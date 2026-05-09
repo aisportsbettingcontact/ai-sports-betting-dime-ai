@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, sport, awayTeam, homeTeam, gameDate, gameNumber, market, pickSide, odds, line, result, awayScore, homeScore, anGameId, timeframe, createdAt FROM tracked_bets WHERE gameDate='2026-05-01' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, sport, awayTeam, homeTeam, gameDate, gameNumber, market, pickSide, odds, line, result, awayScore, homeScore, anGameId, timeframe, createdAt FROM tracked_bets WHERE gameDate='2026-05-01' ORDER BY id;",
+  "rows": [
+    {
+      "id": "60009",
+      "sport": "MLB",
+      "awayTeam": "TEX",
+      "homeTeam": "DET",
+      "gameDate": "2026-05-01",
+      "gameNumber": "1",
+      "market": "ML",
+      "pickSide": "HOME",
+      "odds": "-113",
+      "line": "NULL",
+      "result": "LOSS",
+      "awayScore": "5",
+      "homeScore": "4",
+      "anGameId": "287826",
+      "timeframe": "FULL_GAME",
+      "createdAt": "2026-05-09 05:22:25"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsport\tawayTeam\thomeTeam\tgameDate\tgameNumber\tmarket\tpickSide\todds\tline\tresult\tawayScore\thomeScore\tanGameId\ttimeframe\tcreatedAt\n60009\tMLB\tTEX\tDET\t2026-05-01\t1\tML\tHOME\t-113\tNULL\tLOSS\t5\t4\t287826\tFULL_GAME\t2026-05-09 05:22:25\n",
+  "stderr": "",
+  "execution_time_ms": 288
+}

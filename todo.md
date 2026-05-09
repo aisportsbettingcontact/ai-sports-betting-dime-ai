@@ -3062,3 +3062,10 @@
   - Root cause: LinescoreEntry type in BetTracker.tsx missing gameNumber field → keys "...:undefined" → fallback to ambiguous linescoreByTeams
   - Fix: Added gameNumber: 1 | 2 to LinescoreEntry type (BetTracker.tsx)
   - DB corrected: bet 60008 result=LOSS awayScore=11 homeScore=5 (via full grader pipeline re-run)
+- [x] FIX: createBet autoGradeOnCreate missing gameNumber in gradeTrackedBet call — G2 DH bets graded as G1 on creation
+  - Fix: Added gameNumber: (input.gameNumber ?? 1) as 1 | 2 to gradeTrackedBet call in createBet
+- [x] IMPROVEMENT: Frontend createMut onSuccess handler — replace optimistic PENDING bet with real graded server response immediately
+  - Fix: Added onSuccess(realBet, _input, context) that replaces optimistic bet by exact tempId (stored in onMutate context)
+  - Benefit: Zero PENDING window for past games — UI shows WIN/LOSS/PUSH the instant the mutation resolves
+  - Safe for rapid-fire creation: each optimistic entry has a unique tempId (−Date.now())
+- [x] VALIDATION: 29/29 checks pass across 8 layers (MLB Stats API, gradeTrackedBet, gameNumber propagation, frontend onSuccess, DB state)

@@ -406,16 +406,17 @@ export const betTrackerRouter = router({
           // Use customLine if provided, otherwise fall back to line
           const gradeLineValue = input.customLine ?? input.line ?? null;
           const gradeOut = await gradeTrackedBet({
-            sport:     input.sport as GraderSport,
-            gameDate:  input.gameDate,
-            awayTeam:  input.awayTeam,
-            homeTeam:  input.homeTeam,
-            timeframe: input.timeframe as GraderTimeframe,
-            market:    input.market as GraderMarket,
-            pickSide:  input.pickSide as GraderPickSide,
-            odds:      input.odds,
-            line:      gradeLineValue,
-            anGameId:  input.anGameId,
+            sport:      input.sport as GraderSport,
+            gameDate:   input.gameDate,
+            awayTeam:   input.awayTeam,
+            homeTeam:   input.homeTeam,
+            timeframe:  input.timeframe as GraderTimeframe,
+            market:     input.market as GraderMarket,
+            pickSide:   input.pickSide as GraderPickSide,
+            odds:       input.odds,
+            line:       gradeLineValue,
+            anGameId:   input.anGameId,
+            gameNumber: (input.gameNumber ?? 1) as 1 | 2,
           });
 
           console.log(`[BetTracker][STATE] create: autoGradeOnCreate result=${gradeOut.result} reason=${gradeOut.reason}`);

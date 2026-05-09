@@ -1842,10 +1842,11 @@ export default function BetTracker() {
     onMutate: async (newBet) => {
       await utils.betTracker.listWithStatsPaginated.cancel();
       const previousData = utils.betTracker.listWithStatsPaginated.getInfiniteData(paginatedQueryInput);
+      const tempId = -Date.now(); // unique negative ID for this optimistic entry
       utils.betTracker.listWithStatsPaginated.setInfiniteData(paginatedQueryInput, (old) => {
         if (!old) return old;
         const optimisticBet = {
-          id: -Date.now(), // temp negative ID
+          id: tempId, // temp negative ID — stored in context for precise onSuccess replacement
           ...newBet,
           result: "PENDING" as const,
           createdAt: new Date(),
@@ -1883,13 +1884,35 @@ export default function BetTracker() {
           ),
         };
       });
-      return { previousData };
+      return { previousData, tempId };
     },
     onError: (_err, _newBet, context: any) => {
       // Rollback on error
       if (context?.previousData) {
         utils.betTracker.listWithStatsPaginated.setInfiniteData(paginatedQueryInput, context.previousData);
       }
+    },
+    // ── Replace optimistic PENDING bet with real server-returned bet (already graded) ──
+    // The server awaits gradeTrackedBet synchronously before returning, so the response
+    // already contains the final WIN/LOSS/PUSH result for past games. We replace the
+    // optimistic bet using its exact tempId (stored in context) — zero PENDING window,
+    // safe for rapid-fire bet creation (each optimistic entry has a unique tempId).
+    onSuccess: (realBet, _input, context: any) => {
+      const tempId = context?.tempId;
+      if (tempId == null) return;
+      utils.betTracker.listWithStatsPaginated.setInfiniteData(paginatedQueryInput, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            bets: page.bets.map((b) =>
+              // Replace only the specific optimistic placeholder with this tempId
+              b.id === tempId ? (realBet as unknown as typeof b) : b
+            ),
+          })),
+        };
+      });
     },
     onSettled: () => invalidate(),
   });
