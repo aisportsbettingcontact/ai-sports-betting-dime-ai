@@ -436,27 +436,48 @@ function PickButton({
 }
 
 function GameSelector({
-  games, selectedId, onSelect, loading, sport, formDate, linescoreByTeams,
+   games, selectedId, onSelect, loading, sport, formDate, linescoreByTeams, linescoreByPk,
 }: {
-  games:              SlateGame[];
-  selectedId:         number | null;
-  onSelect:           (game: SlateGame) => void;
-  loading:            boolean;
-  sport:              string;
-  formDate:           string;
+  games:             SlateGame[];
+  selectedId:        number | null;
+  onSelect:          (game: SlateGame) => void;
+  loading:           boolean;
+  sport:             string;
+  formDate:          string;
   linescoreByTeams?:  Map<string, LinescoreEntry>;
+  linescoreByPk?:     Map<number, LinescoreEntry>;
 }) {
-  /** Get linescore for a game using the gameDate:away:home key.
-   * For doubleheaders, tries gameNumber-qualified key first, then falls back to base key.
+  /**
+   * getLs — resolve linescore for a SlateGame.
+   *
+   * Resolution order (most precise first):
+   *   1. linescoreByPk[g.id]  — exact gamePk match (handles DH perfectly, G1 ≠ G2)
+   *   2. linescoreByTeams[gameDate:away:home]  — fallback for non-MLB or missing pk
+   *
+   * Logging:
+   *   [getLs][HIT_PK]   — resolved via gamePk
+   *   [getLs][HIT_TEAM] — resolved via team-name key
+   *   [getLs][MISS]     — no match found
    */
   function getLs(g: SlateGame): LinescoreEntry | undefined {
-    if (!linescoreByTeams) return undefined;
-    // Try DH-qualified key first (gameDate:away:home:gameNumber)
-    const dhKey = `${g.gameDate}:${g.awayTeam}:${g.homeTeam}:${g.gameNumber}`;
-    const dhResult = linescoreByTeams.get(dhKey);
-    if (dhResult) return dhResult;
-    // Fallback to base key for non-DH games
-    return linescoreByTeams.get(`${g.gameDate}:${g.awayTeam}:${g.homeTeam}`);
+    // Primary: exact gamePk lookup (O(1), DH-safe)
+    if (linescoreByPk) {
+      const byPk = linescoreByPk.get(g.id);
+      if (byPk) {
+        console.log(`[getLs][HIT_PK] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} → gamePk=${byPk.gamePk} status=${byPk.status} R=${byPk.awayR}-${byPk.homeR}`);
+        return byPk;
+      }
+    }
+    // Fallback: team-name key (ambiguous for DH, but safe for non-MLB or pre-2026 bets)
+    if (linescoreByTeams) {
+      const byTeam = linescoreByTeams.get(`${g.gameDate}:${g.awayTeam}:${g.homeTeam}`);
+      if (byTeam) {
+        console.log(`[getLs][HIT_TEAM] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} → gamePk=${byTeam.gamePk} status=${byTeam.status} R=${byTeam.awayR}-${byTeam.homeR}`);
+        return byTeam;
+      }
+    }
+    console.log(`[getLs][MISS] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} — no linescore found`);
+    return undefined;
   }
 
   /** Detect which matchups appear more than once on this slate (doubleheaders) */
@@ -551,56 +572,158 @@ function GameSelector({
       <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-colors text-left"
       >
-        {selected ? (
-          <>
-            <img src={selected.awayLogo} alt={selected.awayTeam} className="w-5 h-5 object-contain shrink-0"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <span className="font-bold text-white">{selected.awayTeam}</span>
-            <span className="text-zinc-300">@</span>
-            <img src={selected.homeLogo} alt={selected.homeTeam} className="w-5 h-5 object-contain shrink-0"
-              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            <span className="font-bold text-white">{selected.homeTeam}</span>
-            {isDH(selected) && (
-              <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
-                G{selected.gameNumber}
-              </span>
-            )}
-            <span className="ml-1"><GameStatus g={selected} compact /></span>
-          </>
-        ) : (
+        {selected ? (() => {
+          const selLs = getLs(selected);
+          const selComplete = selected.status === "complete" || selLs?.status === "Final";
+          const selLive = !selComplete && (selected.status === "in_progress" || selLs?.status === "Live");
+          const selHasScore = selLs?.awayR !== null && selLs?.awayR !== undefined && selLs?.homeR !== null && selLs?.homeR !== undefined;
+          const selAwayWins = selHasScore && selComplete && (selLs!.awayR! > selLs!.homeR!);
+          const selHomeWins = selHasScore && selComplete && (selLs!.homeR! > selLs!.awayR!);
+          return (
+            <>
+              <img src={selected.awayLogo} alt={selected.awayTeam} className="w-5 h-5 object-contain shrink-0"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <span className={`font-bold text-sm ${
+                selAwayWins ? "text-white" : selComplete ? "text-zinc-400" : "text-white"
+              }`}>{selected.awayTeam}</span>
+              {/* Score inline — shown when game has started */}
+              {(selComplete || selLive) && selHasScore ? (
+                <span className="flex items-center gap-1 mx-1">
+                  <span className={`font-black font-mono tabular-nums text-sm ${
+                    selAwayWins ? "text-white" : selComplete ? "text-zinc-400" : "text-zinc-200"
+                  }`}>{selLs!.awayR}</span>
+                  <span className="text-zinc-500 text-xs">–</span>
+                  <span className={`font-black font-mono tabular-nums text-sm ${
+                    selHomeWins ? "text-white" : selComplete ? "text-zinc-400" : "text-zinc-200"
+                  }`}>{selLs!.homeR}</span>
+                </span>
+              ) : (
+                <span className="text-zinc-500 text-xs mx-1">@</span>
+              )}
+              <span className={`font-bold text-sm ${
+                selHomeWins ? "text-white" : selComplete ? "text-zinc-400" : "text-white"
+              }`}>{selected.homeTeam}</span>
+              <img src={selected.homeLogo} alt={selected.homeTeam} className="w-5 h-5 object-contain shrink-0"
+                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              {/* DH badge */}
+              {isDH(selected) && (
+                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-black bg-amber-500/25 text-amber-400 border border-amber-500/50 shrink-0">
+                  G{selected.gameNumber}
+                </span>
+              )}
+              {/* Status badge */}
+              {selComplete && (
+                <span className="ml-1 text-xs font-bold text-yellow-400 uppercase shrink-0">FINAL</span>
+              )}
+              {selLive && (() => {
+                const inn = selLs?.currentInning;
+                const state = selLs?.inningState;
+                const innLabel = inn ? `${state === "Top" ? "▲" : state === "Bottom" ? "▼" : ""}${inn}` : "";
+                return (
+                  <span className="flex items-center gap-0.5 ml-1 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-emerald-400">{innLabel || "LIVE"}</span>
+                  </span>
+                );
+              })()}
+              {!selComplete && !selLive && (
+                <span className="ml-1 text-xs text-zinc-400 shrink-0">{selected.gameTime} ET</span>
+              )}
+            </>
+          );
+        })() : (
           <span className="text-zinc-300">Select game…</span>
         )}
         <ChevronDown size={14} className={`ml-auto text-zinc-300 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto">
-          {games.map(g => (
-            <button type="button" key={g.id}
-              onClick={() => { onSelect(g); setOpen(false); }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left ${g.id === selectedId ? "bg-emerald-500/10" : ""}`}
-            >
-              <img src={g.awayLogo} alt={g.awayTeam} className="w-6 h-6 object-contain shrink-0"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <span className="font-bold text-white text-sm w-8 shrink-0">{g.awayTeam}</span>
-              <span className="text-zinc-300 text-xs">@</span>
-              <img src={g.homeLogo} alt={g.homeTeam} className="w-6 h-6 object-contain shrink-0"
-                onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              <span className="font-bold text-white text-sm w-8 shrink-0">{g.homeTeam}</span>
-              {/* Doubleheader G1/G2 badge — only shown when the same matchup appears twice on this slate */}
-              {isDH(g) && (
-                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0">
-                  G{g.gameNumber}
-                </span>
-              )}
-              <span className="ml-auto"><GameStatus g={g} compact /></span>
-              {/* Show ML odds only for scheduled games */}
-              {g.status === "scheduled" && g.odds?.awayMl && (
-                <span className="text-sm text-zinc-300 shrink-0 font-mono">
-                  {fmtOdds(g.odds.awayMl.odds)} / {g.odds.homeMl ? fmtOdds(g.odds.homeMl.odds) : "—"}
-                </span>
-              )}
-            </button>
-          ))}
+          {games.map(g => {
+            const ls = getLs(g);
+            const isComplete = g.status === "complete" || ls?.status === "Final";
+            const isLive = !isComplete && (g.status === "in_progress" || ls?.status === "Live");
+            const hasScore = ls?.awayR !== null && ls?.awayR !== undefined && ls?.homeR !== null && ls?.homeR !== undefined;
+            const awayWins = hasScore && isComplete && (ls!.awayR! > ls!.homeR!);
+            const homeWins = hasScore && isComplete && (ls!.homeR! > ls!.awayR!);
+
+            console.log(`[GameSelector][ROW] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} isDH=${isDH(g)} isComplete=${isComplete} isLive=${isLive} hasScore=${hasScore} R=${ls?.awayR ?? "?"}-${ls?.homeR ?? "?"}`);
+
+            return (
+              <button type="button" key={g.id}
+                onClick={() => { onSelect(g); setOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 hover:bg-zinc-800 transition-colors text-left border-b border-zinc-800/50 last:border-0 ${
+                  g.id === selectedId ? "bg-emerald-500/10" : ""
+                }`}
+              >
+                {/* ── Away team ── */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <img src={g.awayLogo} alt={g.awayTeam} className="w-6 h-6 object-contain"
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <span className={`font-bold text-sm w-8 shrink-0 ${
+                    awayWins ? "text-white" : isComplete ? "text-zinc-400" : "text-white"
+                  }`}>{g.awayTeam}</span>
+                </div>
+
+                {/* ── Score / Status center block ── */}
+                <div className="flex-1 flex items-center justify-center gap-2">
+                  {(isComplete || isLive) && hasScore ? (
+                    // Score display — prominent, DH-differentiating
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-base font-black font-mono tabular-nums ${
+                        awayWins ? "text-white" : isComplete ? "text-zinc-400" : "text-zinc-200"
+                      }`}>{ls!.awayR}</span>
+                      <span className="text-zinc-500 text-sm font-bold">–</span>
+                      <span className={`text-base font-black font-mono tabular-nums ${
+                        homeWins ? "text-white" : isComplete ? "text-zinc-400" : "text-zinc-200"
+                      }`}>{ls!.homeR}</span>
+                      {/* Status badge inline with score */}
+                      {isComplete && (
+                        <span className="text-xs font-bold text-yellow-400 uppercase ml-1">FINAL</span>
+                      )}
+                      {isLive && (() => {
+                        const inn = ls?.currentInning;
+                        const state = ls?.inningState;
+                        const innLabel = inn ? `${state === "Top" ? "▲" : state === "Bottom" ? "▼" : ""}${inn}` : "";
+                        return (
+                          <span className="flex items-center gap-0.5 ml-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-xs font-bold text-emerald-400">{innLabel || "LIVE"}</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    // Scheduled — show start time
+                    <span className="text-zinc-400 text-xs">{g.gameTime} ET</span>
+                  )}
+                </div>
+
+                {/* ── Home team ── */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`font-bold text-sm w-8 text-right shrink-0 ${
+                    homeWins ? "text-white" : isComplete ? "text-zinc-400" : "text-white"
+                  }`}>{g.homeTeam}</span>
+                  <img src={g.homeLogo} alt={g.homeTeam} className="w-6 h-6 object-contain"
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                </div>
+
+                {/* ── Right side: DH badge + ML odds for scheduled ── */}
+                <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                  {isDH(g) && (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-black bg-amber-500/25 text-amber-400 border border-amber-500/50">
+                      G{g.gameNumber}
+                    </span>
+                  )}
+                  {/* ML odds for scheduled games */}
+                  {!isComplete && !isLive && g.odds?.awayMl && (
+                    <span className="text-xs text-zinc-400 font-mono">
+                      {fmtOdds(g.odds.awayMl.odds)}/{g.odds.homeMl ? fmtOdds(g.odds.homeMl.odds) : "—"}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -1559,8 +1682,26 @@ export default function BetTracker() {
     if (!linescoreQuery.data) return map;
     for (const ls of Object.values(linescoreQuery.data)) {
       const key = `${ls.gameDate}:${ls.awayAbbrev}:${ls.homeAbbrev}`;
+      // For non-DH games this is fine; for DH the last game written wins (team-name key is ambiguous)
+      // Use linescoreByPk for precise DH lookups
       map.set(key, ls);
     }
+    return map;
+  }, [linescoreQuery.data]);
+
+  /**
+   * linescoreByPk — keyed by gamePk (number) for O(1) exact game lookup.
+   * Critical for doubleheaders: each game has a unique gamePk = anGameId,
+   * so G1 and G2 are always resolved independently.
+   */
+  const linescoreByPk = useMemo(() => {
+    const map = new Map<number, LinescoreEntry>();
+    if (!linescoreQuery.data) return map;
+    for (const ls of Object.values(linescoreQuery.data)) {
+      map.set(ls.gamePk, ls);
+      console.log(`[Linescore][STATE] gamePk=${ls.gamePk} ${ls.awayAbbrev}@${ls.homeAbbrev} date=${ls.gameDate} status=${ls.status} R=${ls.awayR}-${ls.homeR}`);
+    }
+    console.log(`[Linescore][OUTPUT] linescoreByPk built: ${map.size} entries`);
     return map;
   }, [linescoreQuery.data]);
 
@@ -2440,6 +2581,7 @@ export default function BetTracker() {
                 sport={formSport}
                 formDate={formDate}
                 linescoreByTeams={linescoreByTeams}
+                linescoreByPk={linescoreByPk}
               />
             </div>
 
@@ -2786,9 +2928,18 @@ export default function BetTracker() {
                             {isExpanded && (
                               <div className="space-y-2 p-2 bg-zinc-950/40">
                                 {section.bets.map(bet => {
+                                  // Primary: use anGameId (gamePk) for exact DH-safe lookup
+                                  // Fallback: team-name key for non-MLB or legacy bets without anGameId
                                   const ls = bet.sport === "MLB"
-                                    ? linescoreByTeams.get(`${bet.gameDate}:${bet.awayTeam}:${bet.homeTeam}`) ?? undefined
+                                    ? (
+                                        bet.anGameId != null
+                                          ? (linescoreByPk.get(bet.anGameId) ?? linescoreByTeams.get(`${bet.gameDate}:${bet.awayTeam}:${bet.homeTeam}`))
+                                          : linescoreByTeams.get(`${bet.gameDate}:${bet.awayTeam}:${bet.homeTeam}`)
+                                      ) ?? undefined
                                     : undefined;
+                                  if (bet.sport === "MLB") {
+                                    console.log(`[BetCard][LINESCORE] betId=${bet.id} anGameId=${bet.anGameId ?? "null"} ${bet.awayTeam}@${bet.homeTeam} → gamePk=${ls?.gamePk ?? "MISS"} R=${ls?.awayR ?? "?"}-${ls?.homeR ?? "?"}`);
+                                  }
                                   const betOwnerIsHandicapper = bet.userId === appUser?.id && role === "handicapper";
                                   const canDirectEdit = isOwnerOrAdmin || !betOwnerIsHandicapper;
                                   return (
