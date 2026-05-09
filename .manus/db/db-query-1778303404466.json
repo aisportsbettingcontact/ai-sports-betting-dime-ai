@@ -1,0 +1,42 @@
+{
+  "query": "SELECT id, awayTeam, homeTeam, gameDate, gameNumber, sport, market, pickSide, odds, result, awayScore, homeScore, anGameId, timeframe FROM tracked_bets WHERE gameDate = '2026-04-30' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, gameDate, gameNumber, sport, market, pickSide, odds, result, awayScore, homeScore, anGameId, timeframe FROM tracked_bets WHERE gameDate = '2026-04-30' ORDER BY id;",
+  "rows": [
+    {
+      "id": "60007",
+      "awayTeam": "HOU",
+      "homeTeam": "BAL",
+      "gameDate": "2026-04-30",
+      "gameNumber": "1",
+      "sport": "MLB",
+      "market": "ML",
+      "pickSide": "HOME",
+      "odds": "-118",
+      "result": "WIN",
+      "awayScore": "3",
+      "homeScore": "10",
+      "anGameId": "287818",
+      "timeframe": "FULL_GAME"
+    },
+    {
+      "id": "60008",
+      "awayTeam": "HOU",
+      "homeTeam": "BAL",
+      "gameDate": "2026-04-30",
+      "gameNumber": "2",
+      "sport": "MLB",
+      "market": "ML",
+      "pickSide": "HOME",
+      "odds": "-127",
+      "result": "WIN",
+      "awayScore": "3",
+      "homeScore": "10",
+      "anGameId": "290399",
+      "timeframe": "FULL_GAME"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tawayTeam\thomeTeam\tgameDate\tgameNumber\tsport\tmarket\tpickSide\todds\tresult\tawayScore\thomeScore\tanGameId\ttimeframe\n60007\tHOU\tBAL\t2026-04-30\t1\tMLB\tML\tHOME\t-118\tWIN\t3\t10\t287818\tFULL_GAME\n60008\tHOU\tBAL\t2026-04-30\t2\tMLB\tML\tHOME\t-127\tWIN\t3\t10\t290399\tFULL_GAME\n",
+  "stderr": "",
+  "execution_time_ms": 263
+}

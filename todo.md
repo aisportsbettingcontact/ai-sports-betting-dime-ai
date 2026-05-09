@@ -3058,3 +3058,7 @@
 - [x] scoreGrader.ts: gradeTrackedBet — primary resolution via anGameId (direct gameId === String(anGameId) match), fallback to team-name match
 - [x] scoreGrader.ts: Detailed logging for both resolution paths with DH context
 - [x] TypeScript: 0 errors
+- [x] FIX CRITICAL: G2 doubleheader bets display G1 score (HOU 3-10) instead of G2 score (HOU 11-5) — both bets show same score
+  - Root cause: LinescoreEntry type in BetTracker.tsx missing gameNumber field → keys "...:undefined" → fallback to ambiguous linescoreByTeams
+  - Fix: Added gameNumber: 1 | 2 to LinescoreEntry type (BetTracker.tsx)
+  - DB corrected: bet 60008 result=LOSS awayScore=11 homeScore=5 (via full grader pipeline re-run)

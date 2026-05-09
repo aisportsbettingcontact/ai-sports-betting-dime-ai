@@ -56,6 +56,20 @@ type LinescoreEntry = {
   gameDate:      string;
   awayAbbrev:    string;
   homeAbbrev:    string;
+  /**
+   * Doubleheader game number: 1 = G1, 2 = G2.
+   * Assigned by the server (getLinescores) by chronological startTime order.
+   *
+   * CRITICAL: This field MUST be present in this type for linescoreByGameNum to work.
+   * If this field is missing, ls.gameNumber is undefined at runtime, causing the
+   * linescoreByGameNum map to key as "...:undefined" for ALL games — both DH games
+   * share the same broken key, the lookup always misses, and the fallback
+   * linescoreByTeams (which is ambiguous for DH) returns G1 for both bets.
+   *
+   * Bug confirmed: 2026-04-30 HOU@BAL G2 showed HOU 3-10 (G1 score) instead of HOU 11-5.
+   * Fix: add this field so linescoreByGameNum keys resolve to "...:1" and "...:2" correctly.
+   */
+  gameNumber:    1 | 2;
   innings:       { num: number; awayRuns: number | null; homeRuns: number | null }[];
   awayR:         number | null;
   awayH:         number | null;
