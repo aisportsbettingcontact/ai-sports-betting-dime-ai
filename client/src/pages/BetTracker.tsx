@@ -913,8 +913,11 @@ const BetCard = memo(function BetCard({
       : bet.market === "RL" ? (bet.sport === "NHL" ? "PL" : "RL")
       : "TOT";
     if (bet.market === "RL" && lineDisplay !== null) {
-      const rlSign = (side === "AWAY" ? lineDisplay : -lineDisplay);
-      const rlStr = rlSign > 0 ? `+${rlSign}` : `${rlSign}`;
+      // lineDisplay is already the correct signed value for the PICKED team.
+      // e.g. HOME favorite stored as -1.5 → display "-1.5"
+      //      AWAY underdog stored as +1.5 → display "+1.5"
+      // DO NOT negate — the stored value IS the pick's line, not the opponent's.
+      const rlStr = lineDisplay > 0 ? `+${lineDisplay}` : `${lineDisplay}`;
       return `${nickname} ${rlStr}`;
     }
     return `${nickname} ${mkt}`;
@@ -2064,11 +2067,11 @@ export default function BetTracker() {
     const awayLine = formMarket === "RL" ? (odds?.awayRl?.value ?? null) : null;
     const homeLine = formMarket === "RL" ? (odds?.homeRl?.value ?? null) : null;
 
-    // For RL: customLine is a magnitude (e.g. "1.5"), apply sign per side
-    const awayCustomLine = formMarket === "RL" && formCustomLine
-      ? String(-Math.abs(parseFloat(formCustomLine))) : undefined;
-    const homeCustomLine = formMarket === "RL" && formCustomLine
-      ? String(+Math.abs(parseFloat(formCustomLine))) : undefined;
+    // For RL: pass the raw signed customLine as typed by the user.
+    // The user enters the signed value they want (e.g. "-1.5" for favorite, "+1.5" for underdog).
+    // DO NOT force sign by side — the user controls the sign.
+    const awayCustomLine = formMarket === "RL" && formCustomLine ? formCustomLine : undefined;
+    const homeCustomLine = formMarket === "RL" && formCustomLine ? formCustomLine : undefined;
 
     return (
       <div className="flex gap-2">

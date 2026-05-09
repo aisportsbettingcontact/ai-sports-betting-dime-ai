@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, gameDate, awayTeam, homeTeam, market, pickSide, odds, line, customLine, result, awayScore, homeScore, riskUnits, toWinUnits FROM tracked_bets WHERE gameDate = '2026-05-08' AND market = 'RL' ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, gameDate, awayTeam, homeTeam, market, pickSide, odds, line, customLine, result, awayScore, homeScore, riskUnits, toWinUnits FROM tracked_bets WHERE gameDate = '2026-05-08' AND market = 'RL' ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "60029",
+      "gameDate": "2026-05-08",
+      "awayTeam": "TB",
+      "homeTeam": "BOS",
+      "market": "RL",
+      "pickSide": "HOME",
+      "odds": "155",
+      "line": "-1.5",
+      "customLine": "-1.5",
+      "result": "WIN",
+      "awayScore": "0",
+      "homeScore": "2",
+      "riskUnits": "2.00",
+      "toWinUnits": "3.10"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tgameDate\tawayTeam\thomeTeam\tmarket\tpickSide\todds\tline\tcustomLine\tresult\tawayScore\thomeScore\triskUnits\ttoWinUnits\n60029\t2026-05-08\tTB\tBOS\tRL\tHOME\t155\t-1.5\t-1.5\tWIN\t0\t2\t2.00\t3.10\n",
+  "stderr": "",
+  "execution_time_ms": 298
+}
