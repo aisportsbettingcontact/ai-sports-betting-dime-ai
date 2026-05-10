@@ -114,12 +114,30 @@ interface CacheEntry {
 }
 
 const scoreCache = new Map<string, CacheEntry>();
-const SCORE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+// TTL policy:
+//   LIVE games  → 60s  (scores change rapidly; we need near-real-time grading)
+//   FINAL games → 5min (immutable; no need to re-fetch)
+//   MIXED slate → 60s  (any live game in the slate forces short TTL)
+const SCORE_CACHE_TTL_LIVE_MS  =  60 * 1000; //  60 seconds — live/in-progress games
+const SCORE_CACHE_TTL_FINAL_MS = 5 * 60 * 1000; //  5 minutes  — all games final
+
+/** Returns true if any game in the data set is still live (not yet final) */
+function hasLiveGame(data: GameScoreData[]): boolean {
+  return data.some(g => {
+    const s = g.gameState?.toLowerCase() ?? "";
+    // MLB: "In Progress", "Warmup", "Pre-Game"
+    // NHL: "LIVE"
+    // NBA/NCAAM: ESPN "in" state
+    return s.includes("progress") || s === "live" || s === "in" || s === "warmup";
+  });
+}
 
 function getCached(key: string): GameScoreData[] | null {
   const entry = scoreCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.fetchedAt > SCORE_CACHE_TTL_MS) {
+  // Use short TTL if any game is live, long TTL if all final
+  const ttl = hasLiveGame(entry.data) ? SCORE_CACHE_TTL_LIVE_MS : SCORE_CACHE_TTL_FINAL_MS;
+  if (Date.now() - entry.fetchedAt > ttl) {
     scoreCache.delete(key);
     return null;
   }
