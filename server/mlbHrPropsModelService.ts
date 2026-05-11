@@ -63,13 +63,17 @@ const LEAGUE_ISO      = 0.168;   // League ISO (SLG - AVG)
 const LEAGUE_BARREL   = 8.3;     // League barrel rate (%)
 const LEAGUE_HARDHIT  = 37.5;    // League hard-hit rate (%)
 const PLAYER_PA_PER_GAME = 4.22; // Average PA per batter per game
-// EDGE_THRESHOLD raised from 0.030 → 0.060 (empirical: 0.030 produced 8.6% win rate,
-// well below the ~9.1% breakeven at +1000 odds; 0.060 targets the sharper edge tier)
-const EDGE_THRESHOLD  = 0.060;   // Minimum edge to emit OVER verdict
+// EDGE_THRESHOLD: minimum edge (modelPHr - anNoVig) to emit OVER verdict.
+// P6 recalibration (2026-05-11, n=2438): EDGE_THRESHOLD unchanged at 0.060.
+// Primary gate remains edge-based; MIN_ABSOLUTE_P_HR updated for new factor scale.
+const EDGE_THRESHOLD  = 0.060;   // Minimum edge to emit OVER verdict (unchanged from P5)
 // MIN_ABSOLUTE_P_HR: absolute probability floor for OVER bets.
-// Data shows zero wins at modelPHr ≤ 0.11 and <5% at 0.12–0.24.
-// Set to 0.25 to require the model to assign at least 25% HR probability before betting.
-const MIN_ABSOLUTE_P_HR = 0.25;  // Absolute probability gate — must exceed this to bet OVER
+// P6 recalibration (2026-05-11, n=2438): with new HR_CALIBRATION_FACTOR=0.5317,
+// modelPHr values are ~26% lower than before. Verdict threshold analysis showed:
+//   thresh=0.18 → ACC=18.6% (n=86, best of all thresholds tested 0.08–0.20)
+//   thresh=0.25 (old) → would filter out all bets since new max modelPHr ~0.22
+// Updated from 0.25 → 0.18 to match recalibrated probability scale.
+const MIN_ABSOLUTE_P_HR = 0.18;  // Absolute probability gate — P6 recalibrated 2026-05-11 (was 0.25 for factor 0.720)
 const MIN_P_HR        = 0.04;
 const MAX_P_HR        = 0.45;
 const MIN_STATCAST_ADJ = 0.30;
@@ -89,8 +93,8 @@ const MAX_STATCAST_ADJ = 3.00;
 //                 old_pHr = 1-exp(-0.0649) = 6.3%  [under-estimated due to heavy calib]
 //                 new_pHr = 1-exp(-0.1748) = 16.0%  [closer to actual ~9-12% HR rate]
 //      Note: HR_CALIBRATION_FACTOR will be re-tuned after 200+ game sample in 2026.
-const HR_CALIBRATION_FACTOR = 0.720;  // P5 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
-                                       // Factor reduced 0.875→0.720 (×0.823) to correct systematic over-prediction
+const HR_CALIBRATION_FACTOR = 0.5317;  // P6 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
+                                       // Factor reduced 0.72→0.5317 (×0.738) to correct systematic over-prediction
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface HrPropsModelResult {

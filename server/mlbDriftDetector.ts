@@ -164,7 +164,7 @@ export async function seedCalibrationConstants(): Promise<void> {
     { paramName: "f5_share",             currentValue: "0.56180000", baselineValue: "0.56180000", sampleSize: 5103, ciLower: "0.55800000", ciUpper: "0.56560000" },
     { paramName: "nrfi_rate",            currentValue: "0.48820000", baselineValue: "0.48820000", sampleSize: 5103, ciLower: "0.47900000", ciUpper: "0.49740000" },
     { paramName: "k_calibration_factor", currentValue: "1.00000000", baselineValue: "1.00000000", sampleSize: 0,    ciLower: "0.95000000", ciUpper: "1.05000000" },
-    { paramName: "hr_base_rate",         currentValue: "0.09300000", baselineValue: "0.09300000", sampleSize: 5103, ciLower: "0.08800000", ciUpper: "0.09800000" },
+    { paramName: "hr_base_rate",         currentValue: "0.10090238", baselineValue: "0.10090238", sampleSize: 2438, ciLower: "0.09590238", ciUpper: "0.10590238" },
     { paramName: "f5_under_bias",        currentValue: "0.00000000", baselineValue: "0.00000000", sampleSize: 0,    ciLower: "-0.05000000", ciUpper: "0.05000000" },
     { paramName: "fg_ml_home_edge",      currentValue: "0.00000000", baselineValue: "0.00000000", sampleSize: 0,    ciLower: "-0.05000000", ciUpper: "0.05000000" },
   ];

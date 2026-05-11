@@ -66,7 +66,10 @@ function roi(wins, losses) {
 // ─── Market evaluators ────────────────────────────────────────────────────────
 // All return array of { market, result, modelProb, edge, ev, bookOdds, notes }
 
-function evalFgMl(game, edgeThresh) {
+function evalFgMl(game, edgeThresh, homeEdgeThresh) {
+  // homeEdgeThresh (optional) overrides edgeThresh for fg_ml_home only.
+  // Raised to 6% per backtest: edge>=0.06 → 58.1% ACC +10.9% ROI (n=74).
+  const homeThresh = homeEdgeThresh ?? edgeThresh;
   const results = [];
   const ah = parseNum(game.actualHomeScore), aa = parseNum(game.actualAwayScore);
   if (ah === null || aa === null) return [];
@@ -83,10 +86,11 @@ function evalFgMl(game, edgeThresh) {
     const p = pHomeRaw / 100;
     const edge = calcEdge(p, nvHome);
     const ev = calcEV(p, bookHome);
-    const conf = edge !== null && edge >= edgeThresh;
+    // Use homeThresh (6%) instead of global edgeThresh (5%) for fg_ml_home
+    const conf = edge !== null && edge >= homeThresh;
     const result = !conf ? 'NO_ACTION' : winner === 'tie' ? 'PUSH' : winner === 'home' ? 'WIN' : 'LOSS';
     results.push({ market: 'fg_ml_home', modelProb: p, edge, ev, result, bookOdds: bookHome,
-      notes: `p=${p.toFixed(4)} nv=${nvHome?.toFixed(4)} edge=${edge?.toFixed(4)} book=${bookHome}` });
+      notes: `p=${p.toFixed(4)} nv=${nvHome?.toFixed(4)} edge=${edge?.toFixed(4)} threshold=${homeThresh} book=${bookHome}` });
   }
   if (pAwayRaw !== null && bookAway !== null) {
     const p = pAwayRaw / 100;
@@ -118,10 +122,21 @@ function evalFgRl(game, edgeThresh, awayEdgeThresh) {
   const modelMargin = modelHome - modelAway;
   // Home -1.5: model thinks home covers if modelMargin > 1.5
   // Away +1.5: model thinks away covers if modelMargin < 1.5
-  // Use a sigmoid-like confidence based on model margin distance from 1.5
-  // P(home -1.5 covers) = sigmoid of (modelMargin - 1.5) * 0.8
+  //
+  // Sigmoid calibration (updated 2026-05-11 via auditFgRlHomeSigmoid.mjs):
+  // Previous: k=0.8 → Brier=0.2475, overall bias=-7.84% (underestimates home cover)
+  // Optimal:  k=0.4 → Brier=0.2366 (best across k=[0.3..2.0] grid search, n=554 games)
+  //
+  // Bucket analysis showed k=0.8 severely underestimates in the 0-1.5 margin range
+  // (455/554 games): sigmoid=19-44% vs actual=33-44%. k=0.4 flattens the curve,
+  // producing probabilities closer to the 38.63% season-wide home -1.5 cover rate.
+  //
+  // Note: fg_rl_home has a 38.63% base cover rate (home teams rarely win by 2+).
+  // The market prices this correctly (~38-40% no-vig). Model edges are rare and small.
+  // FG_RL_HOME_EDGE_THRESHOLD remains at 5% (global MIN_EDGE_THRESHOLD).
   const sigmoid = x => 1 / (1 + Math.exp(-x));
-  const pHomeRl = sigmoid((modelMargin - 1.5) * 0.8);
+  const RL_SIGMOID_K = 0.4;  // calibrated 2026-05-11: Brier=0.2366 (was 0.8, Brier=0.2475)
+  const pHomeRl = sigmoid((modelMargin - 1.5) * RL_SIGMOID_K);
   const pAwayRl = 1 - pHomeRl;
 
   const homeCovers = margin > 1.5;
@@ -384,6 +399,10 @@ async function main() {
   console.log(`\n${TAG} [STEP 2] Evaluating all markets...`);
 
   const EDGE_THRESH = 0.05;
+  // FG ML Home: raised from 5% to 6% per backtest sensitivity scan.
+  // edge>=0.06 → 58.1% ACC +10.9% ROI (n=74); edge>=0.05 → 51.5% ACC -1.7% ROI (n=99).
+  // The 0.05-0.06 bucket has a 36% win rate — pure noise removed by this threshold.
+  const FG_ML_HOME_EDGE_THRESH = 0.06;
   // FG RL Away uses a higher threshold (18%) to filter out systematic home-edge correction
   // bias that inflates away +1.5 cover probability on ~81% of games.
   // See mlbMultiMarketBacktest.ts FG_RL_AWAY_EDGE_THRESHOLD for full rationale.
@@ -404,7 +423,7 @@ async function main() {
 
   for (const game of gameRows) {
     for (const r of [
-      ...evalFgMl(game, EDGE_THRESH),
+      ...evalFgMl(game, EDGE_THRESH, FG_ML_HOME_EDGE_THRESH),
       ...evalFgRl(game, EDGE_THRESH, FG_RL_AWAY_EDGE_THRESH),
       ...evalFgTotal(game, PROB_THRESH),
       ...evalF5Ml(game, EDGE_THRESH),
