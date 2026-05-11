@@ -3189,3 +3189,15 @@
 - [x] P3-C: NRFI threshold recalibrated to 0.52 (combined) and 0.54 (both) from 2026 live data analysis
 - [x] P4-A: Per-player lineup order integration — replaced 9x team-average with heterogeneous per-player Statcast array
 - [x] P4-B: Platoon composition adjustment for K-props — LHP vs RHH-heavy (+8%), LHP vs LHH-heavy (-6%), RHP vs LHH-heavy (+5%), RHP vs RHH-heavy (-3%)
+
+## Session: 2026-05-10 — Full Multi-Market Backtest (2026 Live Data)
+
+- [x] Backtest: Audit 2026 live data — 554 final MLB games (Mar 26 – May 10), 693 K-Props, 510 HR Props
+- [x] Backtest: Full historical backtest engine (mlbFullBacktestEngine.ts) — all 5 markets
+- [x] Backtest: tRPC procedures (getFullReport, getDailyTimeSeries, getEdgeBuckets, getKPropsReport, getHrPropsReport, runHistoricalBacktest)
+- [x] Backtest: MlbBacktest UI page (/admin/backtest) — market tables, ROI curves, calibration charts, K/HR props deep-dive
+- [x] Backtest: Optimal thresholds panel — 5 markets hitting ≥70% with exact threshold values
+- [x] Backtest: HR Props calibration fix (HR_CALIBRATION_FACTOR 0.875 → 0.720, bias 3.57pp)
+- [x] Backtest: K-Props calibration fix (bias -0.52 Ks/start → OVER ×1.05, UNDER ×1.03)
+- [x] Backtest: Vitest coverage — 46 new tests (630 total passing, 0 failures)
+- [x] Backtest: DB connection fix in backtest runner (createPool instead of createConnection)

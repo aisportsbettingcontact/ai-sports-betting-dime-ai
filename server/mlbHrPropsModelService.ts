@@ -89,7 +89,8 @@ const MAX_STATCAST_ADJ = 3.00;
 //                 old_pHr = 1-exp(-0.0649) = 6.3%  [under-estimated due to heavy calib]
 //                 new_pHr = 1-exp(-0.1748) = 16.0%  [closer to actual ~9-12% HR rate]
 //      Note: HR_CALIBRATION_FACTOR will be re-tuned after 200+ game sample in 2026.
-const HR_CALIBRATION_FACTOR = 0.875;  // P2-C recalibrated (was 0.325 with woba double-count)
+const HR_CALIBRATION_FACTOR = 0.720;  // P5 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
+                                       // Factor reduced 0.875→0.720 (×0.823) to correct systematic over-prediction
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface HrPropsModelResult {

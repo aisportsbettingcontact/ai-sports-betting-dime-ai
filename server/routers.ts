@@ -1274,6 +1274,75 @@ export const appRouter = router({
         const { backfillAllKPropsMlbamIds } = await import('./mlbKPropsModelService');
         return backfillAllKPropsMlbamIds();
       }),
+    /**
+     * Owner-only: run full historical backtest across all completed games in a date range.
+     * Returns per-market accuracy, ROI, edge distribution, calibration metrics.
+     */
+    runHistoricalBacktest: ownerProcedure
+      .input(z.object({
+        startDate: zodGameDate,
+        endDate:   zodGameDate,
+      }))
+      .mutation(async ({ input }) => {
+        const { runHistoricalBacktestRange } = await import('./mlbFullBacktestEngine');
+        return runHistoricalBacktestRange(input.startDate, input.endDate);
+      }),
+    /**
+     * Get full backtest report: per-market stats, ROI curve, calibration, edge distribution.
+     * Used by the Backtest UI page.
+     */
+    getFullReport: protectedProcedure
+      .input(z.object({
+        days:        z.number().int().min(1).max(365).default(60),
+        minEdge:     z.number().min(0).max(1).default(0),
+        minSample:   z.number().int().min(1).default(5),
+      }))
+      .query(async ({ input }) => {
+        const { getFullBacktestReport } = await import('./mlbFullBacktestEngine');
+        return getFullBacktestReport(input.days, input.minEdge, input.minSample);
+      }),
+    /**
+     * Get per-day accuracy time series for ROI curve chart.
+     */
+    getDailyTimeSeries: protectedProcedure
+      .input(z.object({
+        days:   z.number().int().min(1).max(365).default(60),
+        market: z.string().default('all'),
+      }))
+      .query(async ({ input }) => {
+        const { getDailyBacktestTimeSeries } = await import('./mlbFullBacktestEngine');
+        return getDailyBacktestTimeSeries(input.days, input.market);
+      }),
+    /**
+     * Get edge-bucket accuracy breakdown (calibration chart data).
+     */
+    getEdgeBuckets: protectedProcedure
+      .input(z.object({
+        days:   z.number().int().min(1).max(365).default(60),
+        market: z.string().default('all'),
+      }))
+      .query(async ({ input }) => {
+        const { getEdgeBucketAccuracy } = await import('./mlbFullBacktestEngine');
+        return getEdgeBucketAccuracy(input.days, input.market);
+      }),
+    /**
+     * Get K-Props detailed backtest: MAE, bias, RMSE, per-line accuracy.
+     */
+    getKPropsReport: protectedProcedure
+      .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
+      .query(async ({ input }) => {
+        const { getKPropsBacktestReport } = await import('./mlbFullBacktestEngine');
+        return getKPropsBacktestReport(input.days);
+      }),
+    /**
+     * Get HR Props detailed backtest: calibration, P(HR) distribution, accuracy by odds tier.
+     */
+    getHrPropsReport: protectedProcedure
+      .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
+      .query(async ({ input }) => {
+        const { getHrPropsBacktestReport } = await import('./mlbFullBacktestEngine');
+        return getHrPropsBacktestReport(input.days);
+      }),
   }),
 
   // ─── March Madness Bracket ───────────────────────────────────────────────────────────────────────────────────────

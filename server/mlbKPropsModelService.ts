@@ -81,8 +81,11 @@ const MAX_IP          = 7.0;
 // ─── Direction-split calibration factors (empirical, 288-game backtest 2026) ──
 // OVER bias: model over-projects at high lines (6.5+) → use stronger factor
 // UNDER bias: model over-projects by +0.507 Ks → standard factor
-const K_CALIBRATION_FACTOR_OVER  = 0.800;  // Stronger correction for OVER direction
-const K_CALIBRATION_FACTOR_UNDER = 0.739;  // Standard correction for UNDER direction
+// P5 recalibration: 2026 backtest (n=693) showed Bias=-0.521 Ks/start (model UNDER-projects).
+// MAE=2.023, RMSE=2.570. Negative bias means lambdaRaw is too low → increase factors.
+// Old OVER=0.800, UNDER=0.739. Correction: +0.521/5.1 ≈ +0.102 proportionally.
+const K_CALIBRATION_FACTOR_OVER  = 0.870;  // P5: 0.800 → 0.870 (+0.070) to correct -0.52 under-projection
+const K_CALIBRATION_FACTOR_UNDER = 0.810;  // P5: 0.739 → 0.810 (+0.071) to correct -0.52 under-projection
 // Legacy alias (used in kProj display)
 const K_CALIBRATION_FACTOR = K_CALIBRATION_FACTOR_UNDER;
 const EMPIRICAL_IP_PER_START = 5.1;   // 2025 MLB starter avg IP/start

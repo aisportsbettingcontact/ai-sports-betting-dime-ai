@@ -18,6 +18,7 @@ import BetTracker from "@/pages/BetTracker";
 import AdminModelStatus from "@/pages/AdminModelStatus";
 import PostponedGames from "@/pages/PostponedGames";
 import Resources from "@/pages/Resources";
+import MlbBacktest from "@/pages/MlbBacktest";
 
 function Router() {
   return (
@@ -57,6 +58,8 @@ function Router() {
       <Route path="/admin/postponed-games" component={PostponedGames} />
       {/* Private: Rotogrinders THE BAT X projections — @prez and @lucianobets only */}
       <Route path="/resources" component={Resources} />
+      {/* Owner-only: Multi-market backtest dashboard — 2026 live data validation */}
+      <Route path="/admin/backtest" component={MlbBacktest} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

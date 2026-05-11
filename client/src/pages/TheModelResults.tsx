@@ -1227,12 +1227,19 @@ export default function TheModelResults() {
             </span>
           </div>
           <div className="flex-1" />
-          <Button size="sm" onClick={handleRefresh} disabled={isRefreshing}
-            className="gap-1.5 text-xs h-8 font-bold border"
-            style={{ background: "rgba(57,255,20,0.10)", color: "#39FF14", borderColor: "rgba(57,255,20,0.35)" }}>
-            {isRefreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => setLocation("/admin/backtest")}
+              className="gap-1.5 text-xs h-8 font-medium border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10">
+              <BarChart3 size={12} />
+              Backtest
+            </Button>
+            <Button size="sm" onClick={handleRefresh} disabled={isRefreshing}
+              className="gap-1.5 text-xs h-8 font-bold border"
+              style={{ background: "rgba(57,255,20,0.10)", color: "#39FF14", borderColor: "rgba(57,255,20,0.35)" }}>
+              {isRefreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Market tabs */}
