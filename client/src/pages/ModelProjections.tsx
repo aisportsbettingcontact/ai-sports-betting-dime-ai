@@ -21,6 +21,7 @@ import MlbF5NrfiCard, { type F5NrfiGame } from "@/components/MlbF5NrfiCard";
 import MlbCheatSheetCard, { type CheatSheetGame, CheatSheetView, type CheatSheetLineup } from "@/components/MlbCheatSheetCard";
 import MlbHrPropsCard, { type HrPropRow } from "@/components/MlbHrPropsCard";
 import { AgeModal } from "@/components/AgeModal";
+import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -215,6 +216,7 @@ const compareGames = (a: AnyGame, b: AnyGame): number => {
 export default function ModelProjections() {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   // Architecture: URL query params for feed state (sport, date, tab, statuses)
   // Enables browser back/forward and bookmarkable URLs
@@ -742,6 +744,7 @@ export default function ModelProjections() {
   return (
     <div className="bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
 
       {/* ── In-page favorite notifications (top-right corner) ── */}
       <div
@@ -927,7 +930,7 @@ export default function ModelProjections() {
                       </button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/login"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
+                    <button type="button" onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
                   )}
                 </div>
               </>

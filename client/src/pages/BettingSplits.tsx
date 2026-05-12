@@ -24,6 +24,7 @@ function MoneyBagIcon({ size = 14 }: { size?: number }) {
 }
 import { GameCard } from "@/components/GameCard";
 import { AgeModal } from "@/components/AgeModal";
+import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -146,6 +147,7 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
 export default function BettingSplitsPage() {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedSport, setSelectedSport] = useState<"MLB" | "NHL" | "NBA">("MLB");
   const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
@@ -315,6 +317,7 @@ export default function BettingSplitsPage() {
   return (
     <div className="bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
+      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
 
       {/* ── Sticky Header ── */}
       <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
@@ -372,7 +375,7 @@ export default function BettingSplitsPage() {
                       </button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/login"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
+                    <button type="button" onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
                   )}
                 </div>
               </>
