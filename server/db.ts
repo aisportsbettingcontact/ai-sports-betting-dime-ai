@@ -1043,6 +1043,34 @@ export async function updateAnOdds(
   if (data.homeRunLineOdds !== undefined) updateData.homeRunLineOdds = data.homeRunLineOdds;
   if (data.oddsSource !== undefined) updateData.oddsSource = data.oddsSource;
 
+  // ── MLB RL BOOK SPREAD SYNC GUARD (Fix 3) ─────────────────────────────────────────────
+  // INVARIANT: awayBookSpread and awayRunLine MUST have the same sign for MLB (±1.5).
+  // awayRunLine is the authoritative book field (set by DK/VSiN scraper).
+  // awayBookSpread is the decimal column used by GameCard for display and sign enforcement.
+  // ROOT CAUSE OF TB@TOR 2026-05-11 INVERSION: awayBookSpread=-1.5 but awayRunLine=+1.5.
+  //   → Model ran with correct rl_home_spread (from awayRunLine) but displayed wrong label
+  //     (from awayBookSpread), producing impossible P(cover -1.5) > P(win) on display.
+  // CORRECTION: when both are being written in the same call and signs differ, correct
+  //   awayBookSpread to match awayRunLine (authoritative source).
+  {
+    const incomingAwayRL = data.awayRunLine !== undefined ? parseFloat(data.awayRunLine ?? '') : NaN;
+    const incomingAwayBS = updateData.awayBookSpread !== undefined ? Number(updateData.awayBookSpread) : NaN;
+    if (!isNaN(incomingAwayRL) && !isNaN(incomingAwayBS) && incomingAwayRL !== 0 && incomingAwayBS !== 0) {
+      if (Math.sign(incomingAwayRL) !== Math.sign(incomingAwayBS)) {
+        // Sign mismatch: awayRunLine is authoritative — correct awayBookSpread to match
+        const correctedBS = incomingAwayRL;  // awayBookSpread = awayRunLine (same value)
+        const correctedHomeBS = -incomingAwayRL;
+        console.error(
+          `[updateAnOdds][RL BOOK SPREAD SYNC] id=${id} — awayRunLine=${data.awayRunLine} but awayBookSpread=${data.awayBookSpread}. ` +
+          `SIGN MISMATCH (root cause of RL display inversion). ` +
+          `Correcting awayBookSpread=${correctedBS} homeBookSpread=${correctedHomeBS} to match awayRunLine.`
+        );
+        updateData.awayBookSpread = correctedBS;
+        if (data.homeBookSpread !== undefined) updateData.homeBookSpread = correctedHomeBS;
+      }
+    }
+  }
+
   // ── MLB RL SIGN SYNC (Layer 2 guard) ─────────────────────────────────────────────────────────
   // ── LAYER 3: ML-direction cross-check in updateAnOdds ─────────────────────
   // PRIMARY: When awayML is being written, cross-check against existing

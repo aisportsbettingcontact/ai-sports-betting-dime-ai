@@ -1971,18 +1971,43 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
   if (modelableIds.length > 0) {
     try {
       const liveSpreadRows = await db.select({
-        id:             games.id,
-        awayBookSpread: games.awayBookSpread,
-        homeBookSpread: games.homeBookSpread,
+        id:              games.id,
+        awayBookSpread:  games.awayBookSpread,
+        homeBookSpread:  games.homeBookSpread,
+        awayRunLine:     games.awayRunLine,     // FIX 2: authoritative RL direction (awayRunLine > awayBookSpread)
+        homeRunLine:     games.homeRunLine,
         awayRunLineOdds: games.awayRunLineOdds,
         homeRunLineOdds: games.homeRunLineOdds,
       })
         .from(games)
         .where(inArray(games.id, modelableIds));
       for (const row of liveSpreadRows) {
+        // FIX 2: Use awayRunLine as authoritative RL direction.
+        // awayBookSpread is a decimal column that can be written with wrong sign by the scraper
+        // (root cause of TB@TOR 2026-05-11 inversion: awayBookSpread=-1.5 but awayRunLine=+1.5).
+        // awayRunLine is the varchar column that the model runner uses to derive rl_home_spread —
+        // it is always set correctly by the DK/VSiN scraper. Use it as the ground truth.
+        const awayRLFromRunLine = row.awayRunLine != null ? parseFloat(row.awayRunLine) : null;
+        const awayBSFromSpread  = row.awayBookSpread != null ? parseFloat(String(row.awayBookSpread)) : null;
+        // Detect and log sign mismatch (should be caught by db.ts guard, but log here too)
+        if (awayRLFromRunLine !== null && awayBSFromSpread !== null &&
+            !isNaN(awayRLFromRunLine) && !isNaN(awayBSFromSpread) &&
+            Math.sign(awayRLFromRunLine) !== Math.sign(awayBSFromSpread)) {
+          const g = row as unknown as { awayTeam?: string; homeTeam?: string };
+          console.error(
+            `${TAG} [RL SIGN MISMATCH DETECTED] id=${row.id}: ` +
+            `awayRunLine=${row.awayRunLine} vs awayBookSpread=${row.awayBookSpread}. ` +
+            `Using awayRunLine as authoritative value for RL sign guard.`
+          );
+        }
         liveBookSpreadMap.set(row.id, {
-          awayBookSpread:  row.awayBookSpread != null ? parseFloat(String(row.awayBookSpread)) : null,
-          homeBookSpread:  row.homeBookSpread != null ? parseFloat(String(row.homeBookSpread)) : null,
+          // FIX 2: prefer awayRunLine sign over awayBookSpread for RL direction
+          awayBookSpread:  awayRLFromRunLine !== null && !isNaN(awayRLFromRunLine)
+                             ? awayRLFromRunLine   // authoritative: awayRunLine
+                             : awayBSFromSpread,   // fallback: awayBookSpread
+          homeBookSpread:  awayRLFromRunLine !== null && !isNaN(awayRLFromRunLine)
+                             ? -awayRLFromRunLine  // derived from awayRunLine
+                             : (row.homeBookSpread != null ? parseFloat(String(row.homeBookSpread)) : null),
           awayRunLineOdds: row.awayRunLineOdds ?? null,
           homeRunLineOdds: row.homeRunLineOdds ?? null,
         });
