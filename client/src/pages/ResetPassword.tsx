@@ -9,6 +9,13 @@
  *   3. On submit: call appUsers.resetPassword mutation
  *   4. On success: redirect to home with success toast
  *   5. On error: show specific error message (expired, invalid, etc.)
+ *
+ * iOS SAFARI FIX (same as LoginModal / ForgotPasswordModal):
+ *   Safari 15-17 fires native constraint validation on <form> elements BEFORE
+ *   the onSubmit event, even when noValidate is set. This causes "The string did
+ *   not match the expected pattern." on password fields when AutoFill injects
+ *   credentials. The fix is to replace <form> with <div role="form"> and use
+ *   type="button" + onClick instead of type="submit".
  */
 
 import { useState, useEffect } from "react";
@@ -19,6 +26,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KeyRound, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+
+/** Suppress any residual browser validation events — belt-and-suspenders. */
+const suppressInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof e.nativeEvent.stopImmediatePropagation === "function") {
+    e.nativeEvent.stopImmediatePropagation();
+  }
+};
 
 export default function ResetPassword() {
   const [, navigate] = useLocation();
@@ -60,8 +76,9 @@ export default function ResetPassword() {
     },
   });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // [FIX] Pure JS handler — NOT attached to a <form> onSubmit.
+  // Called by the button's onClick and by onKeyDown Enter on each input.
+  function handleReset() {
     setValidationError(null);
 
     if (password.length < 8) {
@@ -75,6 +92,14 @@ export default function ResetPassword() {
 
     console.log("[ResetPassword] Submitting reset | uid=%s", uid);
     resetPassword.mutate({ uid, token: rawToken, password });
+  }
+
+  // Allow Enter key to submit from either input
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleReset();
+    }
   }
 
   // Invalid link params
@@ -130,7 +155,18 @@ export default function ResetPassword() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        {/*
+          [FIX] <div role="form"> instead of <form>.
+          Safari's constraint validation API only fires on <form> elements.
+          A <div> is 100% invisible to Safari's validation engine.
+          Keyboard submission is handled via onKeyDown on each input.
+          Screen readers: role="form" + aria-label preserve accessibility.
+        */}
+        <div
+          role="form"
+          aria-label="Reset Password"
+          className="flex flex-col gap-4"
+        >
           {/* New Password */}
           <div className="flex flex-col gap-1.5">
             <Label
@@ -151,6 +187,8 @@ export default function ResetPassword() {
                 placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
               />
@@ -186,6 +224,8 @@ export default function ResetPassword() {
                 placeholder="Repeat new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
               />
@@ -209,8 +249,10 @@ export default function ResetPassword() {
             </div>
           )}
 
+          {/* [FIX] type="button" + onClick — not type="submit". No <form> to submit. */}
           <Button
-            type="submit"
+            type="button"
+            onClick={handleReset}
             disabled={resetPassword.isPending || !password || !confirmPassword}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-1"
           >
@@ -231,7 +273,7 @@ export default function ResetPassword() {
           >
             Back to Sign In
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

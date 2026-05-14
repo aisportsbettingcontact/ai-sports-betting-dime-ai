@@ -6,6 +6,25 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+/**
+ * [FIX] Cache-Control headers applied to every HTML response.
+ *
+ * Root cause: iOS Safari aggressively caches SPA HTML in its back/forward cache
+ * and page cache. When we deploy a fix (e.g., form→div for iOS Safari validation),
+ * users with a cached page never receive the update — they keep seeing the old
+ * broken version indefinitely, even after a hard reload.
+ *
+ * Solution: Set Cache-Control: no-store on every HTML response. This forces
+ * Safari (and all browsers) to always fetch a fresh copy of the HTML shell.
+ * Static assets (JS/CSS) are still cached via their content-hash filenames.
+ */
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+  "Surrogate-Control": "no-store",
+};
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -39,7 +58,10 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx?v=${nanoid()}"`
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      res
+        .status(200)
+        .set({ "Content-Type": "text/html", ...NO_CACHE_HEADERS })
+        .end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
@@ -61,7 +83,9 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
+  // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.
   app.use("*", (_req, res) => {
+    res.set({ ...NO_CACHE_HEADERS });
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
