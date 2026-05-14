@@ -750,7 +750,7 @@ export default function ModelProjections() {
   return (
     <div className="bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
-      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
+      {/* LoginModal hidden */}
 
       {/* ── In-page favorite notifications (top-right corner) ── */}
       <div
@@ -955,7 +955,7 @@ export default function ModelProjections() {
                       </button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
+                    null
                   )}
                 </div>
               </>

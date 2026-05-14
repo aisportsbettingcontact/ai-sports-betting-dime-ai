@@ -149,11 +149,7 @@ export default function Home() {
           </span>
         </div>
 
-        <button type="button" onClick={() => setShowLoginPanel(true)}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:text-foreground hover:border-primary/40 transition-colors"
-        >
-          Sign in
-        </button>
+        {/* Sign In button hidden */}
       </header>
 
       {/* ── Hero + Feature cards ── */}
@@ -188,14 +184,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* CTA */}
-        <button type="button" onClick={() => setShowLoginPanel(true)}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all"
-        >
-          <LogIn className="w-4 h-4" />
-          Sign in to continue
-          <ChevronRight className="w-4 h-4 ml-auto" />
-        </button>
+        {/* CTA hidden */}
 
         <p className="mt-5 text-center text-xs text-muted-foreground/50">
           By signing in you agree to gamble responsibly. This tool is for informational purposes only.
