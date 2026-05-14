@@ -448,7 +448,14 @@ export const appUsersRouter = router({
   // ─── Owner-only User Management ────────────────────────────────────────────
 
   listUsers: ownerProcedure.query(async () => {
-    const users = await listAppUsers();
+    let users;
+    try {
+      users = await listAppUsers();
+    } catch (err) {
+      const msg = (err as Error)?.message ?? String(err);
+      console.error(`[AppAdmin][listUsers][FAIL] error=${msg}`);
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to load users. Please refresh the page.' });
+    }
     return users.map((u) => ({
       id: u.id,
       email: u.email,
@@ -476,24 +483,62 @@ export const appUsersRouter = router({
       expiryDate: z.number().nullable().default(null), // null = lifetime
     }))
     .mutation(async ({ input }) => {
-      // Check uniqueness
-      const existingEmail = await getAppUserByEmail(input.email.toLowerCase());
-      if (existingEmail) throw new TRPCError({ code: "CONFLICT", message: "Email already in use" });
+      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role}`);
+      // ── Wrap entire mutation in try/catch to prevent raw errors from escaping ──
+      try {
+        // [STEP 1] Parallel uniqueness checks — run concurrently to halve DB round-trips
+        // Sequential was: 8s + 8s = 16s worst case. Parallel: 8s worst case.
+        console.log(`[AppAdmin][createUser][STEP] parallel uniqueness checks`);
+        const [existingEmail, existingUsername] = await Promise.all([
+          getAppUserByEmail(input.email.toLowerCase()),
+          getAppUserByUsername(input.username.toLowerCase()),
+        ]);
+        if (existingEmail) throw new TRPCError({ code: "CONFLICT", message: "Email already in use" });
+        if (existingUsername) throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
 
-      const existingUsername = await getAppUserByUsername(input.username.toLowerCase());
-      if (existingUsername) throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
+        // [STEP 2] Hash password with cost=10 (OWASP-compliant, ~110ms vs ~250ms for cost=12)
+        // Reduces worst-case: parallel_uniqueness(8s) + bcrypt(0.11s) + insert(8s) = 16.11s << 28s timeout
+        console.log(`[AppAdmin][createUser][STEP] hashing password cost=10`);
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        console.log(`[AppAdmin][createUser][STATE] password hash OK`);
 
-      const passwordHash = await bcrypt.hash(input.password, 12);
-      await createAppUser({
-        email: input.email.toLowerCase(),
-        username: input.username.toLowerCase(),
-        passwordHash,
-        role: input.role,
-        hasAccess: input.hasAccess,
-        expiryDate: input.expiryDate ?? undefined,
-      });
+        // [STEP 3] Insert new user
+        console.log(`[AppAdmin][createUser][STEP] inserting user email=${input.email} username=${input.username}`);
+        await createAppUser({
+          email: input.email.toLowerCase(),
+          username: input.username.toLowerCase(),
+          passwordHash,
+          role: input.role,
+          hasAccess: input.hasAccess,
+          expiryDate: input.expiryDate ?? undefined,
+        });
+        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username}`);
+        return { success: true };
 
-      return { success: true };
+      } catch (err) {
+        // Re-throw TRPCErrors (CONFLICT, BAD_REQUEST, etc.) unchanged
+        if (err instanceof TRPCError) throw err;
+        // Map all DB/network/circuit-breaker errors to a clean INTERNAL_SERVER_ERROR
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[AppAdmin][createUser][FAIL] username=${input.username} error=${msg}`);
+        if (
+          msg.includes('Circuit is OPEN') ||
+          msg.includes('Database not available') ||
+          msg.includes('timed out') ||
+          msg.includes('ECONNREFUSED') ||
+          msg.includes('ETIMEDOUT') ||
+          msg.includes('ER_CON_COUNT_ERROR')
+        ) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Database temporarily unavailable. Please try again in a moment.',
+          });
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create account. Please try again.',
+        });
+      }
     }),
 
   updateUser: ownerProcedure
@@ -609,11 +654,18 @@ export const appUsersRouter = router({
       if (input.id === ctx.appUser.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot force-logout your own account" });
       }
-      const user = await getAppUserById(input.id);
-      if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-      const newTv = await incrementTokenVersion(input.id);
-      console.log(`[AppAuth] forceLogoutUser: userId=${input.id} username=${user.username} — tokenVersion incremented to ${newTv}`);
-      return { success: true, newTokenVersion: newTv };
+      try {
+        const user = await getAppUserById(input.id);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        const newTv = await incrementTokenVersion(input.id);
+        console.log(`[AppAuth] forceLogoutUser: userId=${input.id} username=${user.username} — tokenVersion incremented to ${newTv}`);
+        return { success: true, newTokenVersion: newTv };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[AppAdmin][forceLogoutUser][FAIL] userId=${input.id} error=${msg}`);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to force logout. Please try again.' });
+      }
     }),
 
   /**
@@ -623,9 +675,16 @@ export const appUsersRouter = router({
    */
   forceLogoutAll: ownerProcedure
     .mutation(async ({ ctx }) => {
-      const count = await incrementAllTokenVersions(ctx.appUser.id);
-      console.log(`[AppAuth] forceLogoutAll: invalidated sessions for ${count} users (excluded owner userId=${ctx.appUser.id})`);
-      return { success: true, usersAffected: count };
+      try {
+        const count = await incrementAllTokenVersions(ctx.appUser.id);
+        console.log(`[AppAuth] forceLogoutAll: invalidated sessions for ${count} users (excluded owner userId=${ctx.appUser.id})`);
+        return { success: true, usersAffected: count };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[AppAdmin][forceLogoutAll][FAIL] error=${msg}`);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to force logout all users. Please try again.' });
+      }
     }),
 
   // ─── Discord Admin Controls ────────────────────────────────────────────────
@@ -662,12 +721,18 @@ export const appUsersRouter = router({
         `unlinking discordId=${user.discordId} discordUsername=${user.discordUsername} ` +
         `from userId=${input.id} username=${user.username}`);
 
-      await updateAppUser(input.id, {
-        discordId: null,
-        discordUsername: null,
-        discordAvatar: null,
-        discordConnectedAt: null,
-      });
+      try {
+        await updateAppUser(input.id, {
+          discordId: null,
+          discordUsername: null,
+          discordAvatar: null,
+          discordConnectedAt: null,
+        });
+      } catch (err) {
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[CHECKPOINT:ADMIN_DISCORD_DISCONNECT.DB_FAIL] userId=${input.id} error=${msg}`);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to disconnect Discord. Please try again.' });
+      }
 
       console.log(`[CHECKPOINT:ADMIN_DISCORD_DISCONNECT.SUCCESS] ` +
         `userId=${input.id} username=${user.username} ` +
@@ -859,8 +924,8 @@ export const appUsersRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid or expired reset link." });
       }
 
-      // [STEP] Hash new password
-      const passwordHash = await bcrypt.hash(input.password, 12);
+      // [STEP] Hash new password (cost=10: OWASP-compliant, ~110ms vs ~250ms for cost=12)
+      const passwordHash = await bcrypt.hash(input.password, 10);
 
       // [STEP] Update password, clear reset token, invalidate all sessions
       await updateAppUser(input.uid, {
