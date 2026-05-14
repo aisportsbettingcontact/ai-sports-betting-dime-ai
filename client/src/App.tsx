@@ -24,10 +24,9 @@ import ResetPassword from "@/pages/ResetPassword";
 function Router() {
   return (
     <Switch>
-      {/* Paywall landing page — unauthenticated users land here, authenticated users auto-redirect to /feed */}
-      <Route path="/" component={Home} />
-      {/* /home alias for the landing page */}
-      <Route path="/home" component={Home} />
+      {/* Feed is the public default — / and /home both go directly to the feed */}
+      <Route path="/">{() => <Redirect to="/feed" />}</Route>
+      <Route path="/home">{() => <Redirect to="/feed" />}</Route>
       {/* Legacy redirects */}
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
@@ -35,8 +34,8 @@ function Router() {
       <Route path="/splits">{() => <Redirect to="/feed" />}</Route>
       {/* Unified feed page (AI Model Projections) */}
       <Route path="/feed" component={ModelProjections} />
-      {/* /login → paywall landing (unauthenticated users sign in from Home) */}
-      <Route path="/login">{() => <Redirect to="/" />}</Route>
+      {/* /login → feed (login is hidden) */}
+      <Route path="/login">{() => <Redirect to="/feed" />}</Route>
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/publish" component={PublishProjections} />
       <Route path="/admin/ingest-an" component={IngestAnOdds} />
