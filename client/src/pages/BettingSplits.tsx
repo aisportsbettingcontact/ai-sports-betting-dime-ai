@@ -324,7 +324,7 @@ export default function BettingSplitsPage() {
   return (
     <div className="bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
-      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} />}
+      {/* LoginModal hidden */}
 
       {/* ── Sticky Header ── */}
       <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
@@ -401,7 +401,7 @@ export default function BettingSplitsPage() {
                       </button>
                     </>
                   ) : (
-                    <button type="button" onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">Sign in</button>
+                    null
                   )}
                 </div>
               </>
