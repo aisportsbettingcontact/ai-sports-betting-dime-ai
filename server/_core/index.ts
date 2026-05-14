@@ -320,7 +320,7 @@ async function startServer() {
           res.status(503).json({ error: 'Request timeout' });
         }
       }
-    }, 25_000);
+    }, 28_000);  // 28s: worst-case updateUser = read(8s) + parallel_uniqueness(8s) + bcrypt(0.11s) + write(8s) = 24.11s → 3.89s safety margin
     res.on('finish', () => clearTimeout(timeout));
     res.on('close', () => clearTimeout(timeout));
     next();
