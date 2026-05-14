@@ -317,7 +317,7 @@ function MetricsPanel() {
     },
     {
       label: "AVG SESSION DURATION",
-      sublabel: "Average time on platform per day",
+      sublabel: "Avg active time per session",
       value: loading ? "—" : fmtDuration(sessionData?.avgSessionDurationMs ?? 0),
       color: "text-amber-400",
       border: "border-amber-500/20",
@@ -359,28 +359,30 @@ function MetricsPanel() {
     <div className="mb-6 space-y-3">
       {/* Section label */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold tracking-[0.15em] text-zinc-300 uppercase">Platform Metrics</span>
-        <div className="flex-1 h-px bg-white/6" />
-        {loading && <RefreshCw className="w-3 h-3 text-zinc-300 animate-spin" />}
+        <span className="text-xs font-semibold tracking-[0.15em] text-zinc-400 uppercase">Platform Metrics</span>
+        <div className="flex-1 h-px bg-white/8" />
+        {loading && <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />}
       </div>
 
-      {/* Row 1 — Session KPIs */}
+      {/* Row 1 — Session KPIs: 2-col mobile, 4-col sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {sessionKpis.map((k) => (
-          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-3 sm:px-4 py-2.5 sm:py-3`}>
-            <div className={`text-lg sm:text-xl font-bold font-mono ${k.color}`}>{k.value}</div>
-            <div className="text-xs sm:text-sm font-semibold tracking-wider text-zinc-300 mt-0.5">{k.label}</div>
-            <div className="text-xs sm:text-sm text-zinc-300 mt-0.5">{k.sublabel}</div>
+          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
+            {/* Value: font-mono for fixed-width digits, truncate prevents overflow */}
+            <div className={`text-base sm:text-xl font-bold font-mono ${k.color} truncate`}>{k.value}</div>
+            {/* Label: fixed xs size — sm:text-xs was backwards (larger on mobile) */}
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-zinc-300 mt-0.5 leading-tight">{k.label}</div>
+            <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">{k.sublabel}</div>
           </div>
         ))}
       </div>
-      {/* Row 2 — Member KPIs */}
+      {/* Row 2 — Member KPIs: 2-col mobile, 4-col sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {memberKpis.map((k) => (
-          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-3 sm:px-4 py-2.5 sm:py-3`}>
-            <div className={`text-lg sm:text-xl font-bold font-mono ${k.color}`}>{k.value}</div>
-            <div className="text-xs sm:text-sm font-semibold tracking-wider text-zinc-300 mt-0.5">{k.label}</div>
-            <div className="text-xs sm:text-sm text-zinc-300 mt-0.5">{k.sublabel}</div>
+          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
+            <div className={`text-base sm:text-xl font-bold font-mono ${k.color} truncate`}>{k.value}</div>
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-zinc-300 mt-0.5 leading-tight">{k.label}</div>
+            <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">{k.sublabel}</div>
           </div>
         ))}
       </div>
@@ -599,32 +601,66 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex flex-col">
-      {/* Header */}
+      {/* Header — two-row on mobile, single-row on sm+ */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/8 w-full">
-        <div className="w-full px-3 sm:px-5 lg:px-8 py-3 flex items-center gap-2 sm:gap-4">
+        {/* Row 1: Back + Title */}
+        <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
           <button type="button" onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-1.5 text-zinc-200 hover:text-white transition-colors text-sm"
+            className="flex items-center gap-1.5 text-zinc-200 hover:text-white transition-colors text-sm flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden xs:inline">Back</span>
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2">
-            <Crown className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm font-semibold tracking-wider text-white">USER MANAGEMENT</span>
+          <div className="flex items-center gap-1.5">
+            <Crown className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+            <span className="text-sm font-semibold tracking-wider text-white whitespace-nowrap">USER MANAGEMENT</span>
           </div>
           <div className="flex-1" />
+          {/* Actions — hidden on mobile, shown inline on sm+ */}
+          <div className="hidden sm:flex items-center gap-2">
+            <Button
+              onClick={() => setForceLogoutAllConfirm(true)}
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
+              disabled={forceLogoutAllMutation.isPending}
+            >
+              {forceLogoutAllMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              Force Logout All
+            </Button>
+            <Button
+              onClick={() => navigate("/admin/security")}
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Security Events
+            </Button>
+            <Button onClick={openCreate} size="sm" className="gap-1.5">
+              <Plus className="w-4 h-4" />
+              New Account
+            </Button>
+          </div>
+        </div>
+        {/* Row 2 (mobile only): Action buttons in a full-width row */}
+        <div className="sm:hidden w-full px-3 pb-2.5 flex items-center gap-2">
           <Button
             onClick={() => setForceLogoutAllConfirm(true)}
             size="sm"
             variant="outline"
-            className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
+            className="flex-1 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 text-xs"
             disabled={forceLogoutAllMutation.isPending}
           >
             {forceLogoutAllMutation.isPending ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             )}
             Force Logout All
           </Button>
@@ -632,13 +668,13 @@ export default function UserManagement() {
             onClick={() => navigate("/admin/security")}
             size="sm"
             variant="outline"
-            className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            className="flex-1 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs"
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-3.5 h-3.5" />
             Security Events
           </Button>
-          <Button onClick={openCreate} size="sm" className="gap-1.5">
-            <Plus className="w-4 h-4" />
+          <Button onClick={openCreate} size="sm" className="flex-1 gap-1.5 text-xs">
+            <Plus className="w-3.5 h-3.5" />
             New Account
           </Button>
         </div>
@@ -646,7 +682,12 @@ export default function UserManagement() {
 
       {/* Stats bar */}
       <div className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4">
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        {/*
+          5 cards: use grid-cols-3 on mobile so layout is 3+2 (no orphan).
+          xs:grid-cols-3 ensures the 3-col layout kicks in at 480px.
+          sm:grid-cols-5 shows all 5 in a single row on tablet+.
+        */}
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
           {[
             { label: "Total Accounts", value: rawUsers.length },
             { label: "Owners", value: rawUsers.filter((u) => u.role === "owner").length },
@@ -654,9 +695,9 @@ export default function UserManagement() {
             { label: "Handicappers", value: rawUsers.filter((u) => u.role === "handicapper").length },
             { label: "Active Access", value: rawUsers.filter((u) => u.hasAccess).length },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white/4 border border-white/8 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
-              <div className="text-lg sm:text-xl font-bold text-white">{stat.value}</div>
-              <div className="text-sm sm:text-xs text-zinc-300 tracking-wide">{stat.label}</div>
+            <div key={stat.label} className="bg-white/4 border border-white/8 rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0">
+              <div className="text-lg sm:text-xl font-bold text-white truncate">{stat.value}</div>
+              <div className="text-xs text-zinc-300 tracking-wide leading-tight mt-0.5 truncate">{stat.label}</div>
             </div>
           ))}
         </div>

@@ -3224,3 +3224,13 @@
 - [x] Fix SituationalResultsPanel NHL queries to respect enabled prop
 - [x] Force-logout all 48 non-owner users via tokenVersion increment (DB: 2026-05-14 04:14:00)
 - [x] TypeScript: 0 errors throughout
+## Session: 2026-05-14 — User Management UI Responsive Fix + AVG Session Duration Accuracy
+- [x] Fix header overflow on mobile: two-row layout (title row + actions row), actions use flex-1 to fill width
+- [x] Fix stats grid orphan card: grid-cols-3 on mobile (3+2 layout, no orphan), grid-cols-5 on sm+
+- [x] Fix MetricsPanel text sizes: text-[10px] sm:text-xs (was backwards sm:text-sm > text-xs)
+- [x] Fix MetricsPanel value overflow: min-w-0 + overflow-hidden + truncate on value div
+- [x] Fix AVG SESSION DURATION sublabel: "Avg active time per session" (was "Average time on platform per day")
+- [x] Fix closeUserSessions: use lastHeartbeat-startedAt as durationMs (not now-startedAt)
+- [x] Fix closeIdleSessions: same lastHeartbeat-based duration fix
+- [x] Fix getSessionMetrics: cap outlier sessions at 4h (14_400_000ms) to exclude pre-fix corrupted rows
+- [x] TypeScript: 0 errors

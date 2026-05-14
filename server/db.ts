@@ -2242,18 +2242,23 @@ export async function closeUserSessions(userId: number): Promise<void> {
   if (!db) { console.warn(`${tag} DB not available — sessions not closed`); return; }
   const now = Date.now();
   try {
-    // Fetch open sessions to compute durationMs per row
+    // Fetch open sessions — include lastHeartbeat to compute accurate active duration.
+    // [STEP] durationMs = lastHeartbeat - startedAt (not now - startedAt).
+    // Using lastHeartbeat prevents inflated durations when a session is closed long
+    // after the user's last confirmed activity (e.g. force-logout, idle cleanup).
     const open = await db
-      .select({ id: userSessions.id, startedAt: userSessions.startedAt })
+      .select({ id: userSessions.id, startedAt: userSessions.startedAt, lastHeartbeat: userSessions.lastHeartbeat })
       .from(userSessions)
       .where(and(eq(userSessions.userId, userId), isNull(userSessions.endedAt)));
     for (const s of open) {
-      const dur = now - s.startedAt;
+      // [STATE] activeEnd = lastHeartbeat if available, else now (first-session case)
+      const activeEnd = s.lastHeartbeat ?? now;
+      const dur = Math.max(0, activeEnd - s.startedAt);
       await db
         .update(userSessions)
         .set({ endedAt: now, durationMs: dur })
         .where(eq(userSessions.id, s.id));
-      console.log(`${tag} [OUTPUT] Closed session | sessionId=${s.id} userId=${userId} durationMs=${dur} (${Math.round(dur/60000)} min)`);
+      console.log(`${tag} [OUTPUT] Closed session | sessionId=${s.id} userId=${userId} durationMs=${dur} (${Math.round(dur/60000)} min) lastHeartbeat=${s.lastHeartbeat ? new Date(s.lastHeartbeat).toISOString() : 'null'}`);
     }
     if (open.length === 0) {
       console.log(`${tag} [STATE] No open sessions found for userId=${userId}`);
@@ -2276,13 +2281,16 @@ export async function closeIdleSessions(): Promise<number> {
   const idleCutoff = Date.now() - SESSION_IDLE_MS;
   try {
     const idle = await db
-      .select({ id: userSessions.id, startedAt: userSessions.startedAt })
+      .select({ id: userSessions.id, startedAt: userSessions.startedAt, lastHeartbeat: userSessions.lastHeartbeat })
       .from(userSessions)
       .where(and(isNull(userSessions.endedAt), sql`${userSessions.lastHeartbeat} < ${idleCutoff}`));
     const now = Date.now();
     for (const s of idle) {
-      const dur = now - s.startedAt;
+      // [STEP] Use lastHeartbeat as active-end to avoid inflated durations
+      const activeEnd = s.lastHeartbeat ?? now;
+      const dur = Math.max(0, activeEnd - s.startedAt);
       await db.update(userSessions).set({ endedAt: now, durationMs: dur }).where(eq(userSessions.id, s.id));
+      console.log(`${tag} [STEP] Closed idle session | sessionId=${s.id} durationMs=${dur} (${Math.round(dur/60000)} min)`);
     }
     console.log(`${tag} [OUTPUT] Closed ${idle.length} idle sessions (idleCutoff=${new Date(idleCutoff).toISOString()})`);
     return idle.length;
@@ -2330,11 +2338,20 @@ export async function getSessionMetrics(): Promise<{
       .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
       .from(userSessions)
       .where(gte(userSessions.startedAt, since30d));
-    // Avg session duration (closed sessions in last 30 days only)
+    // Avg session duration (closed sessions in last 30 days only).
+    // [STEP] Cap at 4 hours (14_400_000 ms) to exclude outlier rows created before
+    // the lastHeartbeat-based duration fix was deployed (sessions closed by force-logout
+    // or idle cleanup that recorded wall-clock time instead of active time).
+    const MAX_REALISTIC_SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours
     const [avgRow] = await db
       .select({ avg: sql<number>`AVG(${userSessions.durationMs})` })
       .from(userSessions)
-      .where(and(isNotNull(userSessions.durationMs), gte(userSessions.startedAt, since30d)));
+      .where(and(
+        isNotNull(userSessions.durationMs),
+        gte(userSessions.startedAt, since30d),
+        sql`${userSessions.durationMs} <= ${MAX_REALISTIC_SESSION_MS}`,
+        sql`${userSessions.durationMs} > 0`,
+      ));
     const result = {
       dau: Number(dauRow?.count ?? 0),
       wau: Number(wauRow?.count ?? 0),

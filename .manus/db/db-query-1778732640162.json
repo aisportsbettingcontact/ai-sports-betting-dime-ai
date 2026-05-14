@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, userId, startedAt, endedAt, durationMs, ROUND(durationMs/1000/3600, 2) as hours FROM user_sessions WHERE durationMs IS NOT NULL ORDER BY durationMs DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, userId, startedAt, endedAt, durationMs, ROUND(durationMs/1000/3600, 2) as hours FROM user_sessions WHERE durationMs IS NOT NULL ORDER BY durationMs DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "270026",
+      "userId": "1",
+      "startedAt": "1776300058670",
+      "endedAt": "1778730887887",
+      "durationMs": "2430829217",
+      "hours": "675.23"
+    },
+    {
+      "id": "270030",
+      "userId": "1",
+      "startedAt": "1776311011156",
+      "endedAt": "1778730887887",
+      "durationMs": "2419876731",
+      "hours": "672.19"
+    },
+    {
+      "id": "330090",
+      "userId": "1",
+      "startedAt": "1776717860490",
+      "endedAt": "1778730887887",
+      "durationMs": "2013027397",
+      "hours": "559.17"
+    },
+    {
+      "id": "420001",
+      "userId": "1",
+      "startedAt": "1777212497523",
+      "endedAt": "1778730887887",
+      "durationMs": "1518390364",
+      "hours": "421.78"
+    },
+    {
+      "id": "480007",
+      "userId": "1",
+      "startedAt": "1777398318424",
+      "endedAt": "1778730887887",
+      "durationMs": "1332569463",
+      "hours": "370.16"
+    },
+    {
+      "id": "480031",
+      "userId": "1",
+      "startedAt": "1777426602370",
+      "endedAt": "1778730887887",
+      "durationMs": "1304285517",
+      "hours": "362.30"
+    },
+    {
+      "id": "1",
+      "userId": "7",
+      "startedAt": "1775873568792",
+      "endedAt": "1776094351781",
+      "durationMs": "220782989",
+      "hours": "61.33"
+    },
+    {
+      "id": "9",
+      "userId": "7",
+      "startedAt": "1775888658351",
+      "endedAt": "1776094351781",
+      "durationMs": "205693430",
+      "hours": "57.14"
+    },
+    {
+      "id": "30011",
+      "userId": "7",
+      "startedAt": "1775930236736",
+      "endedAt": "1776094351781",
+      "durationMs": "164115045",
+      "hours": "45.59"
+    },
+    {
+      "id": "30012",
+      "userId": "7",
+      "startedAt": "1775930358553",
+      "endedAt": "1776094352059",
+      "durationMs": "163993506",
+      "hours": "45.55"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tstartedAt\tendedAt\tdurationMs\thours\n270026\t1\t1776300058670\t1778730887887\t2430829217\t675.23\n270030\t1\t1776311011156\t1778730887887\t2419876731\t672.19\n330090\t1\t1776717860490\t1778730887887\t2013027397\t559.17\n420001\t1\t1777212497523\t1778730887887\t1518390364\t421.78\n480007\t1\t1777398318424\t1778730887887\t1332569463\t370.16\n480031\t1\t1777426602370\t1778730887887\t1304285517\t362.30\n1\t7\t1775873568792\t1776094351781\t220782989\t61.33\n9\t7\t1775888658351\t1776094351781\t205693430\t57.14\n30011\t7\t1775930236736\t1776094351781\t164115045\t45.59\n30012\t7\t1775930358553\t1776094352059\t163993506\t45.55\n",
+  "stderr": "",
+  "execution_time_ms": 267
+}
