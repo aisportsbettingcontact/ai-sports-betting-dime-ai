@@ -188,6 +188,23 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // ─── www → non-www canonical redirect (308) ─────────────────────────────
+  // Cloudflare's www redirect uses 301 (which converts POST→GET per HTTP spec),
+  // silently dropping the request body. This middleware intercepts www requests
+  // at the Express level first and issues a 308 Permanent Redirect, which
+  // preserves the HTTP method and body. This fixes login and all API mutations
+  // when users access www.aisportsbettingmodels.com.
+  app.use((req, res, next) => {
+    const host = req.headers.host ?? "";
+    if (host.startsWith("www.")) {
+      const canonical = host.slice(4); // strip "www."
+      const redirectUrl = `${req.protocol}://${canonical}${req.originalUrl}`;
+      console.log(`[www→canonical] 308 redirect: ${host}${req.originalUrl} → ${redirectUrl}`);
+      return res.redirect(308, redirectUrl);
+    }
+    next();
+  });
+
   // ─── Gzip/Brotli response compression ───────────────────────────────────────
   // Compresses all JSON/HTML responses. tRPC payloads (often 50-200KB for large
   // bet lists) shrink 70-85% — dramatically reducing network transfer time.

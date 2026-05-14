@@ -92,7 +92,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-5 py-5 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="px-5 py-5 space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
               Username or Email
@@ -117,7 +117,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
             </label>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 id="login-password"
                 name="password"
                 value={password}
@@ -127,8 +127,6 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                required
-                style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="w-full px-3 py-2.5 pr-10 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
               />
               <button

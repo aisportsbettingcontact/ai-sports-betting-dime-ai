@@ -130,7 +130,7 @@ export default function ResetPassword() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           {/* New Password */}
           <div className="flex flex-col gap-1.5">
             <Label
@@ -143,7 +143,7 @@ export default function ResetPassword() {
               <Input
                 id="rp-password"
                 name="new-password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -152,10 +152,7 @@ export default function ResetPassword() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={resetPassword.isPending}
-                style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
-                required
-                minLength={8}
               />
               <button
                 type="button"
@@ -181,7 +178,7 @@ export default function ResetPassword() {
               <Input
                 id="rp-confirm"
                 name="confirm-password"
-                type="password"
+                type={showConfirm ? "text" : "password"}
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -190,10 +187,7 @@ export default function ResetPassword() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={resetPassword.isPending}
-                style={showConfirm ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
-                required
-                minLength={8}
               />
               <button
                 type="button"
