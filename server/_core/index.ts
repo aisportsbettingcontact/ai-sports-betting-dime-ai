@@ -321,7 +321,15 @@ async function startServer() {
           res.status(503).json({ error: 'Request timeout' });
         }
       }
-    }, 28_000);  // 28s: worst-case updateUser = read(8s) + parallel_uniqueness(8s) + bcrypt(0.11s) + write(8s) = 24.11s → 3.89s safety margin
+    }, 60_000);  // 60s: accommodates TiDB cold-start + retryOnce
+    // Worst case with cold-start retry:
+    //   Attempt 1: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [transient fail]
+    //   retryOnce delay: 3s
+    //   Attempt 2: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [success - TiDB warm]
+    //   Total: 51.22s << 60s timeout
+    // Normal case (TiDB warm): 24.11s << 60s timeout
+    // The keep-alive ping (every 4 min) prevents cold starts in practice;
+    // this 60s timeout is the last-resort safety net for edge cases.
     res.on('finish', () => clearTimeout(timeout));
     res.on('close', () => clearTimeout(timeout));
     next();
@@ -410,19 +418,29 @@ async function startServer() {
       backfillOddsHistoryLineSource()
         .catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):', err));
     }).catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):', err));
-    // ── DB warm-up ping ─────────────────────────────────────────────────────
-    // Pre-establish the TiDB connection pool immediately after server start.
-    // Without this, the first request after a cold start (deploy, restart) hits
-    // a ~2-5s connection establishment latency, which can push the first
-    // updateUser or login mutation over the circuit breaker timeout.
-    // This single SELECT 1 query forces the pool to open a connection so all
-    // subsequent requests use an already-warm connection.
-    setTimeout(() => {
+    // ── DB keep-alive ping ──────────────────────────────────────────────────
+    // TiDB Serverless drops idle connections after ~5 minutes. Without a
+    // recurring keep-alive, the second password update (or any mutation that
+    // comes minutes after the last DB activity) hits a cold TiDB and the
+    // connection establishment takes 5-30s — exceeding the circuit breaker
+    // timeout and surfacing as "Server temporarily unavailable".
+    //
+    // Fix: fire SELECT 1 immediately on startup AND every 4 minutes thereafter.
+    // This keeps the connection pool warm at all times, eliminating cold-start
+    // latency for all UserManagement mutations.
+    const runDbKeepAlive = () => {
       getDb()
-        .then((db) => db.execute('SELECT 1 AS warmup'))
-        .then(() => console.log('[Startup] [DB_WARMUP] TiDB connection pool pre-established ✓'))
-        .catch((err: unknown) => console.warn('[Startup] [DB_WARMUP] Pre-warm failed (non-fatal):', err));
-    }, 500); // 500ms delay: let the event loop settle before hitting the DB
+        .then((db) => db!.execute('SELECT 1 AS keepalive'))
+        .then(() => console.log('[DB_KEEPALIVE] TiDB connection pool kept warm ✓'))
+        .catch((err: unknown) => console.warn('[DB_KEEPALIVE] Ping failed (non-fatal):', err));
+    };
+    // Initial warm-up: 500ms after startup
+    setTimeout(runDbKeepAlive, 500);
+    // Recurring keep-alive: every 4 minutes (240s) — well under TiDB's 5-min idle timeout
+    // unref() prevents this interval from keeping the process alive during tests
+    const keepAliveInterval = setInterval(runDbKeepAlive, 4 * 60 * 1000);
+    keepAliveInterval.unref();
+    console.log('[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)');
 
     // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
     // Runs once on server start, non-fatal, no-ops if all rows already resolved

@@ -29,6 +29,38 @@ import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../
 
 const APP_USER_COOKIE = "app_session";
 
+/**
+ * retryOnce — retry a DB operation exactly once on transient TiDB cold-start errors.
+ *
+ * TiDB Serverless drops idle connections after ~5 minutes. When the pool is cold,
+ * the first query can take 5-30s and trigger the circuit breaker timeout. A single
+ * retry after a 3s delay gives TiDB time to establish a new connection and succeed.
+ *
+ * Only retries on transient errors. Business logic TRPCErrors are re-thrown immediately.
+ */
+async function retryOnce<T>(fn: () => Promise<T>, tag: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof TRPCError) throw err;
+    const msg = (err as Error)?.message ?? String(err);
+    const isTransient =
+      msg.includes('timed out') ||
+      msg.includes('ETIMEDOUT') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('ER_CON_COUNT_ERROR') ||
+      msg.includes('Circuit is OPEN') ||
+      msg.includes('Database not available') ||
+      msg.includes('ECONNRESET') ||
+      msg.includes('connect EHOSTUNREACH');
+    if (!isTransient) throw err;
+    console.warn(`${tag} [RETRY] Transient DB error — retrying in 3s: ${msg.substring(0, 120)}`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log(`${tag} [RETRY] Executing retry attempt...`);
+    return await fn();
+  }
+}
+
 function getAppCookie(req: Request): string | undefined {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");
   return cookies[APP_USER_COOKIE];
@@ -484,10 +516,9 @@ export const appUsersRouter = router({
     }))
     .mutation(async ({ input }) => {
       console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role}`);
-      // ── Wrap entire mutation in try/catch to prevent raw errors from escaping ──
-      try {
+      // ── retryOnce: automatically retry on TiDB cold-start transient errors ──
+      return retryOnce(async () => {
         // [STEP 1] Parallel uniqueness checks — run concurrently to halve DB round-trips
-        // Sequential was: 8s + 8s = 16s worst case. Parallel: 8s worst case.
         console.log(`[AppAdmin][createUser][STEP] parallel uniqueness checks`);
         const [existingEmail, existingUsername] = await Promise.all([
           getAppUserByEmail(input.email.toLowerCase()),
@@ -497,7 +528,6 @@ export const appUsersRouter = router({
         if (existingUsername) throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
 
         // [STEP 2] Hash password with cost=10 (OWASP-compliant, ~110ms vs ~250ms for cost=12)
-        // Reduces worst-case: parallel_uniqueness(8s) + bcrypt(0.11s) + insert(8s) = 16.11s << 28s timeout
         console.log(`[AppAdmin][createUser][STEP] hashing password cost=10`);
         const passwordHash = await bcrypt.hash(input.password, 10);
         console.log(`[AppAdmin][createUser][STATE] password hash OK`);
@@ -514,31 +544,15 @@ export const appUsersRouter = router({
         });
         console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username}`);
         return { success: true };
-
-      } catch (err) {
-        // Re-throw TRPCErrors (CONFLICT, BAD_REQUEST, etc.) unchanged
+      }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
-        // Map all DB/network/circuit-breaker errors to a clean INTERNAL_SERVER_ERROR
         const msg = (err as Error)?.message ?? String(err);
         console.error(`[AppAdmin][createUser][FAIL] username=${input.username} error=${msg}`);
-        if (
-          msg.includes('Circuit is OPEN') ||
-          msg.includes('Database not available') ||
-          msg.includes('timed out') ||
-          msg.includes('ECONNREFUSED') ||
-          msg.includes('ETIMEDOUT') ||
-          msg.includes('ER_CON_COUNT_ERROR')
-        ) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Database temporarily unavailable. Please try again in a moment.',
-          });
-        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create account. Please try again.',
         });
-      }
+      });
     }),
 
   updateUser: ownerProcedure
@@ -553,16 +567,15 @@ export const appUsersRouter = router({
     }))
     .mutation(async ({ input }) => {
       const { id, password, ...rest } = input;
-      console.log(`[AppAdmin][updateUser][INPUT] userId=${id} fields=${JSON.stringify(Object.keys({ ...rest, ...(password ? { password: '***' } : {}) }))}`); 
-      // ── Wrap entire mutation in try/catch to prevent raw errors from escaping ──
-      try {
+      console.log(`[AppAdmin][updateUser][INPUT] userId=${id} fields=${JSON.stringify(Object.keys({ ...rest, ...(password ? { password: '***' } : {}) }))}`);
+      // ── retryOnce: automatically retry on TiDB cold-start transient errors ──
+      return retryOnce(async () => {
         // [STEP 1] Fetch existing user (required for uniqueness checks)
         const existing = await getAppUserById(id);
         if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
         console.log(`[AppAdmin][updateUser][STATE] found userId=${id} username=${existing.username}`);
 
-        // [STEP 2] Parallel uniqueness checks — run concurrently to halve DB round-trips
-        // Only check if the value is actually changing (avoids unnecessary DB reads)
+        // [STEP 2] Parallel uniqueness checks — only if email/username is changing
         const emailChanging = !!(rest.email && rest.email.toLowerCase() !== existing.email);
         const usernameChanging = !!(rest.username && rest.username.toLowerCase() !== existing.username);
         if (emailChanging || usernameChanging) {
@@ -583,7 +596,6 @@ export const appUsersRouter = router({
         if (rest.expiryDate !== undefined) updateData.expiryDate = rest.expiryDate;
 
         // [STEP 4] Hash password with cost=10 (OWASP-compliant, ~110ms vs ~250ms for cost=12)
-        // Reduces worst-case mutation time: 5s(read) + 5s(write) + 0.11s(hash) = ~10.1s << 30s timeout
         if (password) {
           console.log(`[AppAdmin][updateUser][STEP] hashing password userId=${id} cost=10`);
           updateData.passwordHash = await bcrypt.hash(password, 10);
@@ -595,31 +607,15 @@ export const appUsersRouter = router({
         await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
         console.log(`[AppAdmin][updateUser][OUTPUT] SUCCESS userId=${id}`);
         return { success: true };
-
-      } catch (err) {
-        // Re-throw TRPCErrors (NOT_FOUND, CONFLICT, FORBIDDEN, etc.) unchanged
+      }, '[AppAdmin][updateUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
-        // Map all DB/network/circuit-breaker errors to a clean INTERNAL_SERVER_ERROR
         const msg = (err as Error)?.message ?? String(err);
         console.error(`[AppAdmin][updateUser][FAIL] userId=${id} error=${msg}`);
-        if (
-          msg.includes('Circuit is OPEN') ||
-          msg.includes('Database not available') ||
-          msg.includes('timed out') ||
-          msg.includes('ECONNREFUSED') ||
-          msg.includes('ETIMEDOUT') ||
-          msg.includes('ER_CON_COUNT_ERROR')
-        ) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Database temporarily unavailable. Please try again in a moment.',
-          });
-        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update account. Please try again.',
         });
-      }
+      });
     }),
 
   deleteUser: ownerProcedure
