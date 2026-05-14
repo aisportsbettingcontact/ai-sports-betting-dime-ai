@@ -24,7 +24,7 @@ import { bulkApproveModels } from "./db.js";
 import { games } from "../drizzle/schema.js";
 import type { Game } from "../drizzle/schema.js";
 import { scrapeNhlTeamStats, scrapeNhlGoalieStats, getDefaultGoalieStats } from "./nhlNaturalStatScraper.js";
-import { scrapeNhlTeamStatsFromHockeyRef } from "./nhlHockeyRefTeamStats.js";
+import { scrapeNhlTeamStatsFromHockeyRef, getHardcodedPlayoffTeamStats } from "./nhlHockeyRefTeamStats.js";
 import { scrapeNhlTeamStatsFromMoneyPuck, scrapeNhlGoalieStatsFromMoneyPuck } from "./nhlMoneyPuckFallback.js";
 import { scrapeNhlStartingGoalies, matchGoalieName } from "./nhlRotoWireScraper.js";
 import { runNhlModelForGame, runNhlModelBatch, buildTeamStatsDict, formatNhlML } from "./nhlModelEngine.js";
@@ -215,11 +215,22 @@ export async function syncNhlModelForToday(
         }
       } catch (mpErr) {
         const mpMsg = mpErr instanceof Error ? mpErr.message : String(mpErr);
-        console.error(`[NhlModelSync]${tag}   ✗ All 3 team stat sources failed — using league-average defaults`);
-        console.error(`[NhlModelSync]${tag}     NST: ${nstMsg}`);
-        console.error(`[NhlModelSync]${tag}     HR:  ${hrMsg}`);
-        console.error(`[NhlModelSync]${tag}     MP:  ${mpMsg}`);
-        result.errors.push(`Team stats scrape failed (NST: ${nstMsg}; HR: ${hrMsg}; MP: ${mpMsg})`);
+        console.warn(`[NhlModelSync]${tag}   ⚠ MoneyPuck fallback failed (${mpMsg}) — trying hardcoded playoff stats (tier 4)...`);
+        // Tier 4: Hardcoded 2025-26 regular season per-60 stats for all 16 playoff teams.
+        // These are derived from NHL Stats API data and are always available (no network required).
+        // Covers the scenario where all 3 external scrapers are Cloudflare-blocked simultaneously.
+        const hardcoded = getHardcodedPlayoffTeamStats();
+        if (hardcoded.size >= 8) {
+          teamStatsMap = hardcoded;
+          console.log(`[NhlModelSync]${tag}   ✅ Team stats (hardcoded playoff fallback): ${teamStatsMap.size} teams`);
+          result.errors.push(`Team stats: using hardcoded 2025-26 regular season fallback (NST: ${nstMsg}; HR: ${hrMsg}; MP: ${mpMsg})`);
+        } else {
+          console.error(`[NhlModelSync]${tag}   ✗ All 4 team stat sources failed — using league-average defaults`);
+          console.error(`[NhlModelSync]${tag}     NST: ${nstMsg}`);
+          console.error(`[NhlModelSync]${tag}     HR:  ${hrMsg}`);
+          console.error(`[NhlModelSync]${tag}     MP:  ${mpMsg}`);
+          result.errors.push(`Team stats scrape failed (NST: ${nstMsg}; HR: ${hrMsg}; MP: ${mpMsg})`);
+        }
       }
     }
   }

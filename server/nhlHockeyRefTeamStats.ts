@@ -276,3 +276,109 @@ export async function scrapeNhlTeamStatsFromHockeyRef(): Promise<Map<string, Nhl
 
   return results;
 }
+
+// ─── Tier 4: Hardcoded 2025-26 Regular Season Stats (All 3 scrapers blocked) ──
+/**
+ * getHardcodedPlayoffTeamStats()
+ *
+ * Returns a Map<abbrev, NhlTeamStats> with 2025-26 regular season per-60 stats
+ * for all 16 NHL playoff teams, derived from the NHL Stats API (api.nhle.com)
+ * GF/GA/SF/SA per-game data scaled against NST 2025-26 league average per-60 rates.
+ *
+ * Formula:
+ *   xGF_60  = (team_GF_per_game / league_GF_per_game) × LEAGUE_XGF_60
+ *   xGA_60  = (team_GA_per_game / league_GA_per_game) × LEAGUE_XGA_60
+ *   CF_60   = (team_SF_per_game / league_SF_per_game) × LEAGUE_CF_60
+ *   HDCF_60 = (team_GF_per_game / league_GF_per_game) × LEAGUE_HDCF_60
+ *   SCF_60  = (team_SF_per_game / league_SF_per_game) × LEAGUE_SCF_60
+ *
+ * Source: NHL Stats API cayenneExp=seasonId=20252026 and gameTypeId=2 (regular season)
+ * Verified: May 13, 2026 — all 16 playoff teams, 82 GP each
+ *
+ * Used as Tier 4 fallback when NST, Hockey-Reference, and MoneyPuck are all
+ * Cloudflare-blocked from the server environment.
+ */
+export function getHardcodedPlayoffTeamStats(): Map<string, NhlTeamStats> {
+  // League averages from NHL API 2025-26 regular season (32 teams, 82 GP)
+  const LEAGUE_GF_G  = 3.158;   // avg goals for per game
+  const LEAGUE_GA_G  = 3.158;   // avg goals against per game (symmetric)
+  const LEAGUE_SF_G  = 28.437;  // avg shots for per game
+  const LEAGUE_SA_G  = 28.437;  // avg shots against per game (symmetric)
+
+  // NST 2025-26 league average per-60 rates (from nhlHockeyRefTeamStats.ts constants)
+  const LG_XGF_60  = LEAGUE_XGF_60;
+  const LG_XGA_60  = LEAGUE_XGA_60;
+  const LG_CF_60   = LEAGUE_CF_60;
+  const LG_HDCF_60 = LEAGUE_HDCF_60;
+  const LG_SCF_60  = LEAGUE_SCF_60;
+
+  // Helper: compute NhlTeamStats from raw per-game rates
+  const make = (
+    abbrev: string,
+    name: string,
+    gf_g: number,
+    ga_g: number,
+    sf_g: number,
+    sa_g: number,
+    sh_pct: number,
+    sv_pct: number,
+    gf: number,
+    ga: number,
+  ): NhlTeamStats => {
+    const xGF_60  = (gf_g / LEAGUE_GF_G) * LG_XGF_60;
+    const xGA_60  = (ga_g / LEAGUE_GA_G) * LG_XGA_60;
+    const CF_60   = (sf_g / LEAGUE_SF_G) * LG_CF_60;
+    const CA_60   = (sa_g / LEAGUE_SA_G) * LG_CF_60;
+    const HDCF_60 = (gf_g / LEAGUE_GF_G) * LG_HDCF_60;
+    const HDCA_60 = (ga_g / LEAGUE_GA_G) * LG_HDCF_60;
+    const SCF_60  = (sf_g / LEAGUE_SF_G) * LG_SCF_60;
+    const SCA_60  = (sa_g / LEAGUE_SA_G) * LG_SCF_60;
+    const xGF_pct = (xGF_60 / (xGF_60 + xGA_60)) * 100;
+    const xGA_pct = 100 - xGF_pct;
+    const CF_pct  = (CF_60 / (CF_60 + CA_60)) * 100;
+    const SCF_pct = (SCF_60 / (SCF_60 + SCA_60)) * 100;
+    const HDCF_pct = (HDCF_60 / (HDCF_60 + HDCA_60)) * 100;
+    return {
+      abbrev, name, gp: 82,
+      xGF_pct, xGA_pct, CF_pct, SCF_pct, HDCF_pct,
+      SH_pct: sh_pct, SV_pct: sv_pct,
+      GF: gf, GA: ga,
+      xGF_60, xGA_60, HDCF_60, HDCA_60, SCF_60, SCA_60, CF_60, CA_60,
+    };
+  };
+
+  // ── 2025-26 Regular Season Data (NHL Stats API, verified May 13, 2026) ──────
+  // Columns: abbrev, name, GF/G, GA/G, SF/G, SA/G, SH%, SV%, GF, GA
+  const rawData: [string, string, number, number, number, number, number, number, number, number][] = [
+    // Eastern Conference Playoff Teams
+    ["BUF", "Buffalo Sabres",          3.4512, 2.9268, 28.122, 29.061, 11.2, 91.0, 283, 240],
+    ["MTL", "Montréal Canadiens",      3.4024, 3.0610, 26.293, 27.829, 11.8, 91.2, 279, 251],
+    ["CAR", "Carolina Hurricanes",     3.5488, 2.8780, 32.159, 23.927, 10.1, 91.5, 291, 236],
+    ["FLA", "Florida Panthers",        3.0000, 3.3415, 27.988, 26.793, 9.8,  90.0, 246, 274],
+    ["OTT", "Ottawa Senators",         3.3537, 2.9878, 28.915, 24.402, 10.6, 91.1, 275, 245],
+    ["PHI", "Philadelphia Flyers",     2.9268, 2.9146, 25.463, 25.451, 10.5, 90.1, 240, 239],
+    ["BOS", "Boston Bruins",           3.2683, 3.0122, 27.024, 29.695, 11.1, 90.5, 268, 247],
+    ["TBL", "Tampa Bay Lightning",     3.4878, 2.7927, 28.110, 26.695, 11.3, 91.4, 286, 229],
+    // Western Conference Playoff Teams
+    ["COL", "Colorado Avalanche",      3.6341, 2.4024, 33.732, 26.134, 9.8,  91.9, 298, 197],
+    ["DAL", "Dallas Stars",            3.3293, 2.7073, 25.293, 26.159, 12.0, 91.7, 273, 222],
+    ["MIN", "Minnesota Wild",          3.2683, 2.8659, 29.183, 29.402, 10.2, 91.0, 268, 235],
+    ["STL", "St. Louis Blues",         2.8049, 3.0976, 25.329, 27.707, 10.1, 90.2, 230, 254],
+    ["WPG", "Winnipeg Jets",           2.7927, 3.1220, 26.366, 27.768, 9.7,  90.1, 229, 256],
+    ["NSH", "Nashville Predators",     2.9512, 3.2561, 27.866, 29.622, 9.6,  89.8, 242, 267],
+    ["VGK", "Vegas Golden Knights",    3.2195, 2.9512, 28.988, 24.390, 10.2, 91.0, 264, 242],
+    ["ANA", "Anaheim Ducks",           3.2317, 3.5122, 30.805, 28.366, 9.6,  89.5, 265, 288],
+  ];
+
+  const result = new Map<string, NhlTeamStats>();
+  for (const [abbrev, name, gf_g, ga_g, sf_g, sa_g, sh_pct, sv_pct, gf, ga] of rawData) {
+    const stats = make(abbrev, name, gf_g, ga_g, sf_g, sa_g, sh_pct, sv_pct, gf, ga);
+    result.set(abbrev, stats);
+    console.log(
+      `[HardcodedStats] ${abbrev}: xGF_60=${stats.xGF_60.toFixed(3)} xGA_60=${stats.xGA_60.toFixed(3)} ` +
+      `CF_60=${stats.CF_60.toFixed(2)} HDCF_60=${stats.HDCF_60.toFixed(3)}`
+    );
+  }
+  console.log(`[HardcodedStats] ✅ Loaded hardcoded 2025-26 regular season stats for ${result.size}/16 playoff teams`);
+  return result;
+}

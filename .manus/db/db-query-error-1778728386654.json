@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT \n  id,\n  gameDate,\n  awayTeam,\n  homeTeam,\n  sport,\n  -- Book odds\n  bookTotal,\n  overOdds,\n  underOdds,\n  awayML,\n  homeML,\n  awayRunLine,\n  awayRunLineOdds,\n  homeRunLine,\n  homeRunLineOdds,\n  -- Model outputs\n  modelTotal,\n  modelOverRate,\n  modelUnderRate,\n  modelOverOdds,\n  modelUnderOdds,\n  modelAwayWinPct,\n  modelHomeWinPct,\n  modelAwayML,\n  modelHomeML,\n  modelAwayPLOdds,\n  modelHomePLOdds,\n  modelAwaySpreadOdds,\n  modelHomeSpreadOdds,\n  modelRunAt,\n  -- Score projections\n  modelAwayScore,\n  modelHomeScore\nFROM games\nWHERE gameDate = '2026-05-14' AND sport = 'NHL'\nORDER BY gameTime ASC;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id,\n  gameDate,\n  awayTeam,\n  homeTeam,\n  sport,\n  -- Book odds\n  bookTotal,\n  overOdds,\n  underOdds,\n  awayML,\n  homeML,\n  awayRunLine,\n  awayRunLineOdds,\n  homeRunLine,\n  homeRunLineOdds,\n  -- Model outputs\n  modelTotal,\n  modelOverRate,\n  modelUnderRate,\n  modelOverOdds,\n  modelUnderOdds,\n  modelAwayWinPct,\n  modelHomeWinPct,\n  modelAwayML,\n  modelHomeML,\n  modelAwayPLOdds,\n  modelHomePLOdds,\n  modelAwaySpreadOdds,\n  modelHomeSpreadOdds,\n  modelRunAt,\n  -- Score projections\n  modelAwayScore,\n  modelHomeScore\nFROM games\nWHERE gameDate = '2026-05-14' AND sport = 'NHL'\nORDER BY gameTime ASC;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'gameTime' in 'order clause'"
+  ]
+}
