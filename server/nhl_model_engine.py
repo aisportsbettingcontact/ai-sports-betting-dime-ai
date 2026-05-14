@@ -263,20 +263,20 @@ def compute_pace_factor(away_stats: dict, home_stats: dict) -> float:
 GOALIE_REGRESSION_K = 500  # shots-against prior equivalent
 
 
-def compute_goalie_multiplier(gsax: float, shots_faced: int, gp: int) -> float:
+def compute_goalie_multiplier(gsax: float, shots_faced: int, gp: int, goalie_regression_k: float = GOALIE_REGRESSION_K) -> float:
     """
     Section 3 — GOALIE MODEL (Bayesian-regressed):
       raw_effect       = GSAX / shots_faced
       regressed_effect = raw_effect × (SA / (SA + K))   ← shrinks small samples toward 0
       goalie_multiplier = 1 − regressed_effect
-
     Typical values:
       Elite goalie (1000+ SA)  → multiplier ≈ 0.94  (saves ~6% more than expected)
       Average goalie           → multiplier ≈ 1.00
       Weak goalie (1000+ SA)   → multiplier ≈ 1.06
       Backup (< 200 SA)        → multiplier ≈ 1.00  (regressed heavily to mean)
-
     Clamped to [0.88, 1.12] — tighter range since regression already handles outliers.
+    goalie_regression_k: Bayesian prior strength (default=500 for regular season;
+      use 200 for playoffs where goalies have 200-350 SA over 11-20 games).
     """
     if shots_faced is None or shots_faced <= 0:
         # Fall back to per-game normalization if shots_faced not available
@@ -284,18 +284,13 @@ def compute_goalie_multiplier(gsax: float, shots_faced: int, gp: int) -> float:
             return 1.0
         # Estimate shots_faced from GP (NHL avg ~28 shots/game)
         shots_faced = gp * 28
-
     gsax = float(gsax or 0.0)
     shots_faced = float(shots_faced)
-
     raw_effect = gsax / shots_faced
-
     # Bayesian regression: weight raw signal by sample size relative to prior
-    regression_weight = shots_faced / (shots_faced + GOALIE_REGRESSION_K)
+    regression_weight = shots_faced / (shots_faced + goalie_regression_k)
     regressed_effect = raw_effect * regression_weight
-
     multiplier = 1.0 - regressed_effect
-
     # Tighter clamp since regression already handles outliers
     return max(0.88, min(1.12, multiplier))
 
@@ -339,6 +334,8 @@ def project_goals(
     home_goalie_gp: int,
     away_rest_days: int | None,
     home_rest_days: int | None,
+    league_goal_rate: float = LEAGUE_GOAL_RATE,
+    goalie_regression_k: float = GOALIE_REGRESSION_K,
 ) -> tuple[float, float]:
     """
     Section 4 — Pure Expected Goals Model.
@@ -357,10 +354,10 @@ def project_goals(
 
     # Goalie multipliers: away goalie defends home team shots, home goalie defends away team shots
     gm_away_goalie = compute_goalie_multiplier(
-        away_goalie_gsax, away_goalie_shots_faced, away_goalie_gp
+        away_goalie_gsax, away_goalie_shots_faced, away_goalie_gp, goalie_regression_k
     )
     gm_home_goalie = compute_goalie_multiplier(
-        home_goalie_gsax, home_goalie_shots_faced, home_goalie_gp
+        home_goalie_gsax, home_goalie_shots_faced, home_goalie_gp, goalie_regression_k
     )
 
     fatigue_away = compute_fatigue_factor(away_rest_days)
@@ -372,7 +369,7 @@ def project_goals(
     # mu_home = league_goal_rate * OFF_home * DEF_away * goalie_multiplier_away * home_ice * fatigue_home * pace
     # mu_away = league_goal_rate * OFF_away * DEF_home * goalie_multiplier_home * fatigue_away * pace
     mu_home = (
-        LEAGUE_GOAL_RATE
+        league_goal_rate
         * off_home
         * def_away
         * gm_away_goalie  # away goalie faces home team shots
@@ -381,7 +378,7 @@ def project_goals(
         * pace
     )
     mu_away = (
-        LEAGUE_GOAL_RATE
+        league_goal_rate
         * off_away
         * def_home
         * gm_home_goalie  # home goalie faces away team shots
@@ -1251,10 +1248,22 @@ def validate_consistency(probs: dict, mu_away: float, mu_home: float) -> list[st
             f"C2 WARNING: E_total_sim={sim_total:.3f} vs mu_sum={expected_total:.3f}"
         )
 
-    # Constraint 3: P(home −1.5) ≤ P(home_win)
-    if probs["home_pl_cover"] > probs["home_win"] + 0.001:
+    # Constraint 3: P(fav covers -1.5) ≤ P(fav wins outright)
+    # Only applies to the FAVORITE's cover probability (winning by 2+).
+    # The underdog's cover probability (P(underdog covers +1.5)) is always > P(underdog wins)
+    # and that is mathematically correct, not a violation.
+    fav_is_home = probs.get("fav_is_home", True)
+    if fav_is_home:
+        fav_pl_cover = probs["home_pl_cover"]
+        fav_win_prob = probs["home_win"]
+        fav_label = "home"
+    else:
+        fav_pl_cover = probs["away_pl_cover"]
+        fav_win_prob = probs["away_win"]
+        fav_label = "away"
+    if fav_pl_cover > fav_win_prob + 0.001:
         violations.append(
-            f"C3 VIOLATION: P(home-1.5)={probs['home_pl_cover']:.4f} > P(home_win)={probs['home_win']:.4f}"
+            f"C3 VIOLATION: P({fav_label}-1.5)={fav_pl_cover:.4f} > P({fav_label}_win)={fav_win_prob:.4f}"
         )
 
     return violations
@@ -1283,6 +1292,23 @@ def originate_game(inp: dict) -> dict:
     home_name = inp["home_team"]
     away_abbrev = inp.get("away_abbrev", "AWAY")
     home_abbrev = inp.get("home_abbrev", "HOME")
+
+    # ── PLAYOFF MODE ──────────────────────────────────────────────────────────
+    # When playoff_mode=True, override LEAGUE_GOAL_RATE and GOALIE_REGRESSION_K
+    # to reflect playoff scoring environment:
+    #   - Playoff avg GF/G = 2.881 (vs regular season 3.158) → 8.8% reduction
+    #   - Playoff LEAGUE_GOAL_RATE = 2.83 (all-sit, calibrated for playoff pace)
+    #   - Goalie regression K = 200 (smaller prior for playoff sample sizes ~200-350 SA)
+    # Team stats passed in playoff_mode must be computed from playoff GF/G rates
+    # normalized against PLAYOFF league averages (not regular season averages).
+    playoff_mode = bool(inp.get("playoff_mode", False))
+    if playoff_mode:
+        effective_league_goal_rate = 2.83   # Playoff all-sit goals/team/game (2025-26 calibrated)
+        effective_goalie_regression_k = 200  # Smaller prior: playoff goalies have 200-350 SA
+        print(f"[NHLModel]   ► PLAYOFF MODE: league_goal_rate={effective_league_goal_rate} goalie_k={effective_goalie_regression_k}", file=sys.stderr)
+    else:
+        effective_league_goal_rate = LEAGUE_GOAL_RATE
+        effective_goalie_regression_k = GOALIE_REGRESSION_K
 
     # Deterministic seeded RNG: seed derived from game identity so identical inputs
     # always produce identical outputs. Seed = hash(away_abbrev + home_abbrev + game_date).
@@ -1384,6 +1410,8 @@ def originate_game(inp: dict) -> dict:
         home_goalie_gp,
         away_rest_days,
         home_rest_days,
+        league_goal_rate=effective_league_goal_rate,
+        goalie_regression_k=effective_goalie_regression_k,
     )
     print(
         f"[NHLModel]   μ_away={mu_away:.4f}  μ_home={mu_home:.4f}  E_total={mu_away + mu_home:.4f}",

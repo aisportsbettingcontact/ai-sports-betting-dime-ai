@@ -382,3 +382,192 @@ export function getHardcodedPlayoffTeamStats(): Map<string, NhlTeamStats> {
   console.log(`[HardcodedStats] ✅ Loaded hardcoded 2025-26 regular season stats for ${result.size}/16 playoff teams`);
   return result;
 }
+
+// ─── NHL API Playoff Team Stats ───────────────────────────────────────────────
+
+/**
+ * Fetches actual 2025-26 NHL playoff team stats from the NHL Stats API.
+ *
+ * Uses gameTypeId=3 (playoffs) to get per-game rates from actual playoff performance.
+ * Normalizes against PLAYOFF league averages (not regular season) so that the
+ * Sharp Line Engine's LEAGUE_XGF_60 constants produce correct relative ratings.
+ *
+ * Formula (same as getHardcodedPlayoffTeamStats but with playoff league averages):
+ *   xGF_60  = (team_GF_per_game / PLAYOFF_LEAGUE_GF_G) × LEAGUE_XGF_60
+ *   xGA_60  = (team_GA_per_game / PLAYOFF_LEAGUE_GF_G) × LEAGUE_XGA_60
+ *   CF_60   = (team_SF_per_game / PLAYOFF_LEAGUE_SF_G) × LEAGUE_CF_60
+ *
+ * Source: https://api.nhle.com/stats/rest/en/team/summary?cayenneExp=seasonId=20252026 and gameTypeId=3
+ */
+export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamStats>> {
+  const url = "https://api.nhle.com/stats/rest/en/team/summary?isAggregate=false&isGame=false&sort=%5B%7B%22property%22%3A%22points%22%2C%22direction%22%3A%22DESC%22%7D%5D&start=0&limit=50&factCayenneExp=gamesPlayed%3E%3D1&cayenneExp=gameTypeId%3D3%20and%20seasonId%3D20252026";
+
+  console.log("[PlayoffStats] Fetching 2025-26 playoff team stats from NHL API...");
+
+  const resp = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      "Accept": "application/json",
+    },
+  });
+
+  if (!resp.ok) {
+    throw new Error(`[PlayoffStats] NHL API returned ${resp.status}: ${resp.statusText}`);
+  }
+
+  const json = await resp.json() as { data: Array<{
+    teamAbbrev: string;
+    teamFullName: string;
+    gamesPlayed: number;
+    goalsFor: number;
+    goalsAgainst: number;
+    shotsForPerGame: number;
+    shotsAgainstPerGame: number;
+    shootingPct: number;
+    savePct: number;
+  }> };
+
+  const teams = json.data;
+  if (!teams || teams.length === 0) {
+    throw new Error("[PlayoffStats] NHL API returned empty data array");
+  }
+
+  console.log(`[PlayoffStats] Received ${teams.length} playoff teams from NHL API`);
+
+  // Compute playoff league averages from the API data
+  const totalGP = teams.reduce((s, t) => s + t.gamesPlayed, 0);
+  const totalGF = teams.reduce((s, t) => s + t.goalsFor, 0);
+  const totalSF = teams.reduce((s, t) => s + (t.shotsForPerGame * t.gamesPlayed), 0);
+
+  // Each game has 2 teams, so total goals = 2 * goals_per_game * games
+  // league avg goals per team per game = totalGF / totalGP
+  const PLAYOFF_LEAGUE_GF_G = totalGP > 0 ? totalGF / totalGP : 2.881;
+  const PLAYOFF_LEAGUE_SF_G = totalGP > 0 ? totalSF / totalGP : 28.46;
+
+  console.log(`[PlayoffStats] Playoff league averages: GF/G=${PLAYOFF_LEAGUE_GF_G.toFixed(3)} SF/G=${PLAYOFF_LEAGUE_SF_G.toFixed(3)} (${totalGP} team-games)`);
+
+  const result = new Map<string, NhlTeamStats>();
+
+  for (const t of teams) {
+    const gf_g = t.goalsFor / t.gamesPlayed;
+    const ga_g = t.goalsAgainst / t.gamesPlayed;
+    const sf_g = t.shotsForPerGame;
+    // NHL API doesn't provide shotsAgainstPerGame directly in summary — approximate from league avg
+    const sa_g = PLAYOFF_LEAGUE_SF_G * 2 - sf_g; // symmetric: total shots = 2 * league avg
+    const sh_pct = (t.shootingPct ?? 0) * 100;    // API returns decimal (0.126), convert to %
+    const sv_pct = (t.savePct ?? 0) * 100;         // API returns decimal (0.912), convert to %
+
+    // Normalize against PLAYOFF league averages
+    const xGF_60  = (gf_g / PLAYOFF_LEAGUE_GF_G) * LEAGUE_XGF_60;
+    const xGA_60  = (ga_g / PLAYOFF_LEAGUE_GF_G) * LEAGUE_XGA_60;
+    const CF_60   = (sf_g / PLAYOFF_LEAGUE_SF_G) * LEAGUE_CF_60;
+    const CA_60   = (sa_g / PLAYOFF_LEAGUE_SF_G) * LEAGUE_CF_60;
+    const HDCF_60 = (gf_g / PLAYOFF_LEAGUE_GF_G) * LEAGUE_HDCF_60;
+    const HDCA_60 = (ga_g / PLAYOFF_LEAGUE_GF_G) * LEAGUE_HDCF_60;
+    const SCF_60  = (sf_g / PLAYOFF_LEAGUE_SF_G) * LEAGUE_SCF_60;
+    const SCA_60  = (sa_g / PLAYOFF_LEAGUE_SF_G) * LEAGUE_SCF_60;
+
+    const xGF_pct  = (xGF_60 / (xGF_60 + xGA_60)) * 100;
+    const xGA_pct  = 100 - xGF_pct;
+    const CF_pct   = (CF_60 / (CF_60 + CA_60)) * 100;
+    const SCF_pct  = (SCF_60 / (SCF_60 + SCA_60)) * 100;
+    const HDCF_pct = (HDCF_60 / (HDCF_60 + HDCA_60)) * 100;
+
+    const stats: NhlTeamStats = {
+      abbrev: t.teamAbbrev,
+      name: t.teamFullName,
+      gp: t.gamesPlayed,
+      xGF_pct, xGA_pct, CF_pct, SCF_pct, HDCF_pct,
+      SH_pct: sh_pct,
+      SV_pct: sv_pct,
+      GF: t.goalsFor,
+      GA: t.goalsAgainst,
+      xGF_60, xGA_60, HDCF_60, HDCA_60, SCF_60, SCA_60, CF_60, CA_60,
+    };
+
+    result.set(t.teamAbbrev, stats);
+    console.log(
+      `[PlayoffStats] ${t.teamAbbrev} (${t.gamesPlayed} GP): GF/G=${gf_g.toFixed(3)} GA/G=${ga_g.toFixed(3)} ` +
+      `xGF_60=${xGF_60.toFixed(3)} xGA_60=${xGA_60.toFixed(3)} SH%=${sh_pct.toFixed(1)} SV%=${sv_pct.toFixed(1)}`
+    );
+  }
+
+  console.log(`[PlayoffStats] ✅ Loaded live 2025-26 playoff stats for ${result.size} teams`);
+  return result;
+}
+
+/**
+ * Fetches 2025-26 NHL playoff goalie stats from the NHL Stats API.
+ * Returns Map<goalie_full_name, NhlGoalieStats>.
+ */
+export async function fetchNhlPlayoffGoalieStats(): Promise<Map<string, import("./nhlNaturalStatScraper.js").NhlGoalieStats>> {
+  const url = "https://api.nhle.com/stats/rest/en/goalie/summary?isAggregate=false&isGame=false&sort=%5B%7B%22property%22%3A%22wins%22%2C%22direction%22%3A%22DESC%22%7D%5D&start=0&limit=50&factCayenneExp=gamesPlayed%3E%3D1&cayenneExp=gameTypeId%3D3%20and%20seasonId%3D20252026";
+
+  console.log("[PlayoffGoalieStats] Fetching 2025-26 playoff goalie stats from NHL API...");
+
+  const resp = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      "Accept": "application/json",
+    },
+  });
+
+  if (!resp.ok) {
+    throw new Error(`[PlayoffGoalieStats] NHL API returned ${resp.status}: ${resp.statusText}`);
+  }
+
+  const json = await resp.json() as { data: Array<{
+    goalieFullName: string;
+    teamAbbrevs: string;
+    gamesPlayed: number;
+    savePct: number;
+    goalsAgainst: number;
+    shotsAgainst: number;
+    wins: number;
+    losses: number;
+  }> };
+
+  const goalies = json.data;
+  if (!goalies || goalies.length === 0) {
+    throw new Error("[PlayoffGoalieStats] NHL API returned empty data array");
+  }
+
+  console.log(`[PlayoffGoalieStats] Received ${goalies.length} playoff goalies from NHL API`);
+
+  const result = new Map<string, import("./nhlNaturalStatScraper.js").NhlGoalieStats>();
+
+  for (const g of goalies) {
+    const sv_pct = (g.savePct ?? 0) * 100;
+    const shots = g.shotsAgainst ?? 0;
+    const ga = g.goalsAgainst ?? 0;
+    const gp = g.gamesPlayed ?? 0;
+
+    // Compute GSAx: league avg SV% in playoffs ≈ 90.0%
+    // GSAx = shots * (actual_sv_pct - league_avg_sv_pct)
+    // Use 90.0% as playoff league average save percentage
+    const PLAYOFF_LEAGUE_SV_PCT = 0.900;
+    const gsax = shots * ((g.savePct ?? PLAYOFF_LEAGUE_SV_PCT) - PLAYOFF_LEAGUE_SV_PCT);
+
+    // xGA: estimated as shots * league_avg_goal_rate = shots * (1 - 0.900)
+    const xga = shots * (1 - PLAYOFF_LEAGUE_SV_PCT);
+
+    const stats: import("./nhlNaturalStatScraper.js").NhlGoalieStats = {
+      name: g.goalieFullName,
+      team: g.teamAbbrevs ?? "",
+      gp,
+      sv_pct,
+      gsax,
+      xga,
+      ga,
+      shots,
+    };
+
+    result.set(g.goalieFullName, stats);
+    console.log(
+      `[PlayoffGoalieStats] ${g.goalieFullName} (${g.teamAbbrevs}, ${gp} GP): SV%=${sv_pct.toFixed(1)} GSAx=${gsax.toFixed(2)} SA=${shots}`
+    );
+  }
+
+  console.log(`[PlayoffGoalieStats] ✅ Loaded live 2025-26 playoff goalie stats for ${result.size} goalies`);
+  return result;
+}

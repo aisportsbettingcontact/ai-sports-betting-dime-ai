@@ -54,6 +54,8 @@ export interface NhlModelEngineInput {
   home_goalie_shots_faced?: number;
   away_rest_days?:  number;           // days since last game (fatigue)
   home_rest_days?:  number;
+  /** When true, the Python engine uses playoff league averages (LEAGUE_GOAL_RATE=2.83, GOALIE_REGRESSION_K=200) */
+  playoff_mode?:    boolean;
   team_stats: Record<string, {
     // Percentage-based (from count table)
     xGF_pct: number; xGA_pct: number;

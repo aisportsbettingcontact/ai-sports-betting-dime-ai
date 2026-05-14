@@ -24,13 +24,14 @@ import { bulkApproveModels } from "./db.js";
 import { games } from "../drizzle/schema.js";
 import type { Game } from "../drizzle/schema.js";
 import { scrapeNhlTeamStats, scrapeNhlGoalieStats, getDefaultGoalieStats } from "./nhlNaturalStatScraper.js";
-import { scrapeNhlTeamStatsFromHockeyRef, getHardcodedPlayoffTeamStats } from "./nhlHockeyRefTeamStats.js";
+import { scrapeNhlTeamStatsFromHockeyRef, getHardcodedPlayoffTeamStats, fetchNhlPlayoffTeamStats, fetchNhlPlayoffGoalieStats } from "./nhlHockeyRefTeamStats.js";
 import { scrapeNhlTeamStatsFromMoneyPuck, scrapeNhlGoalieStatsFromMoneyPuck } from "./nhlMoneyPuckFallback.js";
 import { scrapeNhlStartingGoalies, matchGoalieName } from "./nhlRotoWireScraper.js";
 import { runNhlModelForGame, runNhlModelBatch, buildTeamStatsDict, formatNhlML } from "./nhlModelEngine.js";
 import type { NhlModelEngineInput } from "./nhlModelEngine.js";
 import { NHL_BY_DB_SLUG } from "../shared/nhlTeams.js";
 import { computeNhlRestDays } from "./nhlHockeyRefScraper.js";
+import { fetchNhlGamesForRange } from "./nhlSchedule.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -289,6 +290,61 @@ export async function syncNhlModelForToday(
   // ── Step 4: Run model for each unmodeled game ─────────────────────────────
   console.log(`\n[NhlModelSync]${tag} Step 4: Running NHL model for ${unmodeled.length} game(s)...`);
 
+  // ── Phase A-1: Detect playoff games via NHL schedule API ────────────────────────────────
+  // The DB games table does not store NHL gameType. We detect playoffs by cross-referencing
+  // the NHL schedule API which returns gameType: 1=preseason, 2=regular, 3=playoffs.
+  // If the API call fails, we fall back to date-based detection (April 20 – June 30 = playoffs).
+  console.log(`[NhlModelSync]${tag} Step 4A-1: Detecting playoff games via NHL schedule API...`);
+  const nhlScheduleGameTypeMap = new Map<string, number>(); // key: "awaySlug@homeSlug" → gameType
+  let isPlayoffSeason = false;
+  try {
+    const scheduleGames = await fetchNhlGamesForRange(gameDate, gameDate);
+    for (const sg of scheduleGames) {
+      const key = `${sg.awayDbSlug}@${sg.homeDbSlug}`;
+      nhlScheduleGameTypeMap.set(key, sg.gameType);
+      if (sg.gameType === 3) isPlayoffSeason = true;
+    }
+    console.log(`[NhlModelSync]${tag}   ✅ NHL schedule fetched: ${scheduleGames.length} games, isPlayoffSeason=${isPlayoffSeason}`);
+  } catch (schedErr) {
+    const schedMsg = schedErr instanceof Error ? schedErr.message : String(schedErr);
+    console.warn(`[NhlModelSync]${tag}   ⚠ NHL schedule fetch failed (${schedMsg}) — using date-based playoff detection`);
+    // Date-based fallback: NHL playoffs run April 20 – June 30
+    const month = new Date(gameDate).getMonth() + 1; // 1-indexed
+    isPlayoffSeason = month >= 4 && month <= 6;
+    console.log(`[NhlModelSync]${tag}   Date-based playoff detection: month=${month} isPlayoffSeason=${isPlayoffSeason}`);
+  }
+
+  // ── Phase A-2: If playoff season, fetch playoff team + goalie stats from NHL API ──────────
+  let playoffTeamStatsMap = new Map<string, import("./nhlNaturalStatScraper.js").NhlTeamStats>();
+  let playoffGoalieStatsMap = new Map<string, import("./nhlNaturalStatScraper.js").NhlGoalieStats>();
+  if (isPlayoffSeason) {
+    console.log(`[NhlModelSync]${tag} Step 4A-2: Fetching playoff team + goalie stats from NHL API...`);
+    const [playoffTeamResult, playoffGoalieResult] = await Promise.allSettled([
+      fetchNhlPlayoffTeamStats(),
+      fetchNhlPlayoffGoalieStats(),
+    ]);
+    if (playoffTeamResult.status === "fulfilled" && playoffTeamResult.value.size >= 4) {
+      playoffTeamStatsMap = playoffTeamResult.value;
+      console.log(`[NhlModelSync]${tag}   ✅ Playoff team stats (NHL API): ${playoffTeamStatsMap.size} teams`);
+    } else {
+      const msg = playoffTeamResult.status === "rejected"
+        ? (playoffTeamResult.reason instanceof Error ? playoffTeamResult.reason.message : String(playoffTeamResult.reason))
+        : `only ${(playoffTeamResult as PromiseFulfilledResult<any>).value.size} teams`;
+      console.warn(`[NhlModelSync]${tag}   ⚠ Playoff team stats fetch failed (${msg}) — will use regular season stats with playoff_mode=true`);
+      result.errors.push(`Playoff team stats: ${msg}`);
+    }
+    if (playoffGoalieResult.status === "fulfilled" && playoffGoalieResult.value.size >= 4) {
+      playoffGoalieStatsMap = playoffGoalieResult.value;
+      console.log(`[NhlModelSync]${tag}   ✅ Playoff goalie stats (NHL API): ${playoffGoalieStatsMap.size} goalies`);
+    } else {
+      const msg = playoffGoalieResult.status === "rejected"
+        ? (playoffGoalieResult.reason instanceof Error ? playoffGoalieResult.reason.message : String(playoffGoalieResult.reason))
+        : `only ${(playoffGoalieResult as PromiseFulfilledResult<any>).value.size} goalies`;
+      console.warn(`[NhlModelSync]${tag}   ⚠ Playoff goalie stats fetch failed (${msg}) — will use regular season goalie stats`);
+      result.errors.push(`Playoff goalie stats: ${msg}`);
+    }
+  }
+
   // ── Phase A0: Pre-fetch all rest days in parallel ─────────────────────────────────────────
   // computeNhlRestDays makes a network call to Hockey Reference per game.
   // Running them sequentially would take N×30s. Run all in parallel first.
@@ -342,16 +398,29 @@ export async function syncNhlModelForToday(
     console.log(`\n[NhlModelSync]${tag} ── Game ${i + 1}/${unmodeled.length}: ${gameLabel} (${game.awayTeam} @ ${game.homeTeam}) ──`);
 
     try {
-      // Resolve team stats — required, no fallback
-      const awayStats = teamStatsMap.get(awayAbbrev);
-      const homeStats = teamStatsMap.get(homeAbbrev);
+      // Detect if this specific game is a playoff game
+      const scheduleKey = `${game.awayTeam}@${game.homeTeam}`;
+      const gameTypeFromSchedule = nhlScheduleGameTypeMap.get(scheduleKey);
+      const isPlayoffGame = gameTypeFromSchedule === 3 || (isPlayoffSeason && gameTypeFromSchedule === undefined);
+      console.log(`[NhlModelSync]${tag}   Game type: ${isPlayoffGame ? 'PLAYOFF (gameType=3)' : 'REGULAR SEASON (gameType=2)'} (scheduleKey=${scheduleKey}, gameTypeFromSchedule=${gameTypeFromSchedule ?? 'not found'})`);
+
+      // Resolve team stats — for playoff games, prefer playoff stats from NHL API
+      // For regular season games, use the NST/HR/MP scraped stats
+      let awayStats = isPlayoffGame && playoffTeamStatsMap.size > 0
+        ? (playoffTeamStatsMap.get(awayAbbrev) ?? teamStatsMap.get(awayAbbrev))
+        : teamStatsMap.get(awayAbbrev);
+      let homeStats = isPlayoffGame && playoffTeamStatsMap.size > 0
+        ? (playoffTeamStatsMap.get(homeAbbrev) ?? teamStatsMap.get(homeAbbrev))
+        : teamStatsMap.get(homeAbbrev);
+
       if (!awayStats || !homeStats) {
         const missing = [!awayStats && awayAbbrev, !homeStats && homeAbbrev].filter(Boolean).join(", ");
         throw new Error(`Team stats not available for: ${missing}. NST scrape may have failed or team abbreviation mismatch.`);
       }
 
-      console.log(`[NhlModelSync]${tag}   Away (${awayAbbrev}): xGF%=${awayStats.xGF_pct} xGF/60=${awayStats.xGF_60} HDCF/60=${awayStats.HDCF_60} SCF/60=${awayStats.SCF_60} CF/60=${awayStats.CF_60}`);
-      console.log(`[NhlModelSync]${tag}   Home (${homeAbbrev}): xGF%=${homeStats.xGF_pct} xGF/60=${homeStats.xGF_60} HDCF/60=${homeStats.HDCF_60} SCF/60=${homeStats.SCF_60} CF/60=${homeStats.CF_60}`);
+      const statsSource = isPlayoffGame && playoffTeamStatsMap.size > 0 ? 'NHL API playoff' : 'NST/HR/MP regular season';
+      console.log(`[NhlModelSync]${tag}   Away (${awayAbbrev}) [${statsSource}]: xGF%=${awayStats.xGF_pct.toFixed(2)} xGF/60=${awayStats.xGF_60.toFixed(3)} HDCF/60=${awayStats.HDCF_60.toFixed(3)} SCF/60=${awayStats.SCF_60.toFixed(3)} CF/60=${awayStats.CF_60.toFixed(3)}`);
+      console.log(`[NhlModelSync]${tag}   Home (${homeAbbrev}) [${statsSource}]: xGF%=${homeStats.xGF_pct.toFixed(2)} xGF/60=${homeStats.xGF_60.toFixed(3)} HDCF/60=${homeStats.HDCF_60.toFixed(3)} SCF/60=${homeStats.SCF_60.toFixed(3)} CF/60=${homeStats.CF_60.toFixed(3)}`);
 
       // Resolve starting goalies
       const awayGoalieInfo = goalieByTeam.get(awayAbbrev) ?? null;
@@ -359,16 +428,22 @@ export async function syncNhlModelForToday(
       const awayGoalieName = awayGoalieInfo?.name ?? null;
       const homeGoalieName = homeGoalieInfo?.name ?? null;
 
-      // Look up goalie stats from NaturalStatTrick
+      // For playoff games, prefer playoff goalie stats from NHL API
+      // For regular season games, use NST/MP scraped stats
+      const effectiveGoalieStatsMap = isPlayoffGame && playoffGoalieStatsMap.size > 0
+        ? playoffGoalieStatsMap
+        : goalieStatsMap;
+      const goalieStatsSource = isPlayoffGame && playoffGoalieStatsMap.size > 0 ? 'NHL API playoff' : 'NST/MP regular season';
+
       const awayGoalieStats = awayGoalieName
-        ? (matchGoalieName(awayGoalieName, goalieStatsMap) ?? getDefaultGoalieStats(awayGoalieName, awayAbbrev))
+        ? (matchGoalieName(awayGoalieName, effectiveGoalieStatsMap) ?? getDefaultGoalieStats(awayGoalieName, awayAbbrev))
         : getDefaultGoalieStats("TBD", awayAbbrev);
       const homeGoalieStats = homeGoalieName
-        ? (matchGoalieName(homeGoalieName, goalieStatsMap) ?? getDefaultGoalieStats(homeGoalieName, homeAbbrev))
+        ? (matchGoalieName(homeGoalieName, effectiveGoalieStatsMap) ?? getDefaultGoalieStats(homeGoalieName, homeAbbrev))
         : getDefaultGoalieStats("TBD", homeAbbrev);
 
-      console.log(`[NhlModelSync]${tag}   Away goalie: ${awayGoalieName ?? "TBD"} | GSAx=${awayGoalieStats.gsax.toFixed(2)} SV%=${awayGoalieStats.sv_pct} GP=${awayGoalieStats.gp}`);
-      console.log(`[NhlModelSync]${tag}   Home goalie: ${homeGoalieName ?? "TBD"} | GSAx=${homeGoalieStats.gsax.toFixed(2)} SV%=${homeGoalieStats.sv_pct} GP=${homeGoalieStats.gp}`);
+      console.log(`[NhlModelSync]${tag}   Away goalie: ${awayGoalieName ?? "TBD"} [${goalieStatsSource}] | GSAx=${awayGoalieStats.gsax.toFixed(2)} SV%=${awayGoalieStats.sv_pct} GP=${awayGoalieStats.gp}`);
+      console.log(`[NhlModelSync]${tag}   Home goalie: ${homeGoalieName ?? "TBD"} [${goalieStatsSource}] | GSAx=${homeGoalieStats.gsax.toFixed(2)} SV%=${homeGoalieStats.sv_pct} GP=${homeGoalieStats.gp}`);
 
       // ── CRITICAL: Require confirmed DK puck line before running model ──────────────────
       if (!game.awayBookSpread || !game.bookTotal || !game.awayML || !game.homeML) {
@@ -414,6 +489,15 @@ export async function syncNhlModelForToday(
       console.log(`[NhlModelSync]${tag}   Rest days: away=${restDays.awayRestDays}d home=${restDays.homeRestDays}d`);
 
       // Build engine input
+      // For playoff games: use playoff team stats (already resolved above) and set playoff_mode=true
+      // The playoff_mode flag tells the Python engine to use playoff league averages
+      // (LEAGUE_GOAL_RATE=2.83, GOALIE_REGRESSION_K=200) instead of regular season values.
+      const effectiveTeamStatsMap = isPlayoffGame && playoffTeamStatsMap.size > 0
+        ? playoffTeamStatsMap
+        : teamStatsMap;
+      if (isPlayoffGame) {
+        console.log(`[NhlModelSync]${tag}   🏆 PLAYOFF GAME — using playoff_mode=true with ${statsSource} stats`);
+      }
       const engineInput: NhlModelEngineInput = {
         away_team:                awayAbbrev,
         home_team:                homeAbbrev,
@@ -438,7 +522,8 @@ export async function syncNhlModelForToday(
         mkt_under_odds:           mktUnderOdds,
         mkt_away_ml:              mktAwayML,
         mkt_home_ml:              mktHomeML,
-        team_stats:               buildTeamStatsDict(awayAbbrev, homeAbbrev, teamStatsMap),
+        team_stats:               buildTeamStatsDict(awayAbbrev, homeAbbrev, effectiveTeamStatsMap),
+        playoff_mode:             isPlayoffGame,
       };
 
       gameContexts.push({
