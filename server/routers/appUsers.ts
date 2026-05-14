@@ -531,7 +531,18 @@ export const appUsersRouter = router({
       if (rest.expiryDate !== undefined) updateData.expiryDate = rest.expiryDate;
       if (password) updateData.passwordHash = await bcrypt.hash(password, 12);
 
-      await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
+      console.log(`[AppAdmin] updateUser: userId=${id} fields=${JSON.stringify(Object.keys(updateData))}`);
+      try {
+        await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
+      } catch (err) {
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[AppAdmin] updateUser: DB error for userId=${id}: ${msg}`);
+        if (msg.includes('Circuit is OPEN') || msg.includes('Database not available') || msg.includes('timed out')) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database temporarily unavailable. Please try again in a moment.' });
+        }
+        throw err;
+      }
+      console.log(`[AppAdmin] updateUser: SUCCESS userId=${id}`);
       return { success: true };
     }),
 
@@ -541,7 +552,16 @@ export const appUsersRouter = router({
       if (input.id === ctx.appUser.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete your own account" });
       }
-      await deleteAppUser(input.id);
+      try {
+        await deleteAppUser(input.id);
+      } catch (err) {
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`[AppAdmin] deleteUser: DB error for userId=${input.id}: ${msg}`);
+        if (msg.includes('Circuit is OPEN') || msg.includes('Database not available') || msg.includes('timed out')) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database temporarily unavailable. Please try again in a moment.' });
+        }
+        throw err;
+      }
       return { success: true };
     }),
 

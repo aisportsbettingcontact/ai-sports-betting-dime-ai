@@ -315,13 +315,21 @@ export async function deleteGameById(id: number): Promise<void> {
 export async function createAppUser(data: InsertAppUser) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(appUsers).values(data);
+  await withCircuitBreaker(async () => {
+    await db.insert(appUsers).values(data);
+  });
 }
 
 export async function listAppUsers(): Promise<AppUser[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(appUsersTable).orderBy(appUsersTable.createdAt);
+  try {
+    return await withCircuitBreaker(async () => {
+      return db.select().from(appUsersTable).orderBy(appUsersTable.createdAt);
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getAppUserById(id: number) {
@@ -366,13 +374,17 @@ export async function getAppUserByUsername(username: string) {
 export async function updateAppUser(id: number, data: Partial<InsertAppUser>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(appUsers).set({ ...data, updatedAt: new Date() }).where(eq(appUsers.id, id));
+  await withCircuitBreaker(async () => {
+    await db.update(appUsers).set({ ...data, updatedAt: new Date() }).where(eq(appUsers.id, id));
+  });
 }
 
 export async function deleteAppUser(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.delete(appUsers).where(eq(appUsers.id, id));
+  await withCircuitBreaker(async () => {
+    await db.delete(appUsers).where(eq(appUsers.id, id));
+  });
 }
 
 export async function updateAppUserLastSignedIn(id: number) {
@@ -388,14 +400,16 @@ export async function updateAppUserLastSignedIn(id: number) {
 export async function incrementTokenVersion(id: number): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db
-    .update(appUsers)
-    .set({ tokenVersion: sql`${appUsers.tokenVersion} + 1`, updatedAt: new Date() })
-    .where(eq(appUsers.id, id));
-  const rows = await db.select({ tv: appUsers.tokenVersion }).from(appUsers).where(eq(appUsers.id, id)).limit(1);
-  const newTv = rows[0]?.tv ?? 1;
-  console.log(`[DB] incrementTokenVersion: userId=${id} newTokenVersion=${newTv}`);
-  return newTv;
+  return await withCircuitBreaker(async () => {
+    await db
+      .update(appUsers)
+      .set({ tokenVersion: sql`${appUsers.tokenVersion} + 1`, updatedAt: new Date() })
+      .where(eq(appUsers.id, id));
+    const rows = await db.select({ tv: appUsers.tokenVersion }).from(appUsers).where(eq(appUsers.id, id)).limit(1);
+    const newTv = rows[0]?.tv ?? 1;
+    console.log(`[DB] incrementTokenVersion: userId=${id} newTokenVersion=${newTv}`);
+    return newTv;
+  });
 }
 
 /**
@@ -406,14 +420,16 @@ export async function incrementTokenVersion(id: number): Promise<number> {
 export async function incrementAllTokenVersions(excludeOwnerId: number): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db
-    .update(appUsers)
-    .set({ tokenVersion: sql`${appUsers.tokenVersion} + 1`, updatedAt: new Date() })
-    .where(ne(appUsers.id, excludeOwnerId));
-  // result[0] is OkPacket with affectedRows
-  const count = (result[0] as any)?.affectedRows ?? 0;
-  console.log(`[DB] incrementAllTokenVersions: excluded ownerId=${excludeOwnerId} — invalidated ${count} user sessions`);
-  return count;
+  return await withCircuitBreaker(async () => {
+    const result = await db
+      .update(appUsers)
+      .set({ tokenVersion: sql`${appUsers.tokenVersion} + 1`, updatedAt: new Date() })
+      .where(ne(appUsers.id, excludeOwnerId));
+    // result[0] is OkPacket with affectedRows
+    const count = (result[0] as any)?.affectedRows ?? 0;
+    console.log(`[DB] incrementAllTokenVersions: excluded ownerId=${excludeOwnerId} — invalidated ${count} user sessions`);
+    return count;
+  });
 }
 
 // ─── Publish / Model Projection helpers ──────────────────────────────────────

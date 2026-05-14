@@ -64,7 +64,16 @@ export function formatMutationError(error: unknown): string {
     return "You don't have permission to perform this action.";
   }
 
-  // [CHECK 5] Internal server error — generic fallback
+  // [CHECK 5] DB/circuit breaker errors — pass through specific message from server
+  if (
+    msg.includes('Database temporarily unavailable') ||
+    msg.includes('Circuit is OPEN') ||
+    msg.includes('Database not available')
+  ) {
+    return 'Database temporarily unavailable. Please try again in a moment.';
+  }
+
+  // [CHECK 6] Internal server error — generic fallback
   if (msg === "Internal server error" || msg.includes("INTERNAL_SERVER_ERROR")) {
     return "An unexpected server error occurred. Please try again.";
   }
