@@ -17,9 +17,11 @@
  * Data source: nhl_schedule_history table (Action Network DK NJ API)
  */
 
+import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { NHL_BY_AN_SLUG } from "@shared/nhlTeams";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { ArrowLeft, RefreshCw, Calendar, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -244,6 +246,12 @@ function GameRow({
 export default function NhlTeamSchedule() {
   const { slug } = useParams<{ slug: string }>();
   const [, navigate] = useLocation();
+
+  // Auth guard: unauthenticated users are redirected to the paywall landing page.
+  const { appUser, loading: appAuthLoading } = useAppAuth();
+  useEffect(() => {
+    if (!appAuthLoading && !appUser) navigate("/");
+  }, [appAuthLoading, appUser, navigate]);
 
   const team = NHL_BY_AN_SLUG.get(slug ?? "");
 

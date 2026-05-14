@@ -3201,3 +3201,8 @@
 - [x] Backtest: K-Props calibration fix (bias -0.52 Ks/start → OVER ×1.05, UNDER ×1.03)
 - [x] Backtest: Vitest coverage — 46 new tests (630 total passing, 0 failures)
 - [x] Backtest: DB connection fix in backtest runner (createPool instead of createConnection)
+
+## Session: 2026-05-14 — Paywall Restore
+- [x] Restore paywall as default entry point: / → Home (hard gate)
+- [x] Add auth guard on /feed — unauthenticated users redirected to /
+- [x] Remove public mode /login redirect (restore proper login flow)

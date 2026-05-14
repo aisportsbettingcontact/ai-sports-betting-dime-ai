@@ -170,10 +170,15 @@ export default function BettingSplitsPage() {
   const { user } = useAuth();
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
 
-  // [PUBLIC MODE 2026-04-30] Auth wall removed — site open to unauthenticated viewers.
-  // Original redirect: if (!appAuthLoading && !appUser) setLocation("/");
-  // Age modal still shown for logged-in users who haven't accepted terms.
-  useEffect(() => { if (!appAuthLoading && appUser && !appUser.termsAccepted) setShowAgeModal(true); }, [appAuthLoading, appUser]);
+  // Auth guard: unauthenticated users are redirected to the paywall landing page.
+  // Age modal shown for logged-in users who haven't accepted terms.
+  useEffect(() => {
+    if (!appAuthLoading && !appUser) {
+      setLocation("/");
+      return;
+    }
+    if (!appAuthLoading && appUser && !appUser.termsAccepted) setShowAgeModal(true);
+  }, [appAuthLoading, appUser, setLocation]);
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false);

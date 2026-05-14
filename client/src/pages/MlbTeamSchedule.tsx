@@ -29,6 +29,7 @@ import React, { useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { MLB_BY_AN_SLUG } from "@shared/mlbTeams";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { ArrowLeft, RefreshCw, Calendar, TrendingUp, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -463,6 +464,12 @@ export default function MlbTeamSchedule() {
   const params = useParams<{ slug: string }>();
   const [, navigate] = useLocation();
   const teamSlug = params.slug ?? "";
+
+  // Auth guard: unauthenticated users are redirected to the paywall landing page.
+  const { appUser, loading: appAuthLoading } = useAppAuth();
+  useEffect(() => {
+    if (!appAuthLoading && !appUser) navigate("/");
+  }, [appAuthLoading, appUser, navigate]);
 
   const teamInfo = MLB_BY_AN_SLUG.get(teamSlug);
 

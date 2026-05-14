@@ -23,9 +23,9 @@ import MlbBacktest from "@/pages/MlbBacktest";
 function Router() {
   return (
     <Switch>
-      {/* [PUBLIC MODE 2026-04-30] Landing page deactivated — / redirects directly to feed */}
-      <Route path="/">{() => <Redirect to="/feed" />}</Route>
-      {/* Landing page preserved at /home if needed */}
+      {/* Paywall landing page — unauthenticated users land here, authenticated users auto-redirect to /feed */}
+      <Route path="/" component={Home} />
+      {/* /home alias for the landing page */}
       <Route path="/home" component={Home} />
       {/* Legacy redirects */}
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
@@ -34,8 +34,8 @@ function Router() {
       <Route path="/splits">{() => <Redirect to="/feed" />}</Route>
       {/* Unified feed page (AI Model Projections) */}
       <Route path="/feed" component={ModelProjections} />
-      {/* Legacy /login redirect to feed (public mode) */}
-      <Route path="/login">{() => <Redirect to="/feed" />}</Route>
+      {/* /login → paywall landing (unauthenticated users sign in from Home) */}
+      <Route path="/login">{() => <Redirect to="/" />}</Route>
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/publish" component={PublishProjections} />
       <Route path="/admin/ingest-an" component={IngestAnOdds} />
