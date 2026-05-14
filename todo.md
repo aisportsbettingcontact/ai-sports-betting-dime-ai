@@ -3261,3 +3261,10 @@
 - [x] Home.tsx: same fix + add id/name attributes + fix bullet placeholder
 - [x] ResetPassword.tsx: both new-password and confirm-password fields fixed
 - [x] UserManagement.tsx: admin create/edit password field fixed
+
+## Session: 2026-05-14 — Login hardening (3 improvements)
+- [x] Fix 1: Add id="home-login-username" and name="username" to Home.tsx username input for Safari AutoFill matching
+- [x] Fix 2: Harden ForgotPasswordModal for iOS Safari — add noValidate to form, replace required+minLength with aria-required+onInvalid on email input
+- [x] Fix 3: Backend — export loginRateMap, LOGIN_RATE_MAX_FAILURES, LOGIN_RATE_WINDOW_MS; extend checkLoginRateLimit to return lockoutUntil; add getLoginStatus publicProcedure
+- [x] Fix 3: Frontend — create LoginAttemptBanner component with attempt counter + lockout countdown; wire into Home.tsx and LoginModal.tsx
+- [x] Fix 3: Tests — 11 new vitest tests in loginStatus.test.ts (all passing)

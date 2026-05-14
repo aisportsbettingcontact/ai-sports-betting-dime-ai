@@ -8,6 +8,7 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { toast } from "sonner";
 import { formatMutationError } from "@/lib/errorUtils";
 import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
+import { LoginAttemptBanner } from "@/components/LoginAttemptBanner";
 
 const FEATURES = [
   {
@@ -46,6 +47,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
+  const [loginFailureTrigger, setLoginFailureTrigger] = useState(0);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +81,7 @@ export default function Home() {
       setLocation("/feed");
     },
     onError: (e) => {
+      setLoginFailureTrigger(prev => prev + 1);
       toast.error(formatMutationError(e));
     },
   });
@@ -200,6 +203,8 @@ export default function Home() {
                 </label>
                 <input
                   type="text"
+                  id="home-login-username"
+                  name="username"
                   value={credential}
                   onChange={(e) => setCredential(e.target.value)}
                   placeholder="@username or email"
@@ -260,6 +265,7 @@ export default function Home() {
                 <span className="text-xs text-muted-foreground">Stay logged in</span>
               </label>
 
+              <LoginAttemptBanner failureTrigger={loginFailureTrigger} />
               <button type="submit"
                 disabled={loginMutation.isPending}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"

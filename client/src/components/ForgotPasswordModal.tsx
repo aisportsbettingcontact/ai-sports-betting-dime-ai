@@ -99,7 +99,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
+          <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 mt-2">
             <div className="flex flex-col gap-1.5">
               <Label
                 htmlFor="fp-identifier"
@@ -117,8 +117,8 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 onChange={(e) => setIdentifier(e.target.value)}
                 disabled={requestReset.isPending}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400"
-                required
-                minLength={1}
+                aria-required="true"
+                onInvalid={(e) => e.preventDefault()}
                 maxLength={320}
               />
             </div>

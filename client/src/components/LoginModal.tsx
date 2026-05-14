@@ -13,6 +13,7 @@ import { Eye, EyeOff, LogIn, Loader2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
+import { LoginAttemptBanner } from "./LoginAttemptBanner";
 
 interface LoginModalProps {
   onClose: () => void;
@@ -24,6 +25,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
+  const [loginFailureTrigger, setLoginFailureTrigger] = useState(0);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const loginMutation = trpc.appUsers.login.useMutation({
@@ -37,6 +39,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
       }
     },
     onError: (err) => {
+      setLoginFailureTrigger(prev => prev + 1);
       // Server throws TRPCError with UNAUTHORIZED/FORBIDDEN on bad credentials
       const msg = err.message ?? "Login failed. Please try again.";
       if (msg.includes("Invalid credentials")) {
@@ -163,6 +166,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
             <span className="text-xs text-muted-foreground">Stay logged in</span>
           </label>
 
+          <LoginAttemptBanner failureTrigger={loginFailureTrigger} />
           <button
             type="submit"
             disabled={loginMutation.isPending}

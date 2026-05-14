@@ -348,7 +348,33 @@ export const appUsersRouter = router({
       };
     }),
 
-  logout: publicProcedure.mutation(async ({ ctx }) => {
+  /**
+   * getLoginStatus — read-only rate-limit status for the requesting IP.
+   *
+   * [INPUT]  req.ip (extracted from context)
+   * [OUTPUT] { remainingAttempts, lockoutUntil, maxAttempts, isLockedOut }
+   * [VERIFY] No side effects — does NOT record a failure attempt
+   */
+  getLoginStatus: publicProcedure.query(({ ctx }) => {
+    const ip =
+      (ctx.req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ??
+      (ctx.req.socket as any)?.remoteAddress ??
+      (ctx.req as any).ip ??
+      'unknown';
+    const result = checkLoginRateLimit(ip);
+    console.log(
+      `[getLoginStatus] IP=${ip} remaining=${result.remainingAttempts} ` +
+      `locked=${!result.allowed} lockoutUntil=${result.lockoutUntil}`
+    );
+    return {
+      remainingAttempts: result.remainingAttempts,
+      lockoutUntil: result.lockoutUntil,
+      maxAttempts: LOGIN_RATE_MAX_FAILURES,
+      isLockedOut: !result.allowed,
+    };
+  }),
+
+    logout: publicProcedure.mutation(async ({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);
     // Invalidate user cache on logout so stale entries don't persist
     const token = getAppCookie(ctx.req);
@@ -840,13 +866,13 @@ export const LOGIN_RATE_MAX_FAILURES = 10;           // max failures per window
  * Side effect: appends the current timestamp to the failure list if allowed.
  * Call this BEFORE the password check; call recordLoginFailure() on auth failure.
  */
-export function checkLoginRateLimit(ip: string): { allowed: boolean; remainingAttempts: number } {
+export function checkLoginRateLimit(ip: string): { allowed: boolean; remainingAttempts: number; lockoutUntil: number | null } {
   const now = Date.now();
   const entry = loginRateMap.get(ip);
 
   if (!entry) {
     // First attempt from this IP — allow
-    return { allowed: true, remainingAttempts: LOGIN_RATE_MAX_FAILURES };
+    return { allowed: true, remainingAttempts: LOGIN_RATE_MAX_FAILURES, lockoutUntil: null };
   }
 
   // Prune expired timestamps
@@ -860,10 +886,11 @@ export function checkLoginRateLimit(ip: string): { allowed: boolean; remainingAt
       `[LoginRateLimit] BLOCKED | IP=${ip} failures=${entry.failTimestamps.length} ` +
       `windowResetIn=${windowResetMin}min`
     );
-    return { allowed: false, remainingAttempts: 0 };
+    const lockoutUntil = oldestFailure + LOGIN_RATE_WINDOW_MS;
+    return { allowed: false, remainingAttempts: 0, lockoutUntil };
   }
 
-  return { allowed: true, remainingAttempts: LOGIN_RATE_MAX_FAILURES - entry.failTimestamps.length };
+  return { allowed: true, remainingAttempts: LOGIN_RATE_MAX_FAILURES - entry.failTimestamps.length, lockoutUntil: null };
 }
 
 /**
