@@ -156,14 +156,14 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder="Enter your username or email"
+                placeholder="Enter your username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={requestReset.isPending}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400"
                 aria-required="true"
-                aria-label="Username or email address"
+                aria-label="Username"
                 onInvalid={suppressInvalid}
                 maxLength={320}
               />

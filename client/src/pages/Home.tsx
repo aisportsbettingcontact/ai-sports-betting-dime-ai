@@ -255,14 +255,14 @@ export default function Home() {
                   value={credential}
                   onChange={(e) => setCredential(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="@username or email"
+                  placeholder="@username"
                   autoComplete="username"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                   autoFocus
                   aria-required="true"
-                  aria-label="Username or email address"
+                  aria-label="Username"
                   onInvalid={suppressInvalid}
                   className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
                 />
