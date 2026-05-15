@@ -2086,7 +2086,12 @@ export function GameCard({ game, mode = "full", showModel: showModelProp, onTogg
   // Do NOT recalculate from |modelTotal - bookTotal| — that produces a goal difference (0.49)
   // which is always below the 8pp threshold, suppressing all total edges.
   // For NBA: compute diff from line values as before.
-  const totalDiff = isNhlGame
+  // totalDiff: probability-based edge in percentage points.
+  // For NHL and MLB: use game.totalDiff (set by Python/TS engine from model over/under% vs book break-even%).
+  //   MLB model always sets modelTotal = bookTotal (same line), so line arithmetic gives 0 — useless.
+  //   The edge lives in the ODDS (model P(over) vs book break-even%), not the line.
+  // For NBA: compute from line arithmetic |modelTotal - bookTotal| (model outputs a different line).
+  const totalDiff = (isNhlGame || isMlbGame)
     ? toNum(game.totalDiff)
     : (!isNaN(modelTotal) && !isNaN(bookTotal))
       ? Math.round(Math.abs(modelTotal - bookTotal) * 10) / 10
@@ -2257,10 +2262,11 @@ export function GameCard({ game, mode = "full", showModel: showModelProp, onTogg
 
   const computedTotalEdge: string | null = (() => {
     if (isNaN(totalDiff) || totalDiff <= 0) return "PASS";
-    // For NHL: edge direction must come from model odds at the book's line, NOT from comparing
+    // For NHL and MLB: edge direction must come from model odds at the book's line, NOT from comparing
     // model expected total vs book line. The model could have E_total > book line but still have
-    // P(over) < 50% due to distribution shape. Use game.totalEdge (set by Python engine) for NHL.
-    if (isNhlGame) return game.totalEdge ?? null;
+    // P(over) < 50% due to distribution shape. Use game.totalEdge (set by Python/TS engine) for both.
+    // MLB now writes totalEdge as "OVER {total} [EDGE]" or "UNDER {total} [EDGE]" from mlbModelRunner.
+    if (isNhlGame || isMlbGame) return game.totalEdge ?? null;
     if (isNaN(modelTotal) || isNaN(bookTotal)) return game.totalEdge;
     return modelTotal > bookTotal ? `Over ${bookTotal}` : `Under ${bookTotal}`;
   })();
@@ -2346,9 +2352,10 @@ export function GameCard({ game, mode = "full", showModel: showModelProp, onTogg
       }
     }
 
-    // ── TIER 2: NHL — use computedTotalEdge from Python engine (model odds at book's line) ────────
-    // The Python engine already accounts for distribution shape, so trust its direction for NHL.
-    if (isNhlGame) {
+    // ── TIER 2: NHL/MLB — use computedTotalEdge from model engine (model odds at book's line) ───────
+    // The Python engine already accounts for distribution shape, so trust its direction.
+    // MLB now writes totalEdge as "OVER {total} [EDGE]" or "UNDER {total} [EDGE]" (same format as NHL).
+    if (isNhlGame || isMlbGame) {
       if (!computedTotalEdge || computedTotalEdge === 'PASS') return null;
       const normalized = computedTotalEdge.toUpperCase();
       if (normalized.startsWith('OVER')) return true;
