@@ -3,33 +3,30 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Server-side scraper for Rotogrinders THE BAT X projection tables.
  *
- * Authenticates with Rotogrinders, fetches the grid page, parses the
- * <table> via cheerio, and returns clean structured JSON.
+ * Authenticates with Rotogrinders, fetches the CSV endpoint (NOT the HTML page),
+ * parses the CSV, and returns clean structured JSON.
  *
- * Access is restricted to @prez and @lucianobets only.
+ * WHY CSV INSTEAD OF HTML:
+ *   The HTML pages use virtual/lazy scrolling — only ~33 rows render in the
+ *   initial server-side HTML. The CSV endpoints return the COMPLETE dataset
+ *   (all players, all columns) in a single authenticated request.
+ *
+ * Access is restricted to @prez, @sippi, and @lucianobets only.
  *
  * Route: GET /api/rg-proxy?page=<key>
  * Valid page keys: today-pitchers | today-hitters | tomorrow-pitchers | tomorrow-hitters
  *
  * Response: { columns, rows, updatedAt, title, type }
  *   Each row includes:
- *     NAME        — player name (normalized from PLAYER for pitchers)
- *     PLAYER_ID   — Rotogrinders internal player ID (from href)
- *     MLB_ID      — MLB Stats API player ID (resolved via name lookup, cached)
- *     HEADSHOT_URL — MLB static headshot CDN URL
+ *     NAME          — player name (normalized from PLAYER for pitchers)
+ *     PLAYER_ID     — Rotogrinders internal player ID (from PLAYERID column)
+ *     MLB_ID        — MLB Stats API player ID (resolved via name lookup, cached)
+ *     HEADSHOT_URL  — MLB static headshot CDN URL
  *     TEAM_LOGO_URL — ESPN team logo CDN URL
  *     OPP_LOGO_URL  — ESPN opponent logo CDN URL
- *
- * ROOT CAUSE FIX (2026-05-08):
- *   Pitchers table uses "PLAYER" as column 0, hitters use "NAME".
- *   The old parser filtered rows where row["NAME"] was empty, dropping ALL pitchers.
- *   Fix: detect the name column by checking for "NAME" or "PLAYER", normalize to "NAME".
  */
 
 import type { Express, Request, Response } from "express";
-import * as cheerio from "cheerio";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type CheerioEl = any;
 import { verifyAppUserToken } from "./routers/appUsers";
 import { getAppUserById } from "./db";
 
@@ -43,28 +40,38 @@ const ESPN_LOGO_BASE = "https://a.espncdn.com/i/teamlogos/mlb/500";
 // JACK MAC whitelist: @prez, @sippi, @lucianobets
 const ALLOWED_USERNAMES = new Set(["prez", "lucianobets", "sippi"]);
 
-export const PAGE_CONFIG: Record<string, { slug: string; title: string; type: "pitchers" | "hitters" }> = {
-  "today-pitchers":    { slug: "/grids/standard-projections-the-bat-x-3372510",        title: "Standard Projections — THE BAT X Pitchers (Today)",  type: "pitchers" },
-  "today-hitters":     { slug: "/grids/standard-projections-the-bat-x-hitters-3372512", title: "Standard Projections — THE BAT X Hitters (Today)",   type: "hitters"  },
-  "tomorrow-pitchers": { slug: "/grids/tomorrow-projections-the-bat-x-3375509",         title: "Tomorrow Projections — THE BAT X Pitchers",          type: "pitchers" },
-  "tomorrow-hitters":  { slug: "/grids/tomorrow-projections-the-bat-x-hitters-3375510", title: "Tomorrow Projections — THE BAT X Hitters",           type: "hitters"  },
+/**
+ * PAGE_CONFIG maps page keys to their CSV endpoint IDs and metadata.
+ *
+ * CSV URL format: https://rotogrinders.com/grids/<numeric-id>.csv
+ * The numeric ID is extracted from the grid slug (last segment after the last dash).
+ *
+ * Confirmed working CSV endpoints (verified 2026-05-15):
+ *   today-pitchers:    /grids/standard-projections-the-bat-x-3372510        → 3372510.csv
+ *   today-hitters:     /grids/standard-projections-the-bat-x-hitters-3372512 → 3372512.csv
+ *   tomorrow-pitchers: /grids/tomorrow-projections-the-bat-x-3375509         → 3375509.csv
+ *   tomorrow-hitters:  /grids/tomorrow-projections-the-bat-x-hitters-3375510 → 3375510.csv
+ */
+export const PAGE_CONFIG: Record<string, {
+  slug: string;
+  csvId: string;
+  title: string;
+  type: "pitchers" | "hitters";
+}> = {
+  "today-pitchers":    { slug: "/grids/standard-projections-the-bat-x-3372510",         csvId: "3372510", title: "Standard Projections — THE BAT X Pitchers (Today)",  type: "pitchers" },
+  "today-hitters":     { slug: "/grids/standard-projections-the-bat-x-hitters-3372512",  csvId: "3372512", title: "Standard Projections — THE BAT X Hitters (Today)",   type: "hitters"  },
+  "tomorrow-pitchers": { slug: "/grids/tomorrow-projections-the-bat-x-3375509",          csvId: "3375509", title: "Tomorrow Projections — THE BAT X Pitchers",          type: "pitchers" },
+  "tomorrow-hitters":  { slug: "/grids/tomorrow-projections-the-bat-x-hitters-3375510",  csvId: "3375510", title: "Tomorrow Projections — THE BAT X Hitters",           type: "hitters"  },
 };
 
 // ─── MLB Team Abbreviation → ESPN slug map ────────────────────────────────────
-// ESPN uses lowercase 2-3 letter slugs. Some teams differ from RG abbreviations.
 
 const TEAM_TO_ESPN: Record<string, string> = {
-  // AL East
   BAL: "bal", BOS: "bos", NYY: "nyy", TB: "tb", TBR: "tb", TOR: "tor",
-  // AL Central
   CWS: "chw", CHW: "chw", CLE: "cle", DET: "det", KC: "kc", KCR: "kc", MIN: "min",
-  // AL West
   HOU: "hou", LAA: "laa", ATH: "oak", OAK: "oak", SEA: "sea", TEX: "tex",
-  // NL East
   ATL: "atl", MIA: "mia", NYM: "nym", PHI: "phi", WSH: "wsh", WAS: "wsh",
-  // NL Central
   CHC: "chc", CIN: "cin", MIL: "mil", PIT: "pit", STL: "stl",
-  // NL West
   ARI: "ari", COL: "col", LAD: "lad", SD: "sd", SDP: "sd", SF: "sf", SFG: "sf",
 };
 
@@ -74,7 +81,6 @@ function teamLogoUrl(abbrev: string): string {
 }
 
 // ─── MLB Player ID Cache ──────────────────────────────────────────────────────
-// Maps normalized player name → { mlbId, cachedAt }
 
 interface MlbIdEntry {
   mlbId: number | null;
@@ -197,8 +203,57 @@ export async function getRgSessionCookie(): Promise<string> {
   return cachedRgCookie;
 }
 
-// ─── Fetch with Auto-Retry on 401/403 ────────────────────────────────────────
+// ─── CSV Fetch with Auto-Retry on 401/403 ────────────────────────────────────
 
+export async function fetchRgCsv(csvId: string, cookie: string): Promise<string> {
+  const csvUrl = `${RG_BASE}/grids/${csvId}.csv`;
+  console.log(`[RGProxy] [STEP] Fetching CSV: ${csvUrl}`);
+
+  const res = await fetch(csvUrl, {
+    headers: {
+      "Cookie": cookie,
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+      "Referer": RG_BASE,
+      "Accept": "text/csv,text/plain,*/*",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+  });
+
+  if (res.status === 401 || res.status === 403) {
+    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing cookie cache and retrying`);
+    cachedRgCookie = null;
+    cookieFetchedAt = 0;
+    const freshCookie = await getRgSessionCookie();
+    const retryRes = await fetch(csvUrl, {
+      headers: {
+        "Cookie": freshCookie,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+        "Referer": RG_BASE,
+        "Accept": "text/csv,text/plain,*/*",
+      },
+    });
+    if (!retryRes.ok) throw new Error(`RG CSV returned ${retryRes.status} after re-auth`);
+    return retryRes.text();
+  }
+
+  if (!res.ok) throw new Error(`RG CSV returned ${res.status}`);
+  const text = await res.text();
+
+  // Validate: CSV must start with a header row containing PLAYER or NAME
+  if (!text.trim()) {
+    throw new Error(`RG CSV returned empty response for csvId=${csvId}`);
+  }
+  if (!text.includes("PLAYER") && !text.includes("NAME")) {
+    // Might be a paywall HTML redirect — log and throw
+    console.error(`[RGProxy] [VERIFY] FAIL — CSV response does not contain expected headers. First 200 chars: ${text.substring(0, 200)}`);
+    throw new Error(`RG CSV response appears to be non-CSV (paywall or redirect) for csvId=${csvId}`);
+  }
+
+  console.log(`[RGProxy] [STATE] CSV fetched: ${text.length} bytes, ${text.split("\n").length} lines`);
+  return text;
+}
+
+// Keep fetchRgPage as a legacy export for backward compatibility (jackMacSheetsSync may use it)
 export async function fetchRgPage(pageUrl: string, cookie: string): Promise<string> {
   const res = await fetch(pageUrl, {
     headers: {
@@ -209,29 +264,11 @@ export async function fetchRgPage(pageUrl: string, cookie: string): Promise<stri
       "Accept-Language": "en-US,en;q=0.9",
     },
   });
-
-  if (res.status === 401 || res.status === 403) {
-    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing cookie cache and retrying`);
-    cachedRgCookie = null;
-    cookieFetchedAt = 0;
-    const freshCookie = await getRgSessionCookie();
-    const retryRes = await fetch(pageUrl, {
-      headers: {
-        "Cookie": freshCookie,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
-        "Referer": RG_BASE,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    });
-    if (!retryRes.ok) throw new Error(`RG returned ${retryRes.status} after re-auth`);
-    return retryRes.text();
-  }
-
   if (!res.ok) throw new Error(`RG returned ${res.status}`);
   return res.text();
 }
 
-// ─── HTML → Structured JSON Table Parser ─────────────────────────────────────
+// ─── CSV → Structured JSON Table Parser ──────────────────────────────────────
 
 export interface RgTableData {
   title: string;
@@ -243,163 +280,104 @@ export interface RgTableData {
 }
 
 /**
- * Extract the RG player ID from a player profile href.
- * e.g. "/players/jesus-luzardo-1266776" → "1266776"
+ * Parse a Rotogrinders CSV string into the same RgTableData format
+ * that the old HTML parser produced.
+ *
+ * CSV format (confirmed 2026-05-15):
+ *   Row 0: header — PLAYERID,PLAYER,SALARY,POS,TEAM,OPP,...
+ *   Rows 1+: data — 6109687,"Jack Leiter",7100,SP,TEX,...
+ *
+ * Enrichment added:
+ *   NAME          — normalized from PLAYER column
+ *   PLAYER_ID     — from PLAYERID column
+ *   MLB_ID        — resolved via MLB Stats API
+ *   HEADSHOT_URL  — MLB CDN headshot
+ *   TEAM_LOGO_URL — ESPN team logo
+ *   OPP_LOGO_URL  — ESPN opponent logo
  */
-function extractRgPlayerId(href: string): string {
-  if (!href || href === "#edit-tags") return "";
-  const parts = href.split("-");
-  const last = parts[parts.length - 1];
-  return /^\d+$/.test(last) ? last : "";
-}
-
-export async function parseRgTable(
-  html: string,
+export async function parseRgCsv(
+  csvText: string,
   pageKey: string,
   title: string,
   type: "pitchers" | "hitters"
 ): Promise<RgTableData> {
-  const $ = cheerio.load(html);
+  // ── Parse CSV ─────────────────────────────────────────────────────────────
+  const lines = csvText.trim().split("\n");
+  if (lines.length < 2) {
+    console.warn(`[RGProxy] [VERIFY] WARN — CSV has fewer than 2 lines for page=${pageKey}`);
+    return { title, pageKey, type, updatedAt: "", columns: [], rows: [] };
+  }
 
-  // ── Extract "FPTS Updated" timestamp ─────────────────────────────────────
-  let updatedAt = "";
-  $("*").each(function () {
-    const text = $(this).clone().children().remove().end().text().trim();
-    if (text.startsWith("FPTS Updated:") && !updatedAt) {
-      updatedAt = text.replace("FPTS Updated:", "").trim();
-    }
-  });
-
-  // ── Find the main data table (most <th> columns) ──────────────────────────
-  let $table = $("div[data-role='sortable'] table").first();
-
-  if (!$table.length) {
-    let maxCols = 0;
-    let bestTable: cheerio.Cheerio<Element> | null = null;
-    $("table").each(function () {
-      const cols = $(this).find("thead tr th").length;
-      if (cols > maxCols) {
-        maxCols = cols;
-        bestTable = $(this) as unknown as cheerio.Cheerio<CheerioEl>;
+  // Parse a single CSV line respecting quoted fields
+  function parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
       }
-    });
-    if (bestTable) $table = bestTable;
+    }
+    result.push(current.trim());
+    return result;
   }
 
-  if (!$table.length) {
-    console.warn(`[RGProxy] [VERIFY] WARN — No table found in HTML for page=${pageKey}`);
-    return { title, pageKey, type, updatedAt, columns: [], rows: [] };
-  }
+  const rawHeaders = parseCsvLine(lines[0]);
+  console.log(`[RGProxy] [STATE] CSV headers (${rawHeaders.length}): ${rawHeaders.slice(0, 15).join(", ")}`);
 
-  // ── Extract column headers ────────────────────────────────────────────────
-  const rawColumns: string[] = [];
-  $table.find("thead tr th").each(function () {
-    const dataCol = $(this).attr("data-col") ?? "";
-    const textCol = $(this)
-      .clone()
-      .children("input, select, span.sort-icon, i")
-      .remove()
-      .end()
-      .text()
-      .trim();
-    rawColumns.push(dataCol || textCol || `col_${rawColumns.length}`);
-  });
-
-  // ── Detect name column: pitchers use "PLAYER", hitters use "NAME" ─────────
-  // Normalize "PLAYER" → "NAME" in the output columns array so the frontend
-  // always has a consistent "NAME" column regardless of tab type.
-  const nameColIndex = rawColumns.findIndex(c => c === "NAME" || c === "PLAYER" || c === "name" || c === "player");
-  const columns = rawColumns.map(c => (c === "PLAYER" || c === "player") ? "NAME" : c);
+  // Detect name column: pitchers use "PLAYER", hitters use "NAME"
+  const playerColIdx = rawHeaders.findIndex(h => h === "PLAYER" || h === "NAME");
+  const playerIdColIdx = rawHeaders.findIndex(h => h === "PLAYERID");
+  const teamColIdx = rawHeaders.findIndex(h => h === "TM" || h === "TEAM");
+  const oppColIdx = rawHeaders.findIndex(h => h === "OPP_TM" || h === "OPP");
 
   console.log(
-    `[RGProxy] [STATE] page=${pageKey} rawNameCol="${rawColumns[nameColIndex]}" idx=${nameColIndex} totalCols=${columns.length}`
-  );
-  console.log(
-    `[RGProxy] [STATE] Columns[0..11]: ${columns.slice(0, 12).join(", ")}`
+    `[RGProxy] [STATE] page=${pageKey} playerColIdx=${playerColIdx} playerIdColIdx=${playerIdColIdx} teamColIdx=${teamColIdx} oppColIdx=${oppColIdx}`
   );
 
-  // ── Extract data rows ─────────────────────────────────────────────────────
+  // Normalize "PLAYER" → "NAME" in the columns array for frontend consistency
+  const normalizedHeaders = rawHeaders.map(h => (h === "PLAYER" ? "NAME" : h));
+
+  // ── Parse data rows ───────────────────────────────────────────────────────
   const rawRows: { row: Record<string, string>; playerName: string; teamAbbrev: string; oppAbbrev: string }[] = [];
 
-  $table.find("tbody tr").each(function () {
-    const $tr = $(this);
-    const tds = $tr.find("td");
-    if (!tds.length) return;
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
 
+    const cells = parseCsvLine(line);
     const row: Record<string, string> = {};
 
-    // Carry over <tr> data attributes
-    const trTeam = $tr.attr("data-team");
-    const trPos  = $tr.attr("data-position");
-    const trSchedule = $tr.attr("data-schedule");
-    if (trTeam)     row["_team"]      = trTeam;
-    if (trPos)      row["_position"]  = trPos;
-    if (trSchedule) row["_schedule"]  = trSchedule;
-
-    let playerName = "";
-    let rgPlayerId = "";
-
-    tds.each(function (i: number) {
-      const rawCol = rawColumns[i] ?? `col_${i}`;
-      const col    = columns[i]    ?? `col_${i}`;
-      const $td    = $(this);
-
-      // ── Boolean checkmark cells ─────────────────────────────────────────
-      if ($td.hasClass("truefalse") || $td.attr("data-type") === "bool") {
-        row[col] = $td.find("i, span").length > 0 ? "true" : ($td.text().trim() ? "true" : "false");
-        return;
-      }
-
-      // ── NAME / PLAYER cell ──────────────────────────────────────────────
-      // Hitters: <td><span>Player Name</span><span data-auth="analyst">...</span></td>
-      // Pitchers: <td><a href="/players/slug-ID">Player Name</a><span data-auth="analyst">...</span></td>
-      if (rawCol === "NAME" || rawCol === "name" || rawCol === "PLAYER" || rawCol === "player") {
-        const $link = $td.find("a[href^='/players/']").first();
-        if ($link.length) {
-          // Pitcher structure: name is in the link text
-          playerName = $link.text().trim();
-          rgPlayerId = extractRgPlayerId($link.attr("href") ?? "");
-          row[col] = playerName;
-        } else {
-          // Hitter structure: name is in the first <span>
-          const $firstSpan = $td.find("span").first();
-          playerName = $firstSpan.length ? $firstSpan.text().trim() : $td.text().trim().split("\n")[0]?.trim() ?? "";
-          // For hitters, try to extract player ID from the data-pointer attribute (base64 encoded URL)
-          const $authSpan = $td.find("span[data-auth]");
-          const pointer = $authSpan.find("a").attr("data-pointer") ?? "";
-          if (pointer) {
-            try {
-              const decoded = Buffer.from(pointer, "base64").toString("utf8");
-              // URL contains player ID: /tags/1086660?
-              const match = decoded.match(/\/tags\/(\d+)/);
-              if (match) rgPlayerId = match[1];
-            } catch { /* ignore */ }
-          }
-          row[col] = playerName;
-        }
-        row["PLAYER_ID"] = rgPlayerId;
-        return;
-      }
-
-      // ── Default: raw text content ────────────────────────────────────────
-      row[col] = $td.text().trim().replace(/\s+/g, " ");
-    });
-
-    // Only include rows with a non-empty NAME
-    if (row["NAME"]) {
-      rawRows.push({
-        row,
-        playerName: row["NAME"],
-        teamAbbrev: row["TEAM"] ?? row["_team"] ?? "",
-        oppAbbrev:  row["OPP_TM"] ?? row["OPP"] ?? "",
-      });
+    for (let j = 0; j < normalizedHeaders.length; j++) {
+      row[normalizedHeaders[j]] = cells[j] ?? "";
     }
-  });
 
-  console.log(`[RGProxy] [STATE] Raw rows with NAME: ${rawRows.length}`);
+    const playerName = row["NAME"] ?? "";
+    if (!playerName) continue;
 
-  // ── Resolve MLB IDs and build headshot/logo URLs in parallel ─────────────
-  // Batch MLB ID lookups: deduplicate by name to avoid redundant API calls
+    // PLAYER_ID from PLAYERID column
+    row["PLAYER_ID"] = row["PLAYERID"] ?? "";
+
+    const teamAbbrev = cells[teamColIdx] ?? "";
+    const oppAbbrev  = cells[oppColIdx]  ?? "";
+
+    rawRows.push({ row, playerName, teamAbbrev, oppAbbrev });
+  }
+
+  console.log(`[RGProxy] [STATE] Parsed rows with NAME: ${rawRows.length}`);
+
+  // ── Resolve MLB IDs in parallel ───────────────────────────────────────────
   const uniqueNames = Array.from(new Set(rawRows.map(r => r.playerName)));
   console.log(`[RGProxy] [STEP] Resolving MLB IDs for ${uniqueNames.length} unique players...`);
 
@@ -426,17 +404,38 @@ export async function parseRgTable(
     };
   });
 
-  // ── Build final columns list (add enriched columns at front) ──────────────
-  // Insert enriched columns right after NAME so they appear first in the table
+  // ── Build final columns list (enriched columns at front) ──────────────────
   const enrichedCols = ["NAME", "HEADSHOT_URL", "MLB_ID", "PLAYER_ID", "TEAM_LOGO_URL", "OPP_LOGO_URL"];
-  const remainingCols = columns.filter(c => !enrichedCols.includes(c));
+  const remainingCols = normalizedHeaders.filter(c => !enrichedCols.includes(c) && c !== "PLAYERID");
   const finalColumns = [...enrichedCols, ...remainingCols];
 
   console.log(
     `[RGProxy] [OUTPUT] page=${pageKey} finalColumns=${finalColumns.length} rows=${rows.length}`
   );
 
+  // updatedAt is not in the CSV — use current timestamp
+  const updatedAt = new Date().toLocaleString("en-US", { timeZone: "America/New_York", hour12: true });
+
   return { title, pageKey, type, updatedAt, columns: finalColumns, rows };
+}
+
+// Keep parseRgTable as a legacy export for backward compatibility
+export async function parseRgTable(
+  html: string,
+  pageKey: string,
+  title: string,
+  type: "pitchers" | "hitters"
+): Promise<RgTableData> {
+  // Redirect to CSV-based parser — html param is ignored
+  // This function is kept for backward compatibility with jackMacSheetsSync.ts
+  console.warn(`[RGProxy] parseRgTable called — redirecting to parseRgCsv (html parsing deprecated)`);
+  const pageConf = PAGE_CONFIG[pageKey];
+  if (!pageConf) {
+    return { title, pageKey, type, updatedAt: "", columns: [], rows: [] };
+  }
+  const cookie = await getRgSessionCookie();
+  const csvText = await fetchRgCsv(pageConf.csvId, cookie);
+  return parseRgCsv(csvText, pageKey, title, type);
 }
 
 // ─── Express Route Registration ───────────────────────────────────────────────
@@ -492,8 +491,7 @@ export function registerRgProxyRoute(app: Express): void {
       return;
     }
 
-    const pageUrl = `${RG_BASE}${pageConf.slug}#expand`;
-    console.log(`[RGProxy] [INPUT] user=@${appUser.username} page=${pageKey} url=${pageUrl}`);
+    console.log(`[RGProxy] [INPUT] user=@${appUser.username} page=${pageKey} csvId=${pageConf.csvId}`);
 
     // ── Step 4: Get Rotogrinders session cookie ───────────────────────────────
     let rgCookie: string;
@@ -505,19 +503,19 @@ export function registerRgProxyRoute(app: Express): void {
       return;
     }
 
-    // ── Step 5: Fetch the page ────────────────────────────────────────────────
-    let html: string;
+    // ── Step 5: Fetch the CSV (complete dataset, no lazy-loading issues) ──────
+    let csvText: string;
     try {
-      html = await fetchRgPage(pageUrl, rgCookie);
-      console.log(`[RGProxy] [STATE] Fetched HTML: ${html.length} bytes`);
+      csvText = await fetchRgCsv(pageConf.csvId, rgCookie);
+      console.log(`[RGProxy] [STATE] Fetched CSV: ${csvText.length} bytes`);
     } catch (err) {
-      console.error("[RGProxy] [VERIFY] FAIL — Fetch error:", (err as Error).message);
-      res.status(502).json({ error: "Failed to fetch from Rotogrinders" });
+      console.error("[RGProxy] [VERIFY] FAIL — CSV fetch error:", (err as Error).message);
+      res.status(503).json({ error: (err as Error).message });
       return;
     }
 
-    // ── Step 6: Parse table + enrich with MLB IDs / headshots / logos ─────────
-    const tableData = await parseRgTable(html, pageKey, pageConf.title, pageConf.type);
+    // ── Step 6: Parse CSV + enrich with MLB IDs / headshots / logos ───────────
+    const tableData = await parseRgCsv(csvText, pageKey, pageConf.title, pageConf.type);
 
     const elapsed = Date.now() - startMs;
     console.log(
@@ -531,5 +529,5 @@ export function registerRgProxyRoute(app: Express): void {
     res.status(200).json(tableData);
   });
 
-  console.log("[RGProxy] Route registered: GET /api/rg-proxy?page=<key> → JSON table data");
+  console.log("[RGProxy] Route registered: GET /api/rg-proxy?page=<key> → JSON table data (CSV-based)");
 }
