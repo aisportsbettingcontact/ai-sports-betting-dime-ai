@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "smoke-test": "node -e \"import('./dist/index.js').then(() => { console.log('[SMOKE] Server initialized without crash'); process.exit(0); }).catch(e => { console.error('[SMOKE] CRASH:', e.message); process.exit(1); })\" & sleep 8 && kill %1 2>/dev/null; wait",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "postinstall": "pip3 install -r requirements.txt -q 2>/dev/null || true"
   },
