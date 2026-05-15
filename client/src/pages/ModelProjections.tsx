@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useUrlState, type Sport } from "@/hooks/useUrlState";
-import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle, BookOpen } from "lucide-react";
+import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -20,6 +20,7 @@ import MlbPropsCard, { type StrikeoutPropRow } from "@/components/MlbPropsCard";
 import MlbF5NrfiCard, { type F5NrfiGame } from "@/components/MlbF5NrfiCard";
 import MlbCheatSheetCard, { type CheatSheetGame, CheatSheetView, type CheatSheetLineup } from "@/components/MlbCheatSheetCard";
 import MlbHrPropsCard, { type HrPropRow } from "@/components/MlbHrPropsCard";
+import JackMacView from "@/components/JackMacView";
 import { AgeModal } from "@/components/AgeModal";
 import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
@@ -263,27 +264,15 @@ export default function ModelProjections() {
   // ── Feed-wide mobile tab filter ───────────────────────────────────────────
   // Tabs: MODEL PROJECTIONS (dual) | BETTING SPLITS (splits) | LINEUPS (lineups, MLB only)
   //       K PROPS (props, MLB only) | F5/NRFI (f5nrfi, MLB only) | HR PROPS (hrprops, MLB only)
-  type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';
+  //       JACK MAC (jackmac, MLB only, whitelist: prez/sippi/lucianobets)
+  type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops' | 'jackmac';
   // feedMobileTab now comes from URL params (via useUrlState), with localStorage fallback
   const feedMobileTab = urlFeedMobileTab;
   const handleFeedTabChange = (next: FeedMobileTab) => {
     setUrlFeedMobileTab(next);
   };
   const feedIsDual = feedMobileTab === 'dual';
-  // Tabs: MODEL PROJECTIONS | BETTING SPLITS | LINEUPS (MLB only) | K PROPS (MLB only) | F5/NRFI (MLB only) | HR PROPS (MLB only)
-  const FEED_TABS: { id: FeedMobileTab; label: string }[] = selectedSport === 'MLB'
-    ? [
-        { id: 'dual',    label: 'PROJECTIONS' },
-        { id: 'splits',  label: 'SPLITS' },
-        { id: 'lineups', label: 'LINEUPS' },
-        { id: 'props',   label: 'K PROPS' },
-        { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
-        { id: 'hrprops', label: 'HR PROPS' },
-      ]
-    : [
-        { id: 'dual',   label: 'MODEL PROJECTIONS' },
-        { id: 'splits', label: 'BETTING SPLITS' },
-      ];
+  // FEED_TABS is built after appUser is declared (see below — canSeeJackMac depends on appUser)
 
   // ── Favorites tab ──────────────────────────────────────────────────────────
   const [showFavoritesTab, setShowFavoritesTab] = useState(false);
@@ -374,6 +363,28 @@ export default function ModelProjections() {
 
   const { user, isAuthenticated } = useAuth();
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
+
+  // ── JACK MAC whitelist + FEED_TABS (requires appUser) ─────────────────────
+  // JACK MAC tab is MLB-only and visible only to @prez, @sippi, @lucianobets.
+  // Must be defined after appUser to avoid TS2448 block-scoped-before-declaration.
+  const JACK_MAC_WHITELIST = new Set(['prez', 'sippi', 'lucianobets']);
+  const canSeeJackMac = Boolean(appUser && JACK_MAC_WHITELIST.has(appUser.username));
+  // Tabs: MODEL PROJECTIONS | BETTING SPLITS | LINEUPS (MLB only) | K PROPS (MLB only)
+  //       F5/NRFI (MLB only) | HR PROPS (MLB only) | JACK MAC (MLB only, whitelist)
+  const FEED_TABS: { id: FeedMobileTab; label: string }[] = selectedSport === 'MLB'
+    ? [
+        { id: 'dual',    label: 'PROJECTIONS' },
+        { id: 'splits',  label: 'SPLITS' },
+        { id: 'lineups', label: 'LINEUPS' },
+        { id: 'props',   label: 'K PROPS' },
+        { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
+        { id: 'hrprops', label: 'HR PROPS' },
+        ...(canSeeJackMac ? [{ id: 'jackmac' as FeedMobileTab, label: 'JACK MAC' }] : []),
+      ]
+    : [
+        { id: 'dual',   label: 'MODEL PROJECTIONS' },
+        { id: 'splits', label: 'BETTING SPLITS' },
+      ];
 
   // Age modal shown for logged-in users who haven't accepted terms.
   // NOTE: No auth guard redirect — the feed is fully public. Unauthenticated users see the feed.
@@ -910,11 +921,7 @@ export default function ModelProjections() {
                           <BarChart2 className="w-3.5 h-3.5 text-emerald-400" /> Bet Tracker
                         </button>
                       )}
-                      {(appUser.username === "prez" || appUser.username === "lucianobets") && (
-                        <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/resources"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                          <BookOpen className="w-3.5 h-3.5 text-violet-400" /> RESOURCES
-                        </button>
-                      )}
+                      {/* RESOURCES removed — content migrated to JACK MAC tab in main feed */}
                       {isOwner && (
                         <>
                           <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/publish"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
@@ -1389,6 +1396,9 @@ export default function ModelProjections() {
                     ))}
                   </div>
                 )
+              ) : feedMobileTab === 'jackmac' && selectedSport === 'MLB' && canSeeJackMac ? (
+                /* ── JACK MAC VIEW (whitelist: prez/sippi/lucianobets) ── */
+                <JackMacView appUser={appUser} />
               ) : (
                 /* ── PROJECTIONS / SPLITS VIEW ── */
                 gamesLoading ? (

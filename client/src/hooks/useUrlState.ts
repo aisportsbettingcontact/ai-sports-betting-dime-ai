@@ -10,11 +10,11 @@ import { useSearch, useLocation } from "wouter";
 import { todayUTC } from "@/components/CalendarPicker";
 
 export type Sport = "MLB" | "NHL" | "NBA";
-export type FeedMobileTab = "dual" | "splits" | "lineups" | "props" | "f5nrfi" | "hrprops";
+export type FeedMobileTab = "dual" | "splits" | "lineups" | "props" | "f5nrfi" | "hrprops" | "jackmac";
 export type GameStatus = "upcoming" | "live" | "final";
 
 const VALID_SPORTS: Sport[] = ["MLB", "NHL", "NBA"];
-const VALID_TABS: FeedMobileTab[] = ["dual", "splits", "lineups", "props", "f5nrfi", "hrprops"];
+const VALID_TABS: FeedMobileTab[] = ["dual", "splits", "lineups", "props", "f5nrfi", "hrprops", "jackmac"];
 const VALID_STATUSES: GameStatus[] = ["upcoming", "live", "final"];
 const FEED_TAB_KEY = "prez_bets_mobile_tab_v4";
 
