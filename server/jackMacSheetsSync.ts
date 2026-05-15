@@ -27,15 +27,15 @@ import { google } from "googleapis";
 import {
   PAGE_CONFIG,
   getRgSessionCookie,
-  fetchRgPage,
-  parseRgTable,
+  fetchRgCsv,
+  parseRgCsv,
   type RgTableData,
 } from "./rotogrinderProxy";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SPREADSHEET_ID = "1lUlFy--SwMHrMKxRiJmvkFePbdBO4PDJvrw0OKDY3Hw";
-const RG_BASE = "https://rotogrinders.com";
+
 
 // Maps PAGE_CONFIG keys → exact Google Sheet tab names
 const PAGE_TO_SHEET_TAB: Record<string, string> = {
@@ -221,16 +221,15 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
     console.log(`\n[SheetsSync] [STEP] Processing page="${pageKey}" → tab="${sheetTab}"`);
 
     try {
-      // 3a. Fetch HTML from Rotogrinders
-      const pageUrl = `${RG_BASE}${pageConf.slug}#expand`;
-      console.log(`[SheetsSync] [INPUT] Fetching: ${pageUrl}`);
-      const html = await fetchRgPage(pageUrl, rgCookie);
-      console.log(`[SheetsSync] [STATE] Fetched ${html.length} bytes for page="${pageKey}"`);
+      // 3a. Fetch CSV from Rotogrinders (complete dataset, no lazy-loading)
+      console.log(`[SheetsSync] [INPUT] Fetching CSV for page="${pageKey}" csvId=${pageConf.csvId}`);
+      const csvText = await fetchRgCsv(pageConf.csvId, rgCookie);
+      console.log(`[SheetsSync] [STATE] Fetched ${csvText.length} bytes CSV for page="${pageKey}"`);
 
-      // 3b. Parse table
-      const tableData = await parseRgTable(html, pageKey, pageConf.title, pageConf.type);
+      // 3b. Parse CSV
+      const tableData = await parseRgCsv(csvText, pageKey, pageConf.title, pageConf.type);
       console.log(
-        `[SheetsSync] [STATE] Parsed page="${pageKey}": ${tableData.rows.length} rows, ${tableData.columns.length} cols, updatedAt="${tableData.updatedAt}"`
+        `[SheetsSync] [STATE] Parsed CSV page="${pageKey}": ${tableData.rows.length} rows, ${tableData.columns.length} cols`
       );
 
       if (tableData.rows.length === 0) {
