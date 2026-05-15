@@ -40,7 +40,8 @@ const MLB_STATS_API = "https://statsapi.mlb.com/api/v1";
 const MLB_HEADSHOT_BASE = "https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_96,q_auto:best/v1/people";
 const ESPN_LOGO_BASE = "https://a.espncdn.com/i/teamlogos/mlb/500";
 
-const ALLOWED_USERNAMES = new Set(["prez", "lucianobets"]);
+// JACK MAC whitelist: @prez, @sippi, @lucianobets
+const ALLOWED_USERNAMES = new Set(["prez", "lucianobets", "sippi"]);
 
 const PAGE_CONFIG: Record<string, { slug: string; title: string; type: "pitchers" | "hitters" }> = {
   "today-pitchers":    { slug: "/grids/standard-projections-the-bat-x-3372510",        title: "Standard Projections — THE BAT X Pitchers (Today)",  type: "pitchers" },

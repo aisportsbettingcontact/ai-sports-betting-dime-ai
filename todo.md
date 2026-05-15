@@ -3279,3 +3279,12 @@
 - [x] ResetPassword.tsx: remove name attrs, always type="password" + webkit-text-security on both password fields
 - [x] ForgotPasswordModal.tsx: remove name attr, autoComplete="off" on identifier input
 - [x] TypeScript: 0 errors | Tests: 655/655 pass
+
+## Session: 2026-05-15 — JACK MAC Tab
+- [x] useUrlState.ts: add 'jackmac' to FeedMobileTab type and VALID_TABS
+- [x] ModelProjections.tsx: add JACK MAC tab to FEED_TABS (MLB only, whitelist-gated render)
+- [x] ModelProjections.tsx: add JACK MAC view section (inline Resources content, all 4 sub-tabs)
+- [x] ModelProjections.tsx: remove RESOURCES dropdown entry
+- [x] rotogrinderProxy.ts: add 'sippi' to ALLOWED_USERNAMES
+- [x] Resources.tsx: add 'sippi' to ALLOWED set (fallback page still accessible)
+- [x] TypeScript: 0 errors | Tests: 655/655 passed
