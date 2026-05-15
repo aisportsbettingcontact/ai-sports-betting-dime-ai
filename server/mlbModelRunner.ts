@@ -2199,6 +2199,65 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       );
     }
 
+    // ── MLB TOTAL EDGE DETECTION ─────────────────────────────────────────────────
+    // Uses the same break-even formula as RL edge detection.
+    // modelOverProb  = r.over_pct  / 100  (from Python Monte Carlo simulation)
+    // modelUnderProb = r.under_pct / 100
+    // bookBreakEvenOver  = |bookOverOdds|  / (|bookOverOdds|  + 100) for negative odds
+    //                    = 100 / (bookOverOdds  + 100) for positive odds
+    // edgeOver  = modelOverProb  - bookBreakEvenOver   (positive = over has edge)
+    // edgeUnder = modelUnderProb - bookBreakEvenUnder  (positive = under has edge)
+    // totalDiff = max(edgeOver, edgeUnder) * 100  [in probability points]
+    // totalEdge = "OVER {bookTotal}" or "UNDER {bookTotal}" (anchored to book line)
+    const _mlbOverPct  = r.over_pct  / 100;  // 0-1 scale
+    const _mlbUnderPct = r.under_pct / 100;  // 0-1 scale
+    // Use live book O/U odds for break-even computation (same pattern as RL odds)
+    const _bkOverOddsRaw  = dbGame?.overOdds  ?? null;
+    const _bkUnderOddsRaw = dbGame?.underOdds ?? null;
+    const _bkOverOddsNum  = parseFloat(String(_bkOverOddsRaw  ?? ''));
+    const _bkUnderOddsNum = parseFloat(String(_bkUnderOddsRaw ?? ''));
+    let mlbTotalDiff: string | null = null;
+    let mlbTotalEdge: string | null = null;
+    if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
+      const _bkOverBreakEven  = _americanBreakEven(_bkOverOddsNum);
+      const _bkUnderBreakEven = _americanBreakEven(_bkUnderOddsNum);
+      if (_bkOverBreakEven !== null && _bkUnderBreakEven !== null) {
+        const edgeOver  = _mlbOverPct  - _bkOverBreakEven;   // positive = over edge
+        const edgeUnder = _mlbUnderPct - _bkUnderBreakEven;  // positive = under edge
+        const bestTotalEdge = Math.max(edgeOver, edgeUnder);
+        // Anchor total label to book total (not model total)
+        const _totalLabel = (() => {
+          const liveTotal = liveBookTotalMap.get(r.db_id);
+          if (liveTotal != null && !isNaN(liveTotal)) return String(liveTotal);
+          const snapTotal = dbGameById.get(r.db_id)?.bookTotal;
+          if (snapTotal != null) return String(snapTotal);
+          return String(r.total_line);
+        })();
+        if (bestTotalEdge > 0) {
+          mlbTotalDiff = String(Math.round(bestTotalEdge * 1000) / 10);  // pp with 1 decimal
+          mlbTotalEdge = edgeOver >= edgeUnder
+            ? `OVER ${_totalLabel} [EDGE]`
+            : `UNDER ${_totalLabel} [EDGE]`;
+          console.log(
+            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE] ` +
+            `overEdge=${(edgeOver*100).toFixed(2)}pp underEdge=${(edgeUnder*100).toFixed(2)}pp ` +
+            `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
+          );
+        } else {
+          mlbTotalDiff = String(Math.round(bestTotalEdge * 1000) / 10);  // negative = no edge
+          console.log(
+            `${TAG} [${r.db_id}] ${r.game} — [TOTAL NO EDGE] ` +
+            `overEdge=${(edgeOver*100).toFixed(2)}pp underEdge=${(edgeUnder*100).toFixed(2)}pp → PASS`
+          );
+        }
+      }
+    } else {
+      console.warn(
+        `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE] SKIP: book O/U odds unavailable ` +
+        `(overOdds=${_bkOverOddsRaw} underOdds=${_bkUnderOddsRaw})`
+      );
+    }
+
     // ── RL SIGN FLIP / INVARIANT VIOLATION: skip model write, clear modelRunAt ──
     // When rlSignFlipDetected=true, the simulation ran with the wrong rl_home_spread.
     // All RL-derived fields (modelHomeSpreadOdds, modelAwaySpreadOdds, spreadDiff,
@@ -2245,6 +2304,11 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           // GameCard uses game.spreadDiff for MLB (like NHL) — line arithmetic is invalid for ±1.5
           spreadDiff:           mlbSpreadDiff ?? undefined,
           spreadEdge:           mlbSpreadEdge ?? undefined,
+          // ── Total Edge (probability-based, same formula as RL edge) ─────────────────────
+          // totalDiff = probability edge in pp (model over/under% - book break-even%)
+          // totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
+          totalDiff:            mlbTotalDiff ?? undefined,
+          totalEdge:            mlbTotalEdge ?? undefined,
           // ── Total (ALWAYS anchored to book O/U line, NOT model-derived line) ────────────
           // CRITICAL: modelTotal MUST equal bookTotal so displayed model line matches book line.
           // r.total_line = Python's optimal line (may differ from book by 0.5) — NEVER use this.
