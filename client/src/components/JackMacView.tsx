@@ -1,17 +1,16 @@
 /**
  * JackMacView.tsx — Inline JACK MAC tab component.
  *
- * Embeds all 4 Rotogrinders THE BAT X projection sub-tabs directly inside the
- * main feed tab bar (MLB only). Access is restricted to @prez, @sippi, and
- * @lucianobets. Any other user (logged in or not) who somehow reaches this
- * component sees an Access Denied wall — the tab itself is never rendered in
- * the tab bar for non-whitelisted users.
+ * Embeds all 4 Rotogrinders THE BAT X projection sub-tabs + MLB Lineups tab
+ * directly inside the main feed tab bar (MLB only).
+ * Access is restricted to @prez, @sippi, and @lucianobets.
  *
  * Sub-tabs:
  *   1. Today Pitchers    (today-pitchers)
  *   2. Today Hitters     (today-hitters)
  *   3. Tomorrow Pitchers (tomorrow-pitchers)
  *   4. Tomorrow Hitters  (tomorrow-hitters)
+ *   5. Lineups           (lineups — MLB Stats API, card layout)
  *
  * Features (identical to Resources.tsx):
  *   - CSV Export per sub-tab
@@ -60,6 +59,54 @@ interface CacheEntry {
   fetchedAt: number;
 }
 type SortDir = "asc" | "desc" | null;
+
+// Lineup types (mirrors server/fangraphsScraper.ts)
+interface FgPitcher {
+  playerId: number;
+  name: string;
+  throws: string;
+  wins: number;
+  losses: number;
+  era: string;
+  ip: string;
+  strikeouts: number;
+  whip: string;
+}
+interface FgBatter {
+  order: number;
+  playerId: number;
+  name: string;
+  bats: string;
+  position: string;
+  isProjected: boolean;
+}
+interface FgTeamLineup {
+  teamId: number;
+  teamName: string;
+  teamAbbr: string;
+  winProbability: number;
+  pitcher: FgPitcher | null;
+  lineup: FgBatter[];
+  lineupStatus: "Posted" | "Projected" | "None";
+}
+interface FgGame {
+  gameId: number;
+  gameTimeUtc: string;
+  away: FgTeamLineup;
+  home: FgTeamLineup;
+}
+interface FgDateResult {
+  date: string;
+  games: FgGame[];
+  scrapedAt: string;
+  elapsedMs: number;
+}
+interface FgScrapeResult {
+  today: FgDateResult;
+  tomorrow: FgDateResult;
+  totalGames: number;
+  errors: string[];
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -152,6 +199,267 @@ function formatAge(ageMs: number): string {
   return `${Math.round(ageMs / 60_000)}m`;
 }
 
+// ─── Lineup Card Components ───────────────────────────────────────────────────
+
+function PitcherBadge({ pitcher, side }: { pitcher: FgPitcher | null; side: "away" | "home" }) {
+  if (!pitcher) {
+    return (
+      <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
+        <span className="font-medium">TBD</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1.5">
+        <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${pitcher.throws === "L" ? "bg-amber-900/50 text-amber-300" : "bg-sky-900/50 text-sky-300"}`}>
+          {pitcher.throws}HP
+        </span>
+        <span className="text-xs font-semibold text-white truncate max-w-[120px]">{pitcher.name}</span>
+      </div>
+      <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
+        <span>{pitcher.wins}-{pitcher.losses}</span>
+        <span className="text-zinc-600">·</span>
+        <span>{pitcher.era} ERA</span>
+        <span className="text-zinc-600">·</span>
+        <span>{pitcher.ip} IP</span>
+        <span className="text-zinc-600">·</span>
+        <span>{pitcher.strikeouts} K</span>
+      </div>
+    </div>
+  );
+}
+
+function LineupTable({ team }: { team: FgTeamLineup }) {
+  const statusColor = team.lineupStatus === "Posted"
+    ? "text-emerald-400"
+    : team.lineupStatus === "Projected"
+    ? "text-amber-400"
+    : "text-zinc-500";
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-wider">{team.teamAbbr} Lineup</span>
+        <span className={`text-[9px] font-semibold uppercase tracking-wider ${statusColor}`}>
+          {team.lineupStatus}
+        </span>
+      </div>
+      {team.lineup.length === 0 ? (
+        <div className="text-xs text-zinc-600 italic py-2 text-center">Lineup not yet posted</div>
+      ) : (
+        <div className="space-y-0.5">
+          {team.lineup.map((batter) => (
+            <div key={batter.playerId} className="flex items-center gap-1.5 text-[11px]">
+              <span className="w-4 text-right text-zinc-600 font-mono shrink-0">{batter.order}</span>
+              <span className={`w-5 text-center font-bold text-[9px] px-0.5 rounded shrink-0 ${
+                batter.bats === "L" ? "text-amber-400 bg-amber-950/40" :
+                batter.bats === "S" ? "text-violet-400 bg-violet-950/40" :
+                "text-sky-400 bg-sky-950/40"
+              }`}>{batter.bats}</span>
+              <span className="text-zinc-200 truncate flex-1">{batter.name}</span>
+              <span className="text-zinc-500 text-[10px] font-mono shrink-0 w-8 text-right">{batter.position}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GameCard({ game }: { game: FgGame }) {
+  const pstFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const gameTimePst = pstFormatter.format(new Date(game.gameTimeUtc));
+
+  return (
+    <div className="bg-[#0d0d18] border border-zinc-800 rounded-lg overflow-hidden hover:border-zinc-700 transition-colors">
+      {/* Game header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/60 border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white">{game.away.teamAbbr}</span>
+          <span className="text-zinc-600 text-xs">@</span>
+          <span className="text-xs font-bold text-white">{game.home.teamAbbr}</span>
+        </div>
+        <span className="text-[10px] text-zinc-400 font-mono">{gameTimePst} PST</span>
+      </div>
+
+      {/* Pitching matchup */}
+      <div className="grid grid-cols-2 gap-3 px-3 py-2 border-b border-zinc-800/60">
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider mb-1">Away SP</div>
+          <PitcherBadge pitcher={game.away.pitcher} side="away" />
+        </div>
+        <div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wider mb-1">Home SP</div>
+          <PitcherBadge pitcher={game.home.pitcher} side="home" />
+        </div>
+      </div>
+
+      {/* Batting orders */}
+      <div className="grid grid-cols-2 gap-3 px-3 py-2">
+        <LineupTable team={game.away} />
+        <LineupTable team={game.home} />
+      </div>
+    </div>
+  );
+}
+
+function LineupsView({
+  isAllowed,
+  onRefresh,
+}: {
+  isAllowed: boolean;
+  onRefresh?: () => void;
+}) {
+  const [lineupDay, setLineupDay] = useState<"today" | "tomorrow">("today");
+  const [lineupSearch, setLineupSearch] = useState("");
+
+  const {
+    data: lineupData,
+    isLoading: lineupLoading,
+    error: lineupError,
+    refetch: lineupRefetch,
+  } = trpc.jackMac.getLineups.useQuery(undefined, {
+    enabled: isAllowed,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: false,
+  });
+
+  const games: FgGame[] = useMemo(() => {
+    if (!lineupData) return [];
+    const dateResult = lineupDay === "today" ? lineupData.today : lineupData.tomorrow;
+    const allGames = dateResult.games;
+    if (!lineupSearch.trim()) return allGames;
+    const q = lineupSearch.trim().toLowerCase();
+    return allGames.filter(g =>
+      g.away.teamAbbr.toLowerCase().includes(q) ||
+      g.home.teamAbbr.toLowerCase().includes(q) ||
+      g.away.teamName.toLowerCase().includes(q) ||
+      g.home.teamName.toLowerCase().includes(q) ||
+      g.away.pitcher?.name.toLowerCase().includes(q) ||
+      g.home.pitcher?.name.toLowerCase().includes(q) ||
+      g.away.lineup.some(b => b.name.toLowerCase().includes(q)) ||
+      g.home.lineup.some(b => b.name.toLowerCase().includes(q))
+    );
+  }, [lineupData, lineupDay, lineupSearch]);
+
+  const dateResult = lineupData ? (lineupDay === "today" ? lineupData.today : lineupData.tomorrow) : null;
+  const postedCount = games.filter(g => g.away.lineupStatus === "Posted" || g.home.lineupStatus === "Posted").length;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* Day selector */}
+        <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+          {(["today", "tomorrow"] as const).map(day => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setLineupDay(day)}
+              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                lineupDay === day
+                  ? "bg-violet-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              {day === "today" ? "Today" : "Tomorrow"}
+            </button>
+          ))}
+        </div>
+
+        {/* Meta + search */}
+        <div className="flex items-center gap-2">
+          {dateResult && (
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded px-2 py-0.5 font-mono">
+              <span>{dateResult.date}</span>
+              <span className="text-zinc-700">·</span>
+              <span>{games.length} games</span>
+              <span className="text-zinc-700">·</span>
+              <span className="text-emerald-400">{postedCount} posted</span>
+            </div>
+          )}
+          <div className="relative w-48">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
+            <Input
+              value={lineupSearch}
+              onChange={e => setLineupSearch(e.target.value)}
+              placeholder="Search team / player..."
+              className="pl-7 h-7 text-xs bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-violet-500"
+            />
+          </div>
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => lineupRefetch()}
+            disabled={lineupLoading}
+            className="text-zinc-400 hover:text-white gap-1.5 h-7 text-xs px-2"
+          >
+            <RefreshCw className={`w-3 h-3 ${lineupLoading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Loading */}
+      {lineupLoading && (
+        <div className="flex items-center justify-center py-16 gap-3 text-zinc-500">
+          <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+          <span className="text-sm">Loading lineups from MLB Stats API...</span>
+        </div>
+      )}
+
+      {/* Error */}
+      {lineupError && !lineupLoading && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <AlertTriangle className="w-7 h-7 text-red-400" />
+          <p className="text-red-300 text-sm font-medium">{lineupError.message}</p>
+          <Button variant="outline" size="sm" onClick={() => lineupRefetch()} className="border-zinc-700 text-white">
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {/* No games */}
+      {!lineupLoading && !lineupError && games.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
+          <span className="text-sm">No games found for {lineupDay === "today" ? "today" : "tomorrow"}</span>
+          {lineupSearch && (
+            <button
+              type="button"
+              onClick={() => setLineupSearch("")}
+              className="text-xs text-violet-400 hover:text-violet-300"
+            >
+              Clear search
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Game cards grid */}
+      {!lineupLoading && !lineupError && games.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+          {games.map(game => (
+            <GameCard key={game.gameId} game={game} />
+          ))}
+        </div>
+      )}
+
+      {/* Partial errors */}
+      {lineupData && lineupData.errors.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-950/20 border border-amber-900/40 rounded px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span>Partial data: {lineupData.errors.join("; ")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface JackMacViewProps {
@@ -186,7 +494,10 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     },
   });
 
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── Main tab state: "projections" | "lineups" ─────────────────────────────
+  const [mainTab, setMainTab] = useState<"projections" | "lineups">("projections");
+
+  // ── State (RG projections) ─────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<TabKey>("today-pitchers");
   const [cache, setCache] = useState<Partial<Record<TabKey, CacheEntry>>>({});
   const [loadingTabs, setLoadingTabs] = useState<Set<TabKey>>(new Set());
@@ -254,9 +565,9 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
 
   // ── Auto-fetch on tab switch ───────────────────────────────────────────────
   useEffect(() => {
-    if (isAllowed) fetchTab(activeTab);
+    if (isAllowed && mainTab === "projections") fetchTab(activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, isAllowed]);
+  }, [activeTab, isAllowed, mainTab]);
 
   // ── Reset search/sort on tab switch ───────────────────────────────────────
   useEffect(() => {
@@ -377,8 +688,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   const isLoadingActive = loadingTabs.has(activeTab);
   const activeError = errors[activeTab];
 
-  // ── Access Denied wall (double-layer: tab bar never shows for non-whitelist,
-  //    but this guard catches any edge-case direct render) ────────────────────
+  // ── Access Denied wall ────────────────────────────────────────────────────
   if (!isAllowed) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-4">
@@ -403,46 +713,52 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold tracking-widest text-[#39FF14] uppercase">JACK MAC</span>
             <span className="text-zinc-600 text-xs">·</span>
-            <span className="text-zinc-400 text-xs">THE BAT X Projections</span>
+            <span className="text-zinc-400 text-xs">
+              {mainTab === "projections" ? "THE BAT X Projections" : "MLB Lineups"}
+            </span>
           </div>
 
           {/* Right: action buttons */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <Button
-              variant="outline" size="sm"
-              onClick={refreshAll}
-              disabled={loadingTabs.size > 0}
-              className="border-zinc-700 text-zinc-300 hover:text-white hover:border-violet-500 gap-1.5 bg-transparent h-7 text-xs px-2"
-              title="Force-refresh all 4 tabs"
-            >
-              <RotateCcw className={`w-3 h-3 ${loadingTabs.size > 0 ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refresh All</span>
-            </Button>
-            <Button
-              variant="ghost" size="sm"
-              onClick={() => fetchTab(activeTab, true)}
-              disabled={isLoadingActive}
-              className="text-zinc-400 hover:text-white gap-1.5 h-7 text-xs px-2"
-              title="Refresh current tab"
-            >
-              <RefreshCw className={`w-3 h-3 ${isLoadingActive ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-            <Button
-              variant="ghost" size="sm"
-              onClick={() => {
-                if (tableData && visibleCols.length > 0) {
-                  exportCsv(activeTab, visibleCols, filteredRows);
-                }
-              }}
-              disabled={!tableData || filteredRows.length === 0}
-              className="text-zinc-400 hover:text-emerald-400 gap-1.5 h-7 text-xs px-2"
-              title="Download visible columns as CSV"
-            >
-              <Download className="w-3 h-3" />
-              <span className="hidden sm:inline">CSV</span>
-            </Button>
-            {/* REFRESH GOOGLE SHEETS button */}
+            {mainTab === "projections" && (
+              <>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={refreshAll}
+                  disabled={loadingTabs.size > 0}
+                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-violet-500 gap-1.5 bg-transparent h-7 text-xs px-2"
+                  title="Force-refresh all 4 tabs"
+                >
+                  <RotateCcw className={`w-3 h-3 ${loadingTabs.size > 0 ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">Refresh All</span>
+                </Button>
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => fetchTab(activeTab, true)}
+                  disabled={isLoadingActive}
+                  className="text-zinc-400 hover:text-white gap-1.5 h-7 text-xs px-2"
+                  title="Refresh current tab"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isLoadingActive ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => {
+                    if (tableData && visibleCols.length > 0) {
+                      exportCsv(activeTab, visibleCols, filteredRows);
+                    }
+                  }}
+                  disabled={!tableData || filteredRows.length === 0}
+                  className="text-zinc-400 hover:text-emerald-400 gap-1.5 h-7 text-xs px-2"
+                  title="Download visible columns as CSV"
+                >
+                  <Download className="w-3 h-3" />
+                  <span className="hidden sm:inline">CSV</span>
+                </Button>
+              </>
+            )}
+            {/* REFRESH GOOGLE SHEETS button — always visible */}
             <button
               type="button"
               onClick={() => {
@@ -452,7 +768,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               disabled={syncToSheets.isPending}
               style={{ backgroundColor: "#34A853", opacity: syncToSheets.isPending ? 0.7 : 1 }}
               className="flex items-center gap-1.5 h-7 px-2.5 rounded text-xs font-bold text-white whitespace-nowrap transition-opacity disabled:cursor-not-allowed"
-              title="Sync all 4 tabs to Google Sheets"
+              title="Sync all tabs (RG + Lineups) to Google Sheets"
             >
               {syncToSheets.isPending ? (
                 <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -475,296 +791,335 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           </div>
         </div>
 
-        {/* Sub-tab bar */}
+        {/* Main tab selector: Projections | Lineups */}
         <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-0.5">
-          {TABS.map(tab => {
-            const isActive = activeTab === tab.key;
-            const isLoading = loadingTabs.has(tab.key);
-            const hasError = !!errors[tab.key];
-            const tabEntry = cache[tab.key];
-            const tabAge = tabEntry ? Date.now() - tabEntry.fetchedAt : null;
-            const tabStale = tabAge !== null && tabAge > STALE_MS;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`
-                  relative px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-all
-                  ${isActive
-                    ? "bg-violet-600 text-white shadow-lg shadow-violet-900/40"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                  }
-                `}
-              >
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.short}</span>
-                {isLoading && <Loader2 className="inline w-3 h-3 ml-1 animate-spin" />}
-                {!isLoading && hasError && <span className="ml-1 text-red-400 text-xs">!</span>}
-                {!isLoading && !hasError && tabStale && !isActive && (
-                  <span className="ml-1 text-amber-400 text-xs" title="Data may be stale">↻</span>
-                )}
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => setMainTab("projections")}
+            className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-all ${
+              mainTab === "projections"
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-900/40"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            THE BAT X
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab("lineups")}
+            className={`px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-all ${
+              mainTab === "lineups"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/40"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            LINEUPS
+          </button>
+
+          {/* RG sub-tabs — only show when in projections mode */}
+          {mainTab === "projections" && (
+            <>
+              <span className="text-zinc-700 mx-1">|</span>
+              {TABS.map(tab => {
+                const isActive = activeTab === tab.key;
+                const isLoading = loadingTabs.has(tab.key);
+                const hasError = !!errors[tab.key];
+                const tabEntry = cache[tab.key];
+                const tabAge = tabEntry ? Date.now() - tabEntry.fetchedAt : null;
+                const tabStale = tabAge !== null && tabAge > STALE_MS;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`
+                      relative px-3 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-all
+                      ${isActive
+                        ? "bg-violet-600/60 text-white"
+                        : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      }
+                    `}
+                  >
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.short}</span>
+                    {isLoading && <Loader2 className="inline w-3 h-3 ml-1 animate-spin" />}
+                    {!isLoading && hasError && <span className="ml-1 text-red-400 text-xs">!</span>}
+                    {!isLoading && !hasError && tabStale && !isActive && (
+                      <span className="ml-1 text-amber-400 text-xs" title="Data may be stale">↻</span>
+                    )}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       </div>
 
       {/* ── Content area ────────────────────────────────────────────────────── */}
       <div className="flex-1 px-3 py-3 w-full">
 
-        {/* Toolbar: metadata + search + column toggle */}
-        {tableData && (
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            {/* Left: title + metadata strip */}
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <h2 className="text-xs font-semibold text-white truncate">{tableData.title}</h2>
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded px-2 py-0.5 font-mono">
-                {ageLabel && (
-                  <span
-                    className={isStaleDisplay ? "text-amber-400" : "text-zinc-400"}
-                    title={isStaleDisplay ? "Data is stale — will auto-refresh on next tab switch" : "Data is fresh"}
-                  >
-                    {isStaleDisplay ? "⚠ " : "↻ "}{ageLabel}
-                  </span>
-                )}
-                {ageLabel && <span className="text-zinc-700">·</span>}
-                <span className="text-zinc-400">
-                  {filteredRows.length === tableData.rows.length
-                    ? `${tableData.rows.length} rows`
-                    : `${filteredRows.length} / ${tableData.rows.length} rows`}
-                </span>
-                <span className="text-zinc-700">·</span>
-                <span className="text-zinc-400">
-                  {visibleCols.length === tableData.columns.filter(c => !INTERNAL_COLS.has(c)).length
-                    ? `${visibleCols.length} cols`
-                    : `${visibleCols.length} / ${tableData.columns.filter(c => !INTERNAL_COLS.has(c)).length} cols`}
-                </span>
-                {tableData.updatedAt && (
-                  <>
-                    <span className="text-zinc-700">·</span>
-                    <span className="text-zinc-500">RG: {tableData.updatedAt}</span>
-                  </>
-                )}
-              </div>
-            </div>
+        {/* ── LINEUPS VIEW ─────────────────────────────────────────────────── */}
+        {mainTab === "lineups" && (
+          <LineupsView isAllowed={isAllowed} />
+        )}
 
-            {/* Right: search + columns button */}
-            <div className="flex items-center gap-2">
-              {/* Column visibility dropdown */}
-              <div className="relative" ref={colPanelRef}>
+        {/* ── PROJECTIONS VIEW ─────────────────────────────────────────────── */}
+        {mainTab === "projections" && (
+          <>
+            {/* Toolbar: metadata + search + column toggle */}
+            {tableData && (
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                {/* Left: title + metadata strip */}
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <h2 className="text-xs font-semibold text-white truncate">{tableData.title}</h2>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 bg-zinc-900/60 border border-zinc-800 rounded px-2 py-0.5 font-mono">
+                    {ageLabel && (
+                      <span
+                        className={isStaleDisplay ? "text-amber-400" : "text-zinc-400"}
+                        title={isStaleDisplay ? "Data is stale — will auto-refresh on next tab switch" : "Data is fresh"}
+                      >
+                        {isStaleDisplay ? "⚠ " : "↻ "}{ageLabel}
+                      </span>
+                    )}
+                    {ageLabel && <span className="text-zinc-700">·</span>}
+                    <span className="text-zinc-400">
+                      {filteredRows.length === tableData.rows.length
+                        ? `${tableData.rows.length} rows`
+                        : `${filteredRows.length} / ${tableData.rows.length} rows`}
+                    </span>
+                    <span className="text-zinc-700">·</span>
+                    <span className="text-zinc-400">
+                      {visibleCols.length === tableData.columns.filter(c => !INTERNAL_COLS.has(c)).length
+                        ? `${visibleCols.length} cols`
+                        : `${visibleCols.length} / ${tableData.columns.filter(c => !INTERNAL_COLS.has(c)).length} cols`}
+                    </span>
+                    {tableData.updatedAt && (
+                      <>
+                        <span className="text-zinc-700">·</span>
+                        <span className="text-zinc-500">RG: {tableData.updatedAt}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: search + columns button */}
+                <div className="flex items-center gap-2">
+                  {/* Column visibility dropdown */}
+                  <div className="relative" ref={colPanelRef}>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => setColPanelOpen(p => !p)}
+                      className="border-zinc-700 text-zinc-300 hover:text-white hover:border-violet-500 gap-1.5 bg-transparent h-7 text-xs px-2"
+                    >
+                      <Columns className="w-3 h-3" />
+                      <span className="hidden sm:inline">Columns</span>
+                    </Button>
+                    {colPanelOpen && (
+                      <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-[#13131f] border border-zinc-700 rounded-lg shadow-2xl shadow-black/60 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Column Groups</span>
+                          <div className="flex gap-1">
+                            <button onClick={showAllCols} className="text-xs text-violet-400 hover:text-violet-300 transition-colors px-1" title="Show all">All</button>
+                            <span className="text-zinc-600">|</span>
+                            <button onClick={resetColVis} className="text-xs text-zinc-400 hover:text-white transition-colors px-1" title="Reset to defaults">Reset</button>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {activeGroups.map(g => {
+                            const isVis = activeColVis[g.label] !== false;
+                            const colsInData = g.cols.filter(c => tableData.columns.includes(c) && !INTERNAL_COLS.has(c));
+                            return (
+                              <button
+                                key={g.label}
+                                type="button"
+                                onClick={() => toggleGroup(g.label)}
+                                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 transition-colors group"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isVis
+                                    ? <CheckSquare className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                                    : <Square className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                                  }
+                                  <span className={`text-xs ${isVis ? "text-white" : "text-zinc-500"}`}>{g.label}</span>
+                                </div>
+                                <span className="text-xs text-zinc-600 group-hover:text-zinc-400">{colsInData.length}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Search */}
+                  <div className="relative w-48 sm:w-56">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
+                    <Input
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder="Search name / team..."
+                      className="pl-7 h-7 text-xs bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-violet-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading spinner */}
+            {isLoadingActive && !tableData && (
+              <div className="flex items-center justify-center py-16 gap-3 text-zinc-500">
+                <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+                <span className="text-sm">Loading projections...</span>
+              </div>
+            )}
+
+            {/* Error banner */}
+            {activeError && (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
+                <AlertTriangle className="w-7 h-7 text-red-400" />
+                <p className="text-red-300 text-sm font-medium">{activeError}</p>
+                <p className="text-zinc-500 text-xs text-center max-w-sm">
+                  The table may not have loaded from Rotogrinders. Try refreshing.
+                </p>
                 <Button
                   variant="outline" size="sm"
-                  onClick={() => setColPanelOpen(p => !p)}
-                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-violet-500 gap-1.5 bg-transparent h-7 text-xs px-2"
+                  onClick={() => fetchTab(activeTab, true)}
+                  className="mt-1 border-zinc-700 text-white"
                 >
-                  <Columns className="w-3 h-3" />
-                  <span className="hidden sm:inline">Columns</span>
+                  Retry
                 </Button>
-                {colPanelOpen && (
-                  <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-[#13131f] border border-zinc-700 rounded-lg shadow-2xl shadow-black/60 p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Column Groups</span>
-                      <div className="flex gap-1">
-                        <button onClick={showAllCols} className="text-xs text-violet-400 hover:text-violet-300 transition-colors px-1" title="Show all">All</button>
-                        <span className="text-zinc-600">|</span>
-                        <button onClick={resetColVis} className="text-xs text-zinc-400 hover:text-white transition-colors px-1" title="Reset to defaults">Reset</button>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      {activeGroups.map(g => {
-                        const isVis = activeColVis[g.label] !== false;
-                        const colsInData = g.cols.filter(c => tableData.columns.includes(c) && !INTERNAL_COLS.has(c));
+              </div>
+            )}
+
+            {/* No visible columns */}
+            {!isLoadingActive && tableData && tableData.rows.length > 0 && visibleCols.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
+                <Columns className="w-7 h-7" />
+                <p className="text-sm">All column groups are hidden.</p>
+                <Button variant="outline" size="sm" onClick={showAllCols} className="mt-1 border-zinc-700 text-white">
+                  Show All Columns
+                </Button>
+              </div>
+            )}
+
+            {/* Data Table */}
+            {tableData && tableData.rows.length > 0 && visibleCols.length > 0 && (
+              <div className="overflow-auto rounded-lg border border-zinc-800 shadow-2xl">
+                <table className="w-full text-xs border-collapse min-w-max">
+                  <thead>
+                    <tr className="bg-zinc-900 border-b border-zinc-700">
+                      {visibleCols.map((col, i) => {
+                        const isKey = keyCols.has(col);
+                        const isSorted = sortCol === col;
                         return (
-                          <button
-                            key={g.label}
-                            type="button"
-                            onClick={() => toggleGroup(g.label)}
-                            className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded hover:bg-zinc-800 transition-colors group"
+                          <th
+                            key={`h-${col}-${i}`}
+                            onClick={() => handleSort(col)}
+                            className={`
+                              px-3 py-2.5 text-left font-semibold cursor-pointer select-none whitespace-nowrap
+                              transition-colors group
+                              ${isKey ? "text-violet-300 bg-violet-950/30 hover:bg-violet-950/50" : "text-zinc-300 hover:bg-zinc-800"}
+                              ${isSorted ? "bg-zinc-800" : ""}
+                            `}
                           >
-                            <div className="flex items-center gap-2">
-                              {isVis
-                                ? <CheckSquare className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                                : <Square className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-                              }
-                              <span className={`text-xs ${isVis ? "text-white" : "text-zinc-500"}`}>{g.label}</span>
-                            </div>
-                            <span className="text-xs text-zinc-600 group-hover:text-zinc-400">{colsInData.length}</span>
-                          </button>
+                            <span className="flex items-center gap-1">
+                              {col}
+                              {isSorted && sortDir === "asc"  && <ChevronUp   className="w-3 h-3 text-violet-400" />}
+                              {isSorted && sortDir === "desc" && <ChevronDown  className="w-3 h-3 text-violet-400" />}
+                              {!isSorted && (
+                                <ChevronsUpDown className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </span>
+                          </th>
                         );
                       })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Search */}
-              <div className="relative w-48 sm:w-56">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
-                <Input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search name / team..."
-                  className="pl-7 h-7 text-xs bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-500 focus:border-violet-500"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Loading spinner */}
-        {isLoadingActive && !tableData && (
-          <div className="flex items-center justify-center py-16 gap-3 text-zinc-500">
-            <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
-            <span className="text-sm">Loading projections...</span>
-          </div>
-        )}
-
-        {/* Error banner */}
-        {activeError && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
-            <AlertTriangle className="w-7 h-7 text-red-400" />
-            <p className="text-red-300 text-sm font-medium">{activeError}</p>
-            <p className="text-zinc-500 text-xs text-center max-w-sm">
-              The table may not have loaded from Rotogrinders. Try refreshing.
-            </p>
-            <Button
-              variant="outline" size="sm"
-              onClick={() => fetchTab(activeTab, true)}
-              className="mt-1 border-zinc-700 text-white"
-            >
-              Retry
-            </Button>
-          </div>
-        )}
-
-        {/* No visible columns */}
-        {!isLoadingActive && tableData && tableData.rows.length > 0 && visibleCols.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
-            <Columns className="w-7 h-7" />
-            <p className="text-sm">All column groups are hidden.</p>
-            <Button variant="outline" size="sm" onClick={showAllCols} className="mt-1 border-zinc-700 text-white">
-              Show All Columns
-            </Button>
-          </div>
-        )}
-
-        {/* Data Table */}
-        {tableData && tableData.rows.length > 0 && visibleCols.length > 0 && (
-          <div className="overflow-auto rounded-lg border border-zinc-800 shadow-2xl">
-            <table className="w-full text-xs border-collapse min-w-max">
-              <thead>
-                <tr className="bg-zinc-900 border-b border-zinc-700">
-                  {visibleCols.map((col, i) => {
-                    const isKey = keyCols.has(col);
-                    const isSorted = sortCol === col;
-                    return (
-                      <th
-                        key={`h-${col}-${i}`}
-                        onClick={() => handleSort(col)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row, ri) => (
+                      <tr
+                        key={ri}
                         className={`
-                          px-3 py-2.5 text-left font-semibold cursor-pointer select-none whitespace-nowrap
-                          transition-colors group
-                          ${isKey ? "text-violet-300 bg-violet-950/30 hover:bg-violet-950/50" : "text-zinc-300 hover:bg-zinc-800"}
-                          ${isSorted ? "bg-zinc-800" : ""}
+                          border-b border-zinc-800/60 transition-colors hover:bg-zinc-800/40
+                          ${ri % 2 === 0 ? "bg-[#0d0d14]" : "bg-[#0a0a0f]"}
                         `}
                       >
-                        <span className="flex items-center gap-1">
-                          {col}
-                          {isSorted && sortDir === "asc"  && <ChevronUp   className="w-3 h-3 text-violet-400" />}
-                          {isSorted && sortDir === "desc" && <ChevronDown  className="w-3 h-3 text-violet-400" />}
-                          {!isSorted && (
-                            <ChevronsUpDown className="w-3 h-3 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          )}
-                        </span>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row, ri) => (
-                  <tr
-                    key={ri}
-                    className={`
-                      border-b border-zinc-800/60 transition-colors hover:bg-zinc-800/40
-                      ${ri % 2 === 0 ? "bg-[#0d0d14]" : "bg-[#0a0a0f]"}
-                    `}
-                  >
-                    {visibleCols.map((col, ci) => {
-                      const val = row[col] ?? "";
-                      const isKey    = keyCols.has(col);
-                      const isName   = col === "NAME";
-                      const isTeam   = col === "TEAM";
-                      const isOpp    = col === "OPP_TM" || col === "OPP";
-                      const isFpts   = col === "FPTS";
-                      const isBool   = val === "true" || val === "false";
-                      const isSalary = col === "SALARY";
-                      const isId     = col === "PLAYER_ID" || col === "MLB_ID";
+                        {visibleCols.map((col, ci) => {
+                          const val = row[col] ?? "";
+                          const isKey    = keyCols.has(col);
+                          const isName   = col === "NAME";
+                          const isTeam   = col === "TEAM";
+                          const isOpp    = col === "OPP_TM" || col === "OPP";
+                          const isFpts   = col === "FPTS";
+                          const isBool   = val === "true" || val === "false";
+                          const isSalary = col === "SALARY";
+                          const isId     = col === "PLAYER_ID" || col === "MLB_ID";
 
-                      if (isName) {
-                        const headshotUrl = row["HEADSHOT_URL"] ?? "";
-                        return (
-                          <td key={`d-${col}-${ci}`} className="px-2 py-1.5 whitespace-nowrap font-semibold text-white sticky left-0 bg-inherit z-10 min-w-[160px] shadow-[2px_0_8px_rgba(0,0,0,0.4)]">
-                            <div className="flex items-center gap-2">
-                              {headshotUrl ? (
-                                <img src={headshotUrl} alt={val} className="w-7 h-7 rounded-full object-cover bg-zinc-800 border border-zinc-700 shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                              ) : (
-                                <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 shrink-0 flex items-center justify-center text-zinc-600 text-[10px] font-bold">{val.charAt(0)}</div>
-                              )}
-                              <span className="truncate max-w-[120px]">{val || <span className="text-zinc-700">—</span>}</span>
-                            </div>
-                          </td>
-                        );
-                      }
-                      if (isTeam) {
-                        const logoUrl = row["TEAM_LOGO_URL"] ?? "";
-                        return (
-                          <td key={`d-${col}-${ci}`} className="px-3 py-1.5 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
-                              {logoUrl ? <img src={logoUrl} alt={val} className="w-5 h-5 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
-                              <span className="text-zinc-200 font-medium text-xs">{val || <span className="text-zinc-700">—</span>}</span>
-                            </div>
-                          </td>
-                        );
-                      }
-                      if (isOpp) {
-                        const logoUrl = row["OPP_LOGO_URL"] ?? "";
-                        return (
-                          <td key={`d-${col}-${ci}`} className="px-3 py-1.5 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
-                              {logoUrl ? <img src={logoUrl} alt={val} className="w-5 h-5 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
-                              <span className="text-zinc-200 font-medium text-xs">{val || <span className="text-zinc-700">—</span>}</span>
-                            </div>
-                          </td>
-                        );
-                      }
-                      return (
-                        <td
-                          key={`d-${col}-${ci}`}
-                          className={`
-                            px-3 py-2 whitespace-nowrap
-                            ${isFpts   ? "text-emerald-400 font-bold" : ""}
-                            ${isSalary ? "text-sky-300 font-medium" : ""}
-                            ${isId     ? "text-zinc-500 font-mono text-[10px]" : ""}
-                            ${isKey && !isFpts && !isSalary && !isId ? "text-violet-200" : ""}
-                            ${!isKey && !isFpts && !isSalary && !isId ? "text-zinc-300" : ""}
-                          `}
-                        >
-                          {isBool
-                            ? (val === "true"
-                              ? <span className="text-emerald-400 font-bold">✔</span>
-                              : <span className="text-zinc-700">—</span>)
-                            : (val || <span className="text-zinc-700">—</span>)
+                          if (isName) {
+                            const headshotUrl = row["HEADSHOT_URL"] ?? "";
+                            return (
+                              <td key={`d-${col}-${ci}`} className="px-2 py-1.5 whitespace-nowrap font-semibold text-white sticky left-0 bg-inherit z-10 min-w-[160px] shadow-[2px_0_8px_rgba(0,0,0,0.4)]">
+                                <div className="flex items-center gap-2">
+                                  {headshotUrl ? (
+                                    <img src={headshotUrl} alt={val} className="w-7 h-7 rounded-full object-cover bg-zinc-800 border border-zinc-700 shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                                  ) : (
+                                    <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 shrink-0 flex items-center justify-center text-zinc-600 text-[10px] font-bold">{val.charAt(0)}</div>
+                                  )}
+                                  <span className="truncate max-w-[120px]">{val || <span className="text-zinc-700">—</span>}</span>
+                                </div>
+                              </td>
+                            );
                           }
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          if (isTeam) {
+                            const logoUrl = row["TEAM_LOGO_URL"] ?? "";
+                            return (
+                              <td key={`d-${col}-${ci}`} className="px-3 py-1.5 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  {logoUrl ? <img src={logoUrl} alt={val} className="w-5 h-5 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
+                                  <span className="text-zinc-200 font-medium text-xs">{val || <span className="text-zinc-700">—</span>}</span>
+                                </div>
+                              </td>
+                            );
+                          }
+                          if (isOpp) {
+                            const logoUrl = row["OPP_LOGO_URL"] ?? "";
+                            return (
+                              <td key={`d-${col}-${ci}`} className="px-3 py-1.5 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  {logoUrl ? <img src={logoUrl} alt={val} className="w-5 h-5 object-contain shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} /> : null}
+                                  <span className="text-zinc-200 font-medium text-xs">{val || <span className="text-zinc-700">—</span>}</span>
+                                </div>
+                              </td>
+                            );
+                          }
+                          return (
+                            <td
+                              key={`d-${col}-${ci}`}
+                              className={`
+                                px-3 py-2 whitespace-nowrap
+                                ${isFpts   ? "text-emerald-400 font-bold" : ""}
+                                ${isSalary ? "text-sky-300 font-medium" : ""}
+                                ${isId     ? "text-zinc-500 font-mono text-[10px]" : ""}
+                                ${isKey && !isFpts && !isSalary && !isId ? "text-violet-200" : ""}
+                                ${!isKey && !isFpts && !isSalary && !isId ? "text-zinc-300" : ""}
+                              `}
+                            >
+                              {isBool
+                                ? (val === "true"
+                                  ? <span className="text-emerald-400 font-bold">✔</span>
+                                  : <span className="text-zinc-700">—</span>)
+                                : (val || <span className="text-zinc-700">—</span>)
+                              }
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
 
         {/* Bottom padding */}

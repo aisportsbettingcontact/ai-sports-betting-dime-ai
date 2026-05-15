@@ -3297,3 +3297,12 @@
 - [ ] Add REFRESH GOOGLE SHEETS button to JackMacView.tsx (#34A853, bold white, Sheets logo)
 - [ ] Reorder JACK MAC tab to leftmost position for @lucianobets only
 - [ ] TypeScript: 0 errors | Tests: pass
+
+## Session: 2026-05-15 - Fangraphs Lineup Scraper
+
+- [x] Inspect Fangraphs scores page structure (headless browser, understand React-rendered lineup data)
+- [x] Build fangraphsScraper.ts: scrape lineups for today + tomorrow (PST dates), full logging (MLB Stats API)
+- [x] Integrate into jackMacSheetsSync.ts: append 2 new tabs (Today Lineups, Tomorrow Lineups)
+- [x] Add tRPC procedure: jackMac.getLineups (whitelist-gated)
+- [x] Add Fangraphs Lineups sub-tab to JackMacView.tsx (LINEUPS main tab in JackMacView)
+- [x] Full end-to-end test: 678/678 tests pass, 15 MLB games with 9-player lineups verified
