@@ -318,17 +318,35 @@ function LineupsView({
 }) {
   const [lineupDay, setLineupDay] = useState<"today" | "tomorrow">("today");
   const [lineupSearch, setLineupSearch] = useState("");
+  const [isForceRefreshing, setIsForceRefreshing] = useState(false);
+  const utils = trpc.useUtils();
 
   const {
     data: lineupData,
     isLoading: lineupLoading,
     error: lineupError,
     refetch: lineupRefetch,
-  } = trpc.jackMac.getLineups.useQuery(undefined, {
-    enabled: isAllowed,
-    staleTime: STALE_MS,
-    refetchOnWindowFocus: false,
-  });
+  } = trpc.jackMac.getLineups.useQuery(
+    { forceRefresh: false },
+    {
+      enabled: isAllowed,
+      staleTime: STALE_MS,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const handleForceRefresh = useCallback(async () => {
+    setIsForceRefreshing(true);
+    try {
+      await utils.jackMac.getLineups.fetch({ forceRefresh: true });
+      // Invalidate so the useQuery hook picks up the fresh data
+      await utils.jackMac.getLineups.invalidate();
+    } catch (err) {
+      console.error("[LineupsView] Force refresh failed:", err);
+    } finally {
+      setIsForceRefreshing(false);
+    }
+  }, [utils]);
 
   const games: FgGame[] = useMemo(() => {
     if (!lineupData) return [];
@@ -395,12 +413,12 @@ function LineupsView({
           </div>
           <Button
             variant="ghost" size="sm"
-            onClick={() => lineupRefetch()}
-            disabled={lineupLoading}
+            onClick={handleForceRefresh}
+            disabled={lineupLoading || isForceRefreshing}
             className="text-zinc-400 hover:text-white gap-1.5 h-7 text-xs px-2"
           >
-            <RefreshCw className={`w-3 h-3 ${lineupLoading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <RefreshCw className={`w-3 h-3 ${lineupLoading || isForceRefreshing ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">{isForceRefreshing ? "Refreshing..." : "Refresh"}</span>
           </Button>
         </div>
       </div>
@@ -420,6 +438,9 @@ function LineupsView({
           <p className="text-red-300 text-sm font-medium">{lineupError.message}</p>
           <Button variant="outline" size="sm" onClick={() => lineupRefetch()} className="border-zinc-700 text-white">
             Retry
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleForceRefresh} disabled={isForceRefreshing} className="border-violet-700 text-violet-300">
+            {isForceRefreshing ? "Refreshing..." : "Force Refresh"}
           </Button>
         </div>
       )}
@@ -973,8 +994,8 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* Error banner */}
-            {activeError && (
+            {/* Error banner — full page only when NO data is present */}
+            {activeError && (!tableData || tableData.rows.length === 0) && (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
                 <AlertTriangle className="w-7 h-7 text-red-400" />
                 <p className="text-red-300 text-sm font-medium">{activeError}</p>
@@ -988,6 +1009,21 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                 >
                   Retry
                 </Button>
+              </div>
+            )}
+
+            {/* Stale data warning — compact banner when data IS present but refresh failed */}
+            {activeError && tableData && tableData.rows.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-md bg-amber-950/60 border border-amber-800/50 text-amber-300 text-xs">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>Showing cached data — live refresh failed ({activeError})</span>
+                <button
+                  type="button"
+                  onClick={() => fetchTab(activeTab, true)}
+                  className="ml-auto text-amber-400 hover:text-white underline underline-offset-2"
+                >
+                  Retry
+                </button>
               </div>
             )}
 

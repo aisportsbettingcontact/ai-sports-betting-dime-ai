@@ -10,6 +10,7 @@
  */
 
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { router } from "../_core/trpc";
 import { appUserProcedure } from "./appUsers";
 import { syncJackMacToSheets } from "../jackMacSheetsSync";
@@ -70,32 +71,40 @@ export const jackMacRouter = router({
    *
    * Restricted to: @prez, @sippi, @lucianobets
    */
-  getLineups: jackMacProcedure.query(async ({ ctx }) => {
-    const username = ctx.appUser?.username ?? "unknown";
-    console.log(`[JackMac] [INPUT] getLineups requested by @${username}`);
-    console.log(`[JackMac] [STEP] Fetching lineups from MLB Stats API...`);
+  getLineups: jackMacProcedure
+    .input(
+      z.object({
+        forceRefresh: z.boolean().default(false),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const username = ctx.appUser?.username ?? "unknown";
+      console.log(
+        `[JackMac] [INPUT] getLineups requested by @${username} forceRefresh=${input.forceRefresh}`
+      );
+      console.log(`[JackMac] [STEP] Fetching lineups from MLB Stats API (cache-aware)...`);
 
-    const t0 = Date.now();
-    let result: FgScrapeResult;
-    try {
-      result = await scrapeFangraphsLineups();
-    } catch (err) {
-      const msg = (err as Error).message;
-      console.error(`[JackMac] [VERIFY] FAIL — getLineups error: ${msg}`);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: `Failed to fetch lineups: ${msg}`,
-      });
-    }
+      const t0 = Date.now();
+      let result: FgScrapeResult;
+      try {
+        result = await scrapeFangraphsLineups(input.forceRefresh);
+      } catch (err) {
+        const msg = (err as Error).message;
+        console.error(`[JackMac] [VERIFY] FAIL — getLineups error: ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to fetch lineups: ${msg}`,
+        });
+      }
 
-    const elapsed = Date.now() - t0;
-    console.log(
-      `[JackMac] [OUTPUT] getLineups: today=${result.today.games.length} tomorrow=${result.tomorrow.games.length} elapsed=${elapsed}ms`
-    );
-    console.log(
-      `[JackMac] [VERIFY] ${result.errors.length === 0 ? "PASS" : "PARTIAL"} — getLineups for @${username}`
-    );
+      const elapsed = Date.now() - t0;
+      console.log(
+        `[JackMac] [OUTPUT] getLineups: today=${result.today.games.length} tomorrow=${result.tomorrow.games.length} elapsed=${elapsed}ms`
+      );
+      console.log(
+        `[JackMac] [VERIFY] ${result.errors.length === 0 ? "PASS" : "PARTIAL"} — getLineups for @${username}`
+      );
 
-    return result;
-  }),
+      return result;
+    }),
 });

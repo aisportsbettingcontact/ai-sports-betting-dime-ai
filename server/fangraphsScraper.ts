@@ -76,6 +76,45 @@ export interface FgScrapeResult {
 const MLB_API_BASE = "https://statsapi.mlb.com/api/v1";
 const CURRENT_SEASON = new Date().getFullYear();
 
+// ─── In-Memory Cache (30-minute TTL) ─────────────────────────────────────────
+
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+interface CacheEntry {
+  result: FgScrapeResult;
+  cachedAt: number;
+}
+
+let _cache: CacheEntry | null = null;
+
+/**
+ * Returns cached result if fresh (< 30 min old), otherwise null.
+ */
+function getCached(): FgScrapeResult | null {
+  if (!_cache) return null;
+  const age = Date.now() - _cache.cachedAt;
+  if (age > CACHE_TTL_MS) {
+    console.log(`[FgScraper] [STATE] Cache expired (age=${Math.round(age / 1000)}s). Fetching fresh data.`);
+    _cache = null;
+    return null;
+  }
+  console.log(`[FgScraper] [STATE] Cache hit (age=${Math.round(age / 1000)}s). Returning cached result.`);
+  return _cache.result;
+}
+
+function setCache(result: FgScrapeResult): void {
+  _cache = { result, cachedAt: Date.now() };
+  console.log(`[FgScraper] [STATE] Cache updated at ${new Date().toISOString()}`);
+}
+
+/**
+ * Invalidates the cache (used for force-refresh).
+ */
+export function invalidateFgCache(): void {
+  _cache = null;
+  console.log(`[FgScraper] [STATE] Cache invalidated`);
+}
+
 // MLB team abbreviation map (teamId → abbr)
 const TEAM_ABBR_MAP: Record<number, string> = {
   108: "LAA", 109: "ARI", 110: "BAL", 111: "BOS", 112: "CHC",
@@ -286,21 +325,64 @@ export async function scrapeFangraphsDate(date: string): Promise<FgDateResult> {
     `[FgScraper] [STATE] date=${date} playerIds=${playerIds.size} pitcherIds=${pitcherIds.size}`
   );
 
-  // ── Step 3: Bulk fetch handedness for all players ─────────────────────────
-  console.log(`[FgScraper] [STEP] date=${date} Fetching handedness for ${playerIds.size} players`);
-  const handednessMap = new Map<number, { bats: string; throws: string; pos: string }>();
+  // ── Step 3 + 4: Bulk fetch handedness AND pitcher stats in parallel ─────────
+  // Both calls run simultaneously using Promise.all to minimize latency.
+  // Handedness: single bulk call for all player IDs (batters + pitchers)
+  // Pitcher stats: single bulk call using people?personIds=...&hydrate=stats(...)
+  console.log(
+    `[FgScraper] [STEP] date=${date} Bulk fetching handedness (${playerIds.size} players) + pitcher stats (${pitcherIds.size} pitchers) in parallel`
+  );
 
-  // MLB API supports up to 500 IDs per request
-  const idChunks: number[][] = [];
+  const handednessMap = new Map<number, { bats: string; throws: string; pos: string }>();
+  const pitcherStatsMap = new Map<
+    number,
+    { era: string; ip: string; so: number; w: number; l: number; whip: string; throws: string }
+  >();
+
+  // Build URL chunks (MLB API max 500 IDs per request)
   const idArray = Array.from(playerIds);
+  const idChunks: number[][] = [];
   for (let i = 0; i < idArray.length; i += 500) {
     idChunks.push(idArray.slice(i, i + 500));
   }
 
-  for (const chunk of idChunks) {
-    const peopleUrl = `${MLB_API_BASE}/people?personIds=${chunk.join(",")}&hydrate=currentTeam`;
-    const peopleData = await fetchJson<MlbPeopleResponse>(peopleUrl);
-    for (const p of peopleData.people) {
+  const pitcherIdArray = Array.from(pitcherIds);
+  const pitcherChunks: number[][] = [];
+  for (let i = 0; i < pitcherIdArray.length; i += 500) {
+    pitcherChunks.push(pitcherIdArray.slice(i, i + 500));
+  }
+
+  // Run all bulk calls in parallel
+  const [handednessResults, pitcherStatsResults] = await Promise.all([
+    // Handedness: fetch all players (no currentTeam hydrate — faster)
+    Promise.all(
+      idChunks.map(chunk =>
+        fetchJson<MlbPeopleResponse>(
+          `${MLB_API_BASE}/people?personIds=${chunk.join(",")}`
+        ).catch(err => {
+          console.warn(`[FgScraper] [WARN] Handedness chunk failed: ${err}`);
+          return { people: [] } as MlbPeopleResponse;
+        })
+      )
+    ),
+    // Pitcher stats: bulk hydrate with season stats
+    pitcherIdArray.length > 0
+      ? Promise.all(
+          pitcherChunks.map(chunk =>
+            fetchJson<MlbPersonStatsResponse>(
+              `${MLB_API_BASE}/people?personIds=${chunk.join(",")}&hydrate=stats(type=season,group=pitching,season=${CURRENT_SEASON})`
+            ).catch(err => {
+              console.warn(`[FgScraper] [WARN] Pitcher stats chunk failed: ${err}`);
+              return { people: [] } as MlbPersonStatsResponse;
+            })
+          )
+        )
+      : Promise.resolve([] as MlbPersonStatsResponse[]),
+  ]);
+
+  // Populate handedness map
+  for (const res of handednessResults) {
+    for (const p of res.people) {
       handednessMap.set(p.id, {
         bats: p.batSide?.code ?? "?",
         throws: p.pitchHand?.code ?? "?",
@@ -310,40 +392,21 @@ export async function scrapeFangraphsDate(date: string): Promise<FgDateResult> {
   }
   console.log(`[FgScraper] [STATE] date=${date} Handedness map: ${handednessMap.size} entries`);
 
-  // ── Step 4: Fetch pitcher season stats ────────────────────────────────────
-  console.log(`[FgScraper] [STEP] date=${date} Fetching pitcher stats for ${pitcherIds.size} pitchers`);
-  const pitcherStatsMap = new Map<
-    number,
-    { era: string; ip: string; so: number; w: number; l: number; whip: string; throws: string }
-  >();
-
-  const pitcherIdArray = Array.from(pitcherIds);
-  for (let i = 0; i < pitcherIdArray.length; i += 50) {
-    const chunk = pitcherIdArray.slice(i, i + 50);
-    // Fetch each pitcher's stats (bulk stats not supported with hydrate)
-    await Promise.all(
-      chunk.map(async (pid) => {
-        try {
-          const statsUrl = `${MLB_API_BASE}/people/${pid}?hydrate=stats(type=season,group=pitching,season=${CURRENT_SEASON})`;
-          const statsData = await fetchJson<MlbPersonStatsResponse>(statsUrl);
-          const person = statsData.people[0];
-          if (!person) return;
-          const splits = person.stats?.[0]?.splits ?? [];
-          const stat = splits[0]?.stat ?? {};
-          pitcherStatsMap.set(pid, {
-            era: stat.era ?? "-.--",
-            ip: stat.inningsPitched ?? "0.0",
-            so: stat.strikeOuts ?? 0,
-            w: stat.wins ?? 0,
-            l: stat.losses ?? 0,
-            whip: stat.whip ?? "-.--",
-            throws: person.pitchHand?.code ?? handednessMap.get(pid)?.throws ?? "?",
-          });
-        } catch (err) {
-          console.warn(`[FgScraper] [WARN] Failed to fetch stats for pitcher ${pid}: ${err}`);
-        }
-      })
-    );
+  // Populate pitcher stats map
+  for (const res of pitcherStatsResults) {
+    for (const person of res.people) {
+      const splits = person.stats?.[0]?.splits ?? [];
+      const stat = splits[0]?.stat ?? {};
+      pitcherStatsMap.set(person.id, {
+        era: stat.era ?? "-.--",
+        ip: stat.inningsPitched ?? "0.0",
+        so: stat.strikeOuts ?? 0,
+        w: stat.wins ?? 0,
+        l: stat.losses ?? 0,
+        whip: stat.whip ?? "-.--",
+        throws: person.pitchHand?.code ?? handednessMap.get(person.id)?.throws ?? "?",
+      });
+    }
   }
   console.log(`[FgScraper] [STATE] date=${date} Pitcher stats map: ${pitcherStatsMap.size} entries`);
 
@@ -437,8 +500,16 @@ export async function scrapeFangraphsDate(date: string): Promise<FgDateResult> {
 /**
  * Scrapes lineups for today AND tomorrow (PST dates).
  * Returns a combined FgScrapeResult.
+ * @param forceRefresh - If true, bypasses the 30-min in-memory cache.
  */
-export async function scrapeFangraphsLineups(): Promise<FgScrapeResult> {
+export async function scrapeFangraphsLineups(forceRefresh = false): Promise<FgScrapeResult> {
+  // Check cache first (unless forceRefresh)
+  if (!forceRefresh) {
+    const cached = getCached();
+    if (cached) return cached;
+  } else {
+    invalidateFgCache();
+  }
   const todayDate = getPstDate(0);
   const tomorrowDate = getPstDate(1);
   const errors: string[] = [];
@@ -480,5 +551,12 @@ export async function scrapeFangraphsLineups(): Promise<FgScrapeResult> {
     `[FgScraper] [OUTPUT] today=${today.games.length} tomorrow=${tomorrow.games.length} total=${totalGames} errors=${errors.length}`
   );
 
-  return { today, tomorrow, totalGames, errors };
+  const result: FgScrapeResult = { today, tomorrow, totalGames, errors };
+
+  // Cache the result for 30 minutes (only cache if we got at least some data)
+  if (totalGames > 0) {
+    setCache(result);
+  }
+
+  return result;
 }

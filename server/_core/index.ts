@@ -453,6 +453,28 @@ async function startServer() {
         )
         .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
     }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
+
+    // ── Lineup cache pre-warm ───────────────────────────────────────────────
+    // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant.
+    // Refreshes every 30 minutes to keep the cache warm throughout the day.
+    // Non-fatal: if the MLB Stats API is down, the cache stays empty and the
+    // next user request will trigger a live fetch.
+    import('../fangraphsScraper').then(({ scrapeFangraphsLineups }) => {
+      // Initial pre-fetch: 3 seconds after startup (avoids blocking the listen callback)
+      setTimeout(() => {
+        scrapeFangraphsLineups()
+          .then(r => console.log(`[Startup] [LINEUP_CACHE] Pre-warmed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
+          .catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Pre-fetch failed (non-fatal):', err));
+      }, 3000);
+      // Recurring refresh: every 30 minutes (force-refresh to bypass cache)
+      const lineupRefreshInterval = setInterval(() => {
+        scrapeFangraphsLineups(true)
+          .then(r => console.log(`[Scheduler] [LINEUP_CACHE] Refreshed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
+          .catch((err: unknown) => console.warn('[Scheduler] [LINEUP_CACHE] Refresh failed (non-fatal):', err));
+      }, 30 * 60 * 1000);
+      lineupRefreshInterval.unref();
+      console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
+    }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
   });
 }
 
