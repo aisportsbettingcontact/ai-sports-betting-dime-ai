@@ -176,10 +176,10 @@ export default function ResetPassword() {
               New Password
             </Label>
             <div className="relative">
+{/* [FIX] type="password" always + -webkit-text-security for show/hide; no name attr (removes Safari adjacency pattern Signal 5, 6) */}
               <Input
                 id="rp-password"
-                name="new-password"
-                type={showPassword ? "text" : "password"}
+                type="password"
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -190,6 +190,7 @@ export default function ResetPassword() {
                 onKeyDown={handleKeyDown}
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
+                style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
               />
               <button
@@ -213,10 +214,10 @@ export default function ResetPassword() {
               Confirm Password
             </Label>
             <div className="relative">
+{/* [FIX] type="password" always + -webkit-text-security for show/hide; no name attr */}
               <Input
                 id="rp-confirm"
-                name="confirm-password"
-                type={showConfirm ? "text" : "password"}
+                type="password"
                 autoComplete="new-password"
                 autoCapitalize="none"
                 autoCorrect="off"
@@ -227,6 +228,7 @@ export default function ResetPassword() {
                 onKeyDown={handleKeyDown}
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
+                style={showConfirm ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
               />
               <button

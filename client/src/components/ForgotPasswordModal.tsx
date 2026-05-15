@@ -148,11 +148,11 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
               >
                 Username
               </Label>
+{/* [FIX] autoComplete="off" (not "username"), no name attr — eliminates iOS Safari AutoFill email-classification signals 4, 5 */}
               <Input
                 id="fp-identifier"
-                name="fp-identifier"
                 type="text"
-                autoComplete="username"
+                autoComplete="off"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}

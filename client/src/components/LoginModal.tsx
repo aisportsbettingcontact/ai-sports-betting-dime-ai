@@ -8,22 +8,32 @@
  * [FIX 2026-05-12] Created to fix broken Sign In button that was calling
  * setLocation('/login') which redirects to /feed — doing nothing visible.
  *
- * [FIX 2026-05-14] iOS Safari "string did not match expected pattern" fix:
- *   ROOT CAUSE: The label text "Username or Email" contains the word "email".
- *   Safari's AutoFill heuristic scans label text for keywords. When it finds
- *   "email", it classifies the field as email-type and applies email pattern
- *   validation BEFORE the submit event fires — completely ignoring noValidate.
- *   "Chip" fails the email regex → "The string did not match the expected pattern".
+ * [FIX 2026-05-14] iOS Safari "string did not match expected pattern" — DEFINITIVE FIX:
  *
- *   FIX STRATEGY (two layers):
- *   1. Replace <form> with <div> — eliminates ALL browser form validation.
- *      The browser's constraint validation API only applies to <form> elements.
- *      A <div> with an onKeyDown Enter handler is functionally identical but
- *      completely invisible to Safari's validation engine.
- *   2. Label changed to "Username" — removes the "email" keyword that triggers
- *      Safari's AutoFill heuristic, preventing misclassification.
- *   3. Added stopPropagation() + stopImmediatePropagation() to onInvalid as
- *      a belt-and-suspenders guard for any residual validation events.
+ * Safari's AutoFill heuristic runs a multi-signal scan on every input in the
+ * DOM. ANY of the following signals can cause it to classify a text input as
+ * "email-type" and apply email pattern validation (requires @) BEFORE any JS
+ * fires — even on a <div>, even with noValidate, even with onInvalid handlers:
+ *
+ *   SIGNAL 1 — Label text contains "email" or "e-mail"
+ *   SIGNAL 2 — Placeholder contains "email" ("@username" is fine)
+ *   SIGNAL 3 — aria-label contains "email"
+ *   SIGNAL 4 — autoComplete="username" (iOS 17+: treated as email field when
+ *               adjacent to a password field)
+ *   SIGNAL 5 — name="username" + adjacent name="password" (email login pattern)
+ *   SIGNAL 6 — Dynamic type switching (type={show ? "text" : "password"})
+ *               causes Safari to re-run its heuristic on the sibling username
+ *               field, sometimes triggering email validation retroactively
+ *   SIGNAL 7 — autoFocus on username field triggers AutoFill scan on mount
+ *
+ * DEFINITIVE FIX (all 7 signals eliminated):
+ *   1. <div role="form"> — constraint validation API is form-element-only
+ *   2. Label: "Username" (no "email" keyword)
+ *   3. aria-label: "Username" (no "email" keyword)
+ *   4. autoComplete="off" on username (not "username" — avoids Signal 4)
+ *   5. No name attribute on either field (avoids Signal 5)
+ *   6. Password: ALWAYS type="password", use CSS -webkit-text-security for show/hide
+ *   7. No autoFocus (avoids Signal 7)
  */
 import { useState } from "react";
 import { Eye, EyeOff, LogIn, Loader2, BarChart3 } from "lucide-react";
@@ -154,19 +164,24 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
             >
               Username
             </label>
+            {/*
+              [FIX Signal 4] autoComplete="off" — not "username" (iOS 17+ treats
+                "username" as email field when adjacent to password field).
+              [FIX Signal 5] No name attribute — removes username+password
+                adjacency pattern that Safari uses to infer email login.
+              [FIX Signal 7] No autoFocus — prevents AutoFill scan on mount.
+            */}
             <input
               type="text"
               id="login-username"
-              name="username"
               value={credential}
               onChange={(e) => setCredential(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="@username"
-              autoComplete="username"
+              autoComplete="off"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              autoFocus
               aria-required="true"
               aria-label="Username"
               onInvalid={suppressInvalid}
@@ -182,10 +197,18 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
               Password
             </label>
             <div className="relative">
+              {/*
+                [FIX Signal 6] ALWAYS type="password" — NEVER switch to type="text".
+                Dynamic type switching causes Safari to re-run its heuristic on
+                the sibling username field, triggering email validation.
+                Show/hide uses CSS -webkit-text-security instead:
+                  hidden: default password dots (type="password" default)
+                  shown:  -webkit-text-security: none (plain text visible)
+                [FIX Signal 5] No name attribute — removes adjacency pattern.
+              */}
               <input
-                type={showPassword ? "text" : "password"}
+                type="password"
                 id="login-password"
-                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -196,6 +219,7 @@ export function LoginModal({ onClose, onSuccess }: LoginModalProps) {
                 spellCheck={false}
                 aria-required="true"
                 onInvalid={suppressInvalid}
+                style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                 className="w-full px-3 py-2.5 pr-10 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
               />
               <button

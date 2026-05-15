@@ -237,19 +237,18 @@ export default function Home() {
                 >
                   Username
                 </label>
+                {/* [FIX] autoComplete="off" (not "username"), no name, no autoFocus — eliminates iOS Safari AutoFill email-classification signals 4, 5, 7 */}
                 <input
                   type="text"
                   id="home-login-username"
-                  name="username"
                   value={credential}
                   onChange={(e) => setCredential(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="@username"
-                  autoComplete="username"
+                  autoComplete="off"
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  autoFocus
                   aria-required="true"
                   aria-label="Username"
                   onInvalid={suppressInvalid}
@@ -265,10 +264,10 @@ export default function Home() {
                   Password
                 </label>
                 <div className="relative">
+                  {/* [FIX] ALWAYS type="password", no name — use -webkit-text-security for show/hide to avoid type-switch re-triggering Safari heuristic (Signals 5, 6) */}
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type="password"
                     id="home-login-password"
-                    name="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -279,6 +278,7 @@ export default function Home() {
                     spellCheck={false}
                     aria-required="true"
                     onInvalid={suppressInvalid}
+                    style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
                     className="w-full px-3 py-2.5 pr-10 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}

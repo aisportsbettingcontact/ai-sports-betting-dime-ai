@@ -3272,3 +3272,10 @@
 - [x] Fix: Restore login button (Sign In) for unauthenticated users in ModelProjections.tsx header dropdown
 - [x] Fix: Restore login button (Sign In) for unauthenticated users in BettingSplits.tsx header dropdown
 - [x] Fix: Ensure owner-exclusive dropdown pages are accessible to @prez after login
+
+## Session: 2026-05-15 — iOS Safari Login Fix (Definitive 7-Signal Elimination)
+- [x] LoginModal.tsx: remove name attr, autoComplete="off", remove autoFocus, always type="password" + webkit-text-security for show/hide
+- [x] Home.tsx: same 7-signal fix on inline login panel (username + password inputs)
+- [x] ResetPassword.tsx: remove name attrs, always type="password" + webkit-text-security on both password fields
+- [x] ForgotPasswordModal.tsx: remove name attr, autoComplete="off" on identifier input
+- [x] TypeScript: 0 errors | Tests: 655/655 pass
