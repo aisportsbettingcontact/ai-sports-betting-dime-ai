@@ -1458,7 +1458,13 @@ export default function BetTracker() {
       setTargetUserId(appUser.id);
     }
   }, [appUser, targetUserId]);
-  const effectiveUserId = isOwnerOrAdmin && targetUserId ? targetUserId : undefined;
+  // Only send an explicit targetUserId when viewing ANOTHER user's bets.
+  // When the owner/admin views their own bets, send undefined so the server defaults
+  // to ctx.appUser.id — this prevents a cache key change when appUser loads after
+  // initial render (undefined → owner's id → re-query with different key).
+  const effectiveUserId = isOwnerOrAdmin && targetUserId && targetUserId !== appUser?.id
+    ? targetUserId
+    : undefined;
 
   // ── Sport / filter state ──────────────────────────────────────────────────
   const [activeSport, setActiveSport]   = useState<SportOrAll>("ALL");
@@ -2090,7 +2096,13 @@ export default function BetTracker() {
   }, [formGame, formMarket, formPickSide, handlePickSide]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
+  // Submission lock: prevents duplicate bets from double-click or rapid re-tap.
+  // createMut.isPending is already true during the mutation, but we add an extra
+  // ref-based guard to block the second tap before React re-renders.
+  const isSubmittingRef = useRef(false);
   const handleSubmit = async () => {
+    if (isSubmittingRef.current || createMut.isPending) return;
+    isSubmittingRef.current = true;
     setFormError("");
     if (!formGame) { setFormError("Select a game from the slate."); return; }
     if (isNaN(oddsNum) || oddsNum === 0) { setFormError("Enter valid American odds (e.g. -110, +145)."); return; }
@@ -2139,39 +2151,42 @@ export default function BetTracker() {
       ? (stakeMode === "U" ? toWinNum : (unitSize > 0 ? toWinFinal / unitSize : toWinFinal))
       : (stakeMode === "U" ? (autoToWin ?? 0) : (unitSize > 0 ? toWinFinal / unitSize : toWinFinal));
     console.log(`[BetTracker][STATE] riskUnits=${riskUnitsVal.toFixed(2)} toWinUnits=${toWinFinalU.toFixed(2)}`);
-
-    await createMut.mutateAsync({
-      anGameId:   formGame.id,
-      gameNumber: formGame.gameNumber,  // 1 for G1/non-DH, 2 for G2 — critical for DH grading
-      sport:      formSport,
-      gameDate:   formDate,
-      awayTeam:   formGame.awayTeam,
-      homeTeam:   formGame.homeTeam,
-      timeframe:  formTimeframe,
-      market:     effectiveMarket,
-      pickSide:   effectivePickSide,
-      odds:       oddsNum,
-      risk:       riskDollars,
-      toWin:      toWinFinal,
-      riskUnits:  parseFloat(riskUnitsVal.toFixed(4)),
-      toWinUnits: parseFloat(toWinFinalU.toFixed(4)),
-      line:       linePick,
-      notes:      formNotes || undefined,
-      wagerType:  formWagerType,
-      customLine: effectiveCustomLine,
-    });
-
-    setFormGame(null);
-    setFormTimeframe("FULL_GAME");
-    setFormMarket("ML");
-    setFormPickSide("AWAY");
-    setFormOdds("");
-    setFormRisk("2");
-    setFormToWin("");
-    setFormToWinManual(false);
-    setFormNotes("");
-    setFormWagerType("PREGAME");
-    setFormCustomLine("");
+    try {
+      await createMut.mutateAsync({
+        anGameId:   formGame.id,
+        gameNumber: formGame.gameNumber,  // 1 for G1/non-DH, 2 for G2 — critical for DH grading
+        sport:      formSport,
+        gameDate:   formDate,
+        awayTeam:   formGame.awayTeam,
+        homeTeam:   formGame.homeTeam,
+        timeframe:  formTimeframe,
+        market:     effectiveMarket,
+        pickSide:   effectivePickSide,
+        odds:       oddsNum,
+        risk:       riskDollars,
+        toWin:      toWinFinal,
+        riskUnits:  parseFloat(riskUnitsVal.toFixed(4)),
+        toWinUnits: parseFloat(toWinFinalU.toFixed(4)),
+        line:       linePick,
+        notes:      formNotes || undefined,
+        wagerType:  formWagerType,
+        customLine: effectiveCustomLine,
+      });
+      setFormGame(null);
+      setFormTimeframe("FULL_GAME");
+      setFormMarket("ML");
+      setFormPickSide("AWAY");
+      setFormOdds("");
+      setFormRisk("2");
+      setFormToWin("");
+      setFormToWinManual(false);
+      setFormNotes("");
+      setFormWagerType("PREGAME");
+      setFormCustomLine("");
+    } finally {
+      // Always release the submission lock so the button re-enables after success OR error
+      isSubmittingRef.current = false;
+    }
   };
 
   // ── Stable callback refs — memo(BetCard) only re-renders when bet data changes, not parent state ──

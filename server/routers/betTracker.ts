@@ -365,6 +365,31 @@ export const betTrackerRouter = router({
       console.log(`[BetTracker][STATE] create: awayTeam=${input.awayTeam} homeTeam=${input.homeTeam} derivedPick="${pick}"`);
 
       const db = await getDb();
+
+      // ── Idempotency guard: prevent duplicate bets from double-tap / network retry ──
+      // If an identical bet (same user, game, market, pickSide, odds) was inserted in
+      // the last 30 seconds, return the existing bet ID instead of creating a new row.
+      const thirtySecondsAgo = new Date(Date.now() - 30_000);
+      const [existing] = await db
+        .select({ id: trackedBets.id })
+        .from(trackedBets)
+        .where(
+          and(
+            eq(trackedBets.userId,    userId),
+            eq(trackedBets.anGameId,  input.anGameId),
+            eq(trackedBets.gameNumber, input.gameNumber),
+            eq(trackedBets.market,    input.market),
+            eq(trackedBets.pickSide,  input.pickSide),
+            eq(trackedBets.odds,      input.odds),
+            gte(trackedBets.createdAt, thirtySecondsAgo),
+          )
+        )
+        .limit(1);
+      if (existing) {
+        console.log(`[BetTracker][IDEMPOTENCY] Duplicate detected within 30s — returning existing id=${existing.id}`);
+        return { id: existing.id, duplicate: true };
+      }
+
       const [result] = await db.insert(trackedBets).values({
         userId,
         anGameId:   input.anGameId,
