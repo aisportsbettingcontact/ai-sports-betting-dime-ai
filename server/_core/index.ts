@@ -31,7 +31,7 @@ import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
-import { getDb } from "../db";
+import { getDb, listGames } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
@@ -453,6 +453,21 @@ async function startServer() {
         )
         .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
     }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
+
+    // ── Games list cache pre-warm ─────────────────────────────────────────────
+    // Pre-warm the games.list cache for all active sports at startup.
+    // Without this, the first user after a deploy pays the full DB cost (~150ms).
+    // With this, the cache is hot before any user hits the server.
+    // Non-fatal: if DB is unavailable, the first user request will populate the cache.
+    setTimeout(() => {
+      Promise.all([
+        listGames({ sport: 'MLB' }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB pre-warmed: ${r.length} games`)),
+        listGames({ sport: 'NHL' }).then(r => console.log(`[Startup] [GAMES_CACHE] NHL pre-warmed: ${r.length} games`)),
+        listGames({ sport: 'NBA' }).then(r => console.log(`[Startup] [GAMES_CACHE] NBA pre-warmed: ${r.length} games`)),
+        listGames({ sport: 'NCAAM' }).then(r => console.log(`[Startup] [GAMES_CACHE] NCAAM pre-warmed: ${r.length} games`)),
+      ]).catch((err: unknown) => console.warn('[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):', err));
+    }, 1000); // 1s after startup — before lineup pre-warm, after DB keep-alive
+    console.log('[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)');
 
     // ── Lineup cache pre-warm ───────────────────────────────────────────────
     // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant.

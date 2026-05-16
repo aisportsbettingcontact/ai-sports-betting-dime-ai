@@ -3316,3 +3316,10 @@
 - [ ] FIX-5: Reduce superjson overhead on games.list — 187-column SELECT * returns 440KB; add column projection for public feed
 - [ ] FIX-6: Deduplicate games.list(NBA) query — allNbaGames fires always even when sport=MLB; gate with enabled flag
 - [ ] FIX-7: Add staleTime to activeSports query (currently 5min staleTime but refetchOnWindowFocus:true causes extra fetches)
+
+## Speed Audit Round 2 (2026-05-16)
+- [ ] FIX-A: Strip null fields from games.list response (425KB → ~60KB)
+- [ ] FIX-B: Pre-warm games.list cache at server startup (MLB, NHL, NBA)
+- [ ] FIX-C: Replace superjson Date meta with Unix timestamps (eliminate 111-entry meta section)
+- [ ] FIX-D: Add games.list GET-level HTTP cache headers for Cloudflare edge caching
+- [ ] FIX-E: Add server-side session cache to skip JWT verify + DB lookup for repeat requests
