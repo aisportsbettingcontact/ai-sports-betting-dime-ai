@@ -589,6 +589,15 @@ export const games = mysqlTable("games", {
 }, (t) => ({
   /** Prevent duplicate rows for the same matchup on the same date */
   uniqMatchup: uniqueIndex("games_matchup_unique").on(t.gameDate, t.awayTeam, t.homeTeam, t.gameNumber),
+  /**
+   * Composite index for the primary feed query pattern:
+   *   WHERE sport = ? AND gameDate >= ? AND gameDate <= ? AND gameStatus != 'postponed'
+   * Eliminates the IndexLookUp+TableRowIDScan double-read on the 7,730-row games table.
+   * Without this index, every games.list call does a full index scan on games_matchup_unique
+   * then a separate TableRowIDScan to filter by sport+gameStatus — ~100ms per query.
+   * With this index, TiKV can satisfy the entire WHERE clause from one index range scan.
+   */
+  idxSportDate: index("idx_games_sport_date_status").on(t.sport, t.gameDate, t.gameStatus),
 }));
 
 export type Game = typeof games.$inferSelect;

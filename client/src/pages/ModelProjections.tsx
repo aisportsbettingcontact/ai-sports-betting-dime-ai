@@ -232,7 +232,7 @@ export default function ModelProjections() {
   // Query which sports have games today or tomorrow (UTC) — hides pills with no games
   const { data: activeSports } = trpc.games.activeSports.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // re-check every 5 minutes
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false, // server cache (60s TTL) makes window-focus refetch wasteful
   });
   // Auto-switch away from a sport with no games once activeSports loads
   useEffect(() => {
@@ -499,10 +499,13 @@ export default function ModelProjections() {
     { enabled: true, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
   );
 
-  // Cross-sport game lists for the Favorites tab (needs ALL sports regardless of selectedSport)
+  // Cross-sport game lists for the Favorites tab (needs ALL sports regardless of selectedSport).
+  // Only fire when NBA has games (activeSports.NBA) or the Favorites tab is open.
+  // This eliminates a redundant 100ms DB round-trip on page load when NBA is off-season.
+  const nbaQueryEnabled = activeSports?.NBA === true || showFavoritesTab;
   const { data: allNbaGames } = trpc.games.list.useQuery(
     { sport: "NBA" },
-    { enabled: true, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
+    { enabled: nbaQueryEnabled, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
   );
 
   const liveCount = useMemo(() =>

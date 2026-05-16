@@ -218,11 +218,12 @@ export const appRouter = router({
             sport: zodSport.optional(),
             gameDate: zodGameDate.optional(),
             gameStatus: z.enum(['upcoming', 'live', 'final']).optional(),
+            forceRefresh: z.boolean().optional(),
           })
           .optional()
       )
       .query(async ({ input, ctx }) => {
-        console.log(`[tRPC][games.list] PUBLIC sport=${input?.sport ?? 'all'} date=${input?.gameDate ?? 'rolling'}`);
+        console.log(`[tRPC][games.list] PUBLIC sport=${input?.sport ?? 'all'} date=${input?.gameDate ?? 'rolling'} forceRefresh=${input?.forceRefresh ?? false}`);
         const games = await listGames(input ?? {});
         // Filter by the appropriate registry based on sport
         let filtered = games.filter(g => isValidGame(g.awayTeam, g.homeTeam, g.sport));

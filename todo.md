@@ -3306,3 +3306,13 @@
 - [x] Add tRPC procedure: jackMac.getLineups (whitelist-gated)
 - [x] Add Fangraphs Lineups sub-tab to JackMacView.tsx (LINEUPS main tab in JackMacView)
 - [x] Full end-to-end test: 678/678 tests pass, 15 MLB games with 9-player lineups verified
+
+## Performance Audit Fixes (2026-05-16)
+
+- [ ] FIX-1: Add composite DB index on games(sport, gameDate, gameStatus) — eliminates IndexLookUp+TableRowIDScan double-read
+- [ ] FIX-2: Add server-side in-memory cache for games.list (30s TTL, keyed by sport+date) — eliminates redundant DB round-trips on every 60s refetch
+- [ ] FIX-3: Add server-side cache for games.activeSports (60s TTL) — eliminates separate DB query on every page load
+- [ ] FIX-4: Eliminate upsertUser(lastSignedIn) on every authenticated request — replace with debounced write (max once per 5 min per user)
+- [ ] FIX-5: Reduce superjson overhead on games.list — 187-column SELECT * returns 440KB; add column projection for public feed
+- [ ] FIX-6: Deduplicate games.list(NBA) query — allNbaGames fires always even when sport=MLB; gate with enabled flag
+- [ ] FIX-7: Add staleTime to activeSports query (currently 5min staleTime but refetchOnWindowFocus:true causes extra fetches)

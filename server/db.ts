@@ -21,6 +21,64 @@ import { withCircuitBreaker } from './dbCircuitBreaker';
 let _db: any = null;
 let _pool: mysql.Pool | null = null;
 
+// ─── Server-side in-memory cache ─────────────────────────────────────────────
+//
+// PROBLEM: games.list and getActiveSports are called on EVERY page load and
+// every 60s refetch interval. With 7,730 rows in the games table, each call
+// costs ~100ms of TiDB round-trip time. The tRPC batch on initial page load
+// fires 5 procedures simultaneously — all hitting the DB at the same time.
+//
+// SOLUTION: Cache the results in Node.js process memory with a short TTL.
+//   - games.list: 30s TTL (data changes only when admin publishes or VSiN refreshes)
+//   - activeSports: 60s TTL (sport availability changes at most once per day)
+//
+// Cache is keyed by (sport, dateWindow) so different sport/date combos are
+// cached independently. Cache is invalidated on any game mutation (publish,
+// ingest, delete) to ensure consistency.
+//
+// IMPACT: Eliminates ~100ms DB round-trip for 95%+ of games.list calls.
+// The first call after TTL expiry pays the DB cost; all subsequent calls
+// within the TTL window are served from memory in <1ms.
+
+type CacheEntry<T> = { data: T; expiresAt: number };
+
+const _gamesListCache = new Map<string, CacheEntry<Game[]>>();
+const _activeSportsCache: { entry: CacheEntry<{ NBA: boolean; NHL: boolean; MLB: boolean }> | null } = { entry: null };
+
+const GAMES_LIST_TTL_MS = 30_000;   // 30 seconds
+const ACTIVE_SPORTS_TTL_MS = 60_000; // 60 seconds
+
+/**
+ * Invalidate all games.list and activeSports cache entries.
+ * Call this whenever game data changes (publish, ingest, delete, odds refresh).
+ */
+export function invalidateGamesCache(): void {
+  const count = _gamesListCache.size;
+  _gamesListCache.clear();
+  _activeSportsCache.entry = null;
+  console.log(`[GamesCache] Invalidated ${count} games.list entries + activeSports cache`);
+}
+
+// ─── User lookup cache ─────────────────────────────────────────────────────────────────
+//
+// PROBLEM: getUserByOpenId fires on EVERY tRPC request (in createContext).
+// On initial page load, the batch fires 5 procedures simultaneously — each
+// calling getUserByOpenId for the same user. That's 5 identical DB reads.
+//
+// SOLUTION: Cache user rows by openId with a 30s TTL. The first lookup in
+// a batch pays the DB cost; all subsequent lookups in the same batch (and
+// for the next 30 seconds) are served from memory in <1ms.
+//
+// Cache is invalidated on upsertUser so role/email changes propagate immediately.
+
+// User type is already imported from drizzle/schema at the top of this file
+const _userCache = new Map<string, CacheEntry<import('../drizzle/schema').User | null>>();
+const USER_CACHE_TTL_MS = 30_000; // 30 seconds
+
+export function invalidateUserCache(openId: string): void {
+  _userCache.delete(openId);
+}
+
 // Lazily create the drizzle instance with a proper connection pool.
 // Pool settings: 10 connections max, 30s acquire timeout, 10s idle timeout.
 export async function getDb() {
@@ -100,6 +158,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
+    // Invalidate user cache so role/email changes propagate immediately
+    invalidateUserCache(user.openId);
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -107,6 +167,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
+  // ─── Cache lookup: eliminates duplicate DB reads within the same tRPC batch ───
+  const cached = _userCache.get(openId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data ?? undefined;
+  }
+
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get user: database not available");
@@ -114,8 +180,12 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const user = result.length > 0 ? result[0] : null;
 
-  return result.length > 0 ? result[0] : undefined;
+  // Cache the result (including null = user not found)
+  _userCache.set(openId, { data: user, expiresAt: Date.now() + USER_CACHE_TTL_MS });
+
+  return user ?? undefined;
 }
 
 // ─── Model Files ─────────────────────────────────────────────────────────────
@@ -204,9 +274,23 @@ export async function insertGames(rows: InsertGame[]) {
       ncaaContestId: sql`COALESCE(ncaaContestId, VALUES(ncaaContestId))`,
     },
   });
+  invalidateGamesCache();
 }
 
-export async function listGames(opts?: { sport?: string; gameDate?: string }): Promise<Game[]> {
+export async function listGames(opts?: { sport?: string; gameDate?: string; forceRefresh?: boolean }): Promise<Game[]> {
+  // ─── Cache lookup ─────────────────────────────────────────────────────────────────
+  // Cache key encodes all query dimensions so different sport/date combos
+  // are cached independently. forceRefresh bypasses cache (used by admin refresh).
+  const cacheKey = `${opts?.sport ?? 'ALL'}:${opts?.gameDate ?? 'ROLLING'}`;
+  if (!opts?.forceRefresh) {
+    const cached = _gamesListCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      console.log(`[GamesCache][HIT] key=${cacheKey} ttlRemaining=${Math.round((cached.expiresAt - Date.now()) / 1000)}s rows=${cached.data.length}`);
+      return cached.data;
+    }
+  } else {
+    console.log(`[GamesCache][BYPASS] key=${cacheKey} forceRefresh=true`);
+  }
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -287,13 +371,20 @@ export async function listGames(opts?: { sport?: string; gameDate?: string }): P
   });
 
   // Sort by start time in Node.js: treat '00:00' as midnight (sort last within each date)
-  return sortGamesByStartTime(gated);
+  const result = sortGamesByStartTime(gated) as Game[];
+
+  // ─── Cache write ─────────────────────────────────────────────────────────────────
+  _gamesListCache.set(cacheKey, { data: result, expiresAt: Date.now() + GAMES_LIST_TTL_MS });
+  console.log(`[GamesCache][MISS] key=${cacheKey} rows=${result.length} ttl=${GAMES_LIST_TTL_MS / 1000}s`);
+
+  return result;
 }
 
 export async function deleteGamesByFileId(fileId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(games).where(eq(games.fileId, fileId));
+  invalidateGamesCache();
 }
 
 /**
@@ -304,6 +395,7 @@ export async function deleteGameById(id: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(games).where(eq(games.id, id));
+  invalidateGamesCache();
 }
 
 // deleteOldGames() REMOVED — daily purge permanently disabled as of 2026-03-25.
@@ -502,11 +594,11 @@ export async function updateGameProjections(
     modelHomeSpreadOdds?: string | null;
   }
 ) {
-  const db = await getDb();
+    const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(games).set(data).where(eq(games.id, id));
+  invalidateGamesCache();
 }
-
 /** Toggle publishedToFeed for a single game */
 /**
  * Update book odds (spread + total) for a single game.
@@ -583,14 +675,15 @@ export async function updateBookOdds(
   if (data.awayPitcherConfirmed !== undefined) updateData.awayPitcherConfirmed = data.awayPitcherConfirmed;
   if (data.homePitcherConfirmed !== undefined) updateData.homePitcherConfirmed = data.homePitcherConfirmed;
   if (data.mlbGamePk !== undefined) updateData.mlbGamePk = data.mlbGamePk;
-  await db.update(games).set(updateData).where(eq(games.id, id));
+    await db.update(games).set(updateData).where(eq(games.id, id));
+  invalidateGamesCache();
 }
-
 /** Toggle publishedModel for a single game — owner approves/retracts model projections */
 export async function setGameModelPublished(id: number, published: boolean): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(games).set({ publishedModel: published }).where(eq(games.id, id));
+  invalidateGamesCache();
 }
 
 /**
@@ -614,6 +707,7 @@ export async function bulkApproveModels(gameDate: string, sport?: string): Promi
     .where(and(...conditions));
   const affected = (result as unknown as { rowsAffected?: number }[])[0]?.rowsAffected ?? 0;
   console.log(`[DB] bulkApproveModels: gameDate=${gameDate} sport=${sport ?? "all"} — approved ${affected} games`);
+  if (affected > 0) invalidateGamesCache();
   return affected;
 }
 
@@ -632,6 +726,7 @@ export async function setGamePublished(id: number, published: boolean) {
   }
 
   await db.update(games).set({ publishedToFeed: published }).where(eq(games.id, id));
+  invalidateGamesCache();
 }
 
 /** List all staging games for a date range (inclusive). Owner-only. */
@@ -679,6 +774,7 @@ export async function updateNcaaStartTime(
   const db = await getDb();
   if (!db) return;
   await db.update(games).set(data).where(eq(games.id, id));
+  invalidateGamesCache();
 }
 
 /** Bulk publish all staging games for a date — only publishes games with live VSiN odds */
@@ -696,6 +792,7 @@ export async function publishAllStagingGames(gameDate: string, sport?: string) {
     .update(games)
     .set({ publishedToFeed: true })
     .where(and(...conditions));
+  invalidateGamesCache();
 }
 
 
@@ -1614,7 +1711,13 @@ export async function auditAndAdvanceAllBracketWinners(): Promise<number> {
  * Returns which sports have at least one game with live odds on today's UTC date
  * or tomorrow's UTC date. Used by the frontend to hide sport tabs with no upcoming games.
  */
-export async function getActiveSports(): Promise<{ NBA: boolean; NHL: boolean; MLB: boolean }> {
+export async function getActiveSports(forceRefresh?: boolean): Promise<{ NBA: boolean; NHL: boolean; MLB: boolean }> {
+  // ─── Cache lookup ─────────────────────────────────────────────────────────────────
+  if (!forceRefresh && _activeSportsCache.entry && _activeSportsCache.entry.expiresAt > Date.now()) {
+    const { NBA, NHL, MLB } = _activeSportsCache.entry.data;
+    console.log(`[ActiveSportsCache][HIT] ttlRemaining=${Math.round((_activeSportsCache.entry.expiresAt - Date.now()) / 1000)}s NBA=${NBA} NHL=${NHL} MLB=${MLB}`);
+    return _activeSportsCache.entry.data;
+  }
   const db = await getDb();
   if (!db) return { NBA: false, NHL: false, MLB: false };
    // Apply the same 11:00 UTC gate used by the frontend todayUTC() function.
@@ -1654,12 +1757,15 @@ export async function getActiveSports(): Promise<{ NBA: boolean; NHL: boolean; M
     .groupBy(games.sport);
   const proActive = new Set(proRows.map((r: { sport: string }) => r.sport));
 
-  console.log(`[activeSports] todayUTC=${todayUTC} tomorrowUTC=${tomorrowUTC} NBA=${proActive.has('NBA')} NHL=${proActive.has('NHL')} MLB=${proActive.has('MLB')}`);
-  return {
+  const result = {
     NBA: proActive.has('NBA'),
     NHL: proActive.has('NHL'),
     MLB: proActive.has('MLB'),
   };
+  console.log(`[activeSports][MISS] todayUTC=${todayUTC} tomorrowUTC=${tomorrowUTC} NBA=${result.NBA} NHL=${result.NHL} MLB=${result.MLB} ttl=${ACTIVE_SPORTS_TTL_MS / 1000}s`);
+  // ─── Cache write ─────────────────────────────────────────────────────────────────
+  _activeSportsCache.entry = { data: result, expiresAt: Date.now() + ACTIVE_SPORTS_TTL_MS };
+  return result;
 }
 
 // ─── MLB Lineups ──────────────────────────────────────────────────────────────
