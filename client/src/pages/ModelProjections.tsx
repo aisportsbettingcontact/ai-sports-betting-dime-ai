@@ -494,9 +494,23 @@ export default function ModelProjections() {
   // games.list and all public feed queries are always enabled — feed is fully public.
   const isAppAuthedForFav = !appAuthLoading && Boolean(appUser);
 
+  // CRITICAL: Pass selectedDate as gameDate explicitly so the server does an exact date match.
+  // Without this, the server returns a 7-day rolling window and the client filters by selectedDate.
+  // If the server cache was populated at a different UTC boundary (before vs after 11:00 UTC cutoff)
+  // than when the client reads it, the dates don't match → all games filtered out → "No games found".
+  // With explicit gameDate: server cache key is MLB:{date}, exact eq() match, zero boundary mismatch.
   const { data: allGames, isLoading: gamesLoading } = trpc.games.list.useQuery(
-    { sport: selectedSport },
+    { sport: selectedSport, gameDate: selectedDate },
     { enabled: true, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
+  );
+
+  // Separate lightweight query for available dates (calendar picker).
+  // This uses the 7-day rolling window on the server to return all dates that have games,
+  // independent of the selectedDate. This way the calendar always shows the full range
+  // of available dates even though allGames only contains the selected date's games.
+  const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
+    { sport: selectedSport },
+    { refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000, staleTime: 2 * 60 * 1000 }
   );
 
   // Cross-sport game lists for the Favorites tab (needs ALL sports regardless of selectedSport).
@@ -588,24 +602,35 @@ export default function ModelProjections() {
     else setSelectedStatuses(next);
   };
 
-  // All unique dates available for the current sport (sorted ascending)
+  // All unique dates available for the current sport (sorted ascending).
+  // IMPORTANT: This now comes from the dedicated games.getAvailableDates query (7-day rolling window)
+  // rather than being computed from allGames. This is necessary because allGames now only contains
+  // the selected date's games (exact gameDate filter), so computing allDates from allGames would
+  // always return a single-element array, breaking the calendar date navigation.
   const allDates = useMemo(() => {
+    if (availableDatesData?.dates && availableDatesData.dates.length > 0) {
+      return availableDatesData.dates.slice().sort();
+    }
+    // Fallback: compute from allGames if the dedicated query hasn't loaded yet
     if (!allGames) return [];
     const dateSet = new Set<string>();
     for (const g of allGames) if (g) dateSet.add(effectiveGameDate(g.gameDate, g.startTimeEst));
     return Array.from(dateSet).sort();
-  }, [allGames]);
+  }, [availableDatesData, allGames]);
 
   // Auto-advance to the first available date when the current selectedDate has no games.
   // This handles MLB opening day: today is March 24 but first game is March 25.
+  // NOTE: Since allGames now only contains games for selectedDate (exact filter), we check
+  // allDates (from the rolling window query) to determine if selectedDate is valid.
+  // If selectedDate is not in allDates, advance to the first available date.
   useEffect(() => {
-    if (!allGames || allGames.length === 0 || allDates.length === 0) return;
-    const hasGamesOnDate = allGames.some(g => g && effectiveGameDate(g.gameDate, g.startTimeEst) === selectedDate);
-    if (!hasGamesOnDate && allDates.length > 0) {
+    if (allDates.length === 0) return; // still loading
+    const hasGamesOnDate = allDates.includes(selectedDate);
+    if (!hasGamesOnDate) {
       console.log(`[Feed] No games on ${selectedDate} for ${selectedSport} — advancing to ${allDates[0]}`);
       setSelectedDate(allDates[0]!);
     }
-  }, [allGames, allDates, selectedDate, selectedSport]);
+  }, [allDates, selectedDate, selectedSport]);
 
   const games = useMemo(() => {
     if (!allGames) return allGames;

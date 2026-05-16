@@ -32,6 +32,7 @@ import {
   bulkApproveModels,
   publishAllStagingGames,
   getActiveSports,
+  getAvailableDates,
 } from "./db";
 import { storagePut } from "./storage";
 import { parseFileBuffer, detectSportFromFilename, detectDateFromFilename } from "./fileParser";
@@ -343,6 +344,25 @@ export const appRouter = router({
           // Non-fatal: header setting can fail in some edge cases
         }
         return stripped;
+      }),
+
+    /**
+     * Return the sorted list of distinct gameDates for a sport.
+     * Used by the client calendar picker to show which dates have games.
+     * PUBLIC — same access as games.list.
+     *
+     * Returns dates in the same 7-day MLB rolling window as games.list,
+     * so the calendar always shows exactly the dates the feed will display.
+     * This query is separate from games.list so the feed can use an exact
+     * gameDate filter (no boundary mismatch) while the calendar still shows
+     * the full range of available dates.
+     */
+    getAvailableDates: publicProcedure
+      .input(z.object({ sport: zodSport }))
+      .query(async ({ input }) => {
+        console.log(`[tRPC][games.getAvailableDates] sport=${input.sport}`);
+        const dates = await getAvailableDates(input.sport);
+        return { dates };
       }),
 
     /**

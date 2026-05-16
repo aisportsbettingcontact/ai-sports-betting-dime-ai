@@ -44,9 +44,14 @@ type CacheEntry<T> = { data: T; expiresAt: number };
 
 const _gamesListCache = new Map<string, CacheEntry<Game[]>>();
 const _activeSportsCache: { entry: CacheEntry<{ NBA: boolean; NHL: boolean; MLB: boolean }> | null } = { entry: null };
+// Available dates cache — declared here so invalidateGamesCache() can clear it.
+// The getAvailableDates() function and AVAILABLE_DATES_TTL_MS constant are defined
+// after listGames() but the Map itself must be declared before invalidateGamesCache().
+const _availableDatesCache = new Map<string, CacheEntry<string[]>>();
 
 const GAMES_LIST_TTL_MS = 30_000;   // 30 seconds
 const ACTIVE_SPORTS_TTL_MS = 60_000; // 60 seconds
+const AVAILABLE_DATES_TTL_MS_EARLY = 5 * 60_000; // 5 minutes (used by getAvailableDates)
 
 /**
  * Invalidate all games.list and activeSports cache entries.
@@ -54,9 +59,11 @@ const ACTIVE_SPORTS_TTL_MS = 60_000; // 60 seconds
  */
 export function invalidateGamesCache(): void {
   const count = _gamesListCache.size;
+  const datesCount = _availableDatesCache.size;
   _gamesListCache.clear();
+  _availableDatesCache.clear();
   _activeSportsCache.entry = null;
-  console.log(`[GamesCache] Invalidated ${count} games.list entries + activeSports cache`);
+  console.log(`[GamesCache] Invalidated ${count} games.list entries + ${datesCount} availableDates entries + activeSports cache`);
 }
 
 // ─── User lookup cache ─────────────────────────────────────────────────────────────────
@@ -378,6 +385,68 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
   console.log(`[GamesCache][MISS] key=${cacheKey} rows=${result.length} ttl=${GAMES_LIST_TTL_MS / 1000}s`);
 
   return result;
+}
+
+// ─── Available dates cache ───────────────────────────────────────────────────
+// _availableDatesCache is declared at the top of the cache section (line ~50)
+// so invalidateGamesCache() can clear it. The TTL constant is defined here.
+const AVAILABLE_DATES_TTL_MS = AVAILABLE_DATES_TTL_MS_EARLY; // 5 minutes
+
+/**
+ * Return the sorted list of distinct gameDate values for a sport.
+ * Uses the same 7-day MLB rolling window as listGames so the calendar
+ * shows the same dates that the feed will display.
+ *
+ * Cached for 5 minutes. Invalidated on any game mutation.
+ */
+export async function getAvailableDates(sport: string): Promise<string[]> {
+  const cacheKey = `DATES:${sport}`;
+  const cached = _availableDatesCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log(`[AvailDatesCache][HIT] sport=${sport} dates=${cached.data.length}`);
+    return cached.data;
+  }
+
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const conditions: ReturnType<typeof eq>[] = [];
+  conditions.push(eq(games.sport, sport));
+  conditions.push(ne(games.gameStatus, 'postponed'));
+
+  // MLB: apply the same 7-day rolling window used by listGames so the calendar
+  // shows the same date range as the feed.
+  if (sport === 'MLB') {
+    const FEED_CUTOFF_UTC_HOUR = 11;
+    const nowMs = Date.now();
+    const nowUtc = new Date(nowMs);
+    const isBeforeCutoff = nowUtc.getUTCHours() < FEED_CUTOFF_UTC_HOUR;
+    const windowStartMs = isBeforeCutoff ? nowMs - 24 * 60 * 60 * 1000 : nowMs;
+    const windowStartDate = new Date(windowStartMs);
+    const todayUtc = [
+      windowStartDate.getUTCFullYear(),
+      String(windowStartDate.getUTCMonth() + 1).padStart(2, '0'),
+      String(windowStartDate.getUTCDate()).padStart(2, '0'),
+    ].join('-');
+    const plusSeven = new Date(windowStartMs + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    conditions.push(gte(games.gameDate, todayUtc));
+    conditions.push(lte(games.gameDate, plusSeven));
+  } else {
+    // Non-MLB: only include games that have live VSiN odds (same gate as listGames)
+    conditions.push(or(isNotNull(games.awayBookSpread), isNotNull(games.bookTotal))!);
+  }
+
+  const rows = await db
+    .selectDistinct({ gameDate: games.gameDate })
+    .from(games)
+    .where(and(...conditions))
+    .orderBy(games.gameDate);
+
+  const dates = rows.map((r: { gameDate: string }) => r.gameDate).filter(Boolean).sort() as string[];
+
+  _availableDatesCache.set(cacheKey, { data: dates, expiresAt: Date.now() + AVAILABLE_DATES_TTL_MS });
+  console.log(`[AvailDatesCache][MISS] sport=${sport} dates=${dates.length} (${dates.join(', ')})`);
+  return dates;
 }
 
 export async function deleteGamesByFileId(fileId: number) {
