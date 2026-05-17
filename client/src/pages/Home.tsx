@@ -1,26 +1,20 @@
-// Home — Paywall landing page with inline login panel
-// Unauthenticated users see the landing; authenticated users are redirected to the dashboard.
-//
-// [FIX 2026-05-14] iOS Safari "string did not match expected pattern" fix:
-//   ROOT CAUSE: The label text "Username or Email" contains the word "email".
-//   Safari's AutoFill heuristic scans label text for keywords. When it finds
-//   "email", it classifies the field as email-type and applies email pattern
-//   validation BEFORE the submit event fires — completely ignoring noValidate.
-//   "Chip" fails the email regex → "The string did not match the expected pattern".
-//
-//   FIX: Replace <form> with <div role="form"> + button onClick handler.
-//   The browser's constraint validation API only applies to <form> elements.
-//   A <div> is 100% invisible to Safari's validation engine.
-//   Label changed to "Username" to remove the "email" keyword trigger.
-import { useState, useEffect, useRef } from "react";
+// Home — Paywall landing page with Discord-only login
+// Unauthenticated users see the landing with a "Sign in with Discord" button.
+// Authenticated users are redirected to /feed.
+
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { BarChart3, TrendingUp, Zap, Shield, Eye, EyeOff, LogIn, Loader2, ChevronRight } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { BarChart3, TrendingUp, Zap, Shield, Loader2 } from "lucide-react";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
-import { toast } from "sonner";
-import { formatMutationError } from "@/lib/errorUtils";
-import { ForgotPasswordModal } from "@/components/ForgotPasswordModal";
-import { LoginAttemptBanner } from "@/components/LoginAttemptBanner";
+
+// Discord brand icon (inline SVG)
+function DiscordIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.033.055a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+    </svg>
+  );
+}
 
 const FEATURES = [
   {
@@ -42,10 +36,9 @@ const FEATURES = [
 
 export default function Home() {
   const [, setLocation] = useLocation();
-  const { appUser, loading: authLoading, refetch } = useAppAuth();
+  const { appUser, loading: authLoading } = useAppAuth();
 
   // Auth loading timeout — if auth check takes > 4s, show the login page anyway
-  // This prevents the infinite black spinner on slow connections or dead server instances
   const [authTimedOut, setAuthTimedOut] = useState(false);
   useEffect(() => {
     if (!authLoading) return;
@@ -53,79 +46,34 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [authLoading]);
 
-  // Login form state
-  const [showLoginPanel, setShowLoginPanel] = useState(false);
-  const [credential, setCredential] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [stayLoggedIn, setStayLoggedIn] = useState(false);
-  const [loginFailureTrigger, setLoginFailureTrigger] = useState(0);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Redirect authenticated users straight to the projections feed
+  // Redirect authenticated users to the feed
   useEffect(() => {
     if (!authLoading && appUser) {
       setLocation("/feed");
     }
   }, [appUser, authLoading, setLocation]);
 
-  // Close panel on outside click
-  useEffect(() => {
-    if (!showLoginPanel) return;
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setShowLoginPanel(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showLoginPanel]);
+  // Show error messages from Discord OAuth callback
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
+  const discordError = searchParams.get("discord_error");
+  const discordUser  = searchParams.get("discord_user");
 
-  // Fire-and-forget session open — creates a user_sessions row for DAU/MAU/WAU tracking
-  const openSessionMutation = trpc.metrics.openSession.useMutation();
-
-  const loginMutation = trpc.appUsers.login.useMutation({
-    onSuccess: () => {
-      openSessionMutation.mutate();
-      refetch();
-      toast.success("Welcome back!");
-      setLocation("/feed");
-    },
-    onError: (e) => {
-      setLoginFailureTrigger(prev => prev + 1);
-      toast.error(formatMutationError(e));
-    },
-  });
-
-  // [FIX] Pure JS handler — NOT attached to a <form> onSubmit.
-  // Bypasses Safari's pre-submit validation engine entirely.
-  const handleLogin = () => {
-    if (!credential.trim() || !password.trim()) {
-      toast.error("Please enter your username and password.");
-      return;
-    }
-    loginMutation.mutate({
-      emailOrUsername: credential.trim(),
-      password,
-      stayLoggedIn,
-    });
+  const errorMessages: Record<string, string> = {
+    no_account:       discordUser
+      ? `No account found for @${discordUser}. Contact the owner to get access.`
+      : "No account found for your Discord. Contact the owner to get access.",
+    access_disabled:  "Your account access has been disabled. Contact the owner.",
+    account_expired:  "Your account subscription has expired. Contact the owner.",
+    discord_cancelled: "Discord sign-in was cancelled.",
+    state_expired:    "Login session expired. Please try again.",
+    state_mismatch:   "Invalid login state. Please try again.",
+    token_exchange_failed: "Discord authentication failed. Please try again.",
+    profile_fetch_failed:  "Could not fetch your Discord profile. Please try again.",
   };
 
-  // Allow Enter key in either input to trigger login
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !loginMutation.isPending) {
-      e.preventDefault();
-      handleLogin();
-    }
-  };
-
-  // Belt-and-suspenders: suppress any residual invalid events
-  const suppressInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    (e.nativeEvent as Event).stopImmediatePropagation();
-  };
+  const loginUrl = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent("/feed")}`;
 
   // Show spinner only while loading AND within the 4-second timeout window
   if (authLoading && !authTimedOut) {
@@ -148,8 +96,6 @@ export default function Home() {
             AI MODEL PROJECTIONS
           </span>
         </div>
-
-        {/* Sign In button hidden */}
       </header>
 
       {/* ── Hero + Feature cards ── */}
@@ -158,13 +104,19 @@ export default function Home() {
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-primary/10 border border-primary/20 mb-6">
           <BarChart3 className="w-8 h-8 text-primary" />
         </div>
-
         <h1 className="text-2xl font-black tracking-widest uppercase text-white text-center mb-2">
           Model Projections
         </h1>
         <p className="text-sm text-muted-foreground text-center mb-10 max-w-sm">
           AI-powered sports betting model projections — spreads, totals, and edges.
         </p>
+
+        {/* Discord error banner */}
+        {discordError && (
+          <div className="w-full mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-400 text-center">
+            {errorMessages[discordError] ?? "Sign-in failed. Please try again."}
+          </div>
+        )}
 
         {/* Feature list */}
         <div className="w-full space-y-3 mb-10">
@@ -184,175 +136,25 @@ export default function Home() {
           ))}
         </div>
 
-        {/* CTA hidden */}
+        {/* Discord Sign In CTA */}
+        <div className="w-full max-w-xs space-y-3">
+          <a
+            href={loginUrl}
+            className="flex items-center justify-center gap-3 w-full px-5 py-3.5 rounded-xl font-bold text-sm text-white transition-all active:scale-[0.98] shadow-lg"
+            style={{ backgroundColor: "#5865F2" }}
+          >
+            <DiscordIcon size={20} />
+            Sign in with Discord
+          </a>
+          <p className="text-center text-xs text-muted-foreground/50">
+            Access is by invitation only. Your Discord account must be linked by the owner.
+          </p>
+        </div>
 
-        <p className="mt-5 text-center text-xs text-muted-foreground/50">
+        <p className="mt-8 text-center text-xs text-muted-foreground/40">
           By signing in you agree to gamble responsibly. This tool is for informational purposes only.
         </p>
       </main>
-
-      {/* ── Inline Login Panel (slide-in overlay) ── */}
-      {showLoginPanel && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-4 sm:pb-0">
-          <div
-            ref={panelRef}
-            className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200"
-          >
-            {/* Panel header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold text-foreground tracking-wide">Member Sign In</span>
-              </div>
-              <button type="button" onClick={() => setShowLoginPanel(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
-            {/*
-              [FIX] <div role="form"> instead of <form>.
-              Safari's constraint validation API only fires on <form> elements.
-              A <div> is completely invisible to Safari's validation engine.
-              Keyboard submission handled via onKeyDown on each input.
-            */}
-            <div
-              role="form"
-              aria-label="Member Sign In"
-              className="px-5 py-5 space-y-4"
-            >
-              <div className="space-y-1">
-                {/*
-                  [FIX] Label changed from "Username or Email" to "Username".
-                  Safari scans label text for the keyword "email" and misclassifies
-                  the field as email-type, applying email pattern validation.
-                  Removing "email" from the label prevents this misclassification.
-                  Users can still enter their email — the backend accepts both.
-                */}
-                <label
-                  htmlFor="home-login-username"
-                  className="text-xs font-semibold tracking-wider uppercase text-muted-foreground"
-                >
-                  Username
-                </label>
-                {/* [FIX] autoComplete="off" (not "username"), no name, no autoFocus — eliminates iOS Safari AutoFill email-classification signals 4, 5, 7 */}
-                <input
-                  type="text"
-                  id="home-login-username"
-                  value={credential}
-                  onChange={(e) => setCredential(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="@username"
-                  autoComplete="off"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  aria-required="true"
-                  aria-label="Username"
-                  onInvalid={suppressInvalid}
-                  className="w-full px-3 py-2.5 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label
-                  htmlFor="home-login-password"
-                  className="text-xs font-semibold tracking-wider uppercase text-muted-foreground"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  {/* [FIX] ALWAYS type="password", no name — use -webkit-text-security for show/hide to avoid type-switch re-triggering Safari heuristic (Signals 5, 6) */}
-                  <input
-                    type="password"
-                    id="home-login-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    aria-required="true"
-                    onInvalid={suppressInvalid}
-                    style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
-                    className="w-full px-3 py-2.5 pr-10 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-colors"
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Stay logged in */}
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <div
-                  onClick={() => setStayLoggedIn(!stayLoggedIn)}
-                  className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${
-                    stayLoggedIn
-                      ? "bg-primary border-primary"
-                      : "bg-secondary border-border hover:border-primary/50"
-                  }`}
-                >
-                  {stayLoggedIn && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-xs text-muted-foreground">Stay logged in</span>
-              </label>
-
-              <LoginAttemptBanner failureTrigger={loginFailureTrigger} />
-
-              {/* [FIX] type="button" + onClick — not type="submit". No <form> to submit. */}
-              <button
-                type="button"
-                onClick={handleLogin}
-                disabled={loginMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loginMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <LogIn className="w-4 h-4" />
-                )}
-                {loginMutation.isPending ? "Signing in…" : "Sign In"}
-              </button>
-
-              {/* Forgot password link */}
-              <div className="text-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors underline-offset-2 hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            </div>
-
-            {/* Forgot Password Modal */}
-            <ForgotPasswordModal
-              open={showForgotPassword}
-              onClose={() => setShowForgotPassword(false)}
-            />
-
-            <div className="px-5 pb-4 text-center">
-              <p className="text-xs text-muted-foreground/50">
-                This tool is for informational purposes only. Gamble responsibly.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

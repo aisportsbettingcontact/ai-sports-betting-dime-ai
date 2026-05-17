@@ -2172,3 +2172,24 @@ export const betEditRequests = mysqlTable("bet_edit_requests", {
 }));
 export type BetEditRequest = typeof betEditRequests.$inferSelect;
 export type InsertBetEditRequest = typeof betEditRequests.$inferInsert;
+
+// ─── Discord Login CSRF state store (for Discord-as-primary-login) ───────────
+//
+// WHY SEPARATE FROM discordOAuthStates:
+//   discordOAuthStates requires an existing userId (account linking only).
+//   discordLoginStates is used when Discord IS the login method — no existing
+//   user is required. The callback creates or finds the user by discordId.
+//
+// returnPath: the page to redirect to after successful login (e.g. "/splits")
+export const discordLoginStates = mysqlTable("discord_login_states", {
+  /** Random CSRF state token generated in /login/connect */
+  state:      varchar("state",      { length: 64 }).primaryKey(),
+  /** The path to redirect to after successful login (e.g. "/splits") */
+  returnPath: varchar("returnPath", { length: 512 }).notNull().default("/"),
+  /** UTC timestamp (ms) when this state expires (10 min from creation) */
+  expiresAt:  bigint("expiresAt",   { mode: "number" }).notNull(),
+  /** UTC timestamp (ms) when this row was created */
+  createdAt:  bigint("createdAt",   { mode: "number" }).notNull(),
+});
+export type DiscordLoginState = typeof discordLoginStates.$inferSelect;
+export type InsertDiscordLoginState = typeof discordLoginStates.$inferInsert;
