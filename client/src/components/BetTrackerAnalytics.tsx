@@ -533,7 +533,7 @@ function BreakdownGridInner({ stats, vertical = false }: { stats: StatsData; ver
 
 export const BreakdownGrid = memo(BreakdownGridInner);
 
-export function HandicapperSelector({
+function HandicapperSelectorInner({
   handicappers,
   selectedId,
   onSelect,
@@ -585,3 +585,4 @@ export function HandicapperSelector({
     </div>
   );
 }
+export const HandicapperSelector = memo(HandicapperSelectorInner);

@@ -1418,6 +1418,16 @@ function LogsTab({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+// ── Module-level constants (outside component — never recreated on render) ──────────────────
+/** Season start dates per sport (YYYY-MM-DD). Update each new season. */
+const SEASON_START_DATES: Record<string, string> = {
+  MLB:   "2026-03-25",
+  NHL:   "2025-10-04", // 2025-26 NHL season
+  NBA:   "2025-10-22", // 2025-26 NBA season
+  NCAAM: "2025-11-04", // 2025-26 NCAAM season
+  ALL:   "2025-10-04", // earliest of all sports
+};
+
 export default function BetTracker() {
   const [, navigate] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
@@ -1476,14 +1486,8 @@ export default function BetTracker() {
   type DateRange = "ALL_TIME" | "TODAY" | "L7" | "L14" | "1M" | "SEASON";
   const [dateRange, setDateRange] = useState<DateRange>("ALL_TIME");
 
-  // Season start dates per sport (YYYY-MM-DD)
-  const SEASON_START: Record<string, string> = {
-    MLB:   "2026-03-25",
-    NHL:   "2025-10-04", // 2025-26 NHL season
-    NBA:   "2025-10-22", // 2025-26 NBA season
-    NCAAM: "2025-11-04", // 2025-26 NCAAM season
-    ALL:   "2025-10-04", // earliest of all sports
-  };
+  // SEASON_START is defined as a module-level constant (outside component) to avoid
+  // recreating the object on every render. See SEASON_START_DATES above the component.
 
   // Compute dateFrom/dateTo from dateRange (UTC-8 based)
   const { dateFrom, dateTo } = useMemo(() => {
@@ -1494,7 +1498,7 @@ export default function BetTracker() {
     if (dateRange === "L14")      return { dateFrom: subtractDays(today, 13), dateTo: today };
     if (dateRange === "1M")       return { dateFrom: subtractDays(today, 29), dateTo: today };
     if (dateRange === "SEASON") {
-      const start = SEASON_START[activeSport] ?? SEASON_START.ALL;
+      const start = SEASON_START_DATES[activeSport] ?? SEASON_START_DATES.ALL;
       if (IS_DEV) console.log(`[BetTracker][STATE] SEASON start=${start} for sport=${activeSport}`);
       return { dateFrom: start, dateTo: today };
     }
@@ -1713,6 +1717,7 @@ export default function BetTracker() {
       staleTime: hasLiveMlbDates ? 30_000 : Infinity,
       gcTime:    hasLiveMlbDates ? 5 * 60_000 : 30 * 60_000,
       refetchInterval: hasLiveMlbDates ? 60_000 : false,
+      refetchOnWindowFocus: false,
       retry: 1,
     }
   );
@@ -1776,7 +1781,7 @@ export default function BetTracker() {
   // ── Logs query (owner/admin only) ─────────────────────────────────────────
   const logsQuery = trpc.betTracker.getLogs.useQuery(
     { limit: 200, offset: 0 },
-    { enabled: canAccess && isOwnerOrAdmin && activeTab === "LOGS" }
+    { enabled: canAccess && isOwnerOrAdmin && activeTab === "LOGS", staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 }
   );
 
   const utils = trpc.useUtils();
@@ -2367,6 +2372,18 @@ export default function BetTracker() {
 
   // ── Pre-computed day sections — avoids rebuilding the sections array on every render ──
   // Previously this was an IIFE inside JSX that ran on every render cycle.
+  // ── canDirectEdit map — hoisted out of per-bet render loop ─────────────────────────────────
+  // Previously computed inline per bet (betOwnerIsHandicapper + canDirectEdit) — O(n) string
+  // comparisons per render. Now computed once per bet list change as a Map<betId, boolean>.
+  const canDirectEditMap = useMemo(() => {
+    const map = new Map<number, boolean>();
+    for (const bet of enrichedBets) {
+      const betOwnerIsHandicapper = bet.userId === appUser?.id && role === "handicapper";
+      map.set(bet.id, isOwnerOrAdmin || !betOwnerIsHandicapper);
+    }
+    return map;
+  }, [enrichedBets, appUser?.id, role, isOwnerOrAdmin]);
+
   // Now it runs only when betsWithSeparators changes (i.e. when bet data updates).
   type DaySectionItem = {
     sep: { date: string; wins: number; losses: number; pushes: number; pending: number; netProfit: number };
@@ -3137,8 +3154,7 @@ export default function BetTracker() {
                                   if (IS_DEV && bet.sport === "MLB") {
                                     console.log(`[BetCard][LINESCORE] betId=${bet.id} gameNum=${betGameNum} ${bet.awayTeam}@${bet.homeTeam} date=${bet.gameDate} → gamePk=${ls?.gamePk ?? "MISS"} R=${ls?.awayR ?? "?"}-${ls?.homeR ?? "?"}`);
                                   }
-                                  const betOwnerIsHandicapper = bet.userId === appUser?.id && role === "handicapper";
-                                  const canDirectEdit = isOwnerOrAdmin || !betOwnerIsHandicapper;
+                                  const canDirectEdit = canDirectEditMap.get(bet.id) ?? true;
                                   return (
                                     <BetCard
                                       key={bet.id}
