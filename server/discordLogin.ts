@@ -5,30 +5,38 @@
  * │  FLOW OVERVIEW                                                          │
  * │                                                                         │
  * │  1. GET  /api/auth/discord-login/connect                               │
- * │     → Generate CSRF state (no existing session required)               │
- * │     → Store state in discord_login_states DB table (TTL 10 min)        │
- * │     → Redirect to Discord OAuth consent screen                         │
+ * │     → Generate CSRF state as a SIGNED JWT (zero DB operations)         │
+ * │     → Redirect to Discord OAuth consent screen immediately             │
  * │       Scopes: identify  guilds.members.read                            │
  * │                                                                         │
  * │  2. GET  /api/auth/discord-login/callback                              │
- * │     → Validate CSRF state from DB                                      │
+ * │     → Validate CSRF state JWT (cryptographic, no DB read)              │
  * │     → Exchange code for access_token with Discord                      │
- * │     → Fetch Discord user profile (/users/@me)                          │
- * │     → [ROLE CHECK] Fetch guild member via /users/@me/guilds/{id}/member│
- * │       → If user is NOT in guild OR missing AI_MODEL_SUB role: deny     │
- * │     → Find existing appUser by discordId                               │
+ * │     → PARALLEL: Fetch Discord profile + guild member in one shot       │
+ * │     → [ROLE CHECK] Verify AI_MODEL_SUB role                            │
+ * │       → If user is NOT in guild OR missing role: deny                  │
+ * │     → Find existing appUser by discordId (single indexed query)        │
  * │       → If found + hasAccess: issue session cookie, redirect           │
  * │       → If NOT found: redirect /?discord_error=no_account              │
+ * │     → Fire-and-forget: update Discord profile fields + lastSignedIn    │
  * │                                                                         │
  * └─────────────────────────────────────────────────────────────────────────┘
  *
+ * PERFORMANCE ARCHITECTURE:
+ *   /connect critical path: 0 DB operations, 0 network calls → pure CPU → <1ms
+ *   /callback critical path:
+ *     - 1 DB read (CSRF state JWT validation is CPU-only)
+ *     - 1 Discord token exchange (unavoidable)
+ *     - 2 Discord API calls IN PARALLEL (profile + guild member)
+ *     - 1 DB read (user lookup by discordId)
+ *     - Profile update + lastSignedIn are fire-and-forget (non-blocking)
+ *
  * SECURITY:
+ *   - CSRF state is a signed JWT (HS256, JWT_SECRET) with 10-min TTL.
  *   - No self-registration. Only accounts pre-created by the owner can log in.
  *   - Guild role check uses the user's own OAuth access_token (guilds.members.read
  *     scope) — does NOT require the bot token.
  *   - Discord access_token is NEVER stored in the DB or logged.
- *   - CSRF state is DB-backed (survives multi-instance Cloud Run restarts).
- *   - State TTL: 10 minutes.
  *   - Session cookie: httpOnly, sameSite=none (prod) / lax (dev), 90-day JWT.
  *
  * ROUTE PREFIX: /api/auth/discord-login
@@ -41,12 +49,12 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { SignJWT } from "jose";
+import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { getDb, getAppUserById, updateAppUserLastSignedIn } from "./db";
-import { discordLoginStates, appUsers } from "../drizzle/schema";
-import { eq, lt } from "drizzle-orm";
+import { appUsers } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API     = "https://discord.com/api/v10";
@@ -54,19 +62,62 @@ const ROUTE_PREFIX    = "/api/auth/discord-login";
 const STATE_TTL_MS    = 10 * 60 * 1000; // 10 minutes
 
 // OAuth scopes:
-//   identify          — read user id, username, avatar
+//   identify            — read user id, username, avatar
 //   guilds.members.read — read user's roles in specific guilds (no bot token needed)
 const OAUTH_SCOPES = "identify guilds.members.read";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── CSRF State JWT ─────────────────────────────────────────────────────────────
+//
+// The CSRF state is a signed JWT containing { returnPath, nonce }.
+// This eliminates ALL DB operations from the /connect critical path.
+// Validation at /callback is pure CPU (signature verification + expiry check).
+//
+// JWT payload: { type: "discord_login_state", returnPath: string, nonce: string }
+// Algorithm: HS256 using JWT_SECRET
+// TTL: 10 minutes
 
-function generateState(): string {
-  return (
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2)
-  );
+function getStateSecret(): Uint8Array {
+  return new TextEncoder().encode(ENV.cookieSecret);
 }
+
+async function createStateToken(returnPath: string): Promise<string> {
+  const nonce = Math.random().toString(36).slice(2) +
+                Math.random().toString(36).slice(2) +
+                Math.random().toString(36).slice(2);
+  return new SignJWT({ type: "discord_login_state", returnPath, nonce })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${STATE_TTL_MS / 1000}s`)
+    .sign(getStateSecret());
+}
+
+async function verifyStateToken(
+  token: string,
+  requestId: string
+): Promise<{ ok: true; returnPath: string } | { ok: false; reason: string }> {
+  try {
+    const { payload } = await jwtVerify(token, getStateSecret(), {
+      algorithms: ["HS256"],
+    });
+    if (payload.type !== "discord_login_state") {
+      return { ok: false, reason: "wrong_token_type" };
+    }
+    const returnPath = typeof payload.returnPath === "string" ? payload.returnPath : "/";
+    console.log(
+      `[DiscordLogin][STATE_JWT][OK] requestId=${requestId} returnPath="${returnPath}"`
+    );
+    return { ok: true, returnPath };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[DiscordLogin][STATE_JWT][FAIL] requestId=${requestId} JWT verification failed: "${msg}"`
+    );
+    if (msg.includes("expired")) return { ok: false, reason: "state_expired" };
+    return { ok: false, reason: "state_mismatch" };
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
  * Build the canonical public-facing origin for OAuth redirect URIs.
@@ -74,11 +125,7 @@ function generateState(): string {
  */
 function buildPublicOrigin(req: Request, requestId: string): string {
   if (ENV.publicOrigin) {
-    const origin = ENV.publicOrigin.replace(/\/$/, "");
-    console.log(
-      `[DiscordLogin][ORIGIN] requestId=${requestId} SOURCE=PUBLIC_ORIGIN_ENV_VAR origin="${origin}"`
-    );
-    return origin;
+    return ENV.publicOrigin.replace(/\/$/, "");
   }
   const fwdProto = req.get("x-forwarded-proto");
   const fwdHost  = req.get("x-forwarded-host");
@@ -122,11 +169,6 @@ async function signAppUserToken(
  * Returns:
  *   { ok: true,  roles: string[], nick: string | null }  — user is in guild and has role
  *   { ok: false, reason: "not_in_guild" | "missing_role" | "api_error", detail?: string }
- *
- * Discord API: GET /users/@me/guilds/{guild.id}/member
- *   Requires: Bearer token with guilds.members.read scope
- *   Returns: GuildMember object with roles array
- *   Docs: https://discord.com/developers/docs/resources/user#get-current-user-guild-member
  */
 async function checkGuildRole(
   accessToken: string,
@@ -137,13 +179,7 @@ async function checkGuildRole(
   | { ok: true;  roles: string[]; nick: string | null }
   | { ok: false; reason: "not_in_guild" | "missing_role" | "api_error"; detail?: string }
 > {
-  console.log(
-    `[DiscordLogin][ROLE_CHECK] requestId=${requestId}` +
-    `\n  → guildId        : "${guildId}"` +
-    `\n  → requiredRoleId : "${requiredRoleId}"` +
-    `\n  → endpoint       : GET ${DISCORD_API}/users/@me/guilds/${guildId}/member`
-  );
-
+  const t0 = Date.now();
   let fetchRes: globalThis.Response;
   try {
     fetchRes = await fetch(`${DISCORD_API}/users/@me/guilds/${guildId}/member`, {
@@ -156,31 +192,25 @@ async function checkGuildRole(
     const detail = err instanceof Error ? err.message : String(err);
     console.error(
       `[DiscordLogin][ROLE_CHECK][NETWORK_ERROR] requestId=${requestId}` +
-      ` fetch threw: "${detail}"`
+      ` fetch threw: "${detail}" in ${Date.now() - t0}ms`
     );
     return { ok: false, reason: "api_error", detail };
   }
 
   console.log(
     `[DiscordLogin][ROLE_CHECK][HTTP] requestId=${requestId}` +
-    ` status=${fetchRes.status}`
+    ` status=${fetchRes.status} in ${Date.now() - t0}ms`
   );
 
-  // 404 = user is not a member of the guild
   if (fetchRes.status === 404) {
-    console.warn(
-      `[DiscordLogin][ROLE_CHECK][NOT_IN_GUILD] requestId=${requestId}` +
-      ` User is not a member of guild ${guildId}.`
-    );
     return { ok: false, reason: "not_in_guild" };
   }
 
-  // 403 = bot not in guild OR scope not granted
   if (fetchRes.status === 403) {
     const body = await fetchRes.text().catch(() => "");
     console.error(
       `[DiscordLogin][ROLE_CHECK][FORBIDDEN] requestId=${requestId}` +
-      ` 403 Forbidden — bot may not be in guild, or guilds.members.read scope was not granted.` +
+      ` 403 — bot may not be in guild, or guilds.members.read scope not granted.` +
       ` body="${body.slice(0, 200)}"`
     );
     return { ok: false, reason: "api_error", detail: `403: ${body.slice(0, 100)}` };
@@ -195,122 +225,81 @@ async function checkGuildRole(
     return { ok: false, reason: "api_error", detail: `HTTP ${fetchRes.status}` };
   }
 
-  // Parse the GuildMember object
   let member: { roles?: string[]; nick?: string | null };
   try {
     member = await fetchRes.json() as { roles?: string[]; nick?: string | null };
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[DiscordLogin][ROLE_CHECK][PARSE_ERROR] requestId=${requestId}` +
-      ` JSON parse failed: "${detail}"`
-    );
     return { ok: false, reason: "api_error", detail: `JSON parse: ${detail}` };
   }
 
-  const roles = member.roles ?? [];
-  const nick  = member.nick ?? null;
+  const roles   = member.roles ?? [];
+  const nick    = member.nick ?? null;
   const hasRole = roles.includes(requiredRoleId);
 
   console.log(
     `[DiscordLogin][ROLE_CHECK][RESULT] requestId=${requestId}` +
-    `\n  → roles     : [${roles.join(", ")}]` +
-    `\n  → nick      : ${nick ?? "(none)"}` +
-    `\n  → hasRole   : ${hasRole}` +
-    `\n  → roleId    : "${requiredRoleId}"`
+    ` hasRole=${hasRole} roleCount=${roles.length} in ${Date.now() - t0}ms`
   );
 
   if (!hasRole) {
-    console.warn(
-      `[DiscordLogin][ROLE_CHECK][MISSING_ROLE] requestId=${requestId}` +
-      ` User is in guild but does NOT have required role "${requiredRoleId}".` +
-      ` They must have the AI MODEL SUB role in the Prez Bets Discord server.`
-    );
     return { ok: false, reason: "missing_role" };
   }
-
   return { ok: true, roles, nick };
 }
 
 // ── Route registration ────────────────────────────────────────────────────────
 
 export function registerDiscordLoginRoutes(app: Express): void {
-  // ── Startup confirmation log ──────────────────────────────────────────────
-  const guildId      = ENV.discordGuildId;
-  const roleId       = ENV.discordRoleAiModelSub;
-  const guildStatus  = guildId  ? `SET="${guildId}"`  : "NOT_SET (role check will be SKIPPED)";
-  const roleStatus   = roleId   ? `SET="${roleId}"`   : "NOT_SET (role check will be SKIPPED)";
-  const originStatus = ENV.publicOrigin ? `SET="${ENV.publicOrigin}"` : "NOT_SET (will use x-forwarded headers)";
+  const guildId = ENV.discordGuildId;
+  const roleId  = ENV.discordRoleAiModelSub;
 
   console.log(
     `[DiscordLogin][STARTUP] Discord login routes registered:` +
     `\n  → routes      : GET ${ROUTE_PREFIX}/connect, GET ${ROUTE_PREFIX}/callback` +
     `\n  → scopes      : "${OAUTH_SCOPES}"` +
-    `\n  → guildId     : ${guildStatus}` +
-    `\n  → roleId      : ${roleStatus}` +
-    `\n  → publicOrigin: ${originStatus}` +
+    `\n  → guildId     : ${guildId ? `SET="${guildId}"` : "NOT_SET (role check SKIPPED)"}` +
+    `\n  → roleId      : ${roleId  ? `SET="${roleId}"`  : "NOT_SET (role check SKIPPED)"}` +
+    `\n  → publicOrigin: ${ENV.publicOrigin ? `SET="${ENV.publicOrigin}"` : "NOT_SET"}` +
     `\n  → clientId    : ${ENV.discordClientId ? `${ENV.discordClientId.slice(0,8)}…` : "MISSING"}` +
-    `\n  → clientSecret: ${ENV.discordClientSecret ? "SET" : "MISSING"}`
+    `\n  → clientSecret: ${ENV.discordClientSecret ? "SET" : "MISSING"}` +
+    `\n  → stateMode   : JWT (zero DB operations on /connect)`
   );
 
   if (!guildId || !roleId) {
     console.warn(
       `[DiscordLogin][STARTUP][WARN] DISCORD_GUILD_ID or DISCORD_ROLE_AI_MODEL_SUB not set.` +
-      ` Guild role check will be BYPASSED — any Discord user with a linked account can log in.` +
-      ` Set both env vars to enforce the AI MODEL SUB role requirement.`
+      ` Guild role check will be BYPASSED.`
     );
   }
 
-  // ─── Step 1: Initiate Discord OAuth (no existing session required) ─────────
+  // ─── Step 1: Initiate Discord OAuth ─────────────────────────────────────────
   //
-  // CHECKPOINT 1: Request received — log all context
-  // CHECKPOINT 2: DB state created — redirect to Discord consent screen
+  // CRITICAL PATH: 0 DB operations, 0 network calls.
+  // State is a signed JWT — generated in pure CPU, embedded in the OAuth URL.
+  // Total latency: <2ms (JWT sign + URL construction + 302 redirect).
   app.get(`${ROUTE_PREFIX}/connect`, async (req: Request, res: Response) => {
-    const requestId  = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const t0        = Date.now();
+    const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
     const returnPath = typeof req.query.returnPath === "string"
       ? req.query.returnPath
       : "/";
 
     console.log(
-      `[DiscordLogin][CHECKPOINT:1] /connect — requestId=${requestId}` +
-      `\n  → returnPath   : "${returnPath}"` +
-      `\n  → ENV.discordClientId present: ${!!ENV.discordClientId}` +
-      `\n  → ENV.discordClientSecret present: ${!!ENV.discordClientSecret}`
+      `[DiscordLogin][CONNECT] requestId=${requestId} returnPath="${returnPath}"`
     );
 
     if (!ENV.discordClientId || !ENV.discordClientSecret) {
       console.error(
-        `[DiscordLogin][CHECKPOINT:1.FAIL] requestId=${requestId}` +
-        ` FATAL: DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set in ENV.` +
-        ` Cannot initiate Discord OAuth.`
+        `[DiscordLogin][CONNECT][FAIL] requestId=${requestId}` +
+        ` DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set.`
       );
       res.redirect(302, `/?error=discord_not_configured`);
       return;
     }
 
-    // Store CSRF state in DB (survives multi-instance restarts)
-    const state     = generateState();
-    const now       = Date.now();
-    const expiresAt = now + STATE_TTL_MS;
-
-    const db = await getDb();
-    if (!db) {
-      console.error(
-        `[DiscordLogin][CHECKPOINT:2.FAIL] requestId=${requestId}` +
-        ` FATAL: DB unavailable — cannot store CSRF state.`
-      );
-      res.redirect(302, `/?error=db_unavailable`);
-      return;
-    }
-
-    // Housekeeping: delete expired states
-    try {
-      await db.delete(discordLoginStates).where(lt(discordLoginStates.expiresAt, now));
-    } catch (e) {
-      console.warn(`[DiscordLogin][CHECKPOINT:2.CLEANUP_WARN] requestId=${requestId}`, e);
-    }
-
-    await db.insert(discordLoginStates).values({ state, returnPath, expiresAt, createdAt: now });
+    // Generate CSRF state as a signed JWT — NO DB write, NO network call
+    const state = await createStateToken(returnPath);
 
     const publicOrigin = buildPublicOrigin(req, requestId);
     const redirectUri  = `${publicOrigin}${ROUTE_PREFIX}/callback`;
@@ -325,11 +314,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
     const authorizeUrl = `https://discord.com/oauth2/authorize?${params.toString()}`;
 
     console.log(
-      `[DiscordLogin][CHECKPOINT:2.OK] /connect — requestId=${requestId}` +
-      `\n  → state         : "${state.slice(0, 8)}…"` +
-      `\n  → redirectUri   : "${redirectUri}"` +
-      `\n  → scopes        : "${OAUTH_SCOPES}"` +
-      `\n  → authorizeUrl  : "${authorizeUrl.slice(0, 140)}…"`
+      `[DiscordLogin][CONNECT][OK] requestId=${requestId}` +
+      ` redirectUri="${redirectUri}" totalMs=${Date.now() - t0}`
     );
 
     res.redirect(302, authorizeUrl);
@@ -337,97 +323,54 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
   // ─── Step 2: Handle Discord OAuth callback ─────────────────────────────────
   //
-  // CHECKPOINT 3: Callback received — validate code + state
-  // CHECKPOINT 4: DB state lookup — validate CSRF state
-  // CHECKPOINT 5: Token exchange with Discord
-  // CHECKPOINT 6: Profile fetch from Discord (/users/@me)
-  // CHECKPOINT 6.5: Guild role check (/users/@me/guilds/{id}/member)
-  // CHECKPOINT 7: Find user by discordId in DB
-  // CHECKPOINT 8: Issue session cookie + redirect
+  // CRITICAL PATH optimizations:
+  //   CP-1: CSRF state validated via JWT (CPU-only, no DB read)
+  //   CP-2: Discord profile + guild member fetched IN PARALLEL (saves ~200ms)
+  //   CP-3: Profile update + lastSignedIn are fire-and-forget (non-blocking)
   app.get(`${ROUTE_PREFIX}/callback`, async (req: Request, res: Response) => {
+    const t0        = Date.now();
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
     const { code, state, error: discordError } = req.query as Record<string, string | undefined>;
 
     console.log(
-      `[DiscordLogin][CHECKPOINT:3] /callback — requestId=${requestId}` +
-      `\n  → code present  : ${!!code}` +
-      `\n  → state present : ${!!state}` +
-      `\n  → discord_error : ${discordError ?? "none"}`
+      `[DiscordLogin][CALLBACK] requestId=${requestId}` +
+      ` code=${!!code} state=${!!state} discordError=${discordError ?? "none"}`
     );
 
-    // Discord denied access (user clicked "Cancel" on consent screen)
+    // Discord denied access (user clicked "Cancel")
     if (discordError) {
-      console.warn(
-        `[DiscordLogin][CHECKPOINT:3.DISCORD_ERROR] requestId=${requestId}` +
-        ` Discord returned error="${discordError}" — user likely cancelled.`
-      );
       res.redirect(302, `/?discord_error=discord_cancelled`);
       return;
     }
 
     if (!code || !state) {
-      console.error(
-        `[DiscordLogin][CHECKPOINT:3.FAIL] requestId=${requestId}` +
-        ` Missing code or state. code=${!!code} state=${!!state}`
-      );
       res.redirect(302, `/?discord_error=invalid_callback`);
       return;
     }
 
-    // ── CHECKPOINT 4: DB state lookup ─────────────────────────────────────────
-    const db = await getDb();
-    if (!db) {
-      console.error(`[DiscordLogin][CHECKPOINT:4.FAIL] requestId=${requestId} DB unavailable`);
-      res.redirect(302, `/?discord_error=db_unavailable`);
-      return;
-    }
-
-    const now = Date.now();
-    const stateRows = await db
-      .select()
-      .from(discordLoginStates)
-      .where(eq(discordLoginStates.state, state))
-      .limit(1);
-
-    const stateRow = stateRows[0];
-    if (!stateRow) {
+    // ── CP-1: Validate CSRF state JWT (CPU-only, no DB) ───────────────────────
+    const stateResult = await verifyStateToken(state, requestId);
+    if (!stateResult.ok) {
       console.error(
-        `[DiscordLogin][CHECKPOINT:4.FAIL] requestId=${requestId}` +
-        ` CSRF state not found in DB: "${state.slice(0, 8)}…"`
+        `[DiscordLogin][CALLBACK][STATE_FAIL] requestId=${requestId}` +
+        ` reason="${stateResult.reason}"`
       );
-      res.redirect(302, `/?discord_error=state_mismatch`);
+      res.redirect(302, `/?discord_error=${stateResult.reason}`);
       return;
     }
-    if (stateRow.expiresAt < now) {
-      console.error(
-        `[DiscordLogin][CHECKPOINT:4.FAIL] requestId=${requestId}` +
-        ` CSRF state expired at ${new Date(stateRow.expiresAt).toISOString()}`
-      );
-      await db.delete(discordLoginStates).where(eq(discordLoginStates.state, state));
-      res.redirect(302, `/?discord_error=state_expired`);
-      return;
-    }
-
-    const returnPath = stateRow.returnPath || "/";
+    const returnPath = stateResult.returnPath;
     console.log(
-      `[DiscordLogin][CHECKPOINT:4.OK] requestId=${requestId}` +
-      ` CSRF state valid. returnPath="${returnPath}" — deleting state row…`
+      `[DiscordLogin][CALLBACK][STATE_OK] requestId=${requestId}` +
+      ` returnPath="${returnPath}" stateMs=${Date.now() - t0}`
     );
 
-    // Delete the used state row (one-time use)
-    await db.delete(discordLoginStates).where(eq(discordLoginStates.state, state));
-
-    // ── CHECKPOINT 5: Token exchange ──────────────────────────────────────────
+    // ── CP-2a: Token exchange with Discord ────────────────────────────────────
     const publicOrigin = buildPublicOrigin(req, requestId);
     const redirectUri  = `${publicOrigin}${ROUTE_PREFIX}/callback`;
 
-    console.log(
-      `[DiscordLogin][CHECKPOINT:5] requestId=${requestId}` +
-      ` Exchanging code for access_token. redirectUri="${redirectUri}"`
-    );
-
     let accessToken: string;
     try {
+      const t1 = Date.now();
       const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -443,8 +386,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
         console.error(
-          `[DiscordLogin][CHECKPOINT:5.FAIL] requestId=${requestId}` +
-          ` Token exchange HTTP ${tokenRes.status}: "${errText.slice(0, 300)}"`
+          `[DiscordLogin][CALLBACK][TOKEN_FAIL] requestId=${requestId}` +
+          ` HTTP ${tokenRes.status}: "${errText.slice(0, 300)}"`
         );
         res.redirect(302, `/?discord_error=token_exchange_failed`);
         return;
@@ -452,135 +395,147 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
       const tokenData = await tokenRes.json() as { access_token: string };
       accessToken = tokenData.access_token;
-      console.log(`[DiscordLogin][CHECKPOINT:5.OK] requestId=${requestId} Token exchange SUCCESS`);
+      console.log(
+        `[DiscordLogin][CALLBACK][TOKEN_OK] requestId=${requestId}` +
+        ` tokenMs=${Date.now() - t1}`
+      );
     } catch (err) {
-      console.error(`[DiscordLogin][CHECKPOINT:5.EXCEPTION] requestId=${requestId}`, err);
+      console.error(`[DiscordLogin][CALLBACK][TOKEN_EXCEPTION] requestId=${requestId}`, err);
       res.redirect(302, `/?discord_error=token_exchange_failed`);
       return;
     }
 
-    // ── CHECKPOINT 6: Profile fetch ───────────────────────────────────────────
-    console.log(`[DiscordLogin][CHECKPOINT:6] requestId=${requestId} Fetching Discord profile…`);
-
-    let discordId: string;
-    let discordUsername: string;
-    let discordAvatar: string | null;
-
-    try {
-      const profileRes = await fetch(`${DISCORD_API}/users/@me`, {
+    // ── CP-2b: PARALLEL fetch — Discord profile + guild member ────────────────
+    //
+    // Both API calls are independent — fire them simultaneously.
+    // This saves ~150-300ms vs sequential fetching.
+    const t2 = Date.now();
+    const [profileResult, guildResult] = await Promise.allSettled([
+      fetch(`${DISCORD_API}/users/@me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!profileRes.ok) {
-        const errText = await profileRes.text();
-        console.error(
-          `[DiscordLogin][CHECKPOINT:6.FAIL] requestId=${requestId}` +
-          ` Profile fetch HTTP ${profileRes.status}: "${errText.slice(0, 300)}"`
-        );
-        res.redirect(302, `/?discord_error=profile_fetch_failed`);
-        return;
-      }
-
-      const profile = await profileRes.json() as {
+      }).then(r => r.json() as Promise<{
         id: string;
         username: string;
         discriminator?: string;
         avatar?: string;
         global_name?: string;
-      };
+      }>),
+      // Only fetch guild member if role check is configured
+      (guildId && roleId)
+        ? fetch(`${DISCORD_API}/users/@me/guilds/${guildId}/member`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "User-Agent": "PressBets/1.0 (https://aisportsbettingmodels.com)",
+            },
+          }).then(async r => {
+            if (r.status === 404) return { __status: 404 };
+            if (r.status === 403) return { __status: 403, __body: await r.text().catch(() => "") };
+            if (!r.ok)            return { __status: r.status };
+            return r.json() as Promise<{ roles?: string[]; nick?: string | null }>;
+          })
+        : Promise.resolve(null),
+    ]);
 
-      discordId = profile.id;
-      // Discord new username system: discriminator "0" = new-style username
-      discordUsername = (profile.discriminator && profile.discriminator !== "0")
-        ? `${profile.username}#${profile.discriminator}`
-        : (profile.global_name || profile.username);
-      discordAvatar = profile.avatar ?? null;
+    console.log(
+      `[DiscordLogin][CALLBACK][PARALLEL_FETCH_DONE] requestId=${requestId}` +
+      ` parallelMs=${Date.now() - t2}` +
+      ` profileStatus=${profileResult.status}` +
+      ` guildStatus=${guildResult.status}`
+    );
 
-      console.log(
-        `[DiscordLogin][CHECKPOINT:6.OK] requestId=${requestId}` +
-        `\n  → discordId       : "${discordId}"` +
-        `\n  → discordUsername : "${discordUsername}"` +
-        `\n  → avatar          : ${discordAvatar ? `"${discordAvatar}"` : "none"}`
+    // ── Process profile result ────────────────────────────────────────────────
+    if (profileResult.status === "rejected") {
+      console.error(
+        `[DiscordLogin][CALLBACK][PROFILE_FAIL] requestId=${requestId}`,
+        profileResult.reason
       );
-    } catch (err) {
-      console.error(`[DiscordLogin][CHECKPOINT:6.EXCEPTION] requestId=${requestId}`, err);
       res.redirect(302, `/?discord_error=profile_fetch_failed`);
       return;
     }
 
-    // ── CHECKPOINT 6.5: Guild role check ─────────────────────────────────────
-    //
-    // Verify the user has the AI MODEL SUB role in the Prez Bets Discord server.
-    // Uses guilds.members.read scope — no bot token required.
-    //
-    // If DISCORD_GUILD_ID or DISCORD_ROLE_AI_MODEL_SUB is not configured,
-    // the check is BYPASSED with a warning (fail-open to avoid locking out
-    // the owner during initial setup).
-    if (ENV.discordGuildId && ENV.discordRoleAiModelSub) {
-      console.log(
-        `[DiscordLogin][CHECKPOINT:6.5] requestId=${requestId}` +
-        ` Checking guild role for discordId="${discordId}" (@${discordUsername})…`
+    const profile = profileResult.value;
+    if (!profile?.id) {
+      console.error(
+        `[DiscordLogin][CALLBACK][PROFILE_INVALID] requestId=${requestId}` +
+        ` profile missing id field: ${JSON.stringify(profile).slice(0, 200)}`
       );
+      res.redirect(302, `/?discord_error=profile_fetch_failed`);
+      return;
+    }
 
-      const roleCheck = await checkGuildRole(
-        accessToken,
-        ENV.discordGuildId,
-        ENV.discordRoleAiModelSub,
-        requestId
-      );
+    const discordId = profile.id;
+    const discordUsername = (profile.discriminator && profile.discriminator !== "0")
+      ? `${profile.username}#${profile.discriminator}`
+      : (profile.global_name || profile.username);
+    const discordAvatar = profile.avatar ?? null;
 
-      if (!roleCheck.ok) {
-        switch (roleCheck.reason) {
-          case "not_in_guild":
+    console.log(
+      `[DiscordLogin][CALLBACK][PROFILE_OK] requestId=${requestId}` +
+      ` discordId="${discordId}" username="${discordUsername}"`
+    );
+
+    // ── Process guild role result ─────────────────────────────────────────────
+    if (guildId && roleId) {
+      if (guildResult.status === "rejected") {
+        // Fail-open on network errors to avoid locking out users during Discord outages
+        console.error(
+          `[DiscordLogin][CALLBACK][GUILD_FETCH_ERROR] requestId=${requestId}` +
+          ` Guild fetch threw — FAILING OPEN:`,
+          guildResult.reason
+        );
+      } else {
+        const guildData = guildResult.value as Record<string, unknown> | null;
+
+        if (guildData === null) {
+          // Should not happen (guildId+roleId are set), but treat as bypass
+        } else if (guildData.__status === 404) {
+          console.warn(
+            `[DiscordLogin][CALLBACK][NOT_IN_GUILD] requestId=${requestId}` +
+            ` discordId="${discordId}" is not in guild ${guildId}`
+          );
+          res.redirect(302, `/?discord_error=not_in_guild&discord_user=${encodeURIComponent(discordUsername)}`);
+          return;
+        } else if (guildData.__status === 403) {
+          // Fail-open: bot may not be in guild yet, or scope not granted
+          console.error(
+            `[DiscordLogin][CALLBACK][GUILD_403] requestId=${requestId}` +
+            ` 403 from guild endpoint — FAILING OPEN. body="${String(guildData.__body ?? "").slice(0, 100)}"`
+          );
+        } else if (typeof guildData.__status === "number") {
+          // Other HTTP error — fail-open
+          console.error(
+            `[DiscordLogin][CALLBACK][GUILD_HTTP_ERROR] requestId=${requestId}` +
+            ` HTTP ${guildData.__status} — FAILING OPEN`
+          );
+        } else {
+          // Valid GuildMember object
+          const roles   = (guildData.roles as string[] | undefined) ?? [];
+          const hasRole = roles.includes(roleId);
+          console.log(
+            `[DiscordLogin][CALLBACK][ROLE_CHECK] requestId=${requestId}` +
+            ` hasRole=${hasRole} roleCount=${roles.length}`
+          );
+          if (!hasRole) {
             console.warn(
-              `[DiscordLogin][CHECKPOINT:6.5.DENIED] requestId=${requestId}` +
-              ` discordId="${discordId}" (@${discordUsername}) is not in the guild.` +
-              ` Redirecting to /?discord_error=not_in_guild`
-            );
-            res.redirect(302, `/?discord_error=not_in_guild&discord_user=${encodeURIComponent(discordUsername)}`);
-            return;
-
-          case "missing_role":
-            console.warn(
-              `[DiscordLogin][CHECKPOINT:6.5.DENIED] requestId=${requestId}` +
-              ` discordId="${discordId}" (@${discordUsername}) is in the guild but` +
-              ` does NOT have the AI MODEL SUB role (${ENV.discordRoleAiModelSub}).` +
-              ` Redirecting to /?discord_error=missing_role`
+              `[DiscordLogin][CALLBACK][MISSING_ROLE] requestId=${requestId}` +
+              ` discordId="${discordId}" lacks role "${roleId}"`
             );
             res.redirect(302, `/?discord_error=missing_role&discord_user=${encodeURIComponent(discordUsername)}`);
             return;
-
-          case "api_error":
-            // Fail-open on API errors to avoid locking out users due to Discord outages.
-            // Log prominently but allow login to proceed.
-            console.error(
-              `[DiscordLogin][CHECKPOINT:6.5.API_ERROR] requestId=${requestId}` +
-              ` Guild role check failed with API error: "${roleCheck.detail}".` +
-              ` FAILING OPEN — allowing login to proceed. Monitor for abuse.`
-            );
-            break;
+          }
         }
-      } else {
-        console.log(
-          `[DiscordLogin][CHECKPOINT:6.5.OK] requestId=${requestId}` +
-          ` ✅ Guild role check PASSED for discordId="${discordId}" (@${discordUsername}).` +
-          ` roles=[${roleCheck.roles.join(", ")}]`
-        );
       }
-    } else {
-      console.warn(
-        `[DiscordLogin][CHECKPOINT:6.5.BYPASS] requestId=${requestId}` +
-        ` DISCORD_GUILD_ID or DISCORD_ROLE_AI_MODEL_SUB not configured.` +
-        ` Guild role check BYPASSED for discordId="${discordId}" (@${discordUsername}).`
-      );
     }
 
-    // ── CHECKPOINT 7: Find user by discordId ──────────────────────────────────
-    console.log(
-      `[DiscordLogin][CHECKPOINT:7] requestId=${requestId}` +
-      ` Looking up appUser by discordId="${discordId}"…`
-    );
+    // ── CP-3: DB user lookup (single indexed query) ───────────────────────────
+    const db = await getDb();
+    if (!db) {
+      console.error(`[DiscordLogin][CALLBACK][DB_FAIL] requestId=${requestId} DB unavailable`);
+      res.redirect(302, `/?discord_error=db_unavailable`);
+      return;
+    }
 
+    const t3 = Date.now();
     const userRows = await db
       .select({ id: appUsers.id })
       .from(appUsers)
@@ -589,10 +544,9 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
     if (userRows.length === 0) {
       console.warn(
-        `[DiscordLogin][CHECKPOINT:7.NOT_FOUND] requestId=${requestId}` +
+        `[DiscordLogin][CALLBACK][NO_ACCOUNT] requestId=${requestId}` +
         ` No appUser found with discordId="${discordId}" (@${discordUsername}).` +
-        ` User passed role check but has no account — owner must create one.` +
-        ` Redirecting to /?discord_error=no_account`
+        ` dbMs=${Date.now() - t3}`
       );
       res.redirect(302, `/?discord_error=no_account&discord_user=${encodeURIComponent(discordUsername)}`);
       return;
@@ -603,8 +557,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
     if (!user) {
       console.error(
-        `[DiscordLogin][CHECKPOINT:7.FAIL] requestId=${requestId}` +
-        ` getAppUserById(${userId}) returned null after discordId lookup. DB inconsistency.`
+        `[DiscordLogin][CALLBACK][USER_NOT_FOUND] requestId=${requestId}` +
+        ` getAppUserById(${userId}) returned null. DB inconsistency.`
       );
       res.redirect(302, `/?discord_error=user_not_found`);
       return;
@@ -612,8 +566,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
     if (!user.hasAccess) {
       console.warn(
-        `[DiscordLogin][CHECKPOINT:7.NO_ACCESS] requestId=${requestId}` +
-        ` userId=${userId} (@${user.username}) hasAccess=false — access disabled.`
+        `[DiscordLogin][CALLBACK][NO_ACCESS] requestId=${requestId}` +
+        ` userId=${userId} hasAccess=false`
       );
       res.redirect(302, `/?discord_error=access_disabled`);
       return;
@@ -621,38 +575,19 @@ export function registerDiscordLoginRoutes(app: Express): void {
 
     if (user.expiryDate && Date.now() > user.expiryDate) {
       console.warn(
-        `[DiscordLogin][CHECKPOINT:7.EXPIRED] requestId=${requestId}` +
-        ` userId=${userId} (@${user.username}) account expired at ${new Date(user.expiryDate).toISOString()}.`
+        `[DiscordLogin][CALLBACK][EXPIRED] requestId=${requestId}` +
+        ` userId=${userId} expired at ${new Date(user.expiryDate).toISOString()}`
       );
       res.redirect(302, `/?discord_error=account_expired`);
       return;
     }
 
-    // ── CHECKPOINT 8: Issue session cookie ────────────────────────────────────
     console.log(
-      `[DiscordLogin][CHECKPOINT:8] requestId=${requestId}` +
-      ` Issuing session cookie for userId=${userId} (@${user.username}) role=${user.role}…`
+      `[DiscordLogin][CALLBACK][DB_OK] requestId=${requestId}` +
+      ` userId=${userId} role=${user.role} dbMs=${Date.now() - t3}`
     );
 
-    // Update Discord profile fields (keeps them fresh on each login)
-    try {
-      await db.update(appUsers)
-        .set({
-          discordUsername,
-          discordAvatar,
-          discordConnectedAt: Date.now(),
-        })
-        .where(eq(appUsers.id, userId));
-    } catch (e) {
-      // Non-fatal — log and continue
-      console.warn(
-        `[DiscordLogin][CHECKPOINT:8.UPDATE_WARN] requestId=${requestId}` +
-        ` Failed to update Discord profile fields (non-fatal):`, e
-      );
-    }
-
-    await updateAppUserLastSignedIn(userId);
-
+    // ── Issue session cookie ──────────────────────────────────────────────────
     const token = await signAppUserToken(userId, user.role, user.tokenVersion);
     const cookieOptions = getSessionCookieOptions(req);
 
@@ -662,11 +597,32 @@ export function registerDiscordLoginRoutes(app: Express): void {
     });
 
     console.log(
-      `[DiscordLogin][CHECKPOINT:8.SUCCESS] requestId=${requestId}` +
+      `[DiscordLogin][CALLBACK][SUCCESS] requestId=${requestId}` +
       ` ✅ Session issued for userId=${userId} (@${user.username}).` +
-      ` Redirecting to "${returnPath}"`
+      ` totalMs=${Date.now() - t0} → redirecting to "${returnPath}"`
     );
 
+    // Redirect immediately — do NOT await profile update or lastSignedIn
     res.redirect(302, returnPath);
+
+    // ── CP-3: Fire-and-forget — update Discord profile + lastSignedIn ─────────
+    //
+    // These are non-critical updates that happen AFTER the redirect is sent.
+    // The user's browser is already navigating to returnPath.
+    // Errors here are logged but do not affect the user experience.
+    setImmediate(() => {
+      Promise.all([
+        db.update(appUsers)
+          .set({ discordUsername, discordAvatar, discordConnectedAt: Date.now() })
+          .where(eq(appUsers.id, userId))
+          .catch((e: unknown) => console.warn(
+            `[DiscordLogin][CALLBACK][PROFILE_UPDATE_WARN] requestId=${requestId}`, e
+          )),
+        updateAppUserLastSignedIn(userId)
+          .catch((e: unknown) => console.warn(
+            `[DiscordLogin][CALLBACK][LAST_SIGNED_IN_WARN] requestId=${requestId}`, e
+          )),
+      ]).catch(() => {/* already handled above */});
+    });
   });
 }

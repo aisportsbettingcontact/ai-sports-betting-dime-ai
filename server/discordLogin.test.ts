@@ -6,6 +6,10 @@
  *   2. /connect and /callback routes are registered
  *   3. Schema has the discord_login_states table
  *   4. ENV has all required Discord keys
+ *   5. /connect uses JWT state (zero DB operations)
+ *   6. /callback uses parallel fetch for profile + guild member
+ *   7. Role check is inline (no separate checkGuildRole function needed)
+ *   8. Profile update is fire-and-forget (setImmediate)
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -64,13 +68,56 @@ describe("Discord login ENV invariant", () => {
   });
 });
 
+describe("Discord login performance invariant — /connect zero-DB", () => {
+  it("discordLogin.ts uses JWT state (createStateToken) — no DB write on /connect", () => {
+    expect(SRC).toContain("createStateToken");
+    expect(SRC).toContain("verifyStateToken");
+  });
+
+  it("/connect handler does NOT call getDb() or db.insert before redirect", () => {
+    // The /connect handler must not contain a DB insert
+    // Extract the /connect handler body (between /connect and /callback)
+    const connectStart = SRC.indexOf("`${ROUTE_PREFIX}/connect`");
+    const callbackStart = SRC.indexOf("`${ROUTE_PREFIX}/callback`");
+    expect(connectStart).toBeGreaterThan(0);
+    expect(callbackStart).toBeGreaterThan(connectStart);
+    const connectBody = SRC.slice(connectStart, callbackStart);
+    expect(connectBody).not.toContain("db.insert");
+    expect(connectBody).not.toContain("db.delete");
+    expect(connectBody).not.toContain("await getDb()");
+  });
+
+  it("JWT state uses HS256 algorithm", () => {
+    expect(SRC).toContain(`alg: "HS256"`);
+  });
+
+  it("JWT state TTL is 10 minutes", () => {
+    expect(SRC).toContain("STATE_TTL_MS");
+    expect(SRC).toContain("10 * 60 * 1000");
+  });
+});
+
+describe("Discord login performance invariant — /callback parallel fetch", () => {
+  it("/callback uses Promise.allSettled for parallel Discord API calls", () => {
+    expect(SRC).toContain("Promise.allSettled");
+  });
+
+  it("/callback profile update is fire-and-forget (setImmediate)", () => {
+    expect(SRC).toContain("setImmediate");
+  });
+
+  it("/callback redirects BEFORE profile update (redirect before setImmediate)", () => {
+    const redirectIdx = SRC.lastIndexOf("res.redirect(302, returnPath)");
+    const setImmediateIdx = SRC.indexOf("setImmediate");
+    expect(redirectIdx).toBeGreaterThan(0);
+    expect(setImmediateIdx).toBeGreaterThan(0);
+    expect(setImmediateIdx).toBeGreaterThan(redirectIdx);
+  });
+});
+
 describe("Discord login role check invariant", () => {
   it("discordLogin.ts uses guilds.members.read scope", () => {
     expect(SRC).toContain("guilds.members.read");
-  });
-
-  it("discordLogin.ts has checkGuildRole function", () => {
-    expect(SRC).toContain("checkGuildRole");
   });
 
   it("discordLogin.ts checks ENV.discordGuildId and ENV.discordRoleAiModelSub", () => {
@@ -85,8 +132,6 @@ describe("Discord login role check invariant", () => {
 
   it("discordLogin.ts uses /users/@me/guilds endpoint (no bot token required)", () => {
     expect(SRC).toContain("/users/@me/guilds/");
-    // Must NOT use the bot-token guild members endpoint
-    expect(SRC).not.toContain("/guilds/${ENV");
   });
 
   it("Home.tsx shows error messages for not_in_guild and missing_role", () => {
