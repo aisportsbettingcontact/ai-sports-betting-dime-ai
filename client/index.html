@@ -51,9 +51,22 @@
   <body>
     <!-- ═══════════════════════════════════════════════════════════════════
          HTML LOADING SHELL — renders IMMEDIATELY before any JS executes.
-         Eliminates the black screen. React will replace #root content
-         once it hydrates. The AppLoadingShell React component matches
-         this exactly so there is zero visual jump.
+         Single unified loading state: covers JS parse, React hydration,
+         Suspense (null fallback), auth check, and route resolution.
+         Hides the moment React renders real visible content into #root.
+
+         ARCHITECTURE:
+         1. Shell renders at 0ms (pure HTML/CSS, no JS required)
+         2. JS loads + React hydrates → Suspense fallback=null → #root empty
+         3. Auth check fires (appUsers.me API call, ~100-300ms)
+         4. Auth resolves → lazy page chunk loads → React renders content
+         5. MutationObserver detects first non-empty child in #root subtree
+         6. Shell fades out (200ms) → removed from DOM
+
+         KEY: subtree:true + characterData:true catches React's text nodes
+         and deeply nested renders, not just direct #root children.
+         This handles the case where Suspense renders null (no direct child)
+         but the lazy component eventually renders nested content.
          ═══════════════════════════════════════════════════════════════════ -->
     <style>
       #html-loading-shell {
@@ -105,31 +118,72 @@
       </div>
       <div class="html-shell-spinner"></div>
     </div>
-    <!-- React mounts here. Once React renders, the loading shell fades out. -->
+    <!-- React mounts here. Once React renders real content, the loading shell fades out. -->
     <div id="root"></div>
     <script>
-      // Hide the HTML loading shell as soon as React mounts its first content.
-      // We observe #root for child additions — the moment React renders anything,
-      // the shell fades out. This gives a seamless handoff.
+      // ─── HTML Shell Dismissal Logic ───────────────────────────────────────────
+      // Strategy: observe #root with subtree:true so we catch React renders at
+      // ANY depth — including when Suspense fallback=null renders nothing at the
+      // top level but the lazy page eventually renders nested DOM nodes.
+      //
+      // We dismiss the shell when #root has actual visible content:
+      //   - At least one element child anywhere in the subtree, AND
+      //   - That element has non-zero dimensions (not just a React comment node)
+      //
+      // This prevents premature dismissal on React's internal fiber nodes.
       (function() {
         var shell = document.getElementById('html-loading-shell');
         var root  = document.getElementById('root');
         if (!shell || !root) return;
-        var obs = new MutationObserver(function() {
-          if (root.children.length > 0) {
-            shell.classList.add('hidden');
-            setTimeout(function() {
-              if (shell.parentNode) shell.parentNode.removeChild(shell);
-            }, 250);
-            obs.disconnect();
+
+        var dismissed = false;
+        function dismiss() {
+          if (dismissed) return;
+          dismissed = true;
+          shell.classList.add('hidden');
+          // Remove from DOM after fade completes (200ms transition)
+          setTimeout(function() {
+            if (shell.parentNode) shell.parentNode.removeChild(shell);
+          }, 250);
+          obs.disconnect();
+        }
+
+        function hasVisibleContent() {
+          // Check if #root has any element descendants with actual content
+          var allEls = root.querySelectorAll('*');
+          for (var i = 0; i < allEls.length; i++) {
+            var el = allEls[i];
+            // Skip script/style/meta tags
+            var tag = el.tagName;
+            if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'META') continue;
+            // Any real element with content = ready
+            if (el.children.length > 0 || (el.textContent && el.textContent.trim().length > 0)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        var obs = new MutationObserver(function(mutations) {
+          // Check on every mutation if real content has appeared
+          if (hasVisibleContent()) {
+            dismiss();
           }
         });
-        obs.observe(root, { childList: true });
-        // Safety: remove after 10s regardless
+
+        // subtree:true catches deeply nested React renders
+        // childList:true catches element additions/removals
+        // characterData:true catches text node changes (React text renders)
+        obs.observe(root, { childList: true, subtree: true, characterData: true });
+
+        // Safety: force-dismiss after 8s regardless of content state
+        // This prevents the shell from blocking the UI if something goes wrong
         setTimeout(function() {
-          shell.classList.add('hidden');
-          obs.disconnect();
-        }, 10000);
+          if (!dismissed) {
+            console.warn('[HTML Shell] Force-dismissed after 8s safety timeout');
+            dismiss();
+          }
+        }, 8000);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>

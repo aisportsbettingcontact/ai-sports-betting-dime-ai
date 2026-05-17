@@ -103,13 +103,11 @@ export default function Home() {
     setTimeout(() => setIsRedirecting(false), 15_000);
   }
 
-  // Show spinner only while loading AND within the 4-second timeout window
+  // [PERF] No inline loading state — return null so the HTML shell covers the auth wait.
+  // The HTML shell (index.html) stays visible until React renders real content into #root.
+  // Returning null here means zero double loading screen on the /login route.
   if (authLoading && !authTimedOut) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-      </div>
-    );
+    return null;
   }
 
   return (

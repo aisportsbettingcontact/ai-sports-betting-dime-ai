@@ -5,7 +5,6 @@ import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import AppLoadingShell from "./components/AppLoadingShell";
 // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -33,7 +32,12 @@ const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
 function Router() {
   return (
-    <Suspense fallback={<AppLoadingShell />}>
+    // [PERF] fallback=null: the HTML loading shell in index.html covers all loading states.
+    // It hides via MutationObserver the moment React renders ANY child into #root.
+    // Using a React component as fallback causes a visual flash between the HTML shell
+    // and the React component — two separate loading states visible to the user.
+    // With null: HTML shell → direct render of real content. Zero flash.
+    <Suspense fallback={null}>
     <Switch>
       {/* ── Public routes (no auth required) ───────────────────────────────── */}
       {/* / and /home → redirect to /feed (RequireAuth on /feed handles the gate) */}
