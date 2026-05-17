@@ -3467,3 +3467,9 @@
 - [x] Guard server-side stats cache HIT/MISS logs with NODE_ENV check
 - [x] Guard getLinescores STEP log (fires per MLB date per 60s poll) with NODE_ENV check
 - [x] TypeScript: 0 errors | Tests: 678/678 pass
+
+- [x] Discord-only login — replaced email/password with Discord OAuth as sole login method
+- [x] discordLogin.ts — new server route /api/auth/discord-login/connect + /callback
+- [x] discordLoginStates DB table — CSRF state store for Discord-as-primary-login
+- [x] LoginModal rewritten — Discord-only, no password fields
+- [x] Home.tsx rewritten — Discord Sign In CTA, error banners for all OAuth failure paths

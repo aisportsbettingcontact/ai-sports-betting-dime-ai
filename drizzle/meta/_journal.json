@@ -603,6 +603,13 @@
       "when": 1778912144697,
       "tag": "0085_classy_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "5",
+      "when": 1779023870674,
+      "tag": "0086_thin_mathemanic",
+      "breakpoints": true
     }
   ]
 }
