@@ -399,7 +399,7 @@ def _roi(p: float, ml_str) -> Optional[float]:
         ml = float(str(ml_str).replace("+", ""))
         dec = (1 + ml/100) if ml > 0 else (1 + 100/abs(ml))
         return round(p * dec - 1.0, 4)
-    except:
+    except Exception:
         return None
 
 def _brier(p: float, outcome: Optional[int]) -> Optional[float]:

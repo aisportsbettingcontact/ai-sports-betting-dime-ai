@@ -45,9 +45,9 @@ import { mlbScheduleRouter } from "./routers/mlbSchedule";
 import { nbaScheduleRouter } from "./routers/nbaSchedule";
 import { nhlScheduleRouter } from "./routers/nhlSchedule";
 import { jackMacRouter } from "./routers/jackMac";
-import { updateBookOdds, listNbaTeams, getNbaTeamByDbSlug, getGameTeamColors, deleteGameById, getFavoriteGameIds, getFavoriteGamesWithDates, toggleFavoriteGame, updateAnOdds, listGamesByDate, listOddsHistory, getBracketGames, auditAndAdvanceAllBracketWinners, getMlbLineupsByGameIds, getStrikeoutPropsByGame, getStrikeoutPropsByGames, getMlbGameEnvSignals, getHrPropsByGame, getHrPropsByGames } from "./db";
+import { listNbaTeams, getNbaTeamByDbSlug, getGameTeamColors, deleteGameById, getFavoriteGameIds, getFavoriteGamesWithDates, toggleFavoriteGame, updateAnOdds, listGamesByDate, listOddsHistory, getBracketGames, auditAndAdvanceAllBracketWinners, getMlbLineupsByGameIds, getStrikeoutPropsByGame, getStrikeoutPropsByGames, getMlbGameEnvSignals, getHrPropsByGame, getHrPropsByGames } from "./db";
 import { runStrikeoutModel, type StrikeoutRunnerInput } from "./strikeoutModelRunner";
-import { getLastRefreshResult, runVsinRefresh, runVsinRefreshManual, refreshAllScoresNow } from "./vsinAutoRefresh";
+import { getLastRefreshResult, runVsinRefreshManual, refreshAllScoresNow } from "./vsinAutoRefresh";
 import { syncNbaModelFromSheet, getLastNbaModelSyncResult } from "./nbaModelSync";
 import { syncNhlModelForToday, getLastNhlSyncResult } from "./nhlModelSync";
 import { runMlbModelForDate, validateMlbModelResults } from "./mlbModelRunner";
@@ -56,7 +56,7 @@ import { MARCH_MADNESS_DB_SLUGS } from "@shared/marchMadnessTeams";
 import { parseAnAllMarketsHtml, type AnSport } from "./anHtmlParser";
 import { NBA_VALID_DB_SLUGS, NBA_TEAMS } from "@shared/nbaTeams";
 import { NHL_VALID_DB_SLUGS, NHL_TEAMS } from "@shared/nhlTeams";
-import { MLB_BY_ABBREV, MLB_VALID_DB_SLUGS, MLB_VALID_ABBREVS } from "@shared/mlbTeams";
+import { MLB_VALID_DB_SLUGS, MLB_VALID_ABBREVS } from "@shared/mlbTeams";
 import { createHash } from 'node:crypto';
 
 /**

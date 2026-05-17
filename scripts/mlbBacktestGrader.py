@@ -41,7 +41,7 @@ except ImportError:
     os.system("sudo pip3 install mysql-connector-python -q")
     import mysql.connector
 
-import dotenv
+import dotenv  # noqa: E402
 
 dotenv.load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
@@ -62,7 +62,7 @@ def get_db():
 
 # ── Import model ───────────────────────────────────────────────────────────────
 print("[STEP] Importing MLBAIModel...")
-import MLBAIModel as M
+import MLBAIModel as M  # noqa: E402
 
 print(f'[STEP] MLBAIModel loaded. CALIBRATION_VERSION={getattr(M, "CALIBRATION_VERSION", "unknown")}')
 
@@ -139,7 +139,7 @@ def ml_to_prob(ml_str: Optional[str]) -> Optional[float]:
         if ml > 0:
             return 100 / (ml + 100)
         return abs(ml) / (abs(ml) + 100)
-    except:
+    except Exception:
         return None
 
 def ml_to_decimal(ml_str: Optional[str]) -> Optional[float]:
@@ -151,7 +151,7 @@ def ml_to_decimal(ml_str: Optional[str]) -> Optional[float]:
         if ml > 0:
             return 1 + ml / 100
         return 1 + 100 / abs(ml)
-    except:
+    except Exception:
         return None
 
 def calc_roi(model_prob: float, book_ml: Optional[str]) -> Optional[float]:
@@ -240,8 +240,8 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
     dk_total = float(row["dkTotal"]) if row.get("dkTotal") else None
     dk_away_ml = str(row["dkAwayML"]) if row.get("dkAwayML") else None
     dk_home_ml = str(row["dkHomeML"]) if row.get("dkHomeML") else None
-    dk_away_rl = float(row["dkAwayRunLine"]) if row.get("dkAwayRunLine") else -1.5
-    dk_home_rl = float(row["dkHomeRunLine"]) if row.get("dkHomeRunLine") else 1.5
+    float(row["dkAwayRunLine"]) if row.get("dkAwayRunLine") else -1.5
+    float(row["dkHomeRunLine"]) if row.get("dkHomeRunLine") else 1.5
     dk_over_odds = str(row["dkOverOdds"]) if row.get("dkOverOdds") else None
     dk_under_odds = str(row["dkUnderOdds"]) if row.get("dkUnderOdds") else None
     dk_away_rl_odds = str(row["dkAwayRunLineOdds"]) if row.get("dkAwayRunLineOdds") else None
@@ -477,7 +477,7 @@ def main():
     cursor = db.cursor(dictionary=True)
 
     # ── Fetch games from mlb_schedule_history + games table ───────────────────
-    season_placeholders = ",".join(["%s"] * len(seasons))
+    ",".join(["%s"] * len(seasons))
     season_patterns = [f"{s}%" for s in seasons]
 
     # Build UNION query for all seasons

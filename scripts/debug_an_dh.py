@@ -56,7 +56,7 @@ for g in games:
             print(f"    {k}: {v}")
 
 # Also check if there are any games with the same away+home teams (potential DH)
-from collections import defaultdict
+from collections import defaultdict  # noqa: E402
 
 matchup_count = defaultdict(list)
 for g in games:

@@ -3530,3 +3530,7 @@
 - [x] Add NCAAM fallback (ESPN API) for past date slates
 - [x] Add staleTime:Infinity for past-date slate queries (immutable cache)
 - [x] Fix Bet Tracker date filter defaulting to today — change default to "All Time" so all historical bets load
+- [x] ruff + vulture audit: 0 Python errors, dead code removed
+- [x] Shared mlbamIdCache module: eliminates duplicate MLB Stats API calls (HR + K-Props)
+- [x] NHL fetch timeout: AbortSignal.timeout(12s/10s) on schedule + live scores endpoints
+- [x] Remove unused imports in routers.ts: updateBookOdds, runVsinRefresh, MLB_BY_ABBREV

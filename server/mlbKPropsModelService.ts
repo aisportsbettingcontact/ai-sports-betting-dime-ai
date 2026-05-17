@@ -55,6 +55,7 @@ import {
   mlbLineups,
 } from "../drizzle/schema";
 import { eq, and, inArray } from "drizzle-orm";
+import { getMlbamIdMap, normalizeMlbamName } from "./mlbamIdCache";
 
 const TAG = "[KPropsModel]";
 
@@ -243,15 +244,9 @@ function computePlatoonAdj(
 
 // ─── Name normalization ───────────────────────────────────────────────────────
 
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+jr\.?$|\s+sr\.?$|\s+ii$|\s+iii$|\s+iv$/i, "")
-    .replace(/[^a-z\s]/g, "")
-    .trim();
-}
+// normalizeName delegated to shared mlbamIdCache (6h TTL, no duplicate API calls)
+const normalizeName = normalizeMlbamName;
+const fetchMlbamIdMap = getMlbamIdMap;
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
@@ -635,23 +630,7 @@ export async function resolveKPropsMlbamIdsForDate(gameDate: string): Promise<{
   return { resolved, alreadyHad, unresolved, errors };
 }
 
-// ─── MLB Stats API: fetch all active player IDs ───────────────────────────────
-async function fetchMlbamIdMap(): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
-  try {
-    const url = `https://statsapi.mlb.com/api/v1/sports/1/players?season=2025&gameType=R`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as { people?: Array<{ id: number; fullName: string }> };
-    for (const p of data.people ?? []) {
-      map.set(normalizeName(p.fullName), p.id);
-    }
-    console.log(`${TAG} [STATE] MLB Stats API: loaded ${map.size} players`);
-  } catch (err) {
-    console.error(`${TAG} [ERROR] MLB Stats API fetch failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  return map;
-}
+// ─── MLB Stats API: fetch all active player IDs — delegated to shared mlbamIdCache ─────
 
 // ─── Backfill mlbamId for all K-Props rows missing it ────────────────────────
 export async function backfillAllKPropsMlbamIds(): Promise<{

@@ -3,7 +3,7 @@ import re
 CSS_FILE = "dist/public/assets/index-CJH5B5DK.css"
 
 # Find the actual CSS file dynamically
-import glob
+import glob  # noqa: E402
 
 css_files = glob.glob("dist/public/assets/*.css")
 if css_files:

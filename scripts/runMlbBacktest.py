@@ -336,7 +336,7 @@ def compute_calibration(graded_games: list) -> dict:
     # ── F5 ML win rates ────────────────────────────────────────────────────
     f5_ml_games = [g for g in graded_games if g.get("f5_ml_winner")]
     f5_away_wins = sum(1 for g in f5_ml_games if g["f5_ml_winner"] == "away")
-    f5_home_wins = sum(1 for g in f5_ml_games if g["f5_ml_winner"] == "home")
+    sum(1 for g in f5_ml_games if g["f5_ml_winner"] == "home")
     f5_pushes    = sum(1 for g in f5_ml_games if g["f5_ml_winner"] == "push")
     f5_away_win_rate = f5_away_wins / len(f5_ml_games) if f5_ml_games else 0.5
     f5_push_rate     = f5_pushes / len(f5_ml_games) if f5_ml_games else 0.0
@@ -516,7 +516,7 @@ def main():
                     ip_full = int(ip_parts[0]) + (int(ip_parts[1]) / 3 if len(ip_parts) > 1 else 0)
                     if ip_full == 0: return None
                     return round(sp["er"] / ip_full * 9, 2)
-                except:
+                except Exception:
                     return None
 
             graded = {
