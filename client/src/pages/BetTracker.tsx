@@ -1533,7 +1533,6 @@ export default function BetTracker() {
 
   // ── Sport / filter state ──────────────────────────────────────────────────
   const [activeSport, setActiveSport]   = useState<SportOrAll>("ALL");
-  const [filterDate, setFilterDate]     = useState(todayEst);
   const [filterResult, setFilterResult] = useState<Result | "">("");
   // Date range filter: ALL_TIME | TODAY | L7 | L14 | 1M | SEASON
   // SEASON = from sport's season start date through today
@@ -1704,14 +1703,14 @@ export default function BetTracker() {
     if (dateRange === "SEASON") return false;
     // L7/L14/1M: historical if dateTo < today (no pending bets possible)
     if (dateTo && dateTo < today) return true;
-    // ALL_TIME with a specific filterDate in the past
-    if (dateRange === "ALL_TIME" && !filterAllTime && filterDate && filterDate < today) return true;
+    // ALL_TIME: never treat as historical — may have pending bets on today/future
     return false;
-  }, [dateRange, dateTo, today, filterAllTime, filterDate]);
+  }, [dateRange, dateTo, today]);
 
   const paginatedQueryInput = useMemo(() => ({
     sport:        activeSport === "ALL" ? undefined : activeSport,
-    gameDate:     (dateRange === "ALL_TIME" && !filterAllTime) ? (filterDate || undefined) : undefined,
+    // ALL_TIME: no gameDate/dateFrom/dateTo — returns all bets regardless of date
+    gameDate:     undefined,
     dateFrom:     dateRange !== "ALL_TIME" ? dateFrom : undefined,
     dateTo:       dateRange !== "ALL_TIME" ? dateTo : undefined,
     result:       filterResult || undefined,
@@ -1719,7 +1718,7 @@ export default function BetTracker() {
     unitSize:     unitSize > 0 ? unitSize : 100,
     limit:        50,
     isHistorical: isHistoricalRange,
-  }), [activeSport, dateRange, filterAllTime, filterDate, dateFrom, dateTo, filterResult, effectiveUserId, unitSize, isHistoricalRange]);
+  }), [activeSport, dateRange, dateFrom, dateTo, filterResult, effectiveUserId, unitSize, isHistoricalRange]);
 
   const paginatedQuery = trpc.betTracker.listWithStatsPaginated.useInfiniteQuery(
     paginatedQueryInput,
@@ -3130,17 +3129,6 @@ export default function BetTracker() {
               <>
                 {/* Filter bar */}
                 <div className="flex items-center gap-3 flex-wrap">
-                  {!filterAllTime && (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-sm tracking-widest text-zinc-300 uppercase font-medium">Filter Date</label>
-                      <input
-                        type="date"
-                        value={filterDate}
-                        onChange={e => setFilterDate(e.target.value)}
-                        className="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-                      />
-                    </div>
-                  )}
                   <div className="flex flex-col gap-1">
                     <label className="text-sm tracking-widest text-zinc-300 uppercase font-medium">Result</label>
                     <div className="relative">
@@ -3196,14 +3184,35 @@ export default function BetTracker() {
                     ))}
                   </div>
                 ) : bets.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+                  <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
                     <Clock size={28} className="text-zinc-700" />
                     <p className="text-zinc-300 text-sm">
                       {filterAllTime
-                        ? "No bets tracked yet."
-                        : `No bets tracked yet${activeSport !== "ALL" ? ` for ${activeSport}` : ""} on ${fmtDate(filterDate)}.`}
+                        ? `No bets tracked yet${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
+                        : dateRange === "TODAY"
+                          ? `No bets for ${activeSport !== "ALL" ? activeSport : "any sport"} today (${fmtDate(todayEst())}).`
+                          : dateRange === "L7"
+                            ? `No bets in the last 7 days${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
+                            : dateRange === "L14"
+                              ? `No bets in the last 14 days${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
+                              : dateRange === "1M"
+                                ? `No bets in the last 30 days${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
+                                : dateRange === "SEASON"
+                                  ? `No bets this season${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
+                                  : `No bets tracked yet${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`}
                     </p>
-                    <p className="text-zinc-300 text-xs">Use the form to add your first bet.</p>
+                    {!filterAllTime && (
+                      <button
+                        type="button"
+                        onClick={() => { setDateRange("ALL_TIME"); setFilterAllTime(true); }}
+                        className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        ← Switch to All-Time
+                      </button>
+                    )}
+                    {filterAllTime && (
+                      <p className="text-zinc-300 text-xs">Use the form above to add your first bet.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">

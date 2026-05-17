@@ -3529,3 +3529,4 @@
 - [x] Add NBA fallback (ESPN API) for past date slates
 - [x] Add NCAAM fallback (ESPN API) for past date slates
 - [x] Add staleTime:Infinity for past-date slate queries (immutable cache)
+- [x] Fix Bet Tracker date filter defaulting to today — change default to "All Time" so all historical bets load
