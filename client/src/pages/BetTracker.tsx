@@ -32,6 +32,8 @@ import {
 import type { TrackedBet } from "@shared/types";
 import { EquityChart, BreakdownGrid, HandicapperSelector } from "@/components/BetTrackerAnalytics";
 import type { StatsData } from "@/components/BetTrackerAnalytics";
+const IS_DEV = process.env.NODE_ENV === "development";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -491,7 +493,7 @@ function GameSelector({
       const key = `${g.gameDate}:${g.awayTeam}:${g.homeTeam}:${g.gameNumber}`;
       const byGN = linescoreByGameNum.get(key);
       if (byGN) {
-        console.log(`[getLs][HIT_GAMENUM] key=${key} gameId=${g.id} → gamePk=${byGN.gamePk} status=${byGN.status} R=${byGN.awayR}-${byGN.homeR}`);
+        if (IS_DEV) console.log(`[getLs][HIT_GAMENUM] key=${key} gameId=${g.id} → gamePk=${byGN.gamePk} status=${byGN.status} R=${byGN.awayR}-${byGN.homeR}`);
         return byGN;
       }
     }
@@ -499,11 +501,11 @@ function GameSelector({
     if (linescoreByTeams) {
       const byTeam = linescoreByTeams.get(`${g.gameDate}:${g.awayTeam}:${g.homeTeam}`);
       if (byTeam) {
-        console.log(`[getLs][HIT_TEAM] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} → gamePk=${byTeam.gamePk} status=${byTeam.status} R=${byTeam.awayR}-${byTeam.homeR}`);
+        if (IS_DEV) console.log(`[getLs][HIT_TEAM] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} → gamePk=${byTeam.gamePk} status=${byTeam.status} R=${byTeam.awayR}-${byTeam.homeR}`);
         return byTeam;
       }
     }
-    console.log(`[getLs][MISS] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} — no linescore found`);
+    if (IS_DEV) console.log(`[getLs][MISS] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} — no linescore found`);
     return undefined;
   }
 
@@ -1486,14 +1488,14 @@ export default function BetTracker() {
   // Compute dateFrom/dateTo from dateRange (UTC-8 based)
   const { dateFrom, dateTo } = useMemo(() => {
     const today = todayPt();
-    console.log(`[BetTracker][STATE] dateRange=${dateRange} activeSport=${activeSport} todayPt=${today}`);
+    if (IS_DEV) console.log(`[BetTracker][STATE] dateRange=${dateRange} activeSport=${activeSport} todayPt=${today}`);
     if (dateRange === "TODAY")    return { dateFrom: today, dateTo: today };
     if (dateRange === "L7")       return { dateFrom: subtractDays(today, 6), dateTo: today };
     if (dateRange === "L14")      return { dateFrom: subtractDays(today, 13), dateTo: today };
     if (dateRange === "1M")       return { dateFrom: subtractDays(today, 29), dateTo: today };
     if (dateRange === "SEASON") {
       const start = SEASON_START[activeSport] ?? SEASON_START.ALL;
-      console.log(`[BetTracker][STATE] SEASON start=${start} for sport=${activeSport}`);
+      if (IS_DEV) console.log(`[BetTracker][STATE] SEASON start=${start} for sport=${activeSport}`);
       return { dateFrom: start, dateTo: today };
     }
     return { dateFrom: undefined, dateTo: undefined }; // ALL_TIME
@@ -1743,7 +1745,7 @@ export default function BetTracker() {
       map.set(ls.gamePk, ls);
     }
     // Summary-only log: per-entry logging (30+ lines/60s) was removed for performance
-    console.log(`[Linescore][OUTPUT] linescoreByPk built: ${map.size} entries`);
+    if (IS_DEV) console.log(`[Linescore][OUTPUT] linescoreByPk built: ${map.size} entries`);
     return map;
   }, [linescoreQuery.data]);
 
@@ -1767,7 +1769,7 @@ export default function BetTracker() {
       map.set(key, ls);
     }
     // Summary-only log: per-entry logging removed for performance
-    console.log(`[Linescore][OUTPUT] linescoreByGameNum built: ${map.size} entries (DH-safe)`);
+    if (IS_DEV) console.log(`[Linescore][OUTPUT] linescoreByGameNum built: ${map.size} entries (DH-safe)`);
     return map;
   }, [linescoreQuery.data]);
 
@@ -1797,7 +1799,7 @@ export default function BetTracker() {
       (entries) => {
         const entry = entries[0];
         if (entry.isIntersecting && paginatedQuery.hasNextPage && !paginatedQuery.isFetchingNextPage) {
-          console.log("[BetTracker][STEP] IntersectionObserver: sentinel visible — fetching next page");
+          if (IS_DEV) console.log("[BetTracker][STEP] IntersectionObserver: sentinel visible — fetching next page");
           paginatedQuery.fetchNextPage();
         }
       },
@@ -2025,7 +2027,7 @@ export default function BetTracker() {
             (b.awayTeam === ls.awayAbbrev || b.homeTeam === ls.homeAbbrev)
           );
           if (hasPending) {
-            console.log(`[BetTracker][STATE] autoGrade: game ${ls.awayAbbrev}@${ls.homeAbbrev} just went Final — firing immediate grade`);
+            if (IS_DEV) console.log(`[BetTracker][STATE] autoGrade: game ${ls.awayAbbrev}@${ls.homeAbbrev} just went Final — firing immediate grade`);
             newFinalFound = true;
           }
         }
@@ -2038,7 +2040,7 @@ export default function BetTracker() {
 
     const interval = setInterval(() => {
       if (!autoGradeMut.isPending) {
-        console.log(`[BetTracker][STEP] autoGrade: 60s poll — grading ${pendingBets.length} PENDING bets`);
+        if (IS_DEV) console.log(`[BetTracker][STEP] autoGrade: 60s poll — grading ${pendingBets.length} PENDING bets`);
         autoGradeMut.mutate({});
       }
     }, 60_000);
@@ -2051,7 +2053,7 @@ export default function BetTracker() {
   const slateGames = (slateQuery.data ?? []) as SlateGame[];
 
   const handleGameSelect = useCallback((game: SlateGame) => {
-    console.log(`[BetTracker][INPUT] game selected: id=${game.id} ${game.awayTeam}@${game.homeTeam}`);
+    if (IS_DEV) console.log(`[BetTracker][INPUT] game selected: id=${game.id} ${game.awayTeam}@${game.homeTeam}`);
     setFormGame(game);
     setFormPickSide("AWAY");
     const o = getPickOdds(game.odds, formMarket, "AWAY");
@@ -2363,6 +2365,28 @@ export default function BetTracker() {
     return result;
   }, [enrichedBets]);
 
+  // ── Pre-computed day sections — avoids rebuilding the sections array on every render ──
+  // Previously this was an IIFE inside JSX that ran on every render cycle.
+  // Now it runs only when betsWithSeparators changes (i.e. when bet data updates).
+  type DaySectionItem = {
+    sep: { date: string; wins: number; losses: number; pushes: number; pending: number; netProfit: number };
+    bets: EnrichedBet[];
+  };
+  const daySections = useMemo((): DaySectionItem[] => {
+    const sections: DaySectionItem[] = [];
+    let current: DaySectionItem | null = null;
+    for (const item of betsWithSeparators) {
+      if (item.type === "separator") {
+        current = { sep: item, bets: [] };
+        sections.push(current);
+      } else if (current) {
+        current.bets.push(item.bet);
+      }
+    }
+    return sections;
+  }, [betsWithSeparators]);
+
+
   // ── Access guard ──────────────────────────────────────────────────────────
   if (authLoading) {
     // Show a page-structure skeleton instead of a blank full-screen spinner.
@@ -2526,7 +2550,7 @@ export default function BetTracker() {
                 onClick={() => {
                   setDateRange(r);
                   setFilterAllTime(r === "ALL_TIME");
-                  console.log(`[BetTracker][INPUT] dateRange changed to ${r}`);
+                  if (IS_DEV) console.log(`[BetTracker][INPUT] dateRange changed to ${r}`);
                 }}
                 onMouseEnter={() => r !== dateRange && handlePrefetch(activeSport, r)}
                 className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
@@ -2702,7 +2726,7 @@ export default function BetTracker() {
               type="button"
               onClick={() => {
                 setAddBetOpen(prev => !prev);
-                console.log(`[BetTracker][INPUT] addBet toggled: ${!addBetOpen}`);
+                if (IS_DEV) console.log(`[BetTracker][INPUT] addBet toggled: ${!addBetOpen}`);
               }}
               className="w-full flex items-center gap-2 px-5 pt-5 pb-4 border-b border-zinc-800 lg:cursor-default"
             >
@@ -3059,25 +3083,7 @@ export default function BetTracker() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {(() => {
-                      // ── Build grouped structure for collapsible date sections ──
-                      // Each date section = { separator, bets[] }
-                      type DaySection = {
-                        sep: { date: string; wins: number; losses: number; pushes: number; pending: number; netProfit: number };
-                        bets: EnrichedBet[];
-                      };
-                      const sections: DaySection[] = [];
-                      let current: DaySection | null = null;
-                      for (const item of betsWithSeparators) {
-                        if (item.type === "separator") {
-                          current = { sep: item, bets: [] };
-                          sections.push(current);
-                        } else if (current) {
-                          current.bets.push(item.bet);
-                        }
-                      }
-
-                      return sections.map(section => {
+                    {daySections.map(section => {
                         const { sep } = section;
                         const isExpanded = expandedDates.has(sep.date);
                         const record = `${sep.wins}W-${sep.losses}L${sep.pushes > 0 ? `-${sep.pushes}P` : ""}`;
@@ -3128,7 +3134,7 @@ export default function BetTracker() {
                                         linescoreByTeams.get(`${bet.gameDate}:${bet.awayTeam}:${bet.homeTeam}`)
                                       ) ?? undefined
                                     : undefined;
-                                  if (bet.sport === "MLB") {
+                                  if (IS_DEV && bet.sport === "MLB") {
                                     console.log(`[BetCard][LINESCORE] betId=${bet.id} gameNum=${betGameNum} ${bet.awayTeam}@${bet.homeTeam} date=${bet.gameDate} → gamePk=${ls?.gamePk ?? "MISS"} R=${ls?.awayR ?? "?"}-${ls?.homeR ?? "?"}`);
                                   }
                                   const betOwnerIsHandicapper = bet.userId === appUser?.id && role === "handicapper";
@@ -3151,8 +3157,7 @@ export default function BetTracker() {
                             )}
                           </div>
                         );
-                      });
-                    })()}
+                    })}
                   </div>
                 )}
 

@@ -3448,3 +3448,22 @@
 - [x] OBSERVABILITY: Add /api/perf endpoint — real-time cache hit rates, invalidation timing, memory usage, DB circuit state
 - [x] TypeScript: 0 errors
 - [x] Tests: 678/678 pass
+
+## Session: 2026-05-17 — BetTracker 100x Performance Overhaul
+
+- [x] Guard getLs() HIT/MISS/GAMENUM console.logs with IS_DEV (fired on every linescore lookup in production)
+- [x] Guard linescoreByPk and linescoreByGameNum useMemo summary logs with IS_DEV
+- [x] Guard IntersectionObserver sentinel log with IS_DEV
+- [x] Guard dateRange STATE logs in useMemo with IS_DEV
+- [x] Guard autoGrade STATE/STEP logs with IS_DEV
+- [x] Guard game select, addBet toggle, dateRange changed logs with IS_DEV
+- [x] Guard BetCard render-loop MLB linescore log with IS_DEV (was firing per-card per-render)
+- [x] Hoist daySections IIFE out of JSX into useMemo (was rebuilding sections array on every render)
+- [x] Replace IIFE in JSX with pre-computed daySections.map()
+- [x] Wrap EquityChart in React.memo (prevents redraw when parent stats panel re-renders)
+- [x] Wrap BreakdownPanel in React.memo
+- [x] Wrap BreakdownGrid in React.memo
+- [x] Guard EquityChart ResizeObserver and canvas draw logs with NODE_ENV check
+- [x] Guard server-side stats cache HIT/MISS logs with NODE_ENV check
+- [x] Guard getLinescores STEP log (fires per MLB date per 60s poll) with NODE_ENV check
+- [x] TypeScript: 0 errors | Tests: 678/678 pass

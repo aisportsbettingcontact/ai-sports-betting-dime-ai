@@ -1581,7 +1581,7 @@ export const betTrackerRouter = router({
 
       await Promise.all(input.dates.map(async (date) => {
         const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${date}&hydrate=linescore,team`;
-        console.log(`[BetTracker][STEP] getLinescores: fetching ${url}`);
+        if (process.env.NODE_ENV === "development") console.log(`[BetTracker][STEP] getLinescores: fetching ${url}`);
         try {
           const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
           if (!resp.ok) {
@@ -1769,7 +1769,7 @@ export const betTrackerRouter = router({
 
       if (cachedStats) {
         // Cache hit: only fetch the page, skip full-table stats scan
-        console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache HIT for userId=${userId}`);
+        if (process.env.NODE_ENV === "development") console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache HIT for userId=${userId}`);
         pageRows = await db.select().from(trackedBets)
           .where(and(...listConditions))
           .orderBy(desc(trackedBets.gameDate), desc(trackedBets.id))
@@ -1777,7 +1777,7 @@ export const betTrackerRouter = router({
         statsRows = []; // not needed — using cached stats
       } else {
         // Cache miss: run both queries in parallel
-        console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache MISS for userId=${userId} — running full aggregation`);
+        if (process.env.NODE_ENV === "development") console.log(`[BetTracker][STEP] listWithStatsPaginated: stats cache MISS for userId=${userId} — running full aggregation`);
         [pageRows, statsRows] = await Promise.all([
           db.select().from(trackedBets)
             .where(and(...listConditions))

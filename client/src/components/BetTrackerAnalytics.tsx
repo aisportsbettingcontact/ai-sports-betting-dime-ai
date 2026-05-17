@@ -8,7 +8,7 @@
  *   HandicapperSelector — Owner/Admin dropdown to switch between handicappers
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { BarChart2, Activity, Users, ChevronDown } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ export type StatsData = {
 
 // ─── EquityChart ──────────────────────────────────────────────────────────────
 
-export function EquityChart({ points }: { points: EquityPoint[] }) {
+function EquityChartInner({ points }: { points: EquityPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
@@ -87,7 +87,7 @@ export function EquityChart({ points }: { points: EquityPoint[] }) {
       // Clamped to [200, 380] absolute pixels
       const ratio = w < 400 ? 0.70 : w < 900 ? 0.40 : 0.30;
       const h = Math.round(Math.min(380, Math.max(200, w * ratio)));
-      console.log(`[EquityChart][STATE] ResizeObserver: w=${w} h=${h} ratio=${ratio}`);
+      if (process.env.NODE_ENV === "development") console.log(`[EquityChart][STATE] ResizeObserver: w=${w} h=${h} ratio=${ratio}`);
       setDims({ w, h });
     });
     ro.observe(el);
@@ -133,7 +133,7 @@ export function EquityChart({ points }: { points: EquityPoint[] }) {
       bottom: 46, // extra space for X-axis labels below the chart
       left: Math.ceil(maxLabelW) + 18,
     };
-    console.log(`[EquityChart][STATE] PAD.left=${PAD.left} maxLabelW=${maxLabelW.toFixed(1)} yLabelFontSize=${yLabelFontSize}`);
+    if (process.env.NODE_ENV === "development") console.log(`[EquityChart][STATE] PAD.left=${PAD.left} maxLabelW=${maxLabelW.toFixed(1)} yLabelFontSize=${yLabelFontSize}`);
     const chartW = W - PAD.left - PAD.right;
     const chartH = H - PAD.top - PAD.bottom;
 
@@ -248,7 +248,7 @@ export function EquityChart({ points }: { points: EquityPoint[] }) {
       lastLabelX = clampedX;
     });
 
-    console.log(`[EquityChart][OUTPUT] Rendered: W=${W} H=${H} points=${points.length} step=${step} maxLabels=${maxLabels} PAD.left=${PAD.left} xLabelFontSize=${xLabelFontSize}`);
+    if (process.env.NODE_ENV === "development") console.log(`[EquityChart][OUTPUT] Rendered: W=${W} H=${H} points=${points.length} step=${step} maxLabels=${maxLabels} PAD.left=${PAD.left} xLabelFontSize=${xLabelFontSize}`);
   }, [points, dims]);
 
   // ── Mouse interaction ───────────────────────────────────────────────────────
@@ -364,9 +364,11 @@ export function EquityChart({ points }: { points: EquityPoint[] }) {
   );
 }
 
+export const EquityChart = memo(EquityChartInner);
+
 // ─── BreakdownPanel ───────────────────────────────────────────────────────────
 
-export function BreakdownPanel({
+function BreakdownPanelInner({
   title,
   icon,
   entries,
@@ -455,6 +457,8 @@ export function BreakdownPanel({
 // ─── BreakdownGrid ────────────────────────────────────────────────────────────
 
 /** Remap raw server keys to human-readable display labels */
+export const BreakdownPanel = memo(BreakdownPanelInner);
+
 function remapKey(
   dimension: "type" | "size" | "month" | "sport" | "timeframe",
   key: string
@@ -506,7 +510,7 @@ function remapEntries(
   return entries.map((e) => ({ ...e, key: remapKey(dimension, e.key) }));
 }
 
-export function BreakdownGrid({ stats, vertical = false }: { stats: StatsData; vertical?: boolean }) {
+function BreakdownGridInner({ stats, vertical = false }: { stats: StatsData; vertical?: boolean }) {
   const panels = [
     <BreakdownPanel key="type" title="By Bet Type" icon={<BarChart2 size={12} />} entries={remapEntries("type", stats.byType)} />,
     <BreakdownPanel key="size" title="By Unit Size" icon={<Activity size={12} />} entries={remapEntries("size", stats.bySize)} />,
@@ -526,6 +530,8 @@ export function BreakdownGrid({ stats, vertical = false }: { stats: StatsData; v
 }
 
 // ─── HandicapperSelector ──────────────────────────────────────────────────────
+
+export const BreakdownGrid = memo(BreakdownGridInner);
 
 export function HandicapperSelector({
   handicappers,
