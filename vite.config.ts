@@ -170,9 +170,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    // Target modern browsers — enables smaller output (no legacy polyfills)
-    target: ["es2020", "chrome90", "firefox88", "safari14"],
-    // Raise chunk size warning threshold — our vendor chunks are intentionally large
+    // chunkSizeWarningLimit — vendor chunks are intentionally large
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
