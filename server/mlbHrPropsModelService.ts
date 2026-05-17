@@ -53,6 +53,7 @@ import {
   games,
 } from "../drizzle/schema";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
+import { getMlbamIdMap, normalizeMlbamName } from "./mlbamIdCache";
 
 const TAG = "[HrPropsModel]";
 
@@ -126,34 +127,11 @@ interface StatcastContext {
   hardHitPct: number | null;
 }
 
-// ─── MLB Stats API name normalization ─────────────────────────────────────────
-function normalizeName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+jr\.?$|\s+sr\.?$|\s+ii$|\s+iii$|\s+iv$/i, "")
-    .replace(/[^a-z\s]/g, "")
-    .trim();
-}
-
-// ─── Fetch all active MLB player IDs from MLB Stats API ───────────────────────
-async function fetchMlbamIdMap(): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
-  try {
-    const url = `https://statsapi.mlb.com/api/v1/sports/1/players?season=2025&gameType=R`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as { people?: Array<{ id: number; fullName: string }> };
-    for (const p of data.people ?? []) {
-      map.set(normalizeName(p.fullName), p.id);
-    }
-    console.log(`${TAG} [STATE] MLB Stats API: loaded ${map.size} players`);
-  } catch (err) {
-    console.error(`${TAG} [ERROR] MLB Stats API fetch failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  return map;
-}
+// ─── MLB Stats API name normalization — delegated to shared mlbamIdCache ──────
+// getMlbamIdMap: module-level cached (6h TTL), shared across HR + K-Props services
+// normalizeMlbamName: same normalization logic as before (NFD + suffix strip)
+const normalizeName = normalizeMlbamName;
+const fetchMlbamIdMap = getMlbamIdMap;
 
 // ─── P2-C: Statcast-enhanced Poisson P(≥1 HR) — wOBA double-count fixed ──────
 function computePlayerPHr(

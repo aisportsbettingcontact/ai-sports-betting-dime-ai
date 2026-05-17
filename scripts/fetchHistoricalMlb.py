@@ -156,7 +156,6 @@ def main():
         print(f"[STEP] Fetching season {season}: {start_date} → {end_date}")
         season_games = []
         chunk_count = 0
-        error_count = 0
 
         for chunk_start, chunk_end in date_range_chunks(start_date, end_date, chunk_days=7):
             chunk_count += 1

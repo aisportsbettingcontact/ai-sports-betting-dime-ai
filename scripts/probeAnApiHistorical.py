@@ -154,7 +154,6 @@ def analyze_game_markets(game: dict, target_games: list[tuple[str, str]]) -> Non
             continue
         periods_in_book = list(book_data.keys())
         has_f5 = "firstfiveinnings" in book_data
-        has_event = "event" in book_data
         f5_data = book_data.get("firstfiveinnings", {})
         f5_ml = f5_data.get("moneyline", [])
         f5_ml_odds = [(m.get("side"), m.get("odds"), m.get("open"), m.get("type")) for m in f5_ml]

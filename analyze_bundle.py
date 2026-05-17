@@ -44,8 +44,8 @@ for s in ext_scripts:
 # --- External link tags ---
 ext_links = re.findall(r'<link[^>]+href=["\']([^"\']+)["\']', content)
 print(f"\n[STEP] External <link href> references: {len(ext_links)}")
-for l in ext_links:
-    print(f"  {l}")
+for link_href in ext_links:
+    print(f"  {link_href}")
 
 # --- Identify what is taking up space ---
 # Remove all tags, measure remaining text

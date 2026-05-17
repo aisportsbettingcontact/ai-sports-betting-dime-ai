@@ -38,7 +38,7 @@ DK_ODDS_FILE = "/tmp/mlb_dk_odds.json"
 
 # ── Import model ───────────────────────────────────────────────────────────────
 print("[STEP] Importing MLBAIModel...")
-import MLBAIModel as M
+import MLBAIModel as M  # noqa: E402
 
 # ── Override SIMULATIONS for backtest speed (10K is sufficient for calibration comparison) ──
 # 10K sims: ~0.5% SE on probabilities, ~1.5s per game, ~2.5hr total for 5103×2
@@ -120,7 +120,7 @@ def sp_to_pitcher_stats(sp: dict) -> dict:
     k  = int(sp.get("k", 5))
     bb = int(sp.get("bb", 2))
     h  = int(sp.get("h", 5))
-    hr = int(sp.get("hr", 0))
+    int(sp.get("hr", 0))
     # Compute ERA/K9/BB9/WHIP from game stats (annualized from 9 innings)
     era  = (er / max(ip, 0.1)) * 9.0
     k9   = (k  / max(ip, 0.1)) * 9.0
@@ -148,7 +148,7 @@ def batting_to_team_stats(batting: dict, base_stats: dict) -> dict:
         stats["avg"] = avg
         stats["obp"] = obp
         stats["slg"] = slg
-    except:
+    except Exception:
         pass
     return stats
 
@@ -159,7 +159,7 @@ def ml_to_decimal(ml_str) -> Optional[float]:
     try:
         ml = float(str(ml_str).replace("+", "").strip())
         return (1 + ml / 100) if ml > 0 else (1 + 100 / abs(ml))
-    except:
+    except Exception:
         return None
 
 def calc_roi(model_prob: float, book_ml) -> Optional[float]:
@@ -350,7 +350,7 @@ def grade_game(game: dict, dk_odds: Optional[dict], version: str) -> Dict[str, A
             try:
                 ml = float(str(nrfi_odds).replace("+",""))
                 p_nrfi_raw = (100/(ml+100)) if ml > 0 else (abs(ml)/(abs(ml)+100))
-            except:
+            except Exception:
                 p_nrfi_raw = 0.515
         else:
             p_nrfi_raw = 0.515
@@ -383,7 +383,7 @@ MARKETS = ["fg_ml_home", "fg_ml_away", "fg_rl_home", "fg_rl_away",
 def aggregate(results: List[dict]) -> dict:
     agg = {}
     for mkt in MARKETS:
-        wins = losses = pushes = roi_count = 0
+        wins = losses = roi_count = 0
         total_roi = 0.0
         probs = []
         for r in results:

@@ -91,7 +91,7 @@ print(f"  home_run_line: {r2['home_run_line']}")
 print(f"  away_run_line: {r2['away_run_line']}")
 print()
 print("CONCLUSION:")
-print(f"  Stored modelHomeSpreadOdds = -221")
+print("  Stored modelHomeSpreadOdds = -221")
 print(f"  Test 1 (rl=-1.5) home_rl_odds = {r1['home_rl_odds']}")
 print(f"  Test 2 (rl=+1.5) home_rl_odds = {r2['home_rl_odds']}")
 if abs(r2['home_rl_odds'] - (-221)) < 20:

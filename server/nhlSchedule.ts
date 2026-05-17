@@ -200,6 +200,7 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
 
   const resp = await fetch(url, {
     redirect: "follow",
+    signal: AbortSignal.timeout(12_000),  // 12s hard timeout — prevents indefinite hang on slow NHL API
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -421,13 +422,13 @@ export async function fetchNhlLiveScores(): Promise<NhlLiveGame[]> {
 
   const url = "https://api-web.nhle.com/v1/scoreboard/now";
   const resp = await fetch(url, {
+    signal: AbortSignal.timeout(10_000),  // 10s hard timeout
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       Accept: "application/json",
       Referer: "https://www.nhl.com/",
     },
   });
-
   if (!resp.ok) {
     throw new Error(`[NHLSchedule] scoreboard/now returned HTTP ${resp.status}`);
   }

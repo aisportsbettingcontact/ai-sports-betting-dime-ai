@@ -66,7 +66,7 @@ check("PIT in TEAM_NRFI_RATES", "PIT" in TEAM_NRFI_RATES, f"PIT={TEAM_NRFI_RATES
 # ── Test 2: project_game with pitcher NRFI rates ───────────────────────────────
 print("\n[TEST 2] project_game() with pitcher NRFI rates (WSH@PIT, n_sims=5000)")
 # Monkey-patch SIMULATIONS to 5000 for speed
-import MLBAIModel
+import MLBAIModel  # noqa: E402
 
 original_sims = MLBAIModel.SIMULATIONS
 MLBAIModel.SIMULATIONS = 5000
@@ -162,10 +162,10 @@ check("nrfi_combined_signal > 0.56 for high-NRFI pair",
       combined_high is not None and combined_high > 0.56,
       f"signal={combined_high}")
 check("nrfi_combined_pass=True for high-NRFI pair",
-      result_high.get("nrfi_combined_pass") == True,
+      result_high.get("nrfi_combined_pass"),
       f"pass={result_high.get('nrfi_combined_pass')}")
 check("nrfi_both_pass=True for both >= 0.60",
-      result_high.get("nrfi_both_pass") == True,
+      result_high.get("nrfi_both_pass"),
       f"both={result_high.get('nrfi_both_pass')}")
 
 # ── Restore SIMULATIONS ────────────────────────────────────────────────────────

@@ -84,7 +84,7 @@ def extract_game_stats(game_pk: int, boxscore: dict) -> dict:
             try:
                 ip_parts = str(ip_str).split(".")
                 ip_full = int(ip_parts[0]) + (int(ip_parts[1]) / 3 if len(ip_parts) > 1 else 0)
-            except:
+            except Exception:
                 ip_full = 0
             er = sp_stats.get("earnedRuns", 0)
             game_era = round(er / ip_full * 9, 2) if ip_full > 0 else None
