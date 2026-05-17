@@ -3373,3 +3373,14 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 678/678 pass
 - [x] Checkpoint saved
+
+## Session: 2026-05-16 — Bet Tracker Save Failure & Blank Page Crash (Round 2)
+
+- [ ] Audit server betTracker.create procedure end-to-end for silent failure paths
+- [ ] Audit client handleSubmit for any remaining lock/guard issues
+- [ ] Identify and fix blank page rendering crash after data loads
+- [ ] Fix optimistic update pipeline (onMutate → onSuccess → onSettled)
+- [ ] Eliminate all performance bottlenecks in initial load and re-render
+- [ ] TypeScript: 0 errors
+- [ ] Tests: all pass
+- [ ] Checkpoint saved

@@ -1897,11 +1897,18 @@ export default function BetTracker() {
       });
       return { previousData, tempId };
     },
-    onError: (_err, _newBet, context: any) => {
+    onError: (err: any, _newBet, context: any) => {
       // Rollback on error
       if (context?.previousData) {
         utils.betTracker.listWithStatsPaginated.setInfiniteData(paginatedQueryInput, context.previousData);
       }
+      // Surface the error — the catch block in handleSubmit will also fire, but
+      // this path handles errors that bypass mutateAsync (e.g. background retries).
+      const msg = err?.message ?? String(err);
+      console.error(`[BetTracker][onError] create mutation failed:`, err);
+      // Only set formError if handleSubmit's catch hasn't already set it
+      // (handleSubmit sets it synchronously before this fires)
+      setFormError(prev => prev ? prev : `Save failed: ${msg}`);
     },
     // ── Replace optimistic PENDING bet with real server-returned bet (already graded) ──
     // The server awaits gradeTrackedBet synchronously before returning, so the response
@@ -2106,6 +2113,7 @@ export default function BetTracker() {
   // ref-based guard to block the second tap before React re-renders.
   const isSubmittingRef = useRef(false);
   const handleSubmit = async () => {
+    console.log(`[BetTracker][ENTRY] handleSubmit called — isSubmittingRef=${isSubmittingRef.current} isPending=${createMut.isPending} formGame=${formGame?.id ?? 'null'} canAccess=${canAccess}`);
     if (isSubmittingRef.current || createMut.isPending) return;
     isSubmittingRef.current = true;
     setFormError("");
@@ -2202,6 +2210,24 @@ export default function BetTracker() {
       setFormNotes("");
       setFormWagerType("PREGAME");
       setFormCustomLine("");
+      console.log(`[BetTracker][OUTPUT] create: SUCCESS — bet saved to tracker`);
+    } catch (err: unknown) {
+      // Surface the exact error to the user — previously this was swallowed silently.
+      // The user would see the optimistic bet appear and disappear with zero feedback.
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[BetTracker][ERROR] create FAILED:`, err);
+      // Map common tRPC error codes to actionable user messages
+      let userMsg = `Save failed: ${msg}`;
+      if (msg.includes('UNAUTHORIZED') || msg.includes('Not authenticated') || msg.includes('Invalid session')) {
+        userMsg = 'Session expired — please log out and log back in.';
+      } else if (msg.includes('FORBIDDEN') || msg.includes('Access denied') || msg.includes('Handicapper access')) {
+        userMsg = 'Access denied — your account does not have Bet Tracker access.';
+      } else if (msg.includes('Session invalidated')) {
+        userMsg = 'Session invalidated — please log out and log back in.';
+      } else if (msg.includes('fetch') || msg.includes('network') || msg.includes('Network')) {
+        userMsg = 'Network error — check your connection and try again.';
+      }
+      setFormError(userMsg);
     } finally {
       // Always release the submission lock so the button re-enables after success OR error
       isSubmittingRef.current = false;
@@ -2383,9 +2409,16 @@ export default function BetTracker() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  return (
+    return (
     <div className="min-h-screen bg-zinc-950 text-white">
-
+      {/* ── Global error toast (fixed top, visible regardless of scroll) ── */}
+      {formError && (
+        <div className="fixed top-0 left-0 right-0 z-[100] flex items-center gap-2 bg-red-600 text-white text-xs font-semibold px-4 py-2.5 shadow-lg" role="alert">
+          <AlertCircle size={14} className="flex-shrink-0" />
+          <span className="flex-1">{formError}</span>
+          <button type="button" onClick={() => setFormError("")} className="ml-2 text-white/70 hover:text-white transition-colors text-base leading-none">&times;</button>
+        </div>
+      )}
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/60">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
