@@ -26,6 +26,9 @@ import {
 import { getDiscordClient } from "../discord/bot";
 import { notifyOwner } from "../_core/notification";
 import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { getDb } from "../db";
+import { discordInviteTokens } from "../../drizzle/schema";
+import { eq, and, isNull, gt } from "drizzle-orm";
 
 const APP_USER_COOKIE = "app_session";
 
@@ -730,6 +733,108 @@ export const appUsersRouter = router({
         unlinkedDiscordId: user.discordId,
         unlinkedDiscordUsername: user.discordUsername,
       };
+    }),
+
+  // ─── Discord Invite Link Generation ───────────────────────────────────────
+  /**
+   * generateDiscordInvite
+   *
+   * OWNER-ONLY: Generate a unique, single-use Discord invite link for a user
+   * who has no Discord account linked. The link is valid for 7 days.
+   *
+   * Security invariants:
+   *   - Token is 32 random bytes (256-bit entropy) — brute force infeasible
+   *   - Single-use: token is marked used on first successful callback
+   *   - Expires after 7 days
+   *   - Bound to a specific userId (targetUserId)
+   *   - Only one active token per user (old tokens revoked on new generation)
+   *
+   * [INPUT]  userId  — the app_users.id to generate the invite for
+   * [INPUT]  origin  — the frontend origin for building the invite URL
+   * [OUTPUT] { inviteUrl: string, expiresAt: number }
+   */
+  generateDiscordInvite: ownerProcedure
+    .input(z.object({
+      userId: z.number().int().positive(),
+      origin: z.string().url(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId, origin } = input;
+      const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      console.log(
+        `[DiscordInvite][GENERATE][INPUT] requestId=${requestId}` +
+        ` owner=${ctx.appUser.username}(id=${ctx.appUser.id})` +
+        ` targetUserId=${userId}`
+      );
+
+      // [STEP 1] Verify target user exists
+      const user = await getAppUserById(userId);
+      if (!user) {
+        console.warn(`[DiscordInvite][GENERATE][FAIL] requestId=${requestId} userId=${userId} NOT_FOUND`);
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      // [STEP 2] Check if user already has Discord linked
+      if (user.discordId) {
+        console.warn(
+          `[DiscordInvite][GENERATE][FAIL] requestId=${requestId}` +
+          ` userId=${userId} username=${user.username} already has discordId=${user.discordId}`
+        );
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This user already has a Discord account linked. Disconnect it first.",
+        });
+      }
+
+      // [STEP 3] Get DB connection
+      const db = await getDb();
+      if (!db) {
+        console.error(`[DiscordInvite][GENERATE][FAIL] requestId=${requestId} DB unavailable`);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable. Please try again." });
+      }
+
+      // [STEP 4] Revoke any existing active tokens for this user (single active token per user)
+      await db
+        .delete(discordInviteTokens)
+        .where(
+          and(
+            eq(discordInviteTokens.targetUserId, userId),
+            isNull(discordInviteTokens.usedAt)
+          )
+        );
+      console.log(
+        `[DiscordInvite][GENERATE][STATE] requestId=${requestId}` +
+        ` revoked previous active tokens for userId=${userId}`
+      );
+
+      // [STEP 5] Generate cryptographically random 32-byte token (64 hex chars)
+      const token = crypto.randomBytes(32).toString("hex");
+      const now = Date.now();
+      const expiresAt = now + 7 * 24 * 60 * 60 * 1000; // 7 days
+
+      // [STEP 6] Insert the new invite token
+      await db.insert(discordInviteTokens).values({
+        token,
+        targetUserId: userId,
+        expiresAt,
+        createdAt: now,
+        usedAt: null,
+        linkedDiscordId: null,
+        createdBy: ctx.appUser.id,
+      });
+
+      // [STEP 7] Build the invite URL
+      const cleanOrigin = origin.replace(/\/$/, "");
+      const inviteUrl = `${cleanOrigin}/api/auth/discord-invite/connect?token=${token}`;
+
+      console.log(
+        `[DiscordInvite][GENERATE][OUTPUT] requestId=${requestId}` +
+        ` SUCCESS userId=${userId} username=${user.username}` +
+        ` tokenPrefix=${token.slice(0, 8)}... expiresAt=${new Date(expiresAt).toISOString()}`
+      );
+
+      return { inviteUrl, expiresAt };
     }),
 
   // ─── Forgot Password ──────────────────────────────────────────────────────

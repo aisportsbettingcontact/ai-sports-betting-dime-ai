@@ -3502,3 +3502,10 @@
 - [x] discordLogin fix — added isTimeout detection to distinguish timeout vs API error in catch blocks
 - [x] Home.tsx fix — added timeout, server_error, db_unavailable error message cases
 - [x] TypeScript: 0 errors | discordLogin tests: 21/21 pass | callback response: 3ms
+
+- [x] Generate Unique Invite Link button for unconnected users in UserManagement
+- [x] discordInviteTokens DB table (token, userId, expiresAt, usedAt, createdAt)
+- [x] server/discordInvite.ts — /connect and /callback Express routes
+- [x] generateDiscordInvite tRPC procedure in appUsers router
+- [x] Invite modal UI with copy-to-clipboard, expiry display, how-it-works guide
+- [x] discordInvite.test.ts — 24 tests covering token structure, security, error paths, success path

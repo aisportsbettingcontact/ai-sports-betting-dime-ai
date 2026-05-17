@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useLocation } from "wouter";
@@ -251,6 +251,7 @@ function ColFilterDropdown({
           )}
         </div>
       )}
+
     </div>
   );
 }
@@ -549,6 +550,53 @@ export default function UserManagement() {
   });
 
   const [forceLogoutAllConfirm, setForceLogoutAllConfirm] = useState(false);
+
+  // ─── Discord Invite Link state ─────────────────────────────────────────────
+  const [inviteModal, setInviteModal] = useState<{
+    userId: number;
+    username: string;
+    inviteUrl: string;
+    expiresAt: number;
+  } | null>(null);
+  const [inviteGenerating, setInviteGenerating] = useState<number | null>(null); // userId being generated
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const generateInviteMutation = trpc.appUsers.generateDiscordInvite.useMutation({
+    onSuccess: (data, variables) => {
+      // Find the username for the modal
+      const user = users.find((u) => u.id === variables.userId);
+      setInviteModal({
+        userId: variables.userId,
+        username: user?.username ?? String(variables.userId),
+        inviteUrl: data.inviteUrl,
+        expiresAt: data.expiresAt,
+      });
+      setInviteGenerating(null);
+      console.log(`[UserMgmt] DISCORD_INVITE.GENERATED: userId=${variables.userId} expiresAt=${new Date(data.expiresAt).toISOString()}`);
+    },
+    onError: (err) => {
+      setInviteGenerating(null);
+      toast.error(formatMutationError(err));
+    },
+  });
+
+  const handleGenerateInvite = useCallback((userId: number) => {
+    setInviteGenerating(userId);
+    setInviteCopied(false);
+    generateInviteMutation.mutate({ userId, origin: window.location.origin });
+  }, [generateInviteMutation]);
+
+  const handleCopyInvite = useCallback(async () => {
+    if (!inviteModal) return;
+    try {
+      await navigator.clipboard.writeText(inviteModal.inviteUrl);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 3000);
+      toast.success("Invite link copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy. Please copy manually.");
+    }
+  }, [inviteModal]);
 
   // Redirect if not owner — MUST be in useEffect, never in render body
   // Calling navigate() during render crashes React 19 silently (blank screen)
@@ -923,7 +971,26 @@ export default function UserManagement() {
                             Connected
                           </>
                         ) : (
-                          "Not Connected"
+                          <button
+                            type="button"
+                            onClick={() => handleGenerateInvite(user.id)}
+                            disabled={inviteGenerating === user.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-[rgba(88,101,242,0.15)] hover:bg-[rgba(88,101,242,0.3)] text-[#7289da] hover:text-white border border-[rgba(88,101,242,0.3)] hover:border-[#7289da] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Generate a unique Discord invite link for this user"
+                          >
+                            {inviteGenerating === user.id ? (
+                              <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                              </svg>
+                            ) : (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                              </svg>
+                            )}
+                            {inviteGenerating === user.id ? "Generating..." : "Generate Invite Link"}
+                          </button>
                         )}
                       </span>
                     </TableCell>
@@ -1171,6 +1238,95 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* ─── Discord Invite Link Modal ─────────────────────────────────────── */}
+      {inviteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setInviteModal(null); }}
+        >
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 space-y-5">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-white">Discord Invite Link</h2>
+                <p className="text-sm text-zinc-400 mt-0.5">
+                  Send this link to <span className="text-white font-medium">@{inviteModal.username}</span> so they can connect their Discord account.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInviteModal(null)}
+                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors flex-shrink-0"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Invite URL box */}
+            <div className="rounded-lg bg-zinc-800 border border-zinc-600 p-3 space-y-2">
+              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide">Invite URL (single-use · 7 days)</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs text-[#7289da] break-all font-mono leading-relaxed">
+                  {inviteModal.inviteUrl}
+                </code>
+              </div>
+            </div>
+
+            {/* Expiry notice */}
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Expires: {new Date(inviteModal.expiresAt).toLocaleString()} · Single-use only
+            </div>
+
+            {/* How it works */}
+            <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-zinc-300">How it works</p>
+              <ol className="text-xs text-zinc-400 space-y-1 list-decimal list-inside">
+                <li>Send this link to <span className="text-white">@{inviteModal.username}</span></li>
+                <li>They open it — Discord&#39;s Authorize screen appears</li>
+                <li>They click Authorize — their Discord account is linked automatically</li>
+                <li>They are redirected to <span className="text-white">/feed</span> and logged in</li>
+              </ol>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleCopyInvite}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold text-sm transition-colors"
+              >
+                {inviteCopied ? (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy Link
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInviteModal(null)}
+                className="px-5 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium text-sm transition-colors border border-zinc-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

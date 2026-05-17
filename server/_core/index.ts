@@ -9,6 +9,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerDiscordAuthRoutes } from "../discordAuth";
 import { registerDiscordLoginRoutes } from "../discordLogin";
+import { registerDiscordInviteRoutes } from "../discordInvite";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -363,6 +364,7 @@ async function startServer() {
   // Discord account linking routes
   registerDiscordAuthRoutes(app);
   registerDiscordLoginRoutes(app);
+  registerDiscordInviteRoutes(app);
   // Rotogrinders server-side proxy — restricted to @prez and @lucianobets
   registerRgProxyRoute(app);
 

@@ -2193,3 +2193,44 @@ export const discordLoginStates = mysqlTable("discord_login_states", {
 });
 export type DiscordLoginState = typeof discordLoginStates.$inferSelect;
 export type InsertDiscordLoginState = typeof discordLoginStates.$inferInsert;
+
+// ─── Discord Invite Tokens (admin-generated, user-specific) ─────────────────
+//
+// Flow:
+//   1. Admin clicks "Generate Unique Invite Link" for a user with no discordId.
+//   2. Server creates a row here with a cryptographically random token (32 bytes → 64 hex chars).
+//   3. Admin copies the link: /api/auth/discord-invite/connect?token=<hex>
+//   4. User opens the link → server validates token → redirects to Discord OAuth
+//      with scope=identify and a signed JWT state embedding the token + userId.
+//   5. After Discord Authorize, callback validates state JWT, exchanges code,
+//      fetches Discord profile, writes discordId/discordUsername/discordAvatar
+//      to the target app_users row, marks token as used.
+//   6. User is issued an app_session cookie and redirected to /feed.
+//
+// Security invariants:
+//   - Token is single-use (usedAt set on first successful callback).
+//   - Token expires after 7 days (expiresAt).
+//   - Token is bound to a specific userId (targetUserId).
+//   - Only one active token per user (old tokens revoked on new generation).
+//   - Token is 32 random bytes (256-bit entropy) — brute force infeasible.
+export const discordInviteTokens = mysqlTable("discord_invite_tokens", {
+  /** 64-char hex string (32 random bytes) — the invite token */
+  token:        varchar("token",        { length: 64  }).primaryKey(),
+  /** The app_users.id this invite is for */
+  targetUserId: int("targetUserId").notNull(),
+  /** UTC timestamp (ms) when this token expires (7 days from creation) */
+  expiresAt:    bigint("expiresAt",     { mode: "number" }).notNull(),
+  /** UTC timestamp (ms) when this token was created */
+  createdAt:    bigint("createdAt",     { mode: "number" }).notNull(),
+  /** UTC timestamp (ms) when this token was successfully used; NULL = unused */
+  usedAt:       bigint("usedAt",        { mode: "number" }),
+  /** The Discord user ID that was linked when this token was used */
+  linkedDiscordId: varchar("linkedDiscordId", { length: 32 }),
+  /** Admin user ID who generated this token */
+  createdBy:    int("createdBy").notNull(),
+}, (t) => ({
+  idxTargetUser: index("idx_dit_target_user").on(t.targetUserId),
+  idxExpiresAt:  index("idx_dit_expires_at").on(t.expiresAt),
+}));
+export type DiscordInviteToken = typeof discordInviteTokens.$inferSelect;
+export type InsertDiscordInviteToken = typeof discordInviteTokens.$inferInsert;
