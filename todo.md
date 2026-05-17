@@ -3509,3 +3509,5 @@
 - [x] generateDiscordInvite tRPC procedure in appUsers router
 - [x] Invite modal UI with copy-to-clipboard, expiry display, how-it-works guide
 - [x] discordInvite.test.ts — 24 tests covering token structure, security, error paths, success path
+
+- [x] Fix execSync blocking event loop in renderSplitsCard.ts — replaced with async execAsync (promisify exec) so Playwright install does not freeze all HTTP requests for 2 minutes at cold start

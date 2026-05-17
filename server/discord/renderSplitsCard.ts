@@ -15,7 +15,9 @@
  */
 
 import { chromium, type Browser, type Page } from "playwright";
-import { execSync } from "child_process";
+import { exec as execCb } from "child_process";
+import { promisify } from "util";
+const execAsync = promisify(execCb);
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
@@ -92,13 +94,18 @@ async function ensurePlaywrightBrowsers(): Promise<void> {
   const execPath = chromium.executablePath();
   console.log(`[SplitsRenderer] Checking Chromium binary at: ${execPath}`);
   if (!fs.existsSync(execPath)) {
-    console.warn(`[SplitsRenderer] ⚠️  Chromium binary NOT found — running playwright install...`);
+    console.warn(`[SplitsRenderer] ⚠️  Chromium binary NOT found — running playwright install (async, non-blocking)...`);
     try {
-      const result = execSync(
-        `node ${require.resolve("playwright/cli")} install chromium`,
-        { timeout: 120_000, encoding: "utf-8", stdio: "pipe" }
+      // CRITICAL: Use async exec (not execSync) to avoid blocking the Node.js event loop.
+      // execSync with a 120s timeout would freeze ALL incoming HTTP requests (including
+      // Discord login /connect) for up to 2 minutes on every cold start after deployment.
+      const cliPath = require.resolve("playwright/cli");
+      const { stdout, stderr } = await execAsync(
+        `node ${cliPath} install chromium`,
+        { timeout: 180_000 }
       );
-      console.log(`[SplitsRenderer] playwright install output: ${result}`);
+      if (stdout) console.log(`[SplitsRenderer] playwright install stdout: ${stdout.slice(0, 500)}`);
+      if (stderr) console.log(`[SplitsRenderer] playwright install stderr: ${stderr.slice(0, 500)}`);
       console.log(`[SplitsRenderer] ✅ Chromium installed successfully`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
