@@ -545,7 +545,7 @@ export default function ModelProjections() {
   // If the server cache was populated at a different UTC boundary (before vs after 11:00 UTC cutoff)
   // than when the client reads it, the dates don't match → all games filtered out → "No games found".
   // With explicit gameDate: server cache key is MLB:{date}, exact eq() match, zero boundary mismatch.
-  const { data: allGames, isLoading: gamesLoading, isFetching: gamesFetching } = trpc.games.list.useQuery(
+  const { data: allGames, isLoading: gamesLoading, isFetching: gamesFetching, refetch: refetchGames } = trpc.games.list.useQuery(
     { sport: selectedSport, gameDate: selectedDate },
     {
       enabled: true,
@@ -555,6 +555,39 @@ export default function ModelProjections() {
       placeholderData: (prev) => prev, // keep previous sport/date data while new query loads — eliminates loading flash
     }
   );
+
+  // ── Auto-retry on empty result ─────────────────────────────────────────────────────────────────
+  // If the query resolves with 0 games and we're not loading, schedule an automatic
+  // retry after 3 seconds. This handles the case where the server-side empty-result
+  // guard (last-known-good cache) hasn't kicked in yet, or where the client receives
+  // a stale cached 0-game response before the server retry completes.
+  // Max 3 auto-retries per date/sport combo to avoid infinite loops on genuine off-days.
+  const _autoRetryCount = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (gamesLoading || gamesFetching) return;          // still in-flight
+    if (!allGames) return;                              // no data yet
+    if (allGames.length > 0) {
+      // Games loaded successfully — reset retry counter for this key
+      const key = `${selectedSport}:${selectedDate}`;
+      _autoRetryCount.current[key] = 0;
+      return;
+    }
+    // 0 games returned and query is idle — schedule a retry
+    const key = `${selectedSport}:${selectedDate}`;
+    const retries = _autoRetryCount.current[key] ?? 0;
+    if (retries >= 3) return; // max retries reached — this is a genuine off-day
+    _autoRetryCount.current[key] = retries + 1;
+    console.warn(
+      `[Feed][AutoRetry] 0 games for ${selectedSport} on ${selectedDate}. ` +
+      `Scheduling retry ${retries + 1}/3 in 3s...`
+    );
+    const timer = setTimeout(() => {
+      console.log(`[Feed][AutoRetry] Firing retry ${retries + 1}/3 for ${selectedSport}:${selectedDate}`);
+      void refetchGames();
+    }, 3000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allGames, gamesLoading, gamesFetching, selectedSport, selectedDate]);
 
   // Separate lightweight query for available dates (calendar picker).
   // This uses the 7-day rolling window on the server to return all dates that have games,
@@ -1536,15 +1569,33 @@ export default function ModelProjections() {
                     <p className="text-sm text-muted-foreground">Loading projections…</p>
                   </div>
                 ) : sortedDates.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
-                    <div>
-                      <p className="text-sm font-semibold text-foreground mb-1">No games found</p>
-                      <p className="text-xs text-muted-foreground">
-                        {selectedStatuses.size > 0 ? `No ${Array.from(selectedStatuses).join(" or ")} ${selectedSport} games right now.` : `No ${selectedSport} games found.`}
-                      </p>
-                    </div>
-                  </div>
+                  (() => {
+                    const retryKey = `${selectedSport}:${selectedDate}`;
+                    const retryCount = _autoRetryCount.current[retryKey] ?? 0;
+                    const isRetrying = retryCount > 0 && retryCount < 3;
+                    return (
+                      <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
+                        {isRetrying ? (
+                          <Loader2 className="w-10 h-10 text-primary/60 animate-spin" />
+                        ) : (
+                          <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-foreground mb-1">
+                            {isRetrying ? 'Loading games…' : 'No games found'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {isRetrying
+                              ? `Connecting to data source… (attempt ${retryCount}/3)`
+                              : selectedStatuses.size > 0
+                                ? `No ${Array.from(selectedStatuses).join(' or ')} ${selectedSport} games right now.`
+                                : `No ${selectedSport} games found.`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   sortedDates.map((date) => (
                     <div key={date}>

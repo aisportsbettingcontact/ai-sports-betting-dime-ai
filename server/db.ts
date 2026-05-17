@@ -51,6 +51,19 @@ const _availableDatesCache = new Map<string, CacheEntry<string[]>>();
 
 const GAMES_LIST_TTL_MS = 60_000;   // 60 seconds — safe now that invalidation is debounced
 
+/**
+ * Last-known-good cache — stores the last non-empty result for each cache key.
+ * When a DB query returns 0 rows for a key that previously had rows, we serve
+ * the stale-but-valid result instead of caching empty and showing "No games found".
+ * This is the primary defense against transient DB failures (TiDB cold start,
+ * connection pool exhaustion, SSL handshake timeout) causing empty feed states.
+ *
+ * TTL: 30 minutes — long enough to survive a DB blip, short enough to not
+ * serve genuinely stale data for too long.
+ */
+const _lastGoodCache = new Map<string, { data: Game[]; storedAt: number }>();
+const LAST_GOOD_TTL_MS = 30 * 60_000; // 30 minutes
+
 // ── Cache performance counters ─────────────────────────────────────────────
 // Tracked globally for the /api/perf endpoint. Resets on server restart.
 const _cacheCounters = {
@@ -449,8 +462,76 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
   // Sort by start time in Node.js: treat '00:00' as midnight (sort last within each date)
   const result = sortGamesByStartTime(gated) as Game[];
 
+  // ─── Empty result guard ──────────────────────────────────────────────────────────────
+  // If the DB returned 0 rows for a key that previously had rows, this is almost certainly
+  // a transient DB failure (TiDB cold start, connection pool exhaustion, SSL timeout).
+  // Strategy:
+  //   1. Retry once after 200ms — catches transient connection issues
+  //   2. If retry also returns 0, serve last-known-good result (if within 30min TTL)
+  //   3. Never write an empty result to the primary cache — forces immediate retry on next request
+  if (result.length === 0) {
+    const lastGood = _lastGoodCache.get(cacheKey);
+    const lastGoodAge = lastGood ? Date.now() - lastGood.storedAt : Infinity;
+
+    // Retry once after 200ms to recover from transient DB connection issues
+    console.warn(`[GamesCache][EMPTY] key=${cacheKey} — DB returned 0 rows. Retrying in 200ms...`);
+    await new Promise(r => setTimeout(r, 200));
+    let retryResult: Game[] = [];
+    try {
+      const retryRows = await db
+        .select()
+        .from(games)
+        .where(and(...conditions))
+        .orderBy(games.gameDate, games.sortOrder);
+      const retryGated: Game[] = retryRows.map((row: Game): Game => {
+        if (row.sport !== 'NCAAM') return row;
+        if (row.publishedModel) return row;
+        const copy = { ...row } as Record<string, unknown>;
+        for (const field of ['awayModelSpread','homeModelSpread','modelTotal','modelAwayML','modelHomeML','modelAwayScore','modelHomeScore','modelOverRate','modelUnderRate','modelAwayWinPct','modelHomeWinPct','modelSpreadClamped','modelTotalClamped','modelCoverDirection','modelRunAt','spreadEdge','spreadDiff','totalEdge','totalDiff','modelAwaySpreadOdds','modelHomeSpreadOdds','modelOverOdds','modelUnderOdds'] as const)
+          copy[field] = null;
+        return copy as Game;
+      });
+      retryResult = sortGamesByStartTime(retryGated) as Game[];
+      console.log(`[GamesCache][RETRY] key=${cacheKey} retry rows=${retryResult.length}`);
+    } catch (retryErr) {
+      console.error(`[GamesCache][RETRY_FAIL] key=${cacheKey}:`, retryErr);
+    }
+
+    if (retryResult.length > 0) {
+      // Retry succeeded — cache and return the retry result
+      _gamesListCache.set(cacheKey, { data: retryResult, expiresAt: Date.now() + GAMES_LIST_TTL_MS });
+      _lastGoodCache.set(cacheKey, { data: retryResult, storedAt: Date.now() });
+      _cacheCounters.gamesMiss++;
+      console.log(`[GamesCache][RETRY_OK] key=${cacheKey} rows=${retryResult.length} — cached`);
+      return retryResult;
+    }
+
+    // Both attempts returned 0. Serve last-known-good if available and fresh.
+    if (lastGood && lastGoodAge < LAST_GOOD_TTL_MS) {
+      console.warn(
+        `[GamesCache][LAST_GOOD] key=${cacheKey} — serving stale result from ${Math.round(lastGoodAge / 1000)}s ago ` +
+        `(${lastGood.data.length} rows). DB returned 0 on both attempts.`
+      );
+      // Cache the last-good result with a SHORT TTL (15s) so we retry DB soon
+      _gamesListCache.set(cacheKey, { data: lastGood.data, expiresAt: Date.now() + 15_000 });
+      _cacheCounters.gamesMiss++;
+      return lastGood.data;
+    }
+
+    // No last-known-good available — return empty but DO NOT cache it.
+    // The next request will immediately retry the DB.
+    console.error(
+      `[GamesCache][EMPTY_FINAL] key=${cacheKey} — returning empty result. ` +
+      `No last-known-good available (lastGoodAge=${Math.round(lastGoodAge / 1000)}s).`
+    );
+    _cacheCounters.gamesMiss++;
+    return result; // empty []
+  }
+
   // ─── Cache write ─────────────────────────────────────────────────────────────────
   _gamesListCache.set(cacheKey, { data: result, expiresAt: Date.now() + GAMES_LIST_TTL_MS });
+  // Update last-known-good with this fresh non-empty result
+  _lastGoodCache.set(cacheKey, { data: result, storedAt: Date.now() });
   _cacheCounters.gamesMiss++;
   console.log(`[GamesCache][MISS] key=${cacheKey} rows=${result.length} ttl=${GAMES_LIST_TTL_MS / 1000}s`);
 
