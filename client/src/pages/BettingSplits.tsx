@@ -184,8 +184,21 @@ export default function BettingSplitsPage() {
   }, []);
 
   const acceptTermsMutation = trpc.appUsers.acceptTerms.useMutation({ onSuccess: () => { refetchAppUser(); setShowAgeModal(false); } });
+  const utils = trpc.useUtils();
   const closeSessionMutation = trpc.metrics.closeSession.useMutation();
-  const appLogoutMutation = trpc.appUsers.logout.useMutation({ onSuccess: () => { setLocation("/"); toast.success("Signed out"); } });
+  const appLogoutMutation = trpc.appUsers.logout.useMutation({
+    onSuccess: async () => {
+      // [FIX] Immediately zero-out the appUsers.me cache so the Discord button
+      // disappears before the redirect fires. Without this, the 5-min staleTime
+      // keeps appUser non-null and the Discord button stays rendered after logout.
+      utils.appUsers.me.setData(undefined, null);
+      await utils.appUsers.me.invalidate();
+      toast.success("Signed out");
+      // [FIX] Hard redirect — wouter setLocation("/") bounces back to /feed
+      // because App.tsx redirects / → /feed. Hard redirect clears all cache.
+      window.location.href = "/login";
+    },
+  });
   const appLogout = () => { closeSessionMutation.mutate(); appLogoutMutation.mutate(); };
 
   useEffect(() => { setSelectedStatuses(new Set()); setSelectedDate(todayUTC()); }, [selectedSport]);

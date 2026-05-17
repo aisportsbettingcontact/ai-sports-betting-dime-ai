@@ -40,7 +40,7 @@ function Router() {
       {/* Unified feed page (AI Model Projections) */}
       <Route path="/feed" component={ModelProjections} />
       {/* /login → feed (login is hidden) */}
-      <Route path="/login">{() => <Redirect to="/feed" />}</Route>
+      <Route path="/login" component={Home} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/publish" component={PublishProjections} />
       <Route path="/admin/ingest-an" component={IngestAnOdds} />

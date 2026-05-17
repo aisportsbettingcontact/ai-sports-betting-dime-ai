@@ -505,7 +505,19 @@ export default function ModelProjections() {
   const closeSessionMutation = trpc.metrics.closeSession.useMutation();
   const heartbeatMutation = trpc.metrics.sessionHeartbeat.useMutation();
   const appLogoutMutation = trpc.appUsers.logout.useMutation({
-    onSuccess: () => { setLocation("/"); toast.success("Signed out"); },
+    onSuccess: async () => {
+      // [FIX] Immediately zero-out the appUsers.me cache so the Discord button
+      // disappears before the redirect fires. Without this, the 5-min staleTime
+      // keeps appUser non-null and the Discord button stays rendered after logout.
+      utils.appUsers.me.setData(undefined, null);
+      await utils.appUsers.me.invalidate();
+      toast.success("Signed out");
+      // [FIX] Hard redirect instead of setLocation("/") — the wouter redirect
+      // chain sends "/" → "/feed" → ModelProjections, so the user never leaves
+      // the page. A hard redirect forces a full page reload, clearing all
+      // React Query cache state and landing on the login page cleanly.
+      window.location.href = "/login";
+    },
   });
   const appLogout = () => { closeSessionMutation.mutate(); appLogoutMutation.mutate(); };
   // Heartbeat every 5 minutes to track active session duration
