@@ -336,6 +336,61 @@ function fmtStartTime(utcStr: string | null, gameTime: string | null): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+// ─── BreakdownsSidebar ──────────────────────────────────────────────────────────────────────────────
+/**
+ * BreakdownsSidebar — Breakdowns panel visible on ALL screen sizes.
+ * - Desktop (lg+): always expanded, vertical stack in left column
+ * - Mobile/tablet (<lg): collapsible toggle, defaults to collapsed
+ * Shows dollar P&L when unitSize > 0.
+ */
+function BreakdownsSidebar({ stats, unitSize }: { stats: StatsData; unitSize: number }) {
+  // Default: expanded on desktop (lg+), collapsed on mobile/tablet
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window !== "undefined") return window.innerWidth >= 1024;
+    return true;
+  });
+  const showDollar = unitSize > 0;
+
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl overflow-hidden">
+      {/* Header — always visible, acts as toggle on mobile/tablet */}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors lg:cursor-default"
+        aria-expanded={expanded}
+        aria-label="Toggle Breakdowns panel"
+      >
+        <div className="flex items-center gap-2">
+          <BarChart2 size={13} className="text-emerald-400" />
+          <span className="text-sm font-bold tracking-widest text-zinc-200 uppercase">Breakdowns</span>
+          {showDollar && (
+            <span className="text-xs text-zinc-400 font-mono">(1u = ${unitSize.toLocaleString()})</span>
+          )}
+        </div>
+        {/* Chevron — hidden on desktop since it’s always expanded */}
+        <ChevronDown
+          size={14}
+          className={`text-zinc-400 transition-transform lg:hidden ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* Content — collapsible on mobile/tablet, always shown on desktop */}
+      <div
+        className={`transition-all duration-200 ${
+          expanded ? "block" : "hidden"
+        } lg:block`}
+      >
+        <div className="p-4 space-y-3">
+          <BreakdownGrid stats={stats} vertical showDollar={showDollar} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({
   label, value, sub, color,
 }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -1706,6 +1761,21 @@ export default function BetTracker() {
     }
   );
 
+  // Derive the display name for the currently selected handicapper
+  // Used in Analytics panel header (e.g. "PREZ BETS" vs "HANKSTHEBANK")
+  const selectedHandicapperName = useMemo(() => {
+    if (!targetUserId || targetUserId === appUser?.id) {
+      // Viewing own bets — use own username/discordUsername
+      return (appUser?.username ?? appUser?.discordUsername ?? "PREZ BETS").toUpperCase();
+    }
+    // Viewing another handicapper's bets — look up in the list
+    const found = (handicappersQuery.data ?? []).find(
+      (h: { id: number; username: string; role: string }) => h.id === targetUserId
+    );
+    if (found) return (found.username ?? "HANDICAPPER").toUpperCase();
+    return "HANDICAPPER";
+  }, [targetUserId, appUser, handicappersQuery.data]);
+
   // ── Linescore query (MLB only) ─────────────────────────────────────────────
   const enrichedBets = (listQuery.data ?? []) as EnrichedBet[];
   const mlbDates = useMemo(() => {
@@ -2710,8 +2780,8 @@ export default function BetTracker() {
                           : "2025-26 SEASON"}
                       </span>
                     </div>
-                    {/* PREZ BETS sub-label */}
-                    <span className="text-sm text-zinc-300 tracking-widest uppercase font-semibold mb-1">PREZ BETS</span>
+                    {/* Dynamic handicapper name */}
+                    <span className="text-sm text-zinc-300 tracking-widest uppercase font-semibold mb-1">{selectedHandicapperName}</span>
                     {/* +/- Units for the season */}
                     <div className="flex items-center gap-2">
                       <TrendingUp size={24} className={stats.netProfit >= 0 ? "text-emerald-400" : "text-red-400"} />
@@ -2719,6 +2789,16 @@ export default function BetTracker() {
                         {stats.netProfit >= 0 ? "+" : ""}{fmtUnits(stats.netProfit)}
                       </span>
                     </div>
+                    {/* Dollar P&L — shown when unitSize > 0 */}
+                    {unitSize > 0 && (
+                      <div className={`text-sm font-mono font-semibold ${
+                        stats.netProfit >= 0 ? "text-emerald-300" : "text-red-300"
+                      }`}>
+                        {stats.netProfit >= 0 ? "+" : ""}
+                        ${Math.abs(stats.netProfit * unitSize).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        {" "}tailing @{selectedHandicapperName.toLowerCase().replace(/\s+/g, "")}
+                      </div>
+                    )}
                   </>
                 ) : (
                   /* ── All other modes: trend icon + units value ── */
@@ -3013,15 +3093,8 @@ export default function BetTracker() {
           </div>{/* end Add Bet card */}
 
           {/* ── Breakdowns (below Add Bet, same left column) ───────────── */}
-          <div className="hidden lg:block">
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center gap-2 pb-1 border-b border-zinc-800">
-                <BarChart2 size={13} className="text-emerald-400" />
-                <span className="text-sm font-bold tracking-widest text-zinc-200 uppercase">Breakdowns</span>
-              </div>
-              <BreakdownGrid stats={stats} vertical />
-            </div>
-          </div>
+          {/* Always visible on all screen sizes — collapsible on mobile/tablet */}
+          <BreakdownsSidebar stats={stats} unitSize={unitSize} />
           </div>{/* end left column */}
           {/* ── Right Panel: Tabs (BETS | LOGS) ──────────────────────────── */}
           <div className="space-y-4">

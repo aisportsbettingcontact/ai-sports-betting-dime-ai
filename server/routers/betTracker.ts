@@ -1513,7 +1513,17 @@ export const betTrackerRouter = router({
       function finalizeBreakdown(map: Map<string, BkEntry>) {
         return Array.from(map.entries()).map(([key, e]) => {
           const np = e.won - e.lost;
-          return { key, wins: e.wins, losses: e.losses, pushes: e.pushes, totalRisk: parseFloat(e.risk.toFixed(2)), netProfit: parseFloat(np.toFixed(2)), roi: e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0 };
+          return {
+            key,
+            wins:            e.wins,
+            losses:          e.losses,
+            pushes:          e.pushes,
+            totalRisk:       parseFloat(e.risk.toFixed(2)),
+            netProfit:       parseFloat(np.toFixed(2)),
+            roi:             e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0,
+            // Dollar P&L: netProfit (units) × unitSize ($/unit)
+            dollarNetProfit: parseFloat((np * unitSize).toFixed(2)),
+          };
         }).sort((a, b) => a.key.localeCompare(b.key));
       }
 
@@ -1535,23 +1545,26 @@ export const betTrackerRouter = router({
       dayPLMap.forEach((pl, date) => { if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; } });
 
       const stats = {
-        totalBets:  statsRows.length,
+        totalBets:       statsRows.length,
         wins, losses, pushes, pending, voids,
-        gradedBets: wins + losses + pushes,
-        totalRisk:  parseFloat(totalRisk.toFixed(2)),
-        totalWon:   parseFloat(totalWon.toFixed(2)),
-        totalLost:  parseFloat(totalLost.toFixed(2)),
-        netProfit:  parseFloat(netProfit.toFixed(2)),
+        gradedBets:      wins + losses + pushes,
+        totalRisk:       parseFloat(totalRisk.toFixed(2)),
+        totalWon:        parseFloat(totalWon.toFixed(2)),
+        totalLost:       parseFloat(totalLost.toFixed(2)),
+        netProfit:       parseFloat(netProfit.toFixed(2)),
+        // Dollar P&L at the top level (netProfit × unitSize)
+        dollarNetProfit: parseFloat((netProfit * unitSize).toFixed(2)),
         roi,
-        bestWin:    parseFloat(bestWin.toFixed(2)),
-        worstLoss:  parseFloat(worstLoss.toFixed(2)),
+        bestWin:         parseFloat(bestWin.toFixed(2)),
+        worstLoss:       parseFloat(worstLoss.toFixed(2)),
         byType, bySize, byMonth, bySport, byResult, byTimeframe, byWagerType,
         equityCurve,
         biggestDayDate,
-        biggestDayUnits: parseFloat(biggestDayUnits.toFixed(2)),
+        biggestDayUnits:  parseFloat(biggestDayUnits.toFixed(2)),
         longestWinStreak,
       };
 
+      console.log(`[BetTracker][OUTPUT] listWithStats: userId=${userId} netProfit=${stats.netProfit}u dollarNetProfit=$${stats.dollarNetProfit} unitSize=${unitSize}`);
       return { bets: enriched, stats };
     }),
 

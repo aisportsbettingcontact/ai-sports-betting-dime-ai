@@ -30,6 +30,8 @@ export type BreakdownEntry = {
   totalRisk: number;
   netProfit: number;
   roi: number;
+  /** Dollar P&L = netProfit (units) × unitSize ($/unit). Optional for backward compat. */
+  dollarNetProfit?: number;
 };
 
 export type StatsData = {
@@ -57,6 +59,8 @@ export type StatsData = {
   byResult?: BreakdownEntry[];
   byTimeframe: BreakdownEntry[];
   equityCurve: EquityPoint[];
+  /** Top-level dollar P&L = netProfit × unitSize */
+  dollarNetProfit?: number;
 };
 
 // ─── EquityChart ──────────────────────────────────────────────────────────────
@@ -372,10 +376,13 @@ function BreakdownPanelInner({
   title,
   icon,
   entries,
+  showDollar = false,
 }: {
   title: string;
   icon: React.ReactNode;
   entries: BreakdownEntry[];
+  /** When true, show dollar P&L alongside unit P&L */
+  showDollar?: boolean;
 }) {
   if (entries.length === 0) return null;
   return (
@@ -394,6 +401,7 @@ function BreakdownPanelInner({
           const settled = e.wins + e.losses;
           const winPct = settled > 0 ? (e.wins / settled) * 100 : 0;
           const isPos = e.netProfit >= 0;
+          const hasDollar = showDollar && e.dollarNetProfit !== undefined;
 
           return (
             <div key={e.key}>
@@ -415,7 +423,7 @@ function BreakdownPanelInner({
                     </span>
                   </span>
 
-                  {/* Net P/L */}
+                  {/* Net P/L (units) */}
                   <span
                     className={`text-sm font-bold font-mono whitespace-nowrap ${
                       isPos ? "text-green-400" : "text-red-400"
@@ -424,6 +432,20 @@ function BreakdownPanelInner({
                     {e.netProfit >= 0 ? "+" : ""}
                     {e.netProfit.toFixed(2)}u
                   </span>
+
+                  {/* Dollar P&L — shown when showDollar=true and dollarNetProfit is available */}
+                  {hasDollar && (
+                    <span
+                      className={`text-xs font-mono whitespace-nowrap px-1.5 py-0.5 rounded ${
+                        isPos
+                          ? "bg-green-500/10 text-green-300"
+                          : "bg-red-500/10 text-red-300"
+                      }`}
+                    >
+                      {(e.dollarNetProfit ?? 0) >= 0 ? "+" : ""}
+                      ${Math.abs(e.dollarNetProfit ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </span>
+                  )}
 
                   {/* ROI */}
                   <span
@@ -510,13 +532,22 @@ function remapEntries(
   return entries.map((e) => ({ ...e, key: remapKey(dimension, e.key) }));
 }
 
-function BreakdownGridInner({ stats, vertical = false }: { stats: StatsData; vertical?: boolean }) {
+function BreakdownGridInner({
+  stats,
+  vertical = false,
+  showDollar = false,
+}: {
+  stats: StatsData;
+  vertical?: boolean;
+  /** When true, show dollar P&L pill in each breakdown row */
+  showDollar?: boolean;
+}) {
   const panels = [
-    <BreakdownPanel key="type" title="By Bet Type" icon={<BarChart2 size={12} />} entries={remapEntries("type", stats.byType)} />,
-    <BreakdownPanel key="size" title="By Unit Size" icon={<Activity size={12} />} entries={remapEntries("size", stats.bySize)} />,
-    <BreakdownPanel key="month" title="By Month" icon={<Activity size={12} />} entries={remapEntries("month", stats.byMonth)} />,
-    <BreakdownPanel key="sport" title="By Sport" icon={<Activity size={12} />} entries={remapEntries("sport", stats.bySport)} />,
-    <BreakdownPanel key="timeframe" title="By Timeframe" icon={<Activity size={12} />} entries={remapEntries("timeframe", stats.byTimeframe)} />,
+    <BreakdownPanel key="type"      title="By Bet Type"   icon={<BarChart2 size={12} />} entries={remapEntries("type",      stats.byType)}      showDollar={showDollar} />,
+    <BreakdownPanel key="size"      title="By Unit Size"  icon={<Activity  size={12} />} entries={remapEntries("size",      stats.bySize)}      showDollar={showDollar} />,
+    <BreakdownPanel key="month"     title="By Month"      icon={<Activity  size={12} />} entries={remapEntries("month",     stats.byMonth)}     showDollar={showDollar} />,
+    <BreakdownPanel key="sport"     title="By Sport"      icon={<Activity  size={12} />} entries={remapEntries("sport",     stats.bySport)}     showDollar={showDollar} />,
+    <BreakdownPanel key="timeframe" title="By Timeframe"  icon={<Activity  size={12} />} entries={remapEntries("timeframe", stats.byTimeframe)} showDollar={showDollar} />,
   ];
   if (vertical) {
     // Vertical stack for sidebar column — no gaps, full width, no grid stretching
