@@ -673,8 +673,6 @@ function GameSelector({
             const awayWins = hasScore && isComplete && (ls!.awayR! > ls!.homeR!);
             const homeWins = hasScore && isComplete && (ls!.homeR! > ls!.awayR!);
 
-            console.log(`[GameSelector][ROW] gameId=${g.id} ${g.awayTeam}@${g.homeTeam} G${g.gameNumber} isDH=${isDH(g)} isComplete=${isComplete} isLive=${isLive} hasScore=${hasScore} R=${ls?.awayR ?? "?"}-${ls?.homeR ?? "?"}`);
-
             return (
               <button type="button" key={g.id}
                 onClick={() => { onSelect(g); setOpen(false); }}
@@ -1743,8 +1741,8 @@ export default function BetTracker() {
     if (!linescoreQuery.data) return map;
     for (const ls of Object.values(linescoreQuery.data)) {
       map.set(ls.gamePk, ls);
-      console.log(`[Linescore][STATE] gamePk=${ls.gamePk} ${ls.awayAbbrev}@${ls.homeAbbrev} date=${ls.gameDate} gameNumber=${ls.gameNumber} status=${ls.status} R=${ls.awayR}-${ls.homeR}`);
     }
+    // Summary-only log: per-entry logging (30+ lines/60s) was removed for performance
     console.log(`[Linescore][OUTPUT] linescoreByPk built: ${map.size} entries`);
     return map;
   }, [linescoreQuery.data]);
@@ -1767,8 +1765,8 @@ export default function BetTracker() {
     for (const ls of Object.values(linescoreQuery.data)) {
       const key = `${ls.gameDate}:${ls.awayAbbrev}:${ls.homeAbbrev}:${ls.gameNumber}`;
       map.set(key, ls);
-      console.log(`[Linescore][GAMENUM] key=${key} gamePk=${ls.gamePk} status=${ls.status} R=${ls.awayR}-${ls.homeR}`);
     }
+    // Summary-only log: per-entry logging removed for performance
     console.log(`[Linescore][OUTPUT] linescoreByGameNum built: ${map.size} entries (DH-safe)`);
     return map;
   }, [linescoreQuery.data]);
@@ -1913,6 +1911,13 @@ export default function BetTracker() {
     onSuccess: (realBet, _input, context: any) => {
       const tempId = context?.tempId;
       if (tempId == null) return;
+      // Guard: idempotency-guard returns { id, duplicate: true } — not a full bet row.
+      // If the server returned a duplicate sentinel, skip cache replacement and let
+      // onSettled → invalidate() fetch the real data from the server.
+      if ((realBet as any)?.duplicate === true) {
+        console.log(`[BetTracker][IDEMPOTENCY] duplicate sentinel received — skipping optimistic replacement, invalidate will sync`);
+        return;
+      }
       utils.betTracker.listWithStatsPaginated.setInfiniteData(paginatedQueryInput, (old) => {
         if (!old) return old;
         return {
@@ -2104,9 +2109,23 @@ export default function BetTracker() {
     if (isSubmittingRef.current || createMut.isPending) return;
     isSubmittingRef.current = true;
     setFormError("");
-    if (!formGame) { setFormError("Select a game from the slate."); return; }
-    if (isNaN(oddsNum) || oddsNum === 0) { setFormError("Enter valid American odds (e.g. -110, +145)."); return; }
-    if (isNaN(riskNum) || riskNum <= 0)  { setFormError(`Enter a valid ${stakeMode === "U" ? "unit" : "dollar"} amount.`); return; }
+    // CRITICAL: always release the lock on validation failure — otherwise the
+    // submit button is permanently disabled for the rest of the session.
+    if (!formGame) {
+      setFormError("Select a game from the slate.");
+      isSubmittingRef.current = false;
+      return;
+    }
+    if (isNaN(oddsNum) || oddsNum === 0) {
+      setFormError("Enter valid American odds (e.g. -110, +145).");
+      isSubmittingRef.current = false;
+      return;
+    }
+    if (isNaN(riskNum) || riskNum <= 0) {
+      setFormError(`Enter a valid ${stakeMode === "U" ? "unit" : "dollar"} amount.`);
+      isSubmittingRef.current = false;
+      return;
+    }
 
     const riskDollars  = stakeMode === "U" ? riskNum * unitSize : riskNum;
     const toWinFinal   = !isNaN(toWinNum) && toWinNum > 0
@@ -2190,10 +2209,14 @@ export default function BetTracker() {
   };
 
   // ── Stable callback refs — memo(BetCard) only re-renders when bet data changes, not parent state ──
+  // Stable ref pattern: updateMut.mutateAsync changes every render (tRPC mutation object
+  // is recreated). Storing it in a ref makes handleResult a stable callback reference,
+  // so React.memo(BetCard) never re-renders due to a changed onResult prop.
+  const updateMutRef = useRef(updateMut.mutateAsync);
+  useEffect(() => { updateMutRef.current = updateMut.mutateAsync; });
   const handleResult = useCallback(async (id: number, result: Result) => {
-    await updateMut.mutateAsync({ id, result });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updateMut.mutateAsync]);
+    await updateMutRef.current({ id, result });
+  }, []); // stable — never changes
 
   const handleEditSave = async () => {
     if (!editBet) return;

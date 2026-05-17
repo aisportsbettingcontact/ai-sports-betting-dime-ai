@@ -386,8 +386,11 @@ export const betTrackerRouter = router({
         )
         .limit(1);
       if (existing) {
-        console.log(`[BetTracker][IDEMPOTENCY] Duplicate detected within 30s — returning existing id=${existing.id}`);
-        return { id: existing.id, duplicate: true };
+        console.log(`[BetTracker][IDEMPOTENCY] Duplicate detected within 30s — returning full existing bet id=${existing.id}`);
+        // Return the full bet row (not a partial sentinel) so the client onSuccess handler
+        // can safely replace the optimistic placeholder without a broken cache entry.
+        const [existingFull] = await db.select().from(trackedBets).where(eq(trackedBets.id, existing.id));
+        return existingFull;
       }
 
       const [result] = await db.insert(trackedBets).values({

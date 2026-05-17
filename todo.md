@@ -3344,3 +3344,32 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 678/678 pass
 - [x] Checkpoint and publish
+
+## Session: 2026-05-16 — Bet Tracker Full Audit & Performance Overhaul
+
+- [ ] Root-cause White Sox ML 5U bet save failure
+- [ ] Audit all add-bet form validation (sport, betType, odds, units, result, date)
+- [ ] Audit tRPC bets.add procedure — input schema, DB insert, error propagation
+- [ ] Audit DB insert helper — field mapping, constraint violations, silent failures
+- [ ] Audit client-side form state — reset logic, optimistic updates, error display
+- [ ] Fix all identified save/validation bugs
+- [ ] Performance: memoize all expensive computations (stats, grouping, filtering)
+- [ ] Performance: eliminate all unnecessary re-renders and unstable references
+- [ ] Performance: audit refetch intervals and staleTime settings
+- [ ] Performance: audit loading/skeleton states
+- [ ] TypeScript: 0 errors
+- [ ] Tests: all pass
+- [ ] Checkpoint
+
+## Session: 2026-05-16 — Bet Tracker Audit & Performance Overhaul
+
+- [x] BUG #1 CRITICAL: Fix permanent submission lock — isSubmittingRef not released on validation failure (White Sox ML save failure root cause)
+- [x] BUG #2 CRITICAL: Fix idempotency guard returning partial sentinel {id, duplicate:true} — now returns full bet row from DB
+- [x] BUG #2 CLIENT: Guard onSuccess against duplicate sentinel shape — skip cache replacement, let invalidate() sync
+- [x] BUG #4 MEDIUM: Fix handleResult useCallback — use stable ref pattern so React.memo(BetCard) is never broken by unstable mutateAsync reference
+- [x] PERF: Remove per-entry console.log from linescoreByPk useMemo (30+ logs/60s eliminated)
+- [x] PERF: Remove per-entry console.log from linescoreByGameNum useMemo (30+ logs/60s eliminated)
+- [x] PERF: Remove per-row console.log from GameSelector dropdown render (fires on every open × every game)
+- [x] TypeScript: 0 errors
+- [x] Tests: 678/678 pass
+- [x] Checkpoint saved
