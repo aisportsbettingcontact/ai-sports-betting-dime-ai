@@ -190,12 +190,43 @@ export default function BettingSplitsPage() {
 
   useEffect(() => { setSelectedStatuses(new Set()); setSelectedDate(todayUTC()); }, [selectedSport]);
 
-  // SECURITY: only fire when appUser is confirmed — prevents unauthenticated API calls
+  // ─── Fix 1: Remove auth gate — games.list is a publicProcedure, no login required ───────────────
+  // Previously: { enabled: isAppAuthed } blocked the query for unauthenticated users.
+  // When appUser=null AND appAuthLoading=false: isAppAuthed=false, gamesLoading=false,
+  // appAuthLoading=false → NO spinner shown, NO games loaded → "No games found" shown.
+  // games.list is declared as publicProcedure on the server — no auth required.
   const isAppAuthed = !appAuthLoading && Boolean(appUser);
   const { data: allGames, isLoading: gamesLoading } = trpc.games.list.useQuery(
     { sport: selectedSport },
-    { enabled: isAppAuthed, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
+    {
+      enabled: true,           // FIX 1: always enabled — games.list is public
+      refetchOnWindowFocus: false,
+      refetchInterval: 60 * 1000,
+      staleTime: 30 * 1000,
+    }
   );
+
+  // ─── Fix 2: Server-authoritative date sync ───────────────────────────────────────────────────────
+  // BettingSplits previously had NO server date sync — selectedDate was computed ONCE at mount
+  // via todayUTC() and never updated. If the user kept the page open across the 11:00 UTC boundary,
+  // selectedDate stayed as yesterday while the server window advanced to today → 0 games shown.
+  // Mirror the same getCurrentDate sync that ModelProjections uses.
+  const { data: serverDateData } = trpc.games.getCurrentDate.useQuery(undefined, {
+    refetchInterval: 60 * 1000,
+    staleTime: 30 * 1000,
+  });
+  useEffect(() => {
+    if (!serverDateData) return;
+    const serverDate = serverDateData.effectiveDate;
+    if (serverDate !== selectedDate) {
+      console.log(
+        `[BettingSplits][DateSync] Syncing selectedDate from client=${selectedDate} to server=${serverDate}` +
+        ` (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`
+      );
+      setSelectedDate(serverDate);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverDateData]);
 
   const liveCount = useMemo(() => (allGames ?? []).filter(g => g?.gameStatus === "live").length, [allGames]);
 
@@ -241,6 +272,47 @@ export default function BettingSplitsPage() {
     for (const g of allGames) if (g) dateSet.add(effectiveGameDate(g.gameDate, g.startTimeEst));
     return Array.from(dateSet).sort();
   }, [allGames]);
+
+  // ─── Fix 3: Auto-advance selectedDate when it has no games ──────────────────────────────────────
+  // BettingSplits previously had NO auto-advance. If selectedDate was not in allDates
+  // (e.g. stale date after boundary crossing), the page stayed stuck on an empty view.
+  // Mirror the same guarded auto-advance that ModelProjections uses.
+  useEffect(() => {
+    if (!allGames || allDates.length === 0) return; // still loading
+    const hasGamesOnDate = allDates.includes(selectedDate);
+    if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
+    // Guard: only auto-advance if selectedDate is BEFORE the server's effective window start.
+    // If effectiveDate is available and selectedDate >= effectiveDate, the dates cache may be
+    // stale — do NOT advance, as that would skip to a future date with no published games.
+    const effectiveDate = serverDateData?.effectiveDate;
+    if (effectiveDate && selectedDate >= effectiveDate) {
+      console.warn(
+        `[BettingSplits][AutoAdvance] BLOCKED — selectedDate=${selectedDate} >= effectiveDate=${effectiveDate}. ` +
+        `allDates=${JSON.stringify(allDates.slice(0, 5))} — stale rolling window, not advancing.`
+      );
+      return;
+    }
+    // selectedDate is genuinely before the window — advance to first available date.
+    console.log(
+      `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
+      `Advancing to allDates[0]=${allDates[0]}`
+    );
+    setSelectedDate(allDates[0]!);
+  }, [allDates, selectedDate, serverDateData]);
+
+  // ─── Fix 4: Diagnostic logging when allGames=0 ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!allGames || gamesLoading) return;
+    if (allGames.length === 0) {
+      console.warn(
+        `[BettingSplits][DIAG] allGames=0 for sport=${selectedSport} date=${selectedDate}. ` +
+        `serverDate=${serverDateData?.effectiveDate ?? 'loading'} ` +
+        `utcHour=${serverDateData?.utcHour ?? '?'} ` +
+        `beforeCutoff=${serverDateData?.isBeforeCutoff ?? '?'} ` +
+        `isAppAuthed=${isAppAuthed} appAuthLoading=${appAuthLoading}`
+      );
+    }
+  }, [allGames, gamesLoading, selectedSport, selectedDate, serverDateData, isAppAuthed, appAuthLoading]);
 
   const games = useMemo(() => {
     if (!allGames) return allGames;
@@ -517,7 +589,7 @@ export default function BettingSplitsPage() {
 
       {/* ── Main Feed ── */}
       <main className="w-full pb-1">
-        {(gamesLoading || appAuthLoading) ? (
+        {(gamesLoading) ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-sm text-muted-foreground">Loading betting splits…</p>
