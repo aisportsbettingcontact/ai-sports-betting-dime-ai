@@ -42,7 +42,7 @@ export default function Home() {
   const [authTimedOut, setAuthTimedOut] = useState(false);
   useEffect(() => {
     if (!authLoading) return;
-    const timer = setTimeout(() => setAuthTimedOut(true), 4000);
+    const timer = setTimeout(() => setAuthTimedOut(true), 2000);
     return () => clearTimeout(timer);
   }, [authLoading]);
 
@@ -83,6 +83,28 @@ export default function Home() {
   };
 
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+
+  // Auto-retry for transient server errors (server was restarting during OAuth callback)
+  // server_error + db_unavailable + timeout are all transient — auto-retry after 5s
+  const isTransientError = discordError === 'server_error' || discordError === 'db_unavailable' || discordError === 'timeout';
+  useEffect(() => {
+    if (!isTransientError) return;
+    console.log(`[Login][AUTO_RETRY] Transient error '${discordError}' — auto-retrying in 5s`);
+    let count = 5;
+    setRetryCountdown(count);
+    const interval = setInterval(() => {
+      count--;
+      setRetryCountdown(count);
+      if (count <= 0) {
+        clearInterval(interval);
+        // Re-initiate Discord OAuth automatically
+        window.location.href = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent(returnPath)}`;
+      }
+    }, 1_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTransientError]);
 
   // prompt=none: if the user is already authenticated with Discord in this browser,
   // Discord skips the consent screen entirely and redirects back immediately.
@@ -139,8 +161,23 @@ export default function Home() {
 
         {/* Discord error banner */}
         {discordError && (
-          <div className="w-full mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-400 text-center">
-            {errorMessages[discordError] ?? "Sign-in failed. Please try again."}
+          <div className="w-full mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-400 text-center space-y-2">
+            <p>{errorMessages[discordError] ?? "Sign-in failed. Please try again."}</p>
+            {isTransientError && retryCountdown !== null && (
+              <p className="text-xs text-red-400/70 animate-pulse">
+                Retrying automatically in {retryCountdown}s…
+              </p>
+            )}
+            {isTransientError && (
+              <button
+                onClick={() => {
+                  window.location.href = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent(returnPath)}`;
+                }}
+                className="text-xs underline text-red-300 hover:text-red-200 transition-colors"
+              >
+                Retry now
+              </button>
+            )}
           </div>
         )}
 
