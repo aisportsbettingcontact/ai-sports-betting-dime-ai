@@ -64,6 +64,42 @@ describe("Discord login ENV invariant", () => {
   });
 });
 
+describe("Discord login role check invariant", () => {
+  it("discordLogin.ts uses guilds.members.read scope", () => {
+    expect(SRC).toContain("guilds.members.read");
+  });
+
+  it("discordLogin.ts has checkGuildRole function", () => {
+    expect(SRC).toContain("checkGuildRole");
+  });
+
+  it("discordLogin.ts checks ENV.discordGuildId and ENV.discordRoleAiModelSub", () => {
+    expect(SRC).toContain("ENV.discordGuildId");
+    expect(SRC).toContain("ENV.discordRoleAiModelSub");
+  });
+
+  it("discordLogin.ts redirects to missing_role and not_in_guild errors", () => {
+    expect(SRC).toContain("missing_role");
+    expect(SRC).toContain("not_in_guild");
+  });
+
+  it("discordLogin.ts uses /users/@me/guilds endpoint (no bot token required)", () => {
+    expect(SRC).toContain("/users/@me/guilds/");
+    // Must NOT use the bot-token guild members endpoint
+    expect(SRC).not.toContain("/guilds/${ENV");
+  });
+
+  it("Home.tsx shows error messages for not_in_guild and missing_role", () => {
+    const home = fs.readFileSync(
+      path.resolve(__dirname, "../client/src/pages/Home.tsx"),
+      "utf-8"
+    );
+    expect(home).toContain("not_in_guild");
+    expect(home).toContain("missing_role");
+    expect(home).toContain("AI Model Sub");
+  });
+});
+
 describe("Discord login frontend invariant", () => {
   it("LoginModal uses /api/auth/discord-login/connect (not old /api/auth/discord/connect)", () => {
     const modal = fs.readFileSync(

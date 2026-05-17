@@ -71,6 +71,12 @@ export default function Home() {
     state_mismatch:   "Invalid login state. Please try again.",
     token_exchange_failed: "Discord authentication failed. Please try again.",
     profile_fetch_failed:  "Could not fetch your Discord profile. Please try again.",
+    not_in_guild:     discordUser
+      ? `@${discordUser} is not in the Prez Bets Discord server. Join the server first, then try again.`
+      : "You are not in the Prez Bets Discord server. Join the server first, then try again.",
+    missing_role:     discordUser
+      ? `@${discordUser} does not have the AI Model Sub role. Purchase a subscription to get access.`
+      : "You do not have the AI Model Sub role in the Prez Bets Discord server. Purchase a subscription to get access.",
   };
 
   const loginUrl = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent("/feed")}`;
@@ -147,7 +153,7 @@ export default function Home() {
             Sign in with Discord
           </a>
           <p className="text-center text-xs text-muted-foreground/50">
-            Access is by invitation only. Your Discord account must be linked by the owner.
+            Access requires the AI Model Sub role in the Prez Bets Discord server.
           </p>
         </div>
 
