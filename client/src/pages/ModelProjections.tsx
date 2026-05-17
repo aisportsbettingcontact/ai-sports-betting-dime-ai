@@ -278,7 +278,7 @@ export default function ModelProjections() {
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(88);
   const [showModel, setShowModel] = useState(true);
-  const toggleModel = () => setShowModel((v) => !v);
+  const toggleModel = useCallback(() => setShowModel((v) => !v), []);
   // ── Tab bar scroll fade indicator ─────────────────────────────────────────
   // tabsShowFade: true when the tab bar has overflowing content AND user hasn't
   // scrolled to the end. Drives the fade-right gradient mask in the tab bar wrapper.
@@ -294,10 +294,16 @@ export default function ModelProjections() {
   type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops' | 'jackmac';
   // feedMobileTab now comes from URL params (via useUrlState), with localStorage fallback
   const feedMobileTab = urlFeedMobileTab;
-  const handleFeedTabChange = (next: FeedMobileTab) => {
+  const handleFeedTabChange = useCallback((next: FeedMobileTab) => {
     setUrlFeedMobileTab(next);
-  };
+  }, [setUrlFeedMobileTab]);
   const feedIsDual = feedMobileTab === 'dual';
+  // Pre-compute the mobileTab prop value once per render so GameCard.memo can bail out.
+  // Inline ternaries in JSX create new string references on every render, defeating memo.
+  const gameMobileTab = useMemo((): 'dual' | 'splits' => {
+    const nonDualTabs: FeedMobileTab[] = ['lineups', 'props', 'f5nrfi', 'hrprops'];
+    return nonDualTabs.includes(feedMobileTab) ? 'dual' : (feedMobileTab as 'dual' | 'splits');
+  }, [feedMobileTab]);
   // FEED_TABS is built after appUser is declared (see below — canSeeJackMac depends on appUser)
 
   // ── Favorites tab ──────────────────────────────────────────────────────────
@@ -519,6 +525,8 @@ export default function ModelProjections() {
   // isAppAuthedForFav gates ONLY favorites queries (requires login).
   // games.list and all public feed queries are always enabled — feed is fully public.
   const isAppAuthedForFav = !appAuthLoading && Boolean(appUser);
+  // Pre-compute the isAppAuthed prop value once per render (Boolean(appUser) inline is unstable).
+  const isAppAuthedProp = useMemo(() => Boolean(appUser), [appUser]);
 
   // CRITICAL: Pass selectedDate as gameDate explicitly so the server does an exact date match.
   // Without this, the server returns a 7-day rolling window and the client filters by selectedDate.
@@ -664,18 +672,27 @@ export default function ModelProjections() {
     }
   }, [allDates, selectedDate, selectedSport]);
 
-  const games = useMemo(() => {
-    if (!allGames) return allGames;
-    let working = selectedStatuses.size === 0 ? allGames : allGames.filter(g => selectedStatuses.has(g?.gameStatus as "upcoming" | "live" | "final"));
-    working = working.filter(g => g && effectiveGameDate(g.gameDate, g.startTimeEst) === selectedDate);
+  // Single-pass computation: filter → group by date → sort.
+  // Previously this was two separate useMemo calls (games + gamesByDate) that each
+  // iterated the full array. Merged into one pass to halve the work.
+  const { games, gamesByDate: _gamesByDate } = useMemo(() => {
+    if (!allGames) return { games: allGames, gamesByDate: {} as Record<string, NonNullable<typeof allGames>[number][]> };
     const byDate: Record<string, NonNullable<typeof allGames>[number][]> = {};
-    for (const g of working) { const d = effectiveGameDate(g!.gameDate, g!.startTimeEst); if (!byDate[d]) byDate[d] = []; byDate[d]!.push(g!); }
+    for (const g of allGames) {
+      if (!g) continue;
+      if (selectedStatuses.size > 0 && !selectedStatuses.has(g.gameStatus as "upcoming" | "live" | "final")) continue;
+      const d = g.gameDate; // effectiveGameDate is identity — g.gameDate === result
+      if (d !== selectedDate) continue;
+      if (!byDate[d]) byDate[d] = [];
+      byDate[d]!.push(g);
+    }
+    // Sort each date bucket and flatten
     const result: NonNullable<typeof allGames>[number][] = [];
     for (const d of Object.keys(byDate).sort()) result.push(...byDate[d]!.sort(compareGames));
-    return result;
+    return { games: result, gamesByDate: byDate };
   }, [allGames, selectedStatuses, selectedDate]);
 
-  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, { refetchInterval: 60_000 });
+  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, { refetchInterval: 60_000, staleTime: 55_000, refetchOnWindowFocus: false });
 
     // ── Favorites ──────────────────────────────────────────────────────────────
   // NOTE: isAppAuthedForFav is declared above near games.list queries (line ~477)
@@ -683,6 +700,7 @@ export default function ModelProjections() {
   const { data: favData } = trpc.favorites.getMyFavorites.useQuery(undefined, {
     enabled: isAppAuthedForFav,
     refetchOnWindowFocus: false,
+    staleTime: 30_000,
     retry: false,
   });
 
@@ -690,6 +708,7 @@ export default function ModelProjections() {
   const { data: favWithDatesData } = trpc.favorites.getMyFavoritesWithDates.useQuery(undefined, {
     enabled: isAppAuthedForFav,
     refetchOnWindowFocus: false,
+    staleTime: 30_000,
     retry: false,
   });
 
@@ -712,10 +731,10 @@ export default function ModelProjections() {
     onError: () => { setOptimisticFavIds(new Set()); },
   });
 
-  const handleToggleFavorite = (gameId: number) => {
+  const handleToggleFavorite = useCallback((gameId: number) => {
     setOptimisticFavIds(prev => { const next = new Set(prev); if (next.has(gameId)) next.delete(gameId); else next.add(gameId); return next; });
     toggleFavMutation.mutate({ gameId });
-  };
+  }, [toggleFavMutation]);
 
   // Called by GameCard when user favorites (not unfavorites) a game
   const handleFavoriteNotify = useCallback((gameId: number) => {
@@ -799,13 +818,8 @@ export default function ModelProjections() {
 
   const showDropdown = searchFocused && q.length > 0;
 
-  const gamesByDate = useMemo(() =>
-    (games ?? []).reduce<Record<string, NonNullable<typeof games>[number][]>>((acc, game) => {
-      const date = effectiveGameDate(game!.gameDate, game!.startTimeEst);
-      if (!acc[date]) acc[date] = [];
-      acc[date]!.push(game!);
-      return acc;
-    }, {}), [games]);
+  // gamesByDate is produced by the merged games useMemo above (zero extra pass).
+  const gamesByDate = _gamesByDate;
   const sortedDates = useMemo(() => Object.keys(gamesByDate).sort((a, b) => a.localeCompare(b)), [gamesByDate]);
 
   const scrollToGame = (gameId: number) => {
@@ -1335,9 +1349,9 @@ export default function ModelProjections() {
                         favoriteGameIds={favIds}
                         onToggleFavorite={handleToggleFavorite}
                         onFavoriteNotify={handleFavoriteNotify}
-                        isAppAuthed={Boolean(appUser)}
-                        mobileTab={(feedMobileTab === 'lineups' || feedMobileTab === 'props') ? 'dual' : feedMobileTab as 'dual' | 'splits'}
-                        onMobileTabChange={(t) => handleFeedTabChange(t)}
+                        isAppAuthed={isAppAuthedProp}
+                        mobileTab={gameMobileTab}
+                        onMobileTabChange={handleFeedTabChange}
                       />
                     </div>
                   ))}
@@ -1503,9 +1517,9 @@ export default function ModelProjections() {
                               favoriteGameIds={favIds}
                               onToggleFavorite={handleToggleFavorite}
                               onFavoriteNotify={handleFavoriteNotify}
-                              isAppAuthed={Boolean(appUser)}
-                              mobileTab={(['lineups', 'props', 'f5nrfi', 'hrprops'].includes(feedMobileTab)) ? 'dual' : feedMobileTab as 'dual' | 'splits'}
-                              onMobileTabChange={(t) => handleFeedTabChange(t)}
+                              isAppAuthed={isAppAuthedProp}
+                              mobileTab={gameMobileTab}
+                              onMobileTabChange={handleFeedTabChange}
                             />
                           </div>
                         ))}

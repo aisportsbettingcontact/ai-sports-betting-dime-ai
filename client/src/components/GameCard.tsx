@@ -19,7 +19,7 @@
  *   └─────────────────────────────────────────────────────────────────────┘
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { toast } from "sonner";
@@ -2049,7 +2049,7 @@ interface GameCardProps {
   onMobileTabChange?: (tab: 'dual' | 'splits') => void;
 }
 
-export function GameCard({ game, mode = "full", showModel: showModelProp, onToggleModel: onToggleModelProp, favoriteGameIds, onToggleFavorite, onFavoriteNotify, isAppAuthed: isAppAuthedProp, mobileTab: mobileTabProp, onMobileTabChange }: GameCardProps) {
+function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggleModel: onToggleModelProp, favoriteGameIds, onToggleFavorite, onFavoriteNotify, isAppAuthed: isAppAuthedProp, mobileTab: mobileTabProp, onMobileTabChange }: GameCardProps) {
   // Use custom app auth (app_session cookie) — NOT Manus OAuth — to gate the star button.
   // Prefer the prop passed from the parent (avoids 33+ redundant tRPC queries per page load).
   // Fall back to calling useAppAuth() only when no prop is provided (e.g., standalone usage).
@@ -2773,8 +2773,9 @@ export function GameCard({ game, mode = "full", showModel: showModelProp, onTogg
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.12, ease: "easeOut" }}
         className="w-full relative"
         ref={cardRef}
         style={{
@@ -3226,3 +3227,12 @@ export function GameCard({ game, mode = "full", showModel: showModelProp, onTogg
     </>
   );
 }
+
+/**
+ * React.memo wrapper for GameCard.
+ * Prevents re-renders when the parent (ModelProjections) re-renders due to
+ * unrelated state changes (e.g. now-ticker, search query, header height).
+ * Props are stable because ModelProjections wraps all callbacks in useCallback
+ * and computes mobileTab/isAppAuthed once per render via useMemo.
+ */
+export const GameCard = memo(GameCardInner);

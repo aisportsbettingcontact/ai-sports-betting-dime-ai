@@ -310,7 +310,7 @@ export const appRouter = router({
           .optional()
       )
       .query(async ({ input, ctx }) => {
-        console.log(`[tRPC][games.list] PUBLIC sport=${input?.sport ?? 'all'} date=${input?.gameDate ?? 'rolling'} forceRefresh=${input?.forceRefresh ?? false}`);
+        // [tRPC][games.list] — hot path log silenced (fires every 60s per user)
         const games = await listGames(input ?? {});
         // Filter by the appropriate registry based on sport
         let filtered = games.filter(g => isValidGame(g.awayTeam, g.homeTeam, g.sport));
@@ -360,7 +360,7 @@ export const appRouter = router({
     getAvailableDates: publicProcedure
       .input(z.object({ sport: zodSport }))
       .query(async ({ input }) => {
-        console.log(`[tRPC][games.getAvailableDates] sport=${input.sport}`);
+        // [tRPC][games.getAvailableDates] — hot path log silenced (fires every 5min per user)
         const dates = await getAvailableDates(input.sport);
         return { dates };
       }),
@@ -384,7 +384,7 @@ export const appRouter = router({
         String(d.getUTCMonth() + 1).padStart(2, '0'),
         String(d.getUTCDate()).padStart(2, '0'),
       ].join('-');
-      console.log(`[tRPC][games.getCurrentDate] effectiveDate=${effectiveDate} utcHour=${nowUtc.getUTCHours()} beforeCutoff=${isBeforeCutoff}`);
+      // [tRPC][games.getCurrentDate] — hot path log silenced (fires every 5min per user)
       return { effectiveDate, utcHour: nowUtc.getUTCHours(), isBeforeCutoff };
     }),
 

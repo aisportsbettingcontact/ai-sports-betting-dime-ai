@@ -170,10 +170,34 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Target modern browsers — enables smaller output (no legacy polyfills)
+    target: ["es2020", "chrome90", "firefox88", "safari14"],
+    // Raise chunk size warning threshold — our vendor chunks are intentionally large
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // MLB-specific panels — only loaded when user is on MLB tab
+          // ── Vendor: React core — always needed, cache-stable ──────────────
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          // ── Vendor: tRPC + React Query — always needed ────────────────────
+          if (
+            id.includes('@trpc/') ||
+            id.includes('@tanstack/react-query') ||
+            id.includes('superjson')
+          ) {
+            return 'vendor-trpc';
+          }
+          // ── Vendor: Framer Motion — lazy animation lib ────────────────────
+          if (id.includes('framer-motion')) {
+            return 'vendor-motion';
+          }
+          // ── Vendor: Radix UI + shadcn — UI primitives ─────────────────────
+          if (id.includes('@radix-ui/')) {
+            return 'vendor-radix';
+          }
+          // ── MLB-specific panels — only loaded when user is on MLB tab ─────
           if (
             id.includes('MlbLineupCard') ||
             id.includes('MlbPropsCard') ||
@@ -183,7 +207,7 @@ export default defineConfig({
           ) {
             return 'mlb-panels';
           }
-          // Admin/analytics pages — only loaded for admin users
+          // ── Admin/analytics pages — only loaded for admin users ───────────
           if (
             id.includes('pages/ModelResults') ||
             id.includes('pages/SecurityEvents')

@@ -50,6 +50,29 @@ const _activeSportsCache: { entry: CacheEntry<{ NBA: boolean; NHL: boolean; MLB:
 const _availableDatesCache = new Map<string, CacheEntry<string[]>>();
 
 const GAMES_LIST_TTL_MS = 60_000;   // 60 seconds — safe now that invalidation is debounced
+
+// ── Cache performance counters ─────────────────────────────────────────────
+// Tracked globally for the /api/perf endpoint. Resets on server restart.
+const _cacheCounters = {
+  gamesHit: 0,
+  gamesMiss: 0,
+  datesHit: 0,
+  datesMiss: 0,
+  activeSportsHit: 0,
+  activeSportsMiss: 0,
+  lastInvalidatedAt: 0 as number,
+};
+export function getCacheHealthStats() {
+  const total = _cacheCounters.gamesHit + _cacheCounters.gamesMiss;
+  const hitRate = total > 0 ? (_cacheCounters.gamesHit / total * 100).toFixed(1) : 'N/A';
+  return {
+    games: { hit: _cacheCounters.gamesHit, miss: _cacheCounters.gamesMiss, hitRate: `${hitRate}%`, entries: _gamesListCache.size },
+    dates: { hit: _cacheCounters.datesHit, miss: _cacheCounters.datesMiss, entries: _availableDatesCache.size },
+    activeSports: { hit: _cacheCounters.activeSportsHit, miss: _cacheCounters.activeSportsMiss },
+    lastInvalidatedAt: _cacheCounters.lastInvalidatedAt,
+    lastInvalidatedAgo: _cacheCounters.lastInvalidatedAt ? `${Math.round((Date.now() - _cacheCounters.lastInvalidatedAt) / 1000)}s ago` : 'never',
+  };
+}
 const ACTIVE_SPORTS_TTL_MS = 60_000; // 60 seconds
 const AVAILABLE_DATES_TTL_MS_EARLY = 5 * 60_000; // 5 minutes (used by getAvailableDates)
 
@@ -101,6 +124,7 @@ export function forceInvalidateGamesCache(): void {
   _gamesListCache.clear();
   _availableDatesCache.clear();
   _activeSportsCache.entry = null;
+  _cacheCounters.lastInvalidatedAt = Date.now();
   console.log(`[GamesCache] Force invalidation: cleared ${count} games.list + ${datesCount} availableDates + activeSports`);
 }
 
@@ -131,16 +155,22 @@ export async function getDb() {
     try {
       _pool = mysql.createPool({
         uri: process.env.DATABASE_URL,
-        connectionLimit: 10,
+        // Increased from 10 → 20: background refresh jobs (VSiN, NHL, MLB) + user requests
+        // can saturate 10 connections during peak. 20 eliminates queue wait time.
+        connectionLimit: 20,
         waitForConnections: true,
-        queueLimit: 50,
-        connectTimeout: 5000,   // reduced from 10s → 5s for faster failure detection
-        idleTimeout: 10000,
+        // Increased from 50 → 100: burst traffic during game-day peaks
+        queueLimit: 100,
+        connectTimeout: 5000,   // 5s — fast failure detection
+        // Increased from 10s → 30s: TiDB serverless has ~30s idle before connection reset
+        idleTimeout: 30000,
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
+        // Compress wire traffic between app server and TiDB (reduces latency on large game rows)
+        compress: true,
       });
       _db = drizzle(_pool);
-      console.log("[Database] Connection pool created (max=10)");
+      console.log("[Database] Connection pool created (max=20, compress=true)");
     } catch (error) {
       console.warn("[Database] Failed to create connection pool:", error);
       _db = null;
@@ -330,7 +360,8 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
   if (!opts?.forceRefresh) {
     const cached = _gamesListCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
-      console.log(`[GamesCache][HIT] key=${cacheKey} ttlRemaining=${Math.round((cached.expiresAt - Date.now()) / 1000)}s rows=${cached.data.length}`);
+      _cacheCounters.gamesHit++;
+      // [GamesCache][HIT] — silenced in hot path (was logging on every cache hit, ~1/min per user)
       return cached.data;
     }
   } else {
@@ -420,6 +451,7 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
 
   // ─── Cache write ─────────────────────────────────────────────────────────────────
   _gamesListCache.set(cacheKey, { data: result, expiresAt: Date.now() + GAMES_LIST_TTL_MS });
+  _cacheCounters.gamesMiss++;
   console.log(`[GamesCache][MISS] key=${cacheKey} rows=${result.length} ttl=${GAMES_LIST_TTL_MS / 1000}s`);
 
   return result;
@@ -441,7 +473,8 @@ export async function getAvailableDates(sport: string): Promise<string[]> {
   const cacheKey = `DATES:${sport}`;
   const cached = _availableDatesCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
-    console.log(`[AvailDatesCache][HIT] sport=${sport} dates=${cached.data.length}`);
+    _cacheCounters.datesHit++;
+    // [AvailDatesCache][HIT] — silenced in hot path
     return cached.data;
   }
 
@@ -484,6 +517,7 @@ export async function getAvailableDates(sport: string): Promise<string[]> {
   const dates = rows.map((r: { gameDate: string }) => r.gameDate).filter(Boolean).sort() as string[];
 
   _availableDatesCache.set(cacheKey, { data: dates, expiresAt: Date.now() + AVAILABLE_DATES_TTL_MS });
+  _cacheCounters.datesMiss++;
   console.log(`[AvailDatesCache][MISS] sport=${sport} dates=${dates.length} (${dates.join(', ')})`);
   return dates;
 }
@@ -1846,7 +1880,8 @@ export async function getActiveSports(forceRefresh?: boolean): Promise<{ NBA: bo
   // ─── Cache lookup ─────────────────────────────────────────────────────────────────
   if (!forceRefresh && _activeSportsCache.entry && _activeSportsCache.entry.expiresAt > Date.now()) {
     const { NBA, NHL, MLB } = _activeSportsCache.entry.data;
-    console.log(`[ActiveSportsCache][HIT] ttlRemaining=${Math.round((_activeSportsCache.entry.expiresAt - Date.now()) / 1000)}s NBA=${NBA} NHL=${NHL} MLB=${MLB}`);
+    _cacheCounters.activeSportsHit++;
+    // [ActiveSportsCache][HIT] — silenced in hot path
     return _activeSportsCache.entry.data;
   }
   const db = await getDb();
@@ -1893,6 +1928,7 @@ export async function getActiveSports(forceRefresh?: boolean): Promise<{ NBA: bo
     NHL: proActive.has('NHL'),
     MLB: proActive.has('MLB'),
   };
+  _cacheCounters.activeSportsMiss++;
   console.log(`[activeSports][MISS] todayUTC=${todayUTC} tomorrowUTC=${tomorrowUTC} NBA=${result.NBA} NHL=${result.NHL} MLB=${result.MLB} ttl=${ACTIVE_SPORTS_TTL_MS / 1000}s`);
   // ─── Cache write ─────────────────────────────────────────────────────────────────
   _activeSportsCache.entry = { data: result, expiresAt: Date.now() + ACTIVE_SPORTS_TTL_MS };

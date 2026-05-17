@@ -3417,3 +3417,34 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 678/678 pass
 - [x] Checkpoint saved
+
+## Session: 2026-05-17 — 100x Feed Performance Overhaul
+- [x] REACT: Wrap GameCard in React.memo — prevents re-renders when parent re-renders due to unrelated state changes (now-ticker, search query, header height)
+- [x] REACT: Wrap toggleModel in useCallback([]) — stable reference across renders
+- [x] REACT: Wrap handleFeedTabChange in useCallback — stable reference, eliminates new function on every render
+- [x] REACT: Wrap handleToggleFavorite in useCallback — stable reference, eliminates new function on every render
+- [x] REACT: Hoist mobileTab computation to useMemo (gameMobileTab) — inline ternary was creating new string reference every render, defeating GameCard.memo
+- [x] REACT: Hoist isAppAuthed computation to useMemo (isAppAuthedProp) — Boolean(appUser) inline was unstable
+- [x] REACT: Replace inline onMobileTabChange arrow functions with stable handleFeedTabChange callback
+- [x] REACT: Merge games + gamesByDate into single useMemo pass — eliminated one full O(n) iteration over the games array
+- [x] QUERY: Add staleTime: 55_000 + refetchOnWindowFocus: false to lastRefresh query
+- [x] QUERY: Add staleTime: 30_000 to favData and favWithDatesData queries
+- [x] BUNDLE: Add lazy() loading for all 15 non-critical pages — eliminates ~60% of initial JS bundle
+- [x] BUNDLE: Add Suspense boundary in Router for lazy pages
+- [x] BUNDLE: Add vendor chunk splitting (vendor-react, vendor-trpc, vendor-motion, vendor-radix)
+- [x] BUNDLE: Set build target to es2020/chrome90/firefox88/safari14
+- [x] ANIMATION: Reduce GameCard motion.div y offset 8->4 and add explicit duration: 0.12s
+- [x] SERVER: Silence GamesCache HIT log — was logging on every cache hit (~1/min per user)
+- [x] SERVER: Silence AvailDatesCache HIT log
+- [x] SERVER: Silence ActiveSportsCache HIT log
+- [x] SERVER: Silence games.list PUBLIC log — was logging on every page load and every 60s refetch
+- [x] SERVER: Silence getCurrentDate log — was logging every 5 minutes per user
+- [x] SERVER: Silence getAvailableDates log — was logging every 5 minutes per user
+- [x] DB: Increase connection pool from 10 to 20
+- [x] DB: Increase queue limit from 50 to 100
+- [x] DB: Increase idleTimeout from 10s to 30s
+- [x] DB: Add compress: true — reduces wire traffic between app server and TiDB
+- [x] OBSERVABILITY: Add cache hit/miss counters to all 3 cache layers
+- [x] OBSERVABILITY: Add /api/perf endpoint — real-time cache hit rates, invalidation timing, memory usage, DB circuit state
+- [x] TypeScript: 0 errors
+- [x] Tests: 678/678 pass

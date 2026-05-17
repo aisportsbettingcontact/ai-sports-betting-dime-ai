@@ -31,7 +31,7 @@ import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
-import { getDb, listGames } from "../db";
+import { getDb, listGames, getCacheHealthStats } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
@@ -270,6 +270,26 @@ async function startServer() {
       ts: Date.now(),
       circuit,
       userCache: cache,
+    });
+  });
+  // ─── Performance health endpoint ──────────────────────────────────────────
+  // Real-time cache hit rates, invalidation timing, and DB pool stats.
+  // Use this to verify the debounced invalidation and memo optimizations are working.
+  app.get("/api/perf", (_req, res) => {
+    const cacheHealth = getCacheHealthStats();
+    const circuit = getCircuitStatus();
+    const uptime = process.uptime();
+    const mem = process.memoryUsage();
+    res.json({
+      ts: Date.now(),
+      uptime: `${Math.round(uptime)}s`,
+      memory: {
+        heapUsedMB: (mem.heapUsed / 1024 / 1024).toFixed(1),
+        heapTotalMB: (mem.heapTotal / 1024 / 1024).toFixed(1),
+        rssMB: (mem.rss / 1024 / 1024).toFixed(1),
+      },
+      cache: cacheHealth,
+      db: { state: circuit.state, consecutiveFailures: circuit.consecutiveFailures },
     });
   });
 
