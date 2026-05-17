@@ -31,7 +31,7 @@ import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
-import { getDb, listGames, getCacheHealthStats } from "../db";
+import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
@@ -534,6 +534,58 @@ async function startServer() {
       lineupRefreshInterval.unref();
       console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
     }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
+
+    // ── 11:00 UTC boundary cache invalidation ─────────────────────────────────
+    // The feed rolls over to the new day's slate at 11:00 UTC. The games cache
+    // and availableDates cache must be invalidated at this exact moment so that
+    // clients immediately see the new day's games without waiting for the 60s TTL.
+    // We schedule a one-shot invalidation to fire at the next 11:00 UTC boundary.
+    const scheduleNextCutoffInvalidation = () => {
+      const nowMs = Date.now();
+      const nowUtc = new Date(nowMs);
+      const CUTOFF_HOUR = 11;
+      // Compute ms until next 11:00:00 UTC
+      let nextCutoffMs: number;
+      if (nowUtc.getUTCHours() < CUTOFF_HOUR) {
+        // Before cutoff today — fire at 11:00 UTC today (+5s buffer)
+        nextCutoffMs = Date.UTC(
+          nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(),
+          CUTOFF_HOUR, 0, 5
+        ) - nowMs;
+      } else {
+        // After cutoff today — fire at 11:00 UTC tomorrow (+5s buffer)
+        const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000);
+        nextCutoffMs = Date.UTC(
+          tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(),
+          CUTOFF_HOUR, 0, 5
+        ) - nowMs;
+      }
+      const nextCutoffDate = new Date(nowMs + nextCutoffMs).toISOString();
+      console.log(`[Startup] [CUTOFF_INVALIDATION] Next 11:00 UTC boundary invalidation scheduled in ${Math.round(nextCutoffMs / 60000)}min (at ${nextCutoffDate})`);
+      const cutoffTimer = setTimeout(() => {
+        console.log('[Scheduler] [CUTOFF_INVALIDATION] 11:00 UTC boundary reached — force-invalidating all caches');
+        forceInvalidateGamesCache();
+        // Re-warm the cache immediately after invalidation with the new effective date
+        const newNowMs = Date.now();
+        const newNowUtc = new Date(newNowMs);
+        const newIsBeforeCutoff = newNowUtc.getUTCHours() < CUTOFF_HOUR;
+        const newEffectiveMs = newIsBeforeCutoff ? newNowMs - 24 * 60 * 60 * 1000 : newNowMs;
+        const newTodayStr = new Date(newEffectiveMs).toISOString().slice(0, 10);
+        const newYesterdayStr = new Date(newEffectiveMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const newTomorrowStr = new Date(newEffectiveMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        console.log(`[Scheduler] [CUTOFF_INVALIDATION] Re-warming cache for effectiveDate=${newTodayStr}`);
+        Promise.all([
+          listGames({ sport: 'MLB', gameDate: newTodayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTodayStr} re-warmed: ${r.length} games`)),
+          listGames({ sport: 'MLB', gameDate: newYesterdayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newYesterdayStr} re-warmed: ${r.length} games`)),
+          listGames({ sport: 'MLB', gameDate: newTomorrowStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTomorrowStr} re-warmed: ${r.length} games`)),
+          getAvailableDates('MLB').then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB availableDates re-warmed: ${r.length} dates`)),
+        ]).catch((err: unknown) => console.warn('[Scheduler] [CUTOFF_INVALIDATION] Re-warm failed (non-fatal):', err));
+        // Schedule the next day's boundary invalidation
+        scheduleNextCutoffInvalidation();
+      }, nextCutoffMs);
+      cutoffTimer.unref();
+    };
+    scheduleNextCutoffInvalidation();
   });
 }
 

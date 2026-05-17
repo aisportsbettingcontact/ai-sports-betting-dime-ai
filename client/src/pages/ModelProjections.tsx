@@ -550,7 +550,11 @@ export default function ModelProjections() {
   // of available dates even though allGames only contains the selected date's games.
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
     { sport: selectedSport },
-    { refetchOnWindowFocus: false, refetchInterval: 5 * 60 * 1000, staleTime: 2 * 60 * 1000 }
+    {
+      refetchOnWindowFocus: false,
+      refetchInterval: 60 * 1000,   // re-check every 60s — matches server cache TTL
+      staleTime: 30 * 1000,         // treat as stale after 30s to catch cutoff transitions
+    }
   );
 
   // Cross-sport game lists for the Favorites tab (needs ALL sports regardless of selectedSport).
@@ -666,17 +670,43 @@ export default function ModelProjections() {
   useEffect(() => {
     if (allDates.length === 0) return; // still loading
     const hasGamesOnDate = allDates.includes(selectedDate);
-    if (!hasGamesOnDate) {
-      console.log(`[Feed] No games on ${selectedDate} for ${selectedSport} — advancing to ${allDates[0]}`);
-      setSelectedDate(allDates[0]!);
+    if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
+
+    // Guard: only auto-advance if selectedDate is BEFORE the server's effective window start.
+    // If effectiveDate is available and selectedDate >= effectiveDate, the dates cache may be
+    // stale — do NOT advance, as the games query will still return correct results via exact match.
+    const effectiveDate = availableDatesData?.effectiveDate;
+    if (effectiveDate && selectedDate >= effectiveDate) {
+      // selectedDate is within or ahead of the server window — stale dates cache, do not advance.
+      console.log(
+        `[Feed][AutoAdvance] BLOCKED — selectedDate=${selectedDate} >= effectiveDate=${effectiveDate}. ` +
+        `Stale dates cache (${allDates.slice(0,3).join(', ')}...). Games query will fire with exact date.`
+      );
+      return;
     }
-  }, [allDates, selectedDate, selectedSport]);
+
+    // selectedDate is genuinely before the window — advance to first available date.
+    console.log(
+      `[Feed][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
+      `Advancing to ${allDates[0]}.`
+    );
+    setSelectedDate(allDates[0]!);
+  }, [allDates, selectedDate, selectedSport, availableDatesData]);
 
   // Single-pass computation: filter → group by date → sort.
   // Previously this was two separate useMemo calls (games + gamesByDate) that each
   // iterated the full array. Merged into one pass to halve the work.
   const { games, gamesByDate: _gamesByDate } = useMemo(() => {
     if (!allGames) return { games: allGames, gamesByDate: {} as Record<string, NonNullable<typeof allGames>[number][]> };
+    // Diagnostic: log when the query returns 0 games so we can trace the cause
+    if (allGames.length === 0) {
+      const effectiveDate = availableDatesData?.effectiveDate;
+      console.warn(
+        `[Feed][DIAG] allGames=0 for sport=${selectedSport} date=${selectedDate}. ` +
+        `effectiveDate=${effectiveDate ?? 'loading'} allDates=[${allDates.slice(0,3).join(',')}...] ` +
+        `serverDate=${serverDateData?.effectiveDate ?? 'loading'}`
+      );
+    }
     const byDate: Record<string, NonNullable<typeof allGames>[number][]> = {};
     for (const g of allGames) {
       if (!g) continue;

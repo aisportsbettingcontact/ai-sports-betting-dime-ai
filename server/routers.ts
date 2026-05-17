@@ -362,7 +362,31 @@ export const appRouter = router({
       .query(async ({ input }) => {
         // [tRPC][games.getAvailableDates] — hot path log silenced (fires every 5min per user)
         const dates = await getAvailableDates(input.sport);
-        return { dates };
+        // Compute the server-authoritative window start date (same logic as getCurrentDate)
+        // so the client can guard the auto-advance correctly.
+        const FEED_CUTOFF_UTC_HOUR = 11;
+        const nowMs = Date.now();
+        const nowUtc = new Date(nowMs);
+        const isBeforeCutoff = nowUtc.getUTCHours() < FEED_CUTOFF_UTC_HOUR;
+        const windowStartMs = isBeforeCutoff ? nowMs - 24 * 60 * 60 * 1000 : nowMs;
+        const windowStartDate = new Date(windowStartMs);
+        const effectiveDate = [
+          windowStartDate.getUTCFullYear(),
+          String(windowStartDate.getUTCMonth() + 1).padStart(2, '0'),
+          String(windowStartDate.getUTCDate()).padStart(2, '0'),
+        ].join('-');
+        // CRITICAL: Always ensure effectiveDate is in the returned dates list.
+        // If the cache was populated during a different cutoff window, effectiveDate
+        // may be missing — causing the client auto-advance to fire incorrectly.
+        const datesWithEffective = dates.includes(effectiveDate)
+          ? dates
+          : [effectiveDate, ...dates].sort();
+        console.log(
+          `[DIAG][getAvailableDates] sport=${input.sport} effectiveDate=${effectiveDate} ` +
+          `dates=${datesWithEffective.length} (${datesWithEffective.slice(0,3).join(', ')}...) ` +
+          `utcHour=${nowUtc.getUTCHours()} beforeCutoff=${isBeforeCutoff}`
+        );
+        return { dates: datesWithEffective, effectiveDate, isBeforeCutoff };
       }),
 
     /**
