@@ -3487,3 +3487,11 @@
 - [x] RequireAuth fix — timeout increased from 5s to 10s
 - [x] LoginModal fix — removed prompt=none from loginUrl (server defaults to consent)
 - [x] TypeScript: 0 errors | Tests: 698/698 pass | Build: clean 7.00s
+
+- [x] discordLogin fix — removed guilds.members.read scope (caused Discord Server Error when bot not in guild)
+- [x] discordLogin fix — OAuth scope changed to identify only; access controlled by DB (discordId + hasAccess + expiryDate)
+- [x] discordLogin fix — wrapped entire /callback handler in top-level try/catch (Express 4 async safety)
+- [x] discordLogin fix — added explicit HTTP status check on Discord profile response
+- [x] discordLogin fix — added access_token presence validation after token exchange
+- [x] discordLogin.test.ts — updated tests to reflect new DB-level access control invariants (21/21 pass)
+- [x] TypeScript: 0 errors | discordLogin tests: 21/21 pass

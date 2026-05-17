@@ -7,9 +7,15 @@
  *   3. Schema has the discord_login_states table
  *   4. ENV has all required Discord keys
  *   5. /connect uses JWT state (zero DB operations)
- *   6. /callback uses parallel fetch for profile + guild member
- *   7. Role check is inline (no separate checkGuildRole function needed)
+ *   6. /callback fetches Discord profile with access_token
+ *   7. Access control is DB-level: discordId + hasAccess + expiryDate
  *   8. Profile update is fire-and-forget (setImmediate)
+ *   9. Entire callback is wrapped in top-level try/catch (Express 4 async safety)
+ *
+ * NOTE: guilds.members.read scope has been intentionally removed.
+ *   That scope requires the Discord bot to be in the guild. When the bot is not
+ *   in the guild, Discord shows "Server Error" on the authorize page — blocking
+ *   ALL users from logging in. Access control is enforced at the DB level instead.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -97,9 +103,9 @@ describe("Discord login performance invariant — /connect zero-DB", () => {
   });
 });
 
-describe("Discord login performance invariant — /callback parallel fetch", () => {
-  it("/callback uses Promise.allSettled for parallel Discord API calls", () => {
-    expect(SRC).toContain("Promise.allSettled");
+describe("Discord login performance invariant — /callback fetch", () => {
+  it("/callback fetches Discord profile via /users/@me", () => {
+    expect(SRC).toContain("/users/@me");
   });
 
   it("/callback profile update is fire-and-forget (setImmediate)", () => {
@@ -115,33 +121,40 @@ describe("Discord login performance invariant — /callback parallel fetch", () 
   });
 });
 
-describe("Discord login role check invariant", () => {
-  it("discordLogin.ts uses guilds.members.read scope", () => {
-    expect(SRC).toContain("guilds.members.read");
+describe("Discord login access control invariant — DB-level", () => {
+  it("discordLogin.ts uses only 'identify' scope (no guilds.members.read)", () => {
+    // guilds.members.read requires bot in guild — causes Discord 'Server Error'
+    // when bot is not present. Scope intentionally removed; access controlled by DB.
+    expect(SRC).toContain(`const OAUTH_SCOPES = "identify"`);
+    expect(SRC).not.toContain(`"identify guilds.members.read"`);
   });
 
-  it("discordLogin.ts checks ENV.discordGuildId and ENV.discordRoleAiModelSub", () => {
-    expect(SRC).toContain("ENV.discordGuildId");
-    expect(SRC).toContain("ENV.discordRoleAiModelSub");
+  it("discordLogin.ts looks up user by discordId in DB", () => {
+    expect(SRC).toContain("appUsers.discordId");
+    expect(SRC).toContain("discordId");
   });
 
-  it("discordLogin.ts redirects to missing_role and not_in_guild errors", () => {
-    expect(SRC).toContain("missing_role");
-    expect(SRC).toContain("not_in_guild");
+  it("discordLogin.ts checks hasAccess before issuing session", () => {
+    expect(SRC).toContain("hasAccess");
+    expect(SRC).toContain("access_disabled");
   });
 
-  it("discordLogin.ts uses /users/@me/guilds endpoint (no bot token required)", () => {
-    expect(SRC).toContain("/users/@me/guilds/");
+  it("discordLogin.ts checks expiryDate before issuing session", () => {
+    expect(SRC).toContain("expiryDate");
+    expect(SRC).toContain("account_expired");
   });
 
-  it("Home.tsx shows error messages for not_in_guild and missing_role", () => {
-    const home = fs.readFileSync(
-      path.resolve(__dirname, "../client/src/pages/Home.tsx"),
-      "utf-8"
-    );
-    expect(home).toContain("not_in_guild");
-    expect(home).toContain("missing_role");
-    expect(home).toContain("AI Model Sub");
+  it("discordLogin.ts redirects to no_account when discordId not in DB", () => {
+    expect(SRC).toContain("no_account");
+  });
+
+  it("discordLogin.ts callback is wrapped in top-level try/catch (Express 4 async safety)", () => {
+    // Express 4.x does NOT forward async errors to the error handler.
+    // The callback MUST have a top-level try/catch to prevent raw 500 pages.
+    expect(SRC).toContain("UNHANDLED_EXCEPTION");
+    expect(SRC).toContain("server_error");
+    // Verify the catch block checks headersSent before redirecting
+    expect(SRC).toContain("headersSent");
   });
 });
 
