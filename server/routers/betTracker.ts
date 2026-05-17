@@ -33,7 +33,7 @@ import { router } from "../_core/trpc";
 import { handicapperProcedure } from "./appUsers";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { trackedBets, appUsers, betEditRequests } from "../../drizzle/schema";
+import { trackedBets, appUsers, betEditRequests, type TrackedBet } from "../../drizzle/schema";
 import { eq, and, desc, inArray, asc, gte, lte, lt, or, sql } from "drizzle-orm";
 import { fetchAnSlate, resolveLogoUrl } from "../actionNetwork";
 import { gradeTrackedBet, fetchScores, type Sport as GraderSport, type Timeframe as GraderTimeframe, type Market as GraderMarket, type PickSide as GraderPickSide } from "../scoreGrader";
@@ -475,6 +475,8 @@ export const betTrackerRouter = router({
       }
 
       const [created] = await db.select().from(trackedBets).where(eq(trackedBets.id, insertId));
+      // Invalidate stats cache so next listWithStatsPaginated reflects the new bet immediately
+      invalidateStatsCacheForUser(userId);
       return created;
     }),
 
@@ -589,6 +591,8 @@ export const betTrackerRouter = router({
       const [updated] = await db.select().from(trackedBets).where(eq(trackedBets.id, input.id));
       console.log(`[BetTracker][OUTPUT] update: SUCCESS — betId=${input.id} result=${updated?.result} pick="${updated?.pick}"`);
       console.log(`[BetTracker][VERIFY] update: PASS — betId=${input.id} updated`);
+      // Invalidate stats cache so updated result is reflected immediately
+      invalidateStatsCacheForUser(userId);
       return updated;
     }),
 
@@ -642,6 +646,8 @@ export const betTrackerRouter = router({
       await db.delete(trackedBets).where(eq(trackedBets.id, input.id));
       console.log(`[BetTracker][OUTPUT] delete: SUCCESS — betId=${input.id} deleted by userId=${userId} role=${role}`);
       console.log(`[BetTracker][VERIFY] delete: PASS — betId=${input.id} removed`);
+      // Invalidate stats cache so deletion is reflected immediately
+      invalidateStatsCacheForUser(userId);
       return { success: true, deletedId: input.id };
     }),
 
@@ -793,6 +799,8 @@ export const betTrackerRouter = router({
       }
 
       console.log(`[BetTracker][VERIFY] reviewEditRequest: PASS — requestId=${input.requestId} action=${input.action}`);
+      // Invalidate stats cache for the bet owner so approved changes are reflected immediately
+      invalidateStatsCacheForUser(bet.userId);
       return { success: true, requestId: input.requestId, action: input.action };
     }),
 
@@ -995,6 +1003,8 @@ export const betTrackerRouter = router({
 
       const summary = { graded, wins, losses, pushes, stillPending, total: pending.length, details };
       console.log(`[BetTracker][OUTPUT] autoGrade: COMPLETE userId=${userId} — graded=${graded} wins=${wins} losses=${losses} pushes=${pushes} stillPending=${stillPending}`);
+      // Invalidate stats cache so graded results are reflected immediately
+      if (graded > 0) invalidateStatsCacheForUser(userId);
       return summary;
     }),
 
@@ -1073,6 +1083,11 @@ export const betTrackerRouter = router({
 
       const summary = { graded, wins, losses, pushes, stillPending, total: pending.length };
       console.log(`[BetTracker][OUTPUT] autoGradeAll: COMPLETE date=${input.gameDate} graded=${graded} wins=${wins} losses=${losses} pushes=${pushes} stillPending=${stillPending}`);
+      // Invalidate stats cache for all users whose bets were graded
+      if (graded > 0) {
+        const affectedUserIds: number[] = Array.from(new Set(pending.map((b: TrackedBet) => b.userId as number)));
+        for (const uid of affectedUserIds) invalidateStatsCacheForUser(uid);
+      }
       return summary;
     }),
 
