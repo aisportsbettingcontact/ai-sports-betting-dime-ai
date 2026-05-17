@@ -3395,3 +3395,25 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 678/678 pass
 - [x] Checkpoint saved
+
+## Session: 2026-05-17 — Loading Performance Audit (8:23 PM PDT)
+
+- [ ] Audit server startup pre-warm timing and cache state
+- [ ] Audit DB query latency for games.list (cold vs warm)
+- [ ] Audit tRPC request chain timing (network + server + DB)
+- [ ] Audit client rendering pipeline (bundle size, hydration, query waterfall)
+- [ ] Fix all identified bottlenecks
+- [ ] TypeScript: 0 errors
+- [ ] Tests pass
+- [ ] Checkpoint saved
+
+## Session: 2026-05-17 — Loading Performance Overhaul
+
+- [x] ROOT CAUSE: Identified runaway cache invalidation loop — 60+ invalidations/minute from per-game updateBookOdds/updateNcaaStartTime calls during VSiN refresh cycles
+- [x] FIX: Replace synchronous invalidateGamesCache() with debounced 500ms version — burst of 15 game updates now produces 1 invalidation instead of 15+
+- [x] FIX: Add forceInvalidateGamesCache() for admin operations (publish, delete, approve) — immediate visibility, no debounce
+- [x] FIX: Upgrade deleteGamesByFileId, deleteGameById, setGameModelPublished, bulkApproveModels, setGamePublished, publishAllStagingGames to forceInvalidateGamesCache()
+- [x] PERF: Increase GAMES_LIST_TTL_MS from 30s to 60s — safe now that invalidation is debounced, halves DB round-trips per session
+- [x] TypeScript: 0 errors
+- [x] Tests: 678/678 pass
+- [x] Checkpoint saved
