@@ -32,6 +32,7 @@ import {
 import type { TrackedBet } from "@shared/types";
 import { EquityChart, BreakdownGrid, HandicapperSelector } from "@/components/BetTrackerAnalytics";
 import type { StatsData } from "@/components/BetTrackerAnalytics";
+import { BetCalendar } from "@/components/BetCalendar";
 const IS_DEV = process.env.NODE_ENV === "development";
 
 
@@ -1716,7 +1717,7 @@ export default function BetTracker() {
     result:       filterResult || undefined,
     targetUserId: effectiveUserId,
     unitSize:     unitSize > 0 ? unitSize : 100,
-    limit:        50,
+    limit:        100,
     isHistorical: isHistoricalRange,
   }), [activeSport, dateRange, dateFrom, dateTo, filterResult, effectiveUserId, unitSize, isHistoricalRange]);
 
@@ -1886,7 +1887,7 @@ export default function BetTracker() {
           paginatedQuery.fetchNextPage();
         }
       },
-      { rootMargin: "200px" } // pre-load 200px before sentinel is visible
+      { rootMargin: "600px", threshold: 0 } // pre-load 600px before sentinel is visible
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -3094,6 +3095,16 @@ export default function BetTracker() {
           {/* ── Breakdowns (below Add Bet, same left column) ───────────── */}
           {/* Always visible on all screen sizes — collapsible on mobile/tablet */}
           <BreakdownsSidebar stats={stats} unitSize={unitSize} />
+
+          {/* ── Calendar Recap (Pikkit-style) ─────────────────────────────────── */}
+          {/* Shows +/- units per day for the selected handicapper, month navigation */}
+          {canAccess && (
+            <BetCalendar
+              targetUserId={effectiveUserId}
+              unitSize={unitSize > 0 ? unitSize : 100}
+              handicapperName={selectedHandicapperName}
+            />
+          )}
           </div>{/* end left column */}
           {/* ── Right Panel: Tabs (BETS | LOGS) ──────────────────────────── */}
           <div className="space-y-4">
@@ -3293,14 +3304,30 @@ export default function BetTracker() {
                   </div>
                 )}
 
-                {/* ── IntersectionObserver sentinel — auto-triggers next page fetch when scrolled into view ── */}
-                {/* Placed 200px before list end; observer pre-loads next page before user reaches bottom */}
-                <div ref={loadMoreRef} className="flex justify-center py-4 min-h-[1px]">
+                {/* ── IntersectionObserver sentinel + explicit Load More fallback ── */}
+                {/* Sentinel: 600px rootMargin pre-loads next page before user reaches bottom */}
+                {/* Load More button: bulletproof fallback for any scroll/observer edge cases */}
+                <div ref={loadMoreRef} className="flex flex-col items-center gap-3 py-6 min-h-[48px]">
                   {isFetchingNextPage && (
                     <div className="flex items-center gap-2 text-xs text-zinc-300">
                       <div className="w-3 h-3 border border-emerald-500 border-t-transparent rounded-full animate-spin" />
                       Loading more bets…
                     </div>
+                  )}
+                  {hasNextPage && !isFetchingNextPage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (IS_DEV) console.log("[BetTracker][INPUT] Load More button clicked — fetching next page");
+                        paginatedQuery.fetchNextPage();
+                      }}
+                      className="px-5 py-2 rounded-lg text-xs font-bold bg-zinc-800 border border-zinc-700 text-zinc-200 hover:bg-zinc-700 hover:text-white transition-all"
+                    >
+                      Load More Bets
+                    </button>
+                  )}
+                  {!hasNextPage && !isFetchingNextPage && enrichedBets.length > 0 && (
+                    <p className="text-xs text-zinc-500 font-mono">All {enrichedBets.length} bets loaded</p>
                   )}
                 </div>
               </>

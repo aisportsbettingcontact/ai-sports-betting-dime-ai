@@ -3617,3 +3617,15 @@
 - [x] Updated DISCORD_BOT_TOKEN secret in production
 - [x] Fixed errorUtils.ts CHECK 4 to use exact string matching instead of msg.includes("permission") — prevents Bot token errors from being masked as permission errors
 - [x] Fixed setManualDiscordId 401/403 error message to be explicit and actionable
+
+## Session: 2026-05-18 - Bet Tracker Date Cutoff Fix + Pikkit Calendar Recap
+- [x] Root cause diagnosed: pagination limit=50 + IntersectionObserver sentinel not triggering page 2
+- [x] Increased pagination limit from 50 to 100 per page
+- [x] Increased IntersectionObserver rootMargin from 200px to 600px for aggressive pre-loading
+- [x] Added explicit "Load More" button as bulletproof fallback when sentinel doesn't fire
+- [x] Added getCalendarData procedure to betTracker router (per-day unit P/L for a given month)
+- [x] Built BetCalendar component (Pikkit-style calendar grid with green/red intensity scaling)
+- [x] Wired BetCalendar into Bet Tracker left column below BreakdownsSidebar
+- [x] Calendar supports: month navigation, +/- units per day, W-L record, net units summary
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed

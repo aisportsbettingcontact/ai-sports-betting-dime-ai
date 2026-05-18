@@ -2003,6 +2003,127 @@ export const betTrackerRouter = router({
       const statsTyped = stats as { totalBets: number; wins: number; losses: number; pushes: number; pending: number; voids: number; gradedBets: number; totalRisk: number; totalWon: number; totalLost: number; netProfit: number; roi: number; bestWin: number; worstLoss: number; byType: unknown[]; bySize: unknown[]; byMonth: unknown[]; bySport: unknown[]; byResult: unknown[]; byTimeframe: unknown[]; byWagerType: unknown[]; equityCurve: unknown[]; biggestDayDate: string; biggestDayUnits: number; longestWinStreak: number };
       return { bets: enriched, stats: statsTyped, nextCursor, hasNextPage, pageSize: rows.length, totalBets: statsTyped.totalBets };
     }),
+
+  /**
+   * getCalendarData — returns per-day unit P/L for a given year-month and user.
+   * Used by the Pikkit-style calendar recap component.
+   *
+   * Returns:
+   *   days: Array<{ date: string; units: number; wins: number; losses: number; pushes: number; pending: number }>
+   *   monthRecord: { wins: number; losses: number; pushes: number; netUnits: number }
+   */
+  getCalendarData: handicapperProcedure
+    .input(z.object({
+      /** YYYY-MM — the month to compute calendar data for */
+      yearMonth:    z.string().regex(/^\d{4}-\d{2}$/),
+      targetUserId: z.number().int().positive().optional(),
+      unitSize:     z.number().positive().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const role = ctx.appUser.role;
+      let userId = ctx.appUser.id;
+      if (input.targetUserId && input.targetUserId !== userId) {
+        if (role !== "owner" && role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Owner or Admin required to view other handicappers" });
+        }
+        userId = input.targetUserId;
+      }
+      const unitSize = input.unitSize ?? 100;
+      const dateFrom = `${input.yearMonth}-01`;
+      // Last day of month: go to first day of next month then subtract 1 day
+      const [y, m] = input.yearMonth.split("-").map(Number);
+      const nextMonth = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+      const dateTo = (() => {
+        const d = new Date(`${nextMonth}-01T12:00:00Z`);
+        d.setUTCDate(d.getUTCDate() - 1);
+        return d.toISOString().slice(0, 10);
+      })();
+
+      console.log(`[BetTracker][INPUT] getCalendarData: userId=${userId} yearMonth=${input.yearMonth} dateFrom=${dateFrom} dateTo=${dateTo}`);
+
+      const db = await getDb();
+      const rows = await db
+        .select({
+          id:          trackedBets.id,
+          gameDate:    trackedBets.gameDate,
+          result:      trackedBets.result,
+          risk:        trackedBets.risk,
+          toWin:       trackedBets.toWin,
+          riskUnits:   trackedBets.riskUnits,
+          toWinUnits:  trackedBets.toWinUnits,
+        })
+        .from(trackedBets)
+        .where(
+          and(
+            eq(trackedBets.userId, userId),
+            gte(trackedBets.gameDate, dateFrom),
+            lte(trackedBets.gameDate, dateTo),
+          )
+        )
+        .orderBy(asc(trackedBets.gameDate), asc(trackedBets.id));
+
+      console.log(`[BetTracker][STATE] getCalendarData: ${rows.length} bets found for ${input.yearMonth}`);
+
+      function toUnits(dollarAmt: number, storedUnits: string | null | undefined): number {
+        if (storedUnits != null && storedUnits !== "") {
+          const v = parseFloat(storedUnits);
+          if (!isNaN(v) && v > 0) return v;
+        }
+        return dollarAmt / unitSize;
+      }
+
+      // Per-day aggregation
+      type DayEntry = { units: number; wins: number; losses: number; pushes: number; pending: number };
+      const dayMap = new Map<string, DayEntry>();
+
+      let monthWins = 0, monthLosses = 0, monthPushes = 0, monthNetUnits = 0;
+
+      for (const bet of rows) {
+        const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
+        const toWinU = toUnits(parseFloat(bet.toWin), bet.toWinUnits);
+        const res    = bet.result as string;
+        const date   = bet.gameDate;
+
+        if (!dayMap.has(date)) dayMap.set(date, { units: 0, wins: 0, losses: 0, pushes: 0, pending: 0 });
+        const day = dayMap.get(date)!;
+
+        if (res === "WIN") {
+          day.units += toWinU;
+          day.wins++;
+          monthWins++;
+          monthNetUnits += toWinU;
+        } else if (res === "LOSS") {
+          day.units -= riskU;
+          day.losses++;
+          monthLosses++;
+          monthNetUnits -= riskU;
+        } else if (res === "PUSH") {
+          day.pushes++;
+          monthPushes++;
+        } else if (res === "PENDING") {
+          day.pending++;
+        }
+      }
+
+      const days = Array.from(dayMap.entries()).map(([date, d]) => ({
+        date,
+        units:   parseFloat(d.units.toFixed(2)),
+        wins:    d.wins,
+        losses:  d.losses,
+        pushes:  d.pushes,
+        pending: d.pending,
+      })).sort((a, b) => a.date.localeCompare(b.date));
+
+      const monthRecord = {
+        wins:     monthWins,
+        losses:   monthLosses,
+        pushes:   monthPushes,
+        netUnits: parseFloat(monthNetUnits.toFixed(2)),
+      };
+
+      console.log(`[BetTracker][OUTPUT] getCalendarData: ${days.length} active days monthRecord=${JSON.stringify(monthRecord)}`);
+      return { days, monthRecord };
+    }),
 });
 
 export type BetTrackerRouter = typeof betTrackerRouter;
