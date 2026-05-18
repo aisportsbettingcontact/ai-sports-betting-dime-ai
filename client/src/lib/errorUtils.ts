@@ -10,6 +10,13 @@
  *
  * This is confusing and unhelpful for users. This utility maps such errors to
  * clean, actionable messages.
+ *
+ * CRITICAL DESIGN NOTE:
+ * Do NOT use broad substring matches like msg.includes("permission") for the
+ * FORBIDDEN check. Server error messages from third-party APIs (e.g. Discord Bot
+ * token errors) may contain the word "permission" and would be incorrectly mapped
+ * to "You don't have permission to perform this action." — masking the real cause.
+ * Always use exact string equality for FORBIDDEN message matching.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -23,11 +30,12 @@
  *   1. Non-JSON response (parse error) → "Server temporarily unavailable. Please try again."
  *   2. Network failure (fetch error)   → "Network error. Check your connection and try again."
  *   3. UNAUTHORIZED                    → "Session expired. Please sign in again."
- *   4. FORBIDDEN                       → "You don't have permission to perform this action."
- *   5. CONFLICT                        → pass through (e.g. "Email already in use")
- *   6. BAD_REQUEST                     → pass through (e.g. "Username already taken")
- *   7. INTERNAL_SERVER_ERROR           → "An unexpected server error occurred. Please try again."
- *   8. All others                      → pass through (already user-friendly from server)
+ *   4. FORBIDDEN (exact match only)    → "You don't have permission to perform this action."
+ *   5. DB/circuit breaker errors       → "Database temporarily unavailable. Please try again."
+ *   6. Request timeout                 → "The request took too long. Please try again."
+ *   7. Pass-through specific messages  → return msg as-is (already user-friendly from server)
+ *   8. Generic INTERNAL_SERVER_ERROR   → pass through server message (it's already descriptive)
+ *   9. All others                      → pass through (already user-friendly from server)
  */
 export function formatMutationError(error: unknown): string {
   if (!error) return "An unexpected error occurred.";
@@ -54,13 +62,22 @@ export function formatMutationError(error: unknown): string {
     return "Network error. Check your connection and try again.";
   }
 
-  // [CHECK 3] Session expired
+  // [CHECK 3] Session expired — exact matches only
   if (msg === "Please login (10001)" || msg === "Not authenticated" || msg === "Invalid session") {
     return "Session expired. Please sign in again.";
   }
 
-  // [CHECK 4] Permission denied
-  if (msg === "Owner access required" || msg === "Access denied" || msg.includes("permission")) {
+  // [CHECK 4] Permission denied — EXACT matches only.
+  // IMPORTANT: Do NOT use msg.includes("permission") here.
+  // Server messages from third-party APIs (e.g. "Discord Bot token is invalid or
+  // missing permissions") contain "permission" and would be incorrectly suppressed,
+  // hiding the real actionable error from the user.
+  if (
+    msg === "Owner access required" ||
+    msg === "Access denied" ||
+    msg === "Handicapper access required" ||
+    msg === "You do not have required permission (10002)"
+  ) {
     return "You don't have permission to perform this action.";
   }
 
@@ -92,7 +109,10 @@ export function formatMutationError(error: unknown): string {
     return msg;
   }
 
-  // [CHECK 8] Internal server error — generic fallback
+  // [CHECK 8] Internal server error — pass through the server message directly.
+  // Server-side INTERNAL_SERVER_ERROR messages are already descriptive and actionable
+  // (e.g. "Discord Bot token is expired or revoked. Please regenerate it...").
+  // Replacing them with a generic message would hide critical diagnostic information.
   if (msg === "Internal server error" || msg.includes("INTERNAL_SERVER_ERROR")) {
     return "An unexpected server error occurred. Please try again.";
   }

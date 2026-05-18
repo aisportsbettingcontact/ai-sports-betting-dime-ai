@@ -1269,9 +1269,14 @@ export const appUsersRouter = router({
             });
           }
           if (botRes.status === 401 || botRes.status === 403) {
+            console.error(
+              `[AdminDiscordConnect][BOT_TOKEN_INVALID] requestId=${requestId}` +
+              ` status=${botRes.status} — Bot token is expired or revoked.` +
+              ` ACTION: Regenerate the token at discord.com/developers/applications and update DISCORD_BOT_TOKEN secret.`
+            );
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: "Discord Bot token is invalid or missing permissions. Contact the system administrator.",
+              message: "Discord Bot token is expired or revoked. Please regenerate it in the Discord Developer Portal and update the DISCORD_BOT_TOKEN secret.",
             });
           }
           throw new TRPCError({

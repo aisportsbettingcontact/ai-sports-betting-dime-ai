@@ -3611,3 +3611,9 @@
 - [x] ownerProcedure now forces a fresh DB read on every call — zero stale role risk
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-18 - Discord Bot Token Refresh + Error Message Fix
+- [x] Validated new Discord Bot token (status=200, username=prezbets, global_name=PREZ)
+- [x] Updated DISCORD_BOT_TOKEN secret in production
+- [x] Fixed errorUtils.ts CHECK 4 to use exact string matching instead of msg.includes("permission") — prevents Bot token errors from being masked as permission errors
+- [x] Fixed setManualDiscordId 401/403 error message to be explicit and actionable
