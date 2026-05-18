@@ -1032,28 +1032,31 @@ export const appUsersRouter = router({
       return { success: true };
     }),
   // ─── Manual Discord ID Pre-Registration ─────────────────────────────────────
-  /**
-   * setManualDiscordId
+  /*
+   * setManualDiscordId (IMMEDIATE CONNECT)
    *
-   * OWNER-ONLY: Pre-register a Discord snowflake ID against an app_users row
-   * that has not yet completed Discord OAuth.
+   * OWNER-ONLY: Given a Discord snowflake ID, immediately:
+   *   1. Validate the snowflake format (17-20 digits)
+   *   2. Resolve the Discord username via Bot API GET /users/{id}
+   *   3. Check uniqueness against all existing discordId + manualDiscordId values
+   *   4. Write discordId + discordUsername + discordAvatar + discordConnectedAt
+   *      directly to the app_users row — NO login required from the user.
+   *   5. Clear manualDiscordId (no longer needed — account is fully connected)
    *
-   * FLOW:
-   *   1. Owner pastes the user Discord ID (17-20 digit snowflake) in User Management.
-   *   2. This procedure validates the snowflake, checks uniqueness, writes to manualDiscordId.
-   *   3. On the user's next Discord login, discordLogin.ts CP-3b detects the match,
-   *      atomically promotes manualDiscordId -> discordId, and clears manualDiscordId.
+   * RESULT: The DISCORD USERNAME column shows @username immediately, the
+   *         DISCORD STATUS shows "Connected", and the user can log in via Discord
+   *         on their next visit without any additional steps.
    *
    * VALIDATION:
    *   - Snowflake must be 17-20 digits (Discord spec)
+   *   - Discord Bot API must return a valid user profile for the ID
    *   - Must not already be live discordId on ANY user (prevents account takeover)
-   *   - Must not already be manualDiscordId on ANOTHER user (prevents duplicate pre-reg)
    *   - Target user must not already have a live discordId (disconnect first)
    *   - Pass empty string to CLEAR a previously set manualDiscordId
    *
-   * [INPUT]  userId    - app_users.id to pre-register for
+   * [INPUT]  userId    - app_users.id to connect
    * [INPUT]  discordId - Discord snowflake string (17-20 digits), or empty string to clear
-   * [OUTPUT] { success: true, userId, manualDiscordId: string | null }
+   * [OUTPUT] { success: true, userId, discordId, discordUsername, immediate: true }
    */
   setManualDiscordId: ownerProcedure
     .input(z.object({
@@ -1067,7 +1070,7 @@ export const appUsersRouter = router({
       const isClear = trimmed === "";
 
       console.log(
-        `[ManualDiscordId][INPUT] requestId=${requestId}` +
+        `[AdminDiscordConnect][INPUT] requestId=${requestId}` +
         ` owner=${ctx.appUser.username}(id=${ctx.appUser.id})` +
         ` targetUserId=${userId} rawInput="${rawInput}" isClear=${isClear}`
       );
@@ -1077,7 +1080,7 @@ export const appUsersRouter = router({
         const SNOWFLAKE_RE = /^\d{17,20}$/;
         if (!SNOWFLAKE_RE.test(trimmed)) {
           console.warn(
-            `[ManualDiscordId][VALIDATE_FAIL] requestId=${requestId}` +
+            `[AdminDiscordConnect][VALIDATE_FAIL] requestId=${requestId}` +
             ` value="${trimmed}" reason=NOT_A_SNOWFLAKE (must be 17-20 digits)`
           );
           throw new TRPCError({
@@ -1086,7 +1089,7 @@ export const appUsersRouter = router({
           });
         }
         console.log(
-          `[ManualDiscordId][VALIDATE_OK] requestId=${requestId}` +
+          `[AdminDiscordConnect][VALIDATE_OK] requestId=${requestId}` +
           ` snowflake="${trimmed}" length=${trimmed.length}`
         );
       }
@@ -1095,20 +1098,20 @@ export const appUsersRouter = router({
       const user = await getAppUserById(userId);
       if (!user) {
         console.error(
-          `[ManualDiscordId][USER_NOT_FOUND] requestId=${requestId} userId=${userId}`
+          `[AdminDiscordConnect][USER_NOT_FOUND] requestId=${requestId} userId=${userId}`
         );
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
       }
       console.log(
-        `[ManualDiscordId][STATE] requestId=${requestId}` +
+        `[AdminDiscordConnect][STATE] requestId=${requestId}` +
         ` username=${user.username} currentDiscordId=${user.discordId ?? "null"}` +
-        ` currentManualDiscordId=${(user as any).manualDiscordId ?? "null"}`
+        ` currentManualDiscordId=${user.manualDiscordId ?? "null"}`
       );
 
       // ── CP-3: Guard — target user already has a live discordId ─────────────
       if (!isClear && user.discordId) {
         console.warn(
-          `[ManualDiscordId][ALREADY_LINKED] requestId=${requestId}` +
+          `[AdminDiscordConnect][ALREADY_LINKED] requestId=${requestId}` +
           ` userId=${userId} username=${user.username}` +
           ` existingDiscordId=${user.discordId}` +
           ` action=REJECTED (use adminDisconnectDiscord first)`
@@ -1123,7 +1126,7 @@ export const appUsersRouter = router({
       if (!isClear) {
         const db = await getDb();
         if (!db) {
-          console.error(`[ManualDiscordId][DB_FAIL] requestId=${requestId} DB unavailable`);
+          console.error(`[AdminDiscordConnect][DB_FAIL] requestId=${requestId} DB unavailable`);
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
         }
         const conflicts = await db
@@ -1141,45 +1144,201 @@ export const appUsersRouter = router({
         if (otherConflicts.length > 0) {
           const conflictUser = otherConflicts[0]!;
           console.warn(
-            `[ManualDiscordId][CONFLICT] requestId=${requestId}` +
+            `[AdminDiscordConnect][CONFLICT] requestId=${requestId}` +
             ` snowflake="${trimmed}" already exists on userId=${conflictUser.id}` +
             ` username=${conflictUser.username}`
           );
           throw new TRPCError({
             code: "CONFLICT",
-            message: `Discord ID ${trimmed} is already registered to another user.`,
+            message: `Discord ID ${trimmed} is already registered to another user (@${conflictUser.username}).`,
           });
         }
         console.log(
-          `[ManualDiscordId][UNIQUENESS_OK] requestId=${requestId}` +
+          `[AdminDiscordConnect][UNIQUENESS_OK] requestId=${requestId}` +
           ` snowflake="${trimmed}" no conflicts found`
         );
       }
 
-      // ── CP-5: Write to DB ───────────────────────────────────────────────────
-      const newValue = isClear ? null : trimmed;
-      try {
-        await updateAppUser(userId, { manualDiscordId: newValue });
-      } catch (err) {
-        const msg = (err as Error)?.message ?? String(err);
-        console.error(
-          `[ManualDiscordId][DB_WRITE_FAIL] requestId=${requestId}` +
-          ` userId=${userId} error=${msg}`
+      // ── CP-5: CLEAR path — remove discordId + manualDiscordId ──────────────
+      if (isClear) {
+        try {
+          await updateAppUser(userId, {
+            manualDiscordId: null,
+          });
+        } catch (err) {
+          const msg = (err as Error)?.message ?? String(err);
+          console.error(
+            `[AdminDiscordConnect][CLEAR_FAIL] requestId=${requestId}` +
+            ` userId=${userId} error=${msg}`
+          );
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to clear Discord ID. Please try again.",
+          });
+        }
+        console.log(
+          `[AdminDiscordConnect][CLEAR_SUCCESS] requestId=${requestId}` +
+          ` userId=${userId} username=${user.username}` +
+          ` clearedBy=owner(${ctx.appUser.username})`
         );
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to save Discord ID. Please try again.",
-        });
+        return { success: true, userId, discordId: null, discordUsername: null, immediate: false };
+      }
+
+      // ── CP-6: Resolve Discord username via Bot API ──────────────────────────
+      // Uses Bot token to call GET /users/{snowflake} — no OAuth flow needed.
+      // Returns: { id, username, discriminator, global_name, avatar, ... }
+      const DISCORD_API = "https://discord.com/api/v10";
+      const botToken = ENV.discordBotToken;
+
+      if (!botToken) {
+        // Bot token not configured — fall back to manualDiscordId (pending) mode
+        console.warn(
+          `[AdminDiscordConnect][BOT_TOKEN_MISSING] requestId=${requestId}` +
+          ` DISCORD_BOT_TOKEN not set — falling back to manualDiscordId pending mode`
+        );
+        await updateAppUser(userId, { manualDiscordId: trimmed });
+        return { success: true, userId, discordId: null, discordUsername: null, immediate: false, pending: true };
       }
 
       console.log(
-        `[ManualDiscordId][SUCCESS] requestId=${requestId}` +
+        `[AdminDiscordConnect][BOT_LOOKUP_START] requestId=${requestId}` +
+        ` snowflake="${trimmed}" endpoint=GET ${DISCORD_API}/users/${trimmed}`
+      );
+
+      let discordProfile: {
+        id: string;
+        username: string;
+        discriminator: string;
+        global_name: string | null;
+        avatar: string | null;
+      };
+
+      try {
+        const t_bot = Date.now();
+        const botRes = await fetch(`${DISCORD_API}/users/${trimmed}`, {
+          headers: {
+            Authorization: `Bot ${botToken}`,
+            "User-Agent": "AISportsBetting/1.0",
+          },
+        });
+
+        const botMs = Date.now() - t_bot;
+        console.log(
+          `[AdminDiscordConnect][BOT_LOOKUP_RESPONSE] requestId=${requestId}` +
+          ` status=${botRes.status} latencyMs=${botMs}`
+        );
+
+        if (!botRes.ok) {
+          const errBody = await botRes.text().catch(() => "(unreadable)");
+          console.error(
+            `[AdminDiscordConnect][BOT_LOOKUP_FAIL] requestId=${requestId}` +
+            ` status=${botRes.status} body="${errBody.slice(0, 200)}"` +
+            ` snowflake="${trimmed}"`
+          );
+          if (botRes.status === 404) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: `Discord user ID ${trimmed} does not exist. Please verify the ID is correct.`,
+            });
+          }
+          if (botRes.status === 401 || botRes.status === 403) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Discord Bot token is invalid or missing permissions. Contact the system administrator.",
+            });
+          }
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Discord API returned ${botRes.status}. Please try again.`,
+          });
+        }
+
+        discordProfile = await botRes.json() as typeof discordProfile;
+        console.log(
+          `[AdminDiscordConnect][BOT_LOOKUP_OK] requestId=${requestId}` +
+          ` id="${discordProfile.id}" username="${discordProfile.username}"` +
+          ` global_name="${discordProfile.global_name ?? "null"}"` +
+          ` discriminator="${discordProfile.discriminator}" latencyMs=${botMs}`
+        );
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(
+          `[AdminDiscordConnect][BOT_LOOKUP_EXCEPTION] requestId=${requestId}` +
+          ` error="${msg}"`
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to reach Discord API. Please try again.",
+        });
+      }
+
+      // ── CP-7: Derive display username (same logic as discordLogin.ts) ────────
+      const resolvedDiscordId = discordProfile.id;
+      const resolvedUsername = (discordProfile.discriminator && discordProfile.discriminator !== "0")
+        ? `${discordProfile.username}#${discordProfile.discriminator}`
+        : (discordProfile.global_name || discordProfile.username);
+      const resolvedAvatar = discordProfile.avatar ?? null;
+
+      console.log(
+        `[AdminDiscordConnect][RESOLVED_USERNAME] requestId=${requestId}` +
+        ` resolvedDiscordId="${resolvedDiscordId}" resolvedUsername="${resolvedUsername}"` +
+        ` resolvedAvatar="${resolvedAvatar ?? "null"}"`
+      );
+
+      // Sanity check: resolved ID must match the input snowflake
+      if (resolvedDiscordId !== trimmed) {
+        console.error(
+          `[AdminDiscordConnect][ID_MISMATCH] requestId=${requestId}` +
+          ` input="${trimmed}" resolved="${resolvedDiscordId}" — CRITICAL mismatch`
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Discord API returned unexpected user ID. Please try again.",
+        });
+      }
+
+      // ── CP-8: Write full Discord connection to DB ────────────────────────────
+      // Sets discordId, discordUsername, discordAvatar, discordConnectedAt
+      // Clears manualDiscordId (no longer needed — account is fully connected)
+      try {
+        await updateAppUser(userId, {
+          discordId: resolvedDiscordId,
+          discordUsername: resolvedUsername,
+          discordAvatar: resolvedAvatar,
+          discordConnectedAt: Date.now(),
+          manualDiscordId: null,
+        });
+      } catch (err) {
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(
+          `[AdminDiscordConnect][DB_WRITE_FAIL] requestId=${requestId}` +
+          ` userId=${userId} error="${msg}"`
+        );
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to save Discord connection. Please try again.",
+        });
+      }
+
+      // Invalidate cache so next request picks up the new discordId
+      invalidateCachedAppUser(userId);
+
+      console.log(
+        `[AdminDiscordConnect][SUCCESS] requestId=${requestId}` +
         ` userId=${userId} username=${user.username}` +
-        ` manualDiscordId=${newValue ?? "null"}` +
-        ` setBy=owner(${ctx.appUser.username})` +
+        ` discordId="${resolvedDiscordId}" discordUsername="${resolvedUsername}"` +
+        ` connectedBy=owner(${ctx.appUser.username})` +
         ` timestamp=${new Date().toISOString()}`
       );
-      return { success: true, userId, manualDiscordId: newValue };
+
+      return {
+        success: true,
+        userId,
+        discordId: resolvedDiscordId,
+        discordUsername: resolvedUsername,
+        immediate: true,
+      };
     }),
 
 });

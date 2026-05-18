@@ -3583,3 +3583,16 @@
 - [x] rawUsers used for modal user lookup (not filtered 'users' array)
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-18 - Discord ID Immediate Connection (Admin-side Bot API resolution)
+- [x] setManualDiscordId procedure rewritten: now calls Discord Bot API GET /users/{id} immediately
+- [x] Resolves discordId + discordUsername + discordAvatar + discordConnectedAt on save
+- [x] Writes full Discord connection directly to app_users — no login required from user
+- [x] Clears manualDiscordId after successful connection (no pending state)
+- [x] Fallback to pending mode if DISCORD_BOT_TOKEN not set
+- [x] Frontend onSuccess handler updated to show @username on immediate connect
+- [x] Modal instructions updated: "immediately connected — no login required"
+- [x] Button text changed from "Save Discord ID" to "Connect Discord"
+- [x] Pending badge removed from table cell (no longer needed)
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed

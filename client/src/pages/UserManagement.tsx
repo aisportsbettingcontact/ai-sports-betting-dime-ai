@@ -607,17 +607,33 @@ export default function UserManagement() {
 
   const setManualDiscordIdMutation = trpc.appUsers.setManualDiscordId.useMutation({
     onSuccess: (data) => {
-      const label = data.manualDiscordId ? `pre-registered as ${data.manualDiscordId}` : "cleared";
-      console.log(
-        `[UserMgmt][ManualDiscordId][SUCCESS] userId=${data.userId} manualDiscordId=${data.manualDiscordId ?? "null"}`
-      );
-      toast.success(`Discord ID ${label}. Will auto-link on next Discord login.`);
+      // data.immediate = true  → Discord resolved immediately, account fully connected
+      // data.immediate = false → cleared or bot token missing (pending mode)
+      if (data.immediate && data.discordUsername) {
+        console.log(
+          `[UserMgmt][AdminDiscordConnect][SUCCESS] userId=${data.userId}` +
+          ` discordId="${data.discordId}" discordUsername="${data.discordUsername}"` +
+          ` mode=IMMEDIATE_CONNECT`
+        );
+        toast.success(`✓ Discord connected: @${data.discordUsername}`);
+      } else if (!data.discordId && !data.discordUsername) {
+        console.log(
+          `[UserMgmt][AdminDiscordConnect][CLEARED] userId=${data.userId} mode=CLEAR`
+        );
+        toast.success("Discord ID cleared.");
+      } else {
+        // Fallback: bot token missing — pending mode
+        console.log(
+          `[UserMgmt][AdminDiscordConnect][PENDING] userId=${data.userId} mode=PENDING`
+        );
+        toast.success("Discord ID saved. Will auto-link on next Discord login.");
+      }
       setEditingDiscordId(null);
       setDiscordIdDraft("");
       utils.appUsers.listUsers.invalidate();
     },
     onError: (err) => {
-      console.error(`[UserMgmt][ManualDiscordId][ERROR]`, err.message);
+      console.error(`[UserMgmt][AdminDiscordConnect][ERROR]`, err.message);
       toast.error(formatMutationError(err));
     },
   });
@@ -1088,16 +1104,9 @@ export default function UserManagement() {
                           type="button"
                           onClick={() => startEditDiscordId(user)}
                           className="group flex items-center gap-1 text-zinc-500 hover:text-zinc-200 transition-colors"
-                          title={user.manualDiscordId
-                            ? `Pre-registered ID: ${user.manualDiscordId} (pending Discord login) — click to edit`
-                            : "Click to pre-register Discord ID"
-                          }
+                          title="Click to connect Discord ID"
                         >
-                          {user.manualDiscordId ? (
-                            <span className="text-amber-400/80 font-mono text-xs">{user.manualDiscordId}<span className="ml-1 text-[10px] text-zinc-500">(pending)</span></span>
-                          ) : (
-                            <span className="text-zinc-600 group-hover:text-zinc-400">—</span>
-                          )}
+                          <span className="text-zinc-600 group-hover:text-zinc-400">—</span>
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-0 group-hover:opacity-60 transition-opacity"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </button>
                       )}
@@ -1359,7 +1368,7 @@ export default function UserManagement() {
             <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
               Enter the user&apos;s Discord <span className="text-zinc-200 font-medium">User ID</span> (17–20 digit snowflake).
               To find it: right-click their name in Discord → <span className="text-zinc-200">Copy User ID</span>.
-              The account will auto-link on their next Discord login.
+              The account will be <span className="text-green-400 font-medium">immediately connected</span> — no login required from the user.
             </p>
             {/* Input */}
             <input
@@ -1375,13 +1384,10 @@ export default function UserManagement() {
               className="w-full px-3 py-2 text-sm rounded-lg bg-zinc-900 border border-[#7289da]/50 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-[#7289da] focus:ring-2 focus:ring-[#7289da]/30 transition-all mb-4"
               disabled={setManualDiscordIdMutation.isPending}
             />
-            {/* Clear option if pre-registered */}
-            {rawUsers.find(u => u.id === editingDiscordId)?.manualDiscordId && (
-              <p className="text-xs text-amber-400/70 mb-3">
-                Currently pre-registered: <span className="font-mono text-amber-400">{rawUsers.find(u => u.id === editingDiscordId)?.manualDiscordId}</span>.
-                Leave input empty and save to clear it.
-              </p>
-            )}
+            {/* Note about clearing */}
+            <p className="text-xs text-zinc-600 mb-3">
+              Leave empty and save to clear a previously entered ID.
+            </p>
             {/* Actions */}
             <div className="flex gap-2 justify-end">
               <button
@@ -1400,12 +1406,12 @@ export default function UserManagement() {
                 {setManualDiscordIdMutation.isPending ? (
                   <>
                     <RefreshCw className="w-3 h-3 animate-spin" />
-                    Saving…
+                    Connecting…
                   </>
                 ) : (
                   <>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                    Save Discord ID
+                    Connect Discord
                   </>
                 )}
               </button>
