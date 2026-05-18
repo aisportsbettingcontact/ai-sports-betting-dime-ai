@@ -80,6 +80,16 @@ export default function Home() {
     missing_role:     discordUser
       ? `@${discordUser} does not have the AI Model Sub role. Purchase a subscription to get access.`
       : "You do not have the AI Model Sub role in the Prez Bets Discord server. Purchase a subscription to get access.",
+    // Invite-link specific errors
+    invite_invalid:       "This invite link is invalid, has already been used, or has expired. Ask the owner to generate a new one.",
+    invite_already_used:  "This invite link has already been used. Each link is single-use. Ask the owner to generate a new one.",
+    invite_connect_failed: "An error occurred while processing your invite link. Please try again or contact the owner.",
+    access_revoked:       "Your account access has been revoked. Contact the owner.",
+    user_not_found:       "Your account could not be found. Contact the owner.",
+    discord_not_configured: "Discord integration is not configured on this server. Contact the owner.",
+    // Generic Discord OAuth errors
+    discord_error:        "Discord returned an unexpected error. Please try again.",
+    invalid_callback:     "Invalid Discord OAuth callback. Please try again.",
   };
 
   const [isRedirecting, setIsRedirecting] = useState(false);

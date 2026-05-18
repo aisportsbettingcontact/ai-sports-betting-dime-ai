@@ -305,6 +305,9 @@ async function startServer() {
 
   // Discord OAuth routes — 5 attempts per 15 min per IP
   app.use("/api/discord-auth", authLimiter);
+  app.use("/api/auth/discord-invite", authLimiter);
+  app.use("/api/auth/discord-login", authLimiter);
+  app.use("/api/auth/discord", authLimiter);
 
   // tRPC login mutation — 5 attempts per 15 min per IP
   // Matches both batch (?batch=1) and direct calls to appUsers.login

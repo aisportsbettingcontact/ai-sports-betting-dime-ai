@@ -3534,3 +3534,4 @@
 - [x] Shared mlbamIdCache module: eliminates duplicate MLB Stats API calls (HR + K-Props)
 - [x] NHL fetch timeout: AbortSignal.timeout(12s/10s) on schedule + live scores endpoints
 - [x] Remove unused imports in routers.ts: updateBookOdds, runVsinRefresh, MLB_BY_ABBREV
+- [x] Exhaustive Discord invite-link audit: find and fix ALL failure modes causing service errors
