@@ -3547,3 +3547,17 @@
 - [ ] Phase 7: Remove unused npm dependencies
 - [ ] Phase 8: Fix all recurring server errors
 - [ ] Phase 9: Full test suite + build verification
+
+## Session: 2026-05-18 - Projection Loading Speed Optimization (100x)
+- [x] Verify DB index idx_games_sport_date_status on (sport, gameDate, gameStatus) — already present
+- [x] Fix getAvailableDates staleTime: 30s → 60s to match server cache TTL (eliminates spurious refetch)
+- [x] Fix allNbaGames staleTime: 30s → 60s to match server cache TTL
+- [x] Defer lastRefresh query until gamesLoading=false (non-critical, was competing for tRPC batch slot)
+- [x] Defer favData query until gamesLoading=false (non-critical, was competing for tRPC batch slot)
+- [x] Defer favWithDatesData query until gamesLoading=false (non-critical, was competing for tRPC batch slot)
+- [x] URL-aware prefetch in RequireAuth: read ?sport= and ?date= from URL so prefetch cache key matches ModelProjections mount request exactly
+- [x] Prefetch yesterday as fallback in RequireAuth to cover 11:00 UTC date transition (both dates warm in cache)
+- [x] Replace all 5 Loader2 spinners in feed with GameCardSkeleton (content-shaped placeholder, zero layout shift)
+- [x] Replace auto-retry Loader2 spinner with GameCardSkeleton for consistency
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed

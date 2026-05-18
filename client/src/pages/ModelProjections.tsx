@@ -8,13 +8,14 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useUrlState, type Sport } from "@/hooks/useUrlState";
-import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle } from "lucide-react";
+import { User, LogOut, LogIn, BarChart3, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { AnimatePresence, motion } from "framer-motion";
 
 // CDN icon URLs
 const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
 import { GameCard } from "@/components/GameCard";
+import { GameCardSkeleton } from "@/components/GameCardSkeleton";
 import { MlbLineupCard } from "@/components/MlbLineupCard";
 import MlbPropsCard, { type StrikeoutPropRow } from "@/components/MlbPropsCard";
 import MlbF5NrfiCard, { type F5NrfiGame } from "@/components/MlbF5NrfiCard";
@@ -598,7 +599,7 @@ export default function ModelProjections() {
     {
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,   // re-check every 60s — matches server cache TTL
-      staleTime: 30 * 1000,         // treat as stale after 30s to catch cutoff transitions
+      staleTime: 60 * 1000,         // [PERF] raised 30s→60s to match server cache TTL — eliminates spurious refetch every 30s
     }
   );
 
@@ -608,7 +609,7 @@ export default function ModelProjections() {
   const nbaQueryEnabled = activeSports?.NBA === true || showFavoritesTab;
   const { data: allNbaGames } = trpc.games.list.useQuery(
     { sport: "NBA" },
-    { enabled: nbaQueryEnabled, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
+    { enabled: nbaQueryEnabled, refetchOnWindowFocus: false, refetchInterval: 60 * 1000, staleTime: 60 * 1000 } // [PERF] raised staleTime 30s→60s to match server TTL
   );
 
   const liveCount = useMemo(() =>
@@ -767,21 +768,26 @@ export default function ModelProjections() {
     return { games: result, gamesByDate: byDate };
   }, [allGames, selectedStatuses, selectedDate]);
 
-  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, { refetchInterval: 60_000, staleTime: 55_000, refetchOnWindowFocus: false });
+  // [PERF] lastRefresh is not on the critical rendering path — defer until games are loaded.
+  // Prevents it from competing with games.list for the tRPC batch slot on initial load.
+  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, { enabled: !gamesLoading, refetchInterval: 60_000, staleTime: 55_000, refetchOnWindowFocus: false });
 
     // ── Favorites ──────────────────────────────────────────────────────────────
   // NOTE: isAppAuthedForFav is declared above near games.list queries (line ~477)
   // to gate ALL sensitive queries from the same auth check.
+  // [PERF] favData is not on the critical rendering path — defer until games are loaded.
+  // Prevents it from competing with games.list for the tRPC batch slot on initial load.
   const { data: favData } = trpc.favorites.getMyFavorites.useQuery(undefined, {
-    enabled: isAppAuthedForFav,
+    enabled: isAppAuthedForFav && !gamesLoading,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     retry: false,
   });
 
   // Favorites with game dates — for the Favorites tab and 11:00 UTC expiry
+  // [PERF] favWithDatesData is not on the critical rendering path — defer until games are loaded.
   const { data: favWithDatesData } = trpc.favorites.getMyFavoritesWithDates.useQuery(undefined, {
-    enabled: isAppAuthedForFav,
+    enabled: isAppAuthedForFav && !gamesLoading,
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     retry: false,
@@ -1437,10 +1443,7 @@ export default function ModelProjections() {
               feedMobileTab === 'lineups' && selectedSport === 'MLB' ? (
                 /* ── LINEUPS VIEW ── */
                 gamesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading lineups…</p>
-                  </div>
+                  <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
                     <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
@@ -1469,10 +1472,7 @@ export default function ModelProjections() {
               ) : feedMobileTab === 'props' && selectedSport === 'MLB' ? (
                 /* ── K PROPS VIEW ── */
                 gamesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading K props…</p>
-                  </div>
+                  <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
                     <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
@@ -1502,10 +1502,7 @@ export default function ModelProjections() {
               ) : feedMobileTab === 'f5nrfi' && selectedSport === 'MLB' ? (
                 /* ── F5 / NRFI VIEW ── */
                 gamesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading Cheat Sheets…</p>
-                  </div>
+                  <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
                     <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
@@ -1529,10 +1526,7 @@ export default function ModelProjections() {
               ) : feedMobileTab === 'hrprops' && selectedSport === 'MLB' ? (
                 /* ── HR PROPS VIEW ── */
                 gamesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading HR props…</p>
-                  </div>
+                  <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
                     <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
@@ -1564,32 +1558,23 @@ export default function ModelProjections() {
               ) : (
                 /* ── PROJECTIONS / SPLITS VIEW ── */
                 gamesLoading ? (
-                  <div className="flex flex-col items-center justify-center py-24 gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading projections…</p>
-                  </div>
+                  <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   (() => {
                     const retryKey = `${selectedSport}:${selectedDate}`;
                     const retryCount = _autoRetryCount.current[retryKey] ?? 0;
                     const isRetrying = retryCount > 0 && retryCount < 3;
+                    // [PERF] Show skeleton during auto-retry instead of spinner
+                    if (isRetrying) return <GameCardSkeleton count={4} />;
                     return (
                       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                        {isRetrying ? (
-                          <Loader2 className="w-10 h-10 text-primary/60 animate-spin" />
-                        ) : (
-                          <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
-                        )}
+                        <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
                         <div>
-                          <p className="text-sm font-semibold text-foreground mb-1">
-                            {isRetrying ? 'Loading games…' : 'No games found'}
-                          </p>
+                          <p className="text-sm font-semibold text-foreground mb-1">No games found</p>
                           <p className="text-xs text-muted-foreground">
-                            {isRetrying
-                              ? `Connecting to data source… (attempt ${retryCount}/3)`
-                              : selectedStatuses.size > 0
-                                ? `No ${Array.from(selectedStatuses).join(' or ')} ${selectedSport} games right now.`
-                                : `No ${selectedSport} games found.`
+                            {selectedStatuses.size > 0
+                              ? `No ${Array.from(selectedStatuses).join(' or ')} ${selectedSport} games right now.`
+                              : `No ${selectedSport} games found.`
                             }
                           </p>
                         </div>
