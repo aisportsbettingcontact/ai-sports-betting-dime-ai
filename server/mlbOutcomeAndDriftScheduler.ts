@@ -280,7 +280,7 @@ export function startMlbOutcomeAndDriftScheduler(): void {
 /**
  * Stops the scheduler. Used in tests and graceful shutdown.
  */
-export function stopMlbOutcomeAndDriftScheduler(): void {
+function stopMlbOutcomeAndDriftScheduler(): void {
   if (schedulerInterval) {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
@@ -292,7 +292,7 @@ export function stopMlbOutcomeAndDriftScheduler(): void {
  * Manual trigger: run the nightly pipeline for a specific date.
  * Used by tRPC admin procedures and backfill scripts.
  */
-export async function manualRunNightlyPipeline(dateStr: string): Promise<void> {
+async function manualRunNightlyPipeline(dateStr: string): Promise<void> {
   console.log(`${TAG} [INPUT] Manual nightly pipeline trigger: date=${dateStr}`);
   await runNightlyPipeline(dateStr);
 }
@@ -301,7 +301,7 @@ export async function manualRunNightlyPipeline(dateStr: string): Promise<void> {
  * Manual trigger: run drift check only (no ingestion, no recalibration).
  * Returns the drift check result for diagnostics.
  */
-export async function manualDriftCheck(triggerRecal = false) {
+async function manualDriftCheck(triggerRecal = false) {
   console.log(`${TAG} [INPUT] Manual drift check: triggerRecal=${triggerRecal}`);
   return checkF5ShareDrift(triggerRecal);
 }

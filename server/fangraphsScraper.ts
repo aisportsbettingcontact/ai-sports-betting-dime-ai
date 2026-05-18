@@ -308,7 +308,9 @@ export async function scrapeFangraphsDate(date: string): Promise<FgDateResult> {
   for (const g of games) {
     const lineups = g.lineups;
     if (lineups) {
-      for (const p of [...lineups.awayPlayers, ...lineups.homePlayers]) {
+      const away = Array.isArray(lineups.awayPlayers) ? lineups.awayPlayers : [];
+      const home = Array.isArray(lineups.homePlayers) ? lineups.homePlayers : [];
+      for (const p of [...away, ...home]) {
         playerIds.add(p.id);
       }
     }

@@ -267,7 +267,7 @@ export function invalidateCachedAppUser(userId: number): void {
 }
 
 /** Clear the entire user cache */
-export function clearUserCache(): void {
+function clearUserCache(): void {
   userCache.clear();
 }
 

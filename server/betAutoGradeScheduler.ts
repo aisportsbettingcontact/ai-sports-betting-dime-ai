@@ -443,7 +443,7 @@ export function startBetAutoGradeScheduler(): void {
 /**
  * Stop the scheduler (for testing or graceful shutdown).
  */
-export function stopBetAutoGradeScheduler(): void {
+function stopBetAutoGradeScheduler(): void {
   if (livePollingInterval)     { clearInterval(livePollingInterval);     livePollingInterval = null; }
   if (standardPollingInterval) { clearInterval(standardPollingInterval); standardPollingInterval = null; }
   if (nightlySweepInterval)    { clearInterval(nightlySweepInterval);    nightlySweepInterval = null; }

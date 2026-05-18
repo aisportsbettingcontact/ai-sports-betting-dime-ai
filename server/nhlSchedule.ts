@@ -241,9 +241,12 @@ async function fetchNhlScheduleForDate(dateStr: string = "now"): Promise<NhlSche
       const homeTeam = NHL_BY_ABBREV.get(homeAbbrev);
 
       if (!awayTeam || !homeTeam) {
-        console.warn(
-          `[NHLSchedule]   WARNING: Unknown team abbrev — away="${awayAbbrev}" home="${homeAbbrev}" — skipping game ${g.id}`
-        );
+        // Silently skip TBD/placeholder teams (e.g., playoff games with unresolved matchups)
+        if (awayAbbrev !== "TBD" && homeAbbrev !== "TBD") {
+          console.warn(
+            `[NHLSchedule]   WARNING: Unknown team abbrev — away="${awayAbbrev}" home="${homeAbbrev}" — skipping game ${g.id}`
+          );
+        }
         skipped++;
         continue;
       }
