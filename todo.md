@@ -3629,3 +3629,14 @@
 - [x] Calendar supports: month navigation, +/- units per day, W-L record, net units summary
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-18 - Bloomberg Terminal Analytics Redesign
+- [x] Rewrote BetTrackerAnalytics.tsx with Bloomberg Terminal × DraftKings quant aesthetic
+- [x] Dual-sided center-zero bars (green=wins right, red=losses left) replacing single win% bars
+- [x] Kelly Grade callouts for unit size tiers (A+/A/B/C/D based on win% + ROI)
+- [x] By-month mini bar chart with trend arrows replacing flat month list
+- [x] Top summary card (RECORD / WIN% / NET UNITS / ROI + BEST STREAK + BEST DAY)
+- [x] Rank indicators (#1/#2/#3) on highest-ROI rows per breakdown dimension
+- [x] Extended getCalendarData to return betCount, equity curve, streaks, ROI, win%
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed

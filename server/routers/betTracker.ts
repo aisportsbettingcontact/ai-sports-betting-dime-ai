@@ -2073,10 +2073,10 @@ export const betTrackerRouter = router({
       }
 
       // Per-day aggregation
-      type DayEntry = { units: number; wins: number; losses: number; pushes: number; pending: number };
+      type DayEntry = { units: number; wins: number; losses: number; pushes: number; pending: number; betCount: number; totalRisk: number };
       const dayMap = new Map<string, DayEntry>();
 
-      let monthWins = 0, monthLosses = 0, monthPushes = 0, monthNetUnits = 0;
+      let monthWins = 0, monthLosses = 0, monthPushes = 0, monthNetUnits = 0, monthTotalRisk = 0;
 
       for (const bet of rows) {
         const riskU  = toUnits(parseFloat(bet.risk),  bet.riskUnits);
@@ -2084,19 +2084,24 @@ export const betTrackerRouter = router({
         const res    = bet.result as string;
         const date   = bet.gameDate;
 
-        if (!dayMap.has(date)) dayMap.set(date, { units: 0, wins: 0, losses: 0, pushes: 0, pending: 0 });
+        if (!dayMap.has(date)) dayMap.set(date, { units: 0, wins: 0, losses: 0, pushes: 0, pending: 0, betCount: 0, totalRisk: 0 });
         const day = dayMap.get(date)!;
+        day.betCount++;
 
         if (res === "WIN") {
           day.units += toWinU;
           day.wins++;
+          day.totalRisk += riskU;
           monthWins++;
           monthNetUnits += toWinU;
+          monthTotalRisk += riskU;
         } else if (res === "LOSS") {
           day.units -= riskU;
           day.losses++;
+          day.totalRisk += riskU;
           monthLosses++;
           monthNetUnits -= riskU;
+          monthTotalRisk += riskU;
         } else if (res === "PUSH") {
           day.pushes++;
           monthPushes++;
@@ -2105,24 +2110,80 @@ export const betTrackerRouter = router({
         }
       }
 
-      const days = Array.from(dayMap.entries()).map(([date, d]) => ({
-        date,
-        units:   parseFloat(d.units.toFixed(2)),
-        wins:    d.wins,
-        losses:  d.losses,
-        pushes:  d.pushes,
-        pending: d.pending,
-      })).sort((a, b) => a.date.localeCompare(b.date));
+      const sortedDays = Array.from(dayMap.entries())
+        .map(([date, d]) => ({
+          date,
+          units:     parseFloat(d.units.toFixed(2)),
+          wins:      d.wins,
+          losses:    d.losses,
+          pushes:    d.pushes,
+          pending:   d.pending,
+          betCount:  d.betCount,
+          totalRisk: parseFloat(d.totalRisk.toFixed(2)),
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      // Equity curve: cumulative units per day (only graded days)
+      let cumulative = 0;
+      const equityCurve: { date: string; cumUnits: number }[] = [];
+      for (const d of sortedDays) {
+        if (d.wins > 0 || d.losses > 0) {
+          cumulative += d.units;
+          equityCurve.push({ date: d.date, cumUnits: parseFloat(cumulative.toFixed(2)) });
+        }
+      }
+
+      // Best / worst day
+      let bestDay: string | null = null, bestDayUnits = -Infinity;
+      let worstDay: string | null = null, worstDayUnits = Infinity;
+      for (const d of sortedDays) {
+        if (d.wins > 0 || d.losses > 0) {
+          if (d.units > bestDayUnits)  { bestDayUnits  = d.units; bestDay  = d.date; }
+          if (d.units < worstDayUnits) { worstDayUnits = d.units; worstDay = d.date; }
+        }
+      }
+
+      // Streaks: computed over graded bets in chronological order
+      const gradedBets = rows.filter((b: typeof rows[number]) => b.result === "WIN" || b.result === "LOSS");
+      let longestWinStreak = 0, longestLossStreak = 0;
+      let curWin = 0, curLoss = 0;
+      let currentStreakType: "W" | "L" | null = null;
+      let currentStreakCount = 0;
+      for (const bet of gradedBets) {
+        if (bet.result === "WIN") {
+          curWin++; curLoss = 0;
+          if (curWin > longestWinStreak) longestWinStreak = curWin;
+          currentStreakType = "W"; currentStreakCount = curWin;
+        } else {
+          curLoss++; curWin = 0;
+          if (curLoss > longestLossStreak) longestLossStreak = curLoss;
+          currentStreakType = "L"; currentStreakCount = curLoss;
+        }
+      }
+      const currentStreak = currentStreakType ? `${currentStreakType}${currentStreakCount}` : null;
+
+      const gradedCount = monthWins + monthLosses;
+      const winPct = gradedCount > 0 ? parseFloat(((monthWins / gradedCount) * 100).toFixed(1)) : 0;
+      const roi    = monthTotalRisk > 0 ? parseFloat(((monthNetUnits / monthTotalRisk) * 100).toFixed(1)) : 0;
 
       const monthRecord = {
-        wins:     monthWins,
-        losses:   monthLosses,
-        pushes:   monthPushes,
-        netUnits: parseFloat(monthNetUnits.toFixed(2)),
+        wins:              monthWins,
+        losses:            monthLosses,
+        pushes:            monthPushes,
+        netUnits:          parseFloat(monthNetUnits.toFixed(2)),
+        winPct,
+        roi,
+        longestWinStreak,
+        longestLossStreak,
+        currentStreak,
+        bestDay,
+        bestDayUnits:      bestDay  ? parseFloat(bestDayUnits.toFixed(2))  : null,
+        worstDay,
+        worstDayUnits:     worstDay ? parseFloat(worstDayUnits.toFixed(2)) : null,
       };
 
-      console.log(`[BetTracker][OUTPUT] getCalendarData: ${days.length} active days monthRecord=${JSON.stringify(monthRecord)}`);
-      return { days, monthRecord };
+      console.log(`[BetTracker][OUTPUT] getCalendarData: ${sortedDays.length} active days monthRecord=${JSON.stringify(monthRecord)} equityCurve=${equityCurve.length} points`);
+      return { days: sortedDays, monthRecord, equityCurve };
     }),
 });
 
