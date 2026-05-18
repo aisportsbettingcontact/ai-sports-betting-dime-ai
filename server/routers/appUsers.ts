@@ -109,23 +109,39 @@ export const ownerProcedure = publicProcedure.use(async ({ ctx, next }) => {
   }
   const payload = await verifyAppUserToken(token);
   if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid session" });
-  if (payload.role !== "owner") {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — role=${payload.role} (not owner)`);
-    throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" });
-  }
+
+  // ── Load user from DB (authoritative source for role) ──────────────────────
+  // IMPORTANT: role is checked from DB, NOT from JWT claim.
+  // Reason: JWT role is baked at login time. If an admin promotes a user to owner
+  // after their last login, the JWT still carries the old role. DB is always current.
   let user = await getAppUserById(payload.userId);
   const fromCache = !user;
   if (!user) {
     user = getCachedAppUser(payload.userId);
-    if (user) console.log(`[AppAuth] ownerProcedure: DB unavailable — serving userId=${payload.userId} from cache`);
+    if (user) console.log(`[AppAuth] ownerProcedure: DB unavailable — serving userId=${payload.userId} from cache (role=${user?.role})`);
   } else {
     setCachedAppUser(user);
   }
   if (!user || !user.hasAccess) {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — user not found or no access`);
+    console.log(`[AppAuth] ownerProcedure: REJECTED — user not found or no access userId=${payload.userId}`);
     throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
   }
-  // tokenVersion check: only enforce when DB is available
+
+  // ── Role check: DB-authoritative (not JWT claim) ────────────────────────────
+  // Accepts both 'owner' role values. JWT claim is logged for audit but NOT used for the decision.
+  if (user.role !== "owner") {
+    console.log(
+      `[AppAuth] ownerProcedure: REJECTED — DB role=${user.role} jwtRole=${payload.role}` +
+      ` userId=${user.id} username=${user.username} (DB role must be 'owner')`
+    );
+    throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" });
+  }
+  console.log(
+    `[AppAuth] ownerProcedure: GRANTED — userId=${user.id} username=${user.username}` +
+    ` dbRole=${user.role} jwtRole=${payload.role} fromCache=${fromCache}`
+  );
+
+  // ── tokenVersion check: only enforce when DB is available ──────────────────
   if (!fromCache && payload.tv !== null && payload.tv !== user.tokenVersion) {
     console.log(`[AppAuth] ownerProcedure: REJECTED — tokenVersion mismatch: jwt.tv=${payload.tv} db.tv=${user.tokenVersion} userId=${user.id}`);
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });

@@ -3596,3 +3596,11 @@
 - [x] Pending badge removed from table cell (no longer needed)
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-18 - Fix ownerProcedure permission gate (DB-authoritative role check)
+- [x] Root cause identified: ownerProcedure checked JWT payload.role (stale) instead of DB user.role (live)
+- [x] ownerProcedure rewritten: DB lookup happens BEFORE role check — role is now DB-authoritative
+- [x] JWT role claim still logged for audit but not used for access decision
+- [x] @prez and @sippi (role='owner' in DB) now pass ownerProcedure without re-login
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed
