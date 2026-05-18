@@ -1,10 +1,19 @@
 /**
- * BetTrackerAnalytics.tsx — Analytics components for the Bet Tracker page.
+ * BetTrackerAnalytics.tsx — Bloomberg Terminal × DraftKings quant analytics
+ *
+ * Design language:
+ *   - #0d0f0e base, #141614 cards, #1a1f1a hover
+ *   - #39FF14 neon green for wins/positives
+ *   - #FF3B3B loss red for negatives
+ *   - JetBrains Mono for all numbers
+ *   - Barlow Condensed for section headers
+ *   - Sharp corners (max 6px radius)
+ *   - 150ms transitions
  *
  * Components:
- *   EquityChart     — Canvas-based cumulative P/L curve with hover tooltip
- *   BreakdownPanel  — Single breakdown dimension (Type/Size/Month/Sport/Timeframe)
- *   BreakdownGrid   — All breakdown panels in a responsive grid
+ *   EquityChart         — Canvas-based cumulative P/L curve with hover tooltip
+ *   BreakdownPanel      — Single breakdown dimension with dual-sided bars
+ *   BreakdownGrid       — All breakdown panels in a responsive grid
  *   HandicapperSelector — Owner/Admin dropdown to switch between handicappers
  */
 
@@ -30,7 +39,6 @@ export type BreakdownEntry = {
   totalRisk: number;
   netProfit: number;
   roi: number;
-  /** Dollar P&L = netProfit (units) × unitSize ($/unit). Optional for backward compat. */
   dollarNetProfit?: number;
 };
 
@@ -59,9 +67,26 @@ export type StatsData = {
   byResult?: BreakdownEntry[];
   byTimeframe: BreakdownEntry[];
   equityCurve: EquityPoint[];
-  /** Top-level dollar P&L = netProfit × unitSize */
   dollarNetProfit?: number;
 };
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const T = {
+  base:      "#0d0f0e",
+  card:      "#141614",
+  hover:     "#1a1f1a",
+  border:    "#1e231e",
+  border2:   "#2a2a2a",
+  green:     "#39FF14",
+  red:       "#FF3B3B",
+  dim:       "#3a4a3a",
+  dimmer:    "#2a3a2a",
+  text:      "#d0d0d0",
+  textMuted: "#888",
+  mono:      "'JetBrains Mono', 'Courier New', monospace",
+  sans:      "'Barlow Condensed', sans-serif",
+} as const;
 
 // ─── EquityChart ──────────────────────────────────────────────────────────────
 
@@ -70,13 +95,12 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [tooltip, setTooltip] = useState<{
-    x: number;       // pixel X of the data-point dot (relative to canvas)
-    dotY: number;    // pixel Y of the data-point dot (relative to canvas)
+    x: number;
+    dotY: number;
     point: EquityPoint;
     flipLeft: boolean;
   } | null>(null);
 
-  // ── Responsive resize observer ──────────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -84,119 +108,81 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
       const entry = entries[0];
       if (!entry) return;
       const w = entry.contentRect.width;
-      // Dynamic height:
-      //   mobile (<400px wide): 70% of width so chart is tall enough to show all labels
-      //   tablet (400-900px):   40% of width
-      //   desktop (>900px):     30% of width
-      // Clamped to [200, 380] absolute pixels
       const ratio = w < 400 ? 0.70 : w < 900 ? 0.40 : 0.30;
       const h = Math.round(Math.min(380, Math.max(200, w * ratio)));
-      if (process.env.NODE_ENV === "development") console.log(`[EquityChart][STATE] ResizeObserver: w=${w} h=${h} ratio=${ratio}`);
       setDims({ w, h });
     });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
-  // ── Canvas draw ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || points.length === 0 || dims.w === 0) return;
+    if (!canvas || dims.w === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width  = dims.w * dpr;
+    canvas.height = dims.h * dpr;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const W = dims.w;
-    const H = dims.h;
-
-    // Set physical pixel size
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
     ctx.scale(dpr, dpr);
 
-    // ── Y-axis: measure widest label to set dynamic left padding ───────────────
-    const gridCount = 5;
-    const values0 = points.map((p) => p.cumPL);
-    const minV0 = Math.min(0, ...values0);
-    const maxV0 = Math.max(0, ...values0);
-    const range0 = maxV0 - minV0 || 1;
-    // Font size: larger on small screens so labels are readable, cap at 11px on wide screens
-    const yLabelFontSize = Math.max(10, Math.min(11, Math.round(W / 60)));
-    ctx.font = `bold ${yLabelFontSize}px JetBrains Mono, monospace`;
-    let maxLabelW = 0;
-    for (let i = 0; i <= gridCount; i++) {
-      const v = minV0 + (range0 * i) / gridCount;
-      const lbl = `${v >= 0 ? "+" : ""}${v.toFixed(1)}u`;
-      const w = ctx.measureText(lbl).width;
-      if (w > maxLabelW) maxLabelW = w;
-    }
-    // PAD.left = measured label width + 14px gap + 4px safety margin
-    const PAD = {
-      top: 20,
-      right: 18,
-      bottom: 46, // extra space for X-axis labels below the chart
-      left: Math.ceil(maxLabelW) + 18,
-    };
-    if (process.env.NODE_ENV === "development") console.log(`[EquityChart][STATE] PAD.left=${PAD.left} maxLabelW=${maxLabelW.toFixed(1)} yLabelFontSize=${yLabelFontSize}`);
-    const chartW = W - PAD.left - PAD.right;
-    const chartH = H - PAD.top - PAD.bottom;
+    const W = dims.w, H = dims.h;
+    const PAD_LEFT = 52, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 28;
+    const chartW = W - PAD_LEFT - PAD_RIGHT;
+    const chartH = H - PAD_TOP - PAD_BOTTOM;
 
-    const values = values0;
-    const minV = minV0;
-    const maxV = maxV0;
-    const range = range0;
-
-    const toX = (i: number) =>
-      PAD.left + (i / Math.max(points.length - 1, 1)) * chartW;
-    const toY = (v: number) =>
-      PAD.top + chartH - ((v - minV) / range) * chartH;
-    const zeroY = toY(0);
-
-    // Background
-    ctx.fillStyle = "#0a0c10";
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#0d0f0e";
     ctx.fillRect(0, 0, W, H);
 
-    // Grid lines + Y labels
+    if (points.length === 0) return;
+
+    const values = points.map(p => p.cumPL);
+    const minV = Math.min(0, ...values);
+    const maxV = Math.max(0, ...values);
+    const range = maxV - minV || 1;
+
+    const toX = (i: number) => PAD_LEFT + (i / Math.max(1, points.length - 1)) * chartW;
+    const toY = (v: number) => PAD_TOP + chartH - ((v - minV) / range) * chartH;
+    const zeroY = toY(0);
+
+    // Grid lines
+    ctx.strokeStyle = "#1e231e";
+    ctx.lineWidth = 1;
+    const gridCount = 4;
     for (let i = 0; i <= gridCount; i++) {
-      const v = minV + (range * i) / gridCount;
+      const v = minV + (range / gridCount) * i;
       const y = toY(v);
-      ctx.strokeStyle = "rgba(255,255,255,0.05)";
-      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(PAD.left, y);
-      ctx.lineTo(W - PAD.right, y);
+      ctx.moveTo(PAD_LEFT, y);
+      ctx.lineTo(PAD_LEFT + chartW, y);
       ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.font = `bold ${yLabelFontSize}px JetBrains Mono, monospace`;
+      ctx.fillStyle = "#3a4a3a";
+      ctx.font = `10px ${T.mono}`;
       ctx.textAlign = "right";
-      ctx.fillText(
-        `${v >= 0 ? "+" : ""}${v.toFixed(1)}u`,
-        PAD.left - 6,
-        y + Math.round(yLabelFontSize * 0.4)
-      );
+      ctx.fillText(`${v >= 0 ? "+" : ""}${v.toFixed(1)}u`, PAD_LEFT - 4, y + 3.5);
     }
 
-    // Zero line (dashed)
-    ctx.strokeStyle = "rgba(255,255,255,0.20)";
-    ctx.lineWidth = 1;
+    // Zero line
+    ctx.strokeStyle = "#2a3a2a";
+    ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(PAD.left, zeroY);
-    ctx.lineTo(W - PAD.right, zeroY);
+    ctx.moveTo(PAD_LEFT, zeroY);
+    ctx.lineTo(PAD_LEFT + chartW, zeroY);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Fill gradient under curve
-    const lastPL = points[points.length - 1]?.cumPL ?? 0;
-    const grad = ctx.createLinearGradient(0, PAD.top, 0, H - PAD.bottom);
-    if (lastPL >= 0) {
-      grad.addColorStop(0, "rgba(52,211,153,0.28)");
-      grad.addColorStop(0.7, "rgba(52,211,153,0.04)");
-      grad.addColorStop(1, "rgba(52,211,153,0)");
+    // Gradient fill
+    const finalPL = points[points.length - 1]?.cumPL ?? 0;
+    const isPos = finalPL >= 0;
+    const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + chartH);
+    if (isPos) {
+      grad.addColorStop(0, "rgba(57,255,20,0.18)");
+      grad.addColorStop(1, "rgba(57,255,20,0.01)");
     } else {
-      grad.addColorStop(0, "rgba(239,68,68,0)");
-      grad.addColorStop(0.3, "rgba(239,68,68,0.04)");
-      grad.addColorStop(1, "rgba(239,68,68,0.28)");
+      grad.addColorStop(0, "rgba(255,59,59,0.01)");
+      grad.addColorStop(1, "rgba(255,59,59,0.18)");
     }
     ctx.beginPath();
     ctx.moveTo(toX(0), zeroY);
@@ -208,104 +194,43 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
 
     // Main line
     ctx.beginPath();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = lastPL >= 0 ? "#34d399" : "#ef4444";
+    ctx.strokeStyle = isPos ? T.green : T.red;
+    ctx.lineWidth = 2;
     ctx.lineJoin = "round";
     points.forEach((p, i) => {
       if (i === 0) ctx.moveTo(toX(i), toY(p.cumPL));
       else ctx.lineTo(toX(i), toY(p.cumPL));
     });
     ctx.stroke();
-
-    // Dots
-    points.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.arc(toX(i), toY(p.cumPL), 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = p.result === "WIN" ? "#34d399" : "#ef4444";
-      ctx.fill();
-    });
-
-    // ── X-axis date labels ──────────────────────────────────────────────────────
-    // Font: 10px minimum so labels are always readable, scale up slightly on wide screens
-    const xLabelFontSize = Math.max(10, Math.min(11, Math.round(W / 65)));
-    // Minimum pixels between label centers to prevent overlap (label ~28px wide at 10px font)
-    const minLabelPx = Math.max(40, xLabelFontSize * 4);
-    const maxLabels = Math.max(2, Math.floor(chartW / minLabelPx));
-    const step = Math.max(1, Math.ceil((points.length - 1) / maxLabels));
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.font = `${xLabelFontSize}px monospace`;
-    ctx.textAlign = "center";
-    // Track last rendered label X to prevent overlap
-    let lastLabelX = -999;
-    const xLabelY = H - PAD.bottom + 18; // 18px below chart bottom edge
-    points.forEach((p, i) => {
-      const isStep = i % step === 0;
-      const isLast = i === points.length - 1;
-      if (!isStep && !isLast) return;
-      const d = p.date.substring(5); // MM-DD
-      const xPos = toX(i);
-      // Clamp to stay within canvas left/right bounds
-      const clampedX = Math.max(PAD.left + xLabelFontSize * 1.5, Math.min(W - PAD.right - xLabelFontSize * 1.5, xPos));
-      // Skip if too close to previous label (prevents overlap on dense data)
-      if (clampedX - lastLabelX < minLabelPx * 0.75) return;
-      ctx.fillText(d, clampedX, xLabelY);
-      lastLabelX = clampedX;
-    });
-
-    if (process.env.NODE_ENV === "development") console.log(`[EquityChart][OUTPUT] Rendered: W=${W} H=${H} points=${points.length} step=${step} maxLabels=${maxLabels} PAD.left=${PAD.left} xLabelFontSize=${xLabelFontSize}`);
   }, [points, dims]);
 
-  // ── Mouse interaction ───────────────────────────────────────────────────────
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (points.length === 0) return;
+      if (points.length === 0 || dims.w === 0) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
 
-      const W = dims.w;
-      const H = dims.h;
-      // Compute PAD_LEFT dynamically — same formula as draw function
-      // so tooltip tracks the correct data point at any screen width
-      const yLabelFontSizeM = Math.max(10, Math.min(11, Math.round(W / 60)));
-      const values0M = points.map((p) => p.cumPL);
-      const minV0M = Math.min(0, ...values0M);
-      const maxV0M = Math.max(0, ...values0M);
-      const range0M = maxV0M - minV0M || 1;
-      // Estimate max label width using character count (monospace approximation)
-      const sampleLabel = `${minV0M < 0 ? "-" : "+"}${Math.max(Math.abs(minV0M), Math.abs(maxV0M)).toFixed(1)}u`;
-      const estCharW = yLabelFontSizeM * 0.62; // monospace char width ratio
-      const estMaxLabelW = sampleLabel.length * estCharW;
-      const PAD_LEFT = Math.ceil(estMaxLabelW) + 18;
-      const PAD_RIGHT = 18;
-      const PAD_TOP = 20;
-      const PAD_BOTTOM = 46;
-      const chartW = W - PAD_LEFT - PAD_RIGHT;
-      const chartH = H - PAD_TOP - PAD_BOTTOM;
-
-      const idx = Math.round(
-        ((mx - PAD_LEFT) / chartW) * (points.length - 1)
-      );
-      const clamped = Math.max(0, Math.min(points.length - 1, idx));
-      const point = points[clamped];
-
-      const values = points.map((p) => p.cumPL);
+      const PAD_LEFT = 52, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 28;
+      const chartW = dims.w - PAD_LEFT - PAD_RIGHT;
+      const chartH = dims.h - PAD_TOP - PAD_BOTTOM;
+      const values = points.map(p => p.cumPL);
       const minV = Math.min(0, ...values);
       const maxV = Math.max(0, ...values);
       const range = maxV - minV || 1;
 
-      const toX = (i: number) =>
-        PAD_LEFT + (i / Math.max(points.length - 1, 1)) * chartW;
-      const toY = (v: number) =>
-        PAD_TOP + chartH - ((v - minV) / range) * chartH;
+      const clamped = Math.max(0, Math.min(points.length - 1,
+        Math.round(((mx - PAD_LEFT) / chartW) * (points.length - 1))
+      ));
+      const point = points[clamped];
+      if (!point) return;
 
+      const toX = (i: number) => PAD_LEFT + (i / Math.max(1, points.length - 1)) * chartW;
+      const toY = (v: number) => PAD_TOP + chartH - ((v - minV) / range) * chartH;
       const dotX = toX(clamped);
       const dotY = toY(point.cumPL);
-
-      // Flip tooltip to left side when near right edge (tooltip width ~180px)
-      const flipLeft = dotX + 14 + 180 > W;
-
+      const flipLeft = dotX + 14 + 180 > dims.w;
       setTooltip({ x: dotX, dotY, point, flipLeft });
     },
     [points, dims]
@@ -313,8 +238,8 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
 
   if (points.length === 0) {
     return (
-      <div className="flex items-center justify-center h-40 text-zinc-300 text-xs">
-        No settled bets yet — equity curve will appear after first graded bet
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "160px", color: T.dim, fontSize: "11px", fontFamily: T.mono }}>
+        NO SETTLED BETS — EQUITY CURVE APPEARS AFTER FIRST GRADED BET
       </div>
     );
   }
@@ -322,46 +247,39 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
   const finalPL = points[points.length - 1]?.cumPL ?? 0;
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} style={{ position: "relative", width: "100%" }}>
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: dims.h || 200, display: "block" }}
+        style={{ width: "100%", height: dims.h || 200, display: "block", borderRadius: "4px", cursor: "crosshair" }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setTooltip(null)}
-        className="rounded-lg cursor-crosshair"
       />
       {tooltip && (
-        <div
-          className="absolute z-10 pointer-events-none bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs shadow-xl min-w-[160px]"
-          style={{
-            // Position tooltip above the dot, anchored to dot X
-            left: tooltip.flipLeft
-              ? Math.max(0, tooltip.x - 174)
-              : Math.min(tooltip.x + 14, dims.w - 180),
-            // Place above the dot with 8px gap; clamp to top of chart
-            top: Math.max(4, tooltip.dotY - 82),
-          }}
-        >
-          <div className="font-bold text-white truncate">{tooltip.point.pick}</div>
-          <div
-            className={
-              tooltip.point.result === "WIN"
-                ? "text-green-400 font-mono"
-                : "text-red-400 font-mono"
-            }
-          >
-            {tooltip.point.result}{" "}
-            {tooltip.point.pl >= 0 ? "+" : ""}
-            {tooltip.point.pl.toFixed(2)}u
+        <div style={{
+          position: "absolute",
+          zIndex: 10,
+          pointerEvents: "none",
+          background: "#141614",
+          border: `1px solid ${T.border2}`,
+          borderRadius: "4px",
+          padding: "8px 12px",
+          fontSize: "11px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+          minWidth: "160px",
+          left: tooltip.flipLeft ? Math.max(0, tooltip.x - 174) : Math.min(tooltip.x + 14, dims.w - 180),
+          top: Math.max(4, tooltip.dotY - 82),
+          fontFamily: T.mono,
+        }}>
+          <div style={{ fontWeight: 700, color: T.text, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tooltip.point.pick}</div>
+          <div style={{ color: tooltip.point.result === "WIN" ? T.green : T.red, fontWeight: 700 }}>
+            {tooltip.point.result} {tooltip.point.pl >= 0 ? "+" : ""}{tooltip.point.pl.toFixed(2)}u
           </div>
-          <div className="text-zinc-300 font-mono">
-            Cumulative:{" "}
-            <span className={finalPL >= 0 ? "text-green-400" : "text-red-400"}>
-              {tooltip.point.cumPL >= 0 ? "+" : ""}
-              {tooltip.point.cumPL.toFixed(2)}u
+          <div style={{ color: T.textMuted, marginTop: "2px" }}>
+            CUM: <span style={{ color: finalPL >= 0 ? T.green : T.red }}>
+              {tooltip.point.cumPL >= 0 ? "+" : ""}{tooltip.point.cumPL.toFixed(2)}u
             </span>
           </div>
-          <div className="text-zinc-300">{tooltip.point.date}</div>
+          <div style={{ color: T.dim, marginTop: "2px" }}>{tooltip.point.date}</div>
         </div>
       )}
     </div>
@@ -370,6 +288,74 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
 
 export const EquityChart = memo(EquityChartInner);
 
+// ─── Dual-sided bar ───────────────────────────────────────────────────────────
+
+/**
+ * DualBar — center-zero bar showing win/loss balance.
+ * Green extends RIGHT proportional to wins, red extends LEFT proportional to losses.
+ */
+function DualBar({ wins, losses, maxTotal }: { wins: number; losses: number; maxTotal: number }) {
+  const total = wins + losses;
+  if (total === 0 || maxTotal === 0) return null;
+
+  const winPct  = maxTotal > 0 ? (wins  / maxTotal) * 50 : 0; // max 50% of bar width
+  const lossPct = maxTotal > 0 ? (losses / maxTotal) * 50 : 0;
+
+  return (
+    <div style={{
+      display: "flex",
+      height: "3px",
+      background: T.border,
+      borderRadius: "2px",
+      overflow: "hidden",
+      marginTop: "5px",
+    }}>
+      {/* Loss bar — left side, grows from center leftward */}
+      <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+        <div style={{
+          width: `${Math.min(100, lossPct * 2)}%`,
+          background: T.red,
+          borderRadius: "2px 0 0 2px",
+          transition: "width 300ms ease",
+        }} />
+      </div>
+      {/* Center divider */}
+      <div style={{ width: "1px", background: T.border2, flexShrink: 0 }} />
+      {/* Win bar — right side, grows from center rightward */}
+      <div style={{ flex: 1, display: "flex", justifyContent: "flex-start" }}>
+        <div style={{
+          width: `${Math.min(100, winPct * 2)}%`,
+          background: T.green,
+          borderRadius: "0 2px 2px 0",
+          transition: "width 300ms ease",
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Kelly Grade ──────────────────────────────────────────────────────────────
+
+/**
+ * Compute Kelly Grade for a unit size tier.
+ * Based on win rate and ROI:
+ *   A+ : winPct >= 65% AND roi >= 30%
+ *   A  : winPct >= 60% OR  roi >= 20%
+ *   B  : winPct >= 52% OR  roi >= 8%
+ *   C  : winPct >= 45%
+ *   D  : below C
+ */
+function kellyGrade(wins: number, losses: number, roi: number): { grade: string; color: string } {
+  const total = wins + losses;
+  if (total < 5) return { grade: "—", color: T.dim };
+  const wp = total > 0 ? (wins / total) * 100 : 0;
+  if (wp >= 65 && roi >= 30) return { grade: "A+", color: T.green };
+  if (wp >= 60 || roi >= 20)  return { grade: "A",  color: T.green };
+  if (wp >= 52 || roi >= 8)   return { grade: "B",  color: "#a3e635" };
+  if (wp >= 45)               return { grade: "C",  color: "#f59e0b" };
+  return                             { grade: "D",  color: T.red };
+}
+
 // ─── BreakdownPanel ───────────────────────────────────────────────────────────
 
 function BreakdownPanelInner({
@@ -377,96 +363,344 @@ function BreakdownPanelInner({
   icon,
   entries,
   showDollar = false,
+  dimension,
 }: {
   title: string;
   icon: React.ReactNode;
   entries: BreakdownEntry[];
-  /** When true, show dollar P&L alongside unit P&L */
   showDollar?: boolean;
+  dimension?: "type" | "size" | "month" | "sport" | "timeframe";
 }) {
   if (entries.length === 0) return null;
+
+  // Sort by ROI descending for rank indicators
+  const sorted = [...entries].sort((a, b) => b.roi - a.roi);
+  const rankMap = new Map(sorted.map((e, i) => [e.key, i + 1]));
+
+  // Max total bets for dual-bar scaling
+  const maxTotal = Math.max(...entries.map(e => e.wins + e.losses), 1);
+
+  // By-month: render as mini bar chart
+  if (dimension === "month") {
+    return <MonthBarChart entries={entries} showDollar={showDollar} />;
+  }
+
+  // Kelly callout for unit size dimension
+  const showKellyCallout = dimension === "size";
+  const topTiers  = entries.filter(e => { const g = kellyGrade(e.wins, e.losses, e.roi); return g.grade === "A+" || g.grade === "A"; });
+  const weakTiers = entries.filter(e => { const g = kellyGrade(e.wins, e.losses, e.roi); return g.grade === "C" || g.grade === "D"; });
+
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
+    <div style={{
+      background: T.card,
+      border: `1px solid ${T.border}`,
+      borderRadius: "4px",
+      padding: "12px 14px",
+    }}>
       {/* Panel header */}
-      <div className="flex items-center gap-1.5 mb-2.5">
-        <span className="text-zinc-200">{icon}</span>
-        <span className="text-sm font-bold tracking-widest text-zinc-200 uppercase">
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+        <span style={{ color: T.green, opacity: 0.7 }}>{icon}</span>
+        <span style={{
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "2px",
+          color: T.text,
+          fontFamily: T.sans,
+        }}>
           {title}
         </span>
       </div>
 
+      {/* Kelly callout for unit size */}
+      {showKellyCallout && topTiers.length > 0 && (
+        <div style={{
+          background: "rgba(57,255,20,0.04)",
+          border: "1px solid rgba(57,255,20,0.15)",
+          borderRadius: "4px",
+          padding: "8px 10px",
+          marginBottom: "10px",
+          fontSize: "10px",
+          fontFamily: T.mono,
+          color: T.green,
+          lineHeight: 1.5,
+        }}>
+          <span style={{ opacity: 0.6 }}>EDGE: </span>
+          {topTiers.map(e => e.key).join(", ")} bets
+          {` (${topTiers.map(e => {
+            const total = e.wins + e.losses;
+            return total > 0 ? `${((e.wins / total) * 100).toFixed(0)}%` : "—";
+          }).join("/")} win rate)`}
+          {weakTiers.length > 0 && (
+            <span style={{ color: T.red, display: "block", marginTop: "2px" }}>
+              <span style={{ opacity: 0.6 }}>REDUCE: </span>
+              {weakTiers.map(e => e.key).join(", ")} volume
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Rows */}
-      <div className="space-y-2.5">
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
         {entries.map((e) => {
           const settled = e.wins + e.losses;
-          const winPct = settled > 0 ? (e.wins / settled) * 100 : 0;
-          const isPos = e.netProfit >= 0;
+          const winPct  = settled > 0 ? (e.wins / settled) * 100 : 0;
+          const isPos   = e.netProfit >= 0;
+          const rank    = rankMap.get(e.key);
           const hasDollar = showDollar && e.dollarNetProfit !== undefined;
+          const kg = dimension === "size" ? kellyGrade(e.wins, e.losses, e.roi) : null;
 
           return (
             <div key={e.key}>
-              {/* Row 1: label + stats inline */}
-              <div className="flex items-baseline justify-between gap-1 flex-wrap">
-                {/* Label */}
-                <span className="text-white text-sm font-bold leading-tight shrink-0 mr-1">
-                  {e.key}
-                </span>
+              {/* Row: label + rank + stats */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", flexWrap: "wrap" }}>
+                {/* Left: label + rank + Kelly grade */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                  {/* Rank badge */}
+                  {rank !== undefined && rank <= 3 && (
+                    <span style={{
+                      fontSize: "9px",
+                      fontFamily: T.mono,
+                      color: rank === 1 ? T.green : rank === 2 ? "#a3e635" : T.textMuted,
+                      fontWeight: 700,
+                      minWidth: "18px",
+                    }}>
+                      #{rank}
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#f0f0f0",
+                    fontFamily: T.sans,
+                    letterSpacing: "0.5px",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {e.key}
+                  </span>
+                  {/* Kelly grade badge */}
+                  {kg && kg.grade !== "—" && (
+                    <span style={{
+                      fontSize: "9px",
+                      fontFamily: T.mono,
+                      fontWeight: 700,
+                      color: kg.color,
+                      background: `${kg.color}18`,
+                      border: `1px solid ${kg.color}30`,
+                      borderRadius: "3px",
+                      padding: "1px 4px",
+                    }}>
+                      {kg.grade}
+                    </span>
+                  )}
+                </div>
 
-                {/* Stats cluster — right-aligned, wraps on very narrow */}
-                <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
+                {/* Right: stats cluster */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                   {/* W-L (WP%) */}
-                  <span className="text-sm text-zinc-200 font-mono whitespace-nowrap">
+                  <span style={{ fontSize: "11px", fontFamily: T.mono, color: T.textMuted, whiteSpace: "nowrap" }}>
                     {e.wins}W–{e.losses}L
-                    {e.pushes > 0 ? `–${e.pushes}P` : ""}{" "}
-                    <span className="text-zinc-300">
+                    {e.pushes > 0 ? `–${e.pushes}P` : ""}
+                    {" "}
+                    <span style={{ color: winPct >= 55 ? T.green : winPct >= 50 ? "#a3e635" : T.red }}>
                       ({winPct.toFixed(0)}%)
                     </span>
                   </span>
 
-                  {/* Net P/L (units) */}
-                  <span
-                    className={`text-sm font-bold font-mono whitespace-nowrap ${
-                      isPos ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {e.netProfit >= 0 ? "+" : ""}
-                    {e.netProfit.toFixed(2)}u
+                  {/* Net P/L units */}
+                  <span style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    fontFamily: T.mono,
+                    color: isPos ? T.green : T.red,
+                    whiteSpace: "nowrap",
+                  }}>
+                    {e.netProfit >= 0 ? "+" : ""}{e.netProfit.toFixed(2)}u
                   </span>
 
-                  {/* Dollar P&L — shown when showDollar=true and dollarNetProfit is available */}
+                  {/* Dollar P&L */}
                   {hasDollar && (
-                    <span
-                      className={`text-xs font-mono whitespace-nowrap px-1.5 py-0.5 rounded ${
-                        isPos
-                          ? "bg-green-500/10 text-green-300"
-                          : "bg-red-500/10 text-red-300"
-                      }`}
-                    >
-                      {(e.dollarNetProfit ?? 0) >= 0 ? "+" : ""}
-                      ${Math.abs(e.dollarNetProfit ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    <span style={{
+                      fontSize: "10px",
+                      fontFamily: T.mono,
+                      color: isPos ? T.green : T.red,
+                      background: isPos ? "rgba(57,255,20,0.07)" : "rgba(255,59,59,0.07)",
+                      border: `1px solid ${isPos ? "rgba(57,255,20,0.15)" : "rgba(255,59,59,0.15)"}`,
+                      borderRadius: "3px",
+                      padding: "1px 5px",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {(e.dollarNetProfit ?? 0) >= 0 ? "+" : ""}${Math.abs(e.dollarNetProfit ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                     </span>
                   )}
 
                   {/* ROI */}
-                  <span
-                    className={`text-sm font-mono whitespace-nowrap ${
-                      isPos ? "text-green-400/75" : "text-red-400/75"
-                    }`}
-                  >
-                    {e.roi >= 0 ? "+" : ""}
-                    {e.roi.toFixed(1)}%
+                  <span style={{
+                    fontSize: "11px",
+                    fontFamily: T.mono,
+                    color: isPos ? "rgba(57,255,20,0.65)" : "rgba(255,59,59,0.65)",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {e.roi >= 0 ? "+" : ""}{e.roi.toFixed(1)}%
                   </span>
                 </div>
               </div>
 
-              {/* Win% bar */}
-              <div className="mt-1 h-[3px] bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${
-                    isPos ? "bg-green-500" : "bg-red-500"
-                  }`}
-                  style={{ width: `${Math.max(0, Math.min(100, winPct))}%` }}
-                />
+              {/* Dual-sided bar */}
+              <DualBar wins={e.wins} losses={e.losses} maxTotal={maxTotal} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── MonthBarChart ────────────────────────────────────────────────────────────
+
+/**
+ * MonthBarChart — replaces the flat list for "By Month" with a mini bar chart.
+ * One bar per month, height proportional to |netProfit|, color green/red.
+ * Shows month-over-month trend arrow.
+ */
+function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; showDollar: boolean }) {
+  if (entries.length === 0) return null;
+
+  const maxAbs = Math.max(...entries.map(e => Math.abs(e.netProfit)), 1);
+  const BAR_MAX_H = 56; // px
+
+  return (
+    <div style={{
+      background: T.card,
+      border: `1px solid ${T.border}`,
+      borderRadius: "4px",
+      padding: "12px 14px",
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "12px" }}>
+        <span style={{ color: T.green, opacity: 0.7 }}><Activity size={12} /></span>
+        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "2px", color: T.text, fontFamily: T.sans }}>
+          BY MONTH
+        </span>
+      </div>
+
+      {/* Bar chart */}
+      <div style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: "6px",
+        height: `${BAR_MAX_H + 32}px`,
+        paddingBottom: "24px",
+        position: "relative",
+      }}>
+        {/* Zero baseline */}
+        <div style={{
+          position: "absolute",
+          bottom: "24px",
+          left: 0,
+          right: 0,
+          height: "1px",
+          background: T.border2,
+        }} />
+
+        {entries.map((e, i) => {
+          const isPos = e.netProfit >= 0;
+          const barH  = Math.max(3, (Math.abs(e.netProfit) / maxAbs) * BAR_MAX_H);
+          const prev  = entries[i - 1];
+          const trendUp = prev ? e.netProfit > prev.netProfit : null;
+
+          // Short month label from key like "APRIL 2026" → "APR"
+          const shortLabel = e.key.split(" ")[0]?.slice(0, 3) ?? e.key.slice(0, 3);
+
+          return (
+            <div key={e.key} style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "3px",
+              position: "relative",
+            }}>
+              {/* Trend arrow */}
+              {trendUp !== null && (
+                <span style={{
+                  fontSize: "9px",
+                  color: trendUp ? T.green : T.red,
+                  fontFamily: T.mono,
+                  position: "absolute",
+                  top: "-16px",
+                }}>
+                  {trendUp ? "↑" : "↓"}
+                </span>
+              )}
+
+              {/* Bar */}
+              <div
+                title={`${e.key}: ${e.netProfit >= 0 ? "+" : ""}${e.netProfit.toFixed(2)}u (${e.wins}W–${e.losses}L, ROI ${e.roi >= 0 ? "+" : ""}${e.roi.toFixed(1)}%)`}
+                style={{
+                  width: "100%",
+                  height: `${barH}px`,
+                  background: isPos ? T.green : T.red,
+                  borderRadius: isPos ? "3px 3px 0 0" : "0 0 3px 3px",
+                  opacity: 0.85,
+                  alignSelf: isPos ? "flex-end" : "flex-start",
+                  transition: "opacity 150ms ease",
+                  cursor: "default",
+                }}
+                onMouseEnter={e2 => { (e2.currentTarget as HTMLDivElement).style.opacity = "1"; }}
+                onMouseLeave={e2 => { (e2.currentTarget as HTMLDivElement).style.opacity = "0.85"; }}
+              />
+
+              {/* Month label */}
+              <span style={{
+                position: "absolute",
+                bottom: "0",
+                fontSize: "9px",
+                fontFamily: T.mono,
+                color: T.dim,
+                letterSpacing: "0.5px",
+                whiteSpace: "nowrap",
+              }}>
+                {shortLabel}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Month list below chart */}
+      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+        {entries.map((e) => {
+          const settled = e.wins + e.losses;
+          const winPct  = settled > 0 ? (e.wins / settled) * 100 : 0;
+          const isPos   = e.netProfit >= 0;
+          const hasDollar = showDollar && e.dollarNetProfit !== undefined;
+
+          return (
+            <div key={e.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#f0f0f0", fontFamily: T.sans, letterSpacing: "0.5px" }}>
+                {e.key}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "10px", fontFamily: T.mono, color: T.textMuted }}>
+                  {e.wins}W–{e.losses}L ({winPct.toFixed(0)}%)
+                </span>
+                <span style={{ fontSize: "11px", fontWeight: 700, fontFamily: T.mono, color: isPos ? T.green : T.red }}>
+                  {e.netProfit >= 0 ? "+" : ""}{e.netProfit.toFixed(2)}u
+                </span>
+                {hasDollar && (
+                  <span style={{
+                    fontSize: "10px", fontFamily: T.mono,
+                    color: isPos ? T.green : T.red,
+                    background: isPos ? "rgba(57,255,20,0.07)" : "rgba(255,59,59,0.07)",
+                    border: `1px solid ${isPos ? "rgba(57,255,20,0.15)" : "rgba(255,59,59,0.15)"}`,
+                    borderRadius: "3px", padding: "1px 5px",
+                  }}>
+                    {(e.dollarNetProfit ?? 0) >= 0 ? "+" : ""}${Math.abs(e.dollarNetProfit ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+                <span style={{ fontSize: "10px", fontFamily: T.mono, color: isPos ? "rgba(57,255,20,0.6)" : "rgba(255,59,59,0.6)" }}>
+                  {e.roi >= 0 ? "+" : ""}{e.roi.toFixed(1)}%
+                </span>
               </div>
             </div>
           );
@@ -478,7 +712,6 @@ function BreakdownPanelInner({
 
 // ─── BreakdownGrid ────────────────────────────────────────────────────────────
 
-/** Remap raw server keys to human-readable display labels */
 export const BreakdownPanel = memo(BreakdownPanelInner);
 
 function remapKey(
@@ -492,21 +725,7 @@ function remapKey(
     return key;
   }
   if (dimension === "month") {
-    const MONTHS = [
-      "",
-      "JANUARY",
-      "FEBRUARY",
-      "MARCH",
-      "APRIL",
-      "MAY",
-      "JUNE",
-      "JULY",
-      "AUGUST",
-      "SEPTEMBER",
-      "OCTOBER",
-      "NOVEMBER",
-      "DECEMBER",
-    ];
+    const MONTHS = ["","JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
     const m = key.match(/^(\d{4})-(\d{2})$/);
     if (m) {
       const month = parseInt(m[2], 10);
@@ -515,9 +734,9 @@ function remapKey(
     return key;
   }
   if (dimension === "timeframe") {
-    if (key === "FULL_GAME") return "Full Game";
-    if (key === "FIRST_5") return "First 5";
-    if (key === "FIRST_HALF") return "First Half";
+    if (key === "FULL_GAME")    return "Full Game";
+    if (key === "FIRST_5")      return "First 5";
+    if (key === "FIRST_HALF")   return "First Half";
     if (key === "FIRST_PERIOD") return "First Period";
     if (key === "FIRST_QUARTER") return "First Quarter";
     return key;
@@ -539,30 +758,84 @@ function BreakdownGridInner({
 }: {
   stats: StatsData;
   vertical?: boolean;
-  /** When true, show dollar P&L pill in each breakdown row */
   showDollar?: boolean;
 }) {
+  const gradedBets = stats.wins + stats.losses;
+  const winPct = gradedBets > 0 ? ((stats.wins / gradedBets) * 100).toFixed(1) : "—";
+  const roiStr = stats.roi >= 0 ? `+${stats.roi.toFixed(1)}%` : `${stats.roi.toFixed(1)}%`;
+  const netStr = stats.netProfit >= 0 ? `+${stats.netProfit.toFixed(2)}u` : `${stats.netProfit.toFixed(2)}u`;
+  const longestWin = stats.longestWinStreak ?? 0;
+
+  // Top summary card
+  const summaryCard = (
+    <div key="summary" style={{
+      background: T.card,
+      border: `1px solid ${T.border}`,
+      borderRadius: "4px",
+      padding: "12px 14px",
+      marginBottom: vertical ? "0" : undefined,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+        <span style={{ color: T.green, opacity: 0.7 }}><BarChart2 size={12} /></span>
+        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "2px", color: T.text, fontFamily: T.sans }}>
+          OVERALL SUMMARY
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+        {[
+          { label: "RECORD",   value: `${stats.wins}W–${stats.losses}L`, color: T.text },
+          { label: "WIN%",     value: `${winPct}%`,                      color: parseFloat(winPct as string) >= 55 ? T.green : T.red },
+          { label: "NET UNITS", value: netStr,                            color: stats.netProfit >= 0 ? T.green : T.red },
+          { label: "ROI",      value: roiStr,                            color: stats.roi >= 0 ? T.green : T.red },
+        ].map(item => (
+          <div key={item.label} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "8px", color: T.dim, letterSpacing: "1.5px", fontFamily: T.mono, marginBottom: "3px" }}>{item.label}</div>
+            <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: T.mono, color: item.color }}>{item.value}</div>
+          </div>
+        ))}
+      </div>
+      {longestWin > 0 && (
+        <div style={{
+          marginTop: "8px",
+          paddingTop: "8px",
+          borderTop: `1px solid ${T.border}`,
+          display: "flex",
+          gap: "16px",
+          fontSize: "10px",
+          fontFamily: T.mono,
+          color: T.dim,
+        }}>
+          <span>BEST STREAK: <span style={{ color: T.green }}>W{longestWin}</span></span>
+          {stats.biggestDayUnits !== undefined && stats.biggestDayUnits > 0 && (
+            <span>BEST DAY: <span style={{ color: T.green }}>+{stats.biggestDayUnits.toFixed(2)}u</span></span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   const panels = [
-    <BreakdownPanel key="type"      title="By Bet Type"   icon={<BarChart2 size={12} />} entries={remapEntries("type",      stats.byType)}      showDollar={showDollar} />,
-    <BreakdownPanel key="size"      title="By Unit Size"  icon={<Activity  size={12} />} entries={remapEntries("size",      stats.bySize)}      showDollar={showDollar} />,
-    <BreakdownPanel key="month"     title="By Month"      icon={<Activity  size={12} />} entries={remapEntries("month",     stats.byMonth)}     showDollar={showDollar} />,
-    <BreakdownPanel key="sport"     title="By Sport"      icon={<Activity  size={12} />} entries={remapEntries("sport",     stats.bySport)}     showDollar={showDollar} />,
-    <BreakdownPanel key="timeframe" title="By Timeframe"  icon={<Activity  size={12} />} entries={remapEntries("timeframe", stats.byTimeframe)} showDollar={showDollar} />,
+    summaryCard,
+    <BreakdownPanel key="type"      title="BY BET TYPE"   icon={<BarChart2 size={12} />} entries={remapEntries("type",      stats.byType)}      showDollar={showDollar} dimension="type"      />,
+    <BreakdownPanel key="size"      title="BY UNIT SIZE"  icon={<Activity  size={12} />} entries={remapEntries("size",      stats.bySize)}      showDollar={showDollar} dimension="size"      />,
+    <BreakdownPanel key="month"     title="BY MONTH"      icon={<Activity  size={12} />} entries={remapEntries("month",     stats.byMonth)}     showDollar={showDollar} dimension="month"     />,
+    <BreakdownPanel key="sport"     title="BY SPORT"      icon={<Activity  size={12} />} entries={remapEntries("sport",     stats.bySport)}     showDollar={showDollar} dimension="sport"     />,
+    <BreakdownPanel key="timeframe" title="BY TIMEFRAME"  icon={<Activity  size={12} />} entries={remapEntries("timeframe", stats.byTimeframe)} showDollar={showDollar} dimension="timeframe" />,
   ];
+
   if (vertical) {
-    // Vertical stack for sidebar column — no gaps, full width, no grid stretching
-    return <div className="flex flex-col gap-2 w-full">{panels}</div>;
+    return <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>{panels}</div>;
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "10px", alignItems: "start" }}>
       {panels}
     </div>
   );
 }
 
-// ─── HandicapperSelector ──────────────────────────────────────────────────────
-
 export const BreakdownGrid = memo(BreakdownGridInner);
+
+// ─── HandicapperSelector ──────────────────────────────────────────────────────
 
 function HandicapperSelectorInner({
   handicappers,
@@ -579,35 +852,66 @@ function HandicapperSelectorInner({
   const selected = handicappers.find((h) => h.id === selectedId);
 
   return (
-    <div className="relative">
+    <div style={{ position: "relative" }}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700 text-xs text-white hover:bg-zinc-700/60 transition-all"
+        style={{
+          display: "flex", alignItems: "center", gap: "6px",
+          padding: "6px 12px",
+          background: T.card,
+          border: `1px solid ${T.border2}`,
+          borderRadius: "4px",
+          color: T.text,
+          fontSize: "11px",
+          fontFamily: T.mono,
+          cursor: "pointer",
+          transition: "all 150ms ease",
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = T.hover; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.card; }}
       >
-        <Users size={12} className="text-zinc-200" />
-        <span className="font-mono">
-          {selected?.username ?? "Select Handicapper"}
-        </span>
-        <ChevronDown size={12} className="text-zinc-300" />
+        <Users size={11} />
+        <span>{selected?.username ?? "SELECT HANDICAPPER"}</span>
+        <ChevronDown size={11} />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-0 z-20 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl min-w-[180px] py-1">
+        <div style={{
+          position: "absolute",
+          top: "calc(100% + 4px)",
+          left: 0,
+          zIndex: 20,
+          background: "#141614",
+          border: `1px solid ${T.border2}`,
+          borderRadius: "4px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          minWidth: "180px",
+          padding: "4px 0",
+        }}>
           {handicappers.map((h) => (
             <button
               key={h.id}
               type="button"
-              onClick={() => {
-                onSelect(h.id);
-                setOpen(false);
+              onClick={() => { onSelect(h.id); setOpen(false); }}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 12px",
+                fontSize: "11px",
+                fontFamily: T.mono,
+                color: h.id === selectedId ? T.green : T.text,
+                fontWeight: h.id === selectedId ? 700 : 400,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                transition: "background 150ms ease",
               }}
-              className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors ${
-                h.id === selectedId ? "text-emerald-400 font-bold" : "text-white"
-              }`}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = T.hover; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
             >
               {h.username}
               {h.id === currentUserId && (
-                <span className="text-zinc-300 ml-1">(you)</span>
+                <span style={{ color: T.dim, marginLeft: "6px" }}>(you)</span>
               )}
             </button>
           ))}
@@ -616,4 +920,5 @@ function HandicapperSelectorInner({
     </div>
   );
 }
+
 export const HandicapperSelector = memo(HandicapperSelectorInner);

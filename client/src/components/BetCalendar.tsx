@@ -1,13 +1,24 @@
 /**
- * BetCalendar.tsx — Pikkit-style calendar recap component
+ * BetCalendar.tsx — Bloomberg Terminal × DraftKings Sportsbook calendar recap
  *
- * Displays a monthly calendar grid showing +/- units per day for a given handicapper.
- * - Green cells: net positive units on that day
- * - Red cells: net negative units on that day
- * - Intensity scales with magnitude (light/medium/dark)
- * - Month navigation: prev/next arrows
- * - Month summary: W-L-P record + net units
- * - Responsive: works on mobile and desktop
+ * Design language:
+ *   - #0d0f0e base, #141614 cards, #1a1f1a hover
+ *   - #39FF14 neon green for wins/positives
+ *   - #FF3B3B loss red for negatives
+ *   - JetBrains Mono for all numbers (monospace = quant feel)
+ *   - Barlow Condensed for section headers
+ *   - Sharp corners (max 6px radius)
+ *   - 150ms transitions
+ *
+ * Features:
+ *   - Monthly summary header bar (record, win%, P/L, ROI, current streak)
+ *   - Magnitude-scaled color intensity (opacity/saturation scales with |units|)
+ *   - Day tiles: date number (top-left), P/L units (bold center), bet count (bottom-right)
+ *   - Best day crown badge, worst day skull badge
+ *   - Today tile: neon green border pulse animation
+ *   - Future dates: invisible (dim number only, no tile)
+ *   - Equity sparkline behind the calendar grid
+ *   - Month navigation (prev/next)
  *
  * Logging convention:
  *   [BetCalendar][INPUT]  — raw props received
@@ -25,108 +36,130 @@ const IS_DEV = process.env.NODE_ENV === "development";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BetCalendarProps {
-  /** The user ID to show calendar for */
   targetUserId?: number;
-  /** Unit size in dollars (for display) */
   unitSize?: number;
-  /** Handicapper display name */
   handicapperName?: string;
-  /** Initial year-month to show (YYYY-MM). Defaults to current month. */
   initialYearMonth?: string;
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MONTH_NAMES = [
+  "JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE",
+  "JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER",
+];
+const DAY_HEADERS = ["S","M","T","W","T","F","S"];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Today in Pacific Time as YYYY-MM-DD */
 function todayPt(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
 }
-
-/** Current month in Pacific Time as YYYY-MM */
 function currentMonthPt(): string {
   return todayPt().slice(0, 7);
 }
-
-/** Parse YYYY-MM into { year, month } (1-indexed month) */
 function parseYearMonth(ym: string): { year: number; month: number } {
   const [y, m] = ym.split("-").map(Number);
   return { year: y, month: m };
 }
-
-/** Navigate month: direction = -1 (prev) or +1 (next) */
 function shiftMonth(ym: string, direction: -1 | 1): string {
   const { year, month } = parseYearMonth(ym);
-  const newMonth = month + direction;
-  if (newMonth < 1) return `${year - 1}-12`;
-  if (newMonth > 12) return `${year + 1}-01`;
-  return `${year}-${String(newMonth).padStart(2, "0")}`;
+  const nm = month + direction;
+  if (nm < 1) return `${year - 1}-12`;
+  if (nm > 12) return `${year + 1}-01`;
+  return `${year}-${String(nm).padStart(2, "0")}`;
 }
-
-/** Get the number of days in a given year-month */
 function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate(); // month is 1-indexed; day=0 = last day of prev month
+  return new Date(year, month, 0).getDate();
 }
-
-/** Get the day-of-week (0=Sun) of the 1st of the month */
 function firstDayOfWeek(year: number, month: number): number {
   return new Date(year, month - 1, 1).getDay();
 }
-
-/** Format YYYY-MM-DD → "MM/DD" */
-function fmtShortDate(d: string): string {
-  const [, m, day] = d.split("-");
-  return `${m}/${day}`;
-}
-
-/** Format units with sign: +12.50u or -3.20u */
 function fmtUnits(n: number): string {
   const abs = Math.abs(n).toFixed(2);
   return n >= 0 ? `+${abs}u` : `-${abs}u`;
 }
-
-/** Format units short: +12.5u or -3.2u (1 decimal for small cells) */
 function fmtUnitsShort(n: number): string {
   const abs = Math.abs(n);
+  // For large values, use 1 decimal; otherwise 2 decimals
   const str = abs >= 10 ? abs.toFixed(1) : abs.toFixed(2);
   return n >= 0 ? `+${str}u` : `-${str}u`;
 }
-
-/** Month name from 1-indexed month number */
-const MONTH_NAMES = [
-  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-];
-
-/** Day-of-week headers */
-const DAY_HEADERS = ["S", "M", "T", "W", "T", "F", "S"];
+function fmtPct(n: number): string {
+  return `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
+}
 
 /**
- * Compute cell color based on unit value and magnitude.
- * Mirrors Pikkit's green/red intensity scale.
+ * Compute inline style for a day tile based on unit magnitude.
+ * Uses actual CSS color values (not Tailwind classes) for precise opacity scaling.
+ *
+ * @param units - net units for the day
+ * @param maxMagnitude - largest |units| in the month (for normalization)
+ * @returns { bg, textColor, borderColor } as CSS color strings
  */
-function getCellStyle(units: number, maxMagnitude: number): {
+function getCellColors(units: number, maxMagnitude: number): {
   bg: string;
-  text: string;
-  border: string;
+  textColor: string;
+  borderColor: string;
 } {
-  if (units === 0) return { bg: "bg-zinc-800/60", text: "text-zinc-400", border: "border-zinc-700/50" };
+  if (units === 0) {
+    return {
+      bg: "rgba(39,39,42,0.5)",
+      textColor: "#71717a",
+      borderColor: "rgba(63,63,70,0.4)",
+    };
+  }
 
-  // Normalize intensity: 0.0 → 1.0
-  const intensity = maxMagnitude > 0 ? Math.min(Math.abs(units) / maxMagnitude, 1.0) : 0.5;
+  // Normalize intensity: 0.1 → 1.0 (never fully transparent)
+  const raw = maxMagnitude > 0 ? Math.min(Math.abs(units) / maxMagnitude, 1.0) : 0.5;
+  // Apply square root to spread out the lower range (small wins still visible)
+  const intensity = 0.15 + Math.sqrt(raw) * 0.85;
 
   if (units > 0) {
-    // Green scale: light (low) → dark (high)
-    if (intensity < 0.25) return { bg: "bg-emerald-900/40",  text: "text-emerald-400", border: "border-emerald-800/40" };
-    if (intensity < 0.50) return { bg: "bg-emerald-800/60",  text: "text-emerald-300", border: "border-emerald-700/50" };
-    if (intensity < 0.75) return { bg: "bg-emerald-700/80",  text: "text-emerald-100", border: "border-emerald-600/60" };
-    return                       { bg: "bg-emerald-600",      text: "text-white",       border: "border-emerald-500" };
+    // Neon green scale: #39FF14 at full intensity
+    const r = Math.round(57  * intensity);
+    const g = Math.round(255 * intensity);
+    const b = Math.round(20  * intensity);
+    return {
+      bg:          `rgba(${r},${g},${b},${0.12 + intensity * 0.25})`,
+      textColor:   intensity > 0.6 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},0.9)`,
+      borderColor: `rgba(${r},${g},${b},${0.15 + intensity * 0.35})`,
+    };
   } else {
-    // Red scale: light (low) → dark (high)
-    if (intensity < 0.25) return { bg: "bg-red-900/40",  text: "text-red-400",  border: "border-red-800/40" };
-    if (intensity < 0.50) return { bg: "bg-red-800/60",  text: "text-red-300",  border: "border-red-700/50" };
-    if (intensity < 0.75) return { bg: "bg-red-700/80",  text: "text-red-100",  border: "border-red-600/60" };
-    return                       { bg: "bg-red-600",      text: "text-white",    border: "border-red-500" };
+    // Loss red scale: #FF3B3B at full intensity
+    const r = Math.round(255 * intensity);
+    const g = Math.round(59  * intensity);
+    const b = Math.round(59  * intensity);
+    return {
+      bg:          `rgba(${r},${g},${b},${0.12 + intensity * 0.25})`,
+      textColor:   intensity > 0.6 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},0.9)`,
+      borderColor: `rgba(${r},${g},${b},${0.15 + intensity * 0.35})`,
+    };
   }
+}
+
+/**
+ * Build an SVG sparkline path from equity curve data points.
+ * Returns a polyline points string for an SVG viewBox of width × height.
+ */
+function buildSparklinePath(
+  equityCurve: { date: string; cumUnits: number }[],
+  width: number,
+  height: number
+): string {
+  if (equityCurve.length < 2) return "";
+  const values = equityCurve.map(p => p.cumUnits);
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const range  = maxVal - minVal || 1;
+  const pad    = height * 0.1;
+
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = pad + ((maxVal - v) / range) * (height - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return points.join(" ");
 }
 
 // ─── BetCalendar ─────────────────────────────────────────────────────────────
@@ -134,7 +167,7 @@ function getCellStyle(units: number, maxMagnitude: number): {
 export function BetCalendar({
   targetUserId,
   unitSize = 100,
-  handicapperName = "PREZ BETS",
+  handicapperName = "PREZ",
   initialYearMonth,
 }: BetCalendarProps) {
   const [yearMonth, setYearMonth] = useState<string>(
@@ -143,15 +176,13 @@ export function BetCalendar({
 
   const { year, month } = parseYearMonth(yearMonth);
 
-  if (IS_DEV) console.log(`[BetCalendar][INPUT] yearMonth=${yearMonth} targetUserId=${targetUserId} unitSize=${unitSize}`);
+  if (IS_DEV) {
+    console.log(`[BetCalendar][INPUT] yearMonth=${yearMonth} targetUserId=${targetUserId} unitSize=${unitSize} handicapperName=${handicapperName}`);
+  }
 
   // ── Server query ─────────────────────────────────────────────────────────
   const calendarQuery = trpc.betTracker.getCalendarData.useQuery(
-    {
-      yearMonth,
-      targetUserId,
-      unitSize,
-    },
+    { yearMonth, targetUserId, unitSize },
     {
       staleTime: yearMonth < currentMonthPt() ? Infinity : 60_000,
       gcTime:    yearMonth < currentMonthPt() ? 30 * 60_000 : 5 * 60_000,
@@ -162,16 +193,19 @@ export function BetCalendar({
 
   // ── Build day map ─────────────────────────────────────────────────────────
   const dayMap = useMemo(() => {
-    const map = new Map<string, { units: number; wins: number; losses: number; pushes: number; pending: number }>();
+    const map = new Map<string, {
+      units: number; wins: number; losses: number;
+      pushes: number; pending: number; betCount: number;
+    }>();
     if (!calendarQuery.data) return map;
     for (const d of calendarQuery.data.days) {
       map.set(d.date, d);
     }
-    if (IS_DEV) console.log(`[BetCalendar][STATE] dayMap built: ${map.size} active days`);
+    if (IS_DEV) console.log(`[BetCalendar][STATE] dayMap: ${map.size} active days`);
     return map;
   }, [calendarQuery.data]);
 
-  // ── Compute max magnitude for intensity scaling ───────────────────────────
+  // ── Max magnitude for intensity scaling ──────────────────────────────────
   const maxMagnitude = useMemo(() => {
     if (!calendarQuery.data) return 1;
     let max = 0;
@@ -181,23 +215,25 @@ export function BetCalendar({
     return max || 1;
   }, [calendarQuery.data]);
 
-  // ── Build calendar grid ───────────────────────────────────────────────────
+  // ── Calendar grid cells ───────────────────────────────────────────────────
   const totalDays = daysInMonth(year, month);
-  const startDow  = firstDayOfWeek(year, month); // 0=Sun
+  const startDow  = firstDayOfWeek(year, month);
   const todayStr  = todayPt();
 
-  // Build cells: null = empty padding, number = day of month
   const cells: (number | null)[] = [
     ...Array(startDow).fill(null),
     ...Array.from({ length: totalDays }, (_, i) => i + 1),
   ];
-  // Pad to complete last row
   while (cells.length % 7 !== 0) cells.push(null);
 
   const monthRecord = calendarQuery.data?.monthRecord;
+  const equityCurve = calendarQuery.data?.equityCurve ?? [];
   const netUnits    = monthRecord?.netUnits ?? 0;
 
-  if (IS_DEV) console.log(`[BetCalendar][STATE] grid: ${cells.length} cells totalDays=${totalDays} startDow=${startDow}`);
+  if (IS_DEV) {
+    console.log(`[BetCalendar][STATE] grid: ${cells.length} cells startDow=${startDow} maxMagnitude=${maxMagnitude.toFixed(2)}`);
+    console.log(`[BetCalendar][STATE] monthRecord=${JSON.stringify(monthRecord)} equityCurve=${equityCurve.length} pts`);
+  }
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const canGoNext = yearMonth < currentMonthPt();
@@ -207,7 +243,6 @@ export function BetCalendar({
     if (IS_DEV) console.log(`[BetCalendar][STEP] Navigate prev: ${yearMonth} → ${prev}`);
     setYearMonth(prev);
   }
-
   function handleNext() {
     if (!canGoNext) return;
     const next = shiftMonth(yearMonth, 1);
@@ -215,58 +250,221 @@ export function BetCalendar({
     setYearMonth(next);
   }
 
-  if (IS_DEV) console.log(`[BetCalendar][OUTPUT] Rendering calendar for ${yearMonth} maxMagnitude=${maxMagnitude.toFixed(2)} monthRecord=${JSON.stringify(monthRecord)}`);
+  if (IS_DEV) {
+    console.log(`[BetCalendar][OUTPUT] Rendering ${yearMonth} netUnits=${netUnits} bestDay=${monthRecord?.bestDay} worstDay=${monthRecord?.worstDay}`);
+  }
+
+  // ── Sparkline dimensions (responsive via CSS, fixed SVG viewBox) ──────────
+  const SPARK_W = 700;
+  const SPARK_H = 80;
+  const sparkPoints = buildSparklinePath(equityCurve, SPARK_W, SPARK_H);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden select-none">
-      {/* ── Header ── */}
-      <div className="px-5 pt-5 pb-4 border-b border-zinc-800">
-        <div className="flex items-start justify-between gap-3">
-          {/* Month + Year */}
+    <div
+      style={{
+        background: "#0d0f0e",
+        border: "1px solid #1e231e",
+        borderRadius: "6px",
+        overflow: "hidden",
+        userSelect: "none",
+        fontFamily: "'Barlow Condensed', sans-serif",
+      }}
+    >
+      {/* ── HEADER: Month + Year + Navigation ── */}
+      <div style={{ padding: "16px 18px 12px", borderBottom: "1px solid #1e231e" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+          {/* Left: Month name + year + handicapper */}
           <div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-black text-white tracking-tight">
+            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <span style={{
+                fontSize: "28px",
+                fontWeight: 900,
+                color: "#f0f0f0",
+                letterSpacing: "-0.5px",
+                lineHeight: 1,
+                fontFamily: "'Barlow Condensed', sans-serif",
+              }}>
                 {MONTH_NAMES[month - 1]}
               </span>
-              <span className="text-sm font-mono text-zinc-400">{year}</span>
+              <span style={{
+                fontSize: "16px",
+                fontWeight: 600,
+                color: "#4a5a4a",
+                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+              }}>
+                {year}
+              </span>
             </div>
-            <p className="text-xs text-zinc-500 mt-0.5 font-mono tracking-wider uppercase">
+            <div style={{
+              fontSize: "11px",
+              color: "#39FF14",
+              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+              letterSpacing: "2px",
+              marginTop: "3px",
+              opacity: 0.8,
+            }}>
               {handicapperName}
-            </p>
+            </div>
           </div>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-1">
+          {/* Right: Navigation */}
+          <div style={{ display: "flex", gap: "4px" }}>
             <button
               type="button"
               onClick={handlePrev}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
               aria-label="Previous month"
+              style={{
+                width: "32px", height: "32px",
+                background: "#141614",
+                border: "1px solid #2a2a2a",
+                borderRadius: "4px",
+                color: "#888",
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 150ms ease",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#1a1f1a"; (e.currentTarget as HTMLButtonElement).style.color = "#f0f0f0"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#141614"; (e.currentTarget as HTMLButtonElement).style.color = "#888"; }}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={13} />
             </button>
             <button
               type="button"
               onClick={handleNext}
               disabled={!canGoNext}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               aria-label="Next month"
+              style={{
+                width: "32px", height: "32px",
+                background: canGoNext ? "#141614" : "#0d0f0e",
+                border: "1px solid #2a2a2a",
+                borderRadius: "4px",
+                color: canGoNext ? "#888" : "#2a2a2a",
+                cursor: canGoNext ? "pointer" : "not-allowed",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "all 150ms ease",
+              }}
+              onMouseEnter={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "#1a1f1a"; (e.currentTarget as HTMLButtonElement).style.color = "#f0f0f0"; } }}
+              onMouseLeave={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "#141614"; (e.currentTarget as HTMLButtonElement).style.color = "#888"; } }}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={13} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Calendar Grid ── */}
-      <div className="px-4 pt-4 pb-2">
+      {/* ── MONTHLY SUMMARY BAR ── */}
+      {!calendarQuery.isLoading && monthRecord && (monthRecord.wins + monthRecord.losses) > 0 && (
+        <div style={{
+          background: "#141614",
+          borderBottom: "1px solid #1e231e",
+          padding: "10px 18px",
+          display: "grid",
+          gridTemplateColumns: "repeat(5, 1fr)",
+          gap: "4px",
+        }}>
+          {/* Record */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>RECORD</div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "#d0d0d0", fontFamily: "'JetBrains Mono', monospace" }}>
+              {monthRecord.wins}W–{monthRecord.losses}L
+              {monthRecord.pushes > 0 && <span style={{ color: "#888" }}>–{monthRecord.pushes}P</span>}
+            </div>
+          </div>
+          {/* Win% */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>WIN%</div>
+            <div style={{
+              fontSize: "13px", fontWeight: 700,
+              color: monthRecord.winPct >= 55 ? "#39FF14" : monthRecord.winPct >= 50 ? "#a3e635" : "#FF3B3B",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {monthRecord.winPct.toFixed(1)}%
+            </div>
+          </div>
+          {/* Net Units */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>NET UNITS</div>
+            <div style={{
+              fontSize: "13px", fontWeight: 700,
+              color: netUnits >= 0 ? "#39FF14" : "#FF3B3B",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {fmtUnits(netUnits)}
+            </div>
+          </div>
+          {/* ROI */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>ROI</div>
+            <div style={{
+              fontSize: "13px", fontWeight: 700,
+              color: monthRecord.roi >= 0 ? "#39FF14" : "#FF3B3B",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {fmtPct(monthRecord.roi)}
+            </div>
+          </div>
+          {/* Current Streak */}
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>STREAK</div>
+            <div style={{
+              fontSize: "13px", fontWeight: 700,
+              color: monthRecord.currentStreak?.startsWith("W") ? "#39FF14" : "#FF3B3B",
+              fontFamily: "'JetBrains Mono', monospace",
+            }}>
+              {monthRecord.currentStreak ?? "—"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CALENDAR GRID ── */}
+      <div style={{ padding: "14px 14px 0", position: "relative" }}>
+        {/* Ghost equity sparkline behind the grid */}
+        {sparkPoints && (
+          <svg
+            viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+            preserveAspectRatio="none"
+            style={{
+              position: "absolute",
+              top: "36px",
+              left: "14px",
+              right: "14px",
+              width: "calc(100% - 28px)",
+              height: "60%",
+              opacity: 0.07,
+              pointerEvents: "none",
+              zIndex: 0,
+            }}
+          >
+            <polyline
+              points={sparkPoints}
+              fill="none"
+              stroke={netUnits >= 0 ? "#39FF14" : "#FF3B3B"}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+
         {/* Day-of-week headers */}
-        <div className="grid grid-cols-7 mb-2">
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          marginBottom: "8px",
+          position: "relative",
+          zIndex: 1,
+        }}>
           {DAY_HEADERS.map((d, i) => (
-            <div
-              key={i}
-              className="text-center text-xs font-bold text-zinc-500 tracking-widest py-1"
-            >
+            <div key={i} style={{
+              textAlign: "center",
+              fontSize: "10px",
+              fontWeight: 700,
+              color: "#3a4a3a",
+              letterSpacing: "2px",
+              padding: "4px 0",
+              fontFamily: "'Barlow Condensed', sans-serif",
+            }}>
               {d}
             </div>
           ))}
@@ -274,62 +472,198 @@ export function BetCalendar({
 
         {/* Loading skeleton */}
         {calendarQuery.isLoading && (
-          <div className="grid grid-cols-7 gap-1.5 mb-4">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "14px" }}>
             {Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-xl bg-zinc-800/50 animate-pulse" />
+              <div key={i} style={{
+                aspectRatio: "1",
+                borderRadius: "4px",
+                background: "rgba(39,39,42,0.4)",
+                animation: "pulse 1.5s ease-in-out infinite",
+              }} />
             ))}
           </div>
         )}
 
         {/* Calendar cells */}
         {!calendarQuery.isLoading && (
-          <div className="grid grid-cols-7 gap-1.5 mb-4">
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            gap: "4px",
+            marginBottom: "14px",
+            position: "relative",
+            zIndex: 1,
+          }}>
             {cells.map((dayNum, idx) => {
               if (dayNum === null) {
-                return <div key={`empty-${idx}`} className="aspect-square" />;
+                return <div key={`empty-${idx}`} style={{ aspectRatio: "1" }} />;
               }
 
               const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
               const dayData = dayMap.get(dateStr);
-              const isToday = dateStr === todayStr;
+              const isToday  = dateStr === todayStr;
               const isFuture = dateStr > todayStr;
+              const isBestDay  = monthRecord?.bestDay  === dateStr;
+              const isWorstDay = monthRecord?.worstDay === dateStr;
 
-              if (!dayData || (dayData.wins === 0 && dayData.losses === 0 && dayData.pushes === 0 && dayData.pending === 0)) {
-                // No bets on this day
+              const hasGradedBets = dayData && (dayData.wins > 0 || dayData.losses > 0);
+
+              if (!hasGradedBets) {
+                // No graded bets — show dim number only (future: invisible, past: very dim)
                 return (
                   <div
                     key={dateStr}
-                    className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-colors ${
-                      isFuture
-                        ? "bg-transparent"
-                        : "bg-zinc-800/30"
-                    } ${isToday ? "ring-1 ring-emerald-500/60" : ""}`}
+                    style={{
+                      aspectRatio: "1",
+                      borderRadius: "4px",
+                      border: isToday ? "1px solid rgba(57,255,20,0.4)" : "1px solid transparent",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isToday ? "rgba(57,255,20,0.04)" : "transparent",
+                      animation: isToday ? "todayPulse 2s ease-in-out infinite" : undefined,
+                    }}
                   >
-                    <span className={`text-xs font-mono ${isFuture ? "text-zinc-700" : "text-zinc-600"}`}>
+                    <span style={{
+                      fontSize: "11px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: isFuture ? "#1e261e" : "#2a3a2a",
+                    }}>
                       {dayNum}
                     </span>
+                    {dayData?.pending && dayData.pending > 0 && (
+                      <span style={{
+                        width: "4px", height: "4px",
+                        borderRadius: "50%",
+                        background: "#f59e0b",
+                        marginTop: "2px",
+                      }} />
+                    )}
                   </div>
                 );
               }
 
-              // Day has bets
-              const { bg, text, border } = getCellStyle(dayData.units, maxMagnitude);
-              const hasPending = dayData.pending > 0;
+              // Day has graded bets — render full tile
+              const { bg, textColor, borderColor } = getCellColors(dayData.units, maxMagnitude);
+              const betCountLabel = dayData.betCount > 0 ? `${dayData.betCount}b` : "";
 
               return (
                 <div
                   key={dateStr}
-                  title={`${fmtShortDate(dateStr)}: ${fmtUnits(dayData.units)} (${dayData.wins}W-${dayData.losses}L${dayData.pushes > 0 ? `-${dayData.pushes}P` : ""}${hasPending ? ` +${dayData.pending} pending` : ""})`}
-                  className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-0.5 cursor-default transition-all hover:scale-105 hover:z-10 relative ${bg} ${border} ${isToday ? "ring-2 ring-white/30" : ""}`}
+                  title={`${dateStr}: ${fmtUnits(dayData.units)} (${dayData.wins}W-${dayData.losses}L${dayData.pushes > 0 ? `-${dayData.pushes}P` : ""}${dayData.pending > 0 ? ` +${dayData.pending} pend` : ""}) — ${dayData.betCount} bet${dayData.betCount !== 1 ? "s" : ""}`}
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: "4px",
+                    border: isToday
+                      ? "1px solid rgba(57,255,20,0.7)"
+                      : `1px solid ${borderColor}`,
+                    background: bg,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    cursor: "default",
+                    transition: "all 150ms ease",
+                    animation: isToday ? "todayPulse 2s ease-in-out infinite" : undefined,
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "scale(1.08)";
+                    (e.currentTarget as HTMLDivElement).style.zIndex = "10";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "scale(1)";
+                    (e.currentTarget as HTMLDivElement).style.zIndex = "1";
+                  }}
                 >
-                  <span className={`text-[10px] font-mono font-bold leading-none ${text} opacity-70`}>
+                  {/* Date number — top left */}
+                  <span style={{
+                    position: "absolute",
+                    top: "3px",
+                    left: "4px",
+                    fontSize: "9px",
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: textColor,
+                    opacity: 0.65,
+                    lineHeight: 1,
+                  }}>
                     {dayNum}
                   </span>
-                  <span className={`text-[9px] xs:text-[10px] font-black leading-none ${text} tracking-tight`}>
+
+                  {/* P/L units — bold center */}
+                  <span style={{
+                    fontSize: "clamp(8px, 1.8vw, 11px)",
+                    fontWeight: 900,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: textColor,
+                    lineHeight: 1,
+                    letterSpacing: "-0.5px",
+                    textAlign: "center",
+                    padding: "0 2px",
+                  }}>
                     {fmtUnitsShort(dayData.units)}
                   </span>
-                  {hasPending && (
-                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-yellow-400" title="Pending bets" />
+
+                  {/* Bet count — bottom right */}
+                  {betCountLabel && (
+                    <span style={{
+                      position: "absolute",
+                      bottom: "2px",
+                      right: "3px",
+                      fontSize: "8px",
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: textColor,
+                      opacity: 0.5,
+                      lineHeight: 1,
+                    }}>
+                      {betCountLabel}
+                    </span>
+                  )}
+
+                  {/* Best day crown badge */}
+                  {isBestDay && (
+                    <span
+                      title="Best day of the month"
+                      style={{
+                        position: "absolute",
+                        top: "2px",
+                        right: "3px",
+                        fontSize: "9px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      👑
+                    </span>
+                  )}
+
+                  {/* Worst day skull badge */}
+                  {isWorstDay && !isBestDay && (
+                    <span
+                      title="Worst day of the month"
+                      style={{
+                        position: "absolute",
+                        top: "2px",
+                        right: "3px",
+                        fontSize: "9px",
+                        lineHeight: 1,
+                      }}
+                    >
+                      💀
+                    </span>
+                  )}
+
+                  {/* Pending dot */}
+                  {dayData.pending > 0 && (
+                    <span style={{
+                      position: "absolute",
+                      bottom: "2px",
+                      left: "3px",
+                      width: "4px",
+                      height: "4px",
+                      borderRadius: "50%",
+                      background: "#f59e0b",
+                    }} title={`${dayData.pending} pending`} />
                   )}
                 </div>
               );
@@ -338,36 +672,57 @@ export function BetCalendar({
         )}
       </div>
 
-      {/* ── Month Summary ── */}
-      <div className="px-5 pb-5 border-t border-zinc-800 pt-4">
-        {calendarQuery.isLoading ? (
-          <div className="flex gap-4">
-            <div className="h-8 w-24 bg-zinc-800 rounded-lg animate-pulse" />
-            <div className="h-8 w-24 bg-zinc-800 rounded-lg animate-pulse" />
-          </div>
-        ) : monthRecord ? (
-          <div className="flex items-center justify-between gap-4">
-            {/* Record */}
+      {/* ── STREAK FOOTER ── */}
+      {!calendarQuery.isLoading && monthRecord && (monthRecord.wins + monthRecord.losses) > 0 && (
+        <div style={{
+          borderTop: "1px solid #1e231e",
+          padding: "10px 18px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: "#0d0f0e",
+        }}>
+          <div style={{ display: "flex", gap: "16px" }}>
             <div>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">Record</p>
-              <p className="text-base font-black text-zinc-200 font-mono">
-                {monthRecord.wins}W–{monthRecord.losses}L
-                {monthRecord.pushes > 0 && <span className="text-yellow-400">–{monthRecord.pushes}P</span>}
-              </p>
+              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>BEST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#39FF14", fontFamily: "'JetBrains Mono', monospace" }}>W{monthRecord.longestWinStreak}</span>
             </div>
-
-            {/* Net Units */}
-            <div className="text-right">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">Net Units</p>
-              <p className={`text-base font-black font-mono ${netUnits >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {fmtUnits(netUnits)}
-              </p>
+            <div>
+              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>WORST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF3B3B", fontFamily: "'JetBrains Mono', monospace" }}>L{monthRecord.longestLossStreak}</span>
             </div>
           </div>
-        ) : (
-          <p className="text-xs text-zinc-500 font-mono">No bets recorded for this month.</p>
-        )}
-      </div>
+          {monthRecord.bestDayUnits !== null && (
+            <div style={{ textAlign: "right" }}>
+              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>BEST DAY </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#39FF14", fontFamily: "'JetBrains Mono', monospace" }}>
+                {fmtUnits(monthRecord.bestDayUnits)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── EMPTY STATE ── */}
+      {!calendarQuery.isLoading && (!monthRecord || (monthRecord.wins + monthRecord.losses) === 0) && (
+        <div style={{ padding: "20px 18px", textAlign: "center" }}>
+          <span style={{ fontSize: "11px", color: "#3a4a3a", fontFamily: "'JetBrains Mono', monospace" }}>
+            NO GRADED BETS FOR THIS MONTH
+          </span>
+        </div>
+      )}
+
+      {/* ── CSS animations ── */}
+      <style>{`
+        @keyframes todayPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,20,0); }
+          50%       { box-shadow: 0 0 0 3px rgba(57,255,20,0.25); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.4; }
+          50%       { opacity: 0.7; }
+        }
+      `}</style>
     </div>
   );
 }
