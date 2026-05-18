@@ -206,8 +206,6 @@ def main() -> int:
 
         # ── Step 3: Compute F5 push rate (NO_ACTION / total F5 bets) ─────────
         f5_total_stats = market_stats.get("f5_total", {})
-        f5_over_stats = market_stats.get("f5_over", {})
-        f5_under_stats = market_stats.get("f5_under", {})
         f5_total_no_action = f5_total_stats.get("no_action", 0)
         f5_total_n = f5_total_stats.get("n", 0) + f5_total_no_action
         f5_push_rate = safe_div(f5_total_no_action, f5_total_n, 0.05)

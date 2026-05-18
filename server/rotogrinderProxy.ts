@@ -254,7 +254,7 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
 }
 
 // Keep fetchRgPage as a legacy export for backward compatibility (jackMacSheetsSync may use it)
-export async function fetchRgPage(pageUrl: string, cookie: string): Promise<string> {
+async function fetchRgPage(pageUrl: string, cookie: string): Promise<string> {
   const res = await fetch(pageUrl, {
     headers: {
       "Cookie": cookie,
@@ -420,7 +420,7 @@ export async function parseRgCsv(
 }
 
 // Keep parseRgTable as a legacy export for backward compatibility
-export async function parseRgTable(
+async function parseRgTable(
   html: string,
   pageKey: string,
   title: string,

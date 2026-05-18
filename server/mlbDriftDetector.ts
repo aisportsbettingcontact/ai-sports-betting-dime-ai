@@ -156,7 +156,7 @@ async function persistDriftState(
  * 3-year backtest (MLBAIModel.py EMPIRICAL_PRIORS, calibrated 2026-04-14).
  * Uses INSERT-if-not-exists semantics — safe to call on every startup.
  */
-export async function seedCalibrationConstants(): Promise<void> {
+async function seedCalibrationConstants(): Promise<void> {
   const TAG_SEED = "[CalibrationSeed]";
   const db = await getDb();
   const now = Date.now();

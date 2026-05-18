@@ -89,12 +89,54 @@ const TEAM_STATS_RATE_URL  = `https://www.naturalstattrick.com/teamtable.php?fro
 // NOTE: goaliestats.php is a 404; the correct endpoint is playerteams.php?stdoi=g
 const GOALIE_STATS_URL = `https://www.naturalstattrick.com/playerteams.php?fromseason=${CURRENT_SEASON}&thruseason=${CURRENT_SEASON}&stype=2&sit=5v5&score=all&stdoi=g&rate=n&team=ALL&pos=S&loc=B&toi=0&gpfilt=none&fd=&td=&tgp=410&lines=single&draftteam=ALL`;
 
+// Rotate User-Agents to reduce 403 rate-limiting from NST
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+];
+
 const FETCH_HEADERS = {
   "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
   "Referer":         "https://www.naturalstattrick.com/",
 };
+
+/**
+ * Fetch with exponential backoff and User-Agent rotation.
+ * On 403/429, waits 2^attempt * 1s before retrying with a different UA.
+ * Prevents NST rate-limit errors from propagating as hard failures.
+ */
+async function fetchWithRetry(url: string, maxAttempts = 3): Promise<Response> {
+  let lastErr: Error = new Error("fetchWithRetry: no attempts made");
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const ua = USER_AGENTS[attempt % USER_AGENTS.length];
+    try {
+      const resp = await fetch(url, {
+        headers: { ...FETCH_HEADERS, "User-Agent": ua },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (resp.status === 403 || resp.status === 429) {
+        const waitMs = Math.pow(2, attempt) * 1000;
+        console.warn(`[NSTScraper] HTTP ${resp.status} on attempt ${attempt + 1}/${maxAttempts} — retrying in ${waitMs}ms`);
+        await new Promise(r => setTimeout(r, waitMs));
+        lastErr = new Error(`HTTP ${resp.status}`);
+        continue;
+      }
+      return resp;
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      if (attempt < maxAttempts - 1) {
+        const waitMs = Math.pow(2, attempt) * 1000;
+        console.warn(`[NSTScraper] Fetch error on attempt ${attempt + 1}/${maxAttempts}: ${lastErr.message} — retrying in ${waitMs}ms`);
+        await new Promise(r => setTimeout(r, waitMs));
+      }
+    }
+  }
+  throw lastErr;
+}
 
 // ─── Team Abbreviation Normalization ─────────────────────────────────────────
 
@@ -191,7 +233,7 @@ function parseNstTable(html: string, tableLabel: string): { headers: string[]; r
 
 async function scrapeTeamCountStats(): Promise<Map<string, Partial<NhlTeamStats>>> {
   console.log("[NSTScraper] ► Fetching team COUNT stats (rate=n)...");
-  const resp = await fetch(TEAM_STATS_COUNT_URL, { headers: FETCH_HEADERS });
+  const resp = await fetchWithRetry(TEAM_STATS_COUNT_URL);
   if (!resp.ok) throw new Error(`[NSTScraper] Count stats fetch failed: HTTP ${resp.status}`);
   const html = await resp.text();
   console.log(`[NSTScraper]   Count stats: ${html.length} bytes`);
@@ -251,7 +293,7 @@ async function scrapeTeamCountStats(): Promise<Map<string, Partial<NhlTeamStats>
 
 async function scrapeTeamRateStats(): Promise<Map<string, Partial<NhlTeamStats>>> {
   console.log("[NSTScraper] ► Fetching team RATE stats (rate=y, per-60)...");
-  const resp = await fetch(TEAM_STATS_RATE_URL, { headers: FETCH_HEADERS });
+  const resp = await fetchWithRetry(TEAM_STATS_RATE_URL);
   if (!resp.ok) throw new Error(`[NSTScraper] Rate stats fetch failed: HTTP ${resp.status}`);
   const html = await resp.text();
   console.log(`[NSTScraper]   Rate stats: ${html.length} bytes`);
@@ -404,7 +446,7 @@ export async function scrapeNhlGoalieStats(): Promise<Map<string, NhlGoalieStats
   console.log("[NSTScraper] ► Fetching goalie stats from NaturalStatTrick...");
   console.log(`[NSTScraper]   URL: ${GOALIE_STATS_URL}`);
 
-  const resp = await fetch(GOALIE_STATS_URL, { headers: FETCH_HEADERS });
+  const resp = await fetchWithRetry(GOALIE_STATS_URL);
   if (!resp.ok) throw new Error(`[NSTScraper] Goalie stats fetch failed: HTTP ${resp.status}`);
   const html = await resp.text();
   console.log(`[NSTScraper]   Goalie stats: ${html.length} bytes`);

@@ -3535,3 +3535,15 @@
 - [x] NHL fetch timeout: AbortSignal.timeout(12s/10s) on schedule + live scores endpoints
 - [x] Remove unused imports in routers.ts: updateBookOdds, runVsinRefresh, MLB_BY_ABBREV
 - [x] Exhaustive Discord invite-link audit: find and fix ALL failure modes causing service errors
+
+## Session: 2026-05-18 - Exhaustive Dead Code Elimination + Performance Optimization
+
+- [ ] Phase 1: Map full project structure (Python, TypeScript, dependencies)
+- [ ] Phase 2: ruff + vulture on all Python; TypeScript dead-code analysis
+- [ ] Phase 3: Unused npm dependency scan; import audit across client + server
+- [ ] Phase 4: Server log mining for recurring errors, slow queries, circuit breaker trips
+- [ ] Phase 5: Execute all Python fixes
+- [ ] Phase 6: Execute all TypeScript fixes (dead files, imports, exports, bottlenecks)
+- [ ] Phase 7: Remove unused npm dependencies
+- [ ] Phase 8: Fix all recurring server errors
+- [ ] Phase 9: Full test suite + build verification

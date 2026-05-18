@@ -1033,7 +1033,7 @@ async function fetchEspnSlate(sport: "NBA" | "NCAAM", dateStr: string): Promise<
 /**
  * Manually invalidate a specific cache entry (e.g., after a date change).
  */
-export function invalidateSlateCache(sport: string, dateStr: string): void {
+function invalidateSlateCache(sport: string, dateStr: string): void {
   const key = cacheKey(sport, dateStr);
   const existed = slateCache.delete(key);
   console.log(`[AN][CACHE] Invalidate key=${key} | existed=${existed}`);

@@ -803,7 +803,7 @@ export async function ingestMlbOutcomes(
  * @param endDate    YYYY-MM-DD end date
  * @param force      If true, re-ingest already-ingested games
  */
-export async function ingestMlbOutcomesRange(
+async function ingestMlbOutcomesRange(
   startDate: string,
   endDate: string,
   force = false,
