@@ -178,7 +178,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
       console.warn(
         `[DiscordInvite][CONNECT][FAIL] requestId=${requestId} invalid token format`
       );
-      res.redirect(302, `/?discord_error=invalid_invite`);
+      res.redirect(302, `/?discord_error=invite_invalid`);
       return;
     }
 
@@ -299,7 +299,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
           `[DiscordInvite][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
           ` discordError="${discordError}"`
         );
-        res.redirect(302, `/?discord_error=${discordError === "access_denied" ? "cancelled" : "discord_error"}`);
+        res.redirect(302, `/?discord_error=${discordError === "access_denied" ? "discord_cancelled" : "discord_error"}`);
         return;
       }
 

@@ -15,7 +15,7 @@ import {
   type InsertAppUser, type UserSession, type InsertUserSession,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
-import { withCircuitBreaker } from './dbCircuitBreaker';
+import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
@@ -713,8 +713,10 @@ export async function updateAppUser(id: number, data: Partial<InsertAppUser>) {
   await withCircuitBreaker(async () => {
     await db.update(appUsers).set({ ...data, updatedAt: new Date() }).where(eq(appUsers.id, id));
   });
-  // Invalidate by-ID cache so role/access changes propagate immediately
+  // Invalidate BOTH caches: db.ts TTL cache + dbCircuitBreaker user cache
+  // Both must be cleared so role/access/discord changes propagate immediately
   invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
 }
 
 export async function deleteAppUser(id: number) {
@@ -724,6 +726,7 @@ export async function deleteAppUser(id: number) {
     await db.delete(appUsers).where(eq(appUsers.id, id));
   });
   invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
 }
 
 export async function updateAppUserLastSignedIn(id: number) {
