@@ -3573,3 +3573,13 @@
 - [x] Inline input: Enter to save, Escape to cancel, pending spinner, amber "pending" badge for pre-registered IDs
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-18 - Discord ID Input Bug Fix (Table Cell Clipping)
+- [x] Root cause identified: TableCell whitespace-nowrap + overflow-hidden clipped inline input to ~0px effective width
+- [x] Replaced inline input with fixed-position modal rendered outside table DOM tree
+- [x] Modal escapes all overflow-hidden/whitespace-nowrap constraints on TableCell
+- [x] Modal shows user context (@username + email), instructions, autoFocus input, Enter/Escape keyboard shortcuts
+- [x] Amber (pending) badge in table cell for pre-registered IDs still shown; click to re-open modal
+- [x] rawUsers used for modal user lookup (not filtered 'users' array)
+- [x] TypeScript check: 0 errors
+- [x] Test suite: 723/723 passed
