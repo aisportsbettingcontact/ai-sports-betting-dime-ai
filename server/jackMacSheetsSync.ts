@@ -168,6 +168,81 @@ export interface SheetSyncResult {
   elapsedMs: number;
 }
 
+// ─── Background Job Store ─────────────────────────────────────────────────────
+// Holds in-memory sync job state so syncToSheets can run asynchronously
+// without blocking the HTTP request (which would time out at ~120s on the platform).
+
+export type SyncJobStatus = "pending" | "running" | "success" | "error";
+
+export interface SyncJob {
+  jobId: string;
+  status: SyncJobStatus;
+  startedAt: string;
+  completedAt?: string;
+  result?: SheetSyncResult;
+  error?: string;
+  elapsedMs?: number;
+}
+
+const syncJobStore = new Map<string, SyncJob>();
+const JOB_TTL_MS = 30 * 60 * 1000; // 30 minutes — auto-evict stale jobs
+
+/**
+ * Start a background sync job. Returns immediately with a jobId.
+ * The actual sync runs asynchronously via setImmediate.
+ */
+export function startSyncJob(): string {
+  // Evict stale jobs older than 30 minutes
+  const now = Date.now();
+  for (const [id, job] of Array.from(syncJobStore.entries())) {
+    if (now - new Date(job.startedAt).getTime() > JOB_TTL_MS) {
+      syncJobStore.delete(id);
+    }
+  }
+
+  const jobId = `sync-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const job: SyncJob = {
+    jobId,
+    status: "pending",
+    startedAt: new Date().toISOString(),
+  };
+  syncJobStore.set(jobId, job);
+
+  console.log(`[SheetsSync] [INPUT] Background sync job created: jobId=${jobId}`);
+
+  // Fire-and-forget: run the sync asynchronously
+  setImmediate(async () => {
+    job.status = "running";
+    console.log(`[SheetsSync] [STEP] Background sync job starting: jobId=${jobId}`);
+    const t0 = Date.now();
+    try {
+      const result = await syncJackMacToSheets();
+      job.status = result.success ? "success" : "error";
+      job.result = result;
+      job.completedAt = new Date().toISOString();
+      job.elapsedMs = Date.now() - t0;
+      console.log(`[SheetsSync] [OUTPUT] Background sync job complete: jobId=${jobId} status=${job.status} elapsed=${job.elapsedMs}ms`);
+    } catch (err) {
+      const msg = (err as Error).message;
+      job.status = "error";
+      job.error = msg;
+      job.completedAt = new Date().toISOString();
+      job.elapsedMs = Date.now() - t0;
+      console.error(`[SheetsSync] [VERIFY] FAIL — Background sync job error: jobId=${jobId} error="${msg}" elapsed=${job.elapsedMs}ms`);
+    }
+  });
+
+  return jobId;
+}
+
+/**
+ * Get the current state of a sync job by jobId.
+ * Returns null if the job does not exist or has been evicted.
+ */
+export function getSyncJob(jobId: string): SyncJob | null {
+  return syncJobStore.get(jobId) ?? null;
+}
+
 // ─── Google Sheets Auth ───────────────────────────────────────────────────────
 
 function getGoogleSheetsClient() {
@@ -310,41 +385,76 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
     };
   }
 
-  // ── Step 3: Sync each page ─────────────────────────────────────────────────
+  // ── Step 3: Fetch + Parse all 4 RG tabs in PARALLEL ─────────────────────────────────
+  // CRITICAL PERFORMANCE FIX: Previously these ran sequentially (up to 4×20s = 80s).
+  // Now all 4 CSV fetches + MLB ID resolutions run concurrently, bounded by the
+  // slowest single tab (~20s) instead of the sum of all tabs (80s).
   const tabResults: SheetSyncTabResult[] = [];
   let totalRowsWritten = 0;
 
-  for (const [pageKey, sheetTab] of Object.entries(PAGE_TO_SHEET_TAB)) {
-    const tabStart = Date.now();
-    const pageConf = PAGE_CONFIG[pageKey];
-    console.log(`\n[SheetsSync] [STEP] Processing page="${pageKey}" → tab="${sheetTab}"`);
+  const pageEntries = Object.entries(PAGE_TO_SHEET_TAB);
+  console.log(`\n[SheetsSync] [STEP] Fetching all ${pageEntries.length} RG tabs in PARALLEL...`);
+  const parallelFetchStart = Date.now();
+
+  const fetchParseResults = await Promise.all(
+    pageEntries.map(async ([pageKey, sheetTab]) => {
+      const tabStart = Date.now();
+      const pageConf = PAGE_CONFIG[pageKey];
+      console.log(`[SheetsSync] [INPUT] [PARALLEL] Fetching CSV for page="${pageKey}" csvId=${pageConf.csvId}`);
+      try {
+        // 3a. Fetch CSV from Rotogrinders
+        const csvText = await fetchRgCsv(pageConf.csvId, rgCookie);
+        console.log(`[SheetsSync] [STATE] [PARALLEL] Fetched ${csvText.length} bytes for page="${pageKey}"`);
+
+        // 3b. Parse CSV (includes parallel MLB ID resolution per tab)
+        const tableData = await parseRgCsv(csvText, pageKey, pageConf.title, pageConf.type);
+        const tabElapsed = Date.now() - tabStart;
+        console.log(
+          `[SheetsSync] [STATE] [PARALLEL] Parsed page="${pageKey}": ${tableData.rows.length} rows, ${tableData.columns.length} cols elapsed=${tabElapsed}ms`
+        );
+        return { pageKey, sheetTab, tableData, tabStart, error: null as string | null };
+      } catch (err) {
+        const tabElapsed = Date.now() - tabStart;
+        const msg = (err as Error).message;
+        console.error(`[SheetsSync] [VERIFY] FAIL [PARALLEL] page="${pageKey}" error: ${msg} elapsed=${tabElapsed}ms`);
+        return { pageKey, sheetTab, tableData: null as import("./rotogrinderProxy").RgTableData | null, tabStart, error: msg };
+      }
+    })
+  );
+
+  console.log(`[SheetsSync] [STATE] Parallel fetch+parse complete in ${Date.now() - parallelFetchStart}ms`);
+
+  // 3c-3d. Write to Google Sheets sequentially (Sheets API rate limits favor sequential writes)
+  for (const { pageKey, sheetTab, tableData, tabStart, error } of fetchParseResults) {
+    if (error || !tableData) {
+      tabResults.push({
+        pageKey,
+        sheetTab,
+        rowsWritten: 0,
+        columnsWritten: 0,
+        updatedAt: "",
+        elapsedMs: Date.now() - tabStart,
+        status: "error",
+        error: error ?? "Unknown error",
+      });
+      continue;
+    }
+
+    if (tableData.rows.length === 0) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — page="${pageKey}" returned 0 rows. Skipping write.`);
+      tabResults.push({
+        pageKey,
+        sheetTab,
+        rowsWritten: 0,
+        columnsWritten: 0,
+        updatedAt: tableData.updatedAt,
+        elapsedMs: Date.now() - tabStart,
+        status: "success",
+      });
+      continue;
+    }
 
     try {
-      // 3a. Fetch CSV from Rotogrinders (complete dataset, no lazy-loading)
-      console.log(`[SheetsSync] [INPUT] Fetching CSV for page="${pageKey}" csvId=${pageConf.csvId}`);
-      const csvText = await fetchRgCsv(pageConf.csvId, rgCookie);
-      console.log(`[SheetsSync] [STATE] Fetched ${csvText.length} bytes CSV for page="${pageKey}"`);
-
-      // 3b. Parse CSV
-      const tableData = await parseRgCsv(csvText, pageKey, pageConf.title, pageConf.type);
-      console.log(
-        `[SheetsSync] [STATE] Parsed CSV page="${pageKey}": ${tableData.rows.length} rows, ${tableData.columns.length} cols`
-      );
-
-      if (tableData.rows.length === 0) {
-        console.warn(`[SheetsSync] [VERIFY] WARN — page="${pageKey}" returned 0 rows. Skipping write.`);
-        tabResults.push({
-          pageKey,
-          sheetTab,
-          rowsWritten: 0,
-          columnsWritten: 0,
-          updatedAt: tableData.updatedAt,
-          elapsedMs: Date.now() - tabStart,
-          status: "success",
-        });
-        continue;
-      }
-
       // 3c. Clear existing sheet tab content
       await clearSheetTab(sheets, sheetTab);
 
@@ -366,10 +476,10 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
         elapsedMs: tabElapsed,
         status: "success",
       });
-    } catch (err) {
-      const msg = (err as Error).message;
+    } catch (writeErr) {
+      const msg = (writeErr as Error).message;
       const tabElapsed = Date.now() - tabStart;
-      console.error(`[SheetsSync] [VERIFY] FAIL — page="${pageKey}" error: ${msg} elapsed=${tabElapsed}ms`);
+      console.error(`[SheetsSync] [VERIFY] FAIL — Sheets write error for page="${pageKey}": ${msg} elapsed=${tabElapsed}ms`);
       tabResults.push({
         pageKey,
         sheetTab,

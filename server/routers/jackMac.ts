@@ -5,15 +5,26 @@
  * Access is restricted to the JACK_MAC_WHITELIST: @prez, @sippi, @lucianobets.
  *
  * Procedures:
- *   jackMac.syncToSheets — scrapes all 4 RG pages + lineups and writes to Google Sheets
- *   jackMac.getLineups   — fetches MLB lineups for today + tomorrow (MLB Stats API)
+ *   jackMac.syncToSheets    — fires a background sync job, returns { jobId } immediately
+ *   jackMac.getSyncStatus   — polls the status of a background sync job by jobId
+ *   jackMac.getLineups      — fetches MLB lineups for today + tomorrow (MLB Stats API)
+ *
+ * BACKGROUND JOB PATTERN (critical for platform proxy timeout avoidance):
+ *   The full sync (4 CSV fetches + MLB ID resolution + 6 Sheets writes) can take
+ *   60-120s. The platform proxy kills requests at ~120s with "Service Unavailable".
+ *   Background job pattern: HTTP request completes in < 50ms, sync runs async.
+ *   Frontend polls getSyncStatus every 2s until job reaches "success" or "error".
  */
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { router } from "../_core/trpc";
 import { appUserProcedure } from "./appUsers";
-import { syncJackMacToSheets } from "../jackMacSheetsSync";
+import {
+  startSyncJob,
+  getSyncJob,
+  type SyncJob,
+} from "../jackMacSheetsSync";
 import { scrapeFangraphsLineups, type FgScrapeResult } from "../fangraphsScraper";
 
 // ─── Whitelist ────────────────────────────────────────────────────────────────
@@ -42,27 +53,66 @@ const jackMacProcedure = appUserProcedure.use(async ({ ctx, next }) => {
 export const jackMacRouter = router({
   /**
    * syncToSheets
-   * Scrapes all 4 Rotogrinders THE BAT X pages + Fangraphs lineups and writes
-   * them to the Jack Mac Google Sheet. Returns a structured result with per-tab status.
+   * Fires a background sync job and returns { jobId } IMMEDIATELY (< 50ms).
+   * The actual sync runs asynchronously. Use getSyncStatus to poll for completion.
+   *
+   * WHY BACKGROUND JOB:
+   *   The full sync takes 60-120s. The platform proxy kills requests at ~120s
+   *   with "Service Unavailable" which the tRPC client cannot JSON.parse.
+   *   Background job pattern: HTTP request completes in < 50ms, sync runs async.
    *
    * Restricted to: @prez, @sippi, @lucianobets
    */
   syncToSheets: jackMacProcedure.mutation(async ({ ctx }) => {
     const username = ctx.appUser?.username ?? "unknown";
     console.log(`[JackMac] [INPUT] syncToSheets triggered by @${username}`);
-    console.log(`[JackMac] [STEP] Starting Rotogrinders + Fangraphs → Google Sheets sync...`);
+    console.log(`[JackMac] [STEP] Starting background sync job...`);
 
-    const result = await syncJackMacToSheets();
+    // Fire-and-forget: startSyncJob() returns immediately with a jobId.
+    // The sync runs asynchronously via setImmediate in jackMacSheetsSync.ts.
+    const jobId = startSyncJob();
 
     console.log(
-      `[JackMac] [OUTPUT] syncToSheets complete: success=${result.success} totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`
+      `[JackMac] [OUTPUT] syncToSheets: background job started jobId=${jobId} by @${username}`
     );
     console.log(
-      `[JackMac] [VERIFY] ${result.success ? "PASS" : "PARTIAL"} — sync triggered by @${username}`
+      `[JackMac] [VERIFY] PASS — sync job enqueued, returning jobId to client immediately`
     );
 
-    return result;
+    return { jobId };
   }),
+
+  /**
+   * getSyncStatus
+   * Polls the status of a background sync job by jobId.
+   * Returns the full SyncJob object including result when complete.
+   *
+   * Frontend should poll every 2s until status is "success" or "error".
+   *
+   * Restricted to: @prez, @sippi, @lucianobets
+   */
+  getSyncStatus: jackMacProcedure
+    .input(z.object({ jobId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const username = ctx.appUser?.username ?? "unknown";
+      const job = getSyncJob(input.jobId);
+
+      if (!job) {
+        console.warn(
+          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found (evicted or invalid) for @${username}`
+        );
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Sync job not found: ${input.jobId}. It may have expired (jobs are retained for 30 minutes).`,
+        });
+      }
+
+      console.log(
+        `[JackMac] [STATE] getSyncStatus: jobId=${input.jobId} status=${job.status} elapsed=${job.elapsedMs ?? "pending"}ms for @${username}`
+      );
+
+      return job as SyncJob;
+    }),
 
   /**
    * getLineups
