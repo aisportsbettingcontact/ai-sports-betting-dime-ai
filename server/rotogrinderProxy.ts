@@ -91,11 +91,46 @@ const mlbIdCache = new Map<string, MlbIdEntry>();
 const MLB_ID_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ");
+  // Replace hyphens with spaces FIRST so "Hao-Yu Lee" → "hao yu lee" (not "haoyu lee")
+  // Then strip remaining non-alpha-space characters (apostrophes, periods, etc.)
+  return name.trim().toLowerCase().replace(/-/g, " ").replace(/[^a-z ]/g, "").replace(/\s+/g, " ");
+}
+
+/**
+ * First-name alias map for players whose RotoGrinders name differs from MLB Stats API.
+ * Key: normalized first name as it appears in RG CSV
+ * Value: normalized first name as it appears in MLB Stats API
+ *
+ * Usage: applied in resolveMlbId before the MLB API lookup.
+ */
+const FIRST_NAME_ALIASES: Record<string, string> = {
+  // Cameron Schlittler → Cam Schlittler (MLB API uses "Cam")
+  "cameron": "cam",
+};
+
+/**
+ * Apply first-name aliases to a player name.
+ * e.g. "Cameron Schlittler" → "Cam Schlittler"
+ */
+function applyFirstNameAlias(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name;
+  const firstLower = parts[0].toLowerCase();
+  const alias = FIRST_NAME_ALIASES[firstLower];
+  if (!alias) return name;
+  // Preserve original casing style (capitalize alias)
+  const aliasCapitalized = alias.charAt(0).toUpperCase() + alias.slice(1);
+  return [aliasCapitalized, ...parts.slice(1)].join(" ");
 }
 
 async function resolveMlbId(playerName: string): Promise<number | null> {
-  const key = normalizeName(playerName);
+  // Apply first-name alias BEFORE cache key computation so aliases share the same cache entry
+  const aliasedName = applyFirstNameAlias(playerName);
+  if (aliasedName !== playerName) {
+    console.log(`[RGProxy] [STATE] First-name alias applied: "${playerName}" → "${aliasedName}"`);
+  }
+
+  const key = normalizeName(aliasedName);
   const cached = mlbIdCache.get(key);
   // For null cache hits, only re-try after 5 minutes (not 24h) to catch newly promoted players
   const nullTtl = 5 * 60 * 1000;
@@ -105,7 +140,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     if (cached.mlbId === null && age < nullTtl) return null;
   }
 
-  const encoded = encodeURIComponent(playerName.trim());
+  const encoded = encodeURIComponent(aliasedName.trim());
 
   // ── Attempt 1: MLB Stats API /people/search with sportId=1 (MLB only) ────────
   try {
@@ -174,7 +209,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     console.warn(`[RGProxy] [STATE] MLB ID attempt 3 failed for "${playerName}": ${(e as Error).message}`);
   }
 
-  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}" after 3 attempts`);
+  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}"${aliasedName !== playerName ? ` (aliased: "${aliasedName}")` : ""} after 3 attempts`);
   mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
   return null;
 }
@@ -281,14 +316,18 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
   }
 
   // ── Helper: validate CSV text ──────────────────────────────────────────────
-  function validateCsv(text: string): void {
+  // Returns true if CSV has data, false if empty (empty is valid for tomorrow tabs when
+  // projections haven't been published yet). Throws only for non-CSV (paywall/redirect).
+  function validateCsv(text: string): boolean {
     if (!text.trim()) {
-      throw new Error(`RG CSV returned empty response for csvId=${csvId}`);
+      console.log(`[RGProxy] [STATE] CSV is empty for csvId=${csvId} (projections not yet published — this is normal for tomorrow tabs)`);
+      return false; // empty but valid
     }
     if (!text.includes("PLAYER") && !text.includes("NAME")) {
       console.error(`[RGProxy] [VERIFY] FAIL — CSV response does not contain expected headers. First 300 chars: ${text.substring(0, 300)}`);
       throw new Error(`RG CSV response appears to be non-CSV (paywall or redirect) for csvId=${csvId}`);
     }
+    return true; // has data
   }
 
   // ── Attempt 1: use provided cookie ────────────────────────────────────────
@@ -305,12 +344,16 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
     console.log(`[RGProxy] [STATE] CSV fetch after re-auth: status=${res.status}`);
     if (!res.ok) throw new Error(`RG CSV returned ${res.status} after re-auth`);
     const text = await res.text();
-    validateCsv(text);
+    const hasData = validateCsv(text);
+    if (!hasData) {
+      console.log(`[RGProxy] [STATE] CSV empty after re-auth for csvId=${csvId} — returning empty string`);
+      return "";
+    }
     console.log(`[RGProxy] [STATE] CSV fetched after re-auth: ${text.length} bytes, ${text.split("\n").length} lines`);
     return text;
   }
 
-  // ── 503/502/429: exponential backoff retry (up to 3 total attempts) ─────────
+  // ── 503/502/429: exponential backoff retry (up to 3 total attempts) ─────────────
   const RETRYABLE = new Set([429, 502, 503, 504]);
   if (RETRYABLE.has(res.status)) {
     const delays = [1500, 3500]; // ms between retries
@@ -333,7 +376,11 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
   }
 
   const text = await res.text();
-  validateCsv(text);
+  const hasData = validateCsv(text);
+  if (!hasData) {
+    console.log(`[RGProxy] [STATE] CSV empty for csvId=${csvId} — returning empty string (projections not yet published)`);
+    return "";
+  }
   console.log(`[RGProxy] [STATE] CSV fetched: ${text.length} bytes, ${text.split("\n").length} lines`);
   return text;
 }
@@ -386,7 +433,13 @@ export async function parseRgCsv(
   title: string,
   type: "pitchers" | "hitters"
 ): Promise<RgTableData> {
-  // ── Parse CSV ─────────────────────────────────────────────────────────────
+  // ── Handle empty CSV (projections not yet published for tomorrow tabs) ───────────────
+  if (!csvText || !csvText.trim()) {
+    console.log(`[RGProxy] [STATE] parseRgCsv: empty csvText for page=${pageKey} — returning empty result (projections not yet published)`);
+    return { title, pageKey, type, updatedAt: "", columns: [], rows: [] };
+  }
+
+  // ── Parse CSV ─────────────────────────────────────────────────────
   const lines = csvText.trim().split("\n");
   if (lines.length < 2) {
     console.warn(`[RGProxy] [VERIFY] WARN — CSV has fewer than 2 lines for page=${pageKey}`);
