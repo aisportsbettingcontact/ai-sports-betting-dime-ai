@@ -26,9 +26,15 @@ export type EquityPoint = {
   date: string;
   cumPL: number;
   betId: number;
-  pick: string;
+  /** pick string — human-readable pick label e.g. "NYY ML" */
+  label: string;
+  /** Legacy alias — same as label, kept for backward compat */
+  pick?: string;
   result: string;
   pl: number;
+  odds?: number;
+  units?: number;
+  isSpecial?: boolean;
 };
 
 export type BreakdownEntry = {
@@ -68,6 +74,13 @@ export type StatsData = {
   byTimeframe: BreakdownEntry[];
   equityCurve: EquityPoint[];
   dollarNetProfit?: number;
+  // Winning ticket stats
+  maxDrawdown?: number;
+  currentRunUnits?: number;
+  currentRunSince?: string;
+  ath?: number;
+  worstDayDate?: string;
+  worstDayUnits?: number;
 };
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -90,7 +103,7 @@ const T = {
 
 // ─── EquityChart ──────────────────────────────────────────────────────────────
 
-function EquityChartInner({ points }: { points: EquityPoint[] }) {
+function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: StatsData }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
@@ -127,8 +140,8 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     ctx.scale(dpr, dpr);
 
     const W = dims.w, H = dims.h;
-    // PAD_BOTTOM increased to 44 to accommodate x-axis date labels
-    const PAD_LEFT = 56, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 44;
+    // PAD_LEFT=64 for emotional y-axis labels, PAD_BOTTOM=44 for x-axis dates
+    const PAD_LEFT = 64, PAD_RIGHT = 20, PAD_TOP = 24, PAD_BOTTOM = 44;
     const chartW = W - PAD_LEFT - PAD_RIGHT;
     const chartH = H - PAD_TOP - PAD_BOTTOM;
 
@@ -147,25 +160,68 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     const toY = (v: number) => PAD_TOP + chartH - ((v - minV) / range) * chartH;
     const zeroY = toY(0);
 
-    // ── Y-axis grid lines + labels (white, non-bold) ──────────────────────────
+    // ── Emotional Y-axis: milestone labels instead of raw numbers ─────────────────
+    // Milestones: START (0), +25U, +50U, +100U, TODAY +{finalPL}U
+    // Plus any negative milestones if minV < 0
+    const finalPL = points[points.length - 1]?.cumPL ?? 0;
+    const isPos = finalPL >= 0;
+
+    // Build milestone set: always include 0, standard milestones, and the final value
+    const rawMilestones = [0];
+    const posMilestones = [25, 50, 100, 150, 200, 250, 300];
+    for (const m of posMilestones) {
+      if (m < maxV) rawMilestones.push(m);
+    }
+    rawMilestones.push(maxV); // ATH / final
+    if (minV < 0) {
+      const negMilestones = [-10, -25, -50];
+      for (const m of negMilestones) {
+        if (m > minV) rawMilestones.push(m);
+      }
+      rawMilestones.push(minV);
+    }
+    // Deduplicate and sort
+    const milestones = Array.from(new Set(rawMilestones)).sort((a, b) => a - b);
+
+    // Draw grid lines at each milestone
     ctx.strokeStyle = "#1e231e";
     ctx.lineWidth = 1;
-    const gridCount = 4;
-    for (let i = 0; i <= gridCount; i++) {
-      const v = minV + (range / gridCount) * i;
+    milestones.forEach(v => {
       const y = toY(v);
       ctx.beginPath();
       ctx.moveTo(PAD_LEFT, y);
       ctx.lineTo(PAD_LEFT + chartW, y);
       ctx.stroke();
-      // White non-bold y-axis labels
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = `normal 10px ${T.mono}`;
-      ctx.textAlign = "right";
-      ctx.fillText(`${v >= 0 ? "+" : ""}${v.toFixed(1)}u`, PAD_LEFT - 4, y + 3.5);
-    }
+    });
 
-    // Zero line
+    // Draw emotional y-axis labels
+    ctx.font = `normal 10px ${T.mono}`;
+    ctx.textAlign = "right";
+    milestones.forEach(v => {
+      const y = toY(v);
+      let label: string;
+      if (v === 0) {
+        label = "START";
+        ctx.fillStyle = "#888888";
+      } else if (v === maxV && v === finalPL) {
+        // Current final value = TODAY label
+        label = `TODAY`;
+        ctx.fillStyle = isPos ? "#39FF14" : "#FF073A";
+      } else if (v === maxV) {
+        // ATH badge
+        label = `ATH`;
+        ctx.fillStyle = "#FFD700";
+      } else if (v < 0) {
+        label = `${v.toFixed(0)}U`;
+        ctx.fillStyle = "#FF073A";
+      } else {
+        label = `+${v.toFixed(0)}U`;
+        ctx.fillStyle = "#FFFFFF";
+      }
+      ctx.fillText(label, PAD_LEFT - 5, y + 3.5);
+    });
+
+    // Zero line (dashed)
     ctx.strokeStyle = "#2a3a2a";
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
@@ -175,16 +231,12 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Gradient fill — always #39FF14 green (positive) or red (negative)
-    const finalPL = points[points.length - 1]?.cumPL ?? 0;
-    const isPos = finalPL >= 0;
+    // Gradient fill — #39FF14 green (positive) or red (negative)
     const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + chartH);
     if (isPos) {
-      // #39FF14 = rgb(57,255,20)
       grad.addColorStop(0, "rgba(57,255,20,0.22)");
       grad.addColorStop(1, "rgba(57,255,20,0.01)");
     } else {
-      // #FF073A = rgb(255,7,58)
       grad.addColorStop(0, "rgba(255,7,58,0.01)");
       grad.addColorStop(1, "rgba(255,7,58,0.22)");
     }
@@ -207,76 +259,162 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     });
     ctx.stroke();
 
-    // ── Neon red #FF073A loss dots ─────────────────────────────────────────────
-    // A "loss dot" marks any point where result === "LOSS" (individual losing bet)
+    // ── Milestone badges on the line ─────────────────────────────────────────────
+    // Find the first point that crosses each milestone threshold
+    const badgeMilestones = [25, 50, 100, 150, 200, 250, 300].filter(m => m <= maxV * 0.98);
+    // Also add ATH badge at the highest point
+    const athPL = stats?.ath ?? maxV;
+    const athIdx = points.reduce((best, p, i) => p.cumPL >= (points[best]?.cumPL ?? -Infinity) ? i : best, 0);
+
+    // Draw milestone crossing badges
+    badgeMilestones.forEach(milestone => {
+      // Find first index where cumPL crosses the milestone
+      let crossIdx = -1;
+      for (let i = 1; i < points.length; i++) {
+        if (points[i - 1].cumPL < milestone && points[i].cumPL >= milestone) {
+          crossIdx = i;
+          break;
+        }
+      }
+      if (crossIdx < 0) return;
+      const bx = toX(crossIdx);
+      const by = toY(milestone);
+      // Badge pill background
+      const label = `+${milestone}U`;
+      ctx.font = `bold 9px ${T.mono}`;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + 10, bh = 16;
+      const bLeft = Math.min(bx - bw / 2, PAD_LEFT + chartW - bw - 2);
+      const bTop = by - bh - 6;
+      ctx.fillStyle = "rgba(57,255,20,0.18)";
+      ctx.strokeStyle = "#39FF14";
+      ctx.lineWidth = 1;
+      // Rounded rect
+      const r = 3;
+      ctx.beginPath();
+      ctx.moveTo(bLeft + r, bTop);
+      ctx.lineTo(bLeft + bw - r, bTop);
+      ctx.quadraticCurveTo(bLeft + bw, bTop, bLeft + bw, bTop + r);
+      ctx.lineTo(bLeft + bw, bTop + bh - r);
+      ctx.quadraticCurveTo(bLeft + bw, bTop + bh, bLeft + bw - r, bTop + bh);
+      ctx.lineTo(bLeft + r, bTop + bh);
+      ctx.quadraticCurveTo(bLeft, bTop + bh, bLeft, bTop + bh - r);
+      ctx.lineTo(bLeft, bTop + r);
+      ctx.quadraticCurveTo(bLeft, bTop, bLeft + r, bTop);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#39FF14";
+      ctx.textAlign = "center";
+      ctx.fillText(label, bLeft + bw / 2, bTop + bh / 2 + 3.5);
+      // Vertical tick from badge to line
+      ctx.strokeStyle = "rgba(57,255,20,0.4)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(bx, bTop + bh);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // ATH badge (gold) at the highest point
+    {
+      const bx = toX(athIdx);
+      const by = toY(points[athIdx]?.cumPL ?? maxV);
+      const label = `ATH +${athPL.toFixed(1)}U`;
+      ctx.font = `bold 9px ${T.mono}`;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + 10, bh = 16;
+      const bLeft = Math.min(bx - bw / 2, PAD_LEFT + chartW - bw - 2);
+      const bTop = Math.max(PAD_TOP + 2, by - bh - 6);
+      ctx.fillStyle = "rgba(255,215,0,0.18)";
+      ctx.strokeStyle = "#FFD700";
+      ctx.lineWidth = 1.5;
+      const r = 3;
+      ctx.beginPath();
+      ctx.moveTo(bLeft + r, bTop);
+      ctx.lineTo(bLeft + bw - r, bTop);
+      ctx.quadraticCurveTo(bLeft + bw, bTop, bLeft + bw, bTop + r);
+      ctx.lineTo(bLeft + bw, bTop + bh - r);
+      ctx.quadraticCurveTo(bLeft + bw, bTop + bh, bLeft + bw - r, bTop + bh);
+      ctx.lineTo(bLeft + r, bTop + bh);
+      ctx.quadraticCurveTo(bLeft, bTop + bh, bLeft, bTop + bh - r);
+      ctx.lineTo(bLeft, bTop + r);
+      ctx.quadraticCurveTo(bLeft, bTop, bLeft + r, bTop);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#FFD700";
+      ctx.textAlign = "center";
+      ctx.fillText(label, bLeft + bw / 2, bTop + bh / 2 + 3.5);
+    }
+
+    // ── Selective red dots: ONLY worst day + max drawdown point ───────────────────
+    // All other losses = no dot (clean green line)
+    const specialBetIds = new Set<number>();
+    // Mark worst day bets and max drawdown bets (server sets isSpecial on these)
+    points.forEach(p => { if (p.isSpecial && p.result === "LOSS") specialBetIds.add(p.betId); });
+
     points.forEach((p, i) => {
-      if (p.result === "LOSS") {
+      if (specialBetIds.has(p.betId)) {
         const dx = toX(i);
         const dy = toY(p.cumPL);
+        // Outer glow
         ctx.beginPath();
-        ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+        ctx.arc(dx, dy, 7, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,7,58,0.15)";
+        ctx.fill();
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(dx, dy, 4, 0, Math.PI * 2);
         ctx.fillStyle = "#FF073A";
         ctx.fill();
-        // Neon glow ring
+        // Ring
         ctx.beginPath();
-        ctx.arc(dx, dy, 4.5, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,7,58,0.35)";
+        ctx.arc(dx, dy, 5.5, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,7,58,0.5)";
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
     });
 
-    // ── X-axis date labels (evenly distributed, white non-bold) ───────────────
-    // Collect unique dates in order (first occurrence index per date)
+    // ── X-axis date labels (evenly distributed, white non-bold) ───────────────────────
     const dateFirstIdx = new Map<string, number>();
     points.forEach((p, i) => {
       if (!dateFirstIdx.has(p.date)) dateFirstIdx.set(p.date, i);
     });
-    const uniqueDates = Array.from(dateFirstIdx.entries()); // [date, firstIdx]
+    const uniqueDates = Array.from(dateFirstIdx.entries());
 
-    // Determine max ticks that fit without overlap (each label ~46px wide)
     const maxTicks = Math.max(2, Math.floor(chartW / 52));
-    // Evenly sample from uniqueDates array
     const step = uniqueDates.length <= maxTicks
       ? 1
       : Math.ceil(uniqueDates.length / maxTicks);
 
     const tickIndices: number[] = [];
-    for (let t = 0; t < uniqueDates.length; t += step) {
-      tickIndices.push(t);
-    }
-    // Always include the last date
-    if (tickIndices[tickIndices.length - 1] !== uniqueDates.length - 1) {
-      tickIndices.push(uniqueDates.length - 1);
-    }
+    for (let t = 0; t < uniqueDates.length; t += step) tickIndices.push(t);
+    if (tickIndices[tickIndices.length - 1] !== uniqueDates.length - 1) tickIndices.push(uniqueDates.length - 1);
 
     ctx.fillStyle = "#FFFFFF";
     ctx.font = `normal 9px ${T.mono}`;
     ctx.textAlign = "center";
     const xAxisY = PAD_TOP + chartH + 16;
-
-    // Tick marks
     ctx.strokeStyle = "#2a3a2a";
     ctx.lineWidth = 1;
 
     tickIndices.forEach(t => {
       const [dateStr, firstIdx] = uniqueDates[t];
       const px = toX(firstIdx);
-      // Tick mark
       ctx.beginPath();
       ctx.moveTo(px, PAD_TOP + chartH);
       ctx.lineTo(px, PAD_TOP + chartH + 5);
       ctx.stroke();
-      // Format date: "MM/DD" from "YYYY-MM-DD"
-      let label = dateStr;
       const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        label = `${parts[1]}/${parts[2]}`;
-      }
+      const label = parts.length === 3 ? `${parts[1]}/${parts[2]}` : dateStr;
       ctx.fillStyle = "#FFFFFF";
       ctx.fillText(label, px, xAxisY + 4);
     });
-  }, [points, dims]);
+  }, [points, dims, stats]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -286,7 +424,7 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
 
-      const PAD_LEFT = 56, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 44;
+      const PAD_LEFT = 64, PAD_RIGHT = 20, PAD_TOP = 24, PAD_BOTTOM = 44;
       const chartW = dims.w - PAD_LEFT - PAD_RIGHT;
       const chartH = dims.h - PAD_TOP - PAD_BOTTOM;
       const values = points.map(p => p.cumPL);
@@ -344,7 +482,7 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
           top: Math.max(4, tooltip.dotY - 82),
           fontFamily: T.mono,
         }}>
-          <div style={{ fontWeight: 700, color: T.text, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tooltip.point.pick}</div>
+          <div style={{ fontWeight: 700, color: T.text, marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tooltip.point.label ?? tooltip.point.pick}</div>
           <div style={{ color: tooltip.point.result === "WIN" ? T.green : T.red, fontWeight: 700 }}>
             {tooltip.point.result} {tooltip.point.pl >= 0 ? "+" : ""}{tooltip.point.pl.toFixed(2)}u
           </div>
@@ -360,7 +498,9 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
   );
 }
 
-export const EquityChart = memo(EquityChartInner);
+export const EquityChart = memo(function EquityChartWrapper({ points, stats }: { points: EquityPoint[]; stats?: StatsData }) {
+  return <EquityChartInner points={points} stats={stats} />;
+});
 
 // ─── Dual-sided bar ───────────────────────────────────────────────────────────
 

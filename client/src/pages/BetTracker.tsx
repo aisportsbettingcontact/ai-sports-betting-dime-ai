@@ -1484,6 +1484,67 @@ const SEASON_START_DATES: Record<string, string> = {
   ALL:   "2025-10-04", // earliest of all sports
 };
 
+// ── Verified Bets Drawer sub-component ──────────────────────────────────────
+function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnalytics").EquityPoint[] }) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  return (
+    <div className="mt-3 border-t border-zinc-800/60">
+      <button
+        type="button"
+        onClick={() => setDrawerOpen(p => !p)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold tracking-widest uppercase hover:bg-zinc-800/40 transition-colors"
+        style={{ color: "#888" }}
+      >
+        <span>Every pick tracked →</span>
+        <ChevronDown size={14} className={`transition-transform duration-200 ${drawerOpen ? "rotate-180" : ""}`} />
+      </button>
+      {drawerOpen && (
+        <div className="overflow-x-auto max-h-72 overflow-y-auto">
+          <table className="w-full text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <thead>
+              <tr className="border-b border-zinc-800 sticky top-0 bg-zinc-900">
+                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "#555" }}>DATE</th>
+                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "#555" }}>PICK</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>ODDS</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>UNITS</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>P/L</th>
+                <th className="px-3 py-2 text-center font-semibold tracking-widest uppercase" style={{ color: "#555" }}>RESULT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pts.map((pt, i) => {
+                const isWin  = pt.result === "WIN";
+                const isLoss = pt.result === "LOSS";
+                const plColor = isWin ? "#39FF14" : isLoss ? "#FF073A" : "#888";
+                const plSign  = pt.pl >= 0 ? "+" : "";
+                return (
+                  <tr key={i} className="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
+                    <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: "#aaa" }}>{pt.date}</td>
+                    <td className="px-3 py-1.5 max-w-[160px] truncate" style={{ color: "#ddd" }} title={pt.label ?? pt.pick}>{pt.label ?? pt.pick}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: "#aaa" }}>{pt.odds != null ? (pt.odds > 0 ? `+${pt.odds}` : pt.odds) : "\u2014"}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: "#aaa" }}>{pt.units != null ? `${pt.units}u` : "\u2014"}</td>
+                    <td className="px-3 py-1.5 text-right font-bold" style={{ color: plColor }}>{plSign}{pt.pl?.toFixed(2)}u</td>
+                    <td className="px-3 py-1.5 text-center">
+                      <span className="px-1.5 py-0.5 rounded text-xs font-bold tracking-widest"
+                        style={{
+                          background: isWin ? "rgba(57,255,20,0.12)" : isLoss ? "rgba(255,7,58,0.12)" : "rgba(136,136,136,0.12)",
+                          color: plColor,
+                          border: `1px solid ${plColor}40`
+                        }}>
+                        {pt.result}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BetTracker() {
   const [, navigate] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
@@ -2752,58 +2813,96 @@ export default function BetTracker() {
             <div>
               <div className="flex flex-col items-center justify-center gap-1 mb-3">
                 {dateRange === "SEASON" ? (
-                  /* ── Season mode: sport logo + season title + PREZ BETS + units ── */
-                  <>
-                    {/* Sport-specific season title */}
-                    <div className="flex items-center gap-2 mb-0.5">
-                      {/* Sport logo/emoji */}
-                      {activeSport === "MLB" && (
-                        <img
-                          src="/manus-storage/mlb-logo_50fd8568.png"
-                          alt="MLB"
-                          className="w-8 h-8 object-contain"
-                          style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.15))" }}
-                        />
-                      )}
-                      {activeSport === "NHL" && (
-                        <span className="text-2xl" role="img" aria-label="NHL">🏒</span>
-                      )}
-                      {activeSport === "NBA" && (
-                        <span className="text-2xl" role="img" aria-label="NBA">🏀</span>
-                      )}
-                      {activeSport === "NCAAM" && (
-                        <span className="text-2xl" role="img" aria-label="NCAAM">🏀</span>
-                      )}
-                      {activeSport === "ALL" && (
-                        <span className="text-2xl" role="img" aria-label="All Sports">🏆</span>
-                      )}
-                      <span className="text-lg sm:text-xl font-bold tracking-widest uppercase text-white">
-                        {activeSport === "MLB"   ? "2026 MLB SEASON"
-                          : activeSport === "NHL"   ? "2025-26 NHL SEASON"
-                          : activeSport === "NBA"   ? "2025-26 NBA SEASON"
-                          : activeSport === "NCAAM" ? "2025-26 NCAAM SEASON"
-                          : "2025-26 SEASON"}
-                      </span>
-                    </div>
-                    {/* Dynamic handicapper name — PREZ displays as PREZ BETS */}
-                    <span className="text-sm text-zinc-300 tracking-widest uppercase font-semibold mb-1">
-                      {selectedHandicapperName === "PREZ" ? "PREZ BETS" : selectedHandicapperName}
-                    </span>
-                    {/* +/- Units for the season — #39FF14 neon green when positive */}
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={24} style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }} />
-                      <span className="text-3xl sm:text-4xl font-bold tracking-widest" style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }}>
-                        {stats.netProfit >= 0 ? "+" : ""}{fmtUnits(stats.netProfit)}
-                      </span>
-                    </div>
-                    {/* Dollar P&L subtitle removed per design spec */}
-                  </>
+                  /* ── WINNING TICKET design: headline + heat badge + proof line + chart ── */
+                  (() => {
+                    const handicapperLabel = selectedHandicapperName === "PREZ" ? "PREZ BETS" : selectedHandicapperName;
+                    const sportLabel = activeSport === "MLB" ? "ON MLB"
+                      : activeSport === "NHL" ? "ON NHL"
+                      : activeSport === "NBA" ? "ON NBA"
+                      : activeSport === "NCAAM" ? "ON NCAAM"
+                      : "ACROSS ALL SPORTS";
+                    const netSign = stats.netProfit >= 0 ? "+" : "";
+                    const netColor = stats.netProfit >= 0 ? "#39FF14" : "#FF073A";
+                    // Current run: from stats (server-computed)
+                    const runUnits = (stats as any).currentRunUnits as number | undefined;
+                    const runSince = (stats as any).currentRunSince as string | undefined;
+                    const maxDD    = (stats as any).maxDrawdown    as number | undefined;
+                    // Format run since date: "YYYY-MM-DD" → "MMM D"
+                    const fmtRunSince = (d?: string) => {
+                      if (!d) return "";
+                      const parts = d.split("-");
+                      if (parts.length !== 3) return d;
+                      const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+                      const m = parseInt(parts[1], 10) - 1;
+                      const day = parseInt(parts[2], 10);
+                      return `${months[m] ?? ""} ${day}`;
+                    };
+                    const hasRun = runUnits != null && runUnits > 0.5;
+                    return (
+                      <>
+                        {/* Sport logo row */}
+                        <div className="flex items-center gap-2 mb-1">
+                          {activeSport === "MLB" && (
+                            <img src="/manus-storage/mlb-logo_50fd8568.png" alt="MLB" className="w-7 h-7 object-contain" style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.15))" }} />
+                          )}
+                          {activeSport === "NHL" && <span className="text-xl" role="img">🏒</span>}
+                          {activeSport === "NBA" && <span className="text-xl" role="img">🏀</span>}
+                          {activeSport === "NCAAM" && <span className="text-xl" role="img">🏀</span>}
+                          {activeSport === "ALL" && <span className="text-xl" role="img">🏆</span>}
+                          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#555" }}>
+                            {activeSport === "MLB" ? "2026 MLB SEASON" : activeSport === "NHL" ? "2025-26 NHL" : activeSport === "NBA" ? "2025-26 NBA" : activeSport === "NCAAM" ? "2025-26 NCAAM" : "2025-26 SEASON"}
+                          </span>
+                        </div>
+
+                        {/* HEADLINE: PREZ BETS IS UP +120.4U ON MLB */}
+                        <div className="text-center mb-1">
+                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                            {handicapperLabel} IS {stats.netProfit >= 0 ? "UP" : "DOWN"}{" "}
+                          </span>
+                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: netColor, letterSpacing: "0.08em" }}>
+                            {netSign}{fmtUnits(stats.netProfit)}
+                          </span>
+                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                            {" "}{sportLabel}
+                          </span>
+                        </div>
+
+                        {/* HEAT BADGE: CURRENT RUN */}
+                        {hasRun && (
+                          <div className="flex items-center justify-center gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase"
+                              style={{ background: "rgba(57,255,20,0.12)", border: "1px solid #39FF14", color: "#39FF14" }}>
+                              <span style={{ fontSize: "10px" }}>🔥</span>
+                              CURRENT RUN: +{runUnits!.toFixed(1)}U SINCE {fmtRunSince(runSince)}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* PROOF LINE: ROI · risked · every bet tracked */}
+                        <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-xs mb-2" style={{ color: "#888" }}>
+                          <span style={{ color: stats.roi >= 0 ? "#39FF14" : "#FF073A", fontWeight: 700 }}>
+                            {stats.roi >= 0 ? "+" : ""}{stats.roi.toFixed(2)}% ROI
+                          </span>
+                          <span>·</span>
+                          <span>{fmtUnits(stats.totalRisk)} risked</span>
+                          <span>·</span>
+                          <span>every bet tracked</span>
+                          {maxDD != null && maxDD > 0 && (
+                            <>
+                              <span>·</span>
+                              <span style={{ color: "#FF073A" }}>max drawdown: -{maxDD.toFixed(1)}u</span>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()
                 ) : (
                   /* ── All other modes: trend icon + units value ── */
                   <>
                     <div className="flex items-center gap-2.5">
-                      <TrendingUp size={28} className={stats.netProfit >= 0 ? "text-emerald-400" : "text-red-400"} />
-                      <span className={`text-3xl sm:text-4xl font-bold tracking-widest uppercase ${stats.netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      <TrendingUp size={28} style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }} />
+                      <span className="text-3xl sm:text-4xl font-bold tracking-widest uppercase" style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }}>
                         {stats.netProfit >= 0 ? "+" : ""}{fmtUnits(stats.netProfit)}
                       </span>
                     </div>
@@ -2822,7 +2921,13 @@ export default function BetTracker() {
                   </>
                 )}
               </div>
-              <EquityChart points={stats.equityCurve} />
+              {/* Pass stats to EquityChart for milestone badges and selective dots */}
+              <EquityChart points={stats.equityCurve} stats={stats as any} />
+
+              {/* ── Verified Bets Drawer ── */}
+              {dateRange === "SEASON" && (
+                <VerifiedBetsDrawer pts={stats.equityCurve ?? []} />
+              )}
             </div>
 
           </div>

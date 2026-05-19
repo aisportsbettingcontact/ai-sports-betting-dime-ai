@@ -1428,6 +1428,8 @@ export const betTrackerRouter = router({
       let wins = 0, losses = 0, pushes = 0, pending = 0, voids = 0;
       let totalRisk = 0, totalWon = 0, totalLost = 0;
       let bestWin = 0, worstLoss = 0;
+      // Day P/L tracking for worst day (per-day aggregated P/L + worst single bet)
+      const dayPLTrack = new Map<string, { pl: number; worstBetId: number; worstBetPl: number }>();
       // Breakdown maps (single pass — all dimensions simultaneously)
       type BkEntry = { wins: number; losses: number; pushes: number; risk: number; won: number; lost: number };
       const byTypeMap      = new Map<string, BkEntry>();
@@ -1440,8 +1442,15 @@ export const betTrackerRouter = router({
       const dayPLMap       = new Map<string, number>();
       // Equity curve (chronological — statsRows ordered ASC)
       let cumPL = 0;
-      const equityCurve: { date: string; cumPL: number; betId: number; pick: string; result: string; pl: number }[] = [];
+      const equityCurve: { date: string; cumPL: number; betId: number; label: string; result: string; pl: number; odds: number; units: number; isSpecial?: boolean }[] = [];
       let longestWinStreak = 0, currentWinStreak = 0;
+      // ATH / drawdown / current run tracking
+      let ath = 0;                   // all-time high cumPL
+      let peakForDD = 0;             // peak used for current drawdown measurement
+      let maxDrawdown = 0;           // maximum drawdown (positive = how far below peak)
+      let maxDrawdownBetId = -1;     // betId at the bottom of the max drawdown
+      let currentRunStart = "";      // date when current winning run started (last time cumPL was at a trough)
+      let currentRunStartPL = 0;     // cumPL at start of current run
 
       function bkGet(map: Map<string, BkEntry>, key: string): BkEntry {
         if (!map.has(key)) map.set(key, { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 });
@@ -1495,13 +1504,39 @@ export const betTrackerRouter = router({
         if (res === "WIN")  dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + toWinU);
         if (res === "LOSS") dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) - riskU);
 
-        // Equity curve
+        // Day P/L tracking for worst day
+        if (res === "WIN" || res === "LOSS") {
+          const dayPL = res === "WIN" ? toWinU : -riskU;
+          const existing = dayPLTrack.get(bet.gameDate);
+          if (!existing) {
+            dayPLTrack.set(bet.gameDate, { pl: dayPL, worstBetId: bet.id, worstBetPl: dayPL });
+          } else {
+            existing.pl += dayPL;
+            if (dayPL < existing.worstBetPl) { existing.worstBetPl = dayPL; existing.worstBetId = bet.id; }
+          }
+        }
+
+        // Equity curve + ATH/drawdown/currentRun tracking
         if (res === "WIN") {
           cumPL += toWinU;
-          equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "WIN", pl: parseFloat(toWinU.toFixed(2)) });
+          const cp = parseFloat(cumPL.toFixed(2));
+          equityCurve.push({ date: bet.gameDate, cumPL: cp, betId: bet.id, label: bet.pick, result: "WIN", pl: parseFloat(toWinU.toFixed(2)), odds: bet.odds, units: riskUnitsRaw ?? riskU });
+          // ATH tracking
+          if (cp > ath) {
+            ath = cp;
+            peakForDD = cp;
+            // When we set a new ATH, the current run started at the last trough before this
+            // We'll finalize currentRunStart after the loop
+          }
         } else if (res === "LOSS") {
           cumPL -= riskU;
-          equityCurve.push({ date: bet.gameDate, cumPL: parseFloat(cumPL.toFixed(2)), betId: bet.id, pick: bet.pick, result: "LOSS", pl: parseFloat((-riskU).toFixed(2)) });
+          const cp = parseFloat(cumPL.toFixed(2));
+          equityCurve.push({ date: bet.gameDate, cumPL: cp, betId: bet.id, label: bet.pick, result: "LOSS", pl: parseFloat((-riskU).toFixed(2)), odds: bet.odds, units: riskUnitsRaw ?? riskU });
+          // Drawdown tracking
+          const dd = peakForDD - cp;
+          if (dd > maxDrawdown) { maxDrawdown = dd; maxDrawdownBetId = bet.id; }
+          // Track current run trough: if we're below the previous run start PL, reset
+          if (cp < currentRunStartPL) { currentRunStart = bet.gameDate; currentRunStartPL = cp; }
         }
 
         // Win streak
@@ -1544,6 +1579,52 @@ export const betTrackerRouter = router({
       let biggestDayDate = "", biggestDayUnits = 0;
       dayPLMap.forEach((pl, date) => { if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; } });
 
+      // ── Worst day computation ─────────────────────────────────────────────────
+      let worstDayDate = "", worstDayUnits = 0, worstDayBetId = -1;
+      dayPLTrack.forEach((v, date) => {
+        if (v.pl < worstDayUnits) { worstDayUnits = v.pl; worstDayDate = date; worstDayBetId = v.worstBetId; }
+      });
+
+      // ── Current run computation ───────────────────────────────────────────────
+      // Walk equityCurve backwards to find the last local minimum (trough) before the current ATH
+      // The current run = cumPL at final point minus cumPL at the last trough
+      const finalCumPL = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].cumPL : 0;
+      let troughPL = finalCumPL;
+      let troughDate = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].date : "";
+      // Walk backwards from the end to find the last trough (lowest point before current level)
+      for (let i = equityCurve.length - 1; i >= 0; i--) {
+        if (equityCurve[i].cumPL <= troughPL) {
+          troughPL = equityCurve[i].cumPL;
+          troughDate = equityCurve[i].date;
+        } else {
+          // We found a point higher than the trough — the trough is the minimum
+          break;
+        }
+      }
+      const currentRunUnits = parseFloat((finalCumPL - troughPL).toFixed(2));
+      const currentRunSince = troughDate;
+
+      // ── Mark special equity curve points ─────────────────────────────────────
+      // Only mark: worst day bet, max drawdown bet — these get red dots
+      // ATH gets a gold badge
+      const specialBetIds = new Set<number>();
+      if (worstDayBetId >= 0) specialBetIds.add(worstDayBetId);
+      if (maxDrawdownBetId >= 0) specialBetIds.add(maxDrawdownBetId);
+      // Find ATH point index
+      let athBetId = -1;
+      let athCumPL = 0;
+      for (const pt of equityCurve) {
+        if (pt.cumPL > athCumPL) { athCumPL = pt.cumPL; athBetId = pt.betId; }
+      }
+      // Mark special points
+      for (const pt of equityCurve) {
+        if (specialBetIds.has(pt.betId) || pt.betId === athBetId) {
+          pt.isSpecial = true;
+        }
+      }
+
+      console.log(`[BetTracker][STATS] maxDrawdown=${maxDrawdown.toFixed(2)}u currentRunUnits=${currentRunUnits}u since=${currentRunSince} ath=${athCumPL.toFixed(2)}u worstDay=${worstDayDate}(${worstDayUnits.toFixed(2)}u)`);
+
       const stats = {
         totalBets:       statsRows.length,
         wins, losses, pushes, pending, voids,
@@ -1562,6 +1643,13 @@ export const betTrackerRouter = router({
         biggestDayDate,
         biggestDayUnits:  parseFloat(biggestDayUnits.toFixed(2)),
         longestWinStreak,
+        // Winning ticket stats
+        maxDrawdown:      parseFloat(maxDrawdown.toFixed(2)),
+        currentRunUnits,
+        currentRunSince,
+        ath:              parseFloat(athCumPL.toFixed(2)),
+        worstDayDate,
+        worstDayUnits:    parseFloat(worstDayUnits.toFixed(2)),
       };
 
       console.log(`[BetTracker][OUTPUT] listWithStats: userId=${userId} netProfit=${stats.netProfit}u dollarNetProfit=$${stats.dollarNetProfit} unitSize=${unitSize}`);
