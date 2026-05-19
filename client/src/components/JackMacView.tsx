@@ -494,26 +494,69 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   // ── Whitelist guard (client-side) ──────────────────────────────────────────
   const isAllowed = Boolean(appUser && JACK_MAC_WHITELIST.has(appUser.username));
 
-  // ── Google Sheets Sync mutation ───────────────────────────────────────────
-  const syncToSheets = trpc.jackMac.syncToSheets.useMutation({
-    onSuccess: (result) => {
-      if (result.success) {
-        toast.success(
-          `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows written across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
-          { duration: 6000 }
-        );
-        console.log(`[JACKMAC][SHEETS][OUTPUT] Sync success: totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`);
-      } else {
-        const failedTabs = result.tabs.filter(t => t.status === "error").map(t => t.sheetTab).join(", ");
-        toast.warning(`Partial sync — some tabs failed: ${failedTabs}`, { duration: 8000 });
-        console.warn(`[JACKMAC][SHEETS][VERIFY] PARTIAL — failed tabs: ${failedTabs}`);
+  // ── Google Sheets Sync — background job pattern ──────────────────────────
+  // syncToSheets.mutate() returns { jobId } immediately (< 50ms).
+  // We then poll getSyncStatus every 2s until the job completes.
+  // This avoids the platform proxy 120s timeout that caused "Service Unavailable".
+  const [syncJobId, setSyncJobId] = useState<string | null>(null);
+  const [isSyncPolling, setIsSyncPolling] = useState(false);
+  const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const syncStatusQuery = trpc.jackMac.getSyncStatus.useQuery(
+    { jobId: syncJobId! },
+    {
+      enabled: isSyncPolling && syncJobId !== null,
+      refetchInterval: isSyncPolling ? 2000 : false,
+      retry: false,
+    }
+  );
+
+  // Watch syncStatusQuery for completion
+  useEffect(() => {
+    if (!isSyncPolling || !syncStatusQuery.data) return;
+    const job = syncStatusQuery.data;
+    if (job.status === "success" || job.status === "error") {
+      setIsSyncPolling(false);
+      setSyncJobId(null);
+      if (syncPollRef.current) {
+        clearInterval(syncPollRef.current);
+        syncPollRef.current = null;
       }
+      if (job.status === "success" && job.result) {
+        const result = job.result;
+        if (result.success) {
+          toast.success(
+            `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows written across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
+            { duration: 6000 }
+          );
+          console.log(`[JACKMAC][SHEETS][OUTPUT] Sync success: totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`);
+        } else {
+          const failedTabs = result.tabs.filter(t => t.status === "error").map(t => t.sheetTab).join(", ");
+          toast.warning(`Partial sync — some tabs failed: ${failedTabs}`, { duration: 8000 });
+          console.warn(`[JACKMAC][SHEETS][VERIFY] PARTIAL — failed tabs: ${failedTabs}`);
+        }
+      } else if (job.status === "error") {
+        toast.error(`Google Sheets sync failed: ${job.error ?? "Unknown error"}`, { duration: 8000 });
+        console.error(`[JACKMAC][SHEETS][VERIFY] FAIL — ${job.error}`);
+      }
+    }
+  }, [syncStatusQuery.data, isSyncPolling]);
+
+  const syncToSheetsMutation = trpc.jackMac.syncToSheets.useMutation({
+    onSuccess: ({ jobId }) => {
+      console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId}`);
+      setSyncJobId(jobId);
+      setIsSyncPolling(true);
+      toast.info("Google Sheets sync started — this runs in the background (60-90s)...", { duration: 5000 });
     },
     onError: (err) => {
-      toast.error(`Google Sheets sync failed: ${err.message}`, { duration: 8000 });
-      console.error(`[JACKMAC][SHEETS][VERIFY] FAIL — ${err.message}`);
+      toast.error(`Google Sheets sync failed to start: ${err.message}`, { duration: 8000 });
+      console.error(`[JACKMAC][SHEETS][VERIFY] FAIL — mutation error: ${err.message}`);
     },
   });
+
+  // Convenience alias for button state checks
+  const syncIsPending = syncToSheetsMutation.isPending || isSyncPolling;
 
   // ── Main tab state: "projections" | "lineups" ─────────────────────────────
   const [mainTab, setMainTab] = useState<"projections" | "lineups">("projections");
@@ -784,14 +827,14 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               type="button"
               onClick={() => {
                 console.log("[JACKMAC][SHEETS][INPUT] REFRESH GOOGLE SHEETS triggered by user");
-                syncToSheets.mutate();
+                syncToSheetsMutation.mutate();
               }}
-              disabled={syncToSheets.isPending}
-              style={{ backgroundColor: "#34A853", opacity: syncToSheets.isPending ? 0.7 : 1 }}
+              disabled={syncIsPending}
+              style={{ backgroundColor: "#34A853", opacity: syncIsPending ? 0.7 : 1 }}
               className="flex items-center gap-1.5 h-7 px-2.5 rounded text-xs font-bold text-white whitespace-nowrap transition-opacity disabled:cursor-not-allowed"
               title="Sync all tabs (RG + Lineups) to Google Sheets"
             >
-              {syncToSheets.isPending ? (
+              {syncIsPending ? (
                 <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
                 </svg>
@@ -806,7 +849,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                 </svg>
               )}
               <span className="hidden sm:inline">
-                {syncToSheets.isPending ? "Syncing..." : "REFRESH GOOGLE SHEETS"}
+                {syncIsPending ? (isSyncPolling ? "Syncing (background)..." : "Starting...") : "REFRESH GOOGLE SHEETS"}
               </span>
             </button>
           </div>

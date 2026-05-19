@@ -148,7 +148,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     console.log(`[RGProxy] [STEP] MLB ID lookup attempt 1 (MLB): player="${playerName}" url=${url1}`);
     const res1 = await fetch(url1, {
       headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(3000), // 3s: tight timeout — MLB API is fast when available
     });
     if (res1.ok) {
       const data1 = await res1.json() as { people?: { id: number; fullName: string }[] };
@@ -172,7 +172,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
       console.log(`[RGProxy] [STEP] MLB ID lookup attempt 2 (sportId=${sportId}): player="${playerName}"`);
       const res2 = await fetch(url2, {
         headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(3000), // 3s: tight timeout
       });
       if (res2.ok) {
         const data2 = await res2.json() as { people?: { id: number; fullName: string }[] };
@@ -194,7 +194,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     console.log(`[RGProxy] [STEP] MLB ID lookup attempt 3 (all sports): player="${playerName}"`);
     const res3 = await fetch(url3, {
       headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(3000), // 3s: tight timeout
     });
     if (res3.ok) {
       const data3 = await res3.json() as { people?: { id: number; fullName: string }[] };

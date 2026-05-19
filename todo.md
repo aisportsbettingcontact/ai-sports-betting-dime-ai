@@ -3654,3 +3654,17 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 723/723 passed
 - [x] Production dist rebuilt (May 19 18:53)
+
+## Session: 2026-05-19 - 503 "Service Unavailable" Root Cause Fix
+
+- [x] ROOT CAUSE: Platform proxy kills HTTP requests at ~120s with raw "Service Unavailable" text; tRPC client JSON.parse fails → "Unexpected token 'S'"
+- [x] TIMING ANALYSIS: Sequential for loop 4 tabs × up to 20s = 80s + MLB ID resolution = can exceed 120s
+- [x] FIX 1: Parallelize 4 CSV fetches — replaced sequential for loop with Promise.all in syncJackMacToSheets
+- [x] FIX 2: Background job pattern — syncToSheets returns { jobId } immediately; sync runs async via setImmediate
+- [x] FIX 3: Reduce MLB ID resolution timeout 5s → 3s per attempt
+- [x] Added startSyncJob() and getSyncJob() to jackMacSheetsSync.ts with 30-min TTL eviction
+- [x] Added getSyncStatus tRPC query to jackMac router
+- [x] Updated JackMacView: polling pattern with syncJobId state, 2s refetch interval, completion toast
+- [x] TypeScript: 0 errors
+- [x] Tests: 723/723 passed
+- [x] Production dist rebuilt (May 19 19:09)
