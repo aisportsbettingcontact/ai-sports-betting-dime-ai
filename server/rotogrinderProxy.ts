@@ -97,29 +97,86 @@ function normalizeName(name: string): string {
 async function resolveMlbId(playerName: string): Promise<number | null> {
   const key = normalizeName(playerName);
   const cached = mlbIdCache.get(key);
-  if (cached && Date.now() - cached.cachedAt < MLB_ID_TTL_MS) {
-    return cached.mlbId;
+  // For null cache hits, only re-try after 5 minutes (not 24h) to catch newly promoted players
+  const nullTtl = 5 * 60 * 1000;
+  if (cached) {
+    const age = Date.now() - cached.cachedAt;
+    if (cached.mlbId !== null && age < MLB_ID_TTL_MS) return cached.mlbId;
+    if (cached.mlbId === null && age < nullTtl) return null;
   }
 
+  const encoded = encodeURIComponent(playerName.trim());
+
+  // ── Attempt 1: MLB Stats API /people/search with sportId=1 (MLB only) ────────
   try {
-    const encoded = encodeURIComponent(playerName.trim());
-    const url = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=1`;
-    const res = await fetch(url, {
+    const url1 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=1`;
+    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 1 (MLB): player="${playerName}" url=${url1}`);
+    const res1 = await fetch(url1, {
       headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
       signal: AbortSignal.timeout(5000),
     });
-    if (!res.ok) {
-      mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
-      return null;
+    if (res1.ok) {
+      const data1 = await res1.json() as { people?: { id: number; fullName: string }[] };
+      const mlbId1 = data1.people?.[0]?.id ?? null;
+      if (mlbId1) {
+        console.log(`[RGProxy] [STATE] MLB ID resolved (attempt 1): player="${playerName}" id=${mlbId1}`);
+        mlbIdCache.set(key, { mlbId: mlbId1, cachedAt: Date.now() });
+        return mlbId1;
+      }
     }
-    const data = await res.json() as { people?: { id: number; fullName: string }[] };
-    const mlbId = data.people?.[0]?.id ?? null;
-    mlbIdCache.set(key, { mlbId, cachedAt: Date.now() });
-    return mlbId;
-  } catch {
-    mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
-    return null;
+  } catch (e) {
+    console.warn(`[RGProxy] [STATE] MLB ID attempt 1 failed for "${playerName}": ${(e as Error).message}`);
   }
+
+  // ── Attempt 2: MLB Stats API /people/search with all sport levels (MiLB + MLB) ─
+  // sportId=1=MLB, 11=AAA, 12=AA, 13=High-A, 14=Single-A, 16=Rookie
+  const allSportIds = [1, 11, 12, 13, 14, 16];
+  for (const sportId of allSportIds.slice(1)) {
+    try {
+      const url2 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=${sportId}`;
+      console.log(`[RGProxy] [STEP] MLB ID lookup attempt 2 (sportId=${sportId}): player="${playerName}"`);
+      const res2 = await fetch(url2, {
+        headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res2.ok) {
+        const data2 = await res2.json() as { people?: { id: number; fullName: string }[] };
+        const mlbId2 = data2.people?.[0]?.id ?? null;
+        if (mlbId2) {
+          console.log(`[RGProxy] [STATE] MLB ID resolved (sportId=${sportId}): player="${playerName}" id=${mlbId2}`);
+          mlbIdCache.set(key, { mlbId: mlbId2, cachedAt: Date.now() });
+          return mlbId2;
+        }
+      }
+    } catch (e) {
+      console.warn(`[RGProxy] [STATE] MLB ID attempt 2 sportId=${sportId} failed for "${playerName}": ${(e as Error).message}`);
+    }
+  }
+
+  // ── Attempt 3: MLB Stats API /people/search with all sports (no sportId filter) ─
+  try {
+    const url3 = `${MLB_STATS_API}/people/search?names=${encoded}`;
+    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 3 (all sports): player="${playerName}"`);
+    const res3 = await fetch(url3, {
+      headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res3.ok) {
+      const data3 = await res3.json() as { people?: { id: number; fullName: string }[] };
+      const mlbId3 = data3.people?.[0]?.id ?? null;
+      if (mlbId3) {
+        console.log(`[RGProxy] [STATE] MLB ID resolved (attempt 3 all sports): player="${playerName}" id=${mlbId3}`);
+        mlbIdCache.set(key, { mlbId: mlbId3, cachedAt: Date.now() });
+        return mlbId3;
+      }
+    }
+  } catch (e) {
+    console.warn(`[RGProxy] [STATE] MLB ID attempt 3 failed for "${playerName}": ${(e as Error).message}`);
+  }
+
+  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}" after 3 attempts`);
+  mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
+  return null;
 }
 
 function headshotUrl(mlbId: number | null): string {
@@ -209,46 +266,74 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
   const csvUrl = `${RG_BASE}/grids/${csvId}.csv`;
   console.log(`[RGProxy] [STEP] Fetching CSV: ${csvUrl}`);
 
-  const res = await fetch(csvUrl, {
-    headers: {
-      "Cookie": cookie,
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
-      "Referer": RG_BASE,
-      "Accept": "text/csv,text/plain,*/*",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-  });
-
-  if (res.status === 401 || res.status === 403) {
-    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing cookie cache and retrying`);
-    cachedRgCookie = null;
-    cookieFetchedAt = 0;
-    const freshCookie = await getRgSessionCookie();
-    const retryRes = await fetch(csvUrl, {
+  // ── Helper: single attempt ─────────────────────────────────────────────────
+  async function attemptFetch(cookieStr: string): Promise<globalThis.Response> {
+    return fetch(csvUrl, {
       headers: {
-        "Cookie": freshCookie,
+        "Cookie": cookieStr,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
         "Referer": RG_BASE,
         "Accept": "text/csv,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
       },
+      signal: AbortSignal.timeout(20000),
     });
-    if (!retryRes.ok) throw new Error(`RG CSV returned ${retryRes.status} after re-auth`);
-    return retryRes.text();
   }
 
-  if (!res.ok) throw new Error(`RG CSV returned ${res.status}`);
+  // ── Helper: validate CSV text ──────────────────────────────────────────────
+  function validateCsv(text: string): void {
+    if (!text.trim()) {
+      throw new Error(`RG CSV returned empty response for csvId=${csvId}`);
+    }
+    if (!text.includes("PLAYER") && !text.includes("NAME")) {
+      console.error(`[RGProxy] [VERIFY] FAIL — CSV response does not contain expected headers. First 300 chars: ${text.substring(0, 300)}`);
+      throw new Error(`RG CSV response appears to be non-CSV (paywall or redirect) for csvId=${csvId}`);
+    }
+  }
+
+  // ── Attempt 1: use provided cookie ────────────────────────────────────────
+  let res = await attemptFetch(cookie);
+  console.log(`[RGProxy] [STATE] CSV fetch attempt 1: status=${res.status}`);
+
+  // ── 401/403: re-authenticate and retry immediately ─────────────────────────
+  if (res.status === 401 || res.status === 403) {
+    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing cookie cache and re-authenticating`);
+    cachedRgCookie = null;
+    cookieFetchedAt = 0;
+    const freshCookie = await getRgSessionCookie();
+    res = await attemptFetch(freshCookie);
+    console.log(`[RGProxy] [STATE] CSV fetch after re-auth: status=${res.status}`);
+    if (!res.ok) throw new Error(`RG CSV returned ${res.status} after re-auth`);
+    const text = await res.text();
+    validateCsv(text);
+    console.log(`[RGProxy] [STATE] CSV fetched after re-auth: ${text.length} bytes, ${text.split("\n").length} lines`);
+    return text;
+  }
+
+  // ── 503/502/429: exponential backoff retry (up to 3 total attempts) ─────────
+  const RETRYABLE = new Set([429, 502, 503, 504]);
+  if (RETRYABLE.has(res.status)) {
+    const delays = [1500, 3500]; // ms between retries
+    for (let attempt = 2; attempt <= 3; attempt++) {
+      const delay = delays[attempt - 2];
+      console.warn(`[RGProxy] [STATE] RG returned ${res.status} — waiting ${delay}ms before attempt ${attempt}/3`);
+      await new Promise(r => setTimeout(r, delay));
+      res = await attemptFetch(cookie);
+      console.log(`[RGProxy] [STATE] CSV fetch attempt ${attempt}: status=${res.status}`);
+      if (res.ok) break;
+      if (!RETRYABLE.has(res.status)) break; // non-retryable error, stop
+    }
+  }
+
+  if (!res.ok) {
+    // Read body for diagnostic context
+    const body = await res.text().catch(() => "");
+    console.error(`[RGProxy] [VERIFY] FAIL — CSV fetch failed after retries: status=${res.status} body_preview="${body.substring(0, 200)}"`);
+    throw new Error(`RG CSV returned ${res.status}${body ? ` — ${body.substring(0, 120)}` : ""} for csvId=${csvId}`);
+  }
+
   const text = await res.text();
-
-  // Validate: CSV must start with a header row containing PLAYER or NAME
-  if (!text.trim()) {
-    throw new Error(`RG CSV returned empty response for csvId=${csvId}`);
-  }
-  if (!text.includes("PLAYER") && !text.includes("NAME")) {
-    // Might be a paywall HTML redirect — log and throw
-    console.error(`[RGProxy] [VERIFY] FAIL — CSV response does not contain expected headers. First 200 chars: ${text.substring(0, 200)}`);
-    throw new Error(`RG CSV response appears to be non-CSV (paywall or redirect) for csvId=${csvId}`);
-  }
-
+  validateCsv(text);
   console.log(`[RGProxy] [STATE] CSV fetched: ${text.length} bytes, ${text.split("\n").length} lines`);
   return text;
 }
@@ -364,7 +449,12 @@ export async function parseRgCsv(
     }
 
     const playerName = row["NAME"] ?? "";
+    // Skip empty names and metadata/footer rows (RG CSVs end with a row of column indices)
     if (!playerName) continue;
+    if (/^\d+$/.test(playerName.trim())) {
+      console.log(`[RGProxy] [STATE] Skipping numeric NAME row (metadata footer): NAME="${playerName}" line=${i}`);
+      continue;
+    }
 
     // PLAYER_ID from PLAYERID column
     row["PLAYER_ID"] = row["PLAYERID"] ?? "";
@@ -393,16 +483,35 @@ export async function parseRgCsv(
   console.log(`[RGProxy] [STATE] MLB ID resolution: ${resolvedCount}/${uniqueNames.length} resolved`);
 
   // ── Build final rows with enriched fields ─────────────────────────────────
+  const missingMlbIds: string[] = [];
+  const missingPlayerIds: string[] = [];
+
   const rows: Record<string, string>[] = rawRows.map(({ row, playerName, teamAbbrev, oppAbbrev }) => {
     const mlbId = mlbIdMap.get(normalizeName(playerName)) ?? null;
+    const playerId = row["PLAYERID"] ?? row["PLAYER_ID"] ?? "";
+
+    if (!mlbId) missingMlbIds.push(playerName);
+    if (!playerId) missingPlayerIds.push(playerName);
+
     return {
       ...row,
       MLB_ID:        mlbId ? String(mlbId) : "",
+      PLAYER_ID:     playerId,
       HEADSHOT_URL:  headshotUrl(mlbId),
       TEAM_LOGO_URL: teamAbbrev ? teamLogoUrl(teamAbbrev) : "",
       OPP_LOGO_URL:  oppAbbrev  ? teamLogoUrl(oppAbbrev)  : "",
     };
   });
+
+  if (missingMlbIds.length > 0) {
+    console.warn(`[RGProxy] [VERIFY] WARN — ${missingMlbIds.length} player(s) missing MLB_ID on page=${pageKey}: ${missingMlbIds.join(", ")}`);
+  }
+  if (missingPlayerIds.length > 0) {
+    console.warn(`[RGProxy] [VERIFY] WARN — ${missingPlayerIds.length} player(s) missing PLAYER_ID (RG) on page=${pageKey}: ${missingPlayerIds.join(", ")}`);
+  }
+  if (missingMlbIds.length === 0 && missingPlayerIds.length === 0) {
+    console.log(`[RGProxy] [VERIFY] PASS — All ${rows.length} players have MLB_ID and PLAYER_ID on page=${pageKey}`);
+  }
 
   // ── Build final columns list (enriched columns at front) ──────────────────
   const enrichedCols = ["NAME", "HEADSHOT_URL", "MLB_ID", "PLAYER_ID", "TEAM_LOGO_URL", "OPP_LOGO_URL"];
