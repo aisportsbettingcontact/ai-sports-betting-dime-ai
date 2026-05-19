@@ -2758,7 +2758,12 @@ export default function BetTracker() {
                     <div className="flex items-center gap-2 mb-0.5">
                       {/* Sport logo/emoji */}
                       {activeSport === "MLB" && (
-                        <span className="text-2xl" role="img" aria-label="MLB">⚾</span>
+                        <img
+                          src="/manus-storage/mlb-logo_50fd8568.png"
+                          alt="MLB"
+                          className="w-8 h-8 object-contain"
+                          style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.15))" }}
+                        />
                       )}
                       {activeSport === "NHL" && (
                         <span className="text-2xl" role="img" aria-label="NHL">🏒</span>
@@ -2780,25 +2785,18 @@ export default function BetTracker() {
                           : "2025-26 SEASON"}
                       </span>
                     </div>
-                    {/* Dynamic handicapper name */}
-                    <span className="text-sm text-zinc-300 tracking-widest uppercase font-semibold mb-1">{selectedHandicapperName}</span>
-                    {/* +/- Units for the season */}
+                    {/* Dynamic handicapper name — PREZ displays as PREZ BETS */}
+                    <span className="text-sm text-zinc-300 tracking-widest uppercase font-semibold mb-1">
+                      {selectedHandicapperName === "PREZ" ? "PREZ BETS" : selectedHandicapperName}
+                    </span>
+                    {/* +/- Units for the season — #39FF14 neon green when positive */}
                     <div className="flex items-center gap-2">
-                      <TrendingUp size={24} className={stats.netProfit >= 0 ? "text-emerald-400" : "text-red-400"} />
-                      <span className={`text-3xl sm:text-4xl font-bold tracking-widest ${stats.netProfit >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      <TrendingUp size={24} style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }} />
+                      <span className="text-3xl sm:text-4xl font-bold tracking-widest" style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }}>
                         {stats.netProfit >= 0 ? "+" : ""}{fmtUnits(stats.netProfit)}
                       </span>
                     </div>
-                    {/* Dollar P&L — shown when unitSize > 0 */}
-                    {unitSize > 0 && (
-                      <div className={`text-sm font-mono font-semibold ${
-                        stats.netProfit >= 0 ? "text-emerald-300" : "text-red-300"
-                      }`}>
-                        {stats.netProfit >= 0 ? "+" : ""}
-                        ${Math.abs(stats.netProfit * unitSize).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        {" "}tailing @{selectedHandicapperName.toLowerCase().replace(/\s+/g, "")}
-                      </div>
-                    )}
+                    {/* Dollar P&L subtitle removed per design spec */}
                   </>
                 ) : (
                   /* ── All other modes: trend icon + units value ── */

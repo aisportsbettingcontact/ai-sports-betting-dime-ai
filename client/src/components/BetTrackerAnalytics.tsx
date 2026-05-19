@@ -127,7 +127,8 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     ctx.scale(dpr, dpr);
 
     const W = dims.w, H = dims.h;
-    const PAD_LEFT = 52, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 28;
+    // PAD_BOTTOM increased to 44 to accommodate x-axis date labels
+    const PAD_LEFT = 56, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 44;
     const chartW = W - PAD_LEFT - PAD_RIGHT;
     const chartH = H - PAD_TOP - PAD_BOTTOM;
 
@@ -146,7 +147,7 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     const toY = (v: number) => PAD_TOP + chartH - ((v - minV) / range) * chartH;
     const zeroY = toY(0);
 
-    // Grid lines
+    // ── Y-axis grid lines + labels (white, non-bold) ──────────────────────────
     ctx.strokeStyle = "#1e231e";
     ctx.lineWidth = 1;
     const gridCount = 4;
@@ -157,8 +158,9 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
       ctx.moveTo(PAD_LEFT, y);
       ctx.lineTo(PAD_LEFT + chartW, y);
       ctx.stroke();
-      ctx.fillStyle = "#3a4a3a";
-      ctx.font = `10px ${T.mono}`;
+      // White non-bold y-axis labels
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = `normal 10px ${T.mono}`;
       ctx.textAlign = "right";
       ctx.fillText(`${v >= 0 ? "+" : ""}${v.toFixed(1)}u`, PAD_LEFT - 4, y + 3.5);
     }
@@ -173,16 +175,18 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Gradient fill
+    // Gradient fill — always #39FF14 green (positive) or red (negative)
     const finalPL = points[points.length - 1]?.cumPL ?? 0;
     const isPos = finalPL >= 0;
     const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + chartH);
     if (isPos) {
-      grad.addColorStop(0, "rgba(57,255,20,0.18)");
+      // #39FF14 = rgb(57,255,20)
+      grad.addColorStop(0, "rgba(57,255,20,0.22)");
       grad.addColorStop(1, "rgba(57,255,20,0.01)");
     } else {
-      grad.addColorStop(0, "rgba(255,59,59,0.01)");
-      grad.addColorStop(1, "rgba(255,59,59,0.18)");
+      // #FF073A = rgb(255,7,58)
+      grad.addColorStop(0, "rgba(255,7,58,0.01)");
+      grad.addColorStop(1, "rgba(255,7,58,0.22)");
     }
     ctx.beginPath();
     ctx.moveTo(toX(0), zeroY);
@@ -192,9 +196,9 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
     ctx.fillStyle = grad;
     ctx.fill();
 
-    // Main line
+    // Main line — #39FF14 when positive, #FF073A when negative
     ctx.beginPath();
-    ctx.strokeStyle = isPos ? T.green : T.red;
+    ctx.strokeStyle = isPos ? "#39FF14" : "#FF073A";
     ctx.lineWidth = 2;
     ctx.lineJoin = "round";
     points.forEach((p, i) => {
@@ -202,6 +206,76 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
       else ctx.lineTo(toX(i), toY(p.cumPL));
     });
     ctx.stroke();
+
+    // ── Neon red #FF073A loss dots ─────────────────────────────────────────────
+    // A "loss dot" marks any point where result === "LOSS" (individual losing bet)
+    points.forEach((p, i) => {
+      if (p.result === "LOSS") {
+        const dx = toX(i);
+        const dy = toY(p.cumPL);
+        ctx.beginPath();
+        ctx.arc(dx, dy, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#FF073A";
+        ctx.fill();
+        // Neon glow ring
+        ctx.beginPath();
+        ctx.arc(dx, dy, 4.5, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,7,58,0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    });
+
+    // ── X-axis date labels (evenly distributed, white non-bold) ───────────────
+    // Collect unique dates in order (first occurrence index per date)
+    const dateFirstIdx = new Map<string, number>();
+    points.forEach((p, i) => {
+      if (!dateFirstIdx.has(p.date)) dateFirstIdx.set(p.date, i);
+    });
+    const uniqueDates = Array.from(dateFirstIdx.entries()); // [date, firstIdx]
+
+    // Determine max ticks that fit without overlap (each label ~46px wide)
+    const maxTicks = Math.max(2, Math.floor(chartW / 52));
+    // Evenly sample from uniqueDates array
+    const step = uniqueDates.length <= maxTicks
+      ? 1
+      : Math.ceil(uniqueDates.length / maxTicks);
+
+    const tickIndices: number[] = [];
+    for (let t = 0; t < uniqueDates.length; t += step) {
+      tickIndices.push(t);
+    }
+    // Always include the last date
+    if (tickIndices[tickIndices.length - 1] !== uniqueDates.length - 1) {
+      tickIndices.push(uniqueDates.length - 1);
+    }
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = `normal 9px ${T.mono}`;
+    ctx.textAlign = "center";
+    const xAxisY = PAD_TOP + chartH + 16;
+
+    // Tick marks
+    ctx.strokeStyle = "#2a3a2a";
+    ctx.lineWidth = 1;
+
+    tickIndices.forEach(t => {
+      const [dateStr, firstIdx] = uniqueDates[t];
+      const px = toX(firstIdx);
+      // Tick mark
+      ctx.beginPath();
+      ctx.moveTo(px, PAD_TOP + chartH);
+      ctx.lineTo(px, PAD_TOP + chartH + 5);
+      ctx.stroke();
+      // Format date: "MM/DD" from "YYYY-MM-DD"
+      let label = dateStr;
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        label = `${parts[1]}/${parts[2]}`;
+      }
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(label, px, xAxisY + 4);
+    });
   }, [points, dims]);
 
   const handleMouseMove = useCallback(
@@ -212,7 +286,7 @@ function EquityChartInner({ points }: { points: EquityPoint[] }) {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
 
-      const PAD_LEFT = 52, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 28;
+      const PAD_LEFT = 56, PAD_RIGHT = 16, PAD_TOP = 20, PAD_BOTTOM = 44;
       const chartW = dims.w - PAD_LEFT - PAD_RIGHT;
       const chartH = dims.h - PAD_TOP - PAD_BOTTOM;
       const values = points.map(p => p.cumPL);

@@ -7,6 +7,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { registerStorageProxy } from "./storageProxy";
 import { registerDiscordAuthRoutes } from "../discordAuth";
 import { registerDiscordLoginRoutes } from "../discordLogin";
 import { registerDiscordInviteRoutes } from "../discordInvite";
@@ -362,6 +363,8 @@ async function startServer() {
     next();
   });
 
+  // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
+  registerStorageProxy(app);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Discord account linking routes
