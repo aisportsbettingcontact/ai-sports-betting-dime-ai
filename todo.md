@@ -3640,3 +3640,17 @@
 - [x] Extended getCalendarData to return betCount, equity curve, streaks, ROI, win%
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
+
+## Session: 2026-05-19 - JACK MAC Fixes + Production Rebuild
+
+- [x] Fix normalizeName hyphen bug: replace(/-/g, " ") before stripping non-alpha chars — fixes Hao-Yu Lee → hao yu lee matching Hao Yu Lee in MLB API
+- [x] Add FIRST_NAME_ALIASES map (cameron → cam) for Cameron Schlittler MLB ID resolution
+- [x] Apply applyFirstNameAlias() in resolveMlbId before MLB API lookup and cache key computation
+- [x] Fix validateCsv to return boolean (false for empty, throw only for non-CSV) — empty CSV is valid for tomorrow tabs when projections not yet published
+- [x] Fix parseRgCsv to handle empty csvText gracefully (return empty result, not throw)
+- [x] Fix fetchRgCsv to handle empty CSV return from validateCsv (return "" instead of throwing)
+- [x] Investigate dynamic tomorrow CSV IDs — confirmed IDs 3375509/3375510 are correct and return data WITH auth cookie; empty without auth
+- [x] Confirmed today IDs 3372510/3372512 also require auth cookie — getRgSessionCookie() works correctly via POST /sign-in redirect:manual
+- [x] TypeScript: 0 errors
+- [x] Tests: 723/723 passed
+- [x] Production dist rebuilt (May 19 18:53)
