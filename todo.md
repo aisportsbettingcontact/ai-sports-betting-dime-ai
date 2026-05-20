@@ -3668,3 +3668,17 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 723/723 passed
 - [x] Production dist rebuilt (May 19 19:09)
+
+## Session: 2026-05-20 - VGK@COL NHL Game Modeling + Publish
+
+- [x] Audit DB state for VGK@COL (id=3540001): confirmed modelRunAt=NULL, publishedToFeed=0, publishedModel=1, model output already present (modelAwayML=+125, etc.)
+- [x] Root cause analysis: modelRunAt was cleared by GoalieWatcher on goalie change detection; subsequent model re-run failed due to transient DrizzleQueryError (DB connection failure at 18:22 UTC May 19)
+- [x] Fix: Set publishedToFeed=1, publishedModel=1 for game id=3540001
+- [x] Fix: Set modelRunAt=UNIX_TIMESTAMP()*1000 for game id=3540001
+- [x] Re-run NHL model for 2026-05-20 with forceRerun=true: synced=1, skipped=0, errors=1 (playoff team stats only 1 team — fallback to hardcoded stats)
+- [x] Fresh model output verified: VGK +1.5 [STRONG EDGE] | UNDER 6.5 [PLAYABLE EDGE] | VGK ML [STRONG EDGE]
+- [x] Model output: Goals=3.01/3.41 | ML=+123/-123 | PL=-203/+203 | O/U=+136/-136 | Win%=44.94%/55.06%
+- [x] Edge detection: PUCK_LINE AWAY +1.5 STRONG EDGE (edge=+6.64pp, EV=+6.44%) | ML AWAY STRONG EDGE (edge=+5.86pp, EV=+10.10%) | TOTAL UNDER 6.5 PLAYABLE EDGE (edge=+4.45pp, EV=+3.86%)
+- [x] TypeScript: 0 errors
+- [x] Tests: 723/723 passed
+- [x] Production dist rebuilt
