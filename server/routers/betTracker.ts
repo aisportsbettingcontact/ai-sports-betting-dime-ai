@@ -785,13 +785,11 @@ export const betTrackerRouter = router({
             }
           }
         }
-        await db.update(betEditRequests).set({
-          status:     "APPROVED",
-          reviewedBy: userId,
-          reviewedAt: now,
-          reviewNote: input.reviewNote ?? null,
-        }).where(eq(betEditRequests.id, input.requestId));
-        console.log(`[BetTracker][OUTPUT] reviewEditRequest: APPROVED — requestId=${input.requestId} by reviewerId=${userId}`);
+        // APPROVED: hard-delete the request row — approved requests are removed immediately.
+        // No orphaned APPROVED records ever accumulate in the table.
+        // DENIED requests are kept as permanent audit trail (see else branch below).
+        await db.delete(betEditRequests).where(eq(betEditRequests.id, input.requestId));
+        console.log(`[BetTracker][OUTPUT] reviewEditRequest: APPROVED — requestId=${input.requestId} hard-deleted from bet_edit_requests by reviewerId=${userId}`);
       } else {
         await db.update(betEditRequests).set({
           status:     "DENIED",
