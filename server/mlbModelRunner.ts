@@ -2485,6 +2485,37 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
  */
 
 const MLB_MODEL_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const MLB_MODEL_WATCHDOG_MS      = 15 * 60 * 1000; // alert if no cycle in 15 min
+let   _lastCycleAt: number       = 0;
+let   _cycleRunning: boolean     = false;
+
+/**
+ * Retry a DB-bound async operation up to maxAttempts times with exponential backoff.
+ * Surfaces transient connection errors without silently dropping the run.
+ */
+async function withDbRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
+  const TAG = "[MlbModelSync][DB-RETRY]";
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const isTransient = /ECONNRESET|ETIMEDOUT|ECONNREFUSED|ER_CON_COUNT|too many connections|deadlock/i.test(msg);
+      console.error(`${TAG} [ATTEMPT ${attempt}/${maxAttempts}] ${label} — ${msg}${isTransient ? " (transient, will retry)" : " (non-transient)"}`);
+      if (!isTransient || attempt === maxAttempts) break;
+      const delayMs = 2000 * Math.pow(2, attempt - 1); // 2s, 4s, 8s
+      console.log(`${TAG} Waiting ${delayMs}ms before retry...`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
 
 function getMlbTodayStr(): string {
   const now = new Date();
@@ -2510,51 +2541,99 @@ function getMlbTomorrowStr(): string {
 
 async function runMlbModelSyncCycle(): Promise<void> {
   const TAG = "[MlbModelSync]";
+
+  // Guard: prevent overlapping cycles (model run can take 8-10 min for a full slate)
+  if (_cycleRunning) {
+    console.log(`${TAG} ⏭ Cycle skipped — previous cycle still running`);
+    return;
+  }
+  _cycleRunning = true;
+
   const todayStr    = getMlbTodayStr();
   const tomorrowStr = getMlbTomorrowStr();
 
   console.log(`${TAG} ► Cycle start — today=${todayStr} tomorrow=${tomorrowStr}`);
 
   try {
-    // Today
-    const todayResult = await runMlbModelForDate(todayStr);
-    console.log(
-      `${TAG} today=${todayStr}: written=${todayResult.written} skipped=${todayResult.skipped} ` +
-      `errors=${todayResult.errors} validation=${todayResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + todayResult.validation.issues.length + " issues)"}`
+    // ── TODAY ──────────────────────────────────────────────────────────────────
+    const todayResult = await withDbRetry(
+      `runMlbModelForDate(${todayStr})`,
+      () => runMlbModelForDate(todayStr),
     );
+    const todayAlreadyModeled = todayResult.total - todayResult.written - (todayResult.total - todayResult.skipped - todayResult.written - todayResult.errors);
+    console.log(
+      `${TAG} today=${todayStr}: ` +
+      `written=${todayResult.written} ` +
+      `not_yet_modelable=${todayResult.skipped} ` +
+      `errors=${todayResult.errors} ` +
+      `validation=${todayResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + todayResult.validation.issues.length + " issues)"}`
+    );
+    if (todayResult.written > 0) {
+      console.log(`${TAG} ✅ TODAY: ${todayResult.written} game(s) newly modeled and published`);
+    }
     if (!todayResult.validation.passed) {
-      console.error(`${TAG} Validation issues (today):`, todayResult.validation.issues);
+      console.error(`${TAG} [VALIDATION FAIL] today issues:`, todayResult.validation.issues);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG} [ERROR] today=${todayStr} failed: ${msg}`);
+    console.error(`${TAG} [ERROR] today=${todayStr} failed after all retries: ${msg}`);
   }
 
   try {
-    // Tomorrow — ensures games seeded a day ahead are modeled as soon as
-    // pitchers + odds are available, without waiting for the MLBCycle watcher.
-    const tomorrowResult = await runMlbModelForDate(tomorrowStr);
-    console.log(
-      `${TAG} tomorrow=${tomorrowStr}: written=${tomorrowResult.written} skipped=${tomorrowResult.skipped} ` +
-      `errors=${tomorrowResult.errors} validation=${tomorrowResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + tomorrowResult.validation.issues.length + " issues)"}`
+    // ── TOMORROW ───────────────────────────────────────────────────────────────
+    // Ensures games seeded a day ahead are modeled as soon as pitchers + odds
+    // are available, without waiting for the MLBCycle watcher.
+    const tomorrowResult = await withDbRetry(
+      `runMlbModelForDate(${tomorrowStr})`,
+      () => runMlbModelForDate(tomorrowStr),
     );
+    console.log(
+      `${TAG} tomorrow=${tomorrowStr}: ` +
+      `written=${tomorrowResult.written} ` +
+      `not_yet_modelable=${tomorrowResult.skipped} ` +
+      `errors=${tomorrowResult.errors} ` +
+      `validation=${tomorrowResult.validation.passed ? "✅ PASSED" : "❌ FAILED (" + tomorrowResult.validation.issues.length + " issues)"}`
+    );
+    if (tomorrowResult.written > 0) {
+      console.log(`${TAG} ✅ TOMORROW: ${tomorrowResult.written} game(s) newly modeled and published`);
+    }
     if (!tomorrowResult.validation.passed) {
-      console.error(`${TAG} Validation issues (tomorrow):`, tomorrowResult.validation.issues);
+      console.error(`${TAG} [VALIDATION FAIL] tomorrow issues:`, tomorrowResult.validation.issues);
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG} [ERROR] tomorrow=${tomorrowStr} failed: ${msg}`);
+    console.error(`${TAG} [ERROR] tomorrow=${tomorrowStr} failed after all retries: ${msg}`);
   }
 
+  _lastCycleAt = Date.now();
+  _cycleRunning = false;
   console.log(`${TAG} ◄ Cycle complete`);
 }
 
 export function startMlbModelSyncScheduler(): void {
   const TAG = "[MlbModelSync]";
-  console.log(`${TAG} Starting — interval=${MLB_MODEL_SYNC_INTERVAL_MS / 1000}s (24/7, no time gates)`);
+  console.log(`${TAG} Starting — interval=${MLB_MODEL_SYNC_INTERVAL_MS / 1000}s watchdog=${MLB_MODEL_WATCHDOG_MS / 1000}s (24/7, no time gates)`);
 
   // Run immediately on boot, then every 5 minutes
   // .unref() prevents this interval from keeping the process alive if all other work is done
+  _lastCycleAt = Date.now(); // initialize so watchdog doesn't fire on first boot
   void runMlbModelSyncCycle();
   setInterval(() => void runMlbModelSyncCycle(), MLB_MODEL_SYNC_INTERVAL_MS).unref();
+
+  // ── Watchdog: alert if no cycle has completed in MLB_MODEL_WATCHDOG_MS ──────
+  // Fires every 2 minutes to check cycle health. If _lastCycleAt is stale,
+  // it means the scheduler is stuck (e.g., a cycle is running for >15 min).
+  // This surfaces silent failures that would otherwise go undetected.
+  setInterval(() => {
+    const staleSince = Date.now() - _lastCycleAt;
+    if (staleSince > MLB_MODEL_WATCHDOG_MS) {
+      const staleMin = Math.round(staleSince / 60000);
+      if (_cycleRunning) {
+        console.warn(`${TAG} [WATCHDOG] ⚠ Cycle has been running for ${staleMin}min — possible hang. Last completed: ${new Date(_lastCycleAt).toISOString()}`);
+      } else {
+        console.error(`${TAG} [WATCHDOG] ❌ No cycle completed in ${staleMin}min — scheduler may be stalled. Triggering emergency cycle.`);
+        void runMlbModelSyncCycle(); // self-healing: trigger a new cycle
+      }
+    }
+  }, 2 * 60 * 1000).unref();
 }
