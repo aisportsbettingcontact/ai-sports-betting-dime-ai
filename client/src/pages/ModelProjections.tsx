@@ -239,9 +239,10 @@ export default function ModelProjections() {
   useEffect(() => {
     if (!activeSports) return;
     const sportActive = activeSports[selectedSport as 'NBA' | 'NHL' | 'MLB'];
-    if (!sportActive) {
-      // Pick the first active sport in display order: MLB → NHL → NBA
-      const fallback = (['MLB', 'NHL', 'NBA'] as const).find(s => activeSports[s]);
+    // NBA tab is hidden from the feed — exclude it from auto-switch fallback
+    if (!sportActive || selectedSport === 'NBA') {
+      // Pick the first active sport in display order: MLB → NHL (NBA excluded — tab hidden)
+      const fallback = (['MLB', 'NHL'] as const).find(s => activeSports[s]);
       if (fallback) setSelectedSport(fallback, true); // isAutoSwitch=true → replace, don't push history
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1186,8 +1187,8 @@ export default function ModelProjections() {
             </button>
           )}
 
-          {/* NBA pill — only shown when NBA has games today or tomorrow */}
-          {(!activeSports || activeSports.NBA) && (
+          {/* NBA pill — HIDDEN: NBA tab suppressed from feed until re-enabled */}
+          {false && (!activeSports || activeSports?.NBA) && (
             <button type="button" onClick={() => setSelectedSport("NBA")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
               style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NBA" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
               <img src={CDN_NBA} alt="NBA" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
