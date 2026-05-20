@@ -2154,13 +2154,36 @@ export default function BetTracker() {
 
   // ── Real-time auto-grade polling ───────────────────────────────────────────
   const prevLinescoreRef = useRef<Record<string, string>>({});
+  // Tracks whether we fired the immediate grade on mount for the current pending set.
+  // Resets to false when pendingBets reaches 0 (all graded) so the next pending
+  // batch also gets an immediate fire.
+  const initialGradeFiredRef = useRef(false);
 
   useEffect(() => {
     if (!canAccess) return;
 
     const pendingBets = enrichedBets.filter(b => b.result === "PENDING");
-    if (pendingBets.length === 0) return;
+    if (pendingBets.length === 0) {
+      // All bets graded — reset so the next pending batch fires immediately on mount
+      initialGradeFiredRef.current = false;
+      return;
+    }
 
+    // ── IMMEDIATE FIRE on mount / when pending bets first appear ──────────────
+    // Fires autoGrade immediately when the page loads with PENDING bets.
+    // Critical for the case where the user opens BetTracker AFTER a game has
+    // already gone Final — the linescore transition (non-Final → Final) was
+    // never observed in this session, so the transition-based trigger below
+    // would never fire. Without this, the user waits up to 30s for the poll.
+    if (!initialGradeFiredRef.current && !autoGradeMut.isPending) {
+      initialGradeFiredRef.current = true;
+      if (IS_DEV) console.log(`[BetTracker][STEP] autoGrade: IMMEDIATE mount fire — ${pendingBets.length} PENDING bets detected on load, firing grade now`);
+      autoGradeMut.mutate({});
+    }
+
+    // ── TRANSITION TRIGGER: fires when a linescore goes non-Final → Final ─────
+    // Provides near-instant grading for bets on games that go Final while the
+    // user is already on the page (linescore poll fires every 60s).
     if (linescoreQuery.data) {
       let newFinalFound = false;
       for (const ls of Object.values(linescoreQuery.data)) {
@@ -2183,12 +2206,14 @@ export default function BetTracker() {
       }
     }
 
+    // ── 30s POLL: safety net for any missed transitions or late-graded games ──
+    // Reduced from 60s → 30s so results appear within half a minute at most.
     const interval = setInterval(() => {
       if (!autoGradeMut.isPending) {
-        if (IS_DEV) console.log(`[BetTracker][STEP] autoGrade: 60s poll — grading ${pendingBets.length} PENDING bets`);
+        if (IS_DEV) console.log(`[BetTracker][STEP] autoGrade: 30s poll — grading ${pendingBets.length} PENDING bets`);
         autoGradeMut.mutate({});
       }
-    }, 60_000);
+    }, 30_000);
 
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
