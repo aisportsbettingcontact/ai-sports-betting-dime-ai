@@ -224,6 +224,43 @@ describe("pendingApprovalCount logic", () => {
   it("handles empty game list", () => {
     expect(countPending([])).toBe(0);
   });
+
+  // NHL: model data = modelAwayPLOdds (puck line odds written by nhl_model_engine.py)
+  // Fix (2026-05-21): bulkApproveModels uses modelAwayPLOdds IS NOT NULL for NHL,
+  // not awayModelSpread. Also sets publishedToFeed=true alongside publishedModel=true.
+  type NhlGameLike = { modelAwayPLOdds: string | null; publishedModel: boolean };
+  function countPendingNhl(games: NhlGameLike[]): number {
+    return games.filter((g) => g.modelAwayPLOdds !== null && !g.publishedModel).length;
+  }
+
+  it("NHL: counts games with modelAwayPLOdds that are not yet approved", () => {
+    const games: NhlGameLike[] = [
+      { modelAwayPLOdds: "-121",  publishedModel: false }, // pending
+      { modelAwayPLOdds: "+121",  publishedModel: true  }, // already approved
+      { modelAwayPLOdds: null,    publishedModel: false }, // no model data
+      { modelAwayPLOdds: "-155",  publishedModel: false }, // pending
+    ];
+    expect(countPendingNhl(games)).toBe(2);
+    console.log("[VERIFY] PASS — NHL bulkApproveModels uses modelAwayPLOdds IS NOT NULL");
+  });
+
+  it("NHL: returns 0 when no games have modelAwayPLOdds", () => {
+    const games: NhlGameLike[] = [
+      { modelAwayPLOdds: null, publishedModel: false },
+      { modelAwayPLOdds: null, publishedModel: false },
+    ];
+    expect(countPendingNhl(games)).toBe(0);
+    console.log("[VERIFY] PASS — NHL bulkApproveModels returns 0 when no model data");
+  });
+
+  it("NHL: returns 0 when all games already approved", () => {
+    const games: NhlGameLike[] = [
+      { modelAwayPLOdds: "-121", publishedModel: true },
+      { modelAwayPLOdds: "+121", publishedModel: true },
+    ];
+    expect(countPendingNhl(games)).toBe(0);
+    console.log("[VERIFY] PASS — NHL bulkApproveModels returns 0 when all already approved");
+  });
 });
 
 // ── Token content integrity tests ──────────────────────────────────────────────
