@@ -3692,3 +3692,17 @@
 - [x] Final DB verification: all 7 games live on feed with full model output
 - [x] Tests: 723/723 passed
 - [x] Production dist rebuilt
+
+## Session: 2026-05-21 - MTL@CAR NHL Model + Automation Fixes
+
+- [x] Model MTL@CAR (id=3570010) with corrected playoff stats and realistic odds
+- [x] Fix fetchNhlPlayoffTeamStats: NHL API no longer returns teamAbbrev — use HR_NAME_TO_ABBREV[teamFullName] with NFD accent normalization for "Montréal Canadiens"
+- [x] Fix fetchNhlPlayoffTeamStats: NHL API no longer returns shootingPct/savePct — derive SH% from GF/SF and SV% from 1-(GA/SA)
+- [x] Fix prob_to_ml in nhl_model_engine.py: add ±800 odds cap to prevent extreme values like -1473
+- [x] Fix bulkApproveModels in db.ts: use modelAwayPLOdds IS NOT NULL for NHL (not awayModelSpread)
+- [x] Fix bulkApproveModels: set publishedToFeed=true alongside publishedModel=true atomically
+- [x] Add 3 new NHL-aware bulkApproveModels unit tests
+- [x] Publish MTL@CAR to feed: publishedToFeed=1, publishedModel=1, modelRunAt set
+- [x] MTL@CAR model output: MTL 1.58 / CAR 3.08 | ML +252/-252 | PL -121/+121 | O/U +203/-203
+- [x] Edges: UNDER 5.5 ELITE EDGE (+19.65pp EV=+35.4%) | CAR -1.5 PLAYABLE EDGE (+3.60pp EV=+4.2%) | CAR ML STRONG EDGE (+7.90pp EV=+7.8%)
+- [x] Tests: 726/726 passed

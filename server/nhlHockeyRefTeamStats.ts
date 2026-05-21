@@ -415,16 +415,20 @@ export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamSta
     throw new Error(`[PlayoffStats] NHL API returned ${resp.status}: ${resp.statusText}`);
   }
 
+  // NOTE: As of 2026-05-21 the NHL Stats API no longer returns `teamAbbrev` or
+  // `shootingPct`/`savePct` in the team summary endpoint. We resolve abbreviation
+  // via the HR_NAME_TO_ABBREV map (keyed by teamFullName) and derive SH%/SV%
+  // from goalsFor/shotsForPerGame instead.
   const json = await resp.json() as { data: Array<{
-    teamAbbrev: string;
     teamFullName: string;
+    teamId: number;
     gamesPlayed: number;
     goalsFor: number;
     goalsAgainst: number;
+    goalsForPerGame: number;
+    goalsAgainstPerGame: number;
     shotsForPerGame: number;
     shotsAgainstPerGame: number;
-    shootingPct: number;
-    savePct: number;
   }> };
 
   const teams = json.data;
@@ -438,9 +442,8 @@ export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamSta
   const totalGP = teams.reduce((s, t) => s + t.gamesPlayed, 0);
   const totalGF = teams.reduce((s, t) => s + t.goalsFor, 0);
   const totalSF = teams.reduce((s, t) => s + (t.shotsForPerGame * t.gamesPlayed), 0);
+  const totalSA = teams.reduce((s, t) => s + (t.shotsAgainstPerGame * t.gamesPlayed), 0);
 
-  // Each game has 2 teams, so total goals = 2 * goals_per_game * games
-  // league avg goals per team per game = totalGF / totalGP
   const PLAYOFF_LEAGUE_GF_G = totalGP > 0 ? totalGF / totalGP : 2.881;
   const PLAYOFF_LEAGUE_SF_G = totalGP > 0 ? totalSF / totalGP : 28.46;
 
@@ -449,13 +452,25 @@ export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamSta
   const result = new Map<string, NhlTeamStats>();
 
   for (const t of teams) {
+    // Resolve abbreviation: use HR_NAME_TO_ABBREV first, fallback to normalized teamFullName lookup
+    // Handle accent variants: "Montréal Canadiens" → "Montreal Canadiens" for map lookup
+    const normalizedName = t.teamFullName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const abbrev = HR_NAME_TO_ABBREV[t.teamFullName] ?? HR_NAME_TO_ABBREV[normalizedName];
+    if (!abbrev) {
+      console.warn(`[PlayoffStats] ⚠ No abbrev mapping for teamFullName="${t.teamFullName}" (teamId=${t.teamId}) — skipping`);
+      continue;
+    }
+
     const gf_g = t.goalsFor / t.gamesPlayed;
     const ga_g = t.goalsAgainst / t.gamesPlayed;
     const sf_g = t.shotsForPerGame;
-    // NHL API doesn't provide shotsAgainstPerGame directly in summary — approximate from league avg
-    const sa_g = PLAYOFF_LEAGUE_SF_G * 2 - sf_g; // symmetric: total shots = 2 * league avg
-    const sh_pct = (t.shootingPct ?? 0) * 100;    // API returns decimal (0.126), convert to %
-    const sv_pct = (t.savePct ?? 0) * 100;         // API returns decimal (0.912), convert to %
+    const sa_g = t.shotsAgainstPerGame > 0 ? t.shotsAgainstPerGame : (PLAYOFF_LEAGUE_SF_G * 2 - sf_g);
+
+    // Derive SH% and SV% from available data (goals / shots)
+    // SH% = goals_for / shots_for_total (per game basis)
+    const sh_pct = sf_g > 0 ? (gf_g / sf_g) * 100 : 10.0;
+    // SV% = 1 - (goals_against / shots_against_total)
+    const sv_pct = sa_g > 0 ? (1 - ga_g / sa_g) * 100 : 91.0;
 
     // Normalize against PLAYOFF league averages
     const xGF_60  = (gf_g / PLAYOFF_LEAGUE_GF_G) * LEAGUE_XGF_60;
@@ -474,7 +489,7 @@ export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamSta
     const HDCF_pct = (HDCF_60 / (HDCF_60 + HDCA_60)) * 100;
 
     const stats: NhlTeamStats = {
-      abbrev: t.teamAbbrev,
+      abbrev,
       name: t.teamFullName,
       gp: t.gamesPlayed,
       xGF_pct, xGA_pct, CF_pct, SCF_pct, HDCF_pct,
@@ -485,9 +500,9 @@ export async function fetchNhlPlayoffTeamStats(): Promise<Map<string, NhlTeamSta
       xGF_60, xGA_60, HDCF_60, HDCA_60, SCF_60, SCA_60, CF_60, CA_60,
     };
 
-    result.set(t.teamAbbrev, stats);
+    result.set(abbrev, stats);
     console.log(
-      `[PlayoffStats] ${t.teamAbbrev} (${t.gamesPlayed} GP): GF/G=${gf_g.toFixed(3)} GA/G=${ga_g.toFixed(3)} ` +
+      `[PlayoffStats] ${abbrev} (${t.gamesPlayed} GP): GF/G=${gf_g.toFixed(3)} GA/G=${ga_g.toFixed(3)} ` +
       `xGF_60=${xGF_60.toFixed(3)} xGA_60=${xGA_60.toFixed(3)} SH%=${sh_pct.toFixed(1)} SV%=${sv_pct.toFixed(1)}`
     );
   }

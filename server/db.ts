@@ -941,26 +941,40 @@ export async function setGameModelPublished(id: number, published: boolean): Pro
 
 /**
  * Bulk-approve all pending model projections for a given date and sport.
- * Only approves games that have model data (awayModelSpread + modelTotal not null)
- * and are not yet approved (publishedModel = false).
+ * Sets both publishedModel=true AND publishedToFeed=true for all games that have
+ * model data and are not yet published.
+ *
+ * Model data detection is sport-aware:
+ *   - NHL: modelAwayPLOdds IS NOT NULL (puck line odds written by nhl_model_engine.py)
+ *   - MLB/NBA/NCAAM: awayModelSpread IS NOT NULL AND modelTotal IS NOT NULL
+ *
  * Returns the number of rows updated.
  */
 export async function bulkApproveModels(gameDate: string, sport?: string): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // Sport-aware model data condition:
+  // NHL writes modelAwayPLOdds; other sports write awayModelSpread + modelTotal
+  const isNhl = sport === "NHL";
+  const modelDataCondition = isNhl
+    ? isNotNull(games.modelAwayPLOdds)
+    : and(isNotNull(games.awayModelSpread), isNotNull(games.modelTotal));
+
   const conditions = [
     eq(games.gameDate, gameDate),
     eq(games.publishedModel, false),
-    isNotNull(games.awayModelSpread),
-    isNotNull(games.modelTotal),
+    modelDataCondition!,
   ];
   if (sport) conditions.push(eq(games.sport, sport));
+
+  // Set BOTH publishedModel and publishedToFeed in a single atomic update
   const result = await db.update(games)
-    .set({ publishedModel: true })
+    .set({ publishedModel: true, publishedToFeed: true })
     .where(and(...conditions));
   const affected = (result as unknown as { rowsAffected?: number }[])[0]?.rowsAffected ?? 0;
-  console.log(`[DB] bulkApproveModels: gameDate=${gameDate} sport=${sport ?? "all"} — approved ${affected} games`);
-    if (affected > 0) forceInvalidateGamesCache(); // admin op — immediate visibility required
+  console.log(`[DB] bulkApproveModels: gameDate=${gameDate} sport=${sport ?? "all"} isNhl=${isNhl} — approved+published ${affected} games`);
+  if (affected > 0) forceInvalidateGamesCache(); // admin op — immediate visibility required
   return affected;
 }
 export async function setGamePublished(id: number, published: boolean) {

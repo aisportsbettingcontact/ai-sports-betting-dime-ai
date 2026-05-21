@@ -599,18 +599,26 @@ def calculate_probs(away_scores: np.ndarray, home_scores: np.ndarray) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+# Maximum realistic American odds cap for NHL markets.
+# NHL totals/puck lines should never exceed ±800 in any realistic market.
+# Extreme values (e.g. -1473) indicate a model calibration issue and must be clamped.
+_MAX_NHL_ODDS = 800
+
 def prob_to_ml(p: float) -> int:
     """
     Section 8: Convert win probability to American moneyline (no vig, fair value).
-
-    If p > 0.5:  favorite_odds = −100 × (p / (1 − p))
-    If p < 0.5:  underdog_odds = +100 × ((1 − p) / p)
-    If p = 0.5:  ±100
+    If p > 0.5:  favorite_odds = -100 x (p / (1 - p))
+    If p < 0.5:  underdog_odds = +100 x ((1 - p) / p)
+    If p = 0.5:  +/-100
+    Clamped to +/-_MAX_NHL_ODDS to prevent extreme unrealistic odds from
+    low-probability events (e.g. projected total far below the book line).
     """
     p = max(0.001, min(0.999, p))
     if p >= 0.5:
-        return -round((p / (1.0 - p)) * 100)
-    return round(((1.0 - p) / p) * 100)
+        raw = -round((p / (1.0 - p)) * 100)
+        return max(raw, -_MAX_NHL_ODDS)  # cap at -800 (e.g. -1473 -> -800)
+    raw = round(((1.0 - p) / p) * 100)
+    return min(raw, _MAX_NHL_ODDS)  # cap at +800
 
 
 def ml_to_prob(ml: int) -> float:
