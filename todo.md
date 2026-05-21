@@ -3682,3 +3682,13 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 723/723 passed
 - [x] Production dist rebuilt
+
+## Session: 2026-05-21 - May 21 MLB Slate Modeling + Publish (7 games)
+
+- [x] Audit DB state for all 7 May 21 MLB games: all have full book lines (spread/total/ML/RL), all modelRunAt=NULL, publishedToFeed=0
+- [x] Pitcher discrepancy check: mlb_lineups had wrong pitchers for TOR@NYY (Spencer Miles vs Braydon Fisher) and COL@ARI (Keegan Thompson vs Zach Agnos) — MLB Stats API confirmed games table is correct; COALESCE logic uses correct pitchers
+- [x] Run MLB model for all 7 games with forceRerun=true: written=7, skipped=0, errors=0, validation=PASSED
+- [x] Publish all 7 games: publishedToFeed=1, publishedModel=1 for all 7 games
+- [x] Final DB verification: all 7 games live on feed with full model output
+- [x] Tests: 723/723 passed
+- [x] Production dist rebuilt
