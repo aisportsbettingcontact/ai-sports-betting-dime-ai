@@ -212,12 +212,20 @@ export const jackMacRouter = router({
 
       if (!job) {
         console.warn(
-          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found for @${username}`
+          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found for @${username} — returning not_found status (server may have restarted)`
         );
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: `Sync job not found: ${input.jobId}. It may have expired (jobs are retained for 30 minutes).`,
-        });
+        // Return a sentinel instead of throwing — the client must handle this gracefully.
+        // Throwing NOT_FOUND causes the tRPC query to enter error state, which the
+        // polling useEffect does not watch, leaving the button stuck forever.
+        return {
+          jobId: input.jobId,
+          runId: null,
+          status: "not_found" as const,
+          startedAt: new Date().toISOString(),
+          executionMode: "manual" as const,
+          triggeredBy: "unknown",
+          error: `Job not found — the server may have restarted. jobId=${input.jobId}`,
+        } as unknown as SyncJob;
       }
 
       console.log(
