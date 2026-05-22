@@ -3774,3 +3774,12 @@
 - [x] Progress panel shows: phase name, elapsed time, row counts, green/red/pulsing state
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - Sync Progress Panel Hardening
+- [x] Client-side progress accumulation: merge events on each poll, never replace with shorter array
+- [x] Safety timeout: extend from 120s to 180s
+- [x] not_found handling: only clear if DB also confirms job is gone (not just in-memory miss)
+- [x] Elapsed counter: use real-time clock tick, not just job.startedAt on each poll
+- [x] Add "Sync complete" final state to progress panel (show after job success/error)
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
