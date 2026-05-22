@@ -92,6 +92,109 @@ interface MlbIdEntry {
 const mlbIdCache = new Map<string, MlbIdEntry>();
 const MLB_ID_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// ─── Concurrency Limiter for MLB API fallback ─────────────────────────────────
+// Caps parallel MLB Stats API calls at 10 to prevent request storms.
+// DB batch lookup handles the bulk; this only fires for cache misses.
+let _mlbApiSlots = 10;
+const _mlbApiQueue: Array<() => void> = [];
+
+function acquireMlbApiSlot(): Promise<void> {
+  if (_mlbApiSlots > 0) {
+    _mlbApiSlots--;
+    return Promise.resolve();
+  }
+  return new Promise(resolve => _mlbApiQueue.push(resolve));
+}
+
+function releaseMlbApiSlot(): void {
+  const next = _mlbApiQueue.shift();
+  if (next) {
+    next();
+  } else {
+    _mlbApiSlots++;
+  }
+}
+
+/**
+ * Batch-resolve MLB IDs for a list of player names using a single DB query.
+ * Returns a Map<normalizedName, mlbamId|null>.
+ * Players already in the in-memory cache are skipped.
+ * Players not found in DB fall through to the individual MLB API lookup.
+ */
+async function batchResolveMlbIdsFromDb(
+  names: string[]
+): Promise<Map<string, number | null>> {
+  const result = new Map<string, number | null>();
+  const needsDb: Array<{ aliasedName: string; key: string; lastNameRaw: string }> = [];
+
+  // Phase 1: check in-memory cache
+  for (const name of names) {
+    const aliasedName = applyFirstNameAlias(name);
+    const key = normalizeName(aliasedName);
+    const cached = mlbIdCache.get(key);
+    const nullTtl = 5 * 60 * 1000;
+    if (cached) {
+      const age = Date.now() - cached.cachedAt;
+      if (cached.mlbId !== null && age < MLB_ID_TTL_MS) {
+        result.set(key, cached.mlbId);
+        continue;
+      }
+      if (cached.mlbId === null && age < nullTtl) {
+        result.set(key, null);
+        continue;
+      }
+    }
+    const nameParts = aliasedName.trim().split(/\s+/);
+    const lastNameRaw = nameParts[nameParts.length - 1];
+    needsDb.push({ aliasedName, key, lastNameRaw });
+  }
+
+  if (needsDb.length === 0) return result;
+
+  // Phase 2: single batch DB query for all cache-miss last names
+  try {
+    const db = await getDb();
+    if (db) {
+      // Build OR clause: name LIKE '%LastName1%' OR name LIKE '%LastName2%' ...
+      // Deduplicate last names to minimize DB work
+      const uniqueLastNames = Array.from(new Set(needsDb.map(p => p.lastNameRaw)));
+      console.log(`[RGProxy] [STEP] Batch DB lookup: ${needsDb.length} players → ${uniqueLastNames.length} unique last names → 1 query`);
+      const t0 = Date.now();
+
+      // Build raw SQL with OR conditions for all last names
+      const conditions = uniqueLastNames
+        .map(ln => `name COLLATE utf8mb4_unicode_ci LIKE '%${ln.replace(/'/g, "''")}%'`)
+        .join(' OR ');
+      const [dbRowsRaw] = await db.execute(
+        drizzleSql.raw(`SELECT name, mlbamId FROM mlb_players WHERE (${conditions}) AND mlbamId IS NOT NULL LIMIT 2000`)
+      ) as [Array<{ name: string; mlbamId: number }>, unknown];
+
+      console.log(`[RGProxy] [STATE] Batch DB lookup: ${dbRowsRaw.length} rows returned in ${Date.now() - t0}ms`);
+
+      // Build a lookup map: normalizedName → mlbamId
+      const dbLookup = new Map<string, number>();
+      for (const row of dbRowsRaw) {
+        dbLookup.set(normalizeNameForDb(row.name), row.mlbamId);
+      }
+
+      // Match each player to the DB results
+      for (const { aliasedName, key } of needsDb) {
+        const normalizedSearch = normalizeNameForDb(aliasedName);
+        const mlbId = dbLookup.get(normalizedSearch) ?? null;
+        if (mlbId) {
+          mlbIdCache.set(key, { mlbId, cachedAt: Date.now() });
+          result.set(key, mlbId);
+        }
+        // If not found, leave out of result — will fall through to MLB API
+      }
+    }
+  } catch (dbErr) {
+    console.warn(`[RGProxy] [STATE] Batch DB lookup failed: ${(dbErr as Error).message} — falling back to MLB API for all ${needsDb.length} players`);
+  }
+
+  return result;
+}
+
 function normalizeName(name: string): string {
   // Replace hyphens with spaces FIRST so "Hao-Yu Lee" → "hao yu lee" (not "haoyu lee")
   // Then strip remaining non-alpha-space characters (apostrophes, periods, etc.)
@@ -143,16 +246,20 @@ function normalizeNameForDb(name: string): string {
     .replace(/\s+/g, " ");
 }
 
-async function resolveMlbId(playerName: string): Promise<number | null> {
-  // Apply first-name alias BEFORE cache key computation so aliases share the same cache entry
+/**
+ * Resolve a player MLB ID via the MLB Stats API only (no DB).
+ * Used as fallback for players not found in the batch DB lookup.
+ * Concurrency is controlled by the caller via acquireMlbApiSlot/releaseMlbApiSlot.
+ */
+async function resolveMlbIdViaApi(playerName: string): Promise<number | null> {
   const aliasedName = applyFirstNameAlias(playerName);
   if (aliasedName !== playerName) {
     console.log(`[RGProxy] [STATE] First-name alias applied: "${playerName}" → "${aliasedName}"`);
   }
-
   const key = normalizeName(aliasedName);
+
+  // Check cache first (may have been populated by a concurrent batch lookup)
   const cached = mlbIdCache.get(key);
-  // For null cache hits, only re-try after 5 minutes (not 24h) to catch newly promoted players
   const nullTtl = 5 * 60 * 1000;
   if (cached) {
     const age = Date.now() - cached.cachedAt;
@@ -160,73 +267,21 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     if (cached.mlbId === null && age < nullTtl) return null;
   }
 
-  // ── Attempt 0: DB lookup via mlb_players table (fast, no network) ────────────
-  // The DB collation is utf8mb4_bin (binary, accent-sensitive).
-  // We MUST use COLLATE utf8mb4_unicode_ci in the LIKE clause to make it
-  // accent-insensitive so "Ramirez" matches "Ramírez", "Jose" matches "José", etc.
-  // Strategy:
-  //   1. Last-name LIKE with unicode_ci collation (DB-side, accent-insensitive)
-  //   2. JS-side accent-normalized exact match for disambiguation
-  //   3. Fallback: first-name LIKE with unicode_ci collation
-  try {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available for MLB ID lookup");
-    const normalizedSearch = normalizeNameForDb(aliasedName);
-    const nameParts = aliasedName.trim().split(/\s+/);
-    const lastNameRaw = nameParts[nameParts.length - 1];
-
-    // Use raw SQL with COLLATE utf8mb4_unicode_ci for accent-insensitive matching
-    // This makes 'Ramirez' match 'Ramírez', 'Jose' match 'José', etc.
-    const [dbRowsRaw] = await db.execute(
-      drizzleSql`SELECT name, mlbamId FROM mlb_players
-        WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`%${lastNameRaw}%`}
-        AND mlbamId IS NOT NULL
-        LIMIT 20`
-    ) as [Array<{ name: string; mlbamId: number }>, unknown];
-
-    // JS-side accent-normalized exact match for disambiguation
-    const match = dbRowsRaw.find(r => normalizeNameForDb(r.name) === normalizedSearch);
-    if (match?.mlbamId) {
-      console.log(`[RGProxy] [STATE] MLB ID resolved (DB-last): player="${playerName}" id=${match.mlbamId} dbName="${match.name}"`);
-      mlbIdCache.set(key, { mlbId: match.mlbamId, cachedAt: Date.now() });
-      return match.mlbamId;
-    }
-
-    // Fallback: first-name LIKE with unicode_ci collation
-    if (nameParts.length >= 2) {
-      const firstNameRaw = nameParts[0];
-      const [firstRowsRaw] = await db.execute(
-        drizzleSql`SELECT name, mlbamId FROM mlb_players
-          WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`${firstNameRaw}%`}
-          AND mlbamId IS NOT NULL
-          LIMIT 10`
-      ) as [Array<{ name: string; mlbamId: number }>, unknown];
-      const firstMatch = firstRowsRaw.find(r => normalizeNameForDb(r.name) === normalizedSearch);
-      if (firstMatch?.mlbamId) {
-        console.log(`[RGProxy] [STATE] MLB ID resolved (DB-first): player="${playerName}" id=${firstMatch.mlbamId} dbName="${firstMatch.name}"`);
-        mlbIdCache.set(key, { mlbId: firstMatch.mlbamId, cachedAt: Date.now() });
-        return firstMatch.mlbamId;
-      }
-    }
-  } catch (dbErr) {
-    console.warn(`[RGProxy] [STATE] DB lookup failed for "${playerName}": ${(dbErr as Error).message} — falling back to MLB API`);
-  }
-
   const encoded = encodeURIComponent(aliasedName.trim());
 
   // ── Attempt 1: MLB Stats API /people/search with sportId=1 (MLB only) ────────
   try {
     const url1 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=1`;
-    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 1 (MLB API): player="${playerName}"`);
+    console.log(`[RGProxy] [STEP] MLB API lookup: player="${playerName}"`);
     const res1 = await fetch(url1, {
       headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(800), // 800ms: fail fast — DB cache should handle 99% of cases
+      signal: AbortSignal.timeout(2000), // 2s timeout (was 800ms — give API more time)
     });
     if (res1.ok) {
       const data1 = await res1.json() as { people?: { id: number; fullName: string }[] };
       const mlbId1 = data1.people?.[0]?.id ?? null;
       if (mlbId1) {
-        console.log(`[RGProxy] [STATE] MLB ID resolved (API attempt 1): player="${playerName}" id=${mlbId1}`);
+        console.log(`[RGProxy] [STATE] MLB ID resolved (API): player="${playerName}" id=${mlbId1}`);
         mlbIdCache.set(key, { mlbId: mlbId1, cachedAt: Date.now() });
         return mlbId1;
       }
@@ -242,7 +297,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
       const url2 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=${sportId}`;
       const res2 = await fetch(url2, {
         headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(800), // 800ms: fail fast
+        signal: AbortSignal.timeout(2000),
       });
       if (res2.ok) {
         const data2 = await res2.json() as { people?: { id: number; fullName: string }[] };
@@ -258,7 +313,7 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     }
   }
 
-  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}"${aliasedName !== playerName ? ` (aliased: "${aliasedName}")` : ""} after DB + API attempts`);
+  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}"${aliasedName !== playerName ? ` (aliased: "${aliasedName}")` : ""} after API attempts`);
   mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
   return null;
 }
@@ -569,20 +624,53 @@ export async function parseRgCsv(
 
   console.log(`[RGProxy] [STATE] Parsed rows with NAME: ${rawRows.length}`);
 
-  // ── Resolve MLB IDs in parallel ───────────────────────────────────────────
+  // ── Resolve MLB IDs: batch DB lookup + concurrency-limited MLB API fallback ────────────────
+  // CRITICAL: Never fire 390 individual DB queries in parallel — this exhausts the
+  // connection pool (20 connections) when the Sheets sync runs concurrently.
+  // Solution: 1 batch DB query for all players, then max-10-concurrent MLB API for misses.
   const uniqueNames = Array.from(new Set(rawRows.map(r => r.playerName)));
   console.log(`[RGProxy] [STEP] Resolving MLB IDs for ${uniqueNames.length} unique players...`);
 
-  const mlbIdMap = new Map<string, number | null>();
-  await Promise.all(
-    uniqueNames.map(async name => {
-      const id = await resolveMlbId(name);
-      mlbIdMap.set(normalizeName(name), id);
-    })
-  );
+  // Phase 1: batch DB lookup (1 query, returns all matches)
+  const mlbIdMap = await batchResolveMlbIdsFromDb(uniqueNames);
+
+  // Phase 2: MLB API fallback for players not resolved by DB (concurrency-limited to 10)
+  const needsApi = uniqueNames.filter(name => {
+    const aliasedName = applyFirstNameAlias(name);
+    const key = normalizeName(aliasedName);
+    return !mlbIdMap.has(key);
+  });
+
+  if (needsApi.length > 0) {
+    console.log(`[RGProxy] [STEP] MLB API fallback for ${needsApi.length} players not found in DB (max 10 concurrent)...`);
+    await Promise.all(
+      needsApi.map(async name => {
+        await acquireMlbApiSlot();
+        try {
+          const id = await resolveMlbIdViaApi(name);
+          const aliasedName = applyFirstNameAlias(name);
+          const key = normalizeName(aliasedName);
+          mlbIdMap.set(key, id);
+          mlbIdMap.set(normalizeName(name), id);
+        } finally {
+          releaseMlbApiSlot();
+        }
+      })
+    );
+  }
+
+  // Ensure all names have an entry (null for unresolved)
+  for (const name of uniqueNames) {
+    const aliasedName = applyFirstNameAlias(name);
+    const key = normalizeName(aliasedName);
+    if (!mlbIdMap.has(key)) mlbIdMap.set(key, null);
+    mlbIdMap.set(normalizeName(name), mlbIdMap.get(key) ?? null);
+  }
 
   const resolvedCount = Array.from(mlbIdMap.values()).filter(v => v !== null).length;
-  console.log(`[RGProxy] [STATE] MLB ID resolution: ${resolvedCount}/${uniqueNames.length} resolved`);
+  const apiCount = needsApi.length;
+  const dbCount = uniqueNames.length - apiCount;
+  console.log(`[RGProxy] [STATE] MLB ID resolution: ${resolvedCount}/${uniqueNames.length} resolved (${dbCount} from DB/cache, ${apiCount} via API)`);
 
   // ── Build final rows with enriched fields ─────────────────────────────────
   const missingMlbIds: string[] = [];

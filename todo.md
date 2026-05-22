@@ -3732,3 +3732,20 @@
 - [x] Upgrade JackMacView.tsx — instant shell render from cache, all 8 UI states, locked/refreshing states, run-lock awareness, background polling
 - [x] Add jackMacCore.test.ts — 35 tests: run lock, cache layer, tab contracts, run history, structured logging, run ID generator
 - [x] All 761/761 tests passing (35 new Jack Mac core tests added)
+
+## Session: 2026-05-22 - Jack Mac 503 + Sheets Sync Performance Fix
+
+- [x] Root cause investigation: HTTP 503 "Showing cached data — live refresh failed"
+- [x] Root cause investigation: Sheets sync taking too long (timeout at 480s)
+- [x] CONFIRMED: Both issues caused by 390 individual DB queries fired in parallel from parseRgCsv()
+- [x] CONFIRMED: Pool exhaustion (20 connections) when live request + Sheets sync run concurrently
+- [x] CONFIRMED: Every player falls through to MLB Stats API (800ms timeout × 390 = 312s minimum)
+- [x] FIX: Replace 390 individual DB queries with 1 batch DB query (all last names in single OR clause)
+- [x] FIX: Add concurrency limiter for MLB API fallback (max 10 concurrent, was unbounded 390)
+- [x] FIX: Increase MLB API timeout from 800ms to 2000ms (less aggressive, more reliable)
+- [x] FIX: Extract resolveMlbIdViaApi() (API-only) from old resolveMlbId() (DB+API)
+- [x] FIX: Add batchResolveMlbIdsFromDb() — 1 query, returns all matches, JS-side matching
+- [x] FIX: Add acquireMlbApiSlot/releaseMlbApiSlot concurrency semaphore (10 slots)
+- [x] VERIFIED: 130 players → 117 unique last names → 1 DB query → 615ms (was 390 queries × 20ms = 7.8s+)
+- [x] VERIFIED: 0 TypeScript errors
+- [x] VERIFIED: 761/761 tests passing
