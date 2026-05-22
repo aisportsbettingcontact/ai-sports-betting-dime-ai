@@ -212,6 +212,20 @@ const MLB_ABBREV_ALIASES: Record<string, string> = {
   "ATH": "ATH", // Athletics: consistent
 };
 
+/**
+ * NBA team lookup by official abbreviation (e.g. "BOS", "LAL", "GSW").
+ * Declared here (above resolveLogoUrl) so it is initialized before use.
+ * The full fetchEspnSlate section below also references this map.
+ */
+const _NBA_BY_ABBREV_EARLY = new Map(NBA_TEAMS.map(t => [t.abbrev, t]));
+
+/**
+ * NHL team lookup by official abbreviation (e.g. "BOS", "MTL", "TOR").
+ * Declared here (above resolveLogoUrl) so it is initialized before use.
+ * The full fetchNhlStatsSlate section below also references this map.
+ */
+const _NHL_BY_ABBREV_EARLY = new Map(NHL_TEAMS.map(t => [t.abbrev, t]));
+
 export function resolveLogoUrl(sport: string, abbrev: string, anLogoUrl: string): string {
   if (sport === "MLB") {
     // Normalize abbreviation via alias map before lookup
@@ -223,6 +237,43 @@ export function resolveLogoUrl(sport: string, abbrev: string, anLogoUrl: string)
     }
     console.warn(`[AN][STATE] Logo fallback: sport=MLB abbrev=${abbrev} (normalized=${normalized}) not in MLB_BY_ABBREV — using AN logo`);
   }
+
+  if (sport === "NBA") {
+    // Try exact abbrev match first, then case-insensitive
+    const abbrevUpper = abbrev.toUpperCase();
+    const team = _NBA_BY_ABBREV_EARLY.get(abbrevUpper) ?? _NBA_BY_ABBREV_EARLY.get(abbrev);
+    if (team?.logoUrl) {
+      console.log(`[AN][STEP]  Logo resolved: sport=NBA abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
+      return team.logoUrl;
+    }
+    // Fallback: try matching by anSlug (Action Network uses slug-based team IDs)
+    const byAnSlug = NBA_TEAMS.find(t => t.anSlug === abbrev || t.anSlug === abbrev.toLowerCase());
+    if (byAnSlug?.logoUrl) {
+      console.log(`[AN][STEP]  Logo resolved via anSlug: sport=NBA abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
+      return byAnSlug.logoUrl;
+    }
+    if (anLogoUrl) return anLogoUrl; // AN CDN fallback
+    console.warn(`[AN][STATE] Logo fallback: sport=NBA abbrev=${abbrev} not in NBA_BY_ABBREV or anSlug map — no logo`);
+  }
+
+  if (sport === "NHL") {
+    // Try exact abbrev match first, then case-insensitive
+    const abbrevUpper = abbrev.toUpperCase();
+    const team = _NHL_BY_ABBREV_EARLY.get(abbrevUpper) ?? _NHL_BY_ABBREV_EARLY.get(abbrev);
+    if (team?.logoUrl) {
+      console.log(`[AN][STEP]  Logo resolved: sport=NHL abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
+      return team.logoUrl;
+    }
+    // Fallback: try matching by anSlug
+    const byAnSlug = NHL_TEAMS.find(t => t.anSlug === abbrev || t.anSlug === abbrev.toLowerCase());
+    if (byAnSlug?.logoUrl) {
+      console.log(`[AN][STEP]  Logo resolved via anSlug: sport=NHL abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
+      return byAnSlug.logoUrl;
+    }
+    if (anLogoUrl) return anLogoUrl; // AN CDN fallback
+    console.warn(`[AN][STATE] Logo fallback: sport=NHL abbrev=${abbrev} not in NHL_BY_ABBREV or anSlug map — no logo`);
+  }
+
   return anLogoUrl;
 }
 

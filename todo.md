@@ -3791,3 +3791,14 @@
 - [x] Add rg_session_cache table to schema + db:push
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - Bet Tracker NBA/NHL Logos + Sort Order
+
+- [x] Discord bot token updated (DISCORD_BOT_TOKEN secret)
+- [x] resolveLogoUrl: add NBA lookup via _NBA_BY_ABBREV_EARLY map (cdn.nba.com SVGs)
+- [x] resolveLogoUrl: add NHL lookup via _NHL_BY_ABBREV_EARLY map (assets.nhle.com SVGs)
+- [x] Fix hoisting bug: NBA_BY_ABBREV/NHL_BY_ABBREV declared after resolveLogoUrl — added early maps above the function
+- [x] sortDayBets: fix null/NaN riskUnits — safeUnits() normalizes null to 0, falls back to risk/unitSize
+- [x] sortDayBets: PRIMARY sort = riskUnits DESC (5U on top), SECONDARY = result priority, TERTIARY = createdAt DESC
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
