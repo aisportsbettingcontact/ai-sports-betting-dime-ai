@@ -28,7 +28,9 @@
 
 import type { Express, Request, Response } from "express";
 import { verifyAppUserToken } from "./routers/appUsers";
-import { getAppUserById } from "./db";
+import { getAppUserById, getDb } from "./db";
+import { mlbPlayers } from "../drizzle/schema";
+import { like, isNotNull, or, eq } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -123,6 +125,24 @@ function applyFirstNameAlias(name: string): string {
   return [aliasCapitalized, ...parts.slice(1)].join(" ");
 }
 
+/**
+ * Normalize a player name for DB lookup:
+ * - Strip Unicode accents (NFD decompose → strip combining marks)
+ * - Lowercase, trim, collapse whitespace
+ * - Replace hyphens with spaces
+ * - Strip non-alpha-space characters
+ */
+function normalizeNameForDb(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // strip accents: é→e, ñ→n, etc.
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/[^a-z ]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 async function resolveMlbId(playerName: string): Promise<number | null> {
   // Apply first-name alias BEFORE cache key computation so aliases share the same cache entry
   const aliasedName = applyFirstNameAlias(playerName);
@@ -140,76 +160,98 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     if (cached.mlbId === null && age < nullTtl) return null;
   }
 
+  // ── Attempt 0: DB lookup via mlb_players table (fast, no network) ────────────
+  // Uses accent-normalized name matching to handle "José Ramírez" → "jose ramirez"
+  // Strategy: LIKE on last name (DB-side filter) → exact accent-normalized match (JS-side)
+  try {
+    const db = await getDb();
+    const normalizedSearch = normalizeNameForDb(aliasedName);
+    const nameParts = aliasedName.trim().split(/\s+/);
+    // Use the last name fragment for the DB LIKE query (most discriminating)
+    // For compound last names (e.g. "Pete Crow-Armstrong"), use the full last segment
+    const lastNameRaw = nameParts[nameParts.length - 1];
+
+    // DB LIKE query: match rows where name contains the last name fragment
+    const dbRows = await db
+      .select({ name: mlbPlayers.name, mlbamId: mlbPlayers.mlbamId })
+      .from(mlbPlayers)
+      .where(like(mlbPlayers.name, `%${lastNameRaw}%`))
+      .limit(20);
+
+    // JS-side accent-normalized exact match
+    const match = dbRows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+    if (match?.mlbamId) {
+      console.log(`[RGProxy] [STATE] MLB ID resolved (DB): player="${playerName}" id=${match.mlbamId} dbName="${match.name}"`);
+      mlbIdCache.set(key, { mlbId: match.mlbamId, cachedAt: Date.now() });
+      return match.mlbamId;
+    }
+
+    // Fallback: first-name LIKE in case last name has accent issues
+    if (nameParts.length >= 2) {
+      const firstNameRaw = nameParts[0];
+      const firstRows = await db
+        .select({ name: mlbPlayers.name, mlbamId: mlbPlayers.mlbamId })
+        .from(mlbPlayers)
+        .where(like(mlbPlayers.name, `${firstNameRaw}%`))
+        .limit(10);
+      const firstMatch = firstRows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+      if (firstMatch?.mlbamId) {
+        console.log(`[RGProxy] [STATE] MLB ID resolved (DB first-name): player="${playerName}" id=${firstMatch.mlbamId} dbName="${firstMatch.name}"`);
+        mlbIdCache.set(key, { mlbId: firstMatch.mlbamId, cachedAt: Date.now() });
+        return firstMatch.mlbamId;
+      }
+    }
+  } catch (dbErr) {
+    console.warn(`[RGProxy] [STATE] DB lookup failed for "${playerName}": ${(dbErr as Error).message} — falling back to MLB API`);
+  }
+
   const encoded = encodeURIComponent(aliasedName.trim());
 
   // ── Attempt 1: MLB Stats API /people/search with sportId=1 (MLB only) ────────
   try {
     const url1 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=1`;
-    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 1 (MLB): player="${playerName}" url=${url1}`);
+    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 1 (MLB API): player="${playerName}"`);
     const res1 = await fetch(url1, {
       headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(3000), // 3s: tight timeout — MLB API is fast when available
+      signal: AbortSignal.timeout(800), // 800ms: fail fast — DB cache should handle 99% of cases
     });
     if (res1.ok) {
       const data1 = await res1.json() as { people?: { id: number; fullName: string }[] };
       const mlbId1 = data1.people?.[0]?.id ?? null;
       if (mlbId1) {
-        console.log(`[RGProxy] [STATE] MLB ID resolved (attempt 1): player="${playerName}" id=${mlbId1}`);
+        console.log(`[RGProxy] [STATE] MLB ID resolved (API attempt 1): player="${playerName}" id=${mlbId1}`);
         mlbIdCache.set(key, { mlbId: mlbId1, cachedAt: Date.now() });
         return mlbId1;
       }
     }
   } catch (e) {
-    console.warn(`[RGProxy] [STATE] MLB ID attempt 1 failed for "${playerName}": ${(e as Error).message}`);
+    console.warn(`[RGProxy] [STATE] MLB API attempt 1 failed for "${playerName}": ${(e as Error).message}`);
   }
 
   // ── Attempt 2: MLB Stats API /people/search with all sport levels (MiLB + MLB) ─
-  // sportId=1=MLB, 11=AAA, 12=AA, 13=High-A, 14=Single-A, 16=Rookie
-  const allSportIds = [1, 11, 12, 13, 14, 16];
-  for (const sportId of allSportIds.slice(1)) {
+  const allSportIds = [11, 12, 13, 14, 16];
+  for (const sportId of allSportIds) {
     try {
       const url2 = `${MLB_STATS_API}/people/search?names=${encoded}&sportId=${sportId}`;
-      console.log(`[RGProxy] [STEP] MLB ID lookup attempt 2 (sportId=${sportId}): player="${playerName}"`);
       const res2 = await fetch(url2, {
         headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-        signal: AbortSignal.timeout(3000), // 3s: tight timeout
+        signal: AbortSignal.timeout(800), // 800ms: fail fast
       });
       if (res2.ok) {
         const data2 = await res2.json() as { people?: { id: number; fullName: string }[] };
         const mlbId2 = data2.people?.[0]?.id ?? null;
         if (mlbId2) {
-          console.log(`[RGProxy] [STATE] MLB ID resolved (sportId=${sportId}): player="${playerName}" id=${mlbId2}`);
+          console.log(`[RGProxy] [STATE] MLB ID resolved (API sportId=${sportId}): player="${playerName}" id=${mlbId2}`);
           mlbIdCache.set(key, { mlbId: mlbId2, cachedAt: Date.now() });
           return mlbId2;
         }
       }
     } catch (e) {
-      console.warn(`[RGProxy] [STATE] MLB ID attempt 2 sportId=${sportId} failed for "${playerName}": ${(e as Error).message}`);
+      // silent — fail fast
     }
   }
 
-  // ── Attempt 3: MLB Stats API /people/search with all sports (no sportId filter) ─
-  try {
-    const url3 = `${MLB_STATS_API}/people/search?names=${encoded}`;
-    console.log(`[RGProxy] [STEP] MLB ID lookup attempt 3 (all sports): player="${playerName}"`);
-    const res3 = await fetch(url3, {
-      headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" },
-      signal: AbortSignal.timeout(3000), // 3s: tight timeout
-    });
-    if (res3.ok) {
-      const data3 = await res3.json() as { people?: { id: number; fullName: string }[] };
-      const mlbId3 = data3.people?.[0]?.id ?? null;
-      if (mlbId3) {
-        console.log(`[RGProxy] [STATE] MLB ID resolved (attempt 3 all sports): player="${playerName}" id=${mlbId3}`);
-        mlbIdCache.set(key, { mlbId: mlbId3, cachedAt: Date.now() });
-        return mlbId3;
-      }
-    }
-  } catch (e) {
-    console.warn(`[RGProxy] [STATE] MLB ID attempt 3 failed for "${playerName}": ${(e as Error).message}`);
-  }
-
-  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}"${aliasedName !== playerName ? ` (aliased: "${aliasedName}")` : ""} after 3 attempts`);
+  console.warn(`[RGProxy] [VERIFY] WARN — MLB ID not found for player="${playerName}"${aliasedName !== playerName ? ` (aliased: "${aliasedName}")` : ""} after DB + API attempts`);
   mlbIdCache.set(key, { mlbId: null, cachedAt: Date.now() });
   return null;
 }
