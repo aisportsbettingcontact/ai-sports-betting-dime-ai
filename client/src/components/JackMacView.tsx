@@ -546,16 +546,41 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   const [syncPollStartedAt, setSyncPollStartedAt] = useState<number | null>(null);
   const [syncConsecutiveErrors, setSyncConsecutiveErrors] = useState(0);
 
+  // ── Client-side progress accumulation ────────────────────────────────────
+  // CRITICAL: never replace the accumulated array with a shorter one.
+  // The server returns job.progress[] which is in-memory only — if the
+  // server restarts mid-sync the new process returns [] from the DB row.
+  // We merge incoming events by phase key so the display never goes backwards.
+  const [accumulatedProgress, setAccumulatedProgress] = useState<SyncProgressEvent[]>([]);
+
+  // Real-time elapsed counter (ticks every second during polling)
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  // Final progress snapshot — shown after job completes so panel stays visible
+  const [finalProgress, setFinalProgress] = useState<SyncProgressEvent[] | null>(null);
+
   // Single source of truth for clearing all sync polling state
   const clearSyncState = useCallback((
     reason: string,
-    showToast?: { type: "success" | "warning" | "error"; msg: string }
+    showToast?: { type: "success" | "warning" | "error"; msg: string },
+    keepProgress?: SyncProgressEvent[]
   ) => {
-    console.log(`[JACKMAC][SHEETS][STATE] clearSyncState reason="${reason}"`);
+    console.log(
+      `[JACKMAC][SHEETS][STATE] clearSyncState reason="${reason}"` +
+      (keepProgress ? ` progressEvents=${keepProgress.length}` : "")
+    );
     setIsSyncPolling(false);
     setSyncJobId(null);
     setSyncPollStartedAt(null);
     setSyncConsecutiveErrors(0);
+    setElapsedSec(0);
+    // Preserve the final progress snapshot so the panel shows the completed state
+    if (keepProgress && keepProgress.length > 0) {
+      setFinalProgress(keepProgress);
+    } else {
+      setFinalProgress(null);
+    }
+    setAccumulatedProgress([]);
     if (showToast?.type === "success") toast.success(showToast.msg, { duration: 6000 });
     else if (showToast?.type === "warning") toast.warning(showToast.msg, { duration: 8000 });
     else if (showToast?.type === "error") toast.error(showToast.msg, { duration: 8000 });
@@ -571,6 +596,74 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
       gcTime: 0,       // CRITICAL: don't keep stale job data in cache between polls
     }
   );
+
+  // ── Real-time elapsed counter (ticks every 1s while polling) ──────────────────
+  // Uses syncPollStartedAt as the reference point (set when mutation succeeds)
+  // This gives a smooth, accurate counter independent of poll latency
+  useEffect(() => {
+    if (!isSyncPolling || syncPollStartedAt === null) {
+      setElapsedSec(0);
+      return;
+    }
+    const tick = () => {
+      const s = Math.floor((Date.now() - syncPollStartedAt) / 1000);
+      setElapsedSec(s);
+    };
+    tick(); // immediate first tick
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isSyncPolling, syncPollStartedAt]);
+
+  // ── Client-side progress event accumulation ──────────────────────────────
+  // CRITICAL FIX: merge incoming progress events into accumulatedProgress.
+  // Never replace the array with a shorter one — the server's in-memory
+  // job.progress[] is reset to [] if the process restarts. By accumulating
+  // on the client we guarantee the display never goes backwards.
+  //
+  // Merge strategy: for each incoming event, update the entry for that phase
+  // (later events for the same phase supersede earlier ones), but ONLY if
+  // the incoming event is newer (higher elapsedMs) than what we already have.
+  useEffect(() => {
+    if (!isSyncPolling || !syncStatusQuery.data) return;
+    const incoming = (syncStatusQuery.data as typeof syncStatusQuery.data & { progress?: SyncProgressEvent[] }).progress ?? [];
+    if (incoming.length === 0) return; // never replace with empty
+    setAccumulatedProgress(prev => {
+      // Build a map of existing events keyed by phase
+      const byPhase = new Map<string, SyncProgressEvent>();
+      for (const ev of prev) byPhase.set(ev.phase, ev);
+      // Merge incoming: only update if incoming event is newer (higher elapsedMs)
+      let changed = false;
+      for (const ev of incoming) {
+        const existing = byPhase.get(ev.phase);
+        if (!existing || ev.elapsedMs >= existing.elapsedMs) {
+          byPhase.set(ev.phase, ev);
+          changed = true;
+        }
+      }
+      if (!changed) return prev; // no change — avoid re-render
+      // Rebuild array preserving insertion order (first seen phase first)
+      const merged: SyncProgressEvent[] = [];
+      const seen = new Set<string>();
+      // First pass: preserve order from prev, update values from map
+      for (const ev of prev) {
+        merged.push(byPhase.get(ev.phase)!);
+        seen.add(ev.phase);
+      }
+      // Second pass: append any new phases from incoming
+      for (const ev of incoming) {
+        if (!seen.has(ev.phase)) {
+          merged.push(byPhase.get(ev.phase)!);
+          seen.add(ev.phase);
+        }
+      }
+      console.log(
+        `[JACKMAC][SHEETS][PROGRESS] Accumulated ${merged.length} events` +
+        ` (prev=${prev.length} incoming=${incoming.length})` +
+        ` phases=[${merged.map(e => e.phase).join(", ")}]`
+      );
+      return merged;
+    });
+  }, [syncStatusQuery.data, isSyncPolling]);
 
   // Poll run lock state when we know a lock is held (but we don't have the jobId)
   const runLockQuery = trpc.jackMac.getRunLockState.useQuery(undefined, {
@@ -589,30 +682,46 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     }
   }, [runLockQuery.data, syncLockedRunId]);
 
-  // Safety net: force-clear stuck polling after 120s regardless of server state
-  // Prevents permanent stuck state if the server restarts mid-sync
+  // Safety net: force-clear stuck polling after 180s regardless of server state
+  // Prevents permanent stuck state if the server restarts mid-sync.
+  // 180s is chosen because the worst-case sync (RG login + 4 tabs + FG fetch + 2 lineup tabs)
+  // takes ~25s under normal conditions; 180s gives 7x headroom for slow networks.
   useEffect(() => {
     if (!isSyncPolling || syncPollStartedAt === null) return;
-    const MAX_POLL_MS = 120_000;
+    const MAX_POLL_MS = 180_000;
     const elapsed = Date.now() - syncPollStartedAt;
     const remaining = MAX_POLL_MS - elapsed;
     if (remaining <= 0) {
-      console.warn(`[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s, force-clearing stuck state`);
-      clearSyncState("safety-timeout", {
-        type: "warning",
-        msg: "Sync status unknown — the server may have restarted. Check Google Sheets directly.",
-      });
+      console.warn(
+        `[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s,` +
+        ` force-clearing stuck state. accumulatedProgress=${accumulatedProgress.length} events`
+      );
+      clearSyncState(
+        "safety-timeout",
+        {
+          type: "warning",
+          msg: `Sync took over ${MAX_POLL_MS / 1000}s — status unknown. If Google Sheets was updated, the sync completed successfully.`,
+        },
+        accumulatedProgress.length > 0 ? accumulatedProgress : undefined
+      );
       return;
     }
     const timer = setTimeout(() => {
-      console.warn(`[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s, force-clearing stuck state`);
-      clearSyncState("safety-timeout", {
-        type: "warning",
-        msg: "Sync status unknown — the server may have restarted. Check Google Sheets directly.",
-      });
+      console.warn(
+        `[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s,` +
+        ` force-clearing stuck state. accumulatedProgress=${accumulatedProgress.length} events`
+      );
+      clearSyncState(
+        "safety-timeout",
+        {
+          type: "warning",
+          msg: `Sync took over ${MAX_POLL_MS / 1000}s — status unknown. If Google Sheets was updated, the sync completed successfully.`,
+        },
+        accumulatedProgress.length > 0 ? accumulatedProgress : undefined
+      );
     }, remaining);
     return () => clearTimeout(timer);
-  }, [isSyncPolling, syncPollStartedAt, clearSyncState]);
+  }, [isSyncPolling, syncPollStartedAt, clearSyncState, accumulatedProgress]);
 
   // Watch syncStatusQuery.error — handle NOT_FOUND and network errors gracefully
   // After 3 consecutive errors, force-clear the stuck state
@@ -641,15 +750,30 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     const job = syncStatusQuery.data;
 
     // Handle not_found sentinel: server returned { status: 'not_found' }
-    // This happens when the server restarted and the in-memory syncJobStore was cleared
+    // This happens when BOTH the in-memory syncJobStore AND the DB lookup returned null.
+    // The DB lookup is the definitive check — if the DB also has no record, the job
+    // truly never persisted (server crashed before persistJobToDb() completed).
+    //
+    // IMPORTANT: preserve accumulated progress so the panel shows what completed
+    // before the server restart, rather than showing a blank error state.
     if ((job.status as string) === "not_found") {
       console.warn(
-        `[JACKMAC][SHEETS][VERIFY] WARN — jobId=${syncJobId} not found on server (server may have restarted)`
+        `[JACKMAC][SHEETS][VERIFY] WARN — jobId=${syncJobId} not found on server (both in-memory + DB)` +
+        ` | accumulatedProgress=${accumulatedProgress.length} events preserved`
       );
-      clearSyncState("job-not-found", {
-        type: "warning",
-        msg: "Sync job not found — the server may have restarted. The sync likely completed. Check Google Sheets directly.",
-      });
+      // If we have accumulated progress events, the sync was running — it likely
+      // completed before the server restart cleared the job. Show what we know.
+      const hasProgress = accumulatedProgress.length > 0;
+      clearSyncState(
+        "job-not-found",
+        {
+          type: hasProgress ? "warning" : "warning",
+          msg: hasProgress
+            ? `Sync status lost (server restarted mid-sync). Last known step: "${accumulatedProgress[accumulatedProgress.length - 1]?.message ?? "unknown"}". Check Google Sheets to confirm completion.`
+            : "Sync job not found — the server may have restarted. Check Google Sheets directly.",
+        },
+        hasProgress ? accumulatedProgress : undefined
+      );
       return;
     }
 
@@ -660,15 +784,23 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           const failedTabs = result.tabs.filter(t => t.status === "error");
           const readBackFailed = result.tabs.filter(t => !t.readBackValidated && t.rowsWritten > 0);
           if (failedTabs.length === 0 && readBackFailed.length === 0) {
-            clearSyncState("job-success", {
-              type: "success",
-              msg: `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
-            });
+            clearSyncState(
+              "job-success",
+              {
+                type: "success",
+                msg: `✓ Google Sheets synced — ${result.totalRowsWritten.toLocaleString()} rows across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
+              },
+              accumulatedProgress.length > 0 ? accumulatedProgress : undefined
+            );
           } else {
             const warnings: string[] = [];
             if (failedTabs.length > 0) warnings.push(`${failedTabs.length} tabs failed`);
             if (readBackFailed.length > 0) warnings.push(`${readBackFailed.length} read-back mismatches`);
-            clearSyncState("job-partial", { type: "warning", msg: `Partial sync — ${warnings.join(", ")}` });
+            clearSyncState(
+              "job-partial",
+              { type: "warning", msg: `Partial sync — ${warnings.join(", ")}` },
+              accumulatedProgress.length > 0 ? accumulatedProgress : undefined
+            );
           }
           console.log(
             `[JACKMAC][SHEETS][OUTPUT] Sync success: runId=${result.runId} totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`
@@ -684,7 +816,11 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           console.warn(`[JACKMAC][SHEETS][VERIFY] PARTIAL — failed tabs: ${failedTabs}`);
         }
       } else if (job.status === "error") {
-        clearSyncState("job-error", { type: "error", msg: `Google Sheets sync failed: ${job.error ?? "Unknown error"}` });
+        clearSyncState(
+          "job-error",
+          { type: "error", msg: `Google Sheets sync failed: ${job.error ?? "Unknown error"}` },
+          accumulatedProgress.length > 0 ? accumulatedProgress : undefined
+        );
         console.error(`[JACKMAC][SHEETS][VERIFY] FAIL — ${job.error}`);
       }
     }
@@ -705,11 +841,16 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
         const { jobId, runId } = result;
         const pollStart = Date.now();
         console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId} runId=${runId} pollStartedAt=${pollStart}`);
+        // Reset all accumulated state before starting a new sync
+        setAccumulatedProgress([]);
+        setFinalProgress(null);
+        setElapsedSec(0);
         setSyncJobId(jobId);
         setIsSyncPolling(true);
         setSyncPollStartedAt(pollStart);
         setSyncLockedRunId(null);
-        toast.info("Google Sheets sync started — runs in background (~20s)...", { duration: 5000 });
+        // No toast — the live progress panel replaces the toast for start notification
+        console.log(`[JACKMAC][SHEETS][STATE] Progress panel active — polling every 2s for jobId=${jobId}`);
       }
     },
     onError: (err) => {
@@ -1066,23 +1207,24 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
         </div>
 
         {/* ── Live Sync Progress Panel ─────────────────────────────────────────
-            Shown during active polling (isSyncPolling) or when a lock is held
-            by another process (syncIsLocked). Replaces the silent spinner with
-            a real-time step-by-step feed of every phase in the ~20s sync job.
+            Shown during active polling (isSyncPolling), when a lock is held
+            by another process (syncIsLocked), OR after completion (finalProgress).
+
+            KEY INVARIANTS:
+            - displayEvents = accumulatedProgress (client-side merge, never shrinks)
+            - elapsedSec = real-time 1s ticker from syncPollStartedAt
+            - finalProgress = snapshot preserved after job completes/errors/times-out
+            - Panel stays visible for 8s after completion so all 3 users can see result
         ─────────────────────────────────────────────────────────────────────── */}
-        {(isSyncPolling || syncIsLocked) && (() => {
-          // Collect live progress events from the latest poll response
-          const progressEvents: SyncProgressEvent[] =
-            (syncStatusQuery.data as (typeof syncStatusQuery.data & { progress?: SyncProgressEvent[] }) | undefined)
-              ?.progress ?? [];
+        {(isSyncPolling || syncIsLocked || finalProgress !== null) && (() => {
+          // Use accumulated (client-side merged) events during polling,
+          // or the final snapshot after the job completes.
+          const isComplete = !isSyncPolling && !syncIsLocked && finalProgress !== null;
+          const displayEvents: SyncProgressEvent[] = isComplete
+            ? (finalProgress ?? [])
+            : accumulatedProgress;
 
-          // Elapsed time counter — computed from job start time
-          const jobStartedAt = syncStatusQuery.data?.startedAt;
-          const elapsedSec = jobStartedAt
-            ? Math.floor((Date.now() - new Date(jobStartedAt).getTime()) / 1000)
-            : null;
-
-          // Phase display config: maps phase prefix → human label + icon char
+          // Phase display config: maps phase prefix → human label
           const phaseLabel = (phase: string): string => {
             if (phase === "sheets-auth")    return "Google Sheets auth";
             if (phase === "rg-login")       return "RotoGrinders login";
@@ -1091,65 +1233,81 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
             if (phase === "sync-complete")  return "Sync complete";
             if (phase.startsWith("sheets-write:")) return `Write → ${phase.replace("sheets-write:", "")}`;
             if (phase.startsWith("fg-write:"))     return `Write → ${phase.replace("fg-write:", "")}`;
-
             return phase;
           };
 
-          // Deduplicate: for each phase, keep only the latest event
-          // (start events are superseded by done/error events for the same phase)
-          const latestByPhase = new Map<string, SyncProgressEvent>();
-          for (const ev of progressEvents) {
-            latestByPhase.set(ev.phase, ev);
-          }
-          const displayEvents = Array.from(latestByPhase.values());
-
-          // Find the currently active phase (last "start" event without a matching done/error)
-          const activePhase = (() => {
-            for (let i = progressEvents.length - 1; i >= 0; i--) {
-              if (progressEvents[i].status === "start") return progressEvents[i].phase;
+          // Find the currently active phase (last "start" event without a done/error)
+          // Only relevant during active polling — null when complete
+          const activePhase: string | null = isComplete ? null : (() => {
+            for (let i = displayEvents.length - 1; i >= 0; i--) {
+              if (displayEvents[i].status === "start") return displayEvents[i].phase;
             }
             return null;
           })();
 
+          // Header state
+          const isExternal = syncIsLocked && !isSyncPolling;
+          const headerLabel = isComplete
+            ? "Sync Complete"
+            : isExternal
+            ? "Sync in Progress (external)"
+            : "Syncing to Google Sheets";
+
           return (
-            <div className="mt-1.5 bg-zinc-900/60 border border-zinc-700/50 rounded overflow-hidden">
+            <div className={`mt-1.5 border rounded overflow-hidden ${
+              isComplete
+                ? "bg-zinc-900/40 border-emerald-800/40"
+                : "bg-zinc-900/60 border-zinc-700/50"
+            }`}>
               {/* Panel header */}
               <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-800/60">
                 <div className="flex items-center gap-2">
-                  {syncIsLocked && !isSyncPolling ? (
+                  {isComplete ? (
+                    <span className="text-emerald-400 text-xs font-bold">✓</span>
+                  ) : isExternal ? (
                     <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
                   ) : (
                     <Loader2 className="w-3 h-3 text-[#39FF14] animate-spin shrink-0" />
                   )}
                   <span className="text-[10px] font-semibold text-zinc-200 tracking-wide uppercase">
-                    {syncIsLocked && !isSyncPolling ? "Sync in Progress (external)" : "Syncing to Google Sheets"}
+                    {headerLabel}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {elapsedSec !== null && (
+                  {/* Real-time elapsed counter — ticks every 1s via setInterval */}
+                  {isSyncPolling && elapsedSec > 0 && (
                     <span className="text-[10px] text-zinc-500 font-mono">{elapsedSec}s elapsed</span>
                   )}
                   {syncIsLocked && syncLockedRunId && (
                     <span className="text-[10px] text-zinc-600 font-mono">run:{syncLockedRunId.slice(-6)}</span>
                   )}
+                  {/* Dismiss button for completed panel */}
+                  {isComplete && (
+                    <button
+                      type="button"
+                      onClick={() => setFinalProgress(null)}
+                      className="text-[10px] text-zinc-500 hover:text-zinc-300 px-1"
+                      title="Dismiss"
+                    >×</button>
+                  )}
                 </div>
               </div>
 
               {/* Progress event list */}
-              <div className="px-2.5 py-1.5 space-y-0.5 max-h-[160px] overflow-y-auto">
+              <div className="px-2.5 py-1.5 space-y-0.5 max-h-[200px] overflow-y-auto">
                 {displayEvents.length === 0 ? (
                   // No events yet — show a pulsing placeholder
                   <div className="flex items-center gap-2 py-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shrink-0" />
                     <span className="text-[10px] text-zinc-400">
-                      {syncIsLocked && !isSyncPolling
+                      {isExternal
                         ? "Sync running in another process — waiting for status..."
                         : "Starting sync job..."}
                     </span>
                   </div>
                 ) : (
                   displayEvents.map((ev) => {
-                    const isActive = ev.phase === activePhase && ev.status === "start";
+                    const isActive = !isComplete && ev.phase === activePhase && ev.status === "start";
                     const isDone  = ev.status === "done";
                     const isError = ev.status === "error";
                     const isSkip  = ev.status === "skip";
@@ -1169,6 +1327,10 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                           {isSkip && (
                             <span className="text-zinc-500 text-[10px] leading-none">–</span>
                           )}
+                          {/* start-but-not-active = completed phase from before server restart */}
+                          {ev.status === "start" && !isActive && (
+                            <span className="text-zinc-500 text-[10px] leading-none">·</span>
+                          )}
                         </div>
                         {/* Message */}
                         <div className="flex-1 min-w-0">
@@ -1185,7 +1347,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                             <span className="ml-1.5 text-[9px] text-zinc-500 font-mono">{ev.rowCount.toLocaleString()} rows</span>
                           )}
                         </div>
-                        {/* Elapsed time */}
+                        {/* Per-event elapsed time */}
                         <span className="text-[9px] text-zinc-600 font-mono shrink-0 mt-0.5">
                           {(ev.elapsedMs / 1000).toFixed(1)}s
                         </span>
@@ -1194,8 +1356,8 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                   })
                 )}
 
-                {/* Active phase pulsing indicator when events exist but a phase is still running */}
-                {displayEvents.length > 0 && activePhase && (
+                {/* Active phase footer — shows which phase is currently running */}
+                {!isComplete && displayEvents.length > 0 && activePhase && (
                   <div className="flex items-center gap-2 py-0.5 border-t border-zinc-800/40 mt-1 pt-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shrink-0" />
                     <span className="text-[10px] text-zinc-400 italic">
