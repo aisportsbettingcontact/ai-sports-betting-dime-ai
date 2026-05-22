@@ -111,6 +111,17 @@ interface FgScrapeResult {
   errors: string[];
 }
 
+// Sync progress event (mirrors server SyncProgressEvent shape)
+interface SyncProgressEvent {
+  at: string;
+  elapsedMs: number;
+  phase: string;
+  message: string;
+  status: "start" | "done" | "error" | "skip";
+  rowCount?: number;
+  tabName?: string;
+}
+
 // Sync result types (mirrors server response shape)
 interface SheetSyncTabResult {
   pageKey: string;
@@ -1054,16 +1065,148 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           </div>
         </div>
 
-        {/* Sync locked banner */}
-        {syncIsLocked && (
-          <div className="flex items-center gap-2 mt-1.5 text-[10px] text-amber-300 bg-amber-950/20 border border-amber-800/30 rounded px-2 py-1">
-            <ShieldAlert className="w-3 h-3 shrink-0" />
-            <span>
-              A Google Sheets sync is currently running (runId: {syncLockedRunId?.slice(-8) ?? "unknown"}).
-              The button will re-enable when the sync completes.
-            </span>
-          </div>
-        )}
+        {/* ── Live Sync Progress Panel ─────────────────────────────────────────
+            Shown during active polling (isSyncPolling) or when a lock is held
+            by another process (syncIsLocked). Replaces the silent spinner with
+            a real-time step-by-step feed of every phase in the ~20s sync job.
+        ─────────────────────────────────────────────────────────────────────── */}
+        {(isSyncPolling || syncIsLocked) && (() => {
+          // Collect live progress events from the latest poll response
+          const progressEvents: SyncProgressEvent[] =
+            (syncStatusQuery.data as (typeof syncStatusQuery.data & { progress?: SyncProgressEvent[] }) | undefined)
+              ?.progress ?? [];
+
+          // Elapsed time counter — computed from job start time
+          const jobStartedAt = syncStatusQuery.data?.startedAt;
+          const elapsedSec = jobStartedAt
+            ? Math.floor((Date.now() - new Date(jobStartedAt).getTime()) / 1000)
+            : null;
+
+          // Phase display config: maps phase prefix → human label + icon char
+          const phaseLabel = (phase: string): string => {
+            if (phase === "sheets-auth")    return "Google Sheets auth";
+            if (phase === "rg-login")       return "RotoGrinders login";
+            if (phase === "rg-fetch")       return "RG CSV fetch (4 tabs)";
+            if (phase === "fg-fetch")       return "MLB lineup fetch";
+            if (phase === "sync-complete")  return "Sync complete";
+            if (phase.startsWith("sheets-write:")) return `Write → ${phase.replace("sheets-write:", "")}`;
+            if (phase.startsWith("fg-write:"))     return `Write → ${phase.replace("fg-write:", "")}`;
+
+            return phase;
+          };
+
+          // Deduplicate: for each phase, keep only the latest event
+          // (start events are superseded by done/error events for the same phase)
+          const latestByPhase = new Map<string, SyncProgressEvent>();
+          for (const ev of progressEvents) {
+            latestByPhase.set(ev.phase, ev);
+          }
+          const displayEvents = Array.from(latestByPhase.values());
+
+          // Find the currently active phase (last "start" event without a matching done/error)
+          const activePhase = (() => {
+            for (let i = progressEvents.length - 1; i >= 0; i--) {
+              if (progressEvents[i].status === "start") return progressEvents[i].phase;
+            }
+            return null;
+          })();
+
+          return (
+            <div className="mt-1.5 bg-zinc-900/60 border border-zinc-700/50 rounded overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-800/60">
+                <div className="flex items-center gap-2">
+                  {syncIsLocked && !isSyncPolling ? (
+                    <ShieldAlert className="w-3 h-3 text-amber-400 shrink-0" />
+                  ) : (
+                    <Loader2 className="w-3 h-3 text-[#39FF14] animate-spin shrink-0" />
+                  )}
+                  <span className="text-[10px] font-semibold text-zinc-200 tracking-wide uppercase">
+                    {syncIsLocked && !isSyncPolling ? "Sync in Progress (external)" : "Syncing to Google Sheets"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {elapsedSec !== null && (
+                    <span className="text-[10px] text-zinc-500 font-mono">{elapsedSec}s elapsed</span>
+                  )}
+                  {syncIsLocked && syncLockedRunId && (
+                    <span className="text-[10px] text-zinc-600 font-mono">run:{syncLockedRunId.slice(-6)}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress event list */}
+              <div className="px-2.5 py-1.5 space-y-0.5 max-h-[160px] overflow-y-auto">
+                {displayEvents.length === 0 ? (
+                  // No events yet — show a pulsing placeholder
+                  <div className="flex items-center gap-2 py-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shrink-0" />
+                    <span className="text-[10px] text-zinc-400">
+                      {syncIsLocked && !isSyncPolling
+                        ? "Sync running in another process — waiting for status..."
+                        : "Starting sync job..."}
+                    </span>
+                  </div>
+                ) : (
+                  displayEvents.map((ev) => {
+                    const isActive = ev.phase === activePhase && ev.status === "start";
+                    const isDone  = ev.status === "done";
+                    const isError = ev.status === "error";
+                    const isSkip  = ev.status === "skip";
+                    return (
+                      <div key={ev.phase} className="flex items-start gap-2 py-0.5">
+                        {/* Status indicator */}
+                        <div className="mt-0.5 shrink-0 w-3 flex justify-center">
+                          {isActive && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse" />
+                          )}
+                          {isDone && (
+                            <span className="text-emerald-400 text-[10px] leading-none font-bold">✓</span>
+                          )}
+                          {isError && (
+                            <span className="text-red-400 text-[10px] leading-none font-bold">✗</span>
+                          )}
+                          {isSkip && (
+                            <span className="text-zinc-500 text-[10px] leading-none">–</span>
+                          )}
+                        </div>
+                        {/* Message */}
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-[10px] leading-tight ${
+                            isActive ? "text-zinc-100" :
+                            isDone   ? "text-zinc-300" :
+                            isError  ? "text-red-400"  :
+                            isSkip   ? "text-zinc-500"  :
+                            "text-zinc-400"
+                          }`}>
+                            {ev.message}
+                          </span>
+                          {ev.rowCount !== undefined && ev.status === "done" && (
+                            <span className="ml-1.5 text-[9px] text-zinc-500 font-mono">{ev.rowCount.toLocaleString()} rows</span>
+                          )}
+                        </div>
+                        {/* Elapsed time */}
+                        <span className="text-[9px] text-zinc-600 font-mono shrink-0 mt-0.5">
+                          {(ev.elapsedMs / 1000).toFixed(1)}s
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+
+                {/* Active phase pulsing indicator when events exist but a phase is still running */}
+                {displayEvents.length > 0 && activePhase && (
+                  <div className="flex items-center gap-2 py-0.5 border-t border-zinc-800/40 mt-1 pt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shrink-0" />
+                    <span className="text-[10px] text-zinc-400 italic">
+                      {phaseLabel(activePhase)}...
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Main tab selector: Projections | Lineups */}
         <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-0.5">
