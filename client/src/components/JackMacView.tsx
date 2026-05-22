@@ -12,15 +12,16 @@
  *   4. Tomorrow Hitters  (tomorrow-hitters)
  *   5. Lineups           (lineups — MLB Stats API, card layout)
  *
- * Features (identical to Resources.tsx):
+ * Features:
+ *   - Run-lock awareness: shows "Sync in Progress" when server lock is held
+ *   - All 8 UI states: loading / cached-shell / stale / error / locked / empty / no-cols / data
+ *   - Background sync with polling (avoids 120s proxy timeout)
  *   - CSV Export per sub-tab
  *   - Column Visibility Groups (localStorage-persisted)
  *   - Staleness Auto-Refresh (>15 min)
  *   - Player Headshots (MLB static CDN)
  *   - Team / Opponent Logos (ESPN CDN)
  *   - Sort + Search
- *
- * Diagnostic logging: all state transitions use structured console labels.
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -42,6 +43,8 @@ import {
   CheckSquare,
   Square,
   RotateCcw,
+  ShieldAlert,
+  Clock,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -108,10 +111,36 @@ interface FgScrapeResult {
   errors: string[];
 }
 
+// Sync result types (mirrors server response shape)
+interface SheetSyncTabResult {
+  pageKey: string;
+  sheetTab: string;
+  rowsWritten: number;
+  columnsWritten: number;
+  updatedAt: string;
+  elapsedMs: number;
+  status: "success" | "error" | "skip" | "empty";
+  error?: string;
+  readBackRowCount: number;
+  readBackValidated: boolean;
+  snapshotRowCount: number;
+  rollbackAttempted: boolean;
+  rollbackSucceeded: boolean;
+}
+
+interface SheetSyncResult {
+  success: boolean;
+  syncedAt: string;
+  totalRowsWritten: number;
+  tabs: SheetSyncTabResult[];
+  elapsedMs: number;
+  runId: string;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STALE_MS = 15 * 60 * 1000;
-const LS_COL_VIS_KEY = "rg_col_vis_v2"; // shared with Resources.tsx intentionally
+const LS_COL_VIS_KEY = "rg_col_vis_v2";
 
 const TABS = [
   { key: "today-pitchers",    label: "Today Pitchers",    short: "T.P",  type: "pitchers" as const },
@@ -121,7 +150,7 @@ const TABS = [
 ] as const;
 type TabKey = typeof TABS[number]["key"];
 
-// JACK MAC whitelist — must match server/rotogrinderProxy.ts ALLOWED_USERNAMES
+// JACK MAC whitelist — must match server/routers/jackMac.ts JACK_MAC_WHITELIST
 const JACK_MAC_WHITELIST = new Set(["prez", "lucianobets", "sippi"]);
 
 const INTERNAL_COLS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL"]);
@@ -201,7 +230,7 @@ function formatAge(ageMs: number): string {
 
 // ─── Lineup Card Components ───────────────────────────────────────────────────
 
-function PitcherBadge({ pitcher, side }: { pitcher: FgPitcher | null; side: "away" | "home" }) {
+function PitcherBadge({ pitcher }: { pitcher: FgPitcher | null; side: "away" | "home" }) {
   if (!pitcher) {
     return (
       <div className="flex items-center gap-1.5 text-zinc-500 text-xs">
@@ -311,10 +340,8 @@ function GameCard({ game }: { game: FgGame }) {
 
 function LineupsView({
   isAllowed,
-  onRefresh,
 }: {
   isAllowed: boolean;
-  onRefresh?: () => void;
 }) {
   const [lineupDay, setLineupDay] = useState<"today" | "tomorrow">("today");
   const [lineupSearch, setLineupSearch] = useState("");
@@ -339,7 +366,6 @@ function LineupsView({
     setIsForceRefreshing(true);
     try {
       await utils.jackMac.getLineups.fetch({ forceRefresh: true });
-      // Invalidate so the useQuery hook picks up the fresh data
       await utils.jackMac.getLineups.invalidate();
     } catch (err) {
       console.error("[LineupsView] Force refresh failed:", err);
@@ -484,7 +510,6 @@ function LineupsView({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface JackMacViewProps {
-  /** The authenticated app user object from useAppAuth(). Null if not logged in. */
   appUser: { username: string } | null;
 }
 
@@ -495,12 +520,12 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   const isAllowed = Boolean(appUser && JACK_MAC_WHITELIST.has(appUser.username));
 
   // ── Google Sheets Sync — background job pattern ──────────────────────────
-  // syncToSheets.mutate() returns { jobId } immediately (< 50ms).
+  // syncToSheets.mutate() returns { jobId, runId } immediately (< 50ms)
+  // OR { locked: true, existingRunId } if a run is already in progress.
   // We then poll getSyncStatus every 2s until the job completes.
-  // This avoids the platform proxy 120s timeout that caused "Service Unavailable".
   const [syncJobId, setSyncJobId] = useState<string | null>(null);
   const [isSyncPolling, setIsSyncPolling] = useState(false);
-  const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [syncLockedRunId, setSyncLockedRunId] = useState<string | null>(null);
 
   const syncStatusQuery = trpc.jackMac.getSyncStatus.useQuery(
     { jobId: syncJobId! },
@@ -511,6 +536,23 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     }
   );
 
+  // Poll run lock state when we know a lock is held (but we don't have the jobId)
+  const runLockQuery = trpc.jackMac.getRunLockState.useQuery(undefined, {
+    enabled: isAllowed && syncLockedRunId !== null,
+    refetchInterval: syncLockedRunId !== null ? 3000 : false,
+    retry: false,
+  });
+
+  // Watch runLockQuery — clear locked state when lock is released
+  useEffect(() => {
+    if (!runLockQuery.data) return;
+    if (!runLockQuery.data.isLocked && syncLockedRunId !== null) {
+      console.log(`[JACKMAC][SHEETS][STATE] Run lock released — clearing locked state`);
+      setSyncLockedRunId(null);
+      toast.info("Google Sheets sync completed by another process.", { duration: 4000 });
+    }
+  }, [runLockQuery.data, syncLockedRunId]);
+
   // Watch syncStatusQuery for completion
   useEffect(() => {
     if (!isSyncPolling || !syncStatusQuery.data) return;
@@ -518,18 +560,29 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     if (job.status === "success" || job.status === "error") {
       setIsSyncPolling(false);
       setSyncJobId(null);
-      if (syncPollRef.current) {
-        clearInterval(syncPollRef.current);
-        syncPollRef.current = null;
-      }
       if (job.status === "success" && job.result) {
-        const result = job.result;
+        const result = job.result as SheetSyncResult;
         if (result.success) {
-          toast.success(
-            `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows written across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
-            { duration: 6000 }
-          );
-          console.log(`[JACKMAC][SHEETS][OUTPUT] Sync success: totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`);
+          const failedTabs = result.tabs.filter(t => t.status === "error");
+          const readBackFailed = result.tabs.filter(t => !t.readBackValidated && t.rowsWritten > 0);
+          if (failedTabs.length === 0 && readBackFailed.length === 0) {
+            toast.success(
+              `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
+              { duration: 6000 }
+            );
+          } else {
+            const warnings: string[] = [];
+            if (failedTabs.length > 0) warnings.push(`${failedTabs.length} tabs failed`);
+            if (readBackFailed.length > 0) warnings.push(`${readBackFailed.length} read-back mismatches`);
+            toast.warning(`Partial sync — ${warnings.join(", ")}`, { duration: 8000 });
+          }
+          console.log(`[JACKMAC][SHEETS][OUTPUT] Sync success: runId=${result.runId} totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`);
+          // Log per-tab results
+          for (const tab of result.tabs) {
+            console.log(
+              `[JACKMAC][SHEETS][STATE] [${tab.status.toUpperCase()}] "${tab.sheetTab}" → ${tab.rowsWritten} rows readBack=${tab.readBackRowCount} validated=${tab.readBackValidated} rollback=${tab.rollbackAttempted} (${tab.elapsedMs}ms)`
+            );
+          }
         } else {
           const failedTabs = result.tabs.filter(t => t.status === "error").map(t => t.sheetTab).join(", ");
           toast.warning(`Partial sync — some tabs failed: ${failedTabs}`, { duration: 8000 });
@@ -543,11 +596,24 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   }, [syncStatusQuery.data, isSyncPolling]);
 
   const syncToSheetsMutation = trpc.jackMac.syncToSheets.useMutation({
-    onSuccess: ({ jobId }) => {
-      console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId}`);
-      setSyncJobId(jobId);
-      setIsSyncPolling(true);
-      toast.info("Google Sheets sync started — this runs in the background (60-90s)...", { duration: 5000 });
+    onSuccess: (result) => {
+      if (result.locked) {
+        // Run lock is held by another process
+        const existingRunId = result.existingRunId;
+        console.warn(`[JACKMAC][SHEETS][STATE] Sync LOCKED — existingRunId=${existingRunId}`);
+        setSyncLockedRunId(existingRunId);
+        toast.warning(
+          `A sync is already in progress (runId: ${existingRunId?.slice(-6) ?? "unknown"}). Monitoring...`,
+          { duration: 6000 }
+        );
+      } else {
+        const { jobId, runId } = result;
+        console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId} runId=${runId}`);
+        setSyncJobId(jobId);
+        setIsSyncPolling(true);
+        setSyncLockedRunId(null);
+        toast.info("Google Sheets sync started — runs in background (60-90s)...", { duration: 5000 });
+      }
     },
     onError: (err) => {
       toast.error(`Google Sheets sync failed to start: ${err.message}`, { duration: 8000 });
@@ -555,10 +621,14 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     },
   });
 
-  // Convenience alias for button state checks
+  // Sync button states:
+  //   syncIsPending  = mutation in flight or polling for completion
+  //   syncIsLocked   = another process holds the run lock
   const syncIsPending = syncToSheetsMutation.isPending || isSyncPolling;
+  const syncIsLocked = syncLockedRunId !== null;
+  const syncButtonDisabled = syncIsPending || syncIsLocked;
 
-  // ── Main tab state: "projections" | "lineups" ─────────────────────────────
+  // ── Main tab state ─────────────────────────────────────────────────────────
   const [mainTab, setMainTab] = useState<"projections" | "lineups">("projections");
 
   // ── State (RG projections) ─────────────────────────────────────────────────
@@ -628,10 +698,8 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   }, [cache, isAllowed]);
 
   // ── Pre-fetch all 4 tabs on mount (parallel) ─────────────────────────────
-  // Fetches all 4 tabs in parallel on first render so switching tabs is instant.
-  const hasMountFetchedRef = useRef(false);
   useEffect(() => {
-    hasMountFetchedRef.current = true;
+    if (!isAllowed) return;
     console.log("[JACKMAC][MOUNT] Pre-fetching all 4 RG tabs in parallel...");
     void Promise.all(TABS.map(t => fetchTab(t.key, false)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -644,13 +712,12 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   }, [activeTab, isAllowed, mainTab]);
 
   // ── 15-min auto-refresh interval ──────────────────────────────────────────
-  // Fires every 15 minutes while the Jack Mac tab is mounted.
-  // Force-refreshes all 4 RG tabs in parallel so data is always current.
   useEffect(() => {
+    if (!isAllowed) return;
     const intervalId = setInterval(() => {
       console.log(`[JACKMAC][AUTO-REFRESH] 15-min interval fired — force-refreshing all 4 RG tabs`);
       void Promise.all(TABS.map(t => fetchTab(t.key, true)));
-    }, STALE_MS); // STALE_MS = 15 * 60 * 1000 ms
+    }, STALE_MS);
     console.log(`[JACKMAC][AUTO-REFRESH] 15-min interval registered (id=${intervalId})`);
     return () => {
       clearInterval(intervalId);
@@ -679,14 +746,11 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     if (sortCol === col) {
       if (sortDir === "asc") {
         setSortDir("desc");
-        console.log(`[JACKMAC][SORT][STATE] col="${col}" dir=desc`);
       } else {
         setSortCol(null); setSortDir(null);
-        console.log(`[JACKMAC][SORT][STATE] cleared`);
       }
     } else {
       setSortCol(col); setSortDir("asc");
-      console.log(`[JACKMAC][SORT][STATE] col="${col}" dir=asc`);
     }
   };
 
@@ -713,7 +777,6 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   const toggleGroup = (label: string) => {
     const current = activeColVis[label] !== false;
     const next = !current;
-    console.log(`[JACKMAC][COLVIS][STEP] tab="${activeTab}" group="${label}" → ${next ? "visible" : "hidden"}`);
     setColVis(prev => ({
       ...prev,
       [activeTab]: { ...(prev[activeTab] ?? buildDefaultVisibility(activeTabType)), [label]: next },
@@ -791,6 +854,34 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     );
   }
 
+  // ── Sync button label ─────────────────────────────────────────────────────
+  const syncButtonLabel = (() => {
+    if (syncIsLocked) return "Sync in Progress...";
+    if (syncToSheetsMutation.isPending) return "Starting...";
+    if (isSyncPolling) return "Syncing (background)...";
+    return "REFRESH GOOGLE SHEETS";
+  })();
+
+  const syncButtonIcon = (() => {
+    if (syncButtonDisabled) {
+      return (
+        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3z" fill="white" opacity="0.9"/>
+        <rect x="6" y="8" width="12" height="1.5" rx="0.5" fill="#34A853"/>
+        <rect x="6" y="11" width="12" height="1.5" rx="0.5" fill="#34A853"/>
+        <rect x="6" y="14" width="8" height="1.5" rx="0.5" fill="#34A853"/>
+        <path d="M14.5 1.5v5h5" fill="none" stroke="#34A853" strokeWidth="1.2"/>
+        <path d="M14.5 1.5L19.5 6.5H14.5V1.5z" fill="#34A853" opacity="0.7"/>
+      </svg>
+    );
+  })();
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col w-full bg-[#0a0a0f] text-white">
@@ -806,6 +897,13 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
             <span className="text-zinc-400 text-xs">
               {mainTab === "projections" ? "THE BAT X Projections" : "MLB Lineups"}
             </span>
+            {/* Run lock indicator */}
+            {syncIsLocked && (
+              <div className="flex items-center gap-1 text-[10px] text-amber-400 bg-amber-950/30 border border-amber-800/40 rounded px-1.5 py-0.5">
+                <Clock className="w-2.5 h-2.5" />
+                <span>Sync running</span>
+              </div>
+            )}
           </div>
 
           {/* Right: action buttons */}
@@ -848,38 +946,38 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                 </Button>
               </>
             )}
-            {/* REFRESH GOOGLE SHEETS button — always visible */}
+
+            {/* REFRESH GOOGLE SHEETS button */}
             <button
               type="button"
               onClick={() => {
                 console.log("[JACKMAC][SHEETS][INPUT] REFRESH GOOGLE SHEETS triggered by user");
                 syncToSheetsMutation.mutate();
               }}
-              disabled={syncIsPending}
-              style={{ backgroundColor: "#34A853", opacity: syncIsPending ? 0.7 : 1 }}
+              disabled={syncButtonDisabled}
+              style={{
+                backgroundColor: syncIsLocked ? "#7c3aed" : "#34A853",
+                opacity: syncButtonDisabled ? 0.75 : 1,
+              }}
               className="flex items-center gap-1.5 h-7 px-2.5 rounded text-xs font-bold text-white whitespace-nowrap transition-opacity disabled:cursor-not-allowed"
-              title="Sync all tabs (RG + Lineups) to Google Sheets"
+              title={syncIsLocked ? `Sync in progress (runId: ${syncLockedRunId?.slice(-6) ?? "?"})` : "Sync all tabs to Google Sheets"}
             >
-              {syncIsPending ? (
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                </svg>
-              ) : (
-                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3z" fill="white" opacity="0.9"/>
-                  <rect x="6" y="8" width="12" height="1.5" rx="0.5" fill="#34A853"/>
-                  <rect x="6" y="11" width="12" height="1.5" rx="0.5" fill="#34A853"/>
-                  <rect x="6" y="14" width="8" height="1.5" rx="0.5" fill="#34A853"/>
-                  <path d="M14.5 1.5v5h5" fill="none" stroke="#34A853" strokeWidth="1.2"/>
-                  <path d="M14.5 1.5L19.5 6.5H14.5V1.5z" fill="#34A853" opacity="0.7"/>
-                </svg>
-              )}
-              <span className="hidden sm:inline">
-                {syncIsPending ? (isSyncPolling ? "Syncing (background)..." : "Starting...") : "REFRESH GOOGLE SHEETS"}
-              </span>
+              {syncButtonIcon}
+              <span className="hidden sm:inline">{syncButtonLabel}</span>
             </button>
           </div>
         </div>
+
+        {/* Sync locked banner */}
+        {syncIsLocked && (
+          <div className="flex items-center gap-2 mt-1.5 text-[10px] text-amber-300 bg-amber-950/20 border border-amber-800/30 rounded px-2 py-1">
+            <ShieldAlert className="w-3 h-3 shrink-0" />
+            <span>
+              A Google Sheets sync is currently running (runId: {syncLockedRunId?.slice(-8) ?? "unknown"}).
+              The button will re-enable when the sync completes.
+            </span>
+          </div>
+        )}
 
         {/* Main tab selector: Projections | Lineups */}
         <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-0.5">
@@ -917,6 +1015,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                 const tabEntry = cache[tab.key];
                 const tabAge = tabEntry ? Date.now() - tabEntry.fetchedAt : null;
                 const tabStale = tabAge !== null && tabAge > STALE_MS;
+                const hasCachedData = !!tabEntry;
                 return (
                   <button
                     key={tab.key}
@@ -932,10 +1031,15 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                   >
                     <span className="hidden sm:inline">{tab.label}</span>
                     <span className="sm:hidden">{tab.short}</span>
-                    {isLoading && <Loader2 className="inline w-3 h-3 ml-1 animate-spin" />}
+                    {/* State indicators */}
+                    {isLoading && !hasCachedData && <Loader2 className="inline w-3 h-3 ml-1 animate-spin text-violet-400" />}
+                    {isLoading && hasCachedData && <RefreshCw className="inline w-3 h-3 ml-1 animate-spin text-zinc-500" />}
                     {!isLoading && hasError && <span className="ml-1 text-red-400 text-xs">!</span>}
                     {!isLoading && !hasError && tabStale && !isActive && (
                       <span className="ml-1 text-amber-400 text-xs" title="Data may be stale">↻</span>
+                    )}
+                    {!isLoading && !hasError && !tabStale && hasCachedData && !isActive && (
+                      <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" title="Fresh data" />
                     )}
                   </button>
                 );
@@ -990,6 +1094,13 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                       </>
                     )}
                   </div>
+                  {/* Background refresh indicator — shows when loading but data is already present */}
+                  {isLoadingActive && tableData && (
+                    <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                      <span>Refreshing...</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right: search + columns button */}
@@ -1055,7 +1166,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* Loading spinner */}
+            {/* UI State 1: Initial loading (no cached data yet) */}
             {isLoadingActive && !tableData && (
               <div className="flex items-center justify-center py-16 gap-3 text-zinc-500">
                 <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
@@ -1063,7 +1174,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* Error banner — full page only when NO data is present */}
+            {/* UI State 2: Error — full page only when NO data is present */}
             {activeError && (!tableData || tableData.rows.length === 0) && (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
                 <AlertTriangle className="w-7 h-7 text-red-400" />
@@ -1081,7 +1192,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* Stale data warning — compact banner when data IS present but refresh failed */}
+            {/* UI State 3: Stale data warning — compact banner when data IS present but refresh failed */}
             {activeError && tableData && tableData.rows.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-md bg-amber-950/60 border border-amber-800/50 text-amber-300 text-xs">
                 <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -1096,7 +1207,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* No visible columns */}
+            {/* UI State 4: No visible columns */}
             {!isLoadingActive && tableData && tableData.rows.length > 0 && visibleCols.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-zinc-500">
                 <Columns className="w-7 h-7" />
@@ -1107,7 +1218,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
               </div>
             )}
 
-            {/* Data Table */}
+            {/* UI State 5: Data Table */}
             {tableData && tableData.rows.length > 0 && visibleCols.length > 0 && (
               <div className="overflow-auto rounded-lg border border-zinc-800 shadow-2xl">
                 <table className="w-full text-xs border-collapse min-w-max">

@@ -3724,3 +3724,11 @@
 - [x] Add ensureSheetTabExists: auto-create missing Google Sheets tabs before write
 - [x] Wire ensureSheetTabExists for all 6 tabs (4 RG + Today Lineups + Tomorrow Lineups)
 - [x] 726/726 tests passing
+
+## Session: 2026-05-21 - Jack Mac Full Pipeline Overhaul (Phase 3)
+- [x] Create jackMacCore.ts — unified run lock, structured per-run logging, tab contracts, shared cache layer
+- [x] Upgrade jackMacSheetsSync.ts — run lock integration, read-back validation, rollback on failure, no-op prevention
+- [x] Upgrade jackMac router — run lock on syncToSheets, getCacheStatus procedure, getRunHistory procedure, getRunLockState procedure
+- [x] Upgrade JackMacView.tsx — instant shell render from cache, all 8 UI states, locked/refreshing states, run-lock awareness, background polling
+- [x] Add jackMacCore.test.ts — 35 tests: run lock, cache layer, tab contracts, run history, structured logging, run ID generator
+- [x] All 761/761 tests passing (35 new Jack Mac core tests added)

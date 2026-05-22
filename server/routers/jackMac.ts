@@ -6,14 +6,23 @@
  *
  * Procedures:
  *   jackMac.syncToSheets    — fires a background sync job, returns { jobId } immediately
+ *                             Returns { locked: true } if a run is already in progress
  *   jackMac.getSyncStatus   — polls the status of a background sync job by jobId
  *   jackMac.getLineups      — fetches MLB lineups for today + tomorrow (MLB Stats API)
+ *   jackMac.getCacheStatus  — returns freshness status of all 6 cached tabs
+ *   jackMac.getRunHistory   — returns the last 20 run summaries with per-step logs
+ *   jackMac.getRunLockState — returns the current run lock state
  *
  * BACKGROUND JOB PATTERN (critical for platform proxy timeout avoidance):
  *   The full sync (4 CSV fetches + MLB ID resolution + 6 Sheets writes) can take
  *   60-120s. The platform proxy kills requests at ~120s with "Service Unavailable".
  *   Background job pattern: HTTP request completes in < 50ms, sync runs async.
  *   Frontend polls getSyncStatus every 2s until job reaches "success" or "error".
+ *
+ * RUN LOCK:
+ *   Only one sync can run at a time (manual or scheduled).
+ *   syncToSheets returns { locked: true, existingRunId } if a run is in progress.
+ *   The scheduler also respects the run lock and skips if locked.
  */
 
 import { TRPCError } from "@trpc/server";
@@ -28,11 +37,21 @@ import {
 } from "../jackMacSheetsSync";
 import { scrapeFangraphsLineups, type FgScrapeResult } from "../fangraphsScraper";
 import { invalidateFgCache } from "../fangraphsScraper";
+import {
+  generateRunId,
+  acquireRunLock,
+  releaseRunLock,
+  getRunLockState,
+  getAllCachedTabs,
+  getRunHistory,
+  getLatestRunSummary,
+} from "../jackMacCore";
 
 // ─── Server-side 15-min auto-sync scheduler ───────────────────────────────────
 // Runs every 15 minutes on the server to keep Google Sheets and the RG cache
 // fresh without requiring any user interaction.
 // Starts 2 minutes after server boot to avoid hammering on cold start.
+// Respects the run lock — skips if a manual sync is in progress.
 
 const JACKMAC_SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const JACKMAC_SYNC_BOOT_DELAY_MS = 2 * 60 * 1000; // 2 min boot delay
@@ -43,38 +62,56 @@ async function runScheduledJackMacSync(): Promise<void> {
   const now = new Date().toISOString();
   console.log(`[JackMac][SCHEDULER] [INPUT] 15-min scheduled sync starting at ${now}`);
   const t0 = Date.now();
-  try {
-    // Invalidate Fangraphs cache so fresh lineup data is fetched
-    invalidateFgCache();
-    console.log(`[JackMac][SCHEDULER] [STEP] Fangraphs cache invalidated`);
 
-    // Run full sync: 4 RG tabs + Today Lineups + Tomorrow Lineups → Google Sheets
-    const result = await syncJackMacToSheets();
-    const elapsed = Date.now() - t0;
+  // Invalidate Fangraphs cache so fresh lineup data is fetched
+  invalidateFgCache();
+  console.log(`[JackMac][SCHEDULER] [STEP] Fangraphs cache invalidated`);
 
-    if (result.success) {
-      console.log(
-        `[JackMac][SCHEDULER] [OUTPUT] Scheduled sync COMPLETE: totalRows=${result.totalRowsWritten} elapsed=${elapsed}ms`
-      );
-      console.log(`[JackMac][SCHEDULER] [VERIFY] PASS — all ${result.tabs.length} tabs synced`);
-      for (const tab of result.tabs) {
+  // Start background sync job (respects run lock)
+  const jobResult = startSyncJob("scheduler", "scheduled");
+
+  if ("locked" in jobResult) {
+    console.warn(
+      `[JackMac][SCHEDULER] [STATE] Scheduled sync SKIPPED — run lock held by runId=${jobResult.existingRunId}`
+    );
+    return;
+  }
+
+  const { jobId, runId } = jobResult;
+  console.log(`[JackMac][SCHEDULER] [STEP] Background sync job started: jobId=${jobId} runId=${runId}`);
+
+  // Poll for completion (max 8 minutes)
+  const maxWaitMs = 8 * 60 * 1000;
+  const pollIntervalMs = 5000;
+  const deadline = Date.now() + maxWaitMs;
+
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+    const job = getSyncJob(jobId);
+    if (!job) break;
+
+    if (job.status === "success" || job.status === "error") {
+      const elapsed = Date.now() - t0;
+      if (job.status === "success" && job.result) {
         console.log(
-          `[JackMac][SCHEDULER] [STATE]   [${tab.status.toUpperCase()}] "${tab.sheetTab}" → ${tab.rowsWritten} rows (${tab.elapsedMs}ms)`
+          `[JackMac][SCHEDULER] [OUTPUT] Scheduled sync COMPLETE: runId=${runId} totalRows=${job.result.totalRowsWritten} elapsed=${elapsed}ms`
+        );
+        console.log(`[JackMac][SCHEDULER] [VERIFY] PASS — all ${job.result.tabs.length} tabs synced`);
+        for (const tab of job.result.tabs) {
+          console.log(
+            `[JackMac][SCHEDULER] [STATE]   [${tab.status.toUpperCase()}] "${tab.sheetTab}" → ${tab.rowsWritten} rows readBack=${tab.readBackRowCount} (${tab.elapsedMs}ms)`
+          );
+        }
+      } else {
+        console.warn(
+          `[JackMac][SCHEDULER] [VERIFY] ${job.status === "error" ? "FAIL" : "PARTIAL"} — runId=${runId} error="${job.error ?? "unknown"}" elapsed=${elapsed}ms`
         );
       }
-    } else {
-      const failedTabs = result.tabs.filter(t => t.status === "error");
-      console.warn(
-        `[JackMac][SCHEDULER] [VERIFY] PARTIAL — ${failedTabs.length} tabs failed: ${failedTabs.map(t => t.sheetTab).join(", ")} elapsed=${elapsed}ms`
-      );
+      return;
     }
-  } catch (err) {
-    const elapsed = Date.now() - t0;
-    const msg = (err as Error).message;
-    console.error(
-      `[JackMac][SCHEDULER] [VERIFY] FAIL — Scheduled sync error: ${msg} elapsed=${elapsed}ms`
-    );
   }
+
+  console.warn(`[JackMac][SCHEDULER] [VERIFY] WARN — runId=${runId} timed out after ${maxWaitMs / 1000}s`);
 }
 
 export function startJackMacScheduler(): void {
@@ -87,12 +124,10 @@ export function startJackMacScheduler(): void {
     `[JackMac][SCHEDULER] Starting 15-min auto-sync scheduler (boot delay=${JACKMAC_SYNC_BOOT_DELAY_MS / 1000}s)`
   );
 
-  // Boot delay: wait 2 minutes before first run to avoid cold-start hammering
   setTimeout(() => {
     console.log(`[JackMac][SCHEDULER] Boot delay elapsed — running first scheduled sync now`);
     void runScheduledJackMacSync();
 
-    // Then repeat every 15 minutes
     jackMacSyncIntervalId = setInterval(() => {
       void runScheduledJackMacSync();
     }, JACKMAC_SYNC_INTERVAL_MS);
@@ -127,33 +162,37 @@ const jackMacProcedure = appUserProcedure.use(async ({ ctx, next }) => {
 export const jackMacRouter = router({
   /**
    * syncToSheets
-   * Fires a background sync job and returns { jobId } IMMEDIATELY (< 50ms).
+   * Fires a background sync job and returns { jobId, runId } IMMEDIATELY (< 50ms).
+   * Returns { locked: true, existingRunId } if a run is already in progress.
    * The actual sync runs asynchronously. Use getSyncStatus to poll for completion.
-   *
-   * WHY BACKGROUND JOB:
-   *   The full sync takes 60-120s. The platform proxy kills requests at ~120s
-   *   with "Service Unavailable" which the tRPC client cannot JSON.parse.
-   *   Background job pattern: HTTP request completes in < 50ms, sync runs async.
    *
    * Restricted to: @prez, @sippi, @lucianobets
    */
   syncToSheets: jackMacProcedure.mutation(async ({ ctx }) => {
     const username = ctx.appUser?.username ?? "unknown";
     console.log(`[JackMac] [INPUT] syncToSheets triggered by @${username}`);
-    console.log(`[JackMac] [STEP] Starting background sync job...`);
 
-    // Fire-and-forget: startSyncJob() returns immediately with a jobId.
-    // The sync runs asynchronously via setImmediate in jackMacSheetsSync.ts.
-    const jobId = startSyncJob();
+    const jobResult = startSyncJob(username, "manual");
 
+    if ("locked" in jobResult) {
+      console.warn(
+        `[JackMac] [STATE] syncToSheets LOCKED — run already in progress: runId=${jobResult.existingRunId}`
+      );
+      return {
+        locked: true as const,
+        existingRunId: jobResult.existingRunId,
+        jobId: null,
+        runId: null,
+      };
+    }
+
+    const { jobId, runId } = jobResult;
     console.log(
-      `[JackMac] [OUTPUT] syncToSheets: background job started jobId=${jobId} by @${username}`
+      `[JackMac] [OUTPUT] syncToSheets: background job started jobId=${jobId} runId=${runId} by @${username}`
     );
-    console.log(
-      `[JackMac] [VERIFY] PASS — sync job enqueued, returning jobId to client immediately`
-    );
+    console.log(`[JackMac] [VERIFY] PASS — sync job enqueued, returning jobId to client immediately`);
 
-    return { jobId };
+    return { locked: false as const, jobId, runId, existingRunId: null };
   }),
 
   /**
@@ -173,7 +212,7 @@ export const jackMacRouter = router({
 
       if (!job) {
         console.warn(
-          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found (evicted or invalid) for @${username}`
+          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found for @${username}`
         );
         throw new TRPCError({
           code: "NOT_FOUND",
@@ -182,7 +221,7 @@ export const jackMacRouter = router({
       }
 
       console.log(
-        `[JackMac] [STATE] getSyncStatus: jobId=${input.jobId} status=${job.status} elapsed=${job.elapsedMs ?? "pending"}ms for @${username}`
+        `[JackMac] [STATE] getSyncStatus: jobId=${input.jobId} runId=${job.runId} status=${job.status} elapsed=${job.elapsedMs ?? "pending"}ms for @${username}`
       );
 
       return job as SyncJob;
@@ -196,17 +235,12 @@ export const jackMacRouter = router({
    * Restricted to: @prez, @sippi, @lucianobets
    */
   getLineups: jackMacProcedure
-    .input(
-      z.object({
-        forceRefresh: z.boolean().default(false),
-      })
-    )
+    .input(z.object({ forceRefresh: z.boolean().default(false) }))
     .query(async ({ ctx, input }) => {
       const username = ctx.appUser?.username ?? "unknown";
       console.log(
         `[JackMac] [INPUT] getLineups requested by @${username} forceRefresh=${input.forceRefresh}`
       );
-      console.log(`[JackMac] [STEP] Fetching lineups from MLB Stats API (cache-aware)...`);
 
       const t0 = Date.now();
       let result: FgScrapeResult;
@@ -231,4 +265,79 @@ export const jackMacRouter = router({
 
       return result;
     }),
+
+  /**
+   * getCacheStatus
+   * Returns the freshness status of all 6 cached JACK MAC tabs.
+   * Used by the frontend to show stale/fresh indicators and decide whether
+   * to trigger a background refresh.
+   *
+   * Restricted to: @prez, @sippi, @lucianobets
+   */
+  getCacheStatus: jackMacProcedure.query(async ({ ctx }) => {
+    const username = ctx.appUser?.username ?? "unknown";
+    console.log(`[JackMac] [INPUT] getCacheStatus requested by @${username}`);
+
+    const allCached = getAllCachedTabs();
+    const runLock = getRunLockState();
+    const latestRun = getLatestRunSummary();
+
+    const tabs = Object.entries(allCached).map(([key, cached]) => ({
+      tabKey: key,
+      label: cached?.tabKey ?? key,
+      rowCount: cached?.rowCount ?? 0,
+      freshness: cached?.freshness ?? "missing",
+      isStale: cached?.isStale ?? true,
+      cacheTimestamp: cached?.cacheTimestamp ?? null,
+      dataDate: cached?.dataDate ?? "",
+      source: cached?.source ?? "",
+      runId: cached?.runId ?? null,
+      errors: cached?.errors ?? [],
+      warnings: cached?.warnings ?? [],
+    }));
+
+    return {
+      tabs,
+      runLock: {
+        isLocked: runLock.isLocked,
+        runId: runLock.runId,
+        executionMode: runLock.executionMode,
+        lockedBy: runLock.lockedBy,
+        lockedAt: runLock.lockedAt,
+      },
+      latestRunId: latestRun?.runId ?? null,
+      latestRunStatus: latestRun?.status ?? null,
+      latestRunCompletedAt: latestRun?.completedAt ?? null,
+      latestRunTotalRowsWritten: latestRun?.totalRowsWritten ?? 0,
+    };
+  }),
+
+  /**
+   * getRunHistory
+   * Returns the last 20 run summaries with per-step logs.
+   * Used for diagnostics and audit trail.
+   *
+   * Restricted to: @prez, @sippi, @lucianobets
+   */
+  getRunHistory: jackMacProcedure.query(async ({ ctx }) => {
+    const username = ctx.appUser?.username ?? "unknown";
+    console.log(`[JackMac] [INPUT] getRunHistory requested by @${username}`);
+    return getRunHistory();
+  }),
+
+  /**
+   * getRunLockState
+   * Returns the current run lock state.
+   * Used by the frontend to show locked/refreshing states.
+   *
+   * Restricted to: @prez, @sippi, @lucianobets
+   */
+  getRunLockState: jackMacProcedure.query(async ({ ctx }) => {
+    const username = ctx.appUser?.username ?? "unknown";
+    const state = getRunLockState();
+    console.log(
+      `[JackMac] [STATE] getRunLockState: isLocked=${state.isLocked} runId=${state.runId} by=${state.lockedBy} for @${username}`
+    );
+    return state;
+  }),
 });
