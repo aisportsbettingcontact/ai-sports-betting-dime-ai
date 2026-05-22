@@ -2494,22 +2494,44 @@ export default function BetTracker() {
     const result: Array<{ type: "separator"; date: string; wins: number; losses: number; pushes: number; pending: number; netProfit: number } | { type: "bet"; bet: EnrichedBet }> = [];
 
     // ── Sort logic within each date group ──────────────────────────────────
-    // Rule 1: Wins before Losses (PUSH/PENDING/VOID after)
-    // Rule 2: Within each result group, sort by riskUnits DESC (highest unit play first)
+    // PRIMARY sort: riskUnits DESC (5U on top, 0.1U at bottom)
+    //   - null/undefined/NaN riskUnits are treated as 0 (sorts last)
+    //   - Dollar-only bets (riskUnits null, unitSize set) are normalized
+    // SECONDARY sort: result priority (WIN → LOSS → PUSH → PENDING → VOID)
+    // TERTIARY sort: createdAt DESC (most recently added first within same unit size)
     //
-    // Result priority: WIN=0, LOSS=1, PUSH=2, PENDING=3, VOID=4
+    // NOTE: The primary sort is unit size, NOT result. The user explicitly asked for
+    // 5U on top descending — result grouping is secondary.
     const RESULT_PRIORITY: Record<string, number> = {
       WIN: 0, LOSS: 1, PUSH: 2, PENDING: 3, VOID: 4,
     };
+    function safeUnits(bet: EnrichedBet): number {
+      // Prefer stored riskUnits (set at bet creation time)
+      if (bet.riskUnits != null && bet.riskUnits !== "") {
+        const v = parseFloat(String(bet.riskUnits));
+        if (!isNaN(v) && v > 0) return v;
+      }
+      // Fallback: derive from dollar risk + unitSize
+      if (bet.risk && unitSize > 0) {
+        const riskDollar = parseFloat(String(bet.risk));
+        if (!isNaN(riskDollar) && riskDollar > 0) return riskDollar / unitSize;
+      }
+      return 0; // unknown unit size — sorts last
+    }
     function sortDayBets(dayBets: EnrichedBet[]): EnrichedBet[] {
       return [...dayBets].sort((a, b) => {
+        // PRIMARY: highest unit size first (5U before 1U)
+        const uA = safeUnits(a);
+        const uB = safeUnits(b);
+        if (Math.abs(uB - uA) > 0.001) return uB - uA;
+        // SECONDARY: result priority (WIN before LOSS)
         const rA = RESULT_PRIORITY[a.result ?? "PENDING"] ?? 3;
         const rB = RESULT_PRIORITY[b.result ?? "PENDING"] ?? 3;
-        if (rA !== rB) return rA - rB; // wins first
-        // Within same result: highest riskUnits first
-        const uA = parseFloat(String(a.riskUnits ?? 0));
-        const uB = parseFloat(String(b.riskUnits ?? 0));
-        return uB - uA;
+        if (rA !== rB) return rA - rB;
+        // TERTIARY: most recently created first (stable tie-break)
+        const cA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const cB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return cB - cA;
       });
     }
 
