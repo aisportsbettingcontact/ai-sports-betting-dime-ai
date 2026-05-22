@@ -30,7 +30,7 @@ import type { Express, Request, Response } from "express";
 import { verifyAppUserToken } from "./routers/appUsers";
 import { getAppUserById, getDb } from "./db";
 import { mlbPlayers } from "../drizzle/schema";
-import { like, isNotNull, or, eq } from "drizzle-orm";
+import { like, isNotNull, or, eq, sql as drizzleSql } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -161,42 +161,48 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
   }
 
   // ── Attempt 0: DB lookup via mlb_players table (fast, no network) ────────────
-  // Uses accent-normalized name matching to handle "José Ramírez" → "jose ramirez"
-  // Strategy: LIKE on last name (DB-side filter) → exact accent-normalized match (JS-side)
+  // The DB collation is utf8mb4_bin (binary, accent-sensitive).
+  // We MUST use COLLATE utf8mb4_unicode_ci in the LIKE clause to make it
+  // accent-insensitive so "Ramirez" matches "Ramírez", "Jose" matches "José", etc.
+  // Strategy:
+  //   1. Last-name LIKE with unicode_ci collation (DB-side, accent-insensitive)
+  //   2. JS-side accent-normalized exact match for disambiguation
+  //   3. Fallback: first-name LIKE with unicode_ci collation
   try {
-    const db = await getDb();
+    const db = getDb();
     const normalizedSearch = normalizeNameForDb(aliasedName);
     const nameParts = aliasedName.trim().split(/\s+/);
-    // Use the last name fragment for the DB LIKE query (most discriminating)
-    // For compound last names (e.g. "Pete Crow-Armstrong"), use the full last segment
     const lastNameRaw = nameParts[nameParts.length - 1];
 
-    // DB LIKE query: match rows where name contains the last name fragment
-    const dbRows = await db
-      .select({ name: mlbPlayers.name, mlbamId: mlbPlayers.mlbamId })
-      .from(mlbPlayers)
-      .where(like(mlbPlayers.name, `%${lastNameRaw}%`))
-      .limit(20);
+    // Use raw SQL with COLLATE utf8mb4_unicode_ci for accent-insensitive matching
+    // This makes 'Ramirez' match 'Ramírez', 'Jose' match 'José', etc.
+    const dbRows = await db.execute(
+      drizzleSql`SELECT name, mlbamId FROM mlb_players
+        WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`%${lastNameRaw}%`}
+        AND mlbamId IS NOT NULL
+        LIMIT 20`
+    ) as { rows: Array<{ name: string; mlbamId: number }> };
 
-    // JS-side accent-normalized exact match
-    const match = dbRows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+    // JS-side accent-normalized exact match for disambiguation
+    const match = dbRows.rows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
     if (match?.mlbamId) {
-      console.log(`[RGProxy] [STATE] MLB ID resolved (DB): player="${playerName}" id=${match.mlbamId} dbName="${match.name}"`);
+      console.log(`[RGProxy] [STATE] MLB ID resolved (DB-last): player="${playerName}" id=${match.mlbamId} dbName="${match.name}"`);
       mlbIdCache.set(key, { mlbId: match.mlbamId, cachedAt: Date.now() });
       return match.mlbamId;
     }
 
-    // Fallback: first-name LIKE in case last name has accent issues
+    // Fallback: first-name LIKE with unicode_ci collation
     if (nameParts.length >= 2) {
       const firstNameRaw = nameParts[0];
-      const firstRows = await db
-        .select({ name: mlbPlayers.name, mlbamId: mlbPlayers.mlbamId })
-        .from(mlbPlayers)
-        .where(like(mlbPlayers.name, `${firstNameRaw}%`))
-        .limit(10);
-      const firstMatch = firstRows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+      const firstRows = await db.execute(
+        drizzleSql`SELECT name, mlbamId FROM mlb_players
+          WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`${firstNameRaw}%`}
+          AND mlbamId IS NOT NULL
+          LIMIT 10`
+      ) as { rows: Array<{ name: string; mlbamId: number }> };
+      const firstMatch = firstRows.rows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
       if (firstMatch?.mlbamId) {
-        console.log(`[RGProxy] [STATE] MLB ID resolved (DB first-name): player="${playerName}" id=${firstMatch.mlbamId} dbName="${firstMatch.name}"`);
+        console.log(`[RGProxy] [STATE] MLB ID resolved (DB-first): player="${playerName}" id=${firstMatch.mlbamId} dbName="${firstMatch.name}"`);
         mlbIdCache.set(key, { mlbId: firstMatch.mlbamId, cachedAt: Date.now() });
         return firstMatch.mlbamId;
       }
