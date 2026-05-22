@@ -556,6 +556,8 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
       enabled: isSyncPolling && syncJobId !== null,
       refetchInterval: isSyncPolling ? 2000 : false,
       retry: false,
+      staleTime: 0,    // CRITICAL: prevent caching not_found responses — always re-fetch
+      gcTime: 0,       // CRITICAL: don't keep stale job data in cache between polls
     }
   );
 
