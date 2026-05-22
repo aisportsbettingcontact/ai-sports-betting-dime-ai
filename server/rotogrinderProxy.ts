@@ -29,7 +29,7 @@
 import type { Express, Request, Response } from "express";
 import { verifyAppUserToken } from "./routers/appUsers";
 import { getAppUserById, getDb } from "./db";
-import { mlbPlayers } from "../drizzle/schema";
+import { mlbPlayers, rgSessionCache } from "../drizzle/schema";
 import { like, isNotNull, or, eq, sql as drizzleSql } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -325,10 +325,10 @@ function headshotUrl(mlbId: number | null): string {
 
 // ─── Session Cookie Cache ─────────────────────────────────────────────────────
 
-let cachedRgCookie: string | null = null;
-let cookieFetchedAt = 0;
-const COOKIE_TTL_MS = 55 * 60 * 1000; // 55 minutes
-
+/**
+ * Parse a raw Cookie header string into a key→value map.
+ * Used by the RG proxy route to extract the app_session JWT.
+ */
 function parseCookieHeader(header: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const part of header.split(";")) {
@@ -339,13 +339,118 @@ function parseCookieHeader(header: string): Record<string, string> {
   return result;
 }
 
-export async function getRgSessionCookie(): Promise<string> {
-  const now = Date.now();
+// ─── In-memory session cookie cache (fast path, same process) ─────────────────
+let cachedRgCookie: string | null = null;
+let cookieFetchedAt = 0;
+// 25-minute TTL matches RotoGrinders session lifetime.
+// DB cache (rg_session_cache) is the cross-process fallback.
+const COOKIE_TTL_MS = 25 * 60 * 1000; // 25 minutes
+
+// ─── DB-backed session cookie cache helpers ────────────────────────────────────
+
+/**
+ * Load the RG session cookie from the DB cache.
+ * Returns the cookie string if valid (not expired), or null if missing/expired.
+ */
+async function loadDbRgCookie(): Promise<string | null> {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const rows = await db.select().from(rgSessionCache).where(eq(rgSessionCache.id, 1)).limit(1);
+    if (rows.length === 0) {
+      console.log("[RGProxy] [STATE] DB cookie cache: no row found");
+      return null;
+    }
+    const row = rows[0];
+    const now = Date.now();
+    if (row.expiresAt <= now) {
+      console.log(`[RGProxy] [STATE] DB cookie cache: expired (expiresAt=${new Date(row.expiresAt).toISOString()} now=${new Date(now).toISOString()})`);
+      return null;
+    }
+    const remainingMin = Math.round((row.expiresAt - now) / 60000);
+    console.log(`[RGProxy] [STATE] DB cookie cache: valid cookie found (expires in ${remainingMin}min)`);
+    return row.cookieStr;
+  } catch (err) {
+    console.warn(`[RGProxy] [VERIFY] WARN — loadDbRgCookie failed: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+/**
+ * Persist the RG session cookie to the DB cache (upsert, id=1).
+ * Fire-and-forget — never throws.
+ */
+async function saveDbRgCookie(cookieStr: string): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const now = Date.now();
+    const expiresAt = now + COOKIE_TTL_MS;
+    // MySQL upsert: INSERT ... ON DUPLICATE KEY UPDATE
+    await db
+      .insert(rgSessionCache)
+      .values({ id: 1, cookieStr, fetchedAt: now, expiresAt })
+      .onDuplicateKeyUpdate({ set: { cookieStr, fetchedAt: now, expiresAt } });
+    console.log(`[RGProxy] [STATE] DB cookie cache: saved (expires ${new Date(expiresAt).toISOString()})`);
+  } catch (err) {
+    console.warn(`[RGProxy] [VERIFY] WARN — saveDbRgCookie failed: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Invalidate the DB cookie cache (called on 401/403 to force re-login).
+ * Fire-and-forget — never throws.
+ */
+async function invalidateDbRgCookie(): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.delete(rgSessionCache).where(eq(rgSessionCache.id, 1));
+    console.log("[RGProxy] [STATE] DB cookie cache: invalidated");
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
+ * Get a valid RotoGrinders session cookie.
+ *
+ * Cache hierarchy (fastest → slowest):
+ *   1. In-memory (same process, zero latency)
+ *   2. DB rg_session_cache (cross-process, survives server restarts)
+ *   3. Fresh login via POST /sign-in (6-8s, 15s hard timeout)
+ *
+ * Progress events are emitted via the optional onProgress callback so the
+ * live sync panel shows granular sub-steps inside the rg-login phase.
+ */
+export async function getRgSessionCookie(
+  onProgress?: (msg: string) => void
+): Promise<string> {
+  const t0 = Date.now();
+  const now = t0;
+
+  // ── Layer 1: in-memory cache ────────────────────────────────────────────────
   if (cachedRgCookie && now - cookieFetchedAt < COOKIE_TTL_MS) {
-    console.log("[RGProxy] [STATE] Using cached RG session cookie");
+    const remainingMin = Math.round((COOKIE_TTL_MS - (now - cookieFetchedAt)) / 60000);
+    console.log(`[RGProxy] [STATE] Using in-memory RG session cookie (expires in ~${remainingMin}min)`);
+    onProgress?.("RotoGrinders session restored from cache");
     return cachedRgCookie;
   }
 
+  // ── Layer 2: DB cache ───────────────────────────────────────────────────────
+  onProgress?.("Checking RotoGrinders session cache...");
+  console.log("[RGProxy] [STEP] In-memory cookie expired or missing — checking DB cache");
+  const dbCookie = await loadDbRgCookie();
+  if (dbCookie) {
+    // Warm the in-memory cache from DB so next call is instant
+    cachedRgCookie = dbCookie;
+    cookieFetchedAt = Date.now();
+    console.log("[RGProxy] [STATE] RG session cookie loaded from DB cache — in-memory cache warmed");
+    onProgress?.("RotoGrinders session restored from DB cache");
+    return dbCookie;
+  }
+
+  // ── Layer 3: fresh login ────────────────────────────────────────────────────
   const username = process.env.ROTOGRINDERS_USERNAME;
   const password = process.env.ROTOGRINDERS_PASSWORD;
 
@@ -353,20 +458,45 @@ export async function getRgSessionCookie(): Promise<string> {
     throw new Error("ROTOGRINDERS_USERNAME or ROTOGRINDERS_PASSWORD not set in environment");
   }
 
-  console.log(`[RGProxy] [STEP] Logging in to Rotogrinders as ${username}...`);
+  console.log(`[RGProxy] [STEP] Sending login request to RotoGrinders (username=${username})...`);
+  onProgress?.("Sending login request to RotoGrinders...");
 
-  const loginRes = await fetch(`${RG_BASE}/sign-in`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
-      "Referer": `${RG_BASE}/sign-in`,
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-    body: new URLSearchParams({ username, password }).toString(),
-    redirect: "manual",
-  });
+  const LOGIN_TIMEOUT_MS = 15_000; // 15s hard timeout — RG login should complete in < 3s
+  const loginStart = Date.now();
+
+  let loginRes: globalThis.Response;
+  try {
+    loginRes = await fetch(`${RG_BASE}/sign-in`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+        "Referer": `${RG_BASE}/sign-in`,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": RG_BASE,
+        "Connection": "keep-alive",
+      },
+      body: new URLSearchParams({ username, password }).toString(),
+      redirect: "manual",
+      // CRITICAL: 15s hard timeout. Without this, Node.js fetch waits indefinitely
+      // if RotoGrinders is rate-limiting or the TCP connection hangs.
+      signal: AbortSignal.timeout(LOGIN_TIMEOUT_MS),
+    });
+  } catch (fetchErr) {
+    const elapsed = Date.now() - loginStart;
+    const msg = (fetchErr as Error).message;
+    if (msg.includes("TimeoutError") || msg.includes("AbortError") || msg.includes("timed out")) {
+      console.error(`[RGProxy] [VERIFY] FAIL — RG login request timed out after ${elapsed}ms (limit=${LOGIN_TIMEOUT_MS}ms) — RotoGrinders may be rate-limiting`);
+      throw new Error(`RotoGrinders login timed out after ${(elapsed / 1000).toFixed(1)}s — server may be rate-limiting. Retry in 30s.`);
+    }
+    console.error(`[RGProxy] [VERIFY] FAIL — RG login fetch error after ${elapsed}ms: ${msg}`);
+    throw new Error(`RotoGrinders login network error: ${msg}`);
+  }
+
+  const loginElapsed = Date.now() - loginStart;
+  console.log(`[RGProxy] [STATE] RG login response received: status=${loginRes.status} elapsed=${loginElapsed}ms`);
+  onProgress?.("RotoGrinders login response received — extracting session cookie...");
 
   const setCookieHeaders: string[] = [];
   loginRes.headers.forEach((value: string, name: string) => {
@@ -374,6 +504,8 @@ export async function getRgSessionCookie(): Promise<string> {
       setCookieHeaders.push(value);
     }
   });
+
+  console.log(`[RGProxy] [STATE] RG login set-cookie headers: count=${setCookieHeaders.length}`);
 
   const rguidCookie = setCookieHeaders
     .map((c: string) => c.split(";")[0])
@@ -385,18 +517,27 @@ export async function getRgSessionCookie(): Promise<string> {
     .join("; ");
 
   if (!rguidCookie && !cookieStr) {
-    throw new Error(`RG login returned no cookies (status=${loginRes.status})`);
+    console.error(`[RGProxy] [VERIFY] FAIL — RG login returned no cookies (status=${loginRes.status} elapsed=${loginElapsed}ms)`);
+    throw new Error(`RotoGrinders login returned no session cookies (HTTP ${loginRes.status}) — credentials may be invalid or account locked`);
   }
 
   if (!rguidCookie) {
-    console.warn(`[RGProxy] [STATE] Warning — rguid cookie not found. Status=${loginRes.status}. Using all cookies.`);
+    console.warn(`[RGProxy] [STATE] WARN — rguid cookie not found in response (status=${loginRes.status}). Using all ${setCookieHeaders.length} cookies.`);
   } else {
-    console.log(`[RGProxy] [STATE] RG login success — rguid obtained (status=${loginRes.status})`);
+    console.log(`[RGProxy] [STATE] RG login success — rguid obtained (status=${loginRes.status} elapsed=${loginElapsed}ms)`);
   }
 
+  // Update in-memory cache
   cachedRgCookie = cookieStr;
   cookieFetchedAt = Date.now();
-  return cachedRgCookie;
+
+  // Persist to DB cache (fire-and-forget)
+  void saveDbRgCookie(cookieStr);
+
+  const totalElapsed = Date.now() - t0;
+  console.log(`[RGProxy] [OUTPUT] RG session cookie obtained via fresh login in ${totalElapsed}ms`);
+  onProgress?.(`RotoGrinders session established (${(totalElapsed / 1000).toFixed(1)}s)`);
+  return cookieStr;
 }
 
 // ─── CSV Fetch with Auto-Retry on 401/403 ────────────────────────────────────
@@ -440,9 +581,11 @@ export async function fetchRgCsv(csvId: string, cookie: string): Promise<string>
 
   // ── 401/403: re-authenticate and retry immediately ─────────────────────────
   if (res.status === 401 || res.status === 403) {
-    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing cookie cache and re-authenticating`);
+    console.warn(`[RGProxy] [STATE] RG returned ${res.status} — clearing in-memory + DB cookie cache and re-authenticating`);
     cachedRgCookie = null;
     cookieFetchedAt = 0;
+    // Also invalidate DB cache so next process doesn't reuse the expired cookie
+    void invalidateDbRgCookie();
     const freshCookie = await getRgSessionCookie();
     res = await attemptFetch(freshCookie);
     console.log(`[RGProxy] [STATE] CSV fetch after re-auth: status=${res.status}`);

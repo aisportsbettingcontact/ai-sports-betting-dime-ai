@@ -3783,3 +3783,11 @@
 - [x] Add "Sync complete" final state to progress panel (show after job success/error)
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - RG Login Hang Fix
+- [x] Add AbortSignal.timeout(15000) to RG login fetch (currently has NO timeout — hangs indefinitely)
+- [x] Add sub-step progress events inside getRgSessionCookie (before fetch, waiting, cookie received)
+- [x] Implement DB-persisted RG session cookie cache (25-min TTL, skip login on repeat syncs)
+- [x] Add rg_session_cache table to schema + db:push
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing

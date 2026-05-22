@@ -137,8 +137,8 @@ export interface SyncProgressEvent {
   phase: string;
   /** Human-readable status message shown in the progress feed */
   message: string;
-  /** Event lifecycle: start = in-progress, done = completed, error = failed */
-  status: "start" | "done" | "error" | "skip";
+  /** Event lifecycle: start = in-progress, progress = sub-step within phase, done = completed, error = failed, skip = skipped */
+  status: "start" | "progress" | "done" | "error" | "skip";
   /** Row count (when available — after fetch/write phases) */
   rowCount?: number;
   /** Tab name (when applicable) */
@@ -951,10 +951,17 @@ export async function syncJackMacToSheets(
   }
 
   // ── Step 2: Get Rotogrinders session cookie ──────────────────────────────────────────
-  emit({ phase: "rg-login", status: "start", message: "Logging into RotoGrinders (~6-8s)..." });
+  emit({ phase: "rg-login", status: "start", message: "Checking RotoGrinders session (cache → DB → login)..." });
   let rgCookie: string;
   try {
-    rgCookie = await getRgSessionCookie();
+    // onProgress callback emits sub-step events into the live panel:
+    //   • "Checking RotoGrinders session cache..."
+    //   • "Sending login request to RotoGrinders..."
+    //   • "RotoGrinders login response received — extracting session cookie..."
+    //   • "RotoGrinders session established (2.1s)" or "RotoGrinders session restored from cache"
+    rgCookie = await getRgSessionCookie((subMsg) => {
+      emit({ phase: "rg-login", status: "progress", message: subMsg });
+    });
     emit({ phase: "rg-login", status: "done", message: "RotoGrinders session established" });
     console.log(`[SheetsSync] [STATE] runId=${runId} RG session cookie obtained`);
   } catch (err) {
