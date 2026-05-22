@@ -523,9 +523,32 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
   // syncToSheets.mutate() returns { jobId, runId } immediately (< 50ms)
   // OR { locked: true, existingRunId } if a run is already in progress.
   // We then poll getSyncStatus every 2s until the job completes.
+  //
+  // STUCK STATE PREVENTION:
+  //   - Safety net: force-clear after 120s regardless of server state
+  //   - Error handler: clear after 3 consecutive poll errors (server restart, network)
+  //   - not_found sentinel: server returns { status: 'not_found' } instead of throwing
+  //     when the job is missing (e.g., after server restart). We clear immediately.
   const [syncJobId, setSyncJobId] = useState<string | null>(null);
   const [isSyncPolling, setIsSyncPolling] = useState(false);
   const [syncLockedRunId, setSyncLockedRunId] = useState<string | null>(null);
+  const [syncPollStartedAt, setSyncPollStartedAt] = useState<number | null>(null);
+  const [syncConsecutiveErrors, setSyncConsecutiveErrors] = useState(0);
+
+  // Single source of truth for clearing all sync polling state
+  const clearSyncState = useCallback((
+    reason: string,
+    showToast?: { type: "success" | "warning" | "error"; msg: string }
+  ) => {
+    console.log(`[JACKMAC][SHEETS][STATE] clearSyncState reason="${reason}"`);
+    setIsSyncPolling(false);
+    setSyncJobId(null);
+    setSyncPollStartedAt(null);
+    setSyncConsecutiveErrors(0);
+    if (showToast?.type === "success") toast.success(showToast.msg, { duration: 6000 });
+    else if (showToast?.type === "warning") toast.warning(showToast.msg, { duration: 8000 });
+    else if (showToast?.type === "error") toast.error(showToast.msg, { duration: 8000 });
+  }, []);
 
   const syncStatusQuery = trpc.jackMac.getSyncStatus.useQuery(
     { jobId: syncJobId! },
@@ -553,31 +576,90 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     }
   }, [runLockQuery.data, syncLockedRunId]);
 
-  // Watch syncStatusQuery for completion
+  // Safety net: force-clear stuck polling after 120s regardless of server state
+  // Prevents permanent stuck state if the server restarts mid-sync
+  useEffect(() => {
+    if (!isSyncPolling || syncPollStartedAt === null) return;
+    const MAX_POLL_MS = 120_000;
+    const elapsed = Date.now() - syncPollStartedAt;
+    const remaining = MAX_POLL_MS - elapsed;
+    if (remaining <= 0) {
+      console.warn(`[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s, force-clearing stuck state`);
+      clearSyncState("safety-timeout", {
+        type: "warning",
+        msg: "Sync status unknown — the server may have restarted. Check Google Sheets directly.",
+      });
+      return;
+    }
+    const timer = setTimeout(() => {
+      console.warn(`[JACKMAC][SHEETS][VERIFY] TIMEOUT — polling exceeded ${MAX_POLL_MS / 1000}s, force-clearing stuck state`);
+      clearSyncState("safety-timeout", {
+        type: "warning",
+        msg: "Sync status unknown — the server may have restarted. Check Google Sheets directly.",
+      });
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [isSyncPolling, syncPollStartedAt, clearSyncState]);
+
+  // Watch syncStatusQuery.error — handle NOT_FOUND and network errors gracefully
+  // After 3 consecutive errors, force-clear the stuck state
+  useEffect(() => {
+    if (!isSyncPolling || !syncStatusQuery.error) return;
+    const errMsg = (syncStatusQuery.error as { message?: string })?.message ?? "Unknown poll error";
+    const newCount = syncConsecutiveErrors + 1;
+    setSyncConsecutiveErrors(newCount);
+    console.warn(`[JACKMAC][SHEETS][VERIFY] Poll error #${newCount}: ${errMsg}`);
+    if (newCount >= 3) {
+      console.error(
+        `[JACKMAC][SHEETS][VERIFY] FAIL — ${newCount} consecutive poll errors, force-clearing. Last: ${errMsg}`
+      );
+      clearSyncState("consecutive-poll-errors", {
+        type: "warning",
+        msg: `Sync status lost after ${newCount} poll errors — the server may have restarted. Check Google Sheets directly.`,
+      });
+    }
+  }, [syncStatusQuery.error, isSyncPolling, syncConsecutiveErrors, clearSyncState]);
+
+  // Watch syncStatusQuery.data — handle all terminal statuses including not_found
   useEffect(() => {
     if (!isSyncPolling || !syncStatusQuery.data) return;
+    // Reset consecutive error counter on any successful poll response
+    if (syncConsecutiveErrors > 0) setSyncConsecutiveErrors(0);
     const job = syncStatusQuery.data;
+
+    // Handle not_found sentinel: server returned { status: 'not_found' }
+    // This happens when the server restarted and the in-memory syncJobStore was cleared
+    if ((job.status as string) === "not_found") {
+      console.warn(
+        `[JACKMAC][SHEETS][VERIFY] WARN — jobId=${syncJobId} not found on server (server may have restarted)`
+      );
+      clearSyncState("job-not-found", {
+        type: "warning",
+        msg: "Sync job not found — the server may have restarted. The sync likely completed. Check Google Sheets directly.",
+      });
+      return;
+    }
+
     if (job.status === "success" || job.status === "error") {
-      setIsSyncPolling(false);
-      setSyncJobId(null);
       if (job.status === "success" && job.result) {
         const result = job.result as SheetSyncResult;
         if (result.success) {
           const failedTabs = result.tabs.filter(t => t.status === "error");
           const readBackFailed = result.tabs.filter(t => !t.readBackValidated && t.rowsWritten > 0);
           if (failedTabs.length === 0 && readBackFailed.length === 0) {
-            toast.success(
-              `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
-              { duration: 6000 }
-            );
+            clearSyncState("job-success", {
+              type: "success",
+              msg: `Google Sheets synced! ${result.totalRowsWritten.toLocaleString()} rows across ${result.tabs.length} tabs in ${(result.elapsedMs / 1000).toFixed(1)}s`,
+            });
           } else {
             const warnings: string[] = [];
             if (failedTabs.length > 0) warnings.push(`${failedTabs.length} tabs failed`);
             if (readBackFailed.length > 0) warnings.push(`${readBackFailed.length} read-back mismatches`);
-            toast.warning(`Partial sync — ${warnings.join(", ")}`, { duration: 8000 });
+            clearSyncState("job-partial", { type: "warning", msg: `Partial sync — ${warnings.join(", ")}` });
           }
-          console.log(`[JACKMAC][SHEETS][OUTPUT] Sync success: runId=${result.runId} totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`);
-          // Log per-tab results
+          console.log(
+            `[JACKMAC][SHEETS][OUTPUT] Sync success: runId=${result.runId} totalRows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`
+          );
           for (const tab of result.tabs) {
             console.log(
               `[JACKMAC][SHEETS][STATE] [${tab.status.toUpperCase()}] "${tab.sheetTab}" → ${tab.rowsWritten} rows readBack=${tab.readBackRowCount} validated=${tab.readBackValidated} rollback=${tab.rollbackAttempted} (${tab.elapsedMs}ms)`
@@ -585,15 +667,15 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
           }
         } else {
           const failedTabs = result.tabs.filter(t => t.status === "error").map(t => t.sheetTab).join(", ");
-          toast.warning(`Partial sync — some tabs failed: ${failedTabs}`, { duration: 8000 });
+          clearSyncState("job-partial-fail", { type: "warning", msg: `Partial sync — some tabs failed: ${failedTabs}` });
           console.warn(`[JACKMAC][SHEETS][VERIFY] PARTIAL — failed tabs: ${failedTabs}`);
         }
       } else if (job.status === "error") {
-        toast.error(`Google Sheets sync failed: ${job.error ?? "Unknown error"}`, { duration: 8000 });
+        clearSyncState("job-error", { type: "error", msg: `Google Sheets sync failed: ${job.error ?? "Unknown error"}` });
         console.error(`[JACKMAC][SHEETS][VERIFY] FAIL — ${job.error}`);
       }
     }
-  }, [syncStatusQuery.data, isSyncPolling]);
+  }, [syncStatusQuery.data, isSyncPolling, syncConsecutiveErrors, syncJobId, clearSyncState]);
 
   const syncToSheetsMutation = trpc.jackMac.syncToSheets.useMutation({
     onSuccess: (result) => {
@@ -608,11 +690,13 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
         );
       } else {
         const { jobId, runId } = result;
-        console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId} runId=${runId}`);
+        const pollStart = Date.now();
+        console.log(`[JACKMAC][SHEETS][STEP] Background sync job started: jobId=${jobId} runId=${runId} pollStartedAt=${pollStart}`);
         setSyncJobId(jobId);
         setIsSyncPolling(true);
+        setSyncPollStartedAt(pollStart);
         setSyncLockedRunId(null);
-        toast.info("Google Sheets sync started — runs in background (60-90s)...", { duration: 5000 });
+        toast.info("Google Sheets sync started — runs in background (~20s)...", { duration: 5000 });
       }
     },
     onError: (err) => {
