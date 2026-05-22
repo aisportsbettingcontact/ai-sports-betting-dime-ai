@@ -2270,3 +2270,24 @@ export const jackMacSyncJobs = mysqlTable("jack_mac_sync_jobs", {
 }));
 export type JackMacSyncJob    = typeof jackMacSyncJobs.$inferSelect;
 export type InsertJackMacSyncJob = typeof jackMacSyncJobs.$inferInsert;
+
+// ─── RG Session Cache ──────────────────────────────────────────────────────────────────────
+// Persists the RotoGrinders session cookie across server restarts and processes.
+// Eliminates the 6-8s login step on repeat syncs (25-min TTL matches RG session).
+//
+// Lifecycle:
+//   1. getRgSessionCookie() checks this table before attempting login
+//   2. If a valid (non-expired) cookie exists, it is returned immediately
+//   3. After a successful login, the new cookie is upserted here
+//   4. Rows older than 30 minutes are eligible for cleanup
+export const rgSessionCache = mysqlTable("rg_session_cache", {
+  /** Fixed primary key — only one active session at a time */
+  id:          int("id").primaryKey().default(1),
+  /** The full cookie string (e.g. "rguid=...; session=...") */
+  cookieStr:   text("cookie_str").notNull(),
+  /** UTC timestamp (ms) when the cookie was fetched */
+  fetchedAt:   bigint("fetched_at", { mode: "number" }).notNull(),
+  /** UTC timestamp (ms) when the cookie expires (fetchedAt + TTL) */
+  expiresAt:   bigint("expires_at", { mode: "number" }).notNull(),
+});
+export type RgSessionCache = typeof rgSessionCache.$inferSelect;

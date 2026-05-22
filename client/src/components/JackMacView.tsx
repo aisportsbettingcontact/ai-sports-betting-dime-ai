@@ -117,7 +117,7 @@ interface SyncProgressEvent {
   elapsedMs: number;
   phase: string;
   message: string;
-  status: "start" | "done" | "error" | "skip";
+  status: "start" | "progress" | "done" | "error" | "skip";
   rowCount?: number;
   tabName?: string;
 }
@@ -1236,11 +1236,12 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
             return phase;
           };
 
-          // Find the currently active phase (last "start" event without a done/error)
+          // Find the currently active phase (last "start" or "progress" event without a done/error)
           // Only relevant during active polling — null when complete
           const activePhase: string | null = isComplete ? null : (() => {
             for (let i = displayEvents.length - 1; i >= 0; i--) {
-              if (displayEvents[i].status === "start") return displayEvents[i].phase;
+              const s = displayEvents[i].status;
+              if (s === "start" || s === "progress") return displayEvents[i].phase;
             }
             return null;
           })();
@@ -1307,7 +1308,7 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
                   </div>
                 ) : (
                   displayEvents.map((ev) => {
-                    const isActive = !isComplete && ev.phase === activePhase && ev.status === "start";
+                    const isActive = !isComplete && ev.phase === activePhase && (ev.status === "start" || ev.status === "progress");
                     const isDone  = ev.status === "done";
                     const isError = ev.status === "error";
                     const isSkip  = ev.status === "skip";
