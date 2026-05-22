@@ -247,7 +247,7 @@ async function ensureSheetTabExists(
       fields: "sheets.properties.title",
     });
     const existingTabs = (meta.data.sheets ?? []).map(
-      (s: { properties?: { title?: string } }) => s.properties?.title ?? ""
+      (s) => s.properties?.title ?? ""
     );
 
     if (existingTabs.includes(tabName)) {

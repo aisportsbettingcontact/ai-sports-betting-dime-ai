@@ -169,22 +169,23 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
   //   2. JS-side accent-normalized exact match for disambiguation
   //   3. Fallback: first-name LIKE with unicode_ci collation
   try {
-    const db = getDb();
+    const db = await getDb();
+    if (!db) throw new Error("Database not available for MLB ID lookup");
     const normalizedSearch = normalizeNameForDb(aliasedName);
     const nameParts = aliasedName.trim().split(/\s+/);
     const lastNameRaw = nameParts[nameParts.length - 1];
 
     // Use raw SQL with COLLATE utf8mb4_unicode_ci for accent-insensitive matching
     // This makes 'Ramirez' match 'Ramírez', 'Jose' match 'José', etc.
-    const dbRows = await db.execute(
+    const [dbRowsRaw] = await db.execute(
       drizzleSql`SELECT name, mlbamId FROM mlb_players
         WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`%${lastNameRaw}%`}
         AND mlbamId IS NOT NULL
         LIMIT 20`
-    ) as { rows: Array<{ name: string; mlbamId: number }> };
+    ) as [Array<{ name: string; mlbamId: number }>, unknown];
 
     // JS-side accent-normalized exact match for disambiguation
-    const match = dbRows.rows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+    const match = dbRowsRaw.find(r => normalizeNameForDb(r.name) === normalizedSearch);
     if (match?.mlbamId) {
       console.log(`[RGProxy] [STATE] MLB ID resolved (DB-last): player="${playerName}" id=${match.mlbamId} dbName="${match.name}"`);
       mlbIdCache.set(key, { mlbId: match.mlbamId, cachedAt: Date.now() });
@@ -194,13 +195,13 @@ async function resolveMlbId(playerName: string): Promise<number | null> {
     // Fallback: first-name LIKE with unicode_ci collation
     if (nameParts.length >= 2) {
       const firstNameRaw = nameParts[0];
-      const firstRows = await db.execute(
+      const [firstRowsRaw] = await db.execute(
         drizzleSql`SELECT name, mlbamId FROM mlb_players
           WHERE name COLLATE utf8mb4_unicode_ci LIKE ${`${firstNameRaw}%`}
           AND mlbamId IS NOT NULL
           LIMIT 10`
-      ) as { rows: Array<{ name: string; mlbamId: number }> };
-      const firstMatch = firstRows.rows.find(r => normalizeNameForDb(r.name) === normalizedSearch);
+      ) as [Array<{ name: string; mlbamId: number }>, unknown];
+      const firstMatch = firstRowsRaw.find(r => normalizeNameForDb(r.name) === normalizedSearch);
       if (firstMatch?.mlbamId) {
         console.log(`[RGProxy] [STATE] MLB ID resolved (DB-first): player="${playerName}" id=${firstMatch.mlbamId} dbName="${firstMatch.name}"`);
         mlbIdCache.set(key, { mlbId: firstMatch.mlbamId, cachedAt: Date.now() });

@@ -345,7 +345,7 @@ export function logStep(fields: Omit<RunStepLog, "timestampUtc">): RunStepLog {
   return {
     ...fields,
     timestampUtc: new Date().toISOString(),
-  };
+  } as RunStepLog;
 }
 
 /**
@@ -355,7 +355,7 @@ export function logError(fields: Omit<RunErrorLog, "timestampUtc">): RunErrorLog
   return {
     ...fields,
     timestampUtc: new Date().toISOString(),
-  };
+  } as RunErrorLog;
 }
 
 // ─── Tab Run Result ───────────────────────────────────────────────────────────
