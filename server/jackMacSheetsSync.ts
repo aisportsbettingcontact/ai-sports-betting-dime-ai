@@ -271,6 +271,52 @@ function getGoogleSheetsClient() {
 // ─── Sheet Write Helpers ──────────────────────────────────────────────────────
 
 /**
+ * Ensures a named sheet tab exists in the spreadsheet.
+ * If the tab does not exist, it is created with the given title.
+ * If it already exists, this is a no-op.
+ *
+ * This prevents "Unable to parse range: 'Tab Name'" errors when writing
+ * to tabs that were deleted or never created.
+ */
+async function ensureSheetTabExists(
+  sheets: ReturnType<typeof google.sheets>,
+  tabName: string
+): Promise<void> {
+  try {
+    // Get the current list of sheet tabs
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      fields: "sheets.properties.title",
+    });
+    const existingTabs = (meta.data.sheets ?? []).map(
+      (s: { properties?: { title?: string } }) => s.properties?.title ?? ""
+    );
+
+    if (existingTabs.includes(tabName)) {
+      console.log(`[SheetsSync] [STATE] Tab "${tabName}" already exists — no-op`);
+      return;
+    }
+
+    // Tab does not exist — create it
+    console.log(`[SheetsSync] [STEP] Creating missing tab: "${tabName}"`);
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{
+          addSheet: {
+            properties: { title: tabName },
+          },
+        }],
+      },
+    });
+    console.log(`[SheetsSync] [OUTPUT] Tab "${tabName}" created successfully`);
+  } catch (err) {
+    // Non-fatal: log and continue — the subsequent write will fail with a clear error
+    console.warn(`[SheetsSync] [VERIFY] WARN — ensureSheetTabExists("${tabName}") failed: ${(err as Error).message}`);
+  }
+}
+
+/**
  * Clears all content in a named sheet tab.
  */
 async function clearSheetTab(
@@ -457,7 +503,8 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
     }
 
     try {
-      // 3c. Clear existing sheet tab content
+      // 3c. Ensure tab exists (creates it if missing), then clear content
+      await ensureSheetTabExists(sheets, sheetTab);
       await clearSheetTab(sheets, sheetTab);
 
       // 3d. Write header + data rows
@@ -518,6 +565,7 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
     // Write Today Lineups tab
     const todayTabStart = Date.now();
     try {
+      await ensureSheetTabExists(sheets, "Today Lineups");
       await clearSheetTab(sheets, "Today Lineups");
       const { rowsWritten, columnsWritten } = await writeFangraphsLineupTab(
         sheets, "Today Lineups", fgResult.today.games, fgResult.today.date
@@ -551,6 +599,7 @@ export async function syncJackMacToSheets(): Promise<SheetSyncResult> {
     // Write Tomorrow Lineups tab
     const tomorrowTabStart = Date.now();
     try {
+      await ensureSheetTabExists(sheets, "Tomorrow Lineups");
       await clearSheetTab(sheets, "Tomorrow Lineups");
       const { rowsWritten, columnsWritten } = await writeFangraphsLineupTab(
         sheets, "Tomorrow Lineups", fgResult.tomorrow.games, fgResult.tomorrow.date

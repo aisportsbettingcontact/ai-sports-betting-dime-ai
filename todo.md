@@ -3718,3 +3718,9 @@
 - [x] Fix Fangraphs lineups date in Google Sheets — add DATE column + title row per tab
 - [x] buildLineupSheetRows now accepts dateLabel and writes it to every data row
 - [x] 726/726 tests pass
+
+## Session: 2026-05-21 - Jack Mac Pipeline Overhaul (Phase 2)
+- [x] Fix MLB ID DB lookup: COLLATE utf8mb4_unicode_ci for accent-insensitive LIKE (Ramirez→Ramírez)
+- [x] Add ensureSheetTabExists: auto-create missing Google Sheets tabs before write
+- [x] Wire ensureSheetTabExists for all 6 tabs (4 RG + Today Lineups + Tomorrow Lineups)
+- [x] 726/726 tests passing
