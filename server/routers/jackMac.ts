@@ -235,11 +235,13 @@ export const jackMacRouter = router({
           executionMode: "manual" as const,
           triggeredBy: "unknown",
           error: `Job not found — the server may have restarted. jobId=${input.jobId}`,
+          progress: [],
         } as unknown as SyncJob;
       }
 
       console.log(
-        `[JackMac] [STATE] getSyncStatus: jobId=${input.jobId} runId=${job.runId} status=${job.status} elapsed=${job.elapsedMs ?? "pending"}ms for @${username}`
+        `[JackMac] [STATE] getSyncStatus: jobId=${input.jobId} runId=${job.runId} status=${job.status}` +
+        ` elapsed=${job.elapsedMs ?? "pending"}ms progressEvents=${job.progress?.length ?? 0} for @${username}`
       );
 
       return job as SyncJob;

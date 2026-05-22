@@ -112,6 +112,39 @@ export interface SheetSyncResult {
 
 export type SyncJobStatus = "pending" | "running" | "success" | "error";
 
+/**
+ * A single progress event emitted by the background sync job.
+ * Appended to SyncJob.progress as each phase starts or completes.
+ * The frontend polls getSyncStatus every 2s and renders these events
+ * in a live step-by-step feed (replaces the silent spinner).
+ */
+export interface SyncProgressEvent {
+  /** ISO timestamp when this event was emitted */
+  at: string;
+  /** Milliseconds since job start */
+  elapsedMs: number;
+  /**
+   * Phase identifier:
+   *   sheets-auth       — Google Sheets client init
+   *   rg-login          — RotoGrinders session cookie
+   *   rg-fetch          — Parallel CSV fetch + parse (4 tabs)
+   *   rg-fetch:{tab}    — Individual tab fetch result
+   *   sheets-write:{tab}— Per-tab write + read-back
+   *   fg-fetch          — Fangraphs/MLB Stats API
+   *   fg-write:{tab}    — Today/Tomorrow lineup tab write
+   *   sync-complete     — Final summary
+   */
+  phase: string;
+  /** Human-readable status message shown in the progress feed */
+  message: string;
+  /** Event lifecycle: start = in-progress, done = completed, error = failed */
+  status: "start" | "done" | "error" | "skip";
+  /** Row count (when available — after fetch/write phases) */
+  rowCount?: number;
+  /** Tab name (when applicable) */
+  tabName?: string;
+}
+
 export interface SyncJob {
   jobId: string;
   runId: string;
@@ -123,6 +156,8 @@ export interface SyncJob {
   elapsedMs?: number;
   executionMode: "manual" | "scheduled";
   triggeredBy: string;
+  /** Live progress events — appended as each phase starts/completes */
+  progress: SyncProgressEvent[];
 }
 
 const syncJobStore = new Map<string, SyncJob>();
@@ -246,6 +281,7 @@ export function startSyncJob(
     startedAt: new Date(startedAt).toISOString(),
     executionMode,
     triggeredBy,
+    progress: [],
   };
 
   // 1. Write to in-memory store immediately (same-process polls are instant)
@@ -268,7 +304,8 @@ export function startSyncJob(
     console.log(`[SheetsSync] [STEP] Background sync job starting: jobId=${jobId} runId=${runId}`);
     const t0 = Date.now();
     try {
-      const result = await syncJackMacToSheets(runId, executionMode, triggeredBy);
+      // Pass the job reference so syncJackMacToSheets can emit live progress events
+      const result = await syncJackMacToSheets(runId, executionMode, triggeredBy, job);
       job.status = result.success ? "success" : "error";
       job.result = result;
       job.completedAt = new Date().toISOString();
@@ -341,6 +378,9 @@ export async function getSyncJob(jobId: string): Promise<SyncJob | null> {
       error: row.error ?? undefined,
       executionMode: "manual",
       triggeredBy: row.triggeredBy ?? "unknown",
+      // Progress events are not persisted to DB (they are ephemeral, in-memory only)
+      // A DB-recovered job will show an empty progress array (job already completed)
+      progress: [],
     };
     console.log(`[SheetsSync] [OUTPUT] getSyncJob: jobId=${jobId} found in DB (status=${dbJob.status})`);
     // Populate in-memory cache so subsequent polls from this process are fast
@@ -823,15 +863,42 @@ async function writeLineupTab(
  * Syncs all 6 JACK MAC tabs to the Google Sheet.
  * Called by the background job (startSyncJob) and the scheduled sync.
  * Run lock must be acquired BEFORE calling this function.
+ *
+ * @param liveJob  Optional reference to the SyncJob object in syncJobStore.
+ *                 When provided, progress events are appended to job.progress
+ *                 so the frontend can display a live step-by-step status feed.
  */
 export async function syncJackMacToSheets(
   runId: string,
   executionMode: "manual" | "scheduled" = "manual",
-  triggeredBy = "unknown"
+  triggeredBy = "unknown",
+  liveJob?: SyncJob
 ): Promise<SheetSyncResult> {
   const syncStart = Date.now();
   const stepLogs: RunStepLog[] = [];
   const errorLogs: RunErrorLog[] = [];
+
+  /**
+   * Emit a progress event to the live job (if provided).
+   * This mutates job.progress in-place so every poll of getSyncStatus
+   * returns the latest events without any additional DB round-trip.
+   */
+  function emit(event: Omit<SyncProgressEvent, "at" | "elapsedMs">): void {
+    if (!liveJob) return;
+    const ev: SyncProgressEvent = {
+      ...event,
+      at: new Date().toISOString(),
+      elapsedMs: Date.now() - syncStart,
+    };
+    liveJob.progress.push(ev);
+    // Structured server log mirrors the frontend event for traceability
+    console.log(
+      `[SheetsSync] [PROGRESS] phase=${ev.phase} status=${ev.status} elapsedMs=${ev.elapsedMs}` +
+      (ev.rowCount !== undefined ? ` rows=${ev.rowCount}` : "") +
+      (ev.tabName ? ` tab="${ev.tabName}"` : "") +
+      ` msg="${ev.message}"`
+    );
+  }
 
   console.log(`\n[SheetsSync] [INPUT] runId=${runId} mode=${executionMode} by=${triggeredBy}`);
   console.log(`[SheetsSync] [STATE] Spreadsheet ID: ${SPREADSHEET_ID}`);
@@ -842,13 +909,16 @@ export async function syncJackMacToSheets(
     finalStatus: "pending",
   }));
 
-  // ── Step 1: Initialize Google Sheets client ───────────────────────────────
+  // ── Step 1: Initialize Google Sheets client ───────────────────────────────────────────
+  emit({ phase: "sheets-auth", status: "start", message: "Connecting to Google Sheets..." });
   let sheets: ReturnType<typeof google.sheets>;
   try {
     sheets = getGoogleSheetsClient();
+    emit({ phase: "sheets-auth", status: "done", message: "Google Sheets connected" });
     console.log(`[SheetsSync] [STATE] runId=${runId} Google Sheets client initialized`);
   } catch (err) {
     const msg = (err as Error).message;
+    emit({ phase: "sheets-auth", status: "error", message: `Sheets auth failed: ${msg}` });
     errorLogs.push(logError({
       runId, failingStep: "sheets-auth",
       errorType: "AuthError", exactErrorMessage: msg,
@@ -880,13 +950,16 @@ export async function syncJackMacToSheets(
     };
   }
 
-  // ── Step 2: Get Rotogrinders session cookie ───────────────────────────────
+  // ── Step 2: Get Rotogrinders session cookie ──────────────────────────────────────────
+  emit({ phase: "rg-login", status: "start", message: "Logging into RotoGrinders (~6-8s)..." });
   let rgCookie: string;
   try {
     rgCookie = await getRgSessionCookie();
+    emit({ phase: "rg-login", status: "done", message: "RotoGrinders session established" });
     console.log(`[SheetsSync] [STATE] runId=${runId} RG session cookie obtained`);
   } catch (err) {
     const msg = (err as Error).message;
+    emit({ phase: "rg-login", status: "error", message: `RotoGrinders login failed: ${msg}` });
     errorLogs.push(logError({
       runId, failingStep: "rg-auth",
       errorType: "AuthError", exactErrorMessage: msg,
@@ -918,13 +991,19 @@ export async function syncJackMacToSheets(
     };
   }
 
-  // ── Step 3: Fetch + Parse all 4 RG tabs in PARALLEL ──────────────────────
+  // ── Step 3: Fetch + Parse all 4 RG tabs in PARALLEL ──────────────────────────────
   const tabResults: SheetSyncTabResult[] = [];
   let totalRowsWritten = 0;
 
   const pageEntries = Object.entries(PAGE_TO_SHEET_TAB);
   console.log(`\n[SheetsSync] [STEP] runId=${runId} Fetching ${pageEntries.length} RG tabs in PARALLEL...`);
   const parallelFetchStart = Date.now();
+
+  emit({
+    phase: "rg-fetch",
+    status: "start",
+    message: `Fetching ${pageEntries.length} RotoGrinders CSV tabs in parallel...`,
+  });
 
   stepLogs.push(logStep({
     runId, step: "rg-parallel-fetch-start", status: "start",
@@ -956,19 +1035,45 @@ export async function syncJackMacToSheets(
     })
   );
 
-  console.log(`[SheetsSync] [STATE] runId=${runId} Parallel fetch+parse complete in ${Date.now() - parallelFetchStart}ms`);
+  const parallelFetchElapsed = Date.now() - parallelFetchStart;
+  const totalFetchedRows = fetchParseResults.reduce((sum, r) => sum + (r.tableData?.rows.length ?? 0), 0);
+  const fetchErrors = fetchParseResults.filter(r => r.error);
+  console.log(`[SheetsSync] [STATE] runId=${runId} Parallel fetch+parse complete in ${parallelFetchElapsed}ms`);
+
+  if (fetchErrors.length > 0) {
+    emit({
+      phase: "rg-fetch",
+      status: "error",
+      message: `RG fetch complete — ${fetchErrors.length} tab(s) failed, ${totalFetchedRows} rows fetched (${(parallelFetchElapsed / 1000).toFixed(1)}s)`,
+      rowCount: totalFetchedRows,
+    });
+  } else {
+    emit({
+      phase: "rg-fetch",
+      status: "done",
+      message: `${pageEntries.length} RG tabs fetched — ${totalFetchedRows} rows total (${(parallelFetchElapsed / 1000).toFixed(1)}s)`,
+      rowCount: totalFetchedRows,
+    });
+  }
 
   stepLogs.push(logStep({
     runId, step: "rg-parallel-fetch-complete", status: "success",
     sourceName: "rotogrinders",
-    parsedRowCount: fetchParseResults.reduce((sum, r) => sum + (r.tableData?.rows.length ?? 0), 0),
-    durationMs: Date.now() - parallelFetchStart,
+    parsedRowCount: totalFetchedRows,
+    durationMs: parallelFetchElapsed,
     finalStatus: "pending",
   }));
 
   // ── Step 4: Write each RG tab to Sheets (sequential — Sheets API rate limits) ──
   for (const { pageKey, sheetTab, tableData, tabStart, error } of fetchParseResults) {
     if (error || !tableData) {
+      emit({
+        phase: `sheets-write:${sheetTab}`,
+        status: "error",
+        message: `"${sheetTab}" — fetch failed: ${error ?? "unknown"}`,
+        tabName: sheetTab,
+        rowCount: 0,
+      });
       tabResults.push({
         pageKey,
         sheetTab,
@@ -1001,6 +1106,13 @@ export async function syncJackMacToSheets(
       console.warn(
         `[SheetsSync] [VERIFY] WARN — runId=${runId} page="${pageKey}" rows=${tableData.rows.length} < min=${minRows}. Skipping write.`
       );
+      emit({
+        phase: `sheets-write:${sheetTab}`,
+        status: "skip",
+        message: `"${sheetTab}" — skipped (${tableData.rows.length} rows < min ${minRows})`,
+        tabName: sheetTab,
+        rowCount: 0,
+      });
       tabResults.push({
         pageKey,
         sheetTab,
@@ -1018,12 +1130,37 @@ export async function syncJackMacToSheets(
       continue;
     }
 
+    emit({
+      phase: `sheets-write:${sheetTab}`,
+      status: "start",
+      message: `Writing "${sheetTab}" (${tableData.rows.length} rows)...`,
+      tabName: sheetTab,
+      rowCount: tableData.rows.length,
+    });
     const tabResult = await writeRgTab(sheets, sheetTab, tableData, runId, stepLogs, errorLogs);
     totalRowsWritten += tabResult.rowsWritten;
     tabResults.push(tabResult);
+    if (tabResult.status === "success") {
+      emit({
+        phase: `sheets-write:${sheetTab}`,
+        status: "done",
+        message: `✓ "${sheetTab}" — ${tabResult.rowsWritten} rows written, read-back ${tabResult.readBackValidated ? "OK" : "MISMATCH"} (${tabResult.elapsedMs}ms)`,
+        tabName: sheetTab,
+        rowCount: tabResult.rowsWritten,
+      });
+    } else {
+      emit({
+        phase: `sheets-write:${sheetTab}`,
+        status: "error",
+        message: `✗ "${sheetTab}" — ${tabResult.error ?? "write failed"}`,
+        tabName: sheetTab,
+        rowCount: 0,
+      });
+    }
   }
 
-  // ── Step 5: Fetch + Write Fangraphs lineups ───────────────────────────────
+  // ── Step 5: Fetch + Write Fangraphs lineups ───────────────────────────────────────────
+  emit({ phase: "fg-fetch", status: "start", message: "Fetching MLB lineups (MLB Stats API)..." });
   console.log(`\n[SheetsSync] [STEP] runId=${runId} Fetching Fangraphs lineups (MLB Stats API)...`);
   const fgStart = Date.now();
 
@@ -1035,37 +1172,81 @@ export async function syncJackMacToSheets(
   try {
     const fgResult: FgScrapeResult = await scrapeFangraphsLineups();
     const fgElapsed = Date.now() - fgStart;
+    const totalGames = fgResult.today.games.length + fgResult.tomorrow.games.length;
     console.log(
       `[SheetsSync] [STATE] runId=${runId} Fangraphs: today=${fgResult.today.games.length} tomorrow=${fgResult.tomorrow.games.length} errors=${fgResult.errors.length} elapsed=${fgElapsed}ms`
     );
+    emit({
+      phase: "fg-fetch",
+      status: "done",
+      message: `MLB lineups fetched — ${totalGames} games (today: ${fgResult.today.games.length}, tomorrow: ${fgResult.tomorrow.games.length}) in ${(fgElapsed / 1000).toFixed(1)}s`,
+      rowCount: totalGames,
+    });
 
     stepLogs.push(logStep({
       runId, step: "fg-lineups-fetch-complete", status: "success",
       sourceName: "mlb-stats-api",
-      parsedRowCount: fgResult.today.games.length + fgResult.tomorrow.games.length,
+      parsedRowCount: totalGames,
       durationMs: fgElapsed, finalStatus: "pending",
     }));
 
     // Write Today Lineups
+    emit({
+      phase: "fg-write:Today Lineups",
+      status: "start",
+      message: `Writing "Today Lineups" (${fgResult.today.games.length} games)...`,
+      tabName: "Today Lineups",
+      rowCount: fgResult.today.games.length,
+    });
     const todayResult = await writeLineupTab(
       sheets, "Today Lineups", fgResult.today.games, fgResult.today.date,
       runId, stepLogs, errorLogs
     );
     totalRowsWritten += todayResult.rowsWritten;
     tabResults.push(todayResult);
+    emit({
+      phase: "fg-write:Today Lineups",
+      status: todayResult.status === "success" ? "done" : todayResult.status === "empty" ? "skip" : "error",
+      message: todayResult.status === "success"
+        ? `✓ "Today Lineups" — ${todayResult.rowsWritten} rows written (${todayResult.elapsedMs}ms)`
+        : todayResult.status === "empty"
+        ? `"Today Lineups" — no games today`
+        : `✗ "Today Lineups" — ${todayResult.error ?? "write failed"}`,
+      tabName: "Today Lineups",
+      rowCount: todayResult.rowsWritten,
+    });
 
     // Write Tomorrow Lineups
+    emit({
+      phase: "fg-write:Tomorrow Lineups",
+      status: "start",
+      message: `Writing "Tomorrow Lineups" (${fgResult.tomorrow.games.length} games)...`,
+      tabName: "Tomorrow Lineups",
+      rowCount: fgResult.tomorrow.games.length,
+    });
     const tomorrowResult = await writeLineupTab(
       sheets, "Tomorrow Lineups", fgResult.tomorrow.games, fgResult.tomorrow.date,
       runId, stepLogs, errorLogs
     );
     totalRowsWritten += tomorrowResult.rowsWritten;
     tabResults.push(tomorrowResult);
+    emit({
+      phase: "fg-write:Tomorrow Lineups",
+      status: tomorrowResult.status === "success" ? "done" : tomorrowResult.status === "empty" ? "skip" : "error",
+      message: tomorrowResult.status === "success"
+        ? `✓ "Tomorrow Lineups" — ${tomorrowResult.rowsWritten} rows written (${tomorrowResult.elapsedMs}ms)`
+        : tomorrowResult.status === "empty"
+        ? `"Tomorrow Lineups" — no games tomorrow`
+        : `✗ "Tomorrow Lineups" — ${tomorrowResult.error ?? "write failed"}`,
+      tabName: "Tomorrow Lineups",
+      rowCount: tomorrowResult.rowsWritten,
+    });
 
   } catch (err) {
     const msg = (err as Error).message;
     const fgElapsed = Date.now() - fgStart;
     console.error(`[SheetsSync] [VERIFY] FAIL — runId=${runId} Fangraphs scrape error: ${msg} elapsed=${fgElapsed}ms`);
+    emit({ phase: "fg-fetch", status: "error", message: `MLB lineup fetch failed: ${msg}` });
 
     errorLogs.push(logError({
       runId, failingStep: "fg-lineups-fetch",
@@ -1095,7 +1276,7 @@ export async function syncJackMacToSheets(
     }
   }
 
-  // ── Final summary ─────────────────────────────────────────────────────────
+  // ── Final summary ──────────────────────────────────────────────────────────────────────────────────────
   const totalElapsed = Date.now() - syncStart;
   const allSuccess = tabResults.every(t => t.status === "success" || t.status === "empty");
   const hasErrors = tabResults.some(t => t.status === "error");
@@ -1108,6 +1289,15 @@ export async function syncJackMacToSheets(
     );
   }
   console.log(`[SheetsSync] [VERIFY] ${allSuccess ? "PASS" : hasErrors ? "PARTIAL" : "PASS"} — full sync finished`);
+
+  emit({
+    phase: "sync-complete",
+    status: allSuccess ? "done" : hasErrors ? "error" : "done",
+    message: allSuccess
+      ? `✓ All 6 tabs synced — ${totalRowsWritten} total rows in ${(totalElapsed / 1000).toFixed(1)}s`
+      : `Sync finished with errors — ${totalRowsWritten} rows in ${(totalElapsed / 1000).toFixed(1)}s`,
+    rowCount: totalRowsWritten,
+  });
 
   stepLogs.push(logStep({
     runId, step: "sync-complete",

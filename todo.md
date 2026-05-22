@@ -3764,3 +3764,13 @@
 - [x] FIX: purgeOldDbJobs() cleans up rows older than 24 hours on each startSyncJob call
 - [x] VERIFIED: 0 TypeScript errors
 - [x] VERIFIED: 761/761 tests passing
+
+## Session: 2026-05-22 - Jack Mac Sync Live Progress Feed
+- [x] Add SyncProgressEvent[] to SyncJob interface (phase, message, status, elapsedMs, rowCount)
+- [x] Instrument syncJackMacToSheets: emit progress events at each phase start/complete
+- [x] Instrument writeRgTab and writeLineupTab: emit per-tab progress events
+- [x] getSyncStatus router returns progress events to frontend on every poll
+- [x] JackMacView.tsx: replace silent spinner with live step-by-step progress feed
+- [x] Progress panel shows: phase name, elapsed time, row counts, green/red/pulsing state
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
