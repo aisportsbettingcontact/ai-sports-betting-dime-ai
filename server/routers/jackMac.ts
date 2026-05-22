@@ -23,9 +23,83 @@ import { appUserProcedure } from "./appUsers";
 import {
   startSyncJob,
   getSyncJob,
+  syncJackMacToSheets,
   type SyncJob,
 } from "../jackMacSheetsSync";
 import { scrapeFangraphsLineups, type FgScrapeResult } from "../fangraphsScraper";
+import { invalidateFgCache } from "../fangraphsScraper";
+
+// ─── Server-side 15-min auto-sync scheduler ───────────────────────────────────
+// Runs every 15 minutes on the server to keep Google Sheets and the RG cache
+// fresh without requiring any user interaction.
+// Starts 2 minutes after server boot to avoid hammering on cold start.
+
+const JACKMAC_SYNC_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const JACKMAC_SYNC_BOOT_DELAY_MS = 2 * 60 * 1000; // 2 min boot delay
+
+let jackMacSyncIntervalId: ReturnType<typeof setInterval> | null = null;
+
+async function runScheduledJackMacSync(): Promise<void> {
+  const now = new Date().toISOString();
+  console.log(`[JackMac][SCHEDULER] [INPUT] 15-min scheduled sync starting at ${now}`);
+  const t0 = Date.now();
+  try {
+    // Invalidate Fangraphs cache so fresh lineup data is fetched
+    invalidateFgCache();
+    console.log(`[JackMac][SCHEDULER] [STEP] Fangraphs cache invalidated`);
+
+    // Run full sync: 4 RG tabs + Today Lineups + Tomorrow Lineups → Google Sheets
+    const result = await syncJackMacToSheets();
+    const elapsed = Date.now() - t0;
+
+    if (result.success) {
+      console.log(
+        `[JackMac][SCHEDULER] [OUTPUT] Scheduled sync COMPLETE: totalRows=${result.totalRowsWritten} elapsed=${elapsed}ms`
+      );
+      console.log(`[JackMac][SCHEDULER] [VERIFY] PASS — all ${result.tabs.length} tabs synced`);
+      for (const tab of result.tabs) {
+        console.log(
+          `[JackMac][SCHEDULER] [STATE]   [${tab.status.toUpperCase()}] "${tab.sheetTab}" → ${tab.rowsWritten} rows (${tab.elapsedMs}ms)`
+        );
+      }
+    } else {
+      const failedTabs = result.tabs.filter(t => t.status === "error");
+      console.warn(
+        `[JackMac][SCHEDULER] [VERIFY] PARTIAL — ${failedTabs.length} tabs failed: ${failedTabs.map(t => t.sheetTab).join(", ")} elapsed=${elapsed}ms`
+      );
+    }
+  } catch (err) {
+    const elapsed = Date.now() - t0;
+    const msg = (err as Error).message;
+    console.error(
+      `[JackMac][SCHEDULER] [VERIFY] FAIL — Scheduled sync error: ${msg} elapsed=${elapsed}ms`
+    );
+  }
+}
+
+export function startJackMacScheduler(): void {
+  if (jackMacSyncIntervalId !== null) {
+    console.log(`[JackMac][SCHEDULER] Already running — skipping duplicate start`);
+    return;
+  }
+
+  console.log(
+    `[JackMac][SCHEDULER] Starting 15-min auto-sync scheduler (boot delay=${JACKMAC_SYNC_BOOT_DELAY_MS / 1000}s)`
+  );
+
+  // Boot delay: wait 2 minutes before first run to avoid cold-start hammering
+  setTimeout(() => {
+    console.log(`[JackMac][SCHEDULER] Boot delay elapsed — running first scheduled sync now`);
+    void runScheduledJackMacSync();
+
+    // Then repeat every 15 minutes
+    jackMacSyncIntervalId = setInterval(() => {
+      void runScheduledJackMacSync();
+    }, JACKMAC_SYNC_INTERVAL_MS);
+
+    console.log(`[JackMac][SCHEDULER] 15-min interval registered (id=${jackMacSyncIntervalId})`);
+  }, JACKMAC_SYNC_BOOT_DELAY_MS);
+}
 
 // ─── Whitelist ────────────────────────────────────────────────────────────────
 

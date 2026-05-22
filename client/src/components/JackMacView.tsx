@@ -627,11 +627,37 @@ export default function JackMacView({ appUser }: JackMacViewProps) {
     }
   }, [cache, isAllowed]);
 
+  // ── Pre-fetch all 4 tabs on mount (parallel) ─────────────────────────────
+  // Fetches all 4 tabs in parallel on first render so switching tabs is instant.
+  const hasMountFetchedRef = useRef(false);
+  useEffect(() => {
+    hasMountFetchedRef.current = true;
+    console.log("[JACKMAC][MOUNT] Pre-fetching all 4 RG tabs in parallel...");
+    void Promise.all(TABS.map(t => fetchTab(t.key, false)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAllowed]);
+
   // ── Auto-fetch on tab switch ───────────────────────────────────────────────
   useEffect(() => {
     if (isAllowed && mainTab === "projections") fetchTab(activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isAllowed, mainTab]);
+
+  // ── 15-min auto-refresh interval ──────────────────────────────────────────
+  // Fires every 15 minutes while the Jack Mac tab is mounted.
+  // Force-refreshes all 4 RG tabs in parallel so data is always current.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      console.log(`[JACKMAC][AUTO-REFRESH] 15-min interval fired — force-refreshing all 4 RG tabs`);
+      void Promise.all(TABS.map(t => fetchTab(t.key, true)));
+    }, STALE_MS); // STALE_MS = 15 * 60 * 1000 ms
+    console.log(`[JACKMAC][AUTO-REFRESH] 15-min interval registered (id=${intervalId})`);
+    return () => {
+      clearInterval(intervalId);
+      console.log(`[JACKMAC][AUTO-REFRESH] 15-min interval cleared (id=${intervalId})`);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAllowed]);
 
   // ── Reset search/sort on tab switch ───────────────────────────────────────
   useEffect(() => {

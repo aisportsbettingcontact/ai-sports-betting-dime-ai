@@ -3706,3 +3706,15 @@
 - [x] MTL@CAR model output: MTL 1.58 / CAR 3.08 | ML +252/-252 | PL -121/+121 | O/U +203/-203
 - [x] Edges: UNDER 5.5 ELITE EDGE (+19.65pp EV=+35.4%) | CAR -1.5 PLAYABLE EDGE (+3.60pp EV=+4.2%) | CAR ML STRONG EDGE (+7.90pp EV=+7.8%)
 - [x] Tests: 726/726 passed
+
+## Session: 2026-05-21 - Jack Mac Pipeline Fixes
+
+- [x] Fix resolveMlbId to use DB-first lookup (mlb_players.mlbamId) — eliminates 90s+ load time
+- [x] Reduce MLB Stats API timeout from 3s to 800ms (fail fast for unknown players)
+- [x] Add pre-fetch all 4 RG tabs on mount (parallel) in JackMacView.tsx
+- [x] Add 15-min setInterval auto-refresh in JackMacView.tsx (force-refreshes all 4 tabs)
+- [x] Add server-side 15-min auto-sync scheduler (startJackMacScheduler) in jackMac router
+- [x] Wire startJackMacScheduler into server startup in _core/index.ts
+- [x] Fix Fangraphs lineups date in Google Sheets — add DATE column + title row per tab
+- [x] buildLineupSheetRows now accepts dateLabel and writes it to every data row
+- [x] 726/726 tests pass

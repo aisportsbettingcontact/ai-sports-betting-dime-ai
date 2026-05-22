@@ -60,14 +60,16 @@ const EXCLUDED_COLUMNS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL
  * Columns: GAME, GAME_TIME_PST, SIDE, TEAM, PITCHER, THROWS, W, L, ERA, IP, SO, WHIP,
  *          BAT_ORDER, PLAYER, BATS, POSITION, LINEUP_STATUS
  */
-function buildLineupSheetRows(games: FgGame[]): string[][] {
+function buildLineupSheetRows(games: FgGame[], dateLabel: string): string[][] {
   const header = [
-    "GAME", "GAME_TIME_PST", "SIDE", "TEAM", "PITCHER", "THROWS",
+    "DATE", "GAME", "GAME_TIME_PST", "SIDE", "TEAM", "PITCHER", "THROWS",
     "W", "L", "ERA", "IP", "SO", "WHIP",
     "BAT_ORDER", "PLAYER", "BATS", "POSITION", "LINEUP_STATUS",
   ];
 
-  const rows: string[][] = [header];
+  // Title row: date label spans the first column for easy identification
+  const titleRow = [`=== ${dateLabel} ===`, ...Array(header.length - 1).fill("")];
+  const rows: string[][] = [titleRow, header];
 
   const pstFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
@@ -89,7 +91,7 @@ function buildLineupSheetRows(games: FgGame[]): string[][] {
       if (team.lineup.length === 0) {
         // No lineup — write one row with pitcher info only
         rows.push([
-          gameLabel, gameTimePst, side.toUpperCase(), team.teamAbbr,
+          dateLabel, gameLabel, gameTimePst, side.toUpperCase(), team.teamAbbr,
           pitcher?.name ?? "TBD", pitcher?.throws ?? "?",
           String(pitcher?.wins ?? ""), String(pitcher?.losses ?? ""),
           pitcher?.era ?? "", pitcher?.ip ?? "",
@@ -99,7 +101,7 @@ function buildLineupSheetRows(games: FgGame[]): string[][] {
       } else {
         for (const batter of team.lineup) {
           rows.push([
-            gameLabel, gameTimePst, side.toUpperCase(), team.teamAbbr,
+            dateLabel, gameLabel, gameTimePst, side.toUpperCase(), team.teamAbbr,
             pitcher?.name ?? "TBD", pitcher?.throws ?? "?",
             String(pitcher?.wins ?? ""), String(pitcher?.losses ?? ""),
             pitcher?.era ?? "", pitcher?.ip ?? "",
@@ -130,7 +132,7 @@ async function writeFangraphsLineupTab(
     return { rowsWritten: 0, columnsWritten: 0 };
   }
 
-  const values = buildLineupSheetRows(games);
+  const values = buildLineupSheetRows(games, dateLabel);
   const dataRows = values.length - 1; // exclude header
   const cols = values[0].length;
 
