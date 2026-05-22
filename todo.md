@@ -3749,3 +3749,18 @@
 - [x] VERIFIED: 130 players → 117 unique last names → 1 DB query → 615ms (was 390 queries × 20ms = 7.8s+)
 - [x] VERIFIED: 0 TypeScript errors
 - [x] VERIFIED: 761/761 tests passing
+
+## Session: 2026-05-22 - Jack Mac "Sync job not found" Fix (DB-backed persistence)
+- [x] ROOT CAUSE: syncStatusQuery inherited global staleTime:5min from QueryClient — first poll response cached as "fresh", refetchInterval stopped firing
+- [x] ROOT CAUSE (alternative): Production may run multiple Node.js processes; syncToSheets hits Process A (creates job in memory), getSyncStatus poll hits Process B (empty syncJobStore → not_found)
+- [x] FIX: Add staleTime:0, gcTime:0 to syncStatusQuery in JackMacView.tsx — forces React Query to always re-fetch, never cache poll responses
+- [x] FIX: Add jack_mac_sync_jobs table to drizzle/schema.ts (jobId, runId, status, startedAt, completedAt, result, error, triggeredBy)
+- [x] FIX: Run pnpm db:push — jack_mac_sync_jobs table created in DB (migration 0089)
+- [x] FIX: startSyncJob() now calls persistJobToDb() immediately after creating in-memory job (fire-and-forget, never blocks)
+- [x] FIX: Background job calls finalizeJobInDb() on completion/failure to update DB row
+- [x] FIX: getSyncJob() is now async — checks in-memory Map first (fast path), falls back to DB (cross-process safety)
+- [x] FIX: getSyncStatus router procedure now awaits getSyncJob() (async)
+- [x] FIX: Scheduler's getSyncJob() call updated to await (async)
+- [x] FIX: purgeOldDbJobs() cleans up rows older than 24 hours on each startSyncJob call
+- [x] VERIFIED: 0 TypeScript errors
+- [x] VERIFIED: 761/761 tests passing

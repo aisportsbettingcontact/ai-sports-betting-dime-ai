@@ -32,7 +32,7 @@ import { appUserProcedure } from "./appUsers";
 import {
   startSyncJob,
   getSyncJob,
-  syncJackMacToSheets,
+  getSyncJobStoreSnapshot,
   type SyncJob,
 } from "../jackMacSheetsSync";
 import { scrapeFangraphsLineups, type FgScrapeResult } from "../fangraphsScraper";
@@ -87,7 +87,7 @@ async function runScheduledJackMacSync(): Promise<void> {
 
   while (Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
-    const job = getSyncJob(jobId);
+    const job = await getSyncJob(jobId);
     if (!job) break;
 
     if (job.status === "success" || job.status === "error") {
@@ -208,11 +208,21 @@ export const jackMacRouter = router({
     .input(z.object({ jobId: z.string() }))
     .query(async ({ ctx, input }) => {
       const username = ctx.appUser?.username ?? "unknown";
-      const job = getSyncJob(input.jobId);
+      // getSyncJob is now async: checks in-memory Map first, then falls back to DB.
+      // This handles the case where the poll hits a different Node.js process than
+      // the one that created the job (load-balanced deployments).
+      const job = await getSyncJob(input.jobId);
 
       if (!job) {
+        // Diagnostic: dump the full syncJobStore state to identify why the job is missing
+        const storeSnapshot = getSyncJobStoreSnapshot();
+        const storeDesc = storeSnapshot.length === 0
+          ? "EMPTY"
+          : storeSnapshot.map(j => `${j.jobId}(${j.status})`).join(", ");
         console.warn(
-          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found for @${username} — returning not_found status (server may have restarted)`
+          `[JackMac] [VERIFY] WARN — getSyncStatus: jobId="${input.jobId}" not found for @${username}` +
+          ` | syncJobStore has ${storeSnapshot.length} job(s): [${storeDesc}]` +
+          ` | DB lookup also returned null — job may not have been persisted yet`
         );
         // Return a sentinel instead of throwing — the client must handle this gracefully.
         // Throwing NOT_FOUND causes the tRPC query to enter error state, which the

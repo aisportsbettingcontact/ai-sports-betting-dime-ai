@@ -29,6 +29,9 @@
  */
 
 import { google } from "googleapis";
+import { eq, lt } from "drizzle-orm";
+import { getDb } from "./db";
+import { jackMacSyncJobs } from "../drizzle/schema";
 import {
   PAGE_CONFIG,
   getRgSessionCookie,
@@ -126,15 +129,97 @@ const syncJobStore = new Map<string, SyncJob>();
 const JOB_TTL_MS = 30 * 60 * 1000; // 30 minutes — auto-evict stale jobs
 
 /**
+ * Persist a sync job row to the DB (fire-and-forget, never throws).
+ * Called synchronously after adding to syncJobStore so the row exists
+ * before the first poll arrives.
+ */
+async function persistJobToDb(
+  jobId: string,
+  runId: string,
+  triggeredBy: string,
+  startedAt: number
+): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — persistJobToDb: DB unavailable, job ${jobId} not persisted`);
+      return;
+    }
+    await db.insert(jackMacSyncJobs).values({
+      jobId,
+      runId,
+      status: "running",
+      startedAt,
+      triggeredBy,
+    });
+    console.log(`[SheetsSync] [STEP] persistJobToDb: jobId=${jobId} written to DB`);
+  } catch (err) {
+    // Non-fatal — in-memory store is the primary source of truth for the running process
+    console.warn(`[SheetsSync] [VERIFY] WARN — persistJobToDb failed: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Update a sync job row in the DB when it completes or fails.
+ * Called at the end of the background job (fire-and-forget, never throws).
+ */
+async function finalizeJobInDb(
+  jobId: string,
+  status: "completed" | "failed",
+  result: SheetSyncResult | undefined,
+  error: string | undefined,
+  completedAt: number
+): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — finalizeJobInDb: DB unavailable, job ${jobId} not finalized`);
+      return;
+    }
+    await db
+      .update(jackMacSyncJobs)
+      .set({
+        status,
+        completedAt,
+        result: result ? JSON.stringify(result) : null,
+        error: error ?? null,
+      })
+      .where(eq(jackMacSyncJobs.jobId, jobId));
+    console.log(`[SheetsSync] [STEP] finalizeJobInDb: jobId=${jobId} status=${status}`);
+  } catch (err) {
+    console.warn(`[SheetsSync] [VERIFY] WARN — finalizeJobInDb failed: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Purge jack_mac_sync_jobs rows older than 24 hours (fire-and-forget, never throws).
+ * Called on each startSyncJob invocation to prevent unbounded table growth.
+ */
+async function purgeOldDbJobs(): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    await db.delete(jackMacSyncJobs).where(lt(jackMacSyncJobs.startedAt, cutoff));
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
  * Start a background sync job. Returns immediately with a jobId.
  * The actual sync runs asynchronously via setImmediate.
  * Returns null if a run lock is already held (prevents duplicate runs).
+ *
+ * DB persistence: writes a 'running' row to jack_mac_sync_jobs immediately
+ * (before the first poll can arrive) so getSyncJob can find the job even
+ * if the poll hits a different Node.js process.
  */
 export function startSyncJob(
   triggeredBy = "unknown",
   executionMode: "manual" | "scheduled" = "manual"
 ): { jobId: string; runId: string } | { locked: true; existingRunId: string | null } {
-  // Evict stale jobs older than 30 minutes
+  // Evict stale in-memory jobs older than 30 minutes
   const now = Date.now();
   for (const [id, job] of Array.from(syncJobStore.entries())) {
     if (now - new Date(job.startedAt).getTime() > JOB_TTL_MS) {
@@ -153,15 +238,25 @@ export function startSyncJob(
   }
 
   const jobId = `sync-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const startedAt = Date.now();
   const job: SyncJob = {
     jobId,
     runId,
     status: "pending",
-    startedAt: new Date().toISOString(),
+    startedAt: new Date(startedAt).toISOString(),
     executionMode,
     triggeredBy,
   };
+
+  // 1. Write to in-memory store immediately (same-process polls are instant)
   syncJobStore.set(jobId, job);
+
+  // 2. Persist to DB immediately (cross-process polls can find the job)
+  //    Fire-and-forget — never blocks startSyncJob return
+  void persistJobToDb(jobId, runId, triggeredBy, startedAt);
+
+  // 3. Purge old DB rows in background
+  void purgeOldDbJobs();
 
   console.log(
     `[SheetsSync] [INPUT] Background sync job created: jobId=${jobId} runId=${runId} mode=${executionMode} by=${triggeredBy}`
@@ -178,9 +273,11 @@ export function startSyncJob(
       job.result = result;
       job.completedAt = new Date().toISOString();
       job.elapsedMs = Date.now() - t0;
+      const finalStatus = result.success ? "completed" : "failed";
       console.log(
         `[SheetsSync] [OUTPUT] Background sync job complete: jobId=${jobId} runId=${runId} status=${job.status} elapsed=${job.elapsedMs}ms`
       );
+      void finalizeJobInDb(jobId, finalStatus, result, undefined, Date.now());
     } catch (err) {
       const msg = (err as Error).message;
       job.status = "error";
@@ -190,6 +287,7 @@ export function startSyncJob(
       console.error(
         `[SheetsSync] [VERIFY] FAIL — Background sync job error: jobId=${jobId} runId=${runId} error="${msg}" elapsed=${job.elapsedMs}ms`
       );
+      void finalizeJobInDb(jobId, "failed", undefined, msg, Date.now());
     } finally {
       // Always release the run lock when the job completes (success or error)
       releaseRunLock(runId);
@@ -201,10 +299,69 @@ export function startSyncJob(
 
 /**
  * Get the current state of a sync job by jobId.
- * Returns null if the job does not exist or has been evicted.
+ * Fast path: in-memory Map (same-process, zero latency).
+ * Fallback: DB lookup (cross-process, handles load-balanced deployments).
+ *
+ * Returns null if the job does not exist in either store.
  */
-export function getSyncJob(jobId: string): SyncJob | null {
-  return syncJobStore.get(jobId) ?? null;
+export async function getSyncJob(jobId: string): Promise<SyncJob | null> {
+  // Fast path: in-memory store (same process that created the job)
+  const cached = syncJobStore.get(jobId);
+  if (cached) {
+    console.log(`[SheetsSync] [STEP] getSyncJob: jobId=${jobId} found in memory (status=${cached.status})`);
+    return cached;
+  }
+
+  // Fallback: DB lookup (different process or server restart)
+  console.log(`[SheetsSync] [STEP] getSyncJob: jobId=${jobId} not in memory — querying DB`);
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — getSyncJob: DB unavailable, cannot look up jobId=${jobId}`);
+      return null;
+    }
+    const rows = await db
+      .select()
+      .from(jackMacSyncJobs)
+      .where(eq(jackMacSyncJobs.jobId, jobId))
+      .limit(1);
+    if (rows.length === 0) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — getSyncJob: jobId=${jobId} not found in DB either`);
+      return null;
+    }
+    const row = rows[0];
+    // Map DB row → SyncJob shape
+    const dbJob: SyncJob = {
+      jobId: row.jobId,
+      runId: row.runId,
+      status: row.status === "completed" ? "success" : row.status === "failed" ? "error" : "running",
+      startedAt: new Date(row.startedAt).toISOString(),
+      completedAt: row.completedAt ? new Date(row.completedAt).toISOString() : undefined,
+      result: row.result ? (JSON.parse(row.result) as SheetSyncResult) : undefined,
+      error: row.error ?? undefined,
+      executionMode: "manual",
+      triggeredBy: row.triggeredBy ?? "unknown",
+    };
+    console.log(`[SheetsSync] [OUTPUT] getSyncJob: jobId=${jobId} found in DB (status=${dbJob.status})`);
+    // Populate in-memory cache so subsequent polls from this process are fast
+    syncJobStore.set(jobId, dbJob);
+    return dbJob;
+  } catch (err) {
+    console.error(`[SheetsSync] [VERIFY] FAIL — getSyncJob DB lookup error: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+/**
+ * Returns a snapshot of all jobs currently in syncJobStore.
+ * Used for diagnostic logging when a job is not found.
+ */
+export function getSyncJobStoreSnapshot(): Array<{ jobId: string; status: string; startedAt: string }> {
+  return Array.from(syncJobStore.values()).map(j => ({
+    jobId: j.jobId,
+    status: j.status,
+    startedAt: j.startedAt,
+  }));
 }
 
 // ─── Google Sheets Auth ───────────────────────────────────────────────────────
