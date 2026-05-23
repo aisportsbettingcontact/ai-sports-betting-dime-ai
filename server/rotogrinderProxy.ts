@@ -846,13 +846,129 @@ export async function parseRgCsv(
     console.log(`[RGProxy] [VERIFY] PASS — All ${rows.length} players have MLB_ID and PLAYER_ID on page=${pageKey}`);
   }
 
-  // ── Build final columns list (enriched columns at front) ──────────────────
-  const enrichedCols = ["NAME", "HEADSHOT_URL", "MLB_ID", "PLAYER_ID", "TEAM_LOGO_URL", "OPP_LOGO_URL"];
-  const remainingCols = normalizedHeaders.filter(c => !enrichedCols.includes(c) && c !== "PLAYERID");
-  const finalColumns = [...enrichedCols, ...remainingCols];
+  // ── Build final columns list (DETERMINISTIC CANONICAL ORDER) ────────────────
+  //
+  // RULE: PLAYER_ID first, NAME second, all known RG columns in exact source order,
+  //       any unknown columns appended before MLB_ID, MLB_ID always last.
+  //
+  // This is the single source of truth for column order across all 4 RG tabs.
+  // Never derive order from CSV headers — RG column order is not stable between slates.
+  //
+  // Internal-only columns (HEADSHOT_URL, TEAM_LOGO_URL, OPP_LOGO_URL, PLAYERID) are
+  // excluded from the sheet write by EXCLUDED_COLUMNS in jackMacSheetsSync.ts.
+  const CANONICAL_RG_COLUMNS: string[] = [
+    // ── Identity (always first two) ──────────────────────────────────────────
+    "PLAYER_ID",
+    "NAME",
+    // ── Core DFS columns (RG source order) ──────────────────────────────────
+    "SALARY",
+    "POS",
+    "TEAM",
+    "OPP",
+    "SCHEDULE_ID",
+    "SLATE",
+    "TM",
+    "OPP_TM",
+    "HAND",
+    "OL",
+    "OD",
+    "PCC",
+    "ERROR",
+    "2H",
+    "BPC",
+    "PPC",
+    "MPC",
+    "OPENER",
+    "CATCHER",
+    "UMPIRE",
+    "PARK",
+    "ROOF",
+    "PLATOON",
+    "SPLIT",
+    "GVF",
+    "HFA",
+    "DH",
+    "FAMILIARITY",
+    "TILT_BIAS",
+    "FPTS",
+    "FPTS/$",
+    "POWN",
+    "RGID",
+    "OBFPTS",
+    // ── Pitcher-specific columns ─────────────────────────────────────────────
+    "IP",
+    "OUTS",
+    "ERA",
+    "CNERA",
+    "W",
+    "L",
+    "QS",
+    "CG",
+    "CGSH",
+    "TBF",
+    "AB",
+    "K",
+    "BB",
+    "IBB",
+    "HBP",
+    "H",
+    "HR",
+    "TB",
+    "SH",
+    "SF",
+    "GIDP",
+    "SB",
+    "CS",
+    "ER",
+    "FLOOR",
+    "CEILING",
+    "PARTNERID",
+    "OWNERSHIP",
+    // ── Internal enrichment (excluded from sheet write by EXCLUDED_COLUMNS) ──
+    "HEADSHOT_URL",
+    "TEAM_LOGO_URL",
+    "OPP_LOGO_URL",
+    // ── MLB_ID always last ────────────────────────────────────────────────────
+    "MLB_ID",
+  ];
+
+  // Build a set of all columns present in the data (normalized headers + enriched)
+  const availableCols = new Set<string>([
+    ...normalizedHeaders.filter(c => c !== "PLAYERID"), // PLAYERID → PLAYER_ID already in CANONICAL
+    "PLAYER_ID",
+    "MLB_ID",
+    "HEADSHOT_URL",
+    "TEAM_LOGO_URL",
+    "OPP_LOGO_URL",
+  ]);
+
+  // Step 1: canonical columns that are actually present in this CSV
+  const canonicalPresent = CANONICAL_RG_COLUMNS.filter(c => availableCols.has(c));
+
+  // Step 2: any columns RG sent that are NOT in the canonical list (unknown future columns)
+  //         — insert them before MLB_ID so they are visible but not disruptive
+  const canonicalSet = new Set(CANONICAL_RG_COLUMNS);
+  const unknownCols = normalizedHeaders.filter(
+    c => c !== "PLAYERID" && !canonicalSet.has(c)
+  );
+
+  if (unknownCols.length > 0) {
+    console.warn(
+      `[RGProxy] [VERIFY] WARN — page=${pageKey} has ${unknownCols.length} unknown column(s) not in canonical list: ${unknownCols.join(", ")}. Appending before MLB_ID.`
+    );
+  }
+
+  // Insert unknown columns before MLB_ID in the canonical list
+  const mlbIdIdx = canonicalPresent.indexOf("MLB_ID");
+  const finalColumns: string[] = mlbIdIdx >= 0
+    ? [...canonicalPresent.slice(0, mlbIdIdx), ...unknownCols, "MLB_ID"]
+    : [...canonicalPresent, ...unknownCols];
 
   console.log(
-    `[RGProxy] [OUTPUT] page=${pageKey} finalColumns=${finalColumns.length} rows=${rows.length}`
+    `[RGProxy] [OUTPUT] page=${pageKey} finalColumns=${finalColumns.length} rows=${rows.length} first3=[${finalColumns.slice(0, 3).join(",")}] last=[${finalColumns[finalColumns.length - 1]}]`
+  );
+  console.log(
+    `[RGProxy] [VERIFY] ${finalColumns[0] === "PLAYER_ID" && finalColumns[1] === "NAME" && finalColumns[finalColumns.length - 1] === "MLB_ID" ? "PASS" : "FAIL"} — column order: PLAYER_ID[0]=${finalColumns[0]} NAME[1]=${finalColumns[1]} LAST=${finalColumns[finalColumns.length - 1]}`
   );
 
   // updatedAt is not in the CSV — use current timestamp
