@@ -1,0 +1,1 @@
+ALTER TABLE `mlb_game_backtest` MODIFY COLUMN `modelSide` varchar(32);
