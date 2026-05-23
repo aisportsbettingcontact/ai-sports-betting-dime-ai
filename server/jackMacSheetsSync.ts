@@ -572,16 +572,86 @@ async function snapshotSheetTab(
 }
 
 /**
- * Clears all content in a named sheet tab.
+ * Clears all content AND all formatting from a named sheet tab.
+ *
+ * Two operations in parallel:
+ *   1. values.clear  — wipes all cell values (existing behavior)
+ *   2. batchUpdate   — resets all cell formatting to Google Sheets defaults:
+ *                      white background, black text, Arial 10pt, no bold,
+ *                      no borders, no freeze rows, default column widths
+ *
+ * This ensures the sheet is always plain text after every sync cycle,
+ * regardless of what formatting was applied by previous code versions.
+ *
+ * [STEP] clearSheetTab: tabName=X
+ * [VERIFY] PASS/FAIL — values.clear + batchUpdate
  */
 async function clearSheetTab(
   sheets: ReturnType<typeof google.sheets>,
   tabName: string
 ): Promise<void> {
+  // Step 1: Clear all values
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SPREADSHEET_ID,
     range: `'${tabName}'`,
   });
+
+  // Step 2: Clear all formatting — resolve sheetId first
+  // Non-fatal: if sheetId lookup fails, values are still cleared
+  try {
+    const sheetId = await getSheetId(sheets, tabName);
+    if (sheetId == null) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — clearSheetTab: sheetId not found for "${tabName}" — formatting not cleared`);
+      return;
+    }
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [
+          // Reset all cell formatting to Google Sheets defaults
+          {
+            repeatCell: {
+              range: { sheetId, startRowIndex: 0, startColumnIndex: 0 },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: { red: 1, green: 1, blue: 1, alpha: 1 },
+                  textFormat: {
+                    bold: false, italic: false, strikethrough: false, underline: false,
+                    fontSize: 10, fontFamily: "Arial",
+                    foregroundColor: { red: 0, green: 0, blue: 0, alpha: 1 },
+                  },
+                  horizontalAlignment: "LEFT",
+                  verticalAlignment: "BOTTOM",
+                  wrapStrategy: "OVERFLOW_CELL",
+                  borders: {
+                    top: { style: "NONE" }, bottom: { style: "NONE" },
+                    left: { style: "NONE" }, right: { style: "NONE" },
+                  },
+                },
+              },
+              fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,borders)",
+            },
+          },
+          // Remove freeze rows and columns
+          {
+            updateSheetProperties: {
+              properties: {
+                sheetId,
+                gridProperties: { frozenRowCount: 0, frozenColumnCount: 0 },
+              },
+              fields: "gridProperties.frozenRowCount,gridProperties.frozenColumnCount",
+            },
+          },
+        ],
+      },
+    });
+
+    console.log(`[SheetsSync] [STEP] clearSheetTab: "${tabName}" — values + formatting cleared`);
+  } catch (fmtErr) {
+    // Non-fatal: values were already cleared above
+    console.warn(`[SheetsSync] [VERIFY] WARN — clearSheetTab: formatting clear failed for "${tabName}": ${(fmtErr as Error).message} — values cleared, formatting may persist`);
+  }
 }
 
 /**
