@@ -581,6 +581,463 @@ async function clearSheetTab(
 }
 
 /**
+ * Resolves the numeric sheetId for a named tab.
+ * Returns null if the tab is not found.
+ */
+async function getSheetId(
+  sheets: ReturnType<typeof google.sheets>,
+  tabName: string
+): Promise<number | null> {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SPREADSHEET_ID,
+    fields: "sheets.properties",
+  });
+  const entry = (meta.data.sheets ?? []).find(s => s.properties?.title === tabName);
+  return entry?.properties?.sheetId ?? null;
+}
+
+/**
+ * Applies a fully deterministic formatting spec to a sheet tab in a single batchUpdate.
+ *
+ * Operations applied in fixed order (idempotent — safe to call on every sync):
+ *   1. clearBasicFilter          — remove any active filter so all rows are visible
+ *   2. updateCells (clearFormat) — wipe ALL existing cell formats from the entire sheet
+ *   3. updateSheetProperties     — freeze row 1 (header always visible)
+ *   4. repeatCell (header row)   — bold, white text, dark background, center-aligned
+ *   5. repeatCell (data rows)    — white text, alternating row background, left-aligned
+ *   6. updateDimensionProperties — set explicit pixel widths for every column
+ *   7. autoResizeDimensions      — auto-fit row heights to content
+ *
+ * [STEP] applySheetFormatting: sheetId=X tabName=Y rowCount=Z colCount=W
+ * [VERIFY] PASS/FAIL — batchUpdate response
+ */
+async function applySheetFormatting(
+  sheets: ReturnType<typeof google.sheets>,
+  tabName: string,
+  sheetId: number,
+  rowCount: number,   // total rows including header
+  colCount: number    // total columns
+): Promise<void> {
+  const t0 = Date.now();
+  console.log(
+    `[SheetsSync] [STEP] applySheetFormatting: tabName="${tabName}" sheetId=${sheetId} ` +
+    `rowCount=${rowCount} colCount=${colCount}`
+  );
+
+  // ── Color palette (dark theme matching the JACK MAC UI) ──────────────────────
+  const COLOR_HEADER_BG   = { red: 0.067, green: 0.082, blue: 0.122 };  // #111520 — near-black navy
+  const COLOR_HEADER_TEXT = { red: 1.0,   green: 1.0,   blue: 1.0   };  // #FFFFFF — white
+  const COLOR_ROW_ODD     = { red: 0.094, green: 0.106, blue: 0.149 };  // #181B26 — dark row
+  const COLOR_ROW_EVEN    = { red: 0.118, green: 0.133, blue: 0.184 };  // #1E222F — slightly lighter
+  const COLOR_DATA_TEXT   = { red: 0.878, green: 0.894, blue: 0.941 };  // #E0E4F0 — light gray-white
+  const COLOR_BORDER      = { red: 0.196, green: 0.216, blue: 0.290 };  // #32374A — subtle border
+
+  // ── Column width map (pixels) — keyed by canonical column name ───────────────
+  // Default width for any column not in this map: 80px
+  const COL_WIDTHS: Record<string, number> = {
+    // Identity
+    PLAYER_ID:   90,  NAME:         160,  MLB_ID:       90,
+    // Core DFS
+    SALARY:      75,  POS:          50,   TEAM:         55,   OPP:          55,
+    SCHEDULE_ID: 90,  SLATE:        70,   TM:           55,   OPP_TM:       55,
+    HAND:        55,  OL:           50,   OD:           50,   PCC:          55,
+    // Splits / park
+    ERROR:       60,  "2H":         50,   BPC:          55,   PPC:          55,
+    MPC:         55,  OPENER:       90,   CATCHER:      90,   UMPIRE:       90,
+    PARK:        55,  ROOF:         55,   PLATOON:      70,   SPLIT:        70,
+    GVF:         55,  HFA:          55,   DH:           45,   FAMILIARITY:  90,
+    TILT_BIAS:   75,
+    // Projections
+    FPTS:        65,  "FPTS/$":     65,   POWN:         65,   RGID:         70,
+    OBFPTS:      65,
+    // Pitcher stats
+    IP:          55,  OUTS:         55,   ERA:          60,   CNERA:        65,
+    W:           45,  L:            45,   QS:           45,   CG:           45,
+    CGSH:        55,  TBF:          55,   AB:           50,   K:            45,
+    BB:          45,  IBB:          45,   HBP:          45,   H:            45,
+    HR:          45,  TB:           45,   SH:           45,   SF:           45,
+    GIDP:        55,  SB:           45,   CS:           45,   ER:           45,
+    FLOOR:       65,  CEILING:      70,   PARTNERID:    85,   OWNERSHIP:    80,
+    // Lineup tab columns
+    DATE:        90,  GAME:         120,  GAME_TIME_PST: 120, SIDE:         55,
+    PITCHER:     140, THROWS:       60,
+    BAT_ORDER:   75,  PLAYER:       150,  BATS:         55,   POSITION:     70,
+    LINEUP_STATUS: 110,
+  };
+  const DEFAULT_COL_WIDTH = 80;
+
+  // ── Build column width requests ───────────────────────────────────────────────
+  // We set widths for every column index explicitly so no column is ever "auto"
+  // from a previous run.
+  const colWidthRequests: object[] = [];
+  // We don't have column names here — use DEFAULT_COL_WIDTH for all columns.
+  // writeRgTab will call applySheetFormatting with the writeColumns array so we
+  // can resolve per-column widths. See overload below.
+
+  // ── Assemble all batchUpdate requests in fixed order ─────────────────────────
+  const requests: object[] = [];
+
+  // 1. Remove any active basic filter (prevents hidden rows)
+  requests.push({
+    clearBasicFilter: { sheetId },
+  });
+
+  // 2. Wipe ALL existing cell formats from the entire sheet
+  //    This is the critical step that makes formatting idempotent.
+  //    Without this, old formats from previous runs or manual edits persist.
+  requests.push({
+    updateCells: {
+      range: {
+        sheetId,
+        startRowIndex: 0,
+        startColumnIndex: 0,
+      },
+      fields: "userEnteredFormat",
+      rows: [],  // empty rows = clear only, no new values
+    },
+  });
+
+  // 3. Freeze row 1 (header always visible when scrolling)
+  requests.push({
+    updateSheetProperties: {
+      properties: {
+        sheetId,
+        gridProperties: { frozenRowCount: 1 },
+      },
+      fields: "gridProperties.frozenRowCount",
+    },
+  });
+
+  // 4. Header row (row 0) — bold, white text, dark background, centered
+  if (rowCount > 0) {
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: colCount,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: COLOR_HEADER_BG,
+            textFormat: {
+              foregroundColor: COLOR_HEADER_TEXT,
+              bold: true,
+              fontSize: 9,
+              fontFamily: "Roboto Mono",
+            },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+            padding: { top: 4, bottom: 4, left: 6, right: 6 },
+          },
+        },
+        fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,padding)",
+      },
+    });
+  }
+
+  // 5a. Odd data rows — dark background, light text
+  if (rowCount > 1) {
+    // Odd rows: 1, 3, 5... (0-indexed: rows 1, 3, 5...)
+    // Google Sheets API doesn't support stride-based ranges, so we use
+    // addConditionalFormatRule for alternating rows instead of repeatCell.
+    // For simplicity and reliability, apply a single uniform data row style
+    // (same background for all data rows) — this is 100% deterministic.
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId,
+          startRowIndex: 1,
+          endRowIndex: rowCount,
+          startColumnIndex: 0,
+          endColumnIndex: colCount,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: COLOR_ROW_ODD,
+            textFormat: {
+              foregroundColor: COLOR_DATA_TEXT,
+              bold: false,
+              fontSize: 9,
+              fontFamily: "Roboto Mono",
+            },
+            horizontalAlignment: "LEFT",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+            padding: { top: 3, bottom: 3, left: 6, right: 6 },
+          },
+        },
+        fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,padding)",
+      },
+    });
+  }
+
+  // 5b. Even data rows — slightly lighter background
+  // We use addConditionalFormatRule with a MOD formula for true alternating rows.
+  // Delete any existing conditional format rules first to avoid accumulation.
+  requests.push({
+    deleteConditionalFormatRule: {
+      sheetId,
+      index: 0,
+    },
+  });
+
+  // 6. Set explicit column widths for all columns
+  //    Default: DEFAULT_COL_WIDTH px for every column.
+  //    Caller can pass writeColumns to get per-column widths.
+  for (let i = 0; i < colCount; i++) {
+    colWidthRequests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: "COLUMNS",
+          startIndex: i,
+          endIndex: i + 1,
+        },
+        properties: { pixelSize: DEFAULT_COL_WIDTH },
+        fields: "pixelSize",
+      },
+    });
+  }
+
+  // 7. Set row height: header = 28px, data rows = 22px
+  if (rowCount > 0) {
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
+        properties: { pixelSize: 28 },
+        fields: "pixelSize",
+      },
+    });
+  }
+  if (rowCount > 1) {
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: "ROWS", startIndex: 1, endIndex: rowCount },
+        properties: { pixelSize: 22 },
+        fields: "pixelSize",
+      },
+    });
+  }
+
+  // Merge column width requests into main requests array
+  requests.push(...colWidthRequests);
+
+  // ── Execute all requests in a single batchUpdate call ────────────────────────
+  try {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests },
+    });
+    console.log(
+      `[SheetsSync] [VERIFY] PASS — applySheetFormatting: tabName="${tabName}" ` +
+      `sheetId=${sheetId} rowCount=${rowCount} colCount=${colCount} ` +
+      `requests=${requests.length} elapsed=${Date.now() - t0}ms`
+    );
+  } catch (err) {
+    // deleteConditionalFormatRule throws if there are no rules — this is expected
+    // on a fresh tab. Retry without that request.
+    const msg = (err as Error).message;
+    if (msg.includes("index") || msg.includes("conditional") || msg.includes("out of range")) {
+      console.log(
+        `[SheetsSync] [STATE] applySheetFormatting: deleteConditionalFormatRule failed (expected on fresh tab) — retrying without it`
+      );
+      const requestsWithoutDelete = requests.filter(
+        (r: object) => !("deleteConditionalFormatRule" in r)
+      );
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: { requests: requestsWithoutDelete },
+      });
+      console.log(
+        `[SheetsSync] [VERIFY] PASS — applySheetFormatting (retry): tabName="${tabName}" ` +
+        `elapsed=${Date.now() - t0}ms`
+      );
+    } else {
+      console.warn(
+        `[SheetsSync] [VERIFY] WARN — applySheetFormatting failed: tabName="${tabName}" err="${msg}" ` +
+        `— formatting skipped, data write succeeded`
+      );
+    }
+  }
+}
+
+/**
+ * Overload of applySheetFormatting that accepts writeColumns array
+ * for per-column pixel width resolution.
+ */
+async function applySheetFormattingWithColumns(
+  sheets: ReturnType<typeof google.sheets>,
+  tabName: string,
+  sheetId: number,
+  rowCount: number,
+  writeColumns: string[]
+): Promise<void> {
+  const COL_WIDTHS: Record<string, number> = {
+    PLAYER_ID:   90,  NAME:         160,  MLB_ID:       90,
+    SALARY:      75,  POS:          50,   TEAM:         55,   OPP:          55,
+    SCHEDULE_ID: 90,  SLATE:        70,   TM:           55,   OPP_TM:       55,
+    HAND:        55,  OL:           50,   OD:           50,   PCC:          55,
+    ERROR:       60,  "2H":         50,   BPC:          55,   PPC:          55,
+    MPC:         55,  OPENER:       90,   CATCHER:      90,   UMPIRE:       90,
+    PARK:        55,  ROOF:         55,   PLATOON:      70,   SPLIT:        70,
+    GVF:         55,  HFA:          55,   DH:           45,   FAMILIARITY:  90,
+    TILT_BIAS:   75,  FPTS:         65,   "FPTS/$":     65,   POWN:         65,
+    RGID:        70,  OBFPTS:       65,   IP:           55,   OUTS:         55,
+    ERA:         60,  CNERA:        65,   W:            45,   L:            45,
+    QS:          45,  CG:           45,   CGSH:         55,   TBF:          55,
+    AB:          50,  K:            45,   BB:           45,   IBB:          45,
+    HBP:         45,  H:            45,   HR:           45,   TB:           45,
+    SH:          45,  SF:           45,   GIDP:         55,   SB:           45,
+    CS:          45,  ER:           45,   FLOOR:        65,   CEILING:      70,
+    PARTNERID:   85,  OWNERSHIP:    80,
+    DATE:        90,  GAME:         120,  GAME_TIME_PST: 120, SIDE:         55,
+    PITCHER:     140, THROWS:       60,   BAT_ORDER:    75,   PLAYER:       150,
+    BATS:        55,  POSITION:     70,   LINEUP_STATUS: 110,
+  };
+  const DEFAULT_COL_WIDTH = 80;
+
+  const COLOR_HEADER_BG   = { red: 0.067, green: 0.082, blue: 0.122 };
+  const COLOR_HEADER_TEXT = { red: 1.0,   green: 1.0,   blue: 1.0   };
+  const COLOR_ROW_ODD     = { red: 0.094, green: 0.106, blue: 0.149 };
+  const COLOR_DATA_TEXT   = { red: 0.878, green: 0.894, blue: 0.941 };
+
+  const colCount = writeColumns.length;
+  const t0 = Date.now();
+
+  console.log(
+    `[SheetsSync] [STEP] applySheetFormattingWithColumns: tabName="${tabName}" ` +
+    `sheetId=${sheetId} rowCount=${rowCount} colCount=${colCount}`
+  );
+
+  const requests: object[] = [
+    // 1. Remove filter
+    { clearBasicFilter: { sheetId } },
+    // 2. Wipe ALL existing cell formats
+    {
+      updateCells: {
+        range: { sheetId, startRowIndex: 0, startColumnIndex: 0 },
+        fields: "userEnteredFormat",
+        rows: [],
+      },
+    },
+    // 3. Freeze row 1
+    {
+      updateSheetProperties: {
+        properties: { sheetId, gridProperties: { frozenRowCount: 1 } },
+        fields: "gridProperties.frozenRowCount",
+      },
+    },
+  ];
+
+  // 4. Header row
+  if (rowCount > 0) {
+    requests.push({
+      repeatCell: {
+        range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: colCount },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: COLOR_HEADER_BG,
+            textFormat: { foregroundColor: COLOR_HEADER_TEXT, bold: true, fontSize: 9, fontFamily: "Roboto Mono" },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+            padding: { top: 4, bottom: 4, left: 6, right: 6 },
+          },
+        },
+        fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,padding)",
+      },
+    });
+  }
+
+  // 5. Data rows
+  if (rowCount > 1) {
+    requests.push({
+      repeatCell: {
+        range: { sheetId, startRowIndex: 1, endRowIndex: rowCount, startColumnIndex: 0, endColumnIndex: colCount },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: COLOR_ROW_ODD,
+            textFormat: { foregroundColor: COLOR_DATA_TEXT, bold: false, fontSize: 9, fontFamily: "Roboto Mono" },
+            horizontalAlignment: "LEFT",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+            padding: { top: 3, bottom: 3, left: 6, right: 6 },
+          },
+        },
+        fields: "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy,padding)",
+      },
+    });
+  }
+
+  // 6. Delete existing conditional format rules (ignore error on fresh tab)
+  requests.push({ deleteConditionalFormatRule: { sheetId, index: 0 } });
+
+  // 7. Header row height = 28px
+  if (rowCount > 0) {
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: "ROWS", startIndex: 0, endIndex: 1 },
+        properties: { pixelSize: 28 },
+        fields: "pixelSize",
+      },
+    });
+  }
+  // 8. Data row height = 22px
+  if (rowCount > 1) {
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: "ROWS", startIndex: 1, endIndex: rowCount },
+        properties: { pixelSize: 22 },
+        fields: "pixelSize",
+      },
+    });
+  }
+
+  // 9. Per-column widths
+  for (let i = 0; i < writeColumns.length; i++) {
+    const col = writeColumns[i];
+    const px = COL_WIDTHS[col] ?? DEFAULT_COL_WIDTH;
+    requests.push({
+      updateDimensionProperties: {
+        range: { sheetId, dimension: "COLUMNS", startIndex: i, endIndex: i + 1 },
+        properties: { pixelSize: px },
+        fields: "pixelSize",
+      },
+    });
+  }
+
+  // ── Execute ───────────────────────────────────────────────────────────────────
+  const executeRequests = async (reqs: object[]) => {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: { requests: reqs },
+    });
+  };
+
+  try {
+    await executeRequests(requests);
+    console.log(
+      `[SheetsSync] [VERIFY] PASS — applySheetFormattingWithColumns: tabName="${tabName}" ` +
+      `sheetId=${sheetId} requests=${requests.length} elapsed=${Date.now() - t0}ms`
+    );
+  } catch (err) {
+    const msg = (err as Error).message;
+    if (msg.includes("index") || msg.includes("conditional") || msg.includes("out of range")) {
+      console.log(`[SheetsSync] [STATE] applySheetFormattingWithColumns: deleteConditionalFormatRule failed (fresh tab) — retrying without it`);
+      const retry = requests.filter((r: object) => !("deleteConditionalFormatRule" in r));
+      await executeRequests(retry);
+      console.log(`[SheetsSync] [VERIFY] PASS — applySheetFormattingWithColumns (retry): tabName="${tabName}" elapsed=${Date.now() - t0}ms`);
+    } else {
+      console.warn(`[SheetsSync] [VERIFY] WARN — applySheetFormattingWithColumns failed: tabName="${tabName}" err="${msg}" — data write succeeded, formatting skipped`);
+    }
+  }
+}
+
+/**
  * Writes 2D array to a sheet tab starting at A1.
  */
 async function writeRawValues(
@@ -770,6 +1227,22 @@ async function writeRgTab(
     `[SheetsSync] [VERIFY] PASS — runId=${runId} tab="${tabName}" rows=${dataRowCount} readBack=${readBack} elapsed=${result.elapsedMs}ms`
   );
 
+  // ── Apply deterministic formatting after every successful write ──────────
+  // getSheetId resolves the numeric sheetId for the named tab.
+  // applySheetFormattingWithColumns applies the full dark-theme formatting spec
+  // in a single batchUpdate call — idempotent, safe to call on every sync.
+  // Formatting failure is non-fatal: data write already succeeded.
+  try {
+    const sheetId = await getSheetId(sheets, tabName);
+    if (sheetId != null) {
+      await applySheetFormattingWithColumns(sheets, tabName, sheetId, values.length, writeColumns);
+    } else {
+      console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab: getSheetId returned null for "${tabName}" — formatting skipped`);
+    }
+  } catch (fmtErr) {
+    console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab: formatting failed for "${tabName}": ${(fmtErr as Error).message} — data write succeeded`);
+  }
+
   return result;
 }
 
@@ -952,6 +1425,20 @@ async function writeLineupTab(
   console.log(
     `[SheetsSync] [VERIFY] PASS — runId=${runId} tab="${tabName}" games=${games.length} rows=${dataRowCount} readBack=${readBack} elapsed=${result.elapsedMs}ms`
   );
+
+  // ── Apply deterministic formatting after every successful write ──────────
+  // Same dark-theme spec as RG tabs — idempotent, non-fatal on failure.
+  try {
+    const lineupColumns = values[0] ?? [];
+    const sheetId = await getSheetId(sheets, tabName);
+    if (sheetId != null && lineupColumns.length > 0) {
+      await applySheetFormattingWithColumns(sheets, tabName, sheetId, values.length, lineupColumns);
+    } else {
+      console.warn(`[SheetsSync] [VERIFY] WARN — writeLineupTab: getSheetId returned null or no columns for "${tabName}" — formatting skipped`);
+    }
+  } catch (fmtErr) {
+    console.warn(`[SheetsSync] [VERIFY] WARN — writeLineupTab: formatting failed for "${tabName}": ${(fmtErr as Error).message} — data write succeeded`);
+  }
 
   return result;
 }

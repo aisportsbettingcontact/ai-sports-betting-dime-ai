@@ -3824,3 +3824,19 @@
 - [x] Add PLAYERID to EXCLUDED_COLUMNS so raw RG column never appears in sheet output
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - Deterministic Google Sheets Formatting
+
+- [x] Root cause: writeRgTab and writeLineupTab did ZERO formatting — only values.clear() + values.update(). All formatting was residual from manual edits. New date-named lineup tabs got zero formatting.
+- [x] Add getSheetId() helper: resolves numeric sheetId for a named tab via spreadsheets.get
+- [x] Add applySheetFormatting() base function: full batchUpdate spec (clearBasicFilter, updateCells wipe, freeze row 1, header repeatCell, data row repeatCell, deleteConditionalFormatRule, row heights, column widths)
+- [x] Add applySheetFormattingWithColumns() overload: per-column pixel widths from COL_WIDTHS map (NAME=160px, PLAYER_ID=90px, MLB_ID=90px, etc.)
+- [x] Wire applySheetFormattingWithColumns into writeRgTab: called after successful write + read-back validation, non-fatal on failure
+- [x] Wire applySheetFormattingWithColumns into writeLineupTab: same pattern, uses values[0] as column list
+- [x] Dark theme: header bg #111520, data row bg #181B26, text #E0E4F0, Roboto Mono 9pt
+- [x] Row heights: header=28px, data rows=22px
+- [x] Idempotent: wipes all existing formats first, then applies fresh spec — identical every sync
+- [x] deleteConditionalFormatRule retry: if fresh tab has no rules, retries batchUpdate without that request
+- [x] Fix duplicate W/L keys in COL_WIDTHS map (W and L already defined as pitcher stats)
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
