@@ -74,7 +74,9 @@ const PAGE_TO_SHEET_TAB: Record<string, string> = {
 };
 
 // Columns to EXCLUDE from the Google Sheet (UI-only enrichment columns)
-const EXCLUDED_COLUMNS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL"]);
+// Columns that are internal-only and must never be written to Google Sheets.
+// PLAYERID = raw RG column, superseded by PLAYER_ID (normalized).
+const EXCLUDED_COLUMNS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL", "PLAYERID"]);
 
 // Minimum rows required for a successful write to be considered valid
 // (prevents writing empty/partial data to Sheets)

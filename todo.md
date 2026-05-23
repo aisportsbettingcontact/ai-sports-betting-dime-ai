@@ -3814,3 +3814,13 @@
 - [x] Update file header comment to document new tab naming convention
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - RG Tab Column Order Fix
+
+- [x] Root cause: enrichedCols array put NAME first, MLB_ID second, PLAYER_ID third — non-deterministic remainingCols from raw CSV headers
+- [x] Implement CANONICAL_RG_COLUMNS fixed array: PLAYER_ID first, NAME second, all known RG columns in exact source order, MLB_ID always last
+- [x] Unknown future RG columns appended before MLB_ID (forward-compatible)
+- [x] Add VERIFY log: PASS/FAIL check that PLAYER_ID[0], NAME[1], MLB_ID[last] on every parse
+- [x] Add PLAYERID to EXCLUDED_COLUMNS so raw RG column never appears in sheet output
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
