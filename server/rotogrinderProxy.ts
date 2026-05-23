@@ -815,21 +815,30 @@ export async function parseRgCsv(
   const dbCount = uniqueNames.length - apiCount;
   console.log(`[RGProxy] [STATE] MLB ID resolution: ${resolvedCount}/${uniqueNames.length} resolved (${dbCount} from DB/cache, ${apiCount} via API)`);
 
-  // ── Build final rows with enriched fields ─────────────────────────────────
+  // ── Build final rows: raw CSV values + MLB_ID appended ──────────────────────
+  //
+  // RULE: Every column that RG sends in the CSV is written to the sheet in the
+  //       EXACT order it appears in the CSV. No reordering. No exclusions.
+  //       PLAYERID (raw RG column) is kept as-is — it IS the RG player ID.
+  //       MLB_ID is appended as the final column after all RG columns.
+  //       Internal-only enrichment columns (HEADSHOT_URL, TEAM_LOGO_URL,
+  //       OPP_LOGO_URL) are NOT written to the sheet — they exist only for
+  //       the frontend UI and are excluded by EXCLUDED_COLUMNS in jackMacSheetsSync.ts.
+  //
+  // This is the ONLY column ordering rule. CANONICAL_RG_COLUMNS is REMOVED.
+  // Column order is 100% derived from the live CSV header on every sync.
+
   const missingMlbIds: string[] = [];
-  const missingPlayerIds: string[] = [];
 
   const rows: Record<string, string>[] = rawRows.map(({ row, playerName, teamAbbrev, oppAbbrev }) => {
     const mlbId = mlbIdMap.get(normalizeName(playerName)) ?? null;
-    const playerId = row["PLAYERID"] ?? row["PLAYER_ID"] ?? "";
 
     if (!mlbId) missingMlbIds.push(playerName);
-    if (!playerId) missingPlayerIds.push(playerName);
 
     return {
       ...row,
+      // Append enrichment fields — HEADSHOT/LOGO are excluded from sheet write
       MLB_ID:        mlbId ? String(mlbId) : "",
-      PLAYER_ID:     playerId,
       HEADSHOT_URL:  headshotUrl(mlbId),
       TEAM_LOGO_URL: teamAbbrev ? teamLogoUrl(teamAbbrev) : "",
       OPP_LOGO_URL:  oppAbbrev  ? teamLogoUrl(oppAbbrev)  : "",
@@ -838,137 +847,43 @@ export async function parseRgCsv(
 
   if (missingMlbIds.length > 0) {
     console.warn(`[RGProxy] [VERIFY] WARN — ${missingMlbIds.length} player(s) missing MLB_ID on page=${pageKey}: ${missingMlbIds.join(", ")}`);
-  }
-  if (missingPlayerIds.length > 0) {
-    console.warn(`[RGProxy] [VERIFY] WARN — ${missingPlayerIds.length} player(s) missing PLAYER_ID (RG) on page=${pageKey}: ${missingPlayerIds.join(", ")}`);
-  }
-  if (missingMlbIds.length === 0 && missingPlayerIds.length === 0) {
-    console.log(`[RGProxy] [VERIFY] PASS — All ${rows.length} players have MLB_ID and PLAYER_ID on page=${pageKey}`);
+  } else {
+    console.log(`[RGProxy] [VERIFY] PASS — All ${rows.length} players have MLB_ID on page=${pageKey}`);
   }
 
-  // ── Build final columns list (DETERMINISTIC CANONICAL ORDER) ────────────────
+  // ── Build final columns list: RAW CSV ORDER + MLB_ID appended last ────────────
   //
-  // RULE: PLAYER_ID first, NAME second, all known RG columns in exact source order,
-  //       any unknown columns appended before MLB_ID, MLB_ID always last.
+  // normalizedHeaders = raw CSV headers with "PLAYER" renamed to "NAME" for pitchers.
+  // We keep every column RG sends, in the exact order RG sends it.
+  // MLB_ID is appended as the final column.
+  // HEADSHOT_URL / TEAM_LOGO_URL / OPP_LOGO_URL are appended after MLB_ID so they
+  // exist in the row objects for the frontend but are excluded from the sheet write
+  // by EXCLUDED_COLUMNS in jackMacSheetsSync.ts.
   //
-  // This is the single source of truth for column order across all 4 RG tabs.
-  // Never derive order from CSV headers — RG column order is not stable between slates.
-  //
-  // Internal-only columns (HEADSHOT_URL, TEAM_LOGO_URL, OPP_LOGO_URL, PLAYERID) are
-  // excluded from the sheet write by EXCLUDED_COLUMNS in jackMacSheetsSync.ts.
-  const CANONICAL_RG_COLUMNS: string[] = [
-    // ── Identity (always first two) ──────────────────────────────────────────
-    "PLAYER_ID",
-    "NAME",
-    // ── Core DFS columns (RG source order) ──────────────────────────────────
-    "SALARY",
-    "POS",
-    "TEAM",
-    "OPP",
-    "SCHEDULE_ID",
-    "SLATE",
-    "TM",
-    "OPP_TM",
-    "HAND",
-    "OL",
-    "OD",
-    "PCC",
-    "ERROR",
-    "2H",
-    "BPC",
-    "PPC",
-    "MPC",
-    "OPENER",
-    "CATCHER",
-    "UMPIRE",
-    "PARK",
-    "ROOF",
-    "PLATOON",
-    "SPLIT",
-    "GVF",
-    "HFA",
-    "DH",
-    "FAMILIARITY",
-    "TILT_BIAS",
-    "FPTS",
-    "FPTS/$",
-    "POWN",
-    "RGID",
-    "OBFPTS",
-    // ── Pitcher-specific columns ─────────────────────────────────────────────
-    "IP",
-    "OUTS",
-    "ERA",
-    "CNERA",
-    "W",
-    "L",
-    "QS",
-    "CG",
-    "CGSH",
-    "TBF",
-    "AB",
-    "K",
-    "BB",
-    "IBB",
-    "HBP",
-    "H",
-    "HR",
-    "TB",
-    "SH",
-    "SF",
-    "GIDP",
-    "SB",
-    "CS",
-    "ER",
-    "FLOOR",
-    "CEILING",
-    "PARTNERID",
-    "OWNERSHIP",
-    // ── Internal enrichment (excluded from sheet write by EXCLUDED_COLUMNS) ──
-    "HEADSHOT_URL",
-    "TEAM_LOGO_URL",
-    "OPP_LOGO_URL",
-    // ── MLB_ID always last ────────────────────────────────────────────────────
-    "MLB_ID",
+  // NOTE: normalizedHeaders already excludes nothing — PLAYERID is kept.
+  //       The sheet write in jackMacSheetsSync.ts will exclude HEADSHOT_URL,
+  //       TEAM_LOGO_URL, OPP_LOGO_URL via EXCLUDED_COLUMNS.
+  //       PLAYERID is NOT excluded — it is the raw RG player ID and belongs in the sheet.
+
+  const finalColumns: string[] = [
+    ...normalizedHeaders,   // all RG CSV columns in native order (PLAYER→NAME renamed)
+    "MLB_ID",               // appended as the last column
+    "HEADSHOT_URL",         // excluded from sheet write, kept for frontend
+    "TEAM_LOGO_URL",        // excluded from sheet write, kept for frontend
+    "OPP_LOGO_URL",         // excluded from sheet write, kept for frontend
   ];
 
-  // Build a set of all columns present in the data (normalized headers + enriched)
-  const availableCols = new Set<string>([
-    ...normalizedHeaders.filter(c => c !== "PLAYERID"), // PLAYERID → PLAYER_ID already in CANONICAL
-    "PLAYER_ID",
-    "MLB_ID",
-    "HEADSHOT_URL",
-    "TEAM_LOGO_URL",
-    "OPP_LOGO_URL",
-  ]);
-
-  // Step 1: canonical columns that are actually present in this CSV
-  const canonicalPresent = CANONICAL_RG_COLUMNS.filter(c => availableCols.has(c));
-
-  // Step 2: any columns RG sent that are NOT in the canonical list (unknown future columns)
-  //         — insert them before MLB_ID so they are visible but not disruptive
-  const canonicalSet = new Set(CANONICAL_RG_COLUMNS);
-  const unknownCols = normalizedHeaders.filter(
-    c => c !== "PLAYERID" && !canonicalSet.has(c)
-  );
-
-  if (unknownCols.length > 0) {
-    console.warn(
-      `[RGProxy] [VERIFY] WARN — page=${pageKey} has ${unknownCols.length} unknown column(s) not in canonical list: ${unknownCols.join(", ")}. Appending before MLB_ID.`
-    );
-  }
-
-  // Insert unknown columns before MLB_ID in the canonical list
-  const mlbIdIdx = canonicalPresent.indexOf("MLB_ID");
-  const finalColumns: string[] = mlbIdIdx >= 0
-    ? [...canonicalPresent.slice(0, mlbIdIdx), ...unknownCols, "MLB_ID"]
-    : [...canonicalPresent, ...unknownCols];
-
+  // Diagnostic: log the first 5 and last 3 columns so every sync is auditable
+  const sheetCols = finalColumns.filter(c => c !== "HEADSHOT_URL" && c !== "TEAM_LOGO_URL" && c !== "OPP_LOGO_URL");
   console.log(
-    `[RGProxy] [OUTPUT] page=${pageKey} finalColumns=${finalColumns.length} rows=${rows.length} first3=[${finalColumns.slice(0, 3).join(",")}] last=[${finalColumns[finalColumns.length - 1]}]`
+    `[RGProxy] [OUTPUT] page=${pageKey} csvColumns=${normalizedHeaders.length} sheetColumns=${sheetCols.length} rows=${rows.length}` +
+    ` first5=[${sheetCols.slice(0, 5).join(",")}] last3=[${sheetCols.slice(-3).join(",")}]`
   );
   console.log(
-    `[RGProxy] [VERIFY] ${finalColumns[0] === "PLAYER_ID" && finalColumns[1] === "NAME" && finalColumns[finalColumns.length - 1] === "MLB_ID" ? "PASS" : "FAIL"} — column order: PLAYER_ID[0]=${finalColumns[0]} NAME[1]=${finalColumns[1]} LAST=${finalColumns[finalColumns.length - 1]}`
+    `[RGProxy] [VERIFY] ${sheetCols[sheetCols.length - 1] === "MLB_ID" ? "PASS" : "FAIL"} — MLB_ID is last column: sheetCols[-1]=${sheetCols[sheetCols.length - 1]}`
+  );
+  console.log(
+    `[RGProxy] [VERIFY] PASS — column order is native CSV order (no reordering applied)`
   );
 
   // updatedAt is not in the CSV — use current timestamp

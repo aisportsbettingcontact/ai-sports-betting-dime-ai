@@ -73,10 +73,14 @@ const PAGE_TO_SHEET_TAB: Record<string, string> = {
   "tomorrow-hitters":  "Tomorrow's Projections (The Bat X Hitters)",
 };
 
-// Columns to EXCLUDE from the Google Sheet (UI-only enrichment columns)
-// Columns that are internal-only and must never be written to Google Sheets.
-// PLAYERID = raw RG column, superseded by PLAYER_ID (normalized).
-const EXCLUDED_COLUMNS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL", "PLAYERID"]);
+// Columns to EXCLUDE from the Google Sheet (UI-only enrichment columns).
+// These are internal-only fields that exist only for the frontend UI.
+// PLAYERID is NOT excluded — it is the native RG player ID column and belongs in the sheet.
+// PLAYER_ID is also NOT excluded — it is a normalized alias set in the row object.
+// NOTE: The new pipeline no longer adds PLAYER_ID as a separate column; rows contain
+//       PLAYERID (native) and the sheet receives it as-is. PLAYER_ID is kept in row
+//       objects for backward compatibility with frontend consumers but is NOT in finalColumns.
+const EXCLUDED_COLUMNS = new Set(["HEADSHOT_URL", "TEAM_LOGO_URL", "OPP_LOGO_URL"]);
 
 // Minimum rows required for a successful write to be considered valid
 // (prevents writing empty/partial data to Sheets)
@@ -1103,10 +1107,35 @@ async function writeRgTab(
     rollbackSucceeded: false,
   };
 
-  // Filter out UI-only enrichment columns
+  // ── Step 1: Build writeColumns — raw CSV order, MLB_ID last, no enrichment ─────
+  //
+  // tableData.columns comes from parseRgCsv and is already in native CSV order
+  // with MLB_ID appended last, followed by HEADSHOT_URL/TEAM_LOGO_URL/OPP_LOGO_URL.
+  // EXCLUDED_COLUMNS removes only the 3 UI-only enrichment fields.
+  // Every other column — including PLAYERID — is written to the sheet as-is.
   const writeColumns = tableData.columns.filter(c => !EXCLUDED_COLUMNS.has(c));
 
+  console.log(
+    `[SheetsSync] [INPUT] runId=${runId} tab="${tabName}" ` +
+    `sourceColumns=${tableData.columns.length} writeColumns=${writeColumns.length} ` +
+    `excludedColumns=${tableData.columns.length - writeColumns.length} ` +
+    `sourceRows=${tableData.rows.length}`
+  );
+  console.log(
+    `[SheetsSync] [STATE] runId=${runId} tab="${tabName}" ` +
+    `writeColumns ALL: [${writeColumns.join(", ")}]`
+  );
+  console.log(
+    `[SheetsSync] [VERIFY] ${
+      writeColumns.length > 0 && writeColumns[writeColumns.length - 1] === "MLB_ID" ? "PASS" : "FAIL"
+    } — MLB_ID is last writeColumn: writeColumns[-1]=${writeColumns[writeColumns.length - 1]}`
+  );
+
   if (writeColumns.length === 0 || tableData.rows.length === 0) {
+    console.log(
+      `[SheetsSync] [STATE] runId=${runId} tab="${tabName}" SKIP — ` +
+      `writeColumns=${writeColumns.length} rows=${tableData.rows.length}`
+    );
     result.status = "empty";
     result.elapsedMs = Date.now() - t0;
     stepLogs.push(logStep({
@@ -1117,7 +1146,7 @@ async function writeRgTab(
     return result;
   }
 
-  // Build 2D array: header + data rows
+  // ── Step 2: Build 2D array — header row + data rows ─────────────────────────
   const values: string[][] = [writeColumns];
   for (const row of tableData.rows) {
     values.push(writeColumns.map(col => {
@@ -1130,6 +1159,16 @@ async function writeRgTab(
   }
 
   const dataRowCount = values.length - 1;
+
+  // Sample row 1 (first data row) for audit traceability
+  const firstDataRow = values[1];
+  if (firstDataRow) {
+    const sampleCells = writeColumns.slice(0, 5).map((col, i) => `${col}=${firstDataRow[i] ?? ""}`);
+    console.log(
+      `[SheetsSync] [STATE] runId=${runId} tab="${tabName}" ` +
+      `row1 sample: ${sampleCells.join(" | ")} | MLB_ID=${firstDataRow[writeColumns.length - 1] ?? ""}`
+    );
+  }
 
   // Step 1: Snapshot existing content
   await ensureSheetTabExists(sheets, tabName);
@@ -1227,21 +1266,11 @@ async function writeRgTab(
     `[SheetsSync] [VERIFY] PASS — runId=${runId} tab="${tabName}" rows=${dataRowCount} readBack=${readBack} elapsed=${result.elapsedMs}ms`
   );
 
-  // ── Apply deterministic formatting after every successful write ──────────
-  // getSheetId resolves the numeric sheetId for the named tab.
-  // applySheetFormattingWithColumns applies the full dark-theme formatting spec
-  // in a single batchUpdate call — idempotent, safe to call on every sync.
-  // Formatting failure is non-fatal: data write already succeeded.
-  try {
-    const sheetId = await getSheetId(sheets, tabName);
-    if (sheetId != null) {
-      await applySheetFormattingWithColumns(sheets, tabName, sheetId, values.length, writeColumns);
-    } else {
-      console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab: getSheetId returned null for "${tabName}" — formatting skipped`);
-    }
-  } catch (fmtErr) {
-    console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab: formatting failed for "${tabName}": ${(fmtErr as Error).message} — data write succeeded`);
-  }
+  // ── No formatting applied — plain text, no background colors ────────────
+  // Sheet receives raw values only. Google Sheets default cell style is used.
+  console.log(
+    `[SheetsSync] [STEP] writeRgTab: no formatting applied for "${tabName}" — plain text mode`
+  );
 
   return result;
 }
@@ -1426,19 +1455,11 @@ async function writeLineupTab(
     `[SheetsSync] [VERIFY] PASS — runId=${runId} tab="${tabName}" games=${games.length} rows=${dataRowCount} readBack=${readBack} elapsed=${result.elapsedMs}ms`
   );
 
-  // ── Apply deterministic formatting after every successful write ──────────
-  // Same dark-theme spec as RG tabs — idempotent, non-fatal on failure.
-  try {
-    const lineupColumns = values[0] ?? [];
-    const sheetId = await getSheetId(sheets, tabName);
-    if (sheetId != null && lineupColumns.length > 0) {
-      await applySheetFormattingWithColumns(sheets, tabName, sheetId, values.length, lineupColumns);
-    } else {
-      console.warn(`[SheetsSync] [VERIFY] WARN — writeLineupTab: getSheetId returned null or no columns for "${tabName}" — formatting skipped`);
-    }
-  } catch (fmtErr) {
-    console.warn(`[SheetsSync] [VERIFY] WARN — writeLineupTab: formatting failed for "${tabName}": ${(fmtErr as Error).message} — data write succeeded`);
-  }
+  // ── No formatting applied — plain text, no background colors ────────────
+  // Sheet receives raw values only. Google Sheets default cell style is used.
+  console.log(
+    `[SheetsSync] [STEP] writeLineupTab: no formatting applied for "${tabName}" — plain text mode`
+  );
 
   return result;
 }
