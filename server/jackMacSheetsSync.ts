@@ -494,6 +494,114 @@ function formatLineupTabName(dateStr: string): string {
 }
 
 /**
+ * Deletes all stale lineup tabs whose date is strictly before today (PST).
+ *
+ * A "stale" lineup tab is any tab matching the pattern "MM-DD-YYYY LINEUPS"
+ * where the embedded date is before today's date in PST/PDT.
+ *
+ * Logic:
+ *   1. Fetch all sheet tab titles from the spreadsheet metadata.
+ *   2. Parse each title matching /^(\d{2})-(\d{2})-(\d{4}) LINEUPS$/.
+ *   3. Compute today's date in PST (UTC-8 in winter, UTC-7 in summer — use
+ *      America/Los_Angeles via Intl.DateTimeFormat for DST-correct comparison).
+ *   4. Delete any tab whose parsed date < today PST in a single batchUpdate.
+ *
+ * Non-fatal: if deletion fails, logs a warning and continues.
+ *
+ * [STEP] deleteStaleLineupTabs: checking all tabs for stale LINEUPS tabs
+ * [OUTPUT] deleted N stale tabs: ["MM-DD-YYYY LINEUPS", ...]
+ */
+async function deleteStaleLineupTabs(
+  sheets: ReturnType<typeof google.sheets>
+): Promise<void> {
+  try {
+    // Step 1: Get all tab metadata (title + sheetId)
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      fields: "sheets.properties",
+    });
+    const allSheets = meta.data.sheets ?? [];
+
+    // Step 2: Compute today's date in PST/PDT (America/Los_Angeles)
+    const pstFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const pstParts = pstFormatter.formatToParts(new Date());
+    const pstYear  = pstParts.find(p => p.type === "year")?.value  ?? "";
+    const pstMonth = pstParts.find(p => p.type === "month")?.value ?? "";
+    const pstDay   = pstParts.find(p => p.type === "day")?.value   ?? "";
+    // todayPst as YYYYMMDD integer for fast comparison
+    const todayPstInt = parseInt(`${pstYear}${pstMonth}${pstDay}`, 10);
+    const todayPstLabel = `${pstMonth}-${pstDay}-${pstYear}`;
+
+    console.log(
+      `[SheetsSync] [STEP] deleteStaleLineupTabs: today PST="${todayPstLabel}" ` +
+      `todayPstInt=${todayPstInt} checking ${allSheets.length} tabs`
+    );
+
+    // Step 3: Find stale lineup tabs
+    const LINEUP_TAB_RE = /^(\d{2})-(\d{2})-(\d{4}) LINEUPS$/;
+    const staleSheets: Array<{ title: string; sheetId: number }> = [];
+
+    for (const sheet of allSheets) {
+      const title = sheet.properties?.title ?? "";
+      const sheetId = sheet.properties?.sheetId;
+      if (sheetId == null) continue;
+
+      const match = title.match(LINEUP_TAB_RE);
+      if (!match) continue;
+
+      const [, mm, dd, yyyy] = match;
+      // Parse tab date as YYYYMMDD integer
+      const tabDateInt = parseInt(`${yyyy}${mm}${dd}`, 10);
+
+      console.log(
+        `[SheetsSync] [STATE] deleteStaleLineupTabs: tab="${title}" ` +
+        `tabDateInt=${tabDateInt} todayPstInt=${todayPstInt} ` +
+        `stale=${tabDateInt < todayPstInt}`
+      );
+
+      if (tabDateInt < todayPstInt) {
+        staleSheets.push({ title, sheetId });
+      }
+    }
+
+    if (staleSheets.length === 0) {
+      console.log(`[SheetsSync] [OUTPUT] deleteStaleLineupTabs: no stale tabs found`);
+      return;
+    }
+
+    // Step 4: Delete all stale tabs in a single batchUpdate
+    console.log(
+      `[SheetsSync] [STEP] deleteStaleLineupTabs: deleting ${staleSheets.length} stale tab(s): ` +
+      `[${staleSheets.map(s => `"${s.title}"`).join(", ")}]`
+    );
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: staleSheets.map(s => ({
+          deleteSheet: { sheetId: s.sheetId },
+        })),
+      },
+    });
+
+    console.log(
+      `[SheetsSync] [OUTPUT] deleteStaleLineupTabs: DELETED ${staleSheets.length} stale tab(s): ` +
+      `[${staleSheets.map(s => `"${s.title}"`).join(", ")}]`
+    );
+  } catch (err) {
+    // Non-fatal: stale tab deletion is a housekeeping operation
+    console.warn(
+      `[SheetsSync] [VERIFY] WARN — deleteStaleLineupTabs failed: ${(err as Error).message} — stale tabs not deleted`
+    );
+  }
+}
+
+/**
  * Renames an existing sheet tab from oldName to newName.
  * If oldName does not exist, logs a skip and returns.
  * If newName already exists, logs a skip (no rename needed).
@@ -1336,11 +1444,53 @@ async function writeRgTab(
     `[SheetsSync] [VERIFY] PASS — runId=${runId} tab="${tabName}" rows=${dataRowCount} readBack=${readBack} elapsed=${result.elapsedMs}ms`
   );
 
-  // ── No formatting applied — plain text, no background colors ────────────
-  // Sheet receives raw values only. Google Sheets default cell style is used.
-  console.log(
-    `[SheetsSync] [STEP] writeRgTab: no formatting applied for "${tabName}" — plain text mode`
-  );
+  // ── Apply black thin borders — the only permitted formatting ───────────────
+  // Single batchUpdate: applies a solid black 1px border to every cell in the
+  // written range (header + data rows). No background color. No font changes.
+  // This makes every cell and its value visually distinct without adding style.
+  try {
+    const sheetId = await getSheetId(sheets, tabName);
+    if (sheetId != null) {
+      const totalRows = dataRowCount + 1; // header + data rows
+      const totalCols = writeColumns.length;
+      const BLACK = { red: 0, green: 0, blue: 0 };
+      const THIN_BORDER = { style: "SOLID", width: 1, color: BLACK };
+
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+          requests: [{
+            updateBorders: {
+              range: {
+                sheetId,
+                startRowIndex: 0,
+                endRowIndex: totalRows,
+                startColumnIndex: 0,
+                endColumnIndex: totalCols,
+              },
+              top:    THIN_BORDER,
+              bottom: THIN_BORDER,
+              left:   THIN_BORDER,
+              right:  THIN_BORDER,
+              innerHorizontal: THIN_BORDER,
+              innerVertical:   THIN_BORDER,
+            },
+          }],
+        },
+      });
+
+      console.log(
+        `[SheetsSync] [VERIFY] PASS — writeRgTab borders: tabName="${tabName}" ` +
+        `sheetId=${sheetId} range=[0..${totalRows}][0..${totalCols}] ` +
+        `style=SOLID_BLACK_1px elapsed=${Date.now() - t0}ms`
+      );
+    } else {
+      console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab borders: sheetId not found for "${tabName}" — borders skipped`);
+    }
+  } catch (borderErr) {
+    // Non-fatal: data was already written successfully
+    console.warn(`[SheetsSync] [VERIFY] WARN — writeRgTab borders failed for "${tabName}": ${(borderErr as Error).message} — data write succeeded`);
+  }
 
   return result;
 }
@@ -1626,6 +1776,14 @@ export async function syncJackMacToSheets(
       runId,
     };
   }
+
+  // ── Step 1b: Delete stale lineup tabs (previous-day MM-DD-YYYY LINEUPS) ───────────────
+  // Runs immediately after Sheets auth succeeds. Non-fatal: if deletion fails,
+  // sync continues normally. Fires before RG fetch to keep housekeeping separate.
+  emit({ phase: "sheets-housekeeping", status: "start", message: "Deleting stale lineup tabs..." });
+  await deleteStaleLineupTabs(sheets);
+  emit({ phase: "sheets-housekeeping", status: "done", message: "Stale lineup tab cleanup complete" });
+  console.log(`[SheetsSync] [STATE] runId=${runId} Stale lineup tab cleanup complete`);
 
   // ── Step 2: Get Rotogrinders session cookie ──────────────────────────────────────────
   emit({ phase: "rg-login", status: "start", message: "Checking RotoGrinders session (cache → DB → login)..." });
