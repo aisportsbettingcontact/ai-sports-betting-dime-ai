@@ -369,7 +369,7 @@ function getMarketConfig(market, row) {
       };
     case 'f5_over':
       return {
-        modelProb: row.modelF5OverRate != null ? parseFloat(row.modelF5OverRate) / 100 : null,
+        modelProb: row.modelF5OverRate != null ? parseFloat(row.modelF5OverRate) : null, // already 0-1 scale
         bookOdds: row.f5OverOdds,
         oppositeOdds: row.f5UnderOdds,
         bookLine: row.f5Total != null ? `F5 O${row.f5Total}` : null,
@@ -377,7 +377,7 @@ function getMarketConfig(market, row) {
       };
     case 'f5_under':
       return {
-        modelProb: row.modelF5UnderRate != null ? parseFloat(row.modelF5UnderRate) / 100 : null,
+        modelProb: row.modelF5UnderRate != null ? parseFloat(row.modelF5UnderRate) : null, // already 0-1 scale
         bookOdds: row.f5UnderOdds,
         oppositeOdds: row.f5OverOdds,
         bookLine: row.f5Total != null ? `F5 U${row.f5Total}` : null,
@@ -385,7 +385,7 @@ function getMarketConfig(market, row) {
       };
     case 'nrfi':
       return {
-        modelProb: row.modelPNrfi != null ? parseFloat(row.modelPNrfi) / 100 : null,
+        modelProb: row.modelPNrfi != null ? parseFloat(row.modelPNrfi) : null, // already 0-1 scale
         bookOdds: row.nrfiOverOdds,
         oppositeOdds: row.yrfiUnderOdds,
         bookLine: 'NRFI',
@@ -394,7 +394,7 @@ function getMarketConfig(market, row) {
     case 'yrfi':
       return {
         // YRFI prob = 1 - NRFI prob
-        modelProb: row.modelPNrfi != null ? parseFloat((1 - parseFloat(row.modelPNrfi) / 100).toFixed(6)) : null,
+        modelProb: row.modelPNrfi != null ? parseFloat((1 - parseFloat(row.modelPNrfi)).toFixed(6)) : null, // already 0-1 scale
         bookOdds: row.yrfiUnderOdds,
         oppositeOdds: row.nrfiOverOdds,
         bookLine: 'YRFI',
