@@ -1492,7 +1492,7 @@ export const mlbGameBacktest = mysqlTable("mlb_game_backtest", {
   ev: decimal("ev", { precision: 6, scale: 2 }),
   /** Confidence gate passed: 1=yes 0=no */
   confidencePassed: tinyint("confidencePassed"),
-  /** Actual outcome: 'WIN' | 'LOSS' | 'PUSH' | 'PENDING' */
+  /** Actual outcome: 'WIN' | 'LOSS' | 'PUSH' | 'VOID' | 'QUARANTINED' | 'UNGRADED' | 'PENDING' */
   result: varchar("result", { length: 16 }),
   /** Model correct: 1=yes 0=no null=pending */
   correct: tinyint("correct"),
@@ -1504,6 +1504,32 @@ export const mlbGameBacktest = mysqlTable("mlb_game_backtest", {
   awayPitcher: varchar("awayPitcher", { length: 128 }),
   /** Home pitcher (for context) */
   homePitcher: varchar("homePitcher", { length: 128 }),
+  /** Home team name (for segmentation) */
+  homeTeam: varchar("homeTeam", { length: 128 }),
+  /** Away team name (for segmentation) */
+  awayTeam: varchar("awayTeam", { length: 128 }),
+  /** Day or night game: 'D' | 'N' */
+  dayNight: varchar("dayNight", { length: 2 }),
+  /** Whether this is a doubleheader game */
+  isDoubleheader: boolean("isDoubleheader").default(false),
+  /** Doubleheader game number: 1 or 2 */
+  gameNumber: tinyint("gameNumber").default(1),
+  /** Leakage quarantine reason (null if not quarantined) */
+  quarantineReason: text("quarantineReason"),
+  /** Book odds for the opposite side (American) — for no-vig calculation */
+  bookOddsOpposite: varchar("bookOddsOpposite", { length: 16 }),
+  /** Closing odds for the model side (American) — for CLV */
+  closingOdds: varchar("closingOdds", { length: 16 }),
+  /** Closing odds for the opposite side (American) — for CLV */
+  closingOddsOpposite: varchar("closingOddsOpposite", { length: 16 }),
+  /** CLV: model probability minus closing no-vig probability */
+  clv: decimal("clv", { precision: 6, scale: 4 }),
+  /** Profit/loss for this bet (in units, positive = profit, negative = loss) */
+  profitLoss: decimal("profitLoss", { precision: 8, scale: 4 }),
+  /** Whether this row passed the leakage guard: 1=safe 0=violation */
+  leakageSafe: tinyint("leakageSafe").default(1),
+  /** UTC ms when model ran (for leakage guard) */
+  modelRunAt: bigint("modelRunAt", { mode: "number" }),
   /** UTC ms when backtest was run */
   backtestRunAt: bigint("backtestRunAt", { mode: "number" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
