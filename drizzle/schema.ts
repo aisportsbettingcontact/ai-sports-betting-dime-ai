@@ -1476,8 +1476,8 @@ export const mlbGameBacktest = mysqlTable("mlb_game_backtest", {
   gameDate: varchar("gameDate", { length: 10 }).notNull(),
   /** Market identifier */
   market: varchar("market", { length: 16 }).notNull(),
-  /** Model prediction side: 'AWAY' | 'HOME' | 'OVER' | 'UNDER' | 'NRFI' | 'YRFI' */
-  modelSide: varchar("modelSide", { length: 8 }),
+  /** Model prediction side / market key e.g. 'fg_ml_home', 'nrfi' */
+  modelSide: varchar("modelSide", { length: 32 }),
   /** Model probability for the predicted side (0-100) */
   modelProb: decimal("modelProb", { precision: 5, scale: 2 }),
   /** Book line used for evaluation, e.g. "1.5" or "8.5" */
@@ -1532,6 +1532,14 @@ export const mlbGameBacktest = mysqlTable("mlb_game_backtest", {
   modelRunAt: bigint("modelRunAt", { mode: "number" }),
   /** UTC ms when backtest was run */
   backtestRunAt: bigint("backtestRunAt", { mode: "number" }),
+  /** Game start time string e.g. '7:05 PM ET' */
+  gameTime: varchar("gameTime", { length: 32 }),
+  /** UTC epoch ms of game start (derived from gameDate + startTimeEst) */
+  gameStartUtcMs: bigint("gameStartUtcMs", { mode: "number" }),
+  /** Reason this row was voided (postponed/suspended) */
+  voidReason: text("voidReason"),
+  /** Audit version string for traceability */
+  auditVersion: varchar("auditVersion", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
   /** One row per (game, market) */
