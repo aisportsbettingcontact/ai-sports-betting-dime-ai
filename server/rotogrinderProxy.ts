@@ -178,14 +178,51 @@ async function batchResolveMlbIdsFromDb(
       }
 
       // Match each player to the DB results
-      for (const { aliasedName, key } of needsDb) {
+      for (const { aliasedName, key, lastNameRaw } of needsDb) {
         const normalizedSearch = normalizeNameForDb(aliasedName);
-        const mlbId = dbLookup.get(normalizedSearch) ?? null;
+
+        // ── Pass 1: exact normalized full-name match ──────────────────────────
+        let mlbId = dbLookup.get(normalizedSearch) ?? null;
+
+        // ── Pass 2: fuzzy last-name match (handles Sam vs Samuel, etc.) ───────
+        // If exact match failed, find all DB rows whose normalized name ends with
+        // the same last name and whose first name is a prefix/suffix of the RG first name.
+        if (!mlbId) {
+          const rgFirstNorm = normalizeNameForDb(aliasedName.trim().split(/\s+/)[0]);
+          const lastNorm = normalizeNameForDb(lastNameRaw);
+          for (const [dbNorm, dbId] of Array.from(dbLookup.entries())) {
+            const dbParts = dbNorm.trim().split(/\s+/);
+            const dbLastNorm = dbParts[dbParts.length - 1];
+            const dbFirstNorm = dbParts[0];
+            if (dbLastNorm === lastNorm) {
+              // First names are prefix/suffix of each other (sam ↔ samuel, etc.)
+              if (
+                dbFirstNorm.startsWith(rgFirstNorm) ||
+                rgFirstNorm.startsWith(dbFirstNorm)
+              ) {
+                mlbId = dbId;
+                console.log(`[RGProxy] [STATE] Fuzzy name match: "${aliasedName}" → DB "${dbNorm}" mlbamId=${dbId}`);
+                break;
+              }
+            }
+          }
+        }
+
+        // ── Pass 3: PLAYER_ID_OVERRIDES hardcoded fallback ────────────────────
+        if (!mlbId) {
+          const overrideKey = normalizeNameForDb(aliasedName);
+          const overrideId = PLAYER_ID_OVERRIDES[overrideKey] ?? null;
+          if (overrideId) {
+            mlbId = overrideId;
+            console.log(`[RGProxy] [STATE] Override match: "${aliasedName}" → mlbamId=${overrideId}`);
+          }
+        }
+
         if (mlbId) {
           mlbIdCache.set(key, { mlbId, cachedAt: Date.now() });
           result.set(key, mlbId);
         }
-        // If not found, leave out of result — will fall through to MLB API
+        // If still not found, leave out of result — will fall through to MLB API
       }
     }
   } catch (dbErr) {
@@ -211,6 +248,22 @@ function normalizeName(name: string): string {
 const FIRST_NAME_ALIASES: Record<string, string> = {
   // Cameron Schlittler → Cam Schlittler (MLB API uses "Cam")
   "cameron": "cam",
+  // Samuel Antonacci → Sam Antonacci (DB and MLB API both store as "Sam")
+  "samuel": "sam",
+};
+
+/**
+ * PLAYER_ID_OVERRIDES: hardcoded MLB ID overrides for players whose names
+ * cannot be resolved via DB lookup or MLB Stats API.
+ * Key: normalizeNameForDb(rgName) — must match exactly what the pipeline produces.
+ * Value: mlbamId (MLBAM numeric player ID).
+ *
+ * Add entries here ONLY when all other resolution paths fail.
+ * Format: "normalized rg name": mlbamId
+ */
+const PLAYER_ID_OVERRIDES: Record<string, number> = {
+  // Add overrides here as needed — e.g.:
+  // "hao yu lee": 701678,
 };
 
 /**
@@ -846,7 +899,18 @@ export async function parseRgCsv(
   });
 
   if (missingMlbIds.length > 0) {
-    console.warn(`[RGProxy] [VERIFY] WARN — ${missingMlbIds.length} player(s) missing MLB_ID on page=${pageKey}: ${missingMlbIds.join(", ")}`);
+    console.error(`[RGProxy] [VERIFY] CRITICAL — ${missingMlbIds.length} player(s) missing MLB_ID on page=${pageKey}`);
+    for (const missingName of missingMlbIds) {
+      const aliasedMissing = applyFirstNameAlias(missingName);
+      const keyMissing = normalizeName(aliasedMissing);
+      console.error(
+        `[RGProxy] [VERIFY] CRITICAL — MLB_ID_MISS: page=${pageKey}` +
+        ` name="${missingName}"` +
+        `${aliasedMissing !== missingName ? ` aliased="${aliasedMissing}"` : ""}` +
+        ` normalizeKey="${keyMissing}"` +
+        ` — Add to FIRST_NAME_ALIASES or PLAYER_ID_OVERRIDES in rotogrinderProxy.ts`
+      );
+    }
   } else {
     console.log(`[RGProxy] [VERIFY] PASS — All ${rows.length} players have MLB_ID on page=${pageKey}`);
   }
