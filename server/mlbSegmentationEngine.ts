@@ -225,7 +225,7 @@ function buildTeamSegments(
   if (awayRows.length > 0) segments.push(computeSegmentStats(awayRows, market, "team_side", "away"));
 
   // By team (home team)
-  const homeTeams = [...new Set(rows.map(r => r.homeTeam).filter(Boolean))] as string[];
+  const homeTeams = Array.from(new Set(rows.map(r => r.homeTeam).filter(Boolean))) as string[];
   for (const team of homeTeams) {
     const teamRows = rows.filter(r => r.homeTeam === team);
     if (teamRows.length >= MIN_SEGMENT_SAMPLE) {
@@ -234,7 +234,7 @@ function buildTeamSegments(
   }
 
   // By team (away team)
-  const awayTeams = [...new Set(rows.map(r => r.awayTeam).filter(Boolean))] as string[];
+  const awayTeams = Array.from(new Set(rows.map(r => r.awayTeam).filter(Boolean))) as string[];
   for (const team of awayTeams) {
     const teamRows = rows.filter(r => r.awayTeam === team);
     if (teamRows.length >= MIN_SEGMENT_SAMPLE) {
@@ -263,7 +263,7 @@ function buildPitcherSegments(
   const segments: SegmentStats[] = [];
 
   // By home pitcher
-  const homePitchers = [...new Set(rows.map(r => r.homePitcher).filter(Boolean))] as string[];
+  const homePitchers = Array.from(new Set(rows.map(r => r.homePitcher).filter(Boolean))) as string[];
   for (const pitcher of homePitchers) {
     const pitcherRows = rows.filter(r => r.homePitcher === pitcher);
     if (pitcherRows.length >= MIN_SEGMENT_SAMPLE) {
@@ -272,7 +272,7 @@ function buildPitcherSegments(
   }
 
   // By away pitcher
-  const awayPitchers = [...new Set(rows.map(r => r.awayPitcher).filter(Boolean))] as string[];
+  const awayPitchers = Array.from(new Set(rows.map(r => r.awayPitcher).filter(Boolean))) as string[];
   for (const pitcher of awayPitchers) {
     const pitcherRows = rows.filter(r => r.awayPitcher === pitcher);
     if (pitcherRows.length >= MIN_SEGMENT_SAMPLE) {
@@ -297,7 +297,7 @@ function buildScheduleSegments(
   if (nightRows.length > 0) segments.push(computeSegmentStats(nightRows, market, "day_night", "night"));
 
   // By month
-  const months = [...new Set(rows.map(r => r.gameDate?.slice(0, 7)).filter(Boolean))] as string[];
+  const months = Array.from(new Set(rows.map(r => r.gameDate?.slice(0, 7)).filter(Boolean))) as string[];
   for (const month of months.sort()) {
     const monthRows = rows.filter(r => r.gameDate?.startsWith(month));
     if (monthRows.length >= MIN_SEGMENT_SAMPLE) {
