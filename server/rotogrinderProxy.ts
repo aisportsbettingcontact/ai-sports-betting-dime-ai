@@ -262,8 +262,10 @@ const FIRST_NAME_ALIASES: Record<string, string> = {
  * Format: "normalized rg name": mlbamId
  */
 const PLAYER_ID_OVERRIDES: Record<string, number> = {
-  // Add overrides here as needed — e.g.:
-  // "hao yu lee": 701678,
+  // Pedro Ramirez (CHC) — API returns Nick Ramirez (598286) which is wrong.
+  // Correct MLBAM ID confirmed from https://rotogrinders.com/players/sam-antonacci-6538449
+  // and RG row data showing mlbamId=699393.
+  "pedro ramirez": 699393,
 };
 
 /**
@@ -787,6 +789,25 @@ export async function parseRgCsv(
   // Normalize "PLAYER" → "NAME" in the columns array for frontend consistency
   const normalizedHeaders = rawHeaders.map(h => (h === "PLAYER" ? "NAME" : h));
 
+  // ── PLAYERID injection for tomorrow tabs ─────────────────────────────────────
+  // Today tabs (today-pitchers, today-hitters) have PLAYERID as col[0] natively.
+  // Tomorrow tabs (tomorrow-pitchers, tomorrow-hitters) have NO PLAYERID column —
+  // only PARTNERID which contains the same RG player ID values.
+  // RULE: All 4 sheets must have PLAYERID as col[0] before NAME.
+  // FIX: For tomorrow tabs, inject a synthetic PLAYERID column as col[0] whose
+  //      values are sourced from PARTNERID. All native columns follow in native order.
+  const hasCsvPlayerid = normalizedHeaders.includes("PLAYERID");
+  const partneridColIdx = normalizedHeaders.findIndex(h => h === "PARTNERID");
+  const needsPlayeridInjection = !hasCsvPlayerid && partneridColIdx !== -1;
+  console.log(
+    `[RGProxy] [STATE] page=${pageKey} hasCsvPlayerid=${hasCsvPlayerid}` +
+    ` partneridColIdx=${partneridColIdx} needsPlayeridInjection=${needsPlayeridInjection}`
+  );
+  // Prepend PLAYERID to the headers if injection is needed
+  const effectiveHeaders = needsPlayeridInjection
+    ? ["PLAYERID", ...normalizedHeaders]
+    : normalizedHeaders;
+
   // ── Parse data rows ───────────────────────────────────────────────────────
   const rawRows: { row: Record<string, string>; playerName: string; teamAbbrev: string; oppAbbrev: string }[] = [];
 
@@ -797,8 +818,18 @@ export async function parseRgCsv(
     const cells = parseCsvLine(line);
     const row: Record<string, string> = {};
 
+    // Map raw CSV cells to normalizedHeaders (not effectiveHeaders — raw CSV has no injected col)
     for (let j = 0; j < normalizedHeaders.length; j++) {
       row[normalizedHeaders[j]] = cells[j] ?? "";
+    }
+
+    // Inject synthetic PLAYERID from PARTNERID for tomorrow tabs
+    if (needsPlayeridInjection) {
+      const partnerIdVal = row["PARTNERID"] ?? "";
+      row["PLAYERID"] = partnerIdVal;
+      if (!partnerIdVal) {
+        console.warn(`[RGProxy] [VERIFY] WARN — PARTNERID is empty for row ${i} on page=${pageKey} — PLAYERID will be blank`);
+      }
     }
 
     const playerName = row["NAME"] ?? "";
@@ -809,7 +840,7 @@ export async function parseRgCsv(
       continue;
     }
 
-    // PLAYER_ID from PLAYERID column
+    // PLAYER_ID from PLAYERID column (now always present after injection)
     row["PLAYER_ID"] = row["PLAYERID"] ?? "";
 
     const teamAbbrev = cells[teamColIdx] ?? "";
@@ -930,7 +961,7 @@ export async function parseRgCsv(
   //       PLAYERID is NOT excluded — it is the raw RG player ID and belongs in the sheet.
 
   const finalColumns: string[] = [
-    ...normalizedHeaders,   // all RG CSV columns in native order (PLAYER→NAME renamed)
+    ...effectiveHeaders,    // PLAYERID first (injected for tomorrow tabs), then all RG CSV columns in native order
     "MLB_ID",               // appended as the last column
     "HEADSHOT_URL",         // excluded from sheet write, kept for frontend
     "TEAM_LOGO_URL",        // excluded from sheet write, kept for frontend
