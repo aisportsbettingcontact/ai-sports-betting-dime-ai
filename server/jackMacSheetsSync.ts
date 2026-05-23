@@ -9,8 +9,12 @@
  *   today-hitters     → "The Bat X Hitters"
  *   tomorrow-pitchers → "Tomorrow's Projections (The Bat X)"
  *   tomorrow-hitters  → "Tomorrow's Projections (The Bat X Hitters)"
- *   today-lineups     → "Today Lineups"
- *   tomorrow-lineups  → "Tomorrow Lineups"
+ *   today-lineups     → "MM-DD-YYYY LINEUPS" (e.g. "05-22-2026 LINEUPS")
+ *   tomorrow-lineups  → "MM-DD-YYYY LINEUPS" (e.g. "05-23-2026 LINEUPS")
+ *
+ * Tab naming: dynamic date-based names replace the legacy static "Today Lineups" /
+ * "Tomorrow Lineups" names. On first run, legacy tabs are automatically renamed.
+ * Row 1 of each lineup tab is the column header (DATE, GAME, ...) — no sentinel row.
  *
  * Hard rules enforced:
  *   1. Run lock — only one sync can run at a time (manual or scheduled)
@@ -465,6 +469,84 @@ async function ensureSheetTabExists(
 }
 
 /**
+ * Converts a YYYY-MM-DD date string to the MM-DD-YYYY LINEUPS tab name format.
+ * e.g. "2026-05-22" → "05-22-2026 LINEUPS"
+ *
+ * [STEP] formatLineupTabName: input=dateStr output=tabName
+ */
+function formatLineupTabName(dateStr: string): string {
+  // dateStr is expected to be YYYY-MM-DD (e.g. "2026-05-22")
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) {
+    console.warn(`[SheetsSync] [VERIFY] WARN — formatLineupTabName: unexpected dateStr format "${dateStr}" — falling back to raw value`);
+    return `${dateStr} LINEUPS`;
+  }
+  const [yyyy, mm, dd] = parts;
+  const tabName = `${mm}-${dd}-${yyyy} LINEUPS`;
+  console.log(`[SheetsSync] [STEP] formatLineupTabName: input="${dateStr}" output="${tabName}"`);
+  return tabName;
+}
+
+/**
+ * Renames an existing sheet tab from oldName to newName.
+ * If oldName does not exist, logs a skip and returns.
+ * If newName already exists, logs a skip (no rename needed).
+ *
+ * Used to migrate legacy static tab names ("Today Lineups", "Tomorrow Lineups")
+ * to the new MM-DD-YYYY LINEUPS format on first run.
+ *
+ * [STEP] renameSheetTabIfExists: oldName → newName
+ */
+async function renameSheetTabIfExists(
+  sheets: ReturnType<typeof google.sheets>,
+  oldName: string,
+  newName: string
+): Promise<void> {
+  if (oldName === newName) return; // nothing to do
+  try {
+    const meta = await sheets.spreadsheets.get({
+      spreadsheetId: SPREADSHEET_ID,
+      fields: "sheets.properties",
+    });
+    const sheetsList = meta.data.sheets ?? [];
+    const existingTitles = sheetsList.map(s => s.properties?.title ?? "");
+
+    if (!existingTitles.includes(oldName)) {
+      console.log(`[SheetsSync] [STEP] renameSheetTabIfExists: oldName="${oldName}" not found — skip rename`);
+      return;
+    }
+    if (existingTitles.includes(newName)) {
+      console.log(`[SheetsSync] [STEP] renameSheetTabIfExists: newName="${newName}" already exists — skip rename`);
+      return;
+    }
+
+    // Find the sheetId for oldName
+    const sheetEntry = sheetsList.find(s => s.properties?.title === oldName);
+    const sheetId = sheetEntry?.properties?.sheetId;
+    if (sheetId == null) {
+      console.warn(`[SheetsSync] [VERIFY] WARN — renameSheetTabIfExists: could not find sheetId for "${oldName}"`);
+      return;
+    }
+
+    console.log(`[SheetsSync] [STEP] renameSheetTabIfExists: sheetId=${sheetId} "${oldName}" → "${newName}"`);
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{
+          updateSheetProperties: {
+            properties: { sheetId, title: newName },
+            fields: "title",
+          },
+        }],
+      },
+    });
+    console.log(`[SheetsSync] [OUTPUT] Tab renamed: "${oldName}" → "${newName}"`);
+  } catch (err) {
+    console.warn(`[SheetsSync] [VERIFY] WARN — renameSheetTabIfExists("${oldName}" → "${newName}") failed: ${(err as Error).message}`);
+  }
+}
+
+/**
  * Reads the current content of a sheet tab (snapshot for rollback).
  * Returns null if the tab is empty or unreadable.
  */
@@ -701,8 +783,9 @@ function buildLineupSheetRows(games: FgGame[], dateLabel: string): string[][] {
     "BAT_ORDER", "PLAYER", "BATS", "POSITION", "LINEUP_STATUS",
   ];
 
-  const titleRow = [`=== ${dateLabel} ===`, ...Array(header.length - 1).fill("")];
-  const rows: string[][] = [titleRow, header];
+  // Row 1 = column header (DATE, GAME, GAME_TIME_PST, ...)
+  // No sentinel/title row — data starts immediately at row 1
+  const rows: string[][] = [header];
 
   const pstFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Los_Angeles",
@@ -758,11 +841,23 @@ async function writeLineupTab(
   dateLabel: string,
   runId: string,
   stepLogs: RunStepLog[],
-  errorLogs: RunErrorLog[]
+  errorLogs: RunErrorLog[],
+  isToday: boolean = false  // true = today's lineup tab, false = tomorrow's
 ): Promise<SheetSyncTabResult> {
   const t0 = Date.now();
+
+  // ── Migrate legacy static tab names to MM-DD-YYYY LINEUPS format ──────────
+  // On the first run after this deploy, "Today Lineups" and "Tomorrow Lineups"
+  // will exist in the sheet. Rename them to the new format before writing.
+  const legacyName = isToday ? "Today Lineups" : "Tomorrow Lineups";
+  console.log(
+    `[SheetsSync] [STEP] writeLineupTab: runId=${runId} tabName="${tabName}" ` +
+    `legacyName="${legacyName}" isToday=${isToday} games=${games.length} dateLabel=${dateLabel}`
+  );
+  await renameSheetTabIfExists(sheets, legacyName, tabName);
+
   const result: SheetSyncTabResult = {
-    pageKey: tabName === "Today Lineups" ? "fg-today-lineups" : "fg-tomorrow-lineups",
+    pageKey: isToday ? "fg-today-lineups" : "fg-tomorrow-lineups",
     sheetTab: tabName,
     rowsWritten: 0,
     columnsWritten: 0,
@@ -788,7 +883,9 @@ async function writeLineupTab(
   }
 
   const values = buildLineupSheetRows(games, dateLabel);
-  const dataRowCount = values.length - 1; // exclude title row (counted as header)
+  // values[0] = column header row; values[1..n] = data rows
+  // dataRowCount = total rows minus the 1 header row
+  const dataRowCount = values.length - 1; // exclude column header row
 
   // Snapshot
   await ensureSheetTabExists(sheets, tabName);
@@ -1197,55 +1294,59 @@ export async function syncJackMacToSheets(
       durationMs: fgElapsed, finalStatus: "pending",
     }));
 
-    // Write Today Lineups
+    // Write Today Lineups — tab name: MM-DD-YYYY LINEUPS (e.g. "05-22-2026 LINEUPS")
+    const todayTabName = formatLineupTabName(fgResult.today.date);
+    console.log(`[SheetsSync] [STEP] Today lineup tab name: "${todayTabName}" (date=${fgResult.today.date})`);
     emit({
-      phase: "fg-write:Today Lineups",
+      phase: `fg-write:${todayTabName}`,
       status: "start",
-      message: `Writing "Today Lineups" (${fgResult.today.games.length} games)...`,
-      tabName: "Today Lineups",
+      message: `Writing "${todayTabName}" (${fgResult.today.games.length} games)...`,
+      tabName: todayTabName,
       rowCount: fgResult.today.games.length,
     });
     const todayResult = await writeLineupTab(
-      sheets, "Today Lineups", fgResult.today.games, fgResult.today.date,
-      runId, stepLogs, errorLogs
+      sheets, todayTabName, fgResult.today.games, fgResult.today.date,
+      runId, stepLogs, errorLogs, true /* isToday */
     );
     totalRowsWritten += todayResult.rowsWritten;
     tabResults.push(todayResult);
     emit({
-      phase: "fg-write:Today Lineups",
+      phase: `fg-write:${todayTabName}`,
       status: todayResult.status === "success" ? "done" : todayResult.status === "empty" ? "skip" : "error",
       message: todayResult.status === "success"
-        ? `✓ "Today Lineups" — ${todayResult.rowsWritten} rows written (${todayResult.elapsedMs}ms)`
+        ? `✓ "${todayTabName}" — ${todayResult.rowsWritten} rows written (${todayResult.elapsedMs}ms)`
         : todayResult.status === "empty"
-        ? `"Today Lineups" — no games today`
-        : `✗ "Today Lineups" — ${todayResult.error ?? "write failed"}`,
-      tabName: "Today Lineups",
+        ? `"${todayTabName}" — no games today`
+        : `✗ "${todayTabName}" — ${todayResult.error ?? "write failed"}`,
+      tabName: todayTabName,
       rowCount: todayResult.rowsWritten,
     });
 
-    // Write Tomorrow Lineups
+    // Write Tomorrow Lineups — tab name: MM-DD-YYYY LINEUPS (e.g. "05-23-2026 LINEUPS")
+    const tomorrowTabName = formatLineupTabName(fgResult.tomorrow.date);
+    console.log(`[SheetsSync] [STEP] Tomorrow lineup tab name: "${tomorrowTabName}" (date=${fgResult.tomorrow.date})`);
     emit({
-      phase: "fg-write:Tomorrow Lineups",
+      phase: `fg-write:${tomorrowTabName}`,
       status: "start",
-      message: `Writing "Tomorrow Lineups" (${fgResult.tomorrow.games.length} games)...`,
-      tabName: "Tomorrow Lineups",
+      message: `Writing "${tomorrowTabName}" (${fgResult.tomorrow.games.length} games)...`,
+      tabName: tomorrowTabName,
       rowCount: fgResult.tomorrow.games.length,
     });
     const tomorrowResult = await writeLineupTab(
-      sheets, "Tomorrow Lineups", fgResult.tomorrow.games, fgResult.tomorrow.date,
-      runId, stepLogs, errorLogs
+      sheets, tomorrowTabName, fgResult.tomorrow.games, fgResult.tomorrow.date,
+      runId, stepLogs, errorLogs, false /* isToday */
     );
     totalRowsWritten += tomorrowResult.rowsWritten;
     tabResults.push(tomorrowResult);
     emit({
-      phase: "fg-write:Tomorrow Lineups",
+      phase: `fg-write:${tomorrowTabName}`,
       status: tomorrowResult.status === "success" ? "done" : tomorrowResult.status === "empty" ? "skip" : "error",
       message: tomorrowResult.status === "success"
-        ? `✓ "Tomorrow Lineups" — ${tomorrowResult.rowsWritten} rows written (${tomorrowResult.elapsedMs}ms)`
+        ? `✓ "${tomorrowTabName}" — ${tomorrowResult.rowsWritten} rows written (${tomorrowResult.elapsedMs}ms)`
         : tomorrowResult.status === "empty"
-        ? `"Tomorrow Lineups" — no games tomorrow`
-        : `✗ "Tomorrow Lineups" — ${tomorrowResult.error ?? "write failed"}`,
-      tabName: "Tomorrow Lineups",
+        ? `"${tomorrowTabName}" — no games tomorrow`
+        : `✗ "${tomorrowTabName}" — ${tomorrowResult.error ?? "write failed"}`,
+      tabName: tomorrowTabName,
       rowCount: tomorrowResult.rowsWritten,
     });
 
@@ -1264,9 +1365,21 @@ export async function syncJackMacToSheets(
       whetherWorkflowContinued: true,
     }));
 
-    for (const tabName of ["Today Lineups", "Tomorrow Lineups"]) {
+    // Error fallback: push stub results for both lineup tabs using dynamic names
+    // fgResult may not be defined here (fetch failed), so compute tab names from current date
+    const nowUtc = new Date();
+    const estOffset = -5 * 60; // EST = UTC-5 (close enough for tab naming; DST not critical here)
+    const estNow = new Date(nowUtc.getTime() + estOffset * 60 * 1000);
+    const todayEst = estNow.toISOString().slice(0, 10); // YYYY-MM-DD
+    const tomorrowEst = new Date(estNow.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const errorTabPairs: Array<[string, string]> = [
+      [formatLineupTabName(todayEst), "fg-today-lineups"],
+      [formatLineupTabName(tomorrowEst), "fg-tomorrow-lineups"],
+    ];
+    console.log(`[SheetsSync] [STATE] Error fallback tab names: ${errorTabPairs.map(([n]) => `"${n}"`).join(", ")}`);
+    for (const [tabName, pageKey] of errorTabPairs) {
       tabResults.push({
-        pageKey: tabName === "Today Lineups" ? "fg-today-lineups" : "fg-tomorrow-lineups",
+        pageKey,
         sheetTab: tabName,
         rowsWritten: 0,
         columnsWritten: 0,

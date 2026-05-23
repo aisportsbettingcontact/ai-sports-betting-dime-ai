@@ -3802,3 +3802,15 @@
 - [x] sortDayBets: PRIMARY sort = riskUnits DESC (5U on top), SECONDARY = result priority, TERTIARY = createdAt DESC
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-22 - Lineup Tab Naming + Row 1 Sentinel
+
+- [x] Remove row 1 sentinel row (=== YYYY-MM-DD ===) from buildLineupSheetRows — data starts at row 1 (column header)
+- [x] Add formatLineupTabName(dateStr) utility: YYYY-MM-DD → MM-DD-YYYY LINEUPS
+- [x] Add renameSheetTabIfExists() helper: migrates legacy Today/Tomorrow Lineups tabs on first run
+- [x] Update writeLineupTab signature: add isToday boolean, call renameSheetTabIfExists before write
+- [x] Update both writeLineupTab call sites: pass formatLineupTabName(date) and isToday flag
+- [x] Fix error fallback block: use dynamic date-based tab names instead of static strings
+- [x] Update file header comment to document new tab naming convention
+- [x] TypeScript: 0 errors
+- [x] Tests: 761/761 passing
