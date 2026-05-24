@@ -258,7 +258,7 @@ function classifyCsrfOrigin(origin: string | null | undefined, path: string): {
       recommendation:
         "This is a known attack pattern. The CSRF block is working correctly. " +
         "No action required — the rate limiter on this endpoint will throttle repeated probes. " +
-        "If volume increases, consider blocking `*.run.app` at the Cloudflare WAF level.",
+        "If volume increases, consider blocking `*.run.app` at the firewall/CDN level.",
     };
   }
 
@@ -469,7 +469,7 @@ function buildBruteForceEmbed(
       "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
       "which means it will start receiving 429 errors if it hasn't already.\n\n" +
       "**What you should do:**\n" +
-      `1. **Block \`${ip}\` at the Cloudflare/CDN firewall** — this is the most effective action.\n` +
+      `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
       "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
       "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
       "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
@@ -488,7 +488,7 @@ function buildBruteForceEmbed(
       {
         name: "🔒 Recommended Immediate Action",
         value:
-          `Block \`${ip}\` in your Cloudflare dashboard → Security → WAF → IP Access Rules.\n` +
+          `Block \`${ip}\` at the firewall/CDN level — IP Access Rules.\n` +
           "Set rule: **Block** | **IP Address** | value: the IP above.",
         inline: false,
       }

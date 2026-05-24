@@ -219,7 +219,7 @@ export async function syncNhlModelForToday(
         console.warn(`[NhlModelSync]${tag}   ⚠ MoneyPuck fallback failed (${mpMsg}) — trying hardcoded playoff stats (tier 4)...`);
         // Tier 4: Hardcoded 2025-26 regular season per-60 stats for all 16 playoff teams.
         // These are derived from NHL Stats API data and are always available (no network required).
-        // Covers the scenario where all 3 external scrapers are Cloudflare-blocked simultaneously.
+        // Covers the scenario where all 3 external scrapers are bot-protection-blocked simultaneously.
         const hardcoded = getHardcodedPlayoffTeamStats();
         if (hardcoded.size >= 8) {
           teamStatsMap = hardcoded;

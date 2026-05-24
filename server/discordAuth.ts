@@ -5,7 +5,7 @@
  * │  ARCHITECTURE NOTE — WHY ROUTES ARE UNDER /api/*                       │
  * │                                                                         │
  * │  The Manus production deployment uses a two-layer proxy:               │
- * │    Browser → Cloudflare → Cloud Run (Express)                          │
+ * │    Browser → Edge Proxy → Cloud Run (Express)                           │
  * │                                                                         │
  * │  The Manus edge proxy ONLY forwards /api/* requests to Express.        │
  * │  Everything else is served by the static CDN (returns SPA index.html). │
@@ -21,7 +21,7 @@
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  ARCHITECTURE NOTE — WHY redirect_uri USES PUBLIC_ORIGIN ENV VAR       │
  * │                                                                         │
- * │  Behind Cloudflare → Cloud Run, the x-forwarded-host header received   │
+ * │  Behind the edge proxy, the x-forwarded-host header received            │
  * │  by Express resolves to the INTERNAL Cloud Run hostname:               │
  * │    cvrl7uon6e-pbhflwecra-uk.a.run.app                                  │
  * │  NOT the public domain: aisportsbettingmodels.com                      │
@@ -86,7 +86,7 @@ function generateState(): string {
  *
  * PRIORITY ORDER (most reliable → least reliable):
  *   1. ENV.publicOrigin  — hardcoded in production secrets (most reliable)
- *   2. x-forwarded-proto + x-forwarded-host — set by Cloudflare (unreliable:
+ * 2. x-forwarded-proto + x-forwarded-host — set by edge proxy (unreliable:
  *      x-forwarded-host may be the internal Cloud Run hostname, not public domain)
  *   3. req.protocol + req.hostname — Express-derived (unreliable behind proxy)
  *
@@ -105,7 +105,7 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     return origin;
   }
 
-  // ── Source 2: x-forwarded-proto + x-forwarded-host (Cloudflare proxy) ─────
+  // ── Source 2: x-forwarded-proto + x-forwarded-host (edge proxy) ─────────────
   const fwdProto = req.get("x-forwarded-proto");
   const fwdHost  = req.get("x-forwarded-host");
   const reqProto    = req.protocol;

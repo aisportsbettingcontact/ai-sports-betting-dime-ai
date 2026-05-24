@@ -4,7 +4,7 @@
  * Utility for converting raw tRPC / network errors into user-friendly messages.
  *
  * Problem: tRPC's onError handler receives the raw error object. When the server
- * returns a non-JSON response (e.g. Cloudflare 503 HTML page), the tRPC client
+ * returns a non-JSON response (e.g. server error HTML page), the tRPC client
  * throws a TRPCClientError whose .message is the raw JSON.parse() failure:
  *   "Unexpected token 'S', 'Service Unavailable' is not valid JSON"
  *
@@ -42,7 +42,7 @@ export function formatMutationError(error: unknown): string {
 
   const msg = error instanceof Error ? error.message : String(error);
 
-  // [CHECK 1] Non-JSON parse error — server returned HTML/text (e.g. Cloudflare 503)
+  // [CHECK 1] Non-JSON parse error — server returned HTML/text (e.g. server error 503)
   if (
     msg.includes("is not valid JSON") ||
     msg.includes("Unexpected token") ||

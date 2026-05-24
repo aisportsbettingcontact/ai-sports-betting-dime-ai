@@ -56,7 +56,7 @@ describe("formatMutationError — complete error mapping", () => {
     console.log("[VERIFY] PASS");
   });
 
-  it("[VERIFY] CHECK 1: JSON parse error (Cloudflare HTML) → generic unavailable message", () => {
+  it("[VERIFY] CHECK 1: JSON parse error (server error HTML) → generic unavailable message", () => {
     const err = new Error("Unexpected token 'S', 'Service Unavailable' is not valid JSON");
     const result = formatMutationError(err);
     expect(result).toBe("Server temporarily unavailable. Please try again in a moment.");

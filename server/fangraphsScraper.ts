@@ -2,7 +2,7 @@
  * fangraphsScraper.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Fetches MLB lineups and probable pitchers using the public MLB Stats API.
- * No authentication, no Cloudflare, no browser required.
+ * No authentication, no bot protection, no browser required.
  *
  * Data source: https://statsapi.mlb.com/api/v1/schedule
  *   - Hydrates: lineups, probablePitcher

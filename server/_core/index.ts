@@ -197,7 +197,7 @@ async function startServer() {
   const server = createServer(app);
 
   // ─── www → non-www canonical redirect (308) ─────────────────────────────
-  // Cloudflare's www redirect uses 301 (which converts POST→GET per HTTP spec),
+  // The edge proxy www redirect uses 301 (which converts POST→GET per HTTP spec),
   // silently dropping the request body. This middleware intercepts www requests
   // at the Express level first and issues a 308 Permanent Redirect, which
   // preserves the HTTP method and body. This fixes login and all API mutations
@@ -219,7 +219,7 @@ async function startServer() {
   // threshold=512: skip compression for tiny responses where overhead > benefit.
   app.use(compression({ threshold: 512 }));
 
-  // Trust the first proxy (Cloudflare / Manus edge) so req.protocol reflects
+  // Trust the first proxy (Manus edge) so req.protocol reflects
   // the original HTTPS scheme and cookies are set correctly (sameSite+secure).
   // Also required for express-rate-limit to read the real client IP from
   // X-Forwarded-For rather than the proxy IP.

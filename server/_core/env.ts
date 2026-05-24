@@ -11,7 +11,7 @@ export const ENV = {
   vsinPassword: process.env.VSIN_PASSWORD ?? "",
   // ── Canonical public origin for OAuth redirect URIs ────────────────────────
   // CRITICAL: Never derive this from x-forwarded-host or req.host.
-  // Behind Cloudflare → Cloud Run, x-forwarded-host resolves to the internal
+  // Behind the edge proxy, x-forwarded-host resolves to the internal
   // Cloud Run hostname (*.a.run.app), NOT the public domain. Discord (and any
   // other OAuth provider) will reject the redirect_uri if it doesn't exactly
   // match a registered URI. Set PUBLIC_ORIGIN to https://aisportsbettingmodels.com
