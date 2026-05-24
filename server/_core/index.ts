@@ -51,7 +51,7 @@ function fireRateLimitEvent(
   ip: string,
   path: string,
   method: string,
-  limitType: "global" | "auth" | "trpc_auth",
+  limitType: "global" | "auth" | "trpc_auth" | "stripe_checkout",
   ua: string | null,
 ) {
   const now = Date.now();
@@ -322,6 +322,36 @@ async function startServer() {
   // Matches both batch (?batch=1) and direct calls to appUsers.login
   app.use("/api/trpc/appUsers.login", trpcAuthLimiter);
   app.use("/api/trpc/auth.login", trpcAuthLimiter);
+
+  // ─── Stripe checkout rate limiter ────────────────────────────────────────
+  // Dedicated limiter for the unauthenticated publicCreateCheckoutSession endpoint.
+  // Forensic analysis (2026-05-24) confirmed 3 coordinated automated probes from
+  // Google Cloud Run (AS15169) targeting this exact procedure within 8.6 hours.
+  // Each probe used a unique *.run.app subdomain and IPv6 address — classic
+  // rotating-origin evasion to bypass per-IP CSRF dedup guards.
+  // Limit: 10 checkout attempts per 15 minutes per IP — generous for any real user
+  // (who clicks once), but stops automated probers that rotate IPs.
+  const stripeCheckoutLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many checkout requests. Please wait 15 minutes before trying again." },
+    keyGenerator: (req) => {
+      const path = req.path.replace(/^\//, "");
+      return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
+    },
+    handler: (req, res, _next, options) => {
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+      console.warn(`[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
+      res.status(options.statusCode).json(options.message);
+    },
+  });
+  // Apply to both direct and batch tRPC calls
+  app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
 
   // ─── Request timeout middleware ───────────────────────────────────────────
   // Kill requests that take > 25s to prevent hanging connections from exhausting
