@@ -86,7 +86,8 @@ function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
             objectFit: 'contain',
             mixBlendMode: 'screen',
             // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
-            filter: 'brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))',
+            // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
+            filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
           }}
         />
       ) : (
@@ -1407,27 +1408,78 @@ export default function ModelProjections() {
       {/* ── Sticky global column header (mobile only) — MATCHUP | SPREAD/PUCK LINE | TOTAL | ML ── */}
       {/* Only shown when MODEL PROJECTIONS tab is active. Hidden for BETTING SPLITS tab. */}
       {feedMobileTab === 'dual' && (
-        <div className="lg:hidden" style={{
-          position: 'sticky', top: 'var(--prez-header-h, 88px)', zIndex: 10,
-          display: 'grid',
-          gridTemplateColumns: 'clamp(170px, 14vw, 220px) 1fr',
-          background: 'hsl(var(--card))',
-          borderBottom: '1px solid rgba(255,255,255,0.10)',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          {/* Left: MATCHUP label */}
-          <div style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', borderRight: '1px solid rgba(255,255,255,0.10)' }}>
-            <span style={{ fontSize: 'clamp(10px, 2.2vw, 12px)', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>MATCHUP</span>
+        // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
+        // LAYOUT RULES (must match MobileGameCard exactly):
+        //   Left panel: 80px fixed (matches MobileGameCard gridTemplateColumns: '80px 1fr')
+        //   Right panel: padding: '5px 6px' gap: '4px' (matches OddsTable padding: '4px 6px' gap: '4px')
+        //   Each label cell: flex: '1 1 0' textAlign: 'center' (matches MktCard flex-1)
+        // zIndex: 39 -- just below main header's z-40 so it stacks correctly
+        // top: var(--prez-header-h) -- set by ResizeObserver on headerRef, always accurate
+        <div
+          className="lg:hidden"
+          ref={(el) => {
+            if (el) {
+              const h = Math.ceil(el.getBoundingClientRect().height);
+              document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
+            }
+          }}
+          style={{
+            position: 'sticky',
+            top: 'var(--prez-header-h, 88px)',
+            zIndex: 39,
+            display: 'grid',
+            gridTemplateColumns: '80px 1fr',
+            width: '100%',
+            background: 'hsl(var(--card))',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+          }}
+        >
+          {/* Left cell: MATCHUP -- 80px, centered */}
+          <div style={{
+            padding: '5px 4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRight: '1px solid rgba(255,255,255,0.10)',
+          }}>
+            <span style={{
+              fontSize: 'clamp(9px, 2.5vw, 11px)',
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.60)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+              whiteSpace: 'nowrap',
+            }}>MATCHUP</span>
           </div>
-          {/* Right: SPREAD/PUCK LINE | TOTAL | ML labels aligned to card columns */}
-          <div style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <div style={{ display: 'flex', gap: '5px', flex: '1 1 0', minWidth: 0 }}>
-              {[selectedSport === 'NHL' ? 'PUCK LINE' : selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML'].map(h => (
-                <div key={h} style={{ flex: '1 1 0', textAlign: 'center' }}>
-                  <span style={{ fontSize: 'clamp(10px, 2.2vw, 12px)', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</span>
-                </div>
-              ))}
-            </div>
+          {/* Right cell: RUN LINE | TOTAL | ML -- padding/gap matches OddsTable exactly */}
+          <div style={{
+            padding: '5px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            {[selectedSport === 'NHL' ? 'PUCK LINE' : selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML'].map(h => (
+              // flex: '1 1 0' matches MktCard's flex: '1 1 0' exactly
+              <div key={h} style={{
+                flex: '1 1 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 0,
+              }}>
+                <span style={{
+                  fontSize: 'clamp(9px, 2.5vw, 11px)',
+                  fontWeight: 700,
+                  color: 'rgba(255,255,255,0.80)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                }}>{h}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

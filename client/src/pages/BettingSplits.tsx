@@ -105,7 +105,8 @@ function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
               objectFit: 'contain',
               mixBlendMode: 'screen',
               // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
-              filter: 'brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))',
+              // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
+              filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
             }}
           />
         : <span style={{ fontSize: Math.max(7, Math.round(actualSize * 0.28)) }} className="font-bold text-muted-foreground">{initials}</span>
