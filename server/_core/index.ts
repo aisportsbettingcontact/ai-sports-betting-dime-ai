@@ -37,6 +37,7 @@ import { startJackMacScheduler } from "../routers/jackMac";
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
+import { registerStripeWebhookRoute } from "../stripeWebhook";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -244,6 +245,12 @@ async function startServer() {
     },
     crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
   }));
+
+  // ─── Stripe webhook — MUST be registered BEFORE express.json() ────────────
+  // Uses express.raw() to preserve the raw buffer for HMAC-SHA256 signature
+  // verification. Placed here so it intercepts /api/stripe/webhook before the
+  // JSON body parser consumes and discards the raw body.
+  registerStripeWebhookRoute(app);
 
   // ─── Body parser with tight size limits ──────────────────────────────────
   // 10kb for JSON API calls (tRPC procedures never need more than a few KB).

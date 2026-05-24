@@ -1120,27 +1120,27 @@ export function summarizeBatch(outputs: GradingOutput[]): BatchGradingSummary[] 
   }
 
   const summaries: BatchGradingSummary[] = [];
-  for (const [market, rows] of byMarket) {
-    const wins     = rows.filter(r => r.grade === "WIN").length;
-    const losses   = rows.filter(r => r.grade === "LOSS").length;
-    const pushes   = rows.filter(r => r.grade === "PUSH").length;
-    const voids    = rows.filter(r => r.grade === "VOID").length;
-    const qCount   = rows.filter(r => r.grade === "QUARANTINED").length;
-    const ungraded = rows.filter(r => r.grade === "UNGRADED").length;
+  Array.from(byMarket.entries()).forEach(([market, rows]: [string, GradingOutput[]]) => {
+    const wins     = rows.filter((r: GradingOutput) => r.grade === "WIN").length;
+    const losses   = rows.filter((r: GradingOutput) => r.grade === "LOSS").length;
+    const pushes   = rows.filter((r: GradingOutput) => r.grade === "PUSH").length;
+    const voids    = rows.filter((r: GradingOutput) => r.grade === "VOID").length;
+    const qCount   = rows.filter((r: GradingOutput) => r.grade === "QUARANTINED").length;
+    const ungraded = rows.filter((r: GradingOutput) => r.grade === "UNGRADED").length;
     const graded   = wins + losses;
     const acc      = graded > 0 ? wins / graded : 0;
     const roi      = calcRoi(wins, losses);
 
-    const edgeRows = rows.filter(r => r.edge !== null);
+    const edgeRows = rows.filter((r: GradingOutput) => r.edge !== null);
     const avgEdge  = edgeRows.length > 0
-      ? edgeRows.reduce((s, r) => s + r.edge!, 0) / edgeRows.length : 0;
+      ? edgeRows.reduce((s: number, r: GradingOutput) => s + r.edge!, 0) / edgeRows.length : 0;
     const avgModelProb = rows.length > 0
-      ? rows.reduce((s, r) => s + r.modelProb, 0) / rows.length : 0;
-    const nvRows = rows.filter(r => r.bookNoVigProb !== null);
+      ? rows.reduce((s: number, r: GradingOutput) => s + r.modelProb, 0) / rows.length : 0;
+    const nvRows = rows.filter((r: GradingOutput) => r.bookNoVigProb !== null);
     const avgBookNoVigProb = nvRows.length > 0
-      ? nvRows.reduce((s, r) => s + r.bookNoVigProb!, 0) / nvRows.length : 0;
+      ? nvRows.reduce((s: number, r: GradingOutput) => s + r.bookNoVigProb!, 0) / nvRows.length : 0;
 
-    const dates = rows.map(r => r.gameDate).filter(Boolean).sort();
+    const dates = rows.map((r: GradingOutput) => r.gameDate).filter(Boolean).sort();
 
     summaries.push({
       market,
@@ -1156,9 +1156,9 @@ export function summarizeBatch(outputs: GradingOutput[]): BatchGradingSummary[] 
       avgBookNoVigProb: parseFloat(avgBookNoVigProb.toFixed(6)),
       dateMin: dates[0] ?? null,
       dateMax: dates[dates.length - 1] ?? null,
-      leakageSafeCount: rows.filter(r => r.leakageSafe).length,
-      leakageViolationCount: rows.filter(r => !r.leakageSafe).length,
+      leakageSafeCount: rows.filter((r: GradingOutput) => r.leakageSafe).length,
+      leakageViolationCount: rows.filter((r: GradingOutput) => !r.leakageSafe).length,
     });
-  }
+  });
   return summaries;
 }
