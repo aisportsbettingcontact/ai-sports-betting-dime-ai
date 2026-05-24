@@ -24,9 +24,12 @@ import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
 import { PLANS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
-import { getDb } from "../db";
+import { getDb, invalidateAppUserByIdCache } from "../db";
 import { appUsers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { syncDiscordRoleForUser } from "../discord/discordRoleSync";
+import { invalidateCachedAppUser } from "../dbCircuitBreaker";
 
 const TAG = "[tRPC][stripe]";
 
@@ -317,5 +320,114 @@ export const stripeRouter = router({
       console.log(`${TAG}[createPortalSession] [VERIFY] PASS`);
 
       return { url: portalSession.url };
+    }),
+
+  /**
+   * getCheckoutSessionUser
+   * Looks up the pending user account created by a Stripe checkout session.
+   * Called by SubscribeSuccess page after redirect from Stripe.
+   */
+  getCheckoutSessionUser: stripeProcedure
+    .input(z.object({ sessionId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      console.log(`${TAG}[getCheckoutSessionUser] [INPUT] sessionId=${input.sessionId}`);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const rows = await db.select({
+        id: appUsers.id,
+        username: appUsers.username,
+        email: appUsers.email,
+        pendingSetup: appUsers.pendingSetup,
+        pendingEmail: appUsers.pendingEmail,
+        pendingUsername: appUsers.pendingUsername,
+        hasAccess: appUsers.hasAccess,
+        stripePlanId: appUsers.stripePlanId,
+        expiryDate: appUsers.expiryDate,
+      }).from(appUsers).where(eq(appUsers.pendingStripeSessionId, input.sessionId)).limit(1);
+
+      if (!rows.length) {
+        console.warn(`${TAG}[getCheckoutSessionUser] [STATE] No user found for sessionId=${input.sessionId}`);
+        return null;
+      }
+
+      const user = rows[0];
+      console.log(`${TAG}[getCheckoutSessionUser] [OUTPUT] userId=${user.id} username=${user.username} pendingSetup=${user.pendingSetup}`);
+      console.log(`${TAG}[getCheckoutSessionUser] [VERIFY] PASS`);
+      return user;
+    }),
+
+  /**
+   * completeAccountSetup
+   * Sets the user's email and password, marks pendingSetup=false, grants Discord role.
+   * Password requirements: min 8 chars, 1 uppercase, 1 lowercase, 1 special character.
+   */
+  completeAccountSetup: stripeProcedure
+    .input(z.object({
+      sessionId: z.string().min(1),
+      email: z.string().email("Please enter a valid email address"),
+      password: z.string()
+        .min(8, "Password must be at least 8 characters")
+        .regex(/[A-Z]/, "Password must contain at least 1 uppercase letter")
+        .regex(/[a-z]/, "Password must contain at least 1 lowercase letter")
+        .regex(/[^A-Za-z0-9]/, "Password must contain at least 1 special character"),
+    }))
+    .mutation(async ({ input }) => {
+      const TAG2 = `${TAG}[completeAccountSetup]`;
+      console.log(`${TAG2} [INPUT] sessionId=${input.sessionId} email=${input.email}`);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // [STEP 1] Find the pending user
+      const rows = await db.select().from(appUsers)
+        .where(eq(appUsers.pendingStripeSessionId, input.sessionId)).limit(1);
+      if (!rows.length) {
+        console.error(`${TAG2} [VERIFY] FAIL — no user found for sessionId=${input.sessionId}`);
+        throw new TRPCError({ code: "NOT_FOUND", message: "Account not found. Please contact support." });
+      }
+      const user = rows[0];
+      console.log(`${TAG2} [STATE] Found userId=${user.id} username=${user.username} pendingSetup=${user.pendingSetup}`);
+
+      if (!user.pendingSetup) {
+        console.log(`${TAG2} [STATE] Account already set up — returning success`);
+        return { success: true, username: user.username, alreadySetup: true };
+      }
+
+      // [STEP 2] Check email uniqueness (excluding this user)
+      const emailConflict = await db.select({ id: appUsers.id }).from(appUsers)
+        .where(eq(appUsers.email, input.email)).limit(1);
+      if (emailConflict.length > 0 && emailConflict[0].id !== user.id) {
+        console.error(`${TAG2} [VERIFY] FAIL — email already in use: ${input.email}`);
+        throw new TRPCError({ code: "CONFLICT", message: "That email address is already in use. Please use a different email." });
+      }
+
+      // [STEP 3] Hash password
+      console.log(`${TAG2} [STEP] Hashing password cost=10`);
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      console.log(`${TAG2} [STATE] Password hash OK`);
+
+      // [STEP 4] Update account: set email, password, clear pendingSetup
+      await db.update(appUsers).set({
+        email: input.email,
+        passwordHash,
+        pendingSetup: false,
+        pendingEmail: null,
+        pendingStripeSessionId: null,
+      }).where(eq(appUsers.id, user.id));
+
+      invalidateAppUserByIdCache(user.id);
+      invalidateCachedAppUser(user.id);
+      console.log(`${TAG2} [OUTPUT] Account setup complete userId=${user.id} email=${input.email}`);
+
+      // [STEP 5] Grant Discord role now that setup is complete
+      if (user.hasAccess) {
+        console.log(`${TAG2} [STEP] Granting Discord role userId=${user.id}`);
+        const updatedUser = { ...user, pendingSetup: false, email: input.email };
+        const discordResult = await syncDiscordRoleForUser(updatedUser, true);
+        console.log(`${TAG2} [STATE] Discord role grant: action=${discordResult.action} reason=${discordResult.reason}`);
+      }
+
+      console.log(`${TAG2} [VERIFY] PASS`);
+      return { success: true, username: user.username, alreadySetup: false };
     }),
 });

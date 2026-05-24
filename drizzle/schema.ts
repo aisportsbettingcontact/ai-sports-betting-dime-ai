@@ -100,6 +100,32 @@ export const appUsers = mysqlTable("app_users", {
    * Subscription plan: 'monthly' | 'annual'. NULL = no active subscription.
    */
   stripePlanId: varchar("stripePlanId", { length: 16 }),
+  // ─── Pending account setup (new users who paid before creating an account) ───
+  /**
+   * TRUE when a new user has paid via Stripe but has not yet set their email/password.
+   * The webhook creates the account with a random passwordHash and sets this flag.
+   * The SubscribeSuccess page prompts them to set email + password.
+   * Once they complete setup, this is set to FALSE and Discord role is assigned.
+   */
+  pendingSetup: boolean("pendingSetup").default(false).notNull(),
+  /**
+   * The email address collected by Stripe during checkout (customer_details.email).
+   * Pre-filled in the SubscribeSuccess account setup form.
+   * Cleared (set to NULL) after the user completes account setup.
+   */
+  pendingEmail: varchar("pendingEmail", { length: 320 }),
+  /**
+   * The desired username collected via Stripe custom_fields during checkout.
+   * Pre-filled in the SubscribeSuccess account setup form.
+   * Cleared (set to NULL) after the user completes account setup.
+   */
+  pendingUsername: varchar("pendingUsername", { length: 64 }),
+  /**
+   * The Stripe Checkout Session ID (cs_xxx) that created this pending account.
+   * Used by the SubscribeSuccess page to look up the account and verify payment.
+   * Cleared (set to NULL) after the user completes account setup.
+   */
+  pendingStripeSessionId: varchar("pendingStripeSessionId", { length: 128 }),
 });
 
 export type AppUser = typeof appUsers.$inferSelect;
