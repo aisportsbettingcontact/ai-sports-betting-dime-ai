@@ -1885,7 +1885,7 @@ export default function PublishProjections() {
               className="font-black text-white whitespace-nowrap"
               style={{ fontSize: "clamp(13px, 3vw, 20px)", letterSpacing: "0.08em" }}
             >
-              PREZ BETS
+              AI SPORTS BETTING
             </span>
             <span className="text-border" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
             <span

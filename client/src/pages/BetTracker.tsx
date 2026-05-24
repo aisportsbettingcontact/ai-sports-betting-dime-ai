@@ -1823,11 +1823,11 @@ export default function BetTracker() {
   );
 
   // Derive the display name for the currently selected handicapper
-  // Used in Analytics panel header (e.g. "PREZ BETS" vs "HANKSTHEBANK")
+  // Used in Analytics panel header (e.g. "AI SPORTS BETTING" vs "HANKSTHEBANK")
   const selectedHandicapperName = useMemo(() => {
     if (!targetUserId || targetUserId === appUser?.id) {
       // Viewing own bets — use own username/discordUsername
-      return (appUser?.username ?? appUser?.discordUsername ?? "PREZ BETS").toUpperCase();
+      return (appUser?.username ?? appUser?.discordUsername ?? "AI SPORTS BETTING").toUpperCase();
     }
     // Viewing another handicapper's bets — look up in the list
     const found = (handicappersQuery.data ?? []).find(
@@ -2862,7 +2862,7 @@ export default function BetTracker() {
                 {dateRange === "SEASON" ? (
                   /* ── WINNING TICKET design: headline + heat badge + proof line + chart ── */
                   (() => {
-                    const handicapperLabel = selectedHandicapperName === "PREZ" ? "PREZ BETS" : selectedHandicapperName;
+                    const handicapperLabel = selectedHandicapperName === "PREZ" ? "AI SPORTS BETTING" : selectedHandicapperName;
                     const sportLabel = activeSport === "MLB" ? "ON MLB"
                       : activeSport === "NHL" ? "ON NHL"
                       : activeSport === "NBA" ? "ON NBA"
@@ -2901,7 +2901,7 @@ export default function BetTracker() {
                           </span>
                         </div>
 
-                        {/* HEADLINE: PREZ BETS IS UP +120.4U ON MLB */}
+                        {/* HEADLINE: AI SPORTS BETTING IS UP +120.4U ON MLB */}
                         <div className="text-center mb-1">
                           <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "#FFFFFF", letterSpacing: "0.08em" }}>
                             {handicapperLabel} IS {stats.netProfit >= 0 ? "UP" : "DOWN"}{" "}

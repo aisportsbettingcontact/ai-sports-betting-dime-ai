@@ -170,7 +170,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     /* Prevent horizontal overflow at the document level — catches any
      * rogue element that might push past 100vw on narrow screens. */
     overflow-x: hidden;

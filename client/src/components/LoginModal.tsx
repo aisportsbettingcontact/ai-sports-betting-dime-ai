@@ -105,7 +105,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             }
           </div>
           <h2 className="text-lg font-bold text-foreground mb-1">
-            {isRedirecting ? "Redirecting to Discord…" : "Sign in to Prez Bets"}
+            {isRedirecting ? "Redirecting to Discord…" : "Sign in to AI Sports Betting"}
           </h2>
           <p className="text-sm text-muted-foreground">
             {isRedirecting

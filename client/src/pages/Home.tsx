@@ -30,7 +30,7 @@ const FEATURES = [
   {
     icon: Shield,
     title: "Exclusive Member Access",
-    desc: "Private, invite-only tool. Projections are refreshed daily from our model.",
+    desc: "Public platform. Projections are refreshed daily from our model.",
   },
 ];
 
@@ -75,11 +75,11 @@ export default function Home() {
     server_error:          "A server error occurred during sign-in. Please try again.",
     db_unavailable:        "Database unavailable. Please try again in a moment.",
     not_in_guild:     discordUser
-      ? `@${discordUser} is not in the Prez Bets Discord server. Join the server first, then try again.`
-      : "You are not in the Prez Bets Discord server. Join the server first, then try again.",
+      ? `@${discordUser} is not in the AI Sports Betting Discord server. Join the server first, then try again.`
+      : "You are not in the AI Sports Betting Discord server. Join the server first, then try again.",
     missing_role:     discordUser
       ? `@${discordUser} does not have the AI Model Sub role. Purchase a subscription to get access.`
-      : "You do not have the AI Model Sub role in the Prez Bets Discord server. Purchase a subscription to get access.",
+      : "You do not have the AI Model Sub role in the AI Sports Betting Discord server. Purchase a subscription to get access.",
     // Invite-link specific errors
     invite_invalid:       "This invite link is invalid, has already been used, or has expired. Ask the owner to generate a new one.",
     invite_already_used:  "This invite link has already been used. Each link is single-use. Ask the owner to generate a new one.",
@@ -148,11 +148,7 @@ export default function Home() {
       <header className="flex items-center justify-between px-6 py-4 border-b border-border">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary" />
-          <span className="text-sm font-black tracking-widest uppercase text-white">PREZ BETS</span>
-          <span className="text-border text-sm">|</span>
-          <span className="text-sm font-medium tracking-widest uppercase text-muted-foreground">
-            AI MODEL PROJECTIONS
-          </span>
+          <span className="text-sm font-black tracking-widest uppercase text-white">AI SPORTS BETTING</span>
         </div>
       </header>
 
@@ -230,7 +226,7 @@ export default function Home() {
           </a>
           {!isRedirecting && (
             <p className="text-center text-xs text-muted-foreground/50">
-              Access requires the AI Model Sub role in the Prez Bets Discord server.
+              Access requires the AI Model Sub role in the AI Sports Betting Discord server.
             </p>
           )}
           {isRedirecting && (
