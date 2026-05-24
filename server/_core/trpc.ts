@@ -171,9 +171,23 @@ function isOriginAllowed(origin: string | undefined): boolean {
   }
 
   // [CHECK 3] Manus sandbox preview URLs (*.manus.computer)
-  // Dev-only preview URLs from the Manus sandbox dev server.
-  if (/^https:\/\/[a-z0-9\-]+\.manus\.computer$/.test(normalized)) {
-    console.log(`[CSRF] Allowed origin (*.manus.computer preview): ${normalized}`);
+  // Dev server preview URLs use multi-level subdomains:
+  //   - Simple:    https://3000-abc123.manus.computer
+  //   - Multi-level: https://3000-abc123.us2.manus.computer
+  // The old single-level pattern /^https:\/\/[a-z0-9\-]+\.manus\.computer$/ only
+  // matched simple subdomains and BLOCKED multi-level preview URLs (e.g. us2 region),
+  // causing legitimate Stripe checkout mutations to be CSRF-blocked.
+  //
+  // Fix: use hostname.endsWith('.manus.computer') — safe because:
+  //   1. manus.computer is a Manus-controlled domain (same operator)
+  //   2. The attacker domain (e.g. *.run.app) does NOT end with .manus.computer
+  //   3. SameSite=Strict cookies provide defense-in-depth even if this check passes
+  //
+  // [INPUT]  normalized — lowercase origin string
+  // [OUTPUT] true if origin ends with .manus.computer under https://
+  // [VERIFY] Tested: 3000-xxx.us2.manus.computer → ALLOW, xfoomsv4ay.run.app → BLOCK
+  if (normalized.startsWith("https://") && normalized.endsWith(".manus.computer")) {
+    console.log(`[CSRF] Allowed origin (*.manus.computer preview, multi-level): ${normalized}`);
     return true;
   }
 
