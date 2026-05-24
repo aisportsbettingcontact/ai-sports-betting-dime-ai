@@ -233,18 +233,73 @@ function formatTimestamp(epochMs: number): string {
 
 // ─── Embed builders ───────────────────────────────────────────────────────────
 
+/**
+ * Classify the attack origin to provide actionable context in the embed.
+ * Returns a label and recommended action based on the blocked origin pattern.
+ */
+function classifyCsrfOrigin(origin: string | null | undefined, path: string): {
+  label: string;
+  classification: string;
+  recommendation: string;
+} {
+  const o = origin ?? "";
+
+  // Google Cloud Run — confirmed attack vector (3 probes on 2026-05-24)
+  if (o.includes(".run.app")) {
+    const isStripeTarget = path.includes("stripe") || path.includes("Checkout");
+    return {
+      label: "🤖 AUTOMATED PROBE — Google Cloud Run (AS15169)",
+      classification:
+        `This is an **automated server-side probe** from Google Cloud Run infrastructure.` +
+        (isStripeTarget
+          ? " The attacker is specifically targeting the **Stripe checkout endpoint** — " +
+            "likely attempting to create fraudulent checkout sessions or enumerate pricing."
+          : " The attacker is probing API endpoints from a serverless function."),
+      recommendation:
+        "This is a known attack pattern. The CSRF block is working correctly. " +
+        "No action required — the rate limiter on this endpoint will throttle repeated probes. " +
+        "If volume increases, consider blocking `*.run.app` at the Cloudflare WAF level.",
+    };
+  }
+
+  // Vercel / Netlify / other serverless
+  if (o.includes(".vercel.app") || o.includes(".netlify.app")) {
+    return {
+      label: "🤖 AUTOMATED PROBE — Serverless Platform",
+      classification: "Request originated from a serverless deployment platform. Likely an automated probe or misconfigured integration.",
+      recommendation: "Monitor for repeat attempts from the same origin. If this is a legitimate integration, add its origin to the allowlist.",
+    };
+  }
+
+  // No origin header at all
+  if (!o) {
+    return {
+      label: "❓ MISSING ORIGIN — Direct API Call",
+      classification: "No Origin header was sent. This is typical of server-side HTTP clients (curl, Postman, automated scripts) that do not set Origin.",
+      recommendation: "Likely a direct API probe or misconfigured client. Monitor for repeat attempts.",
+    };
+  }
+
+  // Generic unknown origin
+  return {
+    label: "⚠️ UNKNOWN ORIGIN — Cross-Site Request",
+    classification: "Request came from an origin not on the approved list. Could be a misconfigured client or a CSRF attempt.",
+    recommendation: "If this is a one-off, no action needed. If you see many from the same origin, investigate or block at the CDN level.",
+  };
+}
+
 function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
+  const { label, classification, recommendation } = classifyCsrfOrigin(p.blockedOrigin, p.path);
+
   return new EmbedBuilder()
     .setColor(EMBED_COLORS.CSRF_BLOCK)
     .setTitle("🚫 CSRF BLOCK — Cross-Site Attack Attempt Stopped")
     .setDescription(
-      "**What happened:** Someone tried to send a request to the site from an external website " +
-      "that is not on the approved list. This is called a Cross-Site Request Forgery (CSRF) attack — " +
-      "it's when a malicious site tries to impersonate a logged-in user and perform actions on their behalf.\n\n" +
+      `**Classification:** ${label}\n\n` +
+      `${classification}\n\n` +
       "**What the server did:** The request was automatically blocked before it could do anything. " +
-      "No data was accessed or changed.\n\n" +
-      "**What you should do:** If this is a one-off, no action needed. If you see many of these " +
-      "from the same IP, consider blocking that IP at the firewall/CDN level."
+      "No data was accessed or changed. No Stripe session was created.\n\n" +
+      `**Recommended action:** ${recommendation}`
     )
     .addFields(
       {
