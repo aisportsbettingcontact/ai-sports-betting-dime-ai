@@ -30,6 +30,8 @@ const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
+const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 
 function Router() {
   return (
@@ -49,6 +51,9 @@ function Router() {
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
       <Route path="/splits">{() => <Redirect to="/feed" />}</Route>
+      {/* Stripe checkout result pages — public, no auth required */}
+      <Route path="/subscribe/success" component={SubscribeSuccess} />
+      <Route path="/subscribe/cancel" component={SubscribeCancel} />
       {/* Login page — public, no auth required */}
       <Route path="/login" component={Home} />
       {/* Password reset — public, accessed via reset link */}

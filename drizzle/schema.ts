@@ -85,6 +85,21 @@ export const appUsers = mysqlTable("app_users", {
    * Tokens are valid for 30 minutes from issuance.
    */
   passwordResetExpiresAt: bigint("passwordResetExpiresAt", { mode: "number" }),
+  // ─── Stripe subscription ────────────────────────────────────────────────────
+  /**
+   * Stripe Customer ID (cus_xxx). Set on first successful checkout.
+   * Used to look up payment history and manage subscriptions via Stripe API.
+   */
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  /**
+   * Active Stripe Subscription ID (sub_xxx). NULL = no active subscription.
+   * Set by webhook on checkout.session.completed / subscription events.
+   */
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
+  /**
+   * Subscription plan: 'monthly' | 'annual'. NULL = no active subscription.
+   */
+  stripePlanId: varchar("stripePlanId", { length: 16 }),
 });
 
 export type AppUser = typeof appUsers.$inferSelect;

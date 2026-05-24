@@ -9,8 +9,6 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   vsinEmail: process.env.VSIN_EMAIL ?? "",
   vsinPassword: process.env.VSIN_PASSWORD ?? "",
-  kenpomEmail: process.env.KENPOM_EMAIL ?? "",
-  kenpomPassword: process.env.KENPOM_PASSWORD ?? "",
   // ── Canonical public origin for OAuth redirect URIs ────────────────────────
   // CRITICAL: Never derive this from x-forwarded-host or req.host.
   // Behind Cloudflare → Cloud Run, x-forwarded-host resolves to the internal
@@ -27,9 +25,15 @@ export const ENV = {
   discordPublicKey: process.env.DISCORD_PUBLIC_KEY ?? "",
   discordGuildId: process.env.DISCORD_GUILD_ID ?? "",
   discordRoleAiModelSub: process.env.DISCORD_ROLE_AI_MODEL_SUB ?? "",
-  // Third-party API keys — must be set in environment, never hardcoded in source
-  metabetApiKey: process.env.METABET_API_KEY ?? "",
   // Google Sheets IDs — non-secret but kept in env for configurability
   // Must be set via NBA_SHEET_ID env var — no hardcoded fallback permitted
   nbaSheetId: process.env.NBA_SHEET_ID ?? "",
+  // ─── Stripe ──────────────────────────────────────────────────────────────────
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+  // Stripe Price IDs — must be created in Stripe Dashboard and set as env vars
+  // STRIPE_PRICE_MONTHLY: $49/month recurring price ID (price_xxx)
+  // STRIPE_PRICE_ANNUAL:  $399/year recurring price ID (price_xxx)
+  stripePriceMonthly: process.env.STRIPE_PRICE_MONTHLY ?? "",
+  stripePriceAnnual: process.env.STRIPE_PRICE_ANNUAL ?? "",
 };
