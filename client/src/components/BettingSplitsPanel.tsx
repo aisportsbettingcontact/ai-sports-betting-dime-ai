@@ -559,8 +559,8 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
         </div>
       ) : (
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span className="uppercase truncate" style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, maxWidth: "48%", letterSpacing: "0.04em" }}>{awayLabel}</span>
-          <span className="uppercase truncate text-right" style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, maxWidth: "48%", letterSpacing: "0.04em" }}>{homeLabel}</span>
+          <span className="uppercase" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{awayLabel}</span>
+          <span className="uppercase text-right" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{homeLabel}</span>
         </div>
       )}
       <SplitBar label="Tickets" awayPct={awayTickets} homePct={homeTickets} awayColor={awayColor} homeColor={homeColor} />

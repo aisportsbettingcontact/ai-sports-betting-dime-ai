@@ -29,6 +29,8 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
+import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
+import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { useMobileDebug, logMobileEvent } from "@/hooks/useMobileDebug";
 import { formatGameTime, timeToMinutes, formatDateHeader, formatDateShort } from '@/lib/gameUtils';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,19 +64,33 @@ function isFavoriteStillActive(gameDate: string): boolean {
 }
 
 // ─── Team Logo Badge ──────────────────────────────────────────────────────────
-function TeamBadge({ slug, size = 22 }: { slug: string; size?: number }) {
+function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
   const nba = getNbaTeamByDbSlug(slug);
-  const logo = nba?.logoUrl;
-  const initials = (nba?.name ?? slug.replace(/_/g, " ")).slice(0, 2).toUpperCase();
+  const nhl = !nba ? NHL_BY_DB_SLUG.get(slug) ?? null : null;
+  const mlb = (!nba && !nhl) ? MLB_BY_ABBREV.get(slug) ?? null : null;
+  const logo = nba?.logoUrl ?? nhl?.logoUrl ?? mlb?.logoUrl;
+  const initials = (nba?.name ?? nhl?.name ?? mlb?.name ?? slug.replace(/_/g, " ")).slice(0, 2).toUpperCase();
+  // Enforce minimum 32px for touch targets and visual clarity
+  const actualSize = Math.max(32, size);
   return (
     <div
       className="rounded overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0"
-      style={{ width: size, height: size }}
+      style={{ width: actualSize, height: actualSize }}
     >
       {logo ? (
-        <img src={logo} alt={initials} className="w-full h-full object-contain" />
+        <img
+          src={logo}
+          alt={initials}
+          style={{
+            width: '100%', height: '100%',
+            objectFit: 'contain',
+            mixBlendMode: 'screen',
+            // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
+            filter: 'brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))',
+          }}
+        />
       ) : (
-        <span style={{ fontSize: 7 }} className="font-bold text-muted-foreground">{initials}</span>
+        <span style={{ fontSize: Math.max(7, Math.round(actualSize * 0.28)) }} className="font-bold text-muted-foreground">{initials}</span>
       )}
     </div>
   );
@@ -86,10 +102,19 @@ type GameRow = { id: number; awayTeam: string; homeTeam: string; gameDate: strin
 function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void }) {
   const awayNba = getNbaTeamByDbSlug(game.awayTeam);
   const homeNba = getNbaTeamByDbSlug(game.homeTeam);
-  const awaySchool = awayNba?.city ?? game.awayTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  const awayNick = awayNba?.nickname ?? "";
-  const homeSchool = homeNba?.city ?? game.homeTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  const homeNick = homeNba?.nickname ?? "";
+  const awayNhl = !awayNba ? NHL_BY_DB_SLUG.get(game.awayTeam) ?? null : null;
+  const homeNhl = !homeNba ? NHL_BY_DB_SLUG.get(game.homeTeam) ?? null : null;
+  const awayMlb = (!awayNba && !awayNhl) ? MLB_BY_ABBREV.get(game.awayTeam) ?? null : null;
+  const homeMlb = (!homeNba && !homeNhl) ? MLB_BY_ABBREV.get(game.homeTeam) ?? null : null;
+  const awaySchool = awayNba?.city ?? awayNhl?.city ?? awayMlb?.city ?? game.awayTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const awayNick = awayNba?.nickname ?? awayNhl?.nickname ?? awayMlb?.nickname ?? "";
+  const homeSchool = homeNba?.city ?? homeNhl?.city ?? homeMlb?.city ?? game.homeTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const homeNick = homeNba?.nickname ?? homeNhl?.nickname ?? homeMlb?.nickname ?? "";
+  // Official abbreviations for responsive display — never truncated
+  const awayAbbr = awayNba?.abbrev ?? awayNhl?.abbrev ?? awayMlb?.abbrev
+    ?? game.awayTeam.split(/[_\s]+/).map(w => w[0]?.toUpperCase() ?? '').join('').slice(0, 3);
+  const homeAbbr = homeNba?.abbrev ?? homeNhl?.abbrev ?? homeMlb?.abbrev
+    ?? game.homeTeam.split(/[_\s]+/).map(w => w[0]?.toUpperCase() ?? '').join('').slice(0, 3);
   const time = formatMilitaryTime(game.startTimeEst);
   const dateShort = formatDateShort(game.gameDate);
 
@@ -98,24 +123,33 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
       className="w-full hover:bg-white/5 active:bg-white/10 transition-colors text-left border-b border-white/8 last:border-0"
     >
       <div className="flex items-center px-3 py-2.5 gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-2" style={{ flex: "1 1 0", minWidth: 0, overflow: "hidden" }}>
-          <TeamBadge slug={game.awayTeam} size={22} />
-          <div className="flex flex-col" style={{ minWidth: 0, overflow: "hidden" }}>
-            <span className="font-bold text-white leading-tight sm:text-sm" style={{ fontSize: "clamp(9px, 2.6vw, 12px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{awaySchool}</span>
-            {awayNick && <span className="font-normal text-zinc-200 leading-tight sm:text-sm" style={{ fontSize: "clamp(8px, 2.2vw, 10px)", whiteSpace: "nowrap", display: "block" }}>{awayNick}</span>}
+        {/* Away team: logo + responsive name */}
+        <div className="flex items-center gap-2" style={{ flex: "1 1 0", minWidth: 0 }}>
+          <TeamBadge slug={game.awayTeam} size={32} />
+          <div className="flex flex-col" style={{ minWidth: 0 }}>
+            {/* xs/sm: abbreviation only — never truncates */}
+            <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{awayAbbr}</span>
+            {/* sm+: city name + nickname — nowrap, no ellipsis */}
+            <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{awaySchool}</span>
+            {awayNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
           </div>
         </div>
-        <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 66 }}>
+        {/* Center: @ + date + time */}
+        <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 60 }}>
           <span className="text-sm text-zinc-300 font-medium leading-tight">@</span>
           <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap mt-0.5">{dateShort}</span>
           <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap">{time}</span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 justify-end" style={{ flex: "1 1 0", minWidth: 0, overflow: "hidden" }}>
-          <div className="flex flex-col items-end" style={{ minWidth: 0, overflow: "hidden" }}>
-            <span className="font-bold text-white leading-tight sm:text-sm" style={{ fontSize: "clamp(9px, 2.6vw, 12px)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{homeSchool}</span>
-            {homeNick && <span className="font-normal text-zinc-200 leading-tight sm:text-sm" style={{ fontSize: "clamp(8px, 2.2vw, 10px)", whiteSpace: "nowrap", display: "block" }}>{homeNick}</span>}
+        {/* Home team: responsive name + logo */}
+        <div className="flex items-center gap-2 justify-end" style={{ flex: "1 1 0", minWidth: 0 }}>
+          <div className="flex flex-col items-end" style={{ minWidth: 0 }}>
+            {/* xs/sm: abbreviation only — never truncates */}
+            <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{homeAbbr}</span>
+            {/* sm+: city name + nickname — nowrap, no ellipsis */}
+            <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{homeSchool}</span>
+            {homeNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
           </div>
-          <TeamBadge slug={game.homeTeam} size={22} />
+          <TeamBadge slug={game.homeTeam} size={32} />
         </div>
       </div>
     </button>

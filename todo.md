@@ -3862,3 +3862,15 @@
 - [x] Simplify LandingNav — Features + Pricing links only
 - [x] Simplify LandingFooter — minimal 2-line footer
 - [x] Simplify LandingPage — Nav + Hero + FeatureShowcase + PricingCTA + Footer only (removed 8 bloated sections)
+## Session: 2026-05-24 - PROJECTIONS + SPLITS Logo/Name Responsive Fixes
+- [x] GameCard TeamLogo: enforce 32px minimum, add brightness(1.35)/contrast(1.08)/saturate(1.15)/drop-shadow filter for all leagues
+- [x] GameCard CompactScorePanel: increase logo size 22->32px in away/home rows
+- [x] GameCard ScorePanel: responsive name display — abbreviation on mobile (<1024px), city+nickname on desktop
+- [x] MobileGameCard TeamLogo: enforce 32px minimum, add enhanced filter (brightness/contrast/saturate/drop-shadow)
+- [x] MobileGameCard away/home rows: increase logo container 28->32px, remove overflow:hidden/ellipsis from abbr, increase abbr font 10->11px
+- [x] BettingSplits TeamBadge: add NHL/MLB lookups, enforce 32px minimum, add enhanced filter
+- [x] BettingSplits SearchResultRow: add NHL/MLB lookups, abbreviations, responsive name (abbr on xs/sm, full name on sm+), remove ellipsis truncation
+- [x] BettingSplitsPanel MarketBlock: remove truncate class and maxWidth constraint from team labels, add whiteSpace:nowrap
+- [x] ModelProjections TeamBadge: add NHL/MLB lookups, enforce 32px minimum, add enhanced filter
+- [x] ModelProjections SearchResultRow: add NHL/MLB lookups, abbreviations, responsive name (abbr on xs/sm, full name on sm+), remove ellipsis truncation
+- [x] TypeScript: 0 new errors in changed files
