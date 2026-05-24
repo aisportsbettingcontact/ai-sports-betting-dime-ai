@@ -3917,3 +3917,8 @@
 - [x] Both paths: same-tab redirect (window.location.href) for seamless UX
 - [x] buildStripeCheckoutSession shared helper to avoid code duplication
 - [x] TypeScript: zero new errors in stripe.ts and PricingCTA.tsx
+
+## Session: 2026-05-24 — Interactive Splits Demo + Checkout Speed
+- [x] BettingSplitsDemo component: real SEA vs KC May 23 data, logos, SPREAD/TOTAL/ML tabs, animated bars
+- [x] FeatureShowcase: replaced static betting-splits image with interactive BettingSplitsDemo
+- [x] PricingCTA: removed all toast notifications (zero friction), switched to window.location.replace() for instant redirect

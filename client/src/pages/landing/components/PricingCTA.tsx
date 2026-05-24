@@ -28,7 +28,7 @@ import { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
-import { toast } from "sonner";
+
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
@@ -93,14 +93,12 @@ export default function PricingCTA() {
   // ── Authenticated checkout mutation ──────────────────────────────────────────
   const createCheckoutSession = trpc.stripe.createCheckoutSession.useMutation({
     onSuccess: (data) => {
-      console.log("[PricingCTA] [OUTPUT] Authenticated checkout session created — redirecting");
-      toast.success("Redirecting to secure checkout...");
-      window.location.href = data.url;
+      console.log("[PricingCTA] [OUTPUT] Authenticated checkout session created — redirecting to:", data.url);
+      window.location.replace(data.url);
       setLoadingPlan(null);
     },
     onError: (err) => {
       console.error("[PricingCTA] [VERIFY] FAIL — Authenticated checkout error:", err.message);
-      toast.error(err.message ?? "Failed to start checkout. Please try again.");
       setLoadingPlan(null);
     },
   });
@@ -108,14 +106,12 @@ export default function PricingCTA() {
   // ── Public (unauthenticated) checkout mutation ────────────────────────────────
   const publicCreateCheckoutSession = trpc.stripe.publicCreateCheckoutSession.useMutation({
     onSuccess: (data) => {
-      console.log("[PricingCTA] [OUTPUT] Public checkout session created — redirecting");
-      toast.success("Redirecting to secure checkout...");
-      window.location.href = data.url;
+      console.log("[PricingCTA] [OUTPUT] Public checkout session created — redirecting to:", data.url);
+      window.location.replace(data.url);
       setLoadingPlan(null);
     },
     onError: (err) => {
       console.error("[PricingCTA] [VERIFY] FAIL — Public checkout error:", err.message);
-      toast.error(err.message ?? "Failed to start checkout. Please try again.");
       setLoadingPlan(null);
     },
   });
@@ -130,7 +126,6 @@ export default function PricingCTA() {
     }
 
     setLoadingPlan(planId);
-    toast.info("Opening secure checkout...", { duration: 2000 });
 
     if (!authLoading && appUser) {
       // ── Authenticated path: email + username prefilled from account ──────────
