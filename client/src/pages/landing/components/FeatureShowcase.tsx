@@ -1,18 +1,41 @@
 /**
  * FeatureShowcase.tsx
  *
- * 4-feature showcase using real UI screenshots.
- * Layout: alternating left/right on desktop, stacked on mobile.
- * Each feature: label + headline + 1-line description + screenshot.
+ * 4-feature showcase.
+ * - model-projections, daily-lineups, cheat-sheets: real UI screenshots
+ * - betting-splits: live interactive demo (BettingSplitsDemo)
  *
- * Images served via /manus-storage/ proxy (permanent webdev-hosted assets).
+ * Layout: alternating left/right on desktop, stacked on mobile.
  */
 
 import { motion, useReducedMotion } from "framer-motion";
+import BettingSplitsDemo from "./BettingSplitsDemo";
 
-const FEATURES = [
+interface StaticFeature {
+  id: string;
+  label: string;
+  headline: string;
+  description: string;
+  type: "image";
+  imgUrl: string;
+  imgAlt: string;
+}
+
+interface InteractiveFeature {
+  id: string;
+  label: string;
+  headline: string;
+  description: string;
+  type: "interactive";
+  component: React.ReactNode;
+}
+
+type Feature = StaticFeature | InteractiveFeature;
+
+const FEATURES: Feature[] = [
   {
     id: "model-projections",
+    type: "image",
     label: "AI Model Projections",
     headline: "Book vs. Model. Side by side.",
     description:
@@ -22,15 +45,16 @@ const FEATURES = [
   },
   {
     id: "betting-splits",
+    type: "interactive",
     label: "Betting Splits",
     headline: "Follow the money, not the crowd.",
     description:
       "Real-time ticket and money percentages across spreads, totals, and moneylines. Know where sharp action is moving.",
-    imgUrl: "/manus-storage/feature-betting-splits_e2096a87.jpeg",
-    imgAlt: "Betting Splits — Ticket and money percentage bars",
+    component: <BettingSplitsDemo />,
   },
   {
     id: "daily-lineups",
+    type: "image",
     label: "Daily Lineups",
     headline: "Starting pitchers. Batting orders. Confirmed.",
     description:
@@ -40,6 +64,7 @@ const FEATURES = [
   },
   {
     id: "cheat-sheets",
+    type: "image",
     label: "Cheat Sheets",
     headline: "NRFI, props, and edge signals — all in one view.",
     description:
@@ -110,29 +135,34 @@ export default function FeatureShowcase() {
                   </p>
                 </div>
 
-                {/* Screenshot side */}
+                {/* Visual side */}
                 <div className="flex-1 w-full">
-                  <div
-                    className="rounded-xl overflow-hidden border border-white/10"
-                    style={{
-                      boxShadow:
-                        "0 0 40px rgba(57,255,20,0.04), 0 16px 48px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    <img
-                      src={feature.imgUrl}
-                      alt={feature.imgAlt}
-                      className="w-full h-auto block"
-                      loading="lazy"
-                      decoding="async"
-                      onError={(e) => {
-                        console.error(
-                          `[FeatureShowcase] Failed to load image: ${feature.imgUrl}`,
-                          e
-                        );
+                  {feature.type === "interactive" ? (
+                    /* Interactive demo — no wrapper border/shadow (component handles it) */
+                    feature.component
+                  ) : (
+                    <div
+                      className="rounded-xl overflow-hidden border border-white/10"
+                      style={{
+                        boxShadow:
+                          "0 0 40px rgba(57,255,20,0.04), 0 16px 48px rgba(0,0,0,0.5)",
                       }}
-                    />
-                  </div>
+                    >
+                      <img
+                        src={feature.imgUrl}
+                        alt={feature.imgAlt}
+                        className="w-full h-auto block"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          console.error(
+                            `[FeatureShowcase] Failed to load image: ${feature.imgUrl}`,
+                            e
+                          );
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );
