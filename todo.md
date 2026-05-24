@@ -3922,3 +3922,14 @@
 - [x] BettingSplitsDemo component: real SEA vs KC May 23 data, logos, SPREAD/TOTAL/ML tabs, animated bars
 - [x] FeatureShowcase: replaced static betting-splits image with interactive BettingSplitsDemo
 - [x] PricingCTA: removed all toast notifications (zero friction), switched to window.location.replace() for instant redirect
+## Session: 2026-05-24 — Landing Page Polish (Nav CTAs, Hero, Pricing, Footer, BettingSplitsDemo)
+- [x] LandingNav: "Login" → "View Today's Edges" (href=/login)
+- [x] LandingNav: "Sign Up" → "Get AI Model Access" (href=/#pricing)
+- [x] Hero: Removed "See Plans" button entirely — single CTA only
+- [x] Hero: Removed unused scrollToPricing function
+- [x] PricingCTA: Headline subtitle changed to "Choose monthly flexibility or lock in annual savings. Full access on every plan."
+- [x] PricingCTA: Annual plan features — replaced "Everything in Monthly" with full specific list
+- [x] PricingCTA: Payment badges replaced with real inline SVG logos (Visa, Mastercard, Amex, Apple Pay, Google Pay, Affirm, Afterpay, Klarna)
+- [x] LandingFooter: Copyright changed to "© 2026 Tailered Sports, Inc. All rights reserved."
+- [x] BettingSplitsDemo: Rebuilt to match real BettingSplitsPanel desktop layout exactly
+- [x] TypeScript: zero new errors

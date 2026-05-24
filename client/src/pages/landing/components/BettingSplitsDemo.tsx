@@ -1,132 +1,79 @@
-import { useState, useEffect, useRef } from "react";
+/**
+ * BettingSplitsDemo.tsx
+ *
+ * Landing page interactive demo that EXACTLY replicates the real BettingSplitsPanel
+ * desktop layout used in the live app.
+ *
+ * Visual rules (matching BettingSplitsPanel exactly):
+ *   - 3-column layout: SPREAD | TOTAL | MONEYLINE (separated by 1px dividers)
+ *   - Each column: centered title with horizontal rules → labels row → Tickets bar → Handle bar
+ *   - Pill bars: away segment (left, rounded-left) + home segment (right, rounded-right)
+ *     with % labels INSIDE each segment, flush left/right respectively
+ *   - SPREAD/TOTAL/ML tab switcher on mobile (< lg), 3-column on desktop (>= lg)
+ *   - IntersectionObserver triggers bar animation on first scroll-into-view
+ *   - Real SEA vs KC May 23 data with actual MLB logos
+ *
+ * Data (DraftKings NJ, May 23 2026, SEA @ KC):
+ *   SPREAD:  SEA -1.5 (+131) / KC +1.5 (-154)  | Tickets: SEA 38% / KC 62%  | Handle: SEA 45% / KC 55%
+ *   TOTAL:   8.5 O/U                             | Tickets: OVER 52% / UNDER 48% | Handle: OVER 61% / UNDER 39%
+ *   ML:      SEA -130 / KC +109                  | Tickets: SEA 55% / KC 45%  | Handle: SEA 67% / KC 33%
+ */
 
-// ─── Real game data: SEA @ KC — May 23, 2026 (Final: SEA 0, KC 5) ────────────
-// Source: mlb_schedule_history anGameId=288452, DK NJ pre-game odds
-// Splits from VSiN (as shown in the app on game day)
+import { useState, useRef, useEffect } from "react";
 
+// ── Team logos ────────────────────────────────────────────────────────────────
 const SEA_LOGO = "https://www.mlbstatic.com/team-logos/136.svg";
 const KC_LOGO  = "https://www.mlbstatic.com/team-logos/118.svg";
 
-const LOGO_FILTER = "brightness(1.7) contrast(1.08) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))";
+// ── Logo filter (matches app's TeamLogo filter) ───────────────────────────────
+const LOGO_FILTER =
+  "brightness(1.7) contrast(1.08) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))";
 
+// ── Label stroke (matches app's LABEL_STROKE) ─────────────────────────────────
+const LABEL_STROKE =
+  "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)";
+
+// ── Market data ───────────────────────────────────────────────────────────────
 type MarketKey = "spread" | "total" | "ml";
 
 interface MarketData {
-  label: string;
+  title: string;
   awayLabel: string;
   homeLabel: string;
-  awayOdds: string;
-  homeOdds: string;
-  awayTickets: number;
-  homeTickets: number;
-  awayMoney: number;
-  homeMoney: number;
-  signal: string;
-  signalColor: string;
-  sharpSide: string | null;
-  openLine: string;
-  closeLine: string;
+  totalValue?: number;
+  ticketsAway: number; // away (or OVER) pct
+  handleAway: number;  // away (or OVER) pct
 }
 
-const GAME_DATA: Record<MarketKey, MarketData> = {
+const MARKETS: Record<MarketKey, MarketData> = {
   spread: {
-    label: "RUN LINE",
-    awayLabel: "SEA -1.5",
-    homeLabel: "KC +1.5",
-    awayOdds: "+131",
-    homeOdds: "-154",
-    awayTickets: 51,
-    homeTickets: 49,
-    awayMoney: 73,
-    homeMoney: 27,
-    signal: "Money Divergence",
-    signalColor: "#39FF14",
-    sharpSide: "SEA",
-    openLine: "SEA -1.5 (+125)",
-    closeLine: "SEA -1.5 (+131)",
+    title: "Spread",
+    awayLabel: "SEA (-1.5)",
+    homeLabel: "KC (+1.5)",
+    ticketsAway: 38,
+    handleAway: 45,
   },
   total: {
-    label: "TOTAL",
-    awayLabel: "OVER 8.5",
-    homeLabel: "UNDER 8.5",
-    awayOdds: "-109",
-    homeOdds: "-111",
-    awayTickets: 54,
-    homeTickets: 46,
-    awayMoney: 47,
-    homeMoney: 53,
-    signal: "No Clear Signal",
-    signalColor: "#6b7280",
-    sharpSide: null,
-    openLine: "8.5 (-110/-110)",
-    closeLine: "8.5 (-109/-111)",
+    title: "Total",
+    awayLabel: "OVER",
+    homeLabel: "UNDER",
+    totalValue: 8.5,
+    ticketsAway: 52,
+    handleAway: 61,
   },
   ml: {
-    label: "MONEYLINE",
-    awayLabel: "SEA ML",
-    homeLabel: "KC ML",
-    awayOdds: "-130",
-    homeOdds: "+109",
-    awayTickets: 20,
-    homeTickets: 80,
-    awayMoney: 32,
-    homeMoney: 68,
-    signal: "Public Heavy",
-    signalColor: "#f59e0b",
-    sharpSide: null,
-    openLine: "SEA -135",
-    closeLine: "SEA -130",
+    title: "Moneyline",
+    awayLabel: "SEA (-130)",
+    homeLabel: "KC (+109)",
+    ticketsAway: 55,
+    handleAway: 67,
   },
 };
 
-const MARKET_TABS: { key: MarketKey; label: string }[] = [
-  { key: "spread", label: "SPREAD" },
-  { key: "total",  label: "TOTAL" },
-  { key: "ml",     label: "MONEYLINE" },
-];
+const MARKET_KEYS: MarketKey[] = ["spread", "total", "ml"];
 
-// ─── Animated bar ─────────────────────────────────────────────────────────────
-function AnimatedBar({
-  pct,
-  color,
-  animate,
-}: {
-  pct: number;
-  color: string;
-  animate: boolean;
-}) {
-  const [width, setWidth] = useState(0);
-  useEffect(() => {
-    if (!animate) { setWidth(0); return; }
-    const t = setTimeout(() => setWidth(pct), 60);
-    return () => clearTimeout(t);
-  }, [pct, animate]);
-
-  return (
-    <div className="flex items-center gap-2 flex-1">
-      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${width}%`,
-            background: color,
-            transition: animate ? "width 0.7s cubic-bezier(0.4,0,0.2,1)" : "none",
-            boxShadow: color === "#39FF14" ? `0 0 6px ${color}60` : undefined,
-          }}
-        />
-      </div>
-      <span
-        className="text-[12px] font-bold tabular-nums w-9 text-right"
-        style={{ color: "#e5e7eb" }}
-      >
-        {pct}%
-      </span>
-    </div>
-  );
-}
-
-// ─── Team logo ────────────────────────────────────────────────────────────────
-function TeamLogo({ src, alt, size = 36 }: { src: string; alt: string; size?: number }) {
+// ── TeamLogo ──────────────────────────────────────────────────────────────────
+function TeamLogo({ src, alt, size }: { src: string; alt: string; size: number }) {
   return (
     <img
       src={src}
@@ -147,205 +94,360 @@ function TeamLogo({ src, alt, size = 36 }: { src: string; alt: string; size?: nu
   );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ── SplitBar — pill bar matching real app's SplitBar exactly ─────────────────
+interface SplitBarProps {
+  label: string;
+  awayPct: number;
+  homePct: number;
+  awayColor: string;
+  homeColor: string;
+  animate: boolean;
+}
+
+function SplitBar({ label, awayPct, homePct, awayColor, homeColor, animate }: SplitBarProps) {
+  const away = animate ? awayPct : 0;
+  const home = animate ? homePct : 0;
+  const isAwayFull = awayPct >= 100;
+  const isHomeFull = homePct >= 100;
+  const showDivider = !isAwayFull && !isHomeFull && awayPct > 0 && homePct > 0;
+
+  const awaySegStyle: React.CSSProperties = isAwayFull
+    ? { flex: 1, background: awayColor, borderRadius: "9999px", display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "0 8px", overflow: "hidden" }
+    : away > 0
+    ? { flexGrow: away, flexShrink: 1, flexBasis: 0, minWidth: awayPct < 10 ? 44 : 38, background: awayColor, borderRadius: "9999px 0 0 9999px", display: "flex", alignItems: "center", justifyContent: "flex-start", padding: "0 8px", overflow: "hidden", transition: "flex-grow 0.7s ease" }
+    : { display: "none" };
+
+  const homeSegStyle: React.CSSProperties = isHomeFull
+    ? { flex: 1, background: homeColor, borderRadius: "9999px", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 8px", overflow: "hidden" }
+    : home > 0
+    ? { flexGrow: home, flexShrink: 1, flexBasis: 0, minWidth: homePct < 10 ? 44 : 38, background: homeColor, borderRadius: "0 9999px 9999px 0", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 8px", overflow: "hidden", transition: "flex-grow 0.7s ease" }
+    : { display: "none" };
+
+  const awayLabelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: "#ffffff",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    textAlign: "left",
+    textShadow: LABEL_STROKE,
+  };
+
+  const homeLabelStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: "#ffffff",
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    lineHeight: 1,
+    whiteSpace: "nowrap",
+    textAlign: "right",
+    textShadow: LABEL_STROKE,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: "100%" }}>
+      <span
+        style={{
+          textAlign: "center",
+          textTransform: "uppercase",
+          letterSpacing: "0.12em",
+          fontWeight: 700,
+          fontSize: 11,
+          color: "rgba(255,255,255,0.80)",
+        }}
+      >
+        {label}
+      </span>
+      <div
+        style={{
+          height: 28,
+          display: "flex",
+          flexDirection: "row",
+          borderRadius: "9999px",
+          border: "1.5px solid rgba(255,255,255,0.15)",
+          boxSizing: "border-box",
+          width: "100%",
+        }}
+      >
+        {/* Away segment */}
+        {!isAwayFull && !isHomeFull && away > 0 && (
+          <div style={awaySegStyle}>
+            <span style={awayLabelStyle}>{awayPct}%</span>
+          </div>
+        )}
+        {/* Divider */}
+        {showDivider && (
+          <div style={{ width: 1.5, background: "rgba(255,255,255,0.3)", flexShrink: 0, alignSelf: "stretch" }} />
+        )}
+        {/* Home segment */}
+        {!isAwayFull && !isHomeFull && home > 0 && (
+          <div style={homeSegStyle}>
+            <span style={homeLabelStyle}>{homePct}%</span>
+          </div>
+        )}
+        {/* Full-bar cases */}
+        {isAwayFull && !isHomeFull && (
+          <div style={{ flex: 1, background: awayColor, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "9999px" }}>
+            <span style={{ ...awayLabelStyle, textAlign: "center" }}>100%</span>
+          </div>
+        )}
+        {isHomeFull && !isAwayFull && (
+          <div style={{ flex: 1, background: homeColor, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "9999px" }}>
+            <span style={{ ...homeLabelStyle, textAlign: "center" }}>100%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── MarketBlock — single column matching real app's MarketBlock ───────────────
+interface MarketBlockProps {
+  market: MarketData;
+  awayColor: string;
+  homeColor: string;
+  animate: boolean;
+}
+
+function MarketBlock({ market, awayColor, homeColor, animate }: MarketBlockProps) {
+  const awayTickets = market.ticketsAway;
+  const homeTickets = 100 - market.ticketsAway;
+  const awayHandle  = market.handleAway;
+  const homeHandle  = 100 - market.handleAway;
+  const isTotalMarket = market.totalValue !== undefined;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        gap: 8,
+        padding: "10px 12px",
+      }}
+    >
+      {/* Title with horizontal rules — matches MarketBlock exactly */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+        <span
+          style={{
+            textTransform: "uppercase",
+            letterSpacing: "0.14em",
+            fontWeight: 800,
+            fontSize: 13,
+            color: "#ffffff",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {market.title}
+        </span>
+        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+      </div>
+
+      {/* Labels row */}
+      {isTotalMarket ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px" }}>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
+          <span style={{ fontSize: 16, color: "#ffffff", fontWeight: 700 }}>{market.totalValue}</span>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px" }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+            {market.awayLabel}
+          </span>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", textAlign: "right" }}>
+            {market.homeLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Tickets bar */}
+      <SplitBar
+        label="Tickets"
+        awayPct={awayTickets}
+        homePct={homeTickets}
+        awayColor={awayColor}
+        homeColor={homeColor}
+        animate={animate}
+      />
+
+      {/* Handle bar */}
+      <SplitBar
+        label="Handle"
+        awayPct={awayHandle}
+        homePct={homeHandle}
+        awayColor={awayColor}
+        homeColor={homeColor}
+        animate={animate}
+      />
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function BettingSplitsDemo() {
-  const [activeMarket, setActiveMarket] = useState<MarketKey>("spread");
   const [animate, setAnimate] = useState(false);
+  const [mobileMarket, setMobileMarket] = useState<MarketKey>("spread");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Trigger bar animation on mount and on tab switch
-  useEffect(() => {
-    setAnimate(false);
-    const t = setTimeout(() => setAnimate(true), 30);
-    return () => clearTimeout(t);
-  }, [activeMarket]);
-
-  // IntersectionObserver: trigger animation when scrolled into view
+  // IntersectionObserver — trigger bar animation on first scroll-into-view
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setAnimate(true); },
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          console.log("[BettingSplitsDemo] [STATE] Entered viewport — triggering bar animation");
+          setAnimate(true);
+          observer.disconnect();
+        }
+      },
       { threshold: 0.3 }
     );
-    obs.observe(el);
-    return () => obs.disconnect();
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
-  const d = GAME_DATA[activeMarket];
+  // SEA teal (visible on dark bg, distinct from KC blue)
+  const awayColor = "#005C5C";
+  const homeColor = "#004687"; // KC Royals blue
 
   return (
     <div
       ref={containerRef}
-      className="rounded-xl border border-white/10 overflow-hidden select-none"
       style={{
-        background: "linear-gradient(145deg, #0d1117 0%, #0a0f1a 100%)",
-        boxShadow: "0 0 40px rgba(57,255,20,0.04), 0 16px 48px rgba(0,0,0,0.6)",
+        background: "#0d1117",
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.08)",
+        overflow: "hidden",
+        width: "100%",
       }}
     >
-      {/* ── Game header ─────────────────────────────────────────────────────── */}
+      {/* ── Header: game info ─────────────────────────────────────────────── */}
       <div
-        className="flex items-center justify-between px-4 py-3 border-b border-white/8"
-        style={{ background: "rgba(255,255,255,0.02)" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "10px 14px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          background: "rgba(255,255,255,0.02)",
+        }}
       >
         {/* Away team */}
-        <div className="flex items-center gap-2.5 flex-1">
-          <TeamLogo src={SEA_LOGO} alt="Seattle Mariners" size={32} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <TeamLogo src={SEA_LOGO} alt="SEA" size={28} />
           <div>
-            <div className="text-[11px] text-[#6b7280] font-semibold tracking-wide uppercase leading-none">Seattle</div>
-            <div className="text-[13px] font-bold text-white leading-tight">Mariners</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Away</div>
+            <div style={{ fontSize: 13, color: "#ffffff", fontWeight: 700 }}>Seattle</div>
           </div>
         </div>
-        {/* Game info */}
-        <div className="flex flex-col items-center gap-0.5 px-3">
-          <span className="text-[10px] text-[#6b7280] font-semibold tracking-widest uppercase">FINAL</span>
-          <div className="flex items-center gap-2">
-            <span className="text-[22px] font-black text-white tabular-nums">0</span>
-            <span className="text-[14px] text-[#4b5563] font-bold">–</span>
-            <span className="text-[22px] font-black text-white tabular-nums">5</span>
+
+        {/* Game info center */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 10, color: "#39FF14", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+            ⚾ MLB · DraftKings NJ
           </div>
-          <span className="text-[9px] text-[#4b5563] font-medium tracking-wide">MAY 23, 2026</span>
+          <div style={{ fontSize: 18, color: "#ffffff", fontWeight: 800, letterSpacing: "-0.02em", margin: "2px 0" }}>
+            0 – 5
+          </div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Final · May 23
+          </div>
         </div>
+
         {/* Home team */}
-        <div className="flex items-center gap-2.5 flex-1 justify-end">
-          <div className="text-right">
-            <div className="text-[11px] text-[#6b7280] font-semibold tracking-wide uppercase leading-none">Kansas City</div>
-            <div className="text-[13px] font-bold text-white leading-tight">Royals</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexDirection: "row-reverse" }}>
+          <TeamLogo src={KC_LOGO} alt="KC" size={28} />
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Home</div>
+            <div style={{ fontSize: 13, color: "#ffffff", fontWeight: 700 }}>Kansas City</div>
           </div>
-          <TeamLogo src={KC_LOGO} alt="Kansas City Royals" size={32} />
         </div>
       </div>
 
-      {/* ── Market tab switcher ──────────────────────────────────────────────── */}
+      {/* ── Mobile: 3-way toggle + single active market ───────────────────── */}
+      <div className="lg:hidden" style={{ padding: "8px 8px 0 8px" }}>
+        <div style={{ display: "flex", gap: 4 }}>
+          {MARKET_KEYS.map((m) => {
+            const label = m === "spread" ? "SPREAD" : m === "total" ? "TOTAL" : "MONEYLINE";
+            const isActive = m === mobileMarket;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  console.log(`[BettingSplitsDemo] [INPUT] Mobile market tab clicked: ${m}`);
+                  setMobileMarket(m);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "4px 0",
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  borderRadius: 4,
+                  border: isActive ? "1px solid rgba(255,255,255,0.35)" : "1px solid rgba(255,255,255,0.1)",
+                  background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+                  color: isActive ? "#ffffff" : "rgba(255,255,255,0.4)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        {/* Active market block */}
+        <MarketBlock
+          market={MARKETS[mobileMarket]}
+          awayColor={awayColor}
+          homeColor={homeColor}
+          animate={animate}
+        />
+      </div>
+
+      {/* ── Desktop: full 3-column layout (matches BettingSplitsPanel isDesktop branch) ── */}
+      <div className="hidden lg:flex" style={{ alignItems: "stretch", width: "100%" }}>
+        {/* Spread */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <MarketBlock market={MARKETS.spread} awayColor={awayColor} homeColor={homeColor} animate={animate} />
+        </div>
+        {/* Divider */}
+        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        {/* Total */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <MarketBlock market={MARKETS.total} awayColor={awayColor} homeColor={homeColor} animate={animate} />
+        </div>
+        {/* Divider */}
+        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        {/* Moneyline */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <MarketBlock market={MARKETS.ml} awayColor={awayColor} homeColor={homeColor} animate={animate} />
+        </div>
+      </div>
+
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
       <div
-        className="flex border-b border-white/8"
-        style={{ background: "rgba(0,0,0,0.2)" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 14px",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.01)",
+        }}
       >
-        {MARKET_TABS.map((tab) => {
-          const isActive = tab.key === activeMarket;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveMarket(tab.key)}
-              className="flex-1 py-2.5 text-[10px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer"
-              style={{
-                color: isActive ? "#39FF14" : "#6b7280",
-                borderBottom: isActive ? "2px solid #39FF14" : "2px solid transparent",
-                background: isActive ? "rgba(57,255,20,0.04)" : "transparent",
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Splits content ───────────────────────────────────────────────────── */}
-      <div className="p-4 space-y-4">
-        {/* Signal badge + sharp side */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <span
-            className="text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide"
-            style={{
-              background: `${d.signalColor}18`,
-              color: d.signalColor,
-              border: `1px solid ${d.signalColor}30`,
-            }}
-          >
-            {d.signal}
-          </span>
-          {d.sharpSide && (
-            <span className="text-[10px] text-[#9ca3af]">
-              Sharp Action: <span className="font-bold text-white">{d.sharpSide}</span>
-            </span>
-          )}
-        </div>
-
-        {/* Odds row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div
-            className="rounded-lg p-3 text-center"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              <TeamLogo src={SEA_LOGO} alt="SEA" size={20} />
-              <span className="text-[11px] text-[#9ca3af] font-semibold">{d.awayLabel}</span>
-            </div>
-            <span
-              className="text-[18px] font-black tabular-nums"
-              style={{ color: d.awayOdds.startsWith("+") ? "#39FF14" : "#e5e7eb" }}
-            >
-              {d.awayOdds}
-            </span>
-          </div>
-          <div
-            className="rounded-lg p-3 text-center"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              <TeamLogo src={KC_LOGO} alt="KC" size={20} />
-              <span className="text-[11px] text-[#9ca3af] font-semibold">{d.homeLabel}</span>
-            </div>
-            <span
-              className="text-[18px] font-black tabular-nums"
-              style={{ color: d.homeOdds.startsWith("+") ? "#39FF14" : "#e5e7eb" }}
-            >
-              {d.homeOdds}
-            </span>
-          </div>
-        </div>
-
-        {/* Tickets row */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-[#6b7280] tracking-widest uppercase">TICKETS</span>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#9ca3af] w-10 shrink-0 font-semibold">SEA</span>
-              <AnimatedBar pct={d.awayTickets} color="#9ca3af" animate={animate} />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#9ca3af] w-10 shrink-0 font-semibold">KC</span>
-              <AnimatedBar pct={d.homeTickets} color="#9ca3af" animate={animate} />
-            </div>
-          </div>
-        </div>
-
-        {/* Money row */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-bold text-[#6b7280] tracking-widest uppercase">MONEY</span>
-          </div>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#9ca3af] w-10 shrink-0 font-semibold">SEA</span>
-              <AnimatedBar
-                pct={d.awayMoney}
-                color={d.awayMoney > d.homeMoney ? "#39FF14" : "#6b7280"}
-                animate={animate}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-[#9ca3af] w-10 shrink-0 font-semibold">KC</span>
-              <AnimatedBar
-                pct={d.homeMoney}
-                color={d.homeMoney > d.awayMoney ? "#39FF14" : "#6b7280"}
-                animate={animate}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Footer: open/close line */}
-        <div
-          className="flex flex-wrap gap-4 pt-3 border-t text-[10px] text-[#6b7280]"
-          style={{ borderColor: "rgba(255,255,255,0.06)" }}
-        >
-          <span>Open: <span className="text-white font-semibold">{d.openLine}</span></span>
-          <span>Close: <span className="text-white font-semibold">{d.closeLine}</span></span>
-          <span className="ml-auto text-[#39FF14] font-semibold">⚾ MLB · DraftKings NJ</span>
-        </div>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+          Source: VSiN · DraftKings NJ
+        </span>
+        <span style={{ fontSize: 10, color: "#39FF14", fontWeight: 700 }}>
+          LIVE SPLITS DATA
+        </span>
       </div>
     </div>
   );

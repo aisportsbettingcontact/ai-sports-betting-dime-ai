@@ -9,7 +9,7 @@ export default function LandingFooter() {
       }}
     >
       <p className="text-[12px] text-[#4b5563]">
-        © {new Date().getFullYear()} AI Sports Betting Models. All rights reserved.
+        © 2026 Tailered Sports, Inc. All rights reserved.
       </p>
       <p className="text-[11px] text-[#374151] mt-1">
         Not financial advice. Bet responsibly.
