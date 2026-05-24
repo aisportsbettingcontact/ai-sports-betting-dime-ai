@@ -2,19 +2,14 @@
  * Hero.tsx
  *
  * Clean, minimal hero section.
- * No fake data widgets. Headline + sub-copy + two CTAs.
+ * No fake data widgets. Headline + sub-copy + single CTA.
  * "View Today's Edges" → /login (requires Discord auth)
- * "See Plans" → scrolls to #pricing
  */
 
 import { motion, useReducedMotion } from "framer-motion";
 
 export default function Hero() {
   const shouldReduce = useReducedMotion();
-
-  const scrollToPricing = () => {
-    document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" });
-  };
 
   return (
     <section
@@ -34,7 +29,7 @@ export default function Hero() {
         }}
       />
 
-      {/* pt-24 clears the fixed nav (h-16 = 64px), pb-12 gives breathing room below CTAs */}
+      {/* pt-24 clears the fixed nav (h-16 = 64px), pb-12 gives breathing room below CTA */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 text-center">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
@@ -75,7 +70,7 @@ export default function Hero() {
             sheets — all in one clean dashboard.
           </p>
 
-          {/* CTAs */}
+          {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-3">
             <a
               href="/login"
@@ -93,13 +88,6 @@ export default function Hero() {
                 />
               </svg>
             </a>
-            <button
-              onClick={scrollToPricing}
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-bold text-sm text-white border border-white/15 bg-white/5 hover:bg-white/10 transition-all duration-150 active:scale-[0.98]"
-              style={{ letterSpacing: "-0.01em" }}
-            >
-              See Plans
-            </button>
           </div>
 
           {/* Microcopy */}
