@@ -952,7 +952,7 @@ export default function ModelProjections() {
         {/* Row 1: brand + user icon
          * LAYOUT: flex row — brand LEFT, discord + user RIGHT.
          * MOBILE FIX: removed absolute centering (absolute left-1/2 -translate-x-1/2)
-         * which caused PREZ BETS to physically overlap the Discord button on narrow
+         * which caused AI SPORTS BETTING to physically overlap the Discord button on narrow
          * screens. Now brand is a normal flex item on the left; Discord button and
          * user icon are flex-shrink-0 on the right. Gap between them is handled by
          * flex-1 spacer. This guarantees zero overlap at every viewport width.
@@ -961,7 +961,7 @@ export default function ModelProjections() {
           {/* ── Brand: left-aligned, shrinks gracefully on narrow screens ── */}
           <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0">
             <BarChart3 className="flex-shrink-0 text-primary" style={{ width: "clamp(14px, 3.5vw, 20px)", height: "clamp(14px, 3.5vw, 20px)" }} />
-            <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(12px, 3.5vw, 18px)", letterSpacing: "0.08em" }}>PREZ BETS</span>
+            <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(12px, 3.5vw, 18px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
           </div>
           {/* ── Spacer: pushes Discord + user icon to the right ── */}
           <div className="flex-1 min-w-0" />

@@ -1,5 +1,5 @@
 // AgeModal - Age & Responsibility Notice modal
-// Design: Prez Bets AI dark theme - centered modal with warning icon
+// Design: AI Sports Betting dark theme - centered modal with warning icon
 
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
 
         {/* Body */}
         <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-          <span className="text-foreground font-semibold">Prez Bets AI</span> provides sports betting
+          <span className="text-foreground font-semibold">AI Sports Betting</span> provides sports betting
           analysis and data for <span className="italic">informational purposes only</span>.
         </p>
 

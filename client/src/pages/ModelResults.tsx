@@ -595,7 +595,7 @@ export default function ModelResults() {
           {/* Centered brand */}
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
             <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 20px)", letterSpacing: "0.08em" }}>
-              PREZ BETS
+              AI SPORTS BETTING
             </span>
             <span className="text-border" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
             <span className="font-medium whitespace-nowrap" style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#9CA3AF" }}>
