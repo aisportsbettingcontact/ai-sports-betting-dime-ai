@@ -137,19 +137,21 @@ function edgeLabelIsAway(
 // ── TeamLogo ──────────────────────────────────────────────────────────────────
 function TeamLogo({ slug, name, logoUrl, size = 36 }: { slug: string; name: string; logoUrl?: string; size?: number }) {
   const [error, setError] = useState(false);
-  // Use CSS clamp so logos scale proportionally with viewport width
+  // Enforce minimum 32px — logos must never be smaller than a fingertip target
   // size prop acts as the "base" for the clamp midpoint (in vw units)
-  const vwRatio = (size / 16).toFixed(2); // convert px to approximate vw
-  const cssSize = `clamp(${Math.round(size * 0.7)}px, ${vwRatio}vw, ${Math.round(size * 1.5)}px)`;
+  const minPx = Math.max(32, Math.round(size * 0.75));
+  const maxPx = Math.max(48, Math.round(size * 1.5));
+  const vwRatio = (size / 14).toFixed(2); // slightly larger vw ratio for better scaling
+  const cssSize = `clamp(${minPx}px, ${vwRatio}vw, ${maxPx}px)`;
   if (!logoUrl || error) {
     return (
       <div
         className="rounded-full flex items-center justify-center font-bold flex-shrink-0"
         style={{
           width: cssSize, height: cssSize,
-          minWidth: Math.round(size * 0.7), minHeight: Math.round(size * 0.7),
+          minWidth: minPx, minHeight: minPx,
           background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))",
-          fontSize: `clamp(${Math.max(7, Math.round(size * 0.2))}px, ${(size * 0.018).toFixed(2)}vw, ${Math.round(size * 0.32)}px)`,
+          fontSize: `clamp(${Math.max(8, Math.round(size * 0.22))}px, ${(size * 0.018).toFixed(2)}vw, ${Math.round(size * 0.34)}px)`,
         }}
       >
         {name.slice(0, 2).toUpperCase()}
@@ -162,14 +164,14 @@ function TeamLogo({ slug, name, logoUrl, size = 36 }: { slug: string; name: stri
       alt={name}
       style={{
         width: cssSize, height: cssSize,
-        minWidth: Math.round(size * 0.7), minHeight: Math.round(size * 0.7),
+        minWidth: minPx, minHeight: minPx,
         objectFit: "contain",
         mixBlendMode: "screen",
         flexShrink: 0,
-        // Brightness boost: lifts dark-primary-color logos (A's #003831, Pirates #000000,
-        // White Sox #000000) off the dark card background. The 1.25 multiplier is subtle
-        // enough to not blow out bright logos (NYY, LAD, etc.) while making dark ones visible.
-        filter: "brightness(1.25) drop-shadow(0 0 2px rgba(255,255,255,0.10))",
+        // Enhanced visibility: brightness lifts dark logos (A's, Pirates, White Sox)
+        // contrast sharpens definition, saturate keeps colors vivid
+        // drop-shadow adds a subtle white glow so logos pop on dark backgrounds
+        filter: "brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))",
       }}
       onError={() => setError(true)}
     />
@@ -2446,9 +2448,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         )}
       </div>
       {/* Away row */}
-      <div className="flex items-center justify-between gap-1 w-full">
+      <div className="flex items-center justify-between gap-1.5 w-full">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={22} />
+          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={32} />
           <span className="font-bold" style={{ fontSize: 11, color: awayWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))", fontWeight: awayWins ? 800 : 600, whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
             {awayAbbr}
           </span>
@@ -2464,9 +2466,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       </div>
       <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
       {/* Home row */}
-      <div className="flex items-center justify-between gap-1 w-full">
+      <div className="flex items-center justify-between gap-1.5 w-full">
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={22} />
+          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={32} />
           <span className="font-bold" style={{ fontSize: 11, color: homeWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))", fontWeight: homeWins ? 800 : 600, whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
             {homeAbbr}
           </span>
@@ -2618,10 +2620,27 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Left: logo + name/nickname — always two lines */}
           <div className="flex items-center gap-2">
           <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={36} />
-          {/* Uniform font size — no auto-scaling, no truncation */}
+          {/* Responsive name display:
+               Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
+               Desktop (≥ 1024px): city name + nickname on two lines */}
           <div className="flex flex-col">
+            {/* Mobile: abbreviation only */}
             <span
-              className="font-semibold leading-tight"
+              className="font-bold leading-tight lg:hidden"
+              style={{
+                fontSize: 'clamp(11px, 3.5vw, 14px)',
+                color: awayWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
+                fontWeight: awayFontWeight,
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.06em',
+                lineHeight: 1.2,
+              }}
+            >
+              {awayAbbr}
+            </span>
+            {/* Desktop: city name */}
+            <span
+              className="font-semibold leading-tight hidden lg:block"
               style={{
                 fontSize: NAME_FONT_SIZE,
                 color: awayWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
@@ -2632,8 +2651,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             >
               {awayName}
             </span>
-            {/* Nickname line 2 */}
-            <span className="leading-none" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+            {/* Nickname line 2 — desktop only */}
+            <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
               {awayNickname || "\u00A0"}
             </span>
           </div>
@@ -2671,10 +2690,27 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Left: logo + name/nickname — always two lines */}
           <div className="flex items-center gap-2">
           <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={36} />
-          {/* Uniform font size — no auto-scaling, no truncation */}
+          {/* Responsive name display:
+               Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
+               Desktop (≥ 1024px): city name + nickname on two lines */}
           <div className="flex flex-col">
+            {/* Mobile: abbreviation only */}
             <span
-              className="font-semibold leading-tight"
+              className="font-bold leading-tight lg:hidden"
+              style={{
+                fontSize: 'clamp(11px, 3.5vw, 14px)',
+                color: homeWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
+                fontWeight: homeFontWeight,
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.06em',
+                lineHeight: 1.2,
+              }}
+            >
+              {homeAbbr}
+            </span>
+            {/* Desktop: city name */}
+            <span
+              className="font-semibold leading-tight hidden lg:block"
               style={{
                 fontSize: NAME_FONT_SIZE,
                 color: homeWins ? "hsl(var(--foreground))" : isFinal ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
@@ -2685,8 +2721,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             >
               {homeName}
             </span>
-            {/* Nickname line 2 */}
-            <span className="leading-none" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+            {/* Nickname line 2 — desktop only */}
+            <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
               {homeNickname || "\u00A0"}
             </span>
           </div>

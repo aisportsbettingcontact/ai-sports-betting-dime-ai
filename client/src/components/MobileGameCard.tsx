@@ -20,12 +20,21 @@ type MobileTab = 'dual' | 'splits';
 
 // TeamLogo component (inline — same as in GameCard.tsx)
 function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: string; logoUrl?: string; size?: number }) {
+  // Enforce minimum 32px — logos must never be smaller than a fingertip target
+  const actualSize = Math.max(32, size);
   if (logoUrl) {
     return (
       <img
         src={logoUrl}
         alt={name}
-        style={{ width: size, height: size, objectFit: 'contain', borderRadius: '50%' }}
+        style={{
+          width: actualSize, height: actualSize,
+          objectFit: 'contain',
+          mixBlendMode: 'screen',
+          flexShrink: 0,
+          // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
+          filter: 'brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))',
+        }}
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
     );
@@ -33,10 +42,11 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
   const initials = name.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
   return (
     <div style={{
-      width: size, height: size, borderRadius: '50%',
+      width: actualSize, height: actualSize, borderRadius: '50%',
       background: 'rgba(255,255,255,0.1)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.35, fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+      fontSize: actualSize * 0.35, fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+      flexShrink: 0,
     }}>
       {initials}
     </div>
@@ -854,43 +864,41 @@ return (
         )}
       </div>
 
-      {/* Away row: logo (28px) + abbr + score on same row */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '40px', gap: '4px', paddingLeft: '2px', paddingRight: '4px', overflow: 'hidden' }}>
-        {/* Logo: 28px */}
-        <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={28} />
+            {/* Away row: logo (32px) + abbr (never truncated) + score */}
+      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '5px', paddingLeft: '2px', paddingRight: '4px' }}>
+        {/* Logo: 32px minimum — always visible */}
+        <div style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={32} />
         </div>
-        {/* Abbreviation — fills remaining space, truncates */}
-        <span style={{ flex: '1 1 0', minWidth: 0, fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.90)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
+        {/* Abbreviation — NEVER truncated; whiteSpace nowrap ensures full display */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
           {awayAbbr}
         </span>
         {/* Score */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: '13px', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
+            fontSize: '14px', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
             color: awayScoreFlash ? '#39FF14' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: awayScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.awayScore}</span>
         )}
       </div>
-
       {/* Divider */}
       <div style={{ height: 1, background: 'hsl(var(--border) / 0.4)' }} />
-
-      {/* Home row: logo (28px) + abbr + score on same row */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '40px', gap: '4px', paddingLeft: '2px', paddingRight: '4px', overflow: 'hidden' }}>
-        {/* Logo: 28px */}
-        <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={28} />
+      {/* Home row: logo (32px) + abbr (never truncated) + score */}
+      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '5px', paddingLeft: '2px', paddingRight: '4px' }}>
+        {/* Logo: 32px minimum — always visible */}
+        <div style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={32} />
         </div>
-        {/* Abbreviation — fills remaining space, truncates */}
-        <span style={{ flex: '1 1 0', minWidth: 0, fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.90)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '0.03em' }}>
+        {/* Abbreviation — NEVER truncated; whiteSpace nowrap ensures full display */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
           {homeAbbr}
         </span>
         {/* Score */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: '13px', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
+            fontSize: '14px', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
             color: homeScoreFlash ? '#39FF14' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: homeScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.homeScore}</span>
