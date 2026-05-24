@@ -230,7 +230,8 @@ async function fetchBacktestRows(
       )
     );
 
-  return rows.map(r => ({
+  type DbRow = typeof rows[number];
+  return rows.map((r: DbRow) => ({
     gameDate:      r.gameDate,
     market:        r.market,
     modelProb:     r.modelProb !== null ? parseFloat(String(r.modelProb)) : null,

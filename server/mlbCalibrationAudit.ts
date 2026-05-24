@@ -124,10 +124,11 @@ async function fetchCalibrationRows(
     .from(mlbGameBacktest)
     .where(and(...conditions));
 
-  return rows
-    .filter(r => r.result === "WIN" || r.result === "LOSS")
-    .filter(r => r.modelProb !== null)
-    .map(r => ({
+  type RawRow = { gameDate: string | null; modelProb: unknown; result: string | null };
+  return (rows as RawRow[])
+    .filter((r: RawRow) => r.result === "WIN" || r.result === "LOSS")
+    .filter((r: RawRow) => r.modelProb !== null)
+    .map((r: RawRow) => ({
       gameDate:  r.gameDate ?? "",
       modelProb: parseFloat(String(r.modelProb)),
       result:    r.result!,
@@ -169,7 +170,7 @@ export function computeCalibration(
   const bs = brierScore(probs, outcomes);
   const ll = logLoss(probs, outcomes);
   const avgModelProb  = probs.reduce((a, b) => a + b, 0) / probs.length;
-  const avgActualRate = outcomes.reduce((a, b) => a + b, 0) / outcomes.length;
+  const avgActualRate = (outcomes as number[]).reduce((a: number, b: number) => a + b, 0) / outcomes.length;
   const bias = parseFloat((avgModelProb - avgActualRate).toFixed(6));
 
   // Build calibration buckets
@@ -188,7 +189,7 @@ export function computeCalibration(
     const bucketProbs    = bucketRows.map(r => r.modelProb);
     const bucketOutcomes = bucketRows.map(r => r.result === "WIN" ? 1 : 0);
     const avgBucketProb  = bucketProbs.reduce((a, b) => a + b, 0) / bucketProbs.length;
-    const actualRate     = bucketOutcomes.reduce((a, b) => a + b, 0) / bucketOutcomes.length;
+    const actualRate     = (bucketOutcomes as number[]).reduce((a: number, b: number) => a + b, 0) / bucketOutcomes.length;
     const calError       = Math.abs(avgBucketProb - actualRate);
     const eceContrib     = (bucketRows.length / rows.length) * calError;
 

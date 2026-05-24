@@ -142,7 +142,8 @@ async function fetchSegmentRows(
     .from(mlbGameBacktest)
     .where(and(...conditions));
 
-  return rows.map(r => ({
+  type DbRow = typeof rows[number];
+  return rows.map((r: DbRow) => ({
     gameId:       r.gameId,
     gameDate:     r.gameDate,
     market:       r.market,
