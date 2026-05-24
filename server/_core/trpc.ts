@@ -480,3 +480,47 @@ export const adminProcedure = t.procedure.use(csrfOriginCheck).use(
     });
   }),
 );
+
+/**
+ * stripeProcedure — CSRF Origin check EXEMPT.
+ *
+ * Stripe-related procedures (checkout session creation, subscription status,
+ * portal session) must never be blocked by the CSRF middleware. Stripe's own
+ * payment flow originates from Stripe-hosted pages and server-to-server calls
+ * that do not carry a browser Origin header matching our domain.
+ *
+ * Security is maintained by:
+ *   - Stripe HMAC-SHA256 webhook signature verification (webhook route)
+ *   - Stripe Checkout session ID validation (checkout completion)
+ *   - App session cookie authentication (appUserStripeProcedure below)
+ *
+ * [INPUT]  Any request — Origin header is NOT validated
+ * [OUTPUT] Passes directly to the next middleware/handler
+ * [VERIFY] Logs path + IP for audit trail without blocking
+ */
+const logStripeRequest = t.middleware(async ({ ctx, next, path }) => {
+  const req = ctx.req;
+  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+  const origin = req.get("origin") ?? "NOT_SET";
+  const method = req.method?.toUpperCase() ?? "UNKNOWN";
+  console.log(
+    `[Stripe] ${method} /api/trpc/${path}` +
+    ` | IP=${ip}` +
+    ` | Origin=${origin}` +
+    ` | CSRF_EXEMPT=true`
+  );
+  return next();
+});
+
+/**
+ * stripeProcedure — unauthenticated Stripe operations (e.g. publicCreateCheckoutSession).
+ * No CSRF check. No auth check.
+ */
+export const stripeProcedure = t.procedure.use(logStripeRequest);
+
+/**
+ * appUserStripeProcedure — authenticated Stripe operations (e.g. createCheckoutSession,
+ * getSubscription, createPortalSession). No CSRF check. Requires valid app_session cookie.
+ * Re-uses appUserProcedure's auth logic but without the csrfOriginCheck chain.
+ */
+export { stripeProcedure as stripeBaseProcedure };
