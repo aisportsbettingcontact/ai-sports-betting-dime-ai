@@ -3907,3 +3907,13 @@
 - [x] sessionStorage stores pendingCheckoutUsername + pendingCheckoutEmail across login redirect
 - [x] Auto-trigger useEffect reads and clears stored username/email on return from login
 - [x] Same-tab redirect (window.location.href) for seamless checkout UX
+
+## Session: 2026-05-24 — Remove Pre-Checkout Modal, Direct Stripe Redirect
+- [x] Remove PreCheckoutModal entirely from PricingCTA
+- [x] Add publicCreateCheckoutSession (publicProcedure) to stripe.ts for unauthenticated users
+- [x] Unauthenticated: Click Here → publicCreateCheckoutSession → Stripe (collects email + Desired Username on Stripe page)
+- [x] Authenticated: Click Here → createCheckoutSession → Stripe (email + username prefilled)
+- [x] Stripe custom_fields: "Desired Username" required text field on Stripe Checkout page
+- [x] Both paths: same-tab redirect (window.location.href) for seamless UX
+- [x] buildStripeCheckoutSession shared helper to avoid code duplication
+- [x] TypeScript: zero new errors in stripe.ts and PricingCTA.tsx
