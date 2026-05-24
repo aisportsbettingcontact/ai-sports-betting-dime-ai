@@ -5,7 +5,7 @@
  * Layout: alternating left/right on desktop, stacked on mobile.
  * Each feature: label + headline + 1-line description + screenshot.
  *
- * CDN URLs are permanent webdev-hosted assets — no expiry.
+ * Images served via /manus-storage/ proxy (permanent webdev-hosted assets).
  */
 
 import { motion, useReducedMotion } from "framer-motion";
@@ -17,8 +17,7 @@ const FEATURES = [
     headline: "Book vs. Model. Side by side.",
     description:
       "Our models price every spread, total, and moneyline. See exactly where the edge is — and how much.",
-    imgUrl:
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/manus-storage/feature-model-projections_2a6e6afa.jpeg",
+    imgUrl: "/manus-storage/feature-model-projections_ae909adc.jpeg",
     imgAlt: "AI Model Projections — Book vs Model odds comparison",
   },
   {
@@ -27,8 +26,7 @@ const FEATURES = [
     headline: "Follow the money, not the crowd.",
     description:
       "Real-time ticket and money percentages across spreads, totals, and moneylines. Know where sharp action is moving.",
-    imgUrl:
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/manus-storage/feature-betting-splits_8ac62dc6.jpeg",
+    imgUrl: "/manus-storage/feature-betting-splits_e2096a87.jpeg",
     imgAlt: "Betting Splits — Ticket and money percentage bars",
   },
   {
@@ -37,8 +35,7 @@ const FEATURES = [
     headline: "Starting pitchers. Batting orders. Confirmed.",
     description:
       "Full lineup cards with player photos, positions, handedness, and pitcher stats — updated as confirmations come in.",
-    imgUrl:
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/manus-storage/feature-daily-lineups_f1d776a4.jpeg",
+    imgUrl: "/manus-storage/feature-daily-lineups_4bdb1e2c.jpeg",
     imgAlt: "Daily Lineups — Starting pitchers and batting order",
   },
   {
@@ -47,8 +44,7 @@ const FEATURES = [
     headline: "NRFI, props, and edge signals — all in one view.",
     description:
       "Quick-scan cheat sheets surface the highest-edge plays of the day. Book price, model price, and ROI signal in one row.",
-    imgUrl:
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/manus-storage/feature-cheat-sheets_fb04ef82.jpeg",
+    imgUrl: "/manus-storage/feature-cheat-sheets_3b5d7079.jpeg",
     imgAlt: "Cheat Sheets — NRFI edge signal with Book vs Model",
   },
 ];
@@ -58,7 +54,8 @@ export default function FeatureShowcase() {
 
   return (
     <section
-      className="py-20 px-4 sm:px-6 lg:px-8"
+      id="features"
+      className="py-14 px-4 sm:px-6 lg:px-8"
       style={{ background: "#050810" }}
     >
       <div className="max-w-5xl mx-auto">
@@ -68,7 +65,7 @@ export default function FeatureShowcase() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="text-center mb-12"
         >
           <h2
             className="text-3xl sm:text-4xl font-bold text-white"
@@ -79,23 +76,23 @@ export default function FeatureShowcase() {
         </motion.div>
 
         {/* Feature rows */}
-        <div className="flex flex-col gap-20">
+        <div className="flex flex-col gap-14">
           {FEATURES.map((feature, i) => {
             const isEven = i % 2 === 0;
 
             return (
               <motion.div
                 key={feature.id}
-                initial={shouldReduce ? false : { opacity: 0, y: 32 }}
+                initial={shouldReduce ? false : { opacity: 0, y: 28 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.55, ease: "easeOut" }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
                 className={`flex flex-col ${
                   isEven ? "lg:flex-row" : "lg:flex-row-reverse"
-                } items-center gap-10 lg:gap-16`}
+                } items-center gap-8 lg:gap-14`}
               >
                 {/* Text side */}
-                <div className="flex-1 flex flex-col gap-4 text-center lg:text-left">
+                <div className="flex-1 flex flex-col gap-3 text-center lg:text-left">
                   <span
                     className="text-[11px] font-bold tracking-widest uppercase"
                     style={{ color: "#39FF14" }}
@@ -128,6 +125,12 @@ export default function FeatureShowcase() {
                       className="w-full h-auto block"
                       loading="lazy"
                       decoding="async"
+                      onError={(e) => {
+                        console.error(
+                          `[FeatureShowcase] Failed to load image: ${feature.imgUrl}`,
+                          e
+                        );
+                      }}
                     />
                   </div>
                 </div>

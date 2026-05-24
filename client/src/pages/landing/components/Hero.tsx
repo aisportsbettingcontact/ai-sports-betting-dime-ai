@@ -18,7 +18,7 @@ export default function Hero() {
 
   return (
     <section
-      className="relative min-h-[90vh] flex flex-col justify-center overflow-hidden"
+      className="relative overflow-hidden"
       style={{
         background:
           "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(57,255,20,0.08) 0%, transparent 60%), linear-gradient(180deg, #080c12 0%, #050810 100%)",
@@ -34,12 +34,13 @@ export default function Hero() {
         }}
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20 text-center">
+      {/* pt-24 clears the fixed nav (h-16 = 64px), pb-12 gives breathing room below CTAs */}
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 text-center">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex flex-col items-center gap-7"
+          className="flex flex-col items-center gap-6"
         >
           {/* Eyebrow */}
           <div className="inline-flex items-center gap-2">
@@ -75,10 +76,10 @@ export default function Hero() {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <a
               href="/login"
-              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
               style={{ background: "#39FF14", letterSpacing: "-0.01em" }}
             >
               View Today's Edges
@@ -94,7 +95,7 @@ export default function Hero() {
             </a>
             <button
               onClick={scrollToPricing}
-              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-lg font-bold text-sm text-white border border-white/15 bg-white/5 hover:bg-white/10 transition-all duration-150 active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-bold text-sm text-white border border-white/15 bg-white/5 hover:bg-white/10 transition-all duration-150 active:scale-[0.98]"
               style={{ letterSpacing: "-0.01em" }}
             >
               See Plans

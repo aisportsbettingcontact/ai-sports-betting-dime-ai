@@ -8,8 +8,6 @@
  *   3. FeatureShowcase — 4 features with real UI screenshots
  *   4. PricingCTA      — Monthly / Annual plans
  *   5. LandingFooter   — minimal footer
- *
- * All sections below the fold are lazy-loaded via IntersectionObserver.
  */
 
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -23,13 +21,16 @@ const FeatureShowcase = lazy(() => import("./components/FeatureShowcase"));
 const PricingCTA      = lazy(() => import("./components/PricingCTA"));
 const LandingFooter   = lazy(() => import("./components/LandingFooter"));
 
+/**
+ * LazySection — renders children only when the section scrolls into view.
+ * Uses a 400px rootMargin so content loads before the user reaches it.
+ * No minHeight placeholder — avoids dead whitespace.
+ */
 function LazySection({
   children,
-  minHeight = "200px",
   id,
 }: {
   children: React.ReactNode;
-  minHeight?: string;
   id?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -52,9 +53,9 @@ function LazySection({
   }, [id]);
 
   return (
-    <div ref={ref} id={id} style={{ minHeight: visible ? undefined : minHeight }}>
+    <div ref={ref} id={id}>
       {visible ? (
-        <Suspense fallback={<div style={{ minHeight }} />}>
+        <Suspense fallback={null}>
           {children}
         </Suspense>
       ) : null}
@@ -71,15 +72,15 @@ export default function LandingPage() {
       <LandingNav />
       <Hero />
 
-      <LazySection id="features" minHeight="600px">
+      <LazySection id="features">
         <FeatureShowcase />
       </LazySection>
 
-      <LazySection id="pricing" minHeight="500px">
+      <LazySection id="pricing">
         <PricingCTA />
       </LazySection>
 
-      <LazySection id="footer" minHeight="100px">
+      <LazySection id="footer">
         <LandingFooter />
       </LazySection>
     </div>
