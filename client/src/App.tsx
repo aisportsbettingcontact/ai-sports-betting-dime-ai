@@ -28,7 +28,8 @@ const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
 const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
 const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
-const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 
 function Router() {
   return (
@@ -40,9 +41,10 @@ function Router() {
     <Suspense fallback={null}>
     <Switch>
       {/* ── Public routes (no auth required) ───────────────────────────────── */}
-      {/* / and /home → redirect to /feed (RequireAuth on /feed handles the gate) */}
-      <Route path="/">{() => <Redirect to="/feed" />}</Route>
-      <Route path="/home">{() => <Redirect to="/feed" />}</Route>
+      {/* / → public landing page */}
+      <Route path="/" component={LandingPage} />
+      {/* /home → redirect to landing */}
+      <Route path="/home">{() => <Redirect to="/" />}</Route>
       {/* Legacy redirects */}
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
