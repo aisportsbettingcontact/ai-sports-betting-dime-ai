@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Third-tier fallback NHL stats scraper using MoneyPuck CSV data.
  * Used when NaturalStatTrick (primary) AND Hockey-Reference (secondary) are
- * both blocked by Cloudflare (HTTP 403) from the sandbox/server IP.
+ * both blocked by bot protection (HTTP 403) from the sandbox/server IP.
  *
  * Data source: https://moneypuck.com/moneypuck/playerData/seasonSummary/2025/regular/
  *   - teams.csv   → 5v5 situation team stats

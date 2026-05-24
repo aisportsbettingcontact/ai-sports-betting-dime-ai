@@ -2,7 +2,7 @@
  * nhlHockeyRefTeamStats.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Fallback NHL team stats scraper using Hockey-Reference (hockey-reference.com)
- * when NaturalStatTrick is blocked by Cloudflare.
+ * when NaturalStatTrick is blocked by bot protection.
  *
  * Data source: https://www.hockey-reference.com/leagues/NHL_2026.html
  *   - stats_adv table (in HTML comment): CF%, SC%, HDSC%, xGF%, SH%, SV%, GF, GA
@@ -296,7 +296,7 @@ export async function scrapeNhlTeamStatsFromHockeyRef(): Promise<Map<string, Nhl
  * Verified: May 13, 2026 — all 16 playoff teams, 82 GP each
  *
  * Used as Tier 4 fallback when NST, Hockey-Reference, and MoneyPuck are all
- * Cloudflare-blocked from the server environment.
+ * Bot-protection-blocked from the server environment.
  */
 export function getHardcodedPlayoffTeamStats(): Map<string, NhlTeamStats> {
   // League averages from NHL API 2025-26 regular season (32 teams, 82 GP)

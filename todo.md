@@ -2286,7 +2286,7 @@
 - [ ] Add targeted username/email to AUTH_FAIL SecurityAlertPayload and embed
 - [ ] Wire targetIdentifier into all AUTH_FAIL call sites in appUsers.ts
 - [ ] Implement weekly threat trend digest (Sunday 08:00 EST) with 7-day bar breakdown
-- [ ] Add Cloudflare IP block tRPC procedure (security.blockIp) with CF API secrets
+- [x] REMOVED: Cloudflare IP block procedure (not using Cloudflare)
 - [ ] Add Block IP button to SecurityEvents.tsx table rows
 
 ## Cloudflare Removal (2026-04-10)
@@ -3321,7 +3321,7 @@
 - [ ] FIX-A: Strip null fields from games.list response (425KB → ~60KB)
 - [ ] FIX-B: Pre-warm games.list cache at server startup (MLB, NHL, NBA)
 - [ ] FIX-C: Replace superjson Date meta with Unix timestamps (eliminate 111-entry meta section)
-- [ ] FIX-D: Add games.list GET-level HTTP cache headers for Cloudflare edge caching
+- [x] REMOVED: Cloudflare edge cache headers (not using Cloudflare)
 - [ ] FIX-E: Add server-side session cache to skip JWT verify + DB lookup for repeat requests
 
 ## Session: 2026-05-16 - Fix "No MLB games found" at 3:01 AM
