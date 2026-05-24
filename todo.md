@@ -3894,3 +3894,16 @@
 - [x] Add pulsing neon green box-shadow on logo (shell-logo-pulse animation)
 - [x] Add "Loading..." label in uppercase Inter font below the bar
 - [x] Remove all stale blue (#3b82f6, #1d4ed8) references from loading shell
+
+## Session: 2026-05-24 — Pricing Cards + Stripe Checkout
+- [x] Rebuild PricingCTA: equal-height side-by-side grid-cols-2 at ALL viewport widths
+- [x] Remove transform scale on Annual card — equal heights via h-full flex-col
+- [x] Badge moved inside Annual card (not above) to prevent height mismatch
+- [x] Annual savings callout: "Only $41.67/mo — 58% off" + "Save $699.89/year vs monthly"
+- [x] CTA buttons changed to "Click Here" on both plans
+- [x] Pre-checkout modal: collects desiredUsername + email before redirecting unauthenticated users to login
+- [x] Stripe checkout: desiredUsername passed as custom_fields.desired_username (prefilled)
+- [x] Stripe checkout: prefillEmail passed as customer_email fallback for unauthenticated flow
+- [x] sessionStorage stores pendingCheckoutUsername + pendingCheckoutEmail across login redirect
+- [x] Auto-trigger useEffect reads and clears stored username/email on return from login
+- [x] Same-tab redirect (window.location.href) for seamless checkout UX

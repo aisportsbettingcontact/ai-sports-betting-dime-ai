@@ -53,13 +53,17 @@ export const stripeRouter = router({
         planId: zodPlanId,
         /** Frontend must pass window.location.origin for correct redirect URLs */
         origin: z.string().url(),
+        /** Desired username collected in pre-checkout modal (unauthenticated flow) */
+        desiredUsername: z.string().min(3).max(64).optional(),
+        /** Email collected in pre-checkout modal — used to prefill Stripe email field */
+        prefillEmail: z.string().email().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { planId, origin } = input;
+      const { planId, origin, desiredUsername, prefillEmail } = input;
       const user = ctx.appUser;
 
-      console.log(`${TAG}[createCheckoutSession] [INPUT] userId=${user.id} email=${user.email} planId=${planId} origin=${origin}`);
+      console.log(`${TAG}[createCheckoutSession] [INPUT] userId=${user.id} email=${user.email} planId=${planId} origin=${origin} desiredUsername=${desiredUsername ?? "(none)"} prefillEmail=${prefillEmail ?? "(none)"}`);
 
       // ── [STEP 1] Resolve plan definition ──────────────────────────────────
       const plan = PLANS[planId as PlanId];
@@ -93,8 +97,13 @@ export const stripeRouter = router({
       // ── [STEP 4] Resolve or reuse Stripe Customer ID ───────────────────────
       // If the user already has a stripeCustomerId, pass it to Checkout so their
       // payment methods are pre-filled and their billing history is unified.
+      // Resolve the email to prefill: prefer the user's account email, fall back to
+      // the email collected in the pre-checkout modal (unauthenticated flow).
+      const resolvedEmail = user.email || prefillEmail || "";
+      console.log(`${TAG}[createCheckoutSession] [STATE] resolvedEmail=${resolvedEmail}`);
+
       let customerParam: { customer: string } | { customer_email: string } = {
-        customer_email: user.email ?? "",
+        customer_email: resolvedEmail,
       };
 
       if (user.stripeCustomerId) {
@@ -130,9 +139,26 @@ export const stripeRouter = router({
           metadata: {
             user_id: String(user.id),
             plan_id: planId,
-            customer_email: user.email ?? "",
-            customer_name: user.username ?? "",
+            customer_email: resolvedEmail,
+            customer_name: user.username ?? desiredUsername ?? "",
+            desired_username: desiredUsername ?? user.username ?? "",
           },
+          // ── Custom fields — collected on Stripe Checkout page ─────────────
+          // Stripe renders these as form fields above the payment section.
+          // desired_username is prefilled if collected in the pre-checkout modal.
+          custom_fields: [
+            {
+              key: "desired_username",
+              label: { type: "custom" as const, custom: "Desired Username" },
+              type: "text" as const,
+              text: {
+                minimum_length: 3,
+                maximum_length: 64,
+                ...(desiredUsername ? { default_value: desiredUsername } : {}),
+              },
+              optional: false,
+            },
+          ],
           // ── Subscription data ─────────────────────────────────────────────
           subscription_data: {
             metadata: {
