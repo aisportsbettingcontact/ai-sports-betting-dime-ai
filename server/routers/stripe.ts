@@ -20,8 +20,8 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, publicProcedure } from "../_core/trpc";
-import { appUserProcedure } from "./appUsers";
+import { router, stripeProcedure } from "../_core/trpc";
+import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
 import { PLANS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
 import { getDb } from "../db";
@@ -189,7 +189,7 @@ export const stripeRouter = router({
    *
    * No pre-checkout modal. No login redirect. Straight to Stripe.
    */
-  publicCreateCheckoutSession: publicProcedure
+  publicCreateCheckoutSession: stripeProcedure
     .input(
       z.object({
         planId: zodPlanId,
@@ -219,7 +219,7 @@ export const stripeRouter = router({
    *
    * Promo codes are enabled (allow_promotion_codes: true).
    */
-  createCheckoutSession: appUserProcedure
+  createCheckoutSession: stripeAppUserProcedure
     .input(
       z.object({
         planId: zodPlanId,
@@ -249,7 +249,7 @@ export const stripeRouter = router({
    * Returns the current user's subscription status from the local DB.
    * Does NOT call the Stripe API — reads from app_users columns.
    */
-  getSubscription: appUserProcedure.query(async ({ ctx }) => {
+  getSubscription: stripeAppUserProcedure.query(async ({ ctx }) => {
     const user = ctx.appUser;
 
     console.log(`${TAG}[getSubscription] [INPUT] userId=${user.id}`);
@@ -276,7 +276,7 @@ export const stripeRouter = router({
    * subscription (cancel, update payment method, view invoices).
    * Requires the user to have a stripeCustomerId.
    */
-  createPortalSession: appUserProcedure
+  createPortalSession: stripeAppUserProcedure
     .input(
       z.object({
         origin: z.string().url(),

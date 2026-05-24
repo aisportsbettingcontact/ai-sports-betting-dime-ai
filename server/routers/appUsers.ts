@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router, stripeProcedure } from "../_core/trpc";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -232,8 +232,56 @@ export const appUserProcedure = publicProcedure.use(async ({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
   }
   // Check expiry
-  if (user.expiryDate && Date.now() > user.expiryDate) {
+    if (user.expiryDate && Date.now() > user.expiryDate) {
     console.log(`[AppAuth] appUserProcedure: REJECTED — userId=${user.id} account expired`);
+    throw new TRPCError({ code: "FORBIDDEN", message: "Account expired" });
+  }
+  return next({ ctx: { ...ctx, appUser: user } });
+});
+
+/**
+ * stripeAppUserProcedure — CSRF-exempt authenticated procedure for Stripe operations.
+ *
+ * Identical auth logic to appUserProcedure but built on stripeProcedure (no csrfOriginCheck).
+ * Use this for all Stripe mutations that require an authenticated app user
+ * (createCheckoutSession, createPortalSession, getSubscription).
+ *
+ * Security is maintained by:
+ *   - app_session JWT cookie validation (tokenVersion + expiry checks)
+ *   - Stripe HMAC-SHA256 webhook signature verification
+ */
+export const stripeAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) => {
+  const token = getAppCookie(ctx.req);
+  if (!token) {
+    console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — no app_session cookie`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  }
+  const payload = await verifyAppUserToken(token);
+  if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid session" });
+  let user = await getAppUserById(payload.userId);
+  const fromCache = !user;
+  if (!user) {
+    user = getCachedAppUser(payload.userId);
+    if (user) {
+      console.log(`[AppAuth] stripeAppUserProcedure: DB unavailable — serving userId=${payload.userId} from cache`);
+    }
+  } else {
+    setCachedAppUser(user);
+  }
+  if (!user) {
+    console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — userId=${payload.userId} not found`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+  }
+  if (!user.hasAccess) {
+    console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — userId=${user.id} hasAccess=false`);
+    throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+  }
+  if (!fromCache && payload.tv !== null && payload.tv !== user.tokenVersion) {
+    console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — tokenVersion mismatch userId=${user.id}`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
+  }
+  if (user.expiryDate && Date.now() > user.expiryDate) {
+    console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — userId=${user.id} account expired`);
     throw new TRPCError({ code: "FORBIDDEN", message: "Account expired" });
   }
   return next({ ctx: { ...ctx, appUser: user } });
