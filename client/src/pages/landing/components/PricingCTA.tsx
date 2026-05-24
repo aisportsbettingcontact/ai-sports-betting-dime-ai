@@ -9,11 +9,10 @@
  *   Cards, Apple Pay, Google Pay, Affirm, Afterpay/Clearpay, Klarna, Link
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { toast } from "sonner";
 
 const PLANS = [
@@ -56,7 +55,7 @@ const PLANS = [
 
 export default function PricingCTA() {
   const shouldReduce = useReducedMotion();
-  const { isAuthenticated } = useAuth();
+  const { appUser, loading: authLoading } = useAppAuth();
   const [loadingPlan, setLoadingPlan] = useState<"monthly" | "annual" | null>(null);
 
   const createCheckoutSession = trpc.stripe.createCheckoutSession.useMutation({
@@ -64,20 +63,52 @@ export default function PricingCTA() {
       // Open Stripe Checkout in a new tab
       window.open(data.url, "_blank");
       toast.success("Redirecting to secure checkout...");
+      console.log("[PricingCTA] [OUTPUT] Checkout session created — opened in new tab");
       setLoadingPlan(null);
     },
     onError: (err) => {
-      console.error("[PricingCTA] Checkout session error:", err.message);
+      console.error("[PricingCTA] [VERIFY] FAIL — Checkout session error:", err.message);
       toast.error(err.message ?? "Failed to start checkout. Please try again.");
       setLoadingPlan(null);
     },
   });
 
+  // [FIX] Auto-trigger checkout when user returns from login with ?checkout=<plan>.
+  // Flow: unauthenticated click → sessionStorage.pendingCheckout set → redirect to /login
+  // → Discord login → RootRoute reads pendingCheckout → redirects to /?checkout=<plan>
+  // → LandingPage renders PricingCTA → this effect fires and auto-triggers checkout.
+  useEffect(() => {
+    if (authLoading || !appUser) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const checkoutParam = searchParams.get("checkout");
+    if (checkoutParam !== "monthly" && checkoutParam !== "annual") return;
+    console.log(`[PricingCTA] [INPUT] Auto-trigger checkout from URL param: checkout=${checkoutParam}`);
+    // Remove the param from URL without triggering navigation
+    const newUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+    // Trigger checkout
+    setLoadingPlan(checkoutParam);
+    createCheckoutSession.mutate({
+      planId: checkoutParam,
+      origin: window.location.origin,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, appUser]);
+
   const handlePlanClick = (planId: "monthly" | "annual") => {
-    // If not authenticated, redirect to login first
-    if (!isAuthenticated) {
-      const loginUrl = getLoginUrl();
-      window.location.href = loginUrl;
+    console.log(`[PricingCTA] [INPUT] handlePlanClick — planId=${planId} appUser=${appUser?.id ?? "null"} authLoading=${authLoading}`);
+
+    // [FIX] If the user is not logged in, store the pending checkout in sessionStorage
+    // and redirect to /login. After Discord login, RootRoute reads pendingCheckout
+    // and redirects to /?checkout=<plan> which auto-triggers checkout via useEffect above.
+    // This avoids ANY Manus OAuth redirect from the pricing buttons.
+    if (!authLoading && !appUser) {
+      console.log(`[PricingCTA] [STATE] Unauthenticated — storing pendingCheckout=${planId} and redirecting to /login`);
+      sessionStorage.setItem("pendingCheckout", planId);
+      toast.info("Please sign in with Discord to continue to checkout.", { duration: 3000 });
+      // Redirect to /login with returnPath=/ so after login they land on the landing page
+      // where the auto-trigger effect will fire.
+      window.location.href = `/login?returnPath=${encodeURIComponent("/")}`;
       return;
     }
 

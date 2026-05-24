@@ -451,7 +451,23 @@ export const appUsersRouter = router({
     if (!token) return null;
     const payload = await verifyAppUserToken(token);
     if (!payload) return null;
-    const user = await getAppUserById(payload.userId);
+
+    // [PERF] Fast path: serve from 5-minute circuit-breaker cache before hitting DB.
+    // getAppUserById has its own 30s cache, but it still calls getDb() which can
+    // cold-start TiDB serverless (2-5s). getCachedAppUser is pure in-memory (0ms).
+    // On cache hit, we skip the DB entirely — critical for initial page load speed.
+    // On cache miss, we fall through to getAppUserById which populates both caches.
+    let user = getCachedAppUser(payload.userId);
+    const fromCircuitBreakerCache = user !== null;
+    if (!user) {
+      user = await getAppUserById(payload.userId);
+      if (user) {
+        // Populate circuit-breaker cache for future requests
+        setCachedAppUser(user);
+      }
+    }
+    console.log(`[AppAuth] me: userId=${payload.userId} fromCache=${fromCircuitBreakerCache}`);
+
     if (!user || !user.hasAccess) return null;
     if (user.expiryDate && Date.now() > user.expiryDate) return null;
     // [STEP] tokenVersion check — must match appUserProcedure's check.

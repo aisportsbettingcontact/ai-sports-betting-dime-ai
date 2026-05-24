@@ -5,6 +5,7 @@ import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAppAuth } from "./_core/hooks/useAppAuth";
 // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -33,6 +34,56 @@ const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 
+/**
+ * RootRoute — auth-aware landing/redirect component for the "/" path.
+ *
+ * Execution flow:
+ *   1. Auth state loading  → render null (HTML loading shell stays visible)
+ *   2. Authenticated (Discord/app session) → handle pending checkout or redirect to /feed
+ *   3. Unauthenticated     → render <LandingPage /> (public marketing page)
+ *
+ * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
+ * Discord-logged-in users are correctly detected and redirected to /feed.
+ * The old useAuth() checked Manus OAuth state — irrelevant to this app's auth system.
+ *
+ * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
+ * Flow: unauthenticated user clicks pricing → login → auto-checkout.
+ *
+ * [LOG] All three branches log their state to the console for traceability.
+ */
+function RootRoute() {
+  const { appUser, loading } = useAppAuth();
+
+  if (loading) {
+    // Auth check in flight — HTML loading shell covers this gap.
+    console.log("[RootRoute] [STATE] Auth loading — holding render");
+    return null;
+  }
+
+  if (appUser) {
+    // [FIX] Check for pending checkout from a pre-login pricing button click.
+    // When an unauthenticated user clicks Start Monthly/Annual, PricingCTA stores
+    // pendingCheckout=monthly|annual in sessionStorage and redirects to /login.
+    // After Discord login, the user lands back here. We read the pending checkout
+    // and pass it as a URL param to LandingPage so it can auto-trigger checkout.
+    const pendingCheckout = sessionStorage.getItem("pendingCheckout");
+    if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
+      sessionStorage.removeItem("pendingCheckout");
+      console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /?checkout=${pendingCheckout}`);
+      return <Redirect to={`/?checkout=${pendingCheckout}`} />;
+    }
+    console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);
+    return <Redirect to="/feed" />;
+  }
+
+  console.log("[RootRoute] [OUTPUT] Unauthenticated — rendering LandingPage");
+  return (
+    <Suspense fallback={null}>
+      <LandingPage />
+    </Suspense>
+  );
+}
+
 function Router() {
   return (
     // [PERF] fallback=null: the HTML loading shell in index.html covers all loading states.
@@ -43,8 +94,12 @@ function Router() {
     <Suspense fallback={null}>
     <Switch>
       {/* ── Public routes (no auth required) ───────────────────────────────── */}
-      {/* / → public landing page */}
-      <Route path="/" component={LandingPage} />
+      {/* / → auth-aware root:
+           - Authenticated users → /feed (skip landing page, go straight to dashboard)
+           - Unauthenticated users → LandingPage (public marketing page)
+           - While auth is loading → render nothing (HTML shell covers this state)
+      */}
+      <Route path="/">{() => <RootRoute />}</Route>
       {/* /home → redirect to landing */}
       <Route path="/home">{() => <Redirect to="/" />}</Route>
       {/* Legacy redirects */}
