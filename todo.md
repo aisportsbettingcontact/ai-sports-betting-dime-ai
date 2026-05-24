@@ -3874,3 +3874,14 @@
 - [x] ModelProjections TeamBadge: add NHL/MLB lookups, enforce 32px minimum, add enhanced filter
 - [x] ModelProjections SearchResultRow: add NHL/MLB lookups, abbreviations, responsive name (abbr on xs/sm, full name on sm+), remove ellipsis truncation
 - [x] TypeScript: 0 new errors in changed files
+## Session: 2026-05-24 - Sticky Header Overlap + Logo Filter Fixes
+- [x] Fix sticky column header overlap: gridTemplateColumns '80px 1fr' (was clamp(170px,14vw,220px) 1fr) to match MobileGameCard exactly
+- [x] Fix sticky column header centering: MATCHUP cell justifyContent:center; RUN LINE/TOTAL/ML each flex:1 1 0 justifyContent:center
+- [x] Fix sticky column header zIndex: 39 (was 10) -- just below main header z-40 so it stacks correctly
+- [x] Fix sticky column header padding: right cell padding:'5px 6px' gap:'4px' matches OddsTable exactly
+- [x] Add --prez-col-header-h CSS variable via ref callback for downstream offset use
+- [x] Increase logo filter brightness 1.35->1.7 in GameCard TeamLogo (dark logos: A's, Padres, White Sox, Pirates)
+- [x] Increase logo filter brightness 1.35->1.7 in MobileGameCard TeamLogo
+- [x] Increase logo filter brightness 1.35->1.7 in BettingSplits TeamBadge
+- [x] Increase logo filter brightness 1.35->1.7 in ModelProjections TeamBadge
+- [x] TypeScript: 0 new errors in all changed files

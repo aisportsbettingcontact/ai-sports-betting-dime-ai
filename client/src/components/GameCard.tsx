@@ -171,7 +171,12 @@ function TeamLogo({ slug, name, logoUrl, size = 36 }: { slug: string; name: stri
         // Enhanced visibility: brightness lifts dark logos (A's, Pirates, White Sox)
         // contrast sharpens definition, saturate keeps colors vivid
         // drop-shadow adds a subtle white glow so logos pop on dark backgrounds
-        filter: "brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))",
+        // Increased brightness for dark-primary logos (A's dark green, Padres brown, White Sox, Pirates)
+        // brightness(1.7): lifts dark logos significantly without blowing out bright logos (WSH red, ATL red)
+        // contrast(1.12): sharpens edges for crisp definition
+        // saturate(1.35): keeps colors vivid on dark backgrounds
+        // drop-shadow: white glow halo so logos pop against #0f0f0f card background
+        filter: "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
       }}
       onError={() => setError(true)}
     />

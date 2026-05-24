@@ -33,7 +33,8 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
           mixBlendMode: 'screen',
           flexShrink: 0,
           // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
-          filter: 'brightness(1.35) contrast(1.08) saturate(1.15) drop-shadow(0 0 3px rgba(255,255,255,0.18))',
+          // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
+          filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
         }}
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
