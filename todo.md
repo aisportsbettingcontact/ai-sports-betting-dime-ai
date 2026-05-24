@@ -3840,3 +3840,14 @@
 - [x] Fix duplicate W/L keys in COL_WIDTHS map (W and L already defined as pitcher stats)
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
+
+## Session: 2026-05-24 - Auth & Checkout Flow Fixes
+
+- [x] Fix: RootRoute uses useAuth (Manus OAuth) instead of useAppAuth (Discord JWT) — logged-in users not redirected to /feed
+- [x] Fix: PricingCTA "Start Monthly" redirects to Manus OAuth instead of Stripe checkout
+- [x] Fix: Add sessionStorage pendingCheckout flow — unauthenticated click → /login → Discord login → auto-trigger checkout
+- [x] Fix: Remove useAuth from PricingCTA (was causing Manus OAuth redirect on UNAUTHORIZED error)
+- [x] Perf: Add getCachedAppUser fast path to appUsers.me (5-min circuit-breaker cache before DB hit)
+- [x] Perf: Removing unnecessary trpc.auth.me (Manus OAuth) call from RootRoute reduces initial load
+- [x] TypeScript: 0 errors (Vite build clean)
+- [x] Tests: 907/907 passing
