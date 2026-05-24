@@ -69,6 +69,9 @@
          but the lazy component eventually renders nested content.
          ═══════════════════════════════════════════════════════════════════ -->
     <style>
+      /* ── HTML Loading Shell: AI Sports Betting brand ─────────────────────── */
+      /* Appears on initial page load while JS bundle downloads + React mounts. */
+      /* Dismissed by MutationObserver the moment React renders real content.   */
       #html-loading-shell {
         position: fixed;
         inset: 0;
@@ -78,49 +81,78 @@
         justify-content: center;
         background-color: #0a0a0f;
         z-index: 9999;
-        transition: opacity 0.2s ease;
+        transition: opacity 0.25s ease;
       }
       #html-loading-shell.hidden {
         opacity: 0;
         pointer-events: none;
       }
+      /* Brand logo: neon-green gradient square with BarChart3 icon */
       .html-shell-logo {
-        width: 52px;
-        height: 52px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 16px;
-        box-shadow: 0 0 32px rgba(59,130,246,0.35);
+        margin-bottom: 20px;
+        box-shadow: 0 0 0 0 rgba(57,255,20,0.5), 0 0 32px rgba(57,255,20,0.25);
+        animation: shell-logo-pulse 2s ease-in-out infinite;
       }
-      .html-shell-spinner {
-        width: 24px;
-        height: 24px;
-        border: 2px solid rgba(255,255,255,0.1);
-        border-top-color: #3b82f6;
-        border-radius: 50%;
-        animation: html-shell-spin 0.7s linear infinite;
+      @keyframes shell-logo-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,20,0.5), 0 0 32px rgba(57,255,20,0.25); }
+        50%       { box-shadow: 0 0 0 6px rgba(57,255,20,0),  0 0 48px rgba(57,255,20,0.40); }
       }
-      @keyframes html-shell-spin {
-        to { transform: rotate(360deg); }
+      /* Progress bar track */
+      .html-shell-bar-track {
+        width: 160px;
+        height: 3px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 99px;
+        overflow: hidden;
+        margin-bottom: 12px;
       }
-      @keyframes pulse-green {
-        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(57,255,20,0.4); }
-        50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(57,255,20,0); }
+      /* Neon green left-to-right fill that loops */
+      .html-shell-bar-fill {
+        height: 100%;
+        width: 45%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, #39FF14 0%, #22c55e 60%, #39FF14 100%);
+        box-shadow: 0 0 8px rgba(57,255,20,0.7);
+        animation: shell-bar-slide 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes shell-bar-slide {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(400%); }
+      }
+      /* "Loading..." label */
+      .html-shell-label {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        color: rgba(255,255,255,0.40);
+        text-transform: uppercase;
       }
     </style>
+    <!-- AI Sports Betting loading shell: logo + neon green progress bar + label -->
     <div id="html-loading-shell">
+      <!-- Brand icon: green gradient square with BarChart3 bars (matches app header icon) -->
       <div class="html-shell-logo">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none"
              stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="20" x2="18" y2="10"/>
           <line x1="12" y1="20" x2="12" y2="4"/>
           <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
       </div>
-      <div class="html-shell-spinner"></div>
+      <!-- Neon green left-to-right progress bar -->
+      <div class="html-shell-bar-track">
+        <div class="html-shell-bar-fill"></div>
+      </div>
+      <!-- Loading label -->
+      <div class="html-shell-label">Loading...</div>
     </div>
     <!-- React mounts here. Once React renders real content, the loading shell fades out. -->
     <div id="root"></div>

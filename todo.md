@@ -3885,3 +3885,12 @@
 - [x] Increase logo filter brightness 1.35->1.7 in BettingSplits TeamBadge
 - [x] Increase logo filter brightness 1.35->1.7 in ModelProjections TeamBadge
 - [x] TypeScript: 0 new errors in all changed files
+
+## Session: 2026-05-24 - HTML Loading Shell Rebrand
+- [x] Audit: loading shell is necessary (covers JS bundle download + React mount gap, prevents blank screen)
+- [x] Audit: only ONE instance exists — index.html html-loading-shell div (RequireAuth returns null, no double screen)
+- [x] Replace blue circular spinner with neon green left-to-right progress bar (shell-bar-slide animation)
+- [x] Replace blue gradient logo background with green gradient (135deg #22c55e -> #16a34a)
+- [x] Add pulsing neon green box-shadow on logo (shell-logo-pulse animation)
+- [x] Add "Loading..." label in uppercase Inter font below the bar
+- [x] Remove all stale blue (#3b82f6, #1d4ed8) references from loading shell
