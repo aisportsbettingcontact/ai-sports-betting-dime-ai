@@ -3933,3 +3933,21 @@
 - [x] LandingFooter: Copyright changed to "© 2026 Tailered Sports, Inc. All rights reserved."
 - [x] BettingSplitsDemo: Rebuilt to match real BettingSplitsPanel desktop layout exactly
 - [x] TypeScript: zero new errors
+
+## Session: 2026-05-24 — Full Stripe + UserManagement + Discord Integration (10 Gaps)
+
+- [ ] Step 1: Create syncDiscordRole utility (server/discord/discordRoleSync.ts)
+- [ ] Step 2: Wire syncDiscordRole into grantUserAccess (grant on access)
+- [ ] Step 3: Wire syncDiscordRole into revokeUserAccess (revoke on cancel)
+- [ ] Step 4: Wire syncDiscordRole into Discord OAuth callback (sync on link)
+- [ ] Step 5: Wire syncDiscordRole into updateUser admin (sync on hasAccess change)
+- [ ] Step 6: Add pendingSetup + pendingEmail + pendingUsername to appUsers schema
+- [ ] Step 7: Fix webhook — create pending account from desired_username + email when no userId
+- [ ] Step 8: Add stripe.getCheckoutSessionUser procedure for SubscribeSuccess lookup
+- [ ] Step 9: Build SubscribeSuccess account setup form (email + password 1upper+1lower+1special+min8)
+- [ ] Step 10: Add Stripe columns (plan, stripeCustomerId) to UserManagement listUsers
+- [ ] Step 11: Add View in Stripe action button to UserManagement
+- [ ] Step 12: Add Sync Discord Role action button to UserManagement
+- [ ] Step 13: Build bulk Stripe customer export for all existing users (no stripeCustomerId)
+- [ ] Step 14: Vitest tests for all new paths
+- [ ] Step 15: TypeScript validation + checkpoint

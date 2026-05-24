@@ -586,8 +586,33 @@ export const appUsersRouter = router({
       discordUsername: u.discordUsername ?? null,
       discordConnectedAt: u.discordConnectedAt ?? null,
       manualDiscordId: u.manualDiscordId ?? null,
+      // Stripe fields
+      stripeCustomerId: u.stripeCustomerId ?? null,
+      stripePlanId: u.stripePlanId ?? null,
+      stripeSubscriptionId: u.stripeSubscriptionId ?? null,
+      pendingSetup: u.pendingSetup ?? false,
     }));
   }),
+
+  // ─── Sync Discord role for a specific user (owner-only) ───────────────────────
+  syncDiscordRole: ownerProcedure
+    .input(z.object({ userId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const TAG2 = `[AppAdmin][syncDiscordRole][userId=${input.userId}]`;
+      console.log(`${TAG2} [INPUT] userId=${input.userId}`);
+      const user = await getAppUserById(input.userId);
+      if (!user) {
+        console.error(`${TAG2} [VERIFY] FAIL — user not found`);
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      }
+      console.log(`${TAG2} [STATE] username=${user.username} hasAccess=${user.hasAccess} discordId=${user.discordId ?? '(none)'}`);
+      // Import syncDiscordRoleForUser dynamically to avoid circular deps
+      const { syncDiscordRoleForUser } = await import('../discord/discordRoleSync');
+      const result = await syncDiscordRoleForUser(user, user.hasAccess);
+      console.log(`${TAG2} [OUTPUT] action=${result.action} reason=${result.reason}`);
+      console.log(`${TAG2} [VERIFY] ${result.action !== 'error' ? 'PASS' : 'FAIL — ' + result.reason}`);
+      return result;
+    }),
 
   createUser: ownerProcedure
     .input(z.object({

@@ -2872,3 +2872,42 @@ export async function getDurationHistogram(): Promise<{
     return fallback;
   }
 }
+
+// ─── Stripe-specific lookup helpers ─────────────────────────────────────────
+
+/**
+ * Look up an app_user by their pending Stripe Checkout Session ID.
+ * Used by the SubscribeSuccess page to find the account created by the webhook.
+ */
+export async function getAppUserByStripeSessionId(sessionId: string): Promise<AppUser | null> {
+  const tag = "[DB][getAppUserByStripeSessionId]";
+  const db = await getDb();
+  if (!db) { console.warn(`${tag} DB not available`); return null; }
+  try {
+    const rows = await db.select().from(appUsers).where(eq(appUsers.pendingStripeSessionId, sessionId)).limit(1);
+    const user = rows[0] ?? null;
+    console.log(`${tag} [OUTPUT] sessionId=${sessionId} found=${user !== null}` + (user ? ` userId=${user.id} pendingSetup=${user.pendingSetup}` : ""));
+    return user;
+  } catch (err) {
+    console.error(`${tag} [VERIFY] FAIL error=${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
+
+/**
+ * Look up an app_user by their Stripe Customer ID.
+ */
+export async function getAppUserByStripeCustomerId(stripeCustomerId: string): Promise<AppUser | null> {
+  const tag = "[DB][getAppUserByStripeCustomerId]";
+  const db = await getDb();
+  if (!db) { console.warn(`${tag} DB not available`); return null; }
+  try {
+    const rows = await db.select().from(appUsers).where(eq(appUsers.stripeCustomerId, stripeCustomerId)).limit(1);
+    const user = rows[0] ?? null;
+    console.log(`${tag} [OUTPUT] stripeCustomerId=${stripeCustomerId} found=${user !== null}` + (user ? ` userId=${user.id}` : ""));
+    return user;
+  } catch (err) {
+    console.error(`${tag} [VERIFY] FAIL error=${err instanceof Error ? err.message : String(err)}`);
+    return null;
+  }
+}
