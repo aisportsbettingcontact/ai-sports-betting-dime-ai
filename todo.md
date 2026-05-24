@@ -3851,3 +3851,14 @@
 - [x] Perf: Removing unnecessary trpc.auth.me (Manus OAuth) call from RootRoute reduces initial load
 - [x] TypeScript: 0 errors (Vite build clean)
 - [x] Tests: 907/907 passing
+
+## Session: 2026-05-24 - Auth/Checkout Fixes + Landing Page Rebuild
+- [x] Fix checkout redirect — unauthenticated users redirected to /login with sessionStorage pendingCheckout instead of Manus OAuth
+- [x] Fix logged-in redirect — RootRoute uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth)
+- [x] Fix initial load performance — removed unnecessary trpc.auth.me call from RootRoute, added getCachedAppUser fast path
+- [x] Upload 4 real UI screenshots to CDN (model projections, betting splits, daily lineups, cheat sheets)
+- [x] Rebuild Hero — clean centered headline + CTAs, no fake mock data widget
+- [x] Create FeatureShowcase — 4 features with real screenshots, alternating left/right layout
+- [x] Simplify LandingNav — Features + Pricing links only
+- [x] Simplify LandingFooter — minimal 2-line footer
+- [x] Simplify LandingPage — Nav + Hero + FeatureShowcase + PricingCTA + Footer only (removed 8 bloated sections)

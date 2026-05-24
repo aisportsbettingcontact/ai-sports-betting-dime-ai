@@ -17,14 +17,12 @@ export default function LandingNav() {
     <header
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        background: scrolled
-          ? "rgba(5,8,16,0.92)"
-          : "transparent",
+        background: scrolled ? "rgba(5,8,16,0.92)" : "transparent",
         backdropFilter: scrolled ? "blur(12px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <a
@@ -45,10 +43,7 @@ export default function LandingNav() {
           <nav className="hidden md:flex items-center gap-6">
             {[
               { label: "Features", id: "features" },
-              { label: "How It Works", id: "how-it-works" },
-              { label: "Sports", id: "sports-coverage" },
               { label: "Pricing", id: "pricing" },
-              { label: "FAQ", id: "faq" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -62,11 +57,11 @@ export default function LandingNav() {
 
           {/* CTA */}
           <a
-            href="/feed"
+            href="/login"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-bold text-black transition-all duration-150 hover:brightness-110"
             style={{ background: "#39FF14", letterSpacing: "-0.01em" }}
           >
-            View Today's Edges
+            Get Started
           </a>
         </div>
       </div>
