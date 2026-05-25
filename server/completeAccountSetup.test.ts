@@ -45,7 +45,8 @@
  * ── Strategy ──────────────────────────────────────────────────────────────────
  *  - Uses real DB (DATABASE_URL is available in the sandbox test environment)
  *  - Uses real appRouter.createCaller (same pattern as auth.logout.test.ts)
- *  - No vi.mock — the procedure is tested end-to-end through the real tRPC stack
+ *  - vi.mock("./email") stubs sendWelcomeEmail and sendPasswordResetEmail so no SMTP
+ *    traffic is generated during test runs (prevents bounce-back emails to the owner inbox)
  *  - syncDiscordRoleForUser silently skips when discordId is null (test user has none)
  *  - sendWelcomeEmail is fire-and-forget (import().then()) — does not block the test
  *  - afterEach cleans up test rows by pendingStripeSessionId prefix "test-session-"
@@ -58,7 +59,18 @@
  *  OR whose username starts with "testuser_cas_" to prevent DB pollution.
  */
 
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, vi } from "vitest";
+
+// ── Email mock — prevent SMTP traffic during test runs ─────────────────────────
+// stripe.ts calls import('../email').then(({ sendWelcomeEmail }) => ...) as a
+// fire-and-forget side-effect. Without this mock, the test runner sends real
+// welcome emails to *.test.invalid addresses, generating bounce-back notifications
+// in the owner inbox. vi.mock intercepts the dynamic import at module resolution
+// time (hoisted before any imports) so the SMTP transporter is never created.
+vi.mock("./email", () => ({
+  sendWelcomeEmail: vi.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
+}));
 import { appRouter } from "./routers";
 import { APP_USER_COOKIE } from "./routers/appUsers";
 import type { TrpcContext } from "./_core/context";
