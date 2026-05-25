@@ -33,6 +33,7 @@ const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
+const ManageAccount = lazy(() => import('./pages/ManageAccount'));
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -135,6 +136,8 @@ function Router() {
       {/* User pages */}
       <Route path="/bet-tracker">{() => <RequireAuth><BetTracker /></RequireAuth>}</Route>
       <Route path="/resources">{() => <RequireAuth><Resources /></RequireAuth>}</Route>
+      {/* Manage Account page */}
+      <Route path="/account">{() => <RequireAuth><ManageAccount /></RequireAuth>}</Route>
       {/* 404 */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

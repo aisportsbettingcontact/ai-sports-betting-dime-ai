@@ -1086,95 +1086,116 @@ export default function ModelProjections() {
               )}
             </div>
           )}
-          {/* User menu */}
-          <div className="flex-shrink-0 relative">
-            <button type="button" onClick={() => setShowUserMenu(!showUserMenu)} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors" title={user ? user.name ?? "Account" : "Sign in"}>
-              <User className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-            {showUserMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                <div className="absolute right-0 top-9 z-50 w-48 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                  {appUser ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <div className="flex items-center gap-1.5">
-                          {appUser.role === "owner" && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
-                          <p className="text-xs font-semibold text-foreground truncate">@{appUser.username}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{appUser.email}</p>
-                        {/* Session duration badge */}
-                        {(() => {
-                          const exp = (appUser as { sessionExpiresAt?: number | null }).sessionExpiresAt;
-                          if (!exp) return (
-                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-white/40">
-                              <span className="w-1.5 h-1.5 rounded-full bg-white/30 inline-block" />
-                              Session: browser
-                            </span>
-                          );
-                          const daysLeft = Math.max(0, Math.ceil((exp - Date.now()) / 86_400_000));
-                          const color = daysLeft <= 3 ? "text-red-400 bg-red-400/10" : daysLeft <= 14 ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10";
-                          const dot = daysLeft <= 3 ? "bg-red-400" : daysLeft <= 14 ? "bg-amber-400" : "bg-emerald-400";
-                          return (
-                            <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${dot} inline-block`} />
-                              Session: {daysLeft}d remaining
-                            </span>
-                          );
-                        })()}
-                      </div>
-                      {(isOwner || appUser.role === "admin" || appUser.role === "handicapper") && (
-                        <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/bet-tracker"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                          <BarChart2 className="w-3.5 h-3.5 text-emerald-400" /> Bet Tracker
-                        </button>
-                      )}
-                      {/* RESOURCES removed — content migrated to JACK MAC tab in main feed */}
-                      {isOwner && (
-                        <>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/publish"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/users"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Crown className="w-3.5 h-3.5 text-yellow-400" /> User Management
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/model-results"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <FlaskConical className="w-3.5 h-3.5 text-blue-400" /> THE MODEL RESULTS
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/security"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Security Events
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/postponed-games"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Postponed Games
-                          </button>
-                        </>
-                      )}
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : user ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <p className="text-xs font-semibold text-foreground truncate">{user.name ?? "User"}</p>
-                        <p className="text-sm text-muted-foreground truncate">{user.email ?? ""}</p>
-                      </div>
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          {/* ── User area: inline badges for regular users, dropdown for elevated roles ── */}
+          {appUser ? (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* ── Subscription badge: LIFETIME (gold) | expiry date (neon green) ── */}
+              {(() => {
+                const planId = (appUser as { stripePlanId?: string | null }).stripePlanId;
+                const expiry = appUser.expiryDate;
+                const isLifetime = !expiry || planId === 'lifetime';
+                if (isLifetime) {
+                  return (
+                    <span
+                      className="hidden xs:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider select-none"
+                      style={{ background: '#FFD700', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.08em' }}
                     >
-                      <LogIn className="w-3.5 h-3.5 text-emerald-400" /> Sign In
-                    </button>
+                      LIFETIME
+                    </span>
+                  );
+                }
+                const d = new Date(expiry);
+                const label = `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`;
+                return (
+                  <span
+                    className="hidden xs:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider select-none"
+                    style={{ background: '#39FF14', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}
+                  >
+                    EXP {label}
+                  </span>
+                );
+              })()}
+
+              {/* ── MANAGE ACCOUNT badge: white/black, navigates to /account ── */}
+              <button
+                type="button"
+                onClick={() => setLocation('/account')}
+                className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider transition-opacity hover:opacity-80 select-none"
+                style={{ background: '#ffffff', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}
+              >
+                MANAGE ACCOUNT
+              </button>
+
+              {/* ── Elevated role dropdown (OWNER / ADMIN / HANDICAPPER only) ── */}
+              {(isOwner || appUser.role === 'admin' || appUser.role === 'handicapper') && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors"
+                    title={`@${appUser.username} (${appUser.role})`}
+                  >
+                    {appUser.role === 'owner' ? (
+                      <Crown className="w-3.5 h-3.5 text-yellow-400" />
+                    ) : (
+                      <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    )}
+                  </button>
+                  {showUserMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                      <div className="absolute right-0 top-9 z-50 w-52 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
+                        <div className="px-3 py-2.5 border-b border-border">
+                          <div className="flex items-center gap-1.5">
+                            {appUser.role === 'owner' && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
+                            <p className="text-xs font-semibold text-foreground truncate">@{appUser.username}</p>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground truncate capitalize">{appUser.role}</p>
+                        </div>
+                        {(isOwner || appUser.role === 'admin' || appUser.role === 'handicapper') && (
+                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/bet-tracker'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                            <BarChart2 className="w-3.5 h-3.5 text-emerald-400" /> Bet Tracker
+                          </button>
+                        )}
+                        {isOwner && (
+                          <>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/publish'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
+                            </button>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/users'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <Crown className="w-3.5 h-3.5 text-yellow-400" /> User Management
+                            </button>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/model-results'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <FlaskConical className="w-3.5 h-3.5 text-blue-400" /> THE MODEL RESULTS
+                            </button>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/security'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Security Events
+                            </button>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/postponed-games'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Postponed Games
+                            </button>
+                          </>
+                        )}
+                        <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                          <LogOut className="w-3.5 h-3.5" /> Sign out
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          ) : !appUser && !user ? (
+            // ── Not logged in: show sign-in icon ──
+            <button
+              type="button"
+              onClick={() => setShowLoginModal(true)}
+              className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
+              title="Sign in"
+            >
+              <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+            </button>
+          ) : null}
         </div>
 
 
