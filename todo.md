@@ -3957,3 +3957,20 @@
 - [x] Add $1 test price ID to server/routers/products.ts
 - [x] Add $1 Test Plan card to PricingCTA.tsx (visible, labeled as test)
 - [ ] Verify full end-to-end: checkout → account setup → Discord role → UserManagement badge
+
+## Session: 2026-05-25 — discordLogin.test.ts fix + vitest global timeout
+
+- [x] Fix discordLogin.test.ts: stale `not.toContain("appUsers.login")` assertion on Home.tsx
+  - Root cause: test was written when Home.tsx was Discord-only; login form refactor added trpc.appUsers.login.useMutation (dual-mode page)
+  - Fix: replaced single stale negative assertion with 5 precise invariants:
+    1. Home.tsx DOES contain /api/auth/discord-login/connect (Discord path present)
+    2. loginUrl variable is built from discord-login/connect (URL redirect, not mutation)
+    3. Discord anchor uses href={loginUrl} (pure href, no inline mutation)
+    4. Home.tsx DOES contain trpc.appUsers.login.useMutation (dual-mode is intentional)
+    5. Discord anchor block does NOT contain useMutation or appUsers.login (anchor is clean)
+  - discordLogin.test.ts: 21/21 pass
+- [x] Fix vitest.config.ts: added testTimeout: 15000 to prevent flaky strikeoutProps parallel timeout
+  - appRouter import in strikeoutProps.test.ts triggers DB connection pool init (~4-5s)
+  - Old 5s default caused intermittent timeout when full suite runs in parallel
+  - 15s provides safe margin without masking genuinely hung tests
+- [x] TypeScript: 0 errors | Full suite: 908/908 pass

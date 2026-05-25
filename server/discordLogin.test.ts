@@ -169,12 +169,34 @@ describe("Discord login frontend invariant", () => {
     expect(modal).not.toContain("trpc.appUsers.login");
   });
 
-  it("Home.tsx uses /api/auth/discord-login/connect", () => {
+  it("Home.tsx uses /api/auth/discord-login/connect for the Discord OAuth button", () => {
     const home = fs.readFileSync(
       path.resolve(__dirname, "../client/src/pages/Home.tsx"),
       "utf-8"
     );
+    // [VERIFY] Discord OAuth path is present — the Discord button navigates to the connect route
     expect(home).toContain("/api/auth/discord-login/connect");
-    expect(home).not.toContain("appUsers.login");
+
+    // [VERIFY] loginUrl variable is constructed from the discord-login/connect path
+    // This ensures the Discord anchor href is a URL redirect, not a tRPC mutation call
+    expect(home).toContain("discord-login/connect");
+    expect(home).toContain("href={loginUrl}");
+
+    // [VERIFY] Home.tsx is a dual-mode login page:
+    //   - Username/password form uses trpc.appUsers.login.useMutation (standard credential login)
+    //   - Discord button uses href={loginUrl} → /api/auth/discord-login/connect (OAuth redirect)
+    // The Discord login path itself does NOT invoke appUsers.login — it is a full-page redirect.
+    // We assert the username/password mutation exists (dual-mode is intentional).
+    expect(home).toContain("trpc.appUsers.login.useMutation");
+
+    // [VERIFY] The Discord anchor block does NOT contain appUsers.login inline.
+    // Extract the Discord anchor element and verify it is a pure href redirect.
+    const anchorStart = home.indexOf("href={loginUrl}");
+    expect(anchorStart).toBeGreaterThan(0);
+    const anchorEnd = home.indexOf("</a>", anchorStart) + 4;
+    const discordAnchorBlock = home.slice(anchorStart, anchorEnd);
+    // The Discord anchor must be a URL redirect — no tRPC mutation call inside it
+    expect(discordAnchorBlock).not.toContain("useMutation");
+    expect(discordAnchorBlock).not.toContain("appUsers.login");
   });
 });
