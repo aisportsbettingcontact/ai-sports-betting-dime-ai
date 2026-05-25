@@ -31,7 +31,7 @@ import { getDb } from "../db";
 import { discordInviteTokens, appUsers as appUsersTable } from "../../drizzle/schema";
 import { eq, and, isNull, gt, or } from "drizzle-orm";
 
-const APP_USER_COOKIE = "app_session";
+export const APP_USER_COOKIE = "app_session";
 
 /**
  * retryOnce — retry a DB operation exactly once on transient TiDB cold-start errors.
@@ -71,7 +71,7 @@ function getAppCookie(req: Request): string | undefined {
 }
 
 // Helper: sign a JWT for an app user session — embeds tokenVersion (tv) for invalidation
-async function signAppUserToken(userId: number, role: string, tokenVersion: number) {
+export async function signAppUserToken(userId: number, role: string, tokenVersion: number) {
   const secret = new TextEncoder().encode(ENV.cookieSecret);
   console.log(`[AppAuth] signAppUserToken: userId=${userId} role=${role} tv=${tokenVersion}`);
   return new SignJWT({ sub: String(userId), role, type: "app_user", tv: tokenVersion })
