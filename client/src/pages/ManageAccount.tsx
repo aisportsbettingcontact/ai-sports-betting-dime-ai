@@ -22,7 +22,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { toast } from "sonner";
-import { LogOut, Key, CreditCard, XCircle, ArrowLeft, BarChart3, AlertTriangle } from "lucide-react";
+import { LogOut, Key, CreditCard, XCircle, ArrowLeft, BarChart3, AlertTriangle, RefreshCw } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,11 +89,26 @@ export default function ManageAccount() {
       setCancelledAt(data.cancelAt);
       setShowCancelConfirm(false);
       refetch();
+      utils.appUsers.me.invalidate();
       toast.success("Subscription cancelled. You retain access until your billing period ends.");
     },
     onError: (err) => {
       console.error("[ManageAccount][cancel] [VERIFY] FAIL", err.message);
       toast.error(err.message || "Failed to cancel subscription.");
+    },
+  });
+
+  const reactivateMutation = trpc.stripe.reactivateSubscription.useMutation({
+    onSuccess: () => {
+      console.log("[ManageAccount][reactivate] [OUTPUT] Subscription reactivated — will auto-renew");
+      setCancelledAt(null);
+      refetch();
+      utils.appUsers.me.invalidate();
+      toast.success("Subscription reactivated! Your plan will auto-renew.");
+    },
+    onError: (err) => {
+      console.error("[ManageAccount][reactivate] [VERIFY] FAIL", err.message);
+      toast.error(err.message || "Failed to reactivate subscription.");
     },
   });
 
@@ -118,6 +133,18 @@ export default function ManageAccount() {
   const expiry = appUser.expiryDate;
   const isLifetime = !expiry || planId === "lifetime";
   const hasStripe = !!(appUser as { stripeCustomerId?: string | null }).stripeCustomerId;
+  // cancelAtPeriodEnd: true = set to cancel at period end, still has access
+  // !hasAccess: fully expired
+  const cancelAtPeriodEnd = (appUser as { cancelAtPeriodEnd?: boolean }).cancelAtPeriodEnd ?? false;
+  // Derive button state:
+  // 1. Fully expired (no access) → "Renew Subscription" (redirect to pricing)
+  // 2. Active but set to cancel → "Reactivate Subscription" (undo cancel)
+  // 3. Active and auto-renewing → "Cancel Subscription"
+  const subButtonState: 'cancel' | 'reactivate' | 'renew' =
+    !appUser.hasAccess ? 'renew'
+    : (cancelAtPeriodEnd || cancelledAt !== null) ? 'reactivate'
+    : 'cancel';
+  console.log(`[ManageAccount][RENDER] subButtonState=${subButtonState} hasAccess=${appUser.hasAccess} cancelAtPeriodEnd=${cancelAtPeriodEnd} cancelledAt=${cancelledAt}`);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -243,16 +270,54 @@ export default function ManageAccount() {
               </button>
             )}
 
-            {/* Cancel Subscription — only for active Stripe subscribers */}
-            {hasStripe && !isLifetime && !cancelledAt && (
-              <button
-                type="button"
-                onClick={() => setShowCancelConfirm(true)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-red-500/30 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <XCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Cancel Subscription</span>
-              </button>
+            {/* Subscription action button — 3 states: cancel / reactivate / renew */}
+            {hasStripe && !isLifetime && (
+              <>
+                {subButtonState === 'cancel' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-red-500/30 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Cancel Subscription</span>
+                  </button>
+                )}
+
+                {subButtonState === 'reactivate' && (
+                  <button
+                    type="button"
+                    disabled={reactivateMutation.isPending}
+                    onClick={() => {
+                      console.log("[ManageAccount][reactivate] [INPUT] userId=", appUser.id);
+                      reactivateMutation.mutate();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-amber-500/40 rounded-xl text-sm font-semibold text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCw className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">
+                      {reactivateMutation.isPending ? "Reactivating…" : "Reactivate Subscription"}
+                    </span>
+                    {reactivateMutation.isPending && (
+                      <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    )}
+                  </button>
+                )}
+
+                {subButtonState === 'renew' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log("[ManageAccount][renew] [INPUT] userId=", appUser.id, "redirecting to pricing");
+                      setLocation("/");
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-primary/40 rounded-xl text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Renew Subscription</span>
+                  </button>
+                )}
+              </>
             )}
 
             {/* Log Out */}

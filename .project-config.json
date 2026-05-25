@@ -13,10 +13,10 @@
   "experiments": null,
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663397752079/MW3FicTy7ae3qrm8dx8Lua",
-    "access_key_id": "ASIAZV3A2ECZFJL4PXHY",
-    "secret_access_key": "+AEYk+PxHlOqwFSM3ykrx/O3vqMW50Y7VSBaymec",
-    "session_token": "IQoJb3JpZ2luX2VjEKP//////////wEaCXVzLWVhc3QtMSJHMEUCIQDJavTtVdxCpPon5h19WHDAKahmNOTYp+sboTGq5adQ0AIgayZoyaQtPCPqqZN74NvCepmSWs3r7l7ZlgLn4sPb3KQq9gMIbBAEGgw2NjUzODYwOTg4NjYiDKYSBLH10fXqf9h8uSrTAw2HoJFrygi0DWT5dKQnu4VMjdmdEqwZb5GgO8Hva2SKJNyNv7U4G2GDzJuW6s5CHaNrF4r1qyzXyPYpkgxOefhYwa0p3dmkjRQ/cxDP4o6CQGZUBsSc8B6mu0pNHFsygrL3PlELoX2WRYkj0gZELWgnemw8uJ7fq91bZ6RJmdiEv5YSlbZlNMMN9cibxHDLzqczvDoeNQNUJawU9lbGxNsWrzfQHyE5OeYcOzuMGrQerzR9VmWBXD5rcKz6txtbHrJ738laz9yRu9aNvwjepwDlwvrBa0Q5DrPYu+rzn+6GMy4S1KC+C7UUEUqRmsvMYBx+gLWk4DQoz7gNBbWPGv48DpFDNS6IaubWexWUI2cNdeCjTD/g7mOmAU61slcN1kJf93gfD7hmP7pUCrgIvBBMaOOLxDcQoA+JhU4OwQGld4U6ICKlQHlc6M+qtCe0l9u6setTwS0SsviuxYLXFHDCERkIgieB0SUXZ9lwn2CHgSEMespt136ZmeLlBzWWJZTRs+eQ1Ut+Ted1AM1KrSu99yaNxIH/9/aGllofjLc8hpJTCU73SE6A5V2waN4rhyB8XF88jiThr7oEuBzMpkvpHNf7hBSjXtuudnMXHWqzPwLlMMKs0tAGOp0Bb2BIhX7I06W6MbNKzb8m4UdFLRiPXaC1XBUUuhRv367DjrPGbev6EvvSBBJ+ZMs9pYBYMLUSju9pDyP9LOCwZqTvVqQOfLOEZ1dt/Ts1iBsdYLpww2EhrtAar7ptgg3fflkBrs8rwj5y10FKK69hd5JZBBaRcibVitaxIlam4jxg8rVS8emfkjLiQGg2466DZ9kpPuvaqfxbvLV3NA==",
-    "expiration": "2026-05-26T06:34:42.000Z"
+    "access_key_id": "ASIAZV3A2ECZGVVTDFW6",
+    "secret_access_key": "+cxtsJTbvoZAXVOEbv8Lf396DkvtE4VVIEpXy2jG",
+    "session_token": "IQoJb3JpZ2luX2VjEKX//////////wEaCXVzLWVhc3QtMSJIMEYCIQDZvXu0Zl+m9LN3EmO76+qhdEpPC5t5O0fj4/BlHINhgQIhANS0Fl7gZZIU04R8/G/P6h/BCs/QsP6stit8OOXi+qXtKvYDCG4QBBoMNjY1Mzg2MDk4ODY2IgxXS/sGrIdUrmFei9oq0wM57iWbwGIuXPVCJPZTeTBEPdYxnGEFTsW2fu8eBupKgi9DUWhCDJXGtKt5fYhH7LBQ3Fk5ZAz6ZMNt/KU7MJmu6Ygefh7QNblqvABu0j7PBFwr+OJGrvy2ItU+ar353sVe092VJmD06r2IYF1YlzvjJYg3xn+/+H7xYBsXEgci+L+lp5IWWMptIzIhDI5uadPpPsPOCJyAkSAKgUeu51xZA6/jtz/pT1ulTCFM/3TcEFYDsCyYBYvm7B8C8URVLCGwbgMb47wf2bukrb2mWlWC4752Ig8mh/7IZhgFohdvhPedp/3ipG3O2uz9Ewc1z1GsQbzGi06vYx+DuDxgtk9gLhdbpPGJyAoktUAMMSc2iGkFeH7WnOAGto+xg5S+8Iy9sbteI6sOvsjmyYXjgnkz+u+GNA7p3yRUFHsS/CABXIc2V1lPSlHf1Fs3el9T7NM2O1FnL0f1GI4urqv12lIsX6ytVoAjJ5+Jczx8t/9R+lQMOm3HkOHEzld3tH4GhoNc5KmZdKsfmm10/FshBFip1bJW6wOJXaIFE11SaQfvRdGN5FpK7ZF7hicZVeNkY/qrB1/z7KYdlqu8/7Llm5EWOA65xrJ9uI65EG2jnyFbF5KD7DDb6tLQBjqcAdJTtDq4q1KCJNhdCj9Ru02ZSTkB1mlfxUTycL7Aqj9jq8XFiVnnNp7hmdAocQ2hAM87OuUlmpGI8Cb9jDSF92cEKIiQBJI/4zo4T26QiZLLPau67vNT7EDg2aSbIGMgjW5lof0wvuf5KOo8Y5j2XXq5NUksiuzdxCkO2VXTsRFw3c4NQe619rBlTFKGn6Limc26pkqE16sMsGqlLQ==",
+    "expiration": "2026-05-26T08:47:23.000Z"
   },
   "name": "ai-sports-betting",
   "path": "/home/ubuntu/ai-sports-betting",
@@ -32,6 +32,7 @@
     "DISCORD_GUILD_ID": "1284016372359106621",
     "DISCORD_PUBLIC_KEY": "d2e34bec17769bdb28313ce1da1efc82eee1394875bd3fa2b6295305b2f83b3a",
     "DISCORD_ROLE_AI_MODEL_SUB": "1474938477664796672",
+    "GMAIL_APP_PASSWORD": "guysgyycneygeuwm",
     "GOOGLE_SERVICE_ACCOUNT_JSON": "{\"type\":\"service_account\",\"project_id\":\"mlb-data-419323\",\"private_key_id\":\"8de44fb3a223d9cef827cbfa3ecb7318d7f78e15\",\"private_key\":\"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDa0r5aOfK5zr00\\nI67ZLTCZd3VI2JWLRxjzApe/cDTrI34K2sZgliIV5uvbd8iQHy5WpArUUyZHBBg3\\nAyG/GWjh3t5eiYDXJPaGEuhp9jjvPFUQiuHx6aGNaz1qbJQ/RmcFli8R54dS9kJx\\n+BpebGUNNVhURariBnu2LhzJ4cAHnuPITk/hmTIvjSILsB93pivl1lcBeL+C5PnK\\nZJqVLU1JJ+YTf0FJeVpbqPriW4rB+DGUyMY86XsNyfCGsOE3AhW8a/REWc/4dUQ4\\nlclBUtGCgld8sPCgHPGihVrlXiL5DXhMS/daRzXca6zI6Prez0+Gu17aw4/mFiAi\\nBweNCHRzAgMBAAECggEAM2860AFz9MnL/k/u3tx44nHKTyudhwXYrvIqkhSBU83d\\naBbBb12KuIQ1ZzpSGdJCdZoMc5jx09p6CKBDU+RYm1LkCOugLbHiAmS6XYHDIzSW\\nuBM1BcRJNXECGBxagj79ozoIaVh3HgCFYL2VESHAZOjnkLNpdcRZWtqe6LMYDJIU\\nqSH+mJuLVtWLKv4XWeQfziafKyANUt8HiuZdfw0rwKnqkGcCPBEroFAz4gUqdk70\\nfOS1WtZS+VqTyCKj4PP4vGHWPy6CTGFF+KM6TTyipA50zHeAOxWIOeU0auCuZSHZ\\n72jmqVxeqNndM5EejsAz80PJ3wZAE6Yd6hp/ETXJFQKBgQDvlJ8DkA5t6VjGFtoY\\n/uB98D88ELWeMxcrXZ5JegC0dSwId5mvt3juB8+tDlDwTK3H2kyhjLf2not/SifD\\n6FcsZdK2I8S0FbVK0Li5UJQTkNS+Xu0vFMXOcHB0d95/CgnXRttPC+SA/ZMWcozB\\nII/hxPAiH4wB33uU4lrLDICdTQKBgQDp0fC60DkDRM1dquEap76uC9GY3PuGotlf\\n0C4NJWZuxPMYeYuJF/cScC+vDz58lji+Gmue0Sc97XGxDE04mgbbzg9D6QOhd54O\\n7Z1ICWy06KCyPIdk76l6Ivn/cg8Je/XGva8b0TKe2OePRo8cAagOO/pD8EUFvS4K\\nYpK7fTN4vwKBgC7coDnfLKNdGEsu3xwyhpC7tHK4Rf4aujZ2SmbO4WJq5OEHG92e\\nAp50kq+j9Dr8lKVZ0tFqp/UqT9jnFV4hjSOXCx8rYedjs6FdsDQ3Sa+GDcbq5HPo\\nGUTnA2gUpkWtHf2o027jwZ9leibS4ytHhj0/+0SBbS5Um2Sk3eOHn4SlAoGBANxP\\nGZmL1AxGaZIWDd+Fql5neGel38Dt9A8ZIir00F0SaVLoQxc7Y2sWFXfGz0Oob3J/\\nhmOwAl+ROIxvYNsyFcBJmYyNIwSipmS+cnGLn8edYLxP1+q8/ly8U/3iRFTVXbCS\\nzUlShXWyPgx7mR/0V5qB3L7ixsYviA/07PiHcVYVAoGABW6RYp8zpCrMdByHVnT7\\necr6C71wHSy9gSh9LnYKzwDzEAw6at9p0a1aXad/e0xhvOMwBeRqsV8mk30Urc0t\\n+UaNf0fgw2Nm4/oH8BdBr52Aj5rPkBhscm0brR+yug6nZgxlMuX7I9SAgICEHJWE\\nTqLFmPyw3e1Oygb4EE74lK0=\\n-----END PRIVATE KEY-----\\n\",\"client_email\":\"ai-sports-betting@mlb-data-419323.iam.gserviceaccount.com\",\"client_id\":\"102443093695810643975\",\"auth_uri\":\"https://accounts.google.com/o/oauth2/auth\",\"token_uri\":\"https://oauth2.googleapis.com/token\",\"auth_provider_x509_cert_url\":\"https://www.googleapis.com/oauth2/v1/certs\",\"client_x509_cert_url\":\"https://www.googleapis.com/robot/v1/metadata/x509/ai-sports-betting%40mlb-data-419323.iam.gserviceaccount.com\",\"universe_domain\":\"googleapis.com\"}",
     "JWT_SECRET": "e9BxTAUDcHheLq6JWBHevS",
     "KENPOM_EMAIL": "taileredsportsbetting@gmail.com",
@@ -47,7 +48,7 @@
     "STRIPE_PRICE_ANNUAL": "price_1TaVdfPa3TFEAkkY0tW4eKSV",
     "STRIPE_PRICE_MONTHLY": "price_1TaVc2Pa3TFEAkkYucDoFPcW",
     "STRIPE_SECRET_KEY": "sk_test_51Ta74ZPJCvfgjObl0GiXhRioDZmZLJLrIS7oyANbEcw7XdMaDgZ81tFlxefI8Hy3YhKO6qDHY07P7jdV9hrkHeXz00YW4fMVXv",
-    "STRIPE_WEBHOOK_SECRET": "whsec_AzFvxRtNPuo1dCq9A1P8z4CwdUEI35Eq",
+    "STRIPE_WEBHOOK_SECRET": "whsec_OZz2f5ADCUm3llExGoUQx553e0pOXbmE",
     "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
     "VITE_ANALYTICS_WEBSITE_ID": "92142ac5-3eb9-4b4a-a381-64e021b598b2",
     "VITE_APP_ID": "MW3FicTy7ae3qrm8dx8Lua",

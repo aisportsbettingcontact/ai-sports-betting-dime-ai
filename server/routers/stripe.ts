@@ -24,7 +24,7 @@ import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
 import { PLANS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
-import { getDb, invalidateAppUserByIdCache } from "../db";
+import { getDb, invalidateAppUserByIdCache, updateAppUser } from "../db";
 import { appUsers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -440,6 +440,29 @@ export const stripeRouter = router({
       });
       console.log(`${TAG2} [STATE] app_session cookie set — user is now authenticated`);
 
+      // [STEP 7] Send branded welcome email (non-blocking — failure does not abort setup)
+      const planLabelMap: Record<string, string> = {
+        monthly: 'Monthly Plan',
+        annual: 'Annual Plan',
+        lifetime: 'Lifetime Access',
+        test: 'Monthly Plan',
+      };
+      const planLabel = planLabelMap[user.stripePlanId ?? ''] ?? 'Subscription';
+      import('../email').then(({ sendWelcomeEmail }) => {
+        sendWelcomeEmail({
+          toEmail: input.email,
+          username: user.username,
+          planLabel,
+          expiryDate: user.expiryDate ? new Date(user.expiryDate) : null,
+        }).catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.warn(`${TAG2} [STATE] Welcome email failed (non-critical): ${msg}`);
+        });
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`${TAG2} [STATE] Welcome email import failed (non-critical): ${msg}`);
+      });
+
       console.log(`${TAG2} [VERIFY] PASS`);
       return { success: true, username: user.username, alreadySetup: false };
     }),
@@ -485,8 +508,61 @@ export const stripeRouter = router({
       ?? (sub as unknown as Record<string, number>).current_period_end
       ?? Math.floor(Date.now() / 1000 + 30 * 86400);
     const periodEnd = rawEnd * 1000; // convert to ms
+    // [STEP] Persist cancel_at_period_end flag to DB so frontend can read it without a Stripe API call
+    await updateAppUser(user.id, { cancelAtPeriodEnd: true });
+    console.log(`${TAG3} [STATE] DB updated cancelAtPeriodEnd=true userId=${user.id}`);
     console.log(`${TAG3} [OUTPUT] cancel_at_period_end=true periodEnd=${new Date(periodEnd).toISOString()}`);
     console.log(`${TAG3} [VERIFY] PASS`);
     return { success: true, cancelAt: periodEnd };
+  }),
+
+  /**
+   * reactivateSubscription
+   *
+   * Removes cancel_at_period_end from the Stripe subscription so it auto-renews.
+   * Only valid when the subscription is still active (hasAccess=true, cancelAtPeriodEnd=true).
+   */
+  reactivateSubscription: stripeAppUserProcedure.mutation(async ({ ctx }) => {
+    const TAG4 = '[Stripe][reactivateSubscription]';
+    const user = ctx.appUser;
+    console.log(`${TAG4} [INPUT] userId=${user.id} subId=${user.stripeSubscriptionId ?? 'none'} cancelAtPeriodEnd=${user.cancelAtPeriodEnd}`);
+
+    if (!user.stripeSubscriptionId) {
+      console.warn(`${TAG4} [VERIFY] FAIL — no stripeSubscriptionId userId=${user.id}`);
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No active subscription found.',
+      });
+    }
+
+    if (!user.hasAccess) {
+      console.warn(`${TAG4} [VERIFY] FAIL — subscription fully expired userId=${user.id}`);
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Subscription has fully expired. Please subscribe again.',
+      });
+    }
+
+    const stripe = getStripe();
+    try {
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+      console.log(`${TAG4} [STATE] Stripe cancel_at_period_end=false subId=${user.stripeSubscriptionId}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAG4} [VERIFY] FAIL — Stripe API error: ${msg}`);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to reactivate subscription. Please try again.',
+      });
+    }
+
+    // [STEP] Clear cancelAtPeriodEnd flag in DB
+    await updateAppUser(user.id, { cancelAtPeriodEnd: false });
+    console.log(`${TAG4} [STATE] DB updated cancelAtPeriodEnd=false userId=${user.id}`);
+    console.log(`${TAG4} [OUTPUT] subscription reactivated userId=${user.id}`);
+    console.log(`${TAG4} [VERIFY] PASS`);
+    return { success: true };
   }),
 });

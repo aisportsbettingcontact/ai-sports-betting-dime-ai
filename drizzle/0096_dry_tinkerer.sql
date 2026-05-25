@@ -1,0 +1,1 @@
+ALTER TABLE `app_users` ADD `cancelAtPeriodEnd` boolean DEFAULT false NOT NULL;
