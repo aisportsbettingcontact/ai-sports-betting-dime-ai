@@ -10,18 +10,19 @@
  *   - On mobile (< 480px) cards are compact: clamp-based padding, no description
  *
  * Checkout flow (NO MODAL):
- *   - Unauthenticated user clicks "Click Here"
+ *   - Unauthenticated user clicks CTA
  *     → publicCreateCheckoutSession (no auth required) → Stripe Checkout
  *     → Stripe collects email + "Desired Username" custom field + payment
- *   - Authenticated user clicks "Click Here"
+ *   - Authenticated user clicks CTA
  *     → createCheckoutSession → Stripe Checkout
  *     → email + username prefilled from account
  *   - Same-tab redirect (window.location.href) — no popup blocker issues
  *
- * Annual savings callout:
- *   - Badge: "Best Value — Save 58%"
- *   - Equivalent monthly cost: "$41.67/mo"
- *   - Savings amount: "Save $699.89/year vs monthly"
+ * $1 TEST PLAN:
+ *   - Shown as a separate row below the main grid (full-width card)
+ *   - Labeled "INTERNAL TEST" with a yellow/amber border
+ *   - Uses planId="test" → price_1Tb3LgPa3TFEAkkYF9s5T8no ($1/month live)
+ *   - REMOVE after end-to-end verification is complete
  */
 
 import { useState, useEffect } from "react";
@@ -55,7 +56,7 @@ const PLANS = [
       "Multi-sport coverage",
       "Mobile-optimized dashboard",
     ],
-    cta: "Click Here",
+    cta: "Start Monthly",
     highlight: false,
     badge: null as string | null,
   },
@@ -77,12 +78,12 @@ const PLANS = [
       "Early access to new sports",
       "Dedicated priority support",
     ],
-    cta: "Click Here",
+    cta: "Lock In Annual",
     highlight: true,
   },
 ] as const;
 
-type PlanId = "monthly" | "annual";
+type PlanId = "monthly" | "annual" | "test";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -134,7 +135,6 @@ export default function PricingCTA() {
       createCheckoutSession.mutate({ planId, origin: window.location.origin });
     } else {
       // ── Unauthenticated path: straight to Stripe, no modal ──────────────────
-      // Stripe Checkout will collect: email (native), Desired Username (custom field), payment
       console.log(`[PricingCTA] [STATE] Unauthenticated — calling publicCreateCheckoutSession planId=${planId}`);
       publicCreateCheckoutSession.mutate({ planId, origin: window.location.origin });
     }
@@ -331,7 +331,7 @@ export default function PricingCTA() {
                       width: "100%",
                     }}
                   >
-                    {isLoading ? (
+                    {loadingPlan === plan.id ? (
                       <>
                         <svg
                           className="animate-spin"
@@ -344,7 +344,7 @@ export default function PricingCTA() {
                             stroke="currentColor"
                             strokeWidth="3"
                             strokeDasharray="31.4 31.4"
-                            strokeLinecap="round"
+                            strokeDashoffset="10"
                           />
                         </svg>
                         Opening...
@@ -373,6 +373,84 @@ export default function PricingCTA() {
             );
           })}
         </div>
+
+        {/* ── $1 E2E TEST PLAN — INTERNAL ONLY ─────────────────────────────────
+            Remove this section after end-to-end verification is complete.
+            Price: price_1Tb3LgPa3TFEAkkYF9s5T8no ($1/month live mode)
+        ──────────────────────────────────────────────────────────────────────── */}
+        <motion.div
+          initial={shouldReduce ? false : { opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="mt-4"
+        >
+          <div
+            className="rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            style={{
+              borderColor: "rgba(251,191,36,0.5)",
+              background: "rgba(120,80,0,0.12)",
+              boxShadow: "0 0 24px rgba(251,191,36,0.08)",
+              padding: "clamp(12px, 3vw, 20px) clamp(14px, 3.5vw, 24px)",
+            }}
+          >
+            {/* Left: label + description */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className="px-2 py-0.5 rounded font-bold uppercase tracking-widest"
+                  style={{
+                    background: "rgba(251,191,36,0.2)",
+                    color: "#fbbf24",
+                    fontSize: "10px",
+                    border: "1px solid rgba(251,191,36,0.4)",
+                  }}
+                >
+                  Internal Test
+                </span>
+                <span className="font-black text-white" style={{ fontSize: "clamp(1.1rem, 3vw, 1.4rem)", letterSpacing: "-0.03em" }}>
+                  $1.00
+                  <span className="text-[#6b7280] font-normal" style={{ fontSize: "clamp(10px, 1.8vw, 13px)" }}>/month</span>
+                </span>
+              </div>
+              <p className="text-[#9ca3af]" style={{ fontSize: "clamp(10px, 1.8vw, 12px)" }}>
+                E2E verification only — confirms full pipeline: checkout → account setup → Discord role → User Management badge.
+                <span className="text-[#fbbf24] font-semibold"> Delete after testing.</span>
+              </p>
+            </div>
+
+            {/* Right: CTA button */}
+            <button
+              onClick={() => handlePlanClick("test")}
+              disabled={loadingPlan !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-lg font-bold transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+              style={{
+                background: "rgba(251,191,36,0.15)",
+                border: "1px solid rgba(251,191,36,0.5)",
+                color: "#fbbf24",
+                padding: "10px 20px",
+                fontSize: "13px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {loadingPlan === "test" ? (
+                <>
+                  <svg className="animate-spin" style={{ width: 13, height: 13 }} viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeDashoffset="10" />
+                  </svg>
+                  Opening...
+                </>
+              ) : (
+                <>
+                  Run $1 Test
+                  <svg style={{ width: 12, height: 12 }} viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
 
         {/* Payment methods — real SVG logos */}
         <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
