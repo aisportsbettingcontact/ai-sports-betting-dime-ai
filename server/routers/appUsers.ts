@@ -550,6 +550,7 @@ export const appUsersRouter = router({
       stripePlanId: user.stripePlanId ?? null,
       stripeCustomerId: user.stripeCustomerId ?? null,
       stripeSubscriptionId: user.stripeSubscriptionId ?? null,
+      cancelAtPeriodEnd: user.cancelAtPeriodEnd ?? false,
     };
   }),
 
@@ -1033,49 +1034,49 @@ export const appUsersRouter = router({
       const origin = input.origin.replace(/\/$/, "");
       const resetUrl = `${origin}/reset-password?token=${rawToken}&uid=${user.id}`;
 
-      // [STEP] Attempt Discord DM delivery
+      // [STEP] Send branded password reset email via Google Workspace SMTP
+      // Primary delivery: email to user's registered address
+      // Fallback: Discord DM (if linked and bot is running)
+      const { sendPasswordResetEmail } = await import('../email');
+      let emailDelivered = false;
+      try {
+        await sendPasswordResetEmail({
+          toEmail: user.email,
+          username: user.username,
+          resetUrl,
+          expiresAt: new Date(expiresAt),
+        });
+        emailDelivered = true;
+        console.log(`[PasswordReset] [STATE] Email delivered to ${user.email} userId=${user.id}`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[PasswordReset] Email delivery failed | userId=${user.id} error=${msg}`);
+      }
+
+      // [STEP] Discord DM fallback (only if email delivery failed)
       let dmDelivered = false;
-      if (user.discordId) {
+      if (!emailDelivered && user.discordId) {
         try {
           const discordClient = getDiscordClient();
           if (discordClient) {
             const dmChannel = await discordClient.users.createDM(user.discordId);
             await dmChannel.send(
-              `🔐 **Password Reset Request**\n\n` +
-              `A password reset was requested for your account **${user.username}**.\n\n` +
-              `Click the link below to reset your password. This link expires in **30 minutes**.\n\n` +
+              `🔐 **Password Reset — AI Sports Betting**\n\n` +
+              `A password reset was requested for **@${user.username}**.\n` +
+              `Click the link below to reset your password (expires in 30 minutes):\n\n` +
               `${resetUrl}\n\n` +
-              `If you did not request this, you can safely ignore this message.`
+              `If you did not request this, ignore this message.`
             );
             dmDelivered = true;
-            console.log(`[PasswordReset] Discord DM delivered | userId=${user.id} discordId=${user.discordId}`);
+            console.log(`[PasswordReset] Discord DM fallback delivered | userId=${user.id} discordId=${user.discordId}`);
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`[PasswordReset] Discord DM failed | userId=${user.id} discordId=${user.discordId} error=${msg}`);
+          console.warn(`[PasswordReset] Discord DM fallback failed | userId=${user.id} error=${msg}`);
         }
       }
 
-      // [STEP] Owner notification (always — provides audit trail; also serves as fallback)
-      const deliveryNote = dmDelivered
-        ? `Reset link sent via Discord DM to ${user.discordUsername ?? user.discordId}.`
-        : user.discordId
-          ? `Discord DM FAILED — relay link manually.`
-          : `User has no Discord linked — relay link manually.`;
-
-      await notifyOwner({
-        title: `[PasswordReset] Reset requested for ${user.username}`,
-        content:
-          `User: ${user.username} (${user.email})\n` +
-          `Delivery: ${deliveryNote}\n` +
-          `Expires: ${new Date(expiresAt).toISOString()}\n\n` +
-          `Reset URL:\n${resetUrl}`,
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[PasswordReset] Owner notification failed (non-critical) | error=${msg}`);
-      });
-
-      console.log(`[PasswordReset] [OUTPUT] success | userId=${user.id} username=${user.username} dmDelivered=${dmDelivered}`);
+      console.log(`[PasswordReset] [OUTPUT] success | userId=${user.id} username=${user.username} emailDelivered=${emailDelivered} dmDelivered=${dmDelivered}`);
       return { success: true };
     }),
 

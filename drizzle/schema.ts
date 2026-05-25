@@ -100,6 +100,12 @@ export const appUsers = mysqlTable("app_users", {
    * Subscription plan: 'monthly' | 'annual'. NULL = no active subscription.
    */
   stripePlanId: varchar("stripePlanId", { length: 16 }),
+  /**
+   * TRUE when the Stripe subscription is set to cancel at period end (user clicked Cancel).
+   * FALSE/NULL = subscription is active and will auto-renew.
+   * Set to TRUE by cancelSubscription, FALSE by reactivateSubscription.
+   */
+  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
   // ─── Pending account setup (new users who paid before creating an account) ───
   /**
    * TRUE when a new user has paid via Stripe but has not yet set their email/password.

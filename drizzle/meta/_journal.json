@@ -673,6 +673,13 @@
       "when": 1779652495246,
       "tag": "0095_true_darkstar",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "5",
+      "when": 1779741242375,
+      "tag": "0096_dry_tinkerer",
+      "breakpoints": true
     }
   ]
 }
