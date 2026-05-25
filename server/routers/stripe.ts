@@ -30,6 +30,8 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { syncDiscordRoleForUser } from "../discord/discordRoleSync";
 import { invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { signAppUserToken, APP_USER_COOKIE } from "./appUsers";
+import { getSessionCookieOptions } from "../_core/cookies";
 
 const TAG = "[tRPC][stripe]";
 
@@ -372,7 +374,7 @@ export const stripeRouter = router({
         .regex(/[a-z]/, "Password must contain at least 1 lowercase letter")
         .regex(/[^A-Za-z0-9]/, "Password must contain at least 1 special character"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const TAG2 = `${TAG}[completeAccountSetup]`;
       console.log(`${TAG2} [INPUT] sessionId=${input.sessionId} email=${input.email}`);
       const db = await getDb();
@@ -426,6 +428,17 @@ export const stripeRouter = router({
         const discordResult = await syncDiscordRoleForUser(updatedUser, true);
         console.log(`${TAG2} [STATE] Discord role grant: action=${discordResult.action} reason=${discordResult.reason}`);
       }
+
+      // [STEP 6] Issue JWT session cookie — auto-logs the user in immediately
+      // so "Enter the Platform" navigates directly to /feed without a re-login prompt.
+      console.log(`${TAG2} [STEP] Issuing app_session JWT cookie userId=${user.id} role=${user.role} tv=${user.tokenVersion}`);
+      const token = await signAppUserToken(user.id, user.role, user.tokenVersion);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(APP_USER_COOKIE, token, {
+        ...cookieOptions,
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days — same as stayLoggedIn=true
+      });
+      console.log(`${TAG2} [STATE] app_session cookie set — user is now authenticated`);
 
       console.log(`${TAG2} [VERIFY] PASS`);
       return { success: true, username: user.username, alreadySetup: false };

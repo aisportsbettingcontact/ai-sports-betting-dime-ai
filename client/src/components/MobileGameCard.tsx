@@ -650,9 +650,10 @@ const MktCard = ({
         {/* Spacer/line row: always rendered to keep height consistent */}
         {isML
           ? <span style={{ fontSize: '11px', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>  // empty spacer for ML
-          : <span style={{ fontSize: '11px', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+          : <span style={{ fontSize: 'clamp(9px, 2.8vw, 11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         }
-        <span style={{ fontSize: '14px', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
+        {/* juice: clamp(11px, 3.5vw, 14px) — scales down on narrow screens (e.g. 360px → 12.6px) so -179 never overflows MktCard */}
+        <span style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
       </div>
     );
   };
@@ -878,7 +879,7 @@ return (
         {/* Score */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: '14px', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
+            fontSize: 'clamp(12px, 3.5vw, 14px)', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
             color: awayScoreFlash ? '#39FF14' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: awayScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.awayScore}</span>
@@ -899,7 +900,7 @@ return (
         {/* Score */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: '14px', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
+            fontSize: 'clamp(12px, 3.5vw, 14px)', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
             color: homeScoreFlash ? '#39FF14' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: homeScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.homeScore}</span>
