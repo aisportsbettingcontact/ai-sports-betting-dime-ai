@@ -3974,3 +3974,14 @@
   - Old 5s default caused intermittent timeout when full suite runs in parallel
   - 15s provides safe margin without masking genuinely hung tests
 - [x] TypeScript: 0 errors | Full suite: 908/908 pass
+
+## Session: 2026-05-25 — completeAccountSetup.test.ts
+
+- [x] Write completeAccountSetup.test.ts — 10 tests, 22 invariants, real DB, real JWT decode
+- [x] HP-1..9: cookie name, JWT value, httpOnly, path, maxAge, secure=false, sameSite=lax, return value, session consumed (NOT_FOUND on replay)
+- [x] JW-1..6: JWT sub, role, type, tv, alg, exp (±60s tolerance)
+- [x] TLS-1,2: HTTPS context flips secure=true, sameSite=none
+- [x] EC-1: already-setup user (pendingSetup=false, sessionId still set) returns alreadySetup=true, no cookie
+- [x] ER-1..6: NOT_FOUND, CONFLICT, BAD_REQUEST (password min/upper/lower/special)
+- [x] afterAll cleanup: deletes all test rows by pendingStripeSessionId LIKE 'test-session-%' OR username LIKE 'testuser_cas_%'
+- [x] Full suite: 918/918 passing, 40/40 test files
