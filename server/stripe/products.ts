@@ -42,13 +42,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceDisplay: "$99.99/month",
     interval: "month",
     priceId: () => {
-      const id = process.env.STRIPE_PRICE_MONTHLY;
-      if (!id) {
-        console.error(`${TAG} [INPUT] STRIPE_PRICE_MONTHLY env var is not set`);
-        throw new Error(
-          "STRIPE_PRICE_MONTHLY is not configured. Create a $99.99/month recurring price in Stripe Dashboard and set the env var."
-        );
-      }
+      // Primary: env var (allows override). Fallback: hardcoded live price ID.
+      const id = process.env.STRIPE_PRICE_MONTHLY ?? "price_1TaVc2Pa3TFEAkkYucDoFPcW";
       console.log(`${TAG} [STATE] monthly priceId=${id}`);
       return id;
     },
@@ -60,13 +55,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceDisplay: "$499.99/year",
     interval: "year",
     priceId: () => {
-      const id = process.env.STRIPE_PRICE_ANNUAL;
-      if (!id) {
-        console.error(`${TAG} [INPUT] STRIPE_PRICE_ANNUAL env var is not set`);
-        throw new Error(
-          "STRIPE_PRICE_ANNUAL is not configured. Create a $499.99/year recurring price in Stripe Dashboard and set the env var."
-        );
-      }
+      // Primary: env var (allows override). Fallback: hardcoded live price ID.
+      const id = process.env.STRIPE_PRICE_ANNUAL ?? "price_1TaVdfPa3TFEAkkY0tW4eKSV";
       console.log(`${TAG} [STATE] annual priceId=${id}`);
       return id;
     },

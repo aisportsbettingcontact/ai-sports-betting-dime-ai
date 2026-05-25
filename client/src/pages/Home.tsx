@@ -133,7 +133,7 @@ export default function Home() {
     }
     console.log(`[Login] [INPUT] handleFormSubmit — identifier=${identifier.trim()} stayLoggedIn=true`);
     loginMutation.mutate({
-      identifier: identifier.trim(),
+      emailOrUsername: identifier.trim(),
       password,
       stayLoggedIn: true,
     });
@@ -160,7 +160,7 @@ export default function Home() {
     if (!forgotIdentifier.trim()) return;
     console.log(`[Login] [INPUT] handleForgotSubmit — identifier=${forgotIdentifier.trim()}`);
     requestResetMutation.mutate({
-      identifier: forgotIdentifier.trim(),
+      emailOrUsername: forgotIdentifier.trim(),
       origin: window.location.origin,
     });
   }
@@ -393,9 +393,7 @@ export default function Home() {
                 <><DiscordIcon size={18} /> Login with Discord</>
               )}
             </a>
-            <p className="text-center text-[11px] text-[#4b5563] leading-relaxed">
-              For lifetime access members and Discord subscribers
-            </p>
+
           </div>
         )}
 

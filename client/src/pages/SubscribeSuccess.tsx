@@ -84,7 +84,7 @@ export default function SubscribeSuccess() {
   const sessionId = params.get("session_id") ?? "";
 
   const planLabel = plan === "annual" ? "Annual" : "Monthly";
-  const planPrice = plan === "annual" ? "$399/year" : "$49/month";
+  const planPrice = plan === "annual" ? "$499.99/year" : "$99.99/month";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -177,7 +177,6 @@ export default function SubscribeSuccess() {
         <div className="max-w-md w-full text-center">
           <p className="text-[#ef4444] mb-2 font-semibold">Could not confirm your subscription.</p>
           <p className="text-[#9ca3af] text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
-          <p className="text-[10px] text-[#374151]">Order ref: {sessionId.slice(0, 24)}...</p>
           <button onClick={() => navigate("/")} className="mt-4 text-[13px] text-[#39FF14] hover:underline">Back to home</button>
         </div>
       </div>
@@ -236,7 +235,7 @@ export default function SubscribeSuccess() {
             </button>
             <button onClick={() => navigate("/")} className="text-[13px] text-[#6b7280] hover:text-[#9ca3af] transition-colors">Back to home</button>
           </motion.div>
-          {sessionId && <p className="text-[10px] text-[#374151] mt-6">Order ref: {sessionId.slice(0, 24)}...</p>}
+
         </motion.div>
       </div>
     );
@@ -401,9 +400,7 @@ export default function SubscribeSuccess() {
           </p>
         </div>
 
-        {sessionId && (
-          <p className="text-[10px] text-[#374151] text-center mt-4">Order ref: {sessionId.slice(0, 24)}...</p>
-        )}
+
       </motion.div>
     </div>
   );
