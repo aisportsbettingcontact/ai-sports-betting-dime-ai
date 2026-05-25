@@ -3951,3 +3951,9 @@
 - [ ] Step 13: Build bulk Stripe customer export for all existing users (no stripeCustomerId)
 - [ ] Step 14: Vitest tests for all new paths
 - [ ] Step 15: TypeScript validation + checkpoint
+
+## $1 Live Test Product (End-to-End Verification)
+- [x] Create $1 live Stripe product + price via API
+- [x] Add $1 test price ID to server/routers/products.ts
+- [x] Add $1 Test Plan card to PricingCTA.tsx (visible, labeled as test)
+- [ ] Verify full end-to-end: checkout → account setup → Discord role → UserManagement badge
