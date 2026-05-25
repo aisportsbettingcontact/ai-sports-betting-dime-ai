@@ -547,6 +547,9 @@ export const appUsersRouter = router({
       discordUsername: user.discordUsername ?? null,
       discordConnectedAt: user.discordConnectedAt ?? null,
       sessionExpiresAt, // null if session cookie (no maxAge), ms timestamp if persistent
+      stripePlanId: user.stripePlanId ?? null,
+      stripeCustomerId: user.stripeCustomerId ?? null,
+      stripeSubscriptionId: user.stripeSubscriptionId ?? null,
     };
   }),
 

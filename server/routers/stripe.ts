@@ -443,4 +443,50 @@ export const stripeRouter = router({
       console.log(`${TAG2} [VERIFY] PASS`);
       return { success: true, username: user.username, alreadySetup: false };
     }),
+
+  /**
+   * cancelSubscription
+   *
+   * Cancels the user's Stripe subscription at period end.
+   * The user retains access until expiryDate; hasAccess is NOT immediately revoked.
+   * The webhook (customer.subscription.deleted) handles final revocation.
+   */
+  cancelSubscription: stripeAppUserProcedure.mutation(async ({ ctx }) => {
+    const TAG3 = '[Stripe][cancelSubscription]';
+    const user = ctx.appUser;
+    console.log(`${TAG3} [INPUT] userId=${user.id} subId=${user.stripeSubscriptionId ?? 'none'}`);
+
+    if (!user.stripeSubscriptionId) {
+      console.warn(`${TAG3} [VERIFY] FAIL — no stripeSubscriptionId userId=${user.id}`);
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No active subscription found.',
+      });
+    }
+
+    const stripe = getStripe();
+    let sub;
+    try {
+      sub = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAG3} [VERIFY] FAIL — Stripe API error: ${msg}`);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel subscription. Please try again.',
+      });
+    }
+
+    // Stripe SDK v17: billing_cycle_anchor replaces current_period_end on Subscription
+    // Use cancel_at (set when cancel_at_period_end=true) or fall back to current_period_end
+    const rawEnd = (sub as unknown as Record<string, number>).cancel_at
+      ?? (sub as unknown as Record<string, number>).current_period_end
+      ?? Math.floor(Date.now() / 1000 + 30 * 86400);
+    const periodEnd = rawEnd * 1000; // convert to ms
+    console.log(`${TAG3} [OUTPUT] cancel_at_period_end=true periodEnd=${new Date(periodEnd).toISOString()}`);
+    console.log(`${TAG3} [VERIFY] PASS`);
+    return { success: true, cancelAt: periodEnd };
+  }),
 });
