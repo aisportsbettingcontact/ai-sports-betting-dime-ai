@@ -3985,3 +3985,10 @@
 - [x] ER-1..6: NOT_FOUND, CONFLICT, BAD_REQUEST (password min/upper/lower/special)
 - [x] afterAll cleanup: deletes all test rows by pendingStripeSessionId LIKE 'test-session-%' OR username LIKE 'testuser_cas_%'
 - [x] Full suite: 918/918 passing, 40/40 test files
+
+## Session: 2026-05-25 — SMTP audit + new test files
+
+- [x] SMTP exposure audit — confirmed email.test.ts is the only file that references email functions; no other test file triggers live SMTP sends
+- [x] Write appUsers.login.test.ts — 10 tests: stayLoggedIn=true (maxAge=7776000000), stayLoggedIn=false (maxAge=undefined), JWT claims (sub/role/type/tv/alg/exp), HTTPS flags, username login, @username behavior, wrong password, hasAccess=false, pendingSetup=true, rate-limit isolation
+- [x] Write tokenVersion.db.test.ts — 8 tests: DB-level incrementTokenVersion (TV-1..4), stale JWT rejected by appUserProcedure (JR-1,2), null tv skips check (JR-3), forceLogoutUser (FL-1..6), incrementAllTokenVersions excludes owner (FA-1..3)
+- [x] Full suite: 936/936 passed (42 test files)
