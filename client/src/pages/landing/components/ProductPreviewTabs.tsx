@@ -205,7 +205,7 @@ function EdgesTab() {
             {["MATCHUP", "MARKET", "BOOK", "NO-VIG", "MODEL", "EDGE %", "ROI %", "CONF", "UPDATED"].map((h) => (
               <th key={h} className="text-left py-2 px-3 text-[10px] font-bold text-[#4b5563] tracking-widest whitespace-nowrap">
                 <Tooltip text={
-                  h === "NO-VIG" ? "Book price with vig removed — true implied probability" :
+                  h === "NO-VIG" ? "Book price with vig removed, true implied probability" :
                   h === "EDGE %" ? "Gap between model probability and market probability" :
                   h === "ROI %" ? "Expected return per unit wagered" : h
                 }>

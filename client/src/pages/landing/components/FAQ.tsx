@@ -4,11 +4,11 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 const FAQS = [
   {
     q: "What exactly does this platform give me?",
-    a: "AI Sports Betting gives you AI-generated model projections, no-vig fair odds, ROI edge signals, betting splits (ticket % and money %), and market movement data across major sports. It's a betting intelligence dashboard — not a pick service.",
+    a: "AI Sports Betting gives you AI-generated model projections, no-vig fair odds, ROI edge signals, betting splits (ticket % and money %), and market movement data across major sports. It's a betting intelligence dashboard, not a pick service.",
   },
   {
     q: "Does this platform guarantee wins?",
-    a: "No. No betting platform can guarantee outcomes. What this platform does is surface data-backed probability comparisons between the model and the market. Positive ROI signals indicate where the model sees value — they do not guarantee results. Bet responsibly.",
+    a: "No. No betting platform can guarantee outcomes. What this platform does is surface data-backed probability comparisons between the model and the market. Positive ROI signals indicate where the model sees value. They do not guarantee results. Bet responsibly.",
   },
   {
     q: "What is a 'no-vig' price?",

@@ -1,11 +1,12 @@
 /**
  * FeatureShowcase.tsx
  *
- * 4-feature showcase.
- * - model-projections, daily-lineups, cheat-sheets: real UI screenshots
- * - betting-splits: live interactive demo (BettingSplitsDemo)
- *
- * Layout: alternating left/right on desktop, stacked on mobile.
+ * 4-feature showcase with fluid responsive layout.
+ * - Alternating left/right on desktop, stacked on mobile.
+ * - Images scale to fill flex-[1.4] column (wider than text).
+ * - Text column is flex-1 with fluid font sizes.
+ * - No em dashes in copy.
+ * - Tight vertical gaps — no dead zones.
  */
 
 import { motion, useReducedMotion } from "framer-motion";
@@ -39,7 +40,7 @@ const FEATURES: Feature[] = [
     label: "AI Model Projections",
     headline: "Book vs. Model. Side by side.",
     description:
-      "Our models price every spread, total, and moneyline. See exactly where the edge is — and how much.",
+      "Our models price every spread, total, and moneyline. See exactly where the edge is and how much.",
     imgUrl: "/manus-storage/feature-model-projections_ae909adc.jpeg",
     imgAlt: "AI Model Projections — Book vs Model odds comparison",
   },
@@ -58,7 +59,7 @@ const FEATURES: Feature[] = [
     label: "Daily Lineups",
     headline: "Starting pitchers. Batting orders. Confirmed.",
     description:
-      "Full lineup cards with player photos, positions, handedness, and pitcher stats — updated as confirmations come in.",
+      "Full lineup cards with player photos, positions, handedness, and pitcher stats. Updated as confirmations come in.",
     imgUrl: "/manus-storage/feature-daily-lineups_4bdb1e2c.jpeg",
     imgAlt: "Daily Lineups — Starting pitchers and batting order",
   },
@@ -66,7 +67,7 @@ const FEATURES: Feature[] = [
     id: "cheat-sheets",
     type: "image",
     label: "Cheat Sheets",
-    headline: "NRFI, props, and edge signals — all in one view.",
+    headline: "NRFI, props, and edge signals. All in one view.",
     description:
       "Quick-scan cheat sheets surface the highest-edge plays of the day. Book price, model price, and ROI signal in one row.",
     imgUrl: "/manus-storage/feature-cheat-sheets_3b5d7079.jpeg",
@@ -80,27 +81,31 @@ export default function FeatureShowcase() {
   return (
     <section
       id="features"
-      style={{ background: "#050810", padding: "3.5rem clamp(16px, 4vw, 64px)" }}
+      className="w-full"
+      style={{ background: "#050810", padding: "2rem clamp(16px, 4vw, 64px) 3rem" }}
     >
       <div className="max-w-screen-2xl mx-auto">
-        {/* Section header */}
+        {/* Section header — tight bottom margin */}
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-8"
         >
           <h2
-            className="text-3xl sm:text-4xl font-bold text-white"
-            style={{ letterSpacing: "-0.03em" }}
+            className="font-bold text-white"
+            style={{
+              letterSpacing: "-0.03em",
+              fontSize: "clamp(1.75rem, 3vw, 3rem)",
+            }}
           >
             Everything you need to bet smarter.
           </h2>
         </motion.div>
 
-        {/* Feature rows */}
-        <div className="flex flex-col gap-14">
+        {/* Feature rows — tighter gap between rows */}
+        <div className="flex flex-col gap-10">
           {FEATURES.map((feature, i) => {
             const isEven = i % 2 === 0;
 
@@ -113,10 +118,10 @@ export default function FeatureShowcase() {
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className={`flex flex-col ${
                   isEven ? "lg:flex-row" : "lg:flex-row-reverse"
-                } items-center gap-8 lg:gap-14`}
+                } items-stretch gap-6 lg:gap-10`}
               >
-                {/* Text side */}
-                <div className="flex-1 flex flex-col gap-3 text-center lg:text-left">
+                {/* Text side — flex-1, vertically centered */}
+                <div className="flex-1 flex flex-col justify-center gap-4 text-center lg:text-left">
                   <span
                     className="text-[11px] font-bold tracking-widest uppercase"
                     style={{ color: "#39FF14" }}
@@ -124,24 +129,29 @@ export default function FeatureShowcase() {
                     {feature.label}
                   </span>
                   <h3
-                    className="text-2xl sm:text-3xl font-bold text-white"
-                    style={{ letterSpacing: "-0.025em" }}
+                    className="font-bold text-white"
+                    style={{
+                      letterSpacing: "-0.025em",
+                      fontSize: "clamp(1.5rem, 2.5vw, 2.5rem)",
+                    }}
                   >
                     {feature.headline}
                   </h3>
-                  <p className="text-[#9ca3af] text-base leading-relaxed max-w-sm mx-auto lg:mx-0">
+                  <p
+                    className="text-[#9ca3af] leading-relaxed"
+                    style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.15rem)" }}
+                  >
                     {feature.description}
                   </p>
                 </div>
 
-                {/* Visual side */}
-                <div className="flex-1 w-full">
+                {/* Visual side — flex-[1.4] so images are wider than text */}
+                <div className="flex-[1.4] w-full min-w-0">
                   {feature.type === "interactive" ? (
-                    /* Interactive demo — no wrapper border/shadow (component handles it) */
                     feature.component
                   ) : (
                     <div
-                      className="rounded-xl overflow-hidden border border-white/10"
+                      className="rounded-xl overflow-hidden border border-white/10 w-full"
                       style={{
                         boxShadow:
                           "0 0 40px rgba(57,255,20,0.04), 0 16px 48px rgba(0,0,0,0.5)",
@@ -155,7 +165,7 @@ export default function FeatureShowcase() {
                         decoding="async"
                         onError={(e) => {
                           console.error(
-                            `[FeatureShowcase] Failed to load image: ${feature.imgUrl}`,
+                            `[FeatureShowcase] [FAIL] Image load error: ${feature.imgUrl}`,
                             e
                           );
                         }}

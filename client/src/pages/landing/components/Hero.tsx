@@ -1,9 +1,10 @@
 /**
  * Hero.tsx
  *
- * Clean, minimal hero section.
- * No fake data widgets. Headline + sub-copy + single CTA.
- * "View Today's Edges" → /login (requires Discord auth)
+ * Full-viewport hero section.
+ * Fluid padding: clamp(16px, 4vw, 64px) horizontal.
+ * Tight vertical spacing — no dead zones above or below.
+ * No em dashes in copy.
  */
 
 import { motion, useReducedMotion } from "framer-motion";
@@ -13,7 +14,7 @@ export default function Hero() {
 
   return (
     <section
-      className="relative overflow-hidden"
+      className="relative overflow-hidden w-full"
       style={{
         background:
           "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(57,255,20,0.08) 0%, transparent 60%), linear-gradient(180deg, #080c12 0%, #050810 100%)",
@@ -29,13 +30,16 @@ export default function Hero() {
         }}
       />
 
-      {/* pt-24 clears the fixed nav (h-16 = 64px), pb-12 gives breathing room below CTA */}
-      <div className="relative z-10 max-w-screen-2xl mx-auto pt-24 pb-12 text-center" style={{ padding: "6rem clamp(16px, 4vw, 64px) 3rem" }}>
+      {/* pt clears fixed nav (h-16=64px). Tight pb to close gap with features section. */}
+      <div
+        className="relative z-10 w-full max-w-screen-2xl mx-auto text-center"
+        style={{ padding: "5rem clamp(16px, 4vw, 64px) 2rem" }}
+      >
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex flex-col items-center gap-6"
+          className="flex flex-col items-center gap-5"
         >
           {/* Eyebrow */}
           <div className="inline-flex items-center gap-2">
@@ -52,10 +56,13 @@ export default function Hero() {
             </span>
           </div>
 
-          {/* H1 */}
+          {/* H1 — fluid font size scales from 3rem on mobile to 6vw on wide screens */}
           <h1
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-[1.0]"
-            style={{ letterSpacing: "-0.04em" }}
+            className="font-bold text-white leading-[1.0] w-full"
+            style={{
+              letterSpacing: "-0.04em",
+              fontSize: "clamp(2.75rem, 6vw, 6rem)",
+            }}
           >
             Find The Edge
             <br />
@@ -64,18 +71,25 @@ export default function Hero() {
             Moves.
           </h1>
 
-          {/* Sub-copy */}
-          <p className="text-[#9ca3af] text-lg sm:text-xl leading-relaxed max-w-2xl">
+          {/* Sub-copy — fluid font size, no em dash */}
+          <p
+            className="text-[#9ca3af] leading-relaxed w-full"
+            style={{ fontSize: "clamp(1rem, 1.6vw, 1.35rem)", maxWidth: "60ch" }}
+          >
             AI model projections, betting splits, daily lineups, and cheat
-            sheets — all in one clean dashboard.
+            sheets. All in one clean dashboard.
           </p>
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-3">
             <a
               href="/login"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-              style={{ background: "#39FF14", letterSpacing: "-0.01em" }}
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+              style={{
+                background: "#39FF14",
+                letterSpacing: "-0.01em",
+                fontSize: "clamp(0.875rem, 1.2vw, 1rem)",
+              }}
             >
               View Today's Edges
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

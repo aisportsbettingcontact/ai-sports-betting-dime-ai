@@ -33,7 +33,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", fontWeight: 700 }}>{homeLineLabel}</span>
       </div>
       <div style={{ width: "100%", height: 20, borderRadius: 4, border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)" }}>—</span>
+        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)" }}>|</span>
       </div>
     </div>
   );

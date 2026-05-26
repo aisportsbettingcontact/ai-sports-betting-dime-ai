@@ -66,8 +66,8 @@ const PLANS = [
     price: "$499.99",
     period: "/year",
     savingsLine: `Save $${ANNUAL_SAVINGS}/year vs monthly`,
-    equivLine: `Only $${ANNUAL_EQUIV_MONTHLY}/mo — ${ANNUAL_SAVINGS_PCT}% off`,
-    badge: `Best Value — Save ${ANNUAL_SAVINGS_PCT}%`,
+    equivLine: `Only $${ANNUAL_EQUIV_MONTHLY}/mo, ${ANNUAL_SAVINGS_PCT}% off`,
+    badge: `Best Value. Save ${ANNUAL_SAVINGS_PCT}%`,
     description: `Lock in full-year access. Equivalent to just $${ANNUAL_EQUIV_MONTHLY}/month.`,
     features: [
       "All AI model projections",
