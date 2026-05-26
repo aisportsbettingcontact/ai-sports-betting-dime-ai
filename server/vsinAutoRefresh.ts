@@ -1014,6 +1014,12 @@ export async function refreshAnApiOdds(
         // before writing so the model never receives a wrong rl_home_spread.
         let _finalAwayRunLine = rAwaySpread.value;
         let _finalHomeRunLine = rHomeSpread.value;
+        // Track whether LAYER2 flipped the run line direction — if so, odds must also be swapped.
+        // INVARIANT: the team on -1.5 (fav) must have the more-negative (fav) odds.
+        // When the scraper delivers the line inverted, it delivers the odds in the same
+        // inverted order. Flipping the line without flipping the odds produces the
+        // impossible display: SD -203 on -1.5 but only -125 ML (PHI@SD bug).
+        let _layer2OddsSwapped = false;
         if (sport === 'mlb' && rAwaySpread.value !== null && useAwayML !== null) {
           const _awayMLNum = parseFloat(String(useAwayML));
           const _awayRLNum = parseFloat(String(rAwaySpread.value));
@@ -1029,20 +1035,30 @@ export async function refreshAnApiOdds(
               const correctedHomeRL = -correctedAwayRL;
               _finalAwayRunLine = correctedAwayRL > 0 ? `+${correctedAwayRL.toFixed(1)}` : `${correctedAwayRL.toFixed(1)}`;
               _finalHomeRunLine = correctedHomeRL > 0 ? `+${correctedHomeRL.toFixed(1)}` : `${correctedHomeRL.toFixed(1)}`;
+              // CRITICAL: odds must also be swapped — the scraped awaySpreadOdds were for the
+              // ORIGINAL (wrong) direction. After flipping the line, the away team is now the
+              // dog (+1.5) so it gets the dog odds (previously homeSpreadOdds), and vice versa.
+              _layer2OddsSwapped = true;
               console.warn(
                 `[ANApiOdds][MLB][LAYER2_ML_GUARD] ${dbGame.awayTeam}@${dbGame.homeTeam} — ` +
                 `scraped awayRunLine=${rAwaySpread.value} contradicts awayML=${useAwayML}. ` +
-                `Corrected to awayRunLine=${_finalAwayRunLine} homeRunLine=${_finalHomeRunLine} ` +
-                `to match ML direction before DUAL_WRITE.`
+                `Corrected to awayRunLine=${_finalAwayRunLine} homeRunLine=${_finalHomeRunLine}. ` +
+                `[ODDS_SWAP] awayRunLineOdds: ${rAwaySpreadOdds.value} → ${rHomeSpreadOdds.value} ` +
+                `homeRunLineOdds: ${rHomeSpreadOdds.value} → ${rAwaySpreadOdds.value}`
               );
             }
           }
         }
+        // When LAYER2 swaps the run line direction, the odds must also be swapped:
+        // the fav odds (more negative) belong to the team now on -1.5, and the dog
+        // odds (more positive) belong to the team now on +1.5.
+        const _finalAwayRunLineOdds = _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value;
+        const _finalHomeRunLineOdds = _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value;
         const mlbRunLineFields = sport === 'mlb' ? {
           awayRunLine:     _finalAwayRunLine,
           homeRunLine:     _finalHomeRunLine,
-          awayRunLineOdds: rAwaySpreadOdds.value,
-          homeRunLineOdds: rHomeSpreadOdds.value,
+          awayRunLineOdds: _finalAwayRunLineOdds,
+          homeRunLineOdds: _finalHomeRunLineOdds,
         } : {};
         if (sport === 'mlb' && _finalAwayRunLine !== null) {
           console.log(
@@ -1075,9 +1091,12 @@ export async function refreshAnApiOdds(
           // For MLB: use LAYER2-corrected run line values so awayBookSpread always
           // matches the ML direction (invariant: ML fav = RL fav).
           awayBookSpread:  _finalAwayBookSpread,
-          awaySpreadOdds:  rAwaySpreadOdds.value,
+          // LAYER2 odds swap: when the run line direction is corrected, the display odds
+          // (awaySpreadOdds/homeSpreadOdds) must also be swapped so the fav odds (-203)
+          // are shown next to the fav's -1.5 line, not the dog's +1.5 line.
+          awaySpreadOdds:  _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value,
           homeBookSpread:  _finalHomeBookSpread,
-          homeSpreadOdds:  rHomeSpreadOdds.value,
+          homeSpreadOdds:  _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value,
           bookTotal:       rTotal.value,
           overOdds:        rOverOdds.value,
           underOdds:       rUnderOdds.value,
