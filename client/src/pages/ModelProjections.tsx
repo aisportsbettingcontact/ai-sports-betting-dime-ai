@@ -982,7 +982,7 @@ export default function ModelProjections() {
       </div>
 
       {/* ── Sticky Header ── */}
-      <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm sticky-header-safe">
+      <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm sticky-header-safe" style={{ touchAction: 'pan-y' }}>
 
         {/* Row 1: brand + user icon
          * LAYOUT: flex row — brand LEFT, discord + user RIGHT.
@@ -993,10 +993,20 @@ export default function ModelProjections() {
          * flex-1 spacer. This guarantees zero overlap at every viewport width.
          */}
         <div className="flex items-center gap-2 px-4 pt-2 pb-1 md:pt-3 md:pb-2 w-full min-w-0">
-          {/* ── Brand: left-aligned, shrinks gracefully on narrow screens ── */}
-          <div className="flex items-center gap-1.5 flex-shrink-0 min-w-0">
-            <BarChart3 className="flex-shrink-0 text-primary" style={{ width: "clamp(14px, 3.5vw, 20px)", height: "clamp(14px, 3.5vw, 20px)" }} />
-            <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(12px, 3.5vw, 18px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
+          {/* ── Brand: site logo image — replaces BarChart3 icon + text ── */}
+          <div className="flex items-center flex-shrink-0 min-w-0">
+            <img
+              src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
+              alt="AI Sports Betting"
+              style={{
+                height: "clamp(28px, 7.5vw, 40px)",
+                width: "auto",
+                objectFit: "contain",
+                borderRadius: "6px",
+                display: "block",
+                flexShrink: 0,
+              }}
+            />
           </div>
           {/* ── Spacer: pushes Discord + user icon to the right ── */}
           <div className="flex-1 min-w-0" />
@@ -1462,6 +1472,8 @@ export default function ModelProjections() {
             borderBottom: '1px solid rgba(255,255,255,0.12)',
             borderTop: '1px solid rgba(255,255,255,0.06)',
             boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            // Prevent horizontal swipe on the column header from scrolling the feed
+            touchAction: 'none',
           }}
         >
           {/* Left cell: MATCHUP -- 80px, centered */}
