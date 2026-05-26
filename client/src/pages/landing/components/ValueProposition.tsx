@@ -9,7 +9,7 @@ const CARDS = [
     ),
     title: "Model-Originated Lines",
     copy: "The platform creates independent projections instead of only reacting to sportsbook prices.",
-    detail: "Our models run statistical simulations using team performance data, historical trends, and market signals — generating fair lines before the public shapes them.",
+    detail: "Our models run statistical simulations using team performance data, historical trends, and market signals, generating fair lines before the public shapes them.",
   },
   {
     icon: (
@@ -19,7 +19,7 @@ const CARDS = [
     ),
     title: "No-Vig Fair Odds",
     copy: "Markets are normalized so you can compare true probability instead of juiced book pricing.",
-    detail: "We strip the sportsbook margin from every market to expose the implied probability the book actually believes — not the inflated price you're being offered.",
+    detail: "We strip the sportsbook margin from every market to expose the implied probability the book actually believes, not the inflated price you're being offered.",
   },
   {
     icon: (
@@ -29,7 +29,7 @@ const CARDS = [
     ),
     title: "ROI-Based Edge Detection",
     copy: "The platform highlights where model probability is stronger than the market price.",
-    detail: "When the model's win probability exceeds the market's implied probability, the system flags the gap as a positive ROI signal — giving you a clear, data-backed reason to consider the bet.",
+    detail: "When the model's win probability exceeds the market's implied probability, the system flags the gap as a positive ROI signal, giving you a clear, data-backed reason to consider the bet.",
   },
   {
     icon: (

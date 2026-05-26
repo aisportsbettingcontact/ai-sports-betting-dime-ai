@@ -5,14 +5,14 @@ const STEPS = [
   {
     num: "01",
     title: "Sportsbooks post a market.",
-    beginner: "A sportsbook opens a game with a price — like LAD -142 on the moneyline.",
+    beginner: "A sportsbook opens a game with a price, like LAD -142 on the moneyline.",
     advanced: "The book sets an opening line based on their own models, public perception, and liability management. The price includes a vig (margin) built in.",
   },
   {
     num: "02",
     title: "The platform removes the vig.",
     beginner: "We strip out the sportsbook's profit margin to find the true implied probability.",
-    advanced: "Using standard vig-removal formulas, we convert both sides of the market to their no-vig probabilities. This exposes what the book actually believes — not the inflated price.",
+    advanced: "Using standard vig-removal formulas, we convert both sides of the market to their no-vig probabilities. This exposes what the book actually believes, not the inflated price.",
   },
   {
     num: "03",
