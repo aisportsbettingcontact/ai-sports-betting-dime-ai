@@ -24,7 +24,7 @@ export default function LandingNav() {
         borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto" style={{ padding: "0 clamp(16px, 4vw, 64px)" }}>
         <div className="flex items-center justify-between h-16">
           {/* Logo — image only, no text */}
           <a

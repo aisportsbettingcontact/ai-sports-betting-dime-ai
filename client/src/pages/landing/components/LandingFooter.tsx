@@ -2,8 +2,9 @@ export default function LandingFooter() {
 
   return (
     <footer
-      className="py-10 px-4 text-center border-t"
+      className="text-center border-t"
       style={{
+        padding: "2.5rem clamp(16px, 4vw, 64px)",
         borderColor: "rgba(255,255,255,0.06)",
         background: "#050810",
       }}

@@ -5,13 +5,13 @@ export default function FinalCTA() {
 
   return (
     <section
-      className="py-24 px-4 sm:px-6 lg:px-8"
       style={{
+        padding: "6rem clamp(16px, 4vw, 64px)",
         background:
           "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(57,255,20,0.07) 0%, transparent 70%), rgba(5,8,16,0.98)",
       }}
     >
-      <div className="max-w-3xl mx-auto text-center">
+      <div className="max-w-screen-2xl mx-auto text-center">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}

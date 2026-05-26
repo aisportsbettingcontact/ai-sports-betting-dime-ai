@@ -94,8 +94,8 @@ function FAQItem({ faq, idx }: { faq: { q: string; a: string }; idx: number }) {
 
 export default function FAQ() {
   return (
-    <section id="faq" className="py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+    <section id="faq" style={{ padding: "6rem clamp(16px, 4vw, 64px)" }}>
+      <div className="max-w-screen-2xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}

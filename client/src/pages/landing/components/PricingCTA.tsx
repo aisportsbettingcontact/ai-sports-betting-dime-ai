@@ -149,13 +149,13 @@ export default function PricingCTA() {
   return (
     <section
       id="pricing"
-      className="py-14 px-4 sm:px-6 lg:px-8"
       style={{
+        padding: "3.5rem clamp(16px, 4vw, 64px)",
         background:
           "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(57,255,20,0.05) 0%, transparent 60%), rgba(5,8,16,0.95)",
       }}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}

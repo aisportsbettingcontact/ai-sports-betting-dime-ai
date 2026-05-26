@@ -80,10 +80,9 @@ export default function FeatureShowcase() {
   return (
     <section
       id="features"
-      className="py-14 px-4 sm:px-6 lg:px-8"
-      style={{ background: "#050810" }}
+      style={{ background: "#050810", padding: "3.5rem clamp(16px, 4vw, 64px)" }}
     >
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         {/* Section header */}
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 20 }}

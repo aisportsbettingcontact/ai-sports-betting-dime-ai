@@ -30,7 +30,7 @@ export default function Hero() {
       />
 
       {/* pt-24 clears the fixed nav (h-16 = 64px), pb-12 gives breathing room below CTA */}
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 text-center">
+      <div className="relative z-10 max-w-screen-2xl mx-auto pt-24 pb-12 text-center" style={{ padding: "6rem clamp(16px, 4vw, 64px) 3rem" }}>
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}

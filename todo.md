@@ -3999,3 +3999,19 @@
 - [x] BettingSplitsDemo: Remove DraftKings NJ from SPLITS tab indicator row
 - [x] BettingSplitsDemo: Remove footer (Source: VSiN · aisportsbettingmodels.com + LIVE DATA)
 - [x] BettingSplitsDemo: Kansas City Royals logo+text alignment confirmed correct (flex-end, row-reverse) — no change needed
+
+## Landing Page Fluid Layout Fixes (Session May 26 2026 — Part 2)
+- [x] Forensic audit: identified 9 components with hard max-w caps causing dead zones on both sides
+- [x] LandingNav: max-w-6xl → max-w-screen-2xl + clamp(16px, 4vw, 64px) fluid padding
+- [x] Hero: max-w-4xl → max-w-screen-2xl + clamp fluid padding
+- [x] FeatureShowcase: max-w-5xl → max-w-screen-2xl + clamp fluid padding
+- [x] PricingCTA: max-w-4xl → max-w-screen-2xl + clamp fluid padding
+- [x] TrustBar: max-w-7xl → max-w-screen-2xl + clamp fluid padding
+- [x] FAQ: max-w-3xl → max-w-screen-2xl + clamp fluid padding
+- [x] FinalCTA: max-w-3xl → max-w-screen-2xl + clamp fluid padding
+- [x] ValueProposition: max-w-7xl → max-w-screen-2xl + clamp fluid padding
+- [x] HowItWorks: max-w-7xl → max-w-screen-2xl + clamp fluid padding
+- [x] EdgeExplanation: max-w-4xl → max-w-screen-2xl + clamp fluid padding
+- [x] LandingFooter: px-4 → clamp fluid padding
+- [x] Fixed 5 duplicate style attribute TS errors (merged padding into existing style objects)
+- [x] TypeScript: 0 errors | Tests: 956/956 passing

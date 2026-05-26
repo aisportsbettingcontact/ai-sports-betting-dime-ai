@@ -41,10 +41,9 @@ export default function EdgeExplanation() {
   return (
     <section
       id="how-it-works"
-      className="py-24 px-4 sm:px-6 lg:px-8"
-      style={{ background: "rgba(5,8,16,0.9)" }}
+      style={{ padding: "6rem clamp(16px, 4vw, 64px)", background: "rgba(5,8,16,0.9)" }}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
