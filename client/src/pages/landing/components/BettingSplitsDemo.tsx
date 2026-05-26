@@ -1,6 +1,6 @@
 /**
  * BettingSplitsDemo.tsx — Mobile-exact replica of real BettingSplitsPanel SPLITS tab.
- * Data: SEA @ KC, May 23 2026 (DraftKings NJ, from screenshot).
+ * Data: SEA @ KC, May 23 2026.
  * NO final score shown.
  */
 import { useState, useRef, useEffect } from "react";
@@ -130,10 +130,6 @@ export default function BettingSplitsDemo() {
             <div style={{ fontSize: 12, color: "#ffffff", fontWeight: 700, lineHeight: 1.2 }}>Mariners</div>
           </div>
         </div>
-        <div style={{ textAlign: "center", flexShrink: 0 }}>
-          <div style={{ fontSize: 9, color: "#39FF14", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>⚾ MLB</div>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>MAY 23, 2026</div>
-        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0, justifyContent: "flex-end", flexDirection: "row-reverse" }}>
           <TeamLogo src={KC_LOGO} alt="KC" size={28} />
           <div style={{ minWidth: 0, textAlign: "right" }}>
@@ -146,7 +142,6 @@ export default function BettingSplitsDemo() {
       <div style={{ display: "flex", alignItems: "center", padding: "4px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)", gap: 6 }}>
         <span style={{ fontSize: 9, color: "#39FF14", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>SPLITS</span>
         <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "0.06em" }}>DraftKings NJ</span>
       </div>
       {/* Mobile layout */}
       <div style={{ display: "flex", flexDirection: "column", width: "100%", padding: "4px 0" }}>
@@ -165,11 +160,6 @@ export default function BettingSplitsDemo() {
         {activeMarket === "spread" && <CompactMarketRow ticketsPct={spreadTickets} handlePct={spreadMoney} awayColor={SEA_COLOR} homeColor={KC_COLOR} awayLineLabel="SEA (-1.5)" homeLineLabel="KC (+1.5)" />}
         {activeMarket === "total"  && <CompactMarketRow ticketsPct={totalTickets}  handlePct={totalMoney}  awayColor={SEA_COLOR} homeColor={KC_COLOR} awayLineLabel="OVER 8.5"  homeLineLabel="UNDER 8.5" />}
         {activeMarket === "ml"     && <CompactMarketRow ticketsPct={mlTickets}     handlePct={mlMoney}     awayColor={SEA_COLOR} homeColor={KC_COLOR} awayLineLabel="SEA (-130)" homeLineLabel="KC (+109)" />}
-      </div>
-      {/* Footer */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 10px", borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.01)" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)" }}>Source: VSiN · aisportsbettingmodels.com</span>
-        <span style={{ fontSize: 9, color: "#39FF14", fontWeight: 700, letterSpacing: "0.08em" }}>LIVE DATA</span>
       </div>
     </div>
   );

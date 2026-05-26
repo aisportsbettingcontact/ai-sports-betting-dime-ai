@@ -26,10 +26,10 @@ export default function LandingNav() {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo — image only, no text */}
           <a
             href="/"
-            className="flex items-center gap-2.5 shrink-0"
+            className="flex items-center shrink-0"
           >
             <img
               src={LOGO_URL}
@@ -49,9 +49,6 @@ export default function LandingNav() {
               style={{ background: "#39FF14" }}
             >
               AI
-            </span>
-            <span className="hidden sm:block text-white font-bold text-sm tracking-tight" style={{ letterSpacing: "-0.02em" }}>
-              AI Sports Betting
             </span>
           </a>
 
