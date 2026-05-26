@@ -1,23 +1,30 @@
 /**
  * Home.tsx — Login page (/login)
  *
- * Layout:
- *   1. Logo + site name
- *   2. Username / Password form  (calls trpc.appUsers.login)
- *   3. Forgot Password link      (calls trpc.appUsers.requestPasswordReset)
- *   4. Divider
- *   5. Login with Discord button (for lifetime / Discord members)
- *   6. Sign Up link              → /#pricing (Stripe checkout creates the account)
+ * Layout: Split-screen on desktop (lg+), stacked on mobile.
+ *   LEFT  — Full-height brand panel: logo, headline, feature bullets, gradient bg.
+ *   RIGHT — Login form: username/password, forgot password, Discord OAuth, sign-up link.
+ *
+ * Fluid scaling:
+ *   - Both panels use min-h-screen so they always fill the viewport.
+ *   - Left panel hides on mobile (hidden lg:flex) to keep the form full-screen on small devices.
+ *   - Form panel is always full-screen on mobile, half-screen on desktop.
+ *   - All font sizes use clamp() for fluid scaling across all pixel densities.
+ *
+ * Auth flow:
+ *   1. Username/password  → trpc.appUsers.login
+ *   2. Forgot password    → trpc.appUsers.requestPasswordReset
+ *   3. Discord OAuth      → /api/auth/discord-login/connect?returnPath=...
  *
  * Error handling:
- *   - Discord OAuth errors shown as a banner (from ?discord_error= URL param)
- *   - Form errors shown inline below the submit button
- *   - Transient server errors auto-retry after 5s
+ *   - Discord OAuth errors shown as a banner (from ?discord_error= URL param).
+ *   - Form errors shown inline below the submit button.
+ *   - Transient server errors auto-retry after 5s.
  */
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, TrendingUp, BarChart2, Zap, Shield } from "lucide-react";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -55,6 +62,30 @@ const DISCORD_ERRORS: Record<string, string> = {
   discord_error:         "Discord returned an unexpected error. Please try again.",
   invalid_callback:      "Invalid Discord OAuth callback. Please try again.",
 };
+
+// ── Feature bullets for the left brand panel ──────────────────────────────────
+const BRAND_FEATURES = [
+  {
+    icon: TrendingUp,
+    title: "AI Model Projections",
+    desc: "Book vs. model odds on every spread, total, and moneyline.",
+  },
+  {
+    icon: BarChart2,
+    title: "Betting Splits",
+    desc: "Real-time ticket and money percentages. Know where sharp money moves.",
+  },
+  {
+    icon: Zap,
+    title: "Edge Signals",
+    desc: "Positive ROI flags when the model's probability beats the market.",
+  },
+  {
+    icon: Shield,
+    title: "Daily Lineups and Cheat Sheets",
+    desc: "Starting pitchers, batting orders, NRFI signals. All confirmed.",
+  },
+];
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -191,25 +222,142 @@ export default function Home() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
-      style={{ background: "#050810" }}
-    >
-      {/* ── Card ── */}
+    /*
+     * Root: full-viewport flex row on desktop, flex column on mobile.
+     * [LOG] Layout: lg:flex-row (split-screen) | <lg: flex-col (stacked, form only)
+     */
+    <div className="flex flex-col lg:flex-row min-h-screen w-full" style={{ background: "#050810" }}>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          LEFT PANEL — Brand / feature showcase
+          Hidden on mobile (hidden lg:flex) — form takes full screen on small devices.
+          Full-height, sticky, fills exactly 50vw on desktop.
+      ════════════════════════════════════════════════════════════════════════ */}
       <div
-        className="w-full max-w-sm rounded-2xl border border-white/10 p-7 flex flex-col gap-6"
-        style={{ background: "rgba(10,14,22,0.97)" }}
+        className="hidden lg:flex flex-col justify-between w-1/2 min-h-screen sticky top-0 self-start"
+        style={{
+          background:
+            "radial-gradient(ellipse 100% 80% at 20% 30%, rgba(57,255,20,0.10) 0%, transparent 60%), linear-gradient(160deg, #080c12 0%, #050810 100%)",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          padding: "clamp(2.5rem, 5vw, 5rem) clamp(2rem, 4vw, 4rem)",
+        }}
       >
-        {/* ── Logo + title ── */}
-        <div className="flex flex-col items-center gap-3">
-          <a href="/" aria-label="Home">
+        {/* Top: logo + brand name */}
+        <div>
+          <a href="/" aria-label="Back to home" className="inline-flex items-center gap-3 mb-12 group">
+            <img
+              src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
+              alt="AI Sports Betting"
+              className="rounded-xl object-cover group-hover:opacity-90 transition-opacity"
+              style={{ width: "clamp(2.5rem, 3.5vw, 3.5rem)", height: "clamp(2.5rem, 3.5vw, 3.5rem)" }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <span
+              className="font-black text-white"
+              style={{ fontSize: "clamp(1rem, 1.4vw, 1.25rem)", letterSpacing: "-0.02em" }}
+            >
+              AI Sports Betting
+            </span>
+          </a>
+
+          {/* Headline */}
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-[#39FF14]" style={{ animation: "pulse-green 2s ease-in-out infinite" }} />
+              <span className="text-[11px] font-bold text-[#39FF14] tracking-widest uppercase">
+                AI-Powered Betting Intelligence
+              </span>
+            </div>
+            <h1
+              className="font-black text-white leading-[1.05]"
+              style={{
+                fontSize: "clamp(2rem, 3.5vw, 3.75rem)",
+                letterSpacing: "-0.04em",
+              }}
+            >
+              Find The Edge
+              <br />
+              <span style={{ color: "#39FF14" }}>Before The Market</span>
+              <br />
+              Moves.
+            </h1>
+            <p
+              className="text-[#6b7280] mt-4 leading-relaxed"
+              style={{ fontSize: "clamp(0.875rem, 1.1vw, 1.05rem)" }}
+            >
+              Model projections, betting splits, daily lineups, and cheat sheets.
+              All in one dashboard.
+            </p>
+          </div>
+
+          {/* Feature bullets */}
+          <div className="flex flex-col gap-5">
+            {BRAND_FEATURES.map((f) => {
+              const Icon = f.icon;
+              return (
+                <div key={f.title} className="flex items-start gap-4">
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center rounded-lg"
+                    style={{
+                      width: "clamp(2rem, 2.5vw, 2.5rem)",
+                      height: "clamp(2rem, 2.5vw, 2.5rem)",
+                      background: "rgba(57,255,20,0.10)",
+                    }}
+                  >
+                    <Icon
+                      style={{
+                        color: "#39FF14",
+                        width: "clamp(1rem, 1.2vw, 1.2rem)",
+                        height: "clamp(1rem, 1.2vw, 1.2rem)",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p
+                      className="font-bold text-white"
+                      style={{ fontSize: "clamp(0.8rem, 1vw, 0.95rem)" }}
+                    >
+                      {f.title}
+                    </p>
+                    <p
+                      className="text-[#6b7280] mt-0.5 leading-snug"
+                      style={{ fontSize: "clamp(0.75rem, 0.9vw, 0.875rem)" }}
+                    >
+                      {f.desc}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bottom: disclaimer */}
+        <p
+          className="text-[#374151] mt-8"
+          style={{ fontSize: "clamp(0.65rem, 0.8vw, 0.75rem)" }}
+        >
+          No guaranteed outcomes. For informational purposes only. Gamble responsibly.
+        </p>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          RIGHT PANEL — Login form
+          Full-screen on mobile, half-screen on desktop.
+          Vertically centered, horizontally padded.
+      ════════════════════════════════════════════════════════════════════════ */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center min-h-screen"
+        style={{ padding: "clamp(2rem, 5vw, 5rem) clamp(1.5rem, 5vw, 5rem)" }}
+      >
+        {/* Mobile-only logo (hidden on desktop where left panel shows it) */}
+        <div className="flex lg:hidden flex-col items-center gap-3 mb-8">
+          <a href="/" aria-label="Back to home">
             <img
               src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
               alt="AI Sports Betting"
               className="w-14 h-14 rounded-xl object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </a>
           <div className="text-center">
@@ -218,169 +366,191 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── Discord error banner ── */}
-        {discordErrorMsg && (
-          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 text-center space-y-1.5">
-            <p>{discordErrorMsg}</p>
-            {isTransientError && retryCountdown !== null && (
-              <p className="text-red-400/70 animate-pulse">Retrying in {retryCountdown}s…</p>
-            )}
-            {isTransientError && (
-              <button
-                onClick={() => { window.location.href = loginUrl; }}
-                className="text-xs underline text-red-300 hover:text-red-200 transition-colors"
-              >
-                Retry now
-              </button>
-            )}
-          </div>
-        )}
+        {/* Form container — max-w keeps it readable on ultra-wide right panels */}
+        <div className="w-full" style={{ maxWidth: "clamp(320px, 40vw, 480px)" }}>
 
-        {/* ── Username / Password form ── */}
-        {!forgotOpen ? (
-          <form onSubmit={handleFormSubmit} className="flex flex-col gap-3" noValidate>
-            {/* Identifier */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="identifier" className="text-[12px] font-semibold text-[#9ca3af]">
-                Username or Email
-              </label>
-              <input
-                id="identifier"
-                type="text"
-                autoComplete="username"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="your_username"
-                className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
-                disabled={loginMutation.isPending}
-              />
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-[12px] font-semibold text-[#9ca3af]">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPw ? "text" : "password"}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
-                  disabled={loginMutation.isPending}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] transition-colors"
-                  tabIndex={-1}
-                  aria-label={showPw ? "Hide password" : "Show password"}
-                >
-                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Forgot password link */}
-            <div className="flex justify-end -mt-1">
-              <button
-                type="button"
-                onClick={() => { setForgotOpen(true); setFormError(null); }}
-                className="text-[11px] text-[#39FF14] hover:text-[#39FF14]/80 transition-colors"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            {/* Form error */}
-            {formError && (
-              <p className="text-[12px] text-red-400 text-center -mt-1">{formError}</p>
-            )}
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loginMutation.isPending}
-              className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ background: "#39FF14" }}
+          {/* Desktop heading */}
+          <div className="hidden lg:block mb-8">
+            <h2
+              className="font-black text-white"
+              style={{ fontSize: "clamp(1.5rem, 2.2vw, 2.25rem)", letterSpacing: "-0.03em" }}
             >
-              {loginMutation.isPending ? (
-                <><Loader2 size={15} className="animate-spin" /> Signing in…</>
-              ) : (
-                "Sign In"
-              )}
-            </button>
-          </form>
-        ) : (
-          /* ── Forgot password form ── */
-          <form onSubmit={handleForgotSubmit} className="flex flex-col gap-3" noValidate>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotIdent(""); }}
-                className="text-[#6b7280] hover:text-white transition-colors"
-                aria-label="Back to login"
-              >
-                ← Back
-              </button>
-              <span className="text-sm font-semibold text-white">Reset Password</span>
-            </div>
+              Sign in
+            </h2>
+            <p className="text-[#6b7280] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
+              Welcome back. Enter your credentials to continue.
+            </p>
+          </div>
 
-            {forgotSent ? (
-              <div className="px-4 py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[12px] text-[#39FF14] text-center">
-                If an account exists for that username or email, a reset link has been sent.
-              </div>
-            ) : (
-              <>
-                <p className="text-[12px] text-[#9ca3af]">
-                  Enter your username or email and we'll send you a password reset link.
-                </p>
+          {/* ── Discord error banner ── */}
+          {discordErrorMsg && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 text-center space-y-1.5">
+              <p>{discordErrorMsg}</p>
+              {isTransientError && retryCountdown !== null && (
+                <p className="text-red-400/70 animate-pulse">Retrying in {retryCountdown}s…</p>
+              )}
+              {isTransientError && (
+                <button
+                  onClick={() => { window.location.href = loginUrl; }}
+                  className="text-xs underline text-red-300 hover:text-red-200 transition-colors"
+                >
+                  Retry now
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Username / Password form ── */}
+          {!forgotOpen ? (
+            <form onSubmit={handleFormSubmit} className="flex flex-col gap-4" noValidate>
+              {/* Identifier */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="identifier"
+                  className="text-[12px] font-semibold text-[#9ca3af]"
+                >
+                  Username or Email
+                </label>
                 <input
+                  id="identifier"
                   type="text"
                   autoComplete="username"
-                  value={forgotIdentifier}
-                  onChange={(e) => setForgotIdent(e.target.value)}
-                  placeholder="Username or email"
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
-                  disabled={requestResetMutation.isPending}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="your_username"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
+                  disabled={loginMutation.isPending}
                 />
-                <button
-                  type="submit"
-                  disabled={requestResetMutation.isPending || !forgotIdentifier.trim()}
-                  className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ background: "#39FF14" }}
+              </div>
+
+              {/* Password */}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="password"
+                  className="text-[12px] font-semibold text-[#9ca3af]"
                 >
-                  {requestResetMutation.isPending ? (
-                    <><Loader2 size={15} className="animate-spin" /> Sending…</>
-                  ) : (
-                    "Send Reset Link"
-                  )}
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPw ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
+                    disabled={loginMutation.isPending}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                  >
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot password link */}
+              <div className="flex justify-end -mt-2">
+                <button
+                  type="button"
+                  onClick={() => { setForgotOpen(true); setFormError(null); }}
+                  className="text-[11px] transition-colors"
+                  style={{ color: "#39FF14" }}
+                >
+                  Forgot password?
                 </button>
-              </>
-            )}
-          </form>
-        )}
+              </div>
 
-        {/* ── Divider ── */}
-        {!forgotOpen && (
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[11px] text-[#4b5563] font-medium">or</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-        )}
+              {/* Form error */}
+              {formError && (
+                <p className="text-[12px] text-red-400 text-center -mt-1">{formError}</p>
+              )}
 
-        {/* ── Discord login ── */}
-        {!forgotOpen && (
-          <div className="flex flex-col gap-2">
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loginMutation.isPending}
+                className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: "#39FF14" }}
+              >
+                {loginMutation.isPending ? (
+                  <><Loader2 size={15} className="animate-spin" /> Signing in…</>
+                ) : (
+                  "Sign In"
+                )}
+              </button>
+            </form>
+          ) : (
+            /* ── Forgot password form ── */
+            <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4" noValidate>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotIdent(""); }}
+                  className="text-[#6b7280] hover:text-white transition-colors"
+                  aria-label="Back to login"
+                >
+                  ← Back
+                </button>
+                <span className="text-sm font-semibold text-white">Reset Password</span>
+              </div>
+
+              {forgotSent ? (
+                <div className="px-4 py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[12px] text-[#39FF14] text-center">
+                  If an account exists for that username or email, a reset link has been sent.
+                </div>
+              ) : (
+                <>
+                  <p className="text-[12px] text-[#9ca3af]">
+                    Enter your username or email and we'll send you a password reset link.
+                  </p>
+                  <input
+                    type="text"
+                    autoComplete="username"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdent(e.target.value)}
+                    placeholder="Username or email"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
+                    disabled={requestResetMutation.isPending}
+                  />
+                  <button
+                    type="submit"
+                    disabled={requestResetMutation.isPending || !forgotIdentifier.trim()}
+                    className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{ background: "#39FF14" }}
+                  >
+                    {requestResetMutation.isPending ? (
+                      <><Loader2 size={15} className="animate-spin" /> Sending…</>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </button>
+                </>
+              )}
+            </form>
+          )}
+
+          {/* ── Divider ── */}
+          {!forgotOpen && (
+            <div className="flex items-center gap-3 my-5">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[11px] text-[#4b5563] font-medium">or</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+          )}
+
+          {/* ── Discord login ── */}
+          {!forgotOpen && (
             <a
               href={loginUrl}
               onClick={handleDiscordClick}
               aria-disabled={isDiscordRedirecting}
-              className="flex items-center justify-center gap-2.5 w-full px-5 py-3 rounded-lg font-bold text-sm text-white transition-all active:scale-[0.98]"
+              className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-all active:scale-[0.98]"
               style={{
                 backgroundColor: "#5865F2",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
@@ -393,29 +563,28 @@ export default function Home() {
                 <><DiscordIcon size={18} /> Login with Discord</>
               )}
             </a>
+          )}
 
-          </div>
-        )}
+          {/* ── Sign Up link ── */}
+          {!forgotOpen && (
+            <p className="text-center text-[12px] text-[#6b7280] mt-5">
+              Don't have an account?{" "}
+              <a
+                href="/#pricing"
+                className="font-semibold transition-colors"
+                style={{ color: "#39FF14" }}
+              >
+                Sign Up
+              </a>
+            </p>
+          )}
 
-        {/* ── Sign Up link ── */}
-        {!forgotOpen && (
-          <p className="text-center text-[12px] text-[#6b7280]">
-            Don't have an account?{" "}
-            <a
-              href="/#pricing"
-              className="font-semibold transition-colors"
-              style={{ color: "#39FF14" }}
-            >
-              Sign Up
-            </a>
+          {/* ── Disclaimer ── */}
+          <p className="text-center text-[11px] text-[#374151] mt-6">
+            By signing in you agree to gamble responsibly. This tool is for informational purposes only.
           </p>
-        )}
+        </div>
       </div>
-
-      {/* ── Disclaimer ── */}
-      <p className="mt-5 text-center text-[11px] text-[#374151] max-w-xs">
-        By signing in you agree to gamble responsibly. This tool is for informational purposes only.
-      </p>
     </div>
   );
 }
