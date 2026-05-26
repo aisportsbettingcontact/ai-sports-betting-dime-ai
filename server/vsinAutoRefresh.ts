@@ -1053,11 +1053,30 @@ export async function refreshAnApiOdds(
           );
         }
 
+        // ── LAYER2 GUARD PROPAGATION FIX ────────────────────────────────────────────
+        // CRITICAL BUG (root cause of Rangers -123 ML / -195 RL contradiction):
+        // LAYER2_ML_GUARD above corrects _finalAwayRunLine/_finalHomeRunLine when the
+        // scraped run line contradicts the ML direction. However, awayBookSpread is the
+        // column used for DISPLAY — it MUST use the corrected value, not the raw
+        // rAwaySpread.value. Before this fix, the guard corrected awayRunLine but left
+        // awayBookSpread with the inverted sign, causing the display contradiction.
+        //
+        // Fix: for MLB, use _finalAwayRunLine/_finalHomeRunLine as awayBookSpread/homeBookSpread.
+        // For all other sports, use rAwaySpread.value as before (no run line guard applies).
+        const _finalAwayBookSpread = (sport === 'mlb' && _finalAwayRunLine !== null)
+          ? _finalAwayRunLine
+          : rAwaySpread.value;
+        const _finalHomeBookSpread = (sport === 'mlb' && _finalHomeRunLine !== null)
+          ? _finalHomeRunLine
+          : rHomeSpread.value;
+
         const _anOddsResult = await updateAnOdds(dbGame.id, {
           // Resolved primary book columns (DK NJ or Open-line — atomic switch)
-          awayBookSpread:  rAwaySpread.value,
+          // For MLB: use LAYER2-corrected run line values so awayBookSpread always
+          // matches the ML direction (invariant: ML fav = RL fav).
+          awayBookSpread:  _finalAwayBookSpread,
           awaySpreadOdds:  rAwaySpreadOdds.value,
-          homeBookSpread:  rHomeSpread.value,
+          homeBookSpread:  _finalHomeBookSpread,
           homeSpreadOdds:  rHomeSpreadOdds.value,
           bookTotal:       rTotal.value,
           overOdds:        rOverOdds.value,
