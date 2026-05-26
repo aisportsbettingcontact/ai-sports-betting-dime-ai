@@ -1031,7 +1031,7 @@ export default function ModelProjections() {
                     color: "#ffffff",
                     fontFamily: "'GG Sans', 'Noto Sans', sans-serif",
                     fontWeight: 600,
-                    fontSize: "13px",
+                    fontSize: "clamp(10px, 2.8vw, 13px)",
                     letterSpacing: "0.01em",
                     lineHeight: 1,
                     border: "none",
@@ -1039,6 +1039,7 @@ export default function ModelProjections() {
                     boxShadow: "none",
                     opacity: 1,
                     whiteSpace: "nowrap",
+                    padding: "6px clamp(6px, 2vw, 12px)",
                   }}
                 >
                   {/* Official Discord logo SVG — white fill */}
@@ -1434,7 +1435,7 @@ export default function ModelProjections() {
       {feedMobileTab === 'dual' && (
         // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
         // LAYOUT RULES (must match MobileGameCard exactly):
-        //   Left panel: 80px fixed (matches MobileGameCard gridTemplateColumns: '80px 1fr')
+        //   Left panel: clamp(72px, 20.4vw, 88px) fluid (matches MobileGameCard gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr')
         //   Right panel: padding: '5px 6px' gap: '4px' (matches OddsTable padding: '4px 6px' gap: '4px')
         //   Each label cell: flex: '1 1 0' textAlign: 'center' (matches MktCard flex-1)
         // zIndex: 39 -- just below main header's z-40 so it stacks correctly
@@ -1455,7 +1456,7 @@ export default function ModelProjections() {
             top: 'var(--prez-header-h, 120px)',
             zIndex: 39,
             display: 'grid',
-            gridTemplateColumns: '80px 1fr',
+            gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
             width: '100%',
             background: 'hsl(var(--card))',
             borderBottom: '1px solid rgba(255,255,255,0.12)',

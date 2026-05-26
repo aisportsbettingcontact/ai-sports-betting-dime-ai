@@ -814,7 +814,7 @@ return (
 
     {/* ── TWO-COLUMN TEAM GRID: frozen left + scrollable right ─────── */}
     {/* Status row (star/LIVE/FINAL/time) is inside the frozen left panel, ABOVE the away team row */}
-    <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', width: '100%', minHeight: 0 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr', width: '100%', minHeight: 0 }}>
 
     {/* ── FROZEN LEFT PANEL: status row + team rows ── */}
     <div style={{
