@@ -47,8 +47,8 @@ export default function HowItWorks() {
   const shouldReduce = useReducedMotion();
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section style={{ padding: "6rem clamp(16px, 4vw, 64px)" }}>
+      <div className="max-w-screen-2xl mx-auto">
         <motion.div
           initial={shouldReduce ? false : { opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
