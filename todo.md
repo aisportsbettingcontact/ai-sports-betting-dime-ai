@@ -3992,3 +3992,10 @@
 - [x] Write appUsers.login.test.ts — 10 tests: stayLoggedIn=true (maxAge=7776000000), stayLoggedIn=false (maxAge=undefined), JWT claims (sub/role/type/tv/alg/exp), HTTPS flags, username login, @username behavior, wrong password, hasAccess=false, pendingSetup=true, rate-limit isolation
 - [x] Write tokenVersion.db.test.ts — 8 tests: DB-level incrementTokenVersion (TV-1..4), stale JWT rejected by appUserProcedure (JR-1,2), null tv skips check (JR-3), forceLogoutUser (FL-1..6), incrementAllTokenVersions excludes owner (FA-1..3)
 - [x] Full suite: 936/936 passed (42 test files)
+
+## Landing Page Fixes (Session May 26 2026)
+- [x] LandingNav: Remove "AI Sports Betting" text span — logo image only
+- [x] BettingSplitsDemo: Remove center header (⚾ MLB + MAY 23, 2026)
+- [x] BettingSplitsDemo: Remove DraftKings NJ from SPLITS tab indicator row
+- [x] BettingSplitsDemo: Remove footer (Source: VSiN · aisportsbettingmodels.com + LIVE DATA)
+- [x] BettingSplitsDemo: Kansas City Royals logo+text alignment confirmed correct (flex-end, row-reverse) — no change needed
