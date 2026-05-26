@@ -409,8 +409,8 @@ async function startServer() {
   registerDiscordAuthRoutes(app);
   registerDiscordLoginRoutes(app);
   registerDiscordInviteRoutes(app);
-  // Rotogrinders server-side proxy — restricted to @prez and @lucianobets
-  registerRgProxyRoute(app);
+  // Rotogrinders server-side proxy — PAUSED (set ROTOGRINDERS_PAUSED=false in jackMac.ts to re-enable scheduler too)
+  // registerRgProxyRoute(app);  // PAUSED
 
   // tRPC API
   app.use(

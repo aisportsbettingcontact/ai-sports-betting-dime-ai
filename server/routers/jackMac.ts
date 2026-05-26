@@ -114,7 +114,16 @@ async function runScheduledJackMacSync(): Promise<void> {
   console.warn(`[JackMac][SCHEDULER] [VERIFY] WARN — runId=${runId} timed out after ${maxWaitMs / 1000}s`);
 }
 
+// ─── ROTOGRINDERS PAUSED ─────────────────────────────────────────────────────
+// Set ROTOGRINDERS_PAUSED = false to re-enable the 15-min auto-sync scheduler.
+const ROTOGRINDERS_PAUSED = true;
+
 export function startJackMacScheduler(): void {
+  if (ROTOGRINDERS_PAUSED) {
+    console.log(`[JackMac][SCHEDULER] [STATE] PAUSED — Rotogrinders scheduler is disabled. Set ROTOGRINDERS_PAUSED=false to re-enable.`);
+    return;
+  }
+
   if (jackMacSyncIntervalId !== null) {
     console.log(`[JackMac][SCHEDULER] Already running — skipping duplicate start`);
     return;
