@@ -38,6 +38,8 @@ const ANNUAL_PRICE = 499.99;
 const ANNUAL_EQUIV_MONTHLY = (ANNUAL_PRICE / 12).toFixed(2); // 41.67
 const ANNUAL_SAVINGS = ((MONTHLY_PRICE * 12) - ANNUAL_PRICE).toFixed(2); // 699.89
 const ANNUAL_SAVINGS_PCT = Math.round(((MONTHLY_PRICE * 12 - ANNUAL_PRICE) / (MONTHLY_PRICE * 12)) * 100); // 58
+const MONTHLY_PER_DAY = (MONTHLY_PRICE / 30).toFixed(2);  // 3.33
+const ANNUAL_PER_DAY  = (ANNUAL_PRICE  / 365).toFixed(2); // 1.37
 
 const PLANS = [
   {
@@ -45,9 +47,11 @@ const PLANS = [
     name: "Monthly",
     price: "$99.99",
     period: "/month",
+    perDay: `$${MONTHLY_PER_DAY}/day`,
+    billedAs: "billed $99.99 monthly",
     savingsLine: null as string | null,
     equivLine: null as string | null,
-    description: "Full access to all models, projections, splits, and edge tools. Cancel anytime.",
+    description: "Full access to all models, projections, splits, and edge tools. Auto-renews monthly. Cancel anytime.",
     features: [
       "All AI model projections",
       "Betting splits & money %",
@@ -65,10 +69,12 @@ const PLANS = [
     name: "Annual",
     price: "$499.99",
     period: "/year",
+    perDay: `$${ANNUAL_PER_DAY}/day`,
+    billedAs: "billed $499.99 annually",
     savingsLine: `Save $${ANNUAL_SAVINGS}/year vs monthly`,
     equivLine: `Only $${ANNUAL_EQUIV_MONTHLY}/mo, ${ANNUAL_SAVINGS_PCT}% off`,
     badge: `Best Value. Save ${ANNUAL_SAVINGS_PCT}%`,
-    description: `Lock in full-year access. Equivalent to just $${ANNUAL_EQUIV_MONTHLY}/month.`,
+    description: `Lock in full-year access. Equivalent to just $${ANNUAL_EQUIV_MONTHLY}/month. Auto-renews annually.`,
     features: [
       "All AI model projections",
       "Betting splits & money %",
@@ -237,7 +243,7 @@ export default function PricingCTA() {
                       {plan.name}
                     </span>
 
-                    {/* Price */}
+                    {/* Price + per-day */}
                     <div className="flex items-baseline gap-1 mt-1">
                       <span
                         className="font-black text-white"
@@ -254,6 +260,24 @@ export default function PricingCTA() {
                         style={{ fontSize: "clamp(10px, 1.8vw, 14px)" }}
                       >
                         {plan.period}
+                      </span>
+                    </div>
+                    {/* Per-day callout */}
+                    <div className="mt-1 flex flex-col gap-0.5">
+                      <span
+                        className="font-bold"
+                        style={{
+                          color: plan.highlight ? "#39FF14" : "#d1d5db",
+                          fontSize: "clamp(11px, 2.2vw, 15px)",
+                        }}
+                      >
+                        {plan.perDay}
+                      </span>
+                      <span
+                        className="text-[#6b7280]"
+                        style={{ fontSize: "clamp(9px, 1.6vw, 11px)" }}
+                      >
+                        {plan.billedAs}
                       </span>
                     </div>
 
@@ -506,7 +530,7 @@ export default function PricingCTA() {
           </svg>
         </div>
         <p className="text-center text-[11px] text-[#4b5563] mt-2">
-          Payments processed securely by Stripe. Cancel anytime.
+          Payments processed securely by Stripe. Subscriptions auto-renew at the end of each billing period. Cancel anytime before renewal to avoid the next charge.
         </p>
       </div>
     </section>

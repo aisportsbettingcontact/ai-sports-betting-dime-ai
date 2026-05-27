@@ -142,7 +142,14 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
         },
       ],
       // ── Subscription data ────────────────────────────────────────────────
+      // description is shown on the Stripe Checkout page and in Stripe-generated
+      // customer emails, providing explicit auto-renewal disclosure.
       subscription_data: {
+        description: planId === 'annual'
+          ? 'AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.'
+          : planId === 'monthly'
+          ? 'AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.'
+          : 'AI Sports Betting Models — Test Plan ($1.00/month). Auto-renews monthly.',
         metadata: {
           ...(userId != null ? { user_id: String(userId) } : {}),
           plan_id: planId,
