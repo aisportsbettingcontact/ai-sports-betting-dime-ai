@@ -34,6 +34,7 @@ const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 const ManageAccount = lazy(() => import('./pages/ManageAccount'));
+const Pricing = lazy(() => import('./pages/Pricing'));
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -112,6 +113,8 @@ function Router() {
       <Route path="/subscribe/cancel" component={SubscribeCancel} />
       {/* Login page — public, no auth required */}
       <Route path="/login" component={Home} />
+      {/* Standalone pricing page — public */}
+      <Route path="/pricing" component={Pricing} />
       {/* Password reset — public, accessed via reset link */}
       <Route path="/reset-password" component={ResetPassword} />
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
