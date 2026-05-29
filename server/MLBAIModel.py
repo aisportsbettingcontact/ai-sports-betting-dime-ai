@@ -1739,6 +1739,59 @@ class MarketDerivation:
                 f"P(away_win_by_2+)={p_away_win_by2:.4f} ≤ P(away_win)={p_away:.4f}",
             )
 
+        # ── FINAL RL INVARIANT ENFORCEMENT (post Steps 6+7) ───────────────────
+        # MATHEMATICAL REQUIREMENT: P(team covers -1.5) MUST be strictly less than
+        # P(team wins outright), because winning by 2+ is a strict subset of winning.
+        # Steps 6 and 7 each apply independent clamps, but Step 7's unconditional
+        # assignment p_hrl = p_home_win_by2 can overwrite Step 6's clamp with a raw
+        # simulation value that still violates the invariant. This final gate
+        # re-enforces the invariant unconditionally after both steps complete.
+        #
+        # CONSEQUENCE: A -118 ML favorite CANNOT be -185 to cover -1.5.
+        #   -118 ML  => P(win) = 0.5413
+        #   -185 RL  => P(cover) = 0.6491  -- IMPOSSIBLE (cover is strict subset of win)
+        #   Correct: RL odds for the -1.5 side must be LESS negative than the ML odds.
+        _rl_final_clamped = False
+        if sim["rl_spread"] < 0:
+            # Home is the -1.5 favorite: P(home covers -1.5) MUST be < P(home wins)
+            if p_hrl >= p_home:
+                _old_p_hrl = p_hrl
+                p_hrl = p_home * 0.97  # cap at 97% of win prob (strict inequality)
+                p_arl = 1.0 - p_hrl
+                rl_home_odds = prob_to_ml(p_hrl)
+                rl_away_odds = prob_to_ml(p_arl)
+                _rl_final_clamped = True
+                if logger:
+                    logger.flag(
+                        f"[RL-FINAL-CLAMP] Home fav (-1.5): p_hrl={_old_p_hrl:.4f} >= p_home={p_home:.4f} "
+                        f"-- INVARIANT VIOLATION. Clamped to p_hrl={p_hrl:.4f} "
+                        f"rl_home_odds={rl_home_odds} rl_away_odds={rl_away_odds}"
+                    )
+        else:
+            # Away is the -1.5 favorite (rl_spread >= 0 means home is +1.5 dog)
+            if p_arl >= p_away:
+                _old_p_arl = p_arl
+                p_arl = p_away * 0.97
+                p_hrl = 1.0 - p_arl
+                rl_home_odds = prob_to_ml(p_hrl)
+                rl_away_odds = prob_to_ml(p_arl)
+                _rl_final_clamped = True
+                if logger:
+                    logger.flag(
+                        f"[RL-FINAL-CLAMP] Away fav (-1.5): p_arl={_old_p_arl:.4f} >= p_away={p_away:.4f} "
+                        f"-- INVARIANT VIOLATION. Clamped to p_arl={p_arl:.4f} "
+                        f"rl_home_odds={rl_home_odds} rl_away_odds={rl_away_odds}"
+                    )
+        if logger:
+            _fav_is_home = sim["rl_spread"] < 0
+            _invariant_ok = (p_hrl < p_home) if _fav_is_home else (p_arl < p_away)
+            logger.verify(
+                _invariant_ok,
+                f"[RL-INVARIANT] P(fav covers -1.5) < P(fav wins): "
+                f"rl_spread={sim['rl_spread']:+.1f} p_hrl={p_hrl:.4f} p_arl={p_arl:.4f} "
+                f"p_home={p_home:.4f} p_away={p_away:.4f} clamped={_rl_final_clamped}"
+            )
+
         # ── STEP 8: Cross-Market Consistency Engine ───────────────────────────
         if logger:
             logger.step("Step 8: Cross-Market Consistency Engine")
