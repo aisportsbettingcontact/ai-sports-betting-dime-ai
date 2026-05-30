@@ -4015,3 +4015,16 @@
 - [x] LandingFooter: px-4 → clamp fluid padding
 - [x] Fixed 5 duplicate style attribute TS errors (merged padding into existing style objects)
 - [x] TypeScript: 0 errors | Tests: 956/956 passing
+
+## Session: 2026-05-30 - Fangraphs Lineup Tab Reactivation
+
+- [x] Audit fangraphsScraper.ts and jackMacSheetsSync.ts lineup pipeline in full depth
+- [x] Build isolated server/fangraphsLineupSync.ts (zero RotoGrinders code, full safeguards)
+- [x] Build server/fangraphsLineupHeartbeat.ts (POST /api/scheduled/fg-lineups handler with run lock)
+- [x] Mount /api/scheduled/fg-lineups in server/_core/index.ts before tRPC
+- [x] Delete stale 05-26-2026 LINEUPS and 05-27-2026 LINEUPS tabs (were not present — already absent)
+- [x] Populate 05-30-2026 LINEUPS (15 games, 30 rows, read-back validated)
+- [x] Populate 05-31-2026 LINEUPS (15 games, 30 rows, read-back validated)
+- [x] Register 10-min Heartbeat cron (task_uid=UrFdDVMKqHH4a6juao2uSu, cron="0 */10 * * * *")
+- [x] Persist task_uid to references/fg-lineups-heartbeat.json
+- [ ] Deploy site so Heartbeat platform can reach /api/scheduled/fg-lineups
