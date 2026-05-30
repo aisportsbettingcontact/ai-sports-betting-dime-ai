@@ -4027,4 +4027,14 @@
 - [x] Populate 05-31-2026 LINEUPS (15 games, 30 rows, read-back validated)
 - [x] Register 10-min Heartbeat cron (task_uid=UrFdDVMKqHH4a6juao2uSu, cron="0 */10 * * * *")
 - [x] Persist task_uid to references/fg-lineups-heartbeat.json
-- [ ] Deploy site so Heartbeat platform can reach /api/scheduled/fg-lineups
+- [ ] Deploy site so Heartbeat platform can reach /api/scheduled/fg-lineups (user action: click Publish in Management UI)
+
+## Session: 2026-05-30 - Fangraphs Lineup Schema Upgrade (Pitcher/Batter MLB IDs + Full Lineups)
+
+- [x] Audit MLB Stats API response — confirmed probablePitcher.id and lineups[].id field paths
+- [x] Add PITCHER_MLB_ID column (col 7) to buildLineupRows — sourced from probablePitcher.id
+- [x] Add BATTER_MLB_ID column (col 17) to buildLineupRows — sourced from awayPlayers/homePlayers[].id
+- [x] Update sample-row log to include PITCHER_MLB_ID for audit traceability
+- [x] Run immediate sync — 05-30 and 05-31 tabs updated to 20-col schema (30 rows each, validated)
+- [x] Run validatePitcherIds.ts — 30/30 PASS, 0 FAIL (all IDs correct including Kyle Bradish=680694)
+- [x] Batting lineups: MLB API returns confirmed lineups only — will auto-populate on next 10-min cycle once lineups are posted (typically 3-4h before first pitch)
