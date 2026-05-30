@@ -327,21 +327,25 @@ async function readBackRowCount(
 /**
  * Converts FgGame[] into a flat 2D string array for Google Sheets.
  *
- * Schema (18 columns):
- *   DATE | GAME | GAME_TIME_PST | SIDE | TEAM | PITCHER | THROWS |
- *   W | L | ERA | IP | SO | WHIP |
- *   BAT_ORDER | PLAYER | BATS | POSITION | LINEUP_STATUS
+ * Schema (20 columns):
+ *   DATE | GAME | GAME_TIME_PST | SIDE | TEAM |
+ *   PITCHER | PITCHER_MLB_ID | THROWS | W | L | ERA | IP | SO | WHIP |
+ *   BAT_ORDER | PLAYER | BATTER_MLB_ID | BATS | POSITION | LINEUP_STATUS
  *
  * Row expansion:
  *   - Lineup posted (9 batters): 9 rows per team (pitcher data repeated on each)
  *   - No lineup: 1 stub row per team (batter columns empty)
  *   - Full game both sides confirmed: 18 data rows
+ *
+ * PITCHER_MLB_ID: MLB Stats API probablePitcher.id (e.g. 680694 for Kyle Bradish)
+ * BATTER_MLB_ID:  MLB Stats API player.id for each lineup batter
+ * Both IDs are empty string when the player is TBD / not yet posted.
  */
 function buildLineupRows(games: FgGame[], dateLabel: string): string[][] {
   const header = [
     "DATE", "GAME", "GAME_TIME_PST", "SIDE", "TEAM",
-    "PITCHER", "THROWS", "W", "L", "ERA", "IP", "SO", "WHIP",
-    "BAT_ORDER", "PLAYER", "BATS", "POSITION", "LINEUP_STATUS",
+    "PITCHER", "PITCHER_MLB_ID", "THROWS", "W", "L", "ERA", "IP", "SO", "WHIP",
+    "BAT_ORDER", "PLAYER", "BATTER_MLB_ID", "BATS", "POSITION", "LINEUP_STATUS",
   ];
 
   const pstFormatter = new Intl.DateTimeFormat("en-US", {
@@ -364,6 +368,8 @@ function buildLineupRows(games: FgGame[], dateLabel: string): string[][] {
       const pitcher = team.pitcher;
 
       const pitcherName  = pitcher?.name       ?? "TBD";
+      // PITCHER_MLB_ID: numeric MLB player ID from probablePitcher.id — empty string for TBD
+      const pitcherMlbId = pitcher?.playerId != null ? String(pitcher.playerId) : "";
       const pitcherHand  = pitcher?.throws      ?? "?";
       const pitcherW     = pitcher != null ? String(pitcher.wins)        : "";
       const pitcherL     = pitcher != null ? String(pitcher.losses)      : "";
@@ -373,22 +379,25 @@ function buildLineupRows(games: FgGame[], dateLabel: string): string[][] {
       const pitcherWhip  = pitcher?.whip        ?? "";
 
       if (team.lineup.length === 0) {
-        // Stub row — no lineup available yet
+        // Stub row — no lineup posted yet; batter columns are empty
+        // PITCHER_MLB_ID is still populated if a probable pitcher is known
         rows.push([
           dateLabel, gameLabel, gameTimePst,
           side.toUpperCase(), team.teamAbbr,
-          pitcherName, pitcherHand, pitcherW, pitcherL,
+          pitcherName, pitcherMlbId, pitcherHand, pitcherW, pitcherL,
           pitcherEra, pitcherIp, pitcherSo, pitcherWhip,
-          "", "", "", "", team.lineupStatus,
+          "", "", "", "", "", team.lineupStatus,
         ]);
       } else {
         for (const batter of team.lineup) {
+          // BATTER_MLB_ID: numeric MLB player ID from lineups awayPlayers/homePlayers[].id
+          const batterMlbId = batter.playerId != null ? String(batter.playerId) : "";
           rows.push([
             dateLabel, gameLabel, gameTimePst,
             side.toUpperCase(), team.teamAbbr,
-            pitcherName, pitcherHand, pitcherW, pitcherL,
+            pitcherName, pitcherMlbId, pitcherHand, pitcherW, pitcherL,
             pitcherEra, pitcherIp, pitcherSo, pitcherWhip,
-            String(batter.order), batter.name, batter.bats, batter.position,
+            String(batter.order), batter.name, batterMlbId, batter.bats, batter.position,
             team.lineupStatus,
           ]);
         }
@@ -449,12 +458,16 @@ async function writeLineupTab(
   const dataRowCount = values.length - 1; // exclude header row
 
   // Log first data row sample for audit traceability
+  // Schema: DATE[0] GAME[1] TIME[2] SIDE[3] TEAM[4] PITCHER[5] PITCHER_MLB_ID[6]
+  //         THROWS[7] W[8] L[9] ERA[10] IP[11] SO[12] WHIP[13]
+  //         BAT_ORDER[14] PLAYER[15] BATTER_MLB_ID[16] BATS[17] POSITION[18] LINEUP_STATUS[19]
   const firstRow = values[1];
   if (firstRow) {
     console.log(
       `[FgSync] [STATE] writeLineupTab: "${tabName}" row[1] sample: ` +
       `DATE=${firstRow[0]} GAME=${firstRow[1]} TIME=${firstRow[2]} SIDE=${firstRow[3]} ` +
-      `TEAM=${firstRow[4]} PITCHER=${firstRow[5]} STATUS=${firstRow[17]}`
+      `TEAM=${firstRow[4]} PITCHER=${firstRow[5]} PITCHER_MLB_ID=${firstRow[6]} ` +
+      `THROWS=${firstRow[7]} STATUS=${firstRow[19]}`
     );
   }
 
