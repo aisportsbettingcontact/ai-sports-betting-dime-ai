@@ -38,6 +38,7 @@ import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
+import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -411,6 +412,11 @@ async function startServer() {
   registerDiscordInviteRoutes(app);
   // Rotogrinders server-side proxy — PAUSED (set ROTOGRINDERS_PAUSED=false in jackMac.ts to re-enable scheduler too)
   // registerRgProxyRoute(app);  // PAUSED
+
+  // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
+  // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
+  // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
+  registerFgLineupsHeartbeat(app);
 
   // tRPC API
   app.use(
