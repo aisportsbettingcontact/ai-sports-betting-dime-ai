@@ -10,7 +10,7 @@
 import React from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/lib/trpc';
-import { getEdgeColor, calculateEdge, getVerdict } from '@/lib/edgeUtils';
+import { getEdgeColor, calculateEdge, calculateRoi, formatRoi, getVerdict } from '@/lib/edgeUtils';
 import { spreadSign, toNum } from '@/lib/gameUtils';
 import { BettingSplitsPanel } from './BettingSplitsPanel';
 
@@ -520,53 +520,100 @@ const homeMlIsEdge      = homeMlEdgeDetected;
 // RULE: Edge lives in the juice, not the line.
 // Each market is independent — never averaged, never combined.
 // Recalculate on every render (derived state, not stored state).
-// AWAY spread edge: book juice vs model juice
-// NHL uses puck-line odds (modelAwayPLOdds); MLB uses run-line/spread odds (modelAwaySpreadOdds)
+// ── ROI % computations (mobile) ──────────────────────────────────────────────
+// FORMULA: calculateRoi(modelML, bookML, bookOppML)
+//   = (modelImplied / bookNoVigProb - 1) * 100
+// This is IDENTICAL to the desktop EdgeVerdict column formula.
+// bookNoVigProb = bookML_implied / (bookML_implied + bookOpp_implied)
+// This removes the vig from the book price before comparing to the model.
+//
+// AWAY spread ROI
 const awaySpreadEdgePP: number = (() => {
-  const bkOdds  = toNum(game.awaySpreadOdds);
-  const mdlOdds = isNhlGame
+  const bkAway  = toNum(game.awaySpreadOdds);
+  const bkHome  = toNum(game.homeSpreadOdds);
+  const mdlAway = isNhlGame
     ? toNum(game.modelAwayPLOdds)
     : toNum((game as unknown as Record<string, string | null>).modelAwaySpreadOdds ?? null);
+  const roi = calculateRoi(mdlAway, bkAway, bkHome);
   if (process.env.NODE_ENV === 'development') {
-    console.log(`%c[GameCard:SpreadEdgePP:AWAY] game=${game.id} sport=${game.sport} bkOdds=${bkOdds} mdlOdds=${mdlOdds} isNhlGame=${isNhlGame}`, 'color:#FF9900;font-size:9px');
+    console.log(
+      `[ROI:SPREAD:AWAY] game=${game.id} mdlAway=${mdlAway} bkAway=${bkAway} bkHome=${bkHome}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
   }
-  return calculateEdge(bkOdds, mdlOdds);
+  return roi;
 })();
-// HOME spread edge
-// NHL uses puck-line odds (modelHomePLOdds); MLB uses run-line/spread odds (modelHomeSpreadOdds)
+// HOME spread ROI
 const homeSpreadEdgePP: number = (() => {
-  const bkOdds  = toNum(game.homeSpreadOdds);
-  const mdlOdds = isNhlGame
+  const bkHome  = toNum(game.homeSpreadOdds);
+  const bkAway  = toNum(game.awaySpreadOdds);
+  const mdlHome = isNhlGame
     ? toNum(game.modelHomePLOdds)
     : toNum((game as unknown as Record<string, string | null>).modelHomeSpreadOdds ?? null);
+  const roi = calculateRoi(mdlHome, bkHome, bkAway);
   if (process.env.NODE_ENV === 'development') {
-    console.log(`%c[GameCard:SpreadEdgePP:HOME] game=${game.id} sport=${game.sport} bkOdds=${bkOdds} mdlOdds=${mdlOdds} isNhlGame=${isNhlGame}`, 'color:#FF9900;font-size:9px');
+    console.log(
+      `[ROI:SPREAD:HOME] game=${game.id} mdlHome=${mdlHome} bkHome=${bkHome} bkAway=${bkAway}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
   }
-  return calculateEdge(bkOdds, mdlOdds);
+  return roi;
 })();
-// OVER total edge
+// OVER total ROI
 const overEdgePP: number = (() => {
-  const bkOdds  = toNum(game.overOdds);
-  const mdlOdds = toNum(game.modelOverOdds);
-  return calculateEdge(bkOdds, mdlOdds);
+  const bkOver  = toNum(game.overOdds);
+  const bkUnder = toNum(game.underOdds);
+  const mdlOver = toNum(game.modelOverOdds);
+  const roi = calculateRoi(mdlOver, bkOver, bkUnder);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `[ROI:TOTAL:OVER] game=${game.id} mdlOver=${mdlOver} bkOver=${bkOver} bkUnder=${bkUnder}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
+  }
+  return roi;
 })();
-// UNDER total edge
+// UNDER total ROI
 const underEdgePP: number = (() => {
-  const bkOdds  = toNum(game.underOdds);
-  const mdlOdds = toNum(game.modelUnderOdds);
-  return calculateEdge(bkOdds, mdlOdds);
+  const bkUnder = toNum(game.underOdds);
+  const bkOver  = toNum(game.overOdds);
+  const mdlUnder = toNum(game.modelUnderOdds);
+  const roi = calculateRoi(mdlUnder, bkUnder, bkOver);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `[ROI:TOTAL:UNDER] game=${game.id} mdlUnder=${mdlUnder} bkUnder=${bkUnder} bkOver=${bkOver}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
+  }
+  return roi;
 })();
-// AWAY ML edge
+// AWAY ML ROI
 const awayMlEdgePP: number = (() => {
-  const bkOdds  = toNum(game.awayML);
-  const mdlOdds = toNum(game.modelAwayML);
-  return calculateEdge(bkOdds, mdlOdds);
+  const bkAway  = toNum(game.awayML);
+  const bkHome  = toNum(game.homeML);
+  const mdlAway = toNum(game.modelAwayML);
+  const roi = calculateRoi(mdlAway, bkAway, bkHome);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `[ROI:ML:AWAY] game=${game.id} mdlAway=${mdlAway} bkAway=${bkAway} bkHome=${bkHome}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
+  }
+  return roi;
 })();
-// HOME ML edge
+// HOME ML ROI
 const homeMlEdgePP: number = (() => {
-  const bkOdds  = toNum(game.homeML);
-  const mdlOdds = toNum(game.modelHomeML);
-  return calculateEdge(bkOdds, mdlOdds);
+  const bkHome  = toNum(game.homeML);
+  const bkAway  = toNum(game.awayML);
+  const mdlHome = toNum(game.modelHomeML);
+  const roi = calculateRoi(mdlHome, bkHome, bkAway);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(
+      `[ROI:ML:HOME] game=${game.id} mdlHome=${mdlHome} bkHome=${bkHome} bkAway=${bkAway}` +
+      ` → roi=${isNaN(roi) ? 'NaN' : roi.toFixed(2)}%`
+    );
+  }
+  return roi;
 })();
 // Best spread edge (away or home, whichever is higher)
 const spreadEdgePP: number = (() => {
@@ -686,7 +733,8 @@ const MktCard = ({
       {(() => {
         const pp = roiEdgePP ?? NaN;
         const hasEdge = !isNaN(pp) && pp >= 1.5;
-        const roiStr = hasEdge ? `+${pp.toFixed(2)}% ROI` : 'NO EDGE';
+        // formatRoi handles sign correctly: +15.71% ROI, -2.10% ROI
+        const roiStr = hasEdge ? formatRoi(pp) : 'NO EDGE';
         const roiColor = hasEdge ? getEdgeColor(pp) : 'rgba(200,200,200,0.45)';
         const label = hasEdge && roiLabel ? roiLabel : '';
         return (
@@ -735,12 +783,12 @@ const OddsTable = () => (
           awayBookJuice={mbAwaySpreadOdds ? String(mbAwaySpreadOdds) : '—110'}
           awayModelLine={mdlAwaySplit.line || '—'}
           awayModelJuice={mdlAwaySplit.odds || '—'}
-          awayModelHasEdge={!isNaN(awaySpreadEdgePP) && awaySpreadEdgePP >= 1.5}
+          awayModelHasEdge={!isNaN(awaySpreadEdgePP) && awaySpreadEdgePP > 0}
           homeBookLine={!isNaN(homeBookSpread) ? spreadSign(homeBookSpread) : '—'}
           homeBookJuice={mbHomeSpreadOdds ? String(mbHomeSpreadOdds) : '—110'}
           homeModelLine={mdlHomeSplit.line || '—'}
           homeModelJuice={mdlHomeSplit.odds || '—'}
-          homeModelHasEdge={!isNaN(homeSpreadEdgePP) && homeSpreadEdgePP >= 1.5}
+          homeModelHasEdge={!isNaN(homeSpreadEdgePP) && homeSpreadEdgePP > 0}
           roiEdgePP={spreadRoiPP}
           roiLabel={spreadRoiLabel}
         />
@@ -765,12 +813,12 @@ const OddsTable = () => (
           awayBookJuice={mbOverOdds ? String(mbOverOdds) : '—110'}
           awayModelLine={`o${mdlOverSplit.line || '—'}`}
           awayModelJuice={mdlOverSplit.odds || '—'}
-          awayModelHasEdge={!isNaN(overEdgePP) && overEdgePP >= 1.5}
+          awayModelHasEdge={!isNaN(overEdgePP) && overEdgePP > 0}
           homeBookLine={!isNaN(bookTotal) ? `u${bkTotalStr}` : 'u—'}
           homeBookJuice={mbUnderOdds ? String(mbUnderOdds) : '—110'}
           homeModelLine={`u${mdlUnderSplit.line || '—'}`}
           homeModelJuice={mdlUnderSplit.odds || '—'}
-          homeModelHasEdge={!isNaN(underEdgePP) && underEdgePP >= 1.5}
+          homeModelHasEdge={!isNaN(underEdgePP) && underEdgePP > 0}
           roiEdgePP={totalRoiPP}
           roiLabel={totalRoiLabel}
         />
@@ -794,12 +842,12 @@ const OddsTable = () => (
           awayBookJuice={bkAwayMl || '—'}
           awayModelLine={''}
           awayModelJuice={mdlAwayMl || '—'}
-          awayModelHasEdge={!isNaN(awayMlEdgePP) && awayMlEdgePP >= 1.5}
+          awayModelHasEdge={!isNaN(awayMlEdgePP) && awayMlEdgePP > 0}
           homeBookLine={''}
           homeBookJuice={bkHomeMl || '—'}
           homeModelLine={''}
           homeModelJuice={mdlHomeMl || '—'}
-          homeModelHasEdge={!isNaN(homeMlEdgePP) && homeMlEdgePP >= 1.5}
+          homeModelHasEdge={!isNaN(homeMlEdgePP) && homeMlEdgePP > 0}
           isML={true}
           roiEdgePP={mlRoiPP}
           roiLabel={mlRoiLabel}
