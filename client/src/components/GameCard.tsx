@@ -892,10 +892,16 @@ function DesktopMergedPanel({
   const modelGreen: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 700, color: '#39FF14', letterSpacing: '0.02em' };
   const modelWhite: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 600, color: '#FFFFFF', letterSpacing: '0.02em' };
   const dimCell:    React.CSSProperties = { fontSize: VAL_FS, fontWeight: 500, color: 'rgba(57,255,20,0.28)', letterSpacing: '0.02em' };
-  const awaySpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway  ? modelGreen : modelWhite) : dimCell;
-  const homeSpreadModelStyle = showModel ? (hasSpreadEdge && !spreadEdgeIsAway ? modelGreen : modelWhite) : dimCell;
-  const overTotalModelStyle  = showModel ? (hasTotalEdge  && totalEdgeIsOver   ? modelGreen : modelWhite) : dimCell;
-  const underTotalModelStyle = showModel ? (hasTotalEdge  && !totalEdgeIsOver  ? modelGreen : modelWhite) : dimCell;
+  // Bug fix: !null === true in JS, so !spreadEdgeIsAway and !totalEdgeIsOver are true when direction is null.
+  // This caused false green highlights on home spread and under total when direction is undetermined.
+  // Require direction to be explicitly false (not just non-true) before applying green.
+  // [VERIFY] spreadEdgeIsAway=null  → away=white, home=white (no edge direction) ✓
+  // [VERIFY] spreadEdgeIsAway=true  → away=green, home=white ✓
+  // [VERIFY] spreadEdgeIsAway=false → away=white, home=green ✓
+  const awaySpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway === true  ? modelGreen : modelWhite) : dimCell;
+  const homeSpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway === false ? modelGreen : modelWhite) : dimCell;
+  const overTotalModelStyle  = showModel ? (hasTotalEdge  && totalEdgeIsOver === true   ? modelGreen : modelWhite) : dimCell;
+  const underTotalModelStyle = showModel ? (hasTotalEdge  && totalEdgeIsOver === false  ? modelGreen : modelWhite) : dimCell;
 
   // ── ML edge detection ──────────────────────────────────────────────────────
   // ML edge direction must match spread edge direction (same team that covers the spread
@@ -1191,11 +1197,13 @@ function DesktopMergedPanel({
   const spreadPass = spreadEdgeIsAway === null || (spreadDiff ?? 0) <= 0;
   const totalPass  = totalEdgeIsOver  === null || (totalDiff  ?? 0) <= 0;
   const spreadIsStronger = (spreadDiff ?? 0) >= (totalDiff ?? 0);
-  // Use edgeLabelIsAway for the edge panel logo — same authoritative abbrev-based detection.
-  // awayAbbr is already resolved from NHL_BY_DB_SLUG via getGameTeamColorsClient above.
-  const spreadEdgeIsAwayForVerdict = computedSpreadEdge
-    ? edgeLabelIsAway(computedSpreadEdge, awayAbbr, awayDisplayName, sport)
-    : false;
+  // Use authSpreadEdgeIsAway (the single authoritative source) for the edge panel logo.
+  // Do NOT re-parse computedSpreadEdge (DB label) here — it can be stale/malformed and
+  // would produce a different result than the authoritative value, showing the wrong team logo.
+  // [VERIFY] authSpreadEdgeIsAway=true → away logo shown ✓
+  // [VERIFY] authSpreadEdgeIsAway=false → home logo shown ✓
+  // [VERIFY] authSpreadEdgeIsAway=null → no logo (spreadPass=true, row not rendered) ✓
+  const spreadEdgeIsAwayForVerdict = authSpreadEdgeIsAway === true;
   const spreadLogoUrl = spreadEdgeIsAwayForVerdict ? awayLogoUrl : homeLogoUrl;
   const spreadVerdictSlug = spreadEdgeIsAwayForVerdict ? awaySlug : homeSlug;
   const spreadVerdictTeam = spreadEdgeIsAwayForVerdict ? awayDisplayName : homeDisplayName;
@@ -1246,9 +1254,10 @@ function DesktopMergedPanel({
       />
       {/* Divider */}
       <div style={{ width: 1, background: 'rgba(255,255,255,0.12)', flexShrink: 0, alignSelf: 'stretch' }} />
-      {/* EdgeVerdict column */}
+      {/* EdgeVerdict column — width MUST be identical for showModel=true and showModel=false to prevent layout shift */}
+      {/* Canonical width: clamp(180px,15vw,240px) — matches file-header spec, uniform across all toggle states */}
       {showModel ? (
-        <div className="flex flex-col items-start justify-center" style={{ flex: '0 0 clamp(190px,16vw,250px)', width: 'clamp(190px,16vw,250px)', padding: '10px 12px', gap: 0 }}>
+        <div className="flex flex-col items-start justify-center" style={{ flex: '0 0 clamp(180px,15vw,240px)', width: 'clamp(180px,15vw,240px)', padding: '10px 12px', gap: 0 }}>
           {/* EDGE header */}
           <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', fontWeight: 800, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, alignSelf: 'center' }}>EDGE</span>
           {spreadPass && totalPass && !hasMlEdge ? (
@@ -1361,7 +1370,7 @@ function DesktopMergedPanel({
           )}
         </div>
       ) : (
-        <div style={{ flex: '0 0 clamp(160px,14vw,200px)', width: 'clamp(160px,14vw,200px)', flexShrink: 0 }} />
+        <div style={{ flex: '0 0 clamp(180px,15vw,240px)', width: 'clamp(180px,15vw,240px)', flexShrink: 0 }} />
       )}
     </div>
   );
@@ -1839,10 +1848,14 @@ function OddsLinesPanel({
   const dimCell       = { fontSize: cellFontSize, fontWeight: 700, color: 'rgba(57,255,20,0.28)', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
 
   // Per-cell model style helpers
-  const awaySpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway  ? modelGreen : modelWhite) : dimCell;
-  const homeSpreadModelStyle = showModel ? (hasSpreadEdge && !spreadEdgeIsAway ? modelGreen : modelWhite) : dimCell;
-  const overTotalModelStyle  = showModel ? (hasTotalEdge  && totalEdgeIsOver   ? modelGreen : modelWhite) : dimCell;
-  const underTotalModelStyle = showModel ? (hasTotalEdge  && !totalEdgeIsOver  ? modelGreen : modelWhite) : dimCell;
+  // Null-guard: !null === true in JS — require explicit true/false, never rely on truthy/falsy for direction.
+  // [VERIFY] spreadEdgeIsAway=null  → away=white, home=white ✓
+  // [VERIFY] spreadEdgeIsAway=true  → away=green, home=white ✓
+  // [VERIFY] spreadEdgeIsAway=false → away=white, home=green ✓
+  const awaySpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway === true  ? modelGreen : modelWhite) : dimCell;
+  const homeSpreadModelStyle = showModel ? (hasSpreadEdge && spreadEdgeIsAway === false ? modelGreen : modelWhite) : dimCell;
+  const overTotalModelStyle  = showModel ? (hasTotalEdge  && totalEdgeIsOver === true   ? modelGreen : modelWhite) : dimCell;
+  const underTotalModelStyle = showModel ? (hasTotalEdge  && totalEdgeIsOver === false  ? modelGreen : modelWhite) : dimCell;
   // ML edges: independent of spread edge direction -- use team with larger positive ML edge pp
   const bkAwayMlNumMob  = toNum(awayMl);
   const bkHomeMlNumMob  = toNum(homeMl);
@@ -3017,8 +3030,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                   }}
                   className="flex flex-col justify-center"
                 >
-                   {/* minWidth = calc(100vw - clamp(170px,14vw,220px)): exactly fills scroll container so when scrolled fully right, 0px bleeds through */}
-                   <div style={{ minWidth: "calc(100vw - clamp(170px, 14vw, 220px))" }} className="flex flex-col justify-center">
+                   {/* minWidth = calc(100vw - clamp(140px,38%,180px)): must match the frozen score column width exactly */}
+                   {/* Using 38vw as the vw-equivalent of 38% (mobile cards are ~full-width) to ensure scroll fills correctly */}
+                   <div style={{ minWidth: "calc(100vw - clamp(140px, 38vw, 180px))" }} className="flex flex-col justify-center">
                     <OddsLinesPanel
                       awayBookSpread={awayBookSpread}
                       homeBookSpread={homeBookSpread}
