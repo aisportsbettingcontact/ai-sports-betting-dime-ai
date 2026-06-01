@@ -2199,18 +2199,22 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     }
 
     // ── MLB TOTAL EDGE DETECTION ─────────────────────────────────────────────────
-    // Uses the same break-even formula as RL edge detection.
-    // modelOverProb  = r.over_pct  / 100  (from Python Monte Carlo simulation)
-    // modelUnderProb = r.under_pct / 100
-    // bookBreakEvenOver  = |bookOverOdds|  / (|bookOverOdds|  + 100) for negative odds
-    //                    = 100 / (bookOverOdds  + 100) for positive odds
-    // edgeOver  = modelOverProb  - bookBreakEvenOver   (positive = over has edge)
-    // edgeUnder = modelUnderProb - bookBreakEvenUnder  (positive = under has edge)
-    // totalDiff = max(edgeOver, edgeUnder) * 100  [in probability points]
-    // totalEdge = "OVER {bookTotal}" or "UNDER {bookTotal}" (anchored to book line)
+    // Uses NO-VIG probability comparison — IDENTICAL to the display layer (GameCard.tsx Tier 1).
+    // This ensures the DB label and the UI always agree on edge direction and existence.
+    //
+    // Formula (matching GameCard.tsx authTotalEdgeIsOver Tier 1):
+    //   modelOverProb    = r.over_pct / 100  (from Python Monte Carlo simulation)
+    //   rawBkOver        = americanToImplied(bookOverOdds)   [raw, vig-inclusive]
+    //   rawBkUnder       = americanToImplied(bookUnderOdds)  [raw, vig-inclusive]
+    //   vigTotal         = rawBkOver + rawBkUnder            [sum > 1.0 = the vig]
+    //   bookNoVigOverProb = rawBkOver / vigTotal             [vig removed]
+    //   edgeOver  = modelOverProb - bookNoVigOverProb        [positive = over has edge]
+    //   edgeUnder = (1 - modelOverProb) - (1 - bookNoVigOverProb) = -edgeOver
+    //   → edge exists when |edgeOver| > 0; direction = OVER if edgeOver > 0, UNDER if < 0
+    //   totalDiff = |edgeOver| * 100  [pp]
+    //   totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
     const _mlbOverPct  = r.over_pct  / 100;  // 0-1 scale
-    const _mlbUnderPct = r.under_pct / 100;  // 0-1 scale
-    // Use live book O/U odds for break-even computation (same pattern as RL odds)
+    // Use live book O/U odds for no-vig computation
     const _bkOverOddsRaw  = dbGame?.overOdds  ?? null;
     const _bkUnderOddsRaw = dbGame?.underOdds ?? null;
     const _bkOverOddsNum  = parseFloat(String(_bkOverOddsRaw  ?? ''));
@@ -2218,12 +2222,13 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     let mlbTotalDiff: string | null = null;
     let mlbTotalEdge: string | null = null;
     if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
-      const _bkOverBreakEven  = _americanBreakEven(_bkOverOddsNum);
-      const _bkUnderBreakEven = _americanBreakEven(_bkUnderOddsNum);
-      if (_bkOverBreakEven !== null && _bkUnderBreakEven !== null) {
-        const edgeOver  = _mlbOverPct  - _bkOverBreakEven;   // positive = over edge
-        const edgeUnder = _mlbUnderPct - _bkUnderBreakEven;  // positive = under edge
-        const bestTotalEdge = Math.max(edgeOver, edgeUnder);
+      // No-vig computation — identical to GameCard.tsx Tier 1
+      const _rawBkOver  = _americanBreakEven(_bkOverOddsNum);   // raw implied (vig-inclusive)
+      const _rawBkUnder = _americanBreakEven(_bkUnderOddsNum);  // raw implied (vig-inclusive)
+      if (_rawBkOver !== null && _rawBkUnder !== null) {
+        const _vigTotal = _rawBkOver + _rawBkUnder;              // sum > 1.0 = the vig
+        const _bkNoVigOverProb = _rawBkOver / _vigTotal;         // vig removed
+        const edgeOver = _mlbOverPct - _bkNoVigOverProb;         // positive = over edge
         // Anchor total label to book total (not model total)
         const _totalLabel = (() => {
           const liveTotal = liveBookTotalMap.get(r.db_id);
@@ -2232,21 +2237,34 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           if (snapTotal != null) return String(snapTotal);
           return String(r.total_line);
         })();
-        if (bestTotalEdge > 0) {
-          mlbTotalDiff = String(Math.round(bestTotalEdge * 1000) / 10);  // pp with 1 decimal
-          mlbTotalEdge = edgeOver >= edgeUnder
-            ? `OVER ${_totalLabel} [EDGE]`
-            : `UNDER ${_totalLabel} [EDGE]`;
+        if (edgeOver > 0) {
+          // OVER edge: model more confident in OVER than book no-vig
+          mlbTotalDiff = String(Math.round(edgeOver * 1000) / 10);
+          mlbTotalEdge = `OVER ${_totalLabel} [EDGE]`;
           console.log(
-            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE] ` +
-            `overEdge=${(edgeOver*100).toFixed(2)}pp underEdge=${(edgeUnder*100).toFixed(2)}pp ` +
+            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE OVER] ` +
+            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
+            `edgeOver=+${(edgeOver*100).toFixed(2)}pp ` +
+            `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
+          );
+        } else if (edgeOver < 0) {
+          // UNDER edge: model less confident in OVER than book no-vig (= more confident in UNDER)
+          const edgeUnder = -edgeOver;  // positive value
+          mlbTotalDiff = String(Math.round(edgeUnder * 1000) / 10);
+          mlbTotalEdge = `UNDER ${_totalLabel} [EDGE]`;
+          console.log(
+            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE UNDER] ` +
+            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
+            `edgeUnder=+${(edgeUnder*100).toFixed(2)}pp ` +
             `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
           );
         } else {
-          mlbTotalDiff = String(Math.round(bestTotalEdge * 1000) / 10);  // negative = no edge
+          // Exactly zero — no edge
+          mlbTotalDiff = '0';
           console.log(
             `${TAG} [${r.db_id}] ${r.game} — [TOTAL NO EDGE] ` +
-            `overEdge=${(edgeOver*100).toFixed(2)}pp underEdge=${(edgeUnder*100).toFixed(2)}pp → PASS`
+            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
+            `edgeOver=0.00pp → PASS`
           );
         }
       }
