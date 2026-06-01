@@ -885,6 +885,9 @@ return (
     <div style={{ display: 'grid', gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr', width: '100%', minHeight: 0 }}>
 
     {/* ── FROZEN LEFT PANEL: status row + team rows ── */}
+    {/* overflow:hidden is CRITICAL: prevents LIVE clock text (e.g. "LIVE TOP 4TH") from
+         bleeding into the right odds panel. The left panel is clamp(72px,20.4vw,88px) wide;
+         without clipping, nowrap text can paint past the panel boundary onto BOOK/MODEL headers. */}
     <div style={{
       gridColumn: '1',
       borderRight: '1px solid hsl(var(--border) / 0.5)',
@@ -897,9 +900,13 @@ return (
       padding: '0 6px',
       gap: 0,
       alignSelf: 'stretch',
+      overflow: 'hidden',  // clip any text that overflows the left panel boundary
     }}>
 
       {/* Status row: star + LIVE/FINAL/time — compact at 80px */}
+      {/* overflow:hidden + minWidth:0 ensures the LIVE clock text never bleeds past this row's boundary.
+           The row is already clipped by the parent panel's overflow:hidden, but this adds a second
+           layer of protection and enables text-overflow:ellipsis on the clock span. */}
       <div style={{
         display: 'flex',
         flexDirection: 'row',
@@ -908,6 +915,8 @@ return (
         paddingLeft: '2px',
         gap: '2px',
         borderBottom: '1px solid rgba(255,255,255,0.10)',
+        overflow: 'hidden',
+        minWidth: 0,
       }}>
         {isAppAuthed && (
           <button type="button" onClick={onStarClick}
@@ -920,11 +929,14 @@ return (
           </button>
         )}
         {isLive ? (
-          <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#39FF14', fontSize: '11px', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
+          // LIVE row: flex container with overflow:hidden + minWidth:0 so the clock text
+          // (e.g. "TOP 4TH") is clipped at the panel boundary instead of bleeding into
+          // the right odds panel's BOOK/MODEL column headers.
+          <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#39FF14', fontSize: '11px', whiteSpace: 'nowrap', flexWrap: 'nowrap', overflow: 'hidden', minWidth: 0, maxWidth: '100%' }}>
             <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: '#39FF14', flexShrink: 0 }} />
-            LIVE
+            <span style={{ flexShrink: 0 }}>LIVE</span>
             {formattedClock && (
-              <span style={{ color: 'rgba(255,255,255,0.90)', fontWeight: 600, fontSize: '11px', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums', marginLeft: '2px', whiteSpace: 'nowrap', display: 'inline', lineHeight: 1 }}>{formattedClock}</span>
+              <span style={{ color: 'rgba(255,255,255,0.90)', fontWeight: 600, fontSize: '11px', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums', marginLeft: '2px', whiteSpace: 'nowrap', display: 'inline', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{formattedClock}</span>
             )}
           </span>
         ) : isFinal ? (
