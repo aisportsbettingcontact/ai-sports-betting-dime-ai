@@ -2199,22 +2199,29 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     }
 
     // ── MLB TOTAL EDGE DETECTION ─────────────────────────────────────────────────
-    // Uses NO-VIG probability comparison — IDENTICAL to the display layer (GameCard.tsx Tier 1).
-    // This ensures the DB label and the UI always agree on edge direction and existence.
+    // OPTION B RULE (confirmed by user): edge exists ONLY when modelImplied(side) > bookImplied(side)
+    // Both probabilities are RAW (vig-inclusive). No vig removal for edge detection.
     //
-    // Formula (matching GameCard.tsx authTotalEdgeIsOver Tier 1):
-    //   modelOverProb    = r.over_pct / 100  (from Python Monte Carlo simulation)
-    //   rawBkOver        = americanToImplied(bookOverOdds)   [raw, vig-inclusive]
-    //   rawBkUnder       = americanToImplied(bookUnderOdds)  [raw, vig-inclusive]
-    //   vigTotal         = rawBkOver + rawBkUnder            [sum > 1.0 = the vig]
-    //   bookNoVigOverProb = rawBkOver / vigTotal             [vig removed]
-    //   edgeOver  = modelOverProb - bookNoVigOverProb        [positive = over has edge]
-    //   edgeUnder = (1 - modelOverProb) - (1 - bookNoVigOverProb) = -edgeOver
-    //   → edge exists when |edgeOver| > 0; direction = OVER if edgeOver > 0, UNDER if < 0
-    //   totalDiff = |edgeOver| * 100  [pp]
+    // Formula:
+    //   modelOverProb  = r.over_pct / 100  (from Python Monte Carlo simulation)
+    //   modelUnderProb = 1 - modelOverProb  (complementary)
+    //   rawBkOver      = americanToImplied(bookOverOdds)   [raw, vig-inclusive]
+    //   rawBkUnder     = americanToImplied(bookUnderOdds)  [raw, vig-inclusive]
+    //
+    //   OVER  edge: modelOverProb  > rawBkOver  → edge on OVER
+    //   UNDER edge: modelUnderProb > rawBkUnder → edge on UNDER
+    //   (these are mutually exclusive for a fair-priced model)
+    //
+    //   totalDiff = |modelSideProb - rawBkSideProb| * 100  [pp]
     //   totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
-    const _mlbOverPct  = r.over_pct  / 100;  // 0-1 scale
-    // Use live book O/U odds for no-vig computation
+    //
+    // VALIDATION (u7.5 book=+102/-122, model=+116/-116):
+    //   rawBkOver  = 100/202 = 49.50%,  modelOverProb  = 100/216 = 46.30% → 46.30 < 49.50 → NO OVER EDGE
+    //   rawBkUnder = 122/222 = 54.95%,  modelUnderProb = 116/216 = 53.70% → 53.70 < 54.95 → NO UNDER EDGE
+    //   Result: PASS (no edge) ✓
+    const _mlbOverPct   = r.over_pct / 100;   // model over probability (0-1 scale)
+    const _mlbUnderPct  = 1 - _mlbOverPct;    // model under probability (complementary)
+    // Use live book O/U odds for raw implied computation
     const _bkOverOddsRaw  = dbGame?.overOdds  ?? null;
     const _bkUnderOddsRaw = dbGame?.underOdds ?? null;
     const _bkOverOddsNum  = parseFloat(String(_bkOverOddsRaw  ?? ''));
@@ -2222,13 +2229,13 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     let mlbTotalDiff: string | null = null;
     let mlbTotalEdge: string | null = null;
     if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
-      // No-vig computation — identical to GameCard.tsx Tier 1
+      // Option B: raw vs raw comparison on each side independently
       const _rawBkOver  = _americanBreakEven(_bkOverOddsNum);   // raw implied (vig-inclusive)
       const _rawBkUnder = _americanBreakEven(_bkUnderOddsNum);  // raw implied (vig-inclusive)
       if (_rawBkOver !== null && _rawBkUnder !== null) {
-        const _vigTotal = _rawBkOver + _rawBkUnder;              // sum > 1.0 = the vig
-        const _bkNoVigOverProb = _rawBkOver / _vigTotal;         // vig removed
-        const edgeOver = _mlbOverPct - _bkNoVigOverProb;         // positive = over edge
+        // Option B edge detection: model must be MORE confident than book on the SAME side
+        const _overEdgePP  = (_mlbOverPct  - _rawBkOver)  * 100;  // positive = OVER edge
+        const _underEdgePP = (_mlbUnderPct - _rawBkUnder) * 100;  // positive = UNDER edge
         // Anchor total label to book total (not model total)
         const _totalLabel = (() => {
           const liveTotal = liveBookTotalMap.get(r.db_id);
@@ -2237,34 +2244,40 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           if (snapTotal != null) return String(snapTotal);
           return String(r.total_line);
         })();
-        if (edgeOver > 0) {
-          // OVER edge: model more confident in OVER than book no-vig
-          mlbTotalDiff = String(Math.round(edgeOver * 1000) / 10);
+        if (_overEdgePP > 0 && _underEdgePP <= 0) {
+          // OVER edge only: model more confident in OVER than book (raw vs raw)
+          mlbTotalDiff = String(Math.round(_overEdgePP * 10) / 10);
           mlbTotalEdge = `OVER ${_totalLabel} [EDGE]`;
           console.log(
             `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE OVER] ` +
-            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
-            `edgeOver=+${(edgeOver*100).toFixed(2)}pp ` +
+            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+            `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% ` +
+            `[OUTPUT] overEdgePP=+${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
+            `[VERIFY] PASS — OVER edge confirmed (model > book raw) ` +
             `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
           );
-        } else if (edgeOver < 0) {
-          // UNDER edge: model less confident in OVER than book no-vig (= more confident in UNDER)
-          const edgeUnder = -edgeOver;  // positive value
-          mlbTotalDiff = String(Math.round(edgeUnder * 1000) / 10);
+        } else if (_underEdgePP > 0 && _overEdgePP <= 0) {
+          // UNDER edge only: model more confident in UNDER than book (raw vs raw)
+          mlbTotalDiff = String(Math.round(_underEdgePP * 10) / 10);
           mlbTotalEdge = `UNDER ${_totalLabel} [EDGE]`;
           console.log(
             `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE UNDER] ` +
-            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
-            `edgeUnder=+${(edgeUnder*100).toFixed(2)}pp ` +
+            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+            `[STATE] rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
+            `[OUTPUT] underEdgePP=+${_underEdgePP.toFixed(2)}pp overEdgePP=${_overEdgePP.toFixed(2)}pp ` +
+            `[VERIFY] PASS — UNDER edge confirmed (model > book raw) ` +
             `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
           );
         } else {
-          // Exactly zero — no edge
+          // No edge on either side (or impossible both-edge case for fair-priced model)
           mlbTotalDiff = '0';
           console.log(
             `${TAG} [${r.db_id}] ${r.game} — [TOTAL NO EDGE] ` +
-            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% bkNoVigOverProb=${(_bkNoVigOverProb*100).toFixed(2)}% ` +
-            `edgeOver=0.00pp → PASS`
+            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+            `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% ` +
+            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
+            `[OUTPUT] overEdgePP=${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
+            `[VERIFY] PASS — no edge on either side → PASS`
           );
         }
       }

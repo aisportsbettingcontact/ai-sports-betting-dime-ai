@@ -761,15 +761,22 @@ def detect_edges(
     4. Price edge: fair_odds - market_odds
     5. Edge classification: ELITE/STRONG/PLAYABLE/SMALL/NO EDGE
 
-    EDGE DIRECTION RULE (confirmed):
-      An edge exists ONLY when model implied probability > book break-even probability.
-      i.e. edge = p_model - p_market_no_vig > 0 (and above threshold)
-      - Underdog (+odds): edge if model gives HIGHER probability than book prices
-        e.g. book +170 (37.0% BE) vs model 40.0% → edge = +3.0pp → EDGE
-        e.g. book +170 (37.0% BE) vs model 34.0% → edge = -3.0pp → NO EDGE
-      - Favorite (-odds): edge if model gives HIGHER probability than book prices
-        e.g. book -112 (52.8% BE) vs model 55.0% → edge = +2.2pp → EDGE
-        e.g. book -112 (52.8% BE) vs model 51.5% → edge = -1.3pp → NO EDGE
+    EDGE DIRECTION RULE (Option B — confirmed by user):
+      An edge exists ONLY when model implied probability > book RAW (vig-inclusive) probability.
+      i.e. edge = p_model - p_market_raw > 0 (and above threshold)
+      Both probabilities are raw (vig-inclusive). No vig removal for edge detection.
+      - Underdog (+odds): edge if model gives HIGHER probability than book raw price
+        e.g. book +170 (37.0% raw) vs model 40.0% → edge = +3.0pp → EDGE
+        e.g. book +170 (37.0% raw) vs model 34.0% → edge = -3.0pp → NO EDGE
+      - Favorite (-odds): edge if model gives HIGHER probability than book raw price
+        e.g. book -112 (52.8% raw) vs model 55.0% → edge = +2.2pp → EDGE
+        e.g. book -112 (52.8% raw) vs model 51.5% → edge = -1.3pp → NO EDGE
+
+    VALIDATION (u7.5 book=+102/-122, model=+116/-116):
+      rawBkOver=49.50%, rawBkUnder=54.95%, mdlOver=46.30%, mdlUnder=53.70%
+      overEdge  = 46.30 - 49.50 = -3.21pp → NO OVER EDGE
+      underEdge = 53.70 - 54.95 = -1.25pp → NO UNDER EDGE
+      Result: PASS (no edge) ✓
     """
     n = len(away_scores)
     edges = []
@@ -786,7 +793,7 @@ def detect_edges(
         f"[EdgeDetect] │  EDGE DETECTION AUDIT (N={n:,} simulations)", file=sys.stderr
     )
     print(
-        "[EdgeDetect] │  Rule: edge = p_model - p_market_no_vig > 0 → EDGE",
+        "[EdgeDetect] │  Rule: OPTION B — edge = p_model - p_market_RAW > 0 → EDGE (raw vs raw, no vig removal)",
         file=sys.stderr,
     )
     print(
@@ -821,9 +828,10 @@ def detect_edges(
         fair_over_odds = prob_to_ml(p_over_model)
         fair_under_odds = prob_to_ml(p_under_model)
 
-        # Step 5: Probability edge (model vs vig-free market)
-        edge_over = p_over_model - p_over_market
-        edge_under = p_under_model - p_under_market
+        # Step 5: Probability edge — OPTION B: model vs RAW book (no vig removal)
+        # edge = p_model - p_market_raw > 0 → edge exists on that side
+        edge_over = p_over_model - p_over_raw
+        edge_under = p_under_model - p_under_raw
 
         # Step 6: EV calculation
         ev_over = expected_value(p_over_model, mkt_over_odds)
@@ -849,7 +857,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Book break-even (no-vig): OVER={p_over_market * 100:.2f}%  UNDER={p_under_market * 100:.2f}%",
+            f"[EdgeDetect] │    Book implied (no-vig, for reference): OVER={p_over_market * 100:.2f}%  UNDER={p_under_market * 100:.2f}%  [NOT used for edge detection]",
             file=sys.stderr,
         )
         print(
@@ -857,7 +865,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Edge (model - break-even): OVER={edge_over * 100:+.2f}pp  UNDER={edge_under * 100:+.2f}pp",
+            f"[EdgeDetect] │    Edge (model - raw book): OVER={edge_over * 100:+.2f}pp  UNDER={edge_under * 100:+.2f}pp  [Option B: raw vs raw]",
             file=sys.stderr,
         )
         print(
@@ -972,9 +980,9 @@ def detect_edges(
         fair_away_pl_odds = prob_to_ml(p_away_pl_model)
         fair_home_pl_odds = prob_to_ml(p_home_pl_model)
 
-        # Probability edges
-        edge_away_pl = p_away_pl_model - p_away_pl_market
-        edge_home_pl = p_home_pl_model - p_home_pl_market
+        # Probability edges — OPTION B: model vs RAW book (no vig removal)
+        edge_away_pl = p_away_pl_model - p_away_pl_raw
+        edge_home_pl = p_home_pl_model - p_home_pl_raw
 
         # EV
         ev_away_pl = expected_value(p_away_pl_model, mkt_away_pl_odds)
@@ -1008,7 +1016,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Book break-even (no-vig): AWAY={p_away_pl_market * 100:.2f}%  HOME={p_home_pl_market * 100:.2f}%",
+            f"[EdgeDetect] │    Book implied (no-vig, for reference): AWAY={p_away_pl_market * 100:.2f}%  HOME={p_home_pl_market * 100:.2f}%  [NOT used for edge detection]",
             file=sys.stderr,
         )
         print(
@@ -1016,7 +1024,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Edge (model - break-even): AWAY={edge_away_pl * 100:+.2f}pp  HOME={edge_home_pl * 100:+.2f}pp",
+            f"[EdgeDetect] │    Edge (model - raw book): AWAY={edge_away_pl * 100:+.2f}pp  HOME={edge_home_pl * 100:+.2f}pp  [Option B: raw vs raw]",
             file=sys.stderr,
         )
         print(
@@ -1099,9 +1107,9 @@ def detect_edges(
         fair_away_ml_odds = prob_to_ml(p_away_ml_model)
         fair_home_ml_odds = prob_to_ml(p_home_ml_model)
 
-        # Probability edges
-        edge_away_ml = p_away_ml_model - p_away_ml_market
-        edge_home_ml = p_home_ml_model - p_home_ml_market
+        # Probability edges — OPTION B: model vs RAW book (no vig removal)
+        edge_away_ml = p_away_ml_model - p_away_ml_raw
+        edge_home_ml = p_home_ml_model - p_home_ml_raw
 
         # EV
         ev_away_ml = expected_value(p_away_ml_model, mkt_away_ml)
@@ -1127,7 +1135,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Book break-even (no-vig): AWAY={p_away_ml_market * 100:.2f}%  HOME={p_home_ml_market * 100:.2f}%",
+            f"[EdgeDetect] │    Book implied (no-vig, for reference): AWAY={p_away_ml_market * 100:.2f}%  HOME={p_home_ml_market * 100:.2f}%  [NOT used for edge detection]",
             file=sys.stderr,
         )
         print(
@@ -1135,7 +1143,7 @@ def detect_edges(
             file=sys.stderr,
         )
         print(
-            f"[EdgeDetect] │    Edge (model - break-even): AWAY={edge_away_ml * 100:+.2f}pp  HOME={edge_home_ml * 100:+.2f}pp",
+            f"[EdgeDetect] │    Edge (model - raw book): AWAY={edge_away_ml * 100:+.2f}pp  HOME={edge_home_ml * 100:+.2f}pp  [Option B: raw vs raw]",
             file=sys.stderr,
         )
         print(

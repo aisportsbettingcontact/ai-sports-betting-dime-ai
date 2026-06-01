@@ -800,28 +800,43 @@ const OddsTable = () => (
     {/* TOTAL card */}
     {(() => {
       // Total: best edge side label (e.g. "O5.5" or "U5.5")
-      const totalRoiPP = isNaN(overEdgePP) && isNaN(underEdgePP)
-        ? NaN
-        : (!isNaN(overEdgePP) && (isNaN(underEdgePP) || overEdgePP >= underEdgePP))
-          ? overEdgePP
-          : underEdgePP;
+      // OPTION B gate: only show ROI and neon green when authTotalEdgeIsOver confirms the edge.
+      // overEdgePP/underEdgePP (ROI%) can be positive even when Option B says NO EDGE
+      // (e.g. u7.5 book=-122 model=-116: ROI=+1.90% but modelImplied 53.70% < bookImplied 54.95%).
+      // The authoritative edge flag is authTotalEdgeIsOver (null=no edge, true=over, false=under).
+      const overHasEdge  = overTotalIsEdge;   // authTotalEdgeIsOver === true
+      const underHasEdge = underTotalIsEdge;  // authTotalEdgeIsOver === false
+      const totalRoiPP = overHasEdge
+        ? (isNaN(overEdgePP) ? NaN : overEdgePP)
+        : underHasEdge
+          ? (isNaN(underEdgePP) ? NaN : underEdgePP)
+          : NaN;  // no edge on either side
       const totalRoiLabel = (() => {
-        const isOver = !isNaN(overEdgePP) && (isNaN(underEdgePP) || overEdgePP >= underEdgePP);
-        const prefix = isOver ? 'O' : 'U';
+        const prefix = overHasEdge ? 'O' : 'U';
         return !isNaN(bookTotal) ? `${prefix}${bkTotalStr}` : prefix;
       })();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[TotalCard] game=${game.id} authTotalEdgeIsOver=${authTotalEdgeIsOver}` +
+          ` overHasEdge=${overHasEdge} underHasEdge=${underHasEdge}` +
+          ` overEdgePP=${isNaN(overEdgePP)?'NaN':overEdgePP.toFixed(2)}` +
+          ` underEdgePP=${isNaN(underEdgePP)?'NaN':underEdgePP.toFixed(2)}` +
+          ` totalRoiPP=${isNaN(totalRoiPP)?'NaN':totalRoiPP.toFixed(2)}` +
+          ` label=${totalRoiLabel}`
+        );
+      }
       return (
         <MktCard
           awayBookLine={!isNaN(bookTotal) ? `o${bkTotalStr}` : 'o—'}
           awayBookJuice={mbOverOdds ? String(mbOverOdds) : '—110'}
           awayModelLine={`o${mdlOverSplit.line || '—'}`}
           awayModelJuice={mdlOverSplit.odds || '—'}
-          awayModelHasEdge={!isNaN(overEdgePP) && overEdgePP > 0}
+          awayModelHasEdge={overHasEdge}   // Option B gate
           homeBookLine={!isNaN(bookTotal) ? `u${bkTotalStr}` : 'u—'}
           homeBookJuice={mbUnderOdds ? String(mbUnderOdds) : '—110'}
           homeModelLine={`u${mdlUnderSplit.line || '—'}`}
           homeModelJuice={mdlUnderSplit.odds || '—'}
-          homeModelHasEdge={!isNaN(underEdgePP) && underEdgePP > 0}
+          homeModelHasEdge={underHasEdge}  // Option B gate
           roiEdgePP={totalRoiPP}
           roiLabel={totalRoiLabel}
         />
