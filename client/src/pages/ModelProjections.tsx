@@ -944,7 +944,14 @@ export default function ModelProjections() {
     setTimeout(() => {
       const el = document.getElementById(`game-card-${gameId}`);
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Compute the full sticky stack height so scrollIntoView doesn't hide the card
+      // under the sticky header. Stack = main header (--prez-header-h) + column header (--prez-col-header-h).
+      const mainH = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--prez-header-h') || '120', 10);
+      const colH  = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--prez-col-header-h') || '32', 10);
+      const totalStickyH = mainH + colH + 8; // +8px breathing room
+      // Apply scroll-margin-top dynamically so scrollIntoView(block:'start') clears the sticky stack
+      el.style.scrollMarginTop = `${totalStickyH}px`;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
       // Use CSS animation class instead of setInterval — zero style leak risk
       el.classList.remove('prez-game-pulse');
       // Force reflow to restart animation if already applied
@@ -1453,10 +1460,24 @@ export default function ModelProjections() {
         <div
           className="lg:hidden"
           ref={(el) => {
-            if (el) {
+            // Use a ResizeObserver (not a one-shot ref callback) so --prez-col-header-h stays
+            // accurate even after the main header's --prez-header-h stabilizes and causes
+            // the column header to reflow. Without this, the first-render measurement can be
+            // stale and the feed's paddingTop will be wrong, causing the column header to
+            // overlap the first game card.
+            if (!el) return;
+            // Disconnect any previous observer attached to this element
+            const prev = (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO;
+            if (prev) prev.disconnect();
+            const ro = new ResizeObserver(() => {
               const h = Math.ceil(el.getBoundingClientRect().height);
               document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
-            }
+            });
+            ro.observe(el);
+            (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO = ro;
+            // Immediate measurement for first frame
+            const h = Math.ceil(el.getBoundingClientRect().height);
+            document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
           }}
           style={{
             position: 'sticky',
@@ -1528,7 +1549,20 @@ export default function ModelProjections() {
       {/* touch-action: pan-y — allows vertical scrolling while blocking horizontal
            interference from the frozen panel scroll containers inside GameCard.
            -webkit-overflow-scrolling: touch — enables iOS momentum scrolling. */}
-      <main className="w-full feed-pb-safe" style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+      {/* Feed container: paddingTop compensates for the sticky column header (MATCHUP | RUN LINE | TOTAL | ML)
+           when the MODEL PROJECTIONS tab is active. Without this, the column header floats over the
+           first game card's BOOK/MODEL labels.
+           --prez-col-header-h is written by the column header's ref callback above.
+           Fallback 32px is the measured height of the column header at any screen size. */}
+      <main
+        className="w-full feed-pb-safe"
+        style={{
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch',
+          // Only apply top padding when the column header is visible (MODEL PROJECTIONS tab, mobile)
+          paddingTop: feedMobileTab === 'dual' ? 'var(--prez-col-header-h, 32px)' : undefined,
+        } as React.CSSProperties}
+      >
 
         {/* ── UNIFIED FEED (projections + splits always shown) ── */}
         {true && (
