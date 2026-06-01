@@ -2381,26 +2381,53 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     if (isNaN(totalDiff) || totalDiff <= 0) return null;
 
     // ── TIER 1 (highest priority): Model over/under odds probability comparison ──────────────────
-    // When model over/under odds are available, use no-vig probability comparison.
-    // This is the most accurate method: edge lives in the juice, not the line.
-    // Example: model o8 (+120) vs book o8 (-118)/u8 (-102)
-    //   modelOverProb = 100/(100+120) = 45.45%
-    //   bookNoVigOverProb = removeVig(-118, -102)[0]/100 = 52.0%
-    //   45.45% < 52.0% → model LESS confident in OVER → UNDER edge ✓
+    // OPTION B RULE: edge exists ONLY when modelImplied(side) > bookImplied(side) — both RAW.
+    // Compare raw model implied vs raw book implied on the SAME side (no vig removal on either).
+    //
+    // CORRECT examples:
+    //   u7.5: model=-116 → mdlUnderImplied=53.70% vs book=-123 → bkUnderImplied=55.16%
+    //     53.70% < 55.16% → model LESS confident in UNDER → NO EDGE ✓
+    //   u7.5: model=-128 → mdlUnderImplied=56.14% vs book=-123 → bkUnderImplied=55.16%
+    //     56.14% > 55.16% → model MORE confident in UNDER → UNDER EDGE ✓
+    //
+    // WRONG (old): comparing raw model implied vs book NO-VIG prob (apples to oranges)
+    //   This inflated apparent model confidence and produced false edges.
+    //
+    // We check BOTH over and under independently:
+    //   OVER edge:  mdlOverImplied  > bkOverImplied  → model more confident in OVER
+    //   UNDER edge: mdlUnderImplied > bkUnderImplied → model more confident in UNDER
+    //   If both or neither: fall through to Tier 2
     const _mdlOverOddsNum  = toNum(game.modelOverOdds);
+    const _mdlUnderOddsNum = toNum(game.modelUnderOdds);
     const _bkOverOddsNum   = toNum(game.overOdds);
     const _bkUnderOddsNum  = toNum(game.underOdds);
-    if (!isNaN(_mdlOverOddsNum) && !isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
-      const modelOverProb = americanToImplied(_mdlOverOddsNum);
+    if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
       const rawBkOver  = americanToImplied(_bkOverOddsNum);
       const rawBkUnder = americanToImplied(_bkUnderOddsNum);
-      const vigTotal = rawBkOver + rawBkUnder;
-      if (!isNaN(modelOverProb) && vigTotal > 0) {
-        const bookNoVigOverProb = rawBkOver / vigTotal;
-        // OVER edge: model more confident in OVER than book no-vig
-        // UNDER edge: model less confident in OVER than book no-vig
-        return modelOverProb > bookNoVigOverProb;
+      // Check OVER side: model over odds available and model more confident in OVER
+      const overEdge = !isNaN(_mdlOverOddsNum)
+        ? americanToImplied(_mdlOverOddsNum) > rawBkOver
+        : false;
+      // Check UNDER side: model under odds available and model more confident in UNDER
+      const underEdge = !isNaN(_mdlUnderOddsNum)
+        ? americanToImplied(_mdlUnderOddsNum) > rawBkUnder
+        : false;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[authTotalEdgeIsOver:Tier1] game=${game.id}` +
+          ` mdlOver=${_mdlOverOddsNum} mdlUnder=${_mdlUnderOddsNum}` +
+          ` bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum}` +
+          ` | mdlOverImp=${isNaN(_mdlOverOddsNum)?'N/A':americanToImplied(_mdlOverOddsNum).toFixed(4)}` +
+          ` bkOverImp=${rawBkOver.toFixed(4)}` +
+          ` | mdlUnderImp=${isNaN(_mdlUnderOddsNum)?'N/A':americanToImplied(_mdlUnderOddsNum).toFixed(4)}` +
+          ` bkUnderImp=${rawBkUnder.toFixed(4)}` +
+          ` | overEdge=${overEdge} underEdge=${underEdge}`
+        );
       }
+      // Both or neither: ambiguous — fall through to Tier 2
+      if (overEdge && !underEdge) return true;   // OVER edge confirmed
+      if (underEdge && !overEdge) return false;  // UNDER edge confirmed
+      // Both edges or no edges: fall through to Tier 2 for tie-breaking
     }
 
     // ── TIER 2: NHL/MLB — use computedTotalEdge from model engine (model odds at book's line) ───────

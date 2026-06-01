@@ -323,53 +323,55 @@ if (process.env.NODE_ENV === 'development') {
 const spreadEdgeIsAway: boolean | null = authSpreadEdgeIsAway;
 const totalEdgeIsOver: boolean | null  = authTotalEdgeIsOver;
 
-// ── ML edge detection — unified with spread edge direction ──────────────
+// ── ML edge detection — OPTION B: independent of spread direction ──────────
 //
-// PRIMARY RULE: ML edge direction MUST match spread edge direction.
-//   spreadEdgeIsAway === true  → away team ML is the edge (same team covers spread)
-//   spreadEdgeIsAway === false → home team ML is the edge
-//   spreadEdgeIsAway === null  → no spread edge; fall back to implied-probability
+// OPTION B RULE: ML edge exists ONLY when modelImplied(side) > bookImplied(side)
+// — both RAW, no vig removal on either side.
 //
-// SECONDARY FALLBACK (only when no spread edge exists):
-//   Implied probability: p = 100 / (|ML| + 100) for positive ML (underdog)
-//                        p = |ML| / (|ML| + 100) for negative ML (favorite)
-//   Edge exists when model implied prob > book implied prob by >= 2%
+// This is computed INDEPENDENTLY of spread edge direction.
+// A team can have a spread edge without an ML edge and vice versa.
+// The ML edge is determined purely by whether the model is more confident
+// in that team winning outright than the book is.
 //
-// GUARANTEE: zero contradictions — you cannot have UCLA spread edge AND
-// Rutgers ML edge simultaneously; they always point to the same team.
+// FORMULA: edgePP = (modelImplied - bookImplied) * 100
+//   modelImplied(-149) = 149/249 = 59.84%
+//   bookImplied(-149)  = 149/249 = 59.84%
+//   edgePP = 0.00pp → NO EDGE (identical odds)
+//
+// THRESHOLD: ML_EDGE_THRESHOLD_PP = 0.5pp (half a percentage point)
+//   This prevents noise from tiny rounding differences.
 const mlImpliedProb = (ml: string | number | null | undefined): number => {
   if (ml == null || ml === '' || ml === '—') return NaN;
   const n = typeof ml === 'number' ? ml : Number(String(ml).replace(/[^\d.-]/g, ''));
   if (isNaN(n)) return NaN;
-  if (n === 100) return 0.5;                    // EV: exactly 50%
-  if (n > 0) return 100 / (n + 100);            // underdog
-  return Math.abs(n) / (Math.abs(n) + 100);     // favorite
+  if (n === 100) return 0.5;
+  if (n > 0) return 100 / (n + 100);
+  return Math.abs(n) / (Math.abs(n) + 100);
 };
 const bkAwayMlProb  = mlImpliedProb(game.awayML);
 const mdlAwayMlProb = mlImpliedProb(game.modelAwayML);
 const bkHomeMlProb  = mlImpliedProb(game.homeML);
 const mdlHomeMlProb = mlImpliedProb(game.modelHomeML);
-const ML_EDGE_THRESHOLD = 0.02;
-// Implied-probability fallback (only used when no spread edge exists)
-const awayMlProbEdge = !isNaN(bkAwayMlProb) && !isNaN(mdlAwayMlProb)
-  ? (mdlAwayMlProb - bkAwayMlProb) >= ML_EDGE_THRESHOLD
-  : false;
-const homeMlProbEdge = !isNaN(bkHomeMlProb) && !isNaN(mdlHomeMlProb)
-  ? (mdlHomeMlProb - bkHomeMlProb) >= ML_EDGE_THRESHOLD
-  : false;
-// Unified ML edge: spread direction takes priority; prob fallback only when no spread edge
-const awayMlEdgeDetected: boolean = spreadEdgeIsAway !== null
-  ? spreadEdgeIsAway === true    // spread edge → away team wins ML too
-  : awayMlProbEdge;              // no spread edge → use implied prob
-const homeMlEdgeDetected: boolean = spreadEdgeIsAway !== null
-  ? spreadEdgeIsAway === false   // spread edge → home team wins ML too
-  : homeMlProbEdge;              // no spread edge → use implied prob
+// OPTION B: edge exists when model implied > book implied (raw vs raw, same side)
+// Threshold: 0.5pp minimum to filter noise
+const ML_EDGE_THRESHOLD_PP = 0.005; // 0.5pp as decimal
+const awayMlEdgePP = (!isNaN(bkAwayMlProb) && !isNaN(mdlAwayMlProb))
+  ? (mdlAwayMlProb - bkAwayMlProb)
+  : NaN;
+const homeMlEdgePP = (!isNaN(bkHomeMlProb) && !isNaN(mdlHomeMlProb))
+  ? (mdlHomeMlProb - bkHomeMlProb)
+  : NaN;
+const awayMlEdgeDetected: boolean = !isNaN(awayMlEdgePP) && awayMlEdgePP > ML_EDGE_THRESHOLD_PP;
+const homeMlEdgeDetected: boolean = !isNaN(homeMlEdgePP) && homeMlEdgePP > ML_EDGE_THRESHOLD_PP;
 if (process.env.NODE_ENV === 'development') {
   console.log(
-    `%c[GameCard:MLEdge:UNIFIED] game=${game.id}` +
-    ` spreadEdgeIsAway=${spreadEdgeIsAway}` +
-    ` | away: bkProb=${bkAwayMlProb?.toFixed(3)} mdlProb=${mdlAwayMlProb?.toFixed(3)} probEdge=${awayMlProbEdge} → finalEdge=${awayMlEdgeDetected}` +
-    ` | home: bkProb=${bkHomeMlProb?.toFixed(3)} mdlProb=${mdlHomeMlProb?.toFixed(3)} probEdge=${homeMlProbEdge} → finalEdge=${homeMlEdgeDetected}`,
+    `%c[GameCard:MLEdge:OPTION_B] game=${game.id}` +
+    ` | away: bkProb=${isNaN(bkAwayMlProb)?'NaN':bkAwayMlProb.toFixed(4)}` +
+    ` mdlProb=${isNaN(mdlAwayMlProb)?'NaN':mdlAwayMlProb.toFixed(4)}` +
+    ` edgePP=${isNaN(awayMlEdgePP)?'NaN':(awayMlEdgePP*100).toFixed(2)}pp → edge=${awayMlEdgeDetected}` +
+    ` | home: bkProb=${isNaN(bkHomeMlProb)?'NaN':bkHomeMlProb.toFixed(4)}` +
+    ` mdlProb=${isNaN(mdlHomeMlProb)?'NaN':mdlHomeMlProb.toFixed(4)}` +
+    ` edgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)}pp → edge=${homeMlEdgeDetected}`,
     'color:#39FF14;font-size:9px'
   );
 }
@@ -587,8 +589,8 @@ const underEdgePP: number = (() => {
   }
   return roi;
 })();
-// AWAY ML ROI
-const awayMlEdgePP: number = (() => {
+// AWAY ML ROI (for EDGE tab display — separate from awayMlEdgePP Option B detection above)
+const awayMlRoi: number = (() => {
   const bkAway  = toNum(game.awayML);
   const bkHome  = toNum(game.homeML);
   const mdlAway = toNum(game.modelAwayML);
@@ -601,8 +603,8 @@ const awayMlEdgePP: number = (() => {
   }
   return roi;
 })();
-// HOME ML ROI
-const homeMlEdgePP: number = (() => {
+// HOME ML ROI (for EDGE tab display — separate from homeMlEdgePP Option B detection above)
+const homeMlRoi: number = (() => {
   const bkHome  = toNum(game.homeML);
   const bkAway  = toNum(game.awayML);
   const mdlHome = toNum(game.modelHomeML);
@@ -629,10 +631,10 @@ const totalEdgePP: number = (() => {
   const best = Math.max(o, u);
   return best === -Infinity ? NaN : best;
 })();
-// Best ML edge (away or home, whichever is higher)
+// Best ML ROI (away or home, whichever is higher) — used for EDGE tab display
 const mlEdgePP: number = (() => {
-  const a = isNaN(awayMlEdgePP) ? -Infinity : awayMlEdgePP;
-  const h = isNaN(homeMlEdgePP) ? -Infinity : homeMlEdgePP;
+  const a = isNaN(awayMlRoi) ? -Infinity : awayMlRoi;
+  const h = isNaN(homeMlRoi) ? -Infinity : homeMlRoi;
   const best = Math.max(a, h);
   return best === -Infinity ? NaN : best;
 })();
@@ -649,7 +651,8 @@ if (process.env.NODE_ENV === 'development') {
     ` | tot=${isNaN(totalEdgePP)?'NaN':totalEdgePP.toFixed(2)}pp` +
     ` (over=${isNaN(overEdgePP)?'NaN':overEdgePP.toFixed(2)} under=${isNaN(underEdgePP)?'NaN':underEdgePP.toFixed(2)})` +
     ` | ml=${isNaN(mlEdgePP)?'NaN':mlEdgePP.toFixed(2)}pp` +
-    ` (away=${isNaN(awayMlEdgePP)?'NaN':awayMlEdgePP.toFixed(2)} home=${isNaN(homeMlEdgePP)?'NaN':homeMlEdgePP.toFixed(2)})` +
+    ` (awayRoi=${isNaN(awayMlRoi)?'NaN':awayMlRoi.toFixed(2)} homeRoi=${isNaN(homeMlRoi)?'NaN':homeMlRoi.toFixed(2)})` +
+    ` (awayEdgePP=${isNaN(awayMlEdgePP)?'NaN':(awayMlEdgePP*100).toFixed(2)} homeEdgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)})` +
     ` | best=${isNaN(bestEdgePP)?'NaN':bestEdgePP.toFixed(2)}pp → ${getVerdict(bestEdgePP)}`,
     'color:#39FF14;font-size:9px'
   );
@@ -826,14 +829,16 @@ const OddsTable = () => (
     })()}
     {/* ML card — juice IS the value; empty spacer row keeps height aligned */}
     {(() => {
-      // ML: best edge side label (e.g. "CGY ML" or "EDM ML")
-      const mlRoiPP = isNaN(awayMlEdgePP) && isNaN(homeMlEdgePP)
+      // ML ROI footer: use awayMlRoi/homeMlRoi (ROI %) for the footer display value.
+      // Use awayMlEdgeDetected/homeMlEdgeDetected (Option B) for neon green highlighting.
+      // Pick the edge side with the higher ROI for the footer label.
+      const mlRoiPP = isNaN(awayMlRoi) && isNaN(homeMlRoi)
         ? NaN
-        : (!isNaN(awayMlEdgePP) && (isNaN(homeMlEdgePP) || awayMlEdgePP >= homeMlEdgePP))
-          ? awayMlEdgePP
-          : homeMlEdgePP;
+        : (!isNaN(awayMlRoi) && (isNaN(homeMlRoi) || awayMlRoi >= homeMlRoi))
+          ? awayMlRoi
+          : homeMlRoi;
       const mlRoiLabel = (() => {
-        const isAway = !isNaN(awayMlEdgePP) && (isNaN(homeMlEdgePP) || awayMlEdgePP >= homeMlEdgePP);
+        const isAway = !isNaN(awayMlRoi) && (isNaN(homeMlRoi) || awayMlRoi >= homeMlRoi);
         return `${isAway ? awayAbbr : homeAbbr} ML`;
       })();
       return (
@@ -842,12 +847,12 @@ const OddsTable = () => (
           awayBookJuice={bkAwayMl || '—'}
           awayModelLine={''}
           awayModelJuice={mdlAwayMl || '—'}
-          awayModelHasEdge={!isNaN(awayMlEdgePP) && awayMlEdgePP > 0}
+          awayModelHasEdge={awayMlEdgeDetected}
           homeBookLine={''}
           homeBookJuice={bkHomeMl || '—'}
           homeModelLine={''}
           homeModelJuice={mdlHomeMl || '—'}
-          homeModelHasEdge={!isNaN(homeMlEdgePP) && homeMlEdgePP > 0}
+          homeModelHasEdge={homeMlEdgeDetected}
           isML={true}
           roiEdgePP={mlRoiPP}
           roiLabel={mlRoiLabel}

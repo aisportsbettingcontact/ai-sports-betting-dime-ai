@@ -258,3 +258,201 @@ describe('edgeUtils: getEdgeColor', () => {
     expect(getEdgeColor(NaN)).toBe('rgba(255,255,255,0.30)');
   });
 });
+
+// ─── Option B Edge Detection Rule ────────────────────────────────────────────
+// RULE: edge exists ONLY when modelImplied(side) > bookImplied(side) — both RAW.
+// Confirmed by user. Replaces old no-vig comparison (apples-to-oranges).
+//
+// CANONICAL CASES (from SF@MIL game, 2026-06-01):
+//   u7.5:   book=-123 model=-116  → model 53.70% < book 55.16%  → NO EDGE ✓
+//   MIL ML: book=-149 model=-149  → model 59.84% = book 59.84%  → NO EDGE ✓
+//   MIL RL: book=+149 model=+134  → model 42.74% > book 40.16%  → EDGE ✓
+//   SF  RL: book=-181 model=-134  → model 57.26% < book 64.41%  → NO EDGE ✓
+
+describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, same side)', () => {
+
+  // ── calculateEdge(bookOdds, modelOdds) returns (modelImplied - bookImplied) * 100 ──
+
+  it('[VERIFY] u7.5 book=-123 model=-116 → edgePP < 0 (NO EDGE: model less confident)', () => {
+    // modelImplied(-116) = 116/216 = 53.70%
+    // bookImplied(-123)  = 123/223 = 55.16%
+    // edgePP = (53.70 - 55.16) = -1.45pp → negative → no edge
+    const edge = calculateEdge(-123, -116);
+    expect(edge).toBeLessThan(0);
+    expect(edge).toBeCloseTo(-1.45, 1);
+  });
+
+  it('[VERIFY] MIL ML book=-149 model=-149 → edgePP = 0 (NO EDGE: identical odds)', () => {
+    const edge = calculateEdge(-149, -149);
+    expect(edge).toBeCloseTo(0, 4);
+  });
+
+  it('[VERIFY] MIL RL book=+149 model=+134 → edgePP > 0 (EDGE: model more confident)', () => {
+    // modelImplied(+134) = 100/234 = 42.74%
+    // bookImplied(+149)  = 100/249 = 40.16%
+    // edgePP = (42.74 - 40.16) = +2.57pp → positive → edge ✓
+    const edge = calculateEdge(149, 134);
+    expect(edge).toBeGreaterThan(0);
+    expect(edge).toBeCloseTo(2.57, 1);
+  });
+
+  it('[VERIFY] SF RL book=-181 model=-134 → edgePP < 0 (NO EDGE: model less confident)', () => {
+    // modelImplied(-134) = 134/234 = 57.26%
+    // bookImplied(-181)  = 181/281 = 64.41%
+    // edgePP = (57.26 - 64.41) = -7.15pp → negative → no edge
+    const edge = calculateEdge(-181, -134);
+    expect(edge).toBeLessThan(0);
+    expect(edge).toBeCloseTo(-7.15, 1);
+  });
+
+  it('[VERIFY] u7.5 book=-123 model=-128 → edgePP > 0 (EDGE: model more confident)', () => {
+    // modelImplied(-128) = 128/228 = 56.14%
+    // bookImplied(-123)  = 123/223 = 55.16%
+    // edgePP = +0.98pp → positive → edge ✓
+    const edge = calculateEdge(-123, -128);
+    expect(edge).toBeGreaterThan(0);
+    expect(edge).toBeCloseTo(0.98, 1);
+  });
+
+  it('[VERIFY] MIL ML book=-149 model=-155 → edgePP > 0 (EDGE: model more confident)', () => {
+    // modelImplied(-155) = 155/255 = 60.78%
+    // bookImplied(-149)  = 149/249 = 59.84%
+    // edgePP = +0.94pp → positive → edge ✓
+    const edge = calculateEdge(-149, -155);
+    expect(edge).toBeGreaterThan(0);
+    expect(edge).toBeCloseTo(0.94, 1);
+  });
+
+  // ── ROI formula: only meaningful when edge IS detected (modelImplied > bookImplied) ──
+
+  it('[VERIFY] MIL RL ROI: model=+134 book=+149 opp=-181 → ROI ≈ +11.28%', () => {
+    // modelImplied(+134) = 100/234 = 0.42735
+    // bookNoVig(+149) = 0.40161 / (0.40161 + 0.64413) = 0.40161 / 1.04574 = 0.38405
+    // ROI = (0.42735 / 0.38405 - 1) * 100 = +11.28%
+    const roi = calculateRoi(134, 149, -181);
+    expect(roi).toBeGreaterThan(0);
+    expect(roi).toBeCloseTo(11.28, 1);
+  });
+
+  it('[VERIFY] u7.5 NO EDGE: calculateRoi still returns a value but edge detection blocks display', () => {
+    // ROI can be positive even when Option B says no edge (model=-116 < book=-123).
+    // The edge detection gate (calculateEdge < 0) prevents this from being shown.
+    const edgePP = calculateEdge(-123, -116);
+    const roi = calculateRoi(-116, -123, 102);
+    expect(edgePP).toBeLessThan(0);  // Option B: no edge
+    expect(roi).toBeGreaterThan(0);  // ROI formula still positive (but gated by edge detection)
+    // This confirms the edge detection gate is REQUIRED — ROI alone is insufficient.
+  });
+
+  // ── americanToImplied precision ──────────────────────────────────────────────
+
+  it('[VERIFY] americanToImplied(-116) = 116/216 ≈ 0.537037', () => {
+    expect(americanToImplied(-116)).toBeCloseTo(116 / 216, 6);
+  });
+  it('[VERIFY] americanToImplied(-123) = 123/223 ≈ 0.551570', () => {
+    expect(americanToImplied(-123)).toBeCloseTo(123 / 223, 6);
+  });
+  it('[VERIFY] americanToImplied(+134) = 100/234 ≈ 0.427350', () => {
+    expect(americanToImplied(134)).toBeCloseTo(100 / 234, 6);
+  });
+  it('[VERIFY] americanToImplied(+149) = 100/249 ≈ 0.401606', () => {
+    expect(americanToImplied(149)).toBeCloseTo(100 / 249, 6);
+  });
+  it('[VERIFY] americanToImplied(-149) = 149/249 ≈ 0.598394', () => {
+    expect(americanToImplied(-149)).toBeCloseTo(149 / 249, 6);
+  });
+  it('[VERIFY] americanToImplied(-181) = 181/281 ≈ 0.644128', () => {
+    expect(americanToImplied(-181)).toBeCloseTo(181 / 281, 6);
+  });
+
+  // ── Tier 1 total edge direction — Option B logic ─────────────────────────────
+  // Mirrors the fixed authTotalEdgeIsOver Tier 1 logic in GameCard.tsx.
+  // OVER edge:  mdlOverImplied  > bkOverImplied  → return true
+  // UNDER edge: mdlUnderImplied > bkUnderImplied → return false
+  // Both or neither: fall through to Tier 2
+
+  function authTotalEdgeIsOverTier1(
+    mdlOverOdds: number | null,
+    mdlUnderOdds: number | null,
+    bkOverOdds: number | null,
+    bkUnderOdds: number | null
+  ): boolean | null {
+    if (bkOverOdds === null || bkUnderOdds === null) return null;
+    const rawBkOver  = americanToImplied(bkOverOdds);
+    const rawBkUnder = americanToImplied(bkUnderOdds);
+    const overEdge  = mdlOverOdds  !== null ? americanToImplied(mdlOverOdds)  > rawBkOver  : false;
+    const underEdge = mdlUnderOdds !== null ? americanToImplied(mdlUnderOdds) > rawBkUnder : false;
+    if (overEdge  && !underEdge) return true;
+    if (underEdge && !overEdge)  return false;
+    return null; // both or neither → fall through to Tier 2
+  }
+
+  it('[VERIFY] Tier1: u7.5 book=+102/-123 model=-116/+116 → true (OVER edge: model more confident in OVER)', () => {
+    // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
+    // mdlOverOdds=-116 → mdlOverImp = 116/216 = 53.70%
+    // bkOverOdds=+102  → bkOverImp  = 100/202 = 49.50%
+    // overEdge: 53.70% > 49.50% → true (model MORE confident in OVER than book)
+    //
+    // mdlUnderOdds=+116 → mdlUnderImp = 100/216 = 46.30%
+    // bkUnderOdds=-123  → bkUnderImp  = 123/223 = 55.16%
+    // underEdge: 46.30% < 55.16% → false (model LESS confident in UNDER)
+    //
+    // Result: overEdge=true, underEdge=false → return true (OVER edge)
+    // NOTE: The user's concern was about the UNDER edge being falsely shown.
+    // This test confirms the OVER edge is correctly detected (not UNDER).
+    const result = authTotalEdgeIsOverTier1(-116, 116, 102, -123);
+    expect(result).toBe(true);
+  });
+
+  it('[VERIFY] Tier1: u7.5 book=+102/-123 model=+116/-116 → null (no edge: model less confident on both sides)', () => {
+    // When model is LESS confident in OVER AND LESS confident in UNDER:
+    // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
+    // mdlOverOdds=+116 → mdlOverImp = 100/216 = 46.30%
+    // bkOverOdds=+102  → bkOverImp  = 100/202 = 49.50%
+    // overEdge: 46.30% < 49.50% → false
+    //
+    // mdlUnderOdds=-116 → mdlUnderImp = 116/216 = 53.70%
+    // bkUnderOdds=-123  → bkUnderImp  = 123/223 = 55.16%
+    // underEdge: 53.70% < 55.16% → false
+    //
+    // Both false → fall through to Tier 2 → null
+    // This is the CORRECT case for the user's u7.5 concern:
+    // model gives OVER at +116 (less confident in OVER than book +102)
+    // model gives UNDER at -116 (less confident in UNDER than book -123)
+    // → NO EDGE on either side ✓
+    const result = authTotalEdgeIsOverTier1(116, -116, 102, -123);
+    expect(result).toBeNull();
+  });
+
+  it('[VERIFY] Tier1: model=-128/+128 book=-123/+102 → false (UNDER edge)', () => {
+    // UNDER: model 128/228=56.14% > book 123/223=55.16% → under edge ✓
+    // OVER:  model 100/228=43.86% < book 100/202=49.50% → no over edge
+    // underEdge && !overEdge → return false (UNDER)
+    // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
+    const result = authTotalEdgeIsOverTier1(128, -128, 102, -123);
+    expect(result).toBe(false);
+  });
+
+  it('[VERIFY] Tier1: book=+115/-135 model=-120/+100 → true (OVER edge)', () => {
+    // OVER:  model implied(-120)=120/220=54.55% > book implied(+115)=100/215=46.51% → OVER edge ✓
+    // UNDER: model implied(+100)=100/200=50.00% < book implied(-135)=135/235=57.45% → no under edge
+    // overEdge && !underEdge → return true (OVER)
+    // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
+    const result = authTotalEdgeIsOverTier1(-120, 100, 115, -135);
+    expect(result).toBe(true);
+  });
+
+  it('[VERIFY] Tier1: both edges impossible for fair-priced model (complementary probabilities)', () => {
+    // For a model with zero vig (symmetric odds), if model is more confident in OVER,
+    // it is necessarily LESS confident in UNDER. Both edges cannot coexist.
+    // Proof: model=-120/+120 (symmetric, zero vig)
+    //   mdlOverImp = 120/220 = 0.5455, mdlUnderImp = 100/220 = 0.4545
+    //   book=-110/+100 (4.8% vig)
+    //   bkOverImp = 110/210 = 0.5238, bkUnderImp = 100/200 = 0.5000
+    //   overEdge: 0.5455 > 0.5238 = true
+    //   underEdge: 0.4545 > 0.5000 = false
+    //   Result: OVER edge only (true), not both
+    const result = authTotalEdgeIsOverTier1(-120, 120, 100, -110);
+    expect(result).toBe(true); // OVER edge only
+  });
+});
