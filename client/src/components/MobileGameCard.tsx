@@ -20,8 +20,9 @@ type MobileTab = 'dual' | 'splits';
 
 // TeamLogo component (inline — same as in GameCard.tsx)
 function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: string; logoUrl?: string; size?: number }) {
-  // Enforce minimum 32px — logos must never be smaller than a fingertip target
-  const actualSize = Math.max(32, size);
+  // Enforce minimum 24px — logos can be 28px in the narrow left panel; the 44px row height
+  // provides the touch target, so the logo itself doesn't need to be 32px.
+  const actualSize = Math.max(24, size);
   if (logoUrl) {
     return (
       <img
@@ -903,63 +904,81 @@ return (
       overflow: 'hidden',  // clip any text that overflows the left panel boundary
     }}>
 
-      {/* Status row: star + LIVE/FINAL/time — compact at 80px */}
-      {/* overflow:hidden + minWidth:0 ensures the LIVE clock text never bleeds past this row's boundary.
-           The row is already clipped by the parent panel's overflow:hidden, but this adds a second
-           layer of protection and enables text-overflow:ellipsis on the clock span. */}
+      {/* Status row: star + LIVE/FINAL/time
+           LAYOUT: column flex so LIVE and inning/clock stack vertically.
+           - Line 1: star icon + "•LIVE" badge (or FINAL pill, or game time)
+           - Line 2 (live only): inning/clock text (e.g. "TOP 4TH", "BOT 2ND")
+           This two-line approach ensures neither LIVE nor the clock is ever clipped.
+           overflow:hidden on the parent panel clips any content that still exceeds the panel width. */}
       <div style={{
         display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: '20px',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
         paddingLeft: '2px',
-        gap: '2px',
+        paddingTop: '3px',
+        paddingBottom: '3px',
+        gap: '1px',
         borderBottom: '1px solid rgba(255,255,255,0.10)',
-        overflow: 'hidden',
         minWidth: 0,
+        width: '100%',
       }}>
-        {isAppAuthed && (
-          <button type="button" onClick={onStarClick}
-            aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 1px', lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center', color: isFavorited ? '#FFD700' : 'rgba(255,255,255,0.65)', filter: isFavorited ? 'drop-shadow(0 0 4px #FFD700)' : 'none', transition: 'color 0.15s' }}
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorited ? '#FFD700' : 'none'} stroke={isFavorited ? '#FFD700' : 'rgba(255,255,255,0.85)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </button>
-        )}
-        {isLive ? (
-          // LIVE row: flex container with overflow:hidden + minWidth:0 so the clock text
-          // (e.g. "TOP 4TH") is clipped at the panel boundary instead of bleeding into
-          // the right odds panel's BOOK/MODEL column headers.
-          <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#39FF14', fontSize: '11px', whiteSpace: 'nowrap', flexWrap: 'nowrap', overflow: 'hidden', minWidth: 0, maxWidth: '100%' }}>
-            <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: '#39FF14', flexShrink: 0 }} />
-            <span style={{ flexShrink: 0 }}>LIVE</span>
-            {formattedClock && (
-              <span style={{ color: 'rgba(255,255,255,0.90)', fontWeight: 600, fontSize: '11px', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums', marginLeft: '2px', whiteSpace: 'nowrap', display: 'inline', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{formattedClock}</span>
-            )}
-          </span>
-        ) : isFinal ? (
-          <span className="font-bold tracking-wide" style={{ fontSize: '8px', color: '#39FF14', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', padding: '1px 6px', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>FINAL</span>
-        ) : (
-          <span style={{ fontSize: '11px', fontWeight: 400, color: 'hsl(var(--foreground))', whiteSpace: 'nowrap' }}>{time}</span>
+        {/* Line 1: star + status badge */}
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '2px', minWidth: 0, width: '100%' }}>
+          {isAppAuthed && (
+            <button type="button" onClick={onStarClick}
+              aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 1px', lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center', color: isFavorited ? '#FFD700' : 'rgba(255,255,255,0.65)', filter: isFavorited ? 'drop-shadow(0 0 4px #FFD700)' : 'none', transition: 'color 0.15s' }}
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorited ? '#FFD700' : 'none'} stroke={isFavorited ? '#FFD700' : 'rgba(255,255,255,0.85)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </button>
+          )}
+          {isLive ? (
+            // "•LIVE" badge — just the dot + LIVE text, no clock here
+            <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#39FF14', fontSize: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#39FF14', flexShrink: 0 }} />
+              <span>LIVE</span>
+            </span>
+          ) : isFinal ? (
+            <span className="font-bold tracking-wide" style={{ fontSize: '8px', color: '#39FF14', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', padding: '1px 6px', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>FINAL</span>
+          ) : (
+            <span style={{ fontSize: '10px', fontWeight: 400, color: 'hsl(var(--foreground))', whiteSpace: 'nowrap' }}>{time}</span>
+          )}
+        </div>
+        {/* Line 2 (live only): inning/clock text — full width, never clipped */}
+        {isLive && formattedClock && (
+          <span style={{
+            fontSize: '9px',
+            fontWeight: 600,
+            color: 'rgba(255,255,255,0.85)',
+            letterSpacing: '0.04em',
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+            lineHeight: 1,
+            paddingLeft: isAppAuthed ? '14px' : '0px', // indent to align under LIVE text (past star icon)
+          }}>{formattedClock}</span>
         )}
       </div>
 
-            {/* Away row: logo (32px) + abbr (never truncated) + score */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '5px', paddingLeft: '2px', paddingRight: '4px' }}>
-        {/* Logo: 32px minimum — always visible */}
-        <div style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={32} />
+            {/* Away row: logo (28px) + abbr + score
+           Logo reduced from 32px to 28px to give abbr+score enough room on narrow phones.
+           On a 390px phone: panel=79.6px, padding-left=8px, gap=4px
+           28 (logo) + 4 (gap) = 32px used, leaving 39.6px for abbr+score.
+           Worst case: "CWS" (26px at 11px) + "12" (18px) = 44px — fits with 0px paddingRight. */}
+      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '4px', paddingLeft: '2px', paddingRight: '2px' }}>
+        {/* Logo: 28px — reduced from 32px to free up space for abbr+score */}
+        <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — NEVER truncated; whiteSpace nowrap ensures full display */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
+        {/* Abbreviation — NEVER truncated */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {awayAbbr}
         </span>
-        {/* Score */}
+        {/* Score — flexShrink:0 so it's never squeezed out */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: 'clamp(12px, 3.5vw, 14px)', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
+            fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
             color: awayScoreFlash ? '#39FF14' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: awayScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.awayScore}</span>
@@ -967,20 +986,20 @@ return (
       </div>
       {/* Divider */}
       <div style={{ height: 1, background: 'hsl(var(--border) / 0.4)' }} />
-      {/* Home row: logo (32px) + abbr (never truncated) + score */}
-      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '5px', paddingLeft: '2px', paddingRight: '4px' }}>
-        {/* Logo: 32px minimum — always visible */}
-        <div style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={32} />
+      {/* Home row: logo (28px) + abbr + score */}
+      <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '4px', paddingLeft: '2px', paddingRight: '2px' }}>
+        {/* Logo: 28px — reduced from 32px to free up space for abbr+score */}
+        <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — NEVER truncated; whiteSpace nowrap ensures full display */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em' }}>
+        {/* Abbreviation — NEVER truncated */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {homeAbbr}
         </span>
-        {/* Score */}
+        {/* Score — flexShrink:0 so it's never squeezed out */}
         {(isLive || isFinal) && hasScores && (
           <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: 'clamp(12px, 3.5vw, 14px)', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
+            fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
             color: homeScoreFlash ? '#39FF14' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: homeScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
           }}>{game.homeScore}</span>

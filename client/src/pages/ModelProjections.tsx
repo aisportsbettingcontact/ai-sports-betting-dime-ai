@@ -1481,10 +1481,17 @@ export default function ModelProjections() {
           }}
           style={{
             position: 'sticky',
-            /* Use 120px as the fallback (safe for tallest mobile header including safe-area insets).
+            /* Use 220px as the fallback — safe for the tallest iPhone (Pro Max with Dynamic Island).
+             * Measured header breakdown on iPhone 14 Pro Max:
+             *   safe-area-inset-top: 59px
+             *   Row1 (brand+user): ~44px
+             *   Row3 (sport tabs + search): ~44px
+             *   Row4 (date row): ~24px
+             *   Row5 (feed tabs): ~44px
+             *   Total: ~215px
              * The ResizeObserver updates --prez-header-h after first paint; the fallback
-             * only applies on the very first frame to prevent overlap with game cards. */
-            top: 'var(--prez-header-h, 120px)',
+             * only applies on the very first frame to prevent a brief overlap flash. */
+            top: 'var(--prez-header-h, 220px)',
             zIndex: 39,
             display: 'grid',
             gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
@@ -1549,18 +1556,16 @@ export default function ModelProjections() {
       {/* touch-action: pan-y — allows vertical scrolling while blocking horizontal
            interference from the frozen panel scroll containers inside GameCard.
            -webkit-overflow-scrolling: touch — enables iOS momentum scrolling. */}
-      {/* Feed container: paddingTop compensates for the sticky column header (MATCHUP | RUN LINE | TOTAL | ML)
-           when the MODEL PROJECTIONS tab is active. Without this, the column header floats over the
-           first game card's BOOK/MODEL labels.
-           --prez-col-header-h is written by the column header's ref callback above.
-           Fallback 32px is the measured height of the column header at any screen size. */}
+      {/* Feed container: NO extra paddingTop needed.
+           The sticky column header (MATCHUP | RUN LINE | TOTAL | ML) has position:sticky,
+           which means it still occupies its natural flow space in the layout.
+           Adding paddingTop here would create DOUBLE the gap (sticky natural space + extra padding).
+           The sticky element's natural space is the correct and sufficient gap. */}
       <main
         className="w-full feed-pb-safe"
         style={{
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
-          // Only apply top padding when the column header is visible (MODEL PROJECTIONS tab, mobile)
-          paddingTop: feedMobileTab === 'dual' ? 'var(--prez-col-header-h, 32px)' : undefined,
         } as React.CSSProperties}
       >
 
