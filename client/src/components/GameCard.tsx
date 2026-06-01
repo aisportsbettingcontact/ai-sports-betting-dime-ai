@@ -2424,10 +2424,14 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           ` | overEdge=${overEdge} underEdge=${underEdge}`
         );
       }
-      // Both or neither: ambiguous — fall through to Tier 2
-      if (overEdge && !underEdge) return true;   // OVER edge confirmed
-      if (underEdge && !overEdge) return false;  // UNDER edge confirmed
-      // Both edges or no edges: fall through to Tier 2 for tie-breaking
+      if (overEdge && !underEdge) return true;   // OVER edge confirmed (Option B)
+      if (underEdge && !overEdge) return false;  // UNDER edge confirmed (Option B)
+      // Neither side has an edge — return null IMMEDIATELY.
+      // Tier 1 is AUTHORITATIVE when model odds are available.
+      // Do NOT fall through to Tier 2: the DB label may be stale from a previous
+      // run that used the old no-vig formula and produced a false edge.
+      if (!overEdge && !underEdge) return null;
+      // Both edges simultaneously (degenerate case for vig-bearing model) — fall through
     }
 
     // ── TIER 2: NHL/MLB — use computedTotalEdge from model engine (model odds at book's line) ───────

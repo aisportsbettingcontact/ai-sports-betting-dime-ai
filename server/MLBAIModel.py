@@ -2043,8 +2043,14 @@ class EdgeDetector:
 
     def detect(self, market: dict, book: dict) -> List[dict]:
         """
-        SPEC: COMPUTE_EDGE — edge = model_prob - book_prob, EV = CALCULATE_EV(edge)
+        SPEC: COMPUTE_EDGE — OPTION B: edge = model_prob - book_raw_prob (raw vs raw, no vig removal)
         SPEC: CONFIDENCE_THRESHOLD = 0.65 — only emit edges where model_p >= threshold
+
+        VALIDATION (u7.5 book=+102/-122, model=+116/-116):
+          rawBkOver=49.50%, rawBkUnder=54.95%, mdlOver=46.30%, mdlUnder=53.70%
+          overEdge  = 46.30 - 49.50 = -3.21pp → NO OVER EDGE
+          underEdge = 53.70 - 54.95 = -1.25pp → NO UNDER EDGE
+          Result: PASS (no edge) ✓
         """
         edges = []
         checks = [
@@ -2056,9 +2062,10 @@ class EdgeDetector:
         for label, model_p, book_odds in checks:
             if book_odds is None:
                 continue
-            bp = ml_to_prob(book_odds)
-            bp_nv, _ = remove_vig(bp, 1.0 - bp)
-            edge = model_p - bp_nv
+            # OPTION B: use raw book implied probability (no vig removal)
+            bp_raw = ml_to_prob(book_odds)
+            bp_nv, _ = remove_vig(bp_raw, 1.0 - bp_raw)  # kept for reference only
+            edge = model_p - bp_raw  # Option B: raw vs raw
             # SPEC: CONFIDENCE_THRESHOLD gate — skip low-confidence model probabilities
             confidence_ok = model_p >= CONFIDENCE_THRESHOLD
             if MIN_EDGE_THRESHOLD <= edge <= MAX_EDGE_THRESHOLD:
@@ -2067,7 +2074,8 @@ class EdgeDetector:
                     {
                         "market": label,
                         "model_p": round(model_p, 4),
-                        "book_p": round(bp_nv, 4),
+                        "book_p": round(bp_raw, 4),   # raw book prob (Option B)
+                        "book_p_nv": round(bp_nv, 4), # no-vig for reference
                         "edge": round(edge, 4),
                         "ev": ev,  # SPEC: EV per unit wagered
                         "confidence_ok": confidence_ok,  # SPEC: CONFIDENCE_THRESHOLD gate
@@ -2081,14 +2089,15 @@ class EdgeDetector:
         over_odds = book.get("over_odds")
         under_odds = book.get("under_odds")
         if ou_line and over_odds:
-            bop = ml_to_prob(over_odds)
-            bup = ml_to_prob(under_odds) if under_odds else 1.0 - bop
-            bop_nv, bup_nv = remove_vig(bop, bup)
-            for label, mp, bp, book_o in [
-                ("over", market["p_over"], bop_nv, over_odds),
-                ("under", market["p_under"], bup_nv, under_odds or over_odds),
+            # OPTION B: use raw book implied probabilities (no vig removal)
+            bop_raw = ml_to_prob(over_odds)
+            bup_raw = ml_to_prob(under_odds) if under_odds else 1.0 - bop_raw
+            bop_nv, bup_nv = remove_vig(bop_raw, bup_raw)  # kept for reference only
+            for label, mp, bp_raw_side, bp_nv_side, book_o in [
+                ("over",  market["p_over"],  bop_raw, bop_nv, over_odds),
+                ("under", market["p_under"], bup_raw, bup_nv, under_odds or over_odds),
             ]:
-                edge = mp - bp
+                edge = mp - bp_raw_side  # Option B: raw vs raw
                 confidence_ok = mp >= CONFIDENCE_THRESHOLD
                 if MIN_EDGE_THRESHOLD <= edge <= MAX_EDGE_THRESHOLD:
                     ev = self._calc_ev(mp, book_o)
@@ -2096,7 +2105,8 @@ class EdgeDetector:
                         {
                             "market": f"total_{label}",
                             "model_p": round(mp, 4),
-                            "book_p": round(bp, 4),
+                            "book_p": round(bp_raw_side, 4),   # raw book prob (Option B)
+                            "book_p_nv": round(bp_nv_side, 4), # no-vig for reference
                             "edge": round(edge, 4),
                             "ev": ev,
                             "confidence_ok": confidence_ok,
