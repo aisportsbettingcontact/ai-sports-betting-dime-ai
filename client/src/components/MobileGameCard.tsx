@@ -257,20 +257,56 @@ if (process.env.NODE_ENV === 'development') {
     'color:#FF9900;font-size:9px'
   );
 }
-const mdlAwaySpreadStr = !isNaN(awayModelSpread)
-  ? (isNhlGame && game.modelAwayPLOdds
-      ? `${spreadSign(awayModelSpread)} (${game.modelAwayPLOdds})`
-      : isMlbGame && game.modelAwaySpreadOdds
-      ? `${spreadSign(awayModelSpread)} (${game.modelAwaySpreadOdds})`
-      : spreadSign(awayModelSpread))
-  : '—';
-const mdlHomeSpreadStr = !isNaN(homeModelSpread)
-  ? (isNhlGame && game.modelHomePLOdds
-      ? `${spreadSign(homeModelSpread)} (${game.modelHomePLOdds})`
-      : isMlbGame && game.modelHomeSpreadOdds
-      ? `${spreadSign(homeModelSpread)} (${game.modelHomeSpreadOdds})`
-      : spreadSign(homeModelSpread))
-  : '—';
+// ── MLB RL LABEL RULE: model RL label ALWAYS mirrors the book's run line. ──────────────────────
+// NEVER use awayModelSpread/homeModelSpread as the label for MLB — it can have wrong sign
+// if the model ran before the book's run line was confirmed (sign flip guard may not catch all cases).
+// Priority: awayRunLine (VSiN run line, most authoritative) → awayBookSpread (DK NJ spread)
+// → awayModelSpread (last resort, only for non-MLB sports).
+//
+// [INPUT]  game.awayRunLine = "+1.5" (VSiN) or null
+// [INPUT]  awayBookSpread = 1.5 (DK NJ) or NaN
+// [INPUT]  awayModelSpread = -1.5 (model, may be wrong sign) or NaN
+// [OUTPUT] mlbAwayRLLabel = "+1.5" (correct book label) or null
+const mlbAwayRLLabel = isMlbGame
+  ? (game.awayRunLine != null && game.awayRunLine !== ''
+      ? game.awayRunLine                          // VSiN run line (most authoritative)
+      : !isNaN(awayBookSpread)
+        ? spreadSign(awayBookSpread)              // DK NJ spread fallback
+        : null)                                   // no label available
+  : null;
+const mlbHomeRLLabel = isMlbGame
+  ? (game.homeRunLine != null && game.homeRunLine !== ''
+      ? game.homeRunLine
+      : !isNaN(homeBookSpread)
+        ? spreadSign(homeBookSpread)
+        : null)
+  : null;
+if (process.env.NODE_ENV === 'development' && isMlbGame) {
+  console.log(
+    `[MobileGameCard:MLB_RL_LABEL] game=${game.id} ${game.awayTeam}@${game.homeTeam}` +
+    ` | awayRunLine=${game.awayRunLine ?? 'null'} awayBookSpread=${awayBookSpread}` +
+    ` | awayModelSpread=${awayModelSpread} (NOT used as label)` +
+    ` | mlbAwayRLLabel=${mlbAwayRLLabel ?? 'null'} mlbHomeRLLabel=${mlbHomeRLLabel ?? 'null'}`
+  );
+}
+const mdlAwaySpreadStr = isMlbGame
+  ? (mlbAwayRLLabel && game.modelAwaySpreadOdds
+      ? `${mlbAwayRLLabel} (${game.modelAwaySpreadOdds})`  // e.g. "+1.5 (-140)"
+      : mlbAwayRLLabel ?? '—')
+  : (!isNaN(awayModelSpread)
+      ? (isNhlGame && game.modelAwayPLOdds
+          ? `${spreadSign(awayModelSpread)} (${game.modelAwayPLOdds})`
+          : spreadSign(awayModelSpread))
+      : '—');
+const mdlHomeSpreadStr = isMlbGame
+  ? (mlbHomeRLLabel && game.modelHomeSpreadOdds
+      ? `${mlbHomeRLLabel} (${game.modelHomeSpreadOdds})`
+      : mlbHomeRLLabel ?? '—')
+  : (!isNaN(homeModelSpread)
+      ? (isNhlGame && game.modelHomePLOdds
+          ? `${spreadSign(homeModelSpread)} (${game.modelHomePLOdds})`
+          : spreadSign(homeModelSpread))
+      : '—');
 // For NHL: display the BOOK's total line with the model's fair odds at that line
 const mdlDisplayTotal = isNhlGame && !isNaN(bookTotal) ? bookTotal : modelTotal;
 const mdlTotalStr = !isNaN(mdlDisplayTotal) ? String(mdlDisplayTotal) : '—';

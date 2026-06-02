@@ -2129,23 +2129,38 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
 
     // ── MLB RL EDGE DETECTION ─────────────────────────────────────────────────
     // MLB run lines are ALWAYS ±1.5 — line arithmetic (|awayModelSpread - awayBookSpread|)
-    // is useless (always 0 when signs match). The edge lives in the ODDS:
-    //   model fair cover% vs book break-even% at the SAME ±1.5 line.
-    // spreadDiff = probability edge in percentage points (like NHL puck line).
-    // spreadEdge = "AWAY +1.5 [EDGE]" or "HOME -1.5 [EDGE]" (like NHL format for edgeLabelIsAway).
+    // is useless (always 0 when signs match). The edge lives in the ODDS.
+    //
+    // OPTION B RULE (mirrors total edge detection exactly):
+    //   Edge exists ONLY when modelImplied(side) > bookImplied(side)
+    //   Both probabilities are RAW (vig-inclusive). No vig removal.
     //
     // FORMULA:
-    //   bookBreakEven(away) = |awayRLOdds| / (|awayRLOdds| + 100)  [for negative odds]
-    //                       = 100 / (awayRLOdds + 100)              [for positive odds]
-    //   edgeAway = away_rl_cover_pct/100 - bookBreakEven(away)
-    //   edgeHome = home_rl_cover_pct/100 - bookBreakEven(home)
-    //   spreadDiff = max(edgeAway, edgeHome) * 100  [in pp]
-    //   spreadEdge = side with higher edge, formatted as "ABBR ±1.5 [EDGE]"
-    const _mlbRlAwayOdds = r.away_rl_odds;  // model fair odds at book's ±1.5 line
-    const _mlbRlHomeOdds = r.home_rl_odds;
-    const _mlbRlAwayCoverPct = r.away_rl_cover_pct / 100;  // 0-1 scale
-    const _mlbRlHomeCoverPct = r.home_rl_cover_pct / 100;
-    // Book break-even: the cover% needed to break even at book's RL odds
+    //   modelAwayImplied = americanToImplied(away_rl_odds)   [model fair odds → raw implied]
+    //   modelHomeImplied = americanToImplied(home_rl_odds)
+    //   bookAwayImplied  = americanToImplied(awayRunLineOdds) [book raw implied, vig-inclusive]
+    //   bookHomeImplied  = americanToImplied(homeRunLineOdds)
+    //
+    //   edgeAway = modelAwayImplied - bookAwayImplied  [positive = model more confident than book on away]
+    //   edgeHome = modelHomeImplied - bookHomeImplied  [positive = model more confident than book on home]
+    //
+    //   VALIDATION (CLE +1.5 -103 book, model +104):
+    //     bookAwayImplied  = 103/(103+100) = 50.74%
+    //     modelAwayImplied = 100/(104+100) = 49.02%
+    //     edgeAway = 49.02% - 50.74% = -1.72pp  → NO EDGE (model LESS confident than book) ✓
+    //
+    //   VALIDATION (SD +1.5 -175 book, model -167):
+    //     bookHomeImplied  = 175/(175+100) = 63.64%
+    //     modelHomeImplied = 167/(167+100) = 62.55%
+    //     edgeHome = 62.55% - 63.64% = -1.09pp  → NO EDGE (model LESS confident than book) ✓
+    //
+    // [INPUT]  r.away_rl_odds = model fair odds at book's +1.5 line (e.g. +104)
+    // [INPUT]  r.home_rl_odds = model fair odds at book's -1.5 line (e.g. -120)
+    // [INPUT]  awayRunLineOdds = book's raw odds at +1.5 (e.g. -103)
+    // [INPUT]  homeRunLineOdds = book's raw odds at -1.5 (e.g. -118)
+    const _mlbRlAwayOdds = r.away_rl_odds;  // model fair odds at book's away RL line
+    const _mlbRlHomeOdds = r.home_rl_odds;  // model fair odds at book's home RL line
+    // Book break-even: raw implied probability at book's RL odds
     // Use liveBookSpreadMap (live re-read) for RL odds — more accurate than snapshot
     const _liveRLOdds = liveBookSpreadMap.get(r.db_id);
     const _bkAwayRLOddsNum = parseFloat(String(
@@ -2158,17 +2173,30 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       if (isNaN(odds)) return null;
       return odds < 0 ? Math.abs(odds) / (Math.abs(odds) + 100) : 100 / (odds + 100);
     };
-    const _bkAwayBreakEven = _americanBreakEven(_bkAwayRLOddsNum);
-    const _bkHomeBreakEven = _americanBreakEven(_bkHomeRLOddsNum);
+    // OPTION B: model implied vs book implied (raw vs raw, same side)
+    const _mdlAwayRLImplied = _americanBreakEven(_mlbRlAwayOdds);  // model implied for away RL
+    const _mdlHomeRLImplied = _americanBreakEven(_mlbRlHomeOdds);  // model implied for home RL
+    const _bkAwayRLImplied  = _americanBreakEven(_bkAwayRLOddsNum); // book raw implied for away RL
+    const _bkHomeRLImplied  = _americanBreakEven(_bkHomeRLOddsNum); // book raw implied for home RL
     let mlbSpreadDiff: string | null = null;
     let mlbSpreadEdge: string | null = null;
-    if (_bkAwayBreakEven !== null && _bkHomeBreakEven !== null) {
-      const edgeAway = _mlbRlAwayCoverPct - _bkAwayBreakEven;  // positive = away has edge
-      const edgeHome = _mlbRlHomeCoverPct - _bkHomeBreakEven;  // positive = home has edge
+    if (_mdlAwayRLImplied !== null && _mdlHomeRLImplied !== null &&
+        _bkAwayRLImplied  !== null && _bkHomeRLImplied  !== null) {
+      // Option B: edge = model implied - book implied (positive = model more confident than book)
+      const edgeAway = _mdlAwayRLImplied - _bkAwayRLImplied;  // positive = away RL edge
+      const edgeHome = _mdlHomeRLImplied - _bkHomeRLImplied;  // positive = home RL edge
       const bestEdge = Math.max(edgeAway, edgeHome);
+      console.log(
+        `${TAG} [${r.db_id}] ${r.game} — [RL OPTION B AUDIT] ` +
+        `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
+        `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
+        `[STATE] mdlAwayImpl=${(_mdlAwayRLImplied*100).toFixed(2)}% mdlHomeImpl=${(_mdlHomeRLImplied*100).toFixed(2)}% ` +
+        `bkAwayImpl=${(_bkAwayRLImplied*100).toFixed(2)}% bkHomeImpl=${(_bkHomeRLImplied*100).toFixed(2)}% ` +
+        `[OUTPUT] edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp bestEdge=${(bestEdge*100).toFixed(2)}pp ` +
+        `[VERIFY] ${bestEdge > 0 ? 'EDGE DETECTED' : 'NO EDGE'}`
+      );
       if (bestEdge > 0) {
         mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);  // pp with 1 decimal
-        const dbGameForEdge = dbGameById.get(r.db_id);
         const awayRLLabel = safeAwayRunLine;  // sign-enforced RL label e.g. "+1.5" or "-1.5"
         const homeRLLabel = safeHomeRunLine;
         const awayAbbrForEdge = r.game.split('@')[0]?.trim() ?? 'AWAY';
@@ -2179,8 +2207,8 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           mlbSpreadEdge = `${homeAbbrForEdge} ${homeRLLabel} [EDGE]`;
         }
         console.log(
-          `${TAG} [${r.db_id}] ${r.game} — [RL EDGE] ` +
-          `awayEdge=${(edgeAway*100).toFixed(2)}pp homeEdge=${(edgeHome*100).toFixed(2)}pp ` +
+          `${TAG} [${r.db_id}] ${r.game} — [RL EDGE CONFIRMED] ` +
+          `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp ` +
           `→ spreadDiff=${mlbSpreadDiff}pp spreadEdge="${mlbSpreadEdge}"`
         );
       } else {
@@ -2188,13 +2216,15 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
         mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);
         console.log(
           `${TAG} [${r.db_id}] ${r.game} — [RL NO EDGE] ` +
-          `awayEdge=${(edgeAway*100).toFixed(2)}pp homeEdge=${(edgeHome*100).toFixed(2)}pp → PASS`
+          `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp → PASS (no edge)`
         );
       }
     } else {
       console.warn(
-        `${TAG} [${r.db_id}] ${r.game} — [RL EDGE] SKIP: book RL odds unavailable ` +
-        `(awayRunLineOdds=${dbGame?.awayRunLineOdds} homeRunLineOdds=${dbGame?.homeRunLineOdds})`
+        `${TAG} [${r.db_id}] ${r.game} — [RL EDGE] SKIP: book RL odds or model RL odds unavailable ` +
+        `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
+        `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
+        `[VERIFY] FAIL — NaN detected in implied probability computation`
       );
     }
 
