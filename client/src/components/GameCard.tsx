@@ -652,6 +652,9 @@ interface DesktopMergedPanelProps {
     openHomeML?: string | null;
     // Note: DK NJ current lines are in awayBookSpread/homeBookSpread/bookTotal/awayML/homeML
     // (populated by ingestAnHtml from AN HTML best-odds table).
+    // MLB run line (VSiN) — used as primary RL label source (more authoritative than awayBookSpread/DK)
+    awayRunLine?: string | null;
+    homeRunLine?: string | null;
     // NHL model puck line and total odds (from nhl_model_engine.py)
     modelAwayPLOdds?: string | null;
     modelHomePLOdds?: string | null;
@@ -805,13 +808,33 @@ function DesktopMergedPanel({
   // MLB model fair odds at book's spread line (computed by Python engine)
   const mdlAwaySpreadOdds = game.modelAwaySpreadOdds ?? null;
   const mdlHomeSpreadOdds = game.modelHomeSpreadOdds ?? null;
-  // ── MLB RULE: model RL LABEL always mirrors book RL LABEL exactly.
-  // Only the ODDS differ between book and model.
-  // awayModelSpread/homeModelSpread may be stale or inverted if the model ran with wrong rl_home_spread.
-  // The book's awaySpread/homeSpread (awayBookSpread/homeBookSpread) is the single source of truth.
-  // For NHL/NBA: use model spread label as before.
-  const mlbMdlAwayLabel = isMlbGame && !isNaN(awaySpread) ? spreadSign(awaySpread) : null;
-  const mlbMdlHomeLabel = isMlbGame && !isNaN(homeSpread) ? spreadSign(homeSpread) : null;
+  // ── MLB RULE: model RL LABEL always mirrors the book's run line. ─────────────────────────────
+  // NEVER use awayModelSpread/homeModelSpread as the label for MLB — it can have wrong sign.
+  // Priority: awayRunLine (VSiN run line) → awayBookSpread (DK NJ spread) → null.
+  // [INPUT]  game.awayRunLine = "+1.5" (VSiN) or null
+  // [INPUT]  awaySpread = 1.5 (DK NJ) or NaN
+  // [OUTPUT] mlbMdlAwayLabel = "+1.5" (correct book label) or null
+  const mlbMdlAwayLabel = isMlbGame
+    ? (game.awayRunLine != null && game.awayRunLine !== ''
+        ? game.awayRunLine                     // VSiN run line (most authoritative)
+        : !isNaN(awaySpread)
+          ? spreadSign(awaySpread)             // DK NJ spread fallback
+          : null)                              // no label available
+    : null;
+  const mlbMdlHomeLabel = isMlbGame
+    ? (game.homeRunLine != null && game.homeRunLine !== ''
+        ? game.homeRunLine
+        : !isNaN(homeSpread)
+          ? spreadSign(homeSpread)
+          : null)
+    : null;
+  if (process.env.NODE_ENV === 'development' && isMlbGame) {
+    console.log(
+      `[DesktopPanel:MLB_RL_LABEL] game=${game.awayTeam}@${game.homeTeam}` +
+      ` | awayRunLine=${game.awayRunLine ?? 'null'} awayBookSpread=${awaySpread}` +
+      ` | mlbMdlAwayLabel=${mlbMdlAwayLabel ?? 'null'} mlbMdlHomeLabel=${mlbMdlHomeLabel ?? 'null'}`
+    );
+  }
   const mdlAwaySpreadStr = hasModelData
     ? (isNhlGame && mdlAwayPLOdds
         ? `${spreadSign(mdlAwaySpread)} (${mdlAwayPLOdds})`
@@ -1671,6 +1694,9 @@ interface OddsLinesPanelProps {
   // MLB model fair odds at book's spread line
   modelAwaySpreadOdds?: string | null;
   modelHomeSpreadOdds?: string | null;
+  // MLB run line (VSiN) — used as primary RL label source (more authoritative than awayBookSpread/DK)
+  awayRunLine?: string | null;
+  homeRunLine?: string | null;
   // AUTHORITATIVE edge direction — computed once at GameCard level, passed down
   authSpreadEdgeIsAway: boolean | null;
   authTotalEdgeIsOver: boolean | null;
@@ -1728,6 +1754,8 @@ function OddsLinesPanel({
   modelUnderOdds,
   modelAwaySpreadOdds,
   modelHomeSpreadOdds,
+  awayRunLine,
+  homeRunLine,
   authSpreadEdgeIsAway,
   authTotalEdgeIsOver,
   isModeled,
@@ -1775,8 +1803,32 @@ function OddsLinesPanel({
   // awayModelSpread/homeModelSpread may be stale or inverted if the model ran with wrong rl_home_spread.
   // The book's awayBookSpread/homeBookSpread is the single source of truth for the ±1.5 label.
   // For NHL/NBA: use model spread as before (model line is meaningful for non-RL sports).
-  const mlbBookAwayLine = isMlbGame && !isNaN(awaySpread) ? spreadSign(awaySpread) : null;
-  const mlbBookHomeLine = isMlbGame && !isNaN(homeSpread) ? spreadSign(homeSpread) : null;
+  // ── MLB RL LABEL: Priority: awayRunLine (VSiN) → awayBookSpread (DK NJ) → null ─────────────────────
+  // NEVER use awayModelSpread as the label for MLB — it can have wrong sign.
+  // [INPUT]  awayRunLine = "+1.5" (VSiN) or null
+  // [INPUT]  awaySpread = 1.5 (DK NJ) or NaN
+  // [OUTPUT] mlbBookAwayLine = "+1.5" (correct book label) or null
+  const mlbBookAwayLine = isMlbGame
+    ? (awayRunLine != null && awayRunLine !== ''
+        ? awayRunLine                           // VSiN run line (most authoritative)
+        : !isNaN(awaySpread)
+          ? spreadSign(awaySpread)              // DK NJ spread fallback
+          : null)                               // no label available
+    : null;
+  const mlbBookHomeLine = isMlbGame
+    ? (homeRunLine != null && homeRunLine !== ''
+        ? homeRunLine
+        : !isNaN(homeSpread)
+          ? spreadSign(homeSpread)
+          : null)
+    : null;
+  if (process.env.NODE_ENV === 'development' && isMlbGame) {
+    console.log(
+      `[OddsLinesPanel:MLB_RL_LABEL] away=${awayDisplayName ?? '?'} home=${homeDisplayName ?? '?'}` +
+      ` | awayRunLine=${awayRunLine ?? 'null'} awayBookSpread=${awaySpread}` +
+      ` | mlbBookAwayLine=${mlbBookAwayLine ?? 'null'} mlbBookHomeLine=${mlbBookHomeLine ?? 'null'}`
+    );
+  }
   // Model spread line:
   //   MLB  → always use book label (mlbBookAwayLine / mlbBookHomeLine)
   //   NHL  → use model puck line label (mdlAwaySpread)
@@ -2984,6 +3036,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 modelUnderOdds={game.modelUnderOdds}
                 modelAwaySpreadOdds={game.modelAwaySpreadOdds ?? null}
                 modelHomeSpreadOdds={game.modelHomeSpreadOdds ?? null}
+                awayRunLine={(game as unknown as Record<string, string | null>).awayRunLine ?? null}
+                homeRunLine={(game as unknown as Record<string, string | null>).homeRunLine ?? null}
                 authSpreadEdgeIsAway={authSpreadEdgeIsAway}
                 authTotalEdgeIsOver={authTotalEdgeIsOver}
                 isModeled={game.modelRunAt != null}
@@ -3110,6 +3164,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                       modelUnderOdds={game.modelUnderOdds}
                       modelAwaySpreadOdds={(game as unknown as Record<string, string | null>).modelAwaySpreadOdds ?? null}
                       modelHomeSpreadOdds={(game as unknown as Record<string, string | null>).modelHomeSpreadOdds ?? null}
+                      awayRunLine={(game as unknown as Record<string, string | null>).awayRunLine ?? null}
+                      homeRunLine={(game as unknown as Record<string, string | null>).homeRunLine ?? null}
                       authSpreadEdgeIsAway={authSpreadEdgeIsAway}
                       authTotalEdgeIsOver={authTotalEdgeIsOver}
                       isModeled={game.modelRunAt != null}

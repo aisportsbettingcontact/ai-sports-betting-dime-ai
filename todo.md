@@ -4038,3 +4038,17 @@
 - [x] Run immediate sync — 05-30 and 05-31 tabs updated to 20-col schema (30 rows each, validated)
 - [x] Run validatePitcherIds.ts — 30/30 PASS, 0 FAIL (all IDs correct including Kyle Bradish=680694)
 - [x] Batting lineups: MLB API returns confirmed lineups only — will auto-populate on next 10-min cycle once lineups are posted (typically 3-4h before first pitch)
+
+## Session: 2026-06-02 - MLB RL Mapping, Edge Detection, and Label Fixes
+
+- [x] Root cause analysis: TOR model RL label shows wrong sign (Bug 1)
+- [x] Root cause analysis: CLE +1.5 -103 vs model +104 false edge (Bug 2)
+- [x] Root cause analysis: SD +1.5 -175 vs model -167 false edge (Bug 3)
+- [x] Fix MobileGameCard MLB RL label: use awayRunLine (VSiN) → awayBookSpread (DK) → null (NOT awayModelSpread)
+- [x] Fix DesktopMergedPanel MLB RL label: same priority chain (awayRunLine → awayBookSpread)
+- [x] Fix OddsLinesPanel MLB RL label: add awayRunLine/homeRunLine props, same priority chain
+- [x] Thread awayRunLine/homeRunLine props to both OddsLinesPanel call sites
+- [x] Fix mlbModelRunner RL edge detection: replace simulation cover% with Option B (modelImplied vs bookImplied, raw vs raw)
+- [x] Add structured [INPUT]/[STATE]/[OUTPUT]/[VERIFY] logging to RL edge detection
+- [x] TypeScript: 0 errors
+- [x] Tests: 1014/1014 passing
