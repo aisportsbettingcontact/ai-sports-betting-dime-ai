@@ -676,8 +676,28 @@ const mlEdgePP: number = (() => {
   return best === -Infinity ? NaN : best;
 })();
 // Best edge across all 3 markets (for EdgeBadge container styling)
+// OPTION B gate: only include a market's ROI in bestEdgePP if Option B confirms an edge.
+// Raw ROI can be positive even when Option B says NO EDGE (see edgeUtils.ts line 171-172).
+// Spread: gate by authSpreadEdgeIsAway (null = no edge)
+// Total: gate by authTotalEdgeIsOver (null = no edge) — already gated in totalEdgePP via overHasEdge/underHasEdge below
+// ML: gate by awayMlEdgeDetected/homeMlEdgeDetected
+const gatedSpreadEdgePP: number = (() => {
+  if (spreadEdgeIsAway === true)  return isNaN(awaySpreadEdgePP) ? NaN : awaySpreadEdgePP;
+  if (spreadEdgeIsAway === false) return isNaN(homeSpreadEdgePP) ? NaN : homeSpreadEdgePP;
+  return NaN;  // null = no Option B edge
+})();
+const gatedTotalEdgePP: number = (() => {
+  if (totalEdgeIsOver === true)  return isNaN(overEdgePP)  ? NaN : overEdgePP;
+  if (totalEdgeIsOver === false) return isNaN(underEdgePP) ? NaN : underEdgePP;
+  return NaN;  // null = no Option B edge
+})();
+const gatedMlEdgePP: number = (() => {
+  if (awayMlEdgeDetected) return isNaN(awayMlRoi) ? NaN : awayMlRoi;
+  if (homeMlEdgeDetected) return isNaN(homeMlRoi) ? NaN : homeMlRoi;
+  return NaN;  // no Option B edge
+})();
 const bestEdgePP: number = (() => {
-  const vals = [spreadEdgePP, totalEdgePP, mlEdgePP].filter(v => !isNaN(v));
+  const vals = [gatedSpreadEdgePP, gatedTotalEdgePP, gatedMlEdgePP].filter(v => !isNaN(v));
   return vals.length > 0 ? Math.max(...vals) : NaN;
 })();
 if (process.env.NODE_ENV === 'development') {
@@ -803,32 +823,51 @@ const OddsTable = () => (
     {/* Market cards row: SPREAD | TOTAL | ML — all flex-1 equal width, ROI footer inside each card */}
     {/* SPREAD card — edge flags drive MODEL juice color; ROI footer shows best-side edge */}
     {(() => {
-      // Spread: best edge side label (e.g. "CGY +1.5" or "EDM -1.5")
-      const spreadRoiPP = isNaN(awaySpreadEdgePP) && isNaN(homeSpreadEdgePP)
-        ? NaN
-        : (!isNaN(awaySpreadEdgePP) && (isNaN(homeSpreadEdgePP) || awaySpreadEdgePP >= homeSpreadEdgePP))
-          ? awaySpreadEdgePP
-          : homeSpreadEdgePP;
+      // OPTION B gate: only show ROI and neon green when authSpreadEdgeIsAway confirms the edge.
+      // awaySpreadEdgePP/homeSpreadEdgePP (ROI%) can be positive even when Option B says NO EDGE
+      // (e.g. CHC -1.5 book=+158 model=+165: ROI=+1.87% but modelImplied 37.74% < bookImplied 38.67%).
+      // The authoritative edge flag is authSpreadEdgeIsAway (null=no edge, true=away, false=home).
+      // This mirrors the TOTAL card pattern exactly.
+      const awayHasEdge = spreadEdgeIsAway === true;   // authSpreadEdgeIsAway === true
+      const homeHasEdge = spreadEdgeIsAway === false;  // authSpreadEdgeIsAway === false
+      // ROI pp: only use the confirmed edge side's ROI; NaN if no edge
+      const spreadRoiPP = awayHasEdge
+        ? (isNaN(awaySpreadEdgePP) ? NaN : awaySpreadEdgePP)
+        : homeHasEdge
+          ? (isNaN(homeSpreadEdgePP) ? NaN : homeSpreadEdgePP)
+          : NaN;  // no edge on either side — Option B blocked
+      // Label: use the confirmed edge side's team + line
       const spreadRoiLabel = (() => {
-        const isAway = !isNaN(awaySpreadEdgePP) && (isNaN(homeSpreadEdgePP) || awaySpreadEdgePP >= homeSpreadEdgePP);
+        if (!awayHasEdge && !homeHasEdge) return '';
+        const isAway = awayHasEdge;
         const abbr = isAway ? awayAbbr : homeAbbr;
         const line = isAway
           ? (!isNaN(awayBookSpread) ? spreadSign(awayBookSpread) : '')
           : (!isNaN(homeBookSpread) ? spreadSign(homeBookSpread) : '');
         return line ? `${abbr} ${line}` : abbr;
       })();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[SpreadCard] game=${game.id} authSpreadEdgeIsAway=${authSpreadEdgeIsAway}` +
+          ` awayHasEdge=${awayHasEdge} homeHasEdge=${homeHasEdge}` +
+          ` awaySpreadEdgePP=${isNaN(awaySpreadEdgePP)?'NaN':awaySpreadEdgePP.toFixed(2)}` +
+          ` homeSpreadEdgePP=${isNaN(homeSpreadEdgePP)?'NaN':homeSpreadEdgePP.toFixed(2)}` +
+          ` spreadRoiPP=${isNaN(spreadRoiPP)?'NaN':spreadRoiPP.toFixed(2)}` +
+          ` label=${spreadRoiLabel}`
+        );
+      }
       return (
         <MktCard
           awayBookLine={!isNaN(awayBookSpread) ? spreadSign(awayBookSpread) : '—'}
           awayBookJuice={mbAwaySpreadOdds ? String(mbAwaySpreadOdds) : '—110'}
           awayModelLine={mdlAwaySplit.line || '—'}
           awayModelJuice={mdlAwaySplit.odds || '—'}
-          awayModelHasEdge={!isNaN(awaySpreadEdgePP) && awaySpreadEdgePP > 0}
+          awayModelHasEdge={awayHasEdge}   // Option B gate — NOT raw ROI > 0
           homeBookLine={!isNaN(homeBookSpread) ? spreadSign(homeBookSpread) : '—'}
           homeBookJuice={mbHomeSpreadOdds ? String(mbHomeSpreadOdds) : '—110'}
           homeModelLine={mdlHomeSplit.line || '—'}
           homeModelJuice={mdlHomeSplit.odds || '—'}
-          homeModelHasEdge={!isNaN(homeSpreadEdgePP) && homeSpreadEdgePP > 0}
+          homeModelHasEdge={homeHasEdge}   // Option B gate — NOT raw ROI > 0
           roiEdgePP={spreadRoiPP}
           roiLabel={spreadRoiLabel}
         />
@@ -881,30 +920,41 @@ const OddsTable = () => (
     })()}
     {/* ML card — juice IS the value; empty spacer row keeps height aligned */}
     {(() => {
-      // ML ROI footer: use awayMlRoi/homeMlRoi (ROI %) for the footer display value.
-      // Use awayMlEdgeDetected/homeMlEdgeDetected (Option B) for neon green highlighting.
-      // Pick the edge side with the higher ROI for the footer label.
-      const mlRoiPP = isNaN(awayMlRoi) && isNaN(homeMlRoi)
-        ? NaN
-        : (!isNaN(awayMlRoi) && (isNaN(homeMlRoi) || awayMlRoi >= homeMlRoi))
-          ? awayMlRoi
-          : homeMlRoi;
+      // OPTION B gate: only show ROI and neon green when awayMlEdgeDetected/homeMlEdgeDetected confirms the edge.
+      // awayMlRoi/homeMlRoi (ROI%) can be positive even when Option B says NO EDGE.
+      // The authoritative edge flags are awayMlEdgeDetected/homeMlEdgeDetected (Option B).
+      // This mirrors the TOTAL card pattern exactly.
+      const mlRoiPP = awayMlEdgeDetected
+        ? (isNaN(awayMlRoi) ? NaN : awayMlRoi)
+        : homeMlEdgeDetected
+          ? (isNaN(homeMlRoi) ? NaN : homeMlRoi)
+          : NaN;  // no edge on either side — Option B blocked
       const mlRoiLabel = (() => {
-        const isAway = !isNaN(awayMlRoi) && (isNaN(homeMlRoi) || awayMlRoi >= homeMlRoi);
+        if (!awayMlEdgeDetected && !homeMlEdgeDetected) return '';
+        const isAway = awayMlEdgeDetected;
         return `${isAway ? awayAbbr : homeAbbr} ML`;
       })();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `[MlCard] game=${game.id} awayMlEdgeDetected=${awayMlEdgeDetected} homeMlEdgeDetected=${homeMlEdgeDetected}` +
+          ` awayMlRoi=${isNaN(awayMlRoi)?'NaN':awayMlRoi.toFixed(2)}` +
+          ` homeMlRoi=${isNaN(homeMlRoi)?'NaN':homeMlRoi.toFixed(2)}` +
+          ` mlRoiPP=${isNaN(mlRoiPP)?'NaN':mlRoiPP.toFixed(2)}` +
+          ` label=${mlRoiLabel}`
+        );
+      }
       return (
         <MktCard
           awayBookLine={''}
           awayBookJuice={bkAwayMl || '—'}
           awayModelLine={''}
           awayModelJuice={mdlAwayMl || '—'}
-          awayModelHasEdge={awayMlEdgeDetected}
+          awayModelHasEdge={awayMlEdgeDetected}  // Option B gate
           homeBookLine={''}
           homeBookJuice={bkHomeMl || '—'}
           homeModelLine={''}
           homeModelJuice={mdlHomeMl || '—'}
-          homeModelHasEdge={homeMlEdgeDetected}
+          homeModelHasEdge={homeMlEdgeDetected}  // Option B gate
           isML={true}
           roiEdgePP={mlRoiPP}
           roiLabel={mlRoiLabel}
