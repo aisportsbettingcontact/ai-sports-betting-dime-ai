@@ -2362,13 +2362,15 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           // spreadDiff = probability edge in pp (model cover% - book break-even%)
           // spreadEdge = "ABBR ±1.5 [EDGE]" for edgeLabelIsAway() parsing in GameCard
           // GameCard uses game.spreadDiff for MLB (like NHL) — line arithmetic is invalid for ±1.5
-          spreadDiff:           mlbSpreadDiff ?? undefined,
-          spreadEdge:           mlbSpreadEdge ?? undefined,
-          // ── Total Edge (probability-based, same formula as RL edge) ─────────────────────
+          // [VERIFY] spreadDiff/spreadEdge/totalDiff/totalEdge: use null (NOT undefined) for Drizzle compatibility
+          // Drizzle ORM throws DrizzleQueryError when a .set() value is undefined
+          spreadDiff:           mlbSpreadDiff ?? null,
+          spreadEdge:           mlbSpreadEdge ?? null,
+          // ── Total Edge (probability-based, same formula as RL edge) ─────────────────
           // totalDiff = probability edge in pp (model over/under% - book break-even%)
           // totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
-          totalDiff:            mlbTotalDiff ?? undefined,
-          totalEdge:            mlbTotalEdge ?? undefined,
+          totalDiff:            mlbTotalDiff ?? null,
+          totalEdge:            mlbTotalEdge ?? null,
           // ── Total (ALWAYS anchored to book O/U line, NOT model-derived line) ────────────
           // CRITICAL: modelTotal MUST equal bookTotal so displayed model line matches book line.
           // r.total_line = Python's optimal line (may differ from book by 0.5) — NEVER use this.
@@ -2423,17 +2425,28 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           // F5 RL cover probabilities (no-vig, 0-100 scale) — used by backtest engine
           modelF5HomeRLCoverPct: r.p_f5_home_rl != null ? String((r.p_f5_home_rl * 100).toFixed(2)) : null,
           modelF5AwayRLCoverPct: r.p_f5_away_rl != null ? String((r.p_f5_away_rl * 100).toFixed(2)) : null,
-          // ── NRFI / YRFI model output ─────────────────────────────────────
+          // ── NRFI/YRFI model output ────────────────────────────────────────────────────────────────────────────────────
+          // [VERIFY] Schema columns: modelPNrfi (decimal 5,2), modelNrfiOdds (varchar 16), modelYrfiOdds (varchar 16)
+          // NOTE: modelPYrfi does NOT exist in DB schema — YRFI probability is encoded in modelYrfiOdds
           modelPNrfi:           String(r.p_nrfi.toFixed(4)),
           modelNrfiOdds:        fmtMl(r.nrfi_odds),
-          modelPYrfi:           String(r.p_yrfi.toFixed(4)),
           modelYrfiOdds:        fmtMl(r.yrfi_odds),
-          // ── HR Props (team-level) model output ─────────────────────────────
-          modelPHomeHrAny:      String(r.p_home_hr_any.toFixed(4)),
-          modelPAwayHrAny:      String(r.p_away_hr_any.toFixed(4)),
-          modelPBothHr:         String(r.p_both_hr.toFixed(4)),
-          modelExpHomeHr:       String(r.exp_home_hr.toFixed(3)),
-          modelExpAwayHr:       String(r.exp_away_hr.toFixed(3)),
+          // modelPYrfi intentionally omitted — column does not exist in DB (verified 2026-06-03)
+          // ── HR Props (team-level) — field names MUST match schema.ts exactly ──────────
+          // Schema: modelAwayHrPct, modelHomeHrPct, modelBothHrPct, modelAwayExpHr, modelHomeExpHr
+          // [INPUT]  r.p_away_hr_any = P(away team hits ≥1 HR) from Python engine
+          // [INPUT]  r.p_home_hr_any = P(home team hits ≥1 HR) from Python engine
+          // [INPUT]  r.p_both_hr     = P(both teams hit ≥1 HR) from Python engine
+          // [INPUT]  r.exp_away_hr   = expected away HRs from Python engine
+          // [INPUT]  r.exp_home_hr   = expected home HRs from Python engine
+          // [VERIFY] Column names verified against drizzle/schema.ts lines 503-511
+          // [VERIFY] Python engine (MLBAIModel.py line 2939-2941) already returns p_away_hr_any in 0-100 scale
+          //   (applies * 100 internally before output). DO NOT multiply by 100 again here.
+          modelAwayHrPct:       String(r.p_away_hr_any.toFixed(2)),  // 0-100 scale (schema: decimal(5,2)) — Python pre-converts
+          modelHomeHrPct:       String(r.p_home_hr_any.toFixed(2)),  // 0-100 scale (schema: decimal(5,2)) — Python pre-converts
+          modelBothHrPct:       String(r.p_both_hr.toFixed(2)),      // 0-100 scale (schema: decimal(5,2)) — Python pre-converts
+          modelAwayExpHr:       String(r.exp_away_hr.toFixed(2)),            // expected HRs (schema: decimal(4,2))
+          modelHomeExpHr:       String(r.exp_home_hr.toFixed(2)),            // expected HRs (schema: decimal(4,2))
           // ── Inning-by-Inning projections (I1-I9, backtest-calibrated 2026-04-13) ──
           // Stored as JSON arrays: [I1, I2, I3, I4, I5, I6, I7, I8, I9]
           modelInningHomeExp:        r.inning_home_exp?.length === 9
@@ -2489,7 +2502,12 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       console.log(`  [DB] ✓ Written id=${r.db_id}`);
       written++;
     } catch (err) {
+      // Expose the underlying MySQL error from DrizzleQueryError.cause
+      const cause = (err as any)?.cause;
+      const mysqlCode = (cause as any)?.code ?? 'UNKNOWN';
+      const mysqlMsg  = (cause as any)?.message ?? (cause ? String(cause) : 'no cause');
       console.error(`  [DB] ✗ ERROR id=${r.db_id}: ${err}`);
+      console.error(`  [DB] ✗ MYSQL CAUSE id=${r.db_id}: code=${mysqlCode} msg=${mysqlMsg}`);
       errors++;
     }
   }
