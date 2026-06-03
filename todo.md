@@ -4052,3 +4052,16 @@
 - [x] Add structured [INPUT]/[STATE]/[OUTPUT]/[VERIFY] logging to RL edge detection
 - [x] TypeScript: 0 errors
 - [x] Tests: 1014/1014 passing
+
+## Session: 2026-06-03 - MLB RL Mapping + HR Props + DB Write Fixes
+
+- [x] Fix MLB RL label sign mismatch: MobileGameCard, DesktopMergedPanel, OddsLinesPanel all now use awayRunLine (VSiN) as primary label source
+- [x] Fix Option B RL edge detection: replace simulation cover% with model implied probability (americanBreakEven(modelOdds) vs americanBreakEven(bookOdds))
+- [x] Fix HR Props field name mismatch: modelPHomeHrAny → modelAwayHrPct, modelPAwayHrAny → modelHomeHrPct, modelPBothHr → modelBothHrPct
+- [x] Fix HR Props scale: Python engine already returns 0-100 scale, remove * 100 multiplication in runner
+- [x] Fix modelPYrfi: column does not exist in DB, removed from runner DB write block
+- [x] Fix DB write failure: spreadDiff/spreadEdge/totalDiff/totalEdge were using ?? undefined (Drizzle rejects undefined), changed to ?? null
+- [x] Fix catch block: expose DrizzleQueryError.cause (MySQL error code) for precise debugging
+- [x] Model all 15 June 3, 2026 MLB games: 15/15 written, 0 errors
+- [x] DB validation audit: all 15 games pass all critical gates (ML, RL, Total, F5, NRFI, HR Props)
+- [x] TypeScript: 0 errors
