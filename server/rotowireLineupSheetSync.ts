@@ -113,19 +113,18 @@ function getPstDate(offsetDays = 0): string {
 }
 
 /**
- * Converts YYYY-MM-DD → "MM-DD-YYYY ROTO LINEUPS"
- * e.g. "2026-06-04" → "06-04-2026 ROTO LINEUPS"
- * Note: uses "ROTO LINEUPS" suffix (not "LINEUPS") to avoid collision with
- * the Fangraphs fg-lineups sync which also writes to "MM-DD-YYYY LINEUPS".
+ * Converts YYYY-MM-DD → "MM-DD-YYYY LINEUPS"
+ * e.g. "2026-06-04" → "06-04-2026 LINEUPS"
+ * Fangraphs fg-lineups sync is PAUSED — Rotowire is the sole writer of these tabs.
  */
 function formatLineupTabName(dateStr: string): string {
   const parts = dateStr.split("-");
   if (parts.length !== 3) {
     console.warn(`[RotoSync] [VERIFY] WARN — formatLineupTabName: unexpected format "${dateStr}" — using raw fallback`);
-    return `${dateStr} ROTO LINEUPS`;
+    return `${dateStr} LINEUPS`;
   }
   const [yyyy, mm, dd] = parts;
-  const tabName = `${mm}-${dd}-${yyyy} ROTO LINEUPS`;
+  const tabName = `${mm}-${dd}-${yyyy} LINEUPS`;
   console.log(`[RotoSync] [STEP] formatLineupTabName: input="${dateStr}" output="${tabName}"`);
   return tabName;
 }
@@ -175,7 +174,7 @@ async function deleteStaleLineupTabs(
   console.log(`[RotoSync] [STEP] deleteStaleLineupTabs: scanning for stale lineup tabs`);
 
   const tabsMap = await getAllTabsMap(sheets);
-  const LINEUP_TAB_RE = /^(\d{2})-(\d{2})-(\d{4}) ROTO LINEUPS$/;
+  const LINEUP_TAB_RE = /^(\d{2})-(\d{2})-(\d{4}) LINEUPS$/;
 
   const todayPst = getPstDate(0);
   const todayInt = parseInt(todayPst.replace(/-/g, ""), 10);
