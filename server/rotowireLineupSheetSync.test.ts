@@ -341,41 +341,41 @@ describe("rotowireLineupSheetSync — date helpers", () => {
     // Test the tab name format inline (mirrors the private helper)
     const formatLineupTabName = (dateStr: string): string => {
       const parts = dateStr.split("-");
-      if (parts.length !== 3) return `${dateStr} ROTO LINEUPS`;
+      if (parts.length !== 3) return `${dateStr} LINEUPS`;
       const [yyyy, mm, dd] = parts;
-      return `${mm}-${dd}-${yyyy} ROTO LINEUPS`;
+      return `${mm}-${dd}-${yyyy} LINEUPS`;
     };
 
     console.log("[INPUT] dateStr='2026-06-04'");
     const result = formatLineupTabName("2026-06-04");
     console.log("[STATE] result:", result);
-    expect(result).toBe("06-04-2026 ROTO LINEUPS");
-    console.log("[VERIFY] PASS — '2026-06-04' → '06-04-2026 ROTO LINEUPS'");
+    expect(result).toBe("06-04-2026 LINEUPS");
+    console.log("[VERIFY] PASS — '2026-06-04' → '06-04-2026 LINEUPS'");
   });
 
   it("formatLineupTabName handles malformed input gracefully", () => {
     const formatLineupTabName = (dateStr: string): string => {
       const parts = dateStr.split("-");
-      if (parts.length !== 3) return `${dateStr} ROTO LINEUPS`;
+      if (parts.length !== 3) return `${dateStr} LINEUPS`;
       const [yyyy, mm, dd] = parts;
-      return `${mm}-${dd}-${yyyy} ROTO LINEUPS`;
+      return `${mm}-${dd}-${yyyy} LINEUPS`;
     };
 
     console.log("[INPUT] dateStr='bad-input'");
     const result = formatLineupTabName("bad-input");
     console.log("[STATE] result:", result);
-    expect(result).toBe("bad-input ROTO LINEUPS");
-    console.log("[VERIFY] PASS — malformed input falls back to raw string + ROTO LINEUPS");
+    expect(result).toBe("bad-input LINEUPS");
+    console.log("[VERIFY] PASS — malformed input falls back to raw string + LINEUPS");
   });
 
   it("stale tab detection: tabDateInt < todayInt is stale", () => {
     // Inline the stale detection logic
-    const LINEUP_TAB_RE = /^(\d{2})-(\d{2})-(\d{4}) ROTO LINEUPS$/;
+    const LINEUP_TAB_RE = /^(\d{2})-(\d{2})-(\d{4}) LINEUPS$/;
     const todayInt = 20260604;
 
-    const stale = "06-03-2026 ROTO LINEUPS";
-    const keep = "06-04-2026 ROTO LINEUPS";
-    const future = "06-05-2026 ROTO LINEUPS";
+    const stale = "06-03-2026 LINEUPS";
+    const keep = "06-04-2026 LINEUPS";
+    const future = "06-05-2026 LINEUPS";
 
     const isStale = (title: string) => {
       const m = LINEUP_TAB_RE.exec(title);
