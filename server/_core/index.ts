@@ -39,6 +39,7 @@ import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalida
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
+import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -417,6 +418,12 @@ async function startServer() {
   // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
   // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
   registerFgLineupsHeartbeat(app);
+
+  // ─── Rotowire lineup Heartbeat ──────────────────────────────────────────
+  // POST /api/scheduled/roto-lineups — called every 10 min by Manus Heartbeat
+  // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
+  // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
+  registerRotoLineupsHeartbeat(app);
 
   // tRPC API
   app.use(
