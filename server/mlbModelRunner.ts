@@ -34,7 +34,7 @@ const __dirname  = path.dirname(__filename);
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ENGINE_PATH = path.join(__dirname, "MLBAIModel.py");
-const PYTHON      = "/usr/bin/python3.11";
+const PYTHON      = "/usr/bin/python3"; // version-agnostic; was 3.11, now 3.12 after sandbox reset
 
 // 2025 MLB team season stats — used as model inputs
 // Format: rpg, era, avg, obp, slg, k9, bb9, whip, ip_per_game
@@ -1298,7 +1298,7 @@ print(json.dumps(results))
         for (const [k, v] of Object.entries(process.env)) {
           if (v !== undefined && k !== 'PYTHONHOME') env[k] = v;
         }
-        env['PYTHONPATH'] = '/usr/local/lib/python3.11/dist-packages:/usr/lib/python3/dist-packages';
+        env['PYTHONPATH'] = '/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/usr/lib/python3.12/dist-packages';
         env['PYTHONDONTWRITEBYTECODE'] = '1';
         return env;
       })(),
