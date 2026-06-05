@@ -1116,20 +1116,9 @@ function DesktopMergedPanel({
       /* flex: 1 1 0% ensures all three SectionCols grow equally from 0 base — identical width regardless of content */
       <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: '8px 10px 10px' }}>
 
-        {/* ── Section title ── */}
-        <div className="flex items-center gap-1.5" style={{ marginBottom: 4 }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          {/* Change 5: SPREAD/TOTAL/MONEYLINE title fontWeight reduced by 50 (900→850) */}
-          <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#fff', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-            {title}
-          </span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-        </div>
-
-        {/* ── Uniform spacer row — same fixed height for ALL three sections ── */}
-        {/* TOTAL previously showed OVER / 139.5 / UNDER here — now removed per spec */}
-        {/* All three sections show an invisible spacer to keep the odds grid and splits bars aligned */}
-        <div style={{ height: 'clamp(16px,1.4vw,22px)', marginBottom: 3 }} />
+        {/* ── Section title: REMOVED on desktop per user request ──
+             RUN LINE / TOTAL / MONEYLINE titles are redundant — game card headers already label each column.
+             BOOK / MODEL sub-headers also removed for the same reason. */}
 
         {/* ── Odds grid: 2 columns — BOOK | MODEL ── */}
         {/*
@@ -1144,9 +1133,6 @@ function DesktopMergedPanel({
           LOG: [OddsCell] logs are emitted in dev whenever isBest or isEdge is true.
         */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 8, alignItems: 'start' }}>
-          {/* Header row */}
-          <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
-          <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
 
           {/* Away / OVER — BOOK pill */}
           <OddsCell
@@ -2624,10 +2610,14 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // Change D: star SVG 2× bigger on desktop (was 18px → 36px)
   // Change E: city/team NAME_FONT_SIZE reduced by 1pt: clamp(13px,1.1vw,18px) → clamp(12px,1.0vw,17px)
   //           NICK_FONT_SIZE reduced by 1pt: clamp(11px,0.9vw,15px) → clamp(10px,0.8vw,14px)
-  const HEADER_ICON_SIZE = isDesktop ? 36 : 12; // Change D: 2× bigger star on desktop (was 18px)
-  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(24px, 2.02vw, 30px)' : '8.25px';  // Change B: 2× (was clamp(12,1.01vw,15))
-  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(31.5px, 2.49vw, 40.5px)' : '6.75px'; // Change A: 3× (was clamp(10.5,0.83vw,13.5))
-  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(36px, 3.03vw, 45px)' : '7.5px';   // Change C: 3× (was clamp(12,1.01vw,15))
+  // Star: 36px × 0.67 = 24px (−33%)
+  const HEADER_ICON_SIZE = isDesktop ? 24 : 12;
+  // Inning/clock: clamp(24px,2.02vw,30px) × 0.50 = clamp(12px,1.01vw,15px) (−50%)
+  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '8.25px';
+  // LIVE: clamp(31.5px,2.49vw,40.5px) × 0.75 = clamp(23.6px,1.87vw,30.4px) (−25%)
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(23.6px, 1.87vw, 30.4px)' : '6.75px';
+  // FINAL: clamp(36px,3.03vw,45px) × 0.75 = clamp(27px,2.27vw,33.75px) (−25%)
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(27px, 2.27vw, 33.75px)' : '7.5px';
   const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // unchanged (upcoming time)
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
