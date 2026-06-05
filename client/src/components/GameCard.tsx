@@ -135,7 +135,7 @@ function edgeLabelIsAway(
 }
 
 // ── TeamLogo ──────────────────────────────────────────────────────────────────
-function TeamLogo({ slug, name, logoUrl, size = 36 }: { slug: string; name: string; logoUrl?: string; size?: number }) {
+  function TeamLogo({ slug, name, logoUrl, size = 36, greyscale = false }: { slug: string; name: string; logoUrl?: string; size?: number; greyscale?: boolean }) {
   const [error, setError] = useState(false);
   // Enforce minimum 32px — logos must never be smaller than a fingertip target
   // size prop acts as the "base" for the clamp midpoint (in vw units)
@@ -176,7 +176,10 @@ function TeamLogo({ slug, name, logoUrl, size = 36 }: { slug: string; name: stri
         // contrast(1.12): sharpens edges for crisp definition
         // saturate(1.35): keeps colors vivid on dark backgrounds
         // drop-shadow: white glow halo so logos pop against #0f0f0f card background
-        filter: "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
+        // Change G: greyscale losing team logo on FINAL desktop only
+        filter: greyscale
+          ? "grayscale(1) brightness(0.75) contrast(1.05)"
+          : "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
       }}
       onError={() => setError(true)}
     />
@@ -1760,6 +1763,9 @@ function OddsLinesPanel({
   authTotalEdgeIsOver,
   isModeled,
 }: OddsLinesPanelProps) {
+  // Change 1: hide Spread/Total/Moneyline + Book/Model header rows on desktop
+  // These are redundant on desktop — each game card already has headers in the matchup panel.
+  const isDesktopOdds = useIsDesktop();
 
   const mdlAwayMl = modelAwayML ?? '—';
   const mdlHomeMl = modelHomeML ?? '—';
@@ -1937,43 +1943,50 @@ function OddsLinesPanel({
 
   return (
     <div className="flex flex-col pl-2 pr-0 pt-0 pb-0 min-w-0" style={{ justifyContent: 'center' }}>
-      {/* Top-level column group headers: SPREAD | TOTAL | MONEYLINE */}
-      <div
-        className={`grid ${GRID} pb-0.5`}
-        style={{ transition: 'grid-template-columns 200ms ease' }}
-      >
-        {/* SPREAD/TOTAL/MONEYLINE: raised to clamp(12px,1.05vw,16px) for maximum readability */}
-        <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Spread</span>
-        <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Total</span>
-        <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Moneyline</span>
-      </div>
+      {/* Top-level column group headers: SPREAD | TOTAL | MONEYLINE
+           DESKTOP ONLY: hidden on desktop (lg+) — redundant with per-card matchup headers.
+           MOBILE: always shown. */}
+      {!isDesktopOdds && (
+        <div
+          className={`grid ${GRID} pb-0.5`}
+          style={{ transition: 'grid-template-columns 200ms ease' }}
+        >
+          <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Spread</span>
+          <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Total</span>
+          <span className={`${showModel ? 'col-span-2' : ''} text-center font-extrabold uppercase tracking-widest`} style={{ fontSize: 'clamp(12px, 1.05vw, 16px)', color: '#FFFFFF' }}>Moneyline</span>
+        </div>
+      )}
 
-      {/* Sub-headers: BOOK only when model off; BOOK | MODEL when model on */}
-      <div
-        className={`grid ${GRID} pb-1 mb-0.5`}
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', transition: 'grid-template-columns 200ms ease' }}
-      >
-        {showModel
-          ? ['Book', 'Model', 'Book', 'Model', 'Book', 'Model'].map((lbl, i) => (
-              <span
-                key={i}
-                className="text-center font-bold uppercase tracking-widest"
-                style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: lbl === 'Model' ? '#39FF14' : 'rgba(255,255,255,0.85)' }}
-              >
-                {lbl}
-              </span>
-            ))
-          : ['Book', 'Book', 'Book'].map((lbl, i) => (
-              <span
-                key={i}
-                className="text-center font-bold uppercase tracking-widest"
-                style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: 'rgba(255,255,255,0.85)' }}
-              >
-                {lbl}
-              </span>
-            ))
-        }
-      </div>
+      {/* Sub-headers: BOOK only when model off; BOOK | MODEL when model on
+           DESKTOP ONLY: hidden on desktop (lg+) — redundant with per-card matchup headers.
+           MOBILE: always shown. */}
+      {!isDesktopOdds && (
+        <div
+          className={`grid ${GRID} pb-1 mb-0.5`}
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', transition: 'grid-template-columns 200ms ease' }}
+        >
+          {showModel
+            ? ['Book', 'Model', 'Book', 'Model', 'Book', 'Model'].map((lbl, i) => (
+                <span
+                  key={i}
+                  className="text-center font-bold uppercase tracking-widest"
+                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: lbl === 'Model' ? '#39FF14' : 'rgba(255,255,255,0.85)' }}
+                >
+                  {lbl}
+                </span>
+              ))
+            : ['Book', 'Book', 'Book'].map((lbl, i) => (
+                <span
+                  key={i}
+                  className="text-center font-bold uppercase tracking-widest"
+                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: 'rgba(255,255,255,0.85)' }}
+                >
+                  {lbl}
+                </span>
+              ))
+          }
+        </div>
+      )}
 
       {/* Away row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div className={`grid ${GRID} py-2`} style={{ transition: 'grid-template-columns 200ms ease' }}>
@@ -2591,23 +2604,31 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // For upcoming games: shows start time instead of scores.
   function ScorePanel() {
     // Uniform font sizes — same for every team, scale with viewport width only
-    // No per-name auto-scaling; no truncation     // Winner: 700 bold; loser: 600 (500+100 = back up by 100 from previous iteration)
-    const awayFontWeight = awayWins ? 700 : isFinal ? 600 : 600;
-    const homeFontWeight = homeWins ? 700 : isFinal ? 600 : 600;
-    // School name: clamp(13px, 1.1vw, 18px) — 13px mobile, ~15.8px at 1440px, 18px max
-    const NAME_FONT_SIZE = 'clamp(13px, 1.1vw, 18px)';
-    // Nickname: clamp(11px, 0.9vw, 15px) — always smaller than school name
-    const NICK_FONT_SIZE = 'clamp(11px, 0.9vw, 15px)';
+    // No per-name auto-scaling; no truncation
+    // Change F: FINAL loser → fontWeight 400 (unbold city, team name, score); winner stays 700
+    // [VERIFY] isFinal=true, awayWins=true  → awayFontWeight=700, homeFontWeight=400 ✓
+    // [VERIFY] isFinal=true, awayWins=false → awayFontWeight=400, homeFontWeight=700 ✓
+    // [VERIFY] isFinal=false               → both 600 (pregame/live unchanged) ✓
+    const awayFontWeight = awayWins ? 700 : (isFinal && isDesktop) ? 400 : 600;
+    const homeFontWeight = homeWins ? 700 : (isFinal && isDesktop) ? 400 : 600;
+    // School name: clamp(12px, 1.0vw, 17px) — reduced by 1pt (was clamp(13px,1.1vw,18px)) — Change E
+    const NAME_FONT_SIZE = isDesktop ? 'clamp(12px, 1.0vw, 17px)' : 'clamp(13px, 1.1vw, 18px)';
+    // Nickname: clamp(10px, 0.8vw, 14px) — reduced by 1pt (was clamp(11px,0.9vw,15px)) — Change E
+    const NICK_FONT_SIZE = isDesktop ? 'clamp(10px, 0.8vw, 14px)' : 'clamp(11px, 0.9vw, 15px)';
     // Desktop-specific sizes: 1.5× the NAME_FONT_SIZE (clamp(13px,1.1vw,18px))
     // → clamp(19.5px, 1.65vw, 27px) for star/clock/LIVE/FINAL/time
-  // ── Change 3: reduce gameClock/LIVE/FINAL/star by 25% ──────────────────────
-  // Before: desktop 24px star → now 18px (×0.75); clamp values ×0.75
-  // Before: CLOCK 16-20px → now 12-15px; LIVE 14-18px → 10.5-13.5px; FINAL 16-20px → 12-15px
-  const HEADER_ICON_SIZE = isDesktop ? 18 : 12; // star SVG px — was 24/16, now ×0.75
-  const CLOCK_FONT_SIZE = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '8.25px';  // was clamp(16,1.35vw,20)/11px
-  const LIVE_FONT_SIZE  = isDesktop ? 'clamp(10.5px, 0.83vw, 13.5px)' : '6.75px'; // was clamp(14,1.1vw,18)/9px
-  const FINAL_FONT_SIZE = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '7.5px';   // was clamp(16,1.35vw,20)/10px
-  const TIME_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // was clamp(16,1.35vw,20)/13px
+  // ── DESKTOP UI CHANGES ──────────────────────────────────────────────────────
+  // Change A: LIVE badge 3× bigger on desktop (was clamp(10.5px,0.83vw,13.5px) → ×3)
+  // Change B: inning/period/clock 2× bigger on desktop (was clamp(12px,1.01vw,15px) → ×2)
+  // Change C: FINAL badge 3× bigger on desktop (was clamp(12px,1.01vw,15px) → ×3)
+  // Change D: star SVG 2× bigger on desktop (was 18px → 36px)
+  // Change E: city/team NAME_FONT_SIZE reduced by 1pt: clamp(13px,1.1vw,18px) → clamp(12px,1.0vw,17px)
+  //           NICK_FONT_SIZE reduced by 1pt: clamp(11px,0.9vw,15px) → clamp(10px,0.8vw,14px)
+  const HEADER_ICON_SIZE = isDesktop ? 36 : 12; // Change D: 2× bigger star on desktop (was 18px)
+  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(24px, 2.02vw, 30px)' : '8.25px';  // Change B: 2× (was clamp(12,1.01vw,15))
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(31.5px, 2.49vw, 40.5px)' : '6.75px'; // Change A: 3× (was clamp(10.5,0.83vw,13.5))
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(36px, 3.03vw, 45px)' : '7.5px';   // Change C: 3× (was clamp(12,1.01vw,15))
+  const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // unchanged (upcoming time)
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
     const teamGroupJustify = 'center';
@@ -2618,7 +2639,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           This row acts as the header spacer to align away/home rows with OddsTable.
           The OddsLinesPanel header (SPREAD/TOTAL/MONEYLINE + BOOK/MODEL rows) takes
           roughly the same height, so we use flex-grow on the team rows to fill space. */}
-      <div className="flex items-center gap-1.5 mb-0.5">
+      {/* Status row: centered on desktop, left-aligned on mobile */}
+      <div className={`flex items-center gap-1.5 mb-0.5${isDesktop ? ' justify-center' : ''}`}>
         {/* Star / Favorite button — always left of status */}
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
@@ -2631,15 +2653,15 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               padding: isDesktop ? "3px 4px" : "3px 4px",
               lineHeight: 1,
               flexShrink: 0,
-              minWidth: 44, minHeight: 44,
+              minWidth: isDesktop ? 52 : 44, minHeight: isDesktop ? 52 : 44,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               color: isFavorited ? "#FFD700" : "rgba(255,255,255,0.65)",
               opacity: 1,
               transition: "color 0.15s, transform 0.15s, filter 0.15s",
-              // ── Change 6: reduce star glow by ~50% (4px→2px radius, opacity 0.6) ──
-              filter: isFavorited ? "drop-shadow(0 0 2px rgba(255,215,0,0.6))" : "none",
+              // Change D: larger glow to match 2× star size on desktop
+              filter: isFavorited ? (isDesktop ? "drop-shadow(0 0 5px rgba(255,215,0,0.75))" : "drop-shadow(0 0 2px rgba(255,215,0,0.6))") : "none",
             }}
             onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; if (!isFavorited) e.currentTarget.style.color = "rgba(255,255,255,0.95)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; if (!isFavorited) e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
@@ -2656,52 +2678,73 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         )}
         {/* Game status: time / FINAL / clock */}
         {isLive ? (
-          <>            {/* LIVE pill FIRST (left), then gameClock to the right */}
-            {/* LIVE indicator — same pill format as FINAL badge, fully rounded, LEFT of clock */}
-            {/* Desktop: clamp(14px,1.1vw,18px) — 1.5× mobile 9px */}
-            <span
-              className="px-1.5 py-0.5 font-bold tracking-wide flex-shrink-0 flex items-center"
-              style={{
-                fontSize: LIVE_FONT_SIZE,
-                background: "rgba(57,255,20,0.12)",
-                color: "#39FF14",
-                border: "1px solid rgba(57,255,20,0.4)",
-                letterSpacing: "0.08em",
-                // ── Change 1: borderRadius halved (9999px → 12px) ──────────────
-                borderRadius: '12px',
-                // ── Change 2: gap between dot and LIVE text increased (gap-1=4px → 8px) ──
-                gap: '8px',
-              }}
-            >
+          // LIVE: badge stacked ABOVE inning/clock on desktop (Change A+B)
+          // Mobile: inline row (unchanged)
+          isDesktop ? (
+            <div className="flex flex-col items-center gap-0.5">
+              {/* LIVE pill — 3× bigger on desktop */}
               <span
-                className="rounded-full animate-pulse inline-block flex-shrink-0"
+                className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
                 style={{
-                  width: isDesktop ? '8px' : '5px',
-                  height: isDesktop ? '8px' : '5px',
-                  background: "#39FF14",
+                  fontSize: LIVE_FONT_SIZE,
+                  background: "rgba(57,255,20,0.12)",
+                  color: "#39FF14",
+                  border: "1px solid rgba(57,255,20,0.4)",
+                  letterSpacing: "0.10em",
+                  borderRadius: '14px',
+                  gap: '10px',
+                  lineHeight: 1,
                 }}
-              />
-              LIVE
-            </span>
-            {/* gameClock to the RIGHT of LIVE pill */}
-            {game.gameClock && (
-              /* Desktop: clamp(16px,1.35vw,20px) — 1.5× mobile 11px */
-              <span className="font-semibold tabular-nums" style={{ fontSize: CLOCK_FONT_SIZE, color: "hsl(var(--muted-foreground))" }}>
-                {game.gameClock}
+              >
+                <span
+                  className="rounded-full animate-pulse inline-block flex-shrink-0"
+                  style={{ width: '12px', height: '12px', background: "#39FF14" }}
+                />
+                LIVE
               </span>
-            )}
-          </>
+              {/* Inning/clock BELOW LIVE — 2× bigger, only when game is live */}
+              {game.gameClock && (
+                <span className="font-bold tabular-nums" style={{ fontSize: CLOCK_FONT_SIZE, color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>
+                  {game.gameClock}
+                </span>
+              )}
+            </div>
+          ) : (
+            <>
+              <span
+                className="px-1.5 py-0.5 font-bold tracking-wide flex-shrink-0 flex items-center"
+                style={{
+                  fontSize: LIVE_FONT_SIZE,
+                  background: "rgba(57,255,20,0.12)",
+                  color: "#39FF14",
+                  border: "1px solid rgba(57,255,20,0.4)",
+                  letterSpacing: "0.08em",
+                  borderRadius: '12px',
+                  gap: '8px',
+                }}
+              >
+                <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '5px', height: '5px', background: "#39FF14" }} />
+                LIVE
+              </span>
+              {game.gameClock && (
+                <span className="font-semibold tabular-nums" style={{ fontSize: CLOCK_FONT_SIZE, color: "hsl(var(--muted-foreground))" }}>
+                  {game.gameClock}
+                </span>
+              )}
+            </>
+          )
         ) : isFinal ? (
-          /* Desktop: neon green FINAL badge — 1.5× mobile 10px */
+          // FINAL: 3× bigger on desktop, unchanged on mobile (Change C)
+          // No inning shown for FINAL games (game is over)
           <span
-            className="px-1.5 py-0.5 font-bold tracking-wide"
+            className="px-1.5 py-0.5 font-black tracking-widest"
             style={{
               fontSize: FINAL_FONT_SIZE,
               background: isDesktop ? "rgba(57,255,20,0.12)" : "rgba(255,255,255,0.07)",
               color: isDesktop ? "#39FF14" : "hsl(var(--muted-foreground))",
               border: isDesktop ? "1px solid rgba(57,255,20,0.4)" : "none",
-              // ── Change 1: FINAL pill borderRadius matches LIVE (12px) ──────
               borderRadius: '12px',
+              lineHeight: 1,
             }}
           >
             FINAL
@@ -2720,7 +2763,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       <div className="flex items-center justify-between gap-2 py-1 w-full">
         {/* Left: logo + name/nickname — always two lines */}
           <div className="flex items-center gap-2">
-          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={36} />
+          {/* Change G: greyscale away logo when away team lost and game is FINAL on desktop */}
+          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={36} greyscale={isFinal && isDesktop && !awayWins} />
           {/* Responsive name display:
                Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
                Desktop (≥ 1024px): city name + nickname on two lines */}
@@ -2766,8 +2810,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               /* NBA scores are 3 digits (100-130) — use smaller clamp to prevent overflow in 160px panel */
               fontSize: isNba ? "clamp(18px, 2vw, 38px)" : "clamp(22px, 2.5vw, 44px)",
               lineHeight: 1,
-              /* Winner=750, loser=600 for FINAL+LIVE; pregame stays 900 */
-              fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : (isFinal || isLive) ? 600 : 900,
+              /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
+              fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: awayScoreFlash
                 ? "#39FF14"
                 : awayWins
@@ -2790,7 +2834,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       <div className="flex items-center justify-between gap-2 py-1 w-full">
         {/* Left: logo + name/nickname — always two lines */}
           <div className="flex items-center gap-2">
-          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={36} />
+          {/* Change G: greyscale home logo when home team lost and game is FINAL on desktop */}
+          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={36} greyscale={isFinal && isDesktop && !homeWins} />
           {/* Responsive name display:
                Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
                Desktop (≥ 1024px): city name + nickname on two lines */}
@@ -2835,8 +2880,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             style={{
               fontSize: isNba ? "clamp(18px, 2vw, 38px)" : "clamp(22px, 2.5vw, 44px)",
               lineHeight: 1,
-              /* Winner=750, loser=600 for FINAL+LIVE; pregame stays 900 */
-              fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : (isFinal || isLive) ? 600 : 900,
+              /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
+              fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: homeScoreFlash
                 ? "#39FF14"
                 : homeWins
