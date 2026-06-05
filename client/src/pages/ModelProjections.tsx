@@ -1458,7 +1458,7 @@ export default function ModelProjections() {
         // zIndex: 39 -- just below main header's z-40 so it stacks correctly
         // top: var(--prez-header-h) -- set by ResizeObserver on headerRef, always accurate
         <div
-          className="lg:hidden"
+          className="grid lg:hidden"
           ref={(el) => {
             // Use a ResizeObserver (not a one-shot ref callback) so --prez-col-header-h stays
             // accurate even after the main header's --prez-header-h stabilizes and causes
@@ -1493,7 +1493,6 @@ export default function ModelProjections() {
              * only applies on the very first frame to prevent a brief overlap flash. */
             top: 'var(--prez-header-h, 220px)',
             zIndex: 39,
-            display: 'grid',
             gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
             width: '100%',
             background: 'hsl(var(--card))',
