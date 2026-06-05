@@ -1125,8 +1125,8 @@ function DesktopMergedPanel({
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
 
-        {/* ── Uniform spacer row — same fixed height for ALL three sections ── */}
-        <div style={{ height: 'clamp(16px,1.4vw,22px)', marginBottom: 3 }} />
+        {/* ── Uniform spacer row — reduced height to move BOOK/MODEL up ── */}
+        <div style={{ height: 'clamp(6px,0.5vw,9px)', marginBottom: 2 }} />
 
         {/* ── Odds grid: 2 columns — BOOK | MODEL ── */}
         {/*
@@ -1140,7 +1140,7 @@ function DesktopMergedPanel({
           isEdge is detected by comparing awayModelStyle / homeModelStyle to the modelGreen object.
           LOG: [OddsCell] logs are emitted in dev whenever isBest or isEdge is true.
         */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 8, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', marginBottom: 5, alignItems: 'start' }}>
           {/* BOOK / MODEL column header row */}
           <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
           <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
@@ -1150,7 +1150,7 @@ function DesktopMergedPanel({
             mainValue={totalLine ? `o${awayBook}` : awayBook}
             juiceStr={null}
             isBook={true}
-            openLine={openAwayBook}
+            openLine={null}
             size="md"
             wrapperStyle={{ justifySelf: 'center', width: '100%' }}
           />
@@ -1170,7 +1170,7 @@ function DesktopMergedPanel({
             mainValue={totalLine ? `u${homeBook}` : homeBook}
             juiceStr={null}
             isBook={true}
-            openLine={openHomeBook}
+            openLine={null}
             size="md"
             wrapperStyle={{ justifySelf: 'center', width: '100%' }}
           />
@@ -2625,10 +2625,10 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   const HEADER_ICON_SIZE = isDesktop ? 24 : 12;
   // Inning/clock: clamp(24px,2.02vw,30px) × 0.50 = clamp(12px,1.01vw,15px) (−50%)
   const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '8.25px';
-  // LIVE: clamp(31.5px,2.49vw,40.5px) × 0.75 = clamp(23.6px,1.87vw,30.4px) (−25%)
-  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(23.6px, 1.87vw, 30.4px)' : '6.75px';
-  // FINAL: clamp(36px,3.03vw,45px) × 0.75 = clamp(27px,2.27vw,33.75px) (−25%)
-  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(27px, 2.27vw, 33.75px)' : '7.5px';
+  // LIVE: clamp(23.6px,1.87vw,30.4px) × 0.75 = clamp(17.7px,1.40vw,22.8px) (−25% more, total −44% from original)
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(17.7px, 1.40vw, 22.8px)' : '6.75px';
+  // FINAL: clamp(27px,2.27vw,33.75px) × 0.75 = clamp(20.25px,1.70vw,25.3px) (−25% more, total −44% from original)
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(20.25px, 1.70vw, 25.3px)' : '7.5px';
   const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // unchanged (upcoming time)
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
@@ -2683,7 +2683,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           // Mobile: inline row (unchanged)
           isDesktop ? (
             <div className="flex flex-col items-center gap-0.5">
-              {/* LIVE pill — 3× bigger on desktop */}
+              {/* LIVE pill — desktop: scaled down (−44% from original) */}
               <span
                 className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
                 style={{
@@ -2693,22 +2693,17 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                   border: "1px solid rgba(57,255,20,0.4)",
                   letterSpacing: "0.10em",
                   borderRadius: '14px',
-                  gap: '10px',
+                  gap: '8px',
                   lineHeight: 1,
                 }}
               >
                 <span
                   className="rounded-full animate-pulse inline-block flex-shrink-0"
-                  style={{ width: '12px', height: '12px', background: "#39FF14" }}
+                  style={{ width: '9px', height: '9px', background: "#39FF14" }}
                 />
                 LIVE
               </span>
-              {/* Inning/clock BELOW LIVE — 2× bigger, only when game is live */}
-              {game.gameClock && (
-                <span className="font-bold tabular-nums" style={{ fontSize: CLOCK_FONT_SIZE, color: "hsl(var(--muted-foreground))", lineHeight: 1 }}>
-                  {game.gameClock}
-                </span>
-              )}
+              {/* Inning/clock is now rendered ABOVE the away team row on desktop — not here */}
             </div>
           ) : (
             <>
@@ -2760,6 +2755,14 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
 
       {/* Team group — desktop: pushed toward top; mobile: vertically centered */}
       <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: teamGroupJustify, paddingTop: teamGroupPaddingTop }}>
+      {/* Desktop-only: inning/clock status above away team row, left-aligned, unbolded */}
+      {isLive && isDesktop && game.gameClock && (
+        <div className="hidden lg:block" style={{ marginBottom: 2 }}>
+          <span style={{ fontSize: CLOCK_FONT_SIZE, fontWeight: 400, color: 'hsl(var(--muted-foreground))', letterSpacing: '0.04em', lineHeight: 1 }}>
+            {game.gameClock}
+          </span>
+        </div>
+      )}
       {/* Away team row */}
       <div className="flex items-center justify-between gap-2 py-1 w-full">
         {/* Left: logo + name/nickname — always two lines */}
