@@ -2621,14 +2621,14 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // Change D: star SVG 2× bigger on desktop (was 18px → 36px)
   // Change E: city/team NAME_FONT_SIZE reduced by 1pt: clamp(13px,1.1vw,18px) → clamp(12px,1.0vw,17px)
   //           NICK_FONT_SIZE reduced by 1pt: clamp(11px,0.9vw,15px) → clamp(10px,0.8vw,14px)
-  // Star: 36px × 0.67 = 24px (−33%)
-  const HEADER_ICON_SIZE = isDesktop ? 24 : 12;
-  // Inning/clock: clamp(24px,2.02vw,30px) × 0.50 = clamp(12px,1.01vw,15px) (−50%)
+  // Star: 24px × 0.75 = 18px (−25% more, total −50% from original 36px)
+  const HEADER_ICON_SIZE = isDesktop ? 18 : 12;
+  // Inning/clock: unchanged
   const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '8.25px';
-  // LIVE: clamp(23.6px,1.87vw,30.4px) × 0.75 = clamp(17.7px,1.40vw,22.8px) (−25% more, total −44% from original)
-  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(17.7px, 1.40vw, 22.8px)' : '6.75px';
-  // FINAL: clamp(27px,2.27vw,33.75px) × 0.75 = clamp(20.25px,1.70vw,25.3px) (−25% more, total −44% from original)
-  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(20.25px, 1.70vw, 25.3px)' : '7.5px';
+  // LIVE: clamp(17.7px,1.40vw,22.8px) × 0.75 = clamp(13.3px,1.05vw,17.1px) (−25% more, total −58% from original)
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(13.3px, 1.05vw, 17.1px)' : '6.75px';
+  // FINAL: clamp(20.25px,1.70vw,25.3px) × 0.75 = clamp(15.2px,1.28vw,19px) (−25% more, total −58% from original)
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(15.2px, 1.28vw, 19px)' : '7.5px';
   const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // unchanged (upcoming time)
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
@@ -2640,8 +2640,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           This row acts as the header spacer to align away/home rows with OddsTable.
           The OddsLinesPanel header (SPREAD/TOTAL/MONEYLINE + BOOK/MODEL rows) takes
           roughly the same height, so we use flex-grow on the team rows to fill space. */}
-      {/* Status row: centered on desktop, left-aligned on mobile */}
-      <div className={`flex items-center gap-1.5 mb-0.5${isDesktop ? ' justify-center' : ''}`}>
+      {/* Status row: left-aligned on both desktop and mobile */}
+      <div className="flex items-center gap-1.5 mb-0.5">
         {/* Star / Favorite button — always left of status */}
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
@@ -2654,7 +2654,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               padding: isDesktop ? "3px 4px" : "3px 4px",
               lineHeight: 1,
               flexShrink: 0,
-              minWidth: isDesktop ? 52 : 44, minHeight: isDesktop ? 52 : 44,
+              minWidth: isDesktop ? 36 : 44, minHeight: isDesktop ? 36 : 44,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
