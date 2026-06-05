@@ -1116,9 +1116,17 @@ function DesktopMergedPanel({
       /* flex: 1 1 0% ensures all three SectionCols grow equally from 0 base — identical width regardless of content */
       <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: '8px 10px 10px' }}>
 
-        {/* ── Section title: REMOVED on desktop per user request ──
-             RUN LINE / TOTAL / MONEYLINE titles are redundant — game card headers already label each column.
-             BOOK / MODEL sub-headers also removed for the same reason. */}
+        {/* ── Section title ── */}
+        <div className="flex items-center gap-1.5" style={{ marginBottom: 4 }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#fff', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+            {title}
+          </span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        </div>
+
+        {/* ── Uniform spacer row — same fixed height for ALL three sections ── */}
+        <div style={{ height: 'clamp(16px,1.4vw,22px)', marginBottom: 3 }} />
 
         {/* ── Odds grid: 2 columns — BOOK | MODEL ── */}
         {/*
@@ -1133,6 +1141,9 @@ function DesktopMergedPanel({
           LOG: [OddsCell] logs are emitted in dev whenever isBest or isEdge is true.
         */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginBottom: 8, alignItems: 'start' }}>
+          {/* BOOK / MODEL column header row */}
+          <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
+          <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
 
           {/* Away / OVER — BOOK pill */}
           <OddsCell
