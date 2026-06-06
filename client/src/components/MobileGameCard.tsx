@@ -14,6 +14,21 @@ import { getEdgeColor, calculateEdge, calculateRoi, formatRoi, getVerdict } from
 import { spreadSign, toNum } from '@/lib/gameUtils';
 import { BettingSplitsPanel } from './BettingSplitsPanel';
 
+// ── fmtOddsSign ─────────────────────────────────────────────────────────────
+// Ensures positive American odds always display with a leading '+' sign.
+// [FIX] Bug: model PL odds (e.g. 214) and model over odds (e.g. 115) were
+// stored as positive integers in DB but rendered without '+' prefix on mobile.
+const fmtOddsSign = (raw: string | number | null | undefined): string => {
+  if (raw == null || raw === '' || raw === '—') return '—';
+  const s = String(raw).trim();
+  if (s.startsWith('+') || s.startsWith('-')) return s;
+  const n = Number(s);
+  if (isNaN(n)) return s;
+  if (n === 100) return 'EV';
+  if (n > 0) return `+${n}`;
+  return s;
+};
+
 type RouterOutput = inferRouterOutputs<AppRouter>;
 type GameRow = RouterOutput['games']['list'][number];
 type MobileTab = 'dual' | 'splits';
@@ -291,31 +306,35 @@ if (process.env.NODE_ENV === 'development' && isMlbGame) {
 }
 const mdlAwaySpreadStr = isMlbGame
   ? (mlbAwayRLLabel && game.modelAwaySpreadOdds
-      ? `${mlbAwayRLLabel} (${game.modelAwaySpreadOdds})`  // e.g. "+1.5 (-140)"
+      // [FIX] fmtOddsSign ensures positive MLB RL odds display with '+' prefix
+      ? `${mlbAwayRLLabel} (${fmtOddsSign(game.modelAwaySpreadOdds)})`
       : mlbAwayRLLabel ?? '—')
   : (!isNaN(awayModelSpread)
       ? (isNhlGame && game.modelAwayPLOdds
-          ? `${spreadSign(awayModelSpread)} (${game.modelAwayPLOdds})`
+          // [FIX] fmtOddsSign ensures positive PL odds (e.g. 214) display as '+214'
+          ? `${spreadSign(awayModelSpread)} (${fmtOddsSign(game.modelAwayPLOdds)})`
           : spreadSign(awayModelSpread))
       : '—');
 const mdlHomeSpreadStr = isMlbGame
   ? (mlbHomeRLLabel && game.modelHomeSpreadOdds
-      ? `${mlbHomeRLLabel} (${game.modelHomeSpreadOdds})`
+      ? `${mlbHomeRLLabel} (${fmtOddsSign(game.modelHomeSpreadOdds)})`
       : mlbHomeRLLabel ?? '—')
   : (!isNaN(homeModelSpread)
       ? (isNhlGame && game.modelHomePLOdds
-          ? `${spreadSign(homeModelSpread)} (${game.modelHomePLOdds})`
+          // [FIX] fmtOddsSign ensures positive PL odds (e.g. 214) display as '+214'
+          ? `${spreadSign(homeModelSpread)} (${fmtOddsSign(game.modelHomePLOdds)})`
           : spreadSign(homeModelSpread))
       : '—');
 // For NHL: display the BOOK's total line with the model's fair odds at that line
 const mdlDisplayTotal = isNhlGame && !isNaN(bookTotal) ? bookTotal : modelTotal;
 const mdlTotalStr = !isNaN(mdlDisplayTotal) ? String(mdlDisplayTotal) : '—';
 // For NHL/MLB: total display strings include O/U odds at the model's line
+// [FIX] fmtOddsSign ensures positive over/under odds (e.g. 115) display as '+115'
 const mdlOverTotalStr  = !isNaN(mdlDisplayTotal)
-  ? ((isNhlGame || isMlbGame) && game.modelOverOdds  ? `${mdlTotalStr} (${game.modelOverOdds})`  : mdlTotalStr)
+  ? ((isNhlGame || isMlbGame) && game.modelOverOdds  ? `${mdlTotalStr} (${fmtOddsSign(game.modelOverOdds)})`  : mdlTotalStr)
   : '—';
 const mdlUnderTotalStr = !isNaN(mdlDisplayTotal)
-  ? ((isNhlGame || isMlbGame) && game.modelUnderOdds ? `${mdlTotalStr} (${game.modelUnderOdds})` : mdlTotalStr)
+  ? ((isNhlGame || isMlbGame) && game.modelUnderOdds ? `${mdlTotalStr} (${fmtOddsSign(game.modelUnderOdds)})` : mdlTotalStr)
   : '—';
 // ── Split helpers: parse "value (odds)" → { line, odds } for two-line pill rendering ──
 // Used by mobile OddsTable to pass mainValue and juiceStr separately to OddsCell
