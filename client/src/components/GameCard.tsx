@@ -891,8 +891,11 @@ function DesktopMergedPanel({
   // Do NOT recompute locally — these are the single source of truth.
   const spreadEdgeIsAway: boolean | null = authSpreadEdgeIsAway;
   const totalEdgeIsOver: boolean | null = authTotalEdgeIsOver;
-  const hasSpreadEdge = !isNaN(spreadDiff) && spreadDiff > 0;
-  const hasTotalEdge  = !isNaN(totalDiff)  && totalDiff  > 0;
+  // [FIX] For NHL/MLB: spreadDiff and totalDiff are null in DB.
+  // hasSpreadEdge/hasTotalEdge must derive from authSpreadEdgeIsAway/authTotalEdgeIsOver
+  // (which are computed from model odds and DB labels) rather than the null diff values.
+  const hasSpreadEdge = spreadEdgeIsAway !== null;
+  const hasTotalEdge  = totalEdgeIsOver  !== null;
 
   // ── Style helpers ────────────────────────────────────────────────────────────────────────────────────
   // Typography hierarchy (desktop):
@@ -1215,10 +1218,13 @@ function DesktopMergedPanel({
 
   // ── EdgeVerdict column ────────────────────────────────────────────────────
   // AUTHORITATIVE pass detection: use computed edge direction values, NOT stale DB labels.
-  // spreadPass: no edge if spreadEdgeIsAway is null (no direction) OR spreadDiff <= 0
-  // totalPass:  no edge if totalEdgeIsOver is null (no direction) OR totalDiff <= 0
-  const spreadPass = spreadEdgeIsAway === null || (spreadDiff ?? 0) <= 0;
-  const totalPass  = totalEdgeIsOver  === null || (totalDiff  ?? 0) <= 0;
+  // [FIX] For NHL/MLB: spreadDiff and totalDiff are null in DB.
+  // spreadPass/totalPass must rely solely on authSpreadEdgeIsAway/authTotalEdgeIsOver.
+  // The old formula (spreadEdgeIsAway === null || spreadDiff <= 0) was always true for NHL/MLB
+  // because spreadDiff=null → (null ?? 0) = 0 → 0 <= 0 = true → always PASS.
+  const spreadPass = spreadEdgeIsAway === null;
+  const totalPass  = totalEdgeIsOver  === null;
+  // spreadIsStronger: for NHL/MLB use model odds ROI comparison; for NBA use diff values
   const spreadIsStronger = (spreadDiff ?? 0) >= (totalDiff ?? 0);
   // Use authSpreadEdgeIsAway (the single authoritative source) for the edge panel logo.
   // Do NOT re-parse computedSpreadEdge (DB label) here — it can be stale/malformed and
@@ -1399,6 +1405,25 @@ function DesktopMergedPanel({
   );
 }
 
+
+// ── fmtOddsSign ─────────────────────────────────────────────────────────────
+// Ensures positive American odds always display with a leading '+' sign.
+// Negative odds are returned as-is (already have '-').
+// Handles both string (e.g. "214", "+214", "-214") and number inputs.
+// Returns '—' for null/undefined/NaN inputs.
+// [FIX] Bug: model PL odds (e.g. 214) and model over odds (e.g. 115) were
+// stored as positive integers in DB but rendered without '+' prefix.
+const fmtOddsSign = (raw: string | number | null | undefined): string => {
+  if (raw == null || raw === '' || raw === '—') return '—';
+  const s = String(raw).trim();
+  // Already has sign prefix — return as-is
+  if (s.startsWith('+') || s.startsWith('-')) return s;
+  const n = Number(s);
+  if (isNaN(n)) return s; // non-numeric string — return unchanged
+  if (n === 100) return 'EV';
+  if (n > 0) return `+${n}`;
+  return s; // negative already handled by startsWith('-') above
+};
 
 // ── OddsCell ─────────────────────────────────────────────────────────────────
 //
@@ -1847,11 +1872,12 @@ function OddsLinesPanel({
         : (!isNaN(mdlHomeSpread) ? spreadSign(mdlHomeSpread) : '—'))
     : '—';
   // Model spread odds — juiceStr for NHL puck line and MLB run line
+  // [FIX] fmtOddsSign ensures positive odds (e.g. 214) display as '+214' not '214'.
   const mdlAwaySpreadJuice = hasModelData
-    ? (isNhlGame ? (modelAwayPLOdds ?? null) : isMlbGame ? (modelAwaySpreadOdds ?? null) : null)
+    ? (isNhlGame ? fmtOddsSign(modelAwayPLOdds ?? null) : isMlbGame ? fmtOddsSign(modelAwaySpreadOdds ?? null) : null)
     : null;
   const mdlHomeSpreadJuice = hasModelData
-    ? (isNhlGame ? (modelHomePLOdds ?? null) : isMlbGame ? (modelHomeSpreadOdds ?? null) : null)
+    ? (isNhlGame ? fmtOddsSign(modelHomePLOdds ?? null) : isMlbGame ? fmtOddsSign(modelHomeSpreadOdds ?? null) : null)
     : null;
 
   // Keep legacy combined strings for any code paths that still use them (edge labels etc.)
@@ -1873,8 +1899,9 @@ function OddsLinesPanel({
   // mainValue = line only ("8.5"), juiceStr = odds only ("-115") passed to OddsCell
   const mdlOverTotalLine  = hasModelData && !isNaN(mdlDisplayTotal) ? String(mdlDisplayTotal) : '—';
   const mdlUnderTotalLine = hasModelData && !isNaN(mdlDisplayTotal) ? String(mdlDisplayTotal) : '—';
-  const mdlOverJuice  = (hasModelData && (isNhlGame || isMlbGame)) ? (modelOverOdds  ?? null) : null;
-  const mdlUnderJuice = (hasModelData && (isNhlGame || isMlbGame)) ? (modelUnderOdds ?? null) : null;
+  // [FIX] fmtOddsSign ensures positive odds (e.g. 115) display as '+115' not '115'.
+  const mdlOverJuice  = (hasModelData && (isNhlGame || isMlbGame)) ? fmtOddsSign(modelOverOdds  ?? null) : null;
+  const mdlUnderJuice = (hasModelData && (isNhlGame || isMlbGame)) ? fmtOddsSign(modelUnderOdds ?? null) : null;
   // Legacy aliases kept for any remaining code paths that reference the old names
   const mdlOverTotal  = mdlOverTotalLine;
   const mdlUnderTotal = mdlUnderTotalLine;
@@ -2360,6 +2387,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   const homeDisplayName = homeNickname || homeName;
 
   const computedSpreadEdge: string | null = (() => {
+    // [FIX] For NHL/MLB: spreadDiff is null in DB (not written by Python engine for these sports).
+    // The edge direction lives in game.spreadEdge (DB label set by Python engine).
+    // Do NOT gate on spreadDiff <= 0 for NHL/MLB — it will always be 0 or null (line is always ±1.5).
+    if (isNhlGame || isMlbGame) {
+      if (!game.spreadEdge || game.spreadEdge === 'PASS') return "PASS";
+      return game.spreadEdge;
+    }
     if (isNaN(spreadDiff) || spreadDiff <= 0) return "PASS";
     // For NHL and MLB: edge direction comes from game.spreadEdge (set by Python engine).
     // Line arithmetic is invalid since both model and book always have ±1.5 for run/puck lines.
@@ -2374,6 +2408,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   })();
 
   const computedTotalEdge: string | null = (() => {
+    // [FIX] For NHL/MLB: totalDiff is null in DB (not written by Python engine for these sports).
+    // The edge direction lives in game.totalEdge (DB label set by Python engine).
+    // Do NOT gate on totalDiff <= 0 for NHL/MLB — it will always be null.
+    if (isNhlGame || isMlbGame) {
+      if (!game.totalEdge || game.totalEdge === 'PASS') return "PASS";
+      return game.totalEdge;
+    }
     if (isNaN(totalDiff) || totalDiff <= 0) return "PASS";
     // For NHL and MLB: edge direction must come from model odds at the book's line, NOT from comparing
     // model expected total vs book line. The model could have E_total > book line but still have
@@ -2440,7 +2481,10 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     return null;
   })();
   const authTotalEdgeIsOver: boolean | null = (() => {
-    if (isNaN(totalDiff) || totalDiff <= 0) return null;
+    // [FIX] For NHL/MLB: totalDiff is null in DB. Skip the totalDiff guard and go directly to
+    // Tier 1 (model odds comparison) then Tier 2 (DB label). The guard was blocking all NHL/MLB
+    // total edges because totalDiff was always null/0 for these sports.
+    if (!(isNhlGame || isMlbGame) && (isNaN(totalDiff) || totalDiff <= 0)) return null;
 
     // ── TIER 1 (highest priority): Model over/under odds probability comparison ──────────────────
     // OPTION B RULE: edge exists ONLY when modelImplied(side) > bookImplied(side) — both RAW.
