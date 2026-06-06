@@ -442,6 +442,26 @@ function EdgeVerdict({
   );
 }
 
+// ── fmtOddsSign ─────────────────────────────────────────────────────────────
+// Ensures positive American odds always display with a leading '+' sign.
+// Negative odds are returned as-is (already have '-').
+// Handles both string (e.g. "214", "+214", "-214") and number inputs.
+// Returns '—' for null/undefined/NaN inputs.
+// [FIX] Bug: model PL odds (e.g. 214) and model over odds (e.g. 115) were
+// stored as positive integers in DB but rendered without '+' prefix.
+// MUST be defined BEFORE DesktopMergedPanel and OddsLinesPanel (both use it).
+const fmtOddsSign = (raw: string | number | null | undefined): string => {
+  if (raw == null || raw === '' || raw === '—') return '—';
+  const s = String(raw).trim();
+  // Already has sign prefix — return as-is
+  if (s.startsWith('+') || s.startsWith('-')) return s;
+  const n = Number(s);
+  if (isNaN(n)) return s; // non-numeric string — return unchanged
+  if (n === 100) return 'EV';
+  if (n > 0) return `+${n}`;
+  return s; // negative already handled by startsWith('-') above
+};
+
 // ── DesktopMergedPanel ───────────────────────────────────────────────────────
 // Desktop-only (≥ lg) unified panel: merges ODDS + SPLITS into a single table.
 // Layout per section (SPREAD | TOTAL | MONEYLINE):
@@ -838,21 +858,25 @@ function DesktopMergedPanel({
       ` | mlbMdlAwayLabel=${mlbMdlAwayLabel ?? 'null'} mlbMdlHomeLabel=${mlbMdlHomeLabel ?? 'null'}`
     );
   }
+  // [FIX] fmtOddsSign applied to all model juice values in DesktopMergedPanel.
+  // This is the DESKTOP-SPECIFIC string construction path — separate from OddsLinesPanel.
+  // mdlAwayPLOdds/mdlHomePLOdds/mdlOverOdds/mdlUnderOdds come from game.model* (raw DB integers).
+  // Without fmtOddsSign, positive values like 214 and 115 render without '+' prefix.
   const mdlAwaySpreadStr = hasModelData
     ? (isNhlGame && mdlAwayPLOdds
-        ? `${spreadSign(mdlAwaySpread)} (${mdlAwayPLOdds})`
+        ? `${spreadSign(mdlAwaySpread)} (${fmtOddsSign(mdlAwayPLOdds)})`
         : isMlbGame
           ? (mlbMdlAwayLabel
-              ? (mdlAwaySpreadOdds ? `${mlbMdlAwayLabel} (${mdlAwaySpreadOdds})` : mlbMdlAwayLabel)
+              ? (mdlAwaySpreadOdds ? `${mlbMdlAwayLabel} (${fmtOddsSign(mdlAwaySpreadOdds)})` : mlbMdlAwayLabel)
               : '—')
           : (!isNaN(mdlAwaySpread) ? spreadSign(mdlAwaySpread) : '—'))
     : '—';
   const mdlHomeSpreadStr = hasModelData
     ? (isNhlGame && mdlHomePLOdds
-        ? `${spreadSign(mdlHomeSpread)} (${mdlHomePLOdds})`
+        ? `${spreadSign(mdlHomeSpread)} (${fmtOddsSign(mdlHomePLOdds)})`
         : isMlbGame
           ? (mlbMdlHomeLabel
-              ? (mdlHomeSpreadOdds ? `${mlbMdlHomeLabel} (${mdlHomeSpreadOdds})` : mlbMdlHomeLabel)
+              ? (mdlHomeSpreadOdds ? `${mlbMdlHomeLabel} (${fmtOddsSign(mdlHomeSpreadOdds)})` : mlbMdlHomeLabel)
               : '—')
           : (!isNaN(mdlHomeSpread) ? spreadSign(mdlHomeSpread) : '—'))
     : '—';
@@ -868,14 +892,17 @@ function DesktopMergedPanel({
       `modelTotal=${mdlTotal} ≠ bookTotal=${bkTotal} — displaying bookTotal per policy`
     );
   }
+  // [FIX] fmtOddsSign applied to model over/under odds in DesktopMergedPanel.
+  // mdlOverOdds/mdlUnderOdds are raw DB strings (e.g. "115", "-115").
+  // Without fmtOddsSign, positive values like 115 render without '+' prefix.
   const mdlOver = hasModelData && !isNaN(mdlDisplayTotal)
     ? ((isNhlGame || isMlbGame) && mdlOverOdds
-        ? `${String(mdlDisplayTotal)} (${mdlOverOdds})`
+        ? `${String(mdlDisplayTotal)} (${fmtOddsSign(mdlOverOdds)})`
         : String(mdlDisplayTotal))
     : '—';
   const mdlUnder = hasModelData && !isNaN(mdlDisplayTotal)
     ? ((isNhlGame || isMlbGame) && mdlUnderOdds
-        ? `${String(mdlDisplayTotal)} (${mdlUnderOdds})`
+        ? `${String(mdlDisplayTotal)} (${fmtOddsSign(mdlUnderOdds)})`
         : String(mdlDisplayTotal))
     : '—';
   const mdlAwayMlStr     = hasModelData ? (modelAwayML ?? '—') : '—';
@@ -1405,25 +1432,6 @@ function DesktopMergedPanel({
   );
 }
 
-
-// ── fmtOddsSign ─────────────────────────────────────────────────────────────
-// Ensures positive American odds always display with a leading '+' sign.
-// Negative odds are returned as-is (already have '-').
-// Handles both string (e.g. "214", "+214", "-214") and number inputs.
-// Returns '—' for null/undefined/NaN inputs.
-// [FIX] Bug: model PL odds (e.g. 214) and model over odds (e.g. 115) were
-// stored as positive integers in DB but rendered without '+' prefix.
-const fmtOddsSign = (raw: string | number | null | undefined): string => {
-  if (raw == null || raw === '' || raw === '—') return '—';
-  const s = String(raw).trim();
-  // Already has sign prefix — return as-is
-  if (s.startsWith('+') || s.startsWith('-')) return s;
-  const n = Number(s);
-  if (isNaN(n)) return s; // non-numeric string — return unchanged
-  if (n === 100) return 'EV';
-  if (n > 0) return `+${n}`;
-  return s; // negative already handled by startsWith('-') above
-};
 
 // ── OddsCell ─────────────────────────────────────────────────────────────────
 //

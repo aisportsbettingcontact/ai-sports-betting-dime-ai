@@ -377,14 +377,21 @@ export const appRouter = router({
           String(windowStartDate.getUTCMonth() + 1).padStart(2, '0'),
           String(windowStartDate.getUTCDate()).padStart(2, '0'),
         ].join('-');
-        // CRITICAL: Always ensure effectiveDate is in the returned dates list.
-        // If the cache was populated during a different cutoff window, effectiveDate
-        // may be missing — causing the client auto-advance to fire incorrectly.
-        const datesWithEffective = dates.includes(effectiveDate)
-          ? dates
-          : [effectiveDate, ...dates].sort();
+        // CRITICAL: effectiveDate injection is MLB-ONLY.
+        // For MLB: inject effectiveDate so the calendar always shows today even if
+        // no games have been ingested yet (prevents auto-advance past today on opening day).
+        // For NHL/NBA: do NOT inject effectiveDate if there are no games on that date.
+        // If effectiveDate is not in the DB dates list, the client auto-advance will
+        // correctly advance to the first real game date (e.g. June 5 → June 6 for NHL).
+        // [FIX] Bug: NHL effectiveDate injection caused the client to see June 5 as a
+        // valid date with 0 games, blocking auto-advance to June 6 (CAR@VGK).
+        const isMlb = input.sport === 'MLB';
+        const datesWithEffective = (isMlb && !dates.includes(effectiveDate))
+          ? [effectiveDate, ...dates].sort()
+          : dates;
         console.log(
           `[DIAG][getAvailableDates] sport=${input.sport} effectiveDate=${effectiveDate} ` +
+          `injected=${isMlb && !dates.includes(effectiveDate)} ` +
           `dates=${datesWithEffective.length} (${datesWithEffective.slice(0,3).join(', ')}...) ` +
           `utcHour=${nowUtc.getUTCHours()} beforeCutoff=${isBeforeCutoff}`
         );
