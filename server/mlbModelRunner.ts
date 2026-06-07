@@ -734,9 +734,17 @@ async function batchFetchPitcherStats(
   // Expose nrfiRateByMlbamId on the result map as a side-channel
   (result as any).__nrfiRates = nrfiRateByMlbamId;
 
+  // ── Unicode accent normalization ─────────────────────────────────────────────
+  // NFD decompose then strip combining diacritical marks (U+0300–U+036F).
+  // Ensures "José Soriano" (DB fullName) matches "Jose Soriano" (games table)
+  // and "Randy Vásquez" (DB fullName) matches "Randy Vasquez" (games table).
+  // Root cause: MLB Stats API stores accented fullNames; VSiN/games table uses ASCII.
+  const normalizeAccents = (s: string): string =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
   const dbMap = new Map<string, { stats: Record<string, number>; mlbamId: number; nrfiRate: number | null; nrfiStarts: number | null }>();
   for (const row of allRows) {
-    const normName = row.fullName.toLowerCase().trim();
+    const normName = normalizeAccents(row.fullName);
     // Season stats base
     const seasonStats: Record<string, number> = {
       era:       row.era       ?? DEFAULT_PITCHER_STATS.era,
@@ -777,7 +785,7 @@ async function batchFetchPitcherStats(
 
   // Resolve each requested pitcher
   for (const { name, teamAbbrev } of pitcherNames) {
-    const normName = name.toLowerCase().trim();
+    const normName = normalizeAccents(name);
     const teamKey = `${normName} (${teamAbbrev.toUpperCase()})`;
 
     let stats: Record<string, number> | undefined;
@@ -2403,6 +2411,13 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
           modelHomeScore:       String(r.proj_home_runs.toFixed(2)),
           modelAwayWinPct:      String(r.away_win_pct.toFixed(2)),
           modelHomeWinPct:      String(r.home_win_pct.toFixed(2)),
+          // ── RL Cover Probabilities (no-vig, 0-100 scale) ─────────────────────────
+          // [INPUT]  r.away_rl_cover_pct = P(away covers RL) from Python engine (0-100 scale)
+          // [INPUT]  r.home_rl_cover_pct = P(home covers RL) from Python engine (0-100 scale)
+          // [VERIFY] Used for edge detection at lines 2110/2124 but were NOT previously written to DB
+          // [FIX]    Added 2026-06-07 — maps away_rl_cover_pct/home_rl_cover_pct to DB columns
+          modelAwayPLCoverPct:  r.away_rl_cover_pct != null ? String(r.away_rl_cover_pct.toFixed(2)) : null,
+          modelHomePLCoverPct:  r.home_rl_cover_pct != null ? String(r.home_rl_cover_pct.toFixed(2)) : null,
           // ── F5 (First Five Innings) model output ───────────────────────────────
           modelF5AwayML:        fmtMl(r.f5_ml_away),
           modelF5HomeML:        fmtMl(r.f5_ml_home),
