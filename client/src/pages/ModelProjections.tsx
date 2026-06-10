@@ -11,6 +11,8 @@ import { useUrlState, type Sport } from "@/hooks/useUrlState";
 import { User, LogOut, LogIn, BarChart3, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { AnimatePresence, motion } from "framer-motion";
+import { skipToken } from "@tanstack/react-query";
+import { WcFeedInline } from "@/components/WcFeedInline";
 
 // CDN icon URLs
 const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
@@ -271,8 +273,10 @@ export default function ModelProjections() {
     refetchOnWindowFocus: false, // server cache (60s TTL) makes window-focus refetch wasteful
   });
   // Auto-switch away from a sport with no games once activeSports loads
+  // [WC] WC is always "active" (its own data source) — skip auto-switch when WC is selected
   useEffect(() => {
     if (!activeSports) return;
+    if (selectedSport === 'WC') return; // WC is always valid — never auto-switch away
     const sportActive = activeSports[selectedSport as 'NBA' | 'NHL' | 'MLB'];
     // NBA tab is hidden from the feed — exclude it from auto-switch fallback
     if (!sportActive || selectedSport === 'NBA') {
@@ -301,13 +305,15 @@ export default function ModelProjections() {
   useEffect(() => {
     if (!serverDateData) return;
     if (hasExplicitDate) return; // user navigated to a specific date — don't override
+    // [WC] WC manages its own date state internally — don't override with baseball/hockey date
+    if (selectedSport === 'WC') return;
     const serverDate = serverDateData.effectiveDate;
     if (serverDate !== selectedDate) {
       console.log(`[Feed] Syncing selectedDate from client=${selectedDate} to server=${serverDate} (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`);
       setSelectedDate(serverDate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverDateData]);
+  }, [serverDateData, selectedSport]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -582,10 +588,13 @@ export default function ModelProjections() {
   // If the server cache was populated at a different UTC boundary (before vs after 11:00 UTC cutoff)
   // than when the client reads it, the dates don't match → all games filtered out → "No games found".
   // With explicit gameDate: server cache key is MLB:{date}, exact eq() match, zero boundary mismatch.
+  // [WC] When WC is selected, skip all games.* queries — WC has its own data source (wc2026.*)
+  // skipToken tells tRPC/react-query to not fire the query at all, avoiding zodSport validation error
+  const isWcSelected = selectedSport === 'WC';
   const { data: allGames, isLoading: gamesLoading, isFetching: gamesFetching, refetch: refetchGames } = trpc.games.list.useQuery(
-    { sport: selectedSport, gameDate: selectedDate },
+    isWcSelected ? skipToken : { sport: selectedSport as 'MLB' | 'NHL' | 'NBA', gameDate: selectedDate },
     {
-      enabled: true,
+      enabled: !isWcSelected,
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 60 * 1000,       // matches server cache TTL — never refetch more often than server refreshes
@@ -631,7 +640,7 @@ export default function ModelProjections() {
   // independent of the selectedDate. This way the calendar always shows the full range
   // of available dates even though allGames only contains the selected date's games.
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
-    { sport: selectedSport },
+    isWcSelected ? skipToken : { sport: selectedSport as 'MLB' | 'NHL' | 'NBA' },
     {
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,   // re-check every 60s — matches server cache TTL
@@ -749,7 +758,9 @@ export default function ModelProjections() {
   // NOTE: Since allGames now only contains games for selectedDate (exact filter), we check
   // allDates (from the rolling window query) to determine if selectedDate is valid.
   // If selectedDate is not in allDates, advance to the first available date.
+  // [WC] WC manages its own date state internally — skip auto-advance entirely
   useEffect(() => {
+    if (selectedSport === 'WC') return;
     if (allDates.length === 0) return; // still loading
     const hasGamesOnDate = allDates.includes(selectedDate);
     if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
@@ -1264,10 +1275,10 @@ export default function ModelProjections() {
             </button>
           )}
 
-          {/* WC 2026 pill — navigates to /wc2026 standalone page */}
-          <button type="button" onClick={() => setLocation('/wc2026')} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-            style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75" alt="WC26" style={{ width: 'clamp(10px, 1.5vw, 14px)', height: 'clamp(10px, 1.5vw, 14px)', objectFit: 'contain', flexShrink: 0, opacity: 0.8 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          {/* WC 2026 pill — renders inline on the feed (same as MLB/NHL) */}
+          <button type="button" onClick={() => setSelectedSport("WC")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
+            style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
+            <img src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75" alt="WC26" style={{ width: 'clamp(10px, 1.5vw, 14px)', height: 'clamp(10px, 1.5vw, 14px)', objectFit: 'contain', flexShrink: 0, opacity: selectedSport === "WC" ? 1 : 0.8 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <span className="hidden sm:inline">WORLD CUP</span><span className="sm:hidden">WC</span>
           </button>
 
@@ -1319,7 +1330,7 @@ export default function ModelProjections() {
             Total ≈ 507px — too wide at fixed sizes, so we use a single-line flex container that
             shrinks proportionally via font-size: clamp(9px, 2.4vw, ...) for the league label.
             sm+ breakpoints are unchanged from the original design. */}
-        {!showFavoritesTab && !gamesLoading && sortedDates.length > 0 && (
+        {!showFavoritesTab && !isWcSelected && !gamesLoading && sortedDates.length > 0 && (
           <div className="w-full flex items-center justify-center px-2 py-1 md:py-2 border-b border-border bg-background/95 sm:px-4" style={{ overflow: 'hidden' }}>
             {/* Single-line pill: all three spans in one nowrap flex row, centered in full width */}
             <div
@@ -1378,11 +1389,11 @@ export default function ModelProjections() {
           </div>
         )}
 
-        {/* Row 5: Feed-wide mobile tab filter — MODEL PROJECTIONS | BETTING SPLITS | LINEUPS (MLB) */}
+        {/* Row 5: Feed-wide mobile tab filter — hidden when WC is selected (WC has its own sub-tab nav) */}
         {/* Tab bar: Fix #9 — flex + overflow-x:auto + scroll-snap for 6-tab MLB row */}
         {/* Fade wrapper: position:relative so the ::after pseudo-element can be absolutely */}
         {/* positioned over the right edge. tabsShowFade drives the CSS class. */}
-        <div className="feed-tabs-wrapper" style={{ position: 'relative' }}>
+        {!isWcSelected && <div className="feed-tabs-wrapper" style={{ position: 'relative' }}>
         <div ref={tabsScrollRef} className="feed-tabs-scroll" style={{
             display: 'flex',
             overflowX: 'auto',
@@ -1451,12 +1462,12 @@ export default function ModelProjections() {
               transition: 'opacity 0.2s ease',
             }}
           />
-        </div>{/* end feed-tabs-wrapper */}
+        </div>}{/* end feed-tabs-wrapper (conditionally rendered) */}
       </header>
 
       {/* ── Sticky global column header (mobile only) — MATCHUP | SPREAD/PUCK LINE | TOTAL | ML ── */}
-      {/* Only shown when MODEL PROJECTIONS tab is active. Hidden for BETTING SPLITS tab. */}
-      {feedMobileTab === 'dual' && (
+      {/* Only shown when MODEL PROJECTIONS tab is active. Hidden for BETTING SPLITS tab and WC. */}
+      {!isWcSelected && feedMobileTab === 'dual' && (
         // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
         // LAYOUT RULES (must match MobileGameCard exactly):
         //   Left panel: clamp(72px, 20.4vw, 88px) fluid (matches MobileGameCard gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr')
@@ -1610,6 +1621,10 @@ export default function ModelProjections() {
                   ))}
                 </div>
               )
+            ) : isWcSelected ? (
+              /* ── WORLD CUP INLINE FEED ── */
+              /* WC bypasses all games.* procedures and renders its own fixture cards */
+              <WcFeedInline />
             ) : (
               /* NORMAL PROJECTIONS FEED — or LINEUPS/PROPS tab for MLB */
               feedMobileTab === 'lineups' && selectedSport === 'MLB' ? (

@@ -4,16 +4,22 @@
  * Manages: sport, date, tab, statuses
  * Enables browser back/forward for sport + date changes and bookmarkable URLs.
  * Falls back to localStorage for tab persistence (existing behavior preserved).
+ *
+ * [CHANGE 2026-06-10] Added "WC" as a valid Sport so the WORLD CUP tab renders
+ * inline on the feed instead of redirecting to a separate /wc2026 route.
+ * WC bypasses all games.* tRPC procedures (they use zodSport which only accepts
+ * MLB/NHL/NBA). The feed guards those queries with `enabled: selectedSport !== 'WC'`
+ * and passes `skipToken` when WC is active.
  */
 import { useCallback, useMemo } from "react";
 import { useSearch, useLocation } from "wouter";
 import { todayUTC } from "@/components/CalendarPicker";
 
-export type Sport = "MLB" | "NHL" | "NBA";
+export type Sport = "MLB" | "NHL" | "NBA" | "WC";
 export type FeedMobileTab = "dual" | "splits" | "lineups" | "props" | "f5nrfi" | "hrprops" | "jackmac";
 export type GameStatus = "upcoming" | "live" | "final";
 
-const VALID_SPORTS: Sport[] = ["MLB", "NHL", "NBA"];
+const VALID_SPORTS: Sport[] = ["MLB", "NHL", "NBA", "WC"];
 const VALID_TABS: FeedMobileTab[] = ["dual", "splits", "lineups", "props", "f5nrfi", "hrprops", "jackmac"];
 const VALID_STATUSES: GameStatus[] = ["upcoming", "live", "final"];
 const FEED_TAB_KEY = "prez_bets_mobile_tab_v4";
