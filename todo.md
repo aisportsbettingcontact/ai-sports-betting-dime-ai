@@ -4076,3 +4076,19 @@
 - [x] SPLITS/LINEUPS/STANDINGS/FUTURES tabs: "Coming soon" stubs
 - [x] TypeScript: 0 errors
 - [x] Tests: 1038/1038 passing
+
+## Session: 2026-06-10 - WORLD CUP Tab Inline Feed Integration
+
+- [x] Add "WC" to Sport type and VALID_SPORTS in useUrlState.ts
+- [x] Change WC pill from setLocation('/wc2026') to setSelectedSport("WC") with active styling
+- [x] Guard games.list query with skipToken when WC is selected (prevents zodSport validation error)
+- [x] Guard games.getAvailableDates query with skipToken when WC is selected
+- [x] Guard auto-switch useEffect to skip when WC is selected (WC is always valid)
+- [x] Guard serverDateData sync useEffect to skip when WC is selected
+- [x] Guard auto-advance useEffect to skip when WC is selected
+- [x] Suppress feed tabs wrapper when WC is selected (WC has its own sub-tab nav)
+- [x] Suppress sticky column header when WC is selected
+- [x] Suppress date header row when WC is selected
+- [x] Inject WcFeedInline component in main feed area when WC is selected
+- [x] All 1038 tests pass
+- [x] TypeScript: 0 errors
