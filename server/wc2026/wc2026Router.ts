@@ -25,7 +25,7 @@ import {
   wc2026BettingSplits,
   wc2026Lineups,
 } from "../../drizzle/wc2026.schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
@@ -227,6 +227,54 @@ export const wc2026Router = router({
           )
         )
         .orderBy(wc2026Lineups.teamId, wc2026Lineups.isStarter, wc2026Lineups.position);
+    }),
+
+  // ─── Lineups by date ──────────────────────────────────────────────────────
+  lineupsByDate: publicProcedure
+    .input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      // Get all fixtures for this date
+      const fixtures = await db
+        .select()
+        .from(wc2026Fixtures)
+        .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
+        .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+
+      if (fixtures.length === 0) return [];
+
+      const [teams, venues] = await Promise.all([
+        db.select().from(wc2026Teams),
+        db.select().from(wc2026Venues),
+      ]);
+
+      const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
+      const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
+      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+
+      // Get all lineups for these fixtures in one query
+      const allLineups = fixtureIds.length > 0
+        ? await db
+            .select()
+            .from(wc2026Lineups)
+            .where(inArray(wc2026Lineups.fixtureId, fixtureIds))
+            .orderBy(wc2026Lineups.fixtureId, wc2026Lineups.teamId, wc2026Lineups.isStarter, wc2026Lineups.position)
+        : [];
+
+      // Group lineups by fixtureId
+      const lineupMap: Record<string, typeof allLineups> = {};
+      for (const row of allLineups) {
+        if (!lineupMap[row.fixtureId]) lineupMap[row.fixtureId] = [];
+        lineupMap[row.fixtureId].push(row);
+      }
+
+      return fixtures.map((f: WcFixture) => ({
+        ...f,
+        homeTeam: teamMap[f.homeTeamId] ?? null,
+        awayTeam: teamMap[f.awayTeamId] ?? null,
+        venue: venueMap[f.venueId] ?? null,
+        lineups: lineupMap[f.fixtureId] ?? [],
+      }));
     }),
 
   // ─── Today's fixtures with DK 1X2 odds (main page feed) ──────────────────
