@@ -35,6 +35,7 @@ const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 const ManageAccount = lazy(() => import('./pages/ManageAccount'));
 const Pricing = lazy(() => import('./pages/Pricing'));
+const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -141,6 +142,8 @@ function Router() {
       <Route path="/resources">{() => <RequireAuth><Resources /></RequireAuth>}</Route>
       {/* Manage Account page */}
       <Route path="/account">{() => <RequireAuth><ManageAccount /></RequireAuth>}</Route>
+      {/* FIFA World Cup 2026 — Group Stage Feed */}
+      <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
       {/* 404 */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

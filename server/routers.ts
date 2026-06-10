@@ -15,6 +15,7 @@ import {
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { wc2026Router } from "./wc2026/wc2026Router";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
   deleteModelFile,
@@ -176,6 +177,7 @@ export const appRouter = router({
   nhlSchedule: nhlScheduleRouter,
   jackMac: jackMacRouter,
   stripe: stripeRouter,
+  wc2026: wc2026Router,
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
   auth: router({

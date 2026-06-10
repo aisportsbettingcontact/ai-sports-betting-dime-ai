@@ -40,6 +40,7 @@ import { registerRgProxyRoute } from "../rotogrinderProxy";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
+import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -424,6 +425,12 @@ async function startServer() {
   // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
   // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
   registerRotoLineupsHeartbeat(app);
+
+  // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
+  // POST /api/heartbeat/wc2026-odds    — every 30 min (5 min near kickoff)
+  // POST /api/heartbeat/wc2026-splits  — every 10 min
+  // POST /api/heartbeat/wc2026-lineups — every 10 min
+  registerWc2026Heartbeats(app);
 
   // tRPC API
   app.use(

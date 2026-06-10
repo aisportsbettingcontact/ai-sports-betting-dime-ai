@@ -680,6 +680,13 @@
       "when": 1779741242375,
       "tag": "0096_dry_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "5",
+      "when": 1781125346880,
+      "tag": "0097_happy_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
