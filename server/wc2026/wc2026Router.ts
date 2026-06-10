@@ -60,6 +60,8 @@ export const wc2026Router = router({
         .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
         .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
 
+      if (fixtures.length === 0) return [];
+
       const [teams, venues] = await Promise.all([
         db.select().from(wc2026Teams),
         db.select().from(wc2026Venues),
@@ -67,12 +69,44 @@ export const wc2026Router = router({
 
       const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
+      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+
+      // Fetch latest DraftKings (book_id=68) 1X2 + TOTAL odds for this date's fixtures
+      const oddsRows = await db
+        .select()
+        .from(wc2026OddsSnapshots)
+        .where(eq(wc2026OddsSnapshots.bookId, 68))
+        .orderBy(desc(wc2026OddsSnapshots.snapshotTs));
+
+      // Build odds map: fixtureId → { home?, away?, draw?, overLine?, overOdds?, underOdds? }
+      const oddsMap: Record<string, { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number }> = {};
+      const seen = new Set<string>();
+      for (const row of oddsRows as WcOddsRow[]) {
+        if (!fixtureIds.includes(row.fixtureId)) continue;
+        if (!oddsMap[row.fixtureId]) oddsMap[row.fixtureId] = {};
+        const key = `${row.fixtureId}:${row.market}:${row.selection}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          const o = oddsMap[row.fixtureId] as Record<string, number | undefined>;
+          if (row.market === "1X2") {
+            o[row.selection] = row.americanOdds;
+          } else if (row.market === "TOTAL") {
+            if (row.selection === "over") {
+              o["overLine"] = row.line ?? undefined;
+              o["overOdds"] = row.americanOdds;
+            } else if (row.selection === "under") {
+              o["underOdds"] = row.americanOdds;
+            }
+          }
+        }
+      }
 
       return fixtures.map((f: WcFixture) => ({
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
         venue: venueMap[f.venueId] ?? null,
+        dkOdds: oddsMap[f.fixtureId] ?? null,
       }));
     }),
 
@@ -217,28 +251,33 @@ export const wc2026Router = router({
     const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
     const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-    // Fetch latest DraftKings (book_id=68) 1X2 odds for today's fixtures
+    // Fetch latest DraftKings (book_id=68) 1X2 + TOTAL odds for today's fixtures
     const oddsRows = await db
       .select()
       .from(wc2026OddsSnapshots)
-      .where(
-        and(
-          eq(wc2026OddsSnapshots.bookId, 68),
-          eq(wc2026OddsSnapshots.market, "1X2")
-        )
-      )
+      .where(eq(wc2026OddsSnapshots.bookId, 68))
       .orderBy(desc(wc2026OddsSnapshots.snapshotTs));
 
-    // Build odds map: fixtureId → { home?, away?, draw? }
-    const oddsMap: Record<string, { home?: number; away?: number; draw?: number }> = {};
+    // Build odds map: fixtureId → { home?, away?, draw?, overLine?, overOdds?, underOdds? }
+    const oddsMap: Record<string, { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number }> = {};
     const seen = new Set<string>();
     for (const row of oddsRows as WcOddsRow[]) {
       if (!fixtureIds.includes(row.fixtureId)) continue;
       if (!oddsMap[row.fixtureId]) oddsMap[row.fixtureId] = {};
-      const key = `${row.fixtureId}:${row.selection}`;
+      const key = `${row.fixtureId}:${row.market}:${row.selection}`;
       if (!seen.has(key)) {
         seen.add(key);
-        (oddsMap[row.fixtureId] as Record<string, number>)[row.selection] = row.americanOdds;
+        const o = oddsMap[row.fixtureId] as Record<string, number | undefined>;
+        if (row.market === "1X2") {
+          o[row.selection] = row.americanOdds;
+        } else if (row.market === "TOTAL") {
+          if (row.selection === "over") {
+            o["overLine"] = row.line ?? undefined;
+            o["overOdds"] = row.americanOdds;
+          } else if (row.selection === "under") {
+            o["underOdds"] = row.americanOdds;
+          }
+        }
       }
     }
 

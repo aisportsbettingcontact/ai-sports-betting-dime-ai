@@ -4065,3 +4065,14 @@
 - [x] Model all 15 June 3, 2026 MLB games: 15/15 written, 0 errors
 - [x] DB validation audit: all 15 games pass all critical gates (ML, RL, Total, F5, NRFI, HR Props)
 - [x] TypeScript: 0 errors
+
+## Session: 2026-06-10 - WORLD CUP Tab Rebuild
+
+- [x] Rename WC pill in ModelProjections.tsx from "WC" to "WORLD CUP" with FIFA WC26 logo
+- [x] Rebuild WorldCup2026.tsx with 5 sub-tabs: PROJECTIONS, SPLITS, LINEUPS, STANDINGS, FUTURES
+- [x] PROJECTIONS tab: date selector (Jun 11–17), fixture cards with 3-way market layout (HOME ML, DRAW, AWAY ML, OVER, UNDER)
+- [x] Update wc2026Router.ts fixturesByDate: include DK NJ 1X2 + TOTAL odds in response (same pattern as todayWithOdds)
+- [x] Update wc2026Router.ts todayWithOdds: extend odds map to include TOTAL market (overLine, overOdds, underOdds)
+- [x] SPLITS/LINEUPS/STANDINGS/FUTURES tabs: "Coming soon" stubs
+- [x] TypeScript: 0 errors
+- [x] Tests: 1038/1038 passing
