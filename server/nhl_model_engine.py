@@ -263,7 +263,12 @@ def compute_pace_factor(away_stats: dict, home_stats: dict) -> float:
 GOALIE_REGRESSION_K = 500  # shots-against prior equivalent
 
 
-def compute_goalie_multiplier(gsax: float, shots_faced: int, gp: int, goalie_regression_k: float = GOALIE_REGRESSION_K) -> float:
+def compute_goalie_multiplier(
+    gsax: float,
+    shots_faced: int,
+    gp: int,
+    goalie_regression_k: float = GOALIE_REGRESSION_K,
+) -> float:
     """
     Section 3 — GOALIE MODEL (Bayesian-regressed):
       raw_effect       = GSAX / shots_faced
@@ -604,6 +609,7 @@ def calculate_probs(away_scores: np.ndarray, home_scores: np.ndarray) -> dict:
 # Extreme values (e.g. -1473) indicate a model calibration issue and must be clamped.
 _MAX_NHL_ODDS = 800
 
+
 def prob_to_ml(p: float) -> int:
     """
     Section 8: Convert win probability to American moneyline (no vig, fair value).
@@ -650,7 +656,7 @@ def build_total_distribution(
     """
     totals = (away_scores + home_scores).astype(int)
     unique, counts = np.unique(totals, return_counts=True)
-    return {int(k): int(v) for k, v in zip(unique, counts)}
+    return {int(k): int(v) for k, v in zip(unique, counts, strict=False)}
 
 
 def build_margin_distribution(
@@ -665,7 +671,7 @@ def build_margin_distribution(
     """
     margins = home_scores.astype(int) - away_scores.astype(int)
     unique, counts = np.unique(margins, return_counts=True)
-    return {int(k): int(v) for k, v in zip(unique, counts)}
+    return {int(k): int(v) for k, v in zip(unique, counts, strict=False)}
 
 
 def prob_total_over(score_counts: dict[int, int], line: float, n: int) -> float:
@@ -1319,9 +1325,16 @@ def originate_game(inp: dict) -> dict:
     # normalized against PLAYOFF league averages (not regular season averages).
     playoff_mode = bool(inp.get("playoff_mode", False))
     if playoff_mode:
-        effective_league_goal_rate = 2.83   # Playoff all-sit goals/team/game (2025-26 calibrated)
-        effective_goalie_regression_k = 200  # Smaller prior: playoff goalies have 200-350 SA
-        print(f"[NHLModel]   ► PLAYOFF MODE: league_goal_rate={effective_league_goal_rate} goalie_k={effective_goalie_regression_k}", file=sys.stderr)
+        effective_league_goal_rate = (
+            2.83  # Playoff all-sit goals/team/game (2025-26 calibrated)
+        )
+        effective_goalie_regression_k = (
+            200  # Smaller prior: playoff goalies have 200-350 SA
+        )
+        print(
+            f"[NHLModel]   ► PLAYOFF MODE: league_goal_rate={effective_league_goal_rate} goalie_k={effective_goalie_regression_k}",
+            file=sys.stderr,
+        )
     else:
         effective_league_goal_rate = LEAGUE_GOAL_RATE
         effective_goalie_regression_k = GOALIE_REGRESSION_K
@@ -1690,7 +1703,7 @@ if __name__ == "__main__":
                 for game_inp in inp:
                     try:
                         result.append(originate_game(game_inp))
-                    except Exception as ge:
+                    except Exception as ge:  # noqa: PERF203
                         import traceback
 
                         result.append(

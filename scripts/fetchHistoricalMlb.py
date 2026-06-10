@@ -33,13 +33,38 @@ REQUEST_DELAY = 0.15  # seconds between API calls to avoid rate limiting
 
 # MLB team abbreviation map (API teamId → standard abbrev)
 TEAM_ID_TO_ABBREV = {
-    108: "LAA", 109: "ARI", 110: "BAL", 111: "BOS", 112: "CHC",
-    113: "CIN", 114: "CLE", 115: "COL", 116: "DET", 117: "HOU",
-    118: "KC",  119: "LAD", 120: "WSH", 121: "NYM", 133: "ATH",
-    134: "PIT", 135: "SD",  136: "SEA", 137: "SF",  138: "STL",
-    139: "TB",  140: "TEX", 141: "TOR", 142: "MIN", 143: "PHI",
-    144: "ATL", 145: "CWS", 146: "MIA", 147: "NYY", 158: "MIL",
+    108: "LAA",
+    109: "ARI",
+    110: "BAL",
+    111: "BOS",
+    112: "CHC",
+    113: "CIN",
+    114: "CLE",
+    115: "COL",
+    116: "DET",
+    117: "HOU",
+    118: "KC",
+    119: "LAD",
+    120: "WSH",
+    121: "NYM",
+    133: "ATH",
+    134: "PIT",
+    135: "SD",
+    136: "SEA",
+    137: "SF",
+    138: "STL",
+    139: "TB",
+    140: "TEX",
+    141: "TOR",
+    142: "MIN",
+    143: "PHI",
+    144: "ATL",
+    145: "CWS",
+    146: "MIA",
+    147: "NYY",
+    158: "MIL",
 }
+
 
 def fetch_schedule_chunk(start_date: str, end_date: str, season: str) -> list:
     """Fetch schedule with linescore for a date range."""
@@ -56,6 +81,7 @@ def fetch_schedule_chunk(start_date: str, end_date: str, season: str) -> list:
     except Exception as e:
         print(f"  [ERROR] fetch_schedule_chunk({start_date}-{end_date}): {e}")
         return []
+
 
 def parse_game(game: dict) -> dict | None:
     """
@@ -130,8 +156,11 @@ def parse_game(game: dict) -> dict | None:
         "awayByInning": away_by_inning,
         "homeByInning": home_by_inning,
         "totalRuns": int(away_final) + int(home_final),
-        "f5TotalRuns": (int(away_f5) + int(home_f5)) if (away_f5 is not None and home_f5 is not None) else None,
+        "f5TotalRuns": (int(away_f5) + int(home_f5))
+        if (away_f5 is not None and home_f5 is not None)
+        else None,
     }
+
 
 def date_range_chunks(start: str, end: str, chunk_days: int = 7):
     """Generate (start, end) date string pairs in chunks."""
@@ -142,6 +171,7 @@ def date_range_chunks(start: str, end: str, chunk_days: int = 7):
         chunk_end = min(cur + timedelta(days=chunk_days - 1), end_dt)
         yield cur.strftime(fmt), chunk_end.strftime(fmt)
         cur += timedelta(days=chunk_days)
+
 
 def main():
     print("[INPUT] Starting MLB historical data fetch")
@@ -157,8 +187,10 @@ def main():
         season_games = []
         chunk_count = 0
 
-        for chunk_start, chunk_end in date_range_chunks(start_date, end_date, chunk_days=7):
-            chunk_count += 1
+        for chunk_start, chunk_end in date_range_chunks(
+            start_date, end_date, chunk_days=7
+        ):
+            chunk_count += 1  # noqa: SIM113
             dates = fetch_schedule_chunk(chunk_start, chunk_end, season)
             chunk_games = 0
             for date_obj in dates:
@@ -169,16 +201,24 @@ def main():
                         chunk_games += 1
 
             if chunk_count % 5 == 0 or chunk_games > 0:
-                print(f"  [STATE] Chunk {chunk_start}→{chunk_end}: {chunk_games} games parsed (season total: {len(season_games)})")
+                print(
+                    f"  [STATE] Chunk {chunk_start}→{chunk_end}: {chunk_games} games parsed (season total: {len(season_games)})"
+                )
 
             time.sleep(REQUEST_DELAY)
 
         nrfi_count = sum(1 for g in season_games if g["nrfiResult"] == "NRFI")
         yrfi_count = sum(1 for g in season_games if g["nrfiResult"] == "YRFI")
         nrfi_rate = nrfi_count / len(season_games) if season_games else 0
-        avg_total = sum(g["totalRuns"] for g in season_games) / len(season_games) if season_games else 0
+        avg_total = (
+            sum(g["totalRuns"] for g in season_games) / len(season_games)
+            if season_games
+            else 0
+        )
         f5_games = [g for g in season_games if g["f5TotalRuns"] is not None]
-        avg_f5 = sum(g["f5TotalRuns"] for g in f5_games) / len(f5_games) if f5_games else 0
+        avg_f5 = (
+            sum(g["f5TotalRuns"] for g in f5_games) / len(f5_games) if f5_games else 0
+        )
 
         season_stats[season] = {
             "total_games": len(season_games),
@@ -189,7 +229,9 @@ def main():
             "avg_f5_runs": round(avg_f5, 3),
         }
 
-        print(f"[OUTPUT] Season {season}: {len(season_games)} games | NRFI={nrfi_count}({nrfi_rate:.1%}) | avg_total={avg_total:.3f} | avg_f5={avg_f5:.3f}")
+        print(
+            f"[OUTPUT] Season {season}: {len(season_games)} games | NRFI={nrfi_count}({nrfi_rate:.1%}) | avg_total={avg_total:.3f} | avg_f5={avg_f5:.3f}"
+        )
         all_games.extend(season_games)
 
     print()
@@ -208,6 +250,7 @@ def main():
 
     print(f"[OUTPUT] Written to {OUTPUT_FILE}")
     print("[VERIFY] PASS — historical data fetch complete")
+
 
 if __name__ == "__main__":
     main()

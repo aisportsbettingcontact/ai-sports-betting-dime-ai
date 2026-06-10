@@ -59,7 +59,6 @@ import json
 import math
 import warnings
 from datetime import datetime
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -235,10 +234,10 @@ class DataIngestion:
         self.plays_path = plays_path
         self.statcast_path = statcast_path
         self.crosswalk_path = crosswalk_path
-        self.plays: Optional[pd.DataFrame] = None
-        self.statcast_batters: Dict[int, dict] = {}
-        self.statcast_pitchers: Dict[int, dict] = {}
-        self.crosswalk: Dict[str, int] = {}
+        self.plays: pd.DataFrame | None = None
+        self.statcast_batters: dict[int, dict] = {}
+        self.statcast_pitchers: dict[int, dict] = {}
+        self.crosswalk: dict[str, int] = {}
         # Per-player split tables (populated by _compute_splits)
         self.pitcher_splits_platoon: dict = {}
         self.pitcher_splits_ha: dict = {}
@@ -338,7 +337,7 @@ class DataIngestion:
 
     def _load_statcast(self):
         print(f"  Statcast: {self.statcast_path}")
-        with open(self.statcast_path, "r") as f:
+        with open(self.statcast_path) as f:
             sc = json.load(f)
         for rec in sc.get("batters", []):
             pid = rec.get("player_id")
@@ -586,10 +585,10 @@ class StrikeoutProjectionModel:
         rng=None,
         n_sims: int = 100_000,
         pitcher_rs_id: str = "",
-        lineup_rs_ids: Optional[List[str]] = None,
-        lineup_spots: Optional[List[int]] = None,
+        lineup_rs_ids: list[str] | None = None,
+        lineup_spots: list[int] | None = None,
         is_home_pitcher: bool = True,
-        data: Optional[DataIngestion] = None,
+        data: DataIngestion | None = None,
     ) -> dict:
 
         if rng is None:
@@ -652,7 +651,7 @@ class StrikeoutProjectionModel:
 
         batter_k_probs = []
         matchup_rows = []
-        for i, (bf, wt) in enumerate(zip(lineup_feats, weights)):
+        for i, (bf, wt) in enumerate(zip(lineup_feats, weights, strict=False)):
             bat_hand = bf.get("bat_hand", "R")
             rs_id = rs_ids[i] if i < len(rs_ids) else ""
             spot = spots[i] if i < len(spots) else (i + 1)
@@ -697,7 +696,7 @@ class StrikeoutProjectionModel:
         pit_whiff = float(pitcher_feats.get("whiff_pct", LEAGUE_WHIFF_PCT / 100.0))
         lu_whiff = sum(
             b.get("whiff_pct", LEAGUE_WHIFF_PCT / 100.0) * w
-            for b, w in zip(lineup_feats, w_norm)
+            for b, w in zip(lineup_feats, w_norm, strict=False)
         )
         whiff_z = (pit_whiff * 100 - LEAGUE_WHIFF_PCT) / SD_WHIFF_PCT
         lu_whiff_z = (lu_whiff * 100 - LEAGUE_WHIFF_PCT) / SD_WHIFF_PCT
@@ -715,11 +714,11 @@ class StrikeoutProjectionModel:
         )
         lu_iz_con = sum(
             b.get("iz_contact_pct", LEAGUE_IZ_CONTACT / 100.0) * w
-            for b, w in zip(lineup_feats, w_norm)
+            for b, w in zip(lineup_feats, w_norm, strict=False)
         )
         lu_oz_con = sum(
             b.get("oz_contact_pct", LEAGUE_OZ_CONTACT / 100.0) * w
-            for b, w in zip(lineup_feats, w_norm)
+            for b, w in zip(lineup_feats, w_norm, strict=False)
         )
         f_str_z = (pit_f_str * 100 - LEAGUE_F_STRIKE_PCT) / SD_F_STRIKE_PCT
         iz_con_z = -(pit_iz_con * 100 - LEAGUE_IZ_CONTACT) / SD_IZ_CONTACT
@@ -925,38 +924,6 @@ def _format_name(raw: str) -> str:
 # ============================================================
 # HTML GENERATOR
 # ============================================================
-def _heat_class_k(pct: float) -> str:
-    if pct >= 25:
-        return "hk4"
-    if pct >= 18:
-        return "hk3"
-    if pct >= 10:
-        return "hk2"
-    if pct >= 3:
-        return "hk1"
-    return ""
-
-
-def _heat_class_g(pct: float) -> str:
-    if pct >= 30:
-        return "h4"
-    if pct >= 20:
-        return "h3"
-    if pct >= 10:
-        return "h2"
-    if pct >= 3:
-        return "h1"
-    return ""
-
-
-def _dist_row_k(probs: list) -> str:
-    cells = ""
-    for p in probs:
-        cls = _heat_class_k(p)
-        val = f".{round(p):02d}" if p < 10 else f".{round(p)}"
-        val = f"{p:.0f}%"
-        cells += f'<td class="{cls}">{val}</td>' if cls else f"<td>{val}</td>"
-    return cells
 
 
 def generate_html(
@@ -985,38 +952,6 @@ def generate_html(
 
     a_init = "".join(p[0] for p in away_proj["name"].split() if p)[:2].upper()
     h_init = "".join(p[0] for p in home_proj["name"].split() if p)[:2].upper()
-
-    def _matchup_table(rows: list) -> str:
-        html = """<table class="matchup-tbl">
-<tr><th>#</th><th>Batter</th><th>H</th><th>K% Raw</th><th>vs Pit</th><th>H/A</th><th>Spot</th><th>Log5</th><th>Wt</th></tr>"""
-        for r in rows:
-            html += (
-                f"<tr><td>{r['spot']}</td><td>{r['name']}</td><td>{r['hand']}</td>"
-                f"<td>{r['k_pct_raw']}%</td><td>{r['k_vs']}%</td>"
-                f"<td>{r['k_ha']}%</td><td>{r['k_lu']}%</td>"
-                f'<td class="cell-k">{r["k_log5"]}%</td>'
-                f'<td class="muted">{r["weight"]:.3f}</td></tr>'
-            )
-        html += "</table>"
-        return html
-
-    def _inning_table(rates: list) -> str:
-        html = '<table class="inn-tbl"><tr><th>Inn</th>'
-        for i in range(1, len(rates) + 1):
-            html += f"<th>{i}</th>"
-        html += "</tr><tr><td>K%</td>"
-        for r in rates:
-            html += f'<td class="cell-k">{r * 100:.1f}%</td>'
-        html += "</tr></table>"
-        return html
-
-    def _dist_cells(probs: list) -> str:
-        cells = ""
-        for p in probs:
-            cls = _heat_class_k(p)
-            disp = f"{p:.0f}%"
-            cells += f'<td class="{cls}">{disp}</td>' if cls else f"<td>{disp}</td>"
-        return cells
 
     def _prop_edge_color(p: float) -> str:
         if p >= 0.60:
@@ -1051,105 +986,6 @@ def generate_html(
     else:
         h_over_odds_disp = home_proj["k_line_odds_over"]
         h_under_odds_disp = home_proj["k_line_odds_under"]
-
-    def _market_comparison_block(proj: dict, market: dict, pit_col: str) -> str:
-        """Build the Book vs Model comparison row with edge detection."""
-        if not market:
-            return ""
-        bk_line = market.get("line", proj["k_line"])
-        bk_over_ml = market.get("over_ml", 0)
-        bk_under_ml = market.get("under_ml", 0)
-
-        # Implied probabilities from book odds (include vig)
-        def _ml2p(ml: int) -> float:
-            if ml > 0:
-                return 100 / (ml + 100)
-            if ml < 0:
-                return abs(ml) / (abs(ml) + 100)
-            return 0.5
-
-        # ── Breakeven rate = no-vig implied probability ──────────────────────────
-        # For a +ML: breakeven = 100 / (ML + 100)
-        # For a -ML: breakeven = |ML| / (|ML| + 100)
-        # This is the probability the bet must win to break even (no house edge).
-        def _breakeven(ml: int) -> float:
-            if ml > 0:
-                return 100.0 / (ml + 100.0)
-            if ml < 0:
-                return abs(ml) / (abs(ml) + 100.0)
-            return 0.5
-
-        bk_over_be = _breakeven(bk_over_ml)  # breakeven rate for Over bet
-        bk_under_be = _breakeven(bk_under_ml)  # breakeven rate for Under bet
-        # Model probability at the BOOK line (may differ from model line)
-        raw_samps = proj.get("_samps")
-        if raw_samps is not None and bk_line != proj["k_line"]:
-            import numpy as _np
-
-            samps_over = float((_np.asarray(raw_samps) > bk_line).mean())
-            samps_under = float((_np.asarray(raw_samps) <= bk_line).mean())
-        else:
-            samps_over = proj.get("p_over_market", proj["p_over_k_line"])
-            samps_under = proj.get("p_under_market", proj["p_under_k_line"])
-        # Edge = model probability minus breakeven rate
-        # Positive edge means model says this side wins more often than needed to profit
-        edge_over = samps_over - bk_over_be
-        edge_under = samps_under - bk_under_be
-        # Best edge side
-        if edge_over >= edge_under:
-            best_side = "OVER"
-            best_edge = edge_over
-            best_ml = bk_over_ml
-        else:
-            best_side = "UNDER"
-            best_edge = edge_under
-            best_ml = bk_under_ml
-        # Verdict: EDGE if model prob > breakeven by ≥3%, FADE if below by ≥3%
-        edge_col = (
-            "#39FF14"
-            if best_edge >= 0.03
-            else ("#FF2D55" if best_edge <= -0.03 else "#EDF2F7")
-        )
-        verdict = (
-            "EDGE"
-            if best_edge >= 0.03
-            else ("FADE" if best_edge <= -0.03 else "NEUTRAL")
-        )
-        verdict_col = edge_col
-        bk_over_str = f"+{bk_over_ml}" if bk_over_ml > 0 else str(bk_over_ml)
-        bk_under_str = f"+{bk_under_ml}" if bk_under_ml > 0 else str(bk_under_ml)
-        best_ml_str = f"+{best_ml}" if best_ml > 0 else str(best_ml)
-        return f"""
-<div class="mkt-cmp-card" style="border-color:{pit_col}22">
-  <div class="mkt-cmp-title" style="color:{pit_col}">Market vs Model</div>
-  <div class="mkt-cmp-row">
-    <div class="mkt-col">
-      <div class="mkt-col-lbl">BOOK LINE</div>
-      <div class="mkt-col-val">{bk_line}</div>
-      <div class="mkt-col-sub">o{bk_line} {bk_over_str} / u{bk_line} {bk_under_str}</div>
-    </div>
-    <div class="mkt-col">
-      <div class="mkt-col-lbl">MODEL PROJ</div>
-      <div class="mkt-col-val" style="color:var(--neon-k)">{proj["k_proj"]}</div>
-      <div class="mkt-col-sub">Model line: <strong style="color:var(--neon-k)">{proj["k_line"]}</strong></div>
-    </div>
-    <div class="mkt-col">
-      <div class="mkt-col-lbl">OVER {bk_line}</div>
-      <div class="mkt-col-val">{samps_over * 100:.1f}%</div>
-      <div class="mkt-col-sub">Breakeven: {bk_over_be * 100:.1f}% &nbsp; Δ{edge_over * 100:+.1f}%</div>
-    </div>
-    <div class="mkt-col">
-      <div class="mkt-col-lbl">UNDER {bk_line}</div>
-      <div class="mkt-col-val">{samps_under * 100:.1f}%</div>
-      <div class="mkt-col-sub">Breakeven: {bk_under_be * 100:.1f}% &nbsp; Δ{edge_under * 100:+.1f}%</div>
-    </div>
-    <div class="mkt-col mkt-verdict">
-      <div class="mkt-col-lbl">EDGE VERDICT</div>
-      <div class="mkt-verdict-badge" style="color:{verdict_col};border-color:{verdict_col}33">{verdict}</div>
-      <div class="mkt-col-sub" style="color:{edge_col}">{best_side} {bk_line} {best_ml_str} &nbsp; {best_edge * 100:+.1f}% edge</div>
-    </div>
-  </div>
-</div>"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1472,7 +1308,7 @@ def main():
     fe = FeatureEngineer(data)
 
     # 2. Build lineups — use CLI args if provided, else auto-detect from plays
-    def _auto_lineup(team: str, n: int = 9) -> List[str]:
+    def _auto_lineup(team: str, n: int = 9) -> list[str]:
         plays = data.plays
         if "batteam" in plays.columns:
             ids = (

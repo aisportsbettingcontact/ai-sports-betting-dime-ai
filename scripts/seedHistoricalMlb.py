@@ -27,6 +27,7 @@ import mysql.connector
 INPUT_FILE = "/home/ubuntu/mlb_historical_results.json"
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
+
 def parse_db_url(url: str) -> dict:
     url = url.replace("mysql2://", "mysql://").replace("mysql://", "")
     user_pass, rest = url.split("@", 1)
@@ -38,39 +39,54 @@ def parse_db_url(url: str) -> dict:
     else:
         host, port = host_port, 3306
     dbname = dbname.split("?")[0]
-    return {"host": host, "port": port, "user": user, "password": password, "database": dbname}
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "database": dbname,
+    }
+
 
 def get_conn():
     cfg = parse_db_url(DATABASE_URL)
     return mysql.connector.connect(
-        host=cfg["host"], port=cfg["port"],
-        user=cfg["user"], password=cfg["password"],
-        database=cfg["database"], ssl_disabled=False,
+        host=cfg["host"],
+        port=cfg["port"],
+        user=cfg["user"],
+        password=cfg["password"],
+        database=cfg["database"],
+        ssl_disabled=False,
         connection_timeout=30,
     )
 
+
 def get_existing_game_pks(conn) -> set:
     cur = conn.cursor()
-    cur.execute("SELECT mlbGamePk FROM games WHERE sport = 'MLB' AND mlbGamePk IS NOT NULL")
+    cur.execute(
+        "SELECT mlbGamePk FROM games WHERE sport = 'MLB' AND mlbGamePk IS NOT NULL"
+    )
     rows = cur.fetchall()
     cur.close()
     return {r[0] for r in rows}
 
+
 def insert_historical_game(conn, game: dict) -> str:
     """Insert a single historical game. Returns 'inserted', 'duplicate', or 'error:<msg>'"""
-    game_pk   = game["gamePk"]
+    game_pk = game["gamePk"]
     game_date = game["gameDate"]
-    away      = game["awayTeam"]
-    home      = game["homeTeam"]
-    away_fin  = game["awayFinalScore"]
-    home_fin  = game["homeFinalScore"]
-    away_f5   = game.get("awayF5Score")
-    home_f5   = game.get("homeF5Score")
-    nrfi      = game.get("nrfiResult")   # 'NRFI' or 'YRFI'
+    away = game["awayTeam"]
+    home = game["homeTeam"]
+    away_fin = game["awayFinalScore"]
+    home_fin = game["homeFinalScore"]
+    away_f5 = game.get("awayF5Score")
+    home_f5 = game.get("homeF5Score")
+    nrfi = game.get("nrfiResult")  # 'NRFI' or 'YRFI'
 
     cur = conn.cursor()
     try:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO games (
                 fileId, gameDate, startTimeEst,
                 awayTeam, homeTeam,
@@ -90,13 +106,21 @@ def insert_historical_game(conn, game: dict) -> str:
                 %s, %s,
                 0, 0
             )
-        """, (
-            game_date, away, home, game_pk,
-            away_fin, home_fin,
-            away_f5, home_f5,
-            nrfi,
-            away_fin, home_fin,
-        ))
+        """,
+            (
+                game_date,
+                away,
+                home,
+                game_pk,
+                away_fin,
+                home_fin,
+                away_f5,
+                home_f5,
+                nrfi,
+                away_fin,
+                home_fin,
+            ),
+        )
         conn.commit()
         cur.close()
         return "inserted"
@@ -111,28 +135,32 @@ def insert_historical_game(conn, game: dict) -> str:
         cur.close()
         return f"error:{e}"
 
+
 def update_2026_actuals(conn, games_2026: list) -> dict:
     """Update 2026 games with actualF5 scores and nrfiActualResult where missing."""
     print(f"\n[STEP] Updating 2026 games with F5/NRFI actuals (n={len(games_2026)})")
     updated = skipped = errors = 0
     cur = conn.cursor()
     for g in games_2026:
-        gp   = g["gamePk"]
-        af5  = g.get("awayF5Score")
-        hf5  = g.get("homeF5Score")
+        gp = g["gamePk"]
+        af5 = g.get("awayF5Score")
+        hf5 = g.get("homeF5Score")
         nrfi = g.get("nrfiResult")
         if af5 is None or hf5 is None or nrfi is None:
             skipped += 1
             continue
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 UPDATE games
                 SET actualF5AwayScore = %s,
                     actualF5HomeScore = %s,
                     nrfiActualResult  = %s
                 WHERE mlbGamePk = %s AND sport = 'MLB'
                   AND (actualF5AwayScore IS NULL OR nrfiActualResult IS NULL)
-            """, (af5, hf5, nrfi, gp))
+            """,
+                (af5, hf5, nrfi, gp),
+            )
             if cur.rowcount > 0:
                 updated += 1
             else:
@@ -144,6 +172,7 @@ def update_2026_actuals(conn, games_2026: list) -> dict:
     cur.close()
     print(f"[OUTPUT] 2026 update: updated={updated} skipped={skipped} errors={errors}")
     return {"updated": updated, "skipped": skipped, "errors": errors}
+
 
 def main():
     print("[INPUT] MLB Historical DB Seed — starting")
@@ -161,7 +190,9 @@ def main():
     games_2025 = [g for g in all_games if g["gameDate"].startswith("2025")]
     games_2026 = [g for g in all_games if g["gameDate"].startswith("2026")]
 
-    print(f"[INPUT] Loaded: 2024={len(games_2024)} 2025={len(games_2025)} 2026={len(games_2026)} total={len(all_games)}")
+    print(
+        f"[INPUT] Loaded: 2024={len(games_2024)} 2025={len(games_2025)} 2026={len(games_2026)} total={len(all_games)}"
+    )
 
     conn = get_conn()
     print("[STATE] DB connection established")
@@ -196,12 +227,18 @@ def main():
                 s_err += 1
                 totals["error"] += 1
                 if totals["error"] <= 10:
-                    print(f"  [ERROR] {season_label} gamePk={gp} date={game['gameDate']}: {result}")
+                    print(
+                        f"  [ERROR] {season_label} gamePk={gp} date={game['gameDate']}: {result}"
+                    )
 
             if (i + 1) % 200 == 0:
-                print(f"  [STATE] {season_label}: {i+1}/{len(season_games)} processed | inserted={s_inserted} errors={s_err}")
+                print(
+                    f"  [STATE] {season_label}: {i + 1}/{len(season_games)} processed | inserted={s_inserted} errors={s_err}"
+                )
 
-        print(f"[OUTPUT] {season_label}: inserted={s_inserted} duplicate={s_dup} skipped={s_skip} errors={s_err}")
+        print(
+            f"[OUTPUT] {season_label}: inserted={s_inserted} duplicate={s_dup} skipped={s_skip} errors={s_err}"
+        )
 
     # Update 2026 games with F5/NRFI actuals
     update_2026_actuals(conn, games_2026)
@@ -217,7 +254,10 @@ def main():
     if totals["error"] == 0:
         print("[VERIFY] PASS — historical seed complete with 0 errors")
     else:
-        print(f"[VERIFY] WARN — seed complete with {totals['error']} errors (see above)")
+        print(
+            f"[VERIFY] WARN — seed complete with {totals['error']} errors (see above)"
+        )
+
 
 if __name__ == "__main__":
     main()

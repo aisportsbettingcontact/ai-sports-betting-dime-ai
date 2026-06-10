@@ -53,12 +53,12 @@ def _ensure_scipy() -> None:
 _ensure_scipy()
 # ─────────────────────────────────────────────────────────────────────────────
 
-from collections import defaultdict  # noqa: E402
-from datetime import datetime  # noqa: E402
-from typing import Dict, List, Optional, Tuple  # noqa: E402
+from collections import defaultdict
+from datetime import datetime
+from typing import Optional
 
-import numpy as np  # noqa: E402
-from scipy.stats import norm  # noqa: E402
+import numpy as np
+from scipy.stats import norm
 
 warnings.filterwarnings("ignore")
 
@@ -227,7 +227,11 @@ PARK_FACTORS = {
     "CIN": {"r": 107, "hr": 112, "h": 104},  # Great American Ball Park — HR-friendly
     "PHI": {"r": 105, "hr": 108, "h": 104},  # Citizens Bank Park
     "BOS": {"r": 104, "hr": 104, "h": 106},  # Fenway Park — hits-friendly, moderate HR
-    "NYA": {"r": 104, "hr": 109, "h": 102},  # Yankee Stadium — HR-friendly short porches
+    "NYA": {
+        "r": 104,
+        "hr": 109,
+        "h": 102,
+    },  # Yankee Stadium — HR-friendly short porches
     "BAL": {"r": 103, "hr": 108, "h": 102},  # Camden Yards — HR-friendly
     "TEX": {"r": 103, "hr": 106, "h": 102},  # Globe Life Field
     "MIL": {"r": 102, "hr": 104, "h": 101},  # American Family Field
@@ -235,24 +239,24 @@ PARK_FACTORS = {
     "HOU": {"r": 101, "hr": 100, "h": 102},  # Minute Maid Park — slight run boost
     "ATL": {"r": 101, "hr": 103, "h": 101},  # Truist Park
     "CHN": {"r": 100, "hr": 101, "h": 100},  # Wrigley Field
-    "LAN": {"r": 100, "hr": 99,  "h": 100},  # Dodger Stadium — pitcher-friendly HR
+    "LAN": {"r": 100, "hr": 99, "h": 100},  # Dodger Stadium — pitcher-friendly HR
     "NYN": {"r": 100, "hr": 100, "h": 100},  # Citi Field (renovated, more neutral)
-    "STL": {"r": 99,  "hr": 98,  "h": 99},   # Busch Stadium
-    "TOR": {"r": 99,  "hr": 100, "h": 99},   # Rogers Centre (dome)
-    "MIN": {"r": 99,  "hr": 100, "h": 98},   # Target Field
-    "SFN": {"r": 98,  "hr": 96,  "h": 99},   # Oracle Park — pitcher-friendly
-    "DET": {"r": 98,  "hr": 97,  "h": 98},   # Comerica Park
-    "CLE": {"r": 97,  "hr": 95,  "h": 97},   # Progressive Field
-    "CHA": {"r": 97,  "hr": 96,  "h": 97},   # Guaranteed Rate Field
-    "TBA": {"r": 97,  "hr": 96,  "h": 97},   # Tropicana Field (dome)
-    "PIT": {"r": 97,  "hr": 95,  "h": 97},   # PNC Park
-    "SDN": {"r": 97,  "hr": 95,  "h": 98},   # Petco Park — pitcher-friendly
-    "SEA": {"r": 96,  "hr": 93,  "h": 97},   # T-Mobile Park — very pitcher-friendly
-    "KCA": {"r": 96,  "hr": 94,  "h": 96},   # Kauffman Stadium
-    "WAS": {"r": 96,  "hr": 95,  "h": 96},   # Nationals Park
-    "ANA": {"r": 96,  "hr": 96,  "h": 97},   # Angel Stadium
-    "MIA": {"r": 95,  "hr": 91,  "h": 95},   # loanDepot Park (dome, very pitcher-friendly)
-    "OAK": {"r": 94,  "hr": 91,  "h": 94},   # Oakland Coliseum — most pitcher-friendly
+    "STL": {"r": 99, "hr": 98, "h": 99},  # Busch Stadium
+    "TOR": {"r": 99, "hr": 100, "h": 99},  # Rogers Centre (dome)
+    "MIN": {"r": 99, "hr": 100, "h": 98},  # Target Field
+    "SFN": {"r": 98, "hr": 96, "h": 99},  # Oracle Park — pitcher-friendly
+    "DET": {"r": 98, "hr": 97, "h": 98},  # Comerica Park
+    "CLE": {"r": 97, "hr": 95, "h": 97},  # Progressive Field
+    "CHA": {"r": 97, "hr": 96, "h": 97},  # Guaranteed Rate Field
+    "TBA": {"r": 97, "hr": 96, "h": 97},  # Tropicana Field (dome)
+    "PIT": {"r": 97, "hr": 95, "h": 97},  # PNC Park
+    "SDN": {"r": 97, "hr": 95, "h": 98},  # Petco Park — pitcher-friendly
+    "SEA": {"r": 96, "hr": 93, "h": 97},  # T-Mobile Park — very pitcher-friendly
+    "KCA": {"r": 96, "hr": 94, "h": 96},  # Kauffman Stadium
+    "WAS": {"r": 96, "hr": 95, "h": 96},  # Nationals Park
+    "ANA": {"r": 96, "hr": 96, "h": 97},  # Angel Stadium
+    "MIA": {"r": 95, "hr": 91, "h": 95},  # loanDepot Park (dome, very pitcher-friendly)
+    "OAK": {"r": 94, "hr": 91, "h": 94},  # Oakland Coliseum — most pitcher-friendly
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -265,7 +269,7 @@ PARK_FACTORS = {
 # ── Team NRFI rates (3yr empirical, n=5,103 games, min 20 games) ─────────────
 # Updated 2026-04-14 from mlbBacktestV2.py. Exact values from mlb_calibration_constants.json.
 # Keyed by DB team abbreviation (same as away_abbrev / home_abbrev in project_game)
-TEAM_NRFI_RATES: Dict[str, float] = {
+TEAM_NRFI_RATES: dict[str, float] = {
     "PIT": 0.5765,
     "NYM": 0.5664,
     "KC": 0.5647,
@@ -302,7 +306,7 @@ TEAM_NRFI_LEAGUE_MEAN = 0.5150  # 3yr empirical NRFI rate (n=5,103 games, was 0.
 # ── Team F5 runs scored means (3yr, n=5,103 games, used for F5 mu calibration) ─
 # Updated 2026-04-14 from mlbBacktestV2.py. Exact values from mlb_calibration_constants.json.
 # Source: team_scoring.avg_f5 field (3yr empirical, min 20 games)
-TEAM_F5_RS: Dict[str, float] = {
+TEAM_F5_RS: dict[str, float] = {
     "PIT": 2.1912,
     "NYM": 2.6844,
     "KC": 2.3029,
@@ -354,8 +358,12 @@ NRFI_PHYSICS_WEIGHT = 0.50  # simulation physics weight (sum = 1.0)
 # P3-C: Recalibrated 2026-05-10 from live 2026 data (n=597 modeled games)
 # Model avg pNRFI=0.4725 vs empirical rate=0.5093 → 7.2% systematic underestimation
 # Threshold lowered from 0.53 to 0.52 to account for model underestimation
-NRFI_COMBINED_THRESHOLD = 0.52  # geometric mean pitcher rate >= 0.52 → filter pass (P3-C recalibrated)
-NRFI_BOTH_THRESHOLD = 0.54  # both individual pitchers >= 0.54 → stronger signal (P3-C: was 0.56)
+NRFI_COMBINED_THRESHOLD = (
+    0.52  # geometric mean pitcher rate >= 0.52 → filter pass (P3-C recalibrated)
+)
+NRFI_BOTH_THRESHOLD = (
+    0.54  # both individual pitchers >= 0.54 → stronger signal (P3-C: was 0.56)
+)
 
 # ── Empirical market priors (3yr, n=5,103 games) ─────────────────────────────
 # Updated 2026-04-14 from mlbBacktestV2.py (2024+2025+2026 full season backtest)
@@ -396,30 +404,30 @@ EMPIRICAL_PRIORS = {
 # Updated 2025-05-10. Key: (outs, base_state) bitmask: 1=1B, 2=2B, 4=3B (0=empty, 7=loaded)
 # Previous values were 2015-2019 era (4.50 R/G avg) — now updated to 2024 actuals.
 RE_MATRIX = {
-    (0, 0): 0.461,   # 0 outs, bases empty
-    (0, 1): 0.831,   # 0 outs, 1B
-    (0, 2): 1.068,   # 0 outs, 2B
-    (0, 3): 1.380,   # 0 outs, 1B+2B
-    (0, 4): 1.309,   # 0 outs, 3B
-    (0, 5): 1.728,   # 0 outs, 1B+3B
-    (0, 6): 1.920,   # 0 outs, 2B+3B
-    (0, 7): 2.234,   # 0 outs, bases loaded
-    (1, 0): 0.243,   # 1 out, bases empty
-    (1, 1): 0.488,   # 1 out, 1B
-    (1, 2): 0.641,   # 1 out, 2B
-    (1, 3): 0.876,   # 1 out, 1B+2B
-    (1, 4): 0.838,   # 1 out, 3B
-    (1, 5): 1.176,   # 1 out, 1B+3B
-    (1, 6): 1.334,   # 1 out, 2B+3B
-    (1, 7): 1.503,   # 1 out, bases loaded
-    (2, 0): 0.093,   # 2 outs, bases empty
-    (2, 1): 0.214,   # 2 outs, 1B
-    (2, 2): 0.307,   # 2 outs, 2B
-    (2, 3): 0.413,   # 2 outs, 1B+2B
-    (2, 4): 0.330,   # 2 outs, 3B
-    (2, 5): 0.479,   # 2 outs, 1B+3B
-    (2, 6): 0.559,   # 2 outs, 2B+3B
-    (2, 7): 0.726,   # 2 outs, bases loaded
+    (0, 0): 0.461,  # 0 outs, bases empty
+    (0, 1): 0.831,  # 0 outs, 1B
+    (0, 2): 1.068,  # 0 outs, 2B
+    (0, 3): 1.380,  # 0 outs, 1B+2B
+    (0, 4): 1.309,  # 0 outs, 3B
+    (0, 5): 1.728,  # 0 outs, 1B+3B
+    (0, 6): 1.920,  # 0 outs, 2B+3B
+    (0, 7): 2.234,  # 0 outs, bases loaded
+    (1, 0): 0.243,  # 1 out, bases empty
+    (1, 1): 0.488,  # 1 out, 1B
+    (1, 2): 0.641,  # 1 out, 2B
+    (1, 3): 0.876,  # 1 out, 1B+2B
+    (1, 4): 0.838,  # 1 out, 3B
+    (1, 5): 1.176,  # 1 out, 1B+3B
+    (1, 6): 1.334,  # 1 out, 2B+3B
+    (1, 7): 1.503,  # 1 out, bases loaded
+    (2, 0): 0.093,  # 2 outs, bases empty
+    (2, 1): 0.214,  # 2 outs, 1B
+    (2, 2): 0.307,  # 2 outs, 2B
+    (2, 3): 0.413,  # 2 outs, 1B+2B
+    (2, 4): 0.330,  # 2 outs, 3B
+    (2, 5): 0.479,  # 2 outs, 1B+3B
+    (2, 6): 0.559,  # 2 outs, 2B+3B
+    (2, 7): 0.726,  # 2 outs, bases loaded
 }
 
 RUN_VALUES = {
@@ -441,7 +449,7 @@ class EngineLogger:
     def __init__(self, game_label: str, verbose: bool = False):
         self.game = game_label
         self.verbose = verbose
-        self.flags: List[str] = []
+        self.flags: list[str] = []
 
     def _emit(self, tag: str, msg: str):
         if self.verbose:
@@ -469,7 +477,7 @@ class EngineLogger:
         self.flags.append(issue)
         self._emit("FLAG", issue)
 
-    def log_distribution(self, label: str, arr: np.ndarray, key_numbers: List[float]):
+    def log_distribution(self, label: str, arr: np.ndarray, key_numbers: list[float]):
         if not self.verbose:
             return
         pct = np.percentile(arr, [5, 25, 50, 75, 95])
@@ -495,7 +503,7 @@ def _log5(p_pit: float, p_bat: float, p_lg: float) -> float:
     return float(np.clip(num / max(den, 1e-9), 0.0, 1.0))
 
 
-def _lineup_weights_dynamic(n: int, pitcher_k_pct: float) -> List[float]:
+def _lineup_weights_dynamic(n: int, pitcher_k_pct: float) -> list[float]:
     """
     LINEUP_DYNAMIC_RUN_WEIGHTS: adjust top/bottom split based on pitcher K%.
     High-K pitchers suppress the bottom of the order more — increase top weight.
@@ -516,8 +524,8 @@ def _nearest_half(x: float) -> float:
 
 
 def _select_optimal_total(
-    total_dist: np.ndarray, key_numbers: List[float], logger: "EngineLogger"
-) -> Tuple[float, float, float]:
+    total_dist: np.ndarray, key_numbers: list[float], logger: "EngineLogger"
+) -> tuple[float, float, float]:
     """
     Step 4: Select optimal total line from KEY_TOTAL_NUMBERS.
     Criteria: MINIMIZE |P_OVER - 0.5|, account for push mass on integers.
@@ -563,7 +571,7 @@ def ml_to_prob(odds: float) -> float:
     return abs(odds) / (abs(odds) + 100.0) if odds < 0 else 100.0 / (odds + 100.0)
 
 
-def remove_vig(p_a: float, p_b: float) -> Tuple[float, float]:
+def remove_vig(p_a: float, p_b: float) -> tuple[float, float]:
     t = p_a + p_b
     if t <= 0:
         return 0.5, 0.5
@@ -642,7 +650,7 @@ class BullpenUsageModel:
             "workload_adj": round(workload_adj, 4),
         }
 
-    def quality_by_inning(self, bullpen: dict, starter_ip: float) -> Dict[int, float]:
+    def quality_by_inning(self, bullpen: dict, starter_ip: float) -> dict[int, float]:
         xfip = bullpen.get("bullpen_xfip", 4.0)
         fatigue = bullpen.get("fatigue_score", 0.3)
         # Fatigued bullpen degrades quality in late innings
@@ -664,7 +672,7 @@ class BullpenUsageModel:
 # LAYER 6: VARIANCE MODEL
 # ─────────────────────────────────────────────────────────────────────────────
 class VarianceModel:
-    def compute(self, lineup: List[dict], pitcher: dict, env: dict) -> dict:
+    def compute(self, lineup: list[dict], pitcher: dict, env: dict) -> dict:
         n = len(lineup)
         k_pct = pitcher.get("k_pct", LEAGUE_K_PCT)
         w = _lineup_weights_dynamic(n, k_pct)
@@ -702,7 +710,7 @@ class GameStateBuilder:
 
     def build(
         self,
-        lineup: List[dict],
+        lineup: list[dict],
         opp_pitcher: dict,
         bullpen: dict,
         env: dict,
@@ -733,12 +741,12 @@ class GameStateBuilder:
         }
 
     def _weighted_pa_probs(
-        self, lineup: List[dict], pitcher: dict, tto: int, k_pct: float
+        self, lineup: list[dict], pitcher: dict, tto: int, k_pct: float
     ) -> dict:
         n = len(lineup)
         w = _lineup_weights_dynamic(n, k_pct)
-        combined: Dict[str, float] = defaultdict(float)
-        for batter, wt in zip(lineup, w):
+        combined: dict[str, float] = defaultdict(float)
+        for batter, wt in zip(lineup, w, strict=False):
             for ev, p in self.pa_model.get_pa_probs(pitcher, batter, tto).items():
                 combined[ev] += p * wt
         total = sum(combined.values())
@@ -764,7 +772,7 @@ class NBGammaMixtureDistribution:
     """
 
     @staticmethod
-    def fit_nb(mu: float, variance: float) -> Tuple[float, float]:
+    def fit_nb(mu: float, variance: float) -> tuple[float, float]:
         variance = max(variance, mu + 0.01)
         p = float(np.clip(mu / variance, 0.01, 0.99))
         r = max(0.01, (mu * p) / (1.0 - p))
@@ -815,7 +823,7 @@ def simulate_extra_innings(
     away_var: float,
     rng: np.random.Generator,
     n_sims: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Simulate extra innings for tied games using ghost runner rule (MLB 2020+).
     Ghost runner starts on 2nd base each extra inning.
@@ -834,7 +842,7 @@ def simulate_extra_innings(
     MAX_EXTRA = 6
     still_tied = np.ones(n_sims, dtype=bool)
 
-    for xi in range(MAX_EXTRA):
+    for _xi in range(MAX_EXTRA):
         if not still_tied.any():
             break
         n_tied = int(still_tied.sum())
@@ -869,7 +877,7 @@ def simulate_extra_innings(
 # STEP 2: MONTE CARLO ENGINE (full MAX SPEC)
 # ─────────────────────────────────────────────────────────────────────────────
 class MonteCarloEngine:
-    def __init__(self, n_sims: int = SIMULATIONS, seed: Optional[int] = None):
+    def __init__(self, n_sims: int = SIMULATIONS, seed: int | None = None):
         self.n_sims = int(
             np.clip(max(n_sims, MIN_SIMULATIONS), MIN_SIMULATIONS, SIM_MAX)
         )
@@ -881,23 +889,21 @@ class MonteCarloEngine:
         home_state: dict,
         away_state: dict,
         env: dict,
-        ou_line: Optional[float] = None,
+        ou_line: float | None = None,
         rl_spread: float = -1.5,
         logger: Optional[
             "EngineLogger"
         ] = None,  # ── 3yr backtest NRFI priors ─────────────────────────────────────────────────────────────────────────────
-        away_pitcher_nrfi: Optional[float] = None,  # away SP 3yr NRFI rate (0-1)
-        home_pitcher_nrfi: Optional[float] = None,  # home SP 3yr NRFI rate (0-1)
-        away_pitcher_nrfi_starts: Optional[
-            int
-        ] = None,  # away SP NRFI sample size (for Bayesian shrinkage)
-        home_pitcher_nrfi_starts: Optional[
-            int
-        ] = None,  # home SP NRFI sample size (for Bayesian shrinkage)
-        away_team_nrfi: Optional[float] = None,  # away team 3yr NRFI rate (0-1)
-        home_team_nrfi: Optional[float] = None,  # home team 3yr NRFI rate (0-1)
-        away_f5_rs: Optional[float] = None,  # away team 3yr F5 RS mean
-        home_f5_rs: Optional[float] = None,  # home team 3yr F5 RS mean
+        away_pitcher_nrfi: float | None = None,  # away SP 3yr NRFI rate (0-1)
+        home_pitcher_nrfi: float | None = None,  # home SP 3yr NRFI rate (0-1)
+        away_pitcher_nrfi_starts: int
+        | None = None,  # away SP NRFI sample size (for Bayesian shrinkage)
+        home_pitcher_nrfi_starts: int
+        | None = None,  # home SP NRFI sample size (for Bayesian shrinkage)
+        away_team_nrfi: float | None = None,  # away team 3yr NRFI rate (0-1)
+        home_team_nrfi: float | None = None,  # home team 3yr NRFI rate (0-1)
+        away_f5_rs: float | None = None,  # away team 3yr F5 RS mean
+        home_f5_rs: float | None = None,  # home team 3yr F5 RS mean
     ) -> dict:
 
         hfa = env.get("hfa_weight", HFA_BASE_WEIGHT)
@@ -979,8 +985,8 @@ class MonteCarloEngine:
         # All four constants are module-level — see lines 60-69 of this file.
 
         def _apply_nrfi_shrinkage(
-            raw_rate: Optional[float], starts: Optional[int]
-        ) -> Optional[float]:
+            raw_rate: float | None, starts: int | None
+        ) -> float | None:
             """Apply Bayesian shrinkage to pitcher NRFI rate based on sample size.
             Returns shrunk rate if starts < NRFI_MIN_STARTS_FULL, else raw_rate unchanged.
             Returns None if raw_rate is None.
@@ -1560,7 +1566,7 @@ class MarketDerivation:
         sim: dict,
         home_team: str,
         away_team: str,
-        ou_line: Optional[float] = None,
+        ou_line: float | None = None,
         logger: Optional["EngineLogger"] = None,
     ) -> dict:
 
@@ -1789,7 +1795,7 @@ class MarketDerivation:
                 _invariant_ok,
                 f"[RL-INVARIANT] P(fav covers -1.5) < P(fav wins): "
                 f"rl_spread={sim['rl_spread']:+.1f} p_hrl={p_hrl:.4f} p_arl={p_arl:.4f} "
-                f"p_home={p_home:.4f} p_away={p_away:.4f} clamped={_rl_final_clamped}"
+                f"p_home={p_home:.4f} p_away={p_away:.4f} clamped={_rl_final_clamped}",
             )
 
         # ── STEP 8: Cross-Market Consistency Engine ───────────────────────────
@@ -2035,13 +2041,13 @@ class EdgeDetector:
         where payout = book_odds/100 if book_odds > 0 else 100/abs(book_odds)
         Returns EV per unit wagered (e.g. 0.05 = 5% EV).
         """
-        if book_odds > 0:
+        if book_odds > 0:  # noqa: SIM108
             payout = book_odds / 100.0
         else:
             payout = 100.0 / abs(book_odds)
         return round(model_p * payout - (1.0 - model_p), 4)
 
-    def detect(self, market: dict, book: dict) -> List[dict]:
+    def detect(self, market: dict, book: dict) -> list[dict]:
         """
         SPEC: COMPUTE_EDGE — OPTION B: edge = model_prob - book_raw_prob (raw vs raw, no vig removal)
         SPEC: CONFIDENCE_THRESHOLD = 0.65 — only emit edges where model_p >= threshold
@@ -2074,8 +2080,8 @@ class EdgeDetector:
                     {
                         "market": label,
                         "model_p": round(model_p, 4),
-                        "book_p": round(bp_raw, 4),   # raw book prob (Option B)
-                        "book_p_nv": round(bp_nv, 4), # no-vig for reference
+                        "book_p": round(bp_raw, 4),  # raw book prob (Option B)
+                        "book_p_nv": round(bp_nv, 4),  # no-vig for reference
                         "edge": round(edge, 4),
                         "ev": ev,  # SPEC: EV per unit wagered
                         "confidence_ok": confidence_ok,  # SPEC: CONFIDENCE_THRESHOLD gate
@@ -2094,7 +2100,7 @@ class EdgeDetector:
             bup_raw = ml_to_prob(under_odds) if under_odds else 1.0 - bop_raw
             bop_nv, bup_nv = remove_vig(bop_raw, bup_raw)  # kept for reference only
             for label, mp, bp_raw_side, bp_nv_side, book_o in [
-                ("over",  market["p_over"],  bop_raw, bop_nv, over_odds),
+                ("over", market["p_over"], bop_raw, bop_nv, over_odds),
                 ("under", market["p_under"], bup_raw, bup_nv, under_odds or over_odds),
             ]:
                 edge = mp - bp_raw_side  # Option B: raw vs raw
@@ -2105,8 +2111,8 @@ class EdgeDetector:
                         {
                             "market": f"total_{label}",
                             "model_p": round(mp, 4),
-                            "book_p": round(bp_raw_side, 4),   # raw book prob (Option B)
-                            "book_p_nv": round(bp_nv_side, 4), # no-vig for reference
+                            "book_p": round(bp_raw_side, 4),  # raw book prob (Option B)
+                            "book_p_nv": round(bp_nv_side, 4),  # no-vig for reference
                             "edge": round(edge, 4),
                             "ev": ev,
                             "confidence_ok": confidence_ok,
@@ -2122,7 +2128,7 @@ class EdgeDetector:
 # VALIDATION LAYER
 # ─────────────────────────────────────────────────────────────────────────────
 class ValidationLayer:
-    def validate(self, market: dict, sim: dict) -> Tuple[bool, List[str]]:
+    def validate(self, market: dict, sim: dict) -> tuple[bool, list[str]]:
         w = []
         if (market["p_home_win"] > 0.5) != (
             market["exp_home_runs"] > market["exp_away_runs"]
@@ -2154,7 +2160,7 @@ class ValidationLayer:
 # ENVIRONMENT FEATURES
 # ─────────────────────────────────────────────────────────────────────────────
 def get_environment_features(
-    home_team_db: str, game_month: int, weather: Optional[dict] = None
+    home_team_db: str, game_month: int, weather: dict | None = None
 ) -> dict:
     retro = DB_TO_RETRO.get(home_team_db, home_team_db)
     pf = PARK_FACTORS.get(retro, {"r": 100, "hr": 100, "h": 100})
@@ -2413,42 +2419,42 @@ def project_game(
     home_pitcher_stats: dict,
     book_lines: dict,
     game_date: datetime,
-    weather: Optional[dict] = None,
+    weather: dict | None = None,
     seed: int = 42,
     verbose: bool = False,
     # ── Precision signals ───────────────────────────────────────────────────────────────────────────────
     park_factor_3yr: float = 1.0,  # 3-year weighted park run factor
-    away_bullpen: Optional[dict] = None,  # Real bullpen stats for away team
-    home_bullpen: Optional[dict] = None,  # Real bullpen stats for home team
+    away_bullpen: dict | None = None,  # Real bullpen stats for away team
+    home_bullpen: dict | None = None,  # Real bullpen stats for home team
     umpire_k_mod: float = 1.0,  # HP umpire K-rate modifier
     umpire_bb_mod: float = 1.0,  # HP umpire BB-rate modifier
     umpire_name: str = "UNKNOWN",  # HP umpire name for logging
-    mlb_game_pk: Optional[int] = None,  # MLB Stats API gamePk for traceability
+    mlb_game_pk: int | None = None,  # MLB Stats API gamePk for traceability
     # ── 3yr backtest NRFI/F5 priors (passed from mlbModelRunner via DB lookup) ──────────────────────
     # Pitcher NRFI rates: away SP's rate used for home lineup; home SP's rate for away lineup
     # If None: auto-looked up from TEAM_NRFI_RATES / TEAM_F5_RS constants
-    away_pitcher_nrfi: Optional[
-        float
-    ] = None,  # away SP 3yr NRFI rate (pitching to home lineup)
-    home_pitcher_nrfi: Optional[
-        float
-    ] = None,  # home SP 3yr NRFI rate (pitching to away lineup)
-    away_pitcher_nrfi_starts: Optional[
-        int
-    ] = None,  # away SP NRFI sample size (for Bayesian shrinkage)
-    home_pitcher_nrfi_starts: Optional[
-        int
-    ] = None,  # home SP NRFI sample size (for Bayesian shrinkage)
-    away_team_nrfi: Optional[float] = None,  # away team 3yr NRFI rate (as batting unit)
-    home_team_nrfi: Optional[float] = None,  # home team 3yr NRFI rate (as batting unit)
-    away_f5_rs: Optional[float] = None,  # away team 3yr F5 RS mean
-    home_f5_rs: Optional[float] = None,  # home team 3yr F5 RS mean
+    away_pitcher_nrfi: float
+    | None = None,  # away SP 3yr NRFI rate (pitching to home lineup)
+    home_pitcher_nrfi: float
+    | None = None,  # home SP 3yr NRFI rate (pitching to away lineup)
+    away_pitcher_nrfi_starts: int
+    | None = None,  # away SP NRFI sample size (for Bayesian shrinkage)
+    home_pitcher_nrfi_starts: int
+    | None = None,  # home SP NRFI sample size (for Bayesian shrinkage)
+    away_team_nrfi: float | None = None,  # away team 3yr NRFI rate (as batting unit)
+    home_team_nrfi: float | None = None,  # home team 3yr NRFI rate (as batting unit)
+    away_f5_rs: float | None = None,  # away team 3yr F5 RS mean
+    home_f5_rs: float | None = None,  # home team 3yr F5 RS mean
     # ── P1-B: Confirmed lineup Statcast aggregates (batting-order-weighted) ─────────────────────────────────────────────────────────────────────────────
-    away_lineup_statcast: Optional[dict] = None,  # { barrel_rate, iso, hard_hit, n_players }
-    home_lineup_statcast: Optional[dict] = None,  # { barrel_rate, iso, hard_hit, n_players }
+    away_lineup_statcast: dict
+    | None = None,  # { barrel_rate, iso, hard_hit, n_players }
+    home_lineup_statcast: dict
+    | None = None,  # { barrel_rate, iso, hard_hit, n_players }
     # ── P4-A: Per-player batting order arrays (9 slots: barrel_rate, iso, hard_hit, bats) ─────────────────────────────────────────────────────────────────────────────
-    away_lineup_order: Optional[list] = None,  # list of 9 dicts: { barrel_rate, iso, hard_hit, bats }
-    home_lineup_order: Optional[list] = None,  # list of 9 dicts: { barrel_rate, iso, hard_hit, bats }
+    away_lineup_order: list
+    | None = None,  # list of 9 dicts: { barrel_rate, iso, hard_hit, bats }
+    home_lineup_order: list
+    | None = None,  # list of 9 dicts: { barrel_rate, iso, hard_hit, bats }
 ) -> dict:
     t0 = time.time()
     game_label = f"{away_abbrev}@{home_abbrev}"
@@ -2545,25 +2551,37 @@ def project_game(
     LEAGUE_ISO_DEFAULT = 0.150
     LEAGUE_HARD_HIT = 37.5
     if away_lineup_statcast is not None:
-        n = away_lineup_statcast.get('n_players', 0)
-        barrel = away_lineup_statcast.get('barrel_rate', LEAGUE_BARREL)
-        iso_val = away_lineup_statcast.get('iso', LEAGUE_ISO_DEFAULT)
-        hard_hit = away_lineup_statcast.get('hard_hit', LEAGUE_HARD_HIT)
+        n = away_lineup_statcast.get("n_players", 0)
+        barrel = away_lineup_statcast.get("barrel_rate", LEAGUE_BARREL)
+        iso_val = away_lineup_statcast.get("iso", LEAGUE_ISO_DEFAULT)
+        hard_hit = away_lineup_statcast.get("hard_hit", LEAGUE_HARD_HIT)
         # Blend: 60% confirmed Statcast, 40% team-average (regression to mean)
         # Prevents over-fitting to small samples or outlier lineups
         STATCAST_BLEND = 0.60
-        away_lineup_feat['barrel_rate'] = float(np.clip(
-            STATCAST_BLEND * (barrel / 100.0) + (1 - STATCAST_BLEND) * away_lineup_feat['barrel_rate'],
-            0.04, 0.16
-        ))
-        away_lineup_feat['iso'] = float(np.clip(
-            STATCAST_BLEND * iso_val + (1 - STATCAST_BLEND) * away_lineup_feat['iso'],
-            0.05, 0.28
-        ))
-        away_lineup_feat['hard_hit'] = float(np.clip(
-            STATCAST_BLEND * (hard_hit / 100.0) + (1 - STATCAST_BLEND) * away_lineup_feat['hard_hit'],
-            0.25, 0.55
-        ))
+        away_lineup_feat["barrel_rate"] = float(
+            np.clip(
+                STATCAST_BLEND * (barrel / 100.0)
+                + (1 - STATCAST_BLEND) * away_lineup_feat["barrel_rate"],
+                0.04,
+                0.16,
+            )
+        )
+        away_lineup_feat["iso"] = float(
+            np.clip(
+                STATCAST_BLEND * iso_val
+                + (1 - STATCAST_BLEND) * away_lineup_feat["iso"],
+                0.05,
+                0.28,
+            )
+        )
+        away_lineup_feat["hard_hit"] = float(
+            np.clip(
+                STATCAST_BLEND * (hard_hit / 100.0)
+                + (1 - STATCAST_BLEND) * away_lineup_feat["hard_hit"],
+                0.25,
+                0.55,
+            )
+        )
         logger.state(
             f"[P1-B] AWAY Statcast inject (n={n}): "
             f"barrel={barrel:.2f}%→{away_lineup_feat['barrel_rate']:.4f} "
@@ -2571,25 +2589,39 @@ def project_game(
             f"hard_hit={hard_hit:.1f}%→{away_lineup_feat['hard_hit']:.4f}"
         )
     else:
-        logger.state("[P1-B] AWAY Statcast: no confirmed lineup data — using team averages")
+        logger.state(
+            "[P1-B] AWAY Statcast: no confirmed lineup data — using team averages"
+        )
     if home_lineup_statcast is not None:
-        n = home_lineup_statcast.get('n_players', 0)
-        barrel = home_lineup_statcast.get('barrel_rate', LEAGUE_BARREL)
-        iso_val = home_lineup_statcast.get('iso', LEAGUE_ISO_DEFAULT)
-        hard_hit = home_lineup_statcast.get('hard_hit', LEAGUE_HARD_HIT)
+        n = home_lineup_statcast.get("n_players", 0)
+        barrel = home_lineup_statcast.get("barrel_rate", LEAGUE_BARREL)
+        iso_val = home_lineup_statcast.get("iso", LEAGUE_ISO_DEFAULT)
+        hard_hit = home_lineup_statcast.get("hard_hit", LEAGUE_HARD_HIT)
         STATCAST_BLEND = 0.60
-        home_lineup_feat['barrel_rate'] = float(np.clip(
-            STATCAST_BLEND * (barrel / 100.0) + (1 - STATCAST_BLEND) * home_lineup_feat['barrel_rate'],
-            0.04, 0.16
-        ))
-        home_lineup_feat['iso'] = float(np.clip(
-            STATCAST_BLEND * iso_val + (1 - STATCAST_BLEND) * home_lineup_feat['iso'],
-            0.05, 0.28
-        ))
-        home_lineup_feat['hard_hit'] = float(np.clip(
-            STATCAST_BLEND * (hard_hit / 100.0) + (1 - STATCAST_BLEND) * home_lineup_feat['hard_hit'],
-            0.25, 0.55
-        ))
+        home_lineup_feat["barrel_rate"] = float(
+            np.clip(
+                STATCAST_BLEND * (barrel / 100.0)
+                + (1 - STATCAST_BLEND) * home_lineup_feat["barrel_rate"],
+                0.04,
+                0.16,
+            )
+        )
+        home_lineup_feat["iso"] = float(
+            np.clip(
+                STATCAST_BLEND * iso_val
+                + (1 - STATCAST_BLEND) * home_lineup_feat["iso"],
+                0.05,
+                0.28,
+            )
+        )
+        home_lineup_feat["hard_hit"] = float(
+            np.clip(
+                STATCAST_BLEND * (hard_hit / 100.0)
+                + (1 - STATCAST_BLEND) * home_lineup_feat["hard_hit"],
+                0.25,
+                0.55,
+            )
+        )
         logger.state(
             f"[P1-B] HOME Statcast inject (n={n}): "
             f"barrel={barrel:.2f}%→{home_lineup_feat['barrel_rate']:.4f} "
@@ -2597,7 +2629,9 @@ def project_game(
             f"hard_hit={hard_hit:.1f}%→{home_lineup_feat['hard_hit']:.4f}"
         )
     else:
-        logger.state("[P1-B] HOME Statcast: no confirmed lineup data — using team averages")
+        logger.state(
+            "[P1-B] HOME Statcast: no confirmed lineup data — using team averages"
+        )
 
     # ── P4-A: Build per-player lineup array from confirmed batting order ─────────────────────────────
     # When away_lineup_order is provided (confirmed lineup with Statcast data per slot),
@@ -2607,9 +2641,9 @@ def project_game(
     # _lineup_weights_dynamic(), so per-player data produces a more accurate run distribution.
     def _build_per_player_lineup(
         base_feat: dict,
-        order: Optional[list],
+        order: list | None,
         team: str,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """
         Build a 9-player lineup array.
         - If order is provided: each slot gets the player's Statcast data merged
@@ -2624,11 +2658,15 @@ def project_game(
             # Merge: base_feat provides K%, BB%, HR%, hit rates (from team splits)
             # slot provides barrel_rate, iso, hard_hit (from individual Statcast)
             player_feat = dict(base_feat)  # copy team-average base
-            player_feat['barrel_rate'] = float(slot.get('barrel_rate', base_feat.get('barrel_rate', 0.083)))
-            player_feat['iso']         = float(slot.get('iso',         base_feat.get('iso', 0.150)))
-            player_feat['hard_hit']    = float(slot.get('hard_hit',    base_feat.get('hard_hit', 0.375)))
+            player_feat["barrel_rate"] = float(
+                slot.get("barrel_rate", base_feat.get("barrel_rate", 0.083))
+            )
+            player_feat["iso"] = float(slot.get("iso", base_feat.get("iso", 0.150)))
+            player_feat["hard_hit"] = float(
+                slot.get("hard_hit", base_feat.get("hard_hit", 0.375))
+            )
             # Bats handedness (for platoon splits in P4-B)
-            player_feat['bats']        = str(slot.get('bats', 'R'))
+            player_feat["bats"] = str(slot.get("bats", "R"))
             result.append(player_feat)
         # Pad to 9 if fewer than 9 slots
         while len(result) < 9:
@@ -2642,7 +2680,7 @@ def project_game(
     home_lineup = _build_per_player_lineup(home_lineup_feat, home_lineup_order, "HOME")
 
     # ── SIGNAL 2: Build bullpen from DB stats (replace _default_bullpen) ───────────────────────────
-    def _build_bullpen_from_db(bp: Optional[dict], team: str) -> dict:
+    def _build_bullpen_from_db(bp: dict | None, team: str) -> dict:
         """Convert DB bullpen stats to engine bullpen feature dict."""
         if not bp:
             logger.state(

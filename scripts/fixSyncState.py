@@ -14,20 +14,18 @@ Fix:
 5. Expand data-watching useEffect: handle 'not_found' sentinel + reset error counter
 """
 
-import re
+filepath = "client/src/components/JackMacView.tsx"
 
-filepath = 'client/src/components/JackMacView.tsx'
-
-with open(filepath, 'r', encoding='utf-8') as f:
+with open(filepath, encoding="utf-8") as f:
     content = f.read()
 
 # ─── Locate the block by line numbers (522-596) ───────────────────────────────
-lines = content.split('\n')
+lines = content.split("\n")
 
 # Find start: line containing "Google Sheets Sync" comment
 start_line = None
 for i, line in enumerate(lines):
-    if 'Google Sheets Sync' in line and 'background job pattern' in line:
+    if "Google Sheets Sync" in line and "background job pattern" in line:
         start_line = i
         break
 
@@ -35,12 +33,12 @@ if start_line is None:
     print("ERROR: Could not find 'Google Sheets Sync — background job pattern' comment")
     exit(1)
 
-print(f"Found start at line {start_line + 1}: {repr(lines[start_line][:80])}")
+print(f"Found start at line {start_line + 1}: {lines[start_line][:80]!r}")
 
 # Find end: the closing ], [syncStatusQuery.data, isSyncPolling]); line
 end_line = None
 for i in range(start_line, min(start_line + 200, len(lines))):
-    if 'syncStatusQuery.data, isSyncPolling' in lines[i] and ']);' in lines[i]:
+    if "syncStatusQuery.data, isSyncPolling" in lines[i] and "]);" in lines[i]:
         end_line = i
         break
 
@@ -48,11 +46,13 @@ if end_line is None:
     print("ERROR: Could not find end of polling useEffect")
     exit(1)
 
-print(f"Found end at line {end_line + 1}: {repr(lines[end_line][:80])}")
-print(f"Replacing lines {start_line + 1} to {end_line + 1} ({end_line - start_line + 1} lines)")
+print(f"Found end at line {end_line + 1}: {lines[end_line][:80]!r}")
+print(
+    f"Replacing lines {start_line + 1} to {end_line + 1} ({end_line - start_line + 1} lines)"
+)
 
 # ─── New block ────────────────────────────────────────────────────────────────
-new_block = '''  // \u2500\u2500 Google Sheets Sync \u2014 background job pattern \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+new_block = """  // \u2500\u2500 Google Sheets Sync \u2014 background job pattern \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // syncToSheets.mutate() returns { jobId, runId } immediately (< 50ms)
   // OR { locked: true, existingRunId } if a run is already in progress.
   // We then poll getSyncStatus every 2s until the job completes.
@@ -208,14 +208,16 @@ new_block = '''  // \u2500\u2500 Google Sheets Sync \u2014 background job patter
         console.error(`[JACKMAC][SHEETS][VERIFY] FAIL \u2014 ${job.error}`);
       }
     }
-  }, [syncStatusQuery.data, isSyncPolling, syncConsecutiveErrors, syncJobId, clearSyncState]);'''
+  }, [syncStatusQuery.data, isSyncPolling, syncConsecutiveErrors, syncJobId, clearSyncState]);"""
 
 # Replace lines start_line to end_line (inclusive) with new_block
-new_lines = lines[:start_line] + new_block.split('\n') + lines[end_line + 1:]
-new_content = '\n'.join(new_lines)
+new_lines = lines[:start_line] + new_block.split("\n") + lines[end_line + 1 :]
+new_content = "\n".join(new_lines)
 
-with open(filepath, 'w', encoding='utf-8') as f:
+with open(filepath, "w", encoding="utf-8") as f:
     f.write(new_content)
 
-print(f"SUCCESS: Replaced {end_line - start_line + 1} lines with {len(new_block.split(chr(10)))} lines")
+print(
+    f"SUCCESS: Replaced {end_line - start_line + 1} lines with {len(new_block.split(chr(10)))} lines"
+)
 print(f"File size: {len(new_content)} bytes")

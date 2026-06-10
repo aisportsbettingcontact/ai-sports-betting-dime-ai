@@ -1,4 +1,22 @@
+# ruff.toml — ai-sports-betting Python linting configuration
+# Applies to: server/*.py, scripts/*.py, *.py (root)
+
+line-length = 88
+
 [lint]
-# E701/E702: compact inline if-return patterns are intentional in math model helpers
-# These are not bugs — they are deliberate compact notation for mathematical functions
-ignore = ["E701", "E702"]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "ARG", "PIE", "PERF", "RUF"]
+
+# Globally ignored rules:
+# E501: line-too-long — long lines are intentional in model constants, SQL, HTML templates
+# RUF001/002/003: ambiguous unicode — intentional use of en-dash and × in comments/strings/docstrings
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]
+
+[lint.per-file-ignores]
+# MLBAIModel.py: imports after _ensure_scipy() guard — scipy must be installed before import
+"server/MLBAIModel.py" = ["E402"]
+# Scripts with sys.path manipulation before model imports
+"scripts/mlbBacktestGrader.py" = ["E402"]
+"scripts/mlbV1V2Grader.py" = ["E402"]
+"scripts/smokeTestIntegration.py" = ["E402"]
+"scripts/audit_css.py" = ["E402"]
+"scripts/debug_an_dh.py" = ["E402"]

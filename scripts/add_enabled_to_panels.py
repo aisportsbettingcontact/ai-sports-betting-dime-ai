@@ -5,7 +5,9 @@
 """
 
 # ── BettingSplitsPanel ────────────────────────────────────────────────────────
-with open("/home/ubuntu/ai-sports-betting/client/src/components/BettingSplitsPanel.tsx", "r") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/BettingSplitsPanel.tsx"
+) as f:
     content = f.read()
 
 # Add getGameTeamColorsClient import
@@ -16,7 +18,9 @@ if "getGameTeamColorsClient" not in content:
     print("Added getGameTeamColorsClient import to BettingSplitsPanel")
 
 # Add enabled prop to BettingSplitsPanelProps
-old_props_end = "  /** Called whenever the user switches the SPREAD/TOTAL/MONEYLINE toggle */"
+old_props_end = (
+    "  /** Called whenever the user switches the SPREAD/TOTAL/MONEYLINE toggle */"
+)
 new_props_end = "  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;\n  /** Called whenever the user switches the SPREAD/TOTAL/MONEYLINE toggle */"
 if "enabled?: boolean" not in content:
     content = content.replace(old_props_end, new_props_end, 1)
@@ -35,14 +39,20 @@ if old_colors in content:
     content = content.replace(old_colors, new_colors, 1)
     print("Replaced teamColors tRPC call in BettingSplitsPanel")
 else:
-    print("WARNING: teamColors call not found in BettingSplitsPanel - may already be replaced")
+    print(
+        "WARNING: teamColors call not found in BettingSplitsPanel - may already be replaced"
+    )
 
-with open("/home/ubuntu/ai-sports-betting/client/src/components/BettingSplitsPanel.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/BettingSplitsPanel.tsx", "w"
+) as f:
     f.write(content)
 print("BettingSplitsPanel done\n")
 
 # ── OddsHistoryPanel ──────────────────────────────────────────────────────────
-with open("/home/ubuntu/ai-sports-betting/client/src/components/OddsHistoryPanel.tsx", "r") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/OddsHistoryPanel.tsx"
+) as f:
     content = f.read()
 
 # Add enabled prop to OddsHistoryPanelProps
@@ -55,7 +65,11 @@ if "enabled?: boolean" not in content:
         # Find the closing brace
         end_idx = content.find("\n}", idx)
         insert_pos = end_idx
-        content = content[:insert_pos] + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;" + content[insert_pos:]
+        content = (
+            content[:insert_pos]
+            + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;"
+            + content[insert_pos:]
+        )
         print("Added enabled prop to OddsHistoryPanelProps")
 
 # Wire enabled into the OddsHistoryPanel function signature
@@ -79,12 +93,16 @@ if old_query_opt in content:
     content = content.replace(old_query_opt, new_query_opt, 1)
     print("Wired enabled into OddsHistoryPanel first query")
 
-with open("/home/ubuntu/ai-sports-betting/client/src/components/OddsHistoryPanel.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/OddsHistoryPanel.tsx", "w"
+) as f:
     f.write(content)
 print("OddsHistoryPanel done\n")
 
 # ── RecentSchedulePanel ───────────────────────────────────────────────────────
-with open("/home/ubuntu/ai-sports-betting/client/src/components/RecentSchedulePanel.tsx", "r") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/RecentSchedulePanel.tsx"
+) as f:
     content = f.read()
 
 # Add enabled prop to RecentSchedulePanelProps
@@ -93,7 +111,11 @@ if "enabled?: boolean" not in content:
     idx = content.find(old_props)
     if idx >= 0:
         end_idx = content.find("\n}", idx)
-        content = content[:end_idx] + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;" + content[end_idx:]
+        content = (
+            content[:end_idx]
+            + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;"
+            + content[end_idx:]
+        )
         print("Added enabled prop to RecentSchedulePanelProps")
 
 # Wire enabled into function signature
@@ -111,19 +133,25 @@ if idx >= 0:
 # The queries use { enabled: enabled && sport === "MLB", ... }
 # Replace the internal 'enabled' variable with 'isDataEnabled'
 old_enabled_var = "  const enabled = !!awaySlug && !!homeSlug;"
-new_enabled_var = "  const isDataEnabled = (enabled ?? true) && !!awaySlug && !!homeSlug;"
+new_enabled_var = (
+    "  const isDataEnabled = (enabled ?? true) && !!awaySlug && !!homeSlug;"
+)
 if old_enabled_var in content:
     content = content.replace(old_enabled_var, new_enabled_var, 1)
     # Now replace all uses of 'enabled &&' in query options
     content = content.replace("enabled: enabled &&", "enabled: isDataEnabled &&")
     print("Replaced enabled variable in RecentSchedulePanel queries")
 
-with open("/home/ubuntu/ai-sports-betting/client/src/components/RecentSchedulePanel.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/RecentSchedulePanel.tsx", "w"
+) as f:
     f.write(content)
 print("RecentSchedulePanel done\n")
 
 # ── SituationalResultsPanel ───────────────────────────────────────────────────
-with open("/home/ubuntu/ai-sports-betting/client/src/components/SituationalResultsPanel.tsx", "r") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/SituationalResultsPanel.tsx"
+) as f:
     content = f.read()
 
 # Add enabled prop to SituationalResultsPanelProps
@@ -132,7 +160,11 @@ if "enabled?: boolean" not in content:
     idx = content.find(old_props)
     if idx >= 0:
         end_idx = content.find("\n}", idx)
-        content = content[:end_idx] + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;" + content[end_idx:]
+        content = (
+            content[:end_idx]
+            + "\n  /** IntersectionObserver gate — only fetch data when card is in viewport */\n  enabled?: boolean;"
+            + content[end_idx:]
+        )
         print("Added enabled prop to SituationalResultsPanelProps")
 
 # Wire enabled into function signature
@@ -159,7 +191,10 @@ count2 = content.count(old_q2)
 content = content.replace(old_q2, new_q2)
 print(f"Replaced {count2} NBA enabled conditions in SituationalResultsPanel")
 
-with open("/home/ubuntu/ai-sports-betting/client/src/components/SituationalResultsPanel.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/components/SituationalResultsPanel.tsx",
+    "w",
+) as f:
     f.write(content)
 print("SituationalResultsPanel done\n")
 

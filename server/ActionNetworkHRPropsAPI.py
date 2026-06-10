@@ -407,27 +407,6 @@ def _normalize_name(name: str) -> str:
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-
-def fetch_consensus_hr_props(date_str: str) -> list[dict]:
-    """
-    Full pipeline: fetch AN HR props for date, return structured records.
-    This is the external entry point called by the TypeScript orchestrator.
-
-    Args:
-        date_str: YYYYMMDD format (e.g. "20260405")
-
-    Returns:
-        List of HR prop records (see module docstring for schema).
-        db_game_map and lineup_map must be provided by the caller (TypeScript side)
-        via stdin JSON. See CLI mode below.
-    """
-    log(f"=== Fetching Consensus HR Props for {date_str} ===")
-    raw = fetch_hr_props_raw(date_str)
-    return raw  # Return raw for TypeScript to process with DB context
-
-
-# ── CLI mode (called from TypeScript via child_process) ───────────────────────
-
 if __name__ == "__main__":
     """
     CLI mode: TypeScript passes input via stdin as JSON:
