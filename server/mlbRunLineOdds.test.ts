@@ -19,14 +19,24 @@ import path from "path";
 describe("mlbModelRunner DB write block — run line odds field mapping", () => {
   const runnerPath = path.join(__dirname, "mlbModelRunner.ts");
   let source: string;
-  // The main DB write block is identified by containing 'awayModelSpread:' and 'modelRunAt:'.
-  // There is also a smaller invalidation write block (.set({ modelRunAt: null })) that appears
-  // earlier in the file when rlSignFlipDetected=true. We must target the MAIN write block.
-  // Strategy: find the .set({ block that contains 'modelAwaySpreadOdds:' (unique to main block).
+  // The main DB write block is identified by containing 'modelTotal:' with a complex IIFE expression.
+  // There is also an INVALIDATE write block (.set({ modelRunAt: null, ... })) that appears
+  // earlier in the file when rlSignFlipDetected=true. The INVALIDATE block sets modelAwaySpreadOdds: null
+  // (simple null assignment), while the MAIN block sets modelTotal: (() => { ... })() (IIFE).
+  // Strategy: find the .set({ block that contains 'modelTotal:' (unique to main block — INVALIDATE uses null).
   function getMainSetBlock(src: string): string {
-    // Match all .set({ ... }) blocks and return the one containing modelAwaySpreadOdds
+    // Match all .set({ ... }) blocks and return the MAIN write block.
+    //
+    // WHY safeAwayRunLine:
+    //   The non-greedy regex /\.set\(\{([\s\S]*?)\}\)/g stops at the first '})'.
+    //   The main write block contains an IIFE (modelTotal: (() => { ... })()) which has its own
+    //   '})' — so the regex truncates the match before modelF5AwayML (which appears after the IIFE).
+    //   'safeAwayRunLine' appears as the VALUE of awayModelSpread in the main write block,
+    //   BEFORE the IIFE, so it is captured within the truncated match.
+    //   It does NOT appear in the INVALIDATE block (which sets awayModelSpread: null).
+    //   This makes it the most reliable discriminator for the main write block.
     const allBlocks = [...src.matchAll(/\.set\(\{([\s\S]*?)\}\)/g)];
-    const mainBlock = allBlocks.find(m => m[1].includes("modelAwaySpreadOdds:"));
+    const mainBlock = allBlocks.find(m => m[1].includes("safeAwayRunLine"));
     return mainBlock ? mainBlock[1] : "";
   }
 

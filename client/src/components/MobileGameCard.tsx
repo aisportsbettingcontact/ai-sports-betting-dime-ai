@@ -304,7 +304,22 @@ if (process.env.NODE_ENV === 'development' && isMlbGame) {
     ` | mlbAwayRLLabel=${mlbAwayRLLabel ?? 'null'} mlbHomeRLLabel=${mlbHomeRLLabel ?? 'null'}`
   );
 }
-const mdlAwaySpreadStr = isMlbGame
+// ── hasModelData gate: mirrors DesktopGameCard logic ────────────────────────────────────────────
+// CRITICAL FIX (2026-06-10): MobileGameCard was rendering stale model odds (e.g. -196 for a
+// +157 ML fav) because it had no modelRunAt gate. When RL INVALIDATE fires in mlbModelRunner.ts,
+// it now nulls ALL model fields atomically. This gate ensures mobile shows '—' for all model
+// columns when modelRunAt=null (model invalidated or not yet run).
+// [INPUT]  game.modelRunAt = null (invalidated/not run) or Date (valid run)
+// [OUTPUT] hasModelData = false → all model strings render as '—'
+const hasModelData = game.modelRunAt != null;
+if (process.env.NODE_ENV === 'development' && isMlbGame) {
+  console.log(
+    `[MobileGameCard:hasModelData] ${game.awayTeam ?? '?'}@${game.homeTeam ?? '?'}` +
+    ` modelRunAt=${game.modelRunAt ?? 'null'} hasModelData=${hasModelData}` +
+    ` modelAwaySpreadOdds=${game.modelAwaySpreadOdds ?? 'null'} modelHomeSpreadOdds=${game.modelHomeSpreadOdds ?? 'null'}`
+  );
+}
+const mdlAwaySpreadStr = !hasModelData ? '—' : isMlbGame
   ? (mlbAwayRLLabel && game.modelAwaySpreadOdds
       // [FIX] fmtOddsSign ensures positive MLB RL odds display with '+' prefix
       ? `${mlbAwayRLLabel} (${fmtOddsSign(game.modelAwaySpreadOdds)})`
@@ -315,7 +330,7 @@ const mdlAwaySpreadStr = isMlbGame
           ? `${spreadSign(awayModelSpread)} (${fmtOddsSign(game.modelAwayPLOdds)})`
           : spreadSign(awayModelSpread))
       : '—');
-const mdlHomeSpreadStr = isMlbGame
+const mdlHomeSpreadStr = !hasModelData ? '—' : isMlbGame
   ? (mlbHomeRLLabel && game.modelHomeSpreadOdds
       ? `${mlbHomeRLLabel} (${fmtOddsSign(game.modelHomeSpreadOdds)})`
       : mlbHomeRLLabel ?? '—')
@@ -330,10 +345,10 @@ const mdlDisplayTotal = isNhlGame && !isNaN(bookTotal) ? bookTotal : modelTotal;
 const mdlTotalStr = !isNaN(mdlDisplayTotal) ? String(mdlDisplayTotal) : '—';
 // For NHL/MLB: total display strings include O/U odds at the model's line
 // [FIX] fmtOddsSign ensures positive over/under odds (e.g. 115) display as '+115'
-const mdlOverTotalStr  = !isNaN(mdlDisplayTotal)
+const mdlOverTotalStr  = !hasModelData ? '—' : !isNaN(mdlDisplayTotal)
   ? ((isNhlGame || isMlbGame) && game.modelOverOdds  ? `${mdlTotalStr} (${fmtOddsSign(game.modelOverOdds)})`  : mdlTotalStr)
   : '—';
-const mdlUnderTotalStr = !isNaN(mdlDisplayTotal)
+const mdlUnderTotalStr = !hasModelData ? '—' : !isNaN(mdlDisplayTotal)
   ? ((isNhlGame || isMlbGame) && game.modelUnderOdds ? `${mdlTotalStr} (${fmtOddsSign(game.modelUnderOdds)})` : mdlTotalStr)
   : '—';
 // ── Split helpers: parse "value (odds)" → { line, odds } for two-line pill rendering ──
@@ -361,8 +376,9 @@ const formatMl = (raw: string | number | null | undefined): string => {
 };
 const bkAwayMl  = formatMl(game.awayML);
 const bkHomeMl  = formatMl(game.homeML);
-const mdlAwayMl = formatMl(game.modelAwayML);
-const mdlHomeMl = formatMl(game.modelHomeML);
+// hasModelData gate: show '—' for model ML when modelRunAt=null (invalidated/not run)
+const mdlAwayMl = hasModelData ? formatMl(game.modelAwayML) : '—';
+const mdlHomeMl = hasModelData ? formatMl(game.modelHomeML) : '—';
 
 if (process.env.NODE_ENV === 'development') {
   console.log(

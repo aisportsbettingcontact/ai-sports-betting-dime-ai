@@ -1718,13 +1718,28 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
             `ML-derived would be ${_mlDerivedRlHomeSpread}. This is a split-market — awayRunLine wins.`
           );
         }
+        console.log(
+          `[INPUT]  [RL-SPREAD] id=${g.id} ${g.awayTeam}@${g.homeTeam}` +
+          ` awayRunLine=${g.awayRunLine} → rlHomeSpread=${rlHomeSpread}` +
+          ` (home=${rlHomeSpread < 0 ? 'FAV' : 'DOG'} at ${rlHomeSpread >= 0 ? '+' : ''}${rlHomeSpread})`
+        );
       } else {
         // awayRunLine is not parseable — fall back to ML direction
         rlHomeSpread = _mlDerivedRlHomeSpread;
+        console.warn(
+          `[INPUT]  [RL-SPREAD] id=${g.id} ${g.awayTeam}@${g.homeTeam}` +
+          ` awayRunLine='${g.awayRunLine}' not parseable → ML fallback rlHomeSpread=${rlHomeSpread}` +
+          ` [WARNING: RL sign guard will validate after run]`
+        );
       }
     } else {
       // No awayRunLine — use ML direction
       rlHomeSpread = _mlDerivedRlHomeSpread;
+      console.warn(
+        `[INPUT]  [RL-SPREAD] id=${g.id} ${g.awayTeam}@${g.homeTeam}` +
+        ` awayRunLine=null → ML fallback rlHomeSpread=${rlHomeSpread}` +
+        ` awayML=${g.awayML} [WARNING: RL sign guard will validate after run]`
+      );
     }
 
     const bookLines = {
@@ -2326,24 +2341,60 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       );
     }
 
-    // ── RL SIGN FLIP / INVARIANT VIOLATION: skip model write, clear modelRunAt ──
-    // When rlSignFlipDetected=true, the simulation ran with the wrong rl_home_spread.
-    // All RL-derived fields (modelHomeSpreadOdds, modelAwaySpreadOdds, spreadDiff,
-    // spreadEdge, away_rl_cover_pct, home_rl_cover_pct) are invalid and must NOT be
-    // written to the DB. Instead, only clear modelRunAt so the game re-runs next
-    // cycle with the now-correct awayRunLine value from the scraper.
+    // ── RL SIGN FLIP / INVARIANT VIOLATION: null ALL model fields atomically ──
+    // CRITICAL FIX (2026-06-10): Previously only modelRunAt was cleared, leaving stale
+    // inverted odds (e.g. -196 for a +157 ML fav) in all other model columns. The desktop
+    // GameCard gated on modelRunAt=null (hasModelData=false) and showed '—', but the mobile
+    // GameCard did NOT have this gate and rendered the stale inverted odds directly.
+    // Fix: null ALL model-derived fields atomically so both mobile and desktop show
+    // clean '—' until the game re-runs successfully with the correct rl_home_spread.
     if (rlSignFlipDetected) {
       try {
+        console.log(
+          `[INPUT]  [RL INVALIDATE] id=${r.db_id} game=${r.game}` +
+          ` awayRunLine=${r.away_run_line} bookAwaySpread=${bookAwaySpreadForGuard}` +
+          ` modelAwayML=${r.away_ml} modelHomePLCoverPct=${r.home_rl_cover_pct}%`
+        );
+        console.log(`[STEP]   Nulling ALL model fields for id=${r.db_id} — stale inverted data must not render`);
         await db.update(games)
-          .set({ modelRunAt: null })
+          .set({
+            // ── Invalidation marker ────────────────────────────────────────────────────────
+            modelRunAt:          null,
+            // ── Run line model fields ──────────────────────────────────────────────────────
+            awayModelSpread:     null,
+            homeModelSpread:     null,
+            modelAwaySpreadOdds: null,
+            modelHomeSpreadOdds: null,
+            modelAwayPLCoverPct: null,
+            modelHomePLCoverPct: null,
+            spreadDiff:          null,
+            spreadEdge:          null,
+            // ── Total model fields ────────────────────────────────────────────────────────
+            modelTotal:          null,
+            totalDiff:           null,
+            totalEdge:           null,
+            modelOverOdds:       null,
+            modelUnderOdds:      null,
+            modelOverRate:       null,
+            modelUnderRate:      null,
+            // ── Moneyline model fields ───────────────────────────────────────────────────
+            modelAwayML:         null,
+            modelHomeML:         null,
+            modelAwayWinPct:     null,
+            modelHomeWinPct:     null,
+            // ── Projected scores ───────────────────────────────────────────────────────────
+            modelAwayScore:      null,
+            modelHomeScore:      null,
+          })
           .where(eq(games.id, r.db_id));
         console.log(
-          `${TAG} [${r.db_id}] ${r.game} — [RL INVALIDATE] modelRunAt cleared. ` +
-          `Game will re-run next cycle with corrected awayRunLine.`
+          `[OUTPUT] [RL INVALIDATE] id=${r.db_id} ${r.game} — ALL model fields nulled.` +
+          ` Game will re-run next cycle with corrected awayRunLine.`
         );
+        console.log(`[VERIFY] PASS — stale model data cleared, UI will show '—' until re-run completes`);
         invalidated++;
       } catch (invErr) {
-        console.error(`${TAG} [${r.db_id}] ${r.game} — [RL INVALIDATE] DB clear failed: ${invErr}`);
+        console.error(`[RL INVALIDATE] id=${r.db_id} ${r.game} — DB clear failed: ${invErr}`);
         errors++;
       }
       continue;  // skip the full model write below
