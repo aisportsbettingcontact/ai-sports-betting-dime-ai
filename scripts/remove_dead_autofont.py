@@ -5,12 +5,16 @@ Removes lines 199-309 (the full block from the comment header to the closing bra
 """
 
 path = "client/src/components/GameCard.tsx"
-with open(path, "r") as f:
+with open(path) as f:
     content = f.read()
 
 # The dead code block starts at the comment and ends at the MobileTeamNameBlock comment
-DEAD_CODE_START = "// ── useAutoFontSize ─────────────────────────────────────────────────────────\n"
-DEAD_CODE_END = "// ── MobileTeamNameBlock ─────────────────────────────────────────────────────\n"
+DEAD_CODE_START = (
+    "// ── useAutoFontSize ─────────────────────────────────────────────────────────\n"
+)
+DEAD_CODE_END = (
+    "// ── MobileTeamNameBlock ─────────────────────────────────────────────────────\n"
+)
 
 start_idx = content.find(DEAD_CODE_START)
 end_idx = content.find(DEAD_CODE_END)

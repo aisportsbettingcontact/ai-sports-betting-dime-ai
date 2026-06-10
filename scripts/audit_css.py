@@ -3,7 +3,7 @@ import re
 CSS_FILE = "dist/public/assets/index-CJH5B5DK.css"
 
 # Find the actual CSS file dynamically
-import glob  # noqa: E402
+import glob
 
 css_files = glob.glob("dist/public/assets/*.css")
 if css_files:
@@ -24,12 +24,21 @@ for m in sorted(set(media_blocks)):
 
 # Check for md: utilities
 print("\n[STEP] md: utility checks:")
-for cls in ["md:hidden", r"md\:hidden", "md:flex", r"md\:flex", "md:block", r"md\:block"]:
+for cls in [
+    "md:hidden",
+    r"md\:hidden",
+    "md:flex",
+    r"md\:flex",
+    "md:block",
+    r"md\:block",
+]:
     count = css.count(cls)
     print(f'  "{cls}" occurrences: {count}')
 
 # Extract the 768px media block content
-match_768 = re.search(r"@media\s*\(min-width:\s*768px\)\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}", css)
+match_768 = re.search(
+    r"@media\s*\(min-width:\s*768px\)\s*\{([^}]+(?:\{[^}]*\}[^}]*)*)\}", css
+)
 if match_768:
     block = match_768.group(1)
     print(f"\n[STEP] 768px media block found ({len(block)} chars)")

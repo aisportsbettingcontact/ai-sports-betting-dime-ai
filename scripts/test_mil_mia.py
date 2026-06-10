@@ -4,6 +4,7 @@ Direct test of MLBAIModel for MIL@MIA (2026-04-17)
 Robert Gasser (league-avg) vs Janson Junk
 Runs with unbuffered output so we can see exactly where it stalls
 """
+
 import os
 import sys
 
@@ -18,43 +19,92 @@ print("[STATE] Junk: from DB stats", flush=True)
 
 # MIL team stats (2025)
 MIL_STATS = {
-    "rpg": 4.72, "era": 3.89, "avg": 0.254, "obp": 0.321, "slg": 0.415,
-    "k9": 9.2, "bb9": 3.1, "whip": 1.22, "ip_per_game": 5.4,
-    "f5_rs": 2.48, "nrfi_rate": 0.531
+    "rpg": 4.72,
+    "era": 3.89,
+    "avg": 0.254,
+    "obp": 0.321,
+    "slg": 0.415,
+    "k9": 9.2,
+    "bb9": 3.1,
+    "whip": 1.22,
+    "ip_per_game": 5.4,
+    "f5_rs": 2.48,
+    "nrfi_rate": 0.531,
 }
 
 # MIA team stats (2025)
 MIA_STATS = {
-    "rpg": 4.18, "era": 4.41, "avg": 0.258, "obp": 0.324, "slg": 0.408,
-    "k9": 8.8, "bb9": 3.4, "whip": 1.31, "ip_per_game": 5.2,
-    "f5_rs": 2.32, "nrfi_rate": 0.4663
+    "rpg": 4.18,
+    "era": 4.41,
+    "avg": 0.258,
+    "obp": 0.324,
+    "slg": 0.408,
+    "k9": 8.8,
+    "bb9": 3.4,
+    "whip": 1.31,
+    "ip_per_game": 5.2,
+    "f5_rs": 2.32,
+    "nrfi_rate": 0.4663,
 }
 
 # Robert Gasser — league-average (no 2024/2025 season stats, TJ surgery)
 GASSER_STATS = {
-    "era": 4.50, "fip": 4.50, "xfip": 4.50, "k9": 9.0, "bb9": 3.1,
-    "whip": 1.26, "ip_per_game": 5.3, "war": 1.0, "throws_hand": 1,  # L
-    "gb_rate": 0.45, "fb_rate": 0.35, "ld_rate": 0.20,
-    "hr_per_9": 1.2, "babip": 0.300,
-    "rolling_era": None, "rolling_fip": None, "rolling_k9": None,
-    "rolling_bb9": None, "rolling_ip": None, "rolling_starts": None
+    "era": 4.50,
+    "fip": 4.50,
+    "xfip": 4.50,
+    "k9": 9.0,
+    "bb9": 3.1,
+    "whip": 1.26,
+    "ip_per_game": 5.3,
+    "war": 1.0,
+    "throws_hand": 1,  # L
+    "gb_rate": 0.45,
+    "fb_rate": 0.35,
+    "ld_rate": 0.20,
+    "hr_per_9": 1.2,
+    "babip": 0.300,
+    "rolling_era": None,
+    "rolling_fip": None,
+    "rolling_k9": None,
+    "rolling_bb9": None,
+    "rolling_ip": None,
+    "rolling_starts": None,
 }
 
 # Janson Junk — from DB (2025 season)
 JUNK_STATS = {
-    "era": 4.85, "fip": 4.92, "xfip": 4.78, "k9": 7.8, "bb9": 3.2,
-    "whip": 1.38, "ip_per_game": 4.9, "war": 0.3, "throws_hand": 2,  # R
-    "gb_rate": 0.42, "fb_rate": 0.38, "ld_rate": 0.20,
-    "hr_per_9": 1.4, "babip": 0.310,
-    "rolling_era": None, "rolling_fip": None, "rolling_k9": None,
-    "rolling_bb9": None, "rolling_ip": None, "rolling_starts": None
+    "era": 4.85,
+    "fip": 4.92,
+    "xfip": 4.78,
+    "k9": 7.8,
+    "bb9": 3.2,
+    "whip": 1.38,
+    "ip_per_game": 4.9,
+    "war": 0.3,
+    "throws_hand": 2,  # R
+    "gb_rate": 0.42,
+    "fb_rate": 0.38,
+    "ld_rate": 0.20,
+    "hr_per_9": 1.4,
+    "babip": 0.310,
+    "rolling_era": None,
+    "rolling_fip": None,
+    "rolling_k9": None,
+    "rolling_bb9": None,
+    "rolling_ip": None,
+    "rolling_starts": None,
 }
 
 BOOK_LINES = {
-    "away_ml": -105, "home_ml": -115,
-    "away_rl": -1.5, "home_rl": 1.5,
-    "away_rl_odds": 165, "home_rl_odds": -200,
-    "total": 8.5, "over_odds": -110, "under_odds": -110
+    "away_ml": -105,
+    "home_ml": -115,
+    "away_rl": -1.5,
+    "home_rl": 1.5,
+    "away_rl_odds": 165,
+    "home_rl_odds": -200,
+    "total": 8.5,
+    "over_odds": -110,
+    "under_odds": -110,
 }
 
 print("[STEP] Calling project_game with verbose=True...", flush=True)
@@ -93,4 +143,5 @@ try:
 except Exception as e:
     print("[FAIL] Exception:", str(e), flush=True)
     import traceback
+
     traceback.print_exc()

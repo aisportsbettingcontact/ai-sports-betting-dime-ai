@@ -2,15 +2,18 @@
 Migrate ModelProjections.tsx to use useUrlState hook for URL query params.
 Uses line-number-based replacement to avoid whitespace matching issues.
 """
-with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "r") as f:
+
+with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx") as f:
     lines = f.readlines()
 
 # ── Step 1: Add useUrlState import after useLocation import ──────────────────
 for i, line in enumerate(lines):
     if 'import { useLocation } from "wouter";' in line:
         lines[i] = line.rstrip("\n") + "\n"
-        lines.insert(i + 1, 'import { useUrlState, type Sport } from "@/hooks/useUrlState";\n')
-        print(f"Added useUrlState import at line {i+2}")
+        lines.insert(
+            i + 1, 'import { useUrlState, type Sport } from "@/hooks/useUrlState";\n'
+        )
+        print(f"Added useUrlState import at line {i + 2}")
         break
 
 # ── Step 2: Replace lines 274-293 (state declarations) ──────────────────────
@@ -18,13 +21,20 @@ for i, line in enumerate(lines):
 start_line = None
 end_line = None
 for i, line in enumerate(lines):
-    if 'const [selectedSport, setSelectedSport] = useState<"MLB" | "NBA" | "NHL">("MLB");' in line:
+    if (
+        'const [selectedSport, setSelectedSport] = useState<"MLB" | "NBA" | "NHL">("MLB");'
+        in line
+    ):
         start_line = i
-    if start_line is not None and "const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());" in line:
+    if (
+        start_line is not None
+        and "const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());"
+        in line
+    ):
         end_line = i
         break
 
-print(f"Replacing lines {start_line+1}-{end_line+1} with useUrlState destructuring")
+print(f"Replacing lines {start_line + 1}-{end_line + 1} with useUrlState destructuring")
 
 new_state_lines = [
     "  // Architecture: URL query params for feed state (sport, date, tab, statuses)\n",
@@ -55,21 +65,24 @@ new_state_lines = [
     "  }, [activeSports]);\n",
 ]
 
-lines[start_line:end_line + 1] = new_state_lines
+lines[start_line : end_line + 1] = new_state_lines
 
 # ── Step 3: Replace feedMobileTab state + handler block ──────────────────────
 # Find the FEED_TAB_KEY / getPersistedFeedTab block
 feed_start = None
 feed_end = None
 for i, line in enumerate(lines):
-    if "type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';" in line:
+    if (
+        "type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';"
+        in line
+    ):
         feed_start = i
     if feed_start is not None and "const feedIsDual = feedMobileTab" in line:
         feed_end = i
         break
 
 if feed_start is not None and feed_end is not None:
-    print(f"Replacing feedMobileTab block: lines {feed_start+1}-{feed_end+1}")
+    print(f"Replacing feedMobileTab block: lines {feed_start + 1}-{feed_end + 1}")
     new_feed_lines = [
         "  type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';\n",
         "  // feedMobileTab now comes from URL params (via useUrlState), with localStorage fallback\n",
@@ -79,16 +92,20 @@ if feed_start is not None and feed_end is not None:
         "  };\n",
         "  const feedIsDual = feedMobileTab === 'dual';\n",
     ]
-    lines[feed_start:feed_end + 1] = new_feed_lines
+    lines[feed_start : feed_end + 1] = new_feed_lines
 else:
-    print(f"WARNING: feedMobileTab block not found (feed_start={feed_start}, feed_end={feed_end})")
+    print(
+        f"WARNING: feedMobileTab block not found (feed_start={feed_start}, feed_end={feed_end})"
+    )
 
 # ── Step 4: Verify resetUrlFilters was already applied ──────────────────────
 for i, line in enumerate(lines):
     if "resetUrlFilters()" in line:
-        print(f"resetUrlFilters already applied at line {i+1}")
+        print(f"resetUrlFilters already applied at line {i + 1}")
         break
 
-with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "w"
+) as f:
     f.writelines(lines)
 print("Migration complete")

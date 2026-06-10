@@ -3,6 +3,7 @@
 Diagnostic: Inspect Action Network API response for doubleheader fields.
 Checks today's MLB slate for any game-level fields that indicate doubleheader G1/G2.
 """
+
 import json
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -14,10 +15,13 @@ today = datetime.now(est).strftime("%Y%m%d")
 url = f"https://api.actionnetwork.com/web/v2/scoreboard/mlb?bookIds=15,30,76,75,123&date={today}&periods=event"
 print(f"[INPUT] Fetching: {url}")
 
-req = urllib.request.Request(url, headers={
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    "Accept": "application/json",
-})
+req = urllib.request.Request(
+    url,
+    headers={
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+        "Accept": "application/json",
+    },
+)
 with urllib.request.urlopen(req, timeout=15) as resp:
     data = json.loads(resp.read())
 
@@ -42,9 +46,19 @@ for g in games:
 
     # Check for any DH-related fields
     dh_fields = {}
-    for k in ["double_header", "game_number", "series_game_number", "game_type",
-              "description", "title", "neutral_site", "series_summary", "broadcast",
-              "boxscore", "score"]:
+    for k in [
+        "double_header",
+        "game_number",
+        "series_game_number",
+        "game_type",
+        "description",
+        "title",
+        "neutral_site",
+        "series_summary",
+        "broadcast",
+        "boxscore",
+        "score",
+    ]:
         if k in g:
             dh_fields[k] = g[k]
 
@@ -56,7 +70,7 @@ for g in games:
             print(f"    {k}: {v}")
 
 # Also check if there are any games with the same away+home teams (potential DH)
-from collections import defaultdict  # noqa: E402
+from collections import defaultdict
 
 matchup_count = defaultdict(list)
 for g in games:

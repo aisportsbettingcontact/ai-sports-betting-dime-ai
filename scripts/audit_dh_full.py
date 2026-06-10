@@ -3,6 +3,7 @@
 Full end-to-end doubleheader logic audit.
 Tests all 5 layers of DH handling with live data.
 """
+
 import json
 import urllib.error
 import urllib.request
@@ -12,6 +13,7 @@ PASS = "✅ PASS"
 FAIL = "❌ FAIL"
 WARN = "⚠️  WARN"
 
+
 def fetch(url, timeout=10):
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "DH-Audit/1.0"})
@@ -19,6 +21,7 @@ def fetch(url, timeout=10):
             return json.loads(r.read())
     except Exception as e:
         return {"_error": str(e)}
+
 
 print("=" * 70)
 print("DOUBLEHEADER LOGIC AUDIT — Full End-to-End Validation")
@@ -47,17 +50,25 @@ for date in TEST_DATES:
         for g in d.get("games", []):
             away = g["teams"]["away"]["team"]["abbreviation"]
             home = g["teams"]["home"]["team"]["abbreviation"]
-            pk   = g["gamePk"]
-            key  = f"{away}@{home}"
-            matchup_games.setdefault(key, []).append({
-                "gamePk": pk,
-                "status": g.get("status", {}).get("abstractGameState", "?"),
-                "awayR": g.get("linescore", {}).get("teams", {}).get("away", {}).get("runs"),
-                "homeR": g.get("linescore", {}).get("teams", {}).get("home", {}).get("runs"),
-                "away": away,
-                "home": home,
-                "date": date,
-            })
+            pk = g["gamePk"]
+            key = f"{away}@{home}"
+            matchup_games.setdefault(key, []).append(
+                {
+                    "gamePk": pk,
+                    "status": g.get("status", {}).get("abstractGameState", "?"),
+                    "awayR": g.get("linescore", {})
+                    .get("teams", {})
+                    .get("away", {})
+                    .get("runs"),
+                    "homeR": g.get("linescore", {})
+                    .get("teams", {})
+                    .get("home", {})
+                    .get("runs"),
+                    "away": away,
+                    "home": home,
+                    "date": date,
+                }
+            )
 
     for key, games in matchup_games.items():
         if len(games) >= 2:
@@ -65,16 +76,26 @@ for date in TEST_DATES:
             g1, g2 = games[0], games[1]
             dh_found[f"{date}:{key}"] = {"g1": g1, "g2": g2}
             print(f"  {PASS} DH found: {date} {key}")
-            print(f"         G1: gamePk={g1['gamePk']} score={g1['awayR']}-{g1['homeR']} status={g1['status']}")
-            print(f"         G2: gamePk={g2['gamePk']} score={g2['awayR']}-{g2['homeR']} status={g2['status']}")
+            print(
+                f"         G1: gamePk={g1['gamePk']} score={g1['awayR']}-{g1['homeR']} status={g1['status']}"
+            )
+            print(
+                f"         G2: gamePk={g2['gamePk']} score={g2['awayR']}-{g2['homeR']} status={g2['status']}"
+            )
             # Verify G1 gamePk < G2 gamePk
             if g1["gamePk"] < g2["gamePk"]:
-                print(f"         {PASS} gamePk ordering correct: G1({g1['gamePk']}) < G2({g2['gamePk']})")
+                print(
+                    f"         {PASS} gamePk ordering correct: G1({g1['gamePk']}) < G2({g2['gamePk']})"
+                )
             else:
-                print(f"         {FAIL} gamePk ordering WRONG: G1({g1['gamePk']}) >= G2({g2['gamePk']})")
+                print(
+                    f"         {FAIL} gamePk ordering WRONG: G1({g1['gamePk']}) >= G2({g2['gamePk']})"
+                )
 
 if not dh_found:
-    print(f"  {WARN} No doubleheaders found on test dates. Testing with 2026-04-30 HOU@BAL known DH.")
+    print(
+        f"  {WARN} No doubleheaders found on test dates. Testing with 2026-04-30 HOU@BAL known DH."
+    )
     # Hardcode the known DH for validation
     url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-04-30&hydrate=linescore"
     data = fetch(url)
@@ -82,7 +103,7 @@ if not dh_found:
         for g in d.get("games", []):
             away = g["teams"]["away"]["team"]["abbreviation"]
             home = g["teams"]["home"]["team"]["abbreviation"]
-            pk   = g["gamePk"]
+            pk = g["gamePk"]
             awayR = g.get("linescore", {}).get("teams", {}).get("away", {}).get("runs")
             homeR = g.get("linescore", {}).get("teams", {}).get("home", {}).get("runs")
             if away == "HOU" and home == "BAL":
@@ -131,15 +152,23 @@ print(f"  MLB Stats API returned {len(mlb_abbrevs)} games for 2026-04-30")
 print(f"  Action Network returned {len(an_abbrevs)} games for 2026-04-30")
 
 # Find HOU@BAL in both
-mlb_hou_bal = [(pk, v) for pk, v in mlb_abbrevs.items() if v["away"] == "HOU" and v["home"] == "BAL"]
-an_hou_bal  = [(gid, v) for gid, v in an_abbrevs.items() if v["away"] == "HOU" and v["home"] == "BAL"]
+mlb_hou_bal = [
+    (pk, v)
+    for pk, v in mlb_abbrevs.items()
+    if v["away"] == "HOU" and v["home"] == "BAL"
+]
+an_hou_bal = [
+    (gid, v)
+    for gid, v in an_abbrevs.items()
+    if v["away"] == "HOU" and v["home"] == "BAL"
+]
 
 print(f"\n  HOU@BAL in MLB Stats API: {mlb_hou_bal}")
 print(f"  HOU@BAL in Action Network: {an_hou_bal}")
 
 if mlb_hou_bal and an_hou_bal:
     mlb_away = mlb_hou_bal[0][1]["away"]
-    an_away  = an_hou_bal[0][1]["away"]
+    an_away = an_hou_bal[0][1]["away"]
     if mlb_away == an_away:
         print(f"  {PASS} Abbreviation match: MLB='{mlb_away}' == AN='{an_away}'")
     else:
@@ -170,7 +199,9 @@ for d in data.get("dates", []):
 # ─────────────────────────────────────────────────────────────────────────────
 # LAYER 4: Simulate the full linescoreByGameNum key construction
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n[LAYER 4] Simulate linescoreByGameNum key construction for 2026-04-30 HOU@BAL DH")
+print(
+    "\n[LAYER 4] Simulate linescoreByGameNum key construction for 2026-04-30 HOU@BAL DH"
+)
 print("-" * 50)
 
 url = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-04-30&hydrate=linescore"
@@ -184,15 +215,17 @@ for d in data.get("dates", []):
         if away == "HOU" and home == "BAL":
             awayR = g.get("linescore", {}).get("teams", {}).get("away", {}).get("runs")
             homeR = g.get("linescore", {}).get("teams", {}).get("home", {}).get("runs")
-            hou_bal_games.append({
-                "gamePk": g["gamePk"],
-                "gameDate": d["date"],
-                "awayAbbrev": away,
-                "homeAbbrev": home,
-                "awayR": awayR,
-                "homeR": homeR,
-                "status": g.get("status", {}).get("abstractGameState", "?"),
-            })
+            hou_bal_games.append(
+                {
+                    "gamePk": g["gamePk"],
+                    "gameDate": d["date"],
+                    "awayAbbrev": away,
+                    "homeAbbrev": home,
+                    "awayR": awayR,
+                    "homeR": homeR,
+                    "status": g.get("status", {}).get("abstractGameState", "?"),
+                }
+            )
 
 hou_bal_games.sort(key=lambda x: x["gamePk"])
 
@@ -205,10 +238,14 @@ print(f"  Found {len(hou_bal_games)} HOU@BAL games on 2026-04-30:")
 for g in hou_bal_games:
     gn = g.get("gameNumber", 1)
     key = f"{g['gameDate']}:{g['awayAbbrev']}:{g['homeAbbrev']}:{gn}"
-    print(f"  G{gn}: gamePk={g['gamePk']} key='{key}' score={g['awayR']}-{g['homeR']} status={g['status']}")
+    print(
+        f"  G{gn}: gamePk={g['gamePk']} key='{key}' score={g['awayR']}-{g['homeR']} status={g['status']}"
+    )
 
 # Simulate bet lookup
-print("\n  Simulating bet lookup for bet 60005 (G2, awayTeam='HOU', homeTeam='BAL', gameNumber=2):")
+print(
+    "\n  Simulating bet lookup for bet 60005 (G2, awayTeam='HOU', homeTeam='BAL', gameNumber=2):"
+)
 bet_gameDate = "2026-04-30"
 bet_awayTeam = "HOU"
 bet_homeTeam = "BAL"
@@ -225,11 +262,15 @@ for g in hou_bal_games:
 
 result = linescore_map.get(lookup_key)
 if result:
-    print(f"  {PASS} HIT: gamePk={result['gamePk']} score={result['awayR']}-{result['homeR']} (G2: HOU 11 – BAL 5)")
+    print(
+        f"  {PASS} HIT: gamePk={result['gamePk']} score={result['awayR']}-{result['homeR']} (G2: HOU 11 – BAL 5)"
+    )
     if result["awayR"] == 11 and result["homeR"] == 5:
         print(f"  {PASS} Score correct: HOU {result['awayR']} – BAL {result['homeR']}")
     else:
-        print(f"  {FAIL} Score WRONG: expected HOU 11 – BAL 5, got HOU {result['awayR']} – BAL {result['homeR']}")
+        print(
+            f"  {FAIL} Score WRONG: expected HOU 11 – BAL 5, got HOU {result['awayR']} – BAL {result['homeR']}"
+        )
 else:
     print(f"  {FAIL} MISS — key '{lookup_key}' not found in map")
     print(f"  Available keys: {list(linescore_map.keys())}")
@@ -245,8 +286,12 @@ print("-" * 50)
 # Simulate with the two games we found.
 
 games_list = hou_bal_games.copy()
-print("  Simulating gradeTrackedBet for G2 bet (gameNumber=2, awayTeam=HOU, homeTeam=BAL):")
-print(f"  Games list: {[(g['gamePk'], g['awayAbbrev']+'@'+g['homeAbbrev'], g.get('gameNumber')) for g in games_list]}")
+print(
+    "  Simulating gradeTrackedBet for G2 bet (gameNumber=2, awayTeam=HOU, homeTeam=BAL):"
+)
+print(
+    f"  Games list: {[(g['gamePk'], g['awayAbbrev'] + '@' + g['homeAbbrev'], g.get('gameNumber')) for g in games_list]}"
+)
 
 # Primary: anGameId match (will fail since AN ID ≠ gamePk)
 an_game_id = 287818  # G2 AN ID
@@ -258,15 +303,23 @@ else:
 
 # Fallback: team-name + gameNumber match
 game_number = 2
-team_matches = [g for g in games_list if g["awayAbbrev"] == "HOU" and g["homeAbbrev"] == "BAL"]
+team_matches = [
+    g for g in games_list if g["awayAbbrev"] == "HOU" and g["homeAbbrev"] == "BAL"
+]
 team_matches.sort(key=lambda x: x["gamePk"])  # sort by gamePk ASC = G1 first
 if len(team_matches) >= game_number:
     selected = team_matches[game_number - 1]  # 0-indexed: G2 = index 1
-    print(f"  {PASS} Fallback gameNumber match: G{game_number} → gamePk={selected['gamePk']} score={selected['awayR']}-{selected['homeR']}")
+    print(
+        f"  {PASS} Fallback gameNumber match: G{game_number} → gamePk={selected['gamePk']} score={selected['awayR']}-{selected['homeR']}"
+    )
     if selected["awayR"] == 11 and selected["homeR"] == 5:
-        print(f"  {PASS} Correct game selected for grading: HOU {selected['awayR']} – BAL {selected['homeR']}")
+        print(
+            f"  {PASS} Correct game selected for grading: HOU {selected['awayR']} – BAL {selected['homeR']}"
+        )
     else:
-        print(f"  {FAIL} Wrong game selected: expected HOU 11 – BAL 5, got HOU {selected['awayR']} – BAL {selected['homeR']}")
+        print(
+            f"  {FAIL} Wrong game selected: expected HOU 11 – BAL 5, got HOU {selected['awayR']} – BAL {selected['homeR']}"
+        )
 else:
     print(f"  {FAIL} Not enough team matches for G{game_number}")
 

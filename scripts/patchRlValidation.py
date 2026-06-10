@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Patch the RL validation check in mlbModelRunner.ts to accept '1.5' (no sign) from MySQL decimal columns."""
 
-
 filepath = "server/mlbModelRunner.ts"
-content = open(filepath).read()
+content = open(filepath).read()  # noqa: SIM115
 
 # Find the exact lines to replace
 old_lines = [
@@ -38,11 +37,11 @@ new_block = """    // 2. RL spread must be exactly \u00b11.5 \u2014 MLB run line
 
 if old_block in content:
     content = content.replace(old_block, new_block, 1)
-    open(filepath, "w").write(content)
+    open(filepath, "w").write(content)  # noqa: SIM115
     print("PATCHED OK")
 else:
     print("ERROR: old_block not found in file")
     # Show context around line 1027
     lines = content.split("\n")
     for i in range(1024, 1035):
-        print(f"  L{i+1}: {lines[i]!r}")
+        print(f"  L{i + 1}: {lines[i]!r}")

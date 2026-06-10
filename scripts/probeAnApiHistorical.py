@@ -37,7 +37,20 @@ HEADERS = {
 }
 
 TARGET_DATES = ["20260331", "20260403"]
-BOOK_IDS_TO_TEST = ["69", "15", "30", "68", "2787", "356", "357", "1863", "2161", "79", "2988", "358"]
+BOOK_IDS_TO_TEST = [
+    "69",
+    "15",
+    "30",
+    "68",
+    "2787",
+    "356",
+    "357",
+    "1863",
+    "2161",
+    "79",
+    "2988",
+    "358",
+]
 BOOK_NAMES = {
     "69": "FanDuel NJ",
     "15": "DraftKings",
@@ -56,19 +69,28 @@ BOOK_NAMES = {
 # Target games we need F5 ML for
 TARGET_GAMES = {
     "20260331": [
-        ("LAA", "CHC"), ("TB", "MIL"), ("NYM", "STL"), ("BOS", "HOU"),
-        ("SF", "SD"), ("NYY", "SEA"), ("CLE", "LAD"), ("DET", "ARI"),
+        ("LAA", "CHC"),
+        ("TB", "MIL"),
+        ("NYM", "STL"),
+        ("BOS", "HOU"),
+        ("SF", "SD"),
+        ("NYY", "SEA"),
+        ("CLE", "LAD"),
+        ("DET", "ARI"),
     ],
     "20260403": [
         ("MIL", "KC"),
     ],
 }
 
+
 def probe_scoreboard_v2(date_str: str, periods: str, book_ids: str) -> dict:
     """Test the v2 scoreboard endpoint."""
     url = "https://api.actionnetwork.com/web/v2/scoreboard/mlb"
     params = {"bookIds": book_ids, "date": date_str, "periods": periods}
-    log.info(f"[PROBE] GET {url}?date={date_str}&periods={periods}&bookIds={book_ids[:30]}...")
+    log.info(
+        f"[PROBE] GET {url}?date={date_str}&periods={periods}&bookIds={book_ids[:30]}..."
+    )
     try:
         resp = requests.get(url, headers=HEADERS, params=params, timeout=20)
         log.info(f"[PROBE] HTTP {resp.status_code} | {len(resp.content)} bytes")
@@ -79,6 +101,7 @@ def probe_scoreboard_v2(date_str: str, periods: str, book_ids: str) -> dict:
     except Exception as e:
         log.error(f"[PROBE] Exception: {e}")
         return {}
+
 
 def probe_scoreboard_v1(date_str: str) -> dict:
     """Test the v1 scoreboard endpoint."""
@@ -95,6 +118,7 @@ def probe_scoreboard_v1(date_str: str) -> dict:
         log.error(f"[PROBE] Exception: {e}")
         return {}
 
+
 def probe_game_odds(event_id: int) -> dict:
     """Test the per-game odds endpoint."""
     url = f"https://api.actionnetwork.com/web/v2/game/{event_id}/odds"
@@ -109,19 +133,6 @@ def probe_game_odds(event_id: int) -> dict:
         log.error(f"[PROBE] Exception: {e}")
         return {}
 
-def probe_consensus(event_id: int) -> dict:
-    """Test the consensus odds endpoint."""
-    url = f"https://api.actionnetwork.com/web/v2/game/{event_id}/consensus"
-    log.info(f"[PROBE] GET {url}")
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=20)
-        log.info(f"[PROBE] HTTP {resp.status_code} | {len(resp.content)} bytes")
-        if resp.status_code == 200:
-            return resp.json()
-        return {}
-    except Exception as e:
-        log.error(f"[PROBE] Exception: {e}")
-        return {}
 
 def analyze_game_markets(game: dict, target_games: list[tuple[str, str]]) -> None:
     """Deep-analyze the markets structure of a game response."""
@@ -135,12 +146,16 @@ def analyze_game_markets(game: dict, target_games: list[tuple[str, str]]) -> Non
     start_time = game.get("start_time", "")
 
     # Check if this is one of our target games
-    is_target = (away, home) in target_games or \
-                any(a in away and h in home for a, h in target_games) or \
-                any(away in a and home in h for a, h in target_games)
+    is_target = (
+        (away, home) in target_games
+        or any(a in away and h in home for a, h in target_games)
+        or any(away in a and home in h for a, h in target_games)
+    )
 
     markets = game.get("markets", {})
-    log.info(f"\n  [GAME] {away}@{home} | id={event_id} | start={start_time[:16]} | {'*** TARGET ***' if is_target else ''}")
+    log.info(
+        f"\n  [GAME] {away}@{home} | id={event_id} | start={start_time[:16]} | {'*** TARGET ***' if is_target else ''}"
+    )
     log.info(f"  [GAME] markets keys: {list(markets.keys()) if markets else 'EMPTY'}")
 
     if not markets:
@@ -156,8 +171,12 @@ def analyze_game_markets(game: dict, target_games: list[tuple[str, str]]) -> Non
         has_f5 = "firstfiveinnings" in book_data
         f5_data = book_data.get("firstfiveinnings", {})
         f5_ml = f5_data.get("moneyline", [])
-        f5_ml_odds = [(m.get("side"), m.get("odds"), m.get("open"), m.get("type")) for m in f5_ml]
-        log.info(f"  [BOOK] {book_name} (id={book_id}): periods={periods_in_book} | F5={has_f5} | F5_ML={f5_ml_odds}")
+        f5_ml_odds = [
+            (m.get("side"), m.get("odds"), m.get("open"), m.get("type")) for m in f5_ml
+        ]
+        log.info(
+            f"  [BOOK] {book_name} (id={book_id}): periods={periods_in_book} | F5={has_f5} | F5_ML={f5_ml_odds}"
+        )
 
     # Also check opener/open fields at game level
     opener = game.get("opener", {})
@@ -172,6 +191,7 @@ def analyze_game_markets(game: dict, target_games: list[tuple[str, str]]) -> Non
     # Check status
     status = game.get("status", "")
     log.info(f"  [GAME] status={status}")
+
 
 def main():
     log.info("=" * 70)
@@ -191,7 +211,7 @@ def main():
         data = probe_scoreboard_v2(
             date_str,
             periods="event,firstfiveinnings,firstinning",
-            book_ids="15,30,358,69,68,2787,356,357,1863,2161,79,2988"
+            book_ids="15,30,358,69,68,2787,356,357,1863,2161,79,2988",
         )
         games_raw = data.get("games", [])
         log.info(f"[STATE] {len(games_raw)} games returned for {date_str}")
@@ -211,7 +231,9 @@ def main():
                 event_ids_for_date.append((away, home, g.get("id")))
 
         all_event_ids[date_str] = event_ids_for_date
-        log.info(f"\n[STATE] Target game event IDs for {date_str}: {event_ids_for_date}")
+        log.info(
+            f"\n[STATE] Target game event IDs for {date_str}: {event_ids_for_date}"
+        )
 
     # ─── Phase 2: Try different period combinations ───────────────────────────
     log.info(f"\n{'─' * 60}")
@@ -227,7 +249,9 @@ def main():
 
     for date_str in TARGET_DATES:
         for periods in period_variants:
-            data = probe_scoreboard_v2(date_str, periods, "15,30,358,69,68,2787,356,357,1863,2161,79,2988")
+            data = probe_scoreboard_v2(
+                date_str, periods, "15,30,358,69,68,2787,356,357,1863,2161,79,2988"
+            )
             games_raw = data.get("games", [])
             target_games_for_date = TARGET_GAMES.get(date_str, [])
             f5_found = 0
@@ -241,7 +265,9 @@ def main():
                         if ml:
                             f5_found += 1
                             break
-            log.info(f"[PHASE 2] date={date_str} periods={periods!r}: {len(games_raw)} games, {f5_found} with F5 ML odds")
+            log.info(
+                f"[PHASE 2] date={date_str} periods={periods!r}: {len(games_raw)} games, {f5_found} with F5 ML odds"
+            )
 
     # ─── Phase 3: Per-game odds endpoint for target event IDs ────────────────
     log.info(f"\n{'─' * 60}")
@@ -250,7 +276,9 @@ def main():
 
     for date_str, event_id_list in all_event_ids.items():
         if not event_id_list:
-            log.warning(f"[PHASE 3] No event IDs found for {date_str} — skipping per-game probe")
+            log.warning(
+                f"[PHASE 3] No event IDs found for {date_str} — skipping per-game probe"
+            )
             continue
         for away, home, event_id in event_id_list:
             if not event_id:
@@ -261,9 +289,12 @@ def main():
                 log.info(f"[PHASE 3] game odds keys: {list(game_odds.keys())}")
                 # Look for F5 ML in the response
                 odds_data = game_odds.get("odds", [])
-                f5_ml_found = [o for o in odds_data if
-                               o.get("period", "") in ("firstfiveinnings", "1h", "f5") and
-                               o.get("type", "") in ("moneyline", "ml")]
+                f5_ml_found = [
+                    o
+                    for o in odds_data
+                    if o.get("period", "") in ("firstfiveinnings", "1h", "f5")
+                    and o.get("type", "") in ("moneyline", "ml")
+                ]
                 log.info(f"[PHASE 3] F5 ML entries: {f5_ml_found}")
             else:
                 log.warning(f"[PHASE 3] No data returned for event_id={event_id}")
@@ -279,7 +310,9 @@ def main():
         log.info(f"[PHASE 4] date={date_str}: {len(games_raw)} games from v1")
         for g in games_raw[:3]:  # Sample first 3
             markets = g.get("markets", {})
-            log.info(f"[PHASE 4] game id={g.get('id')} markets_keys={list(markets.keys())[:5]}")
+            log.info(
+                f"[PHASE 4] game id={g.get('id')} markets_keys={list(markets.keys())[:5]}"
+            )
 
     # ─── Phase 5: Check if 'open' odds are stored differently ────────────────
     log.info(f"\n{'─' * 60}")
@@ -290,7 +323,7 @@ def main():
         data = probe_scoreboard_v2(
             date_str,
             periods="event,firstfiveinnings,firstinning",
-            book_ids="15,30,358,69,68,2787,356,357,1863,2161,79,2988"
+            book_ids="15,30,358,69,68,2787,356,357,1863,2161,79,2988",
         )
         games_raw = data.get("games", [])
         for g in games_raw:
@@ -319,6 +352,7 @@ def main():
     log.info(f"\n{'=' * 70}")
     log.info("[SUMMARY] AN API Historical Deep-Dive Complete")
     log.info("=" * 70)
+
 
 if __name__ == "__main__":
     main()

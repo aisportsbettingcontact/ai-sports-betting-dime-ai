@@ -26,11 +26,11 @@ import sys
 import time
 from collections import defaultdict
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ── Add project root to path so we can import MLBAIModel ──────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SERVER_DIR   = os.path.join(PROJECT_ROOT, "server")
+SERVER_DIR = os.path.join(PROJECT_ROOT, "server")
 sys.path.insert(0, SERVER_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 
@@ -41,96 +41,468 @@ except ImportError:
     os.system("sudo pip3 install mysql-connector-python -q")
     import mysql.connector
 
-import dotenv  # noqa: E402
+import dotenv
 
 dotenv.load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 DB_URL = os.environ.get("DATABASE_URL", "")
 
+
 def parse_db_url(url: str):
     """Parse mysql://user:pass@host:port/dbname"""
     import re
+
     m = re.match(r"mysql://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/(.+)", url)
     if not m:
         raise ValueError(f"Cannot parse DATABASE_URL: {url[:40]}...")
     user, password, host, port, database = m.groups()
-    return dict(user=user, password=password, host=host, port=int(port or 3306), database=database)
+    return dict(  # noqa: C408
+        user=user,
+        password=password,
+        host=host,
+        port=int(port or 3306),
+        database=database,
+    )
+
 
 def get_db():
     cfg = parse_db_url(DB_URL)
     return mysql.connector.connect(**cfg, autocommit=True)
 
+
 # ── Import model ───────────────────────────────────────────────────────────────
 print("[STEP] Importing MLBAIModel...")
-import MLBAIModel as M  # noqa: E402
+import MLBAIModel as M
 
-print(f'[STEP] MLBAIModel loaded. CALIBRATION_VERSION={getattr(M, "CALIBRATION_VERSION", "unknown")}')
+print(
+    f"[STEP] MLBAIModel loaded. CALIBRATION_VERSION={getattr(M, 'CALIBRATION_VERSION', 'unknown')}"
+)
 
 # ── V1 constants (pre-calibration) ────────────────────────────────────────────
 V1_PRIORS = {
-    "F5_RUN_SHARE":       0.5311,
-    "INNING1_RUN_SHARE":  0.1093,
-    "nrfi_rate":          0.5154,
-    "i1_share":           0.1093,
-    "fg_home_win_rate":   0.5258,
-    "fg_away_win_rate":   0.4742,
-    "f5_home_win_rate":   0.5319,
-    "f5_away_win_rate":   0.4681,
-    "f5_push_rate":       0.0,     # not tracked in v1
-    "fg_rl_away_cover":   0.3189,
-    "fg_rl_home_cover":   0.5128,
-    "f5_mean":            4.726,
-    "fg_mean":            8.895,
+    "F5_RUN_SHARE": 0.5311,
+    "INNING1_RUN_SHARE": 0.1093,
+    "nrfi_rate": 0.5154,
+    "i1_share": 0.1093,
+    "fg_home_win_rate": 0.5258,
+    "fg_away_win_rate": 0.4742,
+    "f5_home_win_rate": 0.5319,
+    "f5_away_win_rate": 0.4681,
+    "f5_push_rate": 0.0,  # not tracked in v1
+    "fg_rl_away_cover": 0.3189,
+    "fg_rl_home_cover": 0.5128,
+    "f5_mean": 4.726,
+    "fg_mean": 8.895,
 }
-V1_INN_WEIGHTS = [0.1151, 0.1009, 0.1127, 0.1124, 0.1136, 0.1133, 0.1072, 0.1079, 0.1170]
+V1_INN_WEIGHTS = [
+    0.1151,
+    0.1009,
+    0.1127,
+    0.1124,
+    0.1136,
+    0.1133,
+    0.1072,
+    0.1079,
+    0.1170,
+]
 
 # ── V2 constants (post-calibration, current model) ────────────────────────────
 V2_PRIORS = dict(M.EMPIRICAL_PRIORS)  # live from model
-V2_INN_WEIGHTS = [0.116647, 0.102130, 0.114120, 0.113854, 0.115029, 0.114764, 0.108511, 0.109019, 0.079211]
+V2_INN_WEIGHTS = [
+    0.116647,
+    0.102130,
+    0.114120,
+    0.113854,
+    0.115029,
+    0.114764,
+    0.108511,
+    0.109019,
+    0.079211,
+]
 
 # ── TEAM_STATS lookup (from mlbModelRunner.ts — 2025 season) ──────────────────
-TEAM_STATS: Dict[str, Dict[str, float]] = {
-    "NYY": {"rpg": 4.92, "era": 3.92, "avg": 0.254, "obp": 0.326, "slg": 0.432, "k9": 9.5,  "bb9": 3.1, "whip": 1.23, "ip_per_game": 5.5},
-    "BOS": {"rpg": 4.81, "era": 4.18, "avg": 0.256, "obp": 0.326, "slg": 0.430, "k9": 9.2,  "bb9": 3.3, "whip": 1.28, "ip_per_game": 5.3},
-    "TOR": {"rpg": 4.62, "era": 4.28, "avg": 0.248, "obp": 0.316, "slg": 0.418, "k9": 9.0,  "bb9": 3.2, "whip": 1.28, "ip_per_game": 5.2},
-    "BAL": {"rpg": 4.78, "era": 4.05, "avg": 0.252, "obp": 0.322, "slg": 0.428, "k9": 9.3,  "bb9": 3.0, "whip": 1.24, "ip_per_game": 5.4},
-    "TB":  {"rpg": 4.52, "era": 3.98, "avg": 0.246, "obp": 0.318, "slg": 0.412, "k9": 9.4,  "bb9": 3.1, "whip": 1.24, "ip_per_game": 5.3},
-    "CLE": {"rpg": 4.48, "era": 3.85, "avg": 0.244, "obp": 0.314, "slg": 0.408, "k9": 9.5,  "bb9": 2.9, "whip": 1.22, "ip_per_game": 5.5},
-    "MIN": {"rpg": 4.65, "era": 4.12, "avg": 0.250, "obp": 0.320, "slg": 0.420, "k9": 9.1,  "bb9": 3.2, "whip": 1.26, "ip_per_game": 5.3},
-    "CWS": {"rpg": 3.92, "era": 4.82, "avg": 0.238, "obp": 0.302, "slg": 0.388, "k9": 8.5,  "bb9": 3.5, "whip": 1.35, "ip_per_game": 4.9},
-    "DET": {"rpg": 4.38, "era": 4.15, "avg": 0.246, "obp": 0.314, "slg": 0.408, "k9": 9.0,  "bb9": 3.2, "whip": 1.27, "ip_per_game": 5.2},
-    "KC":  {"rpg": 4.55, "era": 4.22, "avg": 0.250, "obp": 0.318, "slg": 0.415, "k9": 8.8,  "bb9": 3.1, "whip": 1.27, "ip_per_game": 5.2},
-    "HOU": {"rpg": 4.72, "era": 3.88, "avg": 0.252, "obp": 0.322, "slg": 0.425, "k9": 9.4,  "bb9": 2.9, "whip": 1.22, "ip_per_game": 5.5},
-    "SEA": {"rpg": 4.42, "era": 3.95, "avg": 0.244, "obp": 0.314, "slg": 0.408, "k9": 9.6,  "bb9": 2.9, "whip": 1.21, "ip_per_game": 5.5},
-    "TEX": {"rpg": 4.52, "era": 4.15, "avg": 0.250, "obp": 0.318, "slg": 0.412, "k9": 9.0,  "bb9": 3.1, "whip": 1.27, "ip_per_game": 5.3},
-    "LAA": {"rpg": 4.28, "era": 4.42, "avg": 0.246, "obp": 0.314, "slg": 0.408, "k9": 8.8,  "bb9": 3.3, "whip": 1.30, "ip_per_game": 5.1},
-    "ATH": {"rpg": 4.21, "era": 4.38, "avg": 0.244, "obp": 0.312, "slg": 0.395, "k9": 8.8,  "bb9": 3.3, "whip": 1.30, "ip_per_game": 5.1},
-    "OAK": {"rpg": 4.21, "era": 4.38, "avg": 0.244, "obp": 0.312, "slg": 0.395, "k9": 8.8,  "bb9": 3.3, "whip": 1.30, "ip_per_game": 5.1},
-    "NYM": {"rpg": 4.62, "era": 4.02, "avg": 0.252, "obp": 0.322, "slg": 0.418, "k9": 9.1,  "bb9": 3.0, "whip": 1.25, "ip_per_game": 5.4},
-    "PHI": {"rpg": 4.88, "era": 3.88, "avg": 0.258, "obp": 0.328, "slg": 0.438, "k9": 9.4,  "bb9": 2.9, "whip": 1.21, "ip_per_game": 5.5},
-    "ATL": {"rpg": 4.85, "era": 3.92, "avg": 0.256, "obp": 0.326, "slg": 0.435, "k9": 9.3,  "bb9": 3.0, "whip": 1.22, "ip_per_game": 5.4},
-    "MIA": {"rpg": 4.12, "era": 4.45, "avg": 0.240, "obp": 0.308, "slg": 0.395, "k9": 8.8,  "bb9": 3.4, "whip": 1.32, "ip_per_game": 5.0},
-    "WSH": {"rpg": 4.35, "era": 4.52, "avg": 0.244, "obp": 0.312, "slg": 0.402, "k9": 8.7,  "bb9": 3.3, "whip": 1.32, "ip_per_game": 5.0},
-    "WAS": {"rpg": 4.35, "era": 4.52, "avg": 0.244, "obp": 0.312, "slg": 0.402, "k9": 8.7,  "bb9": 3.3, "whip": 1.32, "ip_per_game": 5.0},
-    "CHC": {"rpg": 4.55, "era": 4.12, "avg": 0.248, "obp": 0.318, "slg": 0.415, "k9": 9.0,  "bb9": 3.1, "whip": 1.26, "ip_per_game": 5.3},
-    "STL": {"rpg": 4.42, "era": 4.22, "avg": 0.248, "obp": 0.316, "slg": 0.410, "k9": 8.8,  "bb9": 3.2, "whip": 1.28, "ip_per_game": 5.2},
-    "MIL": {"rpg": 4.58, "era": 3.95, "avg": 0.248, "obp": 0.318, "slg": 0.418, "k9": 9.2,  "bb9": 3.0, "whip": 1.24, "ip_per_game": 5.4},
-    "CIN": {"rpg": 4.65, "era": 4.28, "avg": 0.252, "obp": 0.320, "slg": 0.422, "k9": 9.0,  "bb9": 3.2, "whip": 1.28, "ip_per_game": 5.2},
-    "PIT": {"rpg": 4.28, "era": 4.35, "avg": 0.244, "obp": 0.312, "slg": 0.402, "k9": 8.8,  "bb9": 3.2, "whip": 1.29, "ip_per_game": 5.2},
-    "LAD": {"rpg": 5.12, "era": 3.72, "avg": 0.262, "obp": 0.334, "slg": 0.448, "k9": 9.6,  "bb9": 2.8, "whip": 1.18, "ip_per_game": 5.6},
-    "SD":  {"rpg": 4.58, "era": 3.98, "avg": 0.250, "obp": 0.320, "slg": 0.420, "k9": 9.3,  "bb9": 3.0, "whip": 1.24, "ip_per_game": 5.4},
-    "SF":  {"rpg": 4.42, "era": 4.08, "avg": 0.248, "obp": 0.318, "slg": 0.412, "k9": 9.1,  "bb9": 3.1, "whip": 1.26, "ip_per_game": 5.3},
-    "ARI": {"rpg": 4.72, "era": 4.18, "avg": 0.254, "obp": 0.324, "slg": 0.428, "k9": 9.0,  "bb9": 3.1, "whip": 1.27, "ip_per_game": 5.3},
-    "COL": {"rpg": 4.88, "era": 5.12, "avg": 0.258, "obp": 0.326, "slg": 0.438, "k9": 8.5,  "bb9": 3.4, "whip": 1.38, "ip_per_game": 4.9},
+TEAM_STATS: dict[str, dict[str, float]] = {
+    "NYY": {
+        "rpg": 4.92,
+        "era": 3.92,
+        "avg": 0.254,
+        "obp": 0.326,
+        "slg": 0.432,
+        "k9": 9.5,
+        "bb9": 3.1,
+        "whip": 1.23,
+        "ip_per_game": 5.5,
+    },
+    "BOS": {
+        "rpg": 4.81,
+        "era": 4.18,
+        "avg": 0.256,
+        "obp": 0.326,
+        "slg": 0.430,
+        "k9": 9.2,
+        "bb9": 3.3,
+        "whip": 1.28,
+        "ip_per_game": 5.3,
+    },
+    "TOR": {
+        "rpg": 4.62,
+        "era": 4.28,
+        "avg": 0.248,
+        "obp": 0.316,
+        "slg": 0.418,
+        "k9": 9.0,
+        "bb9": 3.2,
+        "whip": 1.28,
+        "ip_per_game": 5.2,
+    },
+    "BAL": {
+        "rpg": 4.78,
+        "era": 4.05,
+        "avg": 0.252,
+        "obp": 0.322,
+        "slg": 0.428,
+        "k9": 9.3,
+        "bb9": 3.0,
+        "whip": 1.24,
+        "ip_per_game": 5.4,
+    },
+    "TB": {
+        "rpg": 4.52,
+        "era": 3.98,
+        "avg": 0.246,
+        "obp": 0.318,
+        "slg": 0.412,
+        "k9": 9.4,
+        "bb9": 3.1,
+        "whip": 1.24,
+        "ip_per_game": 5.3,
+    },
+    "CLE": {
+        "rpg": 4.48,
+        "era": 3.85,
+        "avg": 0.244,
+        "obp": 0.314,
+        "slg": 0.408,
+        "k9": 9.5,
+        "bb9": 2.9,
+        "whip": 1.22,
+        "ip_per_game": 5.5,
+    },
+    "MIN": {
+        "rpg": 4.65,
+        "era": 4.12,
+        "avg": 0.250,
+        "obp": 0.320,
+        "slg": 0.420,
+        "k9": 9.1,
+        "bb9": 3.2,
+        "whip": 1.26,
+        "ip_per_game": 5.3,
+    },
+    "CWS": {
+        "rpg": 3.92,
+        "era": 4.82,
+        "avg": 0.238,
+        "obp": 0.302,
+        "slg": 0.388,
+        "k9": 8.5,
+        "bb9": 3.5,
+        "whip": 1.35,
+        "ip_per_game": 4.9,
+    },
+    "DET": {
+        "rpg": 4.38,
+        "era": 4.15,
+        "avg": 0.246,
+        "obp": 0.314,
+        "slg": 0.408,
+        "k9": 9.0,
+        "bb9": 3.2,
+        "whip": 1.27,
+        "ip_per_game": 5.2,
+    },
+    "KC": {
+        "rpg": 4.55,
+        "era": 4.22,
+        "avg": 0.250,
+        "obp": 0.318,
+        "slg": 0.415,
+        "k9": 8.8,
+        "bb9": 3.1,
+        "whip": 1.27,
+        "ip_per_game": 5.2,
+    },
+    "HOU": {
+        "rpg": 4.72,
+        "era": 3.88,
+        "avg": 0.252,
+        "obp": 0.322,
+        "slg": 0.425,
+        "k9": 9.4,
+        "bb9": 2.9,
+        "whip": 1.22,
+        "ip_per_game": 5.5,
+    },
+    "SEA": {
+        "rpg": 4.42,
+        "era": 3.95,
+        "avg": 0.244,
+        "obp": 0.314,
+        "slg": 0.408,
+        "k9": 9.6,
+        "bb9": 2.9,
+        "whip": 1.21,
+        "ip_per_game": 5.5,
+    },
+    "TEX": {
+        "rpg": 4.52,
+        "era": 4.15,
+        "avg": 0.250,
+        "obp": 0.318,
+        "slg": 0.412,
+        "k9": 9.0,
+        "bb9": 3.1,
+        "whip": 1.27,
+        "ip_per_game": 5.3,
+    },
+    "LAA": {
+        "rpg": 4.28,
+        "era": 4.42,
+        "avg": 0.246,
+        "obp": 0.314,
+        "slg": 0.408,
+        "k9": 8.8,
+        "bb9": 3.3,
+        "whip": 1.30,
+        "ip_per_game": 5.1,
+    },
+    "ATH": {
+        "rpg": 4.21,
+        "era": 4.38,
+        "avg": 0.244,
+        "obp": 0.312,
+        "slg": 0.395,
+        "k9": 8.8,
+        "bb9": 3.3,
+        "whip": 1.30,
+        "ip_per_game": 5.1,
+    },
+    "OAK": {
+        "rpg": 4.21,
+        "era": 4.38,
+        "avg": 0.244,
+        "obp": 0.312,
+        "slg": 0.395,
+        "k9": 8.8,
+        "bb9": 3.3,
+        "whip": 1.30,
+        "ip_per_game": 5.1,
+    },
+    "NYM": {
+        "rpg": 4.62,
+        "era": 4.02,
+        "avg": 0.252,
+        "obp": 0.322,
+        "slg": 0.418,
+        "k9": 9.1,
+        "bb9": 3.0,
+        "whip": 1.25,
+        "ip_per_game": 5.4,
+    },
+    "PHI": {
+        "rpg": 4.88,
+        "era": 3.88,
+        "avg": 0.258,
+        "obp": 0.328,
+        "slg": 0.438,
+        "k9": 9.4,
+        "bb9": 2.9,
+        "whip": 1.21,
+        "ip_per_game": 5.5,
+    },
+    "ATL": {
+        "rpg": 4.85,
+        "era": 3.92,
+        "avg": 0.256,
+        "obp": 0.326,
+        "slg": 0.435,
+        "k9": 9.3,
+        "bb9": 3.0,
+        "whip": 1.22,
+        "ip_per_game": 5.4,
+    },
+    "MIA": {
+        "rpg": 4.12,
+        "era": 4.45,
+        "avg": 0.240,
+        "obp": 0.308,
+        "slg": 0.395,
+        "k9": 8.8,
+        "bb9": 3.4,
+        "whip": 1.32,
+        "ip_per_game": 5.0,
+    },
+    "WSH": {
+        "rpg": 4.35,
+        "era": 4.52,
+        "avg": 0.244,
+        "obp": 0.312,
+        "slg": 0.402,
+        "k9": 8.7,
+        "bb9": 3.3,
+        "whip": 1.32,
+        "ip_per_game": 5.0,
+    },
+    "WAS": {
+        "rpg": 4.35,
+        "era": 4.52,
+        "avg": 0.244,
+        "obp": 0.312,
+        "slg": 0.402,
+        "k9": 8.7,
+        "bb9": 3.3,
+        "whip": 1.32,
+        "ip_per_game": 5.0,
+    },
+    "CHC": {
+        "rpg": 4.55,
+        "era": 4.12,
+        "avg": 0.248,
+        "obp": 0.318,
+        "slg": 0.415,
+        "k9": 9.0,
+        "bb9": 3.1,
+        "whip": 1.26,
+        "ip_per_game": 5.3,
+    },
+    "STL": {
+        "rpg": 4.42,
+        "era": 4.22,
+        "avg": 0.248,
+        "obp": 0.316,
+        "slg": 0.410,
+        "k9": 8.8,
+        "bb9": 3.2,
+        "whip": 1.28,
+        "ip_per_game": 5.2,
+    },
+    "MIL": {
+        "rpg": 4.58,
+        "era": 3.95,
+        "avg": 0.248,
+        "obp": 0.318,
+        "slg": 0.418,
+        "k9": 9.2,
+        "bb9": 3.0,
+        "whip": 1.24,
+        "ip_per_game": 5.4,
+    },
+    "CIN": {
+        "rpg": 4.65,
+        "era": 4.28,
+        "avg": 0.252,
+        "obp": 0.320,
+        "slg": 0.422,
+        "k9": 9.0,
+        "bb9": 3.2,
+        "whip": 1.28,
+        "ip_per_game": 5.2,
+    },
+    "PIT": {
+        "rpg": 4.28,
+        "era": 4.35,
+        "avg": 0.244,
+        "obp": 0.312,
+        "slg": 0.402,
+        "k9": 8.8,
+        "bb9": 3.2,
+        "whip": 1.29,
+        "ip_per_game": 5.2,
+    },
+    "LAD": {
+        "rpg": 5.12,
+        "era": 3.72,
+        "avg": 0.262,
+        "obp": 0.334,
+        "slg": 0.448,
+        "k9": 9.6,
+        "bb9": 2.8,
+        "whip": 1.18,
+        "ip_per_game": 5.6,
+    },
+    "SD": {
+        "rpg": 4.58,
+        "era": 3.98,
+        "avg": 0.250,
+        "obp": 0.320,
+        "slg": 0.420,
+        "k9": 9.3,
+        "bb9": 3.0,
+        "whip": 1.24,
+        "ip_per_game": 5.4,
+    },
+    "SF": {
+        "rpg": 4.42,
+        "era": 4.08,
+        "avg": 0.248,
+        "obp": 0.318,
+        "slg": 0.412,
+        "k9": 9.1,
+        "bb9": 3.1,
+        "whip": 1.26,
+        "ip_per_game": 5.3,
+    },
+    "ARI": {
+        "rpg": 4.72,
+        "era": 4.18,
+        "avg": 0.254,
+        "obp": 0.324,
+        "slg": 0.428,
+        "k9": 9.0,
+        "bb9": 3.1,
+        "whip": 1.27,
+        "ip_per_game": 5.3,
+    },
+    "COL": {
+        "rpg": 4.88,
+        "era": 5.12,
+        "avg": 0.258,
+        "obp": 0.326,
+        "slg": 0.438,
+        "k9": 8.5,
+        "bb9": 3.4,
+        "whip": 1.38,
+        "ip_per_game": 4.9,
+    },
 }
-DEFAULT_STATS = {"rpg": 4.50, "era": 4.25, "avg": 0.250, "obp": 0.318, "slg": 0.415, "k9": 9.0, "bb9": 3.1, "whip": 1.27, "ip_per_game": 5.2}
-DEFAULT_PITCHER = {"era": 4.25, "k9": 8.8, "bb9": 3.1, "whip": 1.28, "ip": 140.0, "gp": 25, "xera": 4.25}
+DEFAULT_STATS = {
+    "rpg": 4.50,
+    "era": 4.25,
+    "avg": 0.250,
+    "obp": 0.318,
+    "slg": 0.415,
+    "k9": 9.0,
+    "bb9": 3.1,
+    "whip": 1.27,
+    "ip_per_game": 5.2,
+}
+DEFAULT_PITCHER = {
+    "era": 4.25,
+    "k9": 8.8,
+    "bb9": 3.1,
+    "whip": 1.28,
+    "ip": 140.0,
+    "gp": 25,
+    "xera": 4.25,
+}
+
 
 def get_team_stats(abbrev: str) -> dict:
     return TEAM_STATS.get(abbrev, TEAM_STATS.get(abbrev.upper(), DEFAULT_STATS))
 
+
 # ── Odds helpers ───────────────────────────────────────────────────────────────
-def ml_to_prob(ml_str: Optional[str]) -> Optional[float]:
+def ml_to_prob(ml_str: str | None) -> float | None:
     """Convert American ML string to implied probability (no vig)."""
     if not ml_str:
         return None
@@ -142,7 +514,8 @@ def ml_to_prob(ml_str: Optional[str]) -> Optional[float]:
     except Exception:
         return None
 
-def ml_to_decimal(ml_str: Optional[str]) -> Optional[float]:
+
+def ml_to_decimal(ml_str: str | None) -> float | None:
     """Convert American ML to decimal odds."""
     if not ml_str:
         return None
@@ -154,12 +527,14 @@ def ml_to_decimal(ml_str: Optional[str]) -> Optional[float]:
     except Exception:
         return None
 
-def calc_roi(model_prob: float, book_ml: Optional[str]) -> Optional[float]:
+
+def calc_roi(model_prob: float, book_ml: str | None) -> float | None:
     """Calculate expected ROI = model_prob * decimal_odds - 1."""
     dec = ml_to_decimal(book_ml)
     if dec is None:
         return None
     return model_prob * dec - 1.0
+
 
 # ── Patch model constants for v1/v2 ───────────────────────────────────────────
 def patch_model_constants(version: str):
@@ -177,14 +552,19 @@ def patch_model_constants(version: str):
             M.EMPIRICAL_PRIORS[k] = v
 
     # Patch F5_RUN_SHARE and INNING1_RUN_SHARE module-level constants
-    M.EMPIRICAL_PRIORS["F5_RUN_SHARE"] = priors.get("F5_RUN_SHARE", M.EMPIRICAL_PRIORS.get("F5_RUN_SHARE", 0.5618))
-    M.EMPIRICAL_PRIORS["INNING1_RUN_SHARE"] = priors.get("INNING1_RUN_SHARE", M.EMPIRICAL_PRIORS.get("INNING1_RUN_SHARE", 0.1166))
+    M.EMPIRICAL_PRIORS["F5_RUN_SHARE"] = priors.get(
+        "F5_RUN_SHARE", M.EMPIRICAL_PRIORS.get("F5_RUN_SHARE", 0.5618)
+    )
+    M.EMPIRICAL_PRIORS["INNING1_RUN_SHARE"] = priors.get(
+        "INNING1_RUN_SHARE", M.EMPIRICAL_PRIORS.get("INNING1_RUN_SHARE", 0.1166)
+    )
 
     # Store inn_weights for use during simulation (patched via module attribute)
     M._BACKTEST_INN_WEIGHTS = inn_weights
 
+
 # ── Grade a single game ────────────────────────────────────────────────────────
-def grade_game(row: dict, version: str) -> Dict[str, Any]:
+def grade_game(row: dict, version: str) -> dict[str, Any]:
     """
     Run the model for one game and grade all 9 markets.
     Returns dict with per-market results.
@@ -224,15 +604,29 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
     # ── Actual results ─────────────────────────────────────────────────────────
     fg_away = int(row["awayScore"]) if row.get("awayScore") is not None else None
     fg_home = int(row["homeScore"]) if row.get("homeScore") is not None else None
-    f5_away = int(row["actualF5AwayScore"]) if row.get("actualF5AwayScore") is not None else None
-    f5_home = int(row["actualF5HomeScore"]) if row.get("actualF5HomeScore") is not None else None
+    f5_away = (
+        int(row["actualF5AwayScore"])
+        if row.get("actualF5AwayScore") is not None
+        else None
+    )
+    f5_home = (
+        int(row["actualF5HomeScore"])
+        if row.get("actualF5HomeScore") is not None
+        else None
+    )
     nrfi_result = str(row.get("nrfiActualResult", "") or "").upper()
 
     if fg_away is None or fg_home is None:
-        return {"error": "missing_scores", "game": f"{away}@{home}", "date": game_date_str}
+        return {
+            "error": "missing_scores",
+            "game": f"{away}@{home}",
+            "date": game_date_str,
+        }
 
     fg_total = fg_away + fg_home
-    f5_total = (f5_away + f5_home) if (f5_away is not None and f5_home is not None) else None
+    f5_total = (
+        (f5_away + f5_home) if (f5_away is not None and f5_home is not None) else None
+    )
     fg_away_won = fg_away > fg_home
     fg_home_won = fg_home > fg_away
 
@@ -244,8 +638,12 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
     float(row["dkHomeRunLine"]) if row.get("dkHomeRunLine") else 1.5
     dk_over_odds = str(row["dkOverOdds"]) if row.get("dkOverOdds") else None
     dk_under_odds = str(row["dkUnderOdds"]) if row.get("dkUnderOdds") else None
-    dk_away_rl_odds = str(row["dkAwayRunLineOdds"]) if row.get("dkAwayRunLineOdds") else None
-    dk_home_rl_odds = str(row["dkHomeRunLineOdds"]) if row.get("dkHomeRunLineOdds") else None
+    dk_away_rl_odds = (
+        str(row["dkAwayRunLineOdds"]) if row.get("dkAwayRunLineOdds") else None
+    )
+    dk_home_rl_odds = (
+        str(row["dkHomeRunLineOdds"]) if row.get("dkHomeRunLineOdds") else None
+    )
 
     # ── Grade each market ──────────────────────────────────────────────────────
     grades = {}
@@ -312,7 +710,11 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
         "correct": int(over_correct) if over_correct is not None else None,
         "roi": calc_roi(p_over, dk_over_odds) if over_correct is not None else None,
         "actual_total": fg_total,
-        "actual": "WIN" if over_correct else ("PUSH" if fg_total == dk_total else "LOSS") if dk_total else "N/A",
+        "actual": "WIN"
+        if over_correct
+        else ("PUSH" if fg_total == dk_total else "LOSS")
+        if dk_total
+        else "N/A",
     }
 
     # 6. FG Total Under
@@ -325,7 +727,11 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
         "correct": int(under_correct) if under_correct is not None else None,
         "roi": calc_roi(p_under, dk_under_odds) if under_correct is not None else None,
         "actual_total": fg_total,
-        "actual": "WIN" if under_correct else ("PUSH" if fg_total == dk_total else "LOSS") if dk_total else "N/A",
+        "actual": "WIN"
+        if under_correct
+        else ("PUSH" if fg_total == dk_total else "LOSS")
+        if dk_total
+        else "N/A",
     }
 
     # 7. F5 ML Home
@@ -359,9 +765,25 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
             "roi": None,
         }
     else:
-        grades["f5_ml_home"] = {"model_prob": round(p_f5h, 4), "correct": None, "roi": None, "actual": "N/A"}
-        grades["f5_ml_away"] = {"model_prob": result.get("p_f5_away_win", 0.5), "correct": None, "roi": None, "actual": "N/A"}
-        grades["f5_total"] = {"model_prob_over": result.get("p_f5_over", 0.5), "model_total": None, "actual_total": None, "correct": None, "roi": None}
+        grades["f5_ml_home"] = {
+            "model_prob": round(p_f5h, 4),
+            "correct": None,
+            "roi": None,
+            "actual": "N/A",
+        }
+        grades["f5_ml_away"] = {
+            "model_prob": result.get("p_f5_away_win", 0.5),
+            "correct": None,
+            "roi": None,
+            "actual": "N/A",
+        }
+        grades["f5_total"] = {
+            "model_prob_over": result.get("p_f5_over", 0.5),
+            "model_total": None,
+            "actual_total": None,
+            "correct": None,
+            "roi": None,
+        }
 
     # 10. NRFI / YRFI
     p_nrfi = result.get("p_nrfi", 0.5) if "p_nrfi" in result else None
@@ -385,8 +807,16 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
             "actual": nrfi_result,
         }
     else:
-        grades["nrfi"] = {"model_prob": round(p_nrfi, 4), "correct": None, "actual": "N/A"}
-        grades["yrfi"] = {"model_prob": round(p_yrfi, 4), "correct": None, "actual": "N/A"}
+        grades["nrfi"] = {
+            "model_prob": round(p_nrfi, 4),
+            "correct": None,
+            "actual": "N/A",
+        }
+        grades["yrfi"] = {
+            "model_prob": round(p_yrfi, 4),
+            "correct": None,
+            "actual": "N/A",
+        }
 
     # ── Model calibration metrics ──────────────────────────────────────────────
     exp_fg_total = result.get("exp_total", None)
@@ -405,14 +835,29 @@ def grade_game(row: dict, version: str) -> Dict[str, Any]:
         "grades": grades,
     }
 
+
 # ── Aggregate results ──────────────────────────────────────────────────────────
-def aggregate(results: List[dict]) -> dict:
+def aggregate(results: list[dict]) -> dict:
     """Aggregate grades across all games for a given version."""
-    markets = ["fg_ml_home", "fg_ml_away", "fg_rl_home", "fg_rl_away",
-               "fg_over", "fg_under", "f5_ml_home", "f5_ml_away", "nrfi", "yrfi"]
+    markets = [
+        "fg_ml_home",
+        "fg_ml_away",
+        "fg_rl_home",
+        "fg_rl_away",
+        "fg_over",
+        "fg_under",
+        "f5_ml_home",
+        "f5_ml_away",
+        "nrfi",
+        "yrfi",
+    ]
     agg = {}
     for mkt in markets:
-        wins = 0; losses = 0; pushes = 0; total_roi = 0.0; roi_count = 0
+        wins = 0
+        losses = 0
+        pushes = 0
+        total_roi = 0.0
+        roi_count = 0
         probs = []
         for r in results:
             if "grades" not in r:
@@ -438,9 +883,13 @@ def aggregate(results: List[dict]) -> dict:
         avg_roi = total_roi / roi_count if roi_count > 0 else None
         avg_prob = sum(probs) / len(probs) if probs else None
         agg[mkt] = {
-            "wins": wins, "losses": losses, "pushes": pushes,
-            "graded": graded, "accuracy": acc,
-            "avg_roi": avg_roi, "roi_count": roi_count,
+            "wins": wins,
+            "losses": losses,
+            "pushes": pushes,
+            "graded": graded,
+            "accuracy": acc,
+            "avg_roi": avg_roi,
+            "roi_count": roi_count,
             "avg_model_prob": avg_prob,
         }
 
@@ -454,24 +903,39 @@ def aggregate(results: List[dict]) -> dict:
             f5_errors.append(abs(r["exp_f5_total"] - r["f5_actual"]))
 
     agg["_calibration"] = {
-        "fg_total_mae": round(sum(fg_errors) / len(fg_errors), 4) if fg_errors else None,
-        "f5_total_mae": round(sum(f5_errors) / len(f5_errors), 4) if f5_errors else None,
+        "fg_total_mae": round(sum(fg_errors) / len(fg_errors), 4)
+        if fg_errors
+        else None,
+        "f5_total_mae": round(sum(f5_errors) / len(f5_errors), 4)
+        if f5_errors
+        else None,
         "fg_mae_n": len(fg_errors),
         "f5_mae_n": len(f5_errors),
     }
     return agg
 
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="MLB Backtest Grader v1 vs v2")
-    parser.add_argument("--seasons", default="2024,2025,2026", help="Comma-separated seasons")
-    parser.add_argument("--limit", type=int, default=0, help="Limit games per season (0=all)")
+    parser.add_argument(
+        "--seasons", default="2024,2025,2026", help="Comma-separated seasons"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Limit games per season (0=all)"
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose model output")
-    parser.add_argument("--output", default="/tmp/mlb_backtest_v1v2_report.json", help="Output JSON path")
+    parser.add_argument(
+        "--output",
+        default="/tmp/mlb_backtest_v1v2_report.json",
+        help="Output JSON path",
+    )
     args = parser.parse_args()
 
     seasons = [s.strip() for s in args.seasons.split(",")]
-    print(f'\n[INPUT] Seasons: {seasons} | Limit: {args.limit or "ALL"} | Output: {args.output}')
+    print(
+        f"\n[INPUT] Seasons: {seasons} | Limit: {args.limit or 'ALL'} | Output: {args.output}"
+    )
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -482,7 +946,7 @@ def main():
 
     # Build UNION query for all seasons
     query = f"""
-        SELECT 
+        SELECT
             sh.gameDate,
             sh.awayAbbr,
             sh.homeAbbr,
@@ -514,7 +978,7 @@ def main():
         WHERE sh.game_type IN ('regular_season', 'postseason')
           AND sh.awayScore IS NOT NULL
           AND sh.homeScore IS NOT NULL
-          AND ({' OR '.join(['sh.gameDate LIKE %s'] * len(seasons))})
+          AND ({" OR ".join(["sh.gameDate LIKE %s"] * len(seasons))})
         ORDER BY sh.gameDate, sh.awayAbbr
     """
     if args.limit > 0:
@@ -538,7 +1002,9 @@ def main():
     errors = {"v1": 0, "v2": 0}
 
     for version in ["v1", "v2"]:
-        print(f"\n[STEP] Running model under {version} constants ({len(all_rows)} games)...")
+        print(
+            f"\n[STEP] Running model under {version} constants ({len(all_rows)} games)..."
+        )
         patch_model_constants(version)
         t_start = time.time()
 
@@ -547,7 +1013,9 @@ def main():
                 elapsed = time.time() - t_start
                 rate = i / elapsed
                 eta = (len(all_rows) - i) / rate
-                print(f"  [STATE] {version}: {i}/{len(all_rows)} games | {rate:.0f} games/s | ETA {eta:.0f}s")
+                print(
+                    f"  [STATE] {version}: {i}/{len(all_rows)} games | {rate:.0f} games/s | ETA {eta:.0f}s"
+                )
 
             result = grade_game(row, version)
             if "error" in result:
@@ -556,7 +1024,9 @@ def main():
                 all_results[version].append(result)
 
         elapsed = time.time() - t_start
-        print(f"  [OUTPUT] {version}: {len(all_results[version])} graded, {errors[version]} errors | {elapsed:.1f}s")
+        print(
+            f"  [OUTPUT] {version}: {len(all_results[version])} graded, {errors[version]} errors | {elapsed:.1f}s"
+        )
 
     # ── Aggregate ──────────────────────────────────────────────────────────────
     print("\n[STEP] Aggregating results...")
@@ -564,15 +1034,27 @@ def main():
     agg_v2 = aggregate(all_results["v2"])
 
     # ── Print comparison report ────────────────────────────────────────────────
-    MARKETS = ["fg_ml_home", "fg_ml_away", "fg_rl_home", "fg_rl_away",
-               "fg_over", "fg_under", "f5_ml_home", "f5_ml_away", "nrfi", "yrfi"]
+    MARKETS = [
+        "fg_ml_home",
+        "fg_ml_away",
+        "fg_rl_home",
+        "fg_rl_away",
+        "fg_over",
+        "fg_under",
+        "f5_ml_home",
+        "f5_ml_away",
+        "nrfi",
+        "yrfi",
+    ]
 
-    print("\n" + "="*90)
+    print("\n" + "=" * 90)
     print("MLB BACKTEST GRADER — v1 vs v2 CALIBRATION ACCURACY LIFT")
     print(f"Seasons: {seasons} | Games: {len(all_rows)} | Date: {date.today()}")
-    print("="*90)
-    print(f'{"Market":<16} {"v1 Acc":>8} {"v2 Acc":>8} {"Δ Acc":>8} {"v1 Graded":>10} {"v2 Graded":>10} {"v1 ROI":>9} {"v2 ROI":>9} {"Δ ROI":>8}')
-    print("-"*90)
+    print("=" * 90)
+    print(
+        f"{'Market':<16} {'v1 Acc':>8} {'v2 Acc':>8} {'Δ Acc':>8} {'v1 Graded':>10} {'v2 Graded':>10} {'v1 ROI':>9} {'v2 ROI':>9} {'Δ ROI':>8}"
+    )
+    print("-" * 90)
 
     total_lift = 0.0
     lift_count = 0
@@ -586,28 +1068,36 @@ def main():
         delta_acc = (v2_acc - v1_acc) if (v1_acc and v2_acc) else None
         delta_roi = (v2_roi - v1_roi) if (v1_roi and v2_roi) else None
 
-        v1_acc_s = f"{v1_acc*100:.2f}%" if v1_acc else "N/A"
-        v2_acc_s = f"{v2_acc*100:.2f}%" if v2_acc else "N/A"
-        d_acc_s  = f"{delta_acc*100:+.2f}%" if delta_acc is not None else "N/A"
-        v1_roi_s = f"{v1_roi*100:.2f}%" if v1_roi else "N/A"
-        v2_roi_s = f"{v2_roi*100:.2f}%" if v2_roi else "N/A"
-        d_roi_s  = f"{delta_roi*100:+.2f}%" if delta_roi is not None else "N/A"
+        v1_acc_s = f"{v1_acc * 100:.2f}%" if v1_acc else "N/A"
+        v2_acc_s = f"{v2_acc * 100:.2f}%" if v2_acc else "N/A"
+        d_acc_s = f"{delta_acc * 100:+.2f}%" if delta_acc is not None else "N/A"
+        v1_roi_s = f"{v1_roi * 100:.2f}%" if v1_roi else "N/A"
+        v2_roi_s = f"{v2_roi * 100:.2f}%" if v2_roi else "N/A"
+        d_roi_s = f"{delta_roi * 100:+.2f}%" if delta_roi is not None else "N/A"
 
-        print(f'{mkt:<16} {v1_acc_s:>8} {v2_acc_s:>8} {d_acc_s:>8} {v1["graded"]:>10} {v2["graded"]:>10} {v1_roi_s:>9} {v2_roi_s:>9} {d_roi_s:>8}')
+        print(
+            f"{mkt:<16} {v1_acc_s:>8} {v2_acc_s:>8} {d_acc_s:>8} {v1['graded']:>10} {v2['graded']:>10} {v1_roi_s:>9} {v2_roi_s:>9} {d_roi_s:>8}"
+        )
 
         if delta_acc is not None:
             total_lift += delta_acc
             lift_count += 1
 
-    print("-"*90)
+    print("-" * 90)
     avg_lift = total_lift / lift_count if lift_count > 0 else 0
-    print(f'{"AVERAGE LIFT":<16} {"":>8} {"":>8} {avg_lift*100:>+7.2f}% {"":>10} {"":>10}')
+    print(
+        f"{'AVERAGE LIFT':<16} {'':>8} {'':>8} {avg_lift * 100:>+7.2f}% {'':>10} {'':>10}"
+    )
 
     # Calibration MAE
     c1 = agg_v1.get("_calibration", {})
     c2 = agg_v2.get("_calibration", {})
-    print(f'\n[OUTPUT] FG Total MAE: v1={c1.get("fg_total_mae", "N/A")} v2={c2.get("fg_total_mae", "N/A")} (n={c2.get("fg_mae_n", 0)})')
-    print(f'[OUTPUT] F5 Total MAE: v1={c1.get("f5_total_mae", "N/A")} v2={c2.get("f5_total_mae", "N/A")} (n={c2.get("f5_mae_n", 0)})')
+    print(
+        f"\n[OUTPUT] FG Total MAE: v1={c1.get('fg_total_mae', 'N/A')} v2={c2.get('fg_total_mae', 'N/A')} (n={c2.get('fg_mae_n', 0)})"
+    )
+    print(
+        f"[OUTPUT] F5 Total MAE: v1={c1.get('f5_total_mae', 'N/A')} v2={c2.get('f5_total_mae', 'N/A')} (n={c2.get('f5_mae_n', 0)})"
+    )
 
     # Season breakdown
     print("\n[OUTPUT] Accuracy by season (v2):")
@@ -618,7 +1108,11 @@ def main():
         season_agg = aggregate(season_results)
         fg_ml_acc = season_agg.get("fg_ml_home", {}).get("accuracy")
         nrfi_acc = season_agg.get("nrfi", {}).get("accuracy")
-        print(f"  {season}: n={len(season_results)} | FG ML Home acc={fg_ml_acc*100:.1f}% | NRFI acc={nrfi_acc*100:.1f}%" if fg_ml_acc and nrfi_acc else f"  {season}: n={len(season_results)}")
+        print(
+            f"  {season}: n={len(season_results)} | FG ML Home acc={fg_ml_acc * 100:.1f}% | NRFI acc={nrfi_acc * 100:.1f}%"
+            if fg_ml_acc and nrfi_acc
+            else f"  {season}: n={len(season_results)}"
+        )
 
     # ── Save JSON report ───────────────────────────────────────────────────────
     report = {
@@ -637,7 +1131,7 @@ def main():
             "v2_fg_mae": c2.get("fg_total_mae"),
             "v1_f5_mae": c1.get("f5_total_mae"),
             "v2_f5_mae": c2.get("f5_total_mae"),
-        }
+        },
     }
 
     with open(args.output, "w") as f:
@@ -647,6 +1141,7 @@ def main():
 
     cursor.close()
     db.close()
+
 
 if __name__ == "__main__":
     main()

@@ -8,9 +8,9 @@ from model score differential using calibrated k=0.4 sigmoid.
 
 import sys
 
-FILEPATH = 'server/mlbMultiMarketBacktest.ts'
+FILEPATH = "server/mlbMultiMarketBacktest.ts"
 
-with open(FILEPATH, 'r') as f:
+with open(FILEPATH) as f:
     content = f.read()
 
 # The exact block to replace (lines 305-355 approx)
@@ -139,18 +139,20 @@ NEW = """  // Model RL cover probabilities (stored as 0-100 percentages)
 }"""
 
 if OLD not in content:
-    print('[ERROR] Could not find target block — check for encoding differences')
+    print("[ERROR] Could not find target block — check for encoding differences")
     sys.exit(1)
 
 count = content.count(OLD)
-print(f'[INPUT] Found {count} occurrence(s) of target block')
+print(f"[INPUT] Found {count} occurrence(s) of target block")
 
 new_content = content.replace(OLD, NEW, 1)
 
-with open(FILEPATH, 'w') as f:
+with open(FILEPATH, "w") as f:
     f.write(new_content)
 
-print('[OUTPUT] Patch applied successfully')
-print('[VERIFY] New content contains RL_SIGMOID_K:', 'RL_SIGMOID_K' in new_content)
-print('[VERIFY] New content contains sigmoid-fallback:', 'sigmoid-fallback' in new_content)
-print('[VERIFY] Old block removed:', OLD not in new_content)
+print("[OUTPUT] Patch applied successfully")
+print("[VERIFY] New content contains RL_SIGMOID_K:", "RL_SIGMOID_K" in new_content)
+print(
+    "[VERIFY] New content contains sigmoid-fallback:", "sigmoid-fallback" in new_content
+)
+print("[VERIFY] Old block removed:", OLD not in new_content)

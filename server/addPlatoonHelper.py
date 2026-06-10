@@ -1,20 +1,21 @@
 """P4-B: Add computePlatoonAdj helper function to mlbKPropsModelService.ts"""
-with open('server/mlbKPropsModelService.ts', 'r') as f:
+
+with open("server/mlbKPropsModelService.ts") as f:
     content = f.read()
 
 # Find clamp function end to insert after it
-idx = content.find('function clamp(val: number, min: number, max: number): number {')
+idx = content.find("function clamp(val: number, min: number, max: number): number {")
 if idx < 0:
-    print('[WARN] clamp function not found')
+    print("[WARN] clamp function not found")
     exit(1)
 
 # Find the closing brace of clamp
 brace_count = 0
 i = idx
 while i < len(content):
-    if content[i] == '{':
+    if content[i] == "{":
         brace_count += 1
-    elif content[i] == '}':
+    elif content[i] == "}":
         brace_count -= 1
         if brace_count == 0:
             break
@@ -106,9 +107,9 @@ function computePlatoonAdj(
 }
 """
 
-content = content[:i+1] + platoon_helper + content[i+1:]
-print('[STEP] Added computePlatoonAdj helper function after clamp()')
+content = content[: i + 1] + platoon_helper + content[i + 1 :]
+print("[STEP] Added computePlatoonAdj helper function after clamp()")
 
-with open('server/mlbKPropsModelService.ts', 'w') as f:
+with open("server/mlbKPropsModelService.ts", "w") as f:
     f.write(content)
-print('[OUTPUT] Done')
+print("[OUTPUT] Done")

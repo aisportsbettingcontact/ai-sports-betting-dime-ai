@@ -1,4 +1,4 @@
-with open("/home/ubuntu/ai-sports-betting/server/routers.ts", "r") as f:
+with open("/home/ubuntu/ai-sports-betting/server/routers.ts") as f:
     content = f.read()
 
 # Add crypto import at the top if not present

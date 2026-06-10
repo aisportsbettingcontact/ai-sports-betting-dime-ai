@@ -92,7 +92,7 @@ def parse_line_str(s: str) -> float | None:
 # ── Main scraper ───────────────────────────────────────────────────────────────
 
 
-def scrape_action_network_strikeouts(date_str: str | None = None) -> list[dict]:
+def scrape_action_network_strikeouts(date_str: str | None = None) -> list[dict]:  # noqa: ARG001
     """
     Navigate to Action Network MLB strikeouts props page and extract all pitcher K prop lines.
 

@@ -26,8 +26,8 @@ print("=" * 70)
 
 # ── 1. Verify v2 calibration constants ────────────────────────────────────
 EXPECTED_V2 = {
-    "F5_RUN_SHARE":         (0.5618, 0.001),
-    "INNING1_RUN_SHARE":    (0.1166, 0.001),
+    "F5_RUN_SHARE": (0.5618, 0.001),
+    "INNING1_RUN_SHARE": (0.1166, 0.001),
     "TEAM_NRFI_LEAGUE_MEAN": (0.8899, 0.001),
 }
 
@@ -38,7 +38,9 @@ for const_name, (expected, tol) in EXPECTED_V2.items():
         continue
     delta = abs(actual - expected)
     status = "PASS" if delta <= tol else "FAIL"
-    print(f"[VERIFY] {status} — {const_name}: expected={expected:.4f} actual={actual:.4f} delta={delta:.4f}")
+    print(
+        f"[VERIFY] {status} — {const_name}: expected={expected:.4f} actual={actual:.4f} delta={delta:.4f}"
+    )
 
 # Check EMPIRICAL_PRIORS
 priors = getattr(MLBAIModel, "EMPIRICAL_PRIORS", {})
@@ -48,19 +50,25 @@ print(f"\n[STATE] EMPIRICAL_PRIORS keys: {list(priors.keys())}")
 f5_share = priors.get("f5_run_share", None)
 if f5_share is not None:
     status = "PASS" if abs(f5_share - 0.5618) <= 0.001 else "FAIL"
-    print(f"[VERIFY] {status} — EMPIRICAL_PRIORS.f5_run_share={f5_share:.4f} (expected 0.5618)")
+    print(
+        f"[VERIFY] {status} — EMPIRICAL_PRIORS.f5_run_share={f5_share:.4f} (expected 0.5618)"
+    )
 
 # RL away cover in priors
 fg_rl_away = priors.get("fg_rl_away_cover", None)
 if fg_rl_away is not None:
     status = "PASS" if abs(fg_rl_away - 0.6430) <= 0.005 else "FAIL"
-    print(f"[VERIFY] {status} — EMPIRICAL_PRIORS.fg_rl_away_cover={fg_rl_away:.4f} (expected 0.6430)")
+    print(
+        f"[VERIFY] {status} — EMPIRICAL_PRIORS.fg_rl_away_cover={fg_rl_away:.4f} (expected 0.6430)"
+    )
 
 # F5 push rate in priors
 f5_push = priors.get("f5_push_rate", None)
 if f5_push is not None:
     status = "PASS" if abs(f5_push - 0.1507) <= 0.001 else "FAIL"
-    print(f"[VERIFY] {status} — EMPIRICAL_PRIORS.f5_push_rate={f5_push:.4f} (expected 0.1507)")
+    print(
+        f"[VERIFY] {status} — EMPIRICAL_PRIORS.f5_push_rate={f5_push:.4f} (expected 0.1507)"
+    )
 
 print("\n" + "=" * 70)
 print("[STEP] Running project_game() smoke test — NYY@BOS, April 14 2026")
@@ -69,29 +77,74 @@ print("[STEP] Home SP: full-sample (25 starts, NRFI=0.6667) — minimal shrinkag
 print("=" * 70)
 
 AWAY_TEAM = {
-    "mu": 4.52, "variance": 1.21, "rpg": 4.52, "era": 3.85, "f5_rs": 2.31,
-    "obp": 0.318, "slg": 0.421, "woba": 0.322, "iso": 0.165, "k_pct": 0.225,
-    "bb_pct": 0.082, "hr_rate": 0.038, "babip": 0.295, "wrc_plus": 108,
+    "mu": 4.52,
+    "variance": 1.21,
+    "rpg": 4.52,
+    "era": 3.85,
+    "f5_rs": 2.31,
+    "obp": 0.318,
+    "slg": 0.421,
+    "woba": 0.322,
+    "iso": 0.165,
+    "k_pct": 0.225,
+    "bb_pct": 0.082,
+    "hr_rate": 0.038,
+    "babip": 0.295,
+    "wrc_plus": 108,
 }
 HOME_TEAM = {
-    "mu": 4.78, "variance": 1.31, "rpg": 4.78, "era": 4.12, "f5_rs": 2.44,
-    "obp": 0.325, "slg": 0.435, "woba": 0.331, "iso": 0.172, "k_pct": 0.218,
-    "bb_pct": 0.088, "hr_rate": 0.041, "babip": 0.301, "wrc_plus": 112,
+    "mu": 4.78,
+    "variance": 1.31,
+    "rpg": 4.78,
+    "era": 4.12,
+    "f5_rs": 2.44,
+    "obp": 0.325,
+    "slg": 0.435,
+    "woba": 0.331,
+    "iso": 0.172,
+    "k_pct": 0.218,
+    "bb_pct": 0.088,
+    "hr_rate": 0.041,
+    "babip": 0.301,
+    "wrc_plus": 112,
 }
 AWAY_SP = {
-    "era": 3.52, "k9": 9.1, "bb9": 2.4, "whip": 1.12, "fip": 3.38,
-    "xfip": 3.45, "ip": 42.0, "gp": 7, "hr9": 0.9, "xera": 3.35,
-    "fipMinus": 92, "eraMinus": 91, "war": 0.9, "throwsHand": 0,
+    "era": 3.52,
+    "k9": 9.1,
+    "bb9": 2.4,
+    "whip": 1.12,
+    "fip": 3.38,
+    "xfip": 3.45,
+    "ip": 42.0,
+    "gp": 7,
+    "hr9": 0.9,
+    "xera": 3.35,
+    "fipMinus": 92,
+    "eraMinus": 91,
+    "war": 0.9,
+    "throwsHand": 0,
 }
 HOME_SP = {
-    "era": 3.81, "k9": 8.6, "bb9": 2.7, "whip": 1.19, "fip": 3.72,
-    "xfip": 3.68, "ip": 158.0, "gp": 25, "hr9": 1.1, "xera": 3.60,
-    "fipMinus": 97, "eraMinus": 96, "war": 2.4, "throwsHand": 0,
+    "era": 3.81,
+    "k9": 8.6,
+    "bb9": 2.7,
+    "whip": 1.19,
+    "fip": 3.72,
+    "xfip": 3.68,
+    "ip": 158.0,
+    "gp": 25,
+    "hr9": 1.1,
+    "xera": 3.60,
+    "fipMinus": 97,
+    "eraMinus": 96,
+    "war": 2.4,
+    "throwsHand": 0,
 }
 
 try:
     result = MLBAIModel.project_game(
-        away_abbrev="NYY", home_abbrev="BOS",
+        away_abbrev="NYY",
+        home_abbrev="BOS",
         away_team_stats=AWAY_TEAM,
         home_team_stats=HOME_TEAM,
         away_pitcher_stats=AWAY_SP,
@@ -100,7 +153,7 @@ try:
         game_date=datetime.datetime(2026, 4, 14),
         away_pitcher_nrfi=0.3333,
         home_pitcher_nrfi=0.6667,
-        away_pitcher_nrfi_starts=3,   # LOW SAMPLE → shrinkage toward 0.8899
+        away_pitcher_nrfi_starts=3,  # LOW SAMPLE → shrinkage toward 0.8899
         home_pitcher_nrfi_starts=25,  # FULL SAMPLE → minimal shrinkage
         seed=42,
         verbose=False,
@@ -169,11 +222,17 @@ try:
     # p_nrfi should be closer to 0.74 than 0.50
     if p_nrfi is not None:
         if p_nrfi > 0.60:
-            print(f"[VERIFY] PASS — p_nrfi={p_nrfi:.4f} > 0.60 (shrinkage toward league prior applied)")
+            print(
+                f"[VERIFY] PASS — p_nrfi={p_nrfi:.4f} > 0.60 (shrinkage toward league prior applied)"
+            )
         elif p_nrfi > 0.50:
-            print(f"[VERIFY] WARN — p_nrfi={p_nrfi:.4f} in [0.50, 0.60] — shrinkage partially applied")
+            print(
+                f"[VERIFY] WARN — p_nrfi={p_nrfi:.4f} in [0.50, 0.60] — shrinkage partially applied"
+            )
         else:
-            print(f"[VERIFY] FAIL — p_nrfi={p_nrfi:.4f} <= 0.50 — shrinkage may not be working")
+            print(
+                f"[VERIFY] FAIL — p_nrfi={p_nrfi:.4f} <= 0.50 — shrinkage may not be working"
+            )
     else:
         print("[VERIFY] FAIL — p_nrfi is None")
 
@@ -182,19 +241,19 @@ try:
     # ── 4. Full market output summary ─────────────────────────────────────
     print("[STEP] Full market output summary")
     markets = [
-        ("FG ML",     "home_ml",        "away_ml"),
-        ("FG RL",     "home_rl_ml",     "away_rl_ml"),
-        ("FG Total",  "over_ml",        "under_ml"),
-        ("F5 ML",     "f5_home_ml",     "f5_away_ml"),
-        ("F5 RL",     "f5_home_rl_ml",  "f5_away_rl_ml"),
-        ("F5 Total",  "f5_over_ml",     "f5_under_ml"),
-        ("I1 NRFI",   "nrfi_home_ml",   None),
-        ("I1 YRFI",   "nrfi_away_ml",   None),
+        ("FG ML", "home_ml", "away_ml"),
+        ("FG RL", "home_rl_ml", "away_rl_ml"),
+        ("FG Total", "over_ml", "under_ml"),
+        ("F5 ML", "f5_home_ml", "f5_away_ml"),
+        ("F5 RL", "f5_home_rl_ml", "f5_away_rl_ml"),
+        ("F5 Total", "f5_over_ml", "f5_under_ml"),
+        ("I1 NRFI", "nrfi_home_ml", None),
+        ("I1 YRFI", "nrfi_away_ml", None),
     ]
     for label, k1, k2 in markets:
         v1 = result.get(k1)
         v2 = result.get(k2) if k2 else None
-        if v1 is not None:
+        if v1 is not None:  # noqa: SIM108
             v1_str = f"{v1:+.0f}"
         else:
             v1_str = "None"
@@ -212,7 +271,9 @@ try:
 
 except Exception as e:
     print(f"[VERIFY] FAIL — Exception: {e}")
-    import traceback; traceback.print_exc()
+    import traceback
+
+    traceback.print_exc()
     sys.exit(1)
 
 print("\n" + "=" * 70)

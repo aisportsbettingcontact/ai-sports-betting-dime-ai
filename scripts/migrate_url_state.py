@@ -1,4 +1,4 @@
-with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "r") as f:
+with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx") as f:
     content = f.read()
 
 # Step 1: Add useUrlState import
@@ -114,6 +114,8 @@ count3 = content.count(old_reset)
 content = content.replace(old_reset, new_reset, 1)
 print(f"Replaced resetFilters call: {count3}")
 
-with open("/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "w") as f:
+with open(
+    "/home/ubuntu/ai-sports-betting/client/src/pages/ModelProjections.tsx", "w"
+) as f:
     f.write(content)
 print("Done")
