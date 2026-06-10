@@ -1264,6 +1264,13 @@ export default function ModelProjections() {
             </button>
           )}
 
+          {/* WC 2026 pill — navigates to /wc2026 standalone page */}
+          <button type="button" onClick={() => setLocation('/wc2026')} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
+            style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
+            <span style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', flexShrink: 0 }}>⚽</span>
+            <span className="hidden sm:inline">WC</span><span className="sm:hidden">WC</span>
+          </button>
+
           {/* NBA pill — HIDDEN: NBA tab suppressed from feed until re-enabled */}
           {false && (!activeSports || activeSports?.NBA) && (
             <button type="button" onClick={() => setSelectedSport("NBA")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
