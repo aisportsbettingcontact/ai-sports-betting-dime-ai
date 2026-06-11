@@ -153,11 +153,12 @@ async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
 
 // ─── Registration ─────────────────────────────────────────────────────────────
 export function registerWc2026Heartbeats(app: Express): void {
-  app.post("/api/heartbeat/wc2026-odds", handleWc2026Odds);
-  app.post("/api/heartbeat/wc2026-splits", handleWc2026Splits);
-  app.post("/api/heartbeat/wc2026-lineups", handleWc2026Lineups);
+  // Manus Heartbeat requires /api/scheduled/* paths
+  app.post("/api/scheduled/wc2026-odds", handleWc2026Odds);
+  app.post("/api/scheduled/wc2026-splits", handleWc2026Splits);
+  app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
 
   console.log(
-    "[WC2026HB] Registered: /api/heartbeat/wc2026-odds | /api/heartbeat/wc2026-splits | /api/heartbeat/wc2026-lineups"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups"
   );
 }
