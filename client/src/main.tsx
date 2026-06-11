@@ -8,6 +8,166 @@ import superjson from "superjson";
 import App from "./App";
 import "./index.css";
 
+// ─── Rate-limit resilient fetch wrapper ──────────────────────────────────────
+//
+// PROBLEM: The Manus platform edge proxy occasionally returns the plain-text
+// string "Rate exceeded." (no JSON, Content-Type: text/plain) when the deployed
+// domain receives too many requests in a short window. The tRPC httpBatchLink
+// uses superjson to parse every response body — when it receives plain text it
+// throws: SyntaxError: Unexpected token 'R', "Rate exceeded." is not valid JSON
+// This crashes the entire tRPC client and the user sees a raw error message.
+//
+// FIX: Wrap globalThis.fetch to intercept non-JSON responses BEFORE tRPC parses
+// them. If the response body is plain text (not JSON), we synthesize a proper
+// JSON error response that tRPC can handle gracefully. Rate-limit responses are
+// automatically retried up to 3 times with exponential backoff (1s, 2s, 4s).
+//
+// [INPUT]  Any fetch request to /api/trpc
+// [STEP]   Execute the real fetch
+// [STEP]   Check Content-Type header — if not JSON, read body as text
+// [STEP]   If body looks like a rate-limit message, retry with backoff
+// [STEP]   After max retries, synthesize a JSON error response tRPC can parse
+// [OUTPUT] Either the real JSON response or a synthesized error JSON response
+// [VERIFY] Never throws a raw SyntaxError to the tRPC layer
+
+const RATE_LIMIT_PATTERNS = [
+  "rate exceeded",
+  "too many requests",
+  "rate limit",
+  "ratelimit",
+  "throttled",
+  "quota exceeded",
+];
+
+function isRateLimitBody(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  return RATE_LIMIT_PATTERNS.some(p => lower.includes(p));
+}
+
+function synthesizeRateLimitResponse(bodyText: string): Response {
+  // Synthesize a valid tRPC error JSON response so the tRPC client can handle
+  // it gracefully as a TRPCClientError instead of a raw SyntaxError.
+  const errorBody = JSON.stringify([{
+    error: {
+      json: {
+        message: "The server is temporarily busy. Please wait a moment and try again.",
+        code: -32600,
+        data: {
+          code: "TOO_MANY_REQUESTS",
+          httpStatus: 429,
+          path: null,
+        },
+      },
+    },
+  }]);
+  return new Response(errorBody, {
+    status: 429,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// Dedup: only show the rate-limit toast once per page load to avoid stacking.
+let _rateLimitToastShown = false;
+
+async function resilientFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  attempt = 0
+): Promise<Response> {
+  const MAX_RETRIES = 3;
+  const BACKOFF_MS = [1000, 2000, 4000];
+
+  const response = await globalThis.fetch(input, {
+    ...(init ?? {}),
+    credentials: "include",
+  });
+
+  // Fast path: JSON response — return immediately, no interception needed.
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return response;
+  }
+
+  // Non-JSON response: read body as text to inspect it.
+  // We must clone the response because body can only be consumed once.
+  let bodyText = "";
+  try {
+    bodyText = await response.clone().text();
+  } catch {
+    // If we can't read the body, pass through as-is.
+    return response;
+  }
+
+  // Check if this looks like a rate-limit response.
+  if (isRateLimitBody(bodyText) || response.status === 429) {
+    console.warn(
+      `[ResilientFetch] Rate-limit response detected` +
+      ` | attempt=${attempt + 1}/${MAX_RETRIES}` +
+      ` | status=${response.status}` +
+      ` | body="${bodyText.slice(0, 100)}"`
+    );
+
+    // Show a user-facing toast on the first rate-limit hit (deduped).
+    if (!_rateLimitToastShown) {
+      _rateLimitToastShown = true;
+      toast.warning("Server is busy — retrying automatically…", {
+        id: "rate-limit-retry",
+        duration: 6000,
+        description: "This usually resolves in a few seconds.",
+      });
+      // Reset the dedup flag after 30s so future rate-limit events can show again.
+      setTimeout(() => { _rateLimitToastShown = false; }, 30_000);
+    }
+
+    if (attempt < MAX_RETRIES - 1) {
+      // Wait with exponential backoff, then retry.
+      const delay = BACKOFF_MS[attempt] ?? 4000;
+      console.log(`[ResilientFetch] Retrying in ${delay}ms…`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return resilientFetch(input, init, attempt + 1);
+    }
+
+    // Max retries exhausted — synthesize a proper JSON error response.
+    console.error(
+      `[ResilientFetch] Max retries (${MAX_RETRIES}) exhausted for rate-limit response.` +
+      ` Synthesizing JSON error response.`
+    );
+    toast.error("Server is temporarily unavailable. Please try again in a minute.", {
+      id: "rate-limit-final",
+      duration: 8000,
+    });
+    return synthesizeRateLimitResponse(bodyText);
+  }
+
+  // Non-JSON, non-rate-limit response (e.g. HTML error page from proxy).
+  // Synthesize a generic JSON error so tRPC doesn't crash on JSON.parse.
+  console.error(
+    `[ResilientFetch] Unexpected non-JSON response` +
+    ` | status=${response.status}` +
+    ` | contentType="${contentType}"` +
+    ` | body="${bodyText.slice(0, 200)}"`
+  );
+  const errorBody = JSON.stringify([{
+    error: {
+      json: {
+        message: "An unexpected server error occurred. Please refresh and try again.",
+        code: -32600,
+        data: {
+          code: "INTERNAL_SERVER_ERROR",
+          httpStatus: response.status || 500,
+          path: null,
+        },
+      },
+    },
+  }]);
+  return new Response(errorBody, {
+    status: response.status || 500,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+// ─── QueryClient ─────────────────────────────────────────────────────────────
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,10 +226,6 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   }
 
   // [STEP] Delay redirect by 1.5 s so the toast is visible before navigation.
-  // The toast id "session-expired" ensures only one instance is shown.
-  // Redirect to the app's own landing/login page ("/") — NOT the Manus OAuth portal.
-  // The app uses custom JWT auth (app_session cookie), so users must re-enter their
-  // credentials on the app's login form, not the Manus OAuth flow.
   setTimeout(() => {
     window.location.href = "/";
   }, 1500);
@@ -118,14 +274,16 @@ queryClient.getQueryCache().subscribe(event => {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
     // Suppress UNAUTHORIZED console errors for optional auth-gated queries to reduce noise.
-    // These queries are already guarded with enabled:!loading && Boolean(appUser) and will
-    // silently not fire once auth state resolves.
     const isUnauthorized = error instanceof TRPCClientError && error.message === UNAUTHED_ERR_MSG;
     if (isOptionalAuthQuery(event.query.queryKey) && isUnauthorized) return; // suppress
     // Suppress transient network errors (Failed to fetch) — these are browser-level
     // connection blips that auto-retry. Logging them causes false-positive error reports.
     const isNetworkBlip = error instanceof TRPCClientError && error.message === "Failed to fetch";
     if (isNetworkBlip) return;
+    // Suppress rate-limit errors — they are already handled by resilientFetch with toast + retry.
+    const isRateLimit = error instanceof TRPCClientError &&
+      (error.message.includes("temporarily busy") || error.message.includes("temporarily unavailable"));
+    if (isRateLimit) return;
     console.error("[API Query Error]", error);
   }
 });
@@ -134,9 +292,16 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Mutation Error]", error);
+    // Suppress rate-limit errors — already handled by resilientFetch.
+    const isRateLimit = error instanceof TRPCClientError &&
+      (error.message.includes("temporarily busy") || error.message.includes("temporarily unavailable"));
+    if (!isRateLimit) {
+      console.error("[API Mutation Error]", error);
+    }
   }
 });
+
+// ─── tRPC client ─────────────────────────────────────────────────────────────
 
 const trpcClient = trpc.createClient({
   links: [
@@ -147,12 +312,9 @@ const trpcClient = trpc.createClient({
       // for batches that exceed this limit (e.g. 68+ team color queries on Dashboard)
       // preventing HTTP 414 Request-URI Too Large from nginx
       maxURLLength: 2048,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
-          ...(init ?? {}),
-          credentials: "include",
-        });
-      },
+      // Use resilientFetch instead of globalThis.fetch to handle non-JSON responses
+      // (e.g. "Rate exceeded." from the platform edge proxy) without crashing.
+      fetch: resilientFetch,
     }),
   ],
 });

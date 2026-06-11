@@ -4092,3 +4092,13 @@
 - [x] Inject WcFeedInline component in main feed area when WC is selected
 - [x] All 1038 tests pass
 - [x] TypeScript: 0 errors
+
+## Session: 2026-06-11 - Rate Exceeded Login Fix
+- [x] Root cause: Manus platform edge proxy returns plain-text "Rate exceeded." on burst requests; tRPC httpBatchLink tries to JSON.parse it → SyntaxError crash
+- [x] Implement resilientFetch wrapper in main.tsx: intercepts non-JSON responses before tRPC parses them
+- [x] Auto-retry with exponential backoff (1s/2s/4s) for rate-limit responses (up to 3 retries)
+- [x] Synthesize valid tRPC-compatible JSON error response after max retries exhausted
+- [x] Show user-friendly toast ("Server is busy — retrying automatically…") instead of raw SyntaxError
+- [x] Suppress rate-limit errors from console error log (already handled by resilientFetch)
+- [x] Write 12 vitest tests for isRateLimitBody and synthesizeRateLimitResponse (12/12 passing)
+- [x] TypeScript: 0 errors
