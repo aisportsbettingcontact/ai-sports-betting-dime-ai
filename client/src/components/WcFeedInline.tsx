@@ -868,22 +868,22 @@ function WcDesktopMergedPanel({
 
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
-      {/* HOME ML column — singleRow */}
+      {/* AWAY ML column — singleRow (away team shown on top in game card) */}
       <SectionCol
-        title="Home ML"
-        awayLabel={homeFifaCode}
+        title={`${awayFifaCode} ML`}
+        awayLabel={awayFifaCode}
         homeLabel=""
-        awayBook={homeBook}
+        awayBook={awayBook}
         homeBook=""
-        awayModel={homeModel}
+        awayModel={awayModel}
         homeModel=""
         singleRow={true}
-        awayTickets={mlSplits.homeTickets}
+        awayTickets={mlSplits.awayTickets}
         homeTickets={null}
-        awayMoney={mlSplits.homeMoney}
+        awayMoney={mlSplits.awayMoney}
         homeMoney={null}
-        awayColor={homeColors.primary}
-        homeColor={homeColors.secondary}
+        awayColor={awayColors.primary}
+        homeColor={awayColors.secondary}
       />
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
       {/* DRAW column — singleRow */}
@@ -904,22 +904,22 @@ function WcDesktopMergedPanel({
         homeColor="#888888"
       />
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* AWAY ML column — singleRow */}
+      {/* HOME ML column — singleRow (home team shown on bottom in game card) */}
       <SectionCol
-        title="Away ML"
-        awayLabel={awayFifaCode}
+        title={`${homeFifaCode} ML`}
+        awayLabel={homeFifaCode}
         homeLabel=""
-        awayBook={awayBook}
+        awayBook={homeBook}
         homeBook=""
-        awayModel={awayModel}
+        awayModel={homeModel}
         homeModel=""
         singleRow={true}
-        awayTickets={mlSplits.awayTickets}
+        awayTickets={mlSplits.homeTickets}
         homeTickets={null}
-        awayMoney={mlSplits.awayMoney}
+        awayMoney={mlSplits.homeMoney}
         homeMoney={null}
-        awayColor={awayColors.primary}
-        homeColor={awayColors.secondary}
+        awayColor={homeColors.primary}
+        homeColor={homeColors.secondary}
       />
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
       {/* TOTAL column — 2 rows: O/U */}
