@@ -13,15 +13,16 @@
   "experiments": null,
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663397752079/MW3FicTy7ae3qrm8dx8Lua",
-    "access_key_id": "ASIAZV3A2ECZMEBFHOUH",
-    "secret_access_key": "koFgWndDwP2rsQNOvMv12mbrekbBqETs1zh/ZICx",
-    "session_token": "IQoJb3JpZ2luX2VjEDYaCXVzLWVhc3QtMSJGMEQCICEkCgwkRWLZISZPkgr+mHEmd2wVDB342iGzHOiHBWyGAiBNnLoLxRxzKiohu5M73o7Wl4/C5EtAmbcLE56PZ2qaCSr/Awj///////////8BEAQaDDY2NTM4NjA5ODg2NiIM5GyAzvPwakP6dOtXKtMDKQvzezI5avnNov+JVnRuPSRDQGm7eU5w3Z3SRpNMitf1nt0bhj3zJMGnEz6qpbk2OGjnxK5q9eKxMY+06ngLRkvUtGa6PRYwyBjvaXnrhc/1FhqUj8XJko91FDFEgtfzAchcOtuQC6Ze8hHvRgz+tIB751GzWIDGKpYqCQCCH2jmtky2nS9hLl0DRk6nofjOV/9DQQC37/KuXbo5veatlFgDfjXVSapc9fDHH1gEvxj0E83jqaqdNnZaZL41W12WSIfXxTMsEJVrTqI/leOh5hspwzWfR4fR//xfgha4gMJMUiA9qHagEyVMAX9wCGgJeiXtrZZZdsxDGa651xYICUPQ2QDNcugpSJNRt0svy/HBrR+zxPIxKrxNUSvjUCupHkxGue5+3Zu7O/3/qX0LoRGx/QJrs7cspEwo1FAQ3W3FUDfcc16YP6z+gaPG8TPKU0qBiMYqCnZlr3UCTVhwRo/aArz9vaUNzl7lLWyaD/GJkwiB5+VMGHDoAsB6jiZj8OHMd75qApVm8GS1/XKztL6JeFVC/Qjqi80G8ydk+qnc5hIYJjMCcmd8+vp4N9na2+7burmPIw8jOkLD53wvXjlM4IcscNxSjdfdM915gMVmanIw+/2q0QY6ngEUlPgobIR51JiQk1fBVf6sb6LH7FAjqIG1Fw1YJ3BLKtdw2MJSvP/cPtIKg1Fm+PXhhKGeHOHtXQMe0V5xCiQ6bjoTMYaZfhYmqZPhmaB2FUnh8L1CUGktBXq15Kjkf/H6OXMl3g2OOdBJPTOmKLxnojK22kBW9b5R4WKPu5Hp+kYZDlNu0AhH0EeEiWLLVPyZ5+Xg9Ekucs7cRk7vAQ==",
-    "expiration": "2026-06-12T01:58:19.000Z"
+    "access_key_id": "ASIAZV3A2ECZI5KRK7YQ",
+    "secret_access_key": "bazgfVH0sfgAz0gVHQYovriLyWUoCgS27nh7vuiD",
+    "session_token": "IQoJb3JpZ2luX2VjEDoaCXVzLWVhc3QtMSJGMEQCIA0ugipiTuhhQ/BthmnyknDRTttkkbjSXXVep3Rk+2LXAiAD3Ywk7pw8JYaFgN4IlNgV5xCLcf6xcWY38bXyUD6Asyr2AwgCEAQaDDY2NTM4NjA5ODg2NiIMwpEJ63AxxvprSZexKtMDmrjlVXNWsdUbxKpOLYuLC8Ct9hL2mZS5ryisuTzRFeANftP42WW2ZZaEJszf8QoeiGPbeZBGw0WDg23hBVADPIXu8nSA2z5LyIzQPed+GMRt/72sIkSIFdaFj0nhIeOW8u647Tu9HEH5Tjq2lFPFW42YPLHc/ZX+6/OlnfLO9belAY02yifgkXmMlzIMXwUp6pSfmQKFJZ8qb1V04pXghK5bdlolB5T5beW3WZOZ1NqNt03927i7Idz4Khh3y8GRC85ZIx708xhFPD3HbVB+Ni6GkGBJt0dHp6BntYUoYPRDsWACwwkpgosgXwe2Y7ieirr5y0mPwWps0dkBnUxXmbXkMyJmm0BmpSm5Tn4muBr7rXIratcyqYG6iqSMRSrNSJGDgkzlEjSFAsoFV9LzR9nySNO9eQbZkHo1uVnlk81vYali6rJ71KIBhQ3DUj0AgCHVJuaqtgDC9yFNikURQol+jtkcENwItNuljoKv6FB6mg4PKxoMGDfpdT1f4CBKTiK/rjrTHS2lBledMSoWb2lL70SRiXRQGmJOkIR+O+6UESjs/bJUdX5jqIgrZ6zbkw/yG8SZCb2gbSXypoIiZE0ToQznRYWt+uJDOAg54IakWQIwyNar0QY6ngHGgxqbj1/t0U2UT7jnJAkBxR9VMw75Vs26VyXa3lYbstFc1zbB1Q8YzbIQeSm6VNA1K9uJFctLF7/bcc9vBnLOOtCwfe0c/p/Vucf5RcNrDOBBSPyhhmzfIkUsJb3ls/w4Dyl27bPQ3ZSaiA0pK5aJ5E3oYw612c4paCoHJFdSSufcL9bo+YA8i3BJ4y1hQ9LcETZiERt9QFjVFA1bqQ==",
+    "expiration": "2026-06-12T05:07:20.000Z"
   },
   "name": "ai-sports-betting",
   "path": "/home/ubuntu/ai-sports-betting",
   "port": 3000,
   "secrets": {
+    "ANTHROPIC_API_KEY": "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",
     "BUILT_IN_FORGE_API_KEY": "miNquhzPUYHCLhWR7zGhtF",
     "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
     "CF_API_TOKEN": "cfut_nTld033wR3ofRiQlk6qU2k9A6F7fGrd6vkWku6Kl06ceeb39",

@@ -15,6 +15,7 @@
     "postinstall": "pip3 install -r requirements.txt -q 2>/dev/null || true"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@aws-sdk/client-s3": "^3.1029.0",
     "@aws-sdk/s3-request-presigner": "^3.1029.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -80,6 +81,7 @@
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.64.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
     "recharts": "^2.15.2",
     "sharp": "^0.34.5",
