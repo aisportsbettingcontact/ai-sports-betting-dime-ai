@@ -7,13 +7,23 @@
  *
  * Sub-tabs: PROJECTIONS | SPLITS | LINEUPS | STANDINGS | FUTURES
  *
- * PROJECTIONS layout (3-way market):
- *   HOME ML  | BOOK | MODEL
- *   DRAW     | BOOK | MODEL
- *   AWAY ML  | BOOK | MODEL
- *   ─────────────────────────
- *   O {line} | BOOK | MODEL
- *   U {line} | BOOK | MODEL
+ * PROJECTIONS layout — exact GameCard (DesktopMergedPanel) structure:
+ *   Left score panel: flag + country name + kickoff time
+ *   Right merged panel: 3 SectionCol columns
+ *     HOME ML  | BOOK | MODEL
+ *     DRAW     | BOOK | MODEL
+ *     AWAY ML  | BOOK | MODEL
+ *     ─────────────────────────
+ *     O {line} | BOOK | MODEL
+ *     U {line} | BOOK | MODEL
+ *
+ * LINEUPS layout — exact MlbLineupCard structure:
+ *   background: #090E14, borderRadius: 12, border: 1px solid #182433
+ *   3px gradient top bar: linear-gradient(90deg, awayColor 48%, homeColor 52%)
+ *   Matchup header: gridTemplateColumns: "1fr auto 1fr"
+ *   Lineup columns: gridTemplateColumns: "1fr 1px 1fr"
+ *   BattingOrderHeader-equivalent: "Starting XI" header with confirmed/expected dot
+ *   LineupRows-equivalent: jersey number + position pill + player name (Barlow Condensed)
  *
  * Data source: DK NJ (book_id=68) via Action Network API
  *   → wc2026.todayWithOdds  (today's fixtures)
@@ -24,7 +34,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, MapPin, Clock, Users } from "lucide-react";
+import { CalendarDays, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -66,6 +76,146 @@ function posOrder(pos: string | null): number {
   if (!pos) return 99;
   return POSITION_ORDER[pos.toUpperCase()] ?? 50;
 }
+
+// WC team colors — curated per FIFA country code
+const WC_TEAM_COLORS: Record<string, { primary: string; secondary: string }> = {
+  MEX: { primary: "#006847", secondary: "#CE1126" },
+  RSA: { primary: "#007A4D", secondary: "#FFB612" },
+  CAN: { primary: "#FF0000", secondary: "#FFFFFF" },
+  NZL: { primary: "#00247D", secondary: "#CC0000" },
+  ARG: { primary: "#74ACDF", secondary: "#FFFFFF" },
+  MAR: { primary: "#C1272D", secondary: "#006233" },
+  ESP: { primary: "#AA151B", secondary: "#F1BF00" },
+  POR: { primary: "#006600", secondary: "#FF0000" },
+  FRA: { primary: "#002395", secondary: "#ED2939" },
+  GER: { primary: "#000000", secondary: "#DD0000" },
+  BRA: { primary: "#009C3B", secondary: "#FFDF00" },
+  USA: { primary: "#002868", secondary: "#BF0A30" },
+  ENG: { primary: "#FFFFFF", secondary: "#CF081F" },
+  NED: { primary: "#FF6600", secondary: "#FFFFFF" },
+  BEL: { primary: "#000000", secondary: "#EF3340" },
+  URU: { primary: "#5AAAA8", secondary: "#FFFFFF" },
+  COL: { primary: "#FCD116", secondary: "#003087" },
+  ECU: { primary: "#FFD100", secondary: "#0072CE" },
+  CHI: { primary: "#D52B1E", secondary: "#003087" },
+  PER: { primary: "#D91023", secondary: "#FFFFFF" },
+  SEN: { primary: "#00853F", secondary: "#FDEF42" },
+  NGA: { primary: "#008751", secondary: "#FFFFFF" },
+  CMR: { primary: "#007A5E", secondary: "#CE1126" },
+  GHA: { primary: "#006B3F", secondary: "#FCD116" },
+  CIV: { primary: "#F77F00", secondary: "#009A44" },
+  TUN: { primary: "#E70013", secondary: "#FFFFFF" },
+  EGY: { primary: "#CE1126", secondary: "#FFFFFF" },
+  ALG: { primary: "#006233", secondary: "#FFFFFF" },
+  JPN: { primary: "#003087", secondary: "#BC002D" },
+  KOR: { primary: "#003087", secondary: "#CD2E3A" },
+  AUS: { primary: "#00843D", secondary: "#FFD700" },
+  IRN: { primary: "#239F40", secondary: "#DA0000" },
+  SAU: { primary: "#006C35", secondary: "#FFFFFF" },
+  QAT: { primary: "#8D1B3D", secondary: "#FFFFFF" },
+  UZB: { primary: "#1EB53A", secondary: "#0099B5" },
+  SUI: { primary: "#FF0000", secondary: "#FFFFFF" },
+  AUT: { primary: "#ED2939", secondary: "#FFFFFF" },
+  CRO: { primary: "#FF0000", secondary: "#171796" },
+  SRB: { primary: "#C6363C", secondary: "#0C4076" },
+  POL: { primary: "#DC143C", secondary: "#FFFFFF" },
+  UKR: { primary: "#005BBB", secondary: "#FFD500" },
+  CZE: { primary: "#D7141A", secondary: "#11457E" },
+  HUN: { primary: "#CE2939", secondary: "#477050" },
+  DEN: { primary: "#C60C30", secondary: "#FFFFFF" },
+  SWE: { primary: "#006AA7", secondary: "#FECC02" },
+  NOR: { primary: "#EF2B2D", secondary: "#003087" },
+  FIN: { primary: "#003580", secondary: "#FFFFFF" },
+  SCO: { primary: "#003087", secondary: "#FFFFFF" },
+  WAL: { primary: "#C8102E", secondary: "#FFFFFF" },
+  IRL: { primary: "#169B62", secondary: "#FF883E" },
+  ISL: { primary: "#003897", secondary: "#DC1E35" },
+  GRE: { primary: "#0D5EAF", secondary: "#FFFFFF" },
+  TUR: { primary: "#E30A17", secondary: "#FFFFFF" },
+  RUS: { primary: "#D52B1E", secondary: "#003087" },
+  SLO: { primary: "#003DA5", secondary: "#EF3340" },
+  SVK: { primary: "#0B4EA2", secondary: "#EE1C25" },
+  ROM: { primary: "#002B7F", secondary: "#FCD116" },
+  BUL: { primary: "#00966E", secondary: "#D62612" },
+  PAN: { primary: "#DA121A", secondary: "#003087" },
+  CRC: { primary: "#002B7F", secondary: "#CE1126" },
+  HON: { primary: "#0073CF", secondary: "#FFFFFF" },
+  GTM: { primary: "#4997D0", secondary: "#FFFFFF" },
+  SLV: { primary: "#0F47AF", secondary: "#FFFFFF" },
+  JAM: { primary: "#000000", secondary: "#FED100" },
+  HAI: { primary: "#00209F", secondary: "#D21034" },
+  TRI: { primary: "#CE1126", secondary: "#000000" },
+  BOL: { primary: "#D52B1E", secondary: "#F4E400" },
+  PAR: { primary: "#D52B1E", secondary: "#FFFFFF" },
+  VEN: { primary: "#CF142B", secondary: "#003087" },
+  CHN: { primary: "#DE2910", secondary: "#FFDE00" },
+  IND: { primary: "#FF9933", secondary: "#138808" },
+  THA: { primary: "#A51931", secondary: "#2D2A4A" },
+  VIE: { primary: "#DA251D", secondary: "#FFCD00" },
+  IDN: { primary: "#CE1126", secondary: "#FFFFFF" },
+  MYS: { primary: "#CC0001", secondary: "#003087" },
+  PHI: { primary: "#0038A8", secondary: "#CE1126" },
+  IRQ: { primary: "#007A3D", secondary: "#CE1126" },
+  SYR: { primary: "#007A3D", secondary: "#CE1126" },
+  JOR: { primary: "#007A3D", secondary: "#CE1126" },
+  LBN: { primary: "#FFFFFF", secondary: "#EE161F" },
+  OMN: { primary: "#DB161B", secondary: "#FFFFFF" },
+  BHR: { primary: "#CE1126", secondary: "#FFFFFF" },
+  KWT: { primary: "#007A3D", secondary: "#000000" },
+  UAE: { primary: "#00732F", secondary: "#FF0000" },
+  YEM: { primary: "#CE1126", secondary: "#000000" },
+  LBY: { primary: "#000000", secondary: "#239E46" },
+  SDN: { primary: "#D21034", secondary: "#000000" },
+  ETH: { primary: "#078930", secondary: "#FCDD09" },
+  KEN: { primary: "#006600", secondary: "#BB0000" },
+  TAN: { primary: "#1EB53A", secondary: "#FCD116" },
+  UGA: { primary: "#000000", secondary: "#FCDC04" },
+  ZIM: { primary: "#006400", secondary: "#FFD200" },
+  ZAM: { primary: "#198A00", secondary: "#EF7D00" },
+  MOZ: { primary: "#009A44", secondary: "#FCDD09" },
+  MWI: { primary: "#000000", secondary: "#CE1126" },
+  BOT: { primary: "#75AADB", secondary: "#000000" },
+  NAM: { primary: "#003580", secondary: "#009A44" },
+  ANG: { primary: "#CC0000", secondary: "#000000" },
+  COD: { primary: "#007FFF", secondary: "#F7D618" },
+  COG: { primary: "#009543", secondary: "#DC241F" },
+  GAB: { primary: "#009E60", secondary: "#FCD116" },
+  CMR2: { primary: "#007A5E", secondary: "#CE1126" },
+  BEN: { primary: "#008751", secondary: "#FCD116" },
+  NER: { primary: "#E05206", secondary: "#009A00" },
+  MLI: { primary: "#14B53A", secondary: "#FCD116" },
+  BFA: { primary: "#EF2B2D", secondary: "#009A44" },
+  GIN: { primary: "#CE1126", secondary: "#009460" },
+  SLE: { primary: "#1EB53A", secondary: "#0072C6" },
+  LBR: { primary: "#BF0A30", secondary: "#003087" },
+  GNB: { primary: "#CE1126", secondary: "#009A44" },
+  CPV: { primary: "#003893", secondary: "#CF2027" },
+  GMB: { primary: "#3A7728", secondary: "#CE1126" },
+  MRT: { primary: "#006233", secondary: "#FFD700" },
+  SOM: { primary: "#4189DD", secondary: "#FFFFFF" },
+  DJI: { primary: "#6AB2E7", secondary: "#12AD2B" },
+  ERI: { primary: "#4189DD", secondary: "#009A44" },
+  RWA: { primary: "#20603D", secondary: "#FAD201" },
+  BDI: { primary: "#CE1126", secondary: "#1EB53A" },
+  COM: { primary: "#3A75C4", secondary: "#3A75C4" },
+  MDG: { primary: "#FC3D32", secondary: "#007E3A" },
+  MUS: { primary: "#EA2839", secondary: "#1A206D" },
+  SEY: { primary: "#003F87", secondary: "#FCD856" },
+  STP: { primary: "#12AD2B", secondary: "#FFCE00" },
+  GEQ: { primary: "#3E9A00", secondary: "#E32118" },
+  LSO: { primary: "#009543", secondary: "#FFFFFF" },
+  SWZ: { primary: "#3E5EB9", secondary: "#FFD900" },
+};
+
+function getWcTeamColors(fifaCode: string): { primary: string; secondary: string } {
+  return WC_TEAM_COLORS[fifaCode?.toUpperCase()] ?? { primary: "#1a4a8a", secondary: "#c84b0c" };
+}
+
+// ─── Typography scale — exact GameCard constants ──────────────────────────────
+const HDR_FS  = 'clamp(15px,1.25vw,20px)';
+const VAL_FS  = 'clamp(12px,1.0vw,16px)';
+const ABBR_FS = 'clamp(11px,0.9vw,14px)';
+const TITLE_FS = 'clamp(17px,1.45vw,22px)';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -163,291 +313,678 @@ type WcFixtureWithLineups = WcFixtureWithOdds & {
   lineups: WcLineupPlayer[];
 };
 
-// ─── Odds Row ─────────────────────────────────────────────────────────────────
+// ─── OddsCell — exact GameCard OddsCell ──────────────────────────────────────
 
-function OddsRow({
-  label,
-  bookOdds,
-  modelOdds,
+function OddsCell({
+  mainValue,
+  isBook = true,
+  isEdge = false,
+  size = 'md',
+  wrapperStyle,
 }: {
-  label: string;
-  bookOdds: number | undefined | null;
-  modelOdds?: number | undefined | null;
+  mainValue: string;
+  isBook?: boolean;
+  isEdge?: boolean;
+  size?: 'sm' | 'md';
+  wrapperStyle?: React.CSSProperties;
 }) {
-  const bookStr = fmtAmerican(bookOdds);
+  const mainFs = size === 'sm'
+    ? 'clamp(10.5px, 2.6vw, 12.5px)'
+    : 'clamp(13px, 1.1vw, 17px)';
+  const pillPadding = size === 'sm' ? '3px 5px' : '4px 8px';
+  const borderRadius = size === 'sm' ? '8px' : '10px';
+
+  const pillBg = isBook
+    ? (isEdge ? 'rgba(57,255,20,0.10)' : 'rgba(255,255,255,0.07)')
+    : 'transparent';
+  const pillBorder = isBook
+    ? (isEdge ? '1px solid rgba(57,255,20,0.45)' : '1px solid rgba(255,255,255,0.13)')
+    : (isEdge ? '1px solid rgba(57,255,20,0.30)' : '1px solid transparent');
+  const mainColor = isEdge ? '#39FF14' : '#FFFFFF';
+  const mainWeight = isEdge ? 800 : 700;
+
   return (
-    <div className="flex items-center justify-between gap-1 py-[3px]">
-      <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium w-[56px] flex-shrink-0">
-        {label}
-      </span>
-      <div className="flex items-center gap-3 flex-1 justify-end">
+    <div
+      className="flex flex-col items-center justify-center"
+      style={{ gap: 1, ...wrapperStyle }}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: pillPadding,
+          borderRadius,
+          background: pillBg,
+          border: pillBorder,
+          minWidth: size === 'sm' ? 42 : 48,
+          gap: 1,
+          transition: 'background 200ms, border 200ms',
+        }}
+      >
         <span
-          className={cn(
-            "text-xs font-bold tabular-nums w-[44px] text-right",
-            bookStr === "—" ? "text-zinc-600" : "text-zinc-100"
-          )}
+          className="tabular-nums"
+          style={{
+            fontSize: mainFs,
+            fontWeight: mainWeight,
+            color: mainColor,
+            letterSpacing: '0.01em',
+            lineHeight: 1.1,
+            whiteSpace: 'nowrap',
+          }}
         >
-          {bookStr}
-        </span>
-        <span className="text-xs tabular-nums w-[44px] text-right text-zinc-600">
-          {modelOdds != null ? fmtAmerican(modelOdds) : "—"}
+          {mainValue}
         </span>
       </div>
     </div>
   );
 }
 
-// ─── Fixture Card (Projections) ───────────────────────────────────────────────
+// ─── SectionCol — exact GameCard SectionCol ───────────────────────────────────
 
-function WcFixtureCard({ fixture }: { fixture: WcFixtureWithOdds }) {
-  const { homeTeam, awayTeam, venue, dkOdds, status } = fixture;
-  const isLive = status === "LIVE";
-  const isFinal = status === "FT";
-  const hasOdds =
-    dkOdds != null &&
-    (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
-  const totalLine = dkOdds?.overLine ?? 2.5;
+function SectionCol({
+  title,
+  awayLabel,
+  homeLabel,
+  awayBook,
+  homeBook,
+}: {
+  title: string;
+  awayLabel: string;
+  homeLabel: string;
+  awayBook: string;
+  homeBook: string;
+}) {
+  const colHdrStyle = (color: string): React.CSSProperties => ({
+    fontSize: HDR_FS,
+    fontWeight: 700,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase' as const,
+    color,
+    whiteSpace: 'nowrap' as const,
+  });
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border transition-all duration-150 mx-3 mb-3",
-        "bg-[#0f0f0f] border-white/8",
-        isLive && "border-emerald-500/40 shadow-[0_0_12px_rgba(34,197,94,0.08)]"
-      )}
-    >
-      {/* ── Card header: group + kickoff ── */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2">
-        <div className="flex items-center gap-2">
-          {fixture.groupLetter && (
-            <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold border border-zinc-700 rounded px-1.5 py-0.5">
-              GROUP {fixture.groupLetter} · MD{fixture.matchday}
-            </span>
-          )}
-          {isLive && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded animate-pulse">
+    <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: '8px 10px 10px' }}>
+      {/* Section title */}
+      <div className="flex items-center gap-1.5" style={{ marginBottom: 4 }}>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#fff', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          {title}
+        </span>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+      </div>
+
+      {/* Spacer */}
+      <div style={{ height: 'clamp(6px,0.5vw,9px)', marginBottom: 2 }} />
+
+      {/* Odds grid: 2 columns — BOOK | MODEL */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', marginBottom: 5, alignItems: 'start' }}>
+        {/* BOOK / MODEL column headers */}
+        <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
+        <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
+
+        {/* Away / OVER — BOOK pill */}
+        <OddsCell
+          mainValue={awayBook}
+          isBook={true}
+          size="md"
+          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+        />
+        {/* Away / OVER — MODEL pill (blank — no model yet) */}
+        <OddsCell
+          mainValue="—"
+          isBook={false}
+          size="md"
+          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+        />
+
+        {/* Home / UNDER — BOOK pill */}
+        <OddsCell
+          mainValue={homeBook}
+          isBook={true}
+          size="md"
+          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+        />
+        {/* Home / UNDER — MODEL pill (blank — no model yet) */}
+        <OddsCell
+          mainValue="—"
+          isBook={false}
+          size="md"
+          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+        />
+      </div>
+
+      {/* Row labels below pills */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 8px', marginTop: 2 }}>
+        <span className="text-center" style={{ fontSize: ABBR_FS, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          {awayLabel}
+        </span>
+        <span className="text-center" style={{ fontSize: ABBR_FS, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          {homeLabel}
+        </span>
+      </div>
+
+      {/* Thin separator */}
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginTop: 7 }} />
+    </div>
+  );
+}
+
+// ─── WC Score Panel — exact GameCard ScorePanel structure ─────────────────────
+
+function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
+  const { homeTeam, awayTeam } = fixture;
+  const isLive = fixture.status === "LIVE";
+  const isFinal = fixture.status === "FT";
+  const hasScores = fixture.homeScore != null && fixture.awayScore != null;
+
+  const awayFifaCode = awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeFifaCode = homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
+  const awayColors = getWcTeamColors(awayFifaCode);
+  const homeColors = getWcTeamColors(homeFifaCode);
+
+  const NAME_FONT_SIZE = 'clamp(12px, 1.0vw, 17px)';
+  const NICK_FONT_SIZE = 'clamp(10px, 0.8vw, 14px)';
+  const TIME_FONT_SIZE = 'clamp(12px, 1.01vw, 15px)';
+  const LIVE_FONT_SIZE = 'clamp(13.3px, 1.05vw, 17.1px)';
+  const FINAL_FONT_SIZE = 'clamp(15.2px, 1.28vw, 19px)';
+
+  return (
+    <div className="flex flex-col pl-2 pr-2 pt-0 pb-0" style={{ minHeight: '100%', justifyContent: 'center' }}>
+      {/* Status row */}
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {isLive ? (
+          <div className="flex flex-col items-center gap-0.5">
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: LIVE_FONT_SIZE,
+                background: "rgba(57,255,20,0.12)",
+                color: "#39FF14",
+                border: "1px solid rgba(57,255,20,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '8px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '9px', height: '9px', background: "#39FF14" }} />
               LIVE
             </span>
-          )}
-          {isFinal && (
-            <span className="text-[9px] px-1.5 py-0.5 border border-zinc-700 text-zinc-500 font-bold rounded">
-              FT
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-          <Clock className="w-3 h-3" />
-          <span>{fmtKickoff(fixture.kickoffUtc)}</span>
-        </div>
-      </div>
-
-      {/* ── Teams row ── */}
-      <div className="flex items-center gap-2 px-3 pb-3">
-        {/* Away team */}
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <img
-            src={awayTeam?.flagUrl ?? fifaFlagUrl(awayTeam?.fifaCode ?? "XX")}
-            alt={awayTeam?.fifaCode ?? ""}
-            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white/10"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              if (!img.src.includes("flagcdn")) {
-                img.src = `https://flagcdn.com/w40/${awayTeam?.teamId ?? "xx"}.png`;
-              }
-            }}
-          />
-          <div className="min-w-0">
-            <div className="text-xs font-bold text-zinc-100 truncate">
-              {awayTeam?.name ?? fixture.awayTeamId}
-            </div>
-            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
-              {awayTeam?.fifaCode ?? ""}
-            </div>
           </div>
-        </div>
-
-        {/* Score or VS */}
-        <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-10">
-          {isFinal || isLive ? (
-            <div className="text-sm font-bold text-zinc-100 tabular-nums">
-              {fixture.awayScore ?? 0} – {fixture.homeScore ?? 0}
-            </div>
-          ) : (
-            <div className="text-xs text-zinc-600 font-bold">VS</div>
-          )}
-        </div>
-
-        {/* Home team */}
-        <div className="flex-1 flex items-center gap-2 min-w-0 flex-row-reverse">
-          <img
-            src={homeTeam?.flagUrl ?? fifaFlagUrl(homeTeam?.fifaCode ?? "XX")}
-            alt={homeTeam?.fifaCode ?? ""}
-            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white/10"
-            onError={(e) => {
-              const img = e.target as HTMLImageElement;
-              if (!img.src.includes("flagcdn")) {
-                img.src = `https://flagcdn.com/w40/${homeTeam?.teamId ?? "xx"}.png`;
-              }
+        ) : isFinal ? (
+          <span
+            className="px-1.5 py-0.5 font-black tracking-widest"
+            style={{
+              fontSize: FINAL_FONT_SIZE,
+              background: "rgba(57,255,20,0.12)",
+              color: "#39FF14",
+              border: "1px solid rgba(57,255,20,0.4)",
+              borderRadius: '12px',
+              lineHeight: 1,
             }}
-          />
-          <div className="min-w-0 text-right">
-            <div className="text-xs font-bold text-zinc-100 truncate">
-              {homeTeam?.name ?? fixture.homeTeamId}
-            </div>
-            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
-              {homeTeam?.fifaCode ?? ""}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Odds grid ── */}
-      <div className="border-t border-white/6 px-3 pt-2 pb-3">
-        {/* Column headers */}
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] text-zinc-600 uppercase tracking-widest w-[56px]">
-            {hasOdds ? "DK NJ" : "Odds pending"}
+          >
+            FINAL
           </span>
-          <div className="flex items-center gap-3 flex-1 justify-end">
-            <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold w-[44px] text-right">
-              BOOK
-            </span>
-            <span className="text-[9px] text-zinc-600 uppercase tracking-widest w-[44px] text-right">
-              MODEL
-            </span>
-          </div>
-        </div>
-
-        {/* 1X2 rows */}
-        <OddsRow label="HOME ML" bookOdds={hasOdds ? dkOdds?.home : null} />
-        <OddsRow label="DRAW" bookOdds={hasOdds ? dkOdds?.draw : null} />
-        <OddsRow label="AWAY ML" bookOdds={hasOdds ? dkOdds?.away : null} />
-
-        {/* Divider */}
-        <div className="border-t border-white/4 my-1.5" />
-
-        {/* Total rows */}
-        <OddsRow label={`O ${totalLine}`} bookOdds={hasOdds ? (dkOdds?.overOdds ?? null) : null} />
-        <OddsRow label={`U ${totalLine}`} bookOdds={hasOdds ? (dkOdds?.underOdds ?? null) : null} />
-      </div>
-
-      {/* ── Venue ── */}
-      {venue && (
-        <div className="border-t border-white/6 px-3 py-2 flex items-center gap-1 text-[10px] text-zinc-600">
-          <MapPin className="w-3 h-3 flex-shrink-0" />
-          <span>{venue.stadium}, {venue.city}</span>
-          {venue.elevationM > 500 && (
-            <span className="ml-1 text-amber-500/70">⚠ {venue.elevationM}m alt</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WcFixtureCardSkeleton() {
-  return (
-    <div className="rounded-xl border border-white/8 bg-[#0f0f0f] p-4 space-y-3 mx-3 mb-3">
-      <div className="flex justify-between">
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-4 w-16 bg-zinc-800" />
-      </div>
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-5 w-7 bg-zinc-800 rounded-sm" />
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-4 w-8 bg-zinc-800 mx-auto" />
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-5 w-7 bg-zinc-800 rounded-sm" />
-      </div>
-      <div className="pt-2 border-t border-white/6 space-y-2">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex justify-between">
-            <Skeleton className="h-3 w-16 bg-zinc-800" />
-            <Skeleton className="h-3 w-12 bg-zinc-800" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Player Badge Card ─────────────────────────────────────────────────────────
-
-function PlayerBadgeCard({ player, fifaCode }: { player: WcLineupPlayer; fifaCode: string }) {
-  const isInjured = player.injuryStatus && player.injuryStatus !== "null";
-  const injuryColor =
-    player.injuryStatus === "OUT"
-      ? "text-red-400 border-red-500/30 bg-red-500/10"
-      : player.injuryStatus === "QUES"
-      ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
-      : player.injuryStatus === "DTDT"
-      ? "text-orange-400 border-orange-500/30 bg-orange-500/10"
-      : "";
-
-  return (
-    <div
-      className={cn(
-        "relative flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all",
-        "bg-[#111] border-white/6 hover:border-white/12",
-        !player.isStarter && "opacity-60"
-      )}
-    >
-      {/* FIFA flag badge */}
-      <div className="relative">
-        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/15 bg-zinc-800 flex items-center justify-center">
-          <img
-            src={fifaFlagUrl(fifaCode)}
-            alt={fifaCode}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-        {/* Position badge */}
-        {player.position && (
-          <div className="absolute -bottom-1 -right-1 bg-zinc-700 border border-zinc-600 rounded text-[8px] font-bold text-zinc-300 px-1 leading-4">
-            {player.position}
-          </div>
+        ) : (
+          <span className="font-bold" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))" }}>
+            {fmtKickoff(fixture.kickoffUtc)}
+          </span>
         )}
       </div>
 
-      {/* Jersey number */}
-      {player.jerseyNumber != null && (
-        <div className="text-[9px] text-zinc-600 font-bold tabular-nums">
-          #{player.jerseyNumber}
+      {/* Team group */}
+      <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
+        {/* Away team row */}
+        <div className="flex items-center justify-between gap-2 py-1 w-full">
+          <div className="flex items-center gap-2">
+            {/* Flag circle */}
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <img
+                src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
+                alt={awayFifaCode}
+                style={{ width: 24, height: 16, objectFit: 'cover', borderRadius: 2 }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+            <div className="flex flex-col">
+              {/* Mobile: FIFA code only */}
+              <span className="font-bold leading-tight lg:hidden" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '0.06em', lineHeight: 1.2 }}>
+                {awayFifaCode}
+              </span>
+              {/* Desktop: full country name */}
+              <span className="font-semibold leading-tight hidden lg:block" style={{ fontSize: NAME_FONT_SIZE, color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.15 }}>
+                {awayTeam?.name ?? awayFifaCode}
+              </span>
+              <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+                {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
+              </span>
+            </div>
+          </div>
+          {(isLive || isFinal) && hasScores && (
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+              {fixture.awayScore}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* Player name */}
-      <div className="text-[10px] font-semibold text-zinc-200 text-center leading-tight line-clamp-2 max-w-[72px]">
-        {player.playerName}
+        {/* Divider */}
+        <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
+
+        {/* Home team row */}
+        <div className="flex items-center justify-between gap-2 py-1 w-full">
+          <div className="flex items-center gap-2">
+            {/* Flag circle */}
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <img
+                src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
+                alt={homeFifaCode}
+                style={{ width: 24, height: 16, objectFit: 'cover', borderRadius: 2 }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+            <div className="flex flex-col">
+              {/* Mobile: FIFA code only */}
+              <span className="font-bold leading-tight lg:hidden" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '0.06em', lineHeight: 1.2 }}>
+                {homeFifaCode}
+              </span>
+              {/* Desktop: full country name */}
+              <span className="font-semibold leading-tight hidden lg:block" style={{ fontSize: NAME_FONT_SIZE, color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.15 }}>
+                {homeTeam?.name ?? homeFifaCode}
+              </span>
+              <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+                {fixture.matchday ? `Matchday ${fixture.matchday}` : "\u00A0"}
+              </span>
+            </div>
+          </div>
+          {(isLive || isFinal) && hasScores && (
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+              {fixture.homeScore}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Injury status */}
-      {isInjured && (
-        <div
-          className={cn(
-            "text-[8px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide",
-            injuryColor
+      {/* Venue footer */}
+      {fixture.venue && (
+        <div className="flex items-center gap-1 mt-1" style={{ fontSize: 'clamp(9px,0.75vw,11px)', color: 'hsl(var(--muted-foreground))' }}>
+          <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
+          <span className="truncate">{fixture.venue.city}</span>
+          {fixture.venue.elevationM > 500 && (
+            <span style={{ color: '#F59E0B', marginLeft: 2 }}>⚠ {fixture.venue.elevationM}m</span>
           )}
-        >
-          {player.injuryStatus}
         </div>
-      )}
-
-      {/* Bench indicator */}
-      {!player.isStarter && (
-        <div className="text-[8px] text-zinc-600 uppercase tracking-widest">SUB</div>
       )}
     </div>
   );
 }
 
-// ─── Lineup Card per Fixture ──────────────────────────────────────────────────
+// ─── WC Desktop Merged Panel — exact GameCard DesktopMergedPanel structure ────
+
+function WcDesktopMergedPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
+  const { dkOdds } = fixture;
+  const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
+  const totalLine = dkOdds?.overLine ?? 2.5;
+
+  const homeBook = hasOdds ? fmtAmerican(dkOdds?.home) : "—";
+  const drawBook = hasOdds ? fmtAmerican(dkOdds?.draw) : "—";
+  const awayBook = hasOdds ? fmtAmerican(dkOdds?.away) : "—";
+  const overBook = hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—";
+  const underBook = hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—";
+
+  const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
+  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+
+  return (
+    <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
+      {/* HOME ML section */}
+      <SectionCol
+        title="Home ML"
+        awayLabel={homeFifaCode}
+        homeLabel={awayFifaCode}
+        awayBook={homeBook}
+        homeBook={awayBook}
+      />
+      {/* Divider */}
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      {/* DRAW section */}
+      <SectionCol
+        title="Draw"
+        awayLabel="DRAW"
+        homeLabel=""
+        awayBook={drawBook}
+        homeBook=""
+      />
+      {/* Divider */}
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      {/* TOTAL section */}
+      <SectionCol
+        title="Total"
+        awayLabel={`O ${totalLine}`}
+        homeLabel={`U ${totalLine}`}
+        awayBook={overBook}
+        homeBook={underBook}
+      />
+    </div>
+  );
+}
+
+// ─── Fixture Card (Projections) — exact GameCard outer shell ──────────────────
+
+function WcFixtureCard({ fixture }: { fixture: WcFixtureWithOdds }) {
+  const isLive = fixture.status === "LIVE";
+  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const awayColors = getWcTeamColors(awayFifaCode);
+  const borderColor = awayColors.primary;
+
+  return (
+    <div
+      className="w-full relative"
+      style={{
+        background: "hsl(var(--card))",
+        borderTop: "1px solid hsl(var(--border))",
+        borderBottom: "1px solid hsl(var(--border))",
+        borderLeft: `3px solid ${borderColor}`,
+        overflowX: "clip",
+      }}
+    >
+      {/* ── Desktop layout (≥ md) ── */}
+      <div className="hidden md:flex items-stretch w-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
+        {/* Col 1: Score panel */}
+        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+          <WcScorePanel fixture={fixture} />
+        </div>
+        {/* Col 2+3: Merged panel */}
+        <div className="flex-1 min-w-0" style={{ borderLeft: "1px solid hsl(var(--border) / 0.5)" }}>
+          <WcDesktopMergedPanel fixture={fixture} />
+        </div>
+      </div>
+
+      {/* ── Mobile layout (< md) ── */}
+      <div className="md:hidden w-full">
+        <div style={{ display: "grid", gridTemplateColumns: "clamp(140px, 38%, 180px) 1fr", width: "100%" }}>
+          {/* Fixed score panel */}
+          <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)", minHeight: 120 }}>
+            <WcScorePanel fixture={fixture} />
+          </div>
+          {/* Scrollable odds panel */}
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+            <WcMobileOddsPanel fixture={fixture} />
+          </div>
+        </div>
+      </div>
+
+      {/* Live pulse indicator */}
+      {isLive && (
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: '100%', background: 'rgba(57,255,20,0.15)' }} />
+      )}
+    </div>
+  );
+}
+
+// ─── WC Mobile Odds Panel ─────────────────────────────────────────────────────
+
+function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
+  const { dkOdds } = fixture;
+  const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
+  const totalLine = dkOdds?.overLine ?? 2.5;
+
+  const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
+  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+
+  const rows = [
+    { label: `${homeFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.home) : "—" },
+    { label: "DRAW", book: hasOdds ? fmtAmerican(dkOdds?.draw) : "—" },
+    { label: `${awayFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.away) : "—" },
+    { label: `O ${totalLine}`, book: hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—" },
+    { label: `U ${totalLine}`, book: hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—" },
+  ];
+
+  return (
+    <div style={{ padding: '8px 6px', minWidth: 180 }}>
+      {/* Column headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px 4px', marginBottom: 4 }}>
+        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}></span>
+        <span className="text-center" style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>BOOK</span>
+        <span className="text-center" style={{ fontSize: 9, fontWeight: 700, color: '#39FF14', textTransform: 'uppercase', letterSpacing: '0.08em' }}>MODEL</span>
+      </div>
+      {rows.map((row, i) => (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px 4px', alignItems: 'center', marginBottom: 3 }}>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {row.label}
+          </span>
+          <OddsCell mainValue={row.book} isBook={true} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+          <OddsCell mainValue="—" isBook={false} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Fixture Card Skeleton ────────────────────────────────────────────────────
+
+function WcFixtureCardSkeleton() {
+  return (
+    <div
+      className="w-full"
+      style={{
+        background: "hsl(var(--card))",
+        borderTop: "1px solid hsl(var(--border))",
+        borderBottom: "1px solid hsl(var(--border))",
+        borderLeft: "3px solid rgba(255,255,255,0.1)",
+        minHeight: 'clamp(160px,14vw,220px)',
+      }}
+    >
+      <div className="hidden md:flex items-stretch w-full h-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
+        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", borderRight: "1px solid hsl(var(--border) / 0.5)", padding: 12 }}>
+          <Skeleton className="h-4 w-24 bg-zinc-800 mb-3" />
+          <div className="flex items-center gap-2 mb-2">
+            <Skeleton className="h-9 w-9 rounded-full bg-zinc-800" />
+            <Skeleton className="h-4 w-28 bg-zinc-800" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-9 rounded-full bg-zinc-800" />
+            <Skeleton className="h-4 w-28 bg-zinc-800" />
+          </div>
+        </div>
+        <div className="flex-1 flex items-stretch">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex-1 p-3 space-y-2">
+              <Skeleton className="h-4 w-16 bg-zinc-800 mx-auto" />
+              <div className="grid grid-cols-2 gap-2">
+                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
+                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
+                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
+                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Lineup Card — exact MlbLineupCard structure ──────────────────────────────
+
+function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobile: boolean }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: isMobile ? "5px 8px 3px" : "7px 12px 4px",
+        borderBottom: "1px solid rgba(24,36,51,0.6)",
+      }}
+    >
+      <span
+        style={{
+          fontSize: isMobile ? 7 : 8,
+          fontWeight: 700,
+          letterSpacing: "1.5px",
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.5)",
+        }}
+      >
+        Starting XI
+      </span>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 3,
+          fontSize: isMobile ? 7 : 8,
+          fontWeight: 600,
+          letterSpacing: "0.5px",
+          textTransform: "uppercase",
+          color: confirmed ? "#39FF14" : "#FFFF33",
+        }}
+      >
+        <span
+          style={{
+            width: isMobile ? 4 : 5,
+            height: isMobile ? 4 : 5,
+            borderRadius: "50%",
+            background: confirmed ? "#39FF14" : "#FFFF33",
+            display: "inline-block",
+          }}
+        />
+        {confirmed ? "Confirmed" : "Expected"}
+      </span>
+    </div>
+  );
+}
+
+function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]; isMobile: boolean; fifaCode: string }) {
+  if (players.length === 0) {
+    return (
+      <div style={{ padding: "10px 8px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 60 }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase" }}>
+          Lineup Pending
+        </span>
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div style={{ padding: "4px 6px" }}>
+        {players.map((p, i) => {
+          const isInjured = p.injuryStatus && p.injuryStatus !== "null";
+          const injuryColor = p.injuryStatus === "OUT" ? "#EF4444" : p.injuryStatus === "QUES" ? "#F59E0B" : "#F97316";
+          return (
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+                padding: "5px 0",
+                borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.5)" : "none",
+              }}
+            >
+              {/* Jersey number */}
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: "#FFFFFF", width: 14, flexShrink: 0, textAlign: "right" }}>
+                {p.jerseyNumber ?? ""}
+              </span>
+              {/* Flag circle */}
+              <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>
+                <img src={fifaFlagUrl(fifaCode)} alt={fifaCode} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              </div>
+              {/* Name + position */}
+              <div style={{ flex: 1, minWidth: 0, marginLeft: 4 }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }}>
+                  {p.playerName}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                  {p.position && (
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 4px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.4 }}>
+                      {p.position}
+                    </span>
+                  )}
+                  {isInjured && (
+                    <span style={{ fontSize: 9, fontWeight: 700, color: injuryColor, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                      {p.injuryStatus}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Desktop
+  return (
+    <div style={{ padding: "8px 14px" }}>
+      {players.map((p, i) => {
+        const isInjured = p.injuryStatus && p.injuryStatus !== "null";
+        const injuryColor = p.injuryStatus === "OUT" ? "#EF4444" : p.injuryStatus === "QUES" ? "#F59E0B" : "#F97316";
+        return (
+          <div
+            key={p.id}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "6px 0",
+              borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.6)" : "none",
+            }}
+          >
+            {/* Jersey number */}
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 16, flexShrink: 0, textAlign: "right" }}>
+              {p.jerseyNumber ?? ""}
+            </span>
+            {/* Flag circle */}
+            <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>
+              <img src={fifaFlagUrl(fifaCode)} alt={fifaCode} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            </div>
+            {/* Name + position + injury */}
+            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+                {p.playerName}
+              </span>
+              {p.position && (
+                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 6px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.5, flexShrink: 0 }}>
+                  {p.position}
+                </span>
+              )}
+              {isInjured && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: injuryColor, letterSpacing: "0.5px", textTransform: "uppercase", flexShrink: 0 }}>
+                  {p.injuryStatus}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
   const { homeTeam, awayTeam, venue, lineups } = fixture;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
+  const homeFifaCode = homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
+  const awayFifaCode = awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const awayColors = getWcTeamColors(awayFifaCode);
+  const homeColors = getWcTeamColors(homeFifaCode);
 
   const homePlayers = lineups
     .filter((p) => p.teamId === fixture.homeTeamId)
@@ -469,166 +1006,176 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
   const awayBench = awayPlayers.filter((p) => !p.isStarter);
 
   const hasLineups = lineups.length > 0;
+  const anyConfirmed = lineups.some((p) => p.isConfirmed);
+
+  const startTime = fmtKickoff(fixture.kickoffUtc);
 
   return (
-    <div className="rounded-xl border border-white/8 bg-[#0f0f0f] mx-3 mb-4 overflow-hidden">
-      {/* ── Match header ── */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2 border-b border-white/6">
-        <div className="flex items-center gap-2">
-          {fixture.groupLetter && (
-            <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold border border-zinc-700 rounded px-1.5 py-0.5">
-              GROUP {fixture.groupLetter} · MD{fixture.matchday}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-          <Clock className="w-3 h-3" />
-          <span>{fmtKickoff(fixture.kickoffUtc)}</span>
-        </div>
-      </div>
+    <div
+      style={{
+        background: "#090E14",
+        borderRadius: 12,
+        border: "1px solid #182433",
+        overflow: "hidden",
+        marginBottom: 10,
+        marginLeft: 12,
+        marginRight: 12,
+      }}
+    >
+      {/* Color top bar — exact MlbLineupCard gradient */}
+      <div
+        style={{
+          height: 3,
+          background: `linear-gradient(90deg, ${awayColors.primary} 48%, ${homeColors.primary} 52%)`,
+        }}
+      />
 
-      {/* ── Match title ── */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <img
-            src={awayTeam?.flagUrl ?? fifaFlagUrl(awayTeam?.fifaCode ?? "XX")}
-            alt={awayTeam?.fifaCode ?? ""}
-            className="w-8 h-6 object-cover rounded-sm border border-white/10 flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-zinc-100 truncate">{awayTeam?.name ?? fixture.awayTeamId}</div>
-            <div className="text-[9px] text-zinc-500 uppercase">{awayTeam?.fifaCode}</div>
+      {/* ── Matchup header — gridTemplateColumns: "1fr auto 1fr" ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          padding: isMobile ? "8px 10px 6px" : "14px 18px 12px",
+          borderBottom: "1px solid #182433",
+          gap: isMobile ? 6 : 10,
+        }}
+      >
+        {/* Away team — left-aligned */}
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 7 : 12 }}>
+          <div
+            style={{
+              width: isMobile ? 28 : 42,
+              height: isMobile ? 28 : 42,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
+              flexShrink: 0,
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <img
+              src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
+              alt={awayFifaCode}
+              style={{ width: isMobile ? 18 : 28, height: isMobile ? 12 : 18, objectFit: "cover", borderRadius: 2 }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
+              {awayTeam?.name ?? awayFifaCode}
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+              {awayFifaCode}
+            </div>
+            <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${awayColors.primary}22`, color: "#FFFFFF", border: `1px solid ${awayColors.primary}44` }}>
+              Away
+            </div>
           </div>
         </div>
-        <div className="text-xs text-zinc-600 font-bold px-3 flex-shrink-0">VS</div>
-        <div className="flex items-center gap-2 flex-1 min-w-0 flex-row-reverse">
-          <img
-            src={homeTeam?.flagUrl ?? fifaFlagUrl(homeTeam?.fifaCode ?? "XX")}
-            alt={homeTeam?.fifaCode ?? ""}
-            className="w-8 h-6 object-cover rounded-sm border border-white/10 flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
-          <div className="min-w-0 text-right">
-            <div className="text-sm font-bold text-zinc-100 truncate">{homeTeam?.name ?? fixture.homeTeamId}</div>
-            <div className="text-[9px] text-zinc-500 uppercase">{homeTeam?.fifaCode}</div>
+
+        {/* Center: time + @ */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, color: "#FFFFFF", letterSpacing: "1px", whiteSpace: "nowrap" }}>
+            {startTime}
+          </div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 10, color: "#FFFFFF", letterSpacing: "3px", marginTop: 3 }}>
+            @
+          </div>
+        </div>
+
+        {/* Home team — right-aligned */}
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 7 : 12, justifyContent: "flex-end" }}>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
+              {homeTeam?.name ?? homeFifaCode}
+            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+              {homeFifaCode}
+            </div>
+            <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${homeColors.primary}22`, color: "#FFFFFF", border: `1px solid ${homeColors.primary}44` }}>
+              Home
+            </div>
+          </div>
+          <div
+            style={{
+              width: isMobile ? 28 : 42,
+              height: isMobile ? 28 : 42,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
+              flexShrink: 0,
+              overflow: "hidden",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <img
+              src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
+              alt={homeFifaCode}
+              style={{ width: isMobile ? 18 : 28, height: isMobile ? 12 : 18, objectFit: "cover", borderRadius: 2 }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
           </div>
         </div>
       </div>
 
       {!hasLineups ? (
-        <div className="flex items-center justify-center py-10 gap-2 text-zinc-600 text-xs border-t border-white/6">
-          <Users className="w-4 h-4" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px", gap: 8, color: "rgba(255,255,255,0.3)", fontSize: 12, borderTop: "1px solid #182433" }}>
+          <Users style={{ width: 16, height: 16 }} />
           <span>Lineups not yet available</span>
         </div>
       ) : (
-        <div className="border-t border-white/6">
-          {/* ── Two-column lineup grid ── */}
-          <div className="grid grid-cols-2 divide-x divide-white/6">
-            {/* Away team */}
-            <div className="p-3">
-              <div className="flex items-center gap-1.5 mb-3">
-                <img
-                  src={awayTeam?.flagUrl ?? fifaFlagUrl(awayTeam?.fifaCode ?? "XX")}
-                  alt=""
-                  className="w-5 h-3.5 object-cover rounded-sm border border-white/10"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">
-                  {awayTeam?.fifaCode ?? fixture.awayTeamId}
-                </span>
-                <span className="text-[9px] text-zinc-600 ml-auto">AWAY</span>
-              </div>
-
-              {/* Starters */}
-              <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2 font-bold">
-                Starting XI
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {awayStarters.map((p) => (
-                  <PlayerBadgeCard
-                    key={p.id}
-                    player={p}
-                    fifaCode={awayTeam?.fifaCode ?? "XX"}
-                  />
-                ))}
-              </div>
-
-              {/* Bench */}
+        <div>
+          {/* ── Two-column lineup grid — gridTemplateColumns: "1fr 1px 1fr" ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", borderBottom: "1px solid #182433" }}>
+            {/* Away team column */}
+            <div>
+              <StartingXiHeader confirmed={anyConfirmed} isMobile={isMobile} />
+              <PlayerRows players={awayStarters} isMobile={isMobile} fifaCode={awayFifaCode} />
               {awayBench.length > 0 && (
                 <>
-                  <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2 font-bold border-t border-white/6 pt-2">
-                    Bench
+                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid rgba(24,36,51,0.5)", borderBottom: "1px solid rgba(24,36,51,0.5)" }}>
+                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+                      Bench
+                    </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {awayBench.map((p) => (
-                      <PlayerBadgeCard
-                        key={p.id}
-                        player={p}
-                        fifaCode={awayTeam?.fifaCode ?? "XX"}
-                      />
-                    ))}
-                  </div>
+                  <PlayerRows players={awayBench} isMobile={isMobile} fifaCode={awayFifaCode} />
                 </>
               )}
             </div>
 
-            {/* Home team */}
-            <div className="p-3">
-              <div className="flex items-center gap-1.5 mb-3">
-                <img
-                  src={homeTeam?.flagUrl ?? fifaFlagUrl(homeTeam?.fifaCode ?? "XX")}
-                  alt=""
-                  className="w-5 h-3.5 object-cover rounded-sm border border-white/10"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">
-                  {homeTeam?.fifaCode ?? fixture.homeTeamId}
-                </span>
-                <span className="text-[9px] text-zinc-600 ml-auto">HOME</span>
-              </div>
+            {/* Divider */}
+            <div style={{ background: "#182433" }} />
 
-              {/* Starters */}
-              <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2 font-bold">
-                Starting XI
-              </div>
-              <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {homeStarters.map((p) => (
-                  <PlayerBadgeCard
-                    key={p.id}
-                    player={p}
-                    fifaCode={homeTeam?.fifaCode ?? "XX"}
-                  />
-                ))}
-              </div>
-
-              {/* Bench */}
+            {/* Home team column */}
+            <div>
+              <StartingXiHeader confirmed={anyConfirmed} isMobile={isMobile} />
+              <PlayerRows players={homeStarters} isMobile={isMobile} fifaCode={homeFifaCode} />
               {homeBench.length > 0 && (
                 <>
-                  <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2 font-bold border-t border-white/6 pt-2">
-                    Bench
+                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid rgba(24,36,51,0.5)", borderBottom: "1px solid rgba(24,36,51,0.5)" }}>
+                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+                      Bench
+                    </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {homeBench.map((p) => (
-                      <PlayerBadgeCard
-                        key={p.id}
-                        player={p}
-                        fifaCode={homeTeam?.fifaCode ?? "XX"}
-                      />
-                    ))}
-                  </div>
+                  <PlayerRows players={homeBench} isMobile={isMobile} fifaCode={homeFifaCode} />
                 </>
               )}
             </div>
           </div>
 
-          {/* ── Venue footer ── */}
+          {/* Venue footer */}
           {venue && (
-            <div className="border-t border-white/6 px-3 py-2 flex items-center gap-1 text-[10px] text-zinc-600">
-              <MapPin className="w-3 h-3 flex-shrink-0" />
+            <div style={{ padding: "6px 14px", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+              <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
               <span>{venue.stadium}, {venue.city}</span>
               {venue.elevationM > 500 && (
-                <span className="ml-1 text-amber-500/70">⚠ {venue.elevationM}m alt</span>
+                <span style={{ color: "#F59E0B", marginLeft: 4 }}>⚠ {venue.elevationM}m alt</span>
               )}
             </div>
           )}
@@ -684,7 +1231,7 @@ function WcProjectionsFeed({ date }: { date: string }) {
   }
 
   return (
-    <div className="pt-2">
+    <div>
       {(fixtures as WcFixtureWithOdds[]).map((f) => (
         <WcFixtureCard key={f.fixtureId} fixture={f} />
       ))}
@@ -707,17 +1254,17 @@ function WcLineupsFeed({ date }: { date: string }) {
     return (
       <div className="pt-2">
         {[1, 2].map((i) => (
-          <div key={i} className="rounded-xl border border-white/8 bg-[#0f0f0f] mx-3 mb-4 p-4 space-y-3">
-            <div className="flex justify-between">
+          <div key={i} style={{ background: "#090E14", borderRadius: 12, border: "1px solid #182433", marginBottom: 10, marginLeft: 12, marginRight: 12, padding: 16 }}>
+            <div className="flex justify-between mb-4">
               <Skeleton className="h-4 w-24 bg-zinc-800" />
               <Skeleton className="h-4 w-16 bg-zinc-800" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                {[1,2,3,4].map(j => <Skeleton key={j} className="h-16 w-full bg-zinc-800 rounded-lg" />)}
+                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-zinc-800 rounded" />)}
               </div>
               <div className="space-y-2">
-                {[1,2,3,4].map(j => <Skeleton key={j} className="h-16 w-full bg-zinc-800 rounded-lg" />)}
+                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-zinc-800 rounded" />)}
               </div>
             </div>
           </div>
@@ -801,8 +1348,8 @@ function WcDateSelector({
  * Includes:
  *   • Sub-tab nav (PROJECTIONS | SPLITS | LINEUPS | STANDINGS | FUTURES)
  *   • Date selector (Jun 11–17)
- *   • Fixture cards with 3-way market layout (PROJECTIONS)
- *   • Player badge cards with FIFA flags (LINEUPS)
+ *   • Fixture cards matching exact GameCard structure (PROJECTIONS)
+ *   • Lineup cards matching exact MlbLineupCard structure (LINEUPS)
  *
  * [ARCHITECTURE NOTE]
  * This component is mounted directly in the ModelProjections main feed area
@@ -835,7 +1382,7 @@ export function WcFeedInline() {
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
           <div>
-            <div className="text-sm font-bold text-zinc-100 leading-tight">FIFA World Cup 2026</div>
+            <div className="text-sm font-bold text-white tracking-wide">FIFA World Cup 2026</div>
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
               Group Stage · USA / CAN / MEX
             </div>
