@@ -427,9 +427,9 @@ async function startServer() {
   registerRotoLineupsHeartbeat(app);
 
   // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
-  // POST /api/heartbeat/wc2026-odds    — every 30 min (5 min near kickoff)
-  // POST /api/heartbeat/wc2026-splits  — every 10 min
-  // POST /api/heartbeat/wc2026-lineups — every 10 min
+  // POST /api/scheduled/wc2026-odds    — every 30 min (5 min near kickoff)
+  // POST /api/scheduled/wc2026-splits  — every 10 min
+  // POST /api/scheduled/wc2026-lineups — every 10 min
   registerWc2026Heartbeats(app);
 
   // tRPC API
