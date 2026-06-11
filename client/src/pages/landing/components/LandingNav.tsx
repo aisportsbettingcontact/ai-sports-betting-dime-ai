@@ -68,11 +68,11 @@ export default function LandingNav() {
             ))}
           </nav>
 
-          {/* Auth buttons */}
+          {/* Auth buttons — ghost CTA hidden on mobile so the bar fits one row */}
           <div className="flex items-center gap-2">
             <a
               href="/login"
-              className="inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-white border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-150"
+              className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-white border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-150"
             >
               View Today's Edges
             </a>

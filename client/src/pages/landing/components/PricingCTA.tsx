@@ -17,12 +17,6 @@
  *     → createCheckoutSession → Stripe Checkout
  *     → email + username prefilled from account
  *   - Same-tab redirect (window.location.href) — no popup blocker issues
- *
- * $1 TEST PLAN:
- *   - Shown as a separate row below the main grid (full-width card)
- *   - Labeled "INTERNAL TEST" with a yellow/amber border
- *   - Uses planId="test" → price_1Tb3LgPa3TFEAkkYF9s5T8no ($1/month live)
- *   - REMOVE after end-to-end verification is complete
  */
 
 import { useState, useEffect } from "react";
@@ -89,7 +83,7 @@ const PLANS = [
   },
 ] as const;
 
-type PlanId = "monthly" | "annual" | "test";
+type PlanId = "monthly" | "annual";
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -222,7 +216,7 @@ export default function PricingCTA() {
                         className="px-3 py-1 rounded-full font-bold text-black"
                         style={{
                           background: "#39FF14",
-                          fontSize: "clamp(9px, 1.8vw, 11px)",
+                          fontSize: "clamp(10px, 1.8vw, 11px)",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -236,8 +230,8 @@ export default function PricingCTA() {
                     <span
                       className="font-bold tracking-widest uppercase"
                       style={{
-                        color: plan.highlight ? "#39FF14" : "#6b7280",
-                        fontSize: "clamp(9px, 1.8vw, 11px)",
+                        color: plan.highlight ? "#39FF14" : "#9ca3af",
+                        fontSize: "clamp(11px, 1.8vw, 11px)",
                       }}
                     >
                       {plan.name}
@@ -256,8 +250,8 @@ export default function PricingCTA() {
                         {plan.price}
                       </span>
                       <span
-                        className="text-[#6b7280]"
-                        style={{ fontSize: "clamp(10px, 1.8vw, 14px)" }}
+                        className="text-[#9ca3af]"
+                        style={{ fontSize: "clamp(11px, 1.8vw, 14px)" }}
                       >
                         {plan.period}
                       </span>
@@ -274,8 +268,8 @@ export default function PricingCTA() {
                         {plan.perDay}
                       </span>
                       <span
-                        className="text-[#6b7280]"
-                        style={{ fontSize: "clamp(9px, 1.6vw, 11px)" }}
+                        className="text-[#9ca3af]"
+                        style={{ fontSize: "clamp(11px, 1.6vw, 11px)" }}
                       >
                         {plan.billedAs}
                       </span>
@@ -288,14 +282,14 @@ export default function PricingCTA() {
                           className="font-bold"
                           style={{
                             color: "#39FF14",
-                            fontSize: "clamp(10px, 2vw, 13px)",
+                            fontSize: "clamp(11px, 2vw, 13px)",
                           }}
                         >
                           {plan.equivLine}
                         </p>
                         <p
                           className="text-[#9ca3af]"
-                          style={{ fontSize: "clamp(9px, 1.6vw, 11px)" }}
+                          style={{ fontSize: "clamp(11px, 1.6vw, 11px)" }}
                         >
                           {plan.savingsLine}
                         </p>
@@ -305,7 +299,7 @@ export default function PricingCTA() {
                     {/* Description — hidden on very small screens to keep cards compact */}
                     <p
                       className="text-[#9ca3af] mt-1.5 leading-relaxed hidden xs:block sm:block"
-                      style={{ fontSize: "clamp(10px, 1.8vw, 12px)" }}
+                      style={{ fontSize: "clamp(11px, 1.8vw, 12px)" }}
                     >
                       {plan.description}
                     </p>
@@ -317,7 +311,7 @@ export default function PricingCTA() {
                       <li
                         key={f}
                         className="flex items-start gap-1.5 text-[#d1d5db]"
-                        style={{ fontSize: "clamp(10px, 1.8vw, 13px)" }}
+                        style={{ fontSize: "clamp(11px, 1.8vw, 13px)" }}
                       >
                         <svg
                           viewBox="0 0 14 14"
@@ -398,87 +392,9 @@ export default function PricingCTA() {
           })}
         </div>
 
-        {/* ── $1 E2E TEST PLAN — INTERNAL ONLY ─────────────────────────────────
-            Remove this section after end-to-end verification is complete.
-            Price: price_1Tb3LgPa3TFEAkkYF9s5T8no ($1/month live mode)
-        ──────────────────────────────────────────────────────────────────────── */}
-        <motion.div
-          initial={shouldReduce ? false : { opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="mt-4"
-        >
-          <div
-            className="rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-            style={{
-              borderColor: "rgba(251,191,36,0.5)",
-              background: "rgba(120,80,0,0.12)",
-              boxShadow: "0 0 24px rgba(251,191,36,0.08)",
-              padding: "clamp(12px, 3vw, 20px) clamp(14px, 3.5vw, 24px)",
-            }}
-          >
-            {/* Left: label + description */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="px-2 py-0.5 rounded font-bold uppercase tracking-widest"
-                  style={{
-                    background: "rgba(251,191,36,0.2)",
-                    color: "#fbbf24",
-                    fontSize: "10px",
-                    border: "1px solid rgba(251,191,36,0.4)",
-                  }}
-                >
-                  Internal Test
-                </span>
-                <span className="font-black text-white" style={{ fontSize: "clamp(1.1rem, 3vw, 1.4rem)", letterSpacing: "-0.03em" }}>
-                  $1.00
-                  <span className="text-[#6b7280] font-normal" style={{ fontSize: "clamp(10px, 1.8vw, 13px)" }}>/month</span>
-                </span>
-              </div>
-              <p className="text-[#9ca3af]" style={{ fontSize: "clamp(10px, 1.8vw, 12px)" }}>
-                E2E verification only — confirms full pipeline: checkout → account setup → Discord role → User Management badge.
-                <span className="text-[#fbbf24] font-semibold"> Delete after testing.</span>
-              </p>
-            </div>
-
-            {/* Right: CTA button */}
-            <button
-              onClick={() => handlePlanClick("test")}
-              disabled={loadingPlan !== null}
-              className="inline-flex items-center justify-center gap-2 rounded-lg font-bold transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
-              style={{
-                background: "rgba(251,191,36,0.15)",
-                border: "1px solid rgba(251,191,36,0.5)",
-                color: "#fbbf24",
-                padding: "10px 20px",
-                fontSize: "13px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {loadingPlan === "test" ? (
-                <>
-                  <svg className="animate-spin" style={{ width: 13, height: 13 }} viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeDashoffset="10" />
-                  </svg>
-                  Opening...
-                </>
-              ) : (
-                <>
-                  Run $1 Test
-                  <svg style={{ width: 12, height: 12 }} viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
-        </motion.div>
-
         {/* Payment methods — real SVG logos */}
         <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
-          <span className="text-[11px] text-[#4b5563] mr-1">Accepted:</span>
+          <span className="text-[11px] text-[#9ca3af] mr-1">Accepted:</span>
           {/* Visa */}
           <svg viewBox="0 0 780 500" height="20" aria-label="Visa">
             <rect width="780" height="500" rx="40" fill="#1A1F71"/>
@@ -529,7 +445,7 @@ export default function PricingCTA() {
             <text x="8" y="17" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="12" fill="#17120E">klarna</text>
           </svg>
         </div>
-        <p className="text-center text-[11px] text-[#4b5563] mt-2">
+        <p className="text-center text-[11px] text-[#9ca3af] mt-2">
           Payments processed securely by Stripe. Subscriptions auto-renew at the end of each billing period. Cancel anytime before renewal to avoid the next charge.
         </p>
       </div>

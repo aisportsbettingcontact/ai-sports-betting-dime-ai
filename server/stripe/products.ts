@@ -8,7 +8,6 @@
  *
  *   STRIPE_PRICE_MONTHLY   — price_xxx for the $99.99/month recurring plan
  *   STRIPE_PRICE_ANNUAL    — price_xxx for the $499.99/year recurring plan
- *   STRIPE_PRICE_TEST      — price_1Tb3LgPa3TFEAkkYF9s5T8no ($1/month, internal E2E test only)
  *
  * If the env vars are not set, the checkout procedure will throw a descriptive
  * error rather than silently using a wrong or missing price.
@@ -18,7 +17,7 @@ const TAG = "[Stripe][Products]";
 
 // ─── Plan IDs (used as keys throughout the codebase) ─────────────────────────
 
-export type PlanId = "monthly" | "annual" | "test";
+export type PlanId = "monthly" | "annual";
 
 // ─── Plan metadata (mirrors landing page PricingCTA) ─────────────────────────
 
@@ -61,24 +60,6 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       return id;
     },
   },
-  // ─── INTERNAL E2E TEST PLAN ─────────────────────────────────────────────────
-  // $1/month recurring — used ONLY to verify the full purchase → account setup
-  // → Discord role pipeline in live mode without spending $99.
-  // Product: prod_UaDn0BxbjZn3ci  |  Price: price_1Tb3LgPa3TFEAkkYF9s5T8no
-  // REMOVE THIS PLAN AFTER TESTING IS COMPLETE.
-  test: {
-    id: "test",
-    name: "AI Sports Betting — $1 E2E Test",
-    amountCents: 100,
-    priceDisplay: "$1.00/month",
-    interval: "month",
-    priceId: () => {
-      // Hardcoded live price ID — this plan is internal only, no env var needed.
-      const id = "price_1Tb3LgPa3TFEAkkYF9s5T8no";
-      console.log(`${TAG} [STATE] test priceId=${id} [INTERNAL E2E TEST ONLY]`);
-      return id;
-    },
-  },
 };
 
 /**
@@ -89,11 +70,9 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 export function getPlanByPriceId(priceId: string): PlanDefinition | null {
   const monthlyId = process.env.STRIPE_PRICE_MONTHLY;
   const annualId = process.env.STRIPE_PRICE_ANNUAL;
-  const testId = "price_1Tb3LgPa3TFEAkkYF9s5T8no";
 
   if (monthlyId && priceId === monthlyId) return PLANS.monthly;
   if (annualId && priceId === annualId) return PLANS.annual;
-  if (priceId === testId) return PLANS.test;
 
   console.warn(`${TAG} [VERIFY] Unknown priceId=${priceId} — not matched to any plan`);
   return null;
@@ -101,8 +80,8 @@ export function getPlanByPriceId(priceId: string): PlanDefinition | null {
 
 /**
  * Compute the subscription expiry timestamp (UTC ms) for a given plan.
- * Monthly / Test: now + 31 days (buffer for billing cycle variance)
- * Annual:         now + 366 days (buffer for leap year)
+ * Monthly: now + 31 days (buffer for billing cycle variance)
+ * Annual:  now + 366 days (buffer for leap year)
  */
 export function computeExpiryMs(planId: PlanId): number {
   const now = Date.now();

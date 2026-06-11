@@ -66,7 +66,7 @@ export default function FinalCTA() {
             </a>
           </div>
 
-          <p className="text-[11px] text-[#4b5563]">
+          <p className="text-[11px] text-[#9ca3af]">
             No guaranteed outcomes. Built for disciplined, data-driven bettors.
           </p>
         </motion.div>

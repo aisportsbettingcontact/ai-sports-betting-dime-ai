@@ -9,10 +9,10 @@ export default function LandingFooter() {
         background: "#050810",
       }}
     >
-      <p className="text-[12px] text-[#4b5563]">
+      <p className="text-[12px] text-[#9ca3af]">
         © 2026 Tailered Sports, Inc. All rights reserved.
       </p>
-      <p className="text-[11px] text-[#374151] mt-1">
+      <p className="text-[11px] text-[#9ca3af] mt-1">
         Not financial advice. Bet responsibly.
       </p>
     </footer>

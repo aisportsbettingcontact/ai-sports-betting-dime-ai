@@ -37,7 +37,7 @@ const TAG = "[tRPC][stripe]";
 
 // ─── Input validation ─────────────────────────────────────────────────────────
 
-const zodPlanId = z.enum(["monthly", "annual", "test"]);
+const zodPlanId = z.enum(["monthly", "annual"]);
 
 // ─── Shared checkout session builder ─────────────────────────────────────────
 // Used by both authenticated and unauthenticated procedures to avoid duplication.
