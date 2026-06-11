@@ -1249,13 +1249,15 @@ export default function ModelProjections() {
             </button>
           )}
 
-          {/* DATE picker — always visible, even in favorites tab */}
-          <CalendarPicker
-            selectedDate={selectedDate}
-            onSelect={setSelectedDate}
-            availableDates={new Set(allDates)}
-            isAdmin={isOwner || user?.role === "admin"}
-          />
+          {/* DATE picker — hidden when WC is selected (WcFeedInline has its own date selector) */}
+          {!isWcSelected && (
+            <CalendarPicker
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+              availableDates={new Set(allDates)}
+              isAdmin={isOwner || user?.role === "admin"}
+            />
+          )}
 
           {/* MLB pill — only shown when MLB has games today or tomorrow */}
           {(!activeSports || activeSports.MLB) && (
