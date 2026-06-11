@@ -337,4 +337,58 @@ export const wc2026Router = router({
       dkOdds: oddsMap[f.fixtureId] ?? null,
     }));
   }),
+
+  /**
+   * splitsByDate — returns fixtures for a given date with their latest DraftKings
+   * betting splits (tickets % and money %) for HOME_ML, DRAW_ML, AWAY_ML, OVER, UNDER.
+   */
+  splitsByDate: publicProcedure
+    .input(z.object({ date: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const { date } = input;
+
+      const fixtures = await db
+        .select()
+        .from(wc2026Fixtures)
+        .where(eq(wc2026Fixtures.matchDate, sql`${date}`))
+        .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+
+      if (fixtures.length === 0) return [];
+
+      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+
+      const [teams, splitsRows] = await Promise.all([
+        db.select().from(wc2026Teams),
+        db
+          .select()
+          .from(wc2026BettingSplits)
+          .where(inArray(wc2026BettingSplits.fixtureId, fixtureIds))
+          .orderBy(desc(wc2026BettingSplits.snapshotTs)),
+      ]);
+
+      const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
+
+      // Keep only the most-recent split per fixture × teamId × market
+      type SplitRow = typeof wc2026BettingSplits.$inferSelect;
+      const splitsMap: Record<string, SplitRow[]> = {};
+      const seenSplit = new Set<string>();
+      for (const row of splitsRows as SplitRow[]) {
+        const key = `${row.fixtureId}:${row.teamId}:${row.market}`;
+        if (!seenSplit.has(key)) {
+          seenSplit.add(key);
+          if (!splitsMap[row.fixtureId]) splitsMap[row.fixtureId] = [];
+          splitsMap[row.fixtureId].push(row);
+        }
+      }
+
+      return fixtures.map((f: WcFixture) => ({
+        fixtureId: f.fixtureId,
+        matchDate: f.matchDate,
+        kickoffUtc: f.kickoffUtc,
+        homeTeam: teamMap[f.homeTeamId] ?? null,
+        awayTeam: teamMap[f.awayTeamId] ?? null,
+        splits: splitsMap[f.fixtureId] ?? [],
+      }));
+    }),
 });

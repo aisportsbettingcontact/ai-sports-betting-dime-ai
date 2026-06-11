@@ -381,6 +381,169 @@ function OddsCell({
   );
 }
 
+// ─── MergedSplitBar — exact GameCard MergedSplitBar ──────────────────────────
+
+const MERGED_LABEL_STROKE = '-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px rgba(0,0,0,0.9)';
+
+function MergedSplitBar({
+  awayPct, homePct, awayColor, homeColor, rowLabel, awayLabel, homeLabel,
+}: {
+  awayPct: number | null;
+  homePct: number | null;
+  awayColor: string;
+  homeColor: string;
+  rowLabel: string;
+  awayLabel?: string;
+  homeLabel?: string;
+}) {
+  const hasData = awayPct != null && homePct != null;
+  const headerLabelStyle: React.CSSProperties = {
+    fontSize: 'clamp(10px, 0.85vw, 13px)',
+    color: '#FFFFFF',
+    fontWeight: 800,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  };
+  const teamLabelStyle: React.CSSProperties = {
+    fontSize: 'clamp(9px, 0.78vw, 12px)',
+    color: 'rgba(255,255,255,0.80)',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: '38%',
+  };
+  return (
+    <div className="flex flex-col w-full" style={{ gap: 2 }}>
+      <div className="flex items-center justify-between" style={{ gap: 4 }}>
+        <span style={teamLabelStyle}>{awayLabel ?? ''}</span>
+        <span style={headerLabelStyle}>{rowLabel}</span>
+        <span style={{ ...teamLabelStyle, textAlign: 'right' }}>{homeLabel ?? ''}</span>
+      </div>
+      {hasData ? (() => {
+        const away = awayPct!;
+        const home = homePct!;
+        const isAwayFull = away >= 100;
+        const isHomeFull = home >= 100;
+        const segLabel: React.CSSProperties = {
+          fontSize: 'clamp(10px, 0.85vw, 13px)',
+          color: '#fff',
+          fontWeight: 800,
+          whiteSpace: 'nowrap',
+          textShadow: MERGED_LABEL_STROKE,
+          lineHeight: 1,
+          letterSpacing: '0em',
+        };
+        return (
+          <div style={{
+            height: 'clamp(22px, 2.2vw, 32px)',
+            display: 'flex',
+            borderRadius: '9999px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            overflow: 'hidden',
+            width: '100%',
+          }}>
+            {away > 0 && !isAwayFull && !isHomeFull && (
+              <div style={{
+                flexGrow: away, flexShrink: 1, flexBasis: 0,
+                minWidth: away < 10 ? 36 : 30,
+                background: awayColor,
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                paddingLeft: 'clamp(4px,0.4vw,8px)', paddingRight: 'clamp(4px,0.4vw,8px)',
+                borderRadius: '9999px 0 0 9999px',
+              }} className="transition-all duration-700">
+                <span style={{ ...segLabel, textAlign: 'left' }}>{away} %</span>
+              </div>
+            )}
+            {!isAwayFull && !isHomeFull && away > 0 && home > 0 && (
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+            )}
+            {home > 0 && !isHomeFull && !isAwayFull && (
+              <div style={{
+                flexGrow: home, flexShrink: 1, flexBasis: 0,
+                minWidth: home < 10 ? 36 : 30,
+                background: homeColor,
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                paddingLeft: 'clamp(4px,0.4vw,8px)', paddingRight: 'clamp(4px,0.4vw,8px)',
+                borderRadius: '0 9999px 9999px 0',
+              }} className="transition-all duration-700">
+                <span style={{ ...segLabel, textAlign: 'right' }}>{home} %</span>
+              </div>
+            )}
+            {isAwayFull && !isHomeFull && (
+              <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }}>
+                <span style={{ ...segLabel, textAlign: 'center' }}>100 %</span>
+              </div>
+            )}
+            {isHomeFull && !isAwayFull && (
+              <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }}>
+                <span style={{ ...segLabel, textAlign: 'center' }}>100 %</span>
+              </div>
+            )}
+            {isAwayFull && isHomeFull && (
+              <>
+                <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px 0 0 9999px' }}>
+                  <span style={{ ...segLabel, textAlign: 'center' }}>100 %</span>
+                </div>
+                <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 9999px 9999px 0' }}>
+                  <span style={{ ...segLabel, textAlign: 'center' }}>100 %</span>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })() : (
+        <div style={{ height: 'clamp(22px,2.2vw,32px)', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', opacity: 0.80 }}>—</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── WC Splits types + helper ─────────────────────────────────────────────────
+
+type WcSplitRow = {
+  id: number;
+  fixtureId: string;
+  snapshotTs: Date | null;
+  teamId: string;
+  market: string;
+  ticketsPct: number | null;
+  moneyPct: number | null;
+};
+
+type WcFixtureSplits = {
+  fixtureId: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  splits: WcSplitRow[];
+};
+
+/**
+ * Extract split percentages for a given fixture and market.
+ * DB stores fractions (0.0–1.0) — multiply by 100 to get integers for MergedSplitBar.
+ */
+function extractWcSplits(
+  splits: WcFixtureSplits | undefined,
+  market: 'ML' | 'TOTAL',
+  awayTeamId: string,
+  homeTeamId: string,
+): { awayTickets: number | null; homeTickets: number | null; awayMoney: number | null; homeMoney: number | null } {
+  if (!splits || splits.splits.length === 0) {
+    return { awayTickets: null, homeTickets: null, awayMoney: null, homeMoney: null };
+  }
+  const rows = splits.splits.filter((r) => r.market === market);
+  const awayRow = rows.find((r) => r.teamId === awayTeamId);
+  const homeRow = rows.find((r) => r.teamId === homeTeamId);
+  const awayTickets = awayRow?.ticketsPct != null ? Math.round(awayRow.ticketsPct * 100) : null;
+  const homeTickets = homeRow?.ticketsPct != null ? Math.round(homeRow.ticketsPct * 100) : null;
+  const awayMoney   = awayRow?.moneyPct  != null ? Math.round(awayRow.moneyPct  * 100) : null;
+  const homeMoney   = homeRow?.moneyPct  != null ? Math.round(homeRow.moneyPct  * 100) : null;
+  return { awayTickets, homeTickets, awayMoney, homeMoney };
+}
+
 // ─── SectionCol — exact GameCard SectionCol ───────────────────────────────────
 
 function SectionCol({
@@ -389,12 +552,27 @@ function SectionCol({
   homeLabel,
   awayBook,
   homeBook,
+  singleRow = false,
+  awayTickets = null,
+  homeTickets = null,
+  awayMoney = null,
+  homeMoney = null,
+  awayColor = '#1a4a8a',
+  homeColor = '#c84b0c',
 }: {
   title: string;
   awayLabel: string;
   homeLabel: string;
   awayBook: string;
   homeBook: string;
+  /** If true, only render the first (away/over) OddsCell row */
+  singleRow?: boolean;
+  awayTickets?: number | null;
+  homeTickets?: number | null;
+  awayMoney?: number | null;
+  homeMoney?: number | null;
+  awayColor?: string;
+  homeColor?: string;
 }) {
   const colHdrStyle = (color: string): React.CSSProperties => ({
     fontSize: HDR_FS,
@@ -421,7 +599,6 @@ function SectionCol({
 
       {/* Odds grid: 2 columns — BOOK | MODEL */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', marginBottom: 5, alignItems: 'start' }}>
-        {/* BOOK / MODEL column headers */}
         <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
         <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
 
@@ -432,7 +609,6 @@ function SectionCol({
           size="md"
           wrapperStyle={{ justifySelf: 'center', width: '100%' }}
         />
-        {/* Away / OVER — MODEL pill (blank — no model yet) */}
         <OddsCell
           mainValue="—"
           isBook={false}
@@ -440,34 +616,53 @@ function SectionCol({
           wrapperStyle={{ justifySelf: 'center', width: '100%' }}
         />
 
-        {/* Home / UNDER — BOOK pill */}
-        <OddsCell
-          mainValue={homeBook}
-          isBook={true}
-          size="md"
-          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-        />
-        {/* Home / UNDER — MODEL pill (blank — no model yet) */}
-        <OddsCell
-          mainValue="—"
-          isBook={false}
-          size="md"
-          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-        />
-      </div>
-
-      {/* Row labels below pills */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 8px', marginTop: 2 }}>
-        <span className="text-center" style={{ fontSize: ABBR_FS, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-          {awayLabel}
-        </span>
-        <span className="text-center" style={{ fontSize: ABBR_FS, fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-          {homeLabel}
-        </span>
+        {/* Home / UNDER — only when not singleRow */}
+        {!singleRow && (
+          <OddsCell
+            mainValue={homeBook}
+            isBook={true}
+            size="md"
+            wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+          />
+        )}
+        {!singleRow && (
+          <OddsCell
+            mainValue="—"
+            isBook={false}
+            size="md"
+            wrapperStyle={{ justifySelf: 'center', width: '100%' }}
+          />
+        )}
       </div>
 
       {/* Thin separator */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginTop: 7 }} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginBottom: 7 }} />
+
+      {/* TICKETS split bar */}
+      <div style={{ marginTop: 4 }}>
+        <MergedSplitBar
+          awayPct={awayTickets}
+          homePct={homeTickets}
+          awayColor={awayColor}
+          homeColor={homeColor}
+          rowLabel="TICKETS"
+          awayLabel={awayLabel}
+          homeLabel={singleRow ? '' : homeLabel}
+        />
+      </div>
+
+      {/* MONEY split bar */}
+      <div style={{ marginTop: 4 }}>
+        <MergedSplitBar
+          awayPct={awayMoney}
+          homePct={homeMoney}
+          awayColor={awayColor}
+          homeColor={homeColor}
+          rowLabel="MONEY"
+          awayLabel={awayLabel}
+          homeLabel={singleRow ? '' : homeLabel}
+        />
+      </div>
     </div>
   );
 }
@@ -633,49 +828,95 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
 // ─── WC Desktop Merged Panel — exact GameCard DesktopMergedPanel structure ────
 
-function WcDesktopMergedPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
+function WcDesktopMergedPanel({
+  fixture,
+  splits,
+}: {
+  fixture: WcFixtureWithOdds;
+  splits?: WcFixtureSplits;
+}) {
   const { dkOdds } = fixture;
   const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
-  const homeBook = hasOdds ? fmtAmerican(dkOdds?.home) : "—";
-  const drawBook = hasOdds ? fmtAmerican(dkOdds?.draw) : "—";
-  const awayBook = hasOdds ? fmtAmerican(dkOdds?.away) : "—";
-  const overBook = hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—";
+  const homeBook  = hasOdds ? fmtAmerican(dkOdds?.home)      : "—";
+  const drawBook  = hasOdds ? fmtAmerican(dkOdds?.draw)      : "—";
+  const awayBook  = hasOdds ? fmtAmerican(dkOdds?.away)      : "—";
+  const overBook  = hasOdds ? fmtAmerican(dkOdds?.overOdds)  : "—";
   const underBook = hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—";
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeColors   = getWcTeamColors(homeFifaCode);
+  const awayColors   = getWcTeamColors(awayFifaCode);
+
+  const mlSplits    = extractWcSplits(splits, 'ML',    fixture.awayTeamId, fixture.homeTeamId);
+  const totalSplits = extractWcSplits(splits, 'TOTAL', fixture.awayTeamId, fixture.homeTeamId);
 
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
-      {/* HOME ML section */}
+      {/* HOME ML column — singleRow */}
       <SectionCol
         title="Home ML"
         awayLabel={homeFifaCode}
-        homeLabel={awayFifaCode}
+        homeLabel=""
         awayBook={homeBook}
-        homeBook={awayBook}
+        homeBook=""
+        singleRow={true}
+        awayTickets={mlSplits.homeTickets}
+        homeTickets={null}
+        awayMoney={mlSplits.homeMoney}
+        homeMoney={null}
+        awayColor={homeColors.primary}
+        homeColor={homeColors.secondary}
       />
-      {/* Divider */}
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* DRAW section */}
+      {/* DRAW column — singleRow */}
       <SectionCol
         title="Draw"
         awayLabel="DRAW"
         homeLabel=""
         awayBook={drawBook}
         homeBook=""
+        singleRow={true}
+        awayTickets={null}
+        homeTickets={null}
+        awayMoney={null}
+        homeMoney={null}
+        awayColor="#888888"
+        homeColor="#888888"
       />
-      {/* Divider */}
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* TOTAL section */}
+      {/* AWAY ML column — singleRow */}
+      <SectionCol
+        title="Away ML"
+        awayLabel={awayFifaCode}
+        homeLabel=""
+        awayBook={awayBook}
+        homeBook=""
+        singleRow={true}
+        awayTickets={mlSplits.awayTickets}
+        homeTickets={null}
+        awayMoney={mlSplits.awayMoney}
+        homeMoney={null}
+        awayColor={awayColors.primary}
+        homeColor={awayColors.secondary}
+      />
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      {/* TOTAL column — 2 rows: O/U */}
       <SectionCol
         title="Total"
         awayLabel={`O ${totalLine}`}
         homeLabel={`U ${totalLine}`}
         awayBook={overBook}
         homeBook={underBook}
+        singleRow={false}
+        awayTickets={totalSplits.awayTickets}
+        homeTickets={totalSplits.homeTickets}
+        awayMoney={totalSplits.awayMoney}
+        homeMoney={totalSplits.homeMoney}
+        awayColor="#39FF14"
+        homeColor="#FF6B35"
       />
     </div>
   );
@@ -683,7 +924,13 @@ function WcDesktopMergedPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
 // ─── Fixture Card (Projections) — exact GameCard outer shell ──────────────────
 
-function WcFixtureCard({ fixture }: { fixture: WcFixtureWithOdds }) {
+function WcFixtureCard({
+  fixture,
+  splits,
+}: {
+  fixture: WcFixtureWithOdds;
+  splits?: WcFixtureSplits;
+}) {
   const isLive = fixture.status === "LIVE";
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
   const awayColors = getWcTeamColors(awayFifaCode);
@@ -708,7 +955,7 @@ function WcFixtureCard({ fixture }: { fixture: WcFixtureWithOdds }) {
         </div>
         {/* Col 2+3: Merged panel */}
         <div className="flex-1 min-w-0" style={{ borderLeft: "1px solid hsl(var(--border) / 0.5)" }}>
-          <WcDesktopMergedPanel fixture={fixture} />
+          <WcDesktopMergedPanel fixture={fixture} splits={splits} />
         </div>
       </div>
 
@@ -1230,10 +1477,29 @@ function WcProjectionsFeed({ date }: { date: string }) {
     );
   }
 
+  // Splits query — runs in parallel with fixtures query
+  const { data: splitsData } = trpc.wc2026.splitsByDate.useQuery(
+    { date },
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
+  const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(
+    (acc, s) => { acc[s.fixtureId] = s; return acc; },
+    {}
+  ) ?? {};
+
   return (
     <div>
       {(fixtures as WcFixtureWithOdds[]).map((f) => (
-        <WcFixtureCard key={f.fixtureId} fixture={f} />
+        <WcFixtureCard
+          key={f.fixtureId}
+          fixture={f}
+          splits={splitsMap[f.fixtureId]}
+        />
       ))}
     </div>
   );
@@ -1292,6 +1558,175 @@ function WcLineupsFeed({ date }: { date: string }) {
       {(fixtures as WcFixtureWithLineups[]).map((f) => (
         <WcLineupCard key={f.fixtureId} fixture={f} />
       ))}
+    </div>
+  );
+}
+
+// ─── Splits Feed ─────────────────────────────────────────────────────────────
+
+function WcSplitsFeed({ date }: { date: string }) {
+  const { data: splitsData, isLoading } = trpc.wc2026.splitsByDate.useQuery(
+    { date },
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
+  if (isLoading) {
+    return (
+      <div className="pt-4 px-3 space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ background: 'hsl(var(--card))', borderRadius: 8, padding: 16 }}>
+            <Skeleton className="h-4 w-32 bg-zinc-800 mb-3" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-full bg-zinc-800 rounded-full" />
+              <Skeleton className="h-8 w-full bg-zinc-800 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const splits = splitsData as WcFixtureSplits[] | undefined;
+
+  if (!splits || splits.length === 0 || splits.every((s) => s.splits.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
+        <CalendarDays className="w-10 h-10 text-zinc-600" />
+        <div>
+          <p className="text-sm font-semibold text-zinc-400 mb-1">
+            No betting splits available for {WC_DATE_LABELS[date] ?? date}
+          </p>
+          <p className="text-xs text-zinc-600">Splits sourced from VSIN · DraftKings</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-3 pb-4">
+      {splits.filter((s) => s.splits.length > 0).map((s) => {
+        const homeFifaCode = s.homeTeamId.toUpperCase();
+        const awayFifaCode = s.awayTeamId.toUpperCase();
+        const homeColors = getWcTeamColors(homeFifaCode);
+        const awayColors = getWcTeamColors(awayFifaCode);
+
+        const mlSplits    = extractWcSplits(s, 'ML',    s.awayTeamId, s.homeTeamId);
+        const totalSplits = extractWcSplits(s, 'TOTAL', s.awayTeamId, s.homeTeamId);
+
+        const hasMl    = mlSplits.awayTickets    != null || mlSplits.homeTickets    != null;
+        const hasTotal = totalSplits.awayTickets != null || totalSplits.homeTickets != null;
+
+        if (!hasMl && !hasTotal) return null;
+
+        return (
+          <div
+            key={s.fixtureId}
+            style={{
+              background: 'hsl(var(--card))',
+              borderTop: '1px solid hsl(var(--border))',
+              borderBottom: '1px solid hsl(var(--border))',
+              borderLeft: `3px solid ${awayColors.primary}`,
+              padding: '12px 16px 14px',
+              marginBottom: 0,
+            }}
+          >
+            {/* Fixture header */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5">
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0,
+                }}>
+                  <img
+                    src={fifaFlagUrl(awayFifaCode)}
+                    alt={awayFifaCode}
+                    style={{ width: 14, height: 10, objectFit: 'cover', borderRadius: 1 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>{awayFifaCode}</span>
+              </div>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>vs</span>
+              <div className="flex items-center gap-1.5">
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0,
+                }}>
+                  <img
+                    src={fifaFlagUrl(homeFifaCode)}
+                    alt={homeFifaCode}
+                    style={{ width: 14, height: 10, objectFit: 'cover', borderRadius: 1 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>{homeFifaCode}</span>
+              </div>
+              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>DraftKings</span>
+            </div>
+
+            {/* ML splits */}
+            {hasMl && (
+              <div className="mb-3">
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>MONEYLINE</div>
+                <div className="space-y-2">
+                  <MergedSplitBar
+                    awayPct={mlSplits.awayTickets}
+                    homePct={mlSplits.homeTickets}
+                    awayColor={awayColors.primary}
+                    homeColor={homeColors.primary}
+                    rowLabel="TICKETS"
+                    awayLabel={awayFifaCode}
+                    homeLabel={homeFifaCode}
+                  />
+                  <MergedSplitBar
+                    awayPct={mlSplits.awayMoney}
+                    homePct={mlSplits.homeMoney}
+                    awayColor={awayColors.primary}
+                    homeColor={homeColors.primary}
+                    rowLabel="MONEY"
+                    awayLabel={awayFifaCode}
+                    homeLabel={homeFifaCode}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Total splits */}
+            {hasTotal && (
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TOTAL</div>
+                <div className="space-y-2">
+                  <MergedSplitBar
+                    awayPct={totalSplits.awayTickets}
+                    homePct={totalSplits.homeTickets}
+                    awayColor="#39FF14"
+                    homeColor="#FF6B35"
+                    rowLabel="TICKETS"
+                    awayLabel="OVER"
+                    homeLabel="UNDER"
+                  />
+                  <MergedSplitBar
+                    awayPct={totalSplits.awayMoney}
+                    homePct={totalSplits.homeMoney}
+                    awayColor="#39FF14"
+                    homeColor="#FF6B35"
+                    rowLabel="MONEY"
+                    awayLabel="OVER"
+                    homeLabel="UNDER"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1361,7 +1796,7 @@ export function WcFeedInline() {
   const [activeTab, setActiveTab] = useState<WcSubTab>("PROJECTIONS");
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultWcDate);
 
-  const showDateSelector = activeTab === "PROJECTIONS" || activeTab === "LINEUPS";
+  const showDateSelector = activeTab === "PROJECTIONS" || activeTab === "LINEUPS" || activeTab === "SPLITS";
 
   return (
     <div className="w-full">
@@ -1419,7 +1854,7 @@ export function WcFeedInline() {
 
       {/* ── Content ── */}
       {activeTab === "PROJECTIONS" && <WcProjectionsFeed date={selectedDate} />}
-      {activeTab === "SPLITS" && <WcComingSoon label="Betting Splits" />}
+      {activeTab === "SPLITS" && <WcSplitsFeed date={selectedDate} />}
       {activeTab === "LINEUPS" && <WcLineupsFeed date={selectedDate} />}
       {activeTab === "STANDINGS" && <WcComingSoon label="Group Standings" />}
       {activeTab === "FUTURES" && <WcComingSoon label="Futures & Outrights" />}
