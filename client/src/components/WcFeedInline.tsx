@@ -1453,7 +1453,22 @@ function WcProjectionsFeed({ date }: { date: string }) {
     }
   );
 
+  // Splits query — MUST be called unconditionally before any early return (Rules of Hooks)
+  const { data: splitsData } = trpc.wc2026.splitsByDate.useQuery(
+    { date },
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+
   const { data: fixtures, isLoading } = isTodayDate ? todayQuery : dateQuery;
+
+  // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
+  const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(
+    (acc, s) => { acc[s.fixtureId] = s; return acc; },
+    {}
+  ) ?? {};
 
   if (isLoading) {
     return (
@@ -1476,21 +1491,6 @@ function WcProjectionsFeed({ date }: { date: string }) {
       </div>
     );
   }
-
-  // Splits query — runs in parallel with fixtures query
-  const { data: splitsData } = trpc.wc2026.splitsByDate.useQuery(
-    { date },
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-    }
-  );
-
-  // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
-  const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(
-    (acc, s) => { acc[s.fixtureId] = s; return acc; },
-    {}
-  ) ?? {};
 
   return (
     <div>
