@@ -7,7 +7,9 @@
  *   2. Hero            — headline + CTAs
  *   3. FeatureShowcase — 4 features with real UI screenshots
  *   4. PricingCTA      — Monthly / Annual plans
- *   5. LandingFooter   — minimal footer
+ *   5. FAQ             — objection handling before the final ask
+ *   6. FinalCTA        — last conversion push
+ *   7. LandingFooter   — minimal footer
  */
 
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -19,6 +21,8 @@ import Hero from "./components/Hero";
 // ── Deferred: lazy-loaded below the fold ─────────────────────────────────────
 const FeatureShowcase = lazy(() => import("./components/FeatureShowcase"));
 const PricingCTA      = lazy(() => import("./components/PricingCTA"));
+const FAQ             = lazy(() => import("./components/FAQ"));
+const FinalCTA        = lazy(() => import("./components/FinalCTA"));
 const LandingFooter   = lazy(() => import("./components/LandingFooter"));
 
 /**
@@ -78,6 +82,14 @@ export default function LandingPage() {
 
       <LazySection id="pricing">
         <PricingCTA />
+      </LazySection>
+
+      <LazySection id="faq">
+        <FAQ />
+      </LazySection>
+
+      <LazySection id="final-cta">
+        <FinalCTA />
       </LazySection>
 
       <LazySection id="footer">

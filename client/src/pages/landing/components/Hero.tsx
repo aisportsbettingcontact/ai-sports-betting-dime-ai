@@ -105,7 +105,7 @@ export default function Hero() {
           </div>
 
           {/* Microcopy */}
-          <p className="text-[12px] text-[#4b5563]">
+          <p className="text-[12px] text-[#9ca3af]">
             No guaranteed outcomes. Just sharper data and faster market comparison.
           </p>
         </motion.div>

@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
       "port": 3000
+    },
+    {
+      "name": "vite-client",
+      "runtimeExecutable": "/Users/danielwalker/.nvm/versions/node/v22.22.0/bin/node",
+      "runtimeArgs": ["/Users/danielwalker/Desktop/prez-bets/node_modules/vite/bin/vite.js", "/Users/danielwalker/Desktop/prez-bets", "--port", "5173", "--strictPort"],
+      "port": 5173
     }
   ]
 }
