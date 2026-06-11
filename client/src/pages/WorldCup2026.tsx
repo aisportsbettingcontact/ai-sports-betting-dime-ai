@@ -126,6 +126,7 @@ type FixtureWithTeams = {
     elevationM: number;
   } | null;
   dkOdds?: DkOdds;
+  modelOdds?: DkOdds;
 };
 
 // ─── Odds Row Component ───────────────────────────────────────────────────────
@@ -156,9 +157,12 @@ function OddsRow({
         >
           {bookStr}
         </span>
-        {/* Model odds placeholder */}
-        <span className="text-xs tabular-nums w-[44px] text-right text-zinc-600">
-          {modelOdds != null ? fmtAmerican(modelOdds) : "—"}
+        {/* Model odds */}
+        <span
+          className="text-xs tabular-nums w-[44px] text-right font-bold"
+          style={{ color: modelOdds != null ? '#39FF14' : undefined }}
+        >
+          {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-zinc-600">—</span>}
         </span>
       </div>
     </div>
@@ -168,12 +172,15 @@ function OddsRow({
 // ─── Fixture Card ─────────────────────────────────────────────────────────────
 
 function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
-  const { homeTeam, awayTeam, venue, dkOdds, status } = fixture;
+  const { homeTeam, awayTeam, venue, dkOdds, modelOdds, status } = fixture;
   const isLive = status === "LIVE";
   const isFinal = status === "FT";
   const hasOdds =
     dkOdds != null &&
     (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
+  const hasModel =
+    modelOdds != null &&
+    (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   return (
@@ -280,16 +287,16 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
             <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold w-[44px] text-right">
               BOOK
             </span>
-            <span className="text-[9px] text-zinc-600 uppercase tracking-widest w-[44px] text-right">
+            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#39FF14' }}>
               MODEL
             </span>
           </div>
         </div>
 
         {/* 1X2 rows */}
-        <OddsRow label="HOME ML" bookOdds={hasOdds ? dkOdds?.home : null} />
-        <OddsRow label="DRAW" bookOdds={hasOdds ? dkOdds?.draw : null} />
-        <OddsRow label="AWAY ML" bookOdds={hasOdds ? dkOdds?.away : null} />
+        <OddsRow label="HOME ML" bookOdds={hasOdds ? dkOdds?.home : null} modelOdds={hasModel ? modelOdds?.home : null} />
+        <OddsRow label="DRAW" bookOdds={hasOdds ? dkOdds?.draw : null} modelOdds={hasModel ? modelOdds?.draw : null} />
+        <OddsRow label="AWAY ML" bookOdds={hasOdds ? dkOdds?.away : null} modelOdds={hasModel ? modelOdds?.away : null} />
 
         {/* Divider */}
         <div className="border-t border-white/4 my-1.5" />
@@ -298,10 +305,12 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
         <OddsRow
           label={`O ${totalLine}`}
           bookOdds={hasOdds ? (dkOdds?.overOdds ?? null) : null}
+          modelOdds={hasModel ? (modelOdds?.overOdds ?? null) : null}
         />
         <OddsRow
           label={`U ${totalLine}`}
           bookOdds={hasOdds ? (dkOdds?.underOdds ?? null) : null}
+          modelOdds={hasModel ? (modelOdds?.underOdds ?? null) : null}
         />
       </div>
 

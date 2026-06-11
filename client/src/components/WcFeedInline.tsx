@@ -307,6 +307,7 @@ type WcFixtureWithOdds = {
   awayTeam: WcTeamInfo | null;
   venue: WcVenueInfo | null;
   dkOdds?: DkOdds;
+  modelOdds?: DkOdds;
 };
 
 type WcFixtureWithLineups = WcFixtureWithOdds & {
@@ -552,6 +553,8 @@ function SectionCol({
   homeLabel,
   awayBook,
   homeBook,
+  awayModel = '—',
+  homeModel = '—',
   singleRow = false,
   awayTickets = null,
   homeTickets = null,
@@ -565,6 +568,8 @@ function SectionCol({
   homeLabel: string;
   awayBook: string;
   homeBook: string;
+  awayModel?: string;
+  homeModel?: string;
   /** If true, only render the first (away/over) OddsCell row */
   singleRow?: boolean;
   awayTickets?: number | null;
@@ -610,7 +615,7 @@ function SectionCol({
           wrapperStyle={{ justifySelf: 'center', width: '100%' }}
         />
         <OddsCell
-          mainValue="—"
+          mainValue={awayModel}
           isBook={false}
           size="md"
           wrapperStyle={{ justifySelf: 'center', width: '100%' }}
@@ -627,7 +632,7 @@ function SectionCol({
         )}
         {!singleRow && (
           <OddsCell
-            mainValue="—"
+            mainValue={homeModel}
             isBook={false}
             size="md"
             wrapperStyle={{ justifySelf: 'center', width: '100%' }}
@@ -835,15 +840,23 @@ function WcDesktopMergedPanel({
   fixture: WcFixtureWithOdds;
   splits?: WcFixtureSplits;
 }) {
-  const { dkOdds } = fixture;
+  const { dkOdds, modelOdds } = fixture;
   const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
+  const hasModel = modelOdds != null && (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
-  const homeBook  = hasOdds ? fmtAmerican(dkOdds?.home)      : "—";
-  const drawBook  = hasOdds ? fmtAmerican(dkOdds?.draw)      : "—";
-  const awayBook  = hasOdds ? fmtAmerican(dkOdds?.away)      : "—";
-  const overBook  = hasOdds ? fmtAmerican(dkOdds?.overOdds)  : "—";
-  const underBook = hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—";
+  const homeBook  = hasOdds  ? fmtAmerican(dkOdds?.home)        : "—";
+  const drawBook  = hasOdds  ? fmtAmerican(dkOdds?.draw)        : "—";
+  const awayBook  = hasOdds  ? fmtAmerican(dkOdds?.away)        : "—";
+  const overBook  = hasOdds  ? fmtAmerican(dkOdds?.overOdds)   : "—";
+  const underBook = hasOdds  ? fmtAmerican(dkOdds?.underOdds)  : "—";
+
+  // AI Model odds (book_id=0)
+  const homeModel  = hasModel ? fmtAmerican(modelOdds?.home)       : "—";
+  const drawModel  = hasModel ? fmtAmerican(modelOdds?.draw)       : "—";
+  const awayModel  = hasModel ? fmtAmerican(modelOdds?.away)       : "—";
+  const overModel  = hasModel ? fmtAmerican(modelOdds?.overOdds)  : "—";
+  const underModel = hasModel ? fmtAmerican(modelOdds?.underOdds) : "—";
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
@@ -862,6 +875,8 @@ function WcDesktopMergedPanel({
         homeLabel=""
         awayBook={homeBook}
         homeBook=""
+        awayModel={homeModel}
+        homeModel=""
         singleRow={true}
         awayTickets={mlSplits.homeTickets}
         homeTickets={null}
@@ -878,6 +893,8 @@ function WcDesktopMergedPanel({
         homeLabel=""
         awayBook={drawBook}
         homeBook=""
+        awayModel={drawModel}
+        homeModel=""
         singleRow={true}
         awayTickets={null}
         homeTickets={null}
@@ -894,6 +911,8 @@ function WcDesktopMergedPanel({
         homeLabel=""
         awayBook={awayBook}
         homeBook=""
+        awayModel={awayModel}
+        homeModel=""
         singleRow={true}
         awayTickets={mlSplits.awayTickets}
         homeTickets={null}
@@ -910,6 +929,8 @@ function WcDesktopMergedPanel({
         homeLabel={`U ${totalLine}`}
         awayBook={overBook}
         homeBook={underBook}
+        awayModel={overModel}
+        homeModel={underModel}
         singleRow={false}
         awayTickets={totalSplits.awayTickets}
         homeTickets={totalSplits.homeTickets}
@@ -984,19 +1005,20 @@ function WcFixtureCard({
 // ─── WC Mobile Odds Panel ─────────────────────────────────────────────────────
 
 function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
-  const { dkOdds } = fixture;
+  const { dkOdds, modelOdds } = fixture;
   const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
+  const hasModel = modelOdds != null && (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
 
   const rows = [
-    { label: `${homeFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.home) : "—" },
-    { label: "DRAW", book: hasOdds ? fmtAmerican(dkOdds?.draw) : "—" },
-    { label: `${awayFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.away) : "—" },
-    { label: `O ${totalLine}`, book: hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—" },
-    { label: `U ${totalLine}`, book: hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—" },
+    { label: `${homeFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.home) : "—", model: hasModel ? fmtAmerican(modelOdds?.home) : "—" },
+    { label: "DRAW",               book: hasOdds ? fmtAmerican(dkOdds?.draw) : "—", model: hasModel ? fmtAmerican(modelOdds?.draw) : "—" },
+    { label: `${awayFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.away) : "—", model: hasModel ? fmtAmerican(modelOdds?.away) : "—" },
+    { label: `O ${totalLine}`,     book: hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—", model: hasModel ? fmtAmerican(modelOdds?.overOdds) : "—" },
+    { label: `U ${totalLine}`,     book: hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—", model: hasModel ? fmtAmerican(modelOdds?.underOdds) : "—" },
   ];
 
   return (
@@ -1013,7 +1035,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             {row.label}
           </span>
           <OddsCell mainValue={row.book} isBook={true} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-          <OddsCell mainValue="—" isBook={false} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+          <OddsCell mainValue={row.model} isBook={false} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
         </div>
       ))}
     </div>

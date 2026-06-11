@@ -71,42 +71,44 @@ export const wc2026Router = router({
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
       const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-      // Fetch latest DraftKings (book_id=68) 1X2 + TOTAL odds for this date's fixtures
-      const oddsRows = await db
-        .select()
-        .from(wc2026OddsSnapshots)
-        .where(eq(wc2026OddsSnapshots.bookId, 68))
-        .orderBy(desc(wc2026OddsSnapshots.snapshotTs));
-
-      // Build odds map: fixtureId → { home?, away?, draw?, overLine?, overOdds?, underOdds? }
-      const oddsMap: Record<string, { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number }> = {};
-      const seen = new Set<string>();
-      for (const row of oddsRows as WcOddsRow[]) {
-        if (!fixtureIds.includes(row.fixtureId)) continue;
-        if (!oddsMap[row.fixtureId]) oddsMap[row.fixtureId] = {};
-        const key = `${row.fixtureId}:${row.market}:${row.selection}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          const o = oddsMap[row.fixtureId] as Record<string, number | undefined>;
-          if (row.market === "1X2") {
-            o[row.selection] = row.americanOdds;
-          } else if (row.market === "TOTAL") {
-            if (row.selection === "over") {
-              o["overLine"] = row.line ?? undefined;
-              o["overOdds"] = row.americanOdds;
-            } else if (row.selection === "under") {
-              o["underOdds"] = row.americanOdds;
+      // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL odds
+      type OddsShape = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number };
+      const buildOddsMap = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShape> => {
+        const map: Record<string, OddsShape> = {};
+        const seen = new Set<string>();
+        for (const row of rows) {
+          if (!ids.includes(row.fixtureId)) continue;
+          if (!map[row.fixtureId]) map[row.fixtureId] = {};
+          const key = `${row.fixtureId}:${row.market}:${row.selection}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            const o = map[row.fixtureId] as Record<string, number | undefined>;
+            if (row.market === "1X2") {
+              o[row.selection] = row.americanOdds;
+            } else if (row.market === "TOTAL") {
+              if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
+              else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
             }
           }
         }
-      }
+        return map;
+      };
+
+      const [dkOddsRows, modelOddsRows] = await Promise.all([
+        db.select().from(wc2026OddsSnapshots).where(eq(wc2026OddsSnapshots.bookId, 68)).orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+        db.select().from(wc2026OddsSnapshots).where(eq(wc2026OddsSnapshots.bookId, 0)).orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+      ]);
+
+      const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
+      const modelMap = buildOddsMap(modelOddsRows as WcOddsRow[], fixtureIds);
 
       return fixtures.map((f: WcFixture) => ({
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
         venue: venueMap[f.venueId] ?? null,
-        dkOdds: oddsMap[f.fixtureId] ?? null,
+        dkOdds: dkMap[f.fixtureId] ?? null,
+        modelOdds: modelMap[f.fixtureId] ?? null,
       }));
     }),
 
@@ -299,42 +301,44 @@ export const wc2026Router = router({
     const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
     const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-    // Fetch latest DraftKings (book_id=68) 1X2 + TOTAL odds for today's fixtures
-    const oddsRows = await db
-      .select()
-      .from(wc2026OddsSnapshots)
-      .where(eq(wc2026OddsSnapshots.bookId, 68))
-      .orderBy(desc(wc2026OddsSnapshots.snapshotTs));
-
-    // Build odds map: fixtureId → { home?, away?, draw?, overLine?, overOdds?, underOdds? }
-    const oddsMap: Record<string, { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number }> = {};
-    const seen = new Set<string>();
-    for (const row of oddsRows as WcOddsRow[]) {
-      if (!fixtureIds.includes(row.fixtureId)) continue;
-      if (!oddsMap[row.fixtureId]) oddsMap[row.fixtureId] = {};
-      const key = `${row.fixtureId}:${row.market}:${row.selection}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        const o = oddsMap[row.fixtureId] as Record<string, number | undefined>;
-        if (row.market === "1X2") {
-          o[row.selection] = row.americanOdds;
-        } else if (row.market === "TOTAL") {
-          if (row.selection === "over") {
-            o["overLine"] = row.line ?? undefined;
-            o["overOdds"] = row.americanOdds;
-          } else if (row.selection === "under") {
-            o["underOdds"] = row.americanOdds;
+    // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL odds
+    type OddsShapeT = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number };
+    const buildOddsMapT = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShapeT> => {
+      const map: Record<string, OddsShapeT> = {};
+      const seen = new Set<string>();
+      for (const row of rows) {
+        if (!ids.includes(row.fixtureId)) continue;
+        if (!map[row.fixtureId]) map[row.fixtureId] = {};
+        const key = `${row.fixtureId}:${row.market}:${row.selection}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          const o = map[row.fixtureId] as Record<string, number | undefined>;
+          if (row.market === "1X2") {
+            o[row.selection] = row.americanOdds;
+          } else if (row.market === "TOTAL") {
+            if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
+            else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
           }
         }
       }
-    }
+      return map;
+    };
+
+    const [dkOddsRowsT, modelOddsRowsT] = await Promise.all([
+      db.select().from(wc2026OddsSnapshots).where(eq(wc2026OddsSnapshots.bookId, 68)).orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+      db.select().from(wc2026OddsSnapshots).where(eq(wc2026OddsSnapshots.bookId, 0)).orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+    ]);
+
+    const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
+    const modelMapT = buildOddsMapT(modelOddsRowsT as WcOddsRow[], fixtureIds);
 
     return fixtures.map((f: WcFixture) => ({
       ...f,
       homeTeam: teamMap[f.homeTeamId] ?? null,
       awayTeam: teamMap[f.awayTeamId] ?? null,
       venue: venueMap[f.venueId] ?? null,
-      dkOdds: oddsMap[f.fixtureId] ?? null,
+      dkOdds: dkMapT[f.fixtureId] ?? null,
+      modelOdds: modelMapT[f.fixtureId] ?? null,
     }));
   }),
 
