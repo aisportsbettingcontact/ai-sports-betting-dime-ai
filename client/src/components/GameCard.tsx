@@ -2706,7 +2706,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               padding: isDesktop ? "3px 4px" : "3px 4px",
               lineHeight: 1,
               flexShrink: 0,
-              minWidth: isDesktop ? 36 : 44, minHeight: isDesktop ? 36 : 44,
+              /* [LAYOUT FIX] Mobile star: 32px (was 44px) — frees 12px for team row */
+              minWidth: isDesktop ? 36 : 32, minHeight: isDesktop ? 36 : 32,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -2816,11 +2817,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         </div>
       )}
       {/* Away team row */}
-      <div className="flex items-center justify-between gap-2 py-1 w-full">
-        {/* Left: logo + name/nickname — always two lines */}
-          <div className="flex items-center gap-2">
+      {/* [LAYOUT FIX] Away row: gap reduced to 4px; left side flex:1 1 0% + minWidth:0 prevents abbrev overflow */}
+      <div className="flex items-center justify-between py-1 w-full" style={{ gap: 4 }}>
+        {/* Left: logo + name — flex:1 1 0% + minWidth:0 = bulletproof containment */}
+          <div className="flex items-center" style={{ gap: 6, flex: '1 1 0%', minWidth: 0, overflow: 'hidden' }}>
           {/* Change G: greyscale away logo when away team lost and game is FINAL on desktop */}
-          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={36} greyscale={isFinal && isDesktop && !awayWins} />
+          {/* [LAYOUT FIX] Mobile logo: 28px (was 36px) — frees 8px for abbrev+score */}
+          <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={isDesktop ? 36 : 28} greyscale={isFinal && isDesktop && !awayWins} />
           {/* Responsive name display:
                Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
                Desktop (≥ 1024px): city name + nickname on two lines */}
@@ -2863,9 +2866,16 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           <span
             className="tabular-nums flex-shrink-0 transition-colors duration-300"
             style={{
-              /* NBA scores are 3 digits (100-130) — use smaller clamp to prevent overflow in 160px panel */
-              fontSize: isNba ? "clamp(18px, 2vw, 38px)" : "clamp(22px, 2.5vw, 44px)",
+              /* [LAYOUT FIX] Score font:
+                 Mobile MLB: clamp(13px,3.8vw,19px) — 13px min ensures 13+ px margin at all mobile viewports
+                 Mobile NBA: clamp(12px,3.5vw,17px) — smaller for 3-digit scores
+                 Desktop: unchanged (wider panels, no overflow risk) */
+              fontSize: isNba
+                ? (isDesktop ? 'clamp(18px, 2vw, 38px)' : 'clamp(12px, 3.5vw, 17px)')
+                : (isDesktop ? 'clamp(22px, 2.5vw, 44px)' : 'clamp(13px, 3.8vw, 19px)'),
               lineHeight: 1,
+              minWidth: '2ch',
+              textAlign: 'right',
               /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
               fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: awayScoreFlash
@@ -2891,7 +2901,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Left: logo + name/nickname — always two lines */}
           <div className="flex items-center gap-2">
           {/* Change G: greyscale home logo when home team lost and game is FINAL on desktop */}
-          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={36} greyscale={isFinal && isDesktop && !homeWins} />
+          {/* [LAYOUT FIX] Mobile logo: 28px (was 36px) — frees 8px for abbrev+score */}
+          <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={isDesktop ? 36 : 28} greyscale={isFinal && isDesktop && !homeWins} />
           {/* Responsive name display:
                Mobile (< 1024px): abbreviation only (e.g. "GSW", "NYY") — never truncates
                Desktop (≥ 1024px): city name + nickname on two lines */}
@@ -2934,8 +2945,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           <span
             className="tabular-nums flex-shrink-0 transition-colors duration-300"
             style={{
-              fontSize: isNba ? "clamp(18px, 2vw, 38px)" : "clamp(22px, 2.5vw, 44px)",
+              /* [LAYOUT FIX] Home score: same font fix as away score */
+              fontSize: isNba
+                ? (isDesktop ? 'clamp(18px, 2vw, 38px)' : 'clamp(12px, 3.5vw, 17px)')
+                : (isDesktop ? 'clamp(22px, 2.5vw, 44px)' : 'clamp(13px, 3.8vw, 19px)'),
               lineHeight: 1,
+              minWidth: '2ch',
+              textAlign: 'right',
               /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
               fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: homeScoreFlash
