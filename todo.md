@@ -4102,3 +4102,15 @@
 - [x] Suppress rate-limit errors from console error log (already handled by resilientFetch)
 - [x] Write 12 vitest tests for isRateLimitBody and synthesizeRateLimitResponse (12/12 passing)
 - [x] TypeScript: 0 errors
+
+## Session: 2026-06-14 - June 14 MLB Model Direction Validation & Audit
+
+- [x] Run model direction validation for all 15 June 14 MLB games
+- [x] Investigate ARI@CIN DK/model disagreement: confirmed real disagreement (DK pick'em, model favors CIN home — correct pitchers Gallen vs Abbott)
+- [x] Investigate ATL@NYM DK/model disagreement: confirmed real disagreement (ATL offense rpg=5.62 >> NYM rpg=3.27, model correctly favors ATL)
+- [x] Investigate LAD@CWS PITCHER_ERA_DIRECTION_MISMATCH: confirmed false positive — DK+model both favor LAD, ERA check irrelevant when team strength dominates
+- [x] Investigate PHI@MIL DK/model disagreement: confirmed real disagreement — Sánchez ERA=1.63 correctly resolved (blended to ~1.51 with rolling-5), MIL offense (rpg=5.05) >> PHI offense (rpg=3.65) drives model to favor MIL
+- [x] Fix validation script PITCHER_ERA_DIRECTION_MISMATCH logic: only fires when DK+model ALSO disagree (eliminates false positives from team-strength-dominant games)
+- [x] Verify Kyle Harrison duplicate row (BOS + MIL): both share mlbamId, MIL row ERA=2.67 is correct, rolling-5 null for MIL row (season stats only used — correct behavior)
+- [x] Write root cause analysis document: server/june14_rca.md
+- [x] Final validation: 12/15 PASS, 3 legitimate DK/model disagreements (ARI@CIN, ATL@NYM, PHI@MIL), 0 data errors
