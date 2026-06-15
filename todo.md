@@ -4114,3 +4114,14 @@
 - [x] Verify Kyle Harrison duplicate row (BOS + MIL): both share mlbamId, MIL row ERA=2.67 is correct, rolling-5 null for MIL row (season stats only used — correct behavior)
 - [x] Write root cause analysis document: server/june14_rca.md
 - [x] Final validation: 12/15 PASS, 3 legitimate DK/model disagreements (ARI@CIN, ATL@NYM, PHI@MIL), 0 data errors
+
+## Session: 2026-06-15 — June 15 Full Pipeline
+
+- [x] Audit June 15 DB state: 10 MLB games, 4 WC fixtures
+- [x] MLB model auto-ran: 10/10 games modeled + published (publishedToFeed=1, publishedModel=1)
+- [x] WC June 15: Detected all 4 fixtures had home/away SWAPPED (CPV↔ESP, EGY↔BEL, URU↔KSA, NZL↔IRN)
+- [x] Fixed WC fixture orientation: wc26-g-015/013/016/014 — home/away corrected to FIFA official
+- [x] Fixed WC DK odds (book_id=68): deleted stale swapped odds, re-inserted correct team_id-anchored values
+- [x] Fixed WC model odds (book_id=0): deleted stale swapped odds, re-seeded with correct orientation
+- [x] Final validation: 10/10 MLB PASS + 4/4 WC PASS — zero issues
+- [x] Updated AN odds scraper awareness: AN uses team_id to anchor odds (side label is correct per FIFA)
