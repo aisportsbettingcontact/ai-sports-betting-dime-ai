@@ -44,12 +44,15 @@ import {
 const zWaitlistStatus = z.enum(["pending", "approved", "denied"]);
 
 const zSubmitInput = z.object({
-  email:       z.string().email("Invalid email address").max(320),
-  firstName:   z.string().max(128).optional(),
-  lastName:    z.string().max(128).optional(),
-  utmSource:   z.string().max(128).optional(),
-  utmMedium:   z.string().max(128).optional(),
-  utmCampaign: z.string().max(128).optional(),
+  email:          z.string().email("Invalid email address").max(320),
+  fullName:       z.string().max(256).optional(),
+  whyText:        z.string().max(2000).optional(),
+  unitSizeMin:    z.number().int().min(1).max(100000).optional(),
+  unitSizeMax:    z.number().int().min(1).max(100000).optional(),
+  step2Completed: z.boolean().optional(),
+  utmSource:      z.string().max(128).optional(),
+  utmMedium:      z.string().max(128).optional(),
+  utmCampaign:    z.string().max(128).optional(),
 });
 
 const zListInput = z.object({
@@ -91,7 +94,7 @@ export const waitlistRouter = router({
     .input(zSubmitInput)
     .mutation(async ({ input, ctx }) => {
       console.log(`[WaitlistRouter][STEP] submit — email=${input.email}`);
-      console.log(`[WaitlistRouter][INPUT] firstName=${input.firstName ?? "(none)"} lastName=${input.lastName ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`);
+      console.log(`[WaitlistRouter][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} utmSource=${input.utmSource ?? "(none)"}`);
 
       // ── Extract client metadata from request ──────────────────────────────
       const req = ctx.req as import("express").Request | undefined;
@@ -107,14 +110,17 @@ export const waitlistRouter = router({
       let result: Awaited<ReturnType<typeof submitWaitlist>>;
       try {
         result = await submitWaitlist({
-          email:       input.email,
-          firstName:   input.firstName,
-          lastName:    input.lastName,
+          email:          input.email,
+          fullName:       input.fullName,
+          whyText:        input.whyText,
+          unitSizeMin:    input.unitSizeMin,
+          unitSizeMax:    input.unitSizeMax,
+          step2Completed: input.step2Completed,
           ipAddress,
           userAgent,
-          utmSource:   input.utmSource,
-          utmMedium:   input.utmMedium,
-          utmCampaign: input.utmCampaign,
+          utmSource:      input.utmSource,
+          utmMedium:      input.utmMedium,
+          utmCampaign:    input.utmCampaign,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -125,13 +131,13 @@ export const waitlistRouter = router({
       if (!result.ok) {
         console.log(`[WaitlistRouter][OUTPUT] submit — DUPLICATE email=${input.email}`);
         // Return success-like response so the user sees confirmation (avoids email enumeration)
-        return { success: true, duplicate: true };
+        return { ok: false as const, reason: 'duplicate' as const };
       }
 
       console.log(`[WaitlistRouter][OUTPUT] submit — CREATED id=${result.id} email=${input.email}`);
       console.log(`[WaitlistRouter][VERIFY] PASS — waitlist entry submitted`);
 
-      return { success: true, duplicate: false };
+      return { ok: true as const, reason: null };
     }),
 
   // ── list (owner) ───────────────────────────────────────────────────────────

@@ -12,10 +12,6 @@ const FAQS = [
     a: "Our models are built on Dixon-Coles Poisson distributions and Monte Carlo simulation using pitcher ERA, team offensive production, park factors, and lineup data. No model is 100% accurate. We show you the model-implied probability and the confidence level — you decide whether to act on it.",
   },
   {
-    q: "What is the difference between the Monthly and Annual plans?",
-    a: "Both plans include full dashboard access. The Annual plan saves you 58% compared to paying monthly ($499/year vs $99/month × 12 = $1,188). There are no feature differences between plans.",
-  },
-  {
     q: "Can I cancel anytime?",
     a: "Yes. Cancel anytime from your account settings. No contracts, no cancellation fees. Monthly subscribers retain access through the end of their billing period.",
   },

@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+import { landingPrerenderMiddleware } from "../landingPrerender";
 
 /**
  * [FIX] Cache-Control headers applied to every HTML response.
@@ -40,6 +41,12 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+
+  // ── SSR prerender for bots/crawlers ────────────────────────────────────────
+  // Must be registered AFTER vite.middlewares (so Vite handles HMR/assets)
+  // but BEFORE the catch-all that serves the SPA shell.
+  app.use(landingPrerenderMiddleware);
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
@@ -98,6 +105,9 @@ export function serveStatic(app: Express) {
 
   // ── Other static files (favicon, robots.txt, etc.) ───────────────────────────
   app.use(express.static(distPath));
+
+  // ── SSR prerender for bots/crawlers (prod) ────────────────────────────────
+  app.use(landingPrerenderMiddleware);
 
   // fall through to index.html if the file doesn't exist
   // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.

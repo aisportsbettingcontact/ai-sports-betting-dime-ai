@@ -1,311 +1,548 @@
 /**
  * WaitlistCapture.tsx
  *
- * Replaces the PricingCTA and PremiumValueAnchor sections on the landing page
- * while the platform is in pre-launch / waitlist mode.
+ * 2-step waitlist form:
+ *   Step 1 — Full Name (required) + Email (required) → submits to waitlist
+ *   Step 2 — "Want earlier access?" optional: why-text + unit-size range slider
+ *             Submitting step 2 bumps their position in the queue.
  *
- * Design goals:
- *   - Premium, exclusive, invite-only feel
- *   - FOMO-inducing copy ("Limited access", "Spots reserved")
- *   - Clean email capture form with optional name fields
- *   - Animated gradient border on the card
- *   - UTM params captured automatically from URL
- *   - Duplicate submissions handled gracefully (same success message)
+ * Banned phrases (must never appear in rendered JSX):
+ *   - "No credit card required"
+ *   - "No spam, ever"
+ *   - "Unsubscribe anytime"
+ *   - "Access is reviewed manually. Not all applicants will be approved."
  */
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 
-// ─── UTM capture ─────────────────────────────────────────────────────────────
+// ─── UTM helpers ─────────────────────────────────────────────────────────────
+
 function getUtmParams() {
-  const params = new URLSearchParams(window.location.search);
+  if (typeof window === "undefined") return {};
+  const p = new URLSearchParams(window.location.search);
   return {
-    utmSource:   params.get("utm_source")   ?? undefined,
-    utmMedium:   params.get("utm_medium")   ?? undefined,
-    utmCampaign: params.get("utm_campaign") ?? undefined,
+    utmSource:   p.get("utm_source")   ?? undefined,
+    utmMedium:   p.get("utm_medium")   ?? undefined,
+    utmCampaign: p.get("utm_campaign") ?? undefined,
   };
 }
 
-// ─── Stat badge ───────────────────────────────────────────────────────────────
-function StatBadge({ value, label }: { value: string; label: string }) {
+// ─── Dual-thumb range slider ──────────────────────────────────────────────────
+
+const MIN_UNIT  = 5;
+const MAX_UNIT  = 5000;
+const STEP_UNIT = 5;
+
+function formatUSD(v: number) {
+  return v >= 1000 ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : `$${v}`;
+}
+
+interface RangeSliderProps {
+  low:    number;
+  high:   number;
+  onChange: (low: number, high: number) => void;
+}
+
+function RangeSlider({ low, high, onChange }: RangeSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const pct = (v: number) => ((v - MIN_UNIT) / (MAX_UNIT - MIN_UNIT)) * 100;
+
+  const clamp = (v: number) => Math.round(Math.max(MIN_UNIT, Math.min(MAX_UNIT, v)) / STEP_UNIT) * STEP_UNIT;
+
+  const handleLow  = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = clamp(Number(e.target.value));
+    onChange(Math.min(v, high - STEP_UNIT), high);
+  };
+  const handleHigh = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = clamp(Number(e.target.value));
+    onChange(low, Math.max(v, low + STEP_UNIT));
+  };
+
+  const leftPct  = pct(low);
+  const rightPct = pct(high);
+
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      <span className="text-2xl font-bold text-white tracking-tight">{value}</span>
-      <span className="text-[11px] text-zinc-400 uppercase tracking-widest whitespace-nowrap">{label}</span>
+    <div className="w-full select-none" ref={trackRef}>
+      {/* Labels */}
+      <div className="flex justify-between mb-3">
+        <span
+          className="font-bold"
+          style={{ fontSize: "13px", color: "#39FF14" }}
+        >
+          {formatUSD(low)}
+        </span>
+        <span className="text-[#6b7280]" style={{ fontSize: "12px" }}>
+          per unit
+        </span>
+        <span
+          className="font-bold"
+          style={{ fontSize: "13px", color: "#39FF14" }}
+        >
+          {formatUSD(high)}
+        </span>
+      </div>
+
+      {/* Track */}
+      <div className="relative h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+        {/* Filled range */}
+        <div
+          className="absolute h-2 rounded-full"
+          style={{
+            left:  `${leftPct}%`,
+            right: `${100 - rightPct}%`,
+            background: "linear-gradient(90deg, #39FF14, #00d4ff)",
+          }}
+        />
+        {/* Low thumb */}
+        <input
+          type="range"
+          min={MIN_UNIT}
+          max={MAX_UNIT}
+          step={STEP_UNIT}
+          value={low}
+          onChange={handleLow}
+          className="absolute w-full h-2 opacity-0 cursor-pointer"
+          style={{ zIndex: low > MAX_UNIT - 100 ? 5 : 3, top: 0 }}
+          aria-label="Minimum unit size"
+        />
+        {/* High thumb */}
+        <input
+          type="range"
+          min={MIN_UNIT}
+          max={MAX_UNIT}
+          step={STEP_UNIT}
+          value={high}
+          onChange={handleHigh}
+          className="absolute w-full h-2 opacity-0 cursor-pointer"
+          style={{ zIndex: 4, top: 0 }}
+          aria-label="Maximum unit size"
+        />
+        {/* Thumb dots */}
+        {[leftPct, rightPct].map((p, i) => (
+          <div
+            key={i}
+            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-black"
+            style={{
+              left: `${p}%`,
+              transform: "translate(-50%, -50%)",
+              background: "#39FF14",
+              boxShadow: "0 0 8px rgba(57,255,20,0.6)",
+              zIndex: 6,
+              pointerEvents: "none",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Tick labels */}
+      <div className="flex justify-between mt-2">
+        {[5, 100, 500, 1000, 2500, 5000].map((v) => (
+          <span key={v} className="text-[#4b5563]" style={{ fontSize: "10px" }}>
+            {formatUSD(v)}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+
+type Phase = "form1" | "success" | "form2" | "done";
+
 export default function WaitlistCapture() {
-  const [email, setEmail]         = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName]   = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [focused, setFocused]     = useState<string | null>(null);
+  // ── Step 1 state ────────────────────────────────────────────────────────────
+  const [fullName, setFullName] = useState("");
+  const [email,    setEmail]    = useState("");
+  const [error1,   setError1]   = useState("");
 
-  // Capture UTM params once on mount
-  const [utmParams] = useState(() => getUtmParams());
+  // ── Step 2 state ────────────────────────────────────────────────────────────
+  const [whyText,      setWhyText]      = useState("");
+  const [unitLow,      setUnitLow]      = useState(25);
+  const [unitHigh,     setUnitHigh]     = useState(500);
+  const [error2,       setError2]       = useState("");
 
-  const submitMutation = trpc.waitlist.submit.useMutation({
-    onSuccess: () => {
-      setSubmitted(true);
-      setError(null);
+  // ── Phase ────────────────────────────────────────────────────────────────────
+  const [phase, setPhase] = useState<Phase>("form1");
+
+  // ── Mutations ────────────────────────────────────────────────────────────────
+  const submitStep1 = trpc.waitlist.submit.useMutation({
+    onSuccess(data) {
+      if (data.ok || data.reason === "duplicate") {
+        setPhase("success");
+      } else {
+        setError1("Something went wrong. Please try again.");
+      }
     },
-    onError: (err) => {
-      setError(err.message ?? "Something went wrong. Please try again.");
+    onError(err) {
+      setError1(err.message || "Something went wrong. Please try again.");
     },
   });
 
-  function handleSubmit(e: React.FormEvent) {
+  const submitStep2 = trpc.waitlist.submit.useMutation({
+    onSuccess() {
+      setPhase("done");
+    },
+    onError(err) {
+      setError2(err.message || "Something went wrong. Please try again.");
+    },
+  });
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const handleStep1 = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setError("Please enter a valid email address.");
+    setError1("");
+    const trimName  = fullName.trim();
+    const trimEmail = email.trim();
+    if (!trimName)  { setError1("Full name is required."); return; }
+    if (!trimEmail) { setError1("Email address is required."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimEmail)) {
+      setError1("Please enter a valid email address.");
       return;
     }
-    // Basic email format check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    submitMutation.mutate({
-      email:     trimmedEmail,
-      firstName: firstName.trim() || undefined,
-      lastName:  lastName.trim() || undefined,
-      ...utmParams,
+    submitStep1.mutate({
+      email:    trimEmail,
+      fullName: trimName,
+      ...getUtmParams(),
     });
-  }
+  }, [fullName, email, submitStep1]);
 
+  const handleStep2 = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    setError2("");
+    submitStep2.mutate({
+      email:          email.trim(),
+      fullName:       fullName.trim(),
+      whyText:        whyText.trim() || undefined,
+      unitSizeMin:    unitLow,
+      unitSizeMax:    unitHigh,
+      step2Completed: true,
+      ...getUtmParams(),
+    });
+  }, [email, fullName, whyText, unitLow, unitHigh, submitStep2]);
+
+  const handleRangeChange = useCallback((low: number, high: number) => {
+    setUnitLow(low);
+    setUnitHigh(high);
+  }, []);
+
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <section
       id="waitlist"
       className="relative py-28 px-4 overflow-hidden"
       style={{ background: "linear-gradient(180deg, #050810 0%, #080d1a 50%, #050810 100%)" }}
     >
-      {/* ── Ambient glow ─────────────────────────────────────────────────── */}
+      {/* Ambient glow */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(99,102,241,0.12) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(57,255,20,0.06) 0%, transparent 70%)",
         }}
       />
 
-      <div className="relative z-10 max-w-2xl mx-auto text-center">
-
-        {/* ── Exclusivity badge ─────────────────────────────────────────── */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-          <span className="text-xs font-semibold text-indigo-300 tracking-widest uppercase">
-            Early Access — Limited Spots
+      <div className="relative z-10 max-w-xl mx-auto">
+        {/* Section header */}
+        <div className="text-center mb-10">
+          <span
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full font-semibold uppercase tracking-widest mb-4"
+            style={{
+              fontSize: "11px",
+              background: "rgba(57,255,20,0.08)",
+              border: "1px solid rgba(57,255,20,0.2)",
+              color: "#39FF14",
+            }}
+          >
+            <span
+              style={{
+                width: "6px", height: "6px", borderRadius: "50%",
+                background: "#39FF14", display: "inline-block",
+                boxShadow: "0 0 6px #39FF14",
+              }}
+            />
+            Invite-Only Access
           </span>
+          <h2
+            className="font-black text-white"
+            style={{ fontSize: "clamp(1.75rem, 4vw, 2.75rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
+          >
+            Be First to Access
+          </h2>
+          <p className="text-[#9ca3af] mt-3" style={{ fontSize: "clamp(0.95rem, 1.6vw, 1.1rem)" }}>
+            We are opening access to a select group before public launch. Reserve your spot now.
+          </p>
         </div>
 
-        {/* ── Headline ──────────────────────────────────────────────────── */}
-        <h2
-          className="text-4xl sm:text-5xl font-black tracking-tight leading-[1.1] mb-5"
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8"
           style={{
-            background: "linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #818cf8 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 0 40px rgba(57,255,20,0.04)",
           }}
         >
-          Be First In Line.
-        </h2>
+          <AnimatePresence mode="wait">
 
-        <p className="text-lg text-zinc-300 leading-relaxed mb-4 max-w-xl mx-auto">
-          We're opening access to a select group of serious bettors before the public launch.
-          Reserve your spot now — no commitment required.
-        </p>
+            {/* ── PHASE: form1 ─────────────────────────────────────────────── */}
+            {phase === "form1" && (
+              <motion.form
+                key="form1"
+                onSubmit={handleStep1}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-5"
+                noValidate
+              >
+                {/* Full Name — required */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[#9ca3af] font-semibold uppercase tracking-widest" style={{ fontSize: "11px" }}>
+                    Full Name <span style={{ color: "#39FF14" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    placeholder="John Smith"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    className="w-full rounded-lg px-4 py-3 text-white placeholder-[#374151] outline-none transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontSize: "15px",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(57,255,20,0.4)")}
+                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                  />
+                </div>
 
-        {/* ── Social proof stats ────────────────────────────────────────── */}
-        <div className="flex items-center justify-center gap-8 mb-10 py-5 border-y border-white/5">
-          <StatBadge value="MLB"      label="Live Now" />
-          <div className="w-px h-8 bg-white/10" />
-          <StatBadge value="WC 2026"  label="Live Now" />
-          <div className="w-px h-8 bg-white/10" />
-          <StatBadge value="NBA · NHL" label="Coming Soon" />
-        </div>
+                {/* Email — required */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[#9ca3af] font-semibold uppercase tracking-widest" style={{ fontSize: "11px" }}>
+                    Email Address <span style={{ color: "#39FF14" }}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full rounded-lg px-4 py-3 text-white placeholder-[#374151] outline-none transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontSize: "15px",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(57,255,20,0.4)")}
+                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                  />
+                </div>
 
-        {/* ── Form card ─────────────────────────────────────────────────── */}
-        {submitted ? (
-          /* ── Success state ──────────────────────────────────────────── */
-          <div
-            className="relative rounded-2xl p-8 text-center"
-            style={{
-              background: "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(16,24,40,0.9) 100%)",
-              border: "1px solid rgba(99,102,241,0.4)",
-            }}
-          >
-            {/* Checkmark */}
-            <div className="w-16 h-16 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center mx-auto mb-5">
-              <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-2xl font-bold text-white mb-3">You're on the list.</h3>
-            <p className="text-zinc-300 text-base leading-relaxed max-w-sm mx-auto">
-              We'll reach out personally when your access is ready. Keep an eye on your inbox.
-            </p>
-            <p className="mt-4 text-xs text-zinc-500">
-              Didn't receive a confirmation? Check your spam folder or contact us at{" "}
-              <a href="mailto:support@aisportsbettingmodels.com" className="text-indigo-400 hover:underline">
-                support@aisportsbettingmodels.com
-              </a>
-            </p>
-          </div>
-        ) : (
-          /* ── Form ───────────────────────────────────────────────────── */
-          <form
-            onSubmit={handleSubmit}
-            className="relative rounded-2xl p-8"
-            style={{
-              background: "rgba(10,14,30,0.85)",
-              border: "1px solid rgba(99,102,241,0.25)",
-              backdropFilter: "blur(12px)",
-            }}
-          >
-            {/* Name row */}
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="flex flex-col gap-1.5 text-left">
-                <label htmlFor="wl-first" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  First Name <span className="text-zinc-600">(optional)</span>
-                </label>
-                <input
-                  id="wl-first"
-                  type="text"
-                  autoComplete="given-name"
-                  placeholder="John"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  onFocus={() => setFocused("first")}
-                  onBlur={() => setFocused(null)}
-                  maxLength={128}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-all duration-200"
+                {/* Error */}
+                {error1 && (
+                  <p className="text-red-400 text-sm">{error1}</p>
+                )}
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={submitStep1.isPending}
+                  className="w-full rounded-lg py-4 font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
                   style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: focused === "first"
-                      ? "1px solid rgba(99,102,241,0.7)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: focused === "first" ? "0 0 0 3px rgba(99,102,241,0.12)" : "none",
+                    background: "#39FF14",
+                    fontSize: "15px",
+                    boxShadow: "0 0 24px rgba(57,255,20,0.25)",
                   }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5 text-left">
-                <label htmlFor="wl-last" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                  Last Name <span className="text-zinc-600">(optional)</span>
-                </label>
-                <input
-                  id="wl-last"
-                  type="text"
-                  autoComplete="family-name"
-                  placeholder="Smith"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  onFocus={() => setFocused("last")}
-                  onBlur={() => setFocused(null)}
-                  maxLength={128}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-all duration-200"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: focused === "last"
-                      ? "1px solid rgba(99,102,241,0.7)"
-                      : "1px solid rgba(255,255,255,0.08)",
-                    boxShadow: focused === "last" ? "0 0 0 3px rgba(99,102,241,0.12)" : "none",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Email row */}
-            <div className="flex flex-col gap-1.5 text-left mb-5">
-              <label htmlFor="wl-email" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                Email Address <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="wl-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setFocused("email")}
-                onBlur={() => setFocused(null)}
-                required
-                maxLength={320}
-                className="w-full px-4 py-3.5 rounded-xl text-sm text-white placeholder-zinc-600 outline-none transition-all duration-200"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: focused === "email"
-                    ? "1px solid rgba(99,102,241,0.7)"
-                    : error
-                    ? "1px solid rgba(239,68,68,0.6)"
-                    : "1px solid rgba(255,255,255,0.08)",
-                  boxShadow: focused === "email" ? "0 0 0 3px rgba(99,102,241,0.12)" : "none",
-                }}
-              />
-            </div>
-
-            {/* Error message */}
-            {error && (
-              <p className="text-sm text-red-400 mb-4 text-left flex items-center gap-1.5">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-                {error}
-              </p>
+                >
+                  {submitStep1.isPending ? "Reserving your spot…" : "Reserve My Spot →"}
+                </button>
+              </motion.form>
             )}
 
-            {/* Submit button */}
-            <button
-              type="submit"
-              disabled={submitMutation.isPending}
-              className="w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all duration-200 relative overflow-hidden group"
-              style={{
-                background: submitMutation.isPending
-                  ? "rgba(99,102,241,0.4)"
-                  : "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                color: "#ffffff",
-                boxShadow: submitMutation.isPending
-                  ? "none"
-                  : "0 4px 24px rgba(99,102,241,0.35)",
-              }}
-            >
-              <span className="relative z-10">
-                {submitMutation.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Reserving your spot...
+            {/* ── PHASE: success ────────────────────────────────────────────── */}
+            {phase === "success" && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="flex flex-col items-center gap-6 text-center py-4"
+              >
+                {/* Check icon */}
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(57,255,20,0.12)", border: "1px solid rgba(57,255,20,0.3)" }}
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+
+                <div>
+                  <h3 className="font-black text-white text-2xl mb-2">You&apos;re on the list.</h3>
+                  <p className="text-[#9ca3af]" style={{ fontSize: "15px" }}>
+                    We&apos;ll reach out when your access is ready.
+                  </p>
+                </div>
+
+                {/* Step 2 prompt */}
+                <div
+                  className="w-full rounded-xl p-5"
+                  style={{
+                    background: "rgba(57,255,20,0.04)",
+                    border: "1px solid rgba(57,255,20,0.15)",
+                  }}
+                >
+                  <p className="font-semibold text-white mb-1" style={{ fontSize: "14px" }}>
+                    Want earlier access?
+                  </p>
+                  <p className="text-[#6b7280] mb-4" style={{ fontSize: "13px" }}>
+                    Tell us a bit more and move up in the queue.
+                  </p>
+                  <button
+                    onClick={() => setPhase("form2")}
+                    className="w-full rounded-lg py-3 font-bold text-black transition-all hover:brightness-110 active:scale-[0.98]"
+                    style={{ background: "#39FF14", fontSize: "14px" }}
+                  >
+                    Move Up in Line →
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── PHASE: form2 ─────────────────────────────────────────────── */}
+            {phase === "form2" && (
+              <motion.form
+                key="form2"
+                onSubmit={handleStep2}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-7"
+                noValidate
+              >
+                <div className="text-center">
+                  <h3 className="font-black text-white text-xl mb-1">One more step</h3>
+                  <p className="text-[#6b7280]" style={{ fontSize: "13px" }}>
+                    Both fields are optional. Fill in what applies to you.
+                  </p>
+                </div>
+
+                {/* Why text — optional */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[#9ca3af] font-semibold uppercase tracking-widest" style={{ fontSize: "11px" }}>
+                    Why do you want to access our AI Sports Betting Models?
+                    <span className="ml-2 normal-case text-[#4b5563]">(optional)</span>
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Tell us about your betting background, what you're looking to improve, or how you plan to use the platform…"
+                    value={whyText}
+                    onChange={(e) => setWhyText(e.target.value)}
+                    maxLength={2000}
+                    className="w-full rounded-lg px-4 py-3 text-white placeholder-[#374151] outline-none transition-all resize-none"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontSize: "14px",
+                      lineHeight: "1.6",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(57,255,20,0.4)")}
+                    onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                  />
+                  <span className="text-right text-[#4b5563]" style={{ fontSize: "11px" }}>
+                    {whyText.length}/2000
                   </span>
-                ) : (
-                  "Reserve My Spot →"
+                </div>
+
+                {/* Unit size slider — optional */}
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-[#9ca3af] font-semibold uppercase tracking-widest" style={{ fontSize: "11px" }}>
+                      Unit Size Per Bet
+                      <span className="ml-2 normal-case text-[#4b5563]">(optional)</span>
+                    </label>
+                    <p className="text-[#4b5563] mt-1" style={{ fontSize: "12px" }}>
+                      Drag both handles to set your typical unit size range.
+                    </p>
+                  </div>
+                  <RangeSlider
+                    low={unitLow}
+                    high={unitHigh}
+                    onChange={handleRangeChange}
+                  />
+                </div>
+
+                {/* Error */}
+                {error2 && (
+                  <p className="text-red-400 text-sm">{error2}</p>
                 )}
-              </span>
-            </button>
 
-            {/* Trust line */}
-            <p className="mt-4 text-xs text-zinc-500 text-center">
-              No credit card required &nbsp;·&nbsp; No spam, ever &nbsp;·&nbsp; Unsubscribe anytime
-            </p>
-          </form>
-        )}
+                {/* Actions */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="submit"
+                    disabled={submitStep2.isPending}
+                    className="w-full rounded-lg py-4 font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+                    style={{
+                      background: "#39FF14",
+                      fontSize: "15px",
+                      boxShadow: "0 0 24px rgba(57,255,20,0.25)",
+                    }}
+                  >
+                    {submitStep2.isPending ? "Submitting…" : "Submit & Move Up →"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhase("done")}
+                    className="w-full rounded-lg py-3 font-semibold text-[#6b7280] transition-all hover:text-white"
+                    style={{ fontSize: "13px" }}
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </motion.form>
+            )}
 
-        {/* ── Scarcity note ─────────────────────────────────────────────── */}
-        <p className="mt-8 text-sm text-zinc-500 flex items-center justify-center gap-2">
-          <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          Access is reviewed manually. Not all applicants will be approved.
-        </p>
+            {/* ── PHASE: done ──────────────────────────────────────────────── */}
+            {phase === "done" && (
+              <motion.div
+                key="done"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35 }}
+                className="flex flex-col items-center gap-5 text-center py-4"
+              >
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(57,255,20,0.12)", border: "1px solid rgba(57,255,20,0.3)" }}
+                >
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-black text-white text-2xl mb-2">You&apos;re prioritized.</h3>
+                  <p className="text-[#9ca3af]" style={{ fontSize: "15px" }}>
+                    Your information has been noted. We&apos;ll be in touch soon.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );

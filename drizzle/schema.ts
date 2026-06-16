@@ -2385,11 +2385,20 @@ export const waitlist = mysqlTable("waitlist", {
   /** Submitter's email address — unique, lowercase-normalised before insert */
   email:       varchar("email", { length: 320 }).notNull().unique(),
 
-  /** Optional first name supplied in the form */
-  firstName:   varchar("firstName", { length: 128 }),
+  /** Full name supplied in step 1 of the form */
+  fullName:       varchar("full_name", { length: 256 }),
 
-  /** Optional last name supplied in the form */
-  lastName:    varchar("lastName", { length: 128 }),
+  /** Optional: why the user wants access (step 2) */
+  whyText:        text("why_text"),
+
+  /** Optional: unit size range lower bound in USD (step 2) */
+  unitSizeMin:    int("unit_size_min"),
+
+  /** Optional: unit size range upper bound in USD (step 2) */
+  unitSizeMax:    int("unit_size_max"),
+
+  /** Whether the user completed step 2 of the form */
+  step2Completed: boolean("step2_completed").default(false),
 
   /**
    * Review status.

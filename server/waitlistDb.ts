@@ -61,21 +61,24 @@ export interface WaitlistStats {
 // ─── submitWaitlist ───────────────────────────────────────────────────────────
 
 export async function submitWaitlist(input: {
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
+  email:          string;
+  fullName?:      string;
+  whyText?:       string;
+  unitSizeMin?:   number;
+  unitSizeMax?:   number;
+  step2Completed?: boolean;
+  ipAddress?:     string;
+  userAgent?:     string;
+  utmSource?:     string;
+  utmMedium?:     string;
+  utmCampaign?:   string;
 }): Promise<{ ok: true; id: number } | { ok: false; reason: "duplicate" }> {
   const db = getDb();
   const now = Date.now();
   const normalizedEmail = input.email.toLowerCase().trim();
 
   console.log(`[WaitlistDB][STEP] submitWaitlist — email=${normalizedEmail}`);
-  console.log(`[WaitlistDB][INPUT] firstName=${input.firstName ?? "(none)"} lastName=${input.lastName ?? "(none)"} ip=${input.ipAddress ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`);
+  console.log(`[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} ip=${input.ipAddress ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`);
 
   // ── Duplicate check ──────────────────────────────────────────────────────
   const existing = await db
@@ -91,10 +94,13 @@ export async function submitWaitlist(input: {
 
   // ── Insert ───────────────────────────────────────────────────────────────
   const row: InsertWaitlist = {
-    email:       normalizedEmail,
-    firstName:   input.firstName?.trim() || null,
-    lastName:    input.lastName?.trim() || null,
-    status:      "pending",
+    email:          normalizedEmail,
+    fullName:       input.fullName?.trim() || null,
+    whyText:        input.whyText?.trim() || null,
+    unitSizeMin:    input.unitSizeMin ?? null,
+    unitSizeMax:    input.unitSizeMax ?? null,
+    step2Completed: input.step2Completed ?? false,
+    status:         "pending",
     ipAddress:   input.ipAddress ?? null,
     userAgent:   input.userAgent?.slice(0, 512) ?? null,
     utmSource:   input.utmSource ?? null,
@@ -143,8 +149,7 @@ export async function listWaitlist(filters: WaitlistFilters = {}): Promise<Waitl
     conditions.push(
       or(
         like(waitlist.email, pattern),
-        like(waitlist.firstName, pattern),
-        like(waitlist.lastName, pattern),
+        like(waitlist.fullName, pattern),
       ) as ReturnType<typeof eq>
     );
   }
@@ -352,7 +357,8 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
     .orderBy(asc(waitlist.createdAt));
 
   const headers = [
-    "id", "email", "firstName", "lastName", "status",
+    "id", "email", "fullName", "status",
+    "whyText", "unitSizeMin", "unitSizeMax", "step2Completed",
     "adminNote", "ipAddress", "utmSource", "utmMedium", "utmCampaign",
     "reviewedAt", "createdAt", "updatedAt",
   ];
@@ -370,7 +376,8 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
     headers.join(","),
     ...rows.map((r) =>
       [
-        r.id, r.email, r.firstName, r.lastName, r.status,
+        r.id, r.email, r.fullName, r.status,
+        r.whyText, r.unitSizeMin, r.unitSizeMax, r.step2Completed,
         r.adminNote, r.ipAddress, r.utmSource, r.utmMedium, r.utmCampaign,
         r.reviewedAt, r.createdAt, r.updatedAt,
       ]
