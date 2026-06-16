@@ -15,7 +15,7 @@ import LandingPage from './pages/landing/LandingPage';
 const NotFound = lazy(() => import("@/pages/NotFound"));
 // ── ALL routes are lazy-loaded — zero page code in the initial bundle ────────
 // [PERF] ModelProjections was previously eager — it pulled in 531KB of deps
-// (GameCard, BettingSplitsPanel, MlbLineupCard, MlbCheatSheetCard, JackMacView,
+// (GameCard, BettingSplitsPanel, MlbLineupCard, MlbCheatSheetCard,
 // framer-motion, all MLB components). Now lazy: loads in parallel with auth check.
 const ModelProjections = lazy(() => import("./pages/ModelProjections"));
 const BettingSplits    = lazy(() => import("./pages/BettingSplits"));

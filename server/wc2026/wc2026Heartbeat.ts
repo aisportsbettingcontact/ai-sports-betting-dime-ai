@@ -11,8 +11,8 @@
  *             Mark is_closing=true when called within 90 min of any kickoff
  *
  * 2. POST /api/heartbeat/wc2026-splits
- *    Cadence: every 10 min
- *    Action:  Scrape VSIN DK splits → wc2026_betting_splits
+ *    Cadence: every 5 min
+ *    Action:  Scrape DK Network splits → wc2026_betting_splits
  *
  * 3. POST /api/heartbeat/wc2026-lineups
  *    Cadence: every 10 min
@@ -30,7 +30,7 @@ import { getDb } from "../db";
 import { wc2026Fixtures } from "../../drizzle/wc2026.schema";
 import { and, gte, lte, eq } from "drizzle-orm";
 import { scrapeWc2026Odds } from "./wc2026OddsScraper";
-import { scrapeWc2026VsinSplits } from "./wc2026VsinSplitsScraper";
+import { scrapeWc2026DkSplits } from "./wc2026DkSplitsScraper";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 
 // ─── Closing line window: 90 minutes before kickoff ──────────────────────────
@@ -101,8 +101,8 @@ async function handleWc2026Splits(req: Request, res: Response): Promise<void> {
   console.log(`[WC2026HB] [INPUT] /wc2026-splits triggered at ${now.toISOString()}`);
 
   try {
-    console.log("[WC2026HB] [STEP] Running VSIN splits scraper");
-    const result = await scrapeWc2026VsinSplits();
+    console.log("[WC2026HB] [STEP] Running DK Network splits scraper (every 5 min)");
+    const result = await scrapeWc2026DkSplits();
 
     console.log(
       `[WC2026HB] [OUTPUT] splits: rowsWritten=${result.rowsWritten} gamesProcessed=${result.gamesProcessed} errors=${result.errors.length}`

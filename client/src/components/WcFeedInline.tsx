@@ -31,33 +31,37 @@
  *   → wc2026.lineupsByDate  (lineups tab)
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const WC_DATE_RANGE = [
-  "2026-06-11",
-  "2026-06-12",
-  "2026-06-13",
-  "2026-06-14",
-  "2026-06-15",
-  "2026-06-16",
-  "2026-06-17",
-];
+// Full World Cup 2026 schedule: Group Stage (Jun 11–Jul 2) + Knockouts (Jul 4–Jul 19)
+const WC_DATE_RANGE: string[] = (() => {
+  const dates: string[] = [];
+  // Group Stage: Jun 11 – Jul 2
+  const start = new Date(Date.UTC(2026, 5, 11)); // Jun 11
+  const end   = new Date(Date.UTC(2026, 6, 19)); // Jul 19 (Final)
+  for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    dates.push(d.toISOString().split("T")[0]);
+  }
+  return dates;
+})();
 
-const WC_DATE_LABELS: Record<string, string> = {
-  "2026-06-11": "Thu Jun 11",
-  "2026-06-12": "Fri Jun 12",
-  "2026-06-13": "Sat Jun 13",
-  "2026-06-14": "Sun Jun 14",
-  "2026-06-15": "Mon Jun 15",
-  "2026-06-16": "Tue Jun 16",
-  "2026-06-17": "Wed Jun 17",
-};
+// WC_DATE_LABELS: dynamically computed from WC_DATE_RANGE
+const WC_DATE_LABELS: Record<string, string> = Object.fromEntries(
+  WC_DATE_RANGE.map((d) => {
+    const dt = new Date(d + "T12:00:00Z");
+    return [
+      d,
+      dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }),
+    ];
+  })
+);
 
 const WC_SUB_TABS = ["PROJECTIONS", "SPLITS", "LINEUPS", "STANDINGS", "FUTURES"] as const;
 type WcSubTab = (typeof WC_SUB_TABS)[number];
@@ -1724,7 +1728,7 @@ function WcSplitsFeed({ date }: { date: string }) {
           <p className="text-sm font-semibold text-zinc-400 mb-1">
             No betting splits available for {WC_DATE_LABELS[date] ?? date}
           </p>
-          <p className="text-xs text-zinc-600">Splits sourced from VSIN · DraftKings</p>
+          <p className="text-xs text-zinc-600">Splits sourced from DraftKings Network · Updated every 5 min</p>
         </div>
       </div>
     );
@@ -1867,39 +1871,6 @@ function WcComingSoon({ label }: { label: string }) {
   );
 }
 
-// ─── Date Selector ────────────────────────────────────────────────────────────
-
-function WcDateSelector({
-  selectedDate,
-  onSelect,
-}: {
-  selectedDate: string;
-  onSelect: (d: string) => void;
-}) {
-  return (
-    <div
-      className="flex items-center gap-1.5 px-3 sm:px-4 pt-3 pb-2 overflow-x-auto"
-      style={{ scrollbarWidth: "none" } as React.CSSProperties}
-    >
-      {WC_DATE_RANGE.map((d) => (
-        <button
-          key={d}
-          type="button"
-          onClick={() => onSelect(d)}
-          className={cn(
-            "px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all whitespace-nowrap flex-shrink-0",
-            selectedDate === d
-              ? "bg-transparent text-white border border-white/60"
-              : "bg-[#1a1a1a] text-zinc-400 border border-white/8 hover:text-zinc-200"
-          )}
-        >
-          {WC_DATE_LABELS[d]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── Main Inline Feed Component ───────────────────────────────────────────────
 
 /**
@@ -1922,6 +1893,11 @@ export function WcFeedInline() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultWcDate);
 
   const showDateSelector = activeTab === "PROJECTIONS" || activeTab === "LINEUPS" || activeTab === "SPLITS";
+
+  // Build the available dates set for CalendarPicker — all WC match dates
+  const wcAvailableDates = useMemo(() => new Set(WC_DATE_RANGE), []);
+
+  console.log(`[WcFeedInline] [STATE] activeTab=${activeTab} selectedDate=${selectedDate} availableDates=${wcAvailableDates.size}`);
 
   return (
     <div className="w-full">
@@ -1971,9 +1947,19 @@ export function WcFeedInline() {
           ))}
         </div>
 
-        {/* Date selector (shown for PROJECTIONS and LINEUPS) */}
+        {/* Date selector — CalendarPicker matching MLB layout exactly */}
         {showDateSelector && (
-          <WcDateSelector selectedDate={selectedDate} onSelect={setSelectedDate} />
+          <div className="px-3 sm:px-4 pb-2 pt-1">
+            <CalendarPicker
+              selectedDate={selectedDate}
+              onSelect={(d) => {
+                console.log(`[WcFeedInline] [ACTION] Date selected: ${d} (prev=${selectedDate})`);
+                setSelectedDate(d);
+              }}
+              availableDates={wcAvailableDates}
+              isAdmin={false}
+            />
+          </div>
         )}
       </div>
 

@@ -33,7 +33,7 @@ import { prewarmSlateCache } from "../actionNetwork";
 import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
-import { startJackMacScheduler } from "../routers/jackMac";
+// startJackMacScheduler removed — Jack Mac tab purged
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
@@ -498,10 +498,7 @@ async function startServer() {
     // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
     // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
     startMlbModelSyncScheduler();
-    // Jack Mac 15-min auto-sync — pre-warms RG CSV cache + syncs all 6 Google Sheets tabs
-    // (4 RG projection tabs + Today Lineups + Tomorrow Lineups) every 15 minutes
-    // Starts 2 minutes after boot to avoid cold-start hammering
-    startJackMacScheduler();
+    // Jack Mac scheduler removed — tab purged
     // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
     startSecurityDigestScheduler();
     // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs

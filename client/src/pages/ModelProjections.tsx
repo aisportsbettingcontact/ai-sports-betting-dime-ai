@@ -23,7 +23,7 @@ import MlbPropsCard, { type StrikeoutPropRow } from "@/components/MlbPropsCard";
 import MlbF5NrfiCard, { type F5NrfiGame } from "@/components/MlbF5NrfiCard";
 import MlbCheatSheetCard, { type CheatSheetGame, CheatSheetView, type CheatSheetLineup } from "@/components/MlbCheatSheetCard";
 import MlbHrPropsCard, { type HrPropRow } from "@/components/MlbHrPropsCard";
-import JackMacView from "@/components/JackMacView";
+// Jack Mac tab removed
 import { AgeModal } from "@/components/AgeModal";
 import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
@@ -333,8 +333,8 @@ export default function ModelProjections() {
   // ── Feed-wide mobile tab filter ───────────────────────────────────────────
   // Tabs: MODEL PROJECTIONS (dual) | BETTING SPLITS (splits) | LINEUPS (lineups, MLB only)
   //       K PROPS (props, MLB only) | F5/NRFI (f5nrfi, MLB only) | HR PROPS (hrprops, MLB only)
-  //       JACK MAC (jackmac, MLB only, whitelist: prez/sippi/lucianobets)
-  type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops' | 'jackmac';
+  //       Jack Mac tab permanently removed
+  type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';
   // feedMobileTab now comes from URL params (via useUrlState), with localStorage fallback
   const feedMobileTab = urlFeedMobileTab;
   const handleFeedTabChange = useCallback((next: FeedMobileTab) => {
@@ -344,7 +344,7 @@ export default function ModelProjections() {
   // Pre-compute the mobileTab prop value once per render so GameCard.memo can bail out.
   // Inline ternaries in JSX create new string references on every render, defeating memo.
   const gameMobileTab = useMemo((): 'dual' | 'splits' => {
-    const nonDualTabs: FeedMobileTab[] = ['lineups', 'props', 'f5nrfi', 'hrprops'];
+    const nonDualTabs: FeedMobileTab[] = ['lineups', 'props', 'f5nrfi', 'hrprops']; // jackmac removed
     return nonDualTabs.includes(feedMobileTab) ? 'dual' : (feedMobileTab as 'dual' | 'splits');
   }, [feedMobileTab]);
   // FEED_TABS is built after appUser is declared (see below — canSeeJackMac depends on appUser)
@@ -439,36 +439,17 @@ export default function ModelProjections() {
   const { user, isAuthenticated } = useAuth();
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
 
-  // ── JACK MAC whitelist + FEED_TABS (requires appUser) ─────────────────────
-  // JACK MAC tab is MLB-only and visible only to @prez, @sippi, @lucianobets.
-  // Must be defined after appUser to avoid TS2448 block-scoped-before-declaration.
-  const JACK_MAC_WHITELIST = new Set(['prez', 'sippi', 'lucianobets']);
-  const canSeeJackMac = Boolean(appUser && JACK_MAC_WHITELIST.has(appUser.username));
-  // Tabs: MODEL PROJECTIONS | BETTING SPLITS | LINEUPS (MLB only) | K PROPS (MLB only)
-  //       F5/NRFI (MLB only) | HR PROPS (MLB only) | JACK MAC (MLB only, whitelist)
-  // For @lucianobets: JACK MAC is the FIRST tab (leftmost) in MLB.
-  // For @prez and @sippi: JACK MAC appears after HR PROPS (standard order).
-  const isLuciano = canSeeJackMac && appUser?.username === 'lucianobets';
-  const MLB_STANDARD_TABS: { id: FeedMobileTab; label: string }[] = [
-    { id: 'dual',    label: 'PROJECTIONS' },
-    { id: 'splits',  label: 'SPLITS' },
-    { id: 'lineups', label: 'LINEUPS' },
-    { id: 'props',   label: 'K PROPS' },
-    { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
-    { id: 'hrprops', label: 'HR PROPS' },
-    ...(canSeeJackMac ? [{ id: 'jackmac' as FeedMobileTab, label: 'JACK MAC' }] : []),
-  ];
-  const MLB_LUCIANO_TABS: { id: FeedMobileTab; label: string }[] = [
-    { id: 'jackmac', label: 'JACK MAC' },
-    { id: 'dual',    label: 'PROJECTIONS' },
-    { id: 'splits',  label: 'SPLITS' },
-    { id: 'lineups', label: 'LINEUPS' },
-    { id: 'props',   label: 'K PROPS' },
-    { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
-    { id: 'hrprops', label: 'HR PROPS' },
-  ];
+  // ── FEED_TABS ─────────────────────────────────────────────────────────────
+  // Jack Mac tab permanently removed.
   const FEED_TABS: { id: FeedMobileTab; label: string }[] = selectedSport === 'MLB'
-    ? (isLuciano ? MLB_LUCIANO_TABS : MLB_STANDARD_TABS)
+    ? [
+        { id: 'dual',    label: 'PROJECTIONS' },
+        { id: 'splits',  label: 'SPLITS' },
+        { id: 'lineups', label: 'LINEUPS' },
+        { id: 'props',   label: 'K PROPS' },
+        { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
+        { id: 'hrprops', label: 'HR PROPS' },
+      ]
     : [
         { id: 'dual',   label: 'MODEL PROJECTIONS' },
         { id: 'splits', label: 'BETTING SPLITS' },
@@ -1740,9 +1721,6 @@ export default function ModelProjections() {
                     ))}
                   </div>
                 )
-              ) : feedMobileTab === 'jackmac' && selectedSport === 'MLB' && canSeeJackMac ? (
-                /* ── JACK MAC VIEW (whitelist: prez/sippi/lucianobets) ── */
-                <JackMacView appUser={appUser} />
               ) : (
                 /* ── PROJECTIONS / SPLITS VIEW ── */
                 gamesLoading ? (

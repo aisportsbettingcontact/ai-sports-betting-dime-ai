@@ -45,7 +45,7 @@ import { metricsRouter } from "./routers/metrics";
 import { mlbScheduleRouter } from "./routers/mlbSchedule";
 import { nbaScheduleRouter } from "./routers/nbaSchedule";
 import { nhlScheduleRouter } from "./routers/nhlSchedule";
-import { jackMacRouter } from "./routers/jackMac";
+// jackMacRouter removed
 import { stripeRouter } from "./routers/stripe";
 import { claudeRouter } from "./claudeRouter";
 import { waitlistRouter } from "./routers/waitlist";
@@ -177,7 +177,7 @@ export const appRouter = router({
   mlbSchedule: mlbScheduleRouter,
   nbaSchedule: nbaScheduleRouter,
   nhlSchedule: nhlScheduleRouter,
-  jackMac: jackMacRouter,
+  // jackMac router removed
   stripe: stripeRouter,
   wc2026: wc2026Router,
   claude: claudeRouter,
