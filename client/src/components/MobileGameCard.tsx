@@ -1004,7 +1004,12 @@ return (
 
     {/* ── TWO-COLUMN TEAM GRID: frozen left + scrollable right ─────── */}
     {/* Status row (star/LIVE/FINAL/time) is inside the frozen left panel, ABOVE the away team row */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr', width: '100%', minHeight: 0 }}>
+    {/* LEFT PANEL WIDTH: clamp(96px, 24.4vw, 108px)
+         Budget: 6px paddingL + 28px logo + 4px gap + [abbr flex:1 min:24px] + 28px score_slot + 2px paddingR = 92px fixed
+         At 360px: panel=96px → abbr=28px ✓  |  At 390px: panel=96px → abbr=28px ✓
+         At 430px: panel=104.9px → abbr=36.9px ✓  |  360px floor guarantees 28px abbr on all phones
+         Previous clamp(72px,20.4vw,88px) gave only 5-20px for abbr — INSUFFICIENT for 3-char abbrs like CWS/NYM */}
+    <div style={{ display: 'grid', gridTemplateColumns: 'clamp(96px, 24.4vw, 108px) 1fr', width: '100%', minHeight: 0 }}>
 
     {/* ── FROZEN LEFT PANEL: status row + team rows ── */}
     {/* overflow:hidden is CRITICAL: prevents LIVE clock text (e.g. "LIVE TOP 4TH") from
@@ -1083,48 +1088,75 @@ return (
       </div>
 
             {/* Away row: logo (28px) + abbr + score
-           Logo reduced from 32px to 28px to give abbr+score enough room on narrow phones.
-           On a 390px phone: panel=79.6px, padding-left=8px, gap=4px
-           28 (logo) + 4 (gap) = 32px used, leaving 39.6px for abbr+score.
-           Worst case: "CWS" (26px at 11px) + "12" (18px) = 44px — fits with 0px paddingRight. */}
+           ROOT CAUSE FIX: Score slot is ALWAYS reserved (minWidth:28px, flexShrink:0) regardless of game state.
+           Previously the score span was conditionally rendered ({isLive||isFinal}&&hasScores&&<span>),
+           which meant abbr had flex:1 and grabbed ALL remaining space when no score was showing.
+           When a score appeared, it had no guaranteed room and crowded against the abbr.
+           FIX: Score span is always rendered. visibility:hidden when no score keeps the slot but shows nothing.
+           28px minWidth handles double-digit scores (e.g. "12" at 13px tabular-nums = ~18px) with 10px margin.
+           Panel budget on 390px phone: panel=96px
+             6px paddingL + 28px logo + 4px gap + [abbr flex:1] + 28px score_slot + 2px paddingR = 68px fixed
+             abbr gets 96-68 = 28px – sufficient for all 3-char MLB abbrs (CWS/NYM/MIN/LAA etc.) */}
       <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '4px', paddingLeft: '2px', paddingRight: '2px' }}>
-        {/* Logo: 28px — reduced from 32px to free up space for abbr+score */}
+        {/* Logo: 28px fixed — flexShrink:0 so logo never collapses */}
         <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — NEVER truncated */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
+        {/* Abbreviation — flex:1 fills remaining space; minWidth:0 allows shrink if needed */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden' }}>
           {awayAbbr}
         </span>
-        {/* Score — flexShrink:0 so it's never squeezed out */}
-        {(isLive || isFinal) && hasScores && (
-          <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
+        {/* Score slot — ALWAYS rendered with fixed minWidth:28px to permanently reserve space.
+             visibility:hidden when not live/final keeps the slot but shows nothing.
+             This is the ONLY bulletproof pattern: hold the space unconditionally, never conditionally mount/unmount. */}
+        <span
+          className="tabular-nums transition-colors duration-300"
+          style={{
+            flexShrink: 0,
+            minWidth: '28px',
+            textAlign: 'right',
+            fontSize: 'clamp(11px, 3.2vw, 13px)',
+            lineHeight: 1,
+            fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
             color: awayScoreFlash ? '#39FF14' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: awayScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
-          }}>{game.awayScore}</span>
-        )}
+            visibility: (isLive || isFinal) && hasScores ? 'visible' : 'hidden',
+          }}
+        >
+          {game.awayScore ?? '0'}
+        </span>
       </div>
       {/* Divider */}
       <div style={{ height: 1, background: 'hsl(var(--border) / 0.4)' }} />
-      {/* Home row: logo (28px) + abbr + score */}
+      {/* Home row: same bulletproof always-reserved score slot pattern as away row */}
       <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '4px', paddingLeft: '2px', paddingRight: '2px' }}>
-        {/* Logo: 28px — reduced from 32px to free up space for abbr+score */}
+        {/* Logo: 28px fixed — flexShrink:0 so logo never collapses */}
         <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — NEVER truncated */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
+        {/* Abbreviation — flex:1 fills remaining space; minWidth:0 allows shrink if needed */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden' }}>
           {homeAbbr}
         </span>
-        {/* Score — flexShrink:0 so it's never squeezed out */}
-        {(isLive || isFinal) && hasScores && (
-          <span className="tabular-nums flex-shrink-0 transition-colors duration-300" style={{
-            fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
+        {/* Score slot — ALWAYS rendered with fixed minWidth:28px to permanently reserve space.
+             visibility:hidden when not live/final keeps the slot but shows nothing.
+             This is the ONLY bulletproof pattern: hold the space unconditionally, never conditionally mount/unmount. */}
+        <span
+          className="tabular-nums transition-colors duration-300"
+          style={{
+            flexShrink: 0,
+            minWidth: '28px',
+            textAlign: 'right',
+            fontSize: 'clamp(11px, 3.2vw, 13px)',
+            lineHeight: 1,
+            fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
             color: homeScoreFlash ? '#39FF14' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             textShadow: homeScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
-          }}>{game.homeScore}</span>
-        )}
+            visibility: (isLive || isFinal) && hasScores ? 'visible' : 'hidden',
+          }}
+        >
+          {game.homeScore ?? '0'}
+        </span>
       </div>
     </div>
 
