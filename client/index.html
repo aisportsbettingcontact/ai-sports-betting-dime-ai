@@ -150,6 +150,121 @@
     </div>
     <!-- React mounts here. Once React renders real content, the loading shell fades out. -->
     <div id="root"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SEO STATIC CONTENT — crawlable homepage HTML for search engines,
+         social preview tools, accessibility tools, and JS-disabled browsers.
+
+         ARCHITECTURE:
+         - This section is always present in the initial HTML response (no JS needed).
+         - When JS is enabled: React renders LandingPage into #root on top of this.
+           The #seo-static-content section is hidden via JS (class added below) so
+           it does not duplicate the visual landing page.
+         - When JS is disabled: <noscript> removes the hide-class, making this
+           section the visible homepage. The loading shell is also hidden via noscript.
+         - Crawlers (Googlebot, Bing, social preview tools) always see this content
+           because they fetch the raw HTML before executing JavaScript.
+
+         CONTENT: Matches the required minimum per SEO spec.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <style>
+      /* SEO static content: shown by default, hidden when JS runs */
+      #seo-static-content {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        background-color: #0a0a0f;
+        color: #ffffff;
+        padding: 48px 24px 64px;
+        max-width: 860px;
+        margin: 0 auto;
+      }
+      #seo-static-content.js-ready {
+        /* Hidden once JS runs — React LandingPage renders in #root instead */
+        display: none !important;
+      }
+      #seo-static-content .seo-eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #39FF14;
+        margin-bottom: 16px;
+      }
+      #seo-static-content h1 {
+        font-size: clamp(28px, 6vw, 52px);
+        font-weight: 800;
+        line-height: 1.15;
+        color: #ffffff;
+        margin: 0 0 20px;
+      }
+      #seo-static-content .seo-subtitle {
+        font-size: clamp(15px, 2.5vw, 18px);
+        font-weight: 400;
+        color: rgba(255,255,255,0.70);
+        line-height: 1.6;
+        margin-bottom: 32px;
+        max-width: 640px;
+      }
+      #seo-static-content .seo-cta {
+        display: inline-block;
+        background: #39FF14;
+        color: #0a0a0f;
+        font-size: 15px;
+        font-weight: 700;
+        padding: 14px 28px;
+        border-radius: 8px;
+        text-decoration: none;
+        margin-bottom: 48px;
+      }
+      #seo-static-content .seo-body {
+        font-size: 15px;
+        line-height: 1.7;
+        color: rgba(255,255,255,0.65);
+        margin-bottom: 32px;
+        max-width: 720px;
+      }
+      #seo-static-content .seo-disclaimer {
+        font-size: 12px;
+        line-height: 1.6;
+        color: rgba(255,255,255,0.35);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding-top: 24px;
+        max-width: 720px;
+      }
+      /* When JS is disabled: show the SEO content, hide the loading shell */
+    </style>
+    <noscript>
+      <style>
+        #html-loading-shell { display: none !important; }
+        #seo-static-content { display: block !important; }
+        #seo-static-content.js-ready { display: block !important; }
+      </style>
+    </noscript>
+    <section id="seo-static-content" aria-label="AI Sports Betting Models — Homepage">
+      <p class="seo-eyebrow">AI-Powered Betting Intelligence</p>
+      <h1>Sports Betting Intelligence Powered by AI Models</h1>
+      <p class="seo-subtitle">
+        Analyze moneylines, spreads, totals, betting splits, line movement, and model-projected edge signals in one dashboard before you bet.
+      </p>
+      <a class="seo-cta" href="/login">View Today's Model Board</a>
+      <p class="seo-body">
+        AI Sports Betting Models is sports betting intelligence software designed to help users evaluate the board with more structure. The platform brings model projections, market prices, betting splits, line movement, and edge signals into one place so users can compare the model against the market before making a decision.
+      </p>
+      <p class="seo-disclaimer">
+        Sports betting involves risk. AI Sports Betting Models does not guarantee profits or outcomes. Use this platform for informational and analytical purposes only. Bet responsibly and only with money you can afford to lose.
+      </p>
+    </section>
+    <script>
+      // Hide the SEO static content once JS is running — React LandingPage renders in #root instead.
+      // Also hide immediately on non-root paths (e.g. /feed, /login) since the SEO section is
+      // only relevant for the public homepage at /.
+      // This runs synchronously before React mounts, preventing any flash.
+      (function() {
+        var seo = document.getElementById('seo-static-content');
+        if (!seo) return;
+        // Always hide when JS runs — React renders the real LandingPage or the correct route page
+        seo.classList.add('js-ready');
+      })();
+    </script>
     <script>
       // ─── HTML Shell Dismissal Logic ───────────────────────────────────────────
       // Strategy: observe #root with subtree:true so we catch React renders at
