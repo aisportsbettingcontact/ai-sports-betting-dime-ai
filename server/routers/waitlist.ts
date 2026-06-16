@@ -30,6 +30,7 @@ import { ownerProcedure } from "./appUsers";
 import type { WaitlistRow } from "../../drizzle/schema";
 import {
   submitWaitlist,
+  enrichStep2,
   listWaitlist,
   getWaitlistStats,
   updateWaitlistStatus,
@@ -85,6 +86,13 @@ const zExportInput = z.object({
   status: z.enum(["all", "pending", "approved", "denied"]).default("all"),
 });
 
+const zEnrichStep2Input = z.object({
+  email:    z.string().email("Invalid email address").max(320),
+  fullName: z.string().max(256).optional(),
+  whyText:  z.string().max(2000).optional(),
+  unitSize: z.number().int().min(5).max(100000).optional(),
+});
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const waitlistRouter = router({
@@ -138,6 +146,40 @@ export const waitlistRouter = router({
       console.log(`[WaitlistRouter][VERIFY] PASS — waitlist entry submitted`);
 
       return { ok: true as const, reason: null };
+    }),
+
+  // ── enrichStep2 (public) — update enrichment fields on existing entry ─────
+  enrichStep2: publicProcedure
+    .input(zEnrichStep2Input)
+    .mutation(async ({ input }) => {
+      console.log(`[WaitlistRouter][STEP] enrichStep2 — email=${input.email}`);
+      console.log(`[WaitlistRouter][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"}`);
+
+      let result: Awaited<ReturnType<typeof enrichStep2>>;
+      try {
+        result = await enrichStep2({
+          email:          input.email,
+          fullName:       input.fullName,
+          whyText:        input.whyText,
+          unitSize:       input.unitSize,
+          step2Completed: true,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`[WaitlistRouter][ERROR] enrichStep2 — DB error: ${msg}`);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to save your information. Please try again." });
+      }
+
+      if (!result.ok) {
+        console.log(`[WaitlistRouter][OUTPUT] enrichStep2 — NOT_FOUND email=${input.email}`);
+        // Still return ok:true to the user — avoids email enumeration and is a no-op
+        return { ok: true as const };
+      }
+
+      console.log(`[WaitlistRouter][OUTPUT] enrichStep2 — UPDATED email=${input.email}`);
+      console.log(`[WaitlistRouter][VERIFY] PASS — step2 enrichment saved`);
+
+      return { ok: true as const };
     }),
 
   // ── list (owner) ───────────────────────────────────────────────────────────

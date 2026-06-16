@@ -393,3 +393,74 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
 
   return csv;
 }
+
+// ─── enrichStep2 ─────────────────────────────────────────────────────────────
+/**
+ * Updates enrichment fields (fullName, whyText, unitSize, step2Completed) on an
+ * existing waitlist row identified by email.  Called by the Step 2 "Want earlier
+ * access?" form after the initial submission has already created the row.
+ *
+ * Returns:
+ *   { ok: true }             — row found and updated
+ *   { ok: false, reason: "not_found" } — no row with that email
+ */
+export async function enrichStep2(input: {
+  email:          string;
+  fullName?:      string;
+  whyText?:       string;
+  unitSize?:      number;
+  step2Completed: boolean;
+}): Promise<{ ok: true } | { ok: false; reason: "not_found" }> {
+  const db = getDb();
+  const normalizedEmail = input.email.toLowerCase().trim();
+  const now = Date.now();
+
+  console.log(`[WaitlistDB][STEP] enrichStep2 — email=${normalizedEmail}`);
+  console.log(`[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"} step2=${input.step2Completed}`);
+
+  // ── Verify the row exists ─────────────────────────────────────────────────
+  const existing = await db
+    .select({ id: waitlist.id, email: waitlist.email, step2Completed: waitlist.step2Completed })
+    .from(waitlist)
+    .where(eq(waitlist.email, normalizedEmail))
+    .limit(1);
+
+  if (existing.length === 0) {
+    console.log(`[WaitlistDB][VERIFY] FAIL — enrichStep2 email=${normalizedEmail} not found in waitlist`);
+    return { ok: false, reason: "not_found" };
+  }
+
+  const rowId = existing[0].id;
+  console.log(`[WaitlistDB][STATE] found id=${rowId} email=${normalizedEmail} previousStep2=${existing[0].step2Completed}`);
+
+  // ── Build the update payload (only set non-empty values) ──────────────────
+  const updatePayload: Partial<InsertWaitlist> = {
+    updatedAt:      now,
+    step2Completed: input.step2Completed,
+  };
+
+  if (input.fullName !== undefined && input.fullName.trim().length > 0) {
+    updatePayload.fullName = input.fullName.trim();
+  }
+  if (input.whyText !== undefined && input.whyText.trim().length > 0) {
+    updatePayload.whyText = input.whyText.trim();
+  }
+  if (input.unitSize !== undefined && input.unitSize > 0) {
+    // Store single value in both min and max for backward compat with CSV export
+    updatePayload.unitSizeMin = input.unitSize;
+    updatePayload.unitSizeMax = input.unitSize;
+  }
+
+  console.log(`[WaitlistDB][STATE] enrichStep2 updatePayload keys=[${Object.keys(updatePayload).join(", ")}]`);
+
+  // ── Execute the UPDATE ────────────────────────────────────────────────────
+  await db
+    .update(waitlist)
+    .set(updatePayload)
+    .where(eq(waitlist.id, rowId));
+
+  console.log(`[WaitlistDB][OUTPUT] enrichStep2 — UPDATED id=${rowId} email=${normalizedEmail} ts=${now}`);
+  console.log(`[WaitlistDB][VERIFY] PASS — step2 enrichment saved`);
+
+  return { ok: true };
+}
