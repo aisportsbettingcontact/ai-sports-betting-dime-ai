@@ -277,11 +277,11 @@ export default function ModelProjections() {
   useEffect(() => {
     if (!activeSports) return;
     if (selectedSport === 'WC') return; // WC is always valid — never auto-switch away
-    const sportActive = activeSports[selectedSport as 'NBA' | 'NHL' | 'MLB'];
+    const sportActive = activeSports[selectedSport as 'NBA' | 'MLB'];
     // NBA tab is hidden from the feed — exclude it from auto-switch fallback
     if (!sportActive || selectedSport === 'NBA') {
-      // Pick the first active sport in display order: MLB → NHL (NBA excluded — tab hidden)
-      const fallback = (['MLB', 'NHL'] as const).find(s => activeSports[s]);
+      // Pick the first active sport in display order: MLB (NHL removed — season over; NBA excluded — tab hidden)
+      const fallback = (['MLB'] as const).find(s => activeSports[s]);
       if (fallback) setSelectedSport(fallback, true); // isAutoSwitch=true → replace, don't push history
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1274,14 +1274,7 @@ export default function ModelProjections() {
             </button>
           )}
 
-          {/* NHL pill — only shown when NHL has games today or tomorrow */}
-          {(!activeSports || activeSports.NHL) && (
-            <button type="button" onClick={() => setSelectedSport("NHL")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NHL" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
-              <img src="https://media.d3.nhle.com/image/private/t_q-best/prd/assets/nhl/logos/nhl_shield_wm_on_dark_fqkbph" alt="NHL" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "NHL" ? 1 : 0.5, flexShrink: 0 }} />
-              NHL
-            </button>
-          )}
+          {/* NHL pill — REMOVED: season is over */}
 
           {/* WC 2026 pill — renders inline on the feed (same as MLB/NHL) */}
           <button type="button" onClick={() => setSelectedSport("WC")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
@@ -1381,7 +1374,7 @@ export default function ModelProjections() {
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                 }}
-              >{selectedSport === 'NBA' ? 'NBA BASKETBALL' : selectedSport === 'MLB' ? 'MLB BASEBALL' : 'NHL HOCKEY'}</span>
+              >{selectedSport === 'NBA' ? 'NBA BASKETBALL' : selectedSport === 'MLB' ? 'MLB BASEBALL' : 'WORLD CUP 2026'}</span>
             </div>
           </div>
         )}
@@ -1553,7 +1546,7 @@ export default function ModelProjections() {
             alignItems: 'center',
             gap: '4px',
           }}>
-            {[selectedSport === 'NHL' ? 'PUCK LINE' : selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML'].map(h => (
+            {[selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML'].map(h => (
               // flex: '1 1 0' matches MktCard's flex: '1 1 0' exactly
               <div key={h} style={{
                 flex: '1 1 0',

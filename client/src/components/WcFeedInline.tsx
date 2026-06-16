@@ -545,16 +545,39 @@ function extractWcSplits(
   return { awayTickets, homeTickets, awayMoney, homeMoney };
 }
 
-// ─── SectionCol — exact GameCard SectionCol ───────────────────────────────────
+// ─── WcMktCol — MLB-style BOOK/MODEL column with edge detection banner ────────
+//
+// Renders one market column (MONEYLINE | TOTAL | DRAW) matching the exact
+// visual language of the MLB GameCard:
+//   • BOOK / MODEL sub-column headers
+//   • Away row (top) + Home row (bottom) — or single row for DRAW
+//   • Edge detection banner: "TEAM ML +X.XX% ROI" or "NO EDGE"
+//
+// EDGE RULE: edge exists when americanToImplied(model) > americanToImplied(book)
+//   edgePP = (mdlImpl - bkImpl) * 100  (percentage points)
+//   ROI    = (mdlImpl - bkImpl) / bkImpl * 100  (expected value)
+//
+function americanToImplied(odds: number | null | undefined): number {
+  if (odds == null || isNaN(odds)) return 0;
+  return odds < 0 ? Math.abs(odds) / (Math.abs(odds) + 100) : 100 / (odds + 100);
+}
 
-function SectionCol({
+function calcEdge(bookOdds: number | null | undefined, modelOdds: number | null | undefined): number {
+  // Returns ROI in percentage points (positive = edge)
+  const bkImpl  = americanToImplied(bookOdds);
+  const mdlImpl = americanToImplied(modelOdds);
+  if (bkImpl <= 0) return 0;
+  return ((mdlImpl - bkImpl) / bkImpl) * 100;
+}
+
+function WcMktCol({
   title,
   awayLabel,
   homeLabel,
-  awayBook,
-  homeBook,
-  awayModel = '—',
-  homeModel = '—',
+  awayBookNum,
+  homeBookNum,
+  awayModelNum,
+  homeModelNum,
   singleRow = false,
   awayTickets = null,
   homeTickets = null,
@@ -562,15 +585,15 @@ function SectionCol({
   homeMoney = null,
   awayColor = '#1a4a8a',
   homeColor = '#c84b0c',
+  compact = false,
 }: {
   title: string;
   awayLabel: string;
   homeLabel: string;
-  awayBook: string;
-  homeBook: string;
-  awayModel?: string;
-  homeModel?: string;
-  /** If true, only render the first (away/over) OddsCell row */
+  awayBookNum: number | null | undefined;
+  homeBookNum: number | null | undefined;
+  awayModelNum: number | null | undefined;
+  homeModelNum: number | null | undefined;
   singleRow?: boolean;
   awayTickets?: number | null;
   homeTickets?: number | null;
@@ -578,96 +601,151 @@ function SectionCol({
   homeMoney?: number | null;
   awayColor?: string;
   homeColor?: string;
+  compact?: boolean;
 }) {
-  const colHdrStyle = (color: string): React.CSSProperties => ({
-    fontSize: HDR_FS,
+  const awayBook  = fmtAmerican(awayBookNum);
+  const homeBook  = fmtAmerican(homeBookNum);
+  const awayModel = fmtAmerican(awayModelNum);
+  const homeModel = fmtAmerican(homeModelNum);
+
+  // ── Edge detection ──────────────────────────────────────────────────────────
+  const awayRoi = calcEdge(awayBookNum, awayModelNum);
+  const homeRoi = singleRow ? -Infinity : calcEdge(homeBookNum, homeModelNum);
+  const EDGE_THRESHOLD = 0; // any positive ROI = edge
+
+  const awayHasEdge = awayRoi > EDGE_THRESHOLD && awayBookNum != null && awayModelNum != null;
+  const homeHasEdge = !singleRow && homeRoi > EDGE_THRESHOLD && homeBookNum != null && homeModelNum != null;
+
+  let edgeLabel: string | null = null;
+  let edgeRoi = 0;
+  if (awayHasEdge && homeHasEdge) {
+    // Both sides have edge — show the stronger one
+    if (awayRoi >= homeRoi) { edgeLabel = awayLabel; edgeRoi = awayRoi; }
+    else                    { edgeLabel = homeLabel; edgeRoi = homeRoi; }
+  } else if (awayHasEdge) {
+    edgeLabel = awayLabel; edgeRoi = awayRoi;
+  } else if (homeHasEdge) {
+    edgeLabel = homeLabel; edgeRoi = homeRoi;
+  }
+
+  const hasEdge = edgeLabel !== null;
+
+  // ── Styles ──────────────────────────────────────────────────────────────────
+  const pad = compact ? '6px 6px 8px' : '8px 10px 10px';
+  const colHdrFs: React.CSSProperties = {
+    fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)',
     fontWeight: 700,
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase' as const,
-    color,
-    whiteSpace: 'nowrap' as const,
-  });
+    letterSpacing: '0.10em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  };
+  const titleFs: React.CSSProperties = {
+    fontSize: compact ? 'clamp(9px,2.0vw,11px)' : 'clamp(10px,0.9vw,13px)',
+    fontWeight: 850,
+    color: '#fff',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  };
+
+  console.log(
+    `[WcMktCol] title=${title} awayLabel=${awayLabel} homeLabel=${homeLabel}` +
+    ` | [INPUT] awayBook=${awayBookNum} awayModel=${awayModelNum} homeBook=${homeBookNum} homeModel=${homeModelNum}` +
+    ` | [STATE] awayRoi=${awayRoi.toFixed(2)}% homeRoi=${singleRow ? 'N/A' : homeRoi.toFixed(2)}%` +
+    ` | [OUTPUT] edgeLabel=${edgeLabel ?? 'NO EDGE'} edgeRoi=${edgeRoi.toFixed(2)}%` +
+    ` | [VERIFY] hasEdge=${hasEdge}`
+  );
 
   return (
-    <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: '8px 10px 10px' }}>
+    <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
       {/* Section title */}
-      <div className="flex items-center gap-1.5" style={{ marginBottom: 4 }}>
+      <div className="flex items-center gap-1" style={{ marginBottom: compact ? 3 : 4 }}>
         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-        <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#fff', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-          {title}
-        </span>
+        <span style={titleFs}>{title}</span>
         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
       </div>
 
-      {/* Spacer */}
-      <div style={{ height: 'clamp(6px,0.5vw,9px)', marginBottom: 2 }} />
-
-      {/* Odds grid: 2 columns — BOOK | MODEL */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', marginBottom: 5, alignItems: 'start' }}>
-        <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
-        <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
-
-        {/* Away / OVER — BOOK pill */}
-        <OddsCell
-          mainValue={awayBook}
-          isBook={true}
-          size="md"
-          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-        />
-        <OddsCell
-          mainValue={awayModel}
-          isBook={false}
-          size="md"
-          wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-        />
-
-        {/* Home / UNDER — only when not singleRow */}
-        {!singleRow && (
-          <OddsCell
-            mainValue={homeBook}
-            isBook={true}
-            size="md"
-            wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-          />
-        )}
-        {!singleRow && (
-          <OddsCell
-            mainValue={homeModel}
-            isBook={false}
-            size="md"
-            wrapperStyle={{ justifySelf: 'center', width: '100%' }}
-          />
-        )}
+      {/* BOOK / MODEL column headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 3 : 4 }}>
+        <span className="text-center" style={{ ...colHdrFs, color: '#FFFFFF' }}>BOOK</span>
+        <span className="text-center" style={{ ...colHdrFs, color: '#39FF14' }}>MODEL</span>
       </div>
+
+      {/* Away row (or single row for DRAW) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 2 : 3 }}>
+        {/* Away label */}
+        <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginBottom: 1 }}>
+          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,9px)' : 'clamp(9px,0.75vw,11px)', color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+            {awayLabel}
+          </span>
+        </div>
+        <OddsCell mainValue={awayBook}  isBook={true}  isEdge={awayHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+        <OddsCell mainValue={awayModel} isBook={false} isEdge={awayHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+      </div>
+
+      {/* Home row — hidden for singleRow (DRAW) */}
+      {!singleRow && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 2 : 3 }}>
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginBottom: 1 }}>
+            <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,9px)' : 'clamp(9px,0.75vw,11px)', color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+              {homeLabel}
+            </span>
+          </div>
+          <OddsCell mainValue={homeBook}  isBook={true}  isEdge={homeHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+          <OddsCell mainValue={homeModel} isBook={false} isEdge={homeHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
+        </div>
+      )}
 
       {/* Thin separator */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginBottom: 7 }} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
 
-      {/* TICKETS split bar */}
-      <div style={{ marginTop: 4 }}>
-        <MergedSplitBar
-          awayPct={awayTickets}
-          homePct={homeTickets}
-          awayColor={awayColor}
-          homeColor={homeColor}
-          rowLabel="TICKETS"
-          awayLabel={awayLabel}
-          homeLabel={singleRow ? '' : homeLabel}
-        />
+      {/* Edge detection banner — matches MLB GameCard style exactly */}
+      <div style={{
+        marginTop: compact ? 3 : 4,
+        padding: compact ? '3px 6px' : '4px 8px',
+        borderRadius: 8,
+        background: hasEdge ? 'rgba(57,255,20,0.08)' : 'rgba(255,255,255,0.04)',
+        border: hasEdge ? '1px solid rgba(57,255,20,0.25)' : '1px solid rgba(255,255,255,0.08)',
+        textAlign: 'center',
+      }}>
+        {hasEdge ? (
+          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 700, color: '#39FF14', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            {edgeLabel} +{edgeRoi.toFixed(2)}% ROI
+          </span>
+        ) : (
+          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
+            NO EDGE
+          </span>
+        )}
       </div>
 
-      {/* MONEY split bar */}
-      <div style={{ marginTop: 4 }}>
-        <MergedSplitBar
-          awayPct={awayMoney}
-          homePct={homeMoney}
-          awayColor={awayColor}
-          homeColor={homeColor}
-          rowLabel="MONEY"
-          awayLabel={awayLabel}
-          homeLabel={singleRow ? '' : homeLabel}
-        />
-      </div>
+      {/* Splits bars — shown only on desktop (not compact) */}
+      {!compact && (
+        <>
+          <div style={{ marginTop: 5 }}>
+            <MergedSplitBar
+              awayPct={awayTickets}
+              homePct={homeTickets}
+              awayColor={awayColor}
+              homeColor={homeColor}
+              rowLabel="TICKETS"
+              awayLabel={awayLabel}
+              homeLabel={singleRow ? '' : homeLabel}
+            />
+          </div>
+          <div style={{ marginTop: 4 }}>
+            <MergedSplitBar
+              awayPct={awayMoney}
+              homePct={homeMoney}
+              awayColor={awayColor}
+              homeColor={homeColor}
+              rowLabel="MONEY"
+              awayLabel={awayLabel}
+              homeLabel={singleRow ? '' : homeLabel}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -831,7 +909,14 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   );
 }
 
-// ─── WC Desktop Merged Panel — exact GameCard DesktopMergedPanel structure ────
+// ─── WC Desktop Merged Panel — MLB-style 3-column layout ─────────────────────
+//
+// 3 columns matching MLB GameCard exactly:
+//   Col 1: MONEYLINE — AWAY (top row) + HOME (bottom row), BOOK/MODEL
+//   Col 2: TOTAL     — OVER (top row) + UNDER (bottom row), BOOK/MODEL
+//   Col 3: DRAW      — single row, BOOK/MODEL
+//
+// [LOG] WcDesktopMergedPanel: renders MLB-style 3-col layout for WC fixtures
 
 function WcDesktopMergedPanel({
   fixture,
@@ -841,22 +926,7 @@ function WcDesktopMergedPanel({
   splits?: WcFixtureSplits;
 }) {
   const { dkOdds, modelOdds } = fixture;
-  const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
-  const hasModel = modelOdds != null && (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
-
-  const homeBook  = hasOdds  ? fmtAmerican(dkOdds?.home)        : "—";
-  const drawBook  = hasOdds  ? fmtAmerican(dkOdds?.draw)        : "—";
-  const awayBook  = hasOdds  ? fmtAmerican(dkOdds?.away)        : "—";
-  const overBook  = hasOdds  ? fmtAmerican(dkOdds?.overOdds)   : "—";
-  const underBook = hasOdds  ? fmtAmerican(dkOdds?.underOdds)  : "—";
-
-  // AI Model odds (book_id=0)
-  const homeModel  = hasModel ? fmtAmerican(modelOdds?.home)       : "—";
-  const drawModel  = hasModel ? fmtAmerican(modelOdds?.draw)       : "—";
-  const awayModel  = hasModel ? fmtAmerican(modelOdds?.away)       : "—";
-  const overModel  = hasModel ? fmtAmerican(modelOdds?.overOdds)  : "—";
-  const underModel = hasModel ? fmtAmerican(modelOdds?.underOdds) : "—";
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
@@ -866,71 +936,46 @@ function WcDesktopMergedPanel({
   const mlSplits    = extractWcSplits(splits, 'ML',    fixture.awayTeamId, fixture.homeTeamId);
   const totalSplits = extractWcSplits(splits, 'TOTAL', fixture.awayTeamId, fixture.homeTeamId);
 
+  console.log(
+    `[WcDesktopMergedPanel] fixture=${fixture.fixtureId}` +
+    ` away=${awayFifaCode} home=${homeFifaCode}` +
+    ` | [INPUT] dkOdds=${JSON.stringify(dkOdds)} modelOdds=${JSON.stringify(modelOdds)}` +
+    ` | [STATE] totalLine=${totalLine}` +
+    ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
+  );
+
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
-      {/* AWAY ML column — singleRow (away team shown on top in game card) */}
-      <SectionCol
-        title={`${awayFifaCode} ML`}
+
+      {/* ── Col 1: MONEYLINE — AWAY top row, HOME bottom row ──────────────────────── */}
+      <WcMktCol
+        title="MONEYLINE"
         awayLabel={awayFifaCode}
-        homeLabel=""
-        awayBook={awayBook}
-        homeBook=""
-        awayModel={awayModel}
-        homeModel=""
-        singleRow={true}
+        homeLabel={homeFifaCode}
+        awayBookNum={dkOdds?.away}
+        homeBookNum={dkOdds?.home}
+        awayModelNum={modelOdds?.away}
+        homeModelNum={modelOdds?.home}
+        singleRow={false}
         awayTickets={mlSplits.awayTickets}
-        homeTickets={null}
+        homeTickets={mlSplits.homeTickets}
         awayMoney={mlSplits.awayMoney}
-        homeMoney={null}
+        homeMoney={mlSplits.homeMoney}
         awayColor={awayColors.primary}
-        homeColor={awayColors.secondary}
+        homeColor={homeColors.primary}
       />
+
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* DRAW column — singleRow */}
-      <SectionCol
-        title="Draw"
-        awayLabel="DRAW"
-        homeLabel=""
-        awayBook={drawBook}
-        homeBook=""
-        awayModel={drawModel}
-        homeModel=""
-        singleRow={true}
-        awayTickets={null}
-        homeTickets={null}
-        awayMoney={null}
-        homeMoney={null}
-        awayColor="#888888"
-        homeColor="#888888"
-      />
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* HOME ML column — singleRow (home team shown on bottom in game card) */}
-      <SectionCol
-        title={`${homeFifaCode} ML`}
-        awayLabel={homeFifaCode}
-        homeLabel=""
-        awayBook={homeBook}
-        homeBook=""
-        awayModel={homeModel}
-        homeModel=""
-        singleRow={true}
-        awayTickets={mlSplits.homeTickets}
-        homeTickets={null}
-        awayMoney={mlSplits.homeMoney}
-        homeMoney={null}
-        awayColor={homeColors.primary}
-        homeColor={homeColors.secondary}
-      />
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-      {/* TOTAL column — 2 rows: O/U */}
-      <SectionCol
-        title="Total"
+
+      {/* ── Col 2: TOTAL — OVER top row, UNDER bottom row ─────────────────────────── */}
+      <WcMktCol
+        title="TOTAL"
         awayLabel={`O ${totalLine}`}
         homeLabel={`U ${totalLine}`}
-        awayBook={overBook}
-        homeBook={underBook}
-        awayModel={overModel}
-        homeModel={underModel}
+        awayBookNum={dkOdds?.overOdds}
+        homeBookNum={dkOdds?.underOdds}
+        awayModelNum={modelOdds?.overOdds}
+        homeModelNum={modelOdds?.underOdds}
         singleRow={false}
         awayTickets={totalSplits.awayTickets}
         homeTickets={totalSplits.homeTickets}
@@ -939,6 +984,23 @@ function WcDesktopMergedPanel({
         awayColor="#39FF14"
         homeColor="#FF6B35"
       />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+
+      {/* ── Col 3: DRAW — single row ─────────────────────────────────────────────── */}
+      <WcMktCol
+        title="DRAW"
+        awayLabel="DRAW"
+        homeLabel=""
+        awayBookNum={dkOdds?.draw}
+        homeBookNum={null}
+        awayModelNum={modelOdds?.draw}
+        homeModelNum={null}
+        singleRow={true}
+        awayColor="#888888"
+        homeColor="#888888"
+      />
+
     </div>
   );
 }
@@ -1004,40 +1066,81 @@ function WcFixtureCard({
 
 // ─── WC Mobile Odds Panel ─────────────────────────────────────────────────────
 
+// ─── WC Mobile Odds Panel — MLB-style 3-column compact layout ─────────────────
+//
+// Mirrors WcDesktopMergedPanel but uses compact=true WcMktCol cells.
+// Fits all 3 columns on mobile without horizontal scroll.
+// [LOG] WcMobileOddsPanel: renders compact MLB-style 3-col layout
+
 function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const { dkOdds, modelOdds } = fixture;
-  const hasOdds = dkOdds != null && (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);
-  const hasModel = modelOdds != null && (modelOdds.home != null || modelOdds.away != null || modelOdds.draw != null);
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeColors   = getWcTeamColors(homeFifaCode);
+  const awayColors   = getWcTeamColors(awayFifaCode);
 
-  const rows = [
-    { label: `${homeFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.home) : "—", model: hasModel ? fmtAmerican(modelOdds?.home) : "—" },
-    { label: "DRAW",               book: hasOdds ? fmtAmerican(dkOdds?.draw) : "—", model: hasModel ? fmtAmerican(modelOdds?.draw) : "—" },
-    { label: `${awayFifaCode} ML`, book: hasOdds ? fmtAmerican(dkOdds?.away) : "—", model: hasModel ? fmtAmerican(modelOdds?.away) : "—" },
-    { label: `O ${totalLine}`,     book: hasOdds ? fmtAmerican(dkOdds?.overOdds) : "—", model: hasModel ? fmtAmerican(modelOdds?.overOdds) : "—" },
-    { label: `U ${totalLine}`,     book: hasOdds ? fmtAmerican(dkOdds?.underOdds) : "—", model: hasModel ? fmtAmerican(modelOdds?.underOdds) : "—" },
-  ];
+  console.log(
+    `[WcMobileOddsPanel] fixture=${fixture.fixtureId}` +
+    ` away=${awayFifaCode} home=${homeFifaCode}` +
+    ` | [INPUT] dkOdds=${JSON.stringify(dkOdds)} modelOdds=${JSON.stringify(modelOdds)}` +
+    ` | [STATE] totalLine=${totalLine}` +
+    ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
+  );
 
   return (
-    <div style={{ padding: '8px 6px', minWidth: 180 }}>
-      {/* Column headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px 4px', marginBottom: 4 }}>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}></span>
-        <span className="text-center" style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>BOOK</span>
-        <span className="text-center" style={{ fontSize: 9, fontWeight: 700, color: '#39FF14', textTransform: 'uppercase', letterSpacing: '0.08em' }}>MODEL</span>
-      </div>
-      {rows.map((row, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '2px 4px', alignItems: 'center', marginBottom: 3 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, whiteSpace: 'nowrap' }}>
-            {row.label}
-          </span>
-          <OddsCell mainValue={row.book} isBook={true} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-          <OddsCell mainValue={row.model} isBook={false} size="sm" wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-        </div>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'stretch', width: '100%', minHeight: 120 }}>
+
+      {/* Col 1: MONEYLINE */}
+      <WcMktCol
+        title="ML"
+        awayLabel={awayFifaCode}
+        homeLabel={homeFifaCode}
+        awayBookNum={dkOdds?.away}
+        homeBookNum={dkOdds?.home}
+        awayModelNum={modelOdds?.away}
+        homeModelNum={modelOdds?.home}
+        singleRow={false}
+        awayColor={awayColors.primary}
+        homeColor={homeColors.primary}
+        compact={true}
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '6px 0' }} />
+
+      {/* Col 2: TOTAL */}
+      <WcMktCol
+        title="TOTAL"
+        awayLabel={`O ${totalLine}`}
+        homeLabel={`U ${totalLine}`}
+        awayBookNum={dkOdds?.overOdds}
+        homeBookNum={dkOdds?.underOdds}
+        awayModelNum={modelOdds?.overOdds}
+        homeModelNum={modelOdds?.underOdds}
+        singleRow={false}
+        awayColor="#39FF14"
+        homeColor="#FF6B35"
+        compact={true}
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '6px 0' }} />
+
+      {/* Col 3: DRAW */}
+      <WcMktCol
+        title="DRAW"
+        awayLabel="DRAW"
+        homeLabel=""
+        awayBookNum={dkOdds?.draw}
+        homeBookNum={null}
+        awayModelNum={modelOdds?.draw}
+        homeModelNum={null}
+        singleRow={true}
+        awayColor="#888888"
+        homeColor="#888888"
+        compact={true}
+      />
+
     </div>
   );
 }
