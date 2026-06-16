@@ -40,7 +40,7 @@ const FEATURES: Feature[] = [
     label: "AI Model Projections",
     headline: "Book vs. Model. Side by side.",
     description:
-      "Our models price every spread, total, and moneyline. See exactly where the edge is and how much.",
+      "Our models price every spread, total, and moneyline. See exactly where the model disagrees with the book and by how much.",
     imgUrl: "/manus-storage/feature-model-projections_ae909adc.jpeg",
     imgAlt: "AI Model Projections — Book vs Model odds comparison",
   },
@@ -67,11 +67,11 @@ const FEATURES: Feature[] = [
     id: "cheat-sheets",
     type: "image",
     label: "Cheat Sheets",
-    headline: "NRFI, props, and edge signals. All in one view.",
+    headline: "NRFI, props, and model signals. All in one view.",
     description:
-      "Quick-scan cheat sheets surface the highest-edge plays of the day. Book price, model price, and ROI signal in one row.",
+      "Quick-scan cheat sheets surface the highest-value plays of the day. Book price, model price, and confidence signal in one row.",
     imgUrl: "/manus-storage/feature-cheat-sheets_3b5d7079.jpeg",
-    imgAlt: "Cheat Sheets — NRFI edge signal with Book vs Model",
+    imgAlt: "Cheat Sheets — NRFI model signal with Book vs Model comparison",
   },
 ];
 
@@ -100,7 +100,7 @@ export default function FeatureShowcase() {
               fontSize: "clamp(1.75rem, 3vw, 3rem)",
             }}
           >
-            Everything you need to bet smarter.
+            Built for Bettors Who Do Their Own Research.
           </h2>
         </motion.div>
 
