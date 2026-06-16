@@ -1,11 +1,15 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch, Redirect } from "wouter";
-import { lazy, Suspense } from "react";
+import { Route, Switch, Redirect, useLocation } from "wouter";
+import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAppAuth } from "./_core/hooks/useAppAuth";
+// [PERF/FIX] LandingPage is EAGER (not lazy) — it's the first thing unauthenticated users see.
+// Making it lazy would add a Suspense gap (fallback=null → #root empty) while the chunk downloads,
+// which keeps the HTML loading shell visible. Eager import = synchronous render on first paint.
+import LandingPage from './pages/landing/LandingPage';
 // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -30,7 +34,7 @@ const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
 const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
-const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+
 const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 const ManageAccount = lazy(() => import('./pages/ManageAccount'));
@@ -41,51 +45,59 @@ const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
  *
- * Execution flow:
- *   1. Auth state loading  → render null (HTML loading shell stays visible)
- *   2. Authenticated (Discord/app session) → handle pending checkout or redirect to /feed
- *   3. Unauthenticated     → render <LandingPage /> (public marketing page)
+ * Execution flow (OPTIMISTIC RENDER — zero loading shell on landing page):
+ *   1. IMMEDIATE: Render <LandingPage /> without waiting for auth.
+ *      The landing page is public — there is no reason to gate it behind an auth check.
+ *      This eliminates the loading shell entirely for unauthenticated users.
+ *   2. Auth resolves as authenticated → redirect to /feed (imperceptible for logged-in users).
+ *   3. Auth resolves as unauthenticated → LandingPage stays visible (already rendered).
+ *
+ * [FIX] Optimistic render pattern:
+ *   OLD: loading=true → return null → shell visible for 200-800ms → auth resolves → LandingPage
+ *   NEW: return LandingPage immediately → auth resolves → redirect if authenticated
+ *   Result: Loading shell dismissed the moment React mounts (0ms after JS executes).
  *
  * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
  * Discord-logged-in users are correctly detected and redirected to /feed.
- * The old useAuth() checked Manus OAuth state — irrelevant to this app's auth system.
  *
  * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
  * Flow: unauthenticated user clicks pricing → login → auto-checkout.
  *
- * [LOG] All three branches log their state to the console for traceability.
+ * [LOG] All branches log their state to the console for traceability.
  */
 function RootRoute() {
   const { appUser, loading } = useAppAuth();
+  const [, navigate] = useLocation();
 
-  if (loading) {
-    // Auth check in flight — HTML loading shell covers this gap.
-    console.log("[RootRoute] [STATE] Auth loading — holding render");
-    return null;
-  }
-
-  if (appUser) {
-    // [FIX] Check for pending checkout from a pre-login pricing button click.
-    // When an unauthenticated user clicks Start Monthly/Annual, PricingCTA stores
-    // pendingCheckout=monthly|annual in sessionStorage and redirects to /login.
-    // After Discord login, the user lands back here. We read the pending checkout
-    // and pass it as a URL param to LandingPage so it can auto-trigger checkout.
-    const pendingCheckout = sessionStorage.getItem("pendingCheckout");
-    if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
-      sessionStorage.removeItem("pendingCheckout");
-      console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /?checkout=${pendingCheckout}`);
-      return <Redirect to={`/?checkout=${pendingCheckout}`} />;
+  // [CRITICAL FIX] Redirect authenticated users AFTER LandingPage is already rendered.
+  // useEffect runs after paint — by then the shell is already dismissed.
+  // This replaces the old "return null while loading" pattern that kept the shell visible.
+  useEffect(() => {
+    if (loading) {
+      console.log("[RootRoute] [STATE] Auth loading — LandingPage already visible, waiting for auth");
+      return;
     }
-    console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);
-    return <Redirect to="/feed" />;
-  }
+    if (appUser) {
+      // Handle pending checkout from a pre-login pricing button click.
+      const pendingCheckout = sessionStorage.getItem("pendingCheckout");
+      if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
+        sessionStorage.removeItem("pendingCheckout");
+        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /?checkout=${pendingCheckout}`);
+        navigate(`/?checkout=${pendingCheckout}`);
+        return;
+      }
+      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);
+      navigate("/feed");
+    } else {
+      console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
+    }
+  }, [loading, appUser]);
 
-  console.log("[RootRoute] [OUTPUT] Unauthenticated — rendering LandingPage");
-  return (
-    <Suspense fallback={null}>
-      <LandingPage />
-    </Suspense>
-  );
+  // [OPTIMISTIC] Always render LandingPage immediately — no null return, no loading gap.
+  // LandingPage is an eager import — no Suspense needed, renders synchronously.
+  // The HTML loading shell dismisses the moment this component renders into #root.
+  console.log(`[RootRoute] [RENDER] Rendering LandingPage immediately (loading=${loading}, authed=${!!appUser})`);
+  return <LandingPage />;
 }
 
 function Router() {
