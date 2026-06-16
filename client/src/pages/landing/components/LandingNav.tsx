@@ -74,14 +74,14 @@ export default function LandingNav() {
               href="/login"
               className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-semibold text-white border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-150"
             >
-              View Today's Edges
+              View Today's Projections
             </a>
             <a
               href="/#pricing"
               className="inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-bold text-black transition-all duration-150 hover:brightness-110"
               style={{ background: "#39FF14" }}
             >
-              Get AI Model Access
+              Get Access Now
             </a>
           </div>
         </div>

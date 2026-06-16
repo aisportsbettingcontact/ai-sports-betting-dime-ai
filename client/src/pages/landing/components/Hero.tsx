@@ -1,114 +1,83 @@
-/**
- * Hero.tsx
- *
- * Full-viewport hero section.
- * Fluid padding: clamp(16px, 4vw, 64px) horizontal.
- * Tight vertical spacing — no dead zones above or below.
- * No em dashes in copy.
- */
-
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 
 export default function Hero() {
-  const shouldReduce = useReducedMotion();
+  const { appUser, loading } = useAppAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && appUser) setLocation("/feed");
+  }, [loading, appUser, setLocation]);
 
   return (
     <section
-      className="relative overflow-hidden w-full"
-      style={{
-        background:
-          "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(57,255,20,0.08) 0%, transparent 60%), linear-gradient(180deg, #080c12 0%, #050810 100%)",
-      }}
+      className="w-full flex flex-col items-center justify-center text-center"
+      style={{ padding: "clamp(5rem, 12vw, 9rem) clamp(16px, 4vw, 64px) clamp(4rem, 8vw, 7rem)" }}
     >
-      {/* Subtle grid */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
+      <div className="max-w-screen-md mx-auto flex flex-col items-center gap-6">
+        {/* Trust line above headline */}
+        <p className="text-[#6b7280] text-[12px] uppercase tracking-widest font-semibold">
+          MLB · World Cup 2026 · More Sports Coming
+        </p>
 
-      {/* pt clears fixed nav (h-16=64px). Tight pb to close gap with features section. */}
-      <div
-        className="relative z-10 w-full max-w-screen-2xl mx-auto text-center"
-        style={{ padding: "5rem clamp(16px, 4vw, 64px) 2rem" }}
-      >
-        <motion.div
-          initial={shouldReduce ? false : { opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex flex-col items-center gap-5"
+        {/* Primary headline */}
+        <h1
+          className="font-black text-white"
+          style={{ fontSize: "clamp(2.25rem, 6vw, 5rem)", lineHeight: 1.08, letterSpacing: "-0.04em" }}
         >
-          {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2">
-            <span
-              className="w-2 h-2 rounded-full bg-[#39FF14]"
-              style={
-                shouldReduce
-                  ? {}
-                  : { animation: "pulse-green 2s ease-in-out infinite" }
-              }
-            />
-            <span className="text-[11px] font-bold text-[#39FF14] tracking-widest uppercase">
-              AI-Powered Betting Intelligence
-            </span>
-          </div>
+          The Betting Intelligence Dashboard
+          <br />
+          <span style={{ color: "#39FF14" }}>Built for Serious Bettors.</span>
+        </h1>
 
-          {/* H1 — fluid font size scales from 3rem on mobile to 6vw on wide screens */}
-          <h1
-            className="font-bold text-white leading-[1.0] w-full"
-            style={{
-              letterSpacing: "-0.04em",
-              fontSize: "clamp(2.75rem, 6vw, 6rem)",
-            }}
+        {/* Subheadline */}
+        <p
+          className="text-[#9ca3af] leading-relaxed"
+          style={{ fontSize: "clamp(1rem, 1.8vw, 1.25rem)", maxWidth: "52ch" }}
+        >
+          AI model projections, betting splits, line movement, and sharp indicators — all in one dashboard. Research smarter. Bet with conviction.
+        </p>
+
+        {/* Dual CTAs */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <a
+            href="/login"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black transition-all hover:brightness-110"
+            style={{ background: "#39FF14", fontSize: "15px" }}
           >
-            Find The Edge
-            <br />
-            <span style={{ color: "#39FF14" }}>Before The Market</span>
-            <br />
-            Moves.
-          </h1>
-
-          {/* Sub-copy — fluid font size, no em dash */}
-          <p
-            className="text-[#9ca3af] leading-relaxed w-full"
-            style={{ fontSize: "clamp(1rem, 1.6vw, 1.35rem)", maxWidth: "60ch" }}
+            View Today&apos;s Projections
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          <a
+            href="/#pricing"
+            className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold text-white transition-all hover:bg-white/10"
+            style={{ border: "1px solid rgba(255,255,255,0.15)", fontSize: "15px" }}
           >
-            AI model projections, betting splits, daily lineups, and cheat
-            sheets. All in one clean dashboard.
-          </p>
+            Get Access Now
+          </a>
+        </div>
 
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href="/login"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-              style={{
-                background: "#39FF14",
-                letterSpacing: "-0.01em",
-                fontSize: "clamp(0.875rem, 1.2vw, 1rem)",
-              }}
-            >
-              View Today's Edges
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M3 8h10M9 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </a>
-          </div>
+        {/* Trust line below CTAs */}
+        <p className="text-[#4b5563] text-[12px]">
+          No picks. No lock-of-the-day hype. Just the data.
+        </p>
 
-          {/* Microcopy */}
-          <p className="text-[12px] text-[#9ca3af]">
-            No guaranteed outcomes. Just sharper data and faster market comparison.
-          </p>
-        </motion.div>
+        {/* 3 conversion bullets */}
+        <div className="flex flex-col sm:flex-row gap-4 mt-4 text-[13px] text-[#9ca3af]">
+          {[
+            "Dixon-Coles Poisson model + Monte Carlo simulation",
+            "Book vs. model comparison on every game",
+            "Cancel anytime. No contracts.",
+          ].map((bullet) => (
+            <div key={bullet} className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shrink-0" />
+              {bullet}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
