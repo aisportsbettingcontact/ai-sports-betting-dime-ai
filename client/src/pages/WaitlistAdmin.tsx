@@ -172,10 +172,14 @@ export default function WaitlistAdmin() {
   const [page, setPage]                 = useState(1);
   const PAGE_SIZE = 50;
 
-  // ── Selection state ────────────────────────────────────────────────────────
+  // ── Selection state ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  // ── Contact modal state ────────────────────────────────────────────────────
+  // ── Optimistic delete state ──────────────────────────────────────────
+  // IDs that have been optimistically removed from the UI before the server confirms
+  const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<Set<number>>(new Set());
+
+  // ── Contact modal state ──────────────────────────────────────────
   const [contactEntry, setContactEntry] = useState<WaitlistEntry | null>(null);
 
   // ── Auth guard — MUST be useEffect, never conditional render before hooks ──
@@ -243,14 +247,19 @@ export default function WaitlistAdmin() {
 
   const deleteMutation = trpc.waitlist.delete.useMutation({
     onSuccess: (_, vars) => {
-      console.log(`[WaitlistAdmin][ACTION] delete id=${vars.id} ✓`);
+      console.log(`[WaitlistAdmin][ACTION] delete id=${vars.id} ✓ (server confirmed)`);
       toast.success("Entry deleted");
+      // Clean up selection state
       setSelectedIds((prev) => { const n = new Set(prev); n.delete(vars.id); return n; });
+      // Optimistic ID can now be cleared (row is gone from server too)
+      setOptimisticDeletedIds((prev) => { const n = new Set(prev); n.delete(vars.id); return n; });
       invalidate();
     },
     onError: (err, vars) => {
       console.error(`[WaitlistAdmin][ERROR] delete id=${vars.id} failed: ${err.message}`);
-      toast.error("Delete failed", { description: err.message });
+      // Rollback: restore the row by removing it from optimistic-deleted set
+      setOptimisticDeletedIds((prev) => { const n = new Set(prev); n.delete(vars.id); return n; });
+      toast.error("Delete failed — entry restored", { description: err.message });
     },
   });
 
@@ -283,9 +292,12 @@ export default function WaitlistAdmin() {
   }
 
   // ── Derived state ──────────────────────────────────────────────────────────
+  // Filter out optimistically-deleted rows so they disappear immediately on click
   const entries: WaitlistEntry[] = useMemo(
-    () => (listQuery.data?.rows ?? []) as unknown as WaitlistEntry[],
-    [listQuery.data]
+    () => ((listQuery.data?.rows ?? []) as unknown as WaitlistEntry[]).filter(
+      (e) => !optimisticDeletedIds.has(e.id)
+    ),
+    [listQuery.data, optimisticDeletedIds]
   );
   const totalCount = listQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -335,7 +347,9 @@ export default function WaitlistAdmin() {
 
   function handleDelete(id: number, email: string) {
     if (!window.confirm(`Permanently delete ${email}? This cannot be undone.`)) return;
-    console.log(`[WaitlistAdmin][ACTION] delete id=${id} email=${email}`);
+    console.log(`[WaitlistAdmin][ACTION] delete id=${id} email=${email} — optimistically removing from UI`);
+    // Optimistically hide the row immediately
+    setOptimisticDeletedIds((prev) => { const n = new Set(prev); n.add(id); return n; });
     deleteMutation.mutate({ id });
   }
 

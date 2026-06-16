@@ -29,120 +29,117 @@ function getUtmParams() {
   };
 }
 
-// ─── Dual-thumb range slider ──────────────────────────────────────────────────
+// ─── Snap-point unit size picker ─────────────────────────────────────────────
+// Logarithmically spaced preset values covering $5 → $5,000
 
-const MIN_UNIT  = 5;
-const MAX_UNIT  = 5000;
-const STEP_UNIT = 5;
+const UNIT_PRESETS = [
+  { value: 5,    label: "$5" },
+  { value: 10,   label: "$10" },
+  { value: 25,   label: "$25" },
+  { value: 50,   label: "$50" },
+  { value: 100,  label: "$100" },
+  { value: 250,  label: "$250" },
+  { value: 500,  label: "$500" },
+  { value: 1000, label: "$1k" },
+  { value: 2500, label: "$2.5k" },
+  { value: 5000, label: "$5k" },
+] as const;
 
-function formatUSD(v: number) {
-  return v >= 1000 ? `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : `$${v}`;
+type UnitPresetValue = (typeof UNIT_PRESETS)[number]["value"];
+
+function formatUnitSize(v: number): string {
+  if (v >= 1000) return `$${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k`;
+  return `$${v}`;
 }
 
-interface RangeSliderProps {
-  low:    number;
-  high:   number;
-  onChange: (low: number, high: number) => void;
+interface SnapSliderProps {
+  value: UnitPresetValue | null;
+  onChange: (v: UnitPresetValue) => void;
 }
 
-function RangeSlider({ low, high, onChange }: RangeSliderProps) {
+function SnapSlider({ value, onChange }: SnapSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const presets  = UNIT_PRESETS;
+  const selectedIdx = value === null ? -1 : presets.findIndex((p) => p.value === value);
 
-  const pct = (v: number) => ((v - MIN_UNIT) / (MAX_UNIT - MIN_UNIT)) * 100;
+  const handleTrackClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const idx  = Math.round(pct * (presets.length - 1));
+      onChange(presets[idx].value);
+    },
+    [onChange, presets],
+  );
 
-  const clamp = (v: number) => Math.round(Math.max(MIN_UNIT, Math.min(MAX_UNIT, v)) / STEP_UNIT) * STEP_UNIT;
-
-  const handleLow  = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = clamp(Number(e.target.value));
-    onChange(Math.min(v, high - STEP_UNIT), high);
-  };
-  const handleHigh = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = clamp(Number(e.target.value));
-    onChange(low, Math.max(v, low + STEP_UNIT));
-  };
-
-  const leftPct  = pct(low);
-  const rightPct = pct(high);
+  const fillPct =
+    selectedIdx < 0 ? 0 : (selectedIdx / (presets.length - 1)) * 100;
 
   return (
-    <div className="w-full select-none" ref={trackRef}>
-      {/* Labels */}
-      <div className="flex justify-between mb-3">
-        <span
-          className="font-bold"
-          style={{ fontSize: "13px", color: "#39FF14" }}
-        >
-          {formatUSD(low)}
-        </span>
-        <span className="text-[#6b7280]" style={{ fontSize: "12px" }}>
-          per unit
-        </span>
-        <span
-          className="font-bold"
-          style={{ fontSize: "13px", color: "#39FF14" }}
-        >
-          {formatUSD(high)}
-        </span>
-      </div>
-
+    <div className="space-y-3">
       {/* Track */}
-      <div className="relative h-2 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-        {/* Filled range */}
+      <div
+        ref={trackRef}
+        className="relative h-2 rounded-full cursor-pointer select-none"
+        style={{ background: "rgba(255,255,255,0.08)" }}
+        onClick={handleTrackClick}
+        role="slider"
+        aria-valuemin={UNIT_PRESETS[0].value}
+        aria-valuemax={UNIT_PRESETS[UNIT_PRESETS.length - 1].value}
+        aria-valuenow={value ?? undefined}
+        aria-label="Average unit size per bet"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (selectedIdx < 0) { onChange(presets[0].value); return; }
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+            const next = Math.min(selectedIdx + 1, presets.length - 1);
+            onChange(presets[next].value);
+          }
+          if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+            const prev = Math.max(selectedIdx - 1, 0);
+            onChange(presets[prev].value);
+          }
+        }}
+      >
+        {/* Fill */}
         <div
-          className="absolute h-2 rounded-full"
+          className="absolute top-0 left-0 h-full rounded-full transition-all duration-150"
           style={{
-            left:  `${leftPct}%`,
-            right: `${100 - rightPct}%`,
-            background: "linear-gradient(90deg, #39FF14, #00d4ff)",
+            width:      `${fillPct}%`,
+            background: "linear-gradient(90deg, #39FF14, #22c55e)",
           }}
         />
-        {/* Low thumb */}
-        <input
-          type="range"
-          min={MIN_UNIT}
-          max={MAX_UNIT}
-          step={STEP_UNIT}
-          value={low}
-          onChange={handleLow}
-          className="absolute w-full h-2 opacity-0 cursor-pointer"
-          style={{ zIndex: low > MAX_UNIT - 100 ? 5 : 3, top: 0 }}
-          aria-label="Minimum unit size"
-        />
-        {/* High thumb */}
-        <input
-          type="range"
-          min={MIN_UNIT}
-          max={MAX_UNIT}
-          step={STEP_UNIT}
-          value={high}
-          onChange={handleHigh}
-          className="absolute w-full h-2 opacity-0 cursor-pointer"
-          style={{ zIndex: 4, top: 0 }}
-          aria-label="Maximum unit size"
-        />
-        {/* Thumb dots */}
-        {[leftPct, rightPct].map((p, i) => (
+        {/* Thumb */}
+        {selectedIdx >= 0 && (
           <div
-            key={i}
-            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-black"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full border-2 border-[#39FF14] bg-[#0d1117] pointer-events-none transition-all duration-150"
             style={{
-              left: `${p}%`,
-              transform: "translate(-50%, -50%)",
-              background: "#39FF14",
+              left:      `${fillPct}%`,
               boxShadow: "0 0 8px rgba(57,255,20,0.6)",
-              zIndex: 6,
-              pointerEvents: "none",
             }}
           />
-        ))}
+        )}
       </div>
 
-      {/* Tick labels */}
-      <div className="flex justify-between mt-2">
-        {[5, 100, 500, 1000, 2500, 5000].map((v) => (
-          <span key={v} className="text-[#4b5563]" style={{ fontSize: "10px" }}>
-            {formatUSD(v)}
-          </span>
+      {/* Preset label row */}
+      <div className="flex justify-between items-center">
+        {presets.map((p, i) => (
+          <button
+            key={p.value}
+            type="button"
+            onClick={() => onChange(p.value)}
+            className="transition-all duration-100 px-0.5 rounded"
+            style={{
+              fontSize:   "10px",
+              fontFamily: "monospace",
+              color:      i === selectedIdx ? "#39FF14" : "rgba(255,255,255,0.3)",
+              fontWeight: i === selectedIdx ? 700 : 400,
+              transform:  i === selectedIdx ? "scale(1.12)" : "scale(1)",
+            }}
+          >
+            {p.label}
+          </button>
         ))}
       </div>
     </div>
@@ -159,11 +156,10 @@ export default function WaitlistCapture() {
   const [email,    setEmail]    = useState("");
   const [error1,   setError1]   = useState("");
 
-  // ── Step 2 state ────────────────────────────────────────────────────────────
-  const [whyText,      setWhyText]      = useState("");
-  const [unitLow,      setUnitLow]      = useState(25);
-  const [unitHigh,     setUnitHigh]     = useState(500);
-  const [error2,       setError2]       = useState("");
+  // ── Step 2 state ──────────────────────────────────────────────────────────
+  const [whyText,  setWhyText]  = useState("");
+  const [unitSize, setUnitSize] = useState<UnitPresetValue | null>(null);
+  const [error2,   setError2]   = useState("");
 
   // ── Phase ────────────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState<Phase>("form1");
@@ -182,11 +178,14 @@ export default function WaitlistCapture() {
     },
   });
 
-  const submitStep2 = trpc.waitlist.submit.useMutation({
-    onSuccess() {
+  // Step 2 calls enrichStep2 — NOT submit — to update the existing row
+  const enrichStep2Mutation = trpc.waitlist.enrichStep2.useMutation({
+    onSuccess(data) {
+      console.log("[WaitlistCapture][OUTPUT] enrichStep2 onSuccess — ok:", data.ok);
       setPhase("done");
     },
     onError(err) {
+      console.error("[WaitlistCapture][ERROR] enrichStep2 mutation error:", err.message);
       setError2(err.message || "Something went wrong. Please try again.");
     },
   });
@@ -210,24 +209,27 @@ export default function WaitlistCapture() {
     });
   }, [fullName, email, submitStep1]);
 
-  const handleStep2 = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    setError2("");
-    submitStep2.mutate({
-      email:          email.trim(),
-      fullName:       fullName.trim(),
-      whyText:        whyText.trim() || undefined,
-      unitSizeMin:    unitLow,
-      unitSizeMax:    unitHigh,
-      step2Completed: true,
-      ...getUtmParams(),
-    });
-  }, [email, fullName, whyText, unitLow, unitHigh, submitStep2]);
+  const handleStep2 = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      setError2("");
 
-  const handleRangeChange = useCallback((low: number, high: number) => {
-    setUnitLow(low);
-    setUnitHigh(high);
-  }, []);
+      const trimEmail = email.trim().toLowerCase();
+      const trimName  = fullName.trim();
+      const trimWhy   = whyText.trim();
+
+      console.log(`[WaitlistCapture][STEP] handleStep2 — email="${trimEmail}" whyText="${trimWhy ? "(set, len=" + trimWhy.length + ")" : "(empty)"}" unitSize=${unitSize ?? "(none)"}`);
+
+      // enrichStep2 updates the existing row — no UTM params needed
+      enrichStep2Mutation.mutate({
+        email:    trimEmail,
+        fullName: trimName  || undefined,
+        whyText:  trimWhy   || undefined,
+        unitSize: unitSize  ?? undefined,
+      });
+    },
+    [email, fullName, whyText, unitSize, enrichStep2Mutation],
+  );
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -466,22 +468,31 @@ export default function WaitlistCapture() {
                   </span>
                 </div>
 
-                {/* Unit size slider — optional */}
+                {/* Unit size snap-point slider — optional */}
                 <div className="flex flex-col gap-3">
-                  <div>
-                    <label className="text-[#9ca3af] font-semibold uppercase tracking-widest" style={{ fontSize: "11px" }}>
-                      Unit Size Per Bet
+                  <div className="flex items-baseline justify-between">
+                    <label
+                      className="text-[#9ca3af] font-semibold uppercase tracking-widest"
+                      style={{ fontSize: "11px" }}
+                    >
+                      Average Bet Size
                       <span className="ml-2 normal-case text-[#4b5563]">(optional)</span>
                     </label>
-                    <p className="text-[#4b5563] mt-1" style={{ fontSize: "12px" }}>
-                      Drag both handles to set your typical unit size range.
-                    </p>
+                    {unitSize !== null && (
+                      <span
+                        className="font-bold tabular-nums"
+                        style={{ color: "#39FF14", fontSize: "15px" }}
+                      >
+                        {formatUnitSize(unitSize)} / unit
+                      </span>
+                    )}
                   </div>
-                  <RangeSlider
-                    low={unitLow}
-                    high={unitHigh}
-                    onChange={handleRangeChange}
-                  />
+                  <SnapSlider value={unitSize} onChange={setUnitSize} />
+                  {unitSize === null && (
+                    <p className="text-[#4b5563]" style={{ fontSize: "12px" }}>
+                      Click or tap to select your typical unit size per bet.
+                    </p>
+                  )}
                 </div>
 
                 {/* Error */}
@@ -493,15 +504,15 @@ export default function WaitlistCapture() {
                 <div className="flex flex-col gap-3">
                   <button
                     type="submit"
-                    disabled={submitStep2.isPending}
+                    disabled={enrichStep2Mutation.isPending}
                     className="w-full rounded-lg py-4 font-bold text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
                     style={{
                       background: "#39FF14",
-                      fontSize: "15px",
-                      boxShadow: "0 0 24px rgba(57,255,20,0.25)",
+                      fontSize:   "15px",
+                      boxShadow:  "0 0 24px rgba(57,255,20,0.25)",
                     }}
                   >
-                    {submitStep2.isPending ? "Submitting…" : "Submit & Move Up →"}
+                    {enrichStep2Mutation.isPending ? "Submitting…" : "Submit & Move Up →"}
                   </button>
                   <button
                     type="button"
