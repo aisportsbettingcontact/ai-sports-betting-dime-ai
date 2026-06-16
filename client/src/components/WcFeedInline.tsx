@@ -37,11 +37,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
+import { calculateEdge, calculateRoi, formatRoi, getEdgeColor, EDGE_THRESHOLD_PP } from "@/lib/edgeUtils";
+import { BetCell } from "@/components/BetCell";
+import type { BetCellSide } from "@/components/BetCell";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // Full World Cup 2026 schedule: Group Stage (Jun 11–Jul 2) + Knockouts (Jul 4–Jul 19)
-const WC_DATE_RANGE: string[] = (() => {
+export const WC_DATE_RANGE: string[] = (() => {
   const dates: string[] = [];
   // Group Stage: Jun 11 – Jul 2
   const start = new Date(Date.UTC(2026, 5, 11)); // Jun 11
@@ -243,7 +246,7 @@ function todayStr(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-function getDefaultWcDate(): string {
+export function getDefaultWcDate(): string {
   const today = todayStr();
   if (WC_DATE_RANGE.includes(today)) return today;
   return "2026-06-11";
@@ -612,27 +615,57 @@ function WcMktCol({
   const awayModel = fmtAmerican(awayModelNum);
   const homeModel = fmtAmerican(homeModelNum);
 
-  // ── Edge detection ──────────────────────────────────────────────────────────
-  const awayRoi = calcEdge(awayBookNum, awayModelNum);
-  const homeRoi = singleRow ? -Infinity : calcEdge(homeBookNum, homeModelNum);
-  const EDGE_THRESHOLD = 0; // any positive ROI = edge
+  // ── Edge detection — canonical EDGE_THRESHOLD_PP=1.5 from edgeUtils ─────────
+  // FORMULA: edgePP = (modelImplied - bookImplied) * 100  [percentage points]
+  // THRESHOLD: 1.5pp minimum (matches MLB GameCard exactly)
+  // ROI: calculateRoi(modelML, bookML, bookOppML) for display label
+  //
+  // [LOG] WcMktCol edge detection: per-side pp values and threshold gate
+  const awayEdgePP: number = (awayBookNum != null && awayModelNum != null)
+    ? calculateEdge(awayBookNum, awayModelNum)
+    : NaN;
+  const homeEdgePP: number = (!singleRow && homeBookNum != null && homeModelNum != null)
+    ? calculateEdge(homeBookNum, homeModelNum)
+    : NaN;
 
-  const awayHasEdge = awayRoi > EDGE_THRESHOLD && awayBookNum != null && awayModelNum != null;
-  const homeHasEdge = !singleRow && homeRoi > EDGE_THRESHOLD && homeBookNum != null && homeModelNum != null;
+  const awayHasEdge = !isNaN(awayEdgePP) && awayEdgePP >= EDGE_THRESHOLD_PP;
+  const homeHasEdge = !singleRow && !isNaN(homeEdgePP) && homeEdgePP >= EDGE_THRESHOLD_PP;
+
+  // ROI computation for display — requires opposite side book odds
+  // For DRAW (singleRow) there is no opposite side, so ROI is NaN
+  const awayRoiPct: number = (awayHasEdge && homeBookNum != null && awayBookNum != null && awayModelNum != null)
+    ? calculateRoi(awayModelNum, awayBookNum, homeBookNum)
+    : NaN;
+  const homeRoiPct: number = (homeHasEdge && awayBookNum != null && homeBookNum != null && homeModelNum != null)
+    ? calculateRoi(homeModelNum, homeBookNum, awayBookNum)
+    : NaN;
 
   let edgeLabel: string | null = null;
-  let edgeRoi = 0;
+  let edgeDisplayPP = NaN; // pp value used for color tier
+  let edgeDisplayRoi = NaN; // ROI % used for label
   if (awayHasEdge && homeHasEdge) {
-    // Both sides have edge — show the stronger one
-    if (awayRoi >= homeRoi) { edgeLabel = awayLabel; edgeRoi = awayRoi; }
-    else                    { edgeLabel = homeLabel; edgeRoi = homeRoi; }
+    // Both sides have edge — show the stronger one (by pp)
+    if (awayEdgePP >= homeEdgePP) {
+      edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = awayRoiPct;
+    } else {
+      edgeLabel = homeLabel; edgeDisplayPP = homeEdgePP; edgeDisplayRoi = homeRoiPct;
+    }
   } else if (awayHasEdge) {
-    edgeLabel = awayLabel; edgeRoi = awayRoi;
+    edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = awayRoiPct;
   } else if (homeHasEdge) {
-    edgeLabel = homeLabel; edgeRoi = homeRoi;
+    edgeLabel = homeLabel; edgeDisplayPP = homeEdgePP; edgeDisplayRoi = homeRoiPct;
   }
 
   const hasEdge = edgeLabel !== null;
+  const edgeColor = getEdgeColor(edgeDisplayPP);
+
+  console.log(
+    `[WcMktCol:EdgeDetect] title=${title}` +
+    ` | [INPUT] awayBook=${awayBookNum} awayModel=${awayModelNum} homeBook=${homeBookNum} homeModel=${homeModelNum}` +
+    ` | [STATE] awayEdgePP=${isNaN(awayEdgePP) ? 'NaN' : awayEdgePP.toFixed(2)}pp homeEdgePP=${isNaN(homeEdgePP) ? 'NaN' : homeEdgePP.toFixed(2)}pp threshold=${EDGE_THRESHOLD_PP}pp` +
+    ` | [OUTPUT] edgeLabel=${edgeLabel ?? 'NO EDGE'} edgeDisplayPP=${isNaN(edgeDisplayPP) ? 'NaN' : edgeDisplayPP.toFixed(2)}pp edgeRoi=${isNaN(edgeDisplayRoi) ? 'NaN' : edgeDisplayRoi.toFixed(2)}%` +
+    ` | [VERIFY] hasEdge=${hasEdge} edgeColor=${edgeColor}`
+  );
 
   // ── Styles ──────────────────────────────────────────────────────────────────
   const pad = compact ? '6px 6px 8px' : '8px 10px 10px';
@@ -652,13 +685,7 @@ function WcMktCol({
     whiteSpace: 'nowrap',
   };
 
-  console.log(
-    `[WcMktCol] title=${title} awayLabel=${awayLabel} homeLabel=${homeLabel}` +
-    ` | [INPUT] awayBook=${awayBookNum} awayModel=${awayModelNum} homeBook=${homeBookNum} homeModel=${homeModelNum}` +
-    ` | [STATE] awayRoi=${awayRoi.toFixed(2)}% homeRoi=${singleRow ? 'N/A' : homeRoi.toFixed(2)}%` +
-    ` | [OUTPUT] edgeLabel=${edgeLabel ?? 'NO EDGE'} edgeRoi=${edgeRoi.toFixed(2)}%` +
-    ` | [VERIFY] hasEdge=${hasEdge}`
-  );
+  // [LOG] WcMktCol render state — superseded by WcMktCol:EdgeDetect above
 
   return (
     <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
@@ -703,18 +730,18 @@ function WcMktCol({
       {/* Thin separator */}
       <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
 
-      {/* Edge detection banner — matches MLB GameCard style exactly */}
+      {/* Edge detection banner — tier-based color from getEdgeColor (matches MLB GameCard exactly) */}
       <div style={{
         marginTop: compact ? 3 : 4,
         padding: compact ? '3px 6px' : '4px 8px',
         borderRadius: 8,
-        background: hasEdge ? 'rgba(57,255,20,0.08)' : 'rgba(255,255,255,0.04)',
-        border: hasEdge ? '1px solid rgba(57,255,20,0.25)' : '1px solid rgba(255,255,255,0.08)',
+        background: hasEdge ? `${edgeColor}14` : 'rgba(255,255,255,0.04)',
+        border: hasEdge ? `1px solid ${edgeColor}40` : '1px solid rgba(255,255,255,0.08)',
         textAlign: 'center',
       }}>
         {hasEdge ? (
-          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 700, color: '#39FF14', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-            {edgeLabel} +{edgeRoi.toFixed(2)}% ROI
+          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 700, color: edgeColor, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+            {edgeLabel} {!isNaN(edgeDisplayRoi) ? formatRoi(edgeDisplayRoi) : `+${edgeDisplayPP.toFixed(2)}pp`}
           </span>
         ) : (
           <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
@@ -837,15 +864,11 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               />
             </div>
             <div className="flex flex-col">
-              {/* Mobile: FIFA code only */}
-              <span className="font-bold leading-tight lg:hidden" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '0.06em', lineHeight: 1.2 }}>
-                {awayFifaCode}
-              </span>
-              {/* Desktop: full country name */}
-              <span className="font-semibold leading-tight hidden lg:block" style={{ fontSize: NAME_FONT_SIZE, color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.15 }}>
+              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
+              <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3.0vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 {awayTeam?.name ?? awayFifaCode}
               </span>
-              <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+              <span className="leading-none" style={{ fontSize: 'clamp(9px, 2.5vw, 12px)', color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
                 {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
               </span>
             </div>
@@ -878,15 +901,11 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               />
             </div>
             <div className="flex flex-col">
-              {/* Mobile: FIFA code only */}
-              <span className="font-bold leading-tight lg:hidden" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '0.06em', lineHeight: 1.2 }}>
-                {homeFifaCode}
-              </span>
-              {/* Desktop: full country name */}
-              <span className="font-semibold leading-tight hidden lg:block" style={{ fontSize: NAME_FONT_SIZE, color: "hsl(var(--foreground))", fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.15 }}>
+              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
+              <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3.0vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 {homeTeam?.name ?? homeFifaCode}
               </span>
-              <span className="leading-none hidden lg:block" style={{ fontSize: NICK_FONT_SIZE, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+              <span className="leading-none" style={{ fontSize: 'clamp(9px, 2.5vw, 12px)', color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
                 {fixture.matchday ? `Matchday ${fixture.matchday}` : "\u00A0"}
               </span>
             </div>
@@ -1069,12 +1088,11 @@ function WcFixtureCard({
 }
 
 // ─── WC Mobile Odds Panel ─────────────────────────────────────────────────────
-
-// ─── WC Mobile Odds Panel — MLB-style 3-column compact layout ─────────────────
 //
-// Mirrors WcDesktopMergedPanel but uses compact=true WcMktCol cells.
-// Fits all 3 columns on mobile without horizontal scroll.
-// [LOG] WcMobileOddsPanel: renders compact MLB-style 3-col layout
+// Uses canonical BetCell (same boxed #2a2a2e dark-card structure as MLB mobile).
+// Full country names in ML column labels — never FIFA codes.
+// Edge detection: EDGE_THRESHOLD_PP=1.5 via calculateEdge from edgeUtils.
+// [LOG] WcMobileOddsPanel: renders BetCell-based 3-col layout matching MLB exactly
 
 function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const { dkOdds, modelOdds } = fixture;
@@ -1082,68 +1100,127 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
-  const homeColors   = getWcTeamColors(homeFifaCode);
-  const awayColors   = getWcTeamColors(awayFifaCode);
+
+  // [INPUT] Full country names for labels — never FIFA codes
+  const awayName = fixture.awayTeam?.name ?? awayFifaCode;
+  const homeName = fixture.homeTeam?.name ?? homeFifaCode;
+
+  // ── Edge detection: ML ───────────────────────────────────────────────────────
+  const awayMlEdgePP = (dkOdds?.away != null && modelOdds?.away != null)
+    ? calculateEdge(dkOdds.away, modelOdds.away) : NaN;
+  const homeMlEdgePP = (dkOdds?.home != null && modelOdds?.home != null)
+    ? calculateEdge(dkOdds.home, modelOdds.home) : NaN;
+  const mlBestEdgePP = Math.max(
+    isNaN(awayMlEdgePP) ? -Infinity : awayMlEdgePP,
+    isNaN(homeMlEdgePP) ? -Infinity : homeMlEdgePP,
+  );
+  const mlBestEdgePPFinal = mlBestEdgePP === -Infinity ? NaN : mlBestEdgePP;
+  const mlEdgeLabel = (mlBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (awayMlEdgePP >= homeMlEdgePP ? `${awayName} ML` : `${homeName} ML`)
+    : undefined;
+
+  // ── Edge detection: TOTAL ────────────────────────────────────────────────────
+  const overEdgePP = (dkOdds?.overOdds != null && modelOdds?.overOdds != null)
+    ? calculateEdge(dkOdds.overOdds, modelOdds.overOdds) : NaN;
+  const underEdgePP = (dkOdds?.underOdds != null && modelOdds?.underOdds != null)
+    ? calculateEdge(dkOdds.underOdds, modelOdds.underOdds) : NaN;
+  const totalBestEdgePP = Math.max(
+    isNaN(overEdgePP) ? -Infinity : overEdgePP,
+    isNaN(underEdgePP) ? -Infinity : underEdgePP,
+  );
+  const totalBestEdgePPFinal = totalBestEdgePP === -Infinity ? NaN : totalBestEdgePP;
+  const totalEdgeLabel = (totalBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (overEdgePP >= underEdgePP ? `O${totalLine}` : `U${totalLine}`)
+    : undefined;
+
+  // ── Edge detection: DRAW ─────────────────────────────────────────────────────
+  const drawEdgePP = (dkOdds?.draw != null && modelOdds?.draw != null)
+    ? calculateEdge(dkOdds.draw, modelOdds.draw) : NaN;
+  const drawEdgeLabel = (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? 'DRAW' : undefined;
+
+  // ── BetCellSide builders ─────────────────────────────────────────────────────
+  const mlAway: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
+    edgePP: awayMlEdgePP,
+  };
+  const mlHome: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
+    edgePP: homeMlEdgePP,
+  };
+  const totalOver: BetCellSide = {
+    bookLine: `O${totalLine}`, bookJuice: fmtAmerican(dkOdds?.overOdds) ?? '—',
+    modelLine: `O${totalLine}`, modelJuice: fmtAmerican(modelOdds?.overOdds) ?? '—',
+    edgePP: overEdgePP,
+  };
+  const totalUnder: BetCellSide = {
+    bookLine: `U${totalLine}`, bookJuice: fmtAmerican(dkOdds?.underOdds) ?? '—',
+    modelLine: `U${totalLine}`, modelJuice: fmtAmerican(modelOdds?.underOdds) ?? '—',
+    edgePP: underEdgePP,
+  };
+  const drawAway: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
+    edgePP: drawEdgePP,
+  };
+  // Draw has no home side — use a blank placeholder
+  const drawHome: BetCellSide = {
+    bookLine: '', bookJuice: '', modelLine: '', modelJuice: '', edgePP: NaN,
+  };
 
   console.log(
     `[WcMobileOddsPanel] fixture=${fixture.fixtureId}` +
-    ` away=${awayFifaCode} home=${homeFifaCode}` +
-    ` | [INPUT] dkOdds=${JSON.stringify(dkOdds)} modelOdds=${JSON.stringify(modelOdds)}` +
-    ` | [STATE] totalLine=${totalLine}` +
+    ` | [INPUT] away=${awayName} home=${homeName}` +
+    ` | [STATE] mlBestEdge=${isNaN(mlBestEdgePPFinal) ? 'NaN' : mlBestEdgePPFinal.toFixed(2)}pp` +
+    ` totalBestEdge=${isNaN(totalBestEdgePPFinal) ? 'NaN' : totalBestEdgePPFinal.toFixed(2)}pp` +
+    ` drawEdge=${isNaN(drawEdgePP) ? 'NaN' : drawEdgePP.toFixed(2)}pp` +
+    ` | [OUTPUT] mlEdgeLabel=${mlEdgeLabel ?? 'NO EDGE'} totalEdgeLabel=${totalEdgeLabel ?? 'NO EDGE'} drawEdgeLabel=${drawEdgeLabel ?? 'NO EDGE'}` +
     ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
   );
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', width: '100%', minHeight: 120 }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', width: '100%', minHeight: 120 }}>
 
-      {/* Col 1: MONEYLINE */}
-      <WcMktCol
-        title="ML"
-        awayLabel={awayFifaCode}
-        homeLabel={homeFifaCode}
-        awayBookNum={dkOdds?.away}
-        homeBookNum={dkOdds?.home}
-        awayModelNum={modelOdds?.away}
-        homeModelNum={modelOdds?.home}
-        singleRow={false}
-        awayColor={awayColors.primary}
-        homeColor={homeColors.primary}
-        compact={true}
-      />
-
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '6px 0' }} />
+      {/* Col 1: MONEYLINE — full country names as labels */}
+      {/* Away label shown above the cell for context */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>ML</span>
+        <BetCell
+          title="ML"
+          away={mlAway}
+          home={mlHome}
+          edgeLabel={mlEdgeLabel}
+          bestEdgePP={mlBestEdgePPFinal}
+          size="sm"
+        />
+      </div>
 
       {/* Col 2: TOTAL */}
-      <WcMktCol
-        title="TOTAL"
-        awayLabel={`O ${totalLine}`}
-        homeLabel={`U ${totalLine}`}
-        awayBookNum={dkOdds?.overOdds}
-        homeBookNum={dkOdds?.underOdds}
-        awayModelNum={modelOdds?.overOdds}
-        homeModelNum={modelOdds?.underOdds}
-        singleRow={false}
-        awayColor="#39FF14"
-        homeColor="#FF6B35"
-        compact={true}
-      />
-
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '6px 0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>TOTAL</span>
+        <BetCell
+          title="TOTAL"
+          away={totalOver}
+          home={totalUnder}
+          edgeLabel={totalEdgeLabel}
+          bestEdgePP={totalBestEdgePPFinal}
+          size="sm"
+        />
+      </div>
 
       {/* Col 3: DRAW */}
-      <WcMktCol
-        title="DRAW"
-        awayLabel="DRAW"
-        homeLabel=""
-        awayBookNum={dkOdds?.draw}
-        homeBookNum={null}
-        awayModelNum={modelOdds?.draw}
-        homeModelNum={null}
-        singleRow={true}
-        awayColor="#888888"
-        homeColor="#888888"
-        compact={true}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>DRAW</span>
+        <BetCell
+          title="DRAW"
+          away={drawAway}
+          home={drawHome}
+          edgeLabel={drawEdgeLabel}
+          bestEdgePP={drawEdgePP}
+          size="sm"
+        />
+      </div>
 
     </div>
   );
@@ -1876,32 +1953,29 @@ function WcComingSoon({ label }: { label: string }) {
 /**
  * WcFeedInline — renders the full WC 2026 feed inside ModelProjections.
  *
- * Includes:
- *   • Sub-tab nav (PROJECTIONS | SPLITS | LINEUPS | STANDINGS | FUTURES)
- *   • Date selector (Jun 11–17)
- *   • Fixture cards matching exact GameCard structure (PROJECTIONS)
- *   • Lineup cards matching exact MlbLineupCard structure (LINEUPS)
+ * Props:
+ *   selectedDate   — controlled date string (YYYY-MM-DD) from ModelProjections
+ *   onDateChange   — callback to update date in ModelProjections (lifts date state up)
  *
  * [ARCHITECTURE NOTE]
- * This component is mounted directly in the ModelProjections main feed area
- * when selectedSport === "WC". It replaces the normal GameCard feed entirely.
- * The column header, date row, and feed tabs are suppressed in ModelProjections
- * when WC is active.
+ * Date state is OWNED by ModelProjections so the CalendarPicker renders in the
+ * same header row as MLB (not below the WC title). WcFeedInline only owns the
+ * active sub-tab state (PROJECTIONS | SPLITS | LINEUPS | STANDINGS | FUTURES).
  */
-export function WcFeedInline() {
+export function WcFeedInline({
+  selectedDate,
+  onDateChange,
+}: {
+  selectedDate: string;
+  onDateChange: (date: string) => void;
+}) {
   const [activeTab, setActiveTab] = useState<WcSubTab>("PROJECTIONS");
-  const [selectedDate, setSelectedDate] = useState<string>(getDefaultWcDate);
 
-  const showDateSelector = activeTab === "PROJECTIONS" || activeTab === "LINEUPS" || activeTab === "SPLITS";
-
-  // Build the available dates set for CalendarPicker — all WC match dates
-  const wcAvailableDates = useMemo(() => new Set(WC_DATE_RANGE), []);
-
-  console.log(`[WcFeedInline] [STATE] activeTab=${activeTab} selectedDate=${selectedDate} availableDates=${wcAvailableDates.size}`);
+  console.log(`[WcFeedInline] [STATE] activeTab=${activeTab} selectedDate=${selectedDate}`);
 
   return (
     <div className="w-full">
-      {/* ── WC Sub-header (sticky below main feed header) ── */}
+      { /* ── WC Sub-header (sticky below main feed header) ── */}
       <div
         className="sticky z-[38] border-b border-white/8"
         style={{
@@ -1909,7 +1983,7 @@ export function WcFeedInline() {
           background: "hsl(var(--background))",
         }}
       >
-        {/* Title row */}
+        { /* Title row */}
         <div className="flex items-center gap-3 px-3 sm:px-4 pt-3 pb-2">
           <img
             src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75"
@@ -1925,7 +1999,7 @@ export function WcFeedInline() {
           </div>
         </div>
 
-        {/* Sub-tab nav */}
+        { /* Sub-tab nav */}
         <div
           className="flex items-center px-3 sm:px-4 pb-0 overflow-x-auto"
           style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
@@ -1946,21 +2020,6 @@ export function WcFeedInline() {
             </button>
           ))}
         </div>
-
-        {/* Date selector — CalendarPicker matching MLB layout exactly */}
-        {showDateSelector && (
-          <div className="px-3 sm:px-4 pb-2 pt-1">
-            <CalendarPicker
-              selectedDate={selectedDate}
-              onSelect={(d) => {
-                console.log(`[WcFeedInline] [ACTION] Date selected: ${d} (prev=${selectedDate})`);
-                setSelectedDate(d);
-              }}
-              availableDates={wcAvailableDates}
-              isAdmin={false}
-            />
-          </div>
-        )}
       </div>
 
       {/* ── Content ── */}

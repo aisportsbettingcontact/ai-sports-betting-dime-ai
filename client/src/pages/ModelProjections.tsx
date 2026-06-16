@@ -12,7 +12,7 @@ import { User, LogOut, LogIn, BarChart3, Crown, Send, Search, X, Clock, Star, Li
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import { skipToken } from "@tanstack/react-query";
-import { WcFeedInline } from "@/components/WcFeedInline";
+import { WcFeedInline, WC_DATE_RANGE, getDefaultWcDate } from "@/components/WcFeedInline";
 
 // CDN icon URLs
 const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
@@ -257,6 +257,11 @@ export default function ModelProjections() {
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  // WC date state — owned here so CalendarPicker renders in the main header row
+  // (not inside WcFeedInline, which caused the picker to appear below the WC title)
+  const [wcDate, setWcDate] = useState<string>(getDefaultWcDate);
+  const wcAvailableDates = useMemo(() => new Set(WC_DATE_RANGE), []);
+  console.log(`[ModelProjections] [STATE] wcDate=${wcDate} wcAvailableDates=${wcAvailableDates.size}`);
   // Architecture: URL query params for feed state (sport, date, tab, statuses)
   // Enables browser back/forward and bookmarkable URLs
   const {
@@ -1236,8 +1241,19 @@ export default function ModelProjections() {
             </button>
           )}
 
-          {/* DATE picker — hidden when WC is selected (WcFeedInline has its own date selector) */}
-          {!isWcSelected && (
+          {/* DATE picker — MLB uses URL-backed selectedDate; WC uses wcDate from local state */}
+          {/* Both render in the same header row for consistent layout */}
+          {isWcSelected ? (
+            <CalendarPicker
+              selectedDate={wcDate}
+              onSelect={(d) => {
+                console.log(`[ModelProjections] [ACTION] WC CalendarPicker selected: ${d}`);
+                setWcDate(d);
+              }}
+              availableDates={wcAvailableDates}
+              isAdmin={false}
+            />
+          ) : (
             <CalendarPicker
               selectedDate={selectedDate}
               onSelect={setSelectedDate}
@@ -1258,10 +1274,11 @@ export default function ModelProjections() {
           {/* NHL pill — REMOVED: season is over */}
 
           {/* WC 2026 pill — renders inline on the feed (same as MLB/NHL) */}
+          {/* Label: "2026 WORLD CUP" on all screen sizes for clarity */}
           <button type="button" onClick={() => setSelectedSport("WC")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-            style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
+            style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
             <img src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75" alt="WC26" style={{ width: 'clamp(10px, 1.5vw, 14px)', height: 'clamp(10px, 1.5vw, 14px)', objectFit: 'contain', flexShrink: 0, opacity: selectedSport === "WC" ? 1 : 0.8 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <span className="hidden sm:inline">WORLD CUP</span><span className="sm:hidden">WC</span>
+            2026 WORLD CUP
           </button>
 
           {/* NBA pill — HIDDEN: NBA tab suppressed from feed until re-enabled */}
@@ -1606,7 +1623,14 @@ export default function ModelProjections() {
             ) : isWcSelected ? (
               /* ── WORLD CUP INLINE FEED ── */
               /* WC bypasses all games.* procedures and renders its own fixture cards */
-              <WcFeedInline />
+              /* Date is owned here (ModelProjections) so CalendarPicker stays in header row */
+              <WcFeedInline
+                selectedDate={wcDate}
+                onDateChange={(d) => {
+                  console.log(`[ModelProjections] [ACTION] WC date changed: ${d} (prev=${wcDate})`);
+                  setWcDate(d);
+                }}
+              />
             ) : (
               /* NORMAL PROJECTIONS FEED — or LINEUPS/PROPS tab for MLB */
               feedMobileTab === 'lineups' && selectedSport === 'MLB' ? (
