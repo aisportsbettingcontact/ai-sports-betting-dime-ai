@@ -2400,6 +2400,65 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     // Do NOT gate on spreadDiff <= 0 for NHL/MLB — it will always be 0 or null (line is always ±1.5).
     if (isNhlGame || isMlbGame) {
       if (!game.spreadEdge || game.spreadEdge === 'PASS') return "PASS";
+
+      // ── MLB TIER 1 OPTION B GUARD (stale-DB override) ──────────────────────────────────────────
+      // PROBLEM: game.spreadEdge is written by the model runner at run time. If book odds move
+      // after the last model run (e.g., LAD -1.5 was +115 when model ran → edge detected, written
+      // to DB), the stale "LAD -1.5 [EDGE]" persists until the next model run even though the
+      // current book odds (+139) no longer represent an edge vs model (+146).
+      //
+      // SOLUTION: When modelAwaySpreadOdds and modelHomeSpreadOdds are available (MLB only),
+      // run Option B inline using the CURRENT book RL odds (awayRunLineOdds / homeRunLineOdds).
+      // If BOTH sides show negative edge (model less confident than book on both sides),
+      // override the DB label with PASS — the stale edge is definitively invalidated.
+      //
+      // OPTION B RULE: edge exists ONLY when modelImplied(side) > bookImplied(side) (raw vs raw).
+      //   edgeAway = americanToImplied(mdlAwayOdds) - americanToImplied(bkAwayOdds)
+      //   edgeHome = americanToImplied(mdlHomeOdds) - americanToImplied(bkHomeOdds)
+      //   If max(edgeAway, edgeHome) <= 0 → NO EDGE → return PASS
+      //
+      // VALIDATION (TB@LAD June 16):
+      //   bkAway=-168 mdlAway=-146: edgeAway = 59.35% - 62.69% = -3.34pp (no edge)
+      //   bkHome=+139 mdlHome=+146: edgeHome = 40.65% - 41.84% = -1.19pp (no edge)
+      //   max(-3.34, -1.19) = -1.19 <= 0 → PASS ✓  (overrides stale "LAD -1.5 [EDGE]")
+      if (isMlbGame) {
+        const _mdlAwayOddsStr = game.modelAwaySpreadOdds ?? null;  // e.g. "-146" (from game.modelAwaySpreadOdds)
+        const _mdlHomeOddsStr = game.modelHomeSpreadOdds ?? null;  // e.g. "+146"
+        const _bkAwayOddsStr  = game.awayRunLineOdds ?? null;  // e.g. "-168" (current book)
+        const _bkHomeOddsStr  = game.homeRunLineOdds ?? null;  // e.g. "+139"
+        if (_mdlAwayOddsStr && _mdlHomeOddsStr && _bkAwayOddsStr && _bkHomeOddsStr) {
+          const _mdlAwayNum = parseFloat(_mdlAwayOddsStr);
+          const _mdlHomeNum = parseFloat(_mdlHomeOddsStr);
+          const _bkAwayNum  = parseFloat(_bkAwayOddsStr);
+          const _bkHomeNum  = parseFloat(_bkHomeOddsStr);
+          if (!isNaN(_mdlAwayNum) && !isNaN(_mdlHomeNum) && !isNaN(_bkAwayNum) && !isNaN(_bkHomeNum)) {
+            const _mdlAwayImpl = americanToImplied(_mdlAwayNum);
+            const _mdlHomeImpl = americanToImplied(_mdlHomeNum);
+            const _bkAwayImpl  = americanToImplied(_bkAwayNum);
+            const _bkHomeImpl  = americanToImplied(_bkHomeNum);
+            const _edgeAway = _mdlAwayImpl - _bkAwayImpl;
+            const _edgeHome = _mdlHomeImpl - _bkHomeImpl;
+            const _bestEdge = Math.max(_edgeAway, _edgeHome);
+            if (process.env.NODE_ENV === 'development' || true) {
+              console.log(
+                `[computedSpreadEdge:MLB-Tier1] game=${game.id} ${game.awayTeam}@${game.homeTeam}` +
+                ` | [INPUT] mdlAway=${_mdlAwayNum} mdlHome=${_mdlHomeNum}` +
+                ` bkAway=${_bkAwayNum} bkHome=${_bkHomeNum}` +
+                ` | [STATE] mdlAwayImpl=${(_mdlAwayImpl*100).toFixed(2)}% mdlHomeImpl=${(_mdlHomeImpl*100).toFixed(2)}%` +
+                ` bkAwayImpl=${(_bkAwayImpl*100).toFixed(2)}% bkHomeImpl=${(_bkHomeImpl*100).toFixed(2)}%` +
+                ` | [OUTPUT] edgeAway=${(_edgeAway*100).toFixed(2)}pp edgeHome=${(_edgeHome*100).toFixed(2)}pp bestEdge=${(_bestEdge*100).toFixed(2)}pp` +
+                ` | [VERIFY] bestEdge>0=${_bestEdge > 0} dbLabel="${game.spreadEdge}"` +
+                ` → ${_bestEdge <= 0 ? 'OVERRIDING stale DB label → PASS' : 'DB label confirmed valid'}`
+              );
+            }
+            // AUTHORITATIVE: if Option B says no edge on either side, the DB label is stale → PASS
+            if (_bestEdge <= 0) return "PASS";
+            // Option B confirms edge exists — trust DB label for direction
+          }
+        }
+      }
+      // ── END MLB TIER 1 OPTION B GUARD ─────────────────────────────────────────────────────────
+
       return game.spreadEdge;
     }
     if (isNaN(spreadDiff) || spreadDiff <= 0) return "PASS";
