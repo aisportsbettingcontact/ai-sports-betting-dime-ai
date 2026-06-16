@@ -56,7 +56,7 @@ export default function LandingNav() {
           <nav className="hidden md:flex items-center gap-6">
             {[
               { label: "Features", id: "features" },
-              { label: "Pricing", id: "pricing" },
+              { label: "Waitlist", id: "waitlist" },
             ].map((item) => (
               <button
                 key={item.id}
@@ -77,11 +77,11 @@ export default function LandingNav() {
               View Today's Projections
             </a>
             <a
-              href="/#pricing"
+              href="/#waitlist"
               className="inline-flex items-center px-4 py-2 rounded-lg text-[13px] font-bold text-black transition-all duration-150 hover:brightness-110"
               style={{ background: "#39FF14" }}
             >
-              Get Access Now
+              Join Waitlist
             </a>
           </div>
         </div>

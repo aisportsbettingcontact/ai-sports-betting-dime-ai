@@ -129,11 +129,11 @@ export default function Hero() {
             </svg>
           </a>
           <a
-            href="/#pricing"
+            href="/#waitlist"
             className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold text-white transition-all hover:bg-white/10 active:scale-[0.98]"
             style={{ border: "1px solid rgba(255,255,255,0.15)", fontSize: "15px" }}
           >
-            Get Access Now
+            Join the Waitlist
           </a>
         </motion.div>
 
@@ -178,7 +178,7 @@ export default function Hero() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           {[
-            { label: "Stripe Secured", icon: "🔒" },
+            { label: "Invite-Only Access", icon: "🔒" },
             { label: "Cancel Anytime", icon: "✓" },
             { label: "Real-Time Data", icon: "⚡" },
             { label: "No Picks Service", icon: "📊" },

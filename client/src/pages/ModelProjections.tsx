@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useUrlState, type Sport } from "@/hooks/useUrlState";
-import { User, LogOut, LogIn, BarChart3, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle, Bot } from "lucide-react";
+import { User, LogOut, LogIn, BarChart3, Crown, Send, Search, X, Clock, Star, Link2, FlaskConical, ShieldAlert, BarChart2, TrendingUp, AlertTriangle, Bot, Users } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { AnimatePresence, motion } from "framer-motion";
 import { skipToken } from "@tanstack/react-query";
@@ -1205,6 +1205,9 @@ export default function ModelProjections() {
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/claude'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                               <Bot className="w-3.5 h-3.5 text-[#00ff41]" /> Claude UI/UX Assistant
+                            </button>
+                            <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/waitlist'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                              <Users className="w-3.5 h-3.5 text-indigo-400" /> Waitlist
                             </button>
                           </>
                         )}

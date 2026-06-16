@@ -2372,3 +2372,82 @@ export const rgSessionCache = mysqlTable("rg_session_cache", {
   expiresAt:   bigint("expires_at", { mode: "number" }).notNull(),
 });
 export type RgSessionCache = typeof rgSessionCache.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WAITLIST
+// Stores email sign-ups from the public landing page waitlist capture form.
+// Status lifecycle: pending → approved | denied
+// All timestamps are UTC milliseconds (bigint mode: "number").
+// ═══════════════════════════════════════════════════════════════════════════════
+export const waitlist = mysqlTable("waitlist", {
+  id:          int("id").autoincrement().primaryKey(),
+
+  /** Submitter's email address — unique, lowercase-normalised before insert */
+  email:       varchar("email", { length: 320 }).notNull().unique(),
+
+  /** Optional first name supplied in the form */
+  firstName:   varchar("firstName", { length: 128 }),
+
+  /** Optional last name supplied in the form */
+  lastName:    varchar("lastName", { length: 128 }),
+
+  /**
+   * Review status.
+   *   pending  — newly submitted, not yet reviewed
+   *   approved — owner approved; user will be notified / granted access
+   *   denied   — owner denied; user will not receive access
+   */
+  status: mysqlEnum("status", ["pending", "approved", "denied"])
+    .default("pending")
+    .notNull(),
+
+  /**
+   * Optional free-text note left by the owner during review.
+   * Visible only in the admin Waitlist page.
+   */
+  adminNote:   varchar("adminNote", { length: 1024 }),
+
+  /**
+   * IP address of the submitting client, stored for abuse detection.
+   */
+  ipAddress:   varchar("ipAddress", { length: 64 }),
+
+  /**
+   * User-Agent string of the submitting client, stored for abuse detection.
+   */
+  userAgent:   varchar("userAgent", { length: 512 }),
+
+  /**
+   * UTM source tag captured from the landing page URL at submission time.
+   */
+  utmSource:   varchar("utmSource", { length: 128 }),
+
+  /**
+   * UTM medium tag captured at submission time.
+   */
+  utmMedium:   varchar("utmMedium", { length: 128 }),
+
+  /**
+   * UTM campaign tag captured at submission time.
+   */
+  utmCampaign: varchar("utmCampaign", { length: 128 }),
+
+  /** UTC ms timestamp when the owner last changed the status */
+  reviewedAt:  bigint("reviewedAt", { mode: "number" }),
+
+  /** app_users.id of the owner who last reviewed this entry (nullable) */
+  reviewedBy:  int("reviewedBy"),
+
+  /** UTC ms timestamp when the row was created (submission time) */
+  createdAt:   bigint("createdAt", { mode: "number" }).notNull(),
+
+  /** UTC ms timestamp of the last row update */
+  updatedAt:   bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxEmail:     index("idx_waitlist_email").on(t.email),
+  idxStatus:    index("idx_waitlist_status").on(t.status),
+  idxCreatedAt: index("idx_waitlist_created_at").on(t.createdAt),
+}));
+
+export type WaitlistRow    = typeof waitlist.$inferSelect;
+export type InsertWaitlist = typeof waitlist.$inferInsert;

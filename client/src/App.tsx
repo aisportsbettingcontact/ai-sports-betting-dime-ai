@@ -41,6 +41,7 @@ const ManageAccount = lazy(() => import('./pages/ManageAccount'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
+const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -146,6 +147,8 @@ function Router() {
       <Route path="/admin/model-status">{() => <RequireAuth><AdminModelStatus /></RequireAuth>}</Route>
       <Route path="/admin/postponed-games">{() => <RequireAuth><PostponedGames /></RequireAuth>}</Route>
       <Route path="/admin/backtest">{() => <RequireAuth><MlbBacktest /></RequireAuth>}</Route>
+      {/* Waitlist management — owner-only, enforced inside WaitlistAdmin */}
+      <Route path="/admin/waitlist">{() => <RequireAuth><WaitlistAdmin /></RequireAuth>}</Route>
       {/* Team schedules — params are read via useParams() inside each component */}
       <Route path="/mlb/team/:slug">{() => <RequireAuth><MlbTeamSchedule /></RequireAuth>}</Route>
       <Route path="/nba/team/:slug">{() => <RequireAuth><NbaTeamSchedule /></RequireAuth>}</Route>
