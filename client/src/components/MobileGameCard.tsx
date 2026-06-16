@@ -1005,10 +1005,11 @@ return (
     {/* ── TWO-COLUMN TEAM GRID: frozen left + scrollable right ─────── */}
     {/* Status row (star/LIVE/FINAL/time) is inside the frozen left panel, ABOVE the away team row */}
     {/* LEFT PANEL WIDTH: clamp(96px, 24.4vw, 108px)
-         Budget: 6px paddingL + 28px logo + 4px gap + [abbr flex:1 min:24px] + 28px score_slot + 2px paddingR = 92px fixed
-         At 360px: panel=96px → abbr=28px ✓  |  At 390px: panel=96px → abbr=28px ✓
-         At 430px: panel=104.9px → abbr=36.9px ✓  |  360px floor guarantees 28px abbr on all phones
-         Previous clamp(72px,20.4vw,88px) gave only 5-20px for abbr — INSUFFICIENT for 3-char abbrs like CWS/NYM */}
+         Budget: 6px paddingL + 28px logo + 4px gap + [abbr flex:1] + 22px score_slot + 2px paddingR = 62px fixed
+         At 360px: panel=96px → abbr=34px ✓  |  At 390px: panel=96px → abbr=34px ✓
+         At 430px: panel=104.9px → abbr=42.9px ✓  |  360px floor guarantees 34px for WSH/NYM (~28px actual)
+         Score slot 22px: handles double-digit ("12" at 11px tabular = ~15px) with 7px margin
+         CRITICAL: abbr span has NO overflow:hidden — panel container clips at boundary instead */}
     <div style={{ display: 'grid', gridTemplateColumns: 'clamp(96px, 24.4vw, 108px) 1fr', width: '100%', minHeight: 0 }}>
 
     {/* ── FROZEN LEFT PANEL: status row + team rows ── */}
@@ -1088,32 +1089,37 @@ return (
       </div>
 
             {/* Away row: logo (28px) + abbr + score
-           ROOT CAUSE FIX: Score slot is ALWAYS reserved (minWidth:28px, flexShrink:0) regardless of game state.
-           Previously the score span was conditionally rendered ({isLive||isFinal}&&hasScores&&<span>),
-           which meant abbr had flex:1 and grabbed ALL remaining space when no score was showing.
-           When a score appeared, it had no guaranteed room and crowded against the abbr.
-           FIX: Score span is always rendered. visibility:hidden when no score keeps the slot but shows nothing.
-           28px minWidth handles double-digit scores (e.g. "12" at 13px tabular-nums = ~18px) with 10px margin.
-           Panel budget on 390px phone: panel=96px
-             6px paddingL + 28px logo + 4px gap + [abbr flex:1] + 28px score_slot + 2px paddingR = 68px fixed
-             abbr gets 96-68 = 28px – sufficient for all 3-char MLB abbrs (CWS/NYM/MIN/LAA etc.) */}
+           ROOT CAUSE FIX v2: Two-part fix.
+           PART 1: Score slot is ALWAYS reserved (minWidth:22px, flexShrink:0) regardless of game state.
+             Previously conditionally rendered — abbr grabbed all space, score had nowhere to go.
+             Now: visibility:hidden when no score keeps the slot but shows nothing.
+             22px handles double-digit scores ("12" at 11px tabular-nums = ~15px) with 7px margin.
+           PART 2: overflow:hidden REMOVED from abbr span.
+             overflow:hidden was clipping WSH→WS, NYM→NY, MIA→MI/ on iOS Safari.
+             iOS San Francisco font renders ~10% wider than estimates — abbr needs ~28px actual.
+             Panel budget on 390px phone: panel=96px
+               6px paddingL + 28px logo + 4px gap + [abbr flex:1] + 22px score_slot + 2px paddingR = 62px fixed
+               abbr gets 96-62 = 34px → clear of 28px worst-case (WSH/NYM/HOU/OAK) ✓
+             The left panel container (overflow:hidden) is the correct clip boundary — not the abbr span. */}
       <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0', minHeight: '44px', gap: '4px', paddingLeft: '2px', paddingRight: '2px' }}>
         {/* Logo: 28px fixed — flexShrink:0 so logo never collapses */}
         <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <TeamLogo slug={game.awayTeam} name={awayName} logoUrl={awayLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — flex:1 fills remaining space; minWidth:0 allows shrink if needed */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden' }}>
+        {/* Abbreviation — flex:1 fills remaining space; NO overflow:hidden (panel container clips instead)
+             minWidth:0 allows flex shrink but abbr has 34px available on 360px phone — no shrink needed */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {awayAbbr}
         </span>
-        {/* Score slot — ALWAYS rendered with fixed minWidth:28px to permanently reserve space.
+        {/* Score slot — ALWAYS rendered with fixed minWidth:22px to permanently reserve space.
+             22px handles double-digit scores ("12" at 11px tabular-nums ≈ 15px) with 7px margin.
              visibility:hidden when not live/final keeps the slot but shows nothing.
-             This is the ONLY bulletproof pattern: hold the space unconditionally, never conditionally mount/unmount. */}
+             This is the ONLY bulletproof pattern: hold the space unconditionally. */}
         <span
           className="tabular-nums transition-colors duration-300"
           style={{
             flexShrink: 0,
-            minWidth: '28px',
+            minWidth: '22px',
             textAlign: 'right',
             fontSize: 'clamp(11px, 3.2vw, 13px)',
             lineHeight: 1,
@@ -1134,18 +1140,20 @@ return (
         <div style={{ flexShrink: 0, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <TeamLogo slug={game.homeTeam} name={homeName} logoUrl={homeLogoUrl} size={28} />
         </div>
-        {/* Abbreviation — flex:1 fills remaining space; minWidth:0 allows shrink if needed */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0, overflow: 'hidden' }}>
+        {/* Abbreviation — flex:1 fills remaining space; NO overflow:hidden (panel container clips instead)
+             minWidth:0 allows flex shrink but abbr has 34px available on 360px phone — no shrink needed */}
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {homeAbbr}
         </span>
-        {/* Score slot — ALWAYS rendered with fixed minWidth:28px to permanently reserve space.
+        {/* Score slot — ALWAYS rendered with fixed minWidth:22px to permanently reserve space.
+             22px handles double-digit scores ("12" at 11px tabular-nums ≈ 15px) with 7px margin.
              visibility:hidden when not live/final keeps the slot but shows nothing.
-             This is the ONLY bulletproof pattern: hold the space unconditionally, never conditionally mount/unmount. */}
+             This is the ONLY bulletproof pattern: hold the space unconditionally. */}
         <span
           className="tabular-nums transition-colors duration-300"
           style={{
             flexShrink: 0,
-            minWidth: '28px',
+            minWidth: '22px',
             textAlign: 'right',
             fontSize: 'clamp(11px, 3.2vw, 13px)',
             lineHeight: 1,
