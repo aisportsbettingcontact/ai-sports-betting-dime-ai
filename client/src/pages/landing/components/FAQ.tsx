@@ -9,11 +9,11 @@ const FAQS = [
   },
   {
     q: "How accurate are the model projections?",
-    a: "Our models are built on Dixon-Coles Poisson distributions and Monte Carlo simulation using pitcher ERA, team offensive production, park factors, and lineup data. No model is 100% accurate. We show you the edge and the confidence level — you decide whether to act on it.",
+    a: "Our models are built on Dixon-Coles Poisson distributions and Monte Carlo simulation using pitcher ERA, team offensive production, park factors, and lineup data. No model is 100% accurate. We show you the model-implied probability and the confidence level — you decide whether to act on it.",
   },
   {
     q: "What is the difference between the Monthly and Annual plans?",
-    a: "Both plans include full dashboard access. The Annual plan saves you approximately 43% compared to paying monthly. There are no feature differences between plans.",
+    a: "Both plans include full dashboard access. The Annual plan saves you 58% compared to paying monthly ($499/year vs $99/month × 12 = $1,188). There are no feature differences between plans.",
   },
   {
     q: "Can I cancel anytime?",

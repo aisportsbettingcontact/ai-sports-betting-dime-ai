@@ -4125,3 +4125,23 @@
 - [x] Fixed WC model odds (book_id=0): deleted stale swapped odds, re-seeded with correct orientation
 - [x] Final validation: 10/10 MLB PASS + 4/4 WC PASS — zero issues
 - [x] Updated AN odds scraper awareness: AN uses team_id to anchor odds (side label is correct per FIFA)
+
+## Session: 2026-06-15 — Landing Page Redesign (Fortune 500-Grade)
+- [x] Audit all pricing across landing page codebase: found $99.99/$499.99 in PricingCTA, $29/$199 in PremiumValueAnchor, "43%" in FAQ
+- [x] Fix PricingCTA.tsx: MONTHLY_PRICE=99, ANNUAL_PRICE=499, ANNUAL_SAVINGS_PCT=58, all derived values correct
+- [x] Fix PremiumValueAnchor.tsx: $99/month, $499/year, "Save 58% vs monthly"
+- [x] Fix FAQ.tsx: "58%" savings percentage, remove "edge" language
+- [x] Rebuild Hero.tsx: premium animated gradient, trust badges, mechanism-based copy, no "edge" language
+- [x] Build DashboardPreview.tsx: product visual section with mock dashboard UI, SignalBadge, money splits
+- [x] Redesign ValueStack.tsx: SVG icons, tag badges, hover effects, framer-motion animations
+- [x] Redesign PainSection.tsx: before/after two-column layout, remove "edge" language
+- [x] Redesign ProductMechanism.tsx: mechanism explanation block, animated signal cards
+- [x] Redesign MarketWorkflow.tsx: connecting vertical line, step circles, final step highlighted
+- [x] Fix FeatureShowcase.tsx: remove "edge" language from copy and alt text
+- [x] Redesign ComparisonSection.tsx: SVG check/x/sometimes icons, green-tinted header/footer
+- [x] Redesign TrustBoundary.tsx: SVG icons, compliance note added
+- [x] Redesign FinalCTA.tsx: radial glow effect, premium CTA buttons
+- [x] Update LandingFooter.tsx: full compliance disclaimer, Terms/Privacy/Support links
+- [x] Update LandingPage.tsx: add DashboardPreview as section 2, lazy loading for all sections
+- [x] Update index.html: new SEO title, description, static content (no "edge"/"model board"), structured data (SoftwareApplication + FAQPage JSON-LD)
+- [x] TypeScript: 0 errors

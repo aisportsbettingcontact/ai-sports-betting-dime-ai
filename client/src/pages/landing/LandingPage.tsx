@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import LandingNav from "./components/LandingNav";
 import Hero from "./components/Hero";
+const DashboardPreview   = lazy(() => import("./components/DashboardPreview"));
 const ValueStack         = lazy(() => import("./components/ValueStack"));
 const PainSection        = lazy(() => import("./components/PainSection"));
 const ProductMechanism   = lazy(() => import("./components/ProductMechanism"));
@@ -39,6 +40,7 @@ export default function LandingPage() {
     <div className="min-h-screen" style={{ background: "#050810", color: "#ffffff" }}>
       <LandingNav />
       <Hero />
+      <LazySection id="dashboard-preview"><DashboardPreview /></LazySection>
       <LazySection id="value-stack"><ValueStack /></LazySection>
       <LazySection id="pain"><PainSection /></LazySection>
       <LazySection id="product"><ProductMechanism /></LazySection>

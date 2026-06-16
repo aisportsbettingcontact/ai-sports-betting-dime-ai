@@ -27,44 +27,44 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
 
-const MONTHLY_PRICE = 99.99;
-const ANNUAL_PRICE = 499.99;
-const ANNUAL_EQUIV_MONTHLY = (ANNUAL_PRICE / 12).toFixed(2); // 41.67
-const ANNUAL_SAVINGS = ((MONTHLY_PRICE * 12) - ANNUAL_PRICE).toFixed(2); // 699.89
+const MONTHLY_PRICE = 99;
+const ANNUAL_PRICE = 499;
+const ANNUAL_EQUIV_MONTHLY = Math.round(ANNUAL_PRICE / 12); // 42
+const ANNUAL_SAVINGS = (MONTHLY_PRICE * 12) - ANNUAL_PRICE; // 689
 const ANNUAL_SAVINGS_PCT = Math.round(((MONTHLY_PRICE * 12 - ANNUAL_PRICE) / (MONTHLY_PRICE * 12)) * 100); // 58
-const MONTHLY_PER_DAY = (MONTHLY_PRICE / 30).toFixed(2);  // 3.33
+const MONTHLY_PER_DAY = (MONTHLY_PRICE / 30).toFixed(2);  // 3.30
 const ANNUAL_PER_DAY  = (ANNUAL_PRICE  / 365).toFixed(2); // 1.37
 
 const PLANS = [
   {
     id: "monthly" as const,
     name: "Monthly",
-    price: "$99.99",
+    price: "$99",
     period: "/month",
     perDay: `$${MONTHLY_PER_DAY}/day`,
-    billedAs: "billed $99.99 monthly",
+    billedAs: "billed $99 monthly",
     savingsLine: null as string | null,
     equivLine: null as string | null,
-    description: "Full access to all models, projections, splits, and edge tools. Auto-renews monthly. Cancel anytime.",
+    description: "Full access to all models, projections, splits, and market signals. Auto-renews monthly. Cancel anytime.",
     features: [
       "All AI model projections",
       "Betting splits & money %",
       "No-vig fair odds",
-      "ROI edge signals",
+      "Sharp market signals",
       "Multi-sport coverage",
       "Mobile-optimized dashboard",
     ],
-    cta: "Start Monthly",
+    cta: "Get Monthly Access",
     highlight: false,
     badge: null as string | null,
   },
   {
     id: "annual" as const,
     name: "Annual",
-    price: "$499.99",
+    price: "$499",
     period: "/year",
     perDay: `$${ANNUAL_PER_DAY}/day`,
-    billedAs: "billed $499.99 annually",
+    billedAs: "billed $499 annually",
     savingsLine: `Save $${ANNUAL_SAVINGS}/year vs monthly`,
     equivLine: `Only $${ANNUAL_EQUIV_MONTHLY}/mo, ${ANNUAL_SAVINGS_PCT}% off`,
     badge: `Best Value. Save ${ANNUAL_SAVINGS_PCT}%`,
@@ -78,7 +78,7 @@ const PLANS = [
       "Early access to new sports",
       "Dedicated priority support",
     ],
-    cta: "Lock In Annual",
+    cta: "Get Annual Access",
     highlight: true,
   },
 ] as const;

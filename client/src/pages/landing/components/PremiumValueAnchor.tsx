@@ -10,14 +10,14 @@ export default function PremiumValueAnchor() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-2">
           <div className="rounded-xl p-5 text-center flex-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)" }}>
-            <div className="text-[#39FF14] font-black text-[2rem]">$29</div>
+            <div className="text-[#39FF14] font-black text-[2rem]">$99</div>
             <div className="text-[#9ca3af] text-[13px] mt-1">per month</div>
             <div className="text-white text-[12px] mt-2">Full dashboard access</div>
           </div>
           <div className="rounded-xl p-5 text-center flex-1" style={{ background: "rgba(57,255,20,0.08)", border: "1px solid rgba(57,255,20,0.3)" }}>
-            <div className="text-[#39FF14] font-black text-[2rem]">$199</div>
+            <div className="text-[#39FF14] font-black text-[2rem]">$499</div>
             <div className="text-[#9ca3af] text-[13px] mt-1">per year</div>
-            <div className="text-white text-[12px] mt-2">Save 43% vs monthly</div>
+            <div className="text-white text-[12px] mt-2">Save 58% vs monthly</div>
           </div>
         </div>
         <a href="/#pricing" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black self-center transition-all hover:brightness-110" style={{ background: "#39FF14", fontSize: "15px" }}>
