@@ -4145,3 +4145,21 @@
 - [x] Update LandingPage.tsx: add DashboardPreview as section 2, lazy loading for all sections
 - [x] Update index.html: new SEO title, description, static content (no "edge"/"model board"), structured data (SoftwareApplication + FAQPage JSON-LD)
 - [x] TypeScript: 0 errors
+
+## Session: 2026-06-16 — Waitlist Foundation
+
+- [x] Add waitlist table to drizzle/schema.ts and create via SQL (id, email, firstName, lastName, status, adminNote, ipAddress, userAgent, utmSource/Medium/Campaign, reviewedBy, reviewedAt, createdAt, updatedAt)
+- [x] Build server/waitlistDb.ts — submitWaitlist, listWaitlist, getWaitlistStats, updateWaitlistStatus, bulkUpdateWaitlistStatus, deleteWaitlistEntry, exportWaitlistCsv — all with structured logging
+- [x] Build server/routers/waitlist.ts — full tRPC router: submit (public), list/stats/updateStatus/bulkUpdate/delete/exportCsv (ownerProcedure)
+- [x] Register waitlistRouter in server/routers.ts
+- [x] Hide all pricing sections from landing page (PricingCTA, PremiumValueAnchor removed from LandingPage.tsx)
+- [x] Build WaitlistCapture.tsx — premium email form with FOMO copy, exclusivity framing, submission state, error handling
+- [x] Update LandingPage.tsx — replace pricing sections with WaitlistCapture
+- [x] Update Hero.tsx — CTA button points to #waitlist, trust badges updated
+- [x] Update FinalCTA.tsx — copy and CTA updated to waitlist mode
+- [x] Update LandingNav.tsx — Pricing nav item replaced with Waitlist
+- [x] Build WaitlistAdmin.tsx — owner-only admin page: stats cards, search/filter, paginated table, status management, adminNote modal, bulk actions, CSV export
+- [x] Add /admin/waitlist route to App.tsx (lazy loaded, RequireAuth wrapped)
+- [x] Add Waitlist nav item to admin dropdown in ModelProjections.tsx
+- [x] Write server/waitlist.test.ts — 20 unit tests covering all DB helpers, all passing
+- [x] Full test suite: 1,097 tests passing, 0 failures

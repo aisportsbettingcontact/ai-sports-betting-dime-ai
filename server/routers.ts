@@ -48,6 +48,7 @@ import { nhlScheduleRouter } from "./routers/nhlSchedule";
 import { jackMacRouter } from "./routers/jackMac";
 import { stripeRouter } from "./routers/stripe";
 import { claudeRouter } from "./claudeRouter";
+import { waitlistRouter } from "./routers/waitlist";
 import { listNbaTeams, getNbaTeamByDbSlug, getGameTeamColors, deleteGameById, getFavoriteGameIds, getFavoriteGamesWithDates, toggleFavoriteGame, updateAnOdds, listGamesByDate, listOddsHistory, getBracketGames, auditAndAdvanceAllBracketWinners, getMlbLineupsByGameIds, getStrikeoutPropsByGame, getStrikeoutPropsByGames, getMlbGameEnvSignals, getHrPropsByGame, getHrPropsByGames } from "./db";
 import { runStrikeoutModel, type StrikeoutRunnerInput } from "./strikeoutModelRunner";
 import { getLastRefreshResult, runVsinRefreshManual, refreshAllScoresNow } from "./vsinAutoRefresh";
@@ -180,6 +181,7 @@ export const appRouter = router({
   stripe: stripeRouter,
   wc2026: wc2026Router,
   claude: claudeRouter,
+  waitlist: waitlistRouter,
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
   auth: router({

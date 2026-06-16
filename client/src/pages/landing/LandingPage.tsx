@@ -1,19 +1,18 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import LandingNav from "./components/LandingNav";
 import Hero from "./components/Hero";
-const DashboardPreview   = lazy(() => import("./components/DashboardPreview"));
-const ValueStack         = lazy(() => import("./components/ValueStack"));
-const PainSection        = lazy(() => import("./components/PainSection"));
-const ProductMechanism   = lazy(() => import("./components/ProductMechanism"));
-const MarketWorkflow     = lazy(() => import("./components/MarketWorkflow"));
-const FeatureShowcase    = lazy(() => import("./components/FeatureShowcase"));
-const ComparisonSection  = lazy(() => import("./components/ComparisonSection"));
-const PremiumValueAnchor = lazy(() => import("./components/PremiumValueAnchor"));
-const TrustBoundary      = lazy(() => import("./components/TrustBoundary"));
-const PricingCTA         = lazy(() => import("./components/PricingCTA"));
-const FAQ                = lazy(() => import("./components/FAQ"));
-const FinalCTA           = lazy(() => import("./components/FinalCTA"));
-const LandingFooter      = lazy(() => import("./components/LandingFooter"));
+const DashboardPreview  = lazy(() => import("./components/DashboardPreview"));
+const ValueStack        = lazy(() => import("./components/ValueStack"));
+const PainSection       = lazy(() => import("./components/PainSection"));
+const ProductMechanism  = lazy(() => import("./components/ProductMechanism"));
+const MarketWorkflow    = lazy(() => import("./components/MarketWorkflow"));
+const FeatureShowcase   = lazy(() => import("./components/FeatureShowcase"));
+const ComparisonSection = lazy(() => import("./components/ComparisonSection"));
+const WaitlistCapture   = lazy(() => import("./components/WaitlistCapture"));
+const TrustBoundary     = lazy(() => import("./components/TrustBoundary"));
+const FAQ               = lazy(() => import("./components/FAQ"));
+const FinalCTA          = lazy(() => import("./components/FinalCTA"));
+const LandingFooter     = lazy(() => import("./components/LandingFooter"));
 
 function LazySection({ children, id }: { children: React.ReactNode; id?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -47,9 +46,9 @@ export default function LandingPage() {
       <LazySection id="workflow"><MarketWorkflow /></LazySection>
       <LazySection id="features"><FeatureShowcase /></LazySection>
       <LazySection id="comparison"><ComparisonSection /></LazySection>
-      <LazySection id="value-anchor"><PremiumValueAnchor /></LazySection>
+      {/* Waitlist capture — replaces PricingCTA + PremiumValueAnchor during pre-launch */}
+      <LazySection id="waitlist"><WaitlistCapture /></LazySection>
       <LazySection id="trust"><TrustBoundary /></LazySection>
-      <LazySection id="pricing"><PricingCTA /></LazySection>
       <LazySection id="faq"><FAQ /></LazySection>
       <LazySection id="final-cta"><FinalCTA /></LazySection>
       <LazySection id="footer"><LandingFooter /></LazySection>
