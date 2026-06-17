@@ -1467,7 +1467,7 @@ export default function ModelProjections() {
       {/* ── Sticky global column header (mobile only) — MATCHUP | SPREAD/PUCK LINE | TOTAL | ML ── */}
       {/* Shown for MLB/NBA/NHL when PROJECTIONS tab is active, and for WC with WC-specific labels. */}
       {/* [LOG] StickyColHeader: isWcSelected=${isWcSelected} feedMobileTab=${feedMobileTab} */}
-      {((!isWcSelected && feedMobileTab === 'dual') || (isWcSelected && feedMobileTab === 'dual')) && (
+      {(!isWcSelected && feedMobileTab === 'dual') && (
         // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
         // LAYOUT RULES (must match MobileGameCard exactly):
         //   Left panel: clamp(72px, 20.4vw, 88px) fluid (matches MobileGameCard gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr')
@@ -1517,7 +1517,7 @@ export default function ModelProjections() {
             // hsl(var(--card)) can resolve with alpha; use explicit solid color to guarantee opacity.
             background: '#0f0f0f',
             borderBottom: '1px solid rgba(255,255,255,0.12)',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            // [FIX] borderTop removed - was creating a visible gap strip between feed-tabs nav and this header.
             boxShadow: '0 2px 12px rgba(0,0,0,0.85)',
             // Prevent horizontal swipe on the column header from scrolling the feed
             touchAction: 'none',

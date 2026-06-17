@@ -1968,7 +1968,24 @@ export function WcFeedInline({
   return (
     <div className="w-full">
       { /* ── WC Sub-header (sticky below main feed header) ── */}
+      { /* [LOG] WcSubHeader: ResizeObserver measures height into --wc-subheader-h for column header top */}
       <div
+        ref={(el) => {
+          if (!el) return;
+          // [STEP] Measure WC sub-header height -> --wc-subheader-h CSS var
+          const prev = (el as HTMLElement & { _wcSubRO?: ResizeObserver })._wcSubRO;
+          if (prev) prev.disconnect();
+          const ro = new ResizeObserver(() => {
+            const h = Math.ceil(el.getBoundingClientRect().height);
+            document.documentElement.style.setProperty('--wc-subheader-h', `${h}px`);
+            console.log(`[WcSubHeader] [STATE] h=${h}px -> --wc-subheader-h`);
+          });
+          ro.observe(el);
+          (el as HTMLElement & { _wcSubRO?: ResizeObserver })._wcSubRO = ro;
+          const h = Math.ceil(el.getBoundingClientRect().height);
+          document.documentElement.style.setProperty('--wc-subheader-h', `${h}px`);
+          console.log(`[WcSubHeader] [OUTPUT] initial --wc-subheader-h=${h}px`);
+        }}
         className="sticky z-[38] border-b border-white/8"
         style={{
           top: "var(--prez-header-h, 220px)",
@@ -2029,6 +2046,72 @@ export function WcFeedInline({
           ))}
         </div>
       </div>
+
+      {/* ── WC Sticky Column Header: MATCHUP | ML | TOTAL | DRAW ── */}
+      {/* [LOG] WcColHeader: shown only when PROJECTIONS tab active */}
+      {/* [STEP] top = --prez-header-h + --wc-subheader-h = flush below sub-tab nav */}
+      {activeTab === 'PROJECTIONS' && (
+        <div
+          className="grid lg:hidden"
+          style={{
+            position: 'sticky',
+            // [OUTPUT] sticks flush below WC sub-header (FIFA logo + sub-tab nav)
+            top: 'calc(var(--prez-header-h, 220px) + var(--wc-subheader-h, 120px))',
+            zIndex: 37,
+            gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
+            width: '100%',
+            background: '#0f0f0f',
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.85)',
+            touchAction: 'none',
+          }}
+        >
+          {/* Left: MATCHUP */}
+          <div style={{
+            padding: '5px 4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRight: '1px solid rgba(255,255,255,0.10)',
+          }}>
+            <span style={{
+              fontSize: 'clamp(9px, 2.5vw, 11px)',
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.60)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+              whiteSpace: 'nowrap',
+            }}>MATCHUP</span>
+          </div>
+          {/* Right: ML | TOTAL | DRAW */}
+          <div style={{
+            padding: '5px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            {(['ML', 'TOTAL', 'DRAW'] as const).map((lbl) => (
+              <div key={lbl} style={{
+                flex: '1 1 0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 0,
+              }}>
+                <span style={{
+                  fontSize: 'clamp(9px, 2.5vw, 11px)',
+                  fontWeight: 700,
+                  color: 'rgba(255,255,255,0.80)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.07em',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                }}>{lbl}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Content ── */}
       {activeTab === "PROJECTIONS" && <WcProjectionsFeed date={selectedDate} />}
