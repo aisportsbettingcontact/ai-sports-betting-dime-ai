@@ -1989,7 +1989,7 @@ export function WcFeedInline({
         className="sticky z-[38] border-b border-white/8"
         style={{
           top: "var(--prez-header-h, 220px)",
-          background: "hsl(var(--background))",
+          background: "#0f0f0f", /* [FIX] solid opaque — no transparency bleed */
         }}
       >
         { /* Title row */}
@@ -2045,19 +2045,15 @@ export function WcFeedInline({
             </button>
           ))}
         </div>
-      </div>
 
-      {/* ── WC Sticky Column Header: MATCHUP | ML | TOTAL | DRAW ── */}
-      {/* [LOG] WcColHeader: shown only when PROJECTIONS tab active */}
-      {/* [STEP] top = --prez-header-h + --wc-subheader-h = flush below sub-tab nav */}
+      {/* ── WC Column Header: MATCHUP | ML | TOTAL | DRAW ── */}
+      {/* [LOG] WcColHeader: normal flow child of sticky sub-header — zero gap guaranteed */}
+      {/* [FIX] Moved inside sticky sub-header div. No position:sticky needed. */}
+      {/* [VERIFY] background: #0f0f0f matches sub-header — no bleed, no gap */}
       {activeTab === 'PROJECTIONS' && (
         <div
           className="grid lg:hidden"
           style={{
-            position: 'sticky',
-            // [OUTPUT] sticks flush below WC sub-header (FIFA logo + sub-tab nav)
-            top: 'calc(var(--prez-header-h, 220px) + var(--wc-subheader-h, 120px))',
-            zIndex: 37,
             gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
             width: '100%',
             background: '#0f0f0f',
@@ -2112,6 +2108,8 @@ export function WcFeedInline({
           </div>
         </div>
       )}
+      </div>
+
 
       {/* ── Content ── */}
       {activeTab === "PROJECTIONS" && <WcProjectionsFeed date={selectedDate} />}
