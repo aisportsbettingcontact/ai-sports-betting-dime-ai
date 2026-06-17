@@ -37,6 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
+import { formatDateHeader } from "@/lib/gameUtils";
 import { calculateEdge, calculateRoi, formatRoi, getEdgeColor, EDGE_THRESHOLD_PP } from "@/lib/edgeUtils";
 import { BetCell } from "@/components/BetCell";
 import type { BetCellSide } from "@/components/BetCell";
@@ -1182,45 +1183,36 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   return (
     <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', width: '100%', minHeight: 120 }}>
 
-      {/* Col 1: MONEYLINE — full country names as labels */}
-      {/* Away label shown above the cell for context */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>ML</span>
-        <BetCell
-          title="ML"
-          away={mlAway}
-          home={mlHome}
-          edgeLabel={mlEdgeLabel}
-          bestEdgePP={mlBestEdgePPFinal}
-          size="sm"
-        />
-      </div>
+      {/* Col 1: MONEYLINE */}
+      {/* [NOTE] Per-card ML/TOTAL/DRAW title spans removed — sticky column header provides these labels once at the top */}
+      <BetCell
+        title="ML"
+        away={mlAway}
+        home={mlHome}
+        edgeLabel={mlEdgeLabel}
+        bestEdgePP={mlBestEdgePPFinal}
+        size="sm"
+      />
 
       {/* Col 2: TOTAL */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>TOTAL</span>
-        <BetCell
-          title="TOTAL"
-          away={totalOver}
-          home={totalUnder}
-          edgeLabel={totalEdgeLabel}
-          bestEdgePP={totalBestEdgePPFinal}
-          size="sm"
-        />
-      </div>
+      <BetCell
+        title="TOTAL"
+        away={totalOver}
+        home={totalUnder}
+        edgeLabel={totalEdgeLabel}
+        bestEdgePP={totalBestEdgePPFinal}
+        size="sm"
+      />
 
       {/* Col 3: DRAW */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0, gap: 2 }}>
-        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>DRAW</span>
-        <BetCell
-          title="DRAW"
-          away={drawAway}
-          home={drawHome}
-          edgeLabel={drawEdgeLabel}
-          bestEdgePP={drawEdgePP}
-          size="sm"
-        />
-      </div>
+      <BetCell
+        title="DRAW"
+        away={drawAway}
+        home={drawHome}
+        edgeLabel={drawEdgeLabel}
+        bestEdgePP={drawEdgePP}
+        size="sm"
+      />
 
     </div>
   );
@@ -1991,11 +1983,27 @@ export function WcFeedInline({
             className="h-8 w-auto object-contain flex-shrink-0"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white tracking-wide">FIFA World Cup 2026</div>
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
               Group Stage · USA / CAN / MEX
             </div>
+          </div>
+          {/* Formatted date — same style as MLB: TUESDAY, JUNE 17, 2026 */}
+          {/* [OUTPUT] formatDateHeader(selectedDate) rendered right-aligned next to FIFA logo block */}
+          <div className="flex-shrink-0 text-right" style={{ maxWidth: '45%' }}>
+            <span
+              className="font-bold tracking-widest uppercase"
+              style={{
+                fontSize: 'clamp(8px, 2.4vw, 14px)',
+                color: '#ffffff',
+                whiteSpace: 'nowrap',
+                display: 'block',
+                lineHeight: 1.2,
+              }}
+            >
+              {formatDateHeader(selectedDate)}
+            </span>
           </div>
         </div>
 

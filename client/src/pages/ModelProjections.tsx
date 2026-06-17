@@ -1465,8 +1465,9 @@ export default function ModelProjections() {
       </header>
 
       {/* ── Sticky global column header (mobile only) — MATCHUP | SPREAD/PUCK LINE | TOTAL | ML ── */}
-      {/* Only shown when MODEL PROJECTIONS tab is active. Hidden for BETTING SPLITS tab and WC. */}
-      {!isWcSelected && feedMobileTab === 'dual' && (
+      {/* Shown for MLB/NBA/NHL when PROJECTIONS tab is active, and for WC with WC-specific labels. */}
+      {/* [LOG] StickyColHeader: isWcSelected=${isWcSelected} feedMobileTab=${feedMobileTab} */}
+      {((!isWcSelected && feedMobileTab === 'dual') || (isWcSelected && feedMobileTab === 'dual')) && (
         // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
         // LAYOUT RULES (must match MobileGameCard exactly):
         //   Left panel: clamp(72px, 20.4vw, 88px) fluid (matches MobileGameCard gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr')
@@ -1512,10 +1513,12 @@ export default function ModelProjections() {
             zIndex: 39,
             gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
             width: '100%',
-            background: 'hsl(var(--card))',
+            // [FIX] Solid opaque background — prevents feed cards from bleeding through on scroll.
+            // hsl(var(--card)) can resolve with alpha; use explicit solid color to guarantee opacity.
+            background: '#0f0f0f',
             borderBottom: '1px solid rgba(255,255,255,0.12)',
             borderTop: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.85)',
             // Prevent horizontal swipe on the column header from scrolling the feed
             touchAction: 'none',
           }}
@@ -1544,7 +1547,7 @@ export default function ModelProjections() {
             alignItems: 'center',
             gap: '4px',
           }}>
-            {[selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML'].map(h => (
+            {(isWcSelected ? ['ML', 'TOTAL', 'DRAW'] : [selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML']).map(h => (
               // flex: '1 1 0' matches MktCard's flex: '1 1 0' exactly
               <div key={h} style={{
                 flex: '1 1 0',
