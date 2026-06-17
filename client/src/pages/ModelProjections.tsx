@@ -1462,114 +1462,89 @@ export default function ModelProjections() {
             }}
           />
         </div>}{/* end feed-tabs-wrapper (conditionally rendered) */}
-      </header>
 
-      {/* ── Sticky global column header (mobile only) — MATCHUP | SPREAD/PUCK LINE | TOTAL | ML ── */}
-      {/* Shown for MLB/NBA/NHL when PROJECTIONS tab is active, and for WC with WC-specific labels. */}
-      {/* [LOG] StickyColHeader: isWcSelected=${isWcSelected} feedMobileTab=${feedMobileTab} */}
-      {(!isWcSelected && feedMobileTab === 'dual') && (
-        // Sticky column header: MATCHUP | RUN LINE | TOTAL | ML
-        // LAYOUT RULES (must match MobileGameCard exactly):
-        //   Left panel: clamp(72px, 20.4vw, 88px) fluid (matches MobileGameCard gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr')
-        //   Right panel: padding: '5px 6px' gap: '4px' (matches OddsTable padding: '4px 6px' gap: '4px')
-        //   Each label cell: flex: '1 1 0' textAlign: 'center' (matches MktCard flex-1)
-        // zIndex: 39 -- just below main header's z-40 so it stacks correctly
-        // top: var(--prez-header-h) -- set by ResizeObserver on headerRef, always accurate
-        <div
-          className="grid lg:hidden"
-          ref={(el) => {
-            // Use a ResizeObserver (not a one-shot ref callback) so --prez-col-header-h stays
-            // accurate even after the main header's --prez-header-h stabilizes and causes
-            // the column header to reflow. Without this, the first-render measurement can be
-            // stale and the feed's paddingTop will be wrong, causing the column header to
-            // overlap the first game card.
-            if (!el) return;
-            // Disconnect any previous observer attached to this element
-            const prev = (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO;
-            if (prev) prev.disconnect();
-            const ro = new ResizeObserver(() => {
+        {/* ── Column header row (mobile only) — MATCHUP | RUN LINE | TOTAL | ML ── */}
+        {/* [LOG] ColHeaderRow: inside <header> sticky block — zero gap guaranteed */}
+        {/* [STEP] Rendered as last row of header; no separate sticky needed */}
+        {/* [VERIFY] --prez-header-h ResizeObserver on headerRef includes this row's height */}
+        {(!isWcSelected && feedMobileTab === 'dual') && (
+          <div
+            className="grid lg:hidden"
+            ref={(el) => {
+              if (!el) return;
+              // [STEP] ColHeaderRow ResizeObserver: keeps --prez-col-header-h accurate
+              const prev = (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO;
+              if (prev) prev.disconnect();
+              const ro = new ResizeObserver(() => {
+                const h = Math.ceil(el.getBoundingClientRect().height);
+                document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
+                console.log(`[ColHeaderRow] [STATE] h=${h}px -> --prez-col-header-h`);
+              });
+              ro.observe(el);
+              (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO = ro;
               const h = Math.ceil(el.getBoundingClientRect().height);
               document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
-            });
-            ro.observe(el);
-            (el as HTMLElement & { _colHeaderRO?: ResizeObserver })._colHeaderRO = ro;
-            // Immediate measurement for first frame
-            const h = Math.ceil(el.getBoundingClientRect().height);
-            document.documentElement.style.setProperty('--prez-col-header-h', `${h}px`);
-          }}
-          style={{
-            position: 'sticky',
-            /* Use 220px as the fallback — safe for the tallest iPhone (Pro Max with Dynamic Island).
-             * Measured header breakdown on iPhone 14 Pro Max:
-             *   safe-area-inset-top: 59px
-             *   Row1 (brand+user): ~44px
-             *   Row3 (sport tabs + search): ~44px
-             *   Row4 (date row): ~24px
-             *   Row5 (feed tabs): ~44px
-             *   Total: ~215px
-             * The ResizeObserver updates --prez-header-h after first paint; the fallback
-             * only applies on the very first frame to prevent a brief overlap flash. */
-            top: 'var(--prez-header-h, 220px)',
-            zIndex: 39,
-            gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
-            width: '100%',
-            // [FIX] Solid opaque background — prevents feed cards from bleeding through on scroll.
-            // hsl(var(--card)) can resolve with alpha; use explicit solid color to guarantee opacity.
-            background: '#0f0f0f',
-            borderBottom: '1px solid rgba(255,255,255,0.12)',
-            // [FIX] borderTop removed - was creating a visible gap strip between feed-tabs nav and this header.
-            boxShadow: '0 2px 12px rgba(0,0,0,0.85)',
-            // Prevent horizontal swipe on the column header from scrolling the feed
-            touchAction: 'none',
-          }}
-        >
-          {/* Left cell: MATCHUP -- 80px, centered */}
-          <div style={{
-            padding: '5px 4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRight: '1px solid rgba(255,255,255,0.10)',
-          }}>
-            <span style={{
-              fontSize: 'clamp(9px, 2.5vw, 11px)',
-              fontWeight: 700,
-              color: 'rgba(255,255,255,0.60)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-              whiteSpace: 'nowrap',
-            }}>MATCHUP</span>
+              console.log(`[ColHeaderRow] [OUTPUT] initial --prez-col-header-h=${h}px`);
+            }}
+            style={{
+              // [OUTPUT] Inside sticky <header> — no separate sticky positioning needed.
+              // Zero gap: this row flows directly after feed-tabs-scroll borderBottom.
+              gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
+              width: '100%',
+              background: '#0f0f0f',
+              borderBottom: '1px solid rgba(255,255,255,0.12)',
+              // [VERIFY] No borderTop, no margin — flush against feed-tabs row above it.
+              touchAction: 'none',
+            }}
+          >
+            {/* Left cell: MATCHUP */}
+            <div style={{
+              padding: '5px 4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRight: '1px solid rgba(255,255,255,0.10)',
+            }}>
+              <span style={{
+                fontSize: 'clamp(9px, 2.5vw, 11px)',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.60)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.07em',
+                whiteSpace: 'nowrap',
+              }}>MATCHUP</span>
+            </div>
+            {/* Right cell: RUN LINE | TOTAL | ML */}
+            <div style={{
+              padding: '5px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}>
+              {(isWcSelected ? ['ML', 'TOTAL', 'DRAW'] : [selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML']).map(h => (
+                <div key={h} style={{
+                  flex: '1 1 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 0,
+                }}>
+                  <span style={{
+                    fontSize: 'clamp(9px, 2.5vw, 11px)',
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.80)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.07em',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                  }}>{h}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          {/* Right cell: RUN LINE | TOTAL | ML -- padding/gap matches OddsTable exactly */}
-          <div style={{
-            padding: '5px 6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
-            {(isWcSelected ? ['ML', 'TOTAL', 'DRAW'] : [selectedSport === 'MLB' ? 'RUN LINE' : 'SPREAD', 'TOTAL', 'ML']).map(h => (
-              // flex: '1 1 0' matches MktCard's flex: '1 1 0' exactly
-              <div key={h} style={{
-                flex: '1 1 0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: 0,
-              }}>
-                <span style={{
-                  fontSize: 'clamp(9px, 2.5vw, 11px)',
-                  fontWeight: 700,
-                  color: 'rgba(255,255,255,0.80)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                }}>{h}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+      </header>
+
 
       {/* ── Main Feed ── */}
       {/* touch-action: pan-y — allows vertical scrolling while blocking horizontal
