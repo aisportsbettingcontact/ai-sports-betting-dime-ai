@@ -50,7 +50,7 @@
 import { eq } from "drizzle-orm";
 import { games } from "../drizzle/schema";
 import { MLB_BY_ABBREV, MLB_BY_ID } from "../shared/mlbTeams";
-import { getDb, listGamesByDate, updateNcaaStartTime, updateBookOdds } from "./db";
+import { getDb, listGamesByDate, updateNcaaStartTime, updateBookOdds, getMlbLineupsByGameIds } from "./db";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -732,17 +732,50 @@ export async function refreshMlbScores(dateStr: string): Promise<{
       }
 
       // Update pitcher info if changed
+      // PITCHER OVERRIDE GUARD: If mlb_lineups has a Rotowire-sourced pitcher that
+      // differs from the MLB Stats API probable pitcher, do NOT overwrite it.
+      // This protects doubleheader G2 pitcher assignments (e.g. Robbie Ray for SF@ATL G2)
+      // from being overwritten by the API returning the G1 pitcher (e.g. Adrian Houser).
       if (awayPitcherChanged || homePitcherChanged) {
+        // Fetch lineup row for this game to check for Rotowire override
+        const lineupMap = await getMlbLineupsByGameIds([dbGame.id]);
+        const lineupRow = lineupMap.get(dbGame.id);
         const pitcherUpdate: Parameters<typeof updateBookOdds>[1] = {};
         if (awayPitcherChanged && apiGame.awayProbablePitcher) {
-          pitcherUpdate.awayStartingPitcher = apiGame.awayProbablePitcher;
-          pitcherUpdate.awayPitcherConfirmed = true;
+          // If mlb_lineups has a different pitcher name, skip the API overwrite
+          if (
+            lineupRow?.awayPitcherName &&
+            lineupRow.awayPitcherName.trim().toLowerCase() !== apiGame.awayProbablePitcher.trim().toLowerCase()
+          ) {
+            console.warn(
+              `${tag} [PITCHER_OVERRIDE] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
+              ` | API awayPitcher="${apiGame.awayProbablePitcher}" BLOCKED by Rotowire lineup` +
+              ` awayPitcher="${lineupRow.awayPitcherName}" — keeping Rotowire value`
+            );
+          } else {
+            pitcherUpdate.awayStartingPitcher = apiGame.awayProbablePitcher;
+            pitcherUpdate.awayPitcherConfirmed = true;
+          }
         }
         if (homePitcherChanged && apiGame.homeProbablePitcher) {
-          pitcherUpdate.homeStartingPitcher = apiGame.homeProbablePitcher;
-          pitcherUpdate.homePitcherConfirmed = true;
+          // If mlb_lineups has a different pitcher name, skip the API overwrite
+          if (
+            lineupRow?.homePitcherName &&
+            lineupRow.homePitcherName.trim().toLowerCase() !== apiGame.homeProbablePitcher.trim().toLowerCase()
+          ) {
+            console.warn(
+              `${tag} [PITCHER_OVERRIDE] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
+              ` | API homePitcher="${apiGame.homeProbablePitcher}" BLOCKED by Rotowire lineup` +
+              ` homePitcher="${lineupRow.homePitcherName}" — keeping Rotowire value`
+            );
+          } else {
+            pitcherUpdate.homeStartingPitcher = apiGame.homeProbablePitcher;
+            pitcherUpdate.homePitcherConfirmed = true;
+          }
         }
-        await updateBookOdds(dbGame.id, pitcherUpdate);
+        if (Object.keys(pitcherUpdate).length > 0) {
+          await updateBookOdds(dbGame.id, pitcherUpdate);
+        }
       }
 
       updated++;
