@@ -890,44 +890,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
       {/* Team group */}
       <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
-        {/* Away team row */}
-        <div className="flex items-center justify-between gap-2 py-1 w-full">
-          <div className="flex items-center gap-2">
-            {/* Flag circle */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              <img
-                src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
-                alt={awayFifaCode}
-                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            </div>
-            <div className="flex flex-col">
-              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
-              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                {awayTeam?.name ?? awayFifaCode}
-              </span>
-              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
-                {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
-              </span>
-            </div>
-          </div>
-          {(isLive || isFinal) && hasScores && (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
-              {fixture.awayScore}
-            </span>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
-
-        {/* Home team row */}
+        {/* Home team row — TOP (matches DK convention: home listed first/top) */}
         <div className="flex items-center justify-between gap-2 py-1 w-full">
           <div className="flex items-center gap-2">
             {/* Flag circle */}
@@ -957,6 +920,43 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           {(isLive || isFinal) && hasScores && (
             <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
               {fixture.homeScore}
+            </span>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
+
+        {/* Away team row — BOTTOM (matches DK convention: away listed second/bottom) */}
+        <div className="flex items-center justify-between gap-2 py-1 w-full">
+          <div className="flex items-center gap-2">
+            {/* Flag circle */}
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <img
+                src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
+                alt={awayFifaCode}
+                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            </div>
+            <div className="flex flex-col">
+              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
+              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                {awayTeam?.name ?? awayFifaCode}
+              </span>
+              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+                {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
+              </span>
+            </div>
+          </div>
+          {(isLive || isFinal) && hasScores && (
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+              {fixture.awayScore}
             </span>
           )}
         </div>
@@ -1014,23 +1014,25 @@ function WcDesktopMergedPanel({
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
 
-      {/* ── Col 1: MONEYLINE — AWAY top row, HOME bottom row ──────────────────────── */}
+      {/* ── Col 1: MONEYLINE — HOME top row, AWAY bottom row (matches DK convention) ─── */}
       {/* [LOG] ML column: 3-way ROI via threeWayBook/threeWayModel — all H/D/A in denominator */}
+      {/* [NOTE] WcMktCol renders 'away' prop as top row, 'home' prop as bottom row.             */}
+      {/* [NOTE] DK shows home on top, away on bottom — so home odds go into awayBookNum (top).  */}
       <WcMktCol
         title="MONEYLINE"
-        awayLabel={awayFifaCode}
-        homeLabel={homeFifaCode}
-        awayBookNum={dkOdds?.away}
-        homeBookNum={dkOdds?.home}
-        awayModelNum={modelOdds?.away}
-        homeModelNum={modelOdds?.home}
+        awayLabel={homeFifaCode}
+        homeLabel={awayFifaCode}
+        awayBookNum={dkOdds?.home}
+        homeBookNum={dkOdds?.away}
+        awayModelNum={modelOdds?.home}
+        homeModelNum={modelOdds?.away}
         singleRow={false}
-        awayTickets={mlSplits.awayTickets}
-        homeTickets={mlSplits.homeTickets}
-        awayMoney={mlSplits.awayMoney}
-        homeMoney={mlSplits.homeMoney}
-        awayColor={awayColors.primary}
-        homeColor={homeColors.primary}
+        awayTickets={mlSplits.homeTickets}
+        homeTickets={mlSplits.awayTickets}
+        awayMoney={mlSplits.homeMoney}
+        homeMoney={mlSplits.awayMoney}
+        awayColor={homeColors.primary}
+        homeColor={awayColors.primary}
         threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
           ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
         threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
@@ -1226,15 +1228,18 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         : calculateRoi(modelOdds.underOdds, dkOdds.underOdds, dkOdds.overOdds))
     : NaN;
   // ── BetCellSide builders ─────────────────────────────────────────────────────
+  // [DISPLAY] DK convention: HOME on top, AWAY on bottom.
+  // BetCell renders 'away' prop as top row and 'home' prop as bottom row.
+  // So we pass home odds → away prop (top) and away odds → home prop (bottom).
   const mlAway: BetCellSide = {
-    bookLine: '', bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
-    modelLine: '', modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
-    edgePP: awayMlEdgePP,
-  };
-  const mlHome: BetCellSide = {
     bookLine: '', bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
     modelLine: '', modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
     edgePP: homeMlEdgePP,
+  };
+  const mlHome: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
+    edgePP: awayMlEdgePP,
   };
   const totalOver: BetCellSide = {
     bookLine: `O${totalLine}`, bookJuice: fmtAmerican(dkOdds?.overOdds) ?? '—',
