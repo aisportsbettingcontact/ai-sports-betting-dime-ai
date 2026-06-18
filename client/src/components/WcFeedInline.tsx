@@ -243,8 +243,18 @@ function fmtKickoff(kickoffUtc: Date | string | null | undefined): string {
   });
 }
 
+/**
+ * todayStr — returns the effective feed date using the same 11:00 UTC cutoff
+ * gate as CalendarPicker.todayUTC().  This ensures late-night UTC matches
+ * (e.g. kickoff at 01:00 UTC = 9 PM EDT) remain on the correct local date
+ * and do not disappear from the feed after midnight UTC.
+ *
+ * [FIX] Previously used raw `new Date().toISOString().split('T')[0]` which
+ * returned the UTC calendar date with no cutoff awareness, causing matches
+ * with kickoff_utc crossing midnight UTC to vanish from todayWithOdds.
+ */
 function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
+  return todayUTC();
 }
 
 export function getDefaultWcDate(): string {
@@ -1633,6 +1643,9 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
 // ─── Projections Feed ─────────────────────────────────────────────────────────
 
 function WcProjectionsFeed({ date }: { date: string }) {
+  // [FIX] Use todayStr() which wraps todayUTC() — cutoff-aware effective feed date.
+  // This prevents late-night UTC matches (e.g. MEX vs KOR at 01:00 UTC = June 18 EDT)
+  // from being missed after midnight UTC when raw ISO date would return June 19.
   const today = todayStr();
   const isTodayDate = date === today;
 
