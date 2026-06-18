@@ -636,39 +636,44 @@ function WcMktCol({
   // ── Edge detection — canonical EDGE_THRESHOLD_PP=1.5 from edgeUtils ─────────
   // FORMULA: edgePP = (modelImplied - bookImplied) * 100  [percentage points]
   // THRESHOLD: 1.5pp minimum (matches MLB GameCard exactly)
-  // ROI: calculateRoi(modelML, bookML, bookOppML) for display label
+  // ROI: 3-way EV when threeWayBook/threeWayModel provided; 2-way for TOTAL
   //
-  // [LOG] WcMktCol edge detection: per-side pp values and threshold gate
-  const awayEdgePP: number = (awayBookNum != null && awayModelNum != null)
-    ? calculateEdge(awayBookNum, awayModelNum)
-    : NaN;
-  const homeEdgePP: number = (!singleRow && homeBookNum != null && homeModelNum != null)
-    ? calculateEdge(homeBookNum, homeModelNum)
-    : NaN;
-
-  const awayHasEdge = !isNaN(awayEdgePP) && awayEdgePP >= EDGE_THRESHOLD_PP;
-  const homeHasEdge = !singleRow && !isNaN(homeEdgePP) && homeEdgePP >= EDGE_THRESHOLD_PP;
-
-  // ROI computation for display
-  // [LOG] WcMktCol:ROI — 3-way path used when threeWayBook+threeWayModel provided (ML, DRAW)
-  //                    — 2-way path used for TOTAL (no draw outcome)
+  // [LOG] WcMktCol: 3-way path used for ML + DRAW (all H/D/A in denominator)
+  // [LOG] WcMktCol: 2-way path used for TOTAL (no draw in O/U market)
+  //
+  // STEP 1: Compute 3-way calc first (when available) — single source of truth
   let awayRoiPct: number = NaN;
   let homeRoiPct: number = NaN;
   let drawRoiPct: number = NaN;
-
+  let awayEdgePP: number = NaN;
+  let homeEdgePP: number = NaN;
   if (threeWayBook && threeWayModel) {
-    // Full 3-way EV: normalize model probabilities across all 3 outcomes
+    // Full 3-way EV: normalize model + book probs across all 3 outcomes (H/D/A)
     const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
-    awayRoiPct  = calc3.away.roiPct;
-    homeRoiPct  = calc3.home.roiPct;
-    drawRoiPct  = calc3.draw.roiPct;
+    // [STATE] Edge pp from 3-way fair probs -- used for threshold gate AND label
+    awayEdgePP = calc3.away.edgePP;
+    homeEdgePP = singleRow ? NaN : calc3.home.edgePP;
+    awayRoiPct = calc3.away.roiPct;
+    homeRoiPct = calc3.home.roiPct;
+    drawRoiPct = calc3.draw.roiPct;
     console.log(
-      `[WcMktCol:3WayROI] title=${title}` +
-      ` | [STATE] awayFair=${(calc3.away.modelFairProb*100).toFixed(2)}% drawFair=${(calc3.draw.modelFairProb*100).toFixed(2)}% homeFair=${(calc3.home.modelFairProb*100).toFixed(2)}%` +
-      ` | [OUTPUT] awayRoi=${awayRoiPct.toFixed(2)}% drawRoi=${drawRoiPct.toFixed(2)}% homeRoi=${homeRoiPct.toFixed(2)}%`
+      `[WcMktCol:3WayCalc] title=${title}` +
+      ` | [STATE] bookFair: H=${(calc3.home.bookFairProb*100).toFixed(2)}% D=${(calc3.draw.bookFairProb*100).toFixed(2)}% A=${(calc3.away.bookFairProb*100).toFixed(2)}%` +
+      ` | [STATE] modelFair: H=${(calc3.home.modelFairProb*100).toFixed(2)}% D=${(calc3.draw.modelFairProb*100).toFixed(2)}% A=${(calc3.away.modelFairProb*100).toFixed(2)}%` +
+      ` | [OUTPUT] edgePP: H=${isNaN(homeEdgePP)?'NaN':homeEdgePP.toFixed(2)}pp D=${calc3.draw.edgePP.toFixed(2)}pp A=${awayEdgePP.toFixed(2)}pp` +
+      ` | [OUTPUT] roi: H=${homeRoiPct.toFixed(2)}% D=${drawRoiPct.toFixed(2)}% A=${awayRoiPct.toFixed(2)}%`
     );
   } else {
-    // 2-way ROI for TOTAL (over/under) — no draw outcome
+    // 2-way path for TOTAL (over/under -- no draw outcome)
+    awayEdgePP = (awayBookNum != null && awayModelNum != null)
+      ? calculateEdge(awayBookNum, awayModelNum) : NaN;
+    homeEdgePP = (!singleRow && homeBookNum != null && homeModelNum != null)
+      ? calculateEdge(homeBookNum, homeModelNum) : NaN;
+  }
+  const awayHasEdge = !isNaN(awayEdgePP) && awayEdgePP >= EDGE_THRESHOLD_PP;
+  const homeHasEdge = !singleRow && !isNaN(homeEdgePP) && homeEdgePP >= EDGE_THRESHOLD_PP;
+  // STEP 2: 2-way ROI for TOTAL (when threeWayBook not provided)
+  if (!threeWayBook || !threeWayModel) {
     if (awayHasEdge && homeBookNum != null && awayBookNum != null && awayModelNum != null) {
       awayRoiPct = calculateRoi(awayModelNum, awayBookNum, homeBookNum);
     }
@@ -676,7 +681,6 @@ function WcMktCol({
       homeRoiPct = calculateRoi(homeModelNum, homeBookNum, awayBookNum);
     }
   }
-
   // For DRAW singleRow: use drawRoiPct if 3-way available, else awayRoiPct (draw odds in away slot)
   const effectiveAwayRoi = singleRow && !isNaN(drawRoiPct) ? drawRoiPct : awayRoiPct;
 
@@ -1155,11 +1159,43 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const awayName = fixture.awayTeam?.name ?? awayFifaCode;
   const homeName = fixture.homeTeam?.name ?? homeFifaCode;
 
-  // ── Edge detection: ML ───────────────────────────────────────────────────────
-  const awayMlEdgePP = (dkOdds?.away != null && modelOdds?.away != null)
-    ? calculateEdge(dkOdds.away, modelOdds.away) : NaN;
-  const homeMlEdgePP = (dkOdds?.home != null && modelOdds?.home != null)
-    ? calculateEdge(dkOdds.home, modelOdds.home) : NaN;
+  // ── 3-way calc: SINGLE SOURCE OF TRUTH for ML + DRAW edge pp AND ROI ──────────
+  // [LOG] All ML and DRAW edge detection uses 3-way no-vig fair probs.
+  // [LOG] Raw calculateEdge() is NOT used for ML/DRAW — it ignores the draw outcome.
+  // [LOG] TOTAL uses 2-way calculateEdge (over/under — no draw in that market).
+  const has3WayOdds = dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null
+    && modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null;
+  // [STATE] All ML/DRAW edge pp and ROI computed from calc3 (3-way no-vig fair probs)
+  let awayMlEdgePP = NaN;
+  let homeMlEdgePP = NaN;
+  let drawEdgePP   = NaN;
+  let mlAwayRoiPct = NaN;
+  let mlHomeRoiPct = NaN;
+  let drawRoiPct   = NaN;
+  let mlBestRoiPct = NaN;
+  if (has3WayOdds) {
+    const threeWayBook:  ThreeWayOdds = { home: dkOdds!.home!, draw: dkOdds!.draw!, away: dkOdds!.away! };
+    const threeWayModel: ThreeWayOdds = { home: modelOdds!.home!, draw: modelOdds!.draw!, away: modelOdds!.away! };
+    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
+    // [STATE] 3-way fair prob edge pp — used for threshold gate AND ROI label
+    awayMlEdgePP = calc3.away.edgePP;
+    homeMlEdgePP = calc3.home.edgePP;
+    drawEdgePP   = calc3.draw.edgePP;
+    mlAwayRoiPct = calc3.away.roiPct;
+    mlHomeRoiPct = calc3.home.roiPct;
+    drawRoiPct   = calc3.draw.roiPct;
+    // [STATE] Best ML ROI = ROI of the side with the higher 3-way edge pp (HOME vs AWAY only)
+    mlBestRoiPct = awayMlEdgePP >= homeMlEdgePP ? mlAwayRoiPct : mlHomeRoiPct;
+    console.log(
+      `[WcMobileOddsPanel:3WayCalc] fixture=${fixture.fixtureId}` +
+      ` | [STATE] bookFair: H=${(calc3.home.bookFairProb*100).toFixed(2)}% D=${(calc3.draw.bookFairProb*100).toFixed(2)}% A=${(calc3.away.bookFairProb*100).toFixed(2)}%` +
+      ` | [STATE] modelFair: H=${(calc3.home.modelFairProb*100).toFixed(2)}% D=${(calc3.draw.modelFairProb*100).toFixed(2)}% A=${(calc3.away.modelFairProb*100).toFixed(2)}%` +
+      ` | [OUTPUT] edgePP: H=${homeMlEdgePP.toFixed(2)}pp D=${drawEdgePP.toFixed(2)}pp A=${awayMlEdgePP.toFixed(2)}pp` +
+      ` | [OUTPUT] roi: H=${mlHomeRoiPct.toFixed(2)}% D=${drawRoiPct.toFixed(2)}% A=${mlAwayRoiPct.toFixed(2)}%` +
+      ` | [VERIFY] mlBestRoi=${mlBestRoiPct.toFixed(2)}%`
+    );
+  }
+  // ── ML edge label (HOME vs AWAY only — DRAW is in its own column) ─────────────
   const mlBestEdgePP = Math.max(
     isNaN(awayMlEdgePP) ? -Infinity : awayMlEdgePP,
     isNaN(homeMlEdgePP) ? -Infinity : homeMlEdgePP,
@@ -1168,8 +1204,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const mlEdgeLabel = (mlBestEdgePPFinal >= EDGE_THRESHOLD_PP)
     ? (awayMlEdgePP >= homeMlEdgePP ? `${awayName} ML` : `${homeName} ML`)
     : undefined;
-
-  // ── Edge detection: TOTAL ────────────────────────────────────────────────────
+  // ── TOTAL edge detection (2-way — no draw in over/under market) ──────────────
   const overEdgePP = (dkOdds?.overOdds != null && modelOdds?.overOdds != null)
     ? calculateEdge(dkOdds.overOdds, modelOdds.overOdds) : NaN;
   const underEdgePP = (dkOdds?.underOdds != null && modelOdds?.underOdds != null)
@@ -1182,47 +1217,14 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const totalEdgeLabel = (totalBestEdgePPFinal >= EDGE_THRESHOLD_PP)
     ? (overEdgePP >= underEdgePP ? `O${totalLine}` : `U${totalLine}`)
     : undefined;
-
-  // ── Edge detection: DRAW ─────────────────────────────────────────────────────
-  const drawEdgePP = (dkOdds?.draw != null && modelOdds?.draw != null)
-    ? calculateEdge(dkOdds.draw, modelOdds.draw) : NaN;
+  // ── DRAW edge label (from 3-way edgePP computed above) ────────────────────────
   const drawEdgeLabel = (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? 'DRAW' : undefined;
-
-  // ── 3-way ROI computation for ML and DRAW ────────────────────────────────────
-  // [LOG] WcMobileOddsPanel:3WayROI — all 3 outcomes (H/D/A) in denominator
-  // [LOG] TOTAL uses 2-way ROI (over/under — no draw outcome)
-  const has3WayOdds = dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null
-    && modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null;
-
-  let mlAwayRoiPct = NaN;
-  let mlHomeRoiPct = NaN;
-  let drawRoiPct   = NaN;
-  let mlBestRoiPct = NaN;
-
-  if (has3WayOdds) {
-    const threeWayBook:  ThreeWayOdds = { home: dkOdds!.home!, draw: dkOdds!.draw!, away: dkOdds!.away! };
-    const threeWayModel: ThreeWayOdds = { home: modelOdds!.home!, draw: modelOdds!.draw!, away: modelOdds!.away! };
-    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
-    mlAwayRoiPct = calc3.away.roiPct;
-    mlHomeRoiPct = calc3.home.roiPct;
-    drawRoiPct   = calc3.draw.roiPct;
-    // Best ML ROI = ROI of the side with the higher edge pp
-    mlBestRoiPct = awayMlEdgePP >= homeMlEdgePP ? mlAwayRoiPct : mlHomeRoiPct;
-    console.log(
-      `[WcMobileOddsPanel:3WayROI] fixture=${fixture.fixtureId}` +
-      ` | [STATE] awayFair=${(calc3.away.modelFairProb*100).toFixed(2)}% drawFair=${(calc3.draw.modelFairProb*100).toFixed(2)}% homeFair=${(calc3.home.modelFairProb*100).toFixed(2)}%` +
-      ` | [OUTPUT] mlAwayRoi=${mlAwayRoiPct.toFixed(2)}% mlHomeRoi=${mlHomeRoiPct.toFixed(2)}% drawRoi=${drawRoiPct.toFixed(2)}%` +
-      ` | [VERIFY] mlBestRoi=${mlBestRoiPct.toFixed(2)}%`
-    );
-  }
-
-  // 2-way ROI for TOTAL
+  // ── 2-way ROI for TOTAL ───────────────────────────────────────────────────────
   const totalBestRoiPct = (totalBestEdgePPFinal >= EDGE_THRESHOLD_PP && dkOdds?.overOdds != null && dkOdds?.underOdds != null && modelOdds?.overOdds != null && modelOdds?.underOdds != null)
     ? (overEdgePP >= underEdgePP
         ? calculateRoi(modelOdds.overOdds, dkOdds.overOdds, dkOdds.underOdds)
         : calculateRoi(modelOdds.underOdds, dkOdds.underOdds, dkOdds.overOdds))
     : NaN;
-
   // ── BetCellSide builders ─────────────────────────────────────────────────────
   const mlAway: BetCellSide = {
     bookLine: '', bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
