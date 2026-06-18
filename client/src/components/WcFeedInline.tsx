@@ -731,67 +731,84 @@ function WcMktCol({
 
   // [LOG] WcMktCol render state — superseded by WcMktCol:EdgeDetect above
 
+  // ── MLB-identical SubCol: line (dim) + juice (bold) stacked ──────────────────────────────
+  const SubCol = ({ line, juice, isBook: isBookCol, hasEdge: subEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
+    const juiceColor = isBookCol
+      ? 'rgba(255,255,255,0.90)'
+      : subEdge ? '#39FF14' : 'rgba(255,255,255,0.90)';
+    const isMLCol = !line;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+        {isMLCol
+          ? <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>
+          : <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+        }
+        <span style={{ fontSize: 'clamp(11px,3.5vw,14px)', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
+      </div>
+    );
+  };
+  const TeamRow = ({ bookLine, bookJuice, modelLine, modelJuice, modelHasEdge }: { bookLine: string; bookJuice: string; modelLine: string; modelJuice: string; modelHasEdge: boolean }) => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '4px 3px' }}>
+      <SubCol line={bookLine}  juice={bookJuice}  isBook={true}  hasEdge={false} />
+      <SubCol line={modelLine} juice={modelJuice} isBook={false} hasEdge={modelHasEdge} />
+    </div>
+  );
+  const roiStr = hasEdge
+    ? (!isNaN(edgeDisplayRoi) ? formatRoi(edgeDisplayRoi) : `+${edgeDisplayPP.toFixed(2)}pp`)
+    : 'NO EDGE';
+  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
+
   return (
     <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
-      {/* Section title */}
+      {/* Section title — centered with flanking rules */}
       <div className="flex items-center gap-1" style={{ marginBottom: compact ? 3 : 4 }}>
         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         <span style={titleFs}>{title}</span>
         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
       </div>
 
-      {/* BOOK / MODEL column headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 3 : 4 }}>
-        <span className="text-center" style={{ ...colHdrFs, color: '#FFFFFF' }}>BOOK</span>
-        <span className="text-center" style={{ ...colHdrFs, color: '#39FF14' }}>MODEL</span>
-      </div>
-
-      {/* Away row (or single row for DRAW) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 2 : 3 }}>
-        {/* Away label */}
-        <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginBottom: 1 }}>
-          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,9px)' : 'clamp(9px,0.75vw,11px)', color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-            {awayLabel}
-          </span>
+      {/* ── MLB-identical cell container ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
+        {/* BOOK / MODEL header — both muted white, matching MLB exactly */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
+          <span style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+          <span style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
         </div>
-        <OddsCell mainValue={awayBook}  isBook={true}  isEdge={awayHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-        <OddsCell mainValue={awayModel} isBook={false} isEdge={awayHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-      </div>
 
-      {/* Home row — hidden for singleRow (DRAW) */}
-      {!singleRow && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 6px', marginBottom: compact ? 2 : 3 }}>
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', marginBottom: 1 }}>
-            <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,9px)' : 'clamp(9px,0.75vw,11px)', color: 'rgba(255,255,255,0.55)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-              {homeLabel}
-            </span>
-          </div>
-          <OddsCell mainValue={homeBook}  isBook={true}  isEdge={homeHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-          <OddsCell mainValue={homeModel} isBook={false} isEdge={homeHasEdge} size={compact ? 'sm' : 'md'} wrapperStyle={{ justifySelf: 'center', width: '100%' }} />
-        </div>
-      )}
+        {/* Away / Over / Draw row (top) */}
+        <TeamRow
+          bookLine={title === 'TOTAL' ? awayLabel : ''}
+          bookJuice={awayBook}
+          modelLine={title === 'TOTAL' ? awayLabel : ''}
+          modelJuice={awayModel}
+          modelHasEdge={awayHasEdge}
+        />
 
-      {/* Thin separator */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
+        {/* Divider — hidden for singleRow (DRAW) */}
+        {!singleRow && <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />}
 
-      {/* Edge detection banner — tier-based color from getEdgeColor (matches MLB GameCard exactly) */}
-      <div style={{
-        marginTop: compact ? 3 : 4,
-        padding: compact ? '3px 6px' : '4px 8px',
-        borderRadius: 8,
-        background: hasEdge ? `${edgeColor}14` : 'rgba(255,255,255,0.04)',
-        border: hasEdge ? `1px solid ${edgeColor}40` : '1px solid rgba(255,255,255,0.08)',
-        textAlign: 'center',
-      }}>
-        {hasEdge ? (
-          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 700, color: edgeColor, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-            {edgeLabel} {!isNaN(edgeDisplayRoi) ? formatRoi(edgeDisplayRoi) : `+${edgeDisplayPP.toFixed(2)}pp`}
-          </span>
-        ) : (
-          <span style={{ fontSize: compact ? 'clamp(8px,1.8vw,10px)' : 'clamp(9px,0.8vw,11px)', fontWeight: 600, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
-            NO EDGE
-          </span>
+        {/* Home / Under row (bottom) — hidden for singleRow (DRAW) */}
+        {!singleRow && (
+          <TeamRow
+            bookLine={title === 'TOTAL' ? homeLabel : ''}
+            bookJuice={homeBook}
+            modelLine={title === 'TOTAL' ? homeLabel : ''}
+            modelJuice={homeModel}
+            modelHasEdge={homeHasEdge}
+          />
         )}
+
+        {/* ROI footer — exact MLB MobileGameCard footer (borderTop, two spans, no pill border) */}
+        <div style={{ borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
+          {hasEdge && edgeLabel && (
+            <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>
+              {edgeLabel}
+            </span>
+          )}
+          <span style={{ fontSize: 7.5, fontWeight: hasEdge ? 800 : 400, color: roiColor, letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>
+            {roiStr}
+          </span>
+        </div>
       </div>
 
       {/* Splits bars — shown only on desktop (not compact) */}
