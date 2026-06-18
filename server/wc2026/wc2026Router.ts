@@ -282,7 +282,28 @@ export const wc2026Router = router({
   // ─── Today's fixtures with DK 1X2 odds (main page feed) ──────────────────
   todayWithOdds: publicProcedure.query(async () => {
     const db = await getDb();
-    const today = new Date().toISOString().split("T")[0];
+    // [FIX] Use the same 11:00 UTC cutoff gate as CalendarPicker.todayUTC().
+    // Raw `new Date().toISOString().split('T')[0]` returns the UTC calendar date,
+    // which causes late-night matches (kickoff_utc crossing midnight UTC, e.g.
+    // MEX vs KOR at 01:00 UTC = June 18 EDT) to disappear from todayWithOdds
+    // after midnight UTC because their match_date is the local date (June 18)
+    // but the server was computing today as June 19.
+    //
+    // The fix: if the current UTC hour is before 11:00 (the feed cutoff), use
+    // yesterday's date — matching the exact logic in CalendarPicker.todayUTC().
+    const nowUtc = new Date();
+    const FEED_CUTOFF_UTC_HOUR = 11;
+    const isBeforeCutoff = nowUtc.getUTCHours() < FEED_CUTOFF_UTC_HOUR;
+    let today: string;
+    if (isBeforeCutoff) {
+      // Before 11:00 UTC — use previous calendar day (same as client CalendarPicker)
+      const prev = new Date(nowUtc);
+      prev.setUTCDate(prev.getUTCDate() - 1);
+      today = prev.toISOString().split("T")[0];
+    } else {
+      today = nowUtc.toISOString().split("T")[0];
+    }
+    console.log(`[wc2026.todayWithOdds] utcHour=${nowUtc.getUTCHours()} isBeforeCutoff=${isBeforeCutoff} effectiveDate=${today}`);
 
     const fixtures = await db
       .select()
