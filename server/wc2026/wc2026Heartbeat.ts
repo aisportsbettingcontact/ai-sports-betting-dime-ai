@@ -32,6 +32,7 @@ import { and, gte, lte, eq } from "drizzle-orm";
 import { scrapeWc2026Odds } from "./wc2026OddsScraper";
 import { scrapeWc2026DkSplits } from "./wc2026DkSplitsScraper";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
+import { ingestWc2026EspnResults } from "./wc2026EspnResultsIngester";
 
 // ─── Closing line window: 90 minutes before kickoff ──────────────────────────
 const CLOSING_WINDOW_MS = 90 * 60 * 1000;
@@ -151,14 +152,50 @@ async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
   }
 }
 
+// ─── Handler: ESPN results ingestion ─────────────────────────────────────────
+async function handleWc2026EspnResults(req: Request, res: Response): Promise<void> {
+  const now = new Date();
+  // Default to today and yesterday (to catch late-finishing matches)
+  const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
+  const forceReingest = req.body?.forceReingest ?? false;
+
+  console.log(`[WC2026HB] [INPUT] /wc2026-espn-results triggered at ${now.toISOString()} dateStr=${dateStr} forceReingest=${forceReingest}`);
+
+  try {
+    const result = await ingestWc2026EspnResults({ dateStr, forceReingest });
+
+    console.log(
+      `[WC2026HB] [OUTPUT] espn-results: fixturesUpdated=${result.fixturesUpdated} statsWritten=${result.statsWritten} eventsWritten=${result.eventsWritten} lineupsWritten=${result.lineupsWritten} errors=${result.errors.length}`
+    );
+
+    const pass = result.errors.length === 0;
+    console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-espn-results`);
+
+    res.json({
+      ok: pass,
+      date: dateStr,
+      fixturesUpdated: result.fixturesUpdated,
+      statsWritten: result.statsWritten,
+      eventsWritten: result.eventsWritten,
+      lineupsWritten: result.lineupsWritten,
+      matchSummaries: result.matchSummaries,
+      errors: result.errors,
+    });
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-espn-results unhandled: ${String(err)}`);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+}
+
 // ─── Registration ─────────────────────────────────────────────────────────────
 export function registerWc2026Heartbeats(app: Express): void {
   // Manus Heartbeat requires /api/scheduled/* paths
   app.post("/api/scheduled/wc2026-odds", handleWc2026Odds);
   app.post("/api/scheduled/wc2026-splits", handleWc2026Splits);
   app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
+  app.post("/api/scheduled/wc2026-espn-results", handleWc2026EspnResults);
 
   console.log(
-    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results"
   );
 }
