@@ -38,7 +38,8 @@ import { CalendarDays, MapPin, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { formatDateHeader } from "@/lib/gameUtils";
-import { calculateEdge, calculateRoi, formatRoi, getEdgeColor, EDGE_THRESHOLD_PP } from "@/lib/edgeUtils";
+import { calculateEdge, calculateRoi, formatRoi, getEdgeColor, EDGE_THRESHOLD_PP, calculate3WayResult } from "@/lib/edgeUtils";
+import type { ThreeWayOdds } from "@/lib/edgeUtils";
 import { BetCell } from "@/components/BetCell";
 import type { BetCellSide } from "@/components/BetCell";
 
@@ -604,6 +605,8 @@ function WcMktCol({
   awayColor = '#1a4a8a',
   homeColor = '#c84b0c',
   compact = false,
+  threeWayBook = null,
+  threeWayModel = null,
 }: {
   title: string;
   awayLabel: string;
@@ -620,6 +623,10 @@ function WcMktCol({
   awayColor?: string;
   homeColor?: string;
   compact?: boolean;
+  // Full 3-way odds context for soccer ML and DRAW markets
+  // When provided, ROI is computed via calculate3WayResult (all 3 outcomes in denominator)
+  threeWayBook?: ThreeWayOdds | null;
+  threeWayModel?: ThreeWayOdds | null;
 }) {
   const awayBook  = fmtAmerican(awayBookNum);
   const homeBook  = fmtAmerican(homeBookNum);
@@ -642,14 +649,36 @@ function WcMktCol({
   const awayHasEdge = !isNaN(awayEdgePP) && awayEdgePP >= EDGE_THRESHOLD_PP;
   const homeHasEdge = !singleRow && !isNaN(homeEdgePP) && homeEdgePP >= EDGE_THRESHOLD_PP;
 
-  // ROI computation for display — requires opposite side book odds
-  // For DRAW (singleRow) there is no opposite side, so ROI is NaN
-  const awayRoiPct: number = (awayHasEdge && homeBookNum != null && awayBookNum != null && awayModelNum != null)
-    ? calculateRoi(awayModelNum, awayBookNum, homeBookNum)
-    : NaN;
-  const homeRoiPct: number = (homeHasEdge && awayBookNum != null && homeBookNum != null && homeModelNum != null)
-    ? calculateRoi(homeModelNum, homeBookNum, awayBookNum)
-    : NaN;
+  // ROI computation for display
+  // [LOG] WcMktCol:ROI — 3-way path used when threeWayBook+threeWayModel provided (ML, DRAW)
+  //                    — 2-way path used for TOTAL (no draw outcome)
+  let awayRoiPct: number = NaN;
+  let homeRoiPct: number = NaN;
+  let drawRoiPct: number = NaN;
+
+  if (threeWayBook && threeWayModel) {
+    // Full 3-way EV: normalize model probabilities across all 3 outcomes
+    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
+    awayRoiPct  = calc3.away.roiPct;
+    homeRoiPct  = calc3.home.roiPct;
+    drawRoiPct  = calc3.draw.roiPct;
+    console.log(
+      `[WcMktCol:3WayROI] title=${title}` +
+      ` | [STATE] awayFair=${(calc3.away.modelFairProb*100).toFixed(2)}% drawFair=${(calc3.draw.modelFairProb*100).toFixed(2)}% homeFair=${(calc3.home.modelFairProb*100).toFixed(2)}%` +
+      ` | [OUTPUT] awayRoi=${awayRoiPct.toFixed(2)}% drawRoi=${drawRoiPct.toFixed(2)}% homeRoi=${homeRoiPct.toFixed(2)}%`
+    );
+  } else {
+    // 2-way ROI for TOTAL (over/under) — no draw outcome
+    if (awayHasEdge && homeBookNum != null && awayBookNum != null && awayModelNum != null) {
+      awayRoiPct = calculateRoi(awayModelNum, awayBookNum, homeBookNum);
+    }
+    if (homeHasEdge && awayBookNum != null && homeBookNum != null && homeModelNum != null) {
+      homeRoiPct = calculateRoi(homeModelNum, homeBookNum, awayBookNum);
+    }
+  }
+
+  // For DRAW singleRow: use drawRoiPct if 3-way available, else awayRoiPct (draw odds in away slot)
+  const effectiveAwayRoi = singleRow && !isNaN(drawRoiPct) ? drawRoiPct : awayRoiPct;
 
   let edgeLabel: string | null = null;
   let edgeDisplayPP = NaN; // pp value used for color tier
@@ -657,12 +686,12 @@ function WcMktCol({
   if (awayHasEdge && homeHasEdge) {
     // Both sides have edge — show the stronger one (by pp)
     if (awayEdgePP >= homeEdgePP) {
-      edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = awayRoiPct;
+      edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = effectiveAwayRoi;
     } else {
       edgeLabel = homeLabel; edgeDisplayPP = homeEdgePP; edgeDisplayRoi = homeRoiPct;
     }
   } else if (awayHasEdge) {
-    edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = awayRoiPct;
+    edgeLabel = awayLabel; edgeDisplayPP = awayEdgePP; edgeDisplayRoi = effectiveAwayRoi;
   } else if (homeHasEdge) {
     edgeLabel = homeLabel; edgeDisplayPP = homeEdgePP; edgeDisplayRoi = homeRoiPct;
   }
@@ -862,7 +891,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           <div className="flex items-center gap-2">
             {/* Flag circle */}
             <div style={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 28, height: 28, borderRadius: '50%',
               background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
@@ -870,22 +899,22 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               <img
                 src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
                 alt={awayFifaCode}
-                style={{ width: 24, height: 16, objectFit: 'cover', borderRadius: 2 }}
+                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             </div>
             <div className="flex flex-col">
               {/* All screen sizes: full country name (never abbreviated FIFA code) */}
-              <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3.0vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 {awayTeam?.name ?? awayFifaCode}
               </span>
-              <span className="leading-none" style={{ fontSize: 'clamp(9px, 2.5vw, 12px)', color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
                 {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
               </span>
             </div>
           </div>
           {(isLive || isFinal) && hasScores && (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
               {fixture.awayScore}
             </span>
           )}
@@ -899,7 +928,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           <div className="flex items-center gap-2">
             {/* Flag circle */}
             <div style={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 28, height: 28, borderRadius: '50%',
               background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
@@ -907,22 +936,22 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               <img
                 src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
                 alt={homeFifaCode}
-                style={{ width: 24, height: 16, objectFit: 'cover', borderRadius: 2 }}
+                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             </div>
             <div className="flex flex-col">
               {/* All screen sizes: full country name (never abbreviated FIFA code) */}
-              <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3.0vw, 14px)', color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 {homeTeam?.name ?? homeFifaCode}
               </span>
-              <span className="leading-none" style={{ fontSize: 'clamp(9px, 2.5vw, 12px)', color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
+              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
                 {fixture.matchday ? `Matchday ${fixture.matchday}` : "\u00A0"}
               </span>
             </div>
           </div>
           {(isLive || isFinal) && hasScores && (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
               {fixture.homeScore}
             </span>
           )}
@@ -982,6 +1011,7 @@ function WcDesktopMergedPanel({
     <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
 
       {/* ── Col 1: MONEYLINE — AWAY top row, HOME bottom row ──────────────────────── */}
+      {/* [LOG] ML column: 3-way ROI via threeWayBook/threeWayModel — all H/D/A in denominator */}
       <WcMktCol
         title="MONEYLINE"
         awayLabel={awayFifaCode}
@@ -997,6 +1027,10 @@ function WcDesktopMergedPanel({
         homeMoney={mlSplits.homeMoney}
         awayColor={awayColors.primary}
         homeColor={homeColors.primary}
+        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
+          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
+        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
+          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
@@ -1022,6 +1056,7 @@ function WcDesktopMergedPanel({
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 3: DRAW — single row ─────────────────────────────────────────────── */}
+      {/* [LOG] DRAW column: awayBookNum=draw odds, threeWayBook provides full H/D/A context for ROI */}
       <WcMktCol
         title="DRAW"
         awayLabel="DRAW"
@@ -1033,6 +1068,10 @@ function WcDesktopMergedPanel({
         singleRow={true}
         awayColor="#888888"
         homeColor="#888888"
+        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
+          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
+        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
+          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
     </div>
@@ -1078,9 +1117,9 @@ function WcFixtureCard({
 
       {/* ── Mobile layout (< md) ── */}
       <div className="md:hidden w-full">
-        <div style={{ display: "grid", gridTemplateColumns: "clamp(140px, 38%, 180px) 1fr", width: "100%" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "clamp(120px, 32%, 150px) 1fr", width: "100%" }}>
           {/* Fixed score panel */}
-          <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)", minHeight: 120 }}>
+          <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
             <WcScorePanel fixture={fixture} />
           </div>
           {/* Scrollable odds panel */}
@@ -1149,6 +1188,41 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ? calculateEdge(dkOdds.draw, modelOdds.draw) : NaN;
   const drawEdgeLabel = (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? 'DRAW' : undefined;
 
+  // ── 3-way ROI computation for ML and DRAW ────────────────────────────────────
+  // [LOG] WcMobileOddsPanel:3WayROI — all 3 outcomes (H/D/A) in denominator
+  // [LOG] TOTAL uses 2-way ROI (over/under — no draw outcome)
+  const has3WayOdds = dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null
+    && modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null;
+
+  let mlAwayRoiPct = NaN;
+  let mlHomeRoiPct = NaN;
+  let drawRoiPct   = NaN;
+  let mlBestRoiPct = NaN;
+
+  if (has3WayOdds) {
+    const threeWayBook:  ThreeWayOdds = { home: dkOdds!.home!, draw: dkOdds!.draw!, away: dkOdds!.away! };
+    const threeWayModel: ThreeWayOdds = { home: modelOdds!.home!, draw: modelOdds!.draw!, away: modelOdds!.away! };
+    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
+    mlAwayRoiPct = calc3.away.roiPct;
+    mlHomeRoiPct = calc3.home.roiPct;
+    drawRoiPct   = calc3.draw.roiPct;
+    // Best ML ROI = ROI of the side with the higher edge pp
+    mlBestRoiPct = awayMlEdgePP >= homeMlEdgePP ? mlAwayRoiPct : mlHomeRoiPct;
+    console.log(
+      `[WcMobileOddsPanel:3WayROI] fixture=${fixture.fixtureId}` +
+      ` | [STATE] awayFair=${(calc3.away.modelFairProb*100).toFixed(2)}% drawFair=${(calc3.draw.modelFairProb*100).toFixed(2)}% homeFair=${(calc3.home.modelFairProb*100).toFixed(2)}%` +
+      ` | [OUTPUT] mlAwayRoi=${mlAwayRoiPct.toFixed(2)}% mlHomeRoi=${mlHomeRoiPct.toFixed(2)}% drawRoi=${drawRoiPct.toFixed(2)}%` +
+      ` | [VERIFY] mlBestRoi=${mlBestRoiPct.toFixed(2)}%`
+    );
+  }
+
+  // 2-way ROI for TOTAL
+  const totalBestRoiPct = (totalBestEdgePPFinal >= EDGE_THRESHOLD_PP && dkOdds?.overOdds != null && dkOdds?.underOdds != null && modelOdds?.overOdds != null && modelOdds?.underOdds != null)
+    ? (overEdgePP >= underEdgePP
+        ? calculateRoi(modelOdds.overOdds, dkOdds.overOdds, dkOdds.underOdds)
+        : calculateRoi(modelOdds.underOdds, dkOdds.underOdds, dkOdds.overOdds))
+    : NaN;
+
   // ── BetCellSide builders ─────────────────────────────────────────────────────
   const mlAway: BetCellSide = {
     bookLine: '', bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
@@ -1175,7 +1249,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     modelLine: '', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
     edgePP: drawEdgePP,
   };
-  // Draw has no home side — use a blank placeholder
+  // Draw has no home side — singleRow=true suppresses the home row in BetCell
   const drawHome: BetCellSide = {
     bookLine: '', bookJuice: '', modelLine: '', modelJuice: '', edgePP: NaN,
   };
@@ -1187,13 +1261,14 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ` totalBestEdge=${isNaN(totalBestEdgePPFinal) ? 'NaN' : totalBestEdgePPFinal.toFixed(2)}pp` +
     ` drawEdge=${isNaN(drawEdgePP) ? 'NaN' : drawEdgePP.toFixed(2)}pp` +
     ` | [OUTPUT] mlEdgeLabel=${mlEdgeLabel ?? 'NO EDGE'} totalEdgeLabel=${totalEdgeLabel ?? 'NO EDGE'} drawEdgeLabel=${drawEdgeLabel ?? 'NO EDGE'}` +
-    ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
+    ` | [OUTPUT] mlBestRoi=${isNaN(mlBestRoiPct) ? 'NaN' : mlBestRoiPct.toFixed(2)}% totalBestRoi=${isNaN(totalBestRoiPct) ? 'NaN' : totalBestRoiPct.toFixed(2)}% drawRoi=${isNaN(drawRoiPct) ? 'NaN' : drawRoiPct.toFixed(2)}%` +
+    ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null} has3WayOdds=${has3WayOdds}`
   );
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', width: '100%', minHeight: 120 }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', width: '100%' }}>
 
-      {/* Col 1: MONEYLINE */}
+      {/* Col 1: MONEYLINE — 3-way ROI via calculate3WayResult */}
       {/* [NOTE] Per-card ML/TOTAL/DRAW title spans removed — sticky column header provides these labels once at the top */}
       <BetCell
         title="ML"
@@ -1201,27 +1276,31 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         home={mlHome}
         edgeLabel={mlEdgeLabel}
         bestEdgePP={mlBestEdgePPFinal}
+        roiPct={mlBestRoiPct}
         size="sm"
       />
 
-      {/* Col 2: TOTAL */}
+      {/* Col 2: TOTAL — 2-way ROI (over/under, no draw) */}
       <BetCell
         title="TOTAL"
         away={totalOver}
         home={totalUnder}
         edgeLabel={totalEdgeLabel}
         bestEdgePP={totalBestEdgePPFinal}
+        roiPct={totalBestRoiPct}
         size="sm"
       />
 
-      {/* Col 3: DRAW */}
+      {/* Col 3: DRAW — singleRow=true (no home row), 3-way ROI */}
       <BetCell
         title="DRAW"
         away={drawAway}
         home={drawHome}
         edgeLabel={drawEdgeLabel}
         bestEdgePP={drawEdgePP}
+        roiPct={drawRoiPct}
         size="sm"
+        singleRow={true}
       />
 
     </div>
@@ -2067,7 +2146,7 @@ export function WcFeedInline({
         <div
           className="grid lg:hidden"
           style={{
-            gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
+            gridTemplateColumns: 'clamp(120px, 32%, 150px) 1fr',
             width: '100%',
             background: '#0f0f0f',
             borderBottom: '1px solid rgba(255,255,255,0.12)',

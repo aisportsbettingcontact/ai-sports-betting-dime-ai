@@ -238,3 +238,119 @@ export function formatRoi(roi: number): string {
   const sign = roi >= 0 ? '+' : '';
   return `${sign}${roi.toFixed(2)}% ROI`;
 }
+
+/**
+ * ThreeWayOdds — Full 3-outcome odds context for soccer ML/DRAW markets.
+ * All values are American odds (e.g. -180, +310, +500).
+ */
+export interface ThreeWayOdds {
+  home: number;
+  draw: number;
+  away: number;
+}
+
+/**
+ * ThreeWaySideResult — Per-side output from calculate3WayResult.
+ */
+export interface ThreeWaySideResult {
+  /** Model's fair probability for this side (normalized across all 3 outcomes). */
+  modelFairProb: number;
+  /** Book's fair probability for this side (normalized across all 3 outcomes). */
+  bookFairProb: number;
+  /** Edge in percentage points: (modelFairProb - bookFairProb) * 100 */
+  edgePP: number;
+  /** Expected ROI % if betting this side at book odds: (modelFairProb / bookFairProb - 1) * 100 */
+  roiPct: number;
+  /** True if edgePP >= EDGE_THRESHOLD_PP */
+  hasEdge: boolean;
+}
+
+/**
+ * calculate3WayResult — Full 3-way EV for soccer ML/DRAW markets.
+ *
+ * FORMULA:
+ *   1. Compute raw implied probabilities for all 3 sides (book and model).
+ *   2. Normalize each set across all 3 outcomes to get fair probabilities.
+ *   3. Per side: edgePP = (modelFairProb - bookFairProb) * 100
+ *   4. Per side: roiPct = (modelFairProb / bookFairProb - 1) * 100
+ *
+ * This is the correct formula for 3-way markets because:
+ *   - The book's vig is spread across all 3 outcomes (not just 2).
+ *   - Normalizing across all 3 gives the true no-vig fair price.
+ *   - The model's probabilities are also normalized to sum to 1.
+ *
+ * @param book  - Book's American odds for all 3 outcomes
+ * @param model - Model's American odds for all 3 outcomes
+ * @returns Per-side results for home, draw, and away.
+ */
+export function calculate3WayResult(
+  book: ThreeWayOdds,
+  model: ThreeWayOdds
+): { home: ThreeWaySideResult; draw: ThreeWaySideResult; away: ThreeWaySideResult } {
+  // [STEP] Convert to raw implied probabilities
+  const bHome = americanToImplied(book.home);
+  const bDraw = americanToImplied(book.draw);
+  const bAway = americanToImplied(book.away);
+  const mHome = americanToImplied(model.home);
+  const mDraw = americanToImplied(model.draw);
+  const mAway = americanToImplied(model.away);
+
+  // [STEP] Normalize to get fair probabilities (remove vig from all 3 outcomes)
+  const bTotal = bHome + bDraw + bAway;
+  const mTotal = mHome + mDraw + mAway;
+
+  const bookFairHome = bTotal > 0 ? bHome / bTotal : NaN;
+  const bookFairDraw = bTotal > 0 ? bDraw / bTotal : NaN;
+  const bookFairAway = bTotal > 0 ? bAway / bTotal : NaN;
+  const modelFairHome = mTotal > 0 ? mHome / mTotal : NaN;
+  const modelFairDraw = mTotal > 0 ? mDraw / mTotal : NaN;
+  const modelFairAway = mTotal > 0 ? mAway / mTotal : NaN;
+
+  // [STEP] Compute per-side edge and ROI
+  function sideResult(modelFair: number, bookFair: number): ThreeWaySideResult {
+    const edgePP = !isNaN(modelFair) && !isNaN(bookFair) ? (modelFair - bookFair) * 100 : NaN;
+    const roiPct = (!isNaN(modelFair) && !isNaN(bookFair) && bookFair > 0)
+      ? (modelFair / bookFair - 1) * 100 : NaN;
+    return {
+      modelFairProb: modelFair,
+      bookFairProb: bookFair,
+      edgePP,
+      roiPct,
+      hasEdge: !isNaN(edgePP) && edgePP >= EDGE_THRESHOLD_PP,
+    };
+  }
+
+  const result = {
+    home: sideResult(modelFairHome, bookFairHome),
+    draw: sideResult(modelFairDraw, bookFairDraw),
+    away: sideResult(modelFairAway, bookFairAway),
+  };
+
+  console.log(
+    '[calculate3WayResult]' +
+    ` | [INPUT] book=${JSON.stringify(book)} model=${JSON.stringify(model)}` +
+    ` | [STATE] bookFair H=${(bookFairHome*100).toFixed(2)}% D=${(bookFairDraw*100).toFixed(2)}% A=${(bookFairAway*100).toFixed(2)}%` +
+    ` | [STATE] modelFair H=${(modelFairHome*100).toFixed(2)}% D=${(modelFairDraw*100).toFixed(2)}% A=${(modelFairAway*100).toFixed(2)}%` +
+    ` | [OUTPUT] edgePP H=${result.home.edgePP.toFixed(2)}pp D=${result.draw.edgePP.toFixed(2)}pp A=${result.away.edgePP.toFixed(2)}pp` +
+    ` | [OUTPUT] roi H=${result.home.roiPct.toFixed(2)}% D=${result.draw.roiPct.toFixed(2)}% A=${result.away.roiPct.toFixed(2)}%` +
+    ` | [VERIFY] hasEdge H=${result.home.hasEdge} D=${result.draw.hasEdge} A=${result.away.hasEdge}`
+  );
+
+  return result;
+}
+
+/**
+ * calculate3WayRoi — Convenience wrapper for a single side from a 3-way market.
+ * @param side  - 'home' | 'draw' | 'away'
+ * @param book  - Book's American odds for all 3 outcomes
+ * @param model - Model's American odds for all 3 outcomes
+ * @returns ROI % for the specified side, or NaN if invalid.
+ */
+export function calculate3WayRoi(
+  side: 'home' | 'draw' | 'away',
+  book: ThreeWayOdds,
+  model: ThreeWayOdds
+): number {
+  return calculate3WayResult(book, model)[side].roiPct;
+}
+

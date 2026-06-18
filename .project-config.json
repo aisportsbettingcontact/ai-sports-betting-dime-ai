@@ -13,10 +13,10 @@
   "experiments": null,
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663397752079/MW3FicTy7ae3qrm8dx8Lua",
-    "access_key_id": "ASIAZV3A2ECZB5GU7JVM",
-    "secret_access_key": "TNDpxlZySdS6CTBAvEiwm0kHEARCpy8mn9SARNBK",
-    "session_token": "IQoJb3JpZ2luX2VjENb//////////wEaCXVzLWVhc3QtMSJGMEQCIHauMwjSYeu/EmSvOcyZ3Oa3rb74biF5yCW/QQREhJkeAiAL38jMr9wByEB84AEND6WVkyvE7bYIyoRR3VDcRePhcSr/Awie//////////8BEAQaDDY2NTM4NjA5ODg2NiIMPugVRj/wj4/crjfHKtMDtW/GaVfv4SNxxmV9iEm7Ca7ii6iRwqGxpw2h/APAlv0/qmNwDJONQFGh1KJT0/eek8+zQl50ck+p8xIbXNGCeqePW1iitdCtILSLDGZAWf3+5ACnLzgFIsY8tz5bNy49BxLcJN3tCkRpcnYnqYmbAN40ejQUncQZm03/L/CFOnj6wTTzydoNQG6wnCMADla7XoqpADe48J2HadaokqsGl4UDc4dOXmB1qhtS1gVv/aPLUoTuuIdfeD54LywT8GQsBHJuTvgQRrB/wBAN2HxDNUoOEw50RYFUvmWGj4vllIL0poIVrK1GRagFHTd4UntqQohGBsfpeT+b82Xsl774yVrh3b4B7c8rDMX1w0qlzewyaFUINvOjubC0agwsrtE62MN0NLdNr392JTTu0sXsl9qFlqn3eeLnybZewPE7pEQ3tnOLM0lDSOBJk17ob/sTDfyjjQRow+cUCA4xqnVmpiFRxQ8RmuOdl6OckTkaCrZrfD6DmJycLyT5dPelF+/L6cHyJgbQ/2XuXQ672DEUUMj2fRC1eAL24wjMKhKN9m4hnpStf4B94zz5UtE1Za6K4G1FlYMAIid7OvfMOVzHuTVMsGnevq0ZnwBPt+vEeHpQk7gwl/vN0QY6ngET+Gza0/p1t0CDj5loT3ZKhNNo/KyPYbLAgIGp3naBHOXgHj9XxB5H6fX6EDOtTTBgtN1NpFugRxZcITnrARU5sRkwOGdBj5dJFX6SCEb1IYdG+FTisNGwgRHx0vc+Bf14jaW14H24JO52Z2Dqt74zk3zB/IlW8t6BZnB6/DqPSFd4BpOyHI94lDVBxyVqeDrm4vfp2j5pAQNxI17yTQ==",
-    "expiration": "2026-06-18T17:09:43.000Z"
+    "access_key_id": "ASIAZV3A2ECZKO5O5Y4J",
+    "secret_access_key": "ZK/2qQIhNiA2cg8bpwD67i1ea8Y8Giaw96prwE7u",
+    "session_token": "IQoJb3JpZ2luX2VjENr//////////wEaCXVzLWVhc3QtMSJHMEUCIAWVXMgG3qOO3nuYMgVCbFOOqUXZ5xWIjY+j94aE4ycsAiEAv+NQM6/isd250wNeKNa3aU8o0NykZJviTiwqeKb2UBcq/wMIov//////////ARAEGgw2NjUzODYwOTg4NjYiDNObUSEytJsFbq9ItyrTAwgv14OMzOz4u8gBA18b2RPsSzlr5+blhXyvLIykGqHDn40JzoBqqmIM/X6zLMtAATjWkrVt4GrcyBkrRgHEXectaDMyUpqRbx9v0t4FCxhxp+udnZpI5niLCl7dzZm0Gl9R292vqEQf2rvj/UVarWfhlvzP+EtkeB8f62vhz5xKQkJu3LqfouYPgLJdBf/QkLRP3a4rqS8rGfuDrg4+2rAeuTUEn4qWCikfHVO1Yd6CZlisrIoUatVqTi2eZoWNQFfLa8yMoVmWfXquBmdm/nvyPiGudm+nYVQCw6hV4wEMoAbawNWU3+8tGtnwKwOpiACkBbTkHY1LaP0kCqaaM3Z+x1yfCA6HA+a0gNMEPQXgpEmrBgah+SGEFdNBSRJFGHZrPG1Mr2jK9vlFqWeND7AUZY0I7ptp0D1PTav/+lPm3LMaiFV63TO7Zl67DZbZCzUWpB2vYCwc/qu3sOyI0AOeDYfbKWQXwZWQdxMhGX4FiReKJGChObNRZYfpjs9oAoBd9OUa5vLLGAKnNQrYFfzjo+VXi9SelaUxO/v87RgUfSfJ80zLLJYDdPkE2ECK9o400HLF+xOrVgoPXCMLMSfFpeL/vKmTKbwxGN3u4Fg6apQZMLfuztEGOp0BK1h3nZsWbrKxlnVXj3sqKXdAXijgKBoBGI6Bgwe3bloezfDN3Gk5hdaUwR+zoWJ4OCgrqqru1r714YlkpN6T+VqQko4P7ggZs/OUIIcPU3sD/Zyj/NGfFqj3xyBRjBvWz+qh8eT2Nh8Rixf6BTAJcN6pyYRzoVmTWpJBTqqhq1wpjDE3T6KAvIsvp+H8B8o8Umyw8frPdxBcaZAKUQ==",
+    "expiration": "2026-06-18T21:15:35.000Z"
   },
   "name": "ai-sports-betting",
   "path": "/home/ubuntu/ai-sports-betting",

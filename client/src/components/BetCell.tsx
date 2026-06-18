@@ -10,12 +10,17 @@
  *   ├──────────────────────────────┤
  *   │  bookLine      │  modelLine  │  ← away/over row
  *   │  bookJuice     │  modelJuice │
- *   ├──────────────────────────────┤
+ *   ├──────────────────────────────┤  ← hidden when singleRow=true (DRAW)
  *   │  bookLine      │  modelLine  │  ← home/under row
  *   │  bookJuice     │  modelJuice │
  *   ├──────────────────────────────┤
  *   │  edgeLabel  +X.XX% ROI      │  ← footer
  *   └──────────────────────────────┘
+ *
+ * singleRow=true: hides the home row and divider (used for DRAW in soccer).
+ * roiPct: pre-computed ROI % from caller (3-way for ML/DRAW, 2-way for TOTAL).
+ *         When provided and hasEdge, displayed as "+X.XX% ROI" in footer.
+ *         Falls back to "+X.XXpp" display if not provided.
  */
 import React from 'react';
 import { getEdgeColor, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
@@ -31,16 +36,29 @@ export interface BetCellSide {
 }
 
 interface BetCellProps {
-  /** Market title: "SPREAD" | "TOTAL" | "ML" */
+  /** Market title: "SPREAD" | "TOTAL" | "ML" | "DRAW" */
   title: string;
   away: BetCellSide;
   home: BetCellSide;
   /** Best edge side label, e.g. "EDM -1.5", "U6.5", "CGY ML" */
   edgeLabel?: string;
-  /** Best edge PP across away/home for this market. Used for footer. */
+  /** Best edge PP across away/home for this market. Used for footer color tier. */
   bestEdgePP?: number;
+  /**
+   * Pre-computed ROI % from caller.
+   * - ML/DRAW: use calculate3WayResult (3-way no-vig)
+   * - TOTAL: use calculateRoi (2-way no-vig)
+   * When provided and hasEdge, displayed as "+X.XX% ROI" in footer.
+   * Falls back to "+X.XXpp" if NaN.
+   */
+  roiPct?: number;
   /** Visual size: 'sm' = mobile compressed, 'md' = tablet/desktop */
   size?: 'sm' | 'md';
+  /**
+   * singleRow=true: hides the home row and divider.
+   * Used for DRAW in soccer — only one odds line to display.
+   */
+  singleRow?: boolean;
 }
 
 export const BetCell = React.memo(function BetCell({
@@ -48,12 +66,16 @@ export const BetCell = React.memo(function BetCell({
   home,
   edgeLabel,
   bestEdgePP = NaN,
+  roiPct,
   size = 'sm',
+  singleRow = false,
 }: BetCellProps) {
   const hasEdge = !isNaN(bestEdgePP) && bestEdgePP >= EDGE_THRESHOLD_PP;
   const edgeColor = hasEdge ? getEdgeColor(bestEdgePP) : undefined;
 
-  const juiceSize = size === 'sm' ? 14 : 16;
+  // [LOG] BetCell: responsive font sizes matching MLB MobileGameCard exactly
+  // juiceSizeStr uses CSS clamp — responsive on all screen sizes
+  const juiceSizeStr = size === 'sm' ? 'clamp(11px, 3.5vw, 14px)' : 'clamp(13px, 1.2vw, 16px)';
   const lineSize = size === 'sm' ? 9 : 10;
   const headerSize = size === 'sm' ? 6.5 : 8;
   const footerSize = size === 'sm' ? 7 : 8;
@@ -61,7 +83,25 @@ export const BetCell = React.memo(function BetCell({
   const padding = size === 'sm' ? '3px 4px' : '5px 7px';
 
   const awayEdge = !isNaN(away.edgePP) && away.edgePP >= EDGE_THRESHOLD_PP;
-  const homeEdge = !isNaN(home.edgePP) && home.edgePP >= EDGE_THRESHOLD_PP;
+  const homeEdge = !singleRow && !isNaN(home.edgePP) && home.edgePP >= EDGE_THRESHOLD_PP;
+
+  // [LOG] BetCell:EdgeDetect — per-side edge flags
+  console.log(
+    `[BetCell:EdgeDetect] title=${edgeLabel ?? 'N/A'}` +
+    ` | [STATE] awayEdgePP=${isNaN(away.edgePP) ? 'NaN' : away.edgePP.toFixed(2)}pp` +
+    ` homeEdgePP=${singleRow ? 'SINGLE_ROW' : (isNaN(home.edgePP) ? 'NaN' : home.edgePP.toFixed(2) + 'pp')}` +
+    ` bestEdgePP=${isNaN(bestEdgePP) ? 'NaN' : bestEdgePP.toFixed(2)}pp` +
+    ` threshold=${EDGE_THRESHOLD_PP}pp` +
+    ` | [STATE] roiPct=${roiPct != null && !isNaN(roiPct) ? roiPct.toFixed(2) + '%' : 'NaN'}` +
+    ` | [OUTPUT] hasEdge=${hasEdge} awayEdge=${awayEdge} homeEdge=${homeEdge}`
+  );
+
+  // [STEP] ROI footer text — prefer pre-computed roiPct, fall back to bestEdgePP pp display
+  const roiFooterText = hasEdge
+    ? (roiPct != null && !isNaN(roiPct)
+        ? `+${roiPct.toFixed(2)}% ROI`
+        : `+${bestEdgePP.toFixed(2)}pp`)
+    : 'NO EDGE';
 
   const TeamRow = ({ side, isEdge }: { side: BetCellSide; isEdge: boolean }) => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding }}>
@@ -74,7 +114,7 @@ export const BetCell = React.memo(function BetCell({
         )}
         <span
           style={{
-            fontSize: juiceSize,
+            fontSize: juiceSizeStr,
             fontWeight: 700,
             color: 'rgba(255,255,255,0.90)',
             lineHeight: 1,
@@ -92,7 +132,7 @@ export const BetCell = React.memo(function BetCell({
         )}
         <span
           style={{
-            fontSize: juiceSize,
+            fontSize: juiceSizeStr,
             fontWeight: 700,
             lineHeight: 1,
             color: isEdge ? getEdgeColor(side.edgePP) : 'rgba(255,255,255,0.90)',
@@ -116,7 +156,7 @@ export const BetCell = React.memo(function BetCell({
         minWidth: 0,
       }}
     >
-      {/* BOOK / MODEL header */}
+      {/* BOOK / MODEL header — opacity 0.75 matches MLB MobileGameCard exactly */}
       <div
         style={{
           display: 'grid',
@@ -129,7 +169,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.30)',
+            color: 'rgba(255,255,255,0.75)',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -141,7 +181,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.65)',
+            color: 'rgba(255,255,255,0.70)',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -154,11 +194,13 @@ export const BetCell = React.memo(function BetCell({
       {/* Away / Over row */}
       <TeamRow side={away} isEdge={awayEdge} />
 
-      {/* Divider */}
-      <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-
-      {/* Home / Under row */}
-      <TeamRow side={home} isEdge={homeEdge} />
+      {/* Divider + Home row — hidden for singleRow (DRAW) */}
+      {!singleRow && (
+        <>
+          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+          <TeamRow side={home} isEdge={homeEdge} />
+        </>
+      )}
 
       {/* ROI Footer */}
       <div
@@ -200,9 +242,7 @@ export const BetCell = React.memo(function BetCell({
             lineHeight: 1,
           }}
         >
-          {hasEdge && !isNaN(bestEdgePP)
-            ? `+${bestEdgePP.toFixed(2)}% ROI`
-            : 'NO EDGE'}
+          {roiFooterText}
         </span>
       </div>
     </div>
