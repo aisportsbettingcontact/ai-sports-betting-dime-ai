@@ -3,7 +3,7 @@
 
 import {
   mysqlTable, varchar, char, smallint, tinyint, date, datetime,
-  boolean, mysqlEnum, index, uniqueIndex, bigint, double, text, timestamp,
+  boolean, mysqlEnum, index, uniqueIndex, bigint, double, text, timestamp, int,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
@@ -73,6 +73,10 @@ export const wc2026Fixtures = mysqlTable(
     // TRUE only for USA/CAN/MEX playing inside their own country —
     // zero out neutral-site home advantage in the model otherwise.
     isHostHome: boolean("is_host_home").notNull().default(false),
+    // ESPN event ID for automated result ingestion
+    espnEventId: varchar("espn_event_id", { length: 16 }),
+    // Attendance (from ESPN)
+    attendance: int("attendance"),
   },
   (t) => [
     index("idx_date").on(t.matchDate),
@@ -162,6 +166,94 @@ export const wc2026Lineups = mysqlTable(
 );
 
 export type InsertWc2026Lineup = typeof wc2026Lineups.$inferInsert;
+
+// ─── Match Stats ─────────────────────────────────────────────────────────────
+// Post-match box score stats from ESPN API. One row per fixture (upserted after FT).
+export const wc2026MatchStats = mysqlTable(
+  "wc2026_match_stats",
+  {
+    fixtureId: varchar("fixture_id", { length: 16 })
+      .primaryKey()
+      .references(() => wc2026Fixtures.fixtureId),
+    ingestedAt: timestamp("ingested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    // Possession
+    homePossessionPct: double("home_possession_pct"),
+    awayPossessionPct: double("away_possession_pct"),
+    // Shots
+    homeTotalShots: tinyint("home_total_shots"),
+    awayTotalShots: tinyint("away_total_shots"),
+    homeShotsOnTarget: tinyint("home_shots_on_target"),
+    awayShotsOnTarget: tinyint("away_shots_on_target"),
+    // Corners
+    homeCorners: tinyint("home_corners"),
+    awayCorners: tinyint("away_corners"),
+    // Fouls
+    homeFouls: tinyint("home_fouls"),
+    awayFouls: tinyint("away_fouls"),
+    // Cards
+    homeYellowCards: tinyint("home_yellow_cards"),
+    awayYellowCards: tinyint("away_yellow_cards"),
+    homeRedCards: tinyint("home_red_cards"),
+    awayRedCards: tinyint("away_red_cards"),
+    // Offsides
+    homeOffsides: tinyint("home_offsides"),
+    awayOffsides: tinyint("away_offsides"),
+    // Saves
+    homeSaves: tinyint("home_saves"),
+    awaySaves: tinyint("away_saves"),
+    // Passes
+    homeTotalPasses: smallint("home_total_passes"),
+    awayTotalPasses: smallint("away_total_passes"),
+    homeAccuratePasses: smallint("home_accurate_passes"),
+    awayAccuratePasses: smallint("away_accurate_passes"),
+    homePassPct: double("home_pass_pct"),
+    awayPassPct: double("away_pass_pct"),
+    // Tackles
+    homeEffectiveTackles: tinyint("home_effective_tackles"),
+    awayEffectiveTackles: tinyint("away_effective_tackles"),
+    // Interceptions
+    homeInterceptions: tinyint("home_interceptions"),
+    awayInterceptions: tinyint("away_interceptions"),
+    // xG (computed from shot quality model — shots × conversion rate by zone)
+    homeXg: double("home_xg"),
+    awayXg: double("away_xg"),
+    // Blocked shots
+    homeBlockedShots: tinyint("home_blocked_shots"),
+    awayBlockedShots: tinyint("away_blocked_shots"),
+  },
+  (t) => [
+    index("idx_ms_fixture").on(t.fixtureId),
+  ],
+);
+
+export type InsertWc2026MatchStats = typeof wc2026MatchStats.$inferInsert;
+
+// ─── Match Events ─────────────────────────────────────────────────────────────
+// Goal scorers, cards, substitutions from ESPN API. One row per event per fixture.
+export const wc2026MatchEvents = mysqlTable(
+  "wc2026_match_events",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    fixtureId: varchar("fixture_id", { length: 16 })
+      .notNull()
+      .references(() => wc2026Fixtures.fixtureId),
+    teamId: varchar("team_id", { length: 8 })
+      .references(() => wc2026Teams.teamId),
+    eventType: mysqlEnum("event_type", ["GOAL", "OWN_GOAL", "PENALTY", "YELLOW", "RED", "SUB", "VAR"])
+      .notNull(),
+    playerName: varchar("player_name", { length: 96 }),
+    assistPlayerName: varchar("assist_player_name", { length: 96 }),
+    minuteStr: varchar("minute_str", { length: 8 }),  // "45+2'", "90+5'"
+    minuteNum: tinyint("minute_num"),                  // numeric minute for sorting
+    isFirstHalf: boolean("is_first_half").notNull().default(true),
+  },
+  (t) => [
+    index("idx_me_fixture").on(t.fixtureId),
+    index("idx_me_type").on(t.eventType),
+  ],
+);
+
+export type InsertWc2026MatchEvent = typeof wc2026MatchEvents.$inferInsert;
 
 export const wc2026TeamsRelations = relations(wc2026Teams, ({ many }) => ({
   aliases: many(wc2026TeamAliases),
