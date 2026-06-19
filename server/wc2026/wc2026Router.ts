@@ -71,8 +71,10 @@ export const wc2026Router = router({
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
       const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-      // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL odds
-      type OddsShape = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number };
+      // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL + DOUBLE_CHANCE odds
+      // [LOG] buildOddsMap: maps 1X2 (home/draw/away), TOTAL (over/under), DOUBLE_CHANCE (home_draw/away_draw)
+      // [LOG] homeDrawOdds = 1X (Home Win-Draw), awayDrawOdds = X2 (Away Win-Draw)
+      type OddsShape = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number; homeDrawOdds?: number; awayDrawOdds?: number };
       const buildOddsMap = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShape> => {
         const map: Record<string, OddsShape> = {};
         const seen = new Set<string>();
@@ -88,6 +90,10 @@ export const wc2026Router = router({
             } else if (row.market === "TOTAL") {
               if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
               else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
+            } else if (row.market === "DOUBLE_CHANCE") {
+              // [LOG] DOUBLE_CHANCE: home_draw=1X (Home Win-Draw), away_draw=X2 (Away Win-Draw)
+              if (row.selection === "home_draw") { o["homeDrawOdds"] = row.americanOdds; }
+              else if (row.selection === "away_draw") { o["awayDrawOdds"] = row.americanOdds; }
             }
           }
         }
@@ -322,8 +328,10 @@ export const wc2026Router = router({
     const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
     const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-    // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL odds
-    type OddsShapeT = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number };
+    // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL + DOUBLE_CHANCE odds
+    // [LOG] buildOddsMapT: maps 1X2 (home/draw/away), TOTAL (over/under), DOUBLE_CHANCE (home_draw/away_draw)
+    // [LOG] homeDrawOdds = 1X (Home Win-Draw), awayDrawOdds = X2 (Away Win-Draw)
+    type OddsShapeT = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number; homeDrawOdds?: number; awayDrawOdds?: number };
     const buildOddsMapT = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShapeT> => {
       const map: Record<string, OddsShapeT> = {};
       const seen = new Set<string>();
@@ -339,6 +347,10 @@ export const wc2026Router = router({
           } else if (row.market === "TOTAL") {
             if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
             else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
+          } else if (row.market === "DOUBLE_CHANCE") {
+            // [LOG] DOUBLE_CHANCE: home_draw=1X (Home Win-Draw), away_draw=X2 (Away Win-Draw)
+            if (row.selection === "home_draw") { o["homeDrawOdds"] = row.americanOdds; }
+            else if (row.selection === "away_draw") { o["awayDrawOdds"] = row.americanOdds; }
           }
         }
       }
