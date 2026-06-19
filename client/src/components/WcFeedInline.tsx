@@ -589,6 +589,13 @@ function calcEdge(bookOdds: number | null | undefined, modelOdds: number | null 
   return ((mdlImpl - bkImpl) / bkImpl) * 100;
 }
 
+// [STEP] formatTotalLine: strips trailing zero — 2.00→"2", 2.50→"2.5", 3.00→"3"
+// [VERIFY] Only whole and .5 values are used (no .25/.75 asian handicap)
+function formatTotalLine(n: number): string {
+  if (n % 1 === 0) return String(Math.round(n));
+  return parseFloat(n.toFixed(1)).toString();
+}
+
 function WcMktCol({
   title,
   awayLabel,
@@ -737,13 +744,16 @@ function WcMktCol({
       ? 'rgba(255,255,255,0.90)'
       : subEdge ? '#39FF14' : 'rgba(255,255,255,0.90)';
     const isMLCol = !line;
+    // [FIX] Dynamic font scaling: if any value is 5+ chars (e.g. +1000), shrink juice font
+    const isLongOdds = juice.length >= 5;
+    const juiceFontSize = isLongOdds ? 'clamp(9px,2.8vw,11px)' : 'clamp(11px,3.5vw,14px)';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
         {isMLCol
           ? <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>
           : <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         }
-        <span style={{ fontSize: 'clamp(11px,3.5vw,14px)', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
+        <span style={{ fontSize: juiceFontSize, fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
       </div>
     );
   };
@@ -768,7 +778,8 @@ function WcMktCol({
       </div>
 
       {/* ── MLB-identical cell container ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
+      {/* [FIX] justifyContent:'space-between' + footer marginTop:'auto' pins footer to bottom uniformly */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
         {/* BOOK / MODEL header — both muted white, matching MLB exactly */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
           <span style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
@@ -798,8 +809,8 @@ function WcMktCol({
           />
         )}
 
-        {/* ROI footer — exact MLB MobileGameCard footer (borderTop, two spans, no pill border) */}
-        <div style={{ borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
+        {/* ROI footer — pinned to bottom via marginTop:auto + justifyContent:space-between on parent */}
+        <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
           {hasEdge && edgeLabel && (
             <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>
               {edgeLabel}
@@ -1058,11 +1069,36 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 2: TOTAL — OVER top row, UNDER bottom row ─────────────────────────── */}
+      {/* ── Col 2: DRAW — single row, narrow, centered between ML and TOTAL ────────────────────── */}
+      {/* [FIX] DRAW is single-row only — narrow fixed width, no flex growth */}
+      {/* [LOG] DRAW column: awayBookNum=draw odds, threeWayBook provides full H/D/A context for ROI */}
+      <div style={{ flex: '0 0 auto', width: 'clamp(90px,12vw,120px)' }}>
+        <WcMktCol
+          title="DRAW"
+          awayLabel="DRAW"
+          homeLabel=""
+          awayBookNum={dkOdds?.draw}
+          homeBookNum={null}
+          awayModelNum={modelOdds?.draw}
+          homeModelNum={null}
+          singleRow={true}
+          compact={true}
+          awayColor="#888888"
+          homeColor="#888888"
+          threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
+            ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
+          threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
+            ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
+        />
+      </div>
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+
+      {/* ── Col 3: TOTAL — OVER top row, UNDER bottom row ─────────────────────────────────────────── */}
       <WcMktCol
         title="TOTAL"
-        awayLabel={`O ${totalLine}`}
-        homeLabel={`U ${totalLine}`}
+        awayLabel={`O ${formatTotalLine(totalLine)}`}
+        homeLabel={`U ${formatTotalLine(totalLine)}`}
         awayBookNum={dkOdds?.overOdds}
         homeBookNum={dkOdds?.underOdds}
         awayModelNum={modelOdds?.overOdds}
@@ -1074,27 +1110,6 @@ function WcDesktopMergedPanel({
         homeMoney={totalSplits.homeMoney}
         awayColor="#39FF14"
         homeColor="#FF6B35"
-      />
-
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
-
-      {/* ── Col 3: DRAW — single row ─────────────────────────────────────────────── */}
-      {/* [LOG] DRAW column: awayBookNum=draw odds, threeWayBook provides full H/D/A context for ROI */}
-      <WcMktCol
-        title="DRAW"
-        awayLabel="DRAW"
-        homeLabel=""
-        awayBookNum={dkOdds?.draw}
-        homeBookNum={null}
-        awayModelNum={modelOdds?.draw}
-        homeModelNum={null}
-        singleRow={true}
-        awayColor="#888888"
-        homeColor="#888888"
-        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
-          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
-        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
-          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
     </div>
@@ -1258,14 +1273,16 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     modelLine: '', modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
     edgePP: awayMlEdgePP,
   };
+  // [FIX] formatTotalLine: O2.5 not O2.50, O2 not O2.00
+  const fmtTL = formatTotalLine(totalLine);
   const totalOver: BetCellSide = {
-    bookLine: `O${totalLine}`, bookJuice: fmtAmerican(dkOdds?.overOdds) ?? '—',
-    modelLine: `O${totalLine}`, modelJuice: fmtAmerican(modelOdds?.overOdds) ?? '—',
+    bookLine: `O${fmtTL}`, bookJuice: fmtAmerican(dkOdds?.overOdds) ?? '—',
+    modelLine: `O${fmtTL}`, modelJuice: fmtAmerican(modelOdds?.overOdds) ?? '—',
     edgePP: overEdgePP,
   };
   const totalUnder: BetCellSide = {
-    bookLine: `U${totalLine}`, bookJuice: fmtAmerican(dkOdds?.underOdds) ?? '—',
-    modelLine: `U${totalLine}`, modelJuice: fmtAmerican(modelOdds?.underOdds) ?? '—',
+    bookLine: `U${fmtTL}`, bookJuice: fmtAmerican(dkOdds?.underOdds) ?? '—',
+    modelLine: `U${fmtTL}`, modelJuice: fmtAmerican(modelOdds?.underOdds) ?? '—',
     edgePP: underEdgePP,
   };
   const drawAway: BetCellSide = {
@@ -1304,7 +1321,22 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         size="sm"
       />
 
-      {/* Col 2: TOTAL — 2-way ROI (over/under, no draw) */}
+      {/* Col 2: DRAW — singleRow=true (no home row), 3-way ROI — narrow cell, centered between ML and TOTAL */}
+      {/* [FIX] DRAW is single-row only — narrow fixed width, no flex growth */}
+      <div style={{ flex: '0 0 auto', width: 'clamp(72px,22vw,88px)' }}>
+        <BetCell
+          title="DRAW"
+          away={drawAway}
+          home={drawHome}
+          edgeLabel={drawEdgeLabel}
+          bestEdgePP={drawEdgePP}
+          roiPct={drawRoiPct}
+          size="sm"
+          singleRow={true}
+        />
+      </div>
+
+      {/* Col 3: TOTAL — 2-way ROI (over/under, no draw) */}
       <BetCell
         title="TOTAL"
         away={totalOver}
@@ -1313,18 +1345,6 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         bestEdgePP={totalBestEdgePPFinal}
         roiPct={totalBestRoiPct}
         size="sm"
-      />
-
-      {/* Col 3: DRAW — singleRow=true (no home row), 3-way ROI */}
-      <BetCell
-        title="DRAW"
-        away={drawAway}
-        home={drawHome}
-        edgeLabel={drawEdgeLabel}
-        bestEdgePP={drawEdgePP}
-        roiPct={drawRoiPct}
-        size="sm"
-        singleRow={true}
       />
 
     </div>
@@ -2202,9 +2222,10 @@ export function WcFeedInline({
             alignItems: 'center',
             gap: '4px',
           }}>
-            {(['ML', 'TOTAL', 'DRAW'] as const).map((lbl) => (
+            {(['ML', 'DRAW', 'TOTAL'] as const).map((lbl) => (
               <div key={lbl} style={{
-                flex: '1 1 0',
+                flex: lbl === 'DRAW' ? '0 0 auto' : '1 1 0',
+                width: lbl === 'DRAW' ? 'clamp(72px,22vw,88px)' : undefined,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
