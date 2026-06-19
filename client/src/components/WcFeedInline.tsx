@@ -220,6 +220,23 @@ function getWcTeamColors(fifaCode: string): { primary: string; secondary: string
   return WC_TEAM_COLORS[fifaCode?.toUpperCase()] ?? { primary: "#1a4a8a", secondary: "#c84b0c" };
 }
 
+// ─── Team Name Aliases ────────────────────────────────────────────────────────
+// Maps full DB team names to shorter display aliases for game card spacing.
+// Applied at every render site so score totals populate cleanly.
+const WC_TEAM_ALIASES: Record<string, string> = {
+  "Czech Republic":          "Czechia",
+  "Bosnia and Herzegovina":  "Bosnia",
+  "South Korea":             "Korea Rep.",
+  "United States":           "USA",
+  "United States of America": "USA",
+};
+
+/** Returns the display alias for a team name, or the original name if no alias exists. */
+function wcTeamAlias(name: string | null | undefined): string {
+  if (!name) return "";
+  return WC_TEAM_ALIASES[name] ?? name;
+}
+
 // ─── Typography scale — exact GameCard constants ──────────────────────────────
 const HDR_FS  = 'clamp(15px,1.25vw,20px)';
 const VAL_FS  = 'clamp(12px,1.0vw,16px)';
@@ -877,7 +894,9 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const NICK_FONT_SIZE = 'clamp(10px, 0.8vw, 14px)';
   const TIME_FONT_SIZE = 'clamp(12px, 1.01vw, 15px)';
   const LIVE_FONT_SIZE = 'clamp(13.3px, 1.05vw, 17.1px)';
-  const FINAL_FONT_SIZE = 'clamp(15.2px, 1.28vw, 19px)';
+  // FINAL button: 50% of original size
+  // Original: clamp(15.2px, 1.28vw, 19px) → halved: clamp(7.6px, 0.64vw, 9.5px)
+  const FINAL_FONT_SIZE = 'clamp(7.6px, 0.64vw, 9.5px)';
 
   return (
     <div className="flex flex-col pl-2 pr-2 pt-0 pb-0" style={{ minHeight: '100%', justifyContent: 'center' }}>
@@ -904,14 +923,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           </div>
         ) : isFinal ? (
           <span
-            className="px-1.5 py-0.5 font-black tracking-widest"
+            className="font-black tracking-widest"
             style={{
               fontSize: FINAL_FONT_SIZE,
               background: "rgba(57,255,20,0.12)",
               color: "#39FF14",
               border: "1px solid rgba(57,255,20,0.4)",
-              borderRadius: '12px',
+              borderRadius: '6px',
               lineHeight: 1,
+              padding: '2px 5px',
             }}
           >
             FINAL
@@ -945,10 +965,10 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex flex-col">
               {/* All screen sizes: full country name (never abbreviated FIFA code) */}
               <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                {homeTeam?.name ?? homeFifaCode}
+                {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
               </span>
               <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
-                {fixture.matchday ? `Matchday ${fixture.matchday}` : "\u00A0"}
+                {"\u00A0"}
               </span>
             </div>
           </div>
@@ -982,7 +1002,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex flex-col">
               {/* All screen sizes: full country name (never abbreviated FIFA code) */}
               <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                {awayTeam?.name ?? awayFifaCode}
+                {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
               </span>
               <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
                 {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
@@ -1191,9 +1211,9 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
 
-  // [INPUT] Full country names for labels — never FIFA codes
-  const awayName = fixture.awayTeam?.name ?? awayFifaCode;
-  const homeName = fixture.homeTeam?.name ?? homeFifaCode;
+  // [INPUT] Full country names for labels — aliases applied for spacing
+  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
+  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
 
   // ── 3-way calc: SINGLE SOURCE OF TRUTH for ML + DRAW edge pp AND ROI ──────────
   // [LOG] All ML and DRAW edge detection uses 3-way no-vig fair probs.
@@ -1696,7 +1716,7 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
           </div>
           <div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
-              {awayTeam?.name ?? awayFifaCode}
+              {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
             </div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
               {awayFifaCode}
@@ -1721,7 +1741,7 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 7 : 12, justifyContent: "flex-end" }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
-              {homeTeam?.name ?? homeFifaCode}
+              {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
             </div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
               {homeFifaCode}
