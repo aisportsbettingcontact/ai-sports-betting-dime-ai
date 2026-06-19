@@ -75,7 +75,14 @@ export const BetCell = React.memo(function BetCell({
 
   // [LOG] BetCell: responsive font sizes matching MLB MobileGameCard exactly
   // juiceSizeStr uses CSS clamp — responsive on all screen sizes
-  const juiceSizeStr = size === 'sm' ? 'clamp(11px, 3.5vw, 14px)' : 'clamp(13px, 1.2vw, 16px)';
+  // [FIX] Dynamic font scaling: if any juice value is 5+ chars (e.g. +1000), shrink to avoid clamping
+  const hasLongOdds = [
+    away.bookJuice, away.modelJuice,
+    ...(singleRow ? [] : [home.bookJuice, home.modelJuice])
+  ].some(v => v && v.length >= 5);
+  const juiceSizeStr = hasLongOdds
+    ? (size === 'sm' ? 'clamp(9px, 2.8vw, 11px)' : 'clamp(11px, 1.0vw, 13px)')
+    : (size === 'sm' ? 'clamp(11px, 3.5vw, 14px)' : 'clamp(13px, 1.2vw, 16px)');
   const lineSize = size === 'sm' ? 9 : 10;
   const headerSize = size === 'sm' ? 6.5 : 8;
   const footerSize = size === 'sm' ? 7 : 8;
@@ -149,6 +156,7 @@ export const BetCell = React.memo(function BetCell({
       style={{
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
         background: '#2a2a2e',
         borderRadius,
         overflow: 'hidden',
@@ -202,9 +210,10 @@ export const BetCell = React.memo(function BetCell({
         </>
       )}
 
-      {/* ROI Footer */}
+      {/* ROI Footer — pinned to bottom via marginTop:auto + justifyContent:space-between on parent */}
       <div
         style={{
+          marginTop: 'auto',
           borderTop: '0.5px solid rgba(255,255,255,0.07)',
           padding: '3px 4px',
           display: 'flex',
