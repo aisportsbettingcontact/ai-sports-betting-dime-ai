@@ -1096,18 +1096,18 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 2: DRAW/WIN-DRAW — full two-row cell: top=1X (Home Win-Draw), bottom=X2 (Away Win-Draw) */}
+      {/* ── Col 2: DRAW/DOUBLE CHANCE — full two-row cell: top=DRAW (pure 3-way draw odds), bottom=WIN/DRAW (1X double chance) */}
       {/* [FIX] Expanded from singleRow narrow cell to full flex two-row cell matching ML and TOTAL */}
-      {/* [LOG] awayBookNum=homeDrawOdds (1X), homeBookNum=awayDrawOdds (X2) */}
-      {/* [LOG] Edge detection: 2-way calculateEdge per side (1X vs X2) */}
+      {/* [LOG] awayBookNum=draw (pure 3-way draw from 1X2 market), homeBookNum=homeDrawOdds (1X DC from DOUBLE_CHANCE market) */}
+      {/* [LOG] Edge detection: 2-way calculateEdge per side */}
       <WcMktCol
-        title="DRAW/WIN-DRAW"
-        awayLabel="1X"
-        homeLabel="X2"
-        awayBookNum={dkOdds?.homeDrawOdds}
-        homeBookNum={dkOdds?.awayDrawOdds}
-        awayModelNum={modelOdds?.homeDrawOdds}
-        homeModelNum={modelOdds?.awayDrawOdds}
+        title="DRAW/DOUBLE CHANCE"
+        awayLabel="DRAW"
+        homeLabel="WIN/DRAW"
+        awayBookNum={dkOdds?.draw}
+        homeBookNum={dkOdds?.homeDrawOdds}
+        awayModelNum={modelOdds?.draw}
+        homeModelNum={modelOdds?.homeDrawOdds}
         singleRow={false}
         compact={false}
         awayColor="#888888"
@@ -1343,18 +1343,18 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         size="sm"
       />
 
-      {/* Col 2: DRAW/WIN-DRAW — two-row full-flex cell: top row = 1X (Home Win-Draw), bottom row = X2 (Away Win-Draw) */}
+      {/* Col 2: DRAW/DOUBLE CHANCE — two-row full-flex cell: top row = DRAW (pure 3-way draw), bottom row = WIN/DRAW (1X double chance) */}
       {/* [FIX] Expanded from singleRow narrow cell to full two-row flex cell matching ML and TOTAL */}
-      {/* [LOG] awayDrawOdds=1X (homeDrawOdds from DB), homeDrawOdds=X2 (awayDrawOdds from DB) */}
-      {/* [LOG] Edge detection: Double Chance is a 2-way market — calculateEdge() used for each side */}
+      {/* [LOG] dc1xBookOdds=pure draw (from 1X2 market draw selection), dcX2BookOdds=homeDrawOdds (1X DC from DOUBLE_CHANCE market) */}
+      {/* [LOG] Edge detection: 2-way calculateEdge per side (DRAW vs WIN/DRAW) */}
       {(() => {
-        // [STEP] Build BetCellSide objects for 1X and X2 Double Chance
-        // 1X = Home Win-Draw = homeDrawOdds in DB
-        // X2 = Away Win-Draw = awayDrawOdds in DB
-        const dc1xBookOdds  = dkOdds?.homeDrawOdds;
-        const dcX2BookOdds  = dkOdds?.awayDrawOdds;
-        const dc1xModelOdds = modelOdds?.homeDrawOdds;
-        const dcX2ModelOdds = modelOdds?.awayDrawOdds;
+        // [STEP] Build BetCellSide objects for DRAW (top) and WIN/DRAW (bottom)
+        // DRAW top row = pure 3-way draw odds from 1X2 market
+        // WIN/DRAW bottom row = 1X Double Chance (home wins OR draw) from DOUBLE_CHANCE market
+        const dc1xBookOdds  = dkOdds?.draw;          // pure draw (top row)
+        const dcX2BookOdds  = dkOdds?.homeDrawOdds;  // 1X double chance (bottom row)
+        const dc1xModelOdds = modelOdds?.draw;        // model pure draw
+        const dcX2ModelOdds = modelOdds?.homeDrawOdds; // model 1X DC
         // [STEP] Edge detection for each Double Chance side (2-way market)
         const dc1xEdgePP  = (dc1xBookOdds != null && dc1xModelOdds != null)
           ? calculateEdge(dc1xBookOdds, dc1xModelOdds) : NaN;
@@ -1372,7 +1372,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               : calculateRoi(dcX2ModelOdds!, dcX2BookOdds, dc1xBookOdds))
           : NaN;
         const dcEdgeLabel = (dcBestEdgePPFinal >= EDGE_THRESHOLD_PP)
-          ? (dc1xEdgePP >= dcX2EdgePP ? `1X WIN-DRAW` : `X2 WIN-DRAW`)
+          ? (dc1xEdgePP >= dcX2EdgePP ? `DRAW` : `WIN/DRAW`)
           : undefined;
         // [LOG] DC edge detection state
         console.log(
@@ -1385,18 +1385,18 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         );
         // [STEP] BetCellSide: top row = 1X, bottom row = X2
         const dc1xSide: BetCellSide = {
-          bookLine: '1X', bookJuice: fmtAmerican(dc1xBookOdds) ?? '—',
-          modelLine: '1X', modelJuice: fmtAmerican(dc1xModelOdds) ?? '—',
+          bookLine: 'DRAW', bookJuice: fmtAmerican(dc1xBookOdds) ?? '—',
+          modelLine: 'DRAW', modelJuice: fmtAmerican(dc1xModelOdds) ?? '—',
           edgePP: dc1xEdgePP,
         };
         const dcX2Side: BetCellSide = {
-          bookLine: 'X2', bookJuice: fmtAmerican(dcX2BookOdds) ?? '—',
-          modelLine: 'X2', modelJuice: fmtAmerican(dcX2ModelOdds) ?? '—',
+          bookLine: 'WIN/DRAW', bookJuice: fmtAmerican(dcX2BookOdds) ?? '—',
+          modelLine: 'WIN/DRAW', modelJuice: fmtAmerican(dcX2ModelOdds) ?? '—',
           edgePP: dcX2EdgePP,
         };
         return (
           <BetCell
-            title="DRAW/WIN-DRAW"
+            title="DRAW/DOUBLE CHANCE"
             away={dc1xSide}
             home={dcX2Side}
             edgeLabel={dcEdgeLabel}
@@ -2294,7 +2294,7 @@ export function WcFeedInline({
             alignItems: 'center',
             gap: '4px',
           }}>
-          {(['ML', 'DRAW/WIN-DRAW', 'TOTAL'] as const).map((lbl) => (
+          {(['ML', 'DRAW/DOUBLE CHANCE', 'TOTAL'] as const).map((lbl) => (
             <div key={lbl} style={{
               flex: '1 1 0',
               display: 'flex',
