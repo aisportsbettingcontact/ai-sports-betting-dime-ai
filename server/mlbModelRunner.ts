@@ -1940,6 +1940,7 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
   let written     = 0;
   let errors       = 0;
   let invalidated  = 0;  // games skipped due to RL sign flip / invariant violation
+  const invalidatedGameIds: number[] = [];  // track IDs for immediate targeted re-run after this pass
 
   // Build a fast lookup: db_id → engineInput (for NRFI signal retrieval)
   const engineInputById = new Map<number, EngineInput>();
@@ -2393,6 +2394,7 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
         );
         console.log(`[VERIFY] PASS — stale model data cleared, UI will show '—' until re-run completes`);
         invalidated++;
+        invalidatedGameIds.push(r.db_id);  // queue for immediate targeted re-run
       } catch (invErr) {
         console.error(`[RL INVALIDATE] id=${r.db_id} ${r.game} — DB clear failed: ${invErr}`);
         errors++;
@@ -2579,6 +2581,38 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
   }
 
   console.log(`\n${TAG} DB writes: ${written} written, ${errors} errors, ${invalidated} invalidated (RL flip/invariant), ${dbGames.length - modelable.length} skipped (no lines/pitchers)`);
+
+  // ── IMMEDIATE RE-RUN for invalidated games ─────────────────────────────────
+  // When RL sign flip / invariant violation fires, modelRunAt is set to null and
+  // the feed shows '—' for up to 5 minutes (next scheduled cycle). To collapse
+  // this null window to ~30 seconds, immediately re-run ONLY the invalidated
+  // games with forceRerun=true so they pick up the corrected awayRunLine.
+  // This is a targeted re-run — it does NOT re-run the full slate.
+  if (invalidatedGameIds.length > 0) {
+    console.log(`\n${TAG} [IMMEDIATE RE-RUN] ${invalidatedGameIds.length} game(s) invalidated — triggering targeted re-run to collapse null window`);
+    console.log(`${TAG} [IMMEDIATE RE-RUN] targetGameIds=${JSON.stringify(invalidatedGameIds)} dateStr=${dateStr}`);
+    // Fire async via setImmediate — do not await so the current cycle's validation/summary still runs
+    // The re-run is fully independent and will complete within ~30s per game
+    setImmediate(async () => {
+      try {
+        console.log(`${TAG} [IMMEDIATE RE-RUN] Starting targeted re-run for ids=${JSON.stringify(invalidatedGameIds)}`);
+        const rerunResult = await runMlbModelForDate(dateStr, {
+          targetGameIds: invalidatedGameIds,
+          forceRerun: true,
+        });
+        console.log(
+          `${TAG} [IMMEDIATE RE-RUN] Complete — written=${rerunResult.written} errors=${rerunResult.errors}` +
+          ` validation=${rerunResult.validation.passed ? '✅ PASSED' : '❌ FAILED'}`
+        );
+        if (!rerunResult.validation.passed) {
+          console.error(`${TAG} [IMMEDIATE RE-RUN] Validation issues:`, rerunResult.validation.issues);
+        }
+      } catch (rerunErr) {
+        const msg = rerunErr instanceof Error ? rerunErr.message : String(rerunErr);
+        console.error(`${TAG} [IMMEDIATE RE-RUN] FAILED for ids=${JSON.stringify(invalidatedGameIds)}: ${msg}`);
+      }
+    });
+  }
 
   // ── Step 6: Post-write validation gate ──────────────────────────────────────
   console.log(`\n${TAG} Running post-write validation gate...`);
