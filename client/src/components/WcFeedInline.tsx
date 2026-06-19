@@ -590,8 +590,11 @@ function calcEdge(bookOdds: number | null | undefined, modelOdds: number | null 
 }
 
 // [STEP] formatTotalLine: strips trailing zero — 2.00→"2", 2.50→"2.5", 3.00→"3"
+// [FIX] Defensive Number() cast — value may arrive as string from DB/JSON, toFixed only exists on number
 // [VERIFY] Only whole and .5 values are used (no .25/.75 asian handicap)
-function formatTotalLine(n: number): string {
+function formatTotalLine(raw: number | string | null | undefined): string {
+  const n = Number(raw);
+  if (!isFinite(n)) return String(raw ?? '');
   if (n % 1 === 0) return String(Math.round(n));
   return parseFloat(n.toFixed(1)).toString();
 }
