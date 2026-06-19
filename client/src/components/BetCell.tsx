@@ -156,7 +156,7 @@ export const BetCell = React.memo(function BetCell({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         background: '#2a2a2e',
         borderRadius,
         overflow: 'hidden',
