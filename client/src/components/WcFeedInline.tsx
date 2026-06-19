@@ -763,20 +763,24 @@ function WcMktCol({
   // [LOG] WcMktCol render state — superseded by WcMktCol:EdgeDetect above
 
   // ── MLB-identical SubCol: line (dim) + juice (bold) stacked ──────────────────────────────
+  // [FIX] Dynamic font scaling: 6+ chars (e.g. +2200, -1000) → minimum size; 5+ chars → small
+  // [FIX] No hidden spacer spans for ML — pure flex centering, equal vertical padding
   const SubCol = ({ line, juice, isBook: isBookCol, hasEdge: subEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
     const juiceColor = isBookCol
       ? 'rgba(255,255,255,0.90)'
       : subEdge ? '#39FF14' : 'rgba(255,255,255,0.90)';
-    const isMLCol = !line;
-    // [FIX] Dynamic font scaling: if any value is 5+ chars (e.g. +1000), shrink juice font
-    const isLongOdds = juice.length >= 5;
-    const juiceFontSize = isLongOdds ? 'clamp(9px,2.8vw,11px)' : 'clamp(11px,3.5vw,14px)';
+    const isVeryLongOdds = juice.length >= 6; // e.g. +2200, -1000
+    const isLongOdds = juice.length >= 5;     // e.g. +1000, -900
+    const juiceFontSize = isVeryLongOdds
+      ? 'clamp(8px,2.2vw,10px)'
+      : isLongOdds
+      ? 'clamp(9px,2.6vw,11.5px)'
+      : 'clamp(11px,1.0vw,14px)';
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
-        {isMLCol
-          ? <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>
-          : <span style={{ fontSize: 'clamp(9px,2.8vw,11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
-        }
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: line ? 1 : 0, minWidth: 0, flex: 1 }}>
+        {line && (
+          <span style={{ fontSize: 'clamp(8px,0.75vw,10px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+        )}
         <span style={{ fontSize: juiceFontSize, fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
       </div>
     );
@@ -1031,12 +1035,392 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   );
 }
 
+// ─── WcDcDesktopCol — DRAW/WIN-DRAW 3-row column for desktop ────────────────────
+//
+// Renders 3 rows inside the desktop WcMktCol-style container:
+//   Row 1: DRAW       — pure 3-way draw odds (from 1X2 market)
+//   Row 2: [Home] W/D — 1X Double Chance (home wins OR draw)
+//   Row 3: [Away] W/D — X2 Double Chance (away wins OR draw)
+//
+// Each row has BOOK | MODEL sub-columns with edge highlighting.
+// Edge detection: 3-way for DRAW row, 2-way for each DC row.
+// [LOG] WcDcDesktopCol: 3-row DC cell with per-row team labels
+
+function WcDcDesktopCol({
+  homeName,
+  awayName,
+  drawBook,
+  drawModel,
+  homeDcBook,
+  homeDcModel,
+  awayDcBook,
+  awayDcModel,
+  threeWayBook,
+  threeWayModel,
+}: {
+  homeName: string;
+  awayName: string;
+  drawBook?: number | null;
+  drawModel?: number | null;
+  homeDcBook?: number | null;
+  homeDcModel?: number | null;
+  awayDcBook?: number | null;
+  awayDcModel?: number | null;
+  threeWayBook?: ThreeWayOdds | null;
+  threeWayModel?: ThreeWayOdds | null;
+}) {
+  // [STEP] Edge detection for DRAW row — 3-way if available, else 2-way
+  let drawEdgePP = NaN;
+  let drawRoiPct = NaN;
+  if (threeWayBook && threeWayModel) {
+    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
+    drawEdgePP = calc3.draw.edgePP;
+    drawRoiPct = calc3.draw.roiPct;
+  } else if (drawBook != null && drawModel != null) {
+    drawEdgePP = calculateEdge(drawBook, drawModel);
+  }
+  // [STEP] Edge detection for Home DC row (1X) — 2-way
+  const homeDcEdgePP = (homeDcBook != null && homeDcModel != null)
+    ? calculateEdge(homeDcBook, homeDcModel) : NaN;
+  // [STEP] Edge detection for Away DC row (X2) — 2-way
+  const awayDcEdgePP = (awayDcBook != null && awayDcModel != null)
+    ? calculateEdge(awayDcBook, awayDcModel) : NaN;
+
+  // [STEP] Best edge across all 3 rows
+  const allEdges = [drawEdgePP, homeDcEdgePP, awayDcEdgePP].filter(v => !isNaN(v));
+  const bestEdgePP = allEdges.length > 0 ? Math.max(...allEdges) : NaN;
+  const hasEdge = !isNaN(bestEdgePP) && bestEdgePP >= EDGE_THRESHOLD_PP;
+  const edgeColor = hasEdge ? getEdgeColor(bestEdgePP) : undefined;
+
+  // [STEP] ROI for best edge row
+  let edgeLabel: string | null = null;
+  let bestRoiPct = NaN;
+  if (hasEdge) {
+    if (drawEdgePP >= EDGE_THRESHOLD_PP && drawEdgePP >= (isNaN(homeDcEdgePP) ? -Infinity : homeDcEdgePP) && drawEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP)) {
+      edgeLabel = 'DRAW';
+      bestRoiPct = drawRoiPct;
+    } else if (!isNaN(homeDcEdgePP) && homeDcEdgePP >= EDGE_THRESHOLD_PP && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP)) {
+      edgeLabel = `${homeName} W/D`;
+      bestRoiPct = (homeDcBook != null && homeDcModel != null)
+        ? calculateRoi(homeDcModel, homeDcBook, homeDcBook) : NaN;
+    } else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) {
+      edgeLabel = `${awayName} W/D`;
+      bestRoiPct = (awayDcBook != null && awayDcModel != null)
+        ? calculateRoi(awayDcModel, awayDcBook, awayDcBook) : NaN;
+    }
+  }
+
+  console.log(
+    `[WcDcDesktopCol] home=${homeName} away=${awayName}` +
+    ` | [INPUT] drawBook=${drawBook ?? 'N/A'} drawModel=${drawModel ?? 'N/A'}` +
+    ` homeDcBook=${homeDcBook ?? 'N/A'} homeDcModel=${homeDcModel ?? 'N/A'}` +
+    ` awayDcBook=${awayDcBook ?? 'N/A'} awayDcModel=${awayDcModel ?? 'N/A'}` +
+    ` | [STATE] drawEdgePP=${isNaN(drawEdgePP) ? 'NaN' : drawEdgePP.toFixed(2)}pp` +
+    ` homeDcEdgePP=${isNaN(homeDcEdgePP) ? 'NaN' : homeDcEdgePP.toFixed(2)}pp` +
+    ` awayDcEdgePP=${isNaN(awayDcEdgePP) ? 'NaN' : awayDcEdgePP.toFixed(2)}pp` +
+    ` | [OUTPUT] bestEdgePP=${isNaN(bestEdgePP) ? 'NaN' : bestEdgePP.toFixed(2)}pp edgeLabel=${edgeLabel ?? 'NO EDGE'}` +
+    ` | [VERIFY] hasEdge=${hasEdge} threshold=${EDGE_THRESHOLD_PP}pp`
+  );
+
+  // [STEP] Shared font scaling — check all 6 juice values for long odds
+  const allJuices = [
+    fmtAmerican(drawBook), fmtAmerican(drawModel),
+    fmtAmerican(homeDcBook), fmtAmerican(homeDcModel),
+    fmtAmerican(awayDcBook), fmtAmerican(awayDcModel),
+  ].filter(v => v && v !== '—');
+  const maxJuiceLen = allJuices.reduce((max, v) => Math.max(max, v?.length ?? 0), 0);
+  const isVeryLong = maxJuiceLen >= 6;
+  const isLong = maxJuiceLen >= 5;
+  const juiceFs = isVeryLong
+    ? 'clamp(8px,0.7vw,10px)'
+    : isLong
+    ? 'clamp(9px,0.8vw,11.5px)'
+    : 'clamp(11px,1.0vw,14px)';
+  const labelFs = 'clamp(7.5px,0.65vw,9.5px)';
+  const hdrFs = 'clamp(8px,0.7vw,10px)';
+  const pad = '8px 10px 10px';
+  const titleFs: React.CSSProperties = {
+    fontSize: 'clamp(9px,0.8vw,11px)',
+    fontWeight: 850,
+    color: '#fff',
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  };
+
+  // [STEP] Per-row renderer: label (dim) | BOOK juice | MODEL juice
+  const DcRow = ({
+    rowLabel,
+    bookOdds,
+    modelOdds: modelO,
+    rowEdgePP,
+    isLast = false,
+  }: {
+    rowLabel: string;
+    bookOdds: number | null | undefined;
+    modelOdds: number | null | undefined;
+    rowEdgePP: number;
+    isLast?: boolean;
+  }) => {
+    const rowHasEdge = !isNaN(rowEdgePP) && rowEdgePP >= EDGE_THRESHOLD_PP;
+    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : 'rgba(255,255,255,0.90)';
+    return (
+      <>
+        {/* Row divider (not before first row) */}
+        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '3px 4px' }}>
+          {/* Book column */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
+          </div>
+          {/* Model column */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, color: modelColor, lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(modelO)}</span>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const roiStr = hasEdge
+    ? (!isNaN(bestRoiPct) ? `+${bestRoiPct.toFixed(2)}% ROI` : `+${bestEdgePP.toFixed(2)}pp`)
+    : 'NO EDGE';
+  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
+
+  return (
+    <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
+      {/* Section title */}
+      <div className="flex items-center gap-1" style={{ marginBottom: 4 }}>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <span style={titleFs}>DRAW/WIN-DRAW</span>
+        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+      </div>
+
+      {/* Cell container */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: 6 }}>
+        {/* BOOK / MODEL header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
+          <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+          <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+        </div>
+
+        {/* Row 1: DRAW — pure 3-way draw odds */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '3px 4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(drawBook)}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? getEdgeColor(drawEdgePP) : 'rgba(255,255,255,0.90)' }}>{fmtAmerican(drawModel)}</span>
+          </div>
+        </div>
+
+        {/* Row 2: Home W/D — 1X Double Chance */}
+        <DcRow rowLabel={`${homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
+
+        {/* Row 3: Away W/D — X2 Double Chance */}
+        <DcRow rowLabel={`${awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} isLast />
+
+        {/* ROI footer */}
+        <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
+          {hasEdge && edgeLabel && (
+            <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{edgeLabel}</span>
+          )}
+          <span style={{ fontSize: 7.5, fontWeight: hasEdge ? 800 : 400, color: roiColor, letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>{roiStr}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WcDcMobileCell — DRAW/WIN-DRAW 3-row cell for mobile ────────────────────
+//
+// Renders 3 stacked rows inside a #2a2a2e card matching BetCell structure:
+//   Row 1: DRAW       — pure 3-way draw odds
+//   Row 2: [Home] W/D — 1X Double Chance (home wins OR draw)
+//   Row 3: [Away] W/D — X2 Double Chance (away wins OR draw)
+//
+// Each row has BOOK | MODEL sub-columns with edge highlighting.
+// [LOG] WcDcMobileCell: 3-row DC cell matching BetCell visual language
+
+function WcDcMobileCell({
+  fixture,
+  homeName,
+  awayName,
+  drawBook,
+  drawModel,
+  homeDcBook,
+  homeDcModel,
+  awayDcBook,
+  awayDcModel,
+  threeWayBook,
+  threeWayModel,
+}: {
+  fixture: WcFixtureWithOdds;
+  homeName: string;
+  awayName: string;
+  drawBook?: number | null;
+  drawModel?: number | null;
+  homeDcBook?: number | null;
+  homeDcModel?: number | null;
+  awayDcBook?: number | null;
+  awayDcModel?: number | null;
+  threeWayBook?: ThreeWayOdds | null;
+  threeWayModel?: ThreeWayOdds | null;
+}) {
+  // [STEP] Edge detection for DRAW row — 3-way if available, else 2-way
+  let drawEdgePP = NaN;
+  let drawRoiPct = NaN;
+  if (threeWayBook && threeWayModel) {
+    const calc3 = calculate3WayResult(threeWayBook, threeWayModel);
+    drawEdgePP = calc3.draw.edgePP;
+    drawRoiPct = calc3.draw.roiPct;
+  } else if (drawBook != null && drawModel != null) {
+    drawEdgePP = calculateEdge(drawBook, drawModel);
+  }
+  // [STEP] Edge detection for Home DC row (1X) — 2-way
+  const homeDcEdgePP = (homeDcBook != null && homeDcModel != null)
+    ? calculateEdge(homeDcBook, homeDcModel) : NaN;
+  // [STEP] Edge detection for Away DC row (X2) — 2-way
+  const awayDcEdgePP = (awayDcBook != null && awayDcModel != null)
+    ? calculateEdge(awayDcBook, awayDcModel) : NaN;
+
+  // [STEP] Best edge across all 3 rows
+  const allEdges = [drawEdgePP, homeDcEdgePP, awayDcEdgePP].filter(v => !isNaN(v));
+  const bestEdgePP = allEdges.length > 0 ? Math.max(...allEdges) : NaN;
+  const hasEdge = !isNaN(bestEdgePP) && bestEdgePP >= EDGE_THRESHOLD_PP;
+  const edgeColor = hasEdge ? getEdgeColor(bestEdgePP) : undefined;
+
+  // [STEP] Edge label and ROI for best row
+  let edgeLabel: string | null = null;
+  let bestRoiPct = NaN;
+  if (hasEdge) {
+    const drawIsTop = drawEdgePP >= EDGE_THRESHOLD_PP
+      && drawEdgePP >= (isNaN(homeDcEdgePP) ? -Infinity : homeDcEdgePP)
+      && drawEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP);
+    const homeIsTop = !drawIsTop
+      && !isNaN(homeDcEdgePP) && homeDcEdgePP >= EDGE_THRESHOLD_PP
+      && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP);
+    if (drawIsTop) { edgeLabel = 'DRAW'; bestRoiPct = drawRoiPct; }
+    else if (homeIsTop) { edgeLabel = `${homeName} W/D`; }
+    else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) { edgeLabel = `${awayName} W/D`; }
+  }
+
+  console.log(
+    `[WcDcMobileCell] fixture=${fixture.fixtureId} home=${homeName} away=${awayName}` +
+    ` | [INPUT] drawBook=${drawBook ?? 'N/A'} drawModel=${drawModel ?? 'N/A'}` +
+    ` homeDcBook=${homeDcBook ?? 'N/A'} homeDcModel=${homeDcModel ?? 'N/A'}` +
+    ` awayDcBook=${awayDcBook ?? 'N/A'} awayDcModel=${awayDcModel ?? 'N/A'}` +
+    ` | [STATE] drawEdgePP=${isNaN(drawEdgePP) ? 'NaN' : drawEdgePP.toFixed(2)}pp` +
+    ` homeDcEdgePP=${isNaN(homeDcEdgePP) ? 'NaN' : homeDcEdgePP.toFixed(2)}pp` +
+    ` awayDcEdgePP=${isNaN(awayDcEdgePP) ? 'NaN' : awayDcEdgePP.toFixed(2)}pp` +
+    ` | [OUTPUT] bestEdgePP=${isNaN(bestEdgePP) ? 'NaN' : bestEdgePP.toFixed(2)}pp edgeLabel=${edgeLabel ?? 'NO EDGE'}` +
+    ` | [VERIFY] hasEdge=${hasEdge} threshold=${EDGE_THRESHOLD_PP}pp`
+  );
+
+  // [STEP] Shared font scaling — check all 6 juice values for long odds
+  const allJuices = [
+    fmtAmerican(drawBook), fmtAmerican(drawModel),
+    fmtAmerican(homeDcBook), fmtAmerican(homeDcModel),
+    fmtAmerican(awayDcBook), fmtAmerican(awayDcModel),
+  ].filter(v => v && v !== '—');
+  const maxJuiceLen = allJuices.reduce((max, v) => Math.max(max, v?.length ?? 0), 0);
+  const isVeryLong = maxJuiceLen >= 6;
+  const isLong = maxJuiceLen >= 5;
+  const juiceFs = isVeryLong
+    ? 'clamp(8px,2.4vw,10px)'
+    : isLong
+    ? 'clamp(9px,2.8vw,11px)'
+    : 'clamp(11px,3.5vw,14px)';
+  const labelFs = 'clamp(7px,2.0vw,8.5px)';
+  const hdrFs = 6.5;
+  const padding = '3px 3px';
+
+  const roiStr = hasEdge
+    ? (!isNaN(bestRoiPct) ? `+${bestRoiPct.toFixed(2)}% ROI` : `+${bestEdgePP.toFixed(2)}pp`)
+    : 'NO EDGE';
+  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.40)';
+
+  // [STEP] Per-row renderer: label (dim) | BOOK juice | MODEL juice
+  const DcRow = ({
+    rowLabel,
+    bookOdds,
+    modelOdds: modelO,
+    rowEdgePP,
+  }: {
+    rowLabel: string;
+    bookOdds: number | null | undefined;
+    modelOdds: number | null | undefined;
+    rowEdgePP: number;
+  }) => {
+    const rowHasEdge = !isNaN(rowEdgePP) && rowEdgePP >= EDGE_THRESHOLD_PP;
+    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : 'rgba(255,255,255,0.90)';
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding }}>
+        {/* Book column */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+          <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+          <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
+        </div>
+        {/* Model column */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
+          <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+          <span style={{ fontSize: juiceFs, fontWeight: 700, color: modelColor, lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(modelO)}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        background: '#2a2a2e',
+        borderRadius: 8,
+        overflow: 'hidden',
+        flex: '1 1 0',
+        minWidth: 0,
+      }}
+    >
+      {/* BOOK / MODEL header */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
+        <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+        <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+      </div>
+
+      {/* Row 1: DRAW — pure 3-way draw odds */}
+      <DcRow rowLabel="DRAW" bookOdds={drawBook} modelOdds={drawModel} rowEdgePP={drawEdgePP} />
+
+      {/* Row 2: Home W/D — 1X Double Chance */}
+      <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+      <DcRow rowLabel={`${homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
+
+      {/* Row 3: Away W/D — X2 Double Chance */}
+      <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+      <DcRow rowLabel={`${awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
+
+      {/* ROI Footer */}
+      <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
+        {hasEdge && edgeLabel && (
+          <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{edgeLabel}</span>
+        )}
+        <span style={{ fontSize: 7.5, fontWeight: hasEdge ? 800 : 400, color: roiColor, letterSpacing: '0.03em', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>{roiStr}</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── WC Desktop Merged Panel — MLB-style 3-column layout ─────────────────────
 //
 // 3 columns matching MLB GameCard exactly:
 //   Col 1: MONEYLINE — AWAY (top row) + HOME (bottom row), BOOK/MODEL
-//   Col 2: TOTAL     — OVER (top row) + UNDER (bottom row), BOOK/MODEL
-//   Col 3: DRAW      — single row, BOOK/MODEL
+//   Col 2: DRAW/WIN-DRAW — 3 rows: DRAW + Home W/D (1X) + Away W/D (X2)
+//   Col 3: TOTAL     — OVER (top row) + UNDER (bottom row), BOOK/MODEL
 //
 // [LOG] WcDesktopMergedPanel: renders MLB-style 3-col layout for WC fixtures
 
@@ -1096,22 +1480,25 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 2: DRAW/DOUBLE CHANCE — full two-row cell: top=DRAW (pure 3-way draw odds), bottom=WIN/DRAW (1X double chance) */}
-      {/* [FIX] Expanded from singleRow narrow cell to full flex two-row cell matching ML and TOTAL */}
-      {/* [LOG] awayBookNum=draw (pure 3-way draw from 1X2 market), homeBookNum=homeDrawOdds (1X DC from DOUBLE_CHANCE market) */}
-      {/* [LOG] Edge detection: 2-way calculateEdge per side */}
-      <WcMktCol
-        title="DRAW/DOUBLE CHANCE"
-        awayLabel="DRAW"
-        homeLabel="WIN/DRAW"
-        awayBookNum={dkOdds?.draw}
-        homeBookNum={dkOdds?.homeDrawOdds}
-        awayModelNum={modelOdds?.draw}
-        homeModelNum={modelOdds?.homeDrawOdds}
-        singleRow={false}
-        compact={false}
-        awayColor="#888888"
-        homeColor="#888888"
+      {/* ── Col 2: DRAW/WIN-DRAW — 3-row cell: DRAW + Home W/D (1X) + Away W/D (X2) */}
+      {/* [FIX] Renamed from DRAW/DOUBLE CHANCE to DRAW/WIN-DRAW per user requirement */}
+      {/* [FIX] Expanded to 3 rows: pure draw + homeDrawOdds (1X) + awayDrawOdds (X2) */}
+      {/* [LOG] Row 1: DRAW = pure 3-way draw from 1X2 market */}
+      {/* [LOG] Row 2: [HomeName] W/D = homeDrawOdds = 1X (Home Win OR Draw) */}
+      {/* [LOG] Row 3: [AwayName] W/D = awayDrawOdds = X2 (Away Win OR Draw) */}
+      <WcDcDesktopCol
+        homeName={homeFifaCode}
+        awayName={awayFifaCode}
+        drawBook={dkOdds?.draw}
+        drawModel={modelOdds?.draw}
+        homeDcBook={dkOdds?.homeDrawOdds}
+        homeDcModel={modelOdds?.homeDrawOdds}
+        awayDcBook={dkOdds?.awayDrawOdds}
+        awayDcModel={modelOdds?.awayDrawOdds}
+        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
+          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
+        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
+          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
@@ -1343,70 +1730,27 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         size="sm"
       />
 
-      {/* Col 2: DRAW/DOUBLE CHANCE — two-row full-flex cell: top row = DRAW (pure 3-way draw), bottom row = WIN/DRAW (1X double chance) */}
-      {/* [FIX] Expanded from singleRow narrow cell to full two-row flex cell matching ML and TOTAL */}
-      {/* [LOG] dc1xBookOdds=pure draw (from 1X2 market draw selection), dcX2BookOdds=homeDrawOdds (1X DC from DOUBLE_CHANCE market) */}
-      {/* [LOG] Edge detection: 2-way calculateEdge per side (DRAW vs WIN/DRAW) */}
-      {(() => {
-        // [STEP] Build BetCellSide objects for DRAW (top) and WIN/DRAW (bottom)
-        // DRAW top row = pure 3-way draw odds from 1X2 market
-        // WIN/DRAW bottom row = 1X Double Chance (home wins OR draw) from DOUBLE_CHANCE market
-        const dc1xBookOdds  = dkOdds?.draw;          // pure draw (top row)
-        const dcX2BookOdds  = dkOdds?.homeDrawOdds;  // 1X double chance (bottom row)
-        const dc1xModelOdds = modelOdds?.draw;        // model pure draw
-        const dcX2ModelOdds = modelOdds?.homeDrawOdds; // model 1X DC
-        // [STEP] Edge detection for each Double Chance side (2-way market)
-        const dc1xEdgePP  = (dc1xBookOdds != null && dc1xModelOdds != null)
-          ? calculateEdge(dc1xBookOdds, dc1xModelOdds) : NaN;
-        const dcX2EdgePP  = (dcX2BookOdds != null && dcX2ModelOdds != null)
-          ? calculateEdge(dcX2BookOdds, dcX2ModelOdds) : NaN;
-        const dcBestEdgePP = Math.max(
-          isNaN(dc1xEdgePP) ? -Infinity : dc1xEdgePP,
-          isNaN(dcX2EdgePP) ? -Infinity : dcX2EdgePP,
-        );
-        const dcBestEdgePPFinal = dcBestEdgePP === -Infinity ? NaN : dcBestEdgePP;
-        // [STEP] ROI for best DC side (2-way: 1X vs X2)
-        const dcBestRoiPct = (dcBestEdgePPFinal >= EDGE_THRESHOLD_PP && dc1xBookOdds != null && dcX2BookOdds != null)
-          ? (dc1xEdgePP >= dcX2EdgePP
-              ? calculateRoi(dc1xModelOdds!, dc1xBookOdds, dcX2BookOdds)
-              : calculateRoi(dcX2ModelOdds!, dcX2BookOdds, dc1xBookOdds))
-          : NaN;
-        const dcEdgeLabel = (dcBestEdgePPFinal >= EDGE_THRESHOLD_PP)
-          ? (dc1xEdgePP >= dcX2EdgePP ? `DRAW` : `WIN/DRAW`)
-          : undefined;
-        // [LOG] DC edge detection state
-        console.log(
-          `[WcMobileOddsPanel:DC] fixture=${fixture.fixtureId}` +
-          ` | [INPUT] 1X book=${dc1xBookOdds ?? 'N/A'} model=${dc1xModelOdds ?? 'N/A'}` +
-          ` X2 book=${dcX2BookOdds ?? 'N/A'} model=${dcX2ModelOdds ?? 'N/A'}` +
-          ` | [STATE] 1xEdgePP=${isNaN(dc1xEdgePP) ? 'NaN' : dc1xEdgePP.toFixed(2)}pp X2EdgePP=${isNaN(dcX2EdgePP) ? 'NaN' : dcX2EdgePP.toFixed(2)}pp` +
-          ` | [OUTPUT] bestEdgePP=${isNaN(dcBestEdgePPFinal) ? 'NaN' : dcBestEdgePPFinal.toFixed(2)}pp roi=${isNaN(dcBestRoiPct) ? 'NaN' : dcBestRoiPct.toFixed(2)}% label=${dcEdgeLabel ?? 'NO EDGE'}` +
-          ` | [VERIFY] dcBestEdgePPFinal=${isNaN(dcBestEdgePPFinal) ? 'NaN' : dcBestEdgePPFinal.toFixed(2)}pp threshold=${EDGE_THRESHOLD_PP}pp`
-        );
-        // [STEP] BetCellSide: top row = 1X, bottom row = X2
-        const dc1xSide: BetCellSide = {
-          bookLine: 'DRAW', bookJuice: fmtAmerican(dc1xBookOdds) ?? '—',
-          modelLine: 'DRAW', modelJuice: fmtAmerican(dc1xModelOdds) ?? '—',
-          edgePP: dc1xEdgePP,
-        };
-        const dcX2Side: BetCellSide = {
-          bookLine: 'WIN/DRAW', bookJuice: fmtAmerican(dcX2BookOdds) ?? '—',
-          modelLine: 'WIN/DRAW', modelJuice: fmtAmerican(dcX2ModelOdds) ?? '—',
-          edgePP: dcX2EdgePP,
-        };
-        return (
-          <BetCell
-            title="DRAW/DOUBLE CHANCE"
-            away={dc1xSide}
-            home={dcX2Side}
-            edgeLabel={dcEdgeLabel}
-            bestEdgePP={dcBestEdgePPFinal}
-            roiPct={dcBestRoiPct}
-            size="sm"
-            singleRow={false}
-          />
-        );
-      })()}
+      {/* Col 2: DRAW/WIN-DRAW — 3-row cell: DRAW + Home W/D (1X) + Away W/D (X2) */}
+      {/* [FIX] Renamed from DRAW/DOUBLE CHANCE to DRAW/WIN-DRAW per user requirement */}
+      {/* [FIX] Now shows all 3 rows: pure draw + home DC (1X) + away DC (X2) */}
+      {/* [LOG] Row 1: DRAW = pure 3-way draw odds from 1X2 market */}
+      {/* [LOG] Row 2: [HomeName] W/D = homeDrawOdds = 1X (Home Win OR Draw) */}
+      {/* [LOG] Row 3: [AwayName] W/D = awayDrawOdds = X2 (Away Win OR Draw) */}
+      <WcDcMobileCell
+        fixture={fixture}
+        homeName={homeName}
+        awayName={awayName}
+        drawBook={dkOdds?.draw}
+        drawModel={modelOdds?.draw}
+        homeDcBook={dkOdds?.homeDrawOdds}
+        homeDcModel={modelOdds?.homeDrawOdds}
+        awayDcBook={dkOdds?.awayDrawOdds}
+        awayDcModel={modelOdds?.awayDrawOdds}
+        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
+          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
+        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
+          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
+      />
 
       {/* Col 3: TOTAL — 2-way ROI (over/under, no draw) */}
       <BetCell
@@ -2294,7 +2638,7 @@ export function WcFeedInline({
             alignItems: 'center',
             gap: '4px',
           }}>
-          {(['ML', 'DRAW/DOUBLE CHANCE', 'TOTAL'] as const).map((lbl) => (
+          {(['ML', 'DRAW/WIN-DRAW', 'TOTAL'] as const).map((lbl) => (
             <div key={lbl} style={{
               flex: '1 1 0',
               display: 'flex',

@@ -8,11 +8,11 @@
  *   ┌──────────────────────────────┐
  *   │  BOOK          │  MODEL      │  ← header
  *   ├──────────────────────────────┤
- *   │  bookLine      │  modelLine  │  ← away/over row
- *   │  bookJuice     │  modelJuice │
+ *   │  [rowLabel]    │  [rowLabel] │  ← optional row label (dim)
+ *   │  bookJuice     │  modelJuice │  ← away/over row
  *   ├──────────────────────────────┤  ← hidden when singleRow=true (DRAW)
- *   │  bookLine      │  modelLine  │  ← home/under row
- *   │  bookJuice     │  modelJuice │
+ *   │  [rowLabel]    │  [rowLabel] │  ← optional row label (dim)
+ *   │  bookJuice     │  modelJuice │  ← home/under row
  *   ├──────────────────────────────┤
  *   │  edgeLabel  +X.XX% ROI      │  ← footer
  *   └──────────────────────────────┘
@@ -21,12 +21,18 @@
  * roiPct: pre-computed ROI % from caller (3-way for ML/DRAW, 2-way for TOTAL).
  *         When provided and hasEdge, displayed as "+X.XX% ROI" in footer.
  *         Falls back to "+X.XXpp" display if not provided.
+ *
+ * [FIX] ML centering: when bookLine/modelLine is empty, the odds value is
+ *       perfectly vertically centered in the row with equal top/bottom padding.
+ *       No hidden spacer spans — pure flexbox centering.
+ * [FIX] Long odds (5+ chars like +1000, +2200): font shrinks to clamp(8px,2.4vw,10px)
+ *       and cell gets minWidth:0 + overflow:visible to prevent wrapping.
  */
 import React from 'react';
 import { getEdgeColor, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 
 export interface BetCellSide {
-  /** Line display string, e.g. "-1.5", "O8.5", "+110". Empty string for ML (no line). */
+  /** Line display string, e.g. "-1.5", "O8.5", "DRAW", "HOME W/D". Empty string for ML (no line). */
   bookLine: string;
   bookJuice: string;
   modelLine: string;
@@ -74,20 +80,28 @@ export const BetCell = React.memo(function BetCell({
   const edgeColor = hasEdge ? getEdgeColor(bestEdgePP) : undefined;
 
   // [LOG] BetCell: responsive font sizes matching MLB MobileGameCard exactly
-  // juiceSizeStr uses CSS clamp — responsive on all screen sizes
-  // [FIX] Dynamic font scaling: if any juice value is 5+ chars (e.g. +1000), shrink to avoid clamping
-  const hasLongOdds = [
+  // [FIX] Dynamic font scaling: if any juice value is 5+ chars (e.g. +1000), shrink more aggressively
+  // [FIX] 6+ chars (e.g. +2200, -1000) shrink to minimum to prevent wrapping
+  const allJuices = [
     away.bookJuice, away.modelJuice,
     ...(singleRow ? [] : [home.bookJuice, home.modelJuice])
-  ].some(v => v && v.length >= 5);
-  const juiceSizeStr = hasLongOdds
+  ].filter(v => v && v !== '—');
+
+  const maxJuiceLen = allJuices.reduce((max, v) => Math.max(max, v?.length ?? 0), 0);
+  const hasVeryLongOdds = maxJuiceLen >= 6; // e.g. +2200, -1000
+  const hasLongOdds = maxJuiceLen >= 5;     // e.g. +1000, -900
+
+  const juiceSizeStr = hasVeryLongOdds
+    ? (size === 'sm' ? 'clamp(8px, 2.4vw, 10px)' : 'clamp(10px, 0.9vw, 12px)')
+    : hasLongOdds
     ? (size === 'sm' ? 'clamp(9px, 2.8vw, 11px)' : 'clamp(11px, 1.0vw, 13px)')
     : (size === 'sm' ? 'clamp(11px, 3.5vw, 14px)' : 'clamp(13px, 1.2vw, 16px)');
-  const lineSize = size === 'sm' ? 9 : 10;
+
+  const lineSize = size === 'sm' ? 8.5 : 10;
   const headerSize = size === 'sm' ? 6.5 : 8;
   const footerSize = size === 'sm' ? 7 : 8;
   const borderRadius = size === 'sm' ? 8 : 10;
-  const padding = size === 'sm' ? '3px 4px' : '5px 7px';
+  const padding = size === 'sm' ? '4px 3px' : '5px 7px';
 
   const awayEdge = !isNaN(away.edgePP) && away.edgePP >= EDGE_THRESHOLD_PP;
   const homeEdge = !singleRow && !isNaN(home.edgePP) && home.edgePP >= EDGE_THRESHOLD_PP;
@@ -100,6 +114,7 @@ export const BetCell = React.memo(function BetCell({
     ` bestEdgePP=${isNaN(bestEdgePP) ? 'NaN' : bestEdgePP.toFixed(2)}pp` +
     ` threshold=${EDGE_THRESHOLD_PP}pp` +
     ` | [STATE] roiPct=${roiPct != null && !isNaN(roiPct) ? roiPct.toFixed(2) + '%' : 'NaN'}` +
+    ` | [STATE] maxJuiceLen=${maxJuiceLen} hasLongOdds=${hasLongOdds} hasVeryLongOdds=${hasVeryLongOdds}` +
     ` | [OUTPUT] hasEdge=${hasEdge} awayEdge=${awayEdge} homeEdge=${homeEdge}`
   );
 
@@ -110,46 +125,109 @@ export const BetCell = React.memo(function BetCell({
         : `+${bestEdgePP.toFixed(2)}pp`)
     : 'NO EDGE';
 
-  const TeamRow = ({ side, isEdge }: { side: BetCellSide; isEdge: boolean }) => (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding }}>
-      {/* Book column */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        {side.bookLine && (
-          <span style={{ fontSize: lineSize, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
-            {side.bookLine}
-          </span>
-        )}
-        <span
+  // [FIX] TeamRow: pure flexbox centering for ML (no line label) and line+juice for TOTAL/RL
+  // When bookLine is empty, the juice value is perfectly centered with equal vertical padding.
+  // No hidden spacer spans — flex justifyContent:'center' handles vertical centering.
+  const TeamRow = ({ side, isEdge }: { side: BetCellSide; isEdge: boolean }) => {
+    const hasLine = !!(side.bookLine || side.modelLine);
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 2,
+          padding,
+          // [FIX] When no line label, use flex centering for the row itself
+          alignItems: 'center',
+        }}
+      >
+        {/* Book column */}
+        <div
           style={{
-            fontSize: juiceSizeStr,
-            fontWeight: 700,
-            color: 'rgba(255,255,255,0.90)',
-            lineHeight: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: hasLine ? 1 : 0,
+            minWidth: 0,
           }}
         >
-          {side.bookJuice || '—'}
-        </span>
-      </div>
-      {/* Model column */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-        {side.modelLine && (
-          <span style={{ fontSize: lineSize, color: 'rgba(255,255,255,0.45)', lineHeight: 1 }}>
-            {side.modelLine}
+          {side.bookLine && (
+            <span
+              style={{
+                fontSize: lineSize,
+                color: 'rgba(255,255,255,0.45)',
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                textAlign: 'center',
+                fontVariantNumeric: 'tabular-nums',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {side.bookLine}
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: juiceSizeStr,
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.90)',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {side.bookJuice || '—'}
           </span>
-        )}
-        <span
+        </div>
+        {/* Model column */}
+        <div
           style={{
-            fontSize: juiceSizeStr,
-            fontWeight: 700,
-            lineHeight: 1,
-            color: isEdge ? getEdgeColor(side.edgePP) : 'rgba(255,255,255,0.90)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: hasLine ? 1 : 0,
+            minWidth: 0,
           }}
         >
-          {side.modelJuice || '—'}
-        </span>
+          {side.modelLine && (
+            <span
+              style={{
+                fontSize: lineSize,
+                color: 'rgba(255,255,255,0.45)',
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                textAlign: 'center',
+                fontVariantNumeric: 'tabular-nums',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {side.modelLine}
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: juiceSizeStr,
+              fontWeight: 700,
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums',
+              color: isEdge ? getEdgeColor(side.edgePP) : 'rgba(255,255,255,0.90)',
+            }}
+          >
+            {side.modelJuice || '—'}
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -210,7 +288,7 @@ export const BetCell = React.memo(function BetCell({
         </>
       )}
 
-      {/* ROI Footer — pinned to bottom via marginTop:auto + justifyContent:space-between on parent */}
+      {/* ROI Footer — pinned to bottom via marginTop:auto */}
       <div
         style={{
           marginTop: 'auto',
@@ -249,6 +327,8 @@ export const BetCell = React.memo(function BetCell({
             color: hasEdge ? edgeColor : 'rgba(200,200,200,0.40)',
             letterSpacing: '0.03em',
             lineHeight: 1,
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
           }}
         >
           {roiFooterText}
