@@ -141,46 +141,66 @@ export async function scrapeWc2026Odds(opts?: {
       `[WC2026Odds] [STEP] Game ${game.id} | status=${game.status} | start=${game.start_time}`
     );
 
-    // AN soccer: teams[0]=away, teams[1]=home
-    const awayTeamRaw = game.teams[0]?.full_name ?? game.teams[0]?.abbr ?? "";
-    const homeTeamRaw = game.teams[1]?.full_name ?? game.teams[1]?.abbr ?? "";
+    // AN API soccer convention: teams[0]=home, teams[1]=away (matches ESPN standard)
+    // Primary lookup uses teams[0]=home / teams[1]=away.
+    // Fallback swaps orientation in case the fixture was seeded with the reverse assignment.
+    // Both attempts are logged so any orientation mismatch is immediately visible.
+    const team0Raw = game.teams[0]?.full_name ?? game.teams[0]?.abbr ?? "";
+    const team1Raw = game.teams[1]?.full_name ?? game.teams[1]?.abbr ?? "";
 
     console.log(
-      `[WC2026Odds] [STATE] Raw teams: away="${awayTeamRaw}" home="${homeTeamRaw}"`
+      `[WC2026Odds] [STATE] Raw teams: teams[0]="${team0Raw}" teams[1]="${team1Raw}"`
     );
 
-    const [resolvedAway, resolvedHome] = await Promise.all([
-      resolveWcTeam(awayTeamRaw),
-      resolveWcTeam(homeTeamRaw),
+    const [resolved0, resolved1] = await Promise.all([
+      resolveWcTeam(team0Raw),
+      resolveWcTeam(team1Raw),
     ]);
 
-    if (!resolvedAway || !resolvedHome) {
-      const msg = `[WC2026Odds] [VERIFY] FAIL — Unresolved: away="${awayTeamRaw}"→${resolvedAway ?? "null"} home="${homeTeamRaw}"→${resolvedHome ?? "null"}`;
+    if (!resolved0 || !resolved1) {
+      const msg = `[WC2026Odds] [VERIFY] FAIL — Unresolved: teams[0]="${team0Raw}"→${resolved0 ?? "null"} teams[1]="${team1Raw}"→${resolved1 ?? "null"}`;
       console.error(msg);
       errors.push(msg);
       continue;
     }
 
-    const fixtures = await db
+    // Primary: teams[0]=home, teams[1]=away (ESPN/AN standard)
+    let fixtureRows = await db
       .select()
       .from(wc2026Fixtures)
       .where(
         and(
-          eq(wc2026Fixtures.awayTeamId, resolvedAway),
-          eq(wc2026Fixtures.homeTeamId, resolvedHome)
+          eq(wc2026Fixtures.homeTeamId, resolved0),
+          eq(wc2026Fixtures.awayTeamId, resolved1)
         )
       )
       .limit(1);
+    let orientationUsed = "primary(teams[0]=home,teams[1]=away)";
 
-    const fixture = fixtures[0];
+    // Fallback: teams[0]=away, teams[1]=home
+    if (!fixtureRows[0]) {
+      fixtureRows = await db
+        .select()
+        .from(wc2026Fixtures)
+        .where(
+          and(
+            eq(wc2026Fixtures.homeTeamId, resolved1),
+            eq(wc2026Fixtures.awayTeamId, resolved0)
+          )
+        )
+        .limit(1);
+      orientationUsed = "fallback(teams[0]=away,teams[1]=home)";
+    }
+
+    const fixture = fixtureRows[0];
     if (!fixture) {
-      const msg = `[WC2026Odds] [VERIFY] FAIL — No fixture: away=${resolvedAway} home=${resolvedHome}`;
+      const msg = `[WC2026Odds] [VERIFY] FAIL — No fixture found for "${team0Raw}"(${resolved0}) vs "${team1Raw}"(${resolved1}) — tried both orientations`;
       console.error(msg);
       errors.push(msg);
       continue;
     }
 
-    console.log(`[WC2026Odds] [STATE] Matched fixture_id=${fixture.fixtureId}`);
+    console.log(`[WC2026Odds] [STATE] Matched fixture_id=${fixture.fixtureId} via ${orientationUsed} | DB home=${fixture.homeTeamId} away=${fixture.awayTeamId}`);
 
     // Update kickoff_utc if not set
     if (!fixture.kickoffUtc && game.start_time) {
