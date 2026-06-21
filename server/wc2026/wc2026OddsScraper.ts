@@ -18,6 +18,7 @@
  *   [WC2026Odds] [VERIFY] → PASS / FAIL + reason
  */
 
+import https from "https";
 import { getDb } from "../db";
 import {
   wc2026Fixtures,
@@ -29,7 +30,8 @@ import { eq, and } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const AN_SOCCER_URL = "https://api.actionnetwork.com/web/v2/scoreboard/soccer";
-const AN_BOOK_IDS = "15,30,79,2988,75,123,71,68,69";
+// Fetch each bookId separately — CloudFront WAF blocks multi-bookId requests on the soccer path
+const AN_BOOK_IDS_LIST = ["15", "30", "79", "2988", "75", "123", "71", "68", "69"];
 
 const BOOK_NAMES: Record<string, string> = {
   "15": "consensus",
@@ -43,13 +45,60 @@ const BOOK_NAMES: Record<string, string> = {
   "2988": "Fanatics",
 };
 
-const AN_HEADERS = {
+const AN_HEADERS: Record<string, string> = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   Accept: "application/json",
   Referer: "https://www.actionnetwork.com/soccer/odds",
   Origin: "https://www.actionnetwork.com",
 };
+
+/**
+ * HTTP/1.1 fetch using Node.js built-in https module.
+ * CloudFront WAF blocks HTTP/2 (fetch()) for the soccer endpoint but allows HTTP/1.1.
+ * Retries up to 3 times with 2s delay on 403/5xx.
+ */
+function httpsGet(url: string, headers: Record<string, string>): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request(
+      { hostname: u.hostname, path: u.pathname + u.search, method: "GET", headers },
+      (res) => {
+        let data = "";
+        res.on("data", (c: Buffer) => (data += c.toString()));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+async function fetchAnSoccer(dateStr: string, bookId: string): Promise<AnResponse | null> {
+  const url = `${AN_SOCCER_URL}?bookIds=${bookId}&date=${dateStr}&periods=event`;
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const r = await httpsGet(url, AN_HEADERS);
+      if (r.status === 200) return JSON.parse(r.body) as AnResponse;
+      if (r.status === 403 && attempt < MAX_ATTEMPTS) {
+        console.warn(`[WC2026Odds] [STATE] bookId=${bookId} attempt=${attempt} HTTP 403 — retrying in 2s`);
+        await new Promise((res) => setTimeout(res, 2000));
+        continue;
+      }
+      console.error(`[WC2026Odds] [STATE] bookId=${bookId} HTTP ${r.status} after ${attempt} attempts`);
+      return null;
+    } catch (err) {
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((res) => setTimeout(res, 2000));
+        continue;
+      }
+      console.error(`[WC2026Odds] [STATE] bookId=${bookId} fetch error: ${String(err)}`);
+      return null;
+    }
+  }
+  return null;
+}
 
 // ─── Type definitions for AN response ────────────────────────────────────────
 interface AnOutcome {
@@ -110,25 +159,41 @@ export async function scrapeWc2026Odds(opts?: {
     `[WC2026Odds] [INPUT] date=${dateStr} isClosing=${isClosing} ts=${snapshotTs.toISOString()}`
   );
 
-  const url = `${AN_SOCCER_URL}?bookIds=${AN_BOOK_IDS}&date=${dateStr}&periods=event`;
-  let anData: AnResponse;
+  // Fetch each bookId separately (HTTP/1.1 via https module) to bypass CloudFront WAF
+  // Merge all responses: use first successful response for game list, merge markets from each
+  const gameMap = new Map<number, AnGame>();
+  let totalFetched = 0;
 
-  try {
-    const res = await fetch(url, { headers: AN_HEADERS });
-    if (!res.ok) throw new Error(`AN HTTP ${res.status}: ${res.statusText}`);
-    anData = (await res.json()) as AnResponse;
-  } catch (err) {
-    const msg = `[WC2026Odds] [VERIFY] FAIL — AN fetch error: ${String(err)}`;
-    console.error(msg);
-    return { snapshotsWritten: 0, gamesProcessed: 0, errors: [msg] };
+  for (const bookId of AN_BOOK_IDS_LIST) {
+    const data = await fetchAnSoccer(dateStr, bookId);
+    if (!data) {
+      console.warn(`[WC2026Odds] [STATE] bookId=${bookId} — no data returned, skipping`);
+      continue;
+    }
+    for (const game of data.games ?? []) {
+      if (!gameMap.has(game.id)) {
+        gameMap.set(game.id, { ...game, markets: {} });
+      }
+      const existing = gameMap.get(game.id)!;
+      // Merge markets from this bookId response into the game
+      for (const [mBookId, mData] of Object.entries(game.markets ?? {})) {
+        existing.markets[mBookId] = mData;
+      }
+    }
+    totalFetched++;
+    // Small delay between book requests to avoid rate limiting
+    if (totalFetched < AN_BOOK_IDS_LIST.length) {
+      await new Promise((res) => setTimeout(res, 300));
+    }
   }
 
-  const games = anData.games ?? [];
-  console.log(`[WC2026Odds] [STEP] AN returned ${games.length} games for date=${dateStr}`);
+  const games = Array.from(gameMap.values());
+  console.log(`[WC2026Odds] [STEP] AN returned ${games.length} games for date=${dateStr} (fetched ${totalFetched}/${AN_BOOK_IDS_LIST.length} books)`);
 
   if (games.length === 0) {
-    console.log(`[WC2026Odds] [OUTPUT] No games found for date=${dateStr}`);
-    return { snapshotsWritten: 0, gamesProcessed: 0, errors: [] };
+    const msg = `[WC2026Odds] [VERIFY] FAIL — 0 games returned for date=${dateStr} after fetching all books`;
+    console.error(msg);
+    return { snapshotsWritten: 0, gamesProcessed: 0, errors: [msg] };
   }
 
   const db = await getDb();
