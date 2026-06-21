@@ -1101,12 +1101,14 @@ function WcDcDesktopCol({
       bestRoiPct = drawRoiPct;
     } else if (!isNaN(homeDcEdgePP) && homeDcEdgePP >= EDGE_THRESHOLD_PP && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP)) {
       edgeLabel = `${homeName} W/D`;
-      bestRoiPct = (homeDcBook != null && homeDcModel != null)
-        ? calculateRoi(homeDcModel, homeDcBook, homeDcBook) : NaN;
+      // [FIX] DC ROI: opponent of home_draw(1X) is away_draw(X2) — use awayDcBook as bookOppML
+      bestRoiPct = (homeDcBook != null && homeDcModel != null && awayDcBook != null)
+        ? calculateRoi(homeDcModel, homeDcBook, awayDcBook) : NaN;
     } else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) {
       edgeLabel = `${awayName} W/D`;
-      bestRoiPct = (awayDcBook != null && awayDcModel != null)
-        ? calculateRoi(awayDcModel, awayDcBook, awayDcBook) : NaN;
+      // [FIX] DC ROI: opponent of away_draw(X2) is home_draw(1X) — use homeDcBook as bookOppML
+      bestRoiPct = (awayDcBook != null && awayDcModel != null && homeDcBook != null)
+        ? calculateRoi(awayDcModel, awayDcBook, homeDcBook) : NaN;
     }
   }
 
@@ -1305,8 +1307,17 @@ function WcDcMobileCell({
       && !isNaN(homeDcEdgePP) && homeDcEdgePP >= EDGE_THRESHOLD_PP
       && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP);
     if (drawIsTop) { edgeLabel = 'DRAW'; bestRoiPct = drawRoiPct; }
-    else if (homeIsTop) { edgeLabel = `${homeName} W/D`; }
-    else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) { edgeLabel = `${awayName} W/D`; }
+    else if (homeIsTop) {
+      edgeLabel = `${homeName} W/D`;
+      // [FIX] DC ROI: opponent of home_draw(1X) is away_draw(X2) — use awayDcBook as bookOppML
+      bestRoiPct = (homeDcBook != null && homeDcModel != null && awayDcBook != null)
+        ? calculateRoi(homeDcModel, homeDcBook, awayDcBook) : NaN;
+    } else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) {
+      edgeLabel = `${awayName} W/D`;
+      // [FIX] DC ROI: opponent of away_draw(X2) is home_draw(1X) — use homeDcBook as bookOppML
+      bestRoiPct = (awayDcBook != null && awayDcModel != null && homeDcBook != null)
+        ? calculateRoi(awayDcModel, awayDcBook, homeDcBook) : NaN;
+    }
   }
 
   console.log(
