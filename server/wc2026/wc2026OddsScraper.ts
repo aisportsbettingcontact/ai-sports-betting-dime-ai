@@ -281,20 +281,68 @@ export async function scrapeWc2026Odds(opts?: {
     const markets = game.markets ?? {};
     let bookCount = 0;
 
+    // ─── PERMANENT ORIENTATION FIX: team_id-based selection resolution ─────────
+    // AN's side='home'/'away' in market data is NOT reliable — it sometimes refers to
+    // teams[0] (AN's display order) rather than the actual FIFA home team. This causes
+    // inverted odds for fixtures where AN lists the away team first.
+    //
+    // SOLUTION: Use outcome.team_id (present on all 1X2 and ASIAN_HANDICAP outcomes)
+    // to directly identify which DB team (home or away) the odds belong to.
+    //
+    // Resolution map: AN team_id → DB selection label
+    //   - game.teams[0].id → resolved0 → if resolved0 === fixture.homeTeamId → 'home' else 'away'
+    //   - game.teams[1].id → resolved1 → if resolved1 === fixture.homeTeamId → 'home' else 'away'
+    //
+    // This is 100% reliable regardless of AN's teams[] order or side label convention.
+    // Falls back to side-based mapping if team_id is absent (should never happen for 1X2/spread).
+    const anTeamIdToDbSel = new Map<number, string>();
+    if (game.teams[0]?.id && resolved0) {
+      anTeamIdToDbSel.set(game.teams[0].id, resolved0 === fixture.homeTeamId ? "home" : "away");
+    }
+    if (game.teams[1]?.id && resolved1) {
+      anTeamIdToDbSel.set(game.teams[1].id, resolved1 === fixture.homeTeamId ? "home" : "away");
+    }
+
+    console.log(
+      `[WC2026Odds] [STATE] orientationUsed=${orientationUsed}` +
+      ` | [FIX] team_id map: ${JSON.stringify(Object.fromEntries(anTeamIdToDbSel))}` +
+      ` | DB home=${fixture.homeTeamId}(resolved0=${resolved0},resolved1=${resolved1})`
+    );
+
+    /**
+     * Resolve the DB selection label for a 1X2/spread outcome.
+     * Uses team_id if available (primary, reliable), falls back to AN side label.
+     */
+    const resolveSelection = (outcome: AnOutcome, fallbackSide: string): string => {
+      if (outcome.team_id && anTeamIdToDbSel.has(outcome.team_id)) {
+        const dbSel = anTeamIdToDbSel.get(outcome.team_id)!;
+        if (dbSel !== fallbackSide) {
+          console.log(
+            `[WC2026Odds] [FIX] team_id=${outcome.team_id} → DB selection='${dbSel}' (AN side='${fallbackSide}' overridden)` +
+            ` | fixture=${fixture.fixtureId} DB home=${fixture.homeTeamId} away=${fixture.awayTeamId}`
+          );
+        }
+        return dbSel;
+      }
+      // Fallback: use AN side label directly (draw outcomes always use this path)
+      return fallbackSide;
+    }
+
     for (const [bookIdStr, bookData] of Object.entries(markets)) {
       const bookId = parseInt(bookIdStr, 10);
       const bookName = BOOK_NAMES[bookIdStr] ?? `book_${bookIdStr}`;
       const event = bookData?.event;
       if (!event) continue;
 
-      // 1X2 Moneyline
+      // 1X2 Moneyline — use team_id-based selection resolution
       const ml = event.moneyline ?? [];
       const mlHome = ml.find((o) => o.side === "home");
       const mlAway = ml.find((o) => o.side === "away");
       const mlDraw = ml.find((o) => o.side === "draw");
 
-      for (const [sel, outcome] of [["home", mlHome], ["away", mlAway], ["draw", mlDraw]] as [string, AnOutcome | undefined][]) {
+      for (const [anSide, outcome] of [["home", mlHome], ["away", mlAway], ["draw", mlDraw]] as [string, AnOutcome | undefined][]) {
         if (outcome) {
+          const sel = resolveSelection(outcome, anSide);
           rows.push({
             fixtureId: fixture.fixtureId,
             snapshotTs,
@@ -308,12 +356,15 @@ export async function scrapeWc2026Odds(opts?: {
         }
       }
       if (mlHome || mlAway || mlDraw) {
+        // Log with resolved DB selections for full traceability
+        const homeResolved = mlHome ? resolveSelection(mlHome, "home") : "N/A";
+        const awayResolved = mlAway ? resolveSelection(mlAway, "away") : "N/A";
         console.log(
-          `[WC2026Odds] [STATE] ${bookName} 1X2: home=${mlHome?.odds ?? "N/A"} away=${mlAway?.odds ?? "N/A"} draw=${mlDraw?.odds ?? "N/A"}`
+          `[WC2026Odds] [STATE] ${bookName} 1X2: DB home(${fixture.homeTeamId})=${homeResolved === "home" ? mlHome?.odds : mlAway?.odds} DB away(${fixture.awayTeamId})=${awayResolved === "away" ? mlAway?.odds : mlHome?.odds} draw=${mlDraw?.odds ?? "N/A"}`
         );
       }
 
-      // Total (over/under)
+      // Total (over/under) — side labels are orientation-neutral, no team_id needed
       const totals = event.total ?? [];
       const over = totals.find((o) => o.side === "over");
       const under = totals.find((o) => o.side === "under");
@@ -338,12 +389,13 @@ export async function scrapeWc2026Odds(opts?: {
         );
       }
 
-      // Asian Handicap
+      // Asian Handicap — use team_id-based selection resolution (same as 1X2)
       const spreads = event.spread ?? [];
       const spreadHome = spreads.find((o) => o.side === "home");
       const spreadAway = spreads.find((o) => o.side === "away");
-      for (const [sel, outcome] of [["home", spreadHome], ["away", spreadAway]] as [string, AnOutcome | undefined][]) {
+      for (const [anSide, outcome] of [["home", spreadHome], ["away", spreadAway]] as [string, AnOutcome | undefined][]) {
         if (outcome) {
+          const sel = resolveSelection(outcome, anSide);
           rows.push({
             fixtureId: fixture.fixtureId,
             snapshotTs,
