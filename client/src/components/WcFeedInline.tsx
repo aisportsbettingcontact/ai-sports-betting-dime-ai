@@ -1100,12 +1100,12 @@ function WcDcDesktopCol({
       edgeLabel = 'DRAW';
       bestRoiPct = drawRoiPct;
     } else if (!isNaN(homeDcEdgePP) && homeDcEdgePP >= EDGE_THRESHOLD_PP && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP)) {
-      edgeLabel = `${homeName} W/D`;
+      edgeLabel = `${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`;
       // [FIX] DC ROI: opponent of home_draw(1X) is away_draw(X2) — use awayDcBook as bookOppML
       bestRoiPct = (homeDcBook != null && homeDcModel != null && awayDcBook != null)
         ? calculateRoi(homeDcModel, homeDcBook, awayDcBook) : NaN;
     } else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) {
-      edgeLabel = `${awayName} W/D`;
+      edgeLabel = `${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`;
       // [FIX] DC ROI: opponent of away_draw(X2) is home_draw(1X) — use homeDcBook as bookOppML
       bestRoiPct = (awayDcBook != null && awayDcModel != null && homeDcBook != null)
         ? calculateRoi(awayDcModel, awayDcBook, homeDcBook) : NaN;
@@ -1221,10 +1221,10 @@ function WcDcDesktopCol({
         </div>
 
         {/* Row 2: Home W/D — 1X Double Chance */}
-        <DcRow rowLabel={`${homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
+        <DcRow rowLabel={`${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
 
         {/* Row 3: Away W/D — X2 Double Chance */}
-        <DcRow rowLabel={`${awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} isLast />
+        <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} isLast />
 
         {/* ROI footer */}
         <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
@@ -1308,12 +1308,12 @@ function WcDcMobileCell({
       && homeDcEdgePP >= (isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP);
     if (drawIsTop) { edgeLabel = 'DRAW'; bestRoiPct = drawRoiPct; }
     else if (homeIsTop) {
-      edgeLabel = `${homeName} W/D`;
+      edgeLabel = `${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`;
       // [FIX] DC ROI: opponent of home_draw(1X) is away_draw(X2) — use awayDcBook as bookOppML
       bestRoiPct = (homeDcBook != null && homeDcModel != null && awayDcBook != null)
         ? calculateRoi(homeDcModel, homeDcBook, awayDcBook) : NaN;
     } else if (!isNaN(awayDcEdgePP) && awayDcEdgePP >= EDGE_THRESHOLD_PP) {
-      edgeLabel = `${awayName} W/D`;
+      edgeLabel = `${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`;
       // [FIX] DC ROI: opponent of away_draw(X2) is home_draw(1X) — use homeDcBook as bookOppML
       bestRoiPct = (awayDcBook != null && awayDcModel != null && homeDcBook != null)
         ? calculateRoi(awayDcModel, awayDcBook, homeDcBook) : NaN;
@@ -1348,7 +1348,7 @@ function WcDcMobileCell({
     : 'clamp(11px,3.5vw,14px)';
   const labelFs = 'clamp(7px,2.0vw,8.5px)';
   const hdrFs = 6.5;
-  const padding = '3px 3px';
+  const padding = '2px 3px'; // [FIX] mobile: reduced from 3px to tighten 3-row DC cell
 
   const roiStr = hasEdge
     ? (!isNaN(bestRoiPct) ? `+${bestRoiPct.toFixed(2)}% ROI` : `+${bestEdgePP.toFixed(2)}pp`)
@@ -1409,11 +1409,11 @@ function WcDcMobileCell({
 
       {/* Row 2: Home W/D — 1X Double Chance */}
       <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-      <DcRow rowLabel={`${homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
+      <DcRow rowLabel={`${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
 
       {/* Row 3: Away W/D — X2 Double Chance */}
       <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-      <DcRow rowLabel={`${awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
+      <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
 
       {/* ROI Footer */}
       <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
