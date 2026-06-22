@@ -101,7 +101,7 @@ export const BetCell = React.memo(function BetCell({
   const headerSize = size === 'sm' ? 6.5 : 8;
   const footerSize = size === 'sm' ? 7 : 8;
   const borderRadius = size === 'sm' ? 8 : 10;
-  const padding = size === 'sm' ? '4px 3px' : '5px 7px';
+  const padding = size === 'sm' ? '2px 3px' : '5px 7px'; // [FIX] mobile: reduced from 4px to eliminate whitespace
 
   const awayEdge = !isNaN(away.edgePP) && away.edgePP >= EDGE_THRESHOLD_PP;
   const homeEdge = !singleRow && !isNaN(home.edgePP) && home.edgePP >= EDGE_THRESHOLD_PP;
@@ -277,16 +277,19 @@ export const BetCell = React.memo(function BetCell({
         </span>
       </div>
 
-      {/* Away / Over row */}
-      <TeamRow side={away} isEdge={awayEdge} />
+      {/* [FIX] Centered wrapper: 2 rows (ML/TOTAL) vertically centered to match 3-row DRAW column */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', justifyContent: 'center' }}>
+        {/* Away / Over row */}
+        <TeamRow side={away} isEdge={awayEdge} />
 
-      {/* Divider + Home row — hidden for singleRow (DRAW) */}
-      {!singleRow && (
-        <>
-          <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-          <TeamRow side={home} isEdge={homeEdge} />
-        </>
-      )}
+        {/* Divider + Home row — hidden for singleRow (DRAW) */}
+        {!singleRow && (
+          <>
+            <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+            <TeamRow side={home} isEdge={homeEdge} />
+          </>
+        )}
+      </div>
 
       {/* ROI Footer — pinned to bottom via marginTop:auto */}
       <div
