@@ -4204,3 +4204,10 @@
 - [x] Fix DC labels: "CAN WD" not "X2", "SUI WD" not "1X"
 - [x] Fix BTTS labels: "YES" on top, "NO" on bottom
 - [x] Fix DRAW labels: "DRAW" on top, "SUI OR CAN ML" on bottom (no-draw)
+
+## WC2026 Live Score Pipeline — Bug Fixes (June 24)
+- [x] Fix isInProgress: expand ESPN_LIVE_STATUS_NAMES to include STATUS_SECOND_HALF, STATUS_FIRST_HALF, STATUS_HALFTIME, STATUS_EXTRA_TIME, STATUS_PENALTY
+- [x] Fix score orientation swap bug: track isSwapped flag, invert dbHomeScore/dbAwayScore when ESPN home/away reversed vs DB
+- [x] Fix FT upsert to use dbHomeScore/dbAwayScore (not raw homeScore/awayScore)
+- [x] Fix live-scores heartbeat: query both today UTC and yesterday UTC to catch games spanning midnight UTC boundary
+- [x] Ingest DR Congo vs Colombia (wc26-g-046): FT 0-1 (Colombia won), status=FT, homeScore=0, awayScore=1
