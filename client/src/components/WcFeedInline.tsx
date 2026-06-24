@@ -2574,28 +2574,28 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
 // ─── Projections Feed ─────────────────────────────────────────────────────────
 
 function WcProjectionsFeed({ date }: { date: string }) {
-  // [FIX] Use todayStr() which wraps todayUTC() — cutoff-aware effective feed date.
-  // This prevents late-night UTC matches (e.g. MEX vs KOR at 01:00 UTC = June 18 EDT)
-  // from being missed after midnight UTC when raw ISO date would return June 19.
-  const today = todayStr();
-  const isTodayDate = date === today;
-
-  // [FIX 2026-06-24] keepPreviousData prevents blank screen during date transitions.
-  // When user selects a new date, React Query returns the previous date's data while
-  // the new query is in-flight. Without this, isLoading=false + data=undefined → blank.
-  const todayQuery = trpc.wc2026.todayWithOdds.useQuery(undefined, {
-    enabled: isTodayDate,
-    refetchOnWindowFocus: false,
-    refetchInterval: 60 * 1000,
-    staleTime: 60 * 1000,
-    placeholderData: keepPreviousData,
-  });
+  // ─────────────────────────────────────────────────────────────────────────────
+  // [FIX 2026-06-24] ALWAYS use fixturesByDate(date) — never todayWithOdds.
+  //
+  // ROOT CAUSE of the June 23-on-June-24 bug:
+  //   todayWithOdds uses the server's real UTC clock (11:00 UTC cutoff).
+  //   When MANUAL_WC_DATE_OVERRIDE advances the client to June 24 but the server
+  //   UTC hour is still < 11, todayWithOdds returns June 23 fixtures.
+  //   isTodayDate was true (client date === override date), so the feed routed to
+  //   todayWithOdds and displayed June 23 games on the June 24 UI.
+  //
+  // FIX: fixturesByDate(date) does an exact match_date = :date query.
+  //   It is correct for any date — today, yesterday, or any future date.
+  //   The todayWithOdds split is eliminated entirely to prevent this class of
+  //   client/server date disagreement from ever recurring.
+  // ─────────────────────────────────────────────────────────────────────────────
   const dateQuery = trpc.wc2026.fixturesByDate.useQuery(
     { date },
     {
-      enabled: !isTodayDate,
+      enabled: !!date,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 60 * 1000,
+      refetchInterval: 60 * 1000,
       placeholderData: keepPreviousData,
     }
   );
@@ -2609,9 +2609,7 @@ function WcProjectionsFeed({ date }: { date: string }) {
     }
   );
 
-  // [FIX 2026-06-24] Also destructure isFetching to detect in-flight date transitions.
-  // isFetching=true + fixtures=[] means placeholderData from wrong date → show skeleton.
-  const { data: fixtures, isLoading, isFetching } = isTodayDate ? todayQuery : dateQuery;
+  const { data: fixtures, isLoading, isFetching } = dateQuery;
 
   // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
   const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(

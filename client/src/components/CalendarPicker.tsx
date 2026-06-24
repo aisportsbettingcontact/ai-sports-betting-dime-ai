@@ -93,10 +93,25 @@ function userLocalDate(atMs?: number): string {
  * This is the same logic used by `todayUTC()` (exported for consumers that
  * need the raw effective date without the "TODAY" label decision).
  */
+
+/**
+ * MANUAL WC DATE OVERRIDE
+ *
+ * Set to a YYYY-MM-DD string to force the WC calendar to treat that date as
+ * "today" regardless of the real UTC clock.  Set to null to revert to the
+ * automatic 11:00 UTC cutoff logic.
+ *
+ * This is the ONLY place that needs to change for a manual date advance.
+ * No other code should hardcode dates.
+ */
+export const MANUAL_WC_DATE_OVERRIDE: string | null = '2026-06-24';
+
 export function todayUTC(atMs?: number): string {
-  // [ONE-TIME OVERRIDE 2026-06-24] Manual advance to June 24 — remove after June 25 UTC 11:00
-  return '2026-06-24';
-  // eslint-disable-next-line no-unreachable
+  // [MANUAL OVERRIDE] Single authoritative override point.
+  // Set MANUAL_WC_DATE_OVERRIDE above to null to restore automatic logic.
+  if (MANUAL_WC_DATE_OVERRIDE !== null) {
+    return MANUAL_WC_DATE_OVERRIDE;
+  }
   const ms = atMs ?? Date.now();
   const now = new Date(ms);
   const isBeforeCutoff = now.getUTCHours() < FEED_CUTOFF_UTC_HOUR;
