@@ -1032,11 +1032,11 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         );
         // [STEP] Score color: winner = #39FF14 bold, loser/draw = white unbolded
         const homeScoreColor = (isLive || isFinal) && hasScores
-          ? (homeWins ? '#39FF14' : 'rgba(255,255,255,0.85)')
+          ? 'rgba(255,255,255,0.95)'
           : 'rgba(251,191,36,0.75)';
         const homeScoreBold = (isLive || isFinal) && hasScores && homeWins ? 700 : 400;
         const awayScoreColor = (isLive || isFinal) && hasScores
-          ? (awayWins ? '#39FF14' : 'rgba(255,255,255,0.85)')
+          ? 'rgba(255,255,255,0.95)'
           : 'rgba(251,191,36,0.75)';
         const awayScoreBold = (isLive || isFinal) && hasScores && awayWins ? 700 : 400;
         // [STEP] Projected score color: winner proj = #39FF14 bold, loser/draw = amber unbolded
@@ -1052,7 +1052,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
+                <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
                   {wcFlagEmoji(awayFifaCode) || '🏳️'}
                 </span>
                 {/* Full country name — never FIFA code */}
@@ -1079,7 +1079,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
+                <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
                   {wcFlagEmoji(homeFifaCode) || '🏳️'}
                 </span>
                 {/* Full country name — never FIFA code */}
@@ -1815,13 +1815,13 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // mlAway (top) = away team odds, mlHome (bottom) = home team odds.
   // [FIX 2026-06-24] Append ' ML' to team abbreviation so mobile BetCell shows 'SUI ML' / 'CAN ML'
   const mlAway: BetCellSide = {
-    bookLine: `${awayName} ML`, bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
-    modelLine: `${awayName} ML`, modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
+    bookLine: `${awayFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
+    modelLine: `${awayFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
     edgePP: awayMlEdgePP,
   };
   const mlHome: BetCellSide = {
-    bookLine: `${homeName} ML`, bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
-    modelLine: `${homeName} ML`, modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
+    bookLine: `${homeFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
+    modelLine: `${homeFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
     edgePP: homeMlEdgePP,
   };
   // [FIX] formatTotalLine: O2.5 not O2.50, O2 not O2.00
@@ -1949,15 +1949,33 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [FIX] DRAW column: Row 1 = DRAW (label 'DRAW'), Row 2 = HOME OR AWAY ML (no-draw)
   // [FIX] No Draw label: AWAY/HOME abbreviated (e.g. "CAN/SUI") — away first, home second
   // [FIX] Full country names for mobile panel labels (awayName/homeName declared above at line 1743)
-  const noDrawLabel = `${awayName}/${homeName}`;
+  const noDrawLabel = `${awayFifaCode.toUpperCase()}/${homeFifaCode.toUpperCase()}`;
   const drawRow: BetCellSide = {
     bookLine: 'DRAW', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
     modelLine: 'DRAW', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
     edgePP: drawEdgePP,
   };
+  // [FIX 2026-06-24] Derive no-draw model odds from 3-way model probabilities.
+  // The DB stores only homeDrawOdds (home wins OR draw) as noDraw — NOT the true no-draw.
+  // True no-draw = P(home wins) + P(away wins) = 1 - P(draw).
+  // We compute this from modelOdds.draw using the American odds implied probability formula.
+  const modelNoDrawOdds: number | null = (() => {
+    if (modelOdds?.draw == null) return null;
+    // Convert American odds to implied probability (raw, not no-vig)
+    const drawOdds = modelOdds.draw;
+    const pDraw = drawOdds < 0
+      ? (-drawOdds) / (-drawOdds + 100)
+      : 100 / (drawOdds + 100);
+    const pNoDraw = 1 - pDraw;
+    if (pNoDraw <= 0 || pNoDraw >= 1) return null;
+    // Convert back to American odds
+    return pNoDraw >= 0.5
+      ? -(pNoDraw / (1 - pNoDraw)) * 100
+      : ((1 - pNoDraw) / pNoDraw) * 100;
+  })();
   const noDrawRow: BetCellSide = {
     bookLine: noDrawLabel, bookJuice: fmtAmerican(dkOdds?.noDraw) ?? '—',
-    modelLine: noDrawLabel, modelJuice: fmtAmerican(modelOdds?.noDraw) ?? '—',
+    modelLine: noDrawLabel, modelJuice: fmtAmerican(modelNoDrawOdds) ?? '—',
     edgePP: noDrawEdgePP,
   };
   // [FIX] SPREAD: team abbreviation + spread line (no trailing .0). Row 1=HOME (top), Row 2=AWAY (bottom)
@@ -1972,17 +1990,17 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   );
   const spreadAway: BetCellSide = {
     // [FIX] Row 1 = AWAY team (top row in BetCell = 'away' prop) — standard sportsbook: away on top
-    bookLine: `${awayName} ${fmtSpreadLine(awaySpreadLine)}`,
+    bookLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
     bookJuice: fmtAmerican(dkOdds?.awaySpreadOdds) ?? '—',
-    modelLine: `${awayName} ${fmtSpreadLine(awaySpreadLine)}`,
+    modelLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
     modelJuice: fmtAmerican(modelOdds?.awaySpreadOdds) ?? '—',
     edgePP: awaySpreadEdgePP,
   };
   const spreadHome: BetCellSide = {
     // [FIX] Row 2 = HOME team (bottom row in BetCell = 'home' prop) — standard sportsbook: home on bottom
-    bookLine: `${homeName} ${fmtSpreadLine(homeSpreadLine)}`,
+    bookLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
     bookJuice: fmtAmerican(dkOdds?.homeSpreadOdds) ?? '—',
-    modelLine: `${homeName} ${fmtSpreadLine(homeSpreadLine)}`,
+    modelLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
     modelJuice: fmtAmerican(modelOdds?.homeSpreadOdds) ?? '—',
     edgePP: homeSpreadEdgePP,
   };
@@ -1994,16 +2012,16 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ` | [VERIFY] dkAwayDrawOdds=${dkOdds?.awayDrawOdds ?? 'N/A'} dkHomeDrawOdds=${dkOdds?.homeDrawOdds ?? 'N/A'}`
   );
   const dcAway: BetCellSide = {
-    bookLine: `${awayName} WD`,
+    bookLine: `${awayFifaCode.toUpperCase()} WD`,
     bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
-    modelLine: `${awayName} WD`,
+    modelLine: `${awayFifaCode.toUpperCase()} WD`,
     modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
     edgePP: awayDcEdgePP,
   };
   const dcHome: BetCellSide = {
-    bookLine: `${homeName} WD`,
+    bookLine: `${homeFifaCode.toUpperCase()} WD`,
     bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
-    modelLine: `${homeName} WD`,
+    modelLine: `${homeFifaCode.toUpperCase()} WD`,
     modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
     edgePP: homeDcEdgePP,
   };
