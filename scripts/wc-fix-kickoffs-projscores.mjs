@@ -6,7 +6,7 @@
  *   wc26-g-050: QAT@BIH  — 3:00PM EDT = 19:00 UTC (DB has 01:00 UTC next day → WRONG)
  *   wc26-g-051: BRA@SCO  — 6:00PM EDT = 22:00 UTC (DB has 01:00 UTC next day → WRONG)
  *   wc26-g-052: HAI@MAR  — 6:00PM EDT = 22:00 UTC (DB has 19:00 UTC → WRONG)
- *   wc26-g-053: MEX@CZE  — 6:00PM EDT = 22:00 UTC ✅ already correct
+ *   wc26-g-053: MEX@CZE  — 9:00PM EDT = 01:00 UTC June 25 (was incorrectly set to 22:00 UTC → FIXED Jun 24 2026)
  *   wc26-g-054: KOR@RSA  — 9:00PM EDT = 01:00 UTC June 25 (DB has 22:00 UTC → WRONG)
  *
  * Projected scores: use book NV probs + bisection to derive lambdas, then use raw lambda sum
@@ -29,6 +29,7 @@ const kickoffFixes = [
   { id: 'wc26-g-050', utc: '2026-06-24 19:00:00', label: 'QAT@BIH 3PM EDT' },
   { id: 'wc26-g-051', utc: '2026-06-24 22:00:00', label: 'BRA@SCO 6PM EDT' },
   { id: 'wc26-g-052', utc: '2026-06-24 22:00:00', label: 'HAI@MAR 6PM EDT' },
+  { id: 'wc26-g-053', utc: '2026-06-25 01:00:00', label: 'MEX@CZE 9PM EDT' },
   { id: 'wc26-g-054', utc: '2026-06-25 01:00:00', label: 'KOR@RSA 9PM EDT' },
 ];
 
@@ -58,7 +59,7 @@ const expectedOrder = [
   { id: 'wc26-g-050', edtHour: 15 },
   { id: 'wc26-g-051', edtHour: 18 },
   { id: 'wc26-g-052', edtHour: 18 },
-  { id: 'wc26-g-053', edtHour: 18 },
+  { id: 'wc26-g-053', edtHour: 21 },
   { id: 'wc26-g-054', edtHour: 21 },
 ];
 

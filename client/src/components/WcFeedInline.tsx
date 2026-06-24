@@ -940,7 +940,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
   const NAME_FONT_SIZE = 'clamp(12px, 1.0vw, 17px)';
   const NICK_FONT_SIZE = 'clamp(10px, 0.8vw, 14px)';
-  const TIME_FONT_SIZE = 'clamp(12px, 1.01vw, 15px)';
+  const TIME_FONT_SIZE = 'clamp(10px, 1.01vw, 13px)'; // [FIX 2026-06-24] reduced min 12px→10px to prevent '9:00 PM ET' wrap on mobile
   const LIVE_FONT_SIZE = 'clamp(13.3px, 1.05vw, 17.1px)';
   // FINAL button: 50% of original size
   // Original: clamp(15.2px, 1.28vw, 19px) → halved: clamp(7.6px, 0.64vw, 9.5px)
@@ -985,7 +985,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             FINAL
           </span>
         ) : (
-          <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))" }}>
+          <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
             {fmtKickoff(fixture.kickoffUtc)}
             {fixture.groupLetter && (
               <span style={{ fontSize: 'clamp(7.5px, 0.65vw, 9.5px)', color: 'hsl(var(--muted-foreground))', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
@@ -1560,8 +1560,8 @@ function WcDesktopMergedPanel({
       {/* ── Col 1: ML — Row 1: HOME (top), Row 2: AWAY (bottom) ───────────────────────────── */}
       <WcMktCol
         title="ML"
-        awayLabel={homeFifaCode}
-        homeLabel={awayFifaCode}
+        awayLabel={`${homeFifaCode} ML`}
+        homeLabel={`${awayFifaCode} ML`}
         awayBookNum={dkOdds?.home}
         homeBookNum={dkOdds?.away}
         awayModelNum={modelOdds?.home}
@@ -1823,14 +1823,15 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [FIX] Standard sportsbook convention: AWAY on top, HOME on bottom.
   // BetCell renders 'away' prop as top row and 'home' prop as bottom row.
   // mlAway (top) = away team odds, mlHome (bottom) = home team odds.
+  // [FIX 2026-06-24] Append ' ML' to team abbreviation so mobile BetCell shows 'SUI ML' / 'CAN ML'
   const mlAway: BetCellSide = {
-    bookLine: awayFifaCode.toUpperCase(), bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
-    modelLine: awayFifaCode.toUpperCase(), modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
+    bookLine: `${awayFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
+    modelLine: `${awayFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
     edgePP: awayMlEdgePP,
   };
   const mlHome: BetCellSide = {
-    bookLine: homeFifaCode.toUpperCase(), bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
-    modelLine: homeFifaCode.toUpperCase(), modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
+    bookLine: `${homeFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
+    modelLine: `${homeFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
     edgePP: homeMlEdgePP,
   };
   // [FIX] formatTotalLine: O2.5 not O2.50, O2 not O2.00
