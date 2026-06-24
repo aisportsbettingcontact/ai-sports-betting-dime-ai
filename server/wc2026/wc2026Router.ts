@@ -105,11 +105,11 @@ export const wc2026Router = router({
               else if (row.selection === "away") o["away"] = row.americanOdds;
               else if (row.selection === "no_draw") o["noDraw"] = row.americanOdds;
             } else if (row.market === "TOTAL") {
-              if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
+              if (row.selection === "over") { o["overLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["overOdds"] = row.americanOdds; }
               else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
             } else if (row.market === "ASIAN_HANDICAP") {
-              if (row.selection === "home") { o["homeSpreadLine"] = row.line ?? undefined; o["homeSpreadOdds"] = row.americanOdds; }
-              else if (row.selection === "away") { o["awaySpreadLine"] = row.line ?? undefined; o["awaySpreadOdds"] = row.americanOdds; }
+              if (row.selection === "home") { o["homeSpreadLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["homeSpreadOdds"] = row.americanOdds; }
+              else if (row.selection === "away") { o["awaySpreadLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["awaySpreadOdds"] = row.americanOdds; }
             } else if (row.market === "DOUBLE_CHANCE") {
               if (row.selection === "home_draw") o["homeDrawOdds"] = row.americanOdds;
               else if (row.selection === "away_draw") o["awayDrawOdds"] = row.americanOdds;
@@ -389,11 +389,11 @@ export const wc2026Router = router({
             else if (row.selection === "away") o["away"] = row.americanOdds;
             else if (row.selection === "no_draw") o["noDraw"] = row.americanOdds;
           } else if (row.market === "TOTAL") {
-            if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
+            if (row.selection === "over") { o["overLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["overOdds"] = row.americanOdds; }
             else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
           } else if (row.market === "ASIAN_HANDICAP") {
-            if (row.selection === "home") { o["homeSpreadLine"] = row.line ?? undefined; o["homeSpreadOdds"] = row.americanOdds; }
-            else if (row.selection === "away") { o["awaySpreadLine"] = row.line ?? undefined; o["awaySpreadOdds"] = row.americanOdds; }
+            if (row.selection === "home") { o["homeSpreadLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["homeSpreadOdds"] = row.americanOdds; }
+            else if (row.selection === "away") { o["awaySpreadLine"] = row.line != null ? parseFloat(row.line as unknown as string) : undefined; o["awaySpreadOdds"] = row.americanOdds; }
           } else if (row.market === "DOUBLE_CHANCE") {
             if (row.selection === "home_draw") o["homeDrawOdds"] = row.americanOdds;
             else if (row.selection === "away_draw") o["awayDrawOdds"] = row.americanOdds;

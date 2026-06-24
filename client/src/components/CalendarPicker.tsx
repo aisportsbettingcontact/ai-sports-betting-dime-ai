@@ -94,6 +94,9 @@ function userLocalDate(atMs?: number): string {
  * need the raw effective date without the "TODAY" label decision).
  */
 export function todayUTC(atMs?: number): string {
+  // [ONE-TIME OVERRIDE 2026-06-24] Manual advance to June 24 — remove after June 25 UTC 11:00
+  return '2026-06-24';
+  // eslint-disable-next-line no-unreachable
   const ms = atMs ?? Date.now();
   const now = new Date(ms);
   const isBeforeCutoff = now.getUTCHours() < FEED_CUTOFF_UTC_HOUR;
