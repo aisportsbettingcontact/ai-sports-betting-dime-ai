@@ -433,8 +433,12 @@ const awayMlEdgePP = (!isNaN(bkAwayMlProb) && !isNaN(mdlAwayMlProb))
 const homeMlEdgePP = (!isNaN(bkHomeMlProb) && !isNaN(mdlHomeMlProb))
   ? (mdlHomeMlProb - bkHomeMlProb)
   : NaN;
-const awayMlEdgeDetected: boolean = !isNaN(awayMlEdgePP) && awayMlEdgePP > ML_EDGE_THRESHOLD_PP;
-const homeMlEdgeDetected: boolean = !isNaN(homeMlEdgePP) && homeMlEdgePP > ML_EDGE_THRESHOLD_PP;
+// [FIX 2026-06-24] Gate ML edge detection on hasModelData.
+// game.modelAwayML/modelHomeML hold stale values when modelRunAt=null (RL INVALIDATE).
+// Without this gate, awayMlEdgeDetected/homeMlEdgeDetected can be true even when
+// hasModelData=false, causing the ML column to render '—' in neon green (#39FF14).
+const awayMlEdgeDetected: boolean = hasModelData && !isNaN(awayMlEdgePP) && awayMlEdgePP > ML_EDGE_THRESHOLD_PP;
+const homeMlEdgeDetected: boolean = hasModelData && !isNaN(homeMlEdgePP) && homeMlEdgePP > ML_EDGE_THRESHOLD_PP;
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:MLEdge:OPTION_B] game=${game.id}` +

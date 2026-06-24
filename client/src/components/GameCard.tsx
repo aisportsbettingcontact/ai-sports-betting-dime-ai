@@ -974,8 +974,12 @@ function DesktopMergedPanel({
   // This handles cases where spread edge and ML edge are on different teams
   // (e.g. PHI covers +1.5 but BOS wins outright -- both can be true simultaneously).
   const EDGE_THRESHOLD_ML = 0.5;
-  const awayMlPositive = !isNaN(awayMlEdgePP) && awayMlEdgePP > EDGE_THRESHOLD_ML;
-  const homeMlPositive = !isNaN(homeMlEdgePP) && homeMlEdgePP > EDGE_THRESHOLD_ML;
+  // [FIX 2026-06-24] Gate ML edge detection on hasModelData.
+  // modelAwayML/modelHomeML hold stale values when modelRunAt=null (RL INVALIDATE).
+  // Without this gate, awayMlPositive/homeMlPositive can be true even when
+  // hasModelData=false, causing ML column to render '—' in neon green (#39FF14).
+  const awayMlPositive = hasModelData && !isNaN(awayMlEdgePP) && awayMlEdgePP > EDGE_THRESHOLD_ML;
+  const homeMlPositive = hasModelData && !isNaN(homeMlEdgePP) && homeMlEdgePP > EDGE_THRESHOLD_ML;
   // Pick the side with the larger positive edge; if tied, prefer the spread-edge side
   const mlEdgeIsAway: boolean | null = (() => {
     if (awayMlPositive && homeMlPositive) {
@@ -1954,8 +1958,9 @@ function OddsLinesPanel({
   const awayMlEdgePPMob = calculateEdge(bkAwayMlNumMob, mdlAwayMlNumMob);
   const homeMlEdgePPMob = calculateEdge(bkHomeMlNumMob, mdlHomeMlNumMob);
   const EDGE_THRESHOLD_ML_MOB = 0.5;
-  const awayMlPosMob = !isNaN(awayMlEdgePPMob) && awayMlEdgePPMob > EDGE_THRESHOLD_ML_MOB;
-  const homeMlPosMob = !isNaN(homeMlEdgePPMob) && homeMlEdgePPMob > EDGE_THRESHOLD_ML_MOB;
+  // [FIX 2026-06-24] Gate ML edge detection on hasModelData (same fix as DesktopMergedPanel above).
+  const awayMlPosMob = hasModelData && !isNaN(awayMlEdgePPMob) && awayMlEdgePPMob > EDGE_THRESHOLD_ML_MOB;
+  const homeMlPosMob = hasModelData && !isNaN(homeMlEdgePPMob) && homeMlEdgePPMob > EDGE_THRESHOLD_ML_MOB;
   const mlEdgeIsAwayMob: boolean | null = (() => {
     if (awayMlPosMob && homeMlPosMob) return awayMlEdgePPMob >= homeMlEdgePPMob ? true : false;
     if (awayMlPosMob) return true;
@@ -2538,7 +2543,21 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // ── AUTHORITATIVE edge direction — single source of truth for all render paths ──
   // Computed here (after awayAbbr is resolved) and passed to DesktopMergedPanel + mobile IIFE.
   // Eliminates the 3 divergent local computations that could disagree on the same render.
-  const authSpreadEdgeIsAway: boolean | null = (() => {
+  //
+  // [FIX 2026-06-24] MODELRUNAT GATE: When modelRunAt is null (model not yet run, or was
+  // invalidated by RL INVALIDATE), BOTH edge direction flags MUST be null.
+  // Without this gate, stale model odds fields (left over from a previous run before
+  // invalidation) cause authSpreadEdgeIsAway/authTotalEdgeIsOver to be non-null while
+  // hasModelData=false. This renders '—' dashes in neon green (#39FF14) in MobileGameCard
+  // and DesktopMergedPanel — a false edge signal on a game with no valid model output.
+  // Root cause: RL INVALIDATE sets modelRunAt=null but leaves model odds fields populated
+  // in the DB (they are nulled atomically in the same DB update, but a race condition
+  // between the DB write and the frontend cache can expose a window where modelRunAt=null
+  // but model odds are still non-null in the cached game object).
+  // Fix: gate both flags on _hasModelRunAt so no edge color is ever applied without a
+  // valid model run timestamp.
+  const _hasModelRunAt = game.modelRunAt != null;
+  const authSpreadEdgeIsAway: boolean | null = !_hasModelRunAt ? null : (() => {
     if (!computedSpreadEdge || computedSpreadEdge === 'PASS') return null;
     if (isNhlGame || isMlbGame) {
       return edgeLabelIsAway(computedSpreadEdge, awayAbbr, awayDisplayName, game.sport ?? 'NHL');
@@ -2547,7 +2566,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     if (!isNaN(awayModelSpread) && !isNaN(awayBookSpread)) return awayModelSpread < awayBookSpread;
     return null;
   })();
-  const authTotalEdgeIsOver: boolean | null = (() => {
+  const authTotalEdgeIsOver: boolean | null = !_hasModelRunAt ? null : (() => {
     // [FIX] For NHL/MLB: totalDiff is null in DB. Skip the totalDiff guard and go directly to
     // Tier 1 (model odds comparison) then Tier 2 (DB label). The guard was blocking all NHL/MLB
     // total edges because totalDiff was always null/0 for these sports.
