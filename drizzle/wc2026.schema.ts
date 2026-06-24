@@ -296,6 +296,21 @@ export const wc2026ModelProjections = mysqlTable(
     nvHomeProb: double("nv_home_prob"),
     nvDrawProb: double("nv_draw_prob"),
     nvAwayProb: double("nv_away_prob"),
+    // Double chance (1X / X2) — no-vig probabilities and American odds
+    nvDc1X: double("nv_dc_1x"),
+    nvDcX2: double("nv_dc_x2"),
+    dc1XOdds: smallint("dc_1x_odds"),
+    dcX2Odds: smallint("dc_x2_odds"),
+    // No draw (Away or Home ML) — no-vig probabilities and American odds
+    nvNoDrawHome: double("nv_no_draw_home"),
+    nvNoDrawAway: double("nv_no_draw_away"),
+    noDrawHomeOdds: smallint("no_draw_home_odds"),
+    noDrawAwayOdds: smallint("no_draw_away_odds"),
+    // BTTS American odds (btts_prob already stores the probability)
+    bttsYesOdds: smallint("btts_yes_odds"),
+    bttsNoOdds: smallint("btts_no_odds"),
+    // Model total raw (simulation-validated expected total goals)
+    modelTotalRaw: double("model_total_raw"),
     homeEdge: double("home_edge"),
     drawEdge: double("draw_edge"),
     awayEdge: double("away_edge"),

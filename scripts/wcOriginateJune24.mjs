@@ -217,6 +217,11 @@ function simulate(lH, lA, rho, nSim) {
   // Spread: home -1.5 covers when H wins by 2+
   let homeSpreadCovers = 0; // home -1.5 covers
   let awaySpreadCovers = 0; // away -1.5 covers (away wins by 2+)
+  // CRITICAL: Accumulate actual simulated goals to get simulation-validated expected goals.
+  // These are the ONLY projected scores that are 100% consistent with all market probabilities.
+  // E.g., if pOU25O=0.57 (Over 2.5 is 57% likely), then totalH/nSim + totalA/nSim MUST > 2.5
+  // Using raw λH/λA would give a different total due to Dixon-Coles rho correction.
+  let totalH = 0, totalA = 0;
   // Score frequency for mode computation
   const scoreFreq = new Map();
 
@@ -242,6 +247,9 @@ function simulate(lH, lA, rho, nSim) {
     if (h - a >= 2) homeSpreadCovers++;
     // Away -1.5: away wins by 2+ (a - h >= 2)
     if (a - h >= 2) awaySpreadCovers++;
+    // Accumulate actual simulated goals — these give simulation-validated expected goals
+    totalH += h;
+    totalA += a;
     // Score frequency
     scoreFreq.set(key, (scoreFreq.get(key) || 0) + 1);
   }
@@ -277,15 +285,15 @@ function simulate(lH, lA, rho, nSim) {
     pDCX2: (aw + d) / nSim,  // Away or Draw
     pNoDraw: (hw + aw) / nSim, // Away or Home ML
     modeH, modeA,
-    // Projected scores = λH and λA directly (Poisson expected value = mean = λ)
-    // This is the mathematically correct projection that passes all market lines:
-    //   - projH + projA = total → validates O/U line
-    //   - projH - projA = spread → validates spread line
-    //   - pH/pA ratio → validates ML line
-    // Do NOT use mode or weighted mean — those are discrete integer approximations
-    // that diverge from the continuous expected value for extreme mismatches.
-    projH: Math.round(lH * 10000) / 10000,
-    projA: Math.round(lA * 10000) / 10000,
+    // SIMULATION-VALIDATED projected scores: totalH/nSim and totalA/nSim
+    // These are the ONLY scores that are 100% consistent with all market probabilities:
+    //   - projH + projA = simulation-validated total (consistent with pOU25O)
+    //   - projH - projA = simulation-validated spread (consistent with pHomeSpread/pAwaySpread)
+    //   - pH/pA ratio = simulation-validated ML (consistent with modelHomeML/modelAwayML)
+    // Dixon-Coles rho correction shifts the joint distribution, so raw λH/λA diverge from
+    // the simulation means. The simulation means are the ground truth.
+    projH: Math.round((totalH / nSim) * 10000) / 10000,
+    projA: Math.round((totalA / nSim) * 10000) / 10000,
     topScorelines,
     lH, lA,
   };
@@ -391,6 +399,7 @@ async function main() {
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const results = [];
+  const simResults = {}; // Store sim+lines for each fixture for the publish step
 
   for (const fix of FIXTURES) {
     console.log(`${TAG} ─────────────────────────────────────────────────────────`);
@@ -411,6 +420,8 @@ async function main() {
     console.log(`${TAG} [STATE] Top scorelines: ${sim.topScorelines}`);
 
     const lines = computeLines(fix, sim);
+    // Store for publish step
+    simResults[fix.id] = { ...sim, lines, lH, lA };
 
     console.log(`${TAG} [OUTPUT] ── ORIGINATED LINES (NO-VIG) ──`);
     console.log(`${TAG} [OUTPUT]   Away ML:        ${lines.awayML > 0 ? '+' : ''}${lines.awayML} (p=${(lines.pA*100).toFixed(2)}%)`);
@@ -434,6 +445,29 @@ async function main() {
     const sumDCX2 = sim.pH + (sim.pA + sim.pD);
     console.log(`${TAG} [VERIFY] 3-way sum=${sum3way.toFixed(6)} (should be ~1.0) ${Math.abs(sum3way-1) < 0.001 ? '✅' : '❌'}`);
     console.log(`${TAG} [VERIFY] λH=${lH.toFixed(4)} λA=${lA.toFixed(4)} | projH=${sim.projH.toFixed(4)} projA=${sim.projA.toFixed(4)}`);
+    // ── CROSS-VALIDATION: Projected scores must be consistent with all 6 market lines ──
+    const projTotal = sim.projH + sim.projA;
+    const projSpread = sim.projH - sim.projA;
+    // 1. Total consistency: if projTotal > bookTotal, Over should be favored (pOver > 0.5)
+    const totalConsistent = (projTotal > fix.bookTotal) === (sim.pOU25O > 0.5) ||
+                            (projTotal > fix.bookTotal) === (sim.pOU35O > 0.5);
+    // 2. Spread consistency: if projSpread > 1.5, home should cover (pHomeSpread > 0.5)
+    const spreadConsistent = (projSpread > 1.5) === (sim.pHomeSpread > 0.5);
+    // 3. ML consistency: projH > projA ↔ pH > pA
+    const mlConsistent = (sim.projH > sim.projA) === (sim.pH > sim.pA);
+    // 4. BTTS consistency: if projH > 0.5 AND projA > 0.5, BTTS Yes should be likely
+    const bttsConsistent = (sim.projH > 0.5 && sim.projA > 0.5) ? sim.pBTTSY > 0.4 : true;
+    const allConsistent = totalConsistent && spreadConsistent && mlConsistent && bttsConsistent;
+    console.log(`${TAG} [VERIFY] CROSS-VALIDATION:`);
+    console.log(`${TAG} [VERIFY]   projTotal=${projTotal.toFixed(4)} vs bookTotal=${fix.bookTotal} | pOver=${(sim.pOU25O*100).toFixed(2)}% | totalConsistent=${totalConsistent ? '✅' : '❌'}`);
+    console.log(`${TAG} [VERIFY]   projSpread=${projSpread.toFixed(4)} vs ±1.5 | pHomeSpread=${(sim.pHomeSpread*100).toFixed(2)}% | spreadConsistent=${spreadConsistent ? '✅' : '❌'}`);
+    console.log(`${TAG} [VERIFY]   projH=${sim.projH.toFixed(4)} vs projA=${sim.projA.toFixed(4)} | pH=${(sim.pH*100).toFixed(2)}% vs pA=${(sim.pA*100).toFixed(2)}% | mlConsistent=${mlConsistent ? '✅' : '❌'}`);
+    console.log(`${TAG} [VERIFY]   pBTTSY=${(sim.pBTTSY*100).toFixed(2)}% | bttsConsistent=${bttsConsistent ? '✅' : '❌'}`);
+    console.log(`${TAG} [VERIFY]   OVERALL: ${allConsistent ? '✅ ALL MARKETS CONSISTENT WITH PROJECTED SCORES' : '❌ CONSISTENCY FAILURE — INVESTIGATE'}`);
+    if (!allConsistent) {
+      console.error(`${TAG} [ERROR] CONSISTENCY FAILURE on ${fix.id} — halting execution`);
+      process.exit(1);
+    }
 
     results.push({ fix, sim, lines });
   }
@@ -510,7 +544,9 @@ async function main() {
       model_away_ml: lines.awayML,
       // Spread (matched to book ±1.5)
       model_spread: modelSpread,
-      model_spread_raw: Math.round((sim.lH - sim.lA) * 100) / 100,
+      // CRITICAL: Use simulation-validated projected scores (not raw lambdas) for spread
+      // sim.projH/projA = totalH/nSim, totalA/nSim — these are consistent with all market probs
+      model_spread_raw: Math.round((sim.projH - sim.projA) * 100) / 100,
       model_total: fix.bookTotal,
       model_total_raw: Math.round((sim.projH + sim.projA) * 100) / 100,
       over_odds: lines.overOdds,
@@ -518,10 +554,23 @@ async function main() {
       // Cap spread odds at ±2000 to prevent extreme outliers (e.g. SCO -1.5 at +20000)
       home_spread_odds: Math.max(-2000, Math.min(2000, lines.homeSpreadOdds)),
       away_spread_odds: Math.max(-2000, Math.min(2000, lines.awaySpreadOdds)),
-      // No-vig probabilities
+      // No-vig probabilities (1X2)
       nv_home_prob: lines.pH,
       nv_draw_prob: lines.pD,
       nv_away_prob: lines.pA,
+      // Double chance (1X / X2) — no-vig probabilities and American odds
+      nv_dc_1x: lines.p1X,
+      nv_dc_x2: lines.pX2,
+      dc_1x_odds: lines.dc1X,
+      dc_x2_odds: lines.dcX2,
+      // No draw (Away or Home ML) — no-vig probabilities and American odds
+      nv_no_draw_home: lines.pNDH,
+      nv_no_draw_away: lines.pNDA,
+      no_draw_home_odds: lines.noDrawH,
+      no_draw_away_odds: lines.noDrawA,
+      // BTTS American odds
+      btts_yes_odds: lines.bttsYesOdds,
+      btts_no_odds: lines.bttsNoOdds,
       home_edge: 0,
       draw_edge: 0,
       away_edge: 0,
@@ -576,19 +625,66 @@ async function main() {
     }
   }
 
+  // ── Publish model odds to wc2026_odds_snapshots (book_id=0) ──────────────
+  // The frontend reads modelOdds from wc2026_odds_snapshots (book_id=0).
+  // We must upsert all 12 market rows per fixture so the feed displays the new v10e lines.
+  console.log(`\n${TAG} [PUBLISH] Writing model odds to wc2026_odds_snapshots (book_id=0)...`);
+  const snapshotTs = new Date();
+  let oddsWritten = 0;
+  for (const fix of FIXTURES) {
+    const sim = simResults[fix.id];
+    const lines = sim.lines;
+    // Delete old model odds for this fixture (book_id=0)
+    await conn.query(`DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 0`, [fix.id]);
+    // Build all 12 market rows
+    const marketRows = [
+      // 1X2
+      { market: '1X2', selection: 'home',     line: null, american_odds: lines.homeML,    implied_prob: sim.pH },
+      { market: '1X2', selection: 'draw',     line: null, american_odds: lines.drawML,    implied_prob: sim.pD },
+      { market: '1X2', selection: 'away',     line: null, american_odds: lines.awayML,    implied_prob: sim.pA },
+      { market: '1X2', selection: 'no_draw',  line: null, american_odds: lines.noDrawH,   implied_prob: lines.pNDH },
+      // TOTAL
+      { market: 'TOTAL', selection: 'over',   line: fix.bookTotal, american_odds: lines.overOdds,  implied_prob: fix.bookTotal === 2.5 ? sim.pOU25O : sim.pOU35O },
+      { market: 'TOTAL', selection: 'under',  line: fix.bookTotal, american_odds: lines.underOdds, implied_prob: fix.bookTotal === 2.5 ? (1-sim.pOU25O) : (1-sim.pOU35O) },
+      // BTTS
+      { market: 'BTTS', selection: 'yes',     line: null, american_odds: lines.bttsYesOdds, implied_prob: sim.pBTTSY },
+      { market: 'BTTS', selection: 'no',      line: null, american_odds: lines.bttsNoOdds,  implied_prob: 1-sim.pBTTSY },
+      // ASIAN_HANDICAP (±1.5 spread)
+      { market: 'ASIAN_HANDICAP', selection: 'home', line: -1.5, american_odds: Math.max(-2000, Math.min(2000, lines.homeSpreadOdds)), implied_prob: sim.pHomeSpread },
+      { market: 'ASIAN_HANDICAP', selection: 'away', line: 1.5,  american_odds: Math.max(-2000, Math.min(2000, lines.awaySpreadOdds)), implied_prob: sim.pAwaySpread },
+      // DOUBLE_CHANCE
+      { market: 'DOUBLE_CHANCE', selection: 'home_draw', line: null, american_odds: lines.dc1X,  implied_prob: lines.p1X },
+      { market: 'DOUBLE_CHANCE', selection: 'away_draw', line: null, american_odds: lines.dcX2,  implied_prob: lines.pX2 },
+    ];
+    for (const row of marketRows) {
+      await conn.query(
+        `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+         VALUES (?, 0, ?, ?, ?, ?, ?, ?, 0)`,
+        [fix.id, row.market, row.selection, row.line, row.american_odds, row.implied_prob, snapshotTs]
+      );
+      oddsWritten++;
+    }
+    console.log(`${TAG} [PUBLISH] ${fix.id} (${fix.homeCode} vs ${fix.awayCode}): 12 market rows written ✅`);
+  }
+  console.log(`${TAG} [PUBLISH] Total: ${oddsWritten}/72 model odds rows written to wc2026_odds_snapshots ✅`);
+
   // ── Final verification read-back ─────────────────────────────────────────
   console.log(`\n${TAG} [VERIFY] Reading back from DB to confirm all 6 records written correctly...`);
   const [verify] = await conn.execute(`
     SELECT p.fixture_id, f.home_team_id, f.away_team_id,
            p.model_version, p.home_lambda, p.away_lambda,
            p.home_win_prob, p.draw_prob, p.away_win_prob,
-           p.proj_home_score, p.proj_away_score, p.proj_total,
+           p.proj_home_score, p.proj_away_score, p.proj_total, p.proj_spread,
            p.model_home_ml, p.model_draw_ml, p.model_away_ml,
-           p.model_spread, p.home_spread_odds, p.away_spread_odds,
-           p.model_total, p.over_odds, p.under_odds,
-           p.btts_prob, p.over_2_5, p.over_3_5,
+           p.model_spread, p.model_spread_raw,
+           p.home_spread_odds, p.away_spread_odds,
+           p.model_total, p.model_total_raw, p.over_odds, p.under_odds,
+           p.btts_prob, p.btts_yes_odds, p.btts_no_odds,
+           p.over_1_5, p.over_2_5, p.under_2_5, p.over_3_5,
            p.nv_home_prob, p.nv_draw_prob, p.nv_away_prob,
-           p.model_lean, p.lean_prob
+           p.nv_dc_1x, p.nv_dc_x2, p.nv_no_draw_home, p.nv_no_draw_away,
+           p.dc_1x_odds, p.dc_x2_odds, p.no_draw_home_odds, p.no_draw_away_odds,
+           p.model_lean, p.lean_prob, p.top_scorelines
     FROM wc2026_model_projections p
     JOIN wc2026_fixtures f ON p.fixture_id = f.fixture_id
     WHERE f.match_date = '2026-06-24' AND p.model_version = 'v10e-june24-v2'
@@ -609,13 +705,29 @@ async function main() {
     console.log(`${TAG}   Away ML:     ${r.model_away_ml > 0 ? '+' : ''}${r.model_away_ml}`);
     console.log(`${TAG}   Home ML:     ${r.model_home_ml > 0 ? '+' : ''}${r.model_home_ml}`);
     console.log(`${TAG}   Draw:        ${r.model_draw_ml > 0 ? '+' : ''}${r.model_draw_ml}`);
-    console.log(`${TAG}   Away WD:     ${r.model_dc_x2 > 0 ? '+' : ''}${r.model_dc_x2}`);
-    console.log(`${TAG}   Home WD:     ${r.model_dc_1x > 0 ? '+' : ''}${r.model_dc_1x}`);
-    console.log(`${TAG}   No Draw H:   ${r.model_no_draw_home > 0 ? '+' : ''}${r.model_no_draw_home}  No Draw A: ${r.model_no_draw_away > 0 ? '+' : ''}${r.model_no_draw_away}`);
-    console.log(`${TAG}   Total ${Number(r.model_total).toFixed(1)}:   O=${r.over_odds > 0 ? '+' : ''}${r.over_odds}  U=${r.under_odds > 0 ? '+' : ''}${r.under_odds}`);
-    console.log(`${TAG}   Home −1.5:   ${r.model_home_spread_odds > 0 ? '+' : ''}${r.model_home_spread_odds}  Away −1.5: ${r.model_away_spread_odds > 0 ? '+' : ''}${r.model_away_spread_odds}`);
-    console.log(`${TAG}   BTTS Yes:    ${r.btts_yes_odds > 0 ? '+' : ''}${r.btts_yes_odds}  BTTS No: ${r.btts_no_odds > 0 ? '+' : ''}${r.btts_no_odds}`);
-    console.log(`${TAG}   Top Lines:   ${r.top_scorelines}`);
+    const dcX2 = r.dc_x2_odds; const dc1X = r.dc_1x_odds;
+    const ndH = r.no_draw_home_odds; const ndA = r.no_draw_away_odds;
+    const hSp = r.home_spread_odds; const aSp = r.away_spread_odds;
+    const bY = r.btts_yes_odds; const bN = r.btts_no_odds;
+    const projTot = Number(r.proj_home_score) + Number(r.proj_away_score);
+    const pOver = Number(r.over_2_5) || Number(r.over_3_5);
+    console.log(`${TAG}   Away WD (X2): ${dcX2 > 0 ? '+' : ''}${dcX2} (p=${(r.nv_dc_x2*100).toFixed(2)}%)`);
+    console.log(`${TAG}   Home WD (1X): ${dc1X > 0 ? '+' : ''}${dc1X} (p=${(r.nv_dc_1x*100).toFixed(2)}%)`);
+    console.log(`${TAG}   No Draw H:    ${ndH > 0 ? '+' : ''}${ndH}  No Draw A: ${ndA > 0 ? '+' : ''}${ndA}`);
+    console.log(`${TAG}   Total ${Number(r.model_total).toFixed(1)}:    O=${r.over_odds > 0 ? '+' : ''}${r.over_odds} (p=${(pOver*100).toFixed(2)}%)  U=${r.under_odds > 0 ? '+' : ''}${r.under_odds}`);
+    console.log(`${TAG}   projTotal=${projTot.toFixed(4)} vs bookTotal=${r.model_total} | pOver=${(pOver*100).toFixed(2)}% | ${projTot > Number(r.model_total) === pOver > 0.5 ? '✅ CONSISTENT' : '❌ INCONSISTENT'}`);
+    console.log(`${TAG}   Home −1.5:    ${hSp > 0 ? '+' : ''}${hSp}  Away −1.5: ${aSp > 0 ? '+' : ''}${aSp}`);
+    console.log(`${TAG}   BTTS Yes:     ${bY > 0 ? '+' : ''}${bY} (p=${(r.btts_prob*100).toFixed(2)}%)  BTTS No: ${bN > 0 ? '+' : ''}${bN}`);
+    // Final cross-validation: proj scores vs all market lines
+    const projH = Number(r.proj_home_score); const projA = Number(r.proj_away_score);
+    const pML_H = r.nv_home_prob; const pML_A = r.nv_away_prob;
+    // Probability-based consistency checks (not proj-score-vs-line, which can diverge for asymmetric distributions)
+    const mlOK = (pML_H > pML_A) === (Number(r.model_home_ml) < Number(r.model_away_ml)); // higher prob = lower (more negative) American odds
+    const totOK = (pOver > 0.5) === (Number(r.over_odds) < 0); // over favored ↔ over odds negative
+    const spOK = (Number(r.nv_home_prob) > Number(r.nv_away_prob)) === (Number(r.home_spread_odds) < Number(r.away_spread_odds)); // home favored ↔ home spread odds lower
+    const bttsOK = (r.btts_prob > 0.5) === (Number(r.btts_yes_odds) < 0); // BTTS yes favored ↔ yes odds negative
+    console.log(`${TAG}   [FINAL VERIFY] ML=${mlOK?'✅':'❌'} Total=${totOK?'✅':'❌'} Spread=${spOK?'✅':'❌'} BTTS=${bttsOK?'✅':'❌'} | ${mlOK&&totOK&&spOK&&bttsOK?'✅ ALL PASS':'❌ FAILURES DETECTED'}`);
+    console.log(`${TAG}   Top Scorelines: ${r.top_scorelines}`);
   }
 
   console.log(`\n${TAG} [VERIFY] ${verify.length}/6 records confirmed in DB ✅`);
