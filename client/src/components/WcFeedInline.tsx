@@ -32,6 +32,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, MapPin, Users } from "lucide-react";
@@ -2199,11 +2200,15 @@ function WcProjectionsFeed({ date }: { date: string }) {
   const today = todayStr();
   const isTodayDate = date === today;
 
+  // [FIX 2026-06-24] keepPreviousData prevents blank screen during date transitions.
+  // When user selects a new date, React Query returns the previous date's data while
+  // the new query is in-flight. Without this, isLoading=false + data=undefined → blank.
   const todayQuery = trpc.wc2026.todayWithOdds.useQuery(undefined, {
     enabled: isTodayDate,
     refetchOnWindowFocus: false,
     refetchInterval: 60 * 1000,
     staleTime: 60 * 1000,
+    placeholderData: keepPreviousData,
   });
   const dateQuery = trpc.wc2026.fixturesByDate.useQuery(
     { date },
@@ -2211,6 +2216,7 @@ function WcProjectionsFeed({ date }: { date: string }) {
       enabled: !isTodayDate,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000,
+      placeholderData: keepPreviousData,
     }
   );
 
@@ -2223,7 +2229,9 @@ function WcProjectionsFeed({ date }: { date: string }) {
     }
   );
 
-  const { data: fixtures, isLoading } = isTodayDate ? todayQuery : dateQuery;
+  // [FIX 2026-06-24] Also destructure isFetching to detect in-flight date transitions.
+  // isFetching=true + fixtures=[] means placeholderData from wrong date → show skeleton.
+  const { data: fixtures, isLoading, isFetching } = isTodayDate ? todayQuery : dateQuery;
 
   // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
   const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(
@@ -2231,7 +2239,10 @@ function WcProjectionsFeed({ date }: { date: string }) {
     {}
   ) ?? {};
 
-  if (isLoading) {
+  // [FIX 2026-06-24] Show skeleton during: (a) initial load, (b) date transition where
+  // placeholderData from prev date is filtered out → fixtures=[] while isFetching=true.
+  // Only show genuine empty state when query has settled (isFetching=false) with 0 results.
+  if (isLoading || (isFetching && (!fixtures || fixtures.length === 0))) {
     return (
       <div className="pt-2">
         {[1, 2, 3].map((i) => <WcFixtureCardSkeleton key={i} />)}
@@ -2269,15 +2280,17 @@ function WcProjectionsFeed({ date }: { date: string }) {
 // ─── Lineups Feed ─────────────────────────────────────────────────────────────
 
 function WcLineupsFeed({ date }: { date: string }) {
-  const { data: fixtures, isLoading } = trpc.wc2026.lineupsByDate.useQuery(
+  // [FIX 2026-06-24] keepPreviousData + isFetching guard: prevents blank screen on date change.
+  const { data: fixtures, isLoading, isFetching } = trpc.wc2026.lineupsByDate.useQuery(
     { date },
     {
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000,
+      placeholderData: keepPreviousData,
     }
   );
 
-  if (isLoading) {
+  if (isLoading || (isFetching && (!fixtures || fixtures.length === 0))) {
     return (
       <div className="pt-2">
         {[1, 2].map((i) => (
@@ -2326,15 +2339,17 @@ function WcLineupsFeed({ date }: { date: string }) {
 // ─── Splits Feed ─────────────────────────────────────────────────────────────
 
 function WcSplitsFeed({ date }: { date: string }) {
-  const { data: splitsData, isLoading } = trpc.wc2026.splitsByDate.useQuery(
+  // [FIX 2026-06-24] keepPreviousData + isFetching guard: prevents blank screen on date change.
+  const { data: splitsData, isLoading, isFetching } = trpc.wc2026.splitsByDate.useQuery(
     { date },
     {
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000,
+      placeholderData: keepPreviousData,
     }
   );
 
-  if (isLoading) {
+  if (isLoading || (isFetching && (!splitsData || (splitsData as WcFixtureSplits[]).length === 0))) {
     return (
       <div className="pt-4 px-3 space-y-3">
         {[1, 2, 3].map((i) => (
