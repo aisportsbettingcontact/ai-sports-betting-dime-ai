@@ -921,7 +921,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
   const isScheduled = !isLive && !isFinal;
   const proj = fixture.projection;
-  const hasProjScores = isScheduled && proj?.projHomeScore != null && proj?.projAwayScore != null;
+  // Projected scores are intentionally hidden from the feed — internal use only
+  const hasProjScores = false;
   const fmtProj = (v: number | null | undefined): string => {
     if (v == null) return '—';
     return v.toFixed(2);
