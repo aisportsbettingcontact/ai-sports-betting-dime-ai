@@ -255,6 +255,65 @@ export const wc2026MatchEvents = mysqlTable(
 
 export type InsertWc2026MatchEvent = typeof wc2026MatchEvents.$inferInsert;
 
+// ─── Model Projections ───────────────────────────────────────────────────────
+// Dixon-Coles Poisson v4.2 model outputs. One row per fixture (upserted by seed scripts).
+export const wc2026ModelProjections = mysqlTable(
+  "wc2026_model_projections",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    fixtureId: varchar("fixture_id", { length: 16 })
+      .notNull()
+      .references(() => wc2026Fixtures.fixtureId),
+    modelVersion: varchar("model_version", { length: 32 }).notNull(),
+    nSimulations: int("n_simulations").notNull().default(1000000),
+    homeTeam: varchar("home_team", { length: 64 }),
+    awayTeam: varchar("away_team", { length: 64 }),
+    homeLambda: double("home_lambda"),
+    awayLambda: double("away_lambda"),
+    homeWinProb: double("home_win_prob"),
+    drawProb: double("draw_prob"),
+    awayWinProb: double("away_win_prob"),
+    projHomeScore: double("proj_home_score"),
+    projAwayScore: double("proj_away_score"),
+    projTotal: double("proj_total"),
+    projSpread: double("proj_spread"),
+    over05: double("over_0_5"),
+    over15: double("over_1_5"),
+    over25: double("over_2_5"),
+    under25: double("under_2_5"),
+    over35: double("over_3_5"),
+    bttsProb: double("btts_prob"),
+    modelHomeML: smallint("model_home_ml"),
+    modelDrawML: smallint("model_draw_ml"),
+    modelAwayML: smallint("model_away_ml"),
+    modelTotal: double("model_total"),
+    overOdds: smallint("over_odds"),
+    underOdds: smallint("under_odds"),
+    modelSpread: double("model_spread"),
+    modelSpreadRaw: double("model_spread_raw"),
+    homeSpreadOdds: smallint("home_spread_odds"),
+    awaySpreadOdds: smallint("away_spread_odds"),
+    nvHomeProb: double("nv_home_prob"),
+    nvDrawProb: double("nv_draw_prob"),
+    nvAwayProb: double("nv_away_prob"),
+    homeEdge: double("home_edge"),
+    drawEdge: double("draw_edge"),
+    awayEdge: double("away_edge"),
+    modelLean: varchar("model_lean", { length: 8 }),
+    leanProb: double("lean_prob"),
+    topScorelinesJson: text("top_scorelines"),
+    modeledAt: timestamp("modeled_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    uniqueIndex("uq_mp_fixture").on(t.fixtureId),
+    index("idx_mp_fixture").on(t.fixtureId),
+  ],
+);
+
+export type InsertWc2026ModelProjection = typeof wc2026ModelProjections.$inferInsert;
+export type SelectWc2026ModelProjection = typeof wc2026ModelProjections.$inferSelect;
+
 export const wc2026TeamsRelations = relations(wc2026Teams, ({ many }) => ({
   aliases: many(wc2026TeamAliases),
   homeFixtures: many(wc2026Fixtures, { relationName: "home" }),

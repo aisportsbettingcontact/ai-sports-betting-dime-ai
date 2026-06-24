@@ -4175,3 +4175,19 @@
 - [x] WC2026 heartbeat: register `wc2026-espn-results` Manus Heartbeat cron (daily 00:30 UTC)
 - [x] WcFeedInline: group letter moved to status row next to kickoff time (e.g. "3:00 PM EDT · Grp A")
 - [x] WcDcMobileCell: wrap 3 rows in centered flex wrapper to match BetCell 2-row vertical centering
+
+## WC2026 6-Market Feed Redesign (June 24, 2026)
+
+- [x] Extend DkOdds type: noDraw, homeSpreadLine, homeSpreadOdds, awaySpreadLine, awaySpreadOdds, bttsYes, bttsNo
+- [x] Add WcProjection type to WcFixtureWithOdds
+- [x] Add wc2026ModelProjections Drizzle schema table definition
+- [x] Extend wc2026Router fixturesByDate + todayWithOdds to return projection field
+- [x] Seed June 24 DK odds: 72 rows (6 fixtures × 6 markets × 2 sides) + 72 model rows + 6 projections
+- [x] WcScorePanel: projected scores (amber) for SCHEDULED fixtures
+- [x] WcMobileOddsPanel: expand from 3 to 6 columns (ML, DRAW, TOTAL, SPREAD, DBL CHC, BTTS)
+- [x] WcDesktopMergedPanel: expand from 3 to 6 columns matching mobile layout
+- [x] Sticky column header: update labels from 3 to 6 markets
+- [x] DRAW column: Row 1 = DRAW, Row 2 = NO DRAW (replaces WcDcMobileCell 3-row pattern)
+- [x] SPREAD column: Row 1 = AWAY spread, Row 2 = HOME spread
+- [x] DOUBLE CHANCE column: Row 1 = X2 (Away/Draw), Row 2 = 1X (Home/Draw)
+- [x] BTTS column: Row 1 = YES, Row 2 = NO

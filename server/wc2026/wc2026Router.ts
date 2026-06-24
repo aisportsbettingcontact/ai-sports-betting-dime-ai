@@ -24,6 +24,7 @@ import {
   wc2026OddsSnapshots,
   wc2026BettingSplits,
   wc2026Lineups,
+  wc2026ModelProjections,
 } from "../../drizzle/wc2026.schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -72,9 +73,22 @@ export const wc2026Router = router({
       const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
       // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL + DOUBLE_CHANCE odds
-      // [LOG] buildOddsMap: maps 1X2 (home/draw/away), TOTAL (over/under), DOUBLE_CHANCE (home_draw/away_draw)
-      // [LOG] homeDrawOdds = 1X (Home Win-Draw), awayDrawOdds = X2 (Away Win-Draw)
-      type OddsShape = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number; homeDrawOdds?: number; awayDrawOdds?: number };
+      // [LOG] buildOddsMap: maps all 6 markets:
+      //   1X2 (home/draw/away/no_draw), TOTAL (over/under), ASIAN_HANDICAP (home/away),
+      //   DOUBLE_CHANCE (home_draw/away_draw), BTTS (yes/no)
+      type OddsShape = {
+        // 1X2
+        home?: number; draw?: number; away?: number; noDraw?: number;
+        // TOTAL
+        overLine?: number; overOdds?: number; underOdds?: number;
+        // ASIAN_HANDICAP (spread)
+        homeSpreadLine?: number; homeSpreadOdds?: number;
+        awaySpreadLine?: number; awaySpreadOdds?: number;
+        // DOUBLE_CHANCE
+        homeDrawOdds?: number; awayDrawOdds?: number;
+        // BTTS
+        bttsYes?: number; bttsNo?: number;
+      };
       const buildOddsMap = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShape> => {
         const map: Record<string, OddsShape> = {};
         const seen = new Set<string>();
@@ -86,14 +100,22 @@ export const wc2026Router = router({
             seen.add(key);
             const o = map[row.fixtureId] as Record<string, number | undefined>;
             if (row.market === "1X2") {
-              o[row.selection] = row.americanOdds;
+              if (row.selection === "home") o["home"] = row.americanOdds;
+              else if (row.selection === "draw") o["draw"] = row.americanOdds;
+              else if (row.selection === "away") o["away"] = row.americanOdds;
+              else if (row.selection === "no_draw") o["noDraw"] = row.americanOdds;
             } else if (row.market === "TOTAL") {
               if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
               else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
+            } else if (row.market === "ASIAN_HANDICAP") {
+              if (row.selection === "home") { o["homeSpreadLine"] = row.line ?? undefined; o["homeSpreadOdds"] = row.americanOdds; }
+              else if (row.selection === "away") { o["awaySpreadLine"] = row.line ?? undefined; o["awaySpreadOdds"] = row.americanOdds; }
             } else if (row.market === "DOUBLE_CHANCE") {
-              // [LOG] DOUBLE_CHANCE: home_draw=1X (Home Win-Draw), away_draw=X2 (Away Win-Draw)
-              if (row.selection === "home_draw") { o["homeDrawOdds"] = row.americanOdds; }
-              else if (row.selection === "away_draw") { o["awayDrawOdds"] = row.americanOdds; }
+              if (row.selection === "home_draw") o["homeDrawOdds"] = row.americanOdds;
+              else if (row.selection === "away_draw") o["awayDrawOdds"] = row.americanOdds;
+            } else if (row.market === "BTTS") {
+              if (row.selection === "yes") o["bttsYes"] = row.americanOdds;
+              else if (row.selection === "no") o["bttsNo"] = row.americanOdds;
             }
           }
         }
@@ -104,17 +126,22 @@ export const wc2026Router = router({
       // Pre-fix: fetched ALL odds rows (3,724+) then filtered in-memory → O(N) per request.
       // Post-fix: fetches only rows for the 4-8 fixtures on this date → O(1) per request.
       // This eliminates the primary server-side latency cause for the blank WC feed on date change.
-      const [dkOddsRows, modelOddsRows] = await Promise.all([
+      const [dkOddsRows, modelOddsRows, projRows] = await Promise.all([
         db.select().from(wc2026OddsSnapshots)
           .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
         db.select().from(wc2026OddsSnapshots)
           .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+        db.select().from(wc2026ModelProjections)
+          .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
       ]);
 
       const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
       const modelMap = buildOddsMap(modelOddsRows as WcOddsRow[], fixtureIds);
+      const projMap = Object.fromEntries(
+        (projRows as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
+      );
 
       return fixtures.map((f: WcFixture) => ({
         ...f,
@@ -123,6 +150,7 @@ export const wc2026Router = router({
         venue: venueMap[f.venueId] ?? null,
         dkOdds: dkMap[f.fixtureId] ?? null,
         modelOdds: modelMap[f.fixtureId] ?? null,
+        projection: projMap[f.fixtureId] ?? null,
       }));
     }),
 
@@ -336,10 +364,15 @@ export const wc2026Router = router({
     const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
     const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
 
-    // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL + DOUBLE_CHANCE odds
-    // [LOG] buildOddsMapT: maps 1X2 (home/draw/away), TOTAL (over/under), DOUBLE_CHANCE (home_draw/away_draw)
-    // [LOG] homeDrawOdds = 1X (Home Win-Draw), awayDrawOdds = X2 (Away Win-Draw)
-    type OddsShapeT = { home?: number; away?: number; draw?: number; overLine?: number; overOdds?: number; underOdds?: number; homeDrawOdds?: number; awayDrawOdds?: number };
+    // [LOG] buildOddsMapT: maps all 6 markets (1X2/TOTAL/ASIAN_HANDICAP/DOUBLE_CHANCE/BTTS/NO_DRAW)
+    type OddsShapeT = {
+      home?: number; draw?: number; away?: number; noDraw?: number;
+      overLine?: number; overOdds?: number; underOdds?: number;
+      homeSpreadLine?: number; homeSpreadOdds?: number;
+      awaySpreadLine?: number; awaySpreadOdds?: number;
+      homeDrawOdds?: number; awayDrawOdds?: number;
+      bttsYes?: number; bttsNo?: number;
+    };
     const buildOddsMapT = (rows: WcOddsRow[], ids: string[]): Record<string, OddsShapeT> => {
       const map: Record<string, OddsShapeT> = {};
       const seen = new Set<string>();
@@ -351,14 +384,22 @@ export const wc2026Router = router({
           seen.add(key);
           const o = map[row.fixtureId] as Record<string, number | undefined>;
           if (row.market === "1X2") {
-            o[row.selection] = row.americanOdds;
+            if (row.selection === "home") o["home"] = row.americanOdds;
+            else if (row.selection === "draw") o["draw"] = row.americanOdds;
+            else if (row.selection === "away") o["away"] = row.americanOdds;
+            else if (row.selection === "no_draw") o["noDraw"] = row.americanOdds;
           } else if (row.market === "TOTAL") {
             if (row.selection === "over") { o["overLine"] = row.line ?? undefined; o["overOdds"] = row.americanOdds; }
             else if (row.selection === "under") { o["underOdds"] = row.americanOdds; }
+          } else if (row.market === "ASIAN_HANDICAP") {
+            if (row.selection === "home") { o["homeSpreadLine"] = row.line ?? undefined; o["homeSpreadOdds"] = row.americanOdds; }
+            else if (row.selection === "away") { o["awaySpreadLine"] = row.line ?? undefined; o["awaySpreadOdds"] = row.americanOdds; }
           } else if (row.market === "DOUBLE_CHANCE") {
-            // [LOG] DOUBLE_CHANCE: home_draw=1X (Home Win-Draw), away_draw=X2 (Away Win-Draw)
-            if (row.selection === "home_draw") { o["homeDrawOdds"] = row.americanOdds; }
-            else if (row.selection === "away_draw") { o["awayDrawOdds"] = row.americanOdds; }
+            if (row.selection === "home_draw") o["homeDrawOdds"] = row.americanOdds;
+            else if (row.selection === "away_draw") o["awayDrawOdds"] = row.americanOdds;
+          } else if (row.market === "BTTS") {
+            if (row.selection === "yes") o["bttsYes"] = row.americanOdds;
+            else if (row.selection === "no") o["bttsNo"] = row.americanOdds;
           }
         }
       }
@@ -366,18 +407,22 @@ export const wc2026Router = router({
     };
 
     // [FIX 2026-06-24] PERFORMANCE: Same fixture_id IN filter as fixturesByDate.
-    // Fetches only odds for today's fixtures instead of scanning the full table.
-    const [dkOddsRowsT, modelOddsRowsT] = await Promise.all([
+    const [dkOddsRowsT, modelOddsRowsT, projRowsT] = await Promise.all([
       db.select().from(wc2026OddsSnapshots)
         .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
       db.select().from(wc2026OddsSnapshots)
         .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
+      db.select().from(wc2026ModelProjections)
+        .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
     ]);
 
     const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
     const modelMapT = buildOddsMapT(modelOddsRowsT as WcOddsRow[], fixtureIds);
+    const projMapT = Object.fromEntries(
+      (projRowsT as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
+    );
 
     return fixtures.map((f: WcFixture) => ({
       ...f,
@@ -386,6 +431,7 @@ export const wc2026Router = router({
       venue: venueMap[f.venueId] ?? null,
       dkOdds: dkMapT[f.fixtureId] ?? null,
       modelOdds: modelMapT[f.fixtureId] ?? null,
+      projection: projMapT[f.fixtureId] ?? null,
     }));
   }),
 
