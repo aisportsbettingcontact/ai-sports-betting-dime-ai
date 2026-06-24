@@ -4163,3 +4163,15 @@
 - [x] Add Waitlist nav item to admin dropdown in ModelProjections.tsx
 - [x] Write server/waitlist.test.ts — 20 unit tests covering all DB helpers, all passing
 - [x] Full test suite: 1,097 tests passing, 0 failures
+
+## WC2026 Live Score Pipeline + UI Fixes (Jun 24 2026)
+
+- [x] WC2026 ESPN ingester: add `status.type.name` to EspnEvent interface for in-progress detection
+- [x] WC2026 ESPN ingester: fix unconditional FT status bug — now computes `fixtureStatus` dynamically (FT / LIVE / skip)
+- [x] WC2026 ESPN ingester: add `onlyFinalMatches` param (default true) — when false, processes both LIVE and FT events
+- [x] WC2026 ESPN ingester: add LIVE score-only upsert branch (no summary fetch, no stats/events/lineups for in-progress)
+- [x] WC2026 heartbeat: add `handleWc2026LiveScores` handler at POST /api/scheduled/wc2026-live-scores
+- [x] WC2026 heartbeat: register `wc2026-live-scores` Manus Heartbeat cron (every 5 min, `0 */5 * * * *`)
+- [x] WC2026 heartbeat: register `wc2026-espn-results` Manus Heartbeat cron (daily 00:30 UTC)
+- [x] WcFeedInline: group letter moved to status row next to kickoff time (e.g. "3:00 PM EDT · Grp A")
+- [x] WcDcMobileCell: wrap 3 rows in centered flex wrapper to match BetCell 2-row vertical centering
