@@ -1613,7 +1613,11 @@ export default function ModelProjections() {
               /* NORMAL PROJECTIONS FEED — or LINEUPS/PROPS tab for MLB */
               feedMobileTab === 'lineups' && selectedSport === 'MLB' ? (
                 /* ── LINEUPS VIEW ── */
-                gamesLoading ? (
+                // [FIX 2026-06-24] Date-transition guard: when user picks a new date, React Query
+                // returns placeholderData (prev date's games) while the new query is in-flight.
+                // The useMemo filters those out (wrong gameDate) → sortedDates=[] while
+                // gamesLoading=false but gamesFetching=true. Show skeleton, never "No games found".
+                (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
@@ -1642,7 +1646,8 @@ export default function ModelProjections() {
                 )
               ) : feedMobileTab === 'props' && selectedSport === 'MLB' ? (
                 /* ── K PROPS VIEW ── */
-                gamesLoading ? (
+                // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
+                (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
@@ -1672,7 +1677,8 @@ export default function ModelProjections() {
                 )
               ) : feedMobileTab === 'f5nrfi' && selectedSport === 'MLB' ? (
                 /* ── F5 / NRFI VIEW ── */
-                gamesLoading ? (
+                // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
+                (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
@@ -1696,7 +1702,8 @@ export default function ModelProjections() {
                 )
               ) : feedMobileTab === 'hrprops' && selectedSport === 'MLB' ? (
                 /* ── HR PROPS VIEW ── */
-                gamesLoading ? (
+                // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
+                (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
@@ -1725,7 +1732,12 @@ export default function ModelProjections() {
                 )
               ) : (
                 /* ── PROJECTIONS / SPLITS VIEW ── */
-                gamesLoading ? (
+                // [FIX 2026-06-24] Date-transition guard: when user picks a new date, React Query
+                // returns placeholderData (prev date's games) while the new query is in-flight.
+                // The useMemo filters those out (wrong gameDate) → sortedDates=[] while
+                // gamesLoading=false but gamesFetching=true. Show skeleton, never "No games found".
+                // This is the primary fix for the false "No games found" flash on date navigation.
+                (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   (() => {
