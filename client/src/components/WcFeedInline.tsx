@@ -1709,13 +1709,18 @@ function WcFixtureCard({
 
       {/* ── Mobile layout (< md) ── */}
       <div className="md:hidden w-full">
-        <div style={{ display: "grid", gridTemplateColumns: "clamp(120px, 32%, 150px) 1fr", width: "100%" }}>
+        {/* [FIX 2026-06-24] minHeight gives the grid row a defined height so BetCell flex:1 1 0 has a container to fill.
+             Without this, BetCell collapses to 0px height and all market cells appear blank on mobile. */}
+        <div style={{ display: "grid", gridTemplateColumns: "clamp(120px, 32%, 150px) 1fr", width: "100%", minHeight: 'clamp(130px, 28vw, 180px)' }}>
           {/* Fixed score panel */}
           <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
             <WcScorePanel fixture={fixture} />
           </div>
           {/* Scrollable odds panel */}
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+          {/* [FIX 2026-06-24] height:100% propagates the grid row minHeight down to WcMobileOddsPanel.
+               The grid stretches direct children — but WcMobileOddsPanel is a grandchild inside this div.
+               Without height:100% here, WcMobileOddsPanel gets no height from the grid row. */}
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", height: '100%' } as React.CSSProperties}>
             <WcMobileOddsPanel fixture={fixture} />
           </div>
         </div>
@@ -2120,9 +2125,10 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   ];
 
   return (
-    // [FIX] Outer scroll container: width = 100% of the scrollable area in WcFixtureCard
-    // minWidth: 'max-content' removed — cells use fixed widths so exactly 3 fit before scroll
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 3, padding: '4px 4px', minWidth: 'max-content' }}>
+    // [FIX] Outer scroll container: height:100% propagates grid row minHeight into the flex container.
+    // Chain: grid row minHeight → scrollable div height:100% → this div height:100%
+    //        → cell wrapper minHeight → BetCell flex:1 1 0 fills it.
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 3, padding: '4px 4px', minWidth: 'max-content', height: '100%' }}>
       {cells.map(({ label, wide, cell }) => (
         // [FIX] Each cell wrapper: flex column with market label header on top
         // wide=true (ML, DBL CHC): flex basis 36% of scroll container to fit +1000 odds
@@ -2135,6 +2141,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             flex: `0 0 ${wide ? '36vw' : '28vw'}`,
             minWidth: wide ? 90 : 72,
             maxWidth: wide ? 130 : 110,
+            minHeight: 'clamp(100px, 22vw, 150px)',
           }}
         >
           {/* Per-card market header label */}
