@@ -200,36 +200,68 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
 // ─── Handler: live score refresh (every 5 min during match window) ──────────────────────────────────────────────────────────────────────────────
 async function handleWc2026LiveScores(req: Request, res: Response): Promise<void> {
   const now = new Date();
-  // Use today's date in YYYYMMDD format (UTC) — WC matches run 13:00–23:00 UTC
-  const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
-  console.log(`[WC2026HB] [INPUT] /wc2026-live-scores triggered at ${now.toISOString()} dateStr=${dateStr}`);
+
+  // [FIX] Query BOTH today UTC and yesterday UTC.
+  // Root cause: WC games with kickoff at 02:00 UTC (e.g. 10:00 PM EDT) appear on ESPN's
+  // PREVIOUS day scoreboard (June 23 UTC), not the current day (June 24 UTC).
+  // Without querying yesterday, any game spanning midnight UTC is silently missed.
+  const todayStr    = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
+  const yesterday   = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10).replace(/-/g, "");
+
+  // If caller passes explicit dateStr, only query that date; otherwise query both
+  const datesToQuery: string[] = req.body?.dateStr
+    ? [req.body.dateStr]
+    : [todayStr, yesterdayStr];
+
+  console.log(
+    `[WC2026HB] [INPUT] /wc2026-live-scores triggered at ${now.toISOString()}` +
+    ` | datesToQuery=${datesToQuery.join(",")}` +
+    ` | [VERIFY] Querying both today+yesterday to catch games spanning midnight UTC boundary`
+  );
 
   try {
-    // onlyFinalMatches=false → process both LIVE and FT events
-    // forceReingest=false  → skip fixtures already marked FT in DB
-    const result = await ingestWc2026EspnResults({
-      dateStr,
-      onlyFinalMatches: false,
-      forceReingest: false,
-    });
+    // Ingest all queried dates in parallel
+    const results = await Promise.all(
+      datesToQuery.map(dateStr =>
+        ingestWc2026EspnResults({
+          dateStr,
+          onlyFinalMatches: false, // process both LIVE and FT events
+          forceReingest: false,    // skip fixtures already marked FT in DB
+        })
+      )
+    );
 
-    const liveCount = result.matchSummaries.filter(s => s.status.toLowerCase().includes("in progress")).length;
-    const ftCount   = result.matchSummaries.filter(s => !s.status.toLowerCase().includes("in progress")).length;
+    // Merge results across all dates
+    const merged = results.reduce(
+      (acc, r) => ({
+        fixturesUpdated: acc.fixturesUpdated + r.fixturesUpdated,
+        errors: [...acc.errors, ...r.errors],
+        matchSummaries: [...acc.matchSummaries, ...r.matchSummaries],
+      }),
+      { fixturesUpdated: 0, errors: [] as string[], matchSummaries: [] as typeof results[0]["matchSummaries"] }
+    );
+
+    const liveCount = merged.matchSummaries.filter(s => s.status.toLowerCase().includes("in progress")).length;
+    const ftCount   = merged.matchSummaries.filter(s => !s.status.toLowerCase().includes("in progress")).length;
 
     console.log(
-      `[WC2026HB] [OUTPUT] live-scores: fixturesUpdated=${result.fixturesUpdated} live=${liveCount} ft=${ftCount} errors=${result.errors.length}`
+      `[WC2026HB] [OUTPUT] live-scores: fixturesUpdated=${merged.fixturesUpdated}` +
+      ` live=${liveCount} ft=${ftCount} errors=${merged.errors.length}` +
+      ` | dates=${datesToQuery.join(",")}`
     );
-    const pass = result.errors.length === 0;
+    const pass = merged.errors.length === 0;
     console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-live-scores`);
 
     res.json({
       ok: pass,
-      date: dateStr,
-      fixturesUpdated: result.fixturesUpdated,
+      dates: datesToQuery,
+      fixturesUpdated: merged.fixturesUpdated,
       liveCount,
       ftCount,
-      matchSummaries: result.matchSummaries,
-      errors: result.errors,
+      matchSummaries: merged.matchSummaries,
+      errors: merged.errors,
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-live-scores unhandled: ${String(err)}`);
