@@ -1052,17 +1052,17 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 'clamp(18px, 2.2vw, 26px)', lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
+                <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
                   {wcFlagEmoji(awayFifaCode) || '🏳️'}
                 </span>
                 {/* Full country name — never FIFA code */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
               {(isLive || isFinal) && hasScores ? (
-                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
                   {fixture.awayScore}
                 </span>
               ) : hasProjScores ? (
@@ -1079,17 +1079,17 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 'clamp(18px, 2.2vw, 26px)', lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
+                <span style={{ fontSize: 36, lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
                   {wcFlagEmoji(homeFifaCode) || '🏳️'}
                 </span>
                 {/* Full country name — never FIFA code */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
               {(isLive || isFinal) && hasScores ? (
-                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
                   {fixture.homeScore}
                 </span>
               ) : hasProjScores ? (
@@ -1689,7 +1689,7 @@ function WcFixtureCard({
       <div className="hidden md:flex items-stretch w-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
         {/* Col 1: Score panel */}
         {/* [FIX] Wider score panel to accommodate full country names */}
-        <div style={{ flex: "0 0 clamp(180px,24vw,280px)", width: 'clamp(180px,24vw,280px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
           <WcScorePanel fixture={fixture} />
         </div>
         {/* Col 2+3: Merged panel */}
@@ -3026,7 +3026,7 @@ export function WcFeedInline({
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
             borderBottom: '2px solid hsl(var(--border) / 0.5)',
-            background: 'hsl(var(--card))',
+            background: 'transparent',
             paddingLeft: '12px',
           } as React.CSSProperties}
         >
@@ -3044,7 +3044,7 @@ export function WcFeedInline({
                   fontSize: '13px',
                   fontWeight: isActive ? 800 : 500,
                   letterSpacing: '0.06em',
-                  color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.45)',
+                  color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.55)',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: isActive ? '2px solid #39FF14' : '2px solid transparent',
