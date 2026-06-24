@@ -987,8 +987,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))" }}>
             {fmtKickoff(fixture.kickoffUtc)}
             {fixture.groupLetter && (
-              <span style={{ fontSize: 'clamp(9px, 0.75vw, 11px)', color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>
-                &middot; Grp {fixture.groupLetter}
+              <span style={{ fontSize: 'clamp(7.5px, 0.65vw, 9.5px)', color: 'hsl(var(--muted-foreground))', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                &middot; GROUP {fixture.groupLetter}
               </span>
             )}
           </span>
@@ -996,84 +996,114 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       </div>
 
       {/* Team group */}
-      <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
-        {/* Home team row — TOP (matches DK convention: home listed first/top) */}
-        <div className="flex items-center justify-between gap-2 py-1 w-full">
-          <div className="flex items-center gap-2">
-            {/* Flag circle */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              <img
-                src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
-                alt={homeFifaCode}
-                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
+      {/* [LOG] WcScorePanel:Teams — homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()} */}
+      {/* [STATE] Win/loss coloring: homeScore vs awayScore — winner gets #39FF14 bold, loser gets white unbolded */}
+      {/* [VERIFY] Projected scores: amber rgba(251,191,36,0.75) for SCHEDULED; actual scores: green/white for LIVE/FT */}
+      {(() => {
+        // [STEP] Determine winner for score coloring
+        const homeScoreNum = fixture.homeScore ?? 0;
+        const awayScoreNum = fixture.awayScore ?? 0;
+        const homeWins = hasScores && homeScoreNum > awayScoreNum;
+        const awayWins = hasScores && awayScoreNum > homeScoreNum;
+        const isDraw = hasScores && homeScoreNum === awayScoreNum;
+        // [LOG] WcScorePanel:ScoreColor home=${homeScoreNum} away=${awayScoreNum} homeWins=${homeWins} awayWins=${awayWins} isDraw=${isDraw}
+        console.log(
+          `[WcScorePanel:ScoreColor] fixture=${fixture.fixtureId}` +
+          ` | [STATE] homeScore=${homeScoreNum} awayScore=${awayScoreNum}` +
+          ` | [OUTPUT] homeWins=${homeWins} awayWins=${awayWins} isDraw=${isDraw}` +
+          ` | [VERIFY] hasScores=${hasScores} isLive=${isLive} isFinal=${isFinal}`
+        );
+        // [STEP] Score color: winner = #39FF14 bold, loser/draw = white unbolded
+        const homeScoreColor = (isLive || isFinal) && hasScores
+          ? (homeWins ? '#39FF14' : 'rgba(255,255,255,0.85)')
+          : 'rgba(251,191,36,0.75)';
+        const homeScoreBold = (isLive || isFinal) && hasScores && homeWins ? 700 : 400;
+        const awayScoreColor = (isLive || isFinal) && hasScores
+          ? (awayWins ? '#39FF14' : 'rgba(255,255,255,0.85)')
+          : 'rgba(251,191,36,0.75)';
+        const awayScoreBold = (isLive || isFinal) && hasScores && awayWins ? 700 : 400;
+        // [STEP] Projected score color: winner proj = #39FF14 bold, loser/draw = amber unbolded
+        const projHomeWins = hasProjScores && (proj!.projHomeScore ?? 0) > (proj!.projAwayScore ?? 0);
+        const projAwayWins = hasProjScores && (proj!.projAwayScore ?? 0) > (proj!.projHomeScore ?? 0);
+        const projHomeColor = projHomeWins ? '#39FF14' : 'rgba(251,191,36,0.75)';
+        const projHomeBold = projHomeWins ? 700 : 400;
+        const projAwayColor = projAwayWins ? '#39FF14' : 'rgba(251,191,36,0.75)';
+        const projAwayBold = projAwayWins ? 700 : 400;
+        return (
+          <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
+            {/* Home team row — TOP (DK convention: home listed first/top) */}
+            <div className="flex items-center justify-between gap-2 py-1 w-full">
+              <div className="flex items-center gap-2">
+                {/* Flag circle */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <img
+                    src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
+                    alt={homeFifaCode}
+                    style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+                {/* [FIX] Use FIFA code (team_id uppercase) as abbreviation — never full country name */}
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3vw, 12px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {homeFifaCode.toUpperCase()}
+                </span>
+              </div>
+              {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
+              {(isLive || isFinal) && hasScores ? (
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
+                  {fixture.homeScore}
+                </span>
+              ) : hasProjScores ? (
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: projHomeBold, color: projHomeColor, letterSpacing: '0.01em' }}>
+                  {fmtProj(proj!.projHomeScore)}
+                </span>
+              ) : null}
             </div>
-            <div className="flex flex-col">
-              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
-              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
-              </span>
-              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
-                {"\u00A0"}
-              </span>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
+
+            {/* Away team row — BOTTOM (DK convention: away listed second/bottom) */}
+            <div className="flex items-center justify-between gap-2 py-1 w-full">
+              <div className="flex items-center gap-2">
+                {/* Flag circle */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <img
+                    src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
+                    alt={awayFifaCode}
+                    style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+                {/* [FIX] Use FIFA code (team_id uppercase) as abbreviation — never full country name */}
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3vw, 12px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {awayFifaCode.toUpperCase()}
+                </span>
+              </div>
+              {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
+              {(isLive || isFinal) && hasScores ? (
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
+                  {fixture.awayScore}
+                </span>
+              ) : hasProjScores ? (
+                <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: projAwayBold, color: projAwayColor, letterSpacing: '0.01em' }}>
+                  {fmtProj(proj!.projAwayScore)}
+                </span>
+              ) : null}
             </div>
           </div>
-          {(isLive || isFinal) && hasScores ? (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
-              {fixture.homeScore}
-            </span>
-          ) : hasProjScores ? (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: 600, color: 'rgba(251,191,36,0.75)', letterSpacing: '0.01em' }}>
-              {fmtProj(proj!.projHomeScore)}
-            </span>
-          ) : null}
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
-
-        {/* Away team row — BOTTOM (matches DK convention: away listed second/bottom) */}
-        <div className="flex items-center justify-between gap-2 py-1 w-full">
-          <div className="flex items-center gap-2">
-            {/* Flag circle */}
-            <div style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              <img
-                src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
-                alt={awayFifaCode}
-                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-            </div>
-            <div className="flex flex-col">
-              {/* All screen sizes: full country name (never abbreviated FIFA code) */}
-              <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
-              </span>
-              {/* [FIX] Group letter moved to status row next to kickoff time */}
-            </div>
-          </div>
-          {(isLive || isFinal) && hasScores ? (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
-              {fixture.awayScore}
-            </span>
-          ) : hasProjScores ? (
-            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: 600, color: 'rgba(251,191,36,0.75)', letterSpacing: '0.01em' }}>
-              {fmtProj(proj!.projAwayScore)}
-            </span>
-          ) : null}
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Venue footer */}
       {fixture.venue && (
@@ -1845,7 +1875,11 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const spreadBestEdgePPFinal = spreadBestEdgePP === -Infinity ? NaN : spreadBestEdgePP;
   const homeSpreadLine = dkOdds?.homeSpreadLine ?? 0;
   const awaySpreadLine = dkOdds?.awaySpreadLine ?? 0;
-  const fmtSpreadLine = (line: number): string => line > 0 ? `+${line}` : `${line}`;
+  // [FIX] fmtSpreadLine: strip trailing .0 (e.g. 1.5 not 1.50, 2 not 2.0)
+  const fmtSpreadLine = (line: number): string => {
+    const formatted = formatTotalLine(Math.abs(line));
+    return line > 0 ? `+${formatted}` : `-${formatted}`;
+  };
   const spreadEdgeLabel = (spreadBestEdgePPFinal >= EDGE_THRESHOLD_PP)
     ? (homeSpreadEdgePP >= awaySpreadEdgePP
         ? `${homeName} ${fmtSpreadLine(homeSpreadLine)}`
@@ -1885,54 +1919,89 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ? calculateEdge(dkOdds.noDraw, modelOdds.noDraw) : NaN;
 
   // ── BetCellSide builders for new markets ─────────────────────────────────────
-  // DRAW column: Row 1 = DRAW, Row 2 = NO DRAW
+  // [FIX] DRAW column: Row 1 = DRAW (label 'DRAW'), Row 2 = HOME OR AWAY ML (no-draw)
+  const noDrawLabel = `${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML`;
   const drawRow: BetCellSide = {
-    bookLine: '', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
-    modelLine: '', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
+    bookLine: 'DRAW', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
+    modelLine: 'DRAW', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
     edgePP: drawEdgePP,
   };
   const noDrawRow: BetCellSide = {
-    bookLine: '', bookJuice: fmtAmerican(dkOdds?.noDraw) ?? '—',
-    modelLine: '', modelJuice: fmtAmerican(modelOdds?.noDraw) ?? '—',
+    bookLine: noDrawLabel, bookJuice: fmtAmerican(dkOdds?.noDraw) ?? '—',
+    modelLine: noDrawLabel, modelJuice: fmtAmerican(modelOdds?.noDraw) ?? '—',
     edgePP: noDrawEdgePP,
   };
-  // SPREAD column: Row 1 = AWAY spread (top), Row 2 = HOME spread (bottom)
+  // [FIX] SPREAD: team abbreviation + spread line (no trailing .0). Row 1=HOME (top), Row 2=AWAY (bottom)
+  // [LOG] WcMobileOddsPanel:Spread homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()}
+  // [LOG] WcMobileOddsPanel:Spread homeSpreadLine=${homeSpreadLine} awaySpreadLine=${awaySpreadLine}
+  console.log(
+    `[WcMobileOddsPanel:Spread] fixture=${fixture.fixtureId}` +
+    ` | [INPUT] homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()}` +
+    ` | [STATE] homeSpreadLine=${homeSpreadLine} awaySpreadLine=${awaySpreadLine}` +
+    ` | [OUTPUT] homeLabel="${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}" awayLabel="${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}"` +
+    ` | [VERIFY] dkHomeSpreadOdds=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkAwaySpreadOdds=${dkOdds?.awaySpreadOdds ?? 'N/A'}`
+  );
   const spreadAway: BetCellSide = {
-    bookLine: fmtSpreadLine(awaySpreadLine),
-    bookJuice: fmtAmerican(dkOdds?.awaySpreadOdds) ?? '—',
-    modelLine: fmtSpreadLine(awaySpreadLine),
-    modelJuice: fmtAmerican(modelOdds?.awaySpreadOdds) ?? '—',
-    edgePP: awaySpreadEdgePP,
-  };
-  const spreadHome: BetCellSide = {
-    bookLine: fmtSpreadLine(homeSpreadLine),
+    // [FIX] Row 1 = HOME team (top row in BetCell = 'away' prop)
+    bookLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
     bookJuice: fmtAmerican(dkOdds?.homeSpreadOdds) ?? '—',
-    modelLine: fmtSpreadLine(homeSpreadLine),
+    modelLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
     modelJuice: fmtAmerican(modelOdds?.homeSpreadOdds) ?? '—',
     edgePP: homeSpreadEdgePP,
   };
-  // DOUBLE CHANCE column: Row 1 = AWAY OR DRAW (X2), Row 2 = HOME OR DRAW (1X)
+  const spreadHome: BetCellSide = {
+    // [FIX] Row 2 = AWAY team (bottom row in BetCell = 'home' prop)
+    bookLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
+    bookJuice: fmtAmerican(dkOdds?.awaySpreadOdds) ?? '—',
+    modelLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
+    modelJuice: fmtAmerican(modelOdds?.awaySpreadOdds) ?? '—',
+    edgePP: awaySpreadEdgePP,
+  };
+  // [FIX] DOUBLE CHANCE: X2 → "{AWAY} WD", 1X → "{HOME} WD"
+  // [LOG] WcMobileOddsPanel:DC homeWD=${homeFifaCode.toUpperCase()} WD awayWD=${awayFifaCode.toUpperCase()} WD
+  console.log(
+    `[WcMobileOddsPanel:DC] fixture=${fixture.fixtureId}` +
+    ` | [OUTPUT] awayDC="${awayFifaCode.toUpperCase()} WD" homeDC="${homeFifaCode.toUpperCase()} WD"` +
+    ` | [VERIFY] dkAwayDrawOdds=${dkOdds?.awayDrawOdds ?? 'N/A'} dkHomeDrawOdds=${dkOdds?.homeDrawOdds ?? 'N/A'}`
+  );
   const dcAway: BetCellSide = {
-    bookLine: 'X2', bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
-    modelLine: 'X2', modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
+    bookLine: `${awayFifaCode.toUpperCase()} WD`,
+    bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
+    modelLine: `${awayFifaCode.toUpperCase()} WD`,
+    modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
     edgePP: awayDcEdgePP,
   };
   const dcHome: BetCellSide = {
-    bookLine: '1X', bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
-    modelLine: '1X', modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
+    bookLine: `${homeFifaCode.toUpperCase()} WD`,
+    bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
+    modelLine: `${homeFifaCode.toUpperCase()} WD`,
+    modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
     edgePP: homeDcEdgePP,
   };
-  // BTTS column: Row 1 = YES, Row 2 = NO
+  // [FIX] BTTS: YES on top (bookLine='YES'), NO on bottom (bookLine='NO')
+  // [LOG] WcMobileOddsPanel:BTTS YES/NO labels confirmed
+  console.log(
+    `[WcMobileOddsPanel:BTTS] fixture=${fixture.fixtureId}` +
+    ` | [OUTPUT] row1="YES ${fmtAmerican(dkOdds?.bttsYes)}" row2="NO ${fmtAmerican(dkOdds?.bttsNo)}"` +
+    ` | [VERIFY] dkBttsYes=${dkOdds?.bttsYes ?? 'N/A'} dkBttsNo=${dkOdds?.bttsNo ?? 'N/A'}`
+  );
   const bttsYes: BetCellSide = {
-    bookLine: '', bookJuice: fmtAmerican(dkOdds?.bttsYes) ?? '—',
-    modelLine: '', modelJuice: fmtAmerican(modelOdds?.bttsYes) ?? '—',
+    bookLine: 'YES', bookJuice: fmtAmerican(dkOdds?.bttsYes) ?? '—',
+    modelLine: 'YES', modelJuice: fmtAmerican(modelOdds?.bttsYes) ?? '—',
     edgePP: bttsYesEdgePP,
   };
   const bttsNo: BetCellSide = {
-    bookLine: '', bookJuice: fmtAmerican(dkOdds?.bttsNo) ?? '—',
-    modelLine: '', modelJuice: fmtAmerican(modelOdds?.bttsNo) ?? '—',
+    bookLine: 'NO', bookJuice: fmtAmerican(dkOdds?.bttsNo) ?? '—',
+    modelLine: 'NO', modelJuice: fmtAmerican(modelOdds?.bttsNo) ?? '—',
     edgePP: bttsNoEdgePP,
   };
+  // [FIX] DRAW column: Row 1 = DRAW odds, Row 2 = "{HOME} OR {AWAY} ML" (no-draw)
+  // [LOG] WcMobileOddsPanel:Draw noDrawLabel=${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML
+  console.log(
+    `[WcMobileOddsPanel:Draw] fixture=${fixture.fixtureId}` +
+    ` | [OUTPUT] row1="DRAW" row2="${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML"` +
+    ` | [VERIFY] dkDraw=${dkOdds?.draw ?? 'N/A'} dkNoDraw=${dkOdds?.noDraw ?? 'N/A'}`
+  );
 
   console.log(
     `[WcMobileOddsPanel:6Markets] fixture=${fixture.fixtureId}` +
@@ -1943,72 +2012,155 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ` | [VERIFY] dkSpread=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkDC=${dkOdds?.homeDrawOdds ?? 'N/A'} dkBTTS=${dkOdds?.bttsYes ?? 'N/A'}`
   );
 
+  // [FIX] 3-cells-visible layout:
+  // - ML and DBL CHC are wider (wider flex basis) since they can have +1000 or higher odds
+  // - All 4 remaining cells (DRAW, TOTAL, SPREAD, BTTS) are same narrower width
+  // - Exactly 3 cells fit the scrollable container width before horizontal scroll
+  // - Per-card market header label above each BetCell for clarity
+  // [LOG] WcMobileOddsPanel:Layout 3-visible cells, ML+DC wider, per-card headers
+  console.log(
+    `[WcMobileOddsPanel:Layout] fixture=${fixture.fixtureId}` +
+    ` | [STATE] 6 cells, 3 visible before scroll` +
+    ` | [OUTPUT] ML+DC wider (flex:0 0 36%), others narrower (flex:0 0 28%)` +
+    ` | [VERIFY] per-card market headers rendered above each BetCell`
+  );
+
+  // [FIX] Cell wrapper: renders market label header + BetCell in a flex column
+  // ML and DBL CHC get wider flex basis to accommodate +1000 or higher odds
+  type CellDef = {
+    label: string;
+    wide?: boolean;
+    cell: React.ReactNode;
+  };
+  const cells: CellDef[] = [
+    {
+      label: 'ML',
+      wide: true,
+      cell: (
+        <BetCell
+          title="ML"
+          away={mlAway}
+          home={mlHome}
+          edgeLabel={mlEdgeLabel}
+          bestEdgePP={mlBestEdgePPFinal}
+          roiPct={mlBestRoiPct}
+          size="sm"
+        />
+      ),
+    },
+    {
+      label: 'DRAW',
+      wide: false,
+      cell: (
+        <BetCell
+          title="DRAW"
+          away={drawRow}
+          home={noDrawRow}
+          edgeLabel={drawEdgeLabel}
+          bestEdgePP={!isNaN(drawEdgePP) ? drawEdgePP : NaN}
+          roiPct={drawRoiPct}
+          size="sm"
+        />
+      ),
+    },
+    {
+      label: 'TOTAL',
+      wide: false,
+      cell: (
+        <BetCell
+          title="TOTAL"
+          away={totalOver}
+          home={totalUnder}
+          edgeLabel={totalEdgeLabel}
+          bestEdgePP={totalBestEdgePPFinal}
+          roiPct={totalBestRoiPct}
+          size="sm"
+        />
+      ),
+    },
+    {
+      label: 'SPREAD',
+      wide: false,
+      cell: (
+        <BetCell
+          title="SPREAD"
+          away={spreadAway}
+          home={spreadHome}
+          edgeLabel={spreadEdgeLabel}
+          bestEdgePP={spreadBestEdgePPFinal}
+          size="sm"
+        />
+      ),
+    },
+    {
+      label: 'DBL CHC',
+      wide: true,
+      cell: (
+        <BetCell
+          title="DBL CHC"
+          away={dcAway}
+          home={dcHome}
+          edgeLabel={dcEdgeLabel}
+          bestEdgePP={dcBestEdgePPFinal}
+          size="sm"
+        />
+      ),
+    },
+    {
+      label: 'BTTS',
+      wide: false,
+      cell: (
+        <BetCell
+          title="BTTS"
+          away={bttsYes}
+          home={bttsNo}
+          edgeLabel={bttsEdgeLabel}
+          bestEdgePP={bttsBestEdgePPFinal}
+          size="sm"
+        />
+      ),
+    },
+  ];
+
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', minWidth: 'max-content' }}>
-
-      {/* Col 1: ML — Row 1: AWAY ML, Row 2: HOME ML */}
-      <BetCell
-        title="ML"
-        away={mlAway}
-        home={mlHome}
-        edgeLabel={mlEdgeLabel}
-        bestEdgePP={mlBestEdgePPFinal}
-        roiPct={mlBestRoiPct}
-        size="sm"
-      />
-
-      {/* Col 2: DRAW — Row 1: DRAW, Row 2: NO DRAW */}
-      <BetCell
-        title="DRAW"
-        away={drawRow}
-        home={noDrawRow}
-        edgeLabel={drawEdgeLabel}
-        bestEdgePP={!isNaN(drawEdgePP) ? drawEdgePP : NaN}
-        roiPct={drawRoiPct}
-        size="sm"
-      />
-
-      {/* Col 3: TOTAL — Row 1: OVER, Row 2: UNDER */}
-      <BetCell
-        title="TOTAL"
-        away={totalOver}
-        home={totalUnder}
-        edgeLabel={totalEdgeLabel}
-        bestEdgePP={totalBestEdgePPFinal}
-        roiPct={totalBestRoiPct}
-        size="sm"
-      />
-
-      {/* Col 4: SPREAD — Row 1: AWAY spread, Row 2: HOME spread */}
-      <BetCell
-        title="SPREAD"
-        away={spreadAway}
-        home={spreadHome}
-        edgeLabel={spreadEdgeLabel}
-        bestEdgePP={spreadBestEdgePPFinal}
-        size="sm"
-      />
-
-      {/* Col 5: DOUBLE CHANCE — Row 1: AWAY OR DRAW (X2), Row 2: HOME OR DRAW (1X) */}
-      <BetCell
-        title="DBL CHC"
-        away={dcAway}
-        home={dcHome}
-        edgeLabel={dcEdgeLabel}
-        bestEdgePP={dcBestEdgePPFinal}
-        size="sm"
-      />
-
-      {/* Col 6: BTTS — Row 1: YES, Row 2: NO */}
-      <BetCell
-        title="BTTS"
-        away={bttsYes}
-        home={bttsNo}
-        edgeLabel={bttsEdgeLabel}
-        bestEdgePP={bttsBestEdgePPFinal}
-        size="sm"
-      />
-
+    // [FIX] Outer scroll container: width = 100% of the scrollable area in WcFixtureCard
+    // minWidth: 'max-content' removed — cells use fixed widths so exactly 3 fit before scroll
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 3, padding: '4px 4px', minWidth: 'max-content' }}>
+      {cells.map(({ label, wide, cell }) => (
+        // [FIX] Each cell wrapper: flex column with market label header on top
+        // wide=true (ML, DBL CHC): flex basis 36% of scroll container to fit +1000 odds
+        // wide=false (DRAW, TOTAL, SPREAD, BTTS): flex basis 28% — 3 fit = 84% + 2 gaps
+        <div
+          key={label}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: `0 0 ${wide ? '36vw' : '28vw'}`,
+            minWidth: wide ? 90 : 72,
+            maxWidth: wide ? 130 : 110,
+          }}
+        >
+          {/* Per-card market header label */}
+          <div style={{
+            textAlign: 'center',
+            paddingBottom: 2,
+            paddingTop: 1,
+          }}>
+            <span style={{
+              fontSize: 'clamp(7px, 2vw, 9px)',
+              fontWeight: 700,
+              color: 'rgba(255,255,255,0.65)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+              whiteSpace: 'nowrap',
+            }}>{label}</span>
+          </div>
+          {/* BetCell fills remaining height */}
+          <div style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column' }}>
+            {cell}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -2858,68 +3010,8 @@ export function WcFeedInline({
           ))}
         </div>
 
-      {/* ── WC Column Header: MATCHUP | ML | TOTAL | DRAW ── */}
-      {/* [LOG] WcColHeader: normal flow child of sticky sub-header — zero gap guaranteed */}
-      {/* [FIX] Moved inside sticky sub-header div. No position:sticky needed. */}
-      {/* [VERIFY] background: #0f0f0f matches sub-header — no bleed, no gap */}
-      {activeTab === 'PROJECTIONS' && (
-        <div
-          className="grid lg:hidden"
-          style={{
-            gridTemplateColumns: 'clamp(120px, 32%, 150px) 1fr',
-            width: '100%',
-            background: '#0f0f0f',
-            borderBottom: '1px solid rgba(255,255,255,0.12)',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.85)',
-            touchAction: 'none',
-          }}
-        >
-          {/* Left: MATCHUP */}
-          <div style={{
-            padding: '5px 4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRight: '1px solid rgba(255,255,255,0.10)',
-          }}>
-            <span style={{
-              fontSize: 'clamp(9px, 2.5vw, 11px)',
-              fontWeight: 700,
-              color: 'rgba(255,255,255,0.60)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-              whiteSpace: 'nowrap',
-            }}>MATCHUP</span>
-          </div>
-          {/* Right: ML | TOTAL | DRAW */}
-          <div style={{
-            padding: '5px 6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
-          {(['ML', 'DRAW', 'TOTAL', 'SPREAD', 'DBL CHC', 'BTTS'] as const).map((lbl) => (
-            <div key={lbl} style={{
-              flex: '1 1 0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 0,
-            }}>
-              <span style={{
-                fontSize: 'clamp(8px, 2.2vw, 10px)',
-                fontWeight: 700,
-                color: 'rgba(255,255,255,0.80)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                whiteSpace: 'nowrap',
-                textAlign: 'center',
-              }}>{lbl}</span>
-            </div>
-          ))}
-          </div>
-        </div>
-      )}
+      {/* [FIX] Global column header removed — each game card now has per-card market headers above each BetCell */}
+      {/* [LOG] WcColHeader: removed to avoid double-header confusion with per-card headers */}
       </div>
 
 

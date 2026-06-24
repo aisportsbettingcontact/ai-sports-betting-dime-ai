@@ -4191,3 +4191,16 @@
 - [x] SPREAD column: Row 1 = AWAY spread, Row 2 = HOME spread
 - [x] DOUBLE CHANCE column: Row 1 = X2 (Away/Draw), Row 2 = 1X (Home/Draw)
 - [x] BTTS column: Row 1 = YES, Row 2 = NO
+
+## WC2026 Mobile Feed UI Fixes (Phase 4)
+- [x] Fix GROUP label: capitalized "GROUP B" not "Grp B", smaller font-size instead of abbreviating
+- [x] Fix country names: uppercase FIFA code abbreviations (CAN, SUI, BRA, etc.) instead of full names
+- [x] Fix win/loss score coloring: winning score = bold neon green #39FF14, losing score = white unbolded
+- [x] Fix projected scores: amber color, 1 decimal place
+- [x] Fix 3-cells-visible layout: each cell flex:0 0 36vw (ML/DC) or 28vw (others), exactly 3 visible before scroll
+- [x] Add per-card market headers: ML, DRAW, TOTAL, SPREAD, DBL CHC, BTTS label above each BetCell
+- [x] Remove global sticky column header (replaced by per-card headers)
+- [x] Fix spread labels: "CAN +1.5" not "+1.5", no trailing .0
+- [x] Fix DC labels: "CAN WD" not "X2", "SUI WD" not "1X"
+- [x] Fix BTTS labels: "YES" on top, "NO" on bottom
+- [x] Fix DRAW labels: "DRAW" on top, "SUI OR CAN ML" on bottom (no-draw)
