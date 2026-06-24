@@ -277,10 +277,15 @@ function simulate(lH, lA, rho, nSim) {
     pDCX2: (aw + d) / nSim,  // Away or Draw
     pNoDraw: (hw + aw) / nSim, // Away or Home ML
     modeH, modeA,
-    // Floor at 0.50: even the weakest WC team creates some chances
-    // Without floor, extreme mismatches (e.g. SCO vs BRA) push underdog to 0.30
-    projH: Math.round(Math.max(0.50, projH) * 10000) / 10000,
-    projA: Math.round(Math.max(0.50, projA) * 10000) / 10000,
+    // Projected scores = λH and λA directly (Poisson expected value = mean = λ)
+    // This is the mathematically correct projection that passes all market lines:
+    //   - projH + projA = total → validates O/U line
+    //   - projH - projA = spread → validates spread line
+    //   - pH/pA ratio → validates ML line
+    // Do NOT use mode or weighted mean — those are discrete integer approximations
+    // that diverge from the continuous expected value for extreme mismatches.
+    projH: Math.round(lH * 10000) / 10000,
+    projA: Math.round(lA * 10000) / 10000,
     topScorelines,
     lH, lA,
   };
