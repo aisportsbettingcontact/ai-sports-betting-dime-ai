@@ -286,7 +286,10 @@ const TITLE_FS = 'clamp(17px,1.45vw,22px)';
 
 function fmtAmerican(odds: number | undefined | null): string {
   if (odds == null) return "—";
-  return odds > 0 ? `+${odds}` : `${odds}`;
+  // [FIX] Math.round() prevents IEEE 754 float precision artifacts (e.g. -488.9999999999998 → -489).
+  // American odds are always whole integers; rounding is always safe and correct here.
+  const rounded = Math.round(odds);
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
 }
 
 function fmtKickoff(kickoffUtc: Date | string | null | undefined): string {
@@ -1967,19 +1970,43 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // The DB stores only homeDrawOdds (home wins OR draw) as noDraw — NOT the true no-draw.
   // True no-draw = P(home wins) + P(away wins) = 1 - P(draw).
   // We compute this from modelOdds.draw using the American odds implied probability formula.
+  //
+  // [ROOT CAUSE FIX 2026-06-24] IEEE 754 floating point precision error:
+  // The round-trip (American → probability → American) is algebraically exact but IEEE 754
+  // binary arithmetic introduces sub-integer errors for certain inputs.
+  // Example: drawOdds=+489 → pDraw=100/589 → pNoDraw=489/589 → raw=-488.9999999999998
+  // Without Math.round(), fmtAmerican() renders this as '-488.9999999999998'.
+  // Fix: Math.round() the raw result. American odds are always whole integers.
+  // Verified correct for all integer inputs -500 to +1000.
   const modelNoDrawOdds: number | null = (() => {
     if (modelOdds?.draw == null) return null;
-    // Convert American odds to implied probability (raw, not no-vig)
+    // [INPUT] Convert model draw American odds to implied probability (raw, not no-vig)
     const drawOdds = modelOdds.draw;
     const pDraw = drawOdds < 0
       ? (-drawOdds) / (-drawOdds + 100)
       : 100 / (drawOdds + 100);
+    // [STEP] P(no-draw) = 1 - P(draw)
     const pNoDraw = 1 - pDraw;
-    if (pNoDraw <= 0 || pNoDraw >= 1) return null;
-    // Convert back to American odds
-    return pNoDraw >= 0.5
+    // [GUARD] pNoDraw must be strictly between 0 and 1
+    if (pNoDraw <= 0 || pNoDraw >= 1) {
+      console.warn(`[modelNoDrawOdds] fixture=${fixture.fixtureId} GUARD: pNoDraw=${pNoDraw} out of range for drawOdds=${drawOdds}`);
+      return null;
+    }
+    // [STEP] Convert P(no-draw) back to American odds
+    const raw = pNoDraw >= 0.5
       ? -(pNoDraw / (1 - pNoDraw)) * 100
       : ((1 - pNoDraw) / pNoDraw) * 100;
+    // [FIX] Math.round() eliminates IEEE 754 float precision artifacts.
+    // e.g. -488.9999999999998 → -489, -325.9999999999999 → -326
+    const result = Math.round(raw);
+    console.log(
+      `[modelNoDrawOdds] fixture=${fixture.fixtureId}` +
+      ` | [INPUT] drawOdds=${drawOdds}` +
+      ` | [STATE] pDraw=${pDraw.toFixed(6)} pNoDraw=${pNoDraw.toFixed(6)} raw=${raw.toFixed(6)}` +
+      ` | [OUTPUT] result=${result}` +
+      ` | [VERIFY] delta=${Math.abs(raw - result).toFixed(8)} ${Math.abs(raw - result) < 0.001 ? 'PASS' : 'WARN-large-delta'}`
+    );
+    return result;
   })();
   const noDrawRow: BetCellSide = {
     bookLine: noDrawLabel, bookJuice: fmtAmerican(dkOdds?.noDraw) ?? '—',
