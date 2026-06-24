@@ -942,8 +942,13 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             FINAL
           </span>
         ) : (
-          <span className="font-bold" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))" }}>
+          <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))" }}>
             {fmtKickoff(fixture.kickoffUtc)}
+            {fixture.groupLetter && (
+              <span style={{ fontSize: 'clamp(9px, 0.75vw, 11px)', color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>
+                &middot; Grp {fixture.groupLetter}
+              </span>
+            )}
           </span>
         )}
       </div>
@@ -1009,9 +1014,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               <span className="font-bold leading-tight" style={{ fontSize: 11, color: "hsl(var(--foreground))", fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
               </span>
-              <span className="leading-none" style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", whiteSpace: 'nowrap' }}>
-                {fixture.groupLetter ? `Group ${fixture.groupLetter}` : "\u00A0"}
-              </span>
+              {/* [FIX] Group letter moved to status row next to kickoff time */}
             </div>
           </div>
           {(isLive || isFinal) && hasScores && (
@@ -1405,17 +1408,17 @@ function WcDcMobileCell({
         <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
       </div>
 
-      {/* Row 1: DRAW — pure 3-way draw odds */}
-      <DcRow rowLabel="DRAW" bookOdds={drawBook} modelOdds={drawModel} rowEdgePP={drawEdgePP} />
-
-      {/* Row 2: Home W/D — 1X Double Chance */}
-      <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-      <DcRow rowLabel={`${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
-
-      {/* Row 3: Away W/D — X2 Double Chance */}
-      <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
-      <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
-
+      {/* [FIX] Centered wrapper: 3 rows vertically centered to match BetCell 2-row ML/TOTAL columns */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', justifyContent: 'center' }}>
+        {/* Row 1: DRAW — pure 3-way draw odds */}
+        <DcRow rowLabel="DRAW" bookOdds={drawBook} modelOdds={drawModel} rowEdgePP={drawEdgePP} />
+        {/* Row 2: Home W/D — 1X Double Chance */}
+        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <DcRow rowLabel={`${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
+        {/* Row 3: Away W/D — X2 Double Chance */}
+        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
+      </div>
       {/* ROI Footer */}
       <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent' }}>
         {hasEdge && edgeLabel && (

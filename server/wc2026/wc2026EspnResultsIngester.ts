@@ -70,7 +70,8 @@ interface EspnTeam {
 interface EspnEvent {
   id: string;
   name: string;
-  status: { type: { description: string; completed: boolean } };
+  // [FIX] Added status.type.name for STATUS_IN_PROGRESS detection
+  status: { type: { description: string; completed: boolean; name?: string } };
   competitions: EspnCompetition[];
 }
 
@@ -281,12 +282,24 @@ export async function ingestWc2026EspnResults(options: {
     result.eventsProcessed++;
     const eventId = event.id;
     const statusDesc = event.status?.type?.description ?? "Unknown";
+    const statusName = event.status?.type?.name ?? "";
     const isCompleted = event.status?.type?.completed ?? false;
+    const isInProgress = statusName === "STATUS_IN_PROGRESS" || statusDesc.toLowerCase().includes("in progress");
+    // [FIX] Determine target DB status dynamically:
+    //   completed=true  → FT
+    //   in-progress     → LIVE
+    //   otherwise       → null (skip — do NOT write FT/0-0 to unplayed matches)
+    const fixtureStatus: "FT" | "LIVE" | null = isCompleted ? "FT" : isInProgress ? "LIVE" : null;
 
-    console.log(`[WC2026ESPN] [STEP] Processing event ${eventId}: "${event.name}" status=${statusDesc} completed=${isCompleted}`);
+    console.log(`[WC2026ESPN] [STEP] Processing event ${eventId}: "${event.name}" status=${statusDesc} statusName=${statusName} completed=${isCompleted} isInProgress=${isInProgress} → fixtureStatus=${fixtureStatus ?? 'SKIP'}`);
 
     if (onlyFinalMatches && !isCompleted) {
       console.log(`[WC2026ESPN] [STEP] Skipping event ${eventId} — not completed (status=${statusDesc})`);
+      continue;
+    }
+    // [FIX] When onlyFinalMatches=false (live mode): skip events that are neither FT nor LIVE
+    if (!onlyFinalMatches && fixtureStatus === null) {
+      console.log(`[WC2026ESPN] [STEP] Skipping event ${eventId} — not in-progress or completed (status=${statusDesc})`);
       continue;
     }
 
@@ -373,7 +386,36 @@ export async function ingestWc2026EspnResults(options: {
       continue;
     }
 
-    console.log(`[WC2026ESPN] [STEP] Processing fixture ${fixtureId} — fetching full summary`);
+    // [FIX] LIVE path: lightweight score-only upsert — no summary fetch, no stats/events/lineups
+    if (fixtureStatus === "LIVE") {
+      const kickoffStr = (event.competitions?.[0] as any)?.date ?? null;
+      const kickoffUtc = kickoffStr ? new Date(kickoffStr) : null;
+      console.log(`[WC2026ESPN] [STATE] LIVE upsert fixture ${fixtureId}: score=${homeScore}-${awayScore} status=LIVE espnEventId=${eventId}`);
+      await db
+        .update(wc2026Fixtures)
+        .set({
+          homeScore,
+          awayScore,
+          status: "LIVE",
+          espnEventId: eventId,
+          ...(kickoffUtc ? { kickoffUtc } : {}),
+        })
+        .where(eq(wc2026Fixtures.fixtureId, fixtureId));
+      result.fixturesUpdated++;
+      result.matchSummaries.push({
+        fixtureId,
+        homeTeam: homeTeamName,
+        awayTeam: awayTeamName,
+        score: `${awayScore}-${homeScore}`,
+        status: statusDesc,
+        homeXg: 0,
+        awayXg: 0,
+      });
+      console.log(`[WC2026ESPN] [OUTPUT] LIVE fixture ${fixtureId} score updated ✅ (${awayTeamName} ${awayScore} – ${homeScore} ${homeTeamName})`);
+      continue;
+    }
+
+    console.log(`[WC2026ESPN] [STEP] Processing fixture ${fixtureId} — fetching full summary (FT)`);
 
     // Step 3: Fetch full event summary
     let summary: any;
@@ -416,20 +458,21 @@ export async function ingestWc2026EspnResults(options: {
     const kickoffUtc = kickoffStr ? new Date(kickoffStr) : null;
 
     // Step 5: Upsert wc2026_fixtures (score, status, espn_event_id, attendance)
-    console.log(`[WC2026ESPN] [STATE] Upserting fixture ${fixtureId}: score=${homeScore}-${awayScore} status=FT espnEventId=${eventId}`);
+    // [FIX] fixtureStatus is always 'FT' at this point (LIVE was handled above via continue)
+    console.log(`[WC2026ESPN] [STATE] Upserting fixture ${fixtureId}: score=${homeScore}-${awayScore} status=${fixtureStatus} espnEventId=${eventId}`);
     await db
       .update(wc2026Fixtures)
       .set({
         homeScore,
         awayScore,
-        status: "FT",
+        status: fixtureStatus as "FT" | "LIVE",
         espnEventId: eventId,
         attendance,
         ...(kickoffUtc ? { kickoffUtc } : {}),
       })
       .where(eq(wc2026Fixtures.fixtureId, fixtureId));
     result.fixturesUpdated++;
-    console.log(`[WC2026ESPN] [OUTPUT] Fixture ${fixtureId} updated ✅`);
+    console.log(`[WC2026ESPN] [OUTPUT] FT fixture ${fixtureId} fully ingested ✅ (${awayTeamName} ${awayScore} – ${homeScore} ${homeTeamName})`);
 
     // Step 6: Upsert wc2026_match_stats
     const matchStatsRow: InsertWc2026MatchStats = {

@@ -3,20 +3,29 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Project-level heartbeat handlers for WC2026 data pipeline.
  *
- * Three registered endpoints:
+ * Registered endpoints:
  *
- * 1. POST /api/heartbeat/wc2026-odds
+ * 1. POST /api/scheduled/wc2026-odds
  *    Cadence: every 30 min (5 min within 90 min of kickoff via is_closing flag)
  *    Action:  Scrape AN soccer odds → wc2026_odds_snapshots
  *             Mark is_closing=true when called within 90 min of any kickoff
  *
- * 2. POST /api/heartbeat/wc2026-splits
+ * 2. POST /api/scheduled/wc2026-splits
  *    Cadence: every 5 min
  *    Action:  Scrape DK Network splits → wc2026_betting_splits
  *
- * 3. POST /api/heartbeat/wc2026-lineups
+ * 3. POST /api/scheduled/wc2026-lineups
  *    Cadence: every 10 min
  *    Action:  Scrape Rotowire WOC lineups → wc2026_lineups
+ *
+ * 4. POST /api/scheduled/wc2026-espn-results
+ *    Cadence: daily (post-match)
+ *    Action:  Ingest FT match results, stats, events, lineups from ESPN API
+ *
+ * 5. POST /api/scheduled/wc2026-live-scores
+ *    Cadence: every 5 min during match window (13:00–10:55 UTC)
+ *    Action:  Ingest LIVE + FT scores from ESPN scoreboard (score-only for LIVE,
+ *             full ingest for newly-completed FT matches)
  *
  * Logging format:
  *   [WC2026HB] [INPUT]  → endpoint, trigger time
@@ -187,15 +196,56 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
   }
 }
 
-// ─── Registration ─────────────────────────────────────────────────────────────
+
+// ─── Handler: live score refresh (every 5 min during match window) ──────────────────────────────────────────────────────────────────────────────
+async function handleWc2026LiveScores(req: Request, res: Response): Promise<void> {
+  const now = new Date();
+  // Use today's date in YYYYMMDD format (UTC) — WC matches run 13:00–23:00 UTC
+  const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
+  console.log(`[WC2026HB] [INPUT] /wc2026-live-scores triggered at ${now.toISOString()} dateStr=${dateStr}`);
+
+  try {
+    // onlyFinalMatches=false → process both LIVE and FT events
+    // forceReingest=false  → skip fixtures already marked FT in DB
+    const result = await ingestWc2026EspnResults({
+      dateStr,
+      onlyFinalMatches: false,
+      forceReingest: false,
+    });
+
+    const liveCount = result.matchSummaries.filter(s => s.status.toLowerCase().includes("in progress")).length;
+    const ftCount   = result.matchSummaries.filter(s => !s.status.toLowerCase().includes("in progress")).length;
+
+    console.log(
+      `[WC2026HB] [OUTPUT] live-scores: fixturesUpdated=${result.fixturesUpdated} live=${liveCount} ft=${ftCount} errors=${result.errors.length}`
+    );
+    const pass = result.errors.length === 0;
+    console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-live-scores`);
+
+    res.json({
+      ok: pass,
+      date: dateStr,
+      fixturesUpdated: result.fixturesUpdated,
+      liveCount,
+      ftCount,
+      matchSummaries: result.matchSummaries,
+      errors: result.errors,
+    });
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-live-scores unhandled: ${String(err)}`);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+}
+
 export function registerWc2026Heartbeats(app: Express): void {
   // Manus Heartbeat requires /api/scheduled/* paths
   app.post("/api/scheduled/wc2026-odds", handleWc2026Odds);
   app.post("/api/scheduled/wc2026-splits", handleWc2026Splits);
   app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
   app.post("/api/scheduled/wc2026-espn-results", handleWc2026EspnResults);
+  app.post("/api/scheduled/wc2026-live-scores", handleWc2026LiveScores);
 
   console.log(
-    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores"
   );
 }
