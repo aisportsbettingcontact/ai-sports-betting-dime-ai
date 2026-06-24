@@ -1052,11 +1052,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
+                <span style={{ fontSize: 'clamp(26px, 7vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
                   {wcFlagEmoji(awayFifaCode) || '🏳️'}
                 </span>
-                {/* Full country name — never FIFA code */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                {/* [FIX] Mobile: FIFA code abbreviated ALL CAPS. Desktop: full country name. */}
+                {/* [FIX] fontWeight: bold if winning (awayScoreBold), unbolded if losing/tied */}
+                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: 'rgba(255,255,255,0.95)', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {awayFifaCode.toUpperCase()}
+                </span>
+                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
                 </span>
               </div>
@@ -1079,11 +1083,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
                 {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
-                <span style={{ fontSize: 'clamp(24px, 3vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
+                <span style={{ fontSize: 'clamp(26px, 7vw, 36px)', lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
                   {wcFlagEmoji(homeFifaCode) || '🏳️'}
                 </span>
-                {/* Full country name — never FIFA code */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                {/* [FIX] Mobile: FIFA code abbreviated ALL CAPS. Desktop: full country name. */}
+                {/* [FIX] fontWeight: bold if winning (homeScoreBold), unbolded if losing/tied */}
+                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: 'rgba(255,255,255,0.95)', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  {homeFifaCode.toUpperCase()}
+                </span>
+                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
                 </span>
               </div>
