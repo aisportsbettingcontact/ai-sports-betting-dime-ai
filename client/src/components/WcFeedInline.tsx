@@ -69,7 +69,7 @@ const WC_DATE_LABELS: Record<string, string> = Object.fromEntries(
   })
 );
 
-const WC_SUB_TABS = ["PROJECTIONS", "SPLITS", "LINEUPS", "STANDINGS", "FUTURES"] as const;
+const WC_SUB_TABS = ["PROJECTIONS", "LINEUPS", "STANDINGS", "FUTURES"] as const;
 type WcSubTab = (typeof WC_SUB_TABS)[number];
 
 // Position display order for soccer lineups
@@ -237,6 +237,44 @@ function wcTeamAlias(name: string | null | undefined): string {
   if (!name) return "";
   return WC_TEAM_ALIASES[name] ?? name;
 }
+
+// ─── Unicode Flag Emoji ────────────────────────────────────────────────────────
+// Converts FIFA 3-letter code to unicode flag emoji via ISO 3166-1 alpha-2 mapping.
+// [LOG] wcFlagEmoji: returns unicode flag string or empty string if no mapping found
+const FIFA_TO_ISO2: Record<string, string> = {
+  CAN: 'CA', SUI: 'CH', QAT: 'QA', BIH: 'BA', BRA: 'BR', SCO: 'GB-SCT',
+  HAI: 'HT', MAR: 'MA', MEX: 'MX', CZE: 'CZ', KOR: 'KR', RSA: 'ZA',
+  USA: 'US', MEX2: 'MX', ARG: 'AR', FRA: 'FR', ENG: 'GB-ENG', GER: 'DE',
+  ESP: 'ES', ITA: 'IT', POR: 'PT', NED: 'NL', BEL: 'BE', URU: 'UY',
+  COL: 'CO', ECU: 'EC', CHI: 'CL', PER: 'PE', SEN: 'SN', NGA: 'NG',
+  CMR: 'CM', GHA: 'GH', CIV: 'CI', TUN: 'TN', EGY: 'EG', ALG: 'DZ',
+  JPN: 'JP', AUS: 'AU', IRN: 'IR', SAU: 'SA', UZB: 'UZ', AUT: 'AT',
+  CRO: 'HR', SRB: 'RS', POL: 'PL', UKR: 'UA', HUN: 'HU', DEN: 'DK',
+  SWE: 'SE', NOR: 'NO', FIN: 'FI', WAL: 'GB-WLS', IRL: 'IE', ISL: 'IS',
+  GRE: 'GR', TUR: 'TR', SLO: 'SI', SVK: 'SK', ROM: 'RO', BUL: 'BG',
+  PAN: 'PA', CRC: 'CR', HON: 'HN', GTM: 'GT', SLV: 'SV', JAM: 'JM',
+  TRI: 'TT', BOL: 'BO', PAR: 'PY', VEN: 'VE', CHN: 'CN', IND: 'IN',
+  THA: 'TH', IDN: 'ID', PHI: 'PH', IRQ: 'IQ', JOR: 'JO', KWT: 'KW',
+  UAE: 'AE', KEN: 'KE', ZAM: 'ZM', ZIM: 'ZW', ANG: 'AO', COD: 'CD',
+  NZL: 'NZ', SVN: 'SI',
+};
+function wcFlagEmoji(fifaCode: string): string {
+  const code = fifaCode?.toUpperCase() ?? '';
+  const iso2 = FIFA_TO_ISO2[code];
+  if (!iso2 || iso2.includes('-')) {
+    // Subdivision codes (GB-SCT, GB-ENG, GB-WLS) — use parent country flag
+    if (iso2 === 'GB-SCT' || iso2 === 'GB-ENG' || iso2 === 'GB-WLS') {
+      return '\u{1F1EC}\u{1F1E7}'; // 🇬🇧
+    }
+    return '';
+  }
+  // Convert ISO 2-letter code to regional indicator symbols
+  const A = 0x1F1E6;
+  const c1 = String.fromCodePoint(A + iso2.charCodeAt(0) - 65);
+  const c2 = String.fromCodePoint(A + iso2.charCodeAt(1) - 65);
+  return c1 + c2;
+}
+
 
 // ─── Typography scale — exact GameCard constants ──────────────────────────────
 const HDR_FS  = 'clamp(15px,1.25vw,20px)';
@@ -781,8 +819,9 @@ function WcMktCol({
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
   };
+  // [FIX] Match MLB TITLE_FS: clamp(17px,1.45vw,22px) for desktop
   const titleFs: React.CSSProperties = {
-    fontSize: compact ? 'clamp(9px,2.0vw,11px)' : 'clamp(10px,0.9vw,13px)',
+    fontSize: compact ? 'clamp(9px,2.0vw,11px)' : 'clamp(13px,1.1vw,17px)',
     fontWeight: 850,
     color: '#fff',
     letterSpacing: '0.14em',
@@ -801,15 +840,16 @@ function WcMktCol({
       : subEdge ? '#39FF14' : 'rgba(255,255,255,0.90)';
     const isVeryLongOdds = juice.length >= 6; // e.g. +2200, -1000
     const isLongOdds = juice.length >= 5;     // e.g. +1000, -900
+    // [FIX] Match MLB VAL_FS scale: larger odds values get smaller font
     const juiceFontSize = isVeryLongOdds
-      ? 'clamp(8px,2.2vw,10px)'
+      ? 'clamp(10px,0.9vw,13px)'
       : isLongOdds
-      ? 'clamp(9px,2.6vw,11.5px)'
-      : 'clamp(11px,1.0vw,14px)';
+      ? 'clamp(11px,0.95vw,14px)'
+      : 'clamp(12px,1.0vw,16px)';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: line ? 1 : 0, minWidth: 0, flex: 1 }}>
         {line && (
-          <span style={{ fontSize: 'clamp(8px,0.75vw,10px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+          <span style={{ fontSize: 'clamp(9px,0.78vw,11px)', fontWeight: 400, color: 'rgba(255,255,255,0.60)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         )}
         <span style={{ fontSize: juiceFontSize, fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
       </div>
@@ -839,8 +879,10 @@ function WcMktCol({
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
         {/* BOOK / MODEL header — both muted white, matching MLB exactly */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
-          <span style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
-          <span style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+          {/* BOOK header: full white — matches MLB SectionCol exactly */}
+          <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>BOOK</span>
+          {/* MODEL header: neon green — matches MLB SectionCol exactly */}
+          <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#39FF14', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>MODEL</span>
         </div>
 
         {/* Away / Over / Draw row (top) */}
@@ -879,33 +921,7 @@ function WcMktCol({
         </div>
       </div>
 
-      {/* Splits bars — shown only on desktop (not compact) */}
-      {!compact && (
-        <>
-          <div style={{ marginTop: 5 }}>
-            <MergedSplitBar
-              awayPct={awayTickets}
-              homePct={homeTickets}
-              awayColor={awayColor}
-              homeColor={homeColor}
-              rowLabel="TICKETS"
-              awayLabel={awayLabel}
-              homeLabel={singleRow ? '' : homeLabel}
-            />
-          </div>
-          <div style={{ marginTop: 4 }}>
-            <MergedSplitBar
-              awayPct={awayMoney}
-              homePct={homeMoney}
-              awayColor={awayColor}
-              homeColor={homeColor}
-              rowLabel="MONEY"
-              awayLabel={awayLabel}
-              homeLabel={singleRow ? '' : homeLabel}
-            />
-          </div>
-        </>
-      )}
+      {/* [FIX] SPLITS bars removed — WC splits data not consistently available */}
     </div>
   );
 }
@@ -1035,23 +1051,13 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             {/* [FIX] Away team row — TOP (standard sportsbook convention: away listed first/top) */}
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
-                {/* Flag circle */}
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
-                }}>
-                  <img
-                    src={awayTeam?.flagUrl ?? fifaFlagUrl(awayFifaCode)}
-                    alt={awayFifaCode}
-                    style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                </div>
-                {/* [FIX] Use FIFA code (team_id uppercase) as abbreviation — never full country name */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3vw, 12px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                  {awayFifaCode.toUpperCase()}
+                {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
+                <span style={{ fontSize: 'clamp(18px, 2.2vw, 26px)', lineHeight: 1, flexShrink: 0 }} aria-label={awayFifaCode}>
+                  {wcFlagEmoji(awayFifaCode) || '🏳️'}
+                </span>
+                {/* Full country name — never FIFA code */}
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                  {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
@@ -1072,23 +1078,13 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             {/* [FIX] Home team row — BOTTOM (standard sportsbook convention: home listed second/bottom) */}
             <div className="flex items-center justify-between gap-2 py-1 w-full">
               <div className="flex items-center gap-2">
-                {/* Flag circle */}
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)',
-                }}>
-                  <img
-                    src={homeTeam?.flagUrl ?? fifaFlagUrl(homeFifaCode)}
-                    alt={homeFifaCode}
-                    style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2 }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                  />
-                </div>
-                {/* [FIX] Use FIFA code (team_id uppercase) as abbreviation — never full country name */}
-                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(10px, 3vw, 12px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                  {homeFifaCode.toUpperCase()}
+                {/* Unicode flag emoji — replaces img tag for reliability and clarity */}
+                <span style={{ fontSize: 'clamp(18px, 2.2vw, 26px)', lineHeight: 1, flexShrink: 0 }} aria-label={homeFifaCode}>
+                  {wcFlagEmoji(homeFifaCode) || '🏳️'}
+                </span>
+                {/* Full country name — never FIFA code */}
+                <span className="font-bold leading-tight" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: 'rgba(255,255,255,0.95)', fontWeight: 700, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                  {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
@@ -1529,6 +1525,9 @@ function WcDesktopMergedPanel({
   const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
   const homeColors   = getWcTeamColors(homeFifaCode);
   const awayColors   = getWcTeamColors(awayFifaCode);
+  // [FIX] Full country name aliases for market labels — never FIFA codes
+  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
+  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
 
   const mlSplits    = extractWcSplits(splits, 'ML',    fixture.awayTeamId, fixture.homeTeamId);
   const totalSplits = extractWcSplits(splits, 'TOTAL', fixture.awayTeamId, fixture.homeTeamId);
@@ -1558,17 +1557,13 @@ function WcDesktopMergedPanel({
       {/* ── Col 1: ML — Row 1: HOME (top), Row 2: AWAY (bottom) ───────────────────────────── */}
       <WcMktCol
         title="ML"
-        awayLabel={`${homeFifaCode} ML`}
-        homeLabel={`${awayFifaCode} ML`}
+        awayLabel={`${homeName} ML`}
+        homeLabel={`${awayName} ML`}
         awayBookNum={dkOdds?.home}
         homeBookNum={dkOdds?.away}
         awayModelNum={modelOdds?.home}
         homeModelNum={modelOdds?.away}
         singleRow={false}
-        awayTickets={mlSplits.homeTickets}
-        homeTickets={mlSplits.awayTickets}
-        awayMoney={mlSplits.homeMoney}
-        homeMoney={mlSplits.awayMoney}
         awayColor={homeColors.primary}
         homeColor={awayColors.primary}
         threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
@@ -1609,10 +1604,6 @@ function WcDesktopMergedPanel({
         awayModelNum={modelOdds?.overOdds}
         homeModelNum={modelOdds?.underOdds}
         singleRow={false}
-        awayTickets={totalSplits.awayTickets}
-        homeTickets={totalSplits.homeTickets}
-        awayMoney={totalSplits.awayMoney}
-        homeMoney={totalSplits.homeMoney}
         awayColor="#39FF14"
         homeColor="#FF6B35"
       />
@@ -1622,8 +1613,8 @@ function WcDesktopMergedPanel({
       {/* ── Col 4: SPREAD — Row 1: AWAY spread, Row 2: HOME spread ─────────────────────────────── */}
       <WcMktCol
         title="SPREAD"
-        awayLabel={`${awayFifaCode} ${fmtSpreadLineD(dkOdds?.awaySpreadLine)}`}
-        homeLabel={`${homeFifaCode} ${fmtSpreadLineD(dkOdds?.homeSpreadLine)}`}
+        awayLabel={`${awayName} ${fmtSpreadLineD(dkOdds?.awaySpreadLine)}`}
+        homeLabel={`${homeName} ${fmtSpreadLineD(dkOdds?.homeSpreadLine)}`}
         awayBookNum={dkOdds?.awaySpreadOdds}
         homeBookNum={dkOdds?.homeSpreadOdds}
         awayModelNum={modelOdds?.awaySpreadOdds}
@@ -1638,8 +1629,8 @@ function WcDesktopMergedPanel({
       {/* ── Col 5: DOUBLE CHANCE — Row 1: AWAY OR DRAW (X2), Row 2: HOME OR DRAW (1X) ────────────── */}
       <WcMktCol
         title="DBL CHC"
-        awayLabel={`${awayFifaCode} / D`}
-        homeLabel={`${homeFifaCode} / D`}
+        awayLabel={`${awayName} / D`}
+        homeLabel={`${homeName} / D`}
         awayBookNum={dkOdds?.awayDrawOdds}
         homeBookNum={dkOdds?.homeDrawOdds}
         awayModelNum={modelOdds?.awayDrawOdds}
@@ -1697,7 +1688,8 @@ function WcFixtureCard({
       {/* ── Desktop layout (≥ md) ── */}
       <div className="hidden md:flex items-stretch w-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
         {/* Col 1: Score panel */}
-        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+        {/* [FIX] Wider score panel to accommodate full country names */}
+        <div style={{ flex: "0 0 clamp(180px,24vw,280px)", width: 'clamp(180px,24vw,280px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
           <WcScorePanel fixture={fixture} />
         </div>
         {/* Col 2+3: Merged panel */}
@@ -1823,13 +1815,13 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // mlAway (top) = away team odds, mlHome (bottom) = home team odds.
   // [FIX 2026-06-24] Append ' ML' to team abbreviation so mobile BetCell shows 'SUI ML' / 'CAN ML'
   const mlAway: BetCellSide = {
-    bookLine: `${awayFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
-    modelLine: `${awayFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
+    bookLine: `${awayName} ML`, bookJuice: fmtAmerican(dkOdds?.away) ?? '—',
+    modelLine: `${awayName} ML`, modelJuice: fmtAmerican(modelOdds?.away) ?? '—',
     edgePP: awayMlEdgePP,
   };
   const mlHome: BetCellSide = {
-    bookLine: `${homeFifaCode.toUpperCase()} ML`, bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
-    modelLine: `${homeFifaCode.toUpperCase()} ML`, modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
+    bookLine: `${homeName} ML`, bookJuice: fmtAmerican(dkOdds?.home) ?? '—',
+    modelLine: `${homeName} ML`, modelJuice: fmtAmerican(modelOdds?.home) ?? '—',
     edgePP: homeMlEdgePP,
   };
   // [FIX] formatTotalLine: O2.5 not O2.50, O2 not O2.00
@@ -1956,7 +1948,10 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // ── BetCellSide builders for new markets ─────────────────────────────────────
   // [FIX] DRAW column: Row 1 = DRAW (label 'DRAW'), Row 2 = HOME OR AWAY ML (no-draw)
   // [FIX] No Draw label: AWAY/HOME abbreviated (e.g. "CAN/SUI") — away first, home second
-  const noDrawLabel = `${awayFifaCode.toUpperCase()}/${homeFifaCode.toUpperCase()}`;
+  // [FIX] Full country names for mobile panel labels
+  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
+  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
+  const noDrawLabel = `${awayName}/${homeName}`;
   const drawRow: BetCellSide = {
     bookLine: 'DRAW', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
     modelLine: 'DRAW', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
@@ -1974,22 +1969,22 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     `[WcMobileOddsPanel:Spread] fixture=${fixture.fixtureId}` +
     ` | [INPUT] homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()}` +
     ` | [STATE] homeSpreadLine=${homeSpreadLine} awaySpreadLine=${awaySpreadLine}` +
-    ` | [OUTPUT] homeLabel="${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}" awayLabel="${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}"` +
+    ` | [OUTPUT] homeLabel="${homeName} ${fmtSpreadLine(homeSpreadLine)}" awayLabel="${awayName} ${fmtSpreadLine(awaySpreadLine)}"` +
     ` | [VERIFY] dkHomeSpreadOdds=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkAwaySpreadOdds=${dkOdds?.awaySpreadOdds ?? 'N/A'}`
   );
   const spreadAway: BetCellSide = {
     // [FIX] Row 1 = AWAY team (top row in BetCell = 'away' prop) — standard sportsbook: away on top
-    bookLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
+    bookLine: `${awayName} ${fmtSpreadLine(awaySpreadLine)}`,
     bookJuice: fmtAmerican(dkOdds?.awaySpreadOdds) ?? '—',
-    modelLine: `${awayFifaCode.toUpperCase()} ${fmtSpreadLine(awaySpreadLine)}`,
+    modelLine: `${awayName} ${fmtSpreadLine(awaySpreadLine)}`,
     modelJuice: fmtAmerican(modelOdds?.awaySpreadOdds) ?? '—',
     edgePP: awaySpreadEdgePP,
   };
   const spreadHome: BetCellSide = {
     // [FIX] Row 2 = HOME team (bottom row in BetCell = 'home' prop) — standard sportsbook: home on bottom
-    bookLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
+    bookLine: `${homeName} ${fmtSpreadLine(homeSpreadLine)}`,
     bookJuice: fmtAmerican(dkOdds?.homeSpreadOdds) ?? '—',
-    modelLine: `${homeFifaCode.toUpperCase()} ${fmtSpreadLine(homeSpreadLine)}`,
+    modelLine: `${homeName} ${fmtSpreadLine(homeSpreadLine)}`,
     modelJuice: fmtAmerican(modelOdds?.homeSpreadOdds) ?? '—',
     edgePP: homeSpreadEdgePP,
   };
@@ -2001,16 +1996,16 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ` | [VERIFY] dkAwayDrawOdds=${dkOdds?.awayDrawOdds ?? 'N/A'} dkHomeDrawOdds=${dkOdds?.homeDrawOdds ?? 'N/A'}`
   );
   const dcAway: BetCellSide = {
-    bookLine: `${awayFifaCode.toUpperCase()} WD`,
+    bookLine: `${awayName} WD`,
     bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
-    modelLine: `${awayFifaCode.toUpperCase()} WD`,
+    modelLine: `${awayName} WD`,
     modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
     edgePP: awayDcEdgePP,
   };
   const dcHome: BetCellSide = {
-    bookLine: `${homeFifaCode.toUpperCase()} WD`,
+    bookLine: `${homeName} WD`,
     bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
-    modelLine: `${homeFifaCode.toUpperCase()} WD`,
+    modelLine: `${homeName} WD`,
     modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
     edgePP: homeDcEdgePP,
   };
@@ -2035,7 +2030,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [LOG] WcMobileOddsPanel:Draw noDrawLabel=${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML
   console.log(
     `[WcMobileOddsPanel:Draw] fixture=${fixture.fixtureId}` +
-    ` | [OUTPUT] row1="DRAW" row2="${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML"` +
+    ` | [OUTPUT] row1="DRAW" row2="${homeName} OR ${awayName} ML"` +
     ` | [VERIFY] dkDraw=${dkOdds?.draw ?? 'N/A'} dkNoDraw=${dkOdds?.noDraw ?? 'N/A'}`
   );
 
@@ -3024,26 +3019,49 @@ export function WcFeedInline({
           </div>
         </div>
 
-        { /* Sub-tab nav */}
+        { /* Sub-tab nav — MLB-identical: borderBottom on container, active tab has green bottom border */}
         <div
-          className="flex items-center px-3 sm:px-4 pb-0 overflow-x-auto"
-          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+          style={{
+            display: 'flex',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            borderBottom: '2px solid hsl(var(--border) / 0.5)',
+            background: 'hsl(var(--card))',
+            paddingLeft: '12px',
+          } as React.CSSProperties}
         >
-          {WC_SUB_TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "px-3 py-2.5 text-[11px] font-bold tracking-widest uppercase whitespace-nowrap transition-all border-b-2 flex-shrink-0",
-                activeTab === tab
-                  ? "text-white border-white"
-                  : "text-zinc-500 border-transparent hover:text-zinc-300"
-              )}
-            >
-              {tab}
-            </button>
-          ))}
+          {WC_SUB_TABS.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  flex: '0 0 auto',
+                  padding: '7px 12px',
+                  minHeight: 44,
+                  fontSize: '13px',
+                  fontWeight: isActive ? 800 : 500,
+                  letterSpacing: '0.06em',
+                  color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.45)',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid #39FF14' : '2px solid transparent',
+                  marginBottom: '-2px',
+                  cursor: 'pointer',
+                  transition: 'color 0.15s, border-color 0.15s',
+                  textTransform: 'uppercase',
+                  lineHeight: 1.2,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {tab}
+              </button>
+            );
+          })}
         </div>
 
       {/* [FIX] Global column header removed — each game card now has per-card market headers above each BetCell */}
@@ -3053,7 +3071,7 @@ export function WcFeedInline({
 
       {/* ── Content ── */}
       {activeTab === "PROJECTIONS" && <WcProjectionsFeed date={selectedDate} />}
-      {activeTab === "SPLITS" && <WcSplitsFeed date={selectedDate} />}
+      {/* SPLITS tab removed — WC splits data not consistently available */}
       {activeTab === "LINEUPS" && <WcLineupsFeed date={selectedDate} />}
       {activeTab === "STANDINGS" && <WcComingSoon label="Group Standings" />}
       {activeTab === "FUTURES" && <WcComingSoon label="Futures & Outrights" />}
