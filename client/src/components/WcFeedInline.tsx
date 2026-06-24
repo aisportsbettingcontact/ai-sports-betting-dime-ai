@@ -290,16 +290,29 @@ function fifaFlagUrl(fifaCode: string): string {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type DkOdds = {
+  // 1X2
   home?: number;
   away?: number;
   draw?: number;
+  /** 1X2 No-Draw: home or away wins (no draw payout) */
+  noDraw?: number;
+  // TOTAL
   overLine?: number;
   overOdds?: number;
   underOdds?: number;
+  // ASIAN_HANDICAP (spread)
+  homeSpreadLine?: number;
+  homeSpreadOdds?: number;
+  awaySpreadLine?: number;
+  awaySpreadOdds?: number;
+  // DOUBLE_CHANCE
   /** DOUBLE_CHANCE 1X — Home Win-Draw */
   homeDrawOdds?: number;
   /** DOUBLE_CHANCE X2 — Away Win-Draw */
   awayDrawOdds?: number;
+  // BTTS
+  bttsYes?: number;
+  bttsNo?: number;
 } | null;
 
 type WcTeamInfo = {
@@ -332,6 +345,20 @@ type WcLineupPlayer = {
   isConfirmed: boolean;
 };
 
+type WcProjection = {
+  projHomeScore: number | null;
+  projAwayScore: number | null;
+  projTotal: number | null;
+  projSpread: number | null;
+  bttsProb: number | null;
+  over25: number | null;
+  under25: number | null;
+  homeWinProb: number | null;
+  drawProb: number | null;
+  awayWinProb: number | null;
+  modelVersion: string | null;
+} | null;
+
 type WcFixtureWithOdds = {
   fixtureId: string;
   matchDate: string | Date;
@@ -349,6 +376,7 @@ type WcFixtureWithOdds = {
   venue: WcVenueInfo | null;
   dkOdds?: DkOdds;
   modelOdds?: DkOdds;
+  projection?: WcProjection;
 };
 
 type WcFixtureWithLineups = WcFixtureWithOdds & {
@@ -889,6 +917,20 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const isLive = fixture.status === "LIVE";
   const isFinal = fixture.status === "FT";
   const hasScores = fixture.homeScore != null && fixture.awayScore != null;
+  // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
+  const isScheduled = !isLive && !isFinal;
+  const proj = fixture.projection;
+  const hasProjScores = isScheduled && proj?.projHomeScore != null && proj?.projAwayScore != null;
+  const fmtProj = (v: number | null | undefined): string => {
+    if (v == null) return '—';
+    return v.toFixed(2);
+  };
+  console.log(
+    `[WcScorePanel] fixture=${fixture.fixtureId} status=${fixture.status}` +
+    ` | [STATE] isScheduled=${isScheduled} hasProjScores=${hasProjScores}` +
+    ` | [INPUT] projHome=${proj?.projHomeScore ?? 'N/A'} projAway=${proj?.projAwayScore ?? 'N/A'}` +
+    ` | [VERIFY] projection=${proj != null ? 'PRESENT' : 'MISSING'}`
+  );
 
   const awayFifaCode = awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
   const homeFifaCode = homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
@@ -982,11 +1024,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               </span>
             </div>
           </div>
-          {(isLive || isFinal) && hasScores && (
+          {(isLive || isFinal) && hasScores ? (
             <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
               {fixture.homeScore}
             </span>
-          )}
+          ) : hasProjScores ? (
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: 600, color: 'rgba(251,191,36,0.75)', letterSpacing: '0.01em' }}>
+              {fmtProj(proj!.projHomeScore)}
+            </span>
+          ) : null}
         </div>
 
         {/* Divider */}
@@ -1017,11 +1063,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               {/* [FIX] Group letter moved to status row next to kickoff time */}
             </div>
           </div>
-          {(isLive || isFinal) && hasScores && (
+          {(isLive || isFinal) && hasScores ? (
             <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(11px, 3.2vw, 13px)', lineHeight: 1, fontWeight: 700, color: "hsl(var(--foreground))" }}>
               {fixture.awayScore}
             </span>
-          )}
+          ) : hasProjScores ? (
+            <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: 600, color: 'rgba(251,191,36,0.75)', letterSpacing: '0.01em' }}>
+              {fmtProj(proj!.projAwayScore)}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -1465,15 +1515,23 @@ function WcDesktopMergedPanel({
     ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
   );
 
-  return (
-    <div className="flex items-stretch w-full" style={{ minHeight: '100%' }}>
+  const fmtSpreadLineD = (line: number | null | undefined): string => {
+    if (line == null) return '—';
+    return line > 0 ? `+${line}` : `${line}`;
+  };
 
-      {/* ── Col 1: MONEYLINE — HOME top row, AWAY bottom row (matches DK convention) ─── */}
-      {/* [LOG] ML column: 3-way ROI via threeWayBook/threeWayModel — all H/D/A in denominator */}
-      {/* [NOTE] WcMktCol renders 'away' prop as top row, 'home' prop as bottom row.             */}
-      {/* [NOTE] DK shows home on top, away on bottom — so home odds go into awayBookNum (top).  */}
+  console.log(
+    `[WcDesktopMergedPanel:6Markets] fixture=${fixture.fixtureId}` +
+    ` | [INPUT] dkSpread=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkDC=${dkOdds?.homeDrawOdds ?? 'N/A'} dkBTTS=${dkOdds?.bttsYes ?? 'N/A'}` +
+    ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
+  );
+
+  return (
+    <div className="flex items-stretch w-full" style={{ minHeight: '100%', overflowX: 'auto' }}>
+
+      {/* ── Col 1: ML — Row 1: HOME (top), Row 2: AWAY (bottom) ───────────────────────────── */}
       <WcMktCol
-        title="MONEYLINE"
+        title="ML"
         awayLabel={homeFifaCode}
         homeLabel={awayFifaCode}
         awayBookNum={dkOdds?.home}
@@ -1495,21 +1553,18 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 2: DRAW/WIN-DRAW — 3-row cell: DRAW + Home W/D (1X) + Away W/D (X2) */}
-      {/* [FIX] Renamed from DRAW/DOUBLE CHANCE to DRAW/WIN-DRAW per user requirement */}
-      {/* [FIX] Expanded to 3 rows: pure draw + homeDrawOdds (1X) + awayDrawOdds (X2) */}
-      {/* [LOG] Row 1: DRAW = pure 3-way draw from 1X2 market */}
-      {/* [LOG] Row 2: [HomeName] W/D = homeDrawOdds = 1X (Home Win OR Draw) */}
-      {/* [LOG] Row 3: [AwayName] W/D = awayDrawOdds = X2 (Away Win OR Draw) */}
-      <WcDcDesktopCol
-        homeName={homeFifaCode}
-        awayName={awayFifaCode}
-        drawBook={dkOdds?.draw}
-        drawModel={modelOdds?.draw}
-        homeDcBook={dkOdds?.homeDrawOdds}
-        homeDcModel={modelOdds?.homeDrawOdds}
-        awayDcBook={dkOdds?.awayDrawOdds}
-        awayDcModel={modelOdds?.awayDrawOdds}
+      {/* ── Col 2: DRAW — Row 1: DRAW, Row 2: NO DRAW ───────────────────────────────────── */}
+      <WcMktCol
+        title="DRAW"
+        awayLabel="DRAW"
+        homeLabel="NO DRAW"
+        awayBookNum={dkOdds?.draw}
+        homeBookNum={dkOdds?.noDraw}
+        awayModelNum={modelOdds?.draw}
+        homeModelNum={modelOdds?.noDraw}
+        singleRow={false}
+        awayColor="#9CA3AF"
+        homeColor="#9CA3AF"
         threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
           ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
         threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
@@ -1518,7 +1573,7 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 3: TOTAL — OVER top row, UNDER bottom row ─────────────────────────────────────────── */}
+      {/* ── Col 3: TOTAL — Row 1: OVER, Row 2: UNDER ────────────────────────────────────────────── */}
       <WcMktCol
         title="TOTAL"
         awayLabel={`O ${formatTotalLine(totalLine)}`}
@@ -1534,6 +1589,54 @@ function WcDesktopMergedPanel({
         homeMoney={totalSplits.homeMoney}
         awayColor="#39FF14"
         homeColor="#FF6B35"
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+
+      {/* ── Col 4: SPREAD — Row 1: AWAY spread, Row 2: HOME spread ─────────────────────────────── */}
+      <WcMktCol
+        title="SPREAD"
+        awayLabel={`${awayFifaCode} ${fmtSpreadLineD(dkOdds?.awaySpreadLine)}`}
+        homeLabel={`${homeFifaCode} ${fmtSpreadLineD(dkOdds?.homeSpreadLine)}`}
+        awayBookNum={dkOdds?.awaySpreadOdds}
+        homeBookNum={dkOdds?.homeSpreadOdds}
+        awayModelNum={modelOdds?.awaySpreadOdds}
+        homeModelNum={modelOdds?.homeSpreadOdds}
+        singleRow={false}
+        awayColor={awayColors.primary}
+        homeColor={homeColors.primary}
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+
+      {/* ── Col 5: DOUBLE CHANCE — Row 1: AWAY OR DRAW (X2), Row 2: HOME OR DRAW (1X) ────────────── */}
+      <WcMktCol
+        title="DBL CHC"
+        awayLabel={`${awayFifaCode} / D`}
+        homeLabel={`${homeFifaCode} / D`}
+        awayBookNum={dkOdds?.awayDrawOdds}
+        homeBookNum={dkOdds?.homeDrawOdds}
+        awayModelNum={modelOdds?.awayDrawOdds}
+        homeModelNum={modelOdds?.homeDrawOdds}
+        singleRow={false}
+        awayColor={awayColors.primary}
+        homeColor={homeColors.primary}
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+
+      {/* ── Col 6: BTTS — Row 1: YES, Row 2: NO ─────────────────────────────────────────────────────────────────────── */}
+      <WcMktCol
+        title="BTTS"
+        awayLabel="YES"
+        homeLabel="NO"
+        awayBookNum={dkOdds?.bttsYes}
+        homeBookNum={dkOdds?.bttsNo}
+        awayModelNum={modelOdds?.bttsYes}
+        homeModelNum={modelOdds?.bttsNo}
+        singleRow={false}
+        awayColor="#22D3EE"
+        homeColor="#F87171"
       />
 
     </div>
@@ -1730,11 +1833,120 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null} has3WayOdds=${has3WayOdds}`
   );
 
-  return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', width: '100%' }}>
+  // ── SPREAD edge detection (2-way: home spread vs away spread) ─────────────────
+  const homeSpreadEdgePP = (dkOdds?.homeSpreadOdds != null && modelOdds?.homeSpreadOdds != null)
+    ? calculateEdge(dkOdds.homeSpreadOdds, modelOdds.homeSpreadOdds) : NaN;
+  const awaySpreadEdgePP = (dkOdds?.awaySpreadOdds != null && modelOdds?.awaySpreadOdds != null)
+    ? calculateEdge(dkOdds.awaySpreadOdds, modelOdds.awaySpreadOdds) : NaN;
+  const spreadBestEdgePP = Math.max(
+    isNaN(homeSpreadEdgePP) ? -Infinity : homeSpreadEdgePP,
+    isNaN(awaySpreadEdgePP) ? -Infinity : awaySpreadEdgePP,
+  );
+  const spreadBestEdgePPFinal = spreadBestEdgePP === -Infinity ? NaN : spreadBestEdgePP;
+  const homeSpreadLine = dkOdds?.homeSpreadLine ?? 0;
+  const awaySpreadLine = dkOdds?.awaySpreadLine ?? 0;
+  const fmtSpreadLine = (line: number): string => line > 0 ? `+${line}` : `${line}`;
+  const spreadEdgeLabel = (spreadBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (homeSpreadEdgePP >= awaySpreadEdgePP
+        ? `${homeName} ${fmtSpreadLine(homeSpreadLine)}`
+        : `${awayName} ${fmtSpreadLine(awaySpreadLine)}`)
+    : undefined;
 
-      {/* Col 1: MONEYLINE — 3-way ROI via calculate3WayResult */}
-      {/* [NOTE] Per-card ML/TOTAL/DRAW title spans removed — sticky column header provides these labels once at the top */}
+  // ── DOUBLE CHANCE edge detection (2-way: homeDrawOdds vs awayDrawOdds) ────────
+  const homeDcEdgePP = (dkOdds?.homeDrawOdds != null && modelOdds?.homeDrawOdds != null)
+    ? calculateEdge(dkOdds.homeDrawOdds, modelOdds.homeDrawOdds) : NaN;
+  const awayDcEdgePP = (dkOdds?.awayDrawOdds != null && modelOdds?.awayDrawOdds != null)
+    ? calculateEdge(dkOdds.awayDrawOdds, modelOdds.awayDrawOdds) : NaN;
+  const dcBestEdgePP = Math.max(
+    isNaN(homeDcEdgePP) ? -Infinity : homeDcEdgePP,
+    isNaN(awayDcEdgePP) ? -Infinity : awayDcEdgePP,
+  );
+  const dcBestEdgePPFinal = dcBestEdgePP === -Infinity ? NaN : dcBestEdgePP;
+  const dcEdgeLabel = (dcBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (homeDcEdgePP >= awayDcEdgePP ? `${homeName} W/D` : `${awayName} W/D`)
+    : undefined;
+
+  // ── BTTS edge detection (2-way: yes vs no) ────────────────────────────────────
+  const bttsYesEdgePP = (dkOdds?.bttsYes != null && modelOdds?.bttsYes != null)
+    ? calculateEdge(dkOdds.bttsYes, modelOdds.bttsYes) : NaN;
+  const bttsNoEdgePP = (dkOdds?.bttsNo != null && modelOdds?.bttsNo != null)
+    ? calculateEdge(dkOdds.bttsNo, modelOdds.bttsNo) : NaN;
+  const bttsBestEdgePP = Math.max(
+    isNaN(bttsYesEdgePP) ? -Infinity : bttsYesEdgePP,
+    isNaN(bttsNoEdgePP) ? -Infinity : bttsNoEdgePP,
+  );
+  const bttsBestEdgePPFinal = bttsBestEdgePP === -Infinity ? NaN : bttsBestEdgePP;
+  const bttsEdgeLabel = (bttsBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (bttsYesEdgePP >= bttsNoEdgePP ? 'BTTS YES' : 'BTTS NO')
+    : undefined;
+
+  // ── NO-DRAW edge detection (1-way: noDraw odds) ───────────────────────────────
+  const noDrawEdgePP = (dkOdds?.noDraw != null && modelOdds?.noDraw != null)
+    ? calculateEdge(dkOdds.noDraw, modelOdds.noDraw) : NaN;
+
+  // ── BetCellSide builders for new markets ─────────────────────────────────────
+  // DRAW column: Row 1 = DRAW, Row 2 = NO DRAW
+  const drawRow: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.draw) ?? '—',
+    edgePP: drawEdgePP,
+  };
+  const noDrawRow: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.noDraw) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.noDraw) ?? '—',
+    edgePP: noDrawEdgePP,
+  };
+  // SPREAD column: Row 1 = AWAY spread (top), Row 2 = HOME spread (bottom)
+  const spreadAway: BetCellSide = {
+    bookLine: fmtSpreadLine(awaySpreadLine),
+    bookJuice: fmtAmerican(dkOdds?.awaySpreadOdds) ?? '—',
+    modelLine: fmtSpreadLine(awaySpreadLine),
+    modelJuice: fmtAmerican(modelOdds?.awaySpreadOdds) ?? '—',
+    edgePP: awaySpreadEdgePP,
+  };
+  const spreadHome: BetCellSide = {
+    bookLine: fmtSpreadLine(homeSpreadLine),
+    bookJuice: fmtAmerican(dkOdds?.homeSpreadOdds) ?? '—',
+    modelLine: fmtSpreadLine(homeSpreadLine),
+    modelJuice: fmtAmerican(modelOdds?.homeSpreadOdds) ?? '—',
+    edgePP: homeSpreadEdgePP,
+  };
+  // DOUBLE CHANCE column: Row 1 = AWAY OR DRAW (X2), Row 2 = HOME OR DRAW (1X)
+  const dcAway: BetCellSide = {
+    bookLine: 'X2', bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
+    modelLine: 'X2', modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
+    edgePP: awayDcEdgePP,
+  };
+  const dcHome: BetCellSide = {
+    bookLine: '1X', bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
+    modelLine: '1X', modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
+    edgePP: homeDcEdgePP,
+  };
+  // BTTS column: Row 1 = YES, Row 2 = NO
+  const bttsYes: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.bttsYes) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.bttsYes) ?? '—',
+    edgePP: bttsYesEdgePP,
+  };
+  const bttsNo: BetCellSide = {
+    bookLine: '', bookJuice: fmtAmerican(dkOdds?.bttsNo) ?? '—',
+    modelLine: '', modelJuice: fmtAmerican(modelOdds?.bttsNo) ?? '—',
+    edgePP: bttsNoEdgePP,
+  };
+
+  console.log(
+    `[WcMobileOddsPanel:6Markets] fixture=${fixture.fixtureId}` +
+    ` | [STATE] spreadEdge=${isNaN(spreadBestEdgePPFinal) ? 'NaN' : spreadBestEdgePPFinal.toFixed(2)}pp` +
+    ` dcEdge=${isNaN(dcBestEdgePPFinal) ? 'NaN' : dcBestEdgePPFinal.toFixed(2)}pp` +
+    ` bttsEdge=${isNaN(bttsBestEdgePPFinal) ? 'NaN' : bttsBestEdgePPFinal.toFixed(2)}pp` +
+    ` | [OUTPUT] spreadEdgeLabel=${spreadEdgeLabel ?? 'NO EDGE'} dcEdgeLabel=${dcEdgeLabel ?? 'NO EDGE'} bttsEdgeLabel=${bttsEdgeLabel ?? 'NO EDGE'}` +
+    ` | [VERIFY] dkSpread=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkDC=${dkOdds?.homeDrawOdds ?? 'N/A'} dkBTTS=${dkOdds?.bttsYes ?? 'N/A'}`
+  );
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, padding: '6px 6px', minWidth: 'max-content' }}>
+
+      {/* Col 1: ML — Row 1: AWAY ML, Row 2: HOME ML */}
       <BetCell
         title="ML"
         away={mlAway}
@@ -1745,29 +1957,18 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         size="sm"
       />
 
-      {/* Col 2: DRAW/WIN-DRAW — 3-row cell: DRAW + Home W/D (1X) + Away W/D (X2) */}
-      {/* [FIX] Renamed from DRAW/DOUBLE CHANCE to DRAW/WIN-DRAW per user requirement */}
-      {/* [FIX] Now shows all 3 rows: pure draw + home DC (1X) + away DC (X2) */}
-      {/* [LOG] Row 1: DRAW = pure 3-way draw odds from 1X2 market */}
-      {/* [LOG] Row 2: [HomeName] W/D = homeDrawOdds = 1X (Home Win OR Draw) */}
-      {/* [LOG] Row 3: [AwayName] W/D = awayDrawOdds = X2 (Away Win OR Draw) */}
-      <WcDcMobileCell
-        fixture={fixture}
-        homeName={homeName}
-        awayName={awayName}
-        drawBook={dkOdds?.draw}
-        drawModel={modelOdds?.draw}
-        homeDcBook={dkOdds?.homeDrawOdds}
-        homeDcModel={modelOdds?.homeDrawOdds}
-        awayDcBook={dkOdds?.awayDrawOdds}
-        awayDcModel={modelOdds?.awayDrawOdds}
-        threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
-          ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
-        threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
-          ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
+      {/* Col 2: DRAW — Row 1: DRAW, Row 2: NO DRAW */}
+      <BetCell
+        title="DRAW"
+        away={drawRow}
+        home={noDrawRow}
+        edgeLabel={drawEdgeLabel}
+        bestEdgePP={!isNaN(drawEdgePP) ? drawEdgePP : NaN}
+        roiPct={drawRoiPct}
+        size="sm"
       />
 
-      {/* Col 3: TOTAL — 2-way ROI (over/under, no draw) */}
+      {/* Col 3: TOTAL — Row 1: OVER, Row 2: UNDER */}
       <BetCell
         title="TOTAL"
         away={totalOver}
@@ -1775,6 +1976,36 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         edgeLabel={totalEdgeLabel}
         bestEdgePP={totalBestEdgePPFinal}
         roiPct={totalBestRoiPct}
+        size="sm"
+      />
+
+      {/* Col 4: SPREAD — Row 1: AWAY spread, Row 2: HOME spread */}
+      <BetCell
+        title="SPREAD"
+        away={spreadAway}
+        home={spreadHome}
+        edgeLabel={spreadEdgeLabel}
+        bestEdgePP={spreadBestEdgePPFinal}
+        size="sm"
+      />
+
+      {/* Col 5: DOUBLE CHANCE — Row 1: AWAY OR DRAW (X2), Row 2: HOME OR DRAW (1X) */}
+      <BetCell
+        title="DBL CHC"
+        away={dcAway}
+        home={dcHome}
+        edgeLabel={dcEdgeLabel}
+        bestEdgePP={dcBestEdgePPFinal}
+        size="sm"
+      />
+
+      {/* Col 6: BTTS — Row 1: YES, Row 2: NO */}
+      <BetCell
+        title="BTTS"
+        away={bttsYes}
+        home={bttsNo}
+        edgeLabel={bttsEdgeLabel}
+        bestEdgePP={bttsBestEdgePPFinal}
         size="sm"
       />
 
@@ -2667,7 +2898,7 @@ export function WcFeedInline({
             alignItems: 'center',
             gap: '4px',
           }}>
-          {(['ML', 'DRAW/WIN-DRAW', 'TOTAL'] as const).map((lbl) => (
+          {(['ML', 'DRAW', 'TOTAL', 'SPREAD', 'DBL CHC', 'BTTS'] as const).map((lbl) => (
             <div key={lbl} style={{
               flex: '1 1 0',
               display: 'flex',
