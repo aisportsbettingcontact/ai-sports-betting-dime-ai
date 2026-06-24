@@ -1948,9 +1948,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // ── BetCellSide builders for new markets ─────────────────────────────────────
   // [FIX] DRAW column: Row 1 = DRAW (label 'DRAW'), Row 2 = HOME OR AWAY ML (no-draw)
   // [FIX] No Draw label: AWAY/HOME abbreviated (e.g. "CAN/SUI") — away first, home second
-  // [FIX] Full country names for mobile panel labels
-  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
-  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
+  // [FIX] Full country names for mobile panel labels (awayName/homeName declared above at line 1743)
   const noDrawLabel = `${awayName}/${homeName}`;
   const drawRow: BetCellSide = {
     bookLine: 'DRAW', bookJuice: fmtAmerican(dkOdds?.draw) ?? '—',
