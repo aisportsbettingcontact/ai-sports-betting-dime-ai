@@ -20,7 +20,7 @@
  * singleRow=true: hides the home row and divider (used for DRAW in soccer).
  * roiPct: pre-computed ROI % from caller (3-way for ML/DRAW, 2-way for TOTAL).
  *         When provided and hasEdge, displayed as "+X.XX% ROI" in footer.
- *         Falls back to "+X.XXpp" display if not provided.
+ *         If NaN (no book odds available), shows NO EDGE.
  *
  * [FIX] ML centering: when bookLine/modelLine is empty, the odds value is
  *       perfectly vertically centered in the row with equal top/bottom padding.
@@ -118,11 +118,11 @@ export const BetCell = React.memo(function BetCell({
     ` | [OUTPUT] hasEdge=${hasEdge} awayEdge=${awayEdge} homeEdge=${homeEdge}`
   );
 
-  // [STEP] ROI footer text — prefer pre-computed roiPct, fall back to bestEdgePP pp display
-  const roiFooterText = hasEdge
-    ? (roiPct != null && !isNaN(roiPct)
-        ? `+${roiPct.toFixed(2)}% ROI`
-        : `+${bestEdgePP.toFixed(2)}pp`)
+  // [STEP] ROI footer text — always show ROI %, NEVER fall back to pp display
+  // [FIX 2026-06-24] Removed pp fallback: display is always "X.XX% ROI" or "NO EDGE"
+  // RULE: if roiPct is NaN (no book odds), treat as NO EDGE — never show "X.XXpp"
+  const roiFooterText = (hasEdge && roiPct != null && !isNaN(roiPct))
+    ? `+${roiPct.toFixed(2)}% ROI`
     : 'NO EDGE';
 
   // [FIX] TeamRow: pure flexbox centering for ML (no line label) and line+juice for TOTAL/RL
