@@ -25,6 +25,7 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { todayUTC } from "@/components/CalendarPicker";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -69,12 +70,9 @@ function fmtKickoff(kickoffUtc: Date | string | null | undefined): string {
   });
 }
 
-function todayStr(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
 function getDefaultDate(): string {
-  const today = todayStr();
+  // [FIX 2026-06-24] Use todayUTC() which respects MANUAL_WC_DATE_OVERRIDE.
+  const today = todayUTC();
   if (WC_DATE_RANGE.includes(today)) return today;
   return "2026-06-11";
 }
@@ -361,18 +359,19 @@ function FixtureCardSkeleton() {
 // ─── Projections Date Feed ────────────────────────────────────────────────────
 
 function ProjectionsFeed({ date }: { date: string }) {
-  const today = todayStr();
-  const isTodayDate = date === today;
-
-  const todayQuery = trpc.wc2026.todayWithOdds.useQuery(undefined, {
-    enabled: isTodayDate,
-  });
+  // [FIX 2026-06-24] Always use fixturesByDate(date) — never todayWithOdds.
+  // todayWithOdds uses the server's real UTC clock which can disagree with
+  // MANUAL_WC_DATE_OVERRIDE, causing wrong fixtures to load.
   const dateQuery = trpc.wc2026.fixturesByDate.useQuery(
     { date },
-    { enabled: !isTodayDate }
+    {
+      enabled: !!date,
+      staleTime: 60 * 1000,
+      refetchInterval: 60 * 1000,
+    }
   );
 
-  const { data: fixtures, isLoading } = isTodayDate ? todayQuery : dateQuery;
+  const { data: fixtures, isLoading } = dateQuery;
 
   if (isLoading) {
     return (
