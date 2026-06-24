@@ -1110,9 +1110,6 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         <div className="flex items-center gap-1 mt-1" style={{ fontSize: 'clamp(9px,0.75vw,11px)', color: 'hsl(var(--muted-foreground))' }}>
           <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
           <span className="truncate">{fixture.venue.city}</span>
-          {fixture.venue.elevationM > 500 && (
-            <span style={{ color: '#F59E0B', marginLeft: 2 }}>⚠ {fixture.venue.elevationM}m</span>
-          )}
         </div>
       )}
     </div>
@@ -2566,9 +2563,6 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
             <div style={{ padding: "6px 14px", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
               <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
               <span>{venue.stadium}, {venue.city}</span>
-              {venue.elevationM > 500 && (
-                <span style={{ color: "#F59E0B", marginLeft: 4 }}>⚠ {venue.elevationM}m alt</span>
-              )}
             </div>
           )}
         </div>
