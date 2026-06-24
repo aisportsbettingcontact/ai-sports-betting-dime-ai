@@ -821,9 +821,8 @@ function WcMktCol({
       <SubCol line={modelLine} juice={modelJuice} isBook={false} hasEdge={modelHasEdge} />
     </div>
   );
-  const roiStr = hasEdge
-    ? (!isNaN(edgeDisplayRoi) ? formatRoi(edgeDisplayRoi) : `+${edgeDisplayPP.toFixed(2)}pp`)
-    : 'NO EDGE';
+  // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
+  const roiStr = (hasEdge && !isNaN(edgeDisplayRoi)) ? formatRoi(edgeDisplayRoi) : 'NO EDGE';
   const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
 
   return (
@@ -1269,9 +1268,8 @@ function WcDcDesktopCol({
     );
   };
 
-  const roiStr = hasEdge
-    ? (!isNaN(bestRoiPct) ? `+${bestRoiPct.toFixed(2)}% ROI` : `+${bestEdgePP.toFixed(2)}pp`)
-    : 'NO EDGE';
+  // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
+  const roiStr = (hasEdge && !isNaN(bestRoiPct)) ? `+${bestRoiPct.toFixed(2)}% ROI` : 'NO EDGE';
   const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
 
   return (
@@ -1433,9 +1431,8 @@ function WcDcMobileCell({
   const hdrFs = 6.5;
   const padding = '2px 3px'; // [FIX] mobile: reduced from 3px to tighten 3-row DC cell
 
-  const roiStr = hasEdge
-    ? (!isNaN(bestRoiPct) ? `+${bestRoiPct.toFixed(2)}% ROI` : `+${bestEdgePP.toFixed(2)}pp`)
-    : 'NO EDGE';
+  // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
+  const roiStr = (hasEdge && !isNaN(bestRoiPct)) ? `+${bestRoiPct.toFixed(2)}% ROI` : 'NO EDGE';
   const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.40)';
 
   // [STEP] Per-row renderer: label (dim) | BOOK juice | MODEL juice
@@ -1890,6 +1887,17 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         ? `${homeName} ${fmtSpreadLine(homeSpreadLine)}`
         : `${awayName} ${fmtSpreadLine(awaySpreadLine)}`)
     : undefined;
+  // [FIX 2026-06-24] SPREAD ROI: 2-way no-vig (home spread vs away spread)
+  const spreadBestRoiPct: number = (() => {
+    if (homeSpreadEdgePP >= awaySpreadEdgePP && homeSpreadEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.homeSpreadOdds != null && modelOdds?.homeSpreadOdds != null && dkOdds?.awaySpreadOdds != null)
+        ? calculateRoi(modelOdds.homeSpreadOdds, dkOdds.homeSpreadOdds, dkOdds.awaySpreadOdds) : NaN;
+    } else if (awaySpreadEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.awaySpreadOdds != null && modelOdds?.awaySpreadOdds != null && dkOdds?.homeSpreadOdds != null)
+        ? calculateRoi(modelOdds.awaySpreadOdds, dkOdds.awaySpreadOdds, dkOdds.homeSpreadOdds) : NaN;
+    }
+    return NaN;
+  })();
 
   // ── DOUBLE CHANCE edge detection (2-way: homeDrawOdds vs awayDrawOdds) ────────
   const homeDcEdgePP = (dkOdds?.homeDrawOdds != null && modelOdds?.homeDrawOdds != null)
@@ -1904,6 +1912,17 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const dcEdgeLabel = (dcBestEdgePPFinal >= EDGE_THRESHOLD_PP)
     ? (homeDcEdgePP >= awayDcEdgePP ? `${homeName} W/D` : `${awayName} W/D`)
     : undefined;
+  // [FIX 2026-06-24] DC ROI: 2-way no-vig (home DC vs away DC)
+  const dcBestRoiPct: number = (() => {
+    if (homeDcEdgePP >= awayDcEdgePP && homeDcEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.homeDrawOdds != null && modelOdds?.homeDrawOdds != null && dkOdds?.awayDrawOdds != null)
+        ? calculateRoi(modelOdds.homeDrawOdds, dkOdds.homeDrawOdds, dkOdds.awayDrawOdds) : NaN;
+    } else if (awayDcEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.awayDrawOdds != null && modelOdds?.awayDrawOdds != null && dkOdds?.homeDrawOdds != null)
+        ? calculateRoi(modelOdds.awayDrawOdds, dkOdds.awayDrawOdds, dkOdds.homeDrawOdds) : NaN;
+    }
+    return NaN;
+  })();
 
   // ── BTTS edge detection (2-way: yes vs no) ────────────────────────────────────
   const bttsYesEdgePP = (dkOdds?.bttsYes != null && modelOdds?.bttsYes != null)
@@ -1918,6 +1937,17 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const bttsEdgeLabel = (bttsBestEdgePPFinal >= EDGE_THRESHOLD_PP)
     ? (bttsYesEdgePP >= bttsNoEdgePP ? 'BTTS YES' : 'BTTS NO')
     : undefined;
+  // [FIX 2026-06-24] BTTS ROI: 2-way no-vig (YES vs NO)
+  const bttsBestRoiPct: number = (() => {
+    if (bttsYesEdgePP >= bttsNoEdgePP && bttsYesEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.bttsYes != null && modelOdds?.bttsYes != null && dkOdds?.bttsNo != null)
+        ? calculateRoi(modelOdds.bttsYes, dkOdds.bttsYes, dkOdds.bttsNo) : NaN;
+    } else if (bttsNoEdgePP >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.bttsNo != null && modelOdds?.bttsNo != null && dkOdds?.bttsYes != null)
+        ? calculateRoi(modelOdds.bttsNo, dkOdds.bttsNo, dkOdds.bttsYes) : NaN;
+    }
+    return NaN;
+  })();
 
   // ── NO-DRAW edge detection (1-way: noDraw odds) ───────────────────────────────
   const noDrawEdgePP = (dkOdds?.noDraw != null && modelOdds?.noDraw != null)
@@ -2094,6 +2124,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           home={spreadHome}
           edgeLabel={spreadEdgeLabel}
           bestEdgePP={spreadBestEdgePPFinal}
+          roiPct={spreadBestRoiPct}
           size="sm"
         />
       ),
@@ -2108,6 +2139,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           home={dcHome}
           edgeLabel={dcEdgeLabel}
           bestEdgePP={dcBestEdgePPFinal}
+          roiPct={dcBestRoiPct}
           size="sm"
         />
       ),
@@ -2122,6 +2154,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           home={bttsNo}
           edgeLabel={bttsEdgeLabel}
           bestEdgePP={bttsBestEdgePPFinal}
+          roiPct={bttsBestRoiPct}
           size="sm"
         />
       ),
