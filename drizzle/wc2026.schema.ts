@@ -317,6 +317,9 @@ export const wc2026ModelProjections = mysqlTable(
     modelLean: varchar("model_lean", { length: 8 }),
     leanProb: double("lean_prob"),
     topScorelinesJson: text("top_scorelines"),
+    // Freeze flag — when true, the router serves these values as-is without any live re-query
+    isFrozen: boolean("is_frozen").notNull().default(false),
+    frozenAt: timestamp("frozen_at"),
     modeledAt: timestamp("modeled_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
@@ -328,6 +331,52 @@ export const wc2026ModelProjections = mysqlTable(
 
 export type InsertWc2026ModelProjection = typeof wc2026ModelProjections.$inferInsert;
 export type SelectWc2026ModelProjection = typeof wc2026ModelProjections.$inferSelect;
+
+// ─── Frozen Book Odds Snapshot ───────────────────────────────────────────────
+// Stores the hardcoded book lines at the time of freezing.
+// Once a row exists for a fixture_id, the router serves these values and
+// never overwrites them unless explicitly instructed.
+export const wc2026FrozenBookOdds = mysqlTable(
+  "wc2026_frozen_book_odds",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    fixtureId: varchar("fixture_id", { length: 16 })
+      .notNull()
+      .references(() => wc2026Fixtures.fixtureId),
+    frozenAt: timestamp("frozen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    frozenBy: varchar("frozen_by", { length: 64 }).notNull().default("system"),
+    // Book (DraftKings) 1X2 moneylines
+    bookHomeMl: smallint("book_home_ml"),
+    bookDrawMl: smallint("book_draw_ml"),
+    bookAwayMl: smallint("book_away_ml"),
+    // Book spread
+    bookSpreadLine: double("book_spread_line"),
+    bookHomeSpreadOdds: smallint("book_home_spread_odds"),
+    bookAwaySpreadOdds: smallint("book_away_spread_odds"),
+    // Book total
+    bookTotalLine: double("book_total_line"),
+    bookOverOdds: smallint("book_over_odds"),
+    bookUnderOdds: smallint("book_under_odds"),
+    // Book BTTS
+    bookBttsYesOdds: smallint("book_btts_yes_odds"),
+    bookBttsNoOdds: smallint("book_btts_no_odds"),
+    // Book double chance
+    bookDc1XOdds: smallint("book_dc_1x_odds"),
+    bookDcX2Odds: smallint("book_dc_x2_odds"),
+    // Book no draw
+    bookNoDrawHomeOdds: smallint("book_no_draw_home_odds"),
+    bookNoDrawAwayOdds: smallint("book_no_draw_away_odds"),
+    // Source label
+    bookSource: varchar("book_source", { length: 32 }).notNull().default("DraftKings"),
+  },
+  (t) => [
+    uniqueIndex("uq_frozen_book_fixture").on(t.fixtureId),
+    index("idx_frozen_book_fixture").on(t.fixtureId),
+  ],
+);
+
+export type InsertWc2026FrozenBookOdds = typeof wc2026FrozenBookOdds.$inferInsert;
+export type SelectWc2026FrozenBookOdds = typeof wc2026FrozenBookOdds.$inferSelect;
 
 export const wc2026TeamsRelations = relations(wc2026Teams, ({ many }) => ({
   aliases: many(wc2026TeamAliases),
