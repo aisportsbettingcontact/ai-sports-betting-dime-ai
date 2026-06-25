@@ -137,21 +137,55 @@ export const wc2026Router = router({
           .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
       ]);
 
-      const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
+            const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
       const modelMap = buildOddsMap(modelOddsRows as WcOddsRow[], fixtureIds);
       const projMap = Object.fromEntries(
         (projRows as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
       );
-
-      return fixtures.map((f: WcFixture) => ({
-        ...f,
-        homeTeam: teamMap[f.homeTeamId] ?? null,
-        awayTeam: teamMap[f.awayTeamId] ?? null,
-        venue: venueMap[f.venueId] ?? null,
-        dkOdds: dkMap[f.fixtureId] ?? null,
-        modelOdds: modelMap[f.fixtureId] ?? null,
-        projection: projMap[f.fixtureId] ?? null,
-      }));
+      // [FIX v7.0] Build modelOdds from wc2026_model_projections when a projection row exists.
+      // Previously: modelOdds was always read from wc2026_odds_snapshots book_id=0 (stale AI snapshot).
+      // Now: projection row fields are mapped to the OddsShape the frontend expects.
+      // Fallback: use book_id=0 snapshot only when no projection row is present.
+      type ProjRow = typeof wc2026ModelProjections.$inferSelect;
+      const projToModelOdds = (p: ProjRow): Record<string, number | undefined> => ({
+        home: p.modelHomeML ?? undefined,
+        draw: p.modelDrawML ?? undefined,
+        away: p.modelAwayML ?? undefined,
+        overLine: p.modelTotal ?? undefined,
+        overOdds: p.overOdds ?? undefined,
+        underOdds: p.underOdds ?? undefined,
+        homeSpreadLine: p.modelSpread ?? undefined,
+        homeSpreadOdds: p.homeSpreadOdds ?? undefined,
+        awaySpreadLine: p.modelSpread != null ? -p.modelSpread : undefined,
+        awaySpreadOdds: p.awaySpreadOdds ?? undefined,
+        homeDrawOdds: p.dc1XOdds ?? undefined,
+        awayDrawOdds: p.dcX2Odds ?? undefined,
+        bttsYes: p.bttsYesOdds ?? undefined,
+        bttsNo: p.bttsNoOdds ?? undefined,
+        noDraw: p.noDrawHomeOdds ?? undefined,
+        homeEdge: p.homeEdge ?? undefined,
+        drawEdge: p.drawEdge ?? undefined,
+        awayEdge: p.awayEdge ?? undefined,
+        homeWinProb: p.homeWinProb ?? undefined,
+        drawProb: p.drawProb ?? undefined,
+        awayWinProb: p.awayWinProb ?? undefined,
+        projHomeScore: p.projHomeScore ?? undefined,
+        projAwayScore: p.projAwayScore ?? undefined,
+        projTotal: p.projTotal ?? undefined,
+      });
+      return fixtures.map((f: WcFixture) => {
+        const proj = projMap[f.fixtureId] ?? null;
+        return {
+          ...f,
+          homeTeam: teamMap[f.homeTeamId] ?? null,
+          awayTeam: teamMap[f.awayTeamId] ?? null,
+          venue: venueMap[f.venueId] ?? null,
+          dkOdds: dkMap[f.fixtureId] ?? null,
+          modelOdds: proj ? projToModelOdds(proj) : (modelMap[f.fixtureId] ?? null),
+          projection: proj,
+          modelVersion: proj?.modelVersion ?? null,
+        };
+      });
     }),
 
   // ─── Fixtures by group ────────────────────────────────────────────────────
@@ -418,21 +452,52 @@ export const wc2026Router = router({
         .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
     ]);
 
-    const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
+        const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
     const modelMapT = buildOddsMapT(modelOddsRowsT as WcOddsRow[], fixtureIds);
     const projMapT = Object.fromEntries(
       (projRowsT as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
     );
-
-    return fixtures.map((f: WcFixture) => ({
-      ...f,
-      homeTeam: teamMap[f.homeTeamId] ?? null,
-      awayTeam: teamMap[f.awayTeamId] ?? null,
-      venue: venueMap[f.venueId] ?? null,
-      dkOdds: dkMapT[f.fixtureId] ?? null,
-      modelOdds: modelMapT[f.fixtureId] ?? null,
-      projection: projMapT[f.fixtureId] ?? null,
-    }));
+    // [FIX v7.0] Same projection-first modelOdds logic as fixturesByDate
+    type ProjRowT = typeof wc2026ModelProjections.$inferSelect;
+    const projToModelOddsT = (p: ProjRowT): Record<string, number | undefined> => ({
+      home: p.modelHomeML ?? undefined,
+      draw: p.modelDrawML ?? undefined,
+      away: p.modelAwayML ?? undefined,
+      overLine: p.modelTotal ?? undefined,
+      overOdds: p.overOdds ?? undefined,
+      underOdds: p.underOdds ?? undefined,
+      homeSpreadLine: p.modelSpread ?? undefined,
+      homeSpreadOdds: p.homeSpreadOdds ?? undefined,
+      awaySpreadLine: p.modelSpread != null ? -p.modelSpread : undefined,
+      awaySpreadOdds: p.awaySpreadOdds ?? undefined,
+      homeDrawOdds: p.dc1XOdds ?? undefined,
+      awayDrawOdds: p.dcX2Odds ?? undefined,
+      bttsYes: p.bttsYesOdds ?? undefined,
+      bttsNo: p.bttsNoOdds ?? undefined,
+      noDraw: p.noDrawHomeOdds ?? undefined,
+      homeEdge: p.homeEdge ?? undefined,
+      drawEdge: p.drawEdge ?? undefined,
+      awayEdge: p.awayEdge ?? undefined,
+      homeWinProb: p.homeWinProb ?? undefined,
+      drawProb: p.drawProb ?? undefined,
+      awayWinProb: p.awayWinProb ?? undefined,
+      projHomeScore: p.projHomeScore ?? undefined,
+      projAwayScore: p.projAwayScore ?? undefined,
+      projTotal: p.projTotal ?? undefined,
+    });
+    return fixtures.map((f: WcFixture) => {
+      const proj = projMapT[f.fixtureId] ?? null;
+      return {
+        ...f,
+        homeTeam: teamMap[f.homeTeamId] ?? null,
+        awayTeam: teamMap[f.awayTeamId] ?? null,
+        venue: venueMap[f.venueId] ?? null,
+        dkOdds: dkMapT[f.fixtureId] ?? null,
+        modelOdds: proj ? projToModelOddsT(proj) : (modelMapT[f.fixtureId] ?? null),
+        projection: proj,
+        modelVersion: proj?.modelVersion ?? null,
+      };
+    });
   }),
 
   /**
