@@ -48,7 +48,7 @@ import type { BetCellSide } from "@/components/BetCell";
 
 // [MODEL GATE] Set to true when model lines are ready to publish.
 // When false, MODEL column shows — across all WC fixture cards.
-const SHOW_WC_MODEL_ODDS = false;
+const SHOW_WC_MODEL_ODDS = true;
 
 // Full World Cup 2026 schedule: Group Stage (Jun 11–Jul 2) + Knockouts (Jul 4–Jul 19)
 export const WC_DATE_RANGE: string[] = (() => {

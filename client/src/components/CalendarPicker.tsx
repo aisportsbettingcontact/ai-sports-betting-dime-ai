@@ -104,7 +104,7 @@ function userLocalDate(atMs?: number): string {
  * This is the ONLY place that needs to change for a manual date advance.
  * No other code should hardcode dates.
  */
-export const MANUAL_WC_DATE_OVERRIDE: string | null = '2026-06-24';
+export const MANUAL_WC_DATE_OVERRIDE: string | null = '2026-06-27';
 
 export function todayUTC(atMs?: number): string {
   // [MANUAL OVERRIDE] Single authoritative override point.
