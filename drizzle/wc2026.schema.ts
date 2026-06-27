@@ -77,6 +77,8 @@ export const wc2026Fixtures = mysqlTable(
     espnEventId: varchar("espn_event_id", { length: 16 }),
     // Attendance (from ESPN)
     attendance: int("attendance"),
+    // Custom display order for date-based feeds (overrides kickoff_utc sort when set)
+    displayOrder: int("display_order"),
   },
   (t) => [
     index("idx_date").on(t.matchDate),
