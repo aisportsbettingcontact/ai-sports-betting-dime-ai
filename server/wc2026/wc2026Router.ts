@@ -27,7 +27,7 @@ import {
   wc2026ModelProjections,
   wc2026FrozenBookOdds,
 } from "../../drizzle/wc2026.schema";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, sql, inArray } from "drizzle-orm";
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
@@ -60,7 +60,12 @@ export const wc2026Router = router({
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
-        .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+        .orderBy(
+          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Fixtures.displayOrder),
+          asc(wc2026Fixtures.kickoffUtc),
+          asc(wc2026Fixtures.fixtureId)
+        );
 
       if (fixtures.length === 0) return [];
 
@@ -350,7 +355,12 @@ export const wc2026Router = router({
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
-        .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+        .orderBy(
+          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Fixtures.displayOrder),
+          asc(wc2026Fixtures.kickoffUtc),
+          asc(wc2026Fixtures.fixtureId)
+        );
 
       if (fixtures.length === 0) return [];
 
@@ -418,7 +428,12 @@ export const wc2026Router = router({
       .select()
       .from(wc2026Fixtures)
       .where(eq(wc2026Fixtures.matchDate, sql`${today}`))
-      .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+      .orderBy(
+          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Fixtures.displayOrder),
+          asc(wc2026Fixtures.kickoffUtc),
+          asc(wc2026Fixtures.fixtureId)
+        );
 
     if (fixtures.length === 0) return [];
 
@@ -577,7 +592,12 @@ export const wc2026Router = router({
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.matchDate, sql`${date}`))
-        .orderBy(wc2026Fixtures.kickoffUtc, wc2026Fixtures.fixtureId);
+        .orderBy(
+          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Fixtures.displayOrder),
+          asc(wc2026Fixtures.kickoffUtc),
+          asc(wc2026Fixtures.fixtureId)
+        );
 
       if (fixtures.length === 0) return [];
 

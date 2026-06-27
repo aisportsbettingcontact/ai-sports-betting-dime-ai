@@ -46,6 +46,10 @@ import type { BetCellSide } from "@/components/BetCell";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// [MODEL GATE] Set to true when model lines are ready to publish.
+// When false, MODEL column shows — across all WC fixture cards.
+const SHOW_WC_MODEL_ODDS = false;
+
 // Full World Cup 2026 schedule: Group Stage (Jun 11–Jul 2) + Knockouts (Jul 4–Jul 19)
 export const WC_DATE_RANGE: string[] = (() => {
   const dates: string[] = [];
@@ -1529,7 +1533,8 @@ function WcDesktopMergedPanel({
   fixture: WcFixtureWithOdds;
   splits?: WcFixtureSplits;
 }) {
-  const { dkOdds, modelOdds } = fixture;
+  const { dkOdds, modelOdds: _rawModelOdds } = fixture;
+  const modelOdds = SHOW_WC_MODEL_ODDS ? _rawModelOdds : null;
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
@@ -1744,7 +1749,8 @@ function WcFixtureCard({
 // [LOG] WcMobileOddsPanel: renders BetCell-based 3-col layout matching MLB exactly
 
 function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
-  const { dkOdds, modelOdds } = fixture;
+  const { dkOdds, modelOdds: _rawModelOdds } = fixture;
+  const modelOdds = SHOW_WC_MODEL_ODDS ? _rawModelOdds : null;
   const totalLine = dkOdds?.overLine ?? 2.5;
 
   const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
