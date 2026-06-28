@@ -4211,3 +4211,74 @@
 - [x] Fix FT upsert to use dbHomeScore/dbAwayScore (not raw homeScore/awayScore)
 - [x] Fix live-scores heartbeat: query both today UTC and yesterday UTC to catch games spanning midnight UTC boundary
 - [x] Ingest DR Congo vs Colombia (wc26-g-046): FT 0-1 (Colombia won), status=FT, homeScore=0, awayScore=1
+
+## Session: 2026-06-28 - World Cup Analytical Data Warehouse Build
+
+### Phase 0-1: Initialization and Source Inventory
+- [ ] Create append-only execution log (world_cup_advanced_stats_execution_log.txt)
+- [ ] Create run manifest JSON with run ID, starting checkpoint, timestamps
+- [ ] Snapshot current DB state (table list, row counts, schema versions)
+- [ ] Inventory approved sources (FIFA, ESPN) and coverage by tournament/metric family
+- [ ] Document unavailable metric families with reason codes
+
+### Phase 2: Schema and Metric Dictionary
+- [ ] Create all 35+ warehouse tables (wc_tournaments, wc_teams, wc_team_tournaments, wc_players, wc_squads, wc_matches, wc_match_team_stats, wc_match_player_stats, wc_match_goalkeeper_stats, wc_match_lineups, wc_match_formations, wc_match_substitutions, wc_match_events, wc_match_shots, wc_match_passes, wc_match_carries, wc_match_duels, wc_match_defensive_actions, wc_match_goalkeeper_actions, wc_match_set_pieces, wc_match_possessions, wc_match_sequences, wc_match_state_segments, wc_team_tournament_stats, wc_player_tournament_stats, wc_goalkeeper_tournament_stats, wc_pre_match_team_features, wc_pre_match_player_features, wc_metric_dictionary, wc_metric_values, wc_source_lineage, wc_data_availability, wc_validation_results, wc_data_quality_issues, wc_pipeline_runs, wc_pipeline_checkpoints)
+- [ ] Build metric dictionary (all Tier 1-4 metrics with definitions, formulas, versions)
+- [ ] Build player and team identity mappings with canonical IDs
+
+### Phase 3: Rosters and Lineups
+- [ ] Load tournament squads for 2018, 2022, 2026 (all 3 editions)
+- [ ] Load starting XIs and bench for all 200 completed matches
+- [ ] Load substitutions with minute, incoming/outgoing player
+- [ ] Validate: exactly 11 starters per team, at least 1 GK, valid minutes
+
+### Phase 4: Team-Match Statistics (400 rows)
+- [ ] Load basic team stats from ESPN for all 200 completed matches
+- [ ] Load advanced team stats where available
+- [ ] Reconcile team goals against certified match scores
+- [ ] Confirm exactly 400 completed canonical team-match rows
+
+### Phase 5-6: Player and Goalkeeper Statistics
+- [ ] Load every player appearance (starter + substitute) for all 200 matches
+- [ ] Load goalkeeper-match stats with stint separation
+- [ ] Reconcile player goals to team goals
+- [ ] Reconcile GK saves + goals conceded to shots on target faced
+- [ ] Store shootout data separately
+
+### Phase 7-9: Event Layer and Derived Metrics
+- [ ] Load available event/shot/pass/carry/possession data from approved sources
+- [ ] Document unavailable event families with UNAVAILABLE_FROM_APPROVED_SOURCE status
+- [ ] Build derived metrics: xG family, PPDA, field tilt, xT (where valid)
+- [ ] Build match-state segments (time windows, score state, manpower state)
+
+### Phase 10-11: Tournament Aggregates and Pre-Match Features
+- [ ] Aggregate team-tournament stats from match-level tables
+- [ ] Aggregate player-tournament stats from player-match tables
+- [ ] Generate frozen leakage-safe pre-match snapshots for all 200 completed matches
+- [ ] Validate available_at < match_kickoff_time for all pre-match features
+
+### Phase 12-13: Validation and Quality Grading
+- [ ] Run full 30+ check validation suite
+- [ ] Assign quality grades (A/B/C/F) to all 200 completed matches
+- [ ] Populate issue register (wc_data_quality_issues)
+- [ ] Apply transaction-safe repairs for all identified issues
+
+### Phase 14: Artifacts and Certification
+- [ ] Generate world_cup_advanced_stats_execution_log.txt (append-only TXT)
+- [ ] Generate world_cup_advanced_stats_audit_report.md
+- [ ] Generate world_cup_advanced_stats_coverage_matrix.csv
+- [ ] Generate world_cup_advanced_stats_metric_dictionary.csv
+- [ ] Generate world_cup_advanced_stats_source_lineage.csv
+- [ ] Generate world_cup_advanced_stats_unavailable_metrics.csv
+- [ ] Generate world_cup_advanced_stats_validation_results.csv
+- [ ] Generate world_cup_advanced_stats_issue_register.csv
+- [ ] Generate world_cup_advanced_stats_schema.sql
+- [ ] Generate world_cup_advanced_stats_migration.sql
+- [ ] Generate world_cup_advanced_stats_data_dictionary.md
+- [ ] Generate world_cup_advanced_stats_run_manifest.json
+- [ ] Generate world_cup_advanced_stats_repair_manifest.csv
+- [ ] Generate world_cup_advanced_stats_provider_comparison.csv
+- [ ] Generate world_cup_advanced_stats_pre_match_feature_manifest.csv
+- [ ] Calculate SHA-256 checksums for all artifacts
+- [ ] Save final checkpoint
+- [ ] Deliver certified report with all artifacts attached
