@@ -271,13 +271,16 @@ for (let i = 0; i < N_SIMS; i++) {
   scoreCounts.set(key, (scoreCounts.get(key) ?? 0) + 1);
 }
 
-// Spread counters from score distribution
-let homeSpreadCover = 0, awaySpreadCover = 0;
+// FIX v7.3: Correct spread recount — clean canonical formula
+// Netherlands -1.5 covers: NED wins by 2 or more goals (h - a >= 2)
+// Morocco +1.5 covers: MAR does NOT lose by 2+ (i.e., h - a <= 1)
+// These are strict complements: awaySpreadCover = N_SIMS - homeSpreadCover
+let homeSpreadCover = 0;
 for (const [score, count] of scoreCounts) {
   const [h, a] = score.split('-').map(Number);
-  if (h - a >= 2) homeSpreadCover += count;  // NED -1.5 covers
-  if (a - h < 2) awaySpreadCover += count;   // MAR +1.5 covers
+  if (h - a >= 2) homeSpreadCover += count;  // Netherlands covers -1.5
 }
+let awaySpreadCover = N_SIMS - homeSpreadCover;  // Morocco covers +1.5 (strict complement)
 
 const SIM_END = Date.now();
 const simMs = SIM_END - SIM_START;
@@ -326,10 +329,16 @@ const modelHomeML  = probToAmerican(nvModelH);
 const modelDrawML  = probToAmerican(nvModelD);
 const modelAwayML  = probToAmerican(nvModelA);
 
+// FIX v7.3 — Corrected market computations:
+// ADVANCE: pHA and pAA already sum to 1.0 by construction (knockout format)
+//   Do NOT apply noVig2Way — that inflates the underdog's advance probability.
+// NO DRAW: probToAmerican(pNoDraw) where pNoDraw = pHW + pAW (unconditional)
+//   WRONG: probToAmerican(pNoDraw / (pNoDraw + pD)) — normalizes against sub-1 denominator
+// SPREAD: pHomeSpr + pAwaySpr = 1.0 (strict complements after fix above)
+
 const { p1: nvOver, p2: nvUnder } = noVig2Way(pOver25, pUnder25);
 const { p1: nvHomeSpr, p2: nvAwaySpr } = noVig2Way(pHomeSpr, pAwaySpr);
 const { p1: nvBttsY, p2: nvBttsN } = noVig2Way(pBttsY, pBttsN);
-const { p1: nvHA, p2: nvAA } = noVig2Way(pHA, pAA);
 const { p1: nvDC1X, p2: nvDCX2 } = noVig2Way(pDC1X, pDCX2);
 
 const modelOverML  = probToAmerican(nvOver);
@@ -338,11 +347,17 @@ const modelHomeSprML = probToAmerican(nvHomeSpr);
 const modelAwaySprML = probToAmerican(nvAwaySpr);
 const modelBttsYML = probToAmerican(nvBttsY);
 const modelBttsNML = probToAmerican(nvBttsN);
-const modelAdvHomeML = probToAmerican(nvHA);
-const modelAdvAwayML = probToAmerican(nvAA);
-const modelNoDrawML  = probToAmerican(pNoDraw / (pNoDraw + pD));
+// ADVANCE FIX: raw probabilities (already sum to 1.0)
+const modelAdvHomeML = probToAmerican(pHA);
+const modelAdvAwayML = probToAmerican(pAA);
+// NO DRAW FIX: unconditional probability
+const modelNoDrawML  = probToAmerican(pNoDraw);
 const modelDC1XML    = probToAmerican(nvDC1X);
 const modelDCX2ML    = probToAmerican(nvDCX2);
+
+log('FIX', 'ADVANCE_FIX', `pHA=${pHA.toFixed(6)} pAA=${pAA.toFixed(6)} sum=${(pHA+pAA).toFixed(8)} | NED_ADV=${modelAdvHomeML} MAR_ADV=${modelAdvAwayML}`);
+log('FIX', 'NODRAW_FIX', `pNoDraw=${pNoDraw.toFixed(6)} (=pHW+pAW) | modelNoDrawML=${modelNoDrawML}`);
+log('FIX', 'SPREAD_FIX', `pHomeSpr=${pHomeSpr.toFixed(6)} pAwaySpr=${pAwaySpr.toFixed(6)} sum=${(pHomeSpr+pAwaySpr).toFixed(8)}`);
 
 log('OUTPUT', 'MODEL_ML', `NED=${modelHomeML} Draw=${modelDrawML} MAR=${modelAwayML}`);
 log('OUTPUT', 'MODEL_ADVANCE', `NED_ADV=${modelAdvHomeML} MAR_ADV=${modelAdvAwayML}`);
