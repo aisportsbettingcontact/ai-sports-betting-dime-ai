@@ -42,8 +42,12 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** UTC hour at which the feed rolls over to the new calendar day's slate */
-const FEED_CUTOFF_UTC_HOUR = 11;
+/**
+ * UTC hour at which the feed rolls over to the new calendar day's slate.
+ * 07:00 UTC = 00:00 PDT (America/Los_Angeles, UTC-7 in summer)
+ * [2026-06-29] Changed from 11 to 7: feed now advances at 00:01 PT per product spec.
+ */
+const FEED_CUTOFF_UTC_HOUR = 7;
 
 /** IANA timezone IDs used for the 5-timezone debug simulation */
 const DEBUG_TIMEZONES = [
@@ -87,8 +91,8 @@ function userLocalDate(atMs?: number): string {
  * Returns the effective feed date as YYYY-MM-DD.
  *
  * Rule:
- *   - If UTC hour < 11 → effective date = (UTC calendar date − 1 day)
- *   - Otherwise        → effective date = UTC calendar date
+ *   - If UTC hour < 7 → effective date = (UTC calendar date − 1 day)
+ *   - Otherwise       → effective date = UTC calendar date
  *
  * This is the same logic used by `todayUTC()` (exported for consumers that
  * need the raw effective date without the "TODAY" label decision).
@@ -98,13 +102,15 @@ function userLocalDate(atMs?: number): string {
  * MANUAL WC DATE OVERRIDE
  *
  * Set to a YYYY-MM-DD string to force the WC calendar to treat that date as
- * "today" regardless of the real UTC clock.  Set to null to revert to the
- * automatic 11:00 UTC cutoff logic.
+ * "today" regardless of the real UTC clock.  Set to null to use the
+ * automatic PST/PDT cutoff logic (FEED_CUTOFF_UTC_HOUR = 7 = 00:00 PDT).
  *
+ * [2026-06-29] Set to null — automatic date advance is now live.
+ * The feed advances at 00:01 PT (07:01 UTC) every day.
  * This is the ONLY place that needs to change for a manual date advance.
  * No other code should hardcode dates.
  */
-export const MANUAL_WC_DATE_OVERRIDE: string | null = '2026-06-27';
+export const MANUAL_WC_DATE_OVERRIDE: string | null = null;
 
 export function todayUTC(atMs?: number): string {
   // [MANUAL OVERRIDE] Single authoritative override point.

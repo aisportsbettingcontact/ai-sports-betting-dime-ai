@@ -509,7 +509,11 @@ export default function WorldCup2026() {
                 FIFA World Cup 2026
               </div>
               <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
-                Group Stage · USA / CAN / MEX
+                {/* [2026-06-29] Dynamic stage label: KO Round of 32 started Jun 28 */}
+                {selectedDate >= '2026-06-28'
+                  ? 'Knockout Stage · Round of 32'
+                  : 'Group Stage · USA / CAN / MEX'
+                }
               </div>
             </div>
           </div>
