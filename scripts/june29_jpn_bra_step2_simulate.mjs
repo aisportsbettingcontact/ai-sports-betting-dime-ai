@@ -506,12 +506,23 @@ const dcX2 = probToAmerican(nvDCX2);
 logState(`pDC1X (Japan or Draw) = ${pct(pDC1X)} | pDCX2 (Brazil or Draw) = ${pct(pDCX2)}`);
 logOutput(`DC 1X (Japan or Draw): ${fmt(dc1X)} | DC X2 (Brazil or Draw): ${fmt(dcX2)}`);
 
-logStep('Compute No Draw model odds (2-way: Brazil win vs Japan win)');
+logStep('Compute No Draw model odds — FIX v7.3: straight 2-way market, not conditional');
+// FIX v7.3: The NO DRAW market is: does the game end in a draw or not?
+// Correct: probToAmerican(pNoDraw) where pNoDraw = pH + pA (unconditional probability)
+// WRONG (previous): probToAmerican(pNoDraw / (pNoDraw + pD)) — this normalizes against a sub-1
+//   denominator, inflating the no-draw probability and producing artificially short odds.
+// The book prices -1400 for no-draw, implying ~93.3% no-draw probability.
+// With pH~61% + pA~16% = 77% no-draw, the model should be LONGER than -1400 (correct).
+const pNoDraw = pH + pA;  // unconditional probability of no draw
+const noDrawML = probToAmerican(pNoDraw);  // single unified no-draw odds
+// Also compute conditional (who wins if no draw) for reference
 const [nvHnd, nvAnd] = noVig2(pH, pA);
 const noDrawH = probToAmerican(nvHnd);
 const noDrawA = probToAmerican(nvAnd);
+logState(`P(no draw) = pH + pA = ${pct(pH)} + ${pct(pA)} = ${pct(pNoDraw)}`);
+logState(`No Draw market odds (2-way): ${fmt(noDrawML)}`);
 logState(`P(Brazil wins | no draw) = ${pct(nvHnd)} | P(Japan wins | no draw) = ${pct(nvAnd)}`);
-logOutput(`No Draw — Brazil: ${fmt(noDrawH)} | Japan: ${fmt(noDrawA)}`);
+logOutput(`No Draw (unified): ${fmt(noDrawML)} | Brazil wins if no draw: ${fmt(noDrawH)} | Japan wins if no draw: ${fmt(noDrawA)}`);
 
 logStep('Compute Total model odds');
 const pOver = pOU25O;
@@ -570,9 +581,14 @@ logState(`P(Japan wins ET/pens | draw after 90min)  = ${pct(pJpnAdvancesInDraw)}
 logStep('Compute final advancement probabilities');
 const pBraAdvances = pH + pD * pBraAdvancesInDraw;
 const pJpnAdvances = pA + pD * pJpnAdvancesInDraw;
-const [nvBraAdv, nvJpnAdv] = noVig2(pBraAdvances, pJpnAdvances);
-const braAdvOdds = probToAmerican(nvBraAdv);
-const jpnAdvOdds = probToAmerican(nvJpnAdv);
+// FIX v7.3: Do NOT apply noVig2 to advance probs — they already sum to 1.0 by construction.
+// Applying noVig2 to a sum-1 distribution inflates the underdog's advance probability.
+// The correct approach: use raw probabilities directly in probToAmerican().
+// INVARIANT: pBraAdvances + pJpnAdvances MUST equal 1.0 (verified in Phase H)
+const braAdvOdds = probToAmerican(pBraAdvances);
+const jpnAdvOdds = probToAmerican(pJpnAdvances);
+const nvBraAdv = pBraAdvances;  // alias for logging/results consistency
+const nvJpnAdv = pJpnAdvances;
 
 logState(`P(Brazil advances) = P(win 90) + P(draw)×P(BRA wins ET/pen)`);
 logState(`  = ${pct(pH)} + ${pct(pD)} × ${pct(pBraAdvancesInDraw)}`);
@@ -786,7 +802,9 @@ const results = {
   nv_dc_x2: parseFloat(nvDCX2.toFixed(6)),
   model_dc_1x_ml: dc1X,
   model_dc_x2_ml: dcX2,
-  // No Draw
+  // No Draw — FIX v7.3: unified key for router mapping
+  p_no_draw: parseFloat(pNoDraw.toFixed(6)),
+  model_no_draw_ml: noDrawML,  // unified key — maps to router noDraw field
   nv_no_draw_home: parseFloat(nvHnd.toFixed(6)),
   nv_no_draw_away: parseFloat(nvAnd.toFixed(6)),
   model_no_draw_home_ml: noDrawH,
