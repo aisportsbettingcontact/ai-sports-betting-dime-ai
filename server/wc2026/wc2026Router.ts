@@ -173,7 +173,11 @@ export const wc2026Router = router({
         bttsNo: r.bookBttsNoOdds ?? undefined,
         homeDrawOdds: r.bookDc1XOdds ?? undefined,
         awayDrawOdds: r.bookDcX2Odds ?? undefined,
-        noDraw: r.bookNoDrawHomeOdds ?? undefined,
+        // [FIX v7.1-NODRAW] book_no_draw_away_odds holds the "no draw" market (home OR away wins).
+        // book_no_draw_home_odds was always NULL — it was never seeded. Use away column.
+        noDraw: r.bookNoDrawAwayOdds ?? undefined,
+        toAdvanceHome: r.toAdvanceHomeOdds ?? undefined,
+        toAdvanceAway: r.toAdvanceAwayOdds ?? undefined,
       });
       // [FIX v7.0] Build modelOdds from wc2026_model_projections when a projection row exists.
       // Previously: modelOdds was always read from wc2026_odds_snapshots book_id=0 (stale AI snapshot).
@@ -196,6 +200,8 @@ export const wc2026Router = router({
         bttsYes: p.bttsYesOdds ?? undefined,
         bttsNo: p.bttsNoOdds ?? undefined,
         noDraw: p.noDrawHomeOdds ?? undefined,
+        toAdvanceHome: p.toAdvanceHomeOdds ?? undefined,
+        toAdvanceAway: p.toAdvanceAwayOdds ?? undefined,
         homeEdge: p.homeEdge ?? undefined,
         drawEdge: p.drawEdge ?? undefined,
         awayEdge: p.awayEdge ?? undefined,
@@ -528,11 +534,14 @@ export const wc2026Router = router({
       bttsNo: r.bookBttsNoOdds ?? undefined,
       homeDrawOdds: r.bookDc1XOdds ?? undefined,
       awayDrawOdds: r.bookDcX2Odds ?? undefined,
-      noDraw: r.bookNoDrawHomeOdds ?? undefined,
+      // [FIX v7.1-NODRAW] book_no_draw_away_odds = the actual "no draw" market. Home column always NULL.
+      noDraw: r.bookNoDrawAwayOdds ?? undefined,
+      toAdvanceHome: r.toAdvanceHomeOdds ?? undefined,
+      toAdvanceAway: r.toAdvanceAwayOdds ?? undefined,
     });
-    // [FIX v7.0] Same projection-first modelOdds logic as fixturesByDate
-    type ProjRowT = typeof wc2026ModelProjections.$inferSelect;
-    const projToModelOddsT = (p: ProjRowT): Record<string, number | undefined> => ({
+        // [FIX v7.1-NODRAW] Same projection-first modelOdds logic as fixturesByDate
+      type ProjRowT = typeof wc2026ModelProjections.$inferSelect;
+      const projToModelOddsT = (p: ProjRowT): Record<string, number | undefined> => ({
       home: p.modelHomeML ?? undefined,
       draw: p.modelDrawML ?? undefined,
       away: p.modelAwayML ?? undefined,
@@ -547,7 +556,10 @@ export const wc2026Router = router({
       awayDrawOdds: p.dcX2Odds ?? undefined,
       bttsYes: p.bttsYesOdds ?? undefined,
       bttsNo: p.bttsNoOdds ?? undefined,
-      noDraw: p.noDrawHomeOdds ?? undefined,
+        // [FIX v7.1-NODRAW] noDrawAwayOdds = combined home+away win prob → American odds
+        noDraw: p.noDrawAwayOdds ?? p.noDrawHomeOdds ?? undefined,
+        toAdvanceHome: p.toAdvanceHomeOdds ?? undefined,
+        toAdvanceAway: p.toAdvanceAwayOdds ?? undefined,
       homeEdge: p.homeEdge ?? undefined,
       drawEdge: p.drawEdge ?? undefined,
       awayEdge: p.awayEdge ?? undefined,

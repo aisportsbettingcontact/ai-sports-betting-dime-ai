@@ -311,6 +311,11 @@ export const wc2026ModelProjections = mysqlTable(
     // BTTS American odds (btts_prob already stores the probability)
     bttsYesOdds: smallint("btts_yes_odds"),
     bttsNoOdds: smallint("btts_no_odds"),
+    // To Advance (knockout rounds — who advances past this match)
+    toAdvanceHomeProb: double("to_advance_home_prob"),
+    toAdvanceAwayProb: double("to_advance_away_prob"),
+    toAdvanceHomeOdds: smallint("to_advance_home_odds"),
+    toAdvanceAwayOdds: smallint("to_advance_away_odds"),
     // Model total raw (simulation-validated expected total goals)
     modelTotalRaw: double("model_total_raw"),
     homeEdge: double("home_edge"),
@@ -368,6 +373,9 @@ export const wc2026FrozenBookOdds = mysqlTable(
     // Book no draw
     bookNoDrawHomeOdds: smallint("book_no_draw_home_odds"),
     bookNoDrawAwayOdds: smallint("book_no_draw_away_odds"),
+    // Book to advance (knockout rounds — who advances past this match)
+    toAdvanceHomeOdds: smallint("to_advance_home_odds"),
+    toAdvanceAwayOdds: smallint("to_advance_away_odds"),
     // Source label
     bookSource: varchar("book_source", { length: 32 }).notNull().default("DraftKings"),
   },
