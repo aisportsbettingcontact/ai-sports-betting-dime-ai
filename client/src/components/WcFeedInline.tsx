@@ -359,6 +359,9 @@ type DkOdds = {
   // BTTS
   bttsYes?: number;
   bttsNo?: number;
+  // TO ADVANCE (knockout rounds)
+  toAdvanceHome?: number;
+  toAdvanceAway?: number;
 } | null;
 
 type WcTeamInfo = {
@@ -1567,8 +1570,38 @@ function WcDesktopMergedPanel({
     ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
   );
 
+  // ── TO ADVANCE edge detection (2-way: home advance vs away advance) ─────────────
+  const homeAdvEdgePP = (dkOdds?.toAdvanceHome != null && modelOdds?.toAdvanceHome != null)
+    ? calculateEdge(dkOdds.toAdvanceHome, modelOdds.toAdvanceHome) : NaN;
+  const awayAdvEdgePP = (dkOdds?.toAdvanceAway != null && modelOdds?.toAdvanceAway != null)
+    ? calculateEdge(dkOdds.toAdvanceAway, modelOdds.toAdvanceAway) : NaN;
+  console.log(
+    `[WcDesktopMergedPanel:ToAdvance] fixture=${fixture.fixtureId}` +
+    ` | [INPUT] bookHomeAdv=${dkOdds?.toAdvanceHome ?? 'N/A'} bookAwayAdv=${dkOdds?.toAdvanceAway ?? 'N/A'}` +
+    ` | [INPUT] modelHomeAdv=${modelOdds?.toAdvanceHome ?? 'N/A'} modelAwayAdv=${modelOdds?.toAdvanceAway ?? 'N/A'}` +
+    ` | [OUTPUT] homeAdvEdgePP=${isNaN(homeAdvEdgePP) ? 'NaN' : homeAdvEdgePP.toFixed(2)}pp` +
+    ` awayAdvEdgePP=${isNaN(awayAdvEdgePP) ? 'NaN' : awayAdvEdgePP.toFixed(2)}pp` +
+    ` | [VERIFY] hasAdvOdds=${dkOdds?.toAdvanceHome != null && dkOdds?.toAdvanceAway != null}`
+  );
+
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%', overflowX: 'auto' }}>
+
+      {/* ── Col 0: TO ADVANCE — Row 1: HOME advances (top), Row 2: AWAY advances (bottom) ── */}
+      <WcMktCol
+        title="TO ADV"
+        awayLabel={`${homeName} ADV`}
+        homeLabel={`${awayName} ADV`}
+        awayBookNum={dkOdds?.toAdvanceHome}
+        homeBookNum={dkOdds?.toAdvanceAway}
+        awayModelNum={modelOdds?.toAdvanceHome}
+        homeModelNum={modelOdds?.toAdvanceAway}
+        singleRow={false}
+        awayColor={homeColors.primary}
+        homeColor={awayColors.primary}
+      />
+
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 1: ML — Row 1: HOME (top), Row 2: AWAY (bottom) ───────────────────────────── */}
       <WcMktCol
@@ -1760,7 +1793,50 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
   const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
 
-  // ── 3-way calc: SINGLE SOURCE OF TRUTH for ML + DRAW edge pp AND ROI ──────────
+  // ── TO ADVANCE edge detection (2-way: home advance vs away advance) ─────────────
+  const homeAdvEdgePPMob = (dkOdds?.toAdvanceHome != null && modelOdds?.toAdvanceHome != null)
+    ? calculateEdge(dkOdds.toAdvanceHome, modelOdds.toAdvanceHome) : NaN;
+  const awayAdvEdgePPMob = (dkOdds?.toAdvanceAway != null && modelOdds?.toAdvanceAway != null)
+    ? calculateEdge(dkOdds.toAdvanceAway, modelOdds.toAdvanceAway) : NaN;
+  const advBestEdgePP = Math.max(
+    isNaN(homeAdvEdgePPMob) ? -Infinity : homeAdvEdgePPMob,
+    isNaN(awayAdvEdgePPMob) ? -Infinity : awayAdvEdgePPMob,
+  );
+  const advBestEdgePPFinal = advBestEdgePP === -Infinity ? NaN : advBestEdgePP;
+  const advEdgeLabel = (advBestEdgePPFinal >= EDGE_THRESHOLD_PP)
+    ? (homeAdvEdgePPMob >= awayAdvEdgePPMob ? `${homeName} ADV` : `${awayName} ADV`)
+    : undefined;
+  const advBestRoiPct: number = (() => {
+    if (homeAdvEdgePPMob >= awayAdvEdgePPMob && homeAdvEdgePPMob >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.toAdvanceHome != null && modelOdds?.toAdvanceHome != null && dkOdds?.toAdvanceAway != null)
+        ? calculateRoi(modelOdds.toAdvanceHome, dkOdds.toAdvanceHome, dkOdds.toAdvanceAway) : NaN;
+    } else if (awayAdvEdgePPMob >= EDGE_THRESHOLD_PP) {
+      return (dkOdds?.toAdvanceAway != null && modelOdds?.toAdvanceAway != null && dkOdds?.toAdvanceHome != null)
+        ? calculateRoi(modelOdds.toAdvanceAway, dkOdds.toAdvanceAway, dkOdds.toAdvanceHome) : NaN;
+    }
+    return NaN;
+  })();
+  const advHome: BetCellSide = {
+    bookLine: `${homeFifaCode.toUpperCase()} ADV`, bookJuice: fmtAmerican(dkOdds?.toAdvanceHome) ?? '—',
+    modelLine: `${homeFifaCode.toUpperCase()} ADV`, modelJuice: fmtAmerican(modelOdds?.toAdvanceHome) ?? '—',
+    edgePP: homeAdvEdgePPMob,
+  };
+  const advAway: BetCellSide = {
+    bookLine: `${awayFifaCode.toUpperCase()} ADV`, bookJuice: fmtAmerican(dkOdds?.toAdvanceAway) ?? '—',
+    modelLine: `${awayFifaCode.toUpperCase()} ADV`, modelJuice: fmtAmerican(modelOdds?.toAdvanceAway) ?? '—',
+    edgePP: awayAdvEdgePPMob,
+  };
+  console.log(
+    `[WcMobileOddsPanel:ToAdvance] fixture=${fixture.fixtureId}` +
+    ` | [INPUT] bookHomeAdv=${dkOdds?.toAdvanceHome ?? 'N/A'} bookAwayAdv=${dkOdds?.toAdvanceAway ?? 'N/A'}` +
+    ` | [INPUT] modelHomeAdv=${modelOdds?.toAdvanceHome ?? 'N/A'} modelAwayAdv=${modelOdds?.toAdvanceAway ?? 'N/A'}` +
+    ` | [OUTPUT] homeAdvEdge=${isNaN(homeAdvEdgePPMob) ? 'NaN' : homeAdvEdgePPMob.toFixed(2)}pp` +
+    ` awayAdvEdge=${isNaN(awayAdvEdgePPMob) ? 'NaN' : awayAdvEdgePPMob.toFixed(2)}pp` +
+    ` | [OUTPUT] advEdgeLabel=${advEdgeLabel ?? 'NO EDGE'} advBestRoi=${isNaN(advBestRoiPct) ? 'NaN' : advBestRoiPct.toFixed(2)}%` +
+    ` | [VERIFY] hasAdvOdds=${dkOdds?.toAdvanceHome != null && dkOdds?.toAdvanceAway != null}`
+  );
+
+  // ── 3-way calc: SINGLE SOURCE OF TRUTH for ML + DRAW edge pp AND ROI ────────────
   // [LOG] All ML and DRAW edge detection uses 3-way no-vig fair probs.
   // [LOG] Raw calculateEdge() is NOT used for ML/DRAW — it ignores the draw outcome.
   // [LOG] TOTAL uses 2-way calculateEdge (over/under — no draw in that market).
@@ -2121,6 +2197,21 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     cell: React.ReactNode;
   };
   const cells: CellDef[] = [
+    {
+      label: 'TO ADVANCE',
+      wide: true,
+      cell: (
+        <BetCell
+          title="TO ADVANCE"
+          away={advAway}
+          home={advHome}
+          edgeLabel={advEdgeLabel}
+          bestEdgePP={advBestEdgePPFinal}
+          roiPct={advBestRoiPct}
+          size="sm"
+        />
+      ),
+    },
     {
       label: 'MONEYLINE',
       wide: true,
