@@ -285,6 +285,47 @@ export interface EspnMatchData {
     lastPlayWallClock: string | null;
     syncUrl: string;
   };
+  // ── 8 Deferred Core API Sections ────────────────────────────────────────────
+  shotsDetail: EspnDeferredSection;
+  attack: EspnDeferredSection;
+  passes: EspnDeferredSection;
+  expectedGoalsSplits: EspnDeferredSection;
+  goalkeeping: EspnDeferredSection;
+  defense: EspnDeferredSection;
+  duels: EspnDeferredSection;
+  foulsOffsides: EspnDeferredSection;
+}
+
+// ─── DEFERRED SECTION TYPE ────────────────────────────────────────────────────
+
+export interface EspnDeferredStatRow {
+  name: string;
+  displayName: string;
+  homeValue: string;
+  awayValue: string;
+  homeTeamId: string;
+  awayTeamId: string;
+}
+
+export interface EspnDeferredPlayerRow {
+  teamId: string;
+  teamAbbr: string;
+  homeAway: "home" | "away";
+  playerId: string;
+  playerName: string;
+  jersey: string;
+  position: string;
+  stats: Record<string, string>;
+}
+
+export interface EspnDeferredSection {
+  sectionName: string;
+  apiUrl: string;
+  fetched: boolean;
+  teamRows: EspnDeferredStatRow[];
+  playerRows: EspnDeferredPlayerRow[];
+  rawKeys: string[];
+  error: string | null;
 }
 
 // ─── UTILITIES ────────────────────────────────────────────────────────────────
@@ -879,6 +920,187 @@ async function scrapeRoster(
   };
 }
 
+// ─── DEFERRED SECTION SCRAPER ───────────────────────────────────────────────
+
+/**
+ * Parses a Core API stats response (from /statistics endpoint) into
+ * EspnDeferredStatRow[] (team-level) and EspnDeferredPlayerRow[] (player-level).
+ * The ESPN Core API stats response has this shape:
+ *   { splits: { categories: [ { name, displayName, stats: [ { name, displayValue, value } ] } ] } }
+ * For team-level comparison tables the response is:
+ *   { teams: [ { team: { id, abbreviation }, homeAway, statistics: [ ... ] } ] }
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseDeferredSection(data: any, sectionName: string, apiUrl: string): EspnDeferredSection {
+  const teamRows: EspnDeferredStatRow[] = [];
+  const playerRows: EspnDeferredPlayerRow[] = [];
+  const rawKeys: string[] = [];
+
+  if (!data) {
+    return { sectionName, apiUrl, fetched: false, teamRows, playerRows, rawKeys, error: "no data" };
+  }
+
+  // ── Pattern A: boxscore.teams (team-level comparison) ──────────────────────
+  // Shape: { boxscore: { teams: [ { team, homeAway, statistics: [ { name, displayValue } ] } ] } }
+  const bxTeams = data?.boxscore?.teams ?? data?.teams ?? [];
+  if (bxTeams.length >= 2) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const home = bxTeams.find((t: any) => (t?.homeAway ?? "") === "home") ?? bxTeams[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const away = bxTeams.find((t: any) => (t?.homeAway ?? "") === "away") ?? bxTeams[1];
+    const homeId = String(home?.team?.id ?? "");
+    const awayId = String(away?.team?.id ?? "");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const homeStats: Record<string, string> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (home?.statistics ?? []).forEach((s: any) => {
+      const k = String(s?.name ?? "");
+      if (k) homeStats[k] = String(s?.displayValue ?? s?.value ?? "");
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (away?.statistics ?? []).forEach((s: any) => {
+      const k = String(s?.name ?? "");
+      if (k) {
+        if (!rawKeys.includes(k)) rawKeys.push(k);
+        teamRows.push({
+          name: k,
+          displayName: String(s?.label ?? s?.name ?? k),
+          homeValue: homeStats[k] ?? "",
+          awayValue: String(s?.displayValue ?? s?.value ?? ""),
+          homeTeamId: homeId,
+          awayTeamId: awayId,
+        });
+      }
+    });
+    // Fill in any home-only keys
+    for (const [k, v] of Object.entries(homeStats)) {
+      if (!rawKeys.includes(k)) {
+        rawKeys.push(k);
+        teamRows.push({
+          name: k,
+          displayName: k,
+          homeValue: v,
+          awayValue: "",
+          homeTeamId: homeId,
+          awayTeamId: awayId,
+        });
+      }
+    }
+  }
+
+  // ── Pattern B: splits.categories (player-level stats) ─────────────────────
+  // Shape: { splits: { categories: [ { name, displayName, stats: [ { name, displayValue } ] } ] } }
+  const splits = data?.splits ?? data?.statistics?.splits ?? null;
+  if (splits?.categories) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (splits.categories ?? []).forEach((cat: any) => {
+      const catName = String(cat?.name ?? "");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (cat?.stats ?? []).forEach((s: any) => {
+        const k = `${catName}.${String(s?.name ?? "")}`;
+        if (!rawKeys.includes(k)) rawKeys.push(k);
+      });
+    });
+  }
+
+  // ── Pattern C: direct stats array (flat) ──────────────────────────────────
+  // Shape: { statistics: [ { name, displayValue } ] }
+  const directStats = data?.statistics ?? [];
+  if (Array.isArray(directStats) && directStats.length > 0 && teamRows.length === 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    directStats.forEach((s: any) => {
+      const k = String(s?.name ?? "");
+      if (k && !rawKeys.includes(k)) rawKeys.push(k);
+    });
+  }
+
+  // ── Pattern D: athletes array (player rows) ────────────────────────────────
+  // Shape: { athletes: [ { team, athlete, statistics: [ { name, displayValue } ] } ] }
+  const athletes = data?.athletes ?? data?.boxscore?.players ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const teamBlock of athletes) {
+    const teamId = String(teamBlock?.team?.id ?? "");
+    const teamAbbr = String(teamBlock?.team?.abbreviation ?? "");
+    const homeAway = (teamBlock?.homeAway ?? "home") as "home" | "away";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const statNames: string[] = (teamBlock?.statistics?.[0]?.names ?? teamBlock?.statistics?.map((s: any) => s?.name) ?? []).map(String);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const athleteEntry of (teamBlock?.athletes ?? [])) {
+      const ath = athleteEntry?.athlete ?? athleteEntry;
+      const playerId = String(ath?.id ?? "");
+      const playerName = String(ath?.displayName ?? ath?.shortName ?? "");
+      const jersey = String(ath?.jersey ?? "");
+      const position = String(ath?.position?.abbreviation ?? ath?.position?.name ?? "");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawStatValues: string[] = (athleteEntry?.stats ?? []).map((v: any) => String(v ?? ""));
+      const stats: Record<string, string> = {};
+      statNames.forEach((name, i) => {
+        stats[name] = rawStatValues[i] ?? "";
+      });
+      // Also handle object-style stats
+      if (rawStatValues.length === 0 && athleteEntry?.statistics) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (athleteEntry.statistics ?? []).forEach((s: any) => {
+          stats[String(s?.name ?? "")] = String(s?.displayValue ?? s?.value ?? "");
+        });
+      }
+      playerRows.push({ teamId, teamAbbr, homeAway, playerId, playerName, jersey, position, stats });
+    }
+  }
+
+  return { sectionName, apiUrl, fetched: true, teamRows, playerRows, rawKeys, error: null };
+}
+
+/**
+ * Fetches a single deferred Core API section by URL and parses it.
+ * Returns an EspnDeferredSection with error=null on success, error=message on failure.
+ */
+async function scrapeCoreDeferredSection(
+  url: string,
+  sectionName: string,
+  logger: EspnLogger,
+  errors: string[]
+): Promise<EspnDeferredSection> {
+  const safeUrl = forceHttps(url);
+  logger.step(`DEFERRED:${sectionName}`, `Fetching deferred section: ${sectionName}`);
+  logger.state(`${sectionName} URL`, { url: safeUrl });
+
+  try {
+    const data = await fetchWithRetry(safeUrl, `deferred:${sectionName}`, logger);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as any;
+    const topKeys = Object.keys(d ?? {});
+    logger.state(`${sectionName} response top-level keys`, { keys: topKeys.join(", ") });
+
+    const section = parseDeferredSection(d, sectionName, safeUrl);
+    logger.output(`${sectionName} parsed`, {
+      teamRows: section.teamRows.length,
+      playerRows: section.playerRows.length,
+      rawKeys: section.rawKeys.slice(0, 15).join(", "),
+    });
+    logger.verify(
+      section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0 ? "PASS" : "WARN",
+      `${sectionName} has data`,
+      { teamRows: section.teamRows.length, playerRows: section.playerRows.length, keys: section.rawKeys.length }
+    );
+    return section;
+  } catch (err) {
+    const msg = `${sectionName} fetch failed: ${err}`;
+    errors.push(msg);
+    logger.error(`Deferred section failed: ${sectionName}`, err);
+    logger.verify("FAIL", `${sectionName} — fetch error`, { error: String(err) });
+    return {
+      sectionName,
+      apiUrl: safeUrl,
+      fetched: false,
+      teamRows: [],
+      playerRows: [],
+      rawKeys: [],
+      error: String(err),
+    };
+  }
+}
+
 // ─── MAIN SCRAPE FUNCTION ─────────────────────────────────────────────────────
 
 export async function scrapeEspnMatch(
@@ -1215,7 +1437,79 @@ export async function scrapeEspnMatch(
     logger.verify("WARN", "Using fallback summary rosters — no per-player stats", { rosterCount: rosters.length });
   }
 
-  // ── PHASE 6: Assemble + validate ─────────────────────────────────────────────
+  // ── PHASE 6: Deferred Core API Sections (8 sections) ──────────────────────────
+  // These sections are deferred in the ESPN React app and must be fetched from
+  // the Core API separately. Each section maps to a named stats endpoint.
+  // URL pattern: /events/{gameId}/competitions/{gameId}/statistics?statGroup=<name>
+  logger.step("DEFERRED_SECTIONS", "Fetching 8 deferred Core API sections (shots, attack, passes, xG, GK, defense, duels, fouls)");
+
+  const coreStatsBase = `${ESPN_CORE_BASE}/events/${gameId}/competitions/${gameId}/statistics`;
+
+  const deferredSectionDefs: { key: string; name: string; statGroup: string }[] = [
+    { key: "shotsDetail",         name: "Shots Detail",     statGroup: "shots" },
+    { key: "attack",              name: "Attack",           statGroup: "attack" },
+    { key: "passes",              name: "Passes",           statGroup: "passing" },
+    { key: "expectedGoalsSplits", name: "Expected Goals",   statGroup: "expectedGoals" },
+    { key: "goalkeeping",         name: "Goalkeeping",      statGroup: "goalkeeping" },
+    { key: "defense",             name: "Defense",          statGroup: "defense" },
+    { key: "duels",               name: "Duels",            statGroup: "duels" },
+    { key: "foulsOffsides",       name: "Fouls & Offsides", statGroup: "foulsAndOffsides" },
+  ];
+
+  const deferredResults = await concurrentMap(
+    deferredSectionDefs,
+    async (def) => {
+      const url = `${coreStatsBase}?lang=en&region=us&statGroup=${def.statGroup}`;
+      const section = await scrapeCoreDeferredSection(url, def.name, logger, errors);
+      // Fallback: try base stats URL if statGroup returned nothing
+      if (!section.fetched || (section.teamRows.length === 0 && section.playerRows.length === 0 && section.rawKeys.length === 0)) {
+        logger.state(`${def.name}: statGroup returned no data, trying base stats URL`);
+        const baseUrl = `${coreStatsBase}?lang=en&region=us`;
+        const fallback = await scrapeCoreDeferredSection(baseUrl, `${def.name}(base)`, logger, errors);
+        if (fallback.teamRows.length > 0 || fallback.playerRows.length > 0 || fallback.rawKeys.length > 0) {
+          return { key: def.key, section: { ...fallback, sectionName: def.name } };
+        }
+      }
+      return { key: def.key, section };
+    },
+    4
+  );
+
+  const deferredMap: Record<string, EspnDeferredSection> = {};
+  for (const { key, section } of deferredResults) {
+    deferredMap[key] = section;
+    logger.verify(
+      section.fetched && (section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0) ? "PASS" : "WARN",
+      `DEFERRED: ${section.sectionName}`,
+      { teamRows: section.teamRows.length, playerRows: section.playerRows.length, keys: section.rawKeys.length, error: section.error ?? "none" }
+    );
+  }
+
+  const emptySection = (name: string): EspnDeferredSection => ({
+    sectionName: name, apiUrl: "", fetched: false, teamRows: [], playerRows: [], rawKeys: [], error: "not fetched"
+  });
+
+  const shotsDetail         = deferredMap["shotsDetail"]         ?? emptySection("Shots Detail");
+  const attack              = deferredMap["attack"]              ?? emptySection("Attack");
+  const passes              = deferredMap["passes"]              ?? emptySection("Passes");
+  const expectedGoalsSplits = deferredMap["expectedGoalsSplits"] ?? emptySection("Expected Goals");
+  const goalkeeping         = deferredMap["goalkeeping"]         ?? emptySection("Goalkeeping");
+  const defense             = deferredMap["defense"]             ?? emptySection("Defense");
+  const duels               = deferredMap["duels"]              ?? emptySection("Duels");
+  const foulsOffsides       = deferredMap["foulsOffsides"]       ?? emptySection("Fouls & Offsides");
+
+  logger.output("All 8 deferred sections fetched", {
+    shotsDetail:          `${shotsDetail.teamRows.length}rows/${shotsDetail.rawKeys.length}keys`,
+    attack:               `${attack.teamRows.length}rows/${attack.rawKeys.length}keys`,
+    passes:               `${passes.teamRows.length}rows/${passes.rawKeys.length}keys`,
+    expectedGoalsSplits:  `${expectedGoalsSplits.teamRows.length}rows/${expectedGoalsSplits.rawKeys.length}keys`,
+    goalkeeping:          `${goalkeeping.teamRows.length}rows/${goalkeeping.rawKeys.length}keys`,
+    defense:              `${defense.teamRows.length}rows/${defense.rawKeys.length}keys`,
+    duels:                `${duels.teamRows.length}rows/${duels.rawKeys.length}keys`,
+    foulsOffsides:        `${foulsOffsides.teamRows.length}rows/${foulsOffsides.rawKeys.length}keys`,
+  });
+
+  // ── PHASE 7: Assemble + validate ─────────────────────────────────────────────
   logger.step("ASSEMBLE", "Assembling final EspnMatchData object");
 
   const scrapeDurationMs = Date.now() - t0;
@@ -1247,6 +1541,15 @@ export async function scrapeEspnMatch(
     gameInfo,
     format,
     meta,
+    // 8 deferred Core API sections
+    shotsDetail,
+    attack,
+    passes,
+    expectedGoalsSplits,
+    goalkeeping,
+    defense,
+    duels,
+    foulsOffsides,
   };
 
   // Final validation gates
@@ -1255,6 +1558,15 @@ export async function scrapeEspnMatch(
   logger.verify(result.keyEvents.length > 0 ? "PASS" : "WARN", "keyEvents populated", { count: result.keyEvents.length });
   logger.verify(result.rosters.length > 0 ? "PASS" : "WARN", "rosters populated", { count: result.rosters.length });
   logger.verify(errors.length === 0 ? "PASS" : "WARN", `error count = ${errors.length}`, { errors: errors.slice(0, 3) });
+  // Deferred section gates
+  logger.verify(result.shotsDetail.fetched ? "PASS" : "WARN", "shotsDetail fetched", { rows: result.shotsDetail.teamRows.length, keys: result.shotsDetail.rawKeys.length });
+  logger.verify(result.attack.fetched ? "PASS" : "WARN", "attack fetched", { rows: result.attack.teamRows.length, keys: result.attack.rawKeys.length });
+  logger.verify(result.passes.fetched ? "PASS" : "WARN", "passes fetched", { rows: result.passes.teamRows.length, keys: result.passes.rawKeys.length });
+  logger.verify(result.expectedGoalsSplits.fetched ? "PASS" : "WARN", "expectedGoalsSplits fetched", { rows: result.expectedGoalsSplits.teamRows.length, keys: result.expectedGoalsSplits.rawKeys.length });
+  logger.verify(result.goalkeeping.fetched ? "PASS" : "WARN", "goalkeeping fetched", { rows: result.goalkeeping.teamRows.length, keys: result.goalkeeping.rawKeys.length });
+  logger.verify(result.defense.fetched ? "PASS" : "WARN", "defense fetched", { rows: result.defense.teamRows.length, keys: result.defense.rawKeys.length });
+  logger.verify(result.duels.fetched ? "PASS" : "WARN", "duels fetched", { rows: result.duels.teamRows.length, keys: result.duels.rawKeys.length });
+  logger.verify(result.foulsOffsides.fetched ? "PASS" : "WARN", "foulsOffsides fetched", { rows: result.foulsOffsides.teamRows.length, keys: result.foulsOffsides.rawKeys.length });
 
   // Run summary
   const outcome =

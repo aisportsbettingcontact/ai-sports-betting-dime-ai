@@ -173,6 +173,54 @@ async function main(): Promise<void> {
     // RunId
     assert(typeof data.runId === "string" && data.runId.startsWith("ESPN-"), "runId has ESPN- prefix", data.runId);
 
+    // ── 8 Deferred Core API Sections ─────────────────────────────────────────
+    console.log(`\n${C.bold}[TEST 4] Deferred Core API Sections (8 sections)${C.reset}`);
+
+    // Helper: assert a deferred section was fetched and has data
+    function assertDeferred(section: typeof data.shotsDetail, label: string): void {
+      assert(section.fetched, `${label}: fetched=true`, `url=${section.apiUrl.slice(-60)}`);
+      assert(
+        section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0,
+        `${label}: has data`,
+        `teamRows=${section.teamRows.length} playerRows=${section.playerRows.length} keys=${section.rawKeys.length}`
+      );
+      if (section.teamRows.length > 0) {
+        console.log(`    ${C.cyan}${label} team stats: ${section.teamRows.slice(0, 3).map(r => `${r.name}(H:${r.homeValue}|A:${r.awayValue})`).join(", ")}${section.teamRows.length > 3 ? ` +${section.teamRows.length - 3} more` : ""}${C.reset}`);
+      }
+      if (section.playerRows.length > 0) {
+        console.log(`    ${C.cyan}${label} player rows: ${section.playerRows.length} players${C.reset}`);
+      }
+      if (section.error) {
+        console.log(`    ${C.yellow}  ⚠ ${label} error: ${section.error}${C.reset}`);
+      }
+    }
+
+    assertDeferred(data.shotsDetail,         "Shots Detail");
+    assertDeferred(data.attack,              "Attack");
+    assertDeferred(data.passes,              "Passes");
+    assertDeferred(data.expectedGoalsSplits, "Expected Goals");
+    assertDeferred(data.goalkeeping,         "Goalkeeping");
+    assertDeferred(data.defense,             "Defense");
+    assertDeferred(data.duels,               "Duels");
+    assertDeferred(data.foulsOffsides,       "Fouls & Offsides");
+
+    // Print all deferred section keys for forensic audit
+    console.log(`\n${C.bold}  Deferred Section Key Audit:${C.reset}`);
+    const allSections = [
+      { name: "shotsDetail",         s: data.shotsDetail },
+      { name: "attack",              s: data.attack },
+      { name: "passes",              s: data.passes },
+      { name: "expectedGoalsSplits", s: data.expectedGoalsSplits },
+      { name: "goalkeeping",         s: data.goalkeeping },
+      { name: "defense",             s: data.defense },
+      { name: "duels",               s: data.duels },
+      { name: "foulsOffsides",       s: data.foulsOffsides },
+    ];
+    for (const { name, s } of allSections) {
+      const status = s.fetched ? (s.teamRows.length > 0 || s.playerRows.length > 0 || s.rawKeys.length > 0 ? `${C.green}PASS${C.reset}` : `${C.yellow}WARN(no data)${C.reset}`) : `${C.red}FAIL(not fetched)${C.reset}`;
+      console.log(`    ${status}  ${name}: teamRows=${s.teamRows.length} playerRows=${s.playerRows.length} rawKeys=${s.rawKeys.length}${s.error ? ` err=${s.error}` : ""}`);
+    }
+
   } catch (err) {
     assert(false, "scrapeEspnMatch threw unexpected error", String(err));
     console.error(err);
