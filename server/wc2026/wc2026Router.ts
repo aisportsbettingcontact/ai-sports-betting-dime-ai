@@ -9,7 +9,6 @@
  *   wc2026.fixturesByGroup  → all fixtures for a given group letter
  *   wc2026.latestOdds       → most recent odds snapshot per fixture × book × market
  *   wc2026.closingOdds      → is_closing=true snapshots per fixture
- *   wc2026.latestSplits     → most recent betting splits per fixture
  *   wc2026.latestLineups    → most recent lineup rows per fixture
  *   wc2026.todayWithOdds    → today's fixtures with DraftKings 1X2 odds
  */
@@ -18,13 +17,13 @@ import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
 import { scrapeEspnMatch, scrapeEspnScoreboard, extractGameId } from "./espnMatchScraper";
 import { scrapeEspnMatchPage } from "./espnPageScraper";
+import { scrapeAndIngest } from "./espnDbIngester";
 import { getDb } from "../db";
 import {
   wc2026Fixtures,
   wc2026Teams,
   wc2026Venues,
   wc2026OddsSnapshots,
-  wc2026BettingSplits,
   wc2026Lineups,
   wc2026ModelProjections,
   wc2026FrozenBookOdds,
@@ -315,30 +314,6 @@ export const wc2026Router = router({
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs), wc2026OddsSnapshots.bookId);
     }),
 
-  // ─── Latest splits per fixture ────────────────────────────────────────────
-  latestSplits: publicProcedure
-    .input(z.object({ fixtureId: z.string() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const latest = await db
-        .select({ maxTs: sql<Date>`MAX(snapshot_ts)` })
-        .from(wc2026BettingSplits)
-        .where(eq(wc2026BettingSplits.fixtureId, input.fixtureId));
-
-      const maxTs = latest[0]?.maxTs;
-      if (!maxTs) return [];
-
-      return db
-        .select()
-        .from(wc2026BettingSplits)
-        .where(
-          and(
-            eq(wc2026BettingSplits.fixtureId, input.fixtureId),
-            eq(wc2026BettingSplits.snapshotTs, maxTs)
-          )
-        )
-        .orderBy(wc2026BettingSplits.teamId, wc2026BettingSplits.market);
-    }),
 
   // ─── Latest lineups per fixture ───────────────────────────────────────────
   latestLineups: publicProcedure
@@ -604,64 +579,6 @@ export const wc2026Router = router({
     });
   }),
 
-  /**
-   * splitsByDate — returns fixtures for a given date with their latest DraftKings
-   * betting splits (tickets % and money %) for HOME_ML, DRAW_ML, AWAY_ML, OVER, UNDER.
-   */
-  splitsByDate: publicProcedure
-    .input(z.object({ date: z.string() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      const { date } = input;
-
-      const fixtures = await db
-        .select()
-        .from(wc2026Fixtures)
-        .where(eq(wc2026Fixtures.matchDate, sql`${date}`))
-        .orderBy(
-          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
-          asc(wc2026Fixtures.displayOrder),
-          asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.fixtureId)
-        );
-
-      if (fixtures.length === 0) return [];
-
-      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
-
-      const [teams, splitsRows] = await Promise.all([
-        db.select().from(wc2026Teams),
-        db
-          .select()
-          .from(wc2026BettingSplits)
-          .where(inArray(wc2026BettingSplits.fixtureId, fixtureIds))
-          .orderBy(desc(wc2026BettingSplits.snapshotTs)),
-      ]);
-
-      const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
-
-      // Keep only the most-recent split per fixture × teamId × market
-      type SplitRow = typeof wc2026BettingSplits.$inferSelect;
-      const splitsMap: Record<string, SplitRow[]> = {};
-      const seenSplit = new Set<string>();
-      for (const row of splitsRows as SplitRow[]) {
-        const key = `${row.fixtureId}:${row.teamId}:${row.market}`;
-        if (!seenSplit.has(key)) {
-          seenSplit.add(key);
-          if (!splitsMap[row.fixtureId]) splitsMap[row.fixtureId] = [];
-          splitsMap[row.fixtureId].push(row);
-        }
-      }
-
-      return fixtures.map((f: WcFixture) => ({
-        fixtureId: f.fixtureId,
-        matchDate: f.matchDate,
-        kickoffUtc: f.kickoffUtc,
-        homeTeam: teamMap[f.homeTeamId] ?? null,
-        awayTeam: teamMap[f.awayTeamId] ?? null,
-        splits: splitsMap[f.fixtureId] ?? [],
-      }));
-    }),
 
   // ─── ESPN Match Scraper ───────────────────────────────────────────────────
   /**
@@ -785,6 +702,40 @@ export const wc2026Router = router({
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error(`[ESPN_PAGE] espnMatchPage FAILED | gameId=${gameId} | elapsed=${elapsed}ms | error=${errMsg}`);
         return { success: false as const, data: null, error: errMsg };
+      }
+    }),
+
+  /**
+   * espnIngest — scrape ESPN match page + ingest all 9 wc2026_espn_* tables in one call.
+   * Returns per-phase PASS/FAIL with row counts for all 9 tables.
+   */
+  espnIngest: publicProcedure
+    .input(
+      z.object({
+        urlOrGameId: z.string().min(1),
+        dryRun: z.boolean().optional().default(false),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { urlOrGameId, dryRun } = input;
+      const gameIdMatch = urlOrGameId.match(/gameId[=/](\d+)/);
+      const gameId = gameIdMatch ? gameIdMatch[1] : urlOrGameId.replace(/\D/g, "");
+      console.log(`[ESPN_INGEST] espnIngest called | gameId=${gameId} | dryRun=${dryRun}`);
+      const t0 = Date.now();
+      try {
+        const result = await scrapeAndIngest(gameId, { dryRun });
+        const elapsed = Date.now() - t0;
+        const passCount = result.phases.filter(p => p.pass).length;
+        console.log(
+          `[ESPN_INGEST] complete | gameId=${gameId} | elapsed=${elapsed}ms | ` +
+          `phases=${passCount}/9 PASS | rows=${result.totalRowsWritten} | success=${result.success}`
+        );
+        return { success: true as const, result, error: null };
+      } catch (err) {
+        const elapsed = Date.now() - t0;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[ESPN_INGEST] FAILED | gameId=${gameId} | elapsed=${elapsed}ms | error=${errMsg}`);
+        return { success: false as const, result: null, error: errMsg };
       }
     }),
 });

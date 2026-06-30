@@ -2460,3 +2460,553 @@ export const waitlist = mysqlTable("waitlist", {
 
 export type WaitlistRow    = typeof waitlist.$inferSelect;
 export type InsertWaitlist = typeof waitlist.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WC2026 — ESPN WORLD CUP 2026 MATCH DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// TERMINOLOGY RULE: All WC fixtures are referred to as "matches" — never "games".
+//
+// TABLE MAP (9 tables — ALL ESPN-sourced, ALL prefixed wc2026_espn_):
+//   wc2026_espn_matches         — master match record (game strip + competition info)
+//   wc2026_espn_match_odds      — DraftKings moneyline / spread / total per match
+//   wc2026_espn_team_stats      — 8-row tmStatsGrph summary per match per team
+//   wc2026_espn_match_stats     — 40-row full deferred stats (shots/passes/attack/defense/duels/fouls/xG/GK)
+//   wc2026_espn_expected_goals  — xG / xGOT / xA team totals + per-player breakdown
+//   wc2026_espn_shot_map        — every shot with field coords + goal position + attributes
+//   wc2026_espn_player_stats    — per-player boxscore stats (outfield + GK) for both teams
+//   wc2026_espn_lineups         — ESPN formation + starter/sub/unused per team per match
+//   wc2026_espn_glossary        — ESPN stat abbreviation → display name (shared reference)
+//
+// INDEXING STRATEGY:
+//   - All tables indexed on matchId (FK → wc2026_espn_matches.matchId)
+//   - Team columns indexed for cross-match trend queries
+//   - Player columns indexed for player-level trend queries
+//   - Timestamps stored as UTC bigint (ms since epoch)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── 1. wc2026_espn_matches ──────────────────────────────────────────────────
+// Master match record. One row per ESPN match (gameId).
+// Source: gameStrip from player-stats page __espnfitt__
+
+export const wc2026EspnMatches = mysqlTable("wc2026_espn_matches", {
+  id:             int("id").autoincrement().primaryKey(),
+
+  // ESPN identifiers
+  matchId:        varchar("matchId", { length: 32 }).notNull().unique(), // ESPN gameId (e.g. "760487")
+  uid:            varchar("uid", { length: 64 }),                        // ESPN uid (e.g. "s:600~l:2014~e:760487")
+
+  // Competition
+  competition:    varchar("competition", { length: 128 }),               // "FIFA World Cup, Round of 32"
+  round:          varchar("round", { length: 64 }),                      // "Round of 32" | "Group Stage" | etc.
+  season:         varchar("season", { length: 16 }).default("2026"),
+
+  // Timing
+  matchDateUtc:   bigint("matchDateUtc", { mode: "number" }).notNull(),  // UTC ms kickoff time
+  statusState:    varchar("statusState", { length: 32 }),                // "post" | "pre" | "in"
+  statusDetail:   varchar("statusDetail", { length: 64 }),               // "Final" | "HT" | "90'"
+  statusDisplay:  varchar("statusDisplay", { length: 32 }),              // "FT" | "LIVE" | etc.
+
+  // Venue
+  venue:          varchar("venue", { length: 128 }),                     // "NRG Stadium"
+  city:           varchar("city", { length: 128 }),                      // "Houston, TX"
+  attendance:     int("attendance"),
+  referee:        varchar("referee", { length: 128 }),
+
+  // Broadcast
+  broadcasts:     text("broadcasts"),                                    // JSON array of strings
+
+  // Home team
+  homeTeamId:     varchar("homeTeamId", { length: 16 }).notNull(),
+  homeTeamAbbrev: varchar("homeTeamAbbrev", { length: 8 }).notNull(),
+  homeTeamName:   varchar("homeTeamName", { length: 64 }).notNull(),
+  homeTeamLogo:   text("homeTeamLogo"),
+  homeScore:      int("homeScore"),
+  homeLinescores: text("homeLinescores"),                                // JSON array ["1","1"]
+  homeGoalScorers:text("homeGoalScorers"),                               // JSON array [{id,name,clock}]
+  homeRedCards:   text("homeRedCards"),                                  // JSON array of player names
+
+  // Away team
+  awayTeamId:     varchar("awayTeamId", { length: 16 }).notNull(),
+  awayTeamAbbrev: varchar("awayTeamAbbrev", { length: 8 }).notNull(),
+  awayTeamName:   varchar("awayTeamName", { length: 64 }).notNull(),
+  awayTeamLogo:   text("awayTeamLogo"),
+  awayScore:      int("awayScore"),
+  awayLinescores: text("awayLinescores"),
+  awayGoalScorers:text("awayGoalScorers"),
+  awayRedCards:   text("awayRedCards"),
+
+  // Formations
+  homeFormation:  varchar("homeFormation", { length: 16 }),              // "4-3-3"
+  awayFormation:  varchar("awayFormation", { length: 16 }),              // "3-4-2-1"
+
+  // Scrape metadata
+  scrapedAt:      bigint("scrapedAt", { mode: "number" }).notNull(),
+  scrapeDurationMs: int("scrapeDurationMs"),
+  scrapeVersion:  varchar("scrapeVersion", { length: 16 }).default("250x"),
+
+  createdAt:      bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:      bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:     uniqueIndex("idx_wc2026_espn_matches_matchId").on(t.matchId),
+  idxHomeTeam:    index("idx_wc2026_espn_matches_homeTeam").on(t.homeTeamAbbrev),
+  idxAwayTeam:    index("idx_wc2026_espn_matches_awayTeam").on(t.awayTeamAbbrev),
+  idxMatchDate:   index("idx_wc2026_espn_matches_date").on(t.matchDateUtc),
+  idxRound:       index("idx_wc2026_espn_matches_round").on(t.round),
+}));
+export type Wc2026EspnMatch       = typeof wc2026EspnMatches.$inferSelect;
+export type InsertWc2026EspnMatch = typeof wc2026EspnMatches.$inferInsert;
+
+// ─── 2. wc2026_espn_match_odds ───────────────────────────────────────────────
+// DraftKings opening + current odds for each match.
+// Source: gameOdds from matchstats page __espnfitt__
+
+export const wc2026EspnMatchOdds = mysqlTable("wc2026_espn_match_odds", {
+  id:                  int("id").autoincrement().primaryKey(),
+  matchId:             varchar("matchId", { length: 32 }).notNull(),     // FK → wc2026_matches.matchId
+
+  provider:            varchar("provider", { length: 32 }),              // "draftkings"
+  headerText:          varchar("headerText", { length: 64 }),
+
+  // Home team odds
+  homeTeamAbbrev:      varchar("homeTeamAbbrev", { length: 8 }),
+  homeTeamName:        varchar("homeTeamName", { length: 64 }),
+  homeMoneylineOpen:   varchar("homeMoneylineOpen", { length: 16 }),     // "-120"
+  homeMoneylineCurrent:varchar("homeMoneylineCurrent", { length: 16 }),  // "-135"
+  homeTotalSide:       varchar("homeTotalSide", { length: 16 }),         // "o2.5"
+  homeTotalOdds:       varchar("homeTotalOdds", { length: 16 }),         // "+120"
+  homeSpreadLine:      varchar("homeSpreadLine", { length: 16 }),        // "-0.5"
+  homeSpreadOdds:      varchar("homeSpreadOdds", { length: 16 }),        // "-140"
+
+  // Away team odds
+  awayTeamAbbrev:      varchar("awayTeamAbbrev", { length: 8 }),
+  awayTeamName:        varchar("awayTeamName", { length: 64 }),
+  awayMoneylineOpen:   varchar("awayMoneylineOpen", { length: 16 }),
+  awayMoneylineCurrent:varchar("awayMoneylineCurrent", { length: 16 }),
+  awayTotalSide:       varchar("awayTotalSide", { length: 16 }),
+  awayTotalOdds:       varchar("awayTotalOdds", { length: 16 }),
+  awaySpreadLine:      varchar("awaySpreadLine", { length: 16 }),
+  awaySpreadOdds:      varchar("awaySpreadOdds", { length: 16 }),
+
+  // Draw
+  drawMoneylineOpen:   varchar("drawMoneylineOpen", { length: 16 }),
+  drawMoneylineCurrent:varchar("drawMoneylineCurrent", { length: 16 }),
+
+  createdAt:           bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:           bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:          index("idx_wc2026_espn_odds_matchId").on(t.matchId),
+  idxHomeTeam:         index("idx_wc2026_espn_odds_homeTeam").on(t.homeTeamAbbrev),
+  idxAwayTeam:         index("idx_wc2026_espn_odds_awayTeam").on(t.awayTeamAbbrev),
+}));
+export type Wc2026EspnMatchOdds       = typeof wc2026EspnMatchOdds.$inferSelect;
+export type InsertWc2026EspnMatchOdds = typeof wc2026EspnMatchOdds.$inferInsert;
+
+// ─── 3. wc2026_espn_team_stats ───────────────────────────────────────────────
+// 8-row tmStatsGrph summary (Possession, SoG, Shot Attempts, Fouls, YC, RC, Corners, Saves).
+// One row per stat per match (2 values per row: home + away).
+// Source: tmStatsGrph from matchstats page __espnfitt__
+
+export const wc2026EspnTeamStats = mysqlTable("wc2026_espn_team_stats", {
+  id:             int("id").autoincrement().primaryKey(),
+  matchId:        varchar("matchId", { length: 32 }).notNull(),
+
+  homeTeamAbbrev: varchar("homeTeamAbbrev", { length: 8 }).notNull(),
+  awayTeamAbbrev: varchar("awayTeamAbbrev", { length: 8 }).notNull(),
+
+  // 8 summary stats (stored as individual columns for direct querying)
+  possession:     varchar("possession", { length: 8 }),                  // "68.6%"
+  shotsOnGoal:    int("shotsOnGoal"),                                    // home value (int)
+  shotsOnGoalAway:int("shotsOnGoalAway"),
+  shotAttempts:   int("shotAttempts"),
+  shotAttemptsAway:int("shotAttemptsAway"),
+  fouls:          int("fouls"),
+  foulsAway:      int("foulsAway"),
+  yellowCards:    int("yellowCards"),
+  yellowCardsAway:int("yellowCardsAway"),
+  redCards:       int("redCards"),
+  redCardsAway:   int("redCardsAway"),
+  cornerKicks:    int("cornerKicks"),
+  cornerKicksAway:int("cornerKicksAway"),
+  saves:          int("saves"),
+  savesAway:      int("savesAway"),
+  possessionAway: varchar("possessionAway", { length: 8 }),
+
+  createdAt:      bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:      bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:     uniqueIndex("idx_wc2026_espn_team_stats_matchId").on(t.matchId),
+  idxHomeTeam:    index("idx_wc2026_espn_team_stats_homeTeam").on(t.homeTeamAbbrev),
+  idxAwayTeam:    index("idx_wc2026_espn_team_stats_awayTeam").on(t.awayTeamAbbrev),
+}));
+export type Wc2026EspnTeamStats       = typeof wc2026EspnTeamStats.$inferSelect;
+export type InsertWc2026EspnTeamStats = typeof wc2026EspnTeamStats.$inferInsert;
+
+// ─── 4. wc2026_espn_match_stats ──────────────────────────────────────────────
+// All 40 deferred stat rows (shots + passes + attack + xG + GK + defense + duels + fouls).
+// Stored as individual columns for direct SQL trend querying — no JSON blobs.
+// Source: shtsTbls + pssTbls + attkTbls + tmStatsTbls from team-stats page __espnfitt__
+// NOTE: Prefixed wc2026_espn_ to avoid conflict with wc2026_match_stats in wc2026.schema.ts
+
+export const wc2026EspnMatchStats = mysqlTable("wc2026_espn_match_stats", {
+  id:                       int("id").autoincrement().primaryKey(),
+  matchId:                  varchar("matchId", { length: 32 }).notNull(),
+  homeTeamAbbrev:           varchar("homeTeamAbbrev", { length: 8 }).notNull(),
+  awayTeamAbbrev:           varchar("awayTeamAbbrev", { length: 8 }).notNull(),
+
+  // ── SHOTS (shtsTbls — 6 rows) ──────────────────────────────────────────────
+  homeShotsOnGoal:          int("homeShotsOnGoal"),
+  awayShotsOnGoal:          int("awayShotsOnGoal"),
+  homeShots:                int("homeShots"),
+  awayShots:                int("awayShots"),
+  homeShotsBlocked:         int("homeShotsBlocked"),
+  awayShotsBlocked:         int("awayShotsBlocked"),
+  homeHitWoodwork:          int("homeHitWoodwork"),
+  awayHitWoodwork:          int("awayHitWoodwork"),
+  homeAttemptsInsideBox:    int("homeAttemptsInsideBox"),
+  awayAttemptsInsideBox:    int("awayAttemptsInsideBox"),
+  homeAttemptsOutsideBox:   int("homeAttemptsOutsideBox"),
+  awayAttemptsOutsideBox:   int("awayAttemptsOutsideBox"),
+
+  // ── PASSES (pssTbls — 8 rows) ──────────────────────────────────────────────
+  homeAccuratePasses:       int("homeAccuratePasses"),
+  awayAccuratePasses:       int("awayAccuratePasses"),
+  homePassAccuracyPct:      varchar("homePassAccuracyPct", { length: 8 }),   // "92%"
+  awayPassAccuracyPct:      varchar("awayPassAccuracyPct", { length: 8 }),
+  homePasses:               int("homePasses"),
+  awayPasses:               int("awayPasses"),
+  homeTotalBackZonePass:    int("homeTotalBackZonePass"),
+  awayTotalBackZonePass:    int("awayTotalBackZonePass"),
+  homeTotalForwardZonePass: int("homeTotalForwardZonePass"),
+  awayTotalForwardZonePass: int("awayTotalForwardZonePass"),
+  homeAccurateLongBalls:    int("homeAccurateLongBalls"),
+  awayAccurateLongBalls:    int("awayAccurateLongBalls"),
+  homeAccurateCrosses:      int("homeAccurateCrosses"),
+  awayAccurateCrosses:      int("awayAccurateCrosses"),
+  homeTotalThrows:          int("homeTotalThrows"),
+  awayTotalThrows:          int("awayTotalThrows"),
+  homePassTouchesInOppBox:  int("homePassTouchesInOppBox"),
+  awayPassTouchesInOppBox:  int("awayPassTouchesInOppBox"),
+
+  // ── ATTACK (attkTbls — 6 rows) ─────────────────────────────────────────────
+  homeBigChancesCreated:    int("homeBigChancesCreated"),
+  awayBigChancesCreated:    int("awayBigChancesCreated"),
+  homeBigChancesMissed:     int("homeBigChancesMissed"),
+  awayBigChancesMissed:     int("awayBigChancesMissed"),
+  homeThroughBalls:         int("homeThroughBalls"),
+  awayThroughBalls:         int("awayThroughBalls"),
+  homeAttkTouchesInOppBox:  int("homeAttkTouchesInOppBox"),
+  awayAttkTouchesInOppBox:  int("awayAttkTouchesInOppBox"),
+  homeFouledInFinalThird:   int("homeFouledInFinalThird"),
+  awayFouledInFinalThird:   int("awayFouledInFinalThird"),
+  homeCornersWon:           int("homeCornersWon"),
+  awayCornersWon:           int("awayCornersWon"),
+
+  // ── EXPECTED GOALS (tmStatsTbls[expected-goals] — 4 rows) ──────────────────
+  homeXG:                   decimal("homeXG", { precision: 6, scale: 3 }),
+  awayXG:                   decimal("awayXG", { precision: 6, scale: 3 }),
+  homeXGOpenPlay:           decimal("homeXGOpenPlay", { precision: 6, scale: 3 }),
+  awayXGOpenPlay:           decimal("awayXGOpenPlay", { precision: 6, scale: 3 }),
+  homeXGSetPlay:            decimal("homeXGSetPlay", { precision: 6, scale: 3 }),
+  awayXGSetPlay:            decimal("awayXGSetPlay", { precision: 6, scale: 3 }),
+  homeXGOT:                 decimal("homeXGOT", { precision: 6, scale: 3 }),
+  awayXGOT:                 decimal("awayXGOT", { precision: 6, scale: 3 }),
+
+  // ── GOALKEEPING (tmStatsTbls[goalkeeping] — 5 rows) ────────────────────────
+  homeGkSaves:              int("homeGkSaves"),
+  awayGkSaves:              int("awayGkSaves"),
+  homeGoalKicks:            int("homeGoalKicks"),
+  awayGoalKicks:            int("awayGoalKicks"),
+  homeShotsFaced:           int("homeShotsFaced"),
+  awayShotsFaced:           int("awayShotsFaced"),
+  homeTotalHighClaims:      int("homeTotalHighClaims"),
+  awayTotalHighClaims:      int("awayTotalHighClaims"),
+  homePenaltyKicksSaved:    int("homePenaltyKicksSaved"),
+  awayPenaltyKicksSaved:    int("awayPenaltyKicksSaved"),
+
+  // ── DEFENSE (tmStatsTbls[defense] — 4 rows) ────────────────────────────────
+  homeTackles:              int("homeTackles"),
+  awayTackles:              int("awayTackles"),
+  homeInterceptions:        int("homeInterceptions"),
+  awayInterceptions:        int("awayInterceptions"),
+  homeClearances:           int("homeClearances"),
+  awayClearances:           int("awayClearances"),
+  homeRecoveries:           int("homeRecoveries"),
+  awayRecoveries:           int("awayRecoveries"),
+
+  // ── DUELS (tmStatsTbls[duels] — 3 rows) ────────────────────────────────────
+  homeDuelsWon:             int("homeDuelsWon"),
+  awayDuelsWon:             int("awayDuelsWon"),
+  homeDuels:                int("homeDuels"),
+  awayDuels:                int("awayDuels"),
+  homeAerialsWon:           int("homeAerialsWon"),
+  awayAerialsWon:           int("awayAerialsWon"),
+
+  // ── FOULS & DISCIPLINE (tmStatsTbls[fouls] — 4 rows) ───────────────────────
+  homeFoulsCommitted:       int("homeFoulsCommitted"),
+  awayFoulsCommitted:       int("awayFoulsCommitted"),
+  homeOffsides:             int("homeOffsides"),
+  awayOffsides:             int("awayOffsides"),
+  homeFoulYellowCards:      int("homeFoulYellowCards"),
+  awayFoulYellowCards:      int("awayFoulYellowCards"),
+  homeFoulRedCards:         int("homeFoulRedCards"),
+  awayFoulRedCards:         int("awayFoulRedCards"),
+
+  createdAt:                bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:                bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:               uniqueIndex("idx_wc2026_match_stats_matchId").on(t.matchId),
+  idxHomeTeam:              index("idx_wc2026_match_stats_homeTeam").on(t.homeTeamAbbrev),
+  idxAwayTeam:              index("idx_wc2026_match_stats_awayTeam").on(t.awayTeamAbbrev),
+}));
+export type Wc2026EspnMatchStats       = typeof wc2026EspnMatchStats.$inferSelect;
+export type InsertWc2026EspnMatchStats = typeof wc2026EspnMatchStats.$inferInsert;
+
+// ─── 5. wc2026_espn_expected_goals ───────────────────────────────────────────
+// Team-level xG totals + per-player xG/xA breakdown.
+// Source: mtchStatsGrph + boxscore from matchstats/player-stats pages
+
+export const wc2026EspnExpectedGoals = mysqlTable("wc2026_espn_expected_goals", {
+  id:                  int("id").autoincrement().primaryKey(),
+  matchId:             varchar("matchId", { length: 32 }).notNull(),
+
+  // Team totals
+  homeTeamAbbrev:      varchar("homeTeamAbbrev", { length: 8 }).notNull(),
+  awayTeamAbbrev:      varchar("awayTeamAbbrev", { length: 8 }).notNull(),
+  homeXG:              decimal("homeXG", { precision: 6, scale: 3 }),
+  awayXG:              decimal("awayXG", { precision: 6, scale: 3 }),
+  homeXGOpenPlay:      decimal("homeXGOpenPlay", { precision: 6, scale: 3 }),
+  awayXGOpenPlay:      decimal("awayXGOpenPlay", { precision: 6, scale: 3 }),
+  homeXGSetPlay:       decimal("homeXGSetPlay", { precision: 6, scale: 3 }),
+  awayXGSetPlay:       decimal("awayXGSetPlay", { precision: 6, scale: 3 }),
+  homeXGOT:            decimal("homeXGOT", { precision: 6, scale: 3 }),
+  awayXGOT:            decimal("awayXGOT", { precision: 6, scale: 3 }),
+  homeXA:              decimal("homeXA", { precision: 6, scale: 3 }),
+  awayXA:              decimal("awayXA", { precision: 6, scale: 3 }),
+
+  // Per-player xG/xA stored as JSON array [{name, team, xG, xA}]
+  perPlayerJson:       text("perPlayerJson"),
+
+  createdAt:           bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:           bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:          uniqueIndex("idx_wc2026_espn_xg_matchId").on(t.matchId),
+  idxHomeTeam:         index("idx_wc2026_espn_xg_homeTeam").on(t.homeTeamAbbrev),
+  idxAwayTeam:         index("idx_wc2026_espn_xg_awayTeam").on(t.awayTeamAbbrev),
+}));
+export type Wc2026EspnExpectedGoals       = typeof wc2026EspnExpectedGoals.$inferSelect;
+export type InsertWc2026EspnExpectedGoals = typeof wc2026EspnExpectedGoals.$inferInsert;
+
+// ─── 6. wc2026_espn_shot_map ─────────────────────────────────────────────────
+// Every shot with field coordinates, goal position, player, and xG attributes.
+// One row per shot. Source: shtMp from matchstats page __espnfitt__
+
+export const wc2026EspnShotMap = mysqlTable("wc2026_espn_shot_map", {
+  id:              int("id").autoincrement().primaryKey(),
+  matchId:         varchar("matchId", { length: 32 }).notNull(),
+
+  // Shot identity
+  shotId:          varchar("shotId", { length: 32 }),
+  sequence:        int("sequence"),
+
+  // Player
+  playerId:        varchar("playerId", { length: 32 }),
+  playerName:      varchar("playerName", { length: 128 }),
+  playerShortName: varchar("playerShortName", { length: 64 }),
+  playerJersey:    varchar("playerJersey", { length: 4 }),
+  teamAbbrev:      varchar("teamAbbrev", { length: 8 }),
+  isAway:          tinyint("isAway"),                                    // 0=home, 1=away
+
+  // Timing
+  period:          int("period"),                                        // 1 or 2 (or 3/4 for ET)
+  clock:           varchar("clock", { length: 8 }),                     // "14'"
+
+  // Shot result
+  iconType:        varchar("iconType", { length: 16 }),                  // "goal"|"save"|"offTarget"|"blocked"
+  isOwnGoal:       tinyint("isOwnGoal"),
+
+  // Field coordinates (0–100 scale, origin = attacking goal)
+  fieldStartX:     decimal("fieldStartX", { precision: 6, scale: 2 }),
+  fieldStartY:     decimal("fieldStartY", { precision: 6, scale: 2 }),
+  fieldEndX:       decimal("fieldEndX", { precision: 6, scale: 2 }),
+  fieldEndY:       decimal("fieldEndY", { precision: 6, scale: 2 }),
+
+  // Goal frame position (0–100 scale)
+  goalPositionY:   decimal("goalPositionY", { precision: 6, scale: 2 }),
+  goalPositionZ:   decimal("goalPositionZ", { precision: 6, scale: 2 }),
+
+  // xG attributes
+  xG:              decimal("xG", { precision: 6, scale: 4 }),
+  xGOT:            decimal("xGOT", { precision: 6, scale: 4 }),
+  distance:        varchar("distance", { length: 16 }),                  // "25 yds"
+  shotType:        varchar("shotType", { length: 32 }),                  // "Left Foot"
+  situation:       varchar("situation", { length: 32 }),                 // "Regular Play"
+  goalZone:        varchar("goalZone", { length: 32 }),                  // "Low Left"
+
+  // Description
+  description:     text("description"),
+  shortDescription:varchar("shortDescription", { length: 255 }),
+
+  createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchId:      index("idx_wc2026_espn_shots_matchId").on(t.matchId),
+  idxPlayer:       index("idx_wc2026_espn_shots_player").on(t.playerId),
+  idxTeam:         index("idx_wc2026_espn_shots_team").on(t.teamAbbrev),
+  idxIconType:     index("idx_wc2026_espn_shots_iconType").on(t.iconType),
+}));
+export type Wc2026EspnShotMap       = typeof wc2026EspnShotMap.$inferSelect;
+export type InsertWc2026EspnShotMap = typeof wc2026EspnShotMap.$inferInsert;
+
+// ─── 7. wc2026_espn_player_stats ─────────────────────────────────────────────
+// Per-player boxscore stats for both outfield players and goalkeepers.
+// One row per player per match. Source: bxscr from player-stats page __espnfitt__
+//
+// OUTFIELD COLUMNS (ESPN abbreviations — see wc2026_glossary):
+//   TCH (Touches) | G (Goals) | A (Assists) | xG | xA | SOG (SoG) | SHOT (Shots)
+//   BCC (Big Chances Created) | DINT (Defensive Interventions) | DUELW (Duels Won)
+//
+// GK COLUMNS:
+//   GA (Goals Conceded) | SV (Saves) | SOGA (Shots On Goal Against)
+//   xGC (xG Conceded) | xGOTC (xGOT Conceded) | GP (Goals Prevented)
+//   BCS (Big Chance Saves) | CLR (Clearances) | CC (Crosses Claimed) | KS (Keeper Sweepers)
+
+export const wc2026EspnPlayerStats = mysqlTable("wc2026_espn_player_stats", {
+  id:              int("id").autoincrement().primaryKey(),
+  matchId:         varchar("matchId", { length: 32 }).notNull(),
+
+  // Player identity
+  athleteId:       varchar("athleteId", { length: 32 }).notNull(),
+  name:            varchar("name", { length: 128 }).notNull(),
+  nameShort:       varchar("nameShort", { length: 64 }),
+  jersey:          varchar("jersey", { length: 4 }),
+  teamAbbrev:      varchar("teamAbbrev", { length: 8 }).notNull(),
+  teamName:        varchar("teamName", { length: 64 }),
+  isHome:          tinyint("isHome").notNull(),                          // 1=home team, 0=away
+  positionGroup:   varchar("positionGroup", { length: 32 }),             // "Forwards"|"Midfielders"|"Defenders"|"Goalkeepers"
+  isGoalkeeper:    tinyint("isGoalkeeper").default(0).notNull(),
+
+  // ── OUTFIELD STATS (ESPN abbreviations) ────────────────────────────────────
+  tch:             int("tch"),                                           // TCH: Touches
+  g:               int("g"),                                             // G: Total Goals
+  a:               int("a"),                                             // A: Assists
+  xG:              decimal("xG", { precision: 6, scale: 4 }),            // xG: Expected Goals
+  xA:              decimal("xA", { precision: 6, scale: 4 }),            // xA: Expected Assists
+  sog:             int("sog"),                                           // SOG: Shots on Goal
+  shot:            int("shot"),                                          // SHOT: Shots
+  bcc:             int("bcc"),                                           // BCC: Big Chances Created
+  dint:            int("dint"),                                          // DINT: Defensive Interventions
+  duelw:           int("duelw"),                                         // DUELW: Duels Won
+
+  // ── GOALKEEPER STATS (ESPN abbreviations) ──────────────────────────────────
+  ga:              int("ga"),                                            // GA: Goals Conceded
+  sv:              int("sv"),                                            // SV: Saves
+  soga:            int("soga"),                                          // SOGA: Shots On Goal Against
+  xGC:             decimal("xGC", { precision: 6, scale: 4 }),           // xGC: Expected Goals Conceded
+  xGOTC:           decimal("xGOTC", { precision: 6, scale: 4 }),         // xGOTC: Expected Goals On Target Conceded
+  gp:              decimal("gp", { precision: 6, scale: 4 }),            // GP: Goals Prevented (can be negative)
+  bcs:             int("bcs"),                                           // BCS: Big Chance Saves
+  clr:             int("clr"),                                           // CLR: Clearances
+  cc:              int("cc"),                                            // CC: Crosses Claimed
+  ks:              int("ks"),                                            // KS: Keeper Sweepers
+
+  // ── LINEUP STATS (from lineUps section) ────────────────────────────────────
+  appearances:     int("appearances"),
+  foulsCommitted:  int("foulsCommitted"),
+  foulsSuffered:   int("foulsSuffered"),
+  ownGoals:        int("ownGoals"),
+  redCards:        int("redCards"),
+  subIns:          int("subIns"),
+  yellowCards:     int("yellowCards"),
+  offsides:        int("offsides"),
+  shotsFaced:      int("shotsFaced"),                                    // GK only
+
+  createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:       bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_player_stats_match_player").on(t.matchId, t.athleteId),
+  idxMatchId:      index("idx_wc2026_espn_player_stats_matchId").on(t.matchId),
+  idxAthleteId:    index("idx_wc2026_espn_player_stats_athleteId").on(t.athleteId),
+  idxTeam:         index("idx_wc2026_espn_player_stats_team").on(t.teamAbbrev),
+  idxPosition:     index("idx_wc2026_espn_player_stats_position").on(t.positionGroup),
+}));
+export type Wc2026EspnPlayerStats       = typeof wc2026EspnPlayerStats.$inferSelect;
+export type InsertWc2026EspnPlayerStats = typeof wc2026EspnPlayerStats.$inferInsert;
+
+// ─── 8. wc2026_espn_lineups ──────────────────────────────────────────────────
+// ESPN confirmed formation + starter/substitute/unused lists per team per match.
+// One row per player per match. Source: lineUps from player-stats page __espnfitt__
+// NOTE: Prefixed wc2026_espn_ to avoid conflict with wc2026_lineups in wc2026.schema.ts
+
+export const wc2026EspnLineups = mysqlTable("wc2026_espn_lineups", {
+  id:              int("id").autoincrement().primaryKey(),
+  matchId:         varchar("matchId", { length: 32 }).notNull(),
+
+  // Team
+  teamId:          varchar("teamId", { length: 16 }),
+  teamAbbrev:      varchar("teamAbbrev", { length: 8 }).notNull(),
+  teamName:        varchar("teamName", { length: 64 }),
+  teamLogo:        text("teamLogo"),
+  teamColor:       varchar("teamColor", { length: 8 }),
+  formation:       varchar("formation", { length: 16 }),                 // "4-3-3"
+  isHome:          tinyint("isHome").notNull(),
+
+  // Player
+  athleteId:       varchar("athleteId", { length: 32 }).notNull(),
+  name:            varchar("name", { length: 128 }).notNull(),
+  nameShort:       varchar("nameShort", { length: 64 }),
+  jersey:          varchar("jersey", { length: 4 }),
+  formationPlace:  varchar("formationPlace", { length: 4 }),             // "1"–"11" for starters
+  role:            mysqlEnum("role", ["starter", "substitute", "unused"]).notNull(),
+
+  createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_lineups_match_player").on(t.matchId, t.athleteId),
+  idxMatchId:      index("idx_wc2026_espn_lineups_matchId").on(t.matchId),
+  idxAthleteId:    index("idx_wc2026_espn_lineups_athleteId").on(t.athleteId),
+  idxTeam:         index("idx_wc2026_espn_lineups_team").on(t.teamAbbrev),
+  idxRole:         index("idx_wc2026_espn_lineups_role").on(t.role),
+}));
+export type Wc2026EspnLineup       = typeof wc2026EspnLineups.$inferSelect;
+export type InsertWc2026EspnLineup = typeof wc2026EspnLineups.$inferInsert;
+
+// ─── 9. wc2026_espn_glossary ─────────────────────────────────────────────────
+// ESPN stat abbreviation → full display name. Shared reference table.
+// Populated once from the ESPN boxscore glossary HTML.
+// 20 confirmed abbreviations from forensic audit of gameId 760487.
+//
+// CONFIRMED ENTRIES (from pasted_content_49.txt + live scraper):
+//   A     → Assists
+//   BCC   → Big Chances Created
+//   BCS   → Big Chance Saves
+//   CC    → Crosses Claimed
+//   CLR   → Clearances
+//   DINT  → Defensive Interventions
+//   DUELW → Duels Won
+//   G     → Total Goals
+//   GA    → Goals Conceded
+//   GP    → Goals Prevented
+//   KS    → Keeper Sweepers
+//   SHOT  → Shots
+//   SOG   → Shots on Goal
+//   SOGA  → Shots On Goal Against
+//   SV    → Saves
+//   TCH   → Touches
+//   xA    → Expected Assists
+//   xG    → Expected Goals
+//   xGC   → Expected Goals Conceded
+//   xGOTC → Expected Goals On Target Conceded
+
+export const wc2026EspnGlossary = mysqlTable("wc2026_espn_glossary", {
+  id:           int("id").autoincrement().primaryKey(),
+  abbreviation: varchar("abbreviation", { length: 16 }).notNull().unique(),
+  displayName:  varchar("displayName", { length: 128 }).notNull(),
+  category:     mysqlEnum("category", ["outfield", "goalkeeper", "both"]).default("both").notNull(),
+  description:  text("description"),                                     // optional extended definition
+  createdAt:    bigint("createdAt", { mode: "number" }).notNull(),
+  updatedAt:    bigint("updatedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  idxAbbrev:    uniqueIndex("idx_wc2026_espn_glossary_abbrev").on(t.abbreviation),
+  idxCategory:  index("idx_wc2026_espn_glossary_category").on(t.category),
+}));
+export type Wc2026EspnGlossaryEntry       = typeof wc2026EspnGlossary.$inferSelect;
+export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInsert;
