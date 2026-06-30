@@ -1,0 +1,2 @@
+ALTER TABLE `wc2026_fixtures` ADD `advancing_team_id` varchar(8);--> statement-breakpoint
+ALTER TABLE `wc2026_fixtures` ADD CONSTRAINT `wc2026_fixtures_advancing_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`advancing_team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;

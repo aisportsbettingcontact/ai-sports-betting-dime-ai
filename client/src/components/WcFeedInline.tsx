@@ -420,6 +420,8 @@ type WcFixtureWithOdds = {
   homeScore: number | null;
   awayScore: number | null;
   status: string;
+  // [KO] advancing_team_id: team that won this knockout match (null if not yet played)
+  advancingTeamId: string | null;
   homeTeam: WcTeamInfo | null;
   awayTeam: WcTeamInfo | null;
   venue: WcVenueInfo | null;
@@ -967,50 +969,33 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const NAME_FONT_SIZE = 'clamp(12px, 1.0vw, 17px)';
   const NICK_FONT_SIZE = 'clamp(10px, 0.8vw, 14px)';
   const TIME_FONT_SIZE = 'clamp(10px, 1.01vw, 13px)'; // [FIX 2026-06-24] reduced min 12px→10px to prevent '9:00 PM ET' wrap on mobile
-  const LIVE_FONT_SIZE = 'clamp(13.3px, 1.05vw, 17.1px)';
-  // FINAL button: 50% of original size
-  // Original: clamp(15.2px, 1.28vw, 19px) → halved: clamp(7.6px, 0.64vw, 9.5px)
-  const FINAL_FONT_SIZE = 'clamp(7.6px, 0.64vw, 9.5px)';
+  // [FIX 2026-06-30] FINAL/LIVE button sizing — exact midpoint between original LIVE and halved FINAL
+  // LIVE original: clamp(13.3px, 1.05vw, 17.1px) | FINAL original: clamp(7.6px, 0.64vw, 9.5px)
+  // Midpoint: min=(13.3+7.6)/2=10.45px, vw=(1.05+0.64)/2=0.845vw, max=(17.1+9.5)/2=13.3px
+  const STATUS_FONT_SIZE = 'clamp(10.5px, 0.85vw, 13.3px)';
+  const LIVE_FONT_SIZE = STATUS_FONT_SIZE;
+  const FINAL_FONT_SIZE = STATUS_FONT_SIZE;
+  // [FIX 2026-06-30] Advancing team: team that won this KO match (shown to right of FINAL badge)
+  const advancingTeamId = fixture.advancingTeamId ?? null;
+  const advancingTeam = advancingTeamId
+    ? (fixture.homeTeamId === advancingTeamId ? fixture.homeTeam : fixture.awayTeam)
+    : null;
+  const advancingFifaCode = advancingTeam?.fifaCode ?? advancingTeamId?.toUpperCase() ?? null;
+  console.log(
+    `[WcScorePanel:Advancing] fixture=${fixture.fixtureId}` +
+    ` | [INPUT] advancingTeamId=${advancingTeamId ?? 'null'}` +
+    ` | [OUTPUT] advancingFifaCode=${advancingFifaCode ?? 'null'}` +
+    ` | [VERIFY] isFinal=${isFinal} hasAdvancing=${advancingTeamId !== null}`
+  );
 
   return (
     <div className="flex flex-col pl-2 pr-2 pt-0 pb-0" style={{ minHeight: '100%', justifyContent: 'center' }}>
-      {/* Status row */}
-      <div className="flex items-center gap-1.5 mb-0.5">
-        {isLive ? (
-          <div className="flex flex-col items-center gap-0.5">
-            <span
-              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
-              style={{
-                fontSize: LIVE_FONT_SIZE,
-                background: "rgba(57,255,20,0.12)",
-                color: "#39FF14",
-                border: "1px solid rgba(57,255,20,0.4)",
-                letterSpacing: "0.10em",
-                borderRadius: '14px',
-                gap: '8px',
-                lineHeight: 1,
-              }}
-            >
-              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '9px', height: '9px', background: "#39FF14" }} />
-              LIVE
-            </span>
-          </div>
-        ) : isFinal ? (
-          <span
-            className="font-black tracking-widest"
-            style={{
-              fontSize: FINAL_FONT_SIZE,
-              background: "rgba(57,255,20,0.12)",
-              color: "#39FF14",
-              border: "1px solid rgba(57,255,20,0.4)",
-              borderRadius: '6px',
-              lineHeight: 1,
-              padding: '2px 5px',
-            }}
-          >
-            FINAL
-          </span>
-        ) : (
+      {/* [FIX 2026-06-30] Status row moved to AFTER teams for better vertical positioning.
+           Scheduled time shown at TOP (before teams) — FINAL/LIVE shown at BOTTOM (after teams).
+           This eliminates the whitespace-below-button issue seen in Japan vs Brazil card. */}
+      {/* Scheduled time row — shown only for upcoming matches, at top */}
+      {!isLive && !isFinal && (
+        <div className="flex items-center gap-1 mb-1">
           <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
             {fmtKickoff(fixture.kickoffUtc)}
             {fixture.groupLetter && (
@@ -1019,8 +1004,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               </span>
             )}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Team group */}
       {/* [LOG] WcScorePanel:Teams — homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()} */}
@@ -1119,6 +1104,82 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           </div>
         );
       })()}
+
+      {/* [FIX 2026-06-30] FINAL/LIVE status badge — positioned AFTER teams, BEFORE venue footer.
+           This anchors the badge lower in the card, eliminating the whitespace gap seen in JPN vs BRA.
+           FINAL badge includes advancing team display (flag + FIFA code) to its right. */}
+      {(isLive || isFinal) && (
+        <div className="flex items-center gap-2 mt-1.5">
+          {isLive ? (
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: LIVE_FONT_SIZE,
+                background: "rgba(57,255,20,0.12)",
+                color: "#39FF14",
+                border: "1px solid rgba(57,255,20,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
+              LIVE
+            </span>
+          ) : (
+            // isFinal branch
+            <>
+              <span
+                className="font-black tracking-widest flex-shrink-0"
+                style={{
+                  fontSize: FINAL_FONT_SIZE,
+                  background: "rgba(57,255,20,0.12)",
+                  color: "#39FF14",
+                  border: "1px solid rgba(57,255,20,0.4)",
+                  borderRadius: '6px',
+                  lineHeight: 1,
+                  padding: '3px 6px',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                FINAL
+              </span>
+              {/* [FIX 2026-06-30] Advancing team display — shown to right of FINAL badge.
+                   Shows flag emoji + FIFA code of the team that advanced past this KO match.
+                   Only rendered when advancingTeamId is populated in DB. */}
+              {advancingFifaCode && (
+                <div
+                  className="flex items-center gap-1 flex-shrink-0"
+                  style={{
+                    background: 'rgba(57,255,20,0.07)',
+                    border: '1px solid rgba(57,255,20,0.25)',
+                    borderRadius: '6px',
+                    padding: '2px 5px',
+                  }}
+                >
+                  <span style={{ fontSize: 'clamp(11px, 3.2vw, 14px)', lineHeight: 1, flexShrink: 0 }}>
+                    {wcFlagEmoji(advancingFifaCode) || '🏳️'}
+                  </span>
+                  <span
+                    className="font-black"
+                    style={{
+                      fontSize: 'clamp(8px, 2.2vw, 10.5px)',
+                      color: '#39FF14',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      lineHeight: 1,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {advancingFifaCode}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Venue footer */}
       {fixture.venue && (

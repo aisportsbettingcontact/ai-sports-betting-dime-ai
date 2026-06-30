@@ -220,6 +220,10 @@ export const wc2026Router = router({
           homeTeam: teamMap[f.homeTeamId] ?? null,
           awayTeam: teamMap[f.awayTeamId] ?? null,
           venue: venueMap[f.venueId] ?? null,
+          // [FIX 2026-06-30] advancingTeamId: team_id of the team that advanced past this KO match.
+          // Populated by seedAdvancingTeams.ts after each completed knockout fixture.
+          // Null for group stage matches and unplayed knockout matches.
+          advancingTeamId: (f as any).advancingTeamId ?? null,
           // [FREEZE] Use frozen book odds when available, otherwise fall back to live DK snapshot
           dkOdds: frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.fixtureId] ?? null),
           // [FREEZE] Use frozen model projection when is_frozen=1, otherwise fall back to book_id=0 snapshot
