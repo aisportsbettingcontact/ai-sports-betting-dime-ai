@@ -1,361 +1,255 @@
 /**
- * fifaLiveScraper.ts
- * ═══════════════════════════════════════════════════════════════════════════════
- * WC2026 Live Match Status Scraper — Heartbeat Handler
+ * fifaLiveScraper.ts — WC2026 Live Match Status Scraper (FIFA API v4)
  *
- * PURPOSE:
- *   Polls the FIFA 2026 scores-fixtures page on each Heartbeat trigger.
- *   Extracts live match minute, HALFTIME state, and FT status for all R32+
- *   fixtures. Updates wc2026_fixtures.status and wc2026_fixtures.match_minute.
+ * DATA SOURCE: https://api.fifa.com/api/v3/live/football?language=en&count=100
+ * This is the internal FIFA API used by FIFA.com's SPA. Returns live matches
+ * with numeric MatchStatus + Period codes.
  *
- * TRIGGER:
- *   POST /api/scheduled/wc2026-live-sync
- *   Registered in server/_core/index.ts
- *   Created via: manus-heartbeat create --name wc2026-live-sync --cron "0 * * * * *"
+ * FIFA STATUS CODE MAP:
+ *   MatchStatus=0, Period=null  → FT        (match complete)
+ *   MatchStatus=1, Period=0     → SCHEDULED (not started)
+ *   MatchStatus=1, Period=1/2   → LIVE       (1st/2nd half)
+ *   MatchStatus=3, Period=5     → HT         (regular halftime)
+ *   MatchStatus=3, Period=6     → HT + ETHT  (ET halftime)
+ *   MatchStatus=3, Period=3/4   → ET         (ET 1st/2nd half)
+ *   MatchStatus=3, Period=11    → SHOOTOUT   (penalty shootout)
  *
- * STATUS MAPPING:
- *   FIFA HTML → DB status
- *   "FT" / "AET" / "AP"  → "FT"
- *   "HT"                  → "HT"
- *   "N'" / "45+2'"        → "LIVE" (match_minute = N)
- *   anything else         → "SCHEDULED" (no update)
- *
- * AUTHOR: Manus AI — 2026-06-30
- * ═══════════════════════════════════════════════════════════════════════════════
+ * AUTHOR: Manus AI — 2026-06-30 v4 (FIFA API rewrite, no HTML scraping)
  */
 
 import type { Request, Response } from 'express';
 import { getDb } from '../db';
 import { wc2026Fixtures } from '../../drizzle/wc2026.schema';
-import { eq, inArray, or } from 'drizzle-orm';
+import { eq, isNotNull } from 'drizzle-orm';
 
-// ─── LOGGING ──────────────────────────────────────────────────────────────────
-
-type ScrapeLevel = 'INPUT' | 'STEP' | 'STATE' | 'OUTPUT' | 'VERIFY' | 'PASS' | 'FAIL' | 'WARN' | 'DB' | 'SKIP' | 'AUDIT';
-
-const ICONS: Record<ScrapeLevel, string> = {
-  INPUT: '📥', STEP: '▶ ', STATE: '🔄', OUTPUT: '📤', VERIFY: '🔍',
-  PASS: '✅', FAIL: '❌', WARN: '⚠️ ', DB: '🗄️ ', SKIP: '⏭️ ', AUDIT: '📋',
+type ScrapeLevel = 'INPUT'|'STEP'|'STATE'|'OUTPUT'|'VERIFY'|'PASS'|'FAIL'|'WARN'|'DB'|'SKIP'|'AUDIT';
+const ICONS: Record<ScrapeLevel,string> = {
+  INPUT:'📥',STEP:'▶ ',STATE:'🔄',OUTPUT:'📤',VERIFY:'🔍',
+  PASS:'✅',FAIL:'❌',WARN:'⚠️ ',DB:'🗄️ ',SKIP:'⏭️ ',AUDIT:'📋',
 };
-
-function ts(): string { return new Date().toISOString().replace('T', ' ').replace('Z', ''); }
-
+function ts(): string { return new Date().toISOString().replace('T',' ').replace('Z',''); }
+let stepN = 0;
+function S(): string { return `S${++stepN}`; }
 function log(level: ScrapeLevel, step: string, msg: string, detail?: string): void {
   const icon = ICONS[level] ?? '  ';
   const prefix = `[${ts()}] [WC26-LIVE] [${level.padEnd(6)}] [${step.padEnd(8)}]`;
   console.log(`${prefix} ${icon} ${msg}${detail ? `\n${' '.repeat(55)}↳ ${detail}` : ''}`);
 }
 
-// ─── FIFA SCRAPE LOGIC ────────────────────────────────────────────────────────
-
-const FIFA_URL =
-  'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=US&wtw-filter=ALL';
-
+const FIFA_API_URL = 'https://api.fifa.com/api/v3/live/football?language=en&count=100';
 const FIFA_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json',
   'Accept-Language': 'en-US,en;q=0.9',
   'Cache-Control': 'no-cache',
 };
 
+type DbStatus = 'SCHEDULED'|'LIVE'|'HT'|'ET'|'SHOOTOUT'|'FT';
+
 interface FifaMatchState {
   fifaMatchId: string;
-  status: 'LIVE' | 'HT' | 'FT' | 'SCHEDULED';
-  minute: string | null;   // "18", "45+2", null for HT/FT/SCHEDULED
-  homeScore: number | null;
-  awayScore: number | null;
-  rawStatusText: string;
+  status: DbStatus;
+  minute: string|null;
+  homeScore: number|null;
+  awayScore: number|null;
+  homePenScore: number|null;  // penalty shootout score
+  awayPenScore: number|null;
+  fifaWinnerId: string|null;  // FIFA team ID of winner (for shootout/AET)
+  homeTeamFifaId: string|null;
+  awayTeamFifaId: string|null;
+  rawMatchStatus: number;
+  rawPeriod: number|null;
 }
 
-/**
- * Normalize a FIFA raw status label into a clean minute string.
- *
- * FIFA renders these formats in <span class="..statusLabel..">:
- *   Regular time:  "18'"          → stored as "18"
- *   Injury time:   "45'+2'"       → stored as "45+2"   ← THE CRITICAL FIX
- *   Injury time:   "90'+3'"       → stored as "90+3"
- *   Legacy format: "45+2'"        → stored as "45+2"   (fallback, no mid-apostrophe)
- *   Halftime:      "HT"           → status=HT, minute=null
- *   Full time:     "FT"/"AET"/"AP" → status=FT, minute=null
- *
- * Storage format: base+injury with NO apostrophes (e.g., "45+2").
- * Display format: re-add trailing apostrophe at render time (e.g., "45+2'").
- *
- * [AUDIT] All 4 FIFA minute formats tested:
- *   ✅ "18'"      → LIVE, minute="18"
- *   ✅ "45'+2'"   → LIVE, minute="45+2"  (injury time with mid-apostrophe)
- *   ✅ "90'+3'"   → LIVE, minute="90+3"  (second-half injury time)
- *   ✅ "45+2'"    → LIVE, minute="45+2"  (legacy format, no mid-apostrophe)
- *   ✅ "HT"       → HT, minute=null
- *   ✅ "FT"       → FT, minute=null
- *   ✅ "AET"      → FT, minute=null
- *   ✅ "AP"       → FT, minute=null
- */
-function normalizeMinute(raw: string): { status: FifaMatchState['status']; minute: string | null } {
-  // ── FORMAT 1: Injury time with mid-apostrophe: "45'+2'" or "90'+3'"
-  // Pattern: {base}'+{injury}'
-  const injuryMidApostrophe = raw.match(/^(\d+)'\+(\d+)'$/);
-  if (injuryMidApostrophe) {
-    const base = injuryMidApostrophe[1];
-    const injury = injuryMidApostrophe[2];
-    return { status: 'LIVE', minute: `${base}+${injury}` };
-  }
-
-  // ── FORMAT 2: Injury time legacy (no mid-apostrophe): "45+2'"
-  // Pattern: {base}+{injury}'
+function normalizeMatchTime(raw: string|null): string|null {
+  if (!raw || raw==='' || raw==="0'") return null;
+  const injuryMid = raw.match(/^(\d+)'\+(\d+)'$/);
+  if (injuryMid) return `${injuryMid[1]}+${injuryMid[2]}`;
   const injuryLegacy = raw.match(/^(\d+)\+(\d+)'$/);
-  if (injuryLegacy) {
-    const base = injuryLegacy[1];
-    const injury = injuryLegacy[2];
-    return { status: 'LIVE', minute: `${base}+${injury}` };
-  }
-
-  // ── FORMAT 3: Regular minute: "18'" or "45'"
-  // Pattern: {minute}'
-  const regularMinute = raw.match(/^(\d+)'$/);
-  if (regularMinute) {
-    return { status: 'LIVE', minute: regularMinute[1] };
-  }
-
-  // ── FORMAT 4: Bare integer (no apostrophe) — defensive fallback
-  const bareMinute = raw.match(/^(\d+)$/);
-  if (bareMinute) {
-    return { status: 'LIVE', minute: bareMinute[1] };
-  }
-
-  // Not a live minute — return SCHEDULED (caller handles HT/FT before calling this)
-  return { status: 'SCHEDULED', minute: null };
+  if (injuryLegacy) return `${injuryLegacy[1]}+${injuryLegacy[2]}`;
+  const regular = raw.match(/^(\d+)'$/);
+  if (regular) return regular[1];
+  const bare = raw.match(/^(\d+)$/);
+  if (bare) return bare[1];
+  return null;
 }
 
-/**
- * Parse FIFA HTML to extract match states.
- * Regex-based — no DOM library needed server-side.
- */
-function parseFifaHtml(html: string): FifaMatchState[] {
-  const results: FifaMatchState[] = [];
-
-  // Each match block anchored by its FIFA match ID in the URL
-  const matchBlockRegex =
-    /href="[^"]*match-centre\/match\/[^"]*\/(\d{9})"([\s\S]{0,3000}?)(?=href="[^"]*match-centre\/match\/|$)/g;
-
-  let blockMatch: RegExpExecArray | null;
-  // eslint-disable-next-line no-cond-assign
-  while ((blockMatch = matchBlockRegex.exec(html)) !== null) {
-    const fifaMatchId = blockMatch[1];
-    const block = blockMatch[2];
-
-    // Status label — FIFA renders class containing "statusLabel"
-    const statusMatch = block.match(/statusLabel[^>]*>([^<]+)</);
-    if (!statusMatch) continue;
-    const rawStatus = statusMatch[1].trim();
-
-    // Scores — look for numeric content in score elements
-    const scoreRegex = /score[^>]*>(\d+)</gi;
-    const scoreMatches: RegExpExecArray[] = [];
-    let sm: RegExpExecArray | null;
-    // eslint-disable-next-line no-cond-assign
-    while ((sm = scoreRegex.exec(block)) !== null) scoreMatches.push(sm);
-
-    const homeScore = scoreMatches.length >= 1 ? parseInt(scoreMatches[0][1], 10) : null;
-    const awayScore = scoreMatches.length >= 2 ? parseInt(scoreMatches[1][1], 10) : null;
-
-    // ── STATUS RESOLUTION ─────────────────────────────────────────────────────
-    // Priority: FT variants → HT → live minute formats (normalizeMinute handles all)
-    let status: FifaMatchState['status'];
-    let minute: string | null;
-
-    if (rawStatus === 'FT' || rawStatus === 'AET' || rawStatus === 'AP') {
-      status = 'FT';
-      minute = null;
-    } else if (rawStatus === 'HT') {
-      status = 'HT';
-      minute = null;
-    } else if (
-      rawStatus.toUpperCase().includes('EXTRA TIME HALF TIME') ||
-      rawStatus.toUpperCase() === 'ET HT' ||
-      rawStatus.toUpperCase() === 'ETHT'
-    ) {
-      // [FIX 2026-06-30] Extra Time Half Time — treat as HT with special minute marker
-      // FIFA renders: 'EXTRA TIME HALF TIME' in the statusLabel span
-      // Stored as: status=HT, matchMinute='ETHT'
-      status = 'HT';
-      minute = 'ETHT';
-    } else {
-      // Delegate ALL live minute formats to normalizeMinute:
-      // handles "18'", "45'+2'" (injury mid-apostrophe), "45+2'" (legacy), bare integers
-      // Also handles ET minutes: "105'+2'", "120'+3'"
-      ({ status, minute } = normalizeMinute(rawStatus));
+function resolveStatus(matchStatus: number, period: number|null, matchTime: string|null): {status: DbStatus; minute: string|null} {
+  if (matchStatus === 0) return {status:'FT', minute:null};
+  if (matchStatus === 3) {
+    switch (period) {
+      case 5:  return {status:'HT',       minute:null};
+      case 6:  return {status:'HT',       minute:'ETHT'};
+      case 3:  return {status:'ET',       minute:normalizeMatchTime(matchTime)};
+      case 4:  return {status:'ET',       minute:normalizeMatchTime(matchTime)};
+      case 11: return {status:'SHOOTOUT', minute:'PENS'};
+      default: return {status:'LIVE',     minute:normalizeMatchTime(matchTime)};
     }
-
-    results.push({ fifaMatchId, status, minute, homeScore, awayScore, rawStatusText: rawStatus });
   }
-
-  return results;
+  if (matchStatus === 1) {
+    if (!period) return {status:'SCHEDULED', minute:null};
+    return {status:'LIVE', minute:normalizeMatchTime(matchTime)};
+  }
+  return {status:'SCHEDULED', minute:null};
 }
 
-// ─── HANDLER ─────────────────────────────────────────────────────────────────
+interface FifaApiMatch {
+  IdMatch: string;
+  MatchStatus: number;
+  Period?: number|null;
+  MatchTime?: string|null;
+  HomeTeam?: {Score?: number|null; IdTeam?: string|null};
+  AwayTeam?: {Score?: number|null; IdTeam?: string|null};
+  HomeTeamPenaltyScore?: number|null;
+  AwayTeamPenaltyScore?: number|null;
+  Winner?: string|null; // FIFA team ID of the winner (for shootout)
+}
+
+async function fetchFifaLiveMatches(): Promise<FifaMatchState[]> {
+  log('STEP', S(), `Fetching FIFA API: ${FIFA_API_URL}`);
+  const t0 = Date.now();
+  const resp = await fetch(FIFA_API_URL, {headers: FIFA_HEADERS});
+  log('STATE', S(), `HTTP ${resp.status} in ${Date.now()-t0}ms`);
+  if (!resp.ok) throw new Error(`FIFA API HTTP ${resp.status}: ${resp.statusText}`);
+  const data = await resp.json() as {Results?: FifaApiMatch[]};
+  const matches = data.Results ?? [];
+  log('STATE', S(), `Received ${matches.length} live matches from FIFA API`);
+  return matches.map(m => {
+    const {status, minute} = resolveStatus(m.MatchStatus, m.Period ?? null, m.MatchTime ?? null);
+    return {
+      fifaMatchId: m.IdMatch,
+      status, minute,
+      homeScore: m.HomeTeam?.Score ?? null,
+      awayScore: m.AwayTeam?.Score ?? null,
+      homePenScore: m.HomeTeamPenaltyScore ?? null,
+      awayPenScore: m.AwayTeamPenaltyScore ?? null,
+      fifaWinnerId: m.Winner ?? null,
+      homeTeamFifaId: m.HomeTeam?.IdTeam ?? null,
+      awayTeamFifaId: m.AwayTeam?.IdTeam ?? null,
+      rawMatchStatus: m.MatchStatus,
+      rawPeriod: m.Period ?? null,
+    };
+  });
+}
 
 export async function wc2026LiveSyncHandler(req: Request, res: Response): Promise<void> {
+  stepN = 0;
   const startMs = Date.now();
-  let stepN = 0;
-  let passCount = 0;
-  let failCount = 0;
-  let warnCount = 0;
-  let updatedCount = 0;
-  let skippedCount = 0;
-
-  const S = () => `S${++stepN}`;
-
-  log('INPUT', S(), 'WC2026 Live Sync triggered',
-    `method=${req.method} | ts=${new Date().toISOString()}`);
+  log('INPUT', S(), '═══ WC2026 Live Sync — FIFA API v4 ═══');
+  log('INPUT', S(), `Trigger: ${req.method} ${req.path}`);
+  let updatedCount=0, skippedCount=0, failCount=0, warnCount=0;
 
   try {
     const db = await getDb();
 
-    // ── STEP 1: Fetch FIFA HTML ────────────────────────────────────────────────
-    log('STEP', S(), 'Fetching FIFA scores-fixtures HTML', `url=${FIFA_URL}`);
+    // Load all fixtures that have a fifaMatchId
+    log('STEP', S(), 'Loading tracked fixtures from DB');
+    const allFixtures = await db.select({
+      fixtureId: wc2026Fixtures.fixtureId,
+      fifaMatchId: wc2026Fixtures.fifaMatchId,
+      status: wc2026Fixtures.status,
+      homeScore: wc2026Fixtures.homeScore,
+      awayScore: wc2026Fixtures.awayScore,
+      matchMinute: wc2026Fixtures.matchMinute,
+      homeTeamId: wc2026Fixtures.homeTeamId,
+      awayTeamId: wc2026Fixtures.awayTeamId,
+      advancingTeamId: wc2026Fixtures.advancingTeamId,
+    }).from(wc2026Fixtures).where(isNotNull(wc2026Fixtures.fifaMatchId));
 
-    let html: string;
+    log('STATE', S(), `Tracking ${allFixtures.length} fixtures with fifaMatchId`);
+    if (allFixtures.length === 0) {
+      log('WARN', S(), 'No fixtures have fifaMatchId — nothing to update');
+      res.json({updated:0, skipped:0, errors:0});
+      return;
+    }
+
+    type DbFixture = (typeof allFixtures)[0];
+    const fifaToFixture = new Map<string, DbFixture>(allFixtures.map((f: DbFixture) => [f.fifaMatchId!, f] as [string, DbFixture]));
+    const trackedIds = new Set(fifaToFixture.keys());
+    log('AUDIT', S(), `Tracked FIFA IDs: ${Array.from(trackedIds).join(', ')}`);
+
+    // Fetch live data from FIFA API
+    let liveMatches: FifaMatchState[];
     try {
-      const resp = await fetch(FIFA_URL, {
-        headers: FIFA_HEADERS,
-        signal: AbortSignal.timeout(30_000),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-      html = await resp.text();
-      log('PASS', `S${stepN}`, 'FIFA HTML fetched', `bytes=${html.length} | status=${resp.status}`);
-      passCount++;
-    } catch (fetchErr: unknown) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-      log('FAIL', `S${stepN}`, 'FIFA HTML fetch FAILED', `error=${msg}`);
-      failCount++;
-      res.status(500).json({ ok: false, error: 'FIFA fetch failed', detail: msg });
+      liveMatches = await fetchFifaLiveMatches();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log('FAIL', S(), `FIFA API fetch failed: ${msg}`);
+      res.status(500).json({error:'FIFA API fetch failed', detail:msg});
       return;
     }
 
-    // ── STEP 2: Parse match states ─────────────────────────────────────────────
-    log('STEP', S(), 'Parsing FIFA HTML for match states');
-    const allScraped = parseFifaHtml(html);
-    const active = allScraped.filter((m) => m.status !== 'SCHEDULED');
-
-    log('STATE', `S${stepN}`,
-      `Parsed ${allScraped.length} total matches | ${active.length} active (LIVE/HT/FT)`,
-      active.map((m) => `${m.fifaMatchId}=${m.rawStatusText}`).join(' | ') || 'none');
-    passCount++;
-
-    if (active.length === 0) {
-      log('SKIP', `S${stepN}`, 'No active matches — nothing to update');
-      res.json({ ok: true, updated: 0, skipped: 0, message: 'No active matches' });
-      return;
+    // Filter to our tracked fixtures
+    const relevant = liveMatches.filter(m => trackedIds.has(m.fifaMatchId));
+    log('STATE', S(), `${relevant.length}/${liveMatches.length} live matches match our tracked fixtures`);
+    for (const m of relevant) {
+      log('AUDIT', S(), `fifaId=${m.fifaMatchId} rawStatus=${m.rawMatchStatus} period=${m.rawPeriod} → dbStatus=${m.status} minute=${m.minute??'null'} score=${m.homeScore??'?'}-${m.awayScore??'?'}`);
     }
 
-    // ── STEP 3: Load DB fixtures ───────────────────────────────────────────────
-    log('STEP', S(), `Loading DB fixtures for ${active.length} active FIFA IDs`);
+    // Apply patches
+    for (const liveMatch of relevant) {
+      const fixture = fifaToFixture.get(liveMatch.fifaMatchId);
+      if (!fixture) { skippedCount++; continue; }
 
-    const activeFifaIds = active.map((m) => m.fifaMatchId);
+      const patch: Partial<typeof wc2026Fixtures.$inferInsert> = {};
+      if (liveMatch.status !== fixture.status) patch.status = liveMatch.status;
+      if (liveMatch.homeScore !== null && liveMatch.homeScore !== fixture.homeScore) patch.homeScore = liveMatch.homeScore;
+      if (liveMatch.awayScore !== null && liveMatch.awayScore !== fixture.awayScore) patch.awayScore = liveMatch.awayScore;
+      if (liveMatch.minute !== fixture.matchMinute) patch.matchMinute = liveMatch.minute;
 
-    // Fetch fixtures that match active FIFA IDs OR are currently LIVE/HT in DB
-    const dbFixtures = await db.select().from(wc2026Fixtures).where(
-      or(
-        inArray((wc2026Fixtures as unknown as Record<string, unknown>)['fifaMatchId'] as Parameters<typeof inArray>[0], activeFifaIds),
-        inArray(wc2026Fixtures.status, ['LIVE', 'HT'] as ('LIVE' | 'HT' | 'FT' | 'SCHEDULED')[]),
-      ),
-    );
+      // Auto-set advancingTeamId when FT
+      if (liveMatch.status === 'FT' && !fixture.advancingTeamId) {
+        // Case 1: Clear winner from regular/ET score
+        if (liveMatch.homeScore !== null && liveMatch.awayScore !== null &&
+            liveMatch.homeScore !== liveMatch.awayScore) {
+          patch.advancingTeamId = liveMatch.homeScore > liveMatch.awayScore
+            ? fixture.homeTeamId : fixture.awayTeamId;
+          log('DB', S(), `FT winner (score): ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId}`);
+        }
+        // Case 2: Penalty shootout winner via FIFA Winner field
+        else if (liveMatch.fifaWinnerId) {
+          if (liveMatch.fifaWinnerId === liveMatch.homeTeamFifaId) {
+            patch.advancingTeamId = fixture.homeTeamId;
+          } else if (liveMatch.fifaWinnerId === liveMatch.awayTeamFifaId) {
+            patch.advancingTeamId = fixture.awayTeamId;
+          }
+          const penStr = liveMatch.homePenScore !== null
+            ? `(${liveMatch.homePenScore}-${liveMatch.awayPenScore} pens)` : '';
+          log('DB', S(), `FT winner (pens) ${penStr}: ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
+        }
+        // Case 3: Penalty shootout winner via penalty scores
+        else if (liveMatch.homePenScore !== null && liveMatch.awayPenScore !== null &&
+                 liveMatch.homePenScore !== liveMatch.awayPenScore) {
+          patch.advancingTeamId = liveMatch.homePenScore > liveMatch.awayPenScore
+            ? fixture.homeTeamId : fixture.awayTeamId;
+          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId}`);
+        }
+      }
 
-    log('STATE', `S${stepN}`, `Loaded ${dbFixtures.length} DB fixtures to evaluate`);
-    passCount++;
-
-    // Build FIFA ID → DB fixture map
-    const fifaToFixture = new Map<string, (typeof dbFixtures)[0]>();
-    for (const fix of dbFixtures) {
-      const f = fix as unknown as Record<string, unknown>;
-      if (f['fifaMatchId']) fifaToFixture.set(f['fifaMatchId'] as string, fix);
-    }
-
-    // ── STEP 4: Apply updates ──────────────────────────────────────────────────
-    log('STEP', S(), 'Applying status/minute updates to DB');
-
-    for (const scraped of active) {
-      const dbFix = fifaToFixture.get(scraped.fifaMatchId);
-
-      if (!dbFix) {
-        log('WARN', `S${stepN}`, `No DB fixture for FIFA ID ${scraped.fifaMatchId}`,
-          `status=${scraped.rawStatusText} — skipping`);
-        warnCount++;
+      if (Object.keys(patch).length === 0) {
+        log('SKIP', S(), `${fixture.fixtureId} — no changes`);
         skippedCount++;
         continue;
       }
 
-      const f = dbFix as unknown as Record<string, unknown>;
-      const currentStatus = f['status'] as string;
-      const currentMinute = f['matchMinute'] as string | null;
-      const fixtureId = f['fixtureId'] as string;
-
-      const newStatus = scraped.status as 'LIVE' | 'HT' | 'FT' | 'SCHEDULED';
-      const newMinute = scraped.minute;
-
-      const statusChanged = currentStatus !== newStatus;
-      const minuteChanged = currentMinute !== newMinute;
-
-      if (!statusChanged && !minuteChanged) {
-        log('SKIP', `S${stepN}`, `${fixtureId}: no change`,
-          `status=${currentStatus} | minute=${currentMinute ?? 'null'}`);
-        skippedCount++;
-        continue;
-      }
-
-      log('DB', `S${stepN}`, `UPDATE ${fixtureId}`,
-        `status: ${currentStatus} → ${newStatus} | minute: ${currentMinute ?? 'null'} → ${newMinute ?? 'null'} | score: ${scraped.homeScore ?? '?'}-${scraped.awayScore ?? '?'}`);
-
+      log('DB', S(), `UPDATE ${fixture.fixtureId}`, JSON.stringify(patch));
       try {
-        const patch: Record<string, unknown> = {};
-        if (statusChanged) patch['status'] = newStatus;
-        if (minuteChanged) patch['matchMinute'] = newMinute;
-        if (scraped.homeScore !== null) patch['homeScore'] = scraped.homeScore;
-        if (scraped.awayScore !== null) patch['awayScore'] = scraped.awayScore;
-
-        await db.update(wc2026Fixtures)
-          .set(patch as Parameters<ReturnType<typeof db.update>['set']>[0])
-          .where(eq(wc2026Fixtures.fixtureId, fixtureId));
-
-        log('PASS', `S${stepN}`, `✅ ${fixtureId} updated`,
-          `newStatus=${newStatus} | newMinute=${newMinute ?? 'null'}`);
-        passCount++;
+        await db.update(wc2026Fixtures).set(patch).where(eq(wc2026Fixtures.fixtureId, fixture.fixtureId));
+        log('PASS', S(), `✅ ${fixture.fixtureId} updated`);
         updatedCount++;
-      } catch (updateErr: unknown) {
-        const msg = updateErr instanceof Error ? updateErr.message.slice(0, 200) : String(updateErr);
-        log('FAIL', `S${stepN}`, `❌ UPDATE failed for ${fixtureId}`, `error=${msg}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message.slice(0,200) : String(err);
+        log('FAIL', S(), `❌ UPDATE failed for ${fixture.fixtureId}: ${msg}`);
         failCount++;
       }
     }
 
-    // ── STEP 5: Stale LIVE/HT check ────────────────────────────────────────────
-    log('STEP', S(), 'Checking for stale LIVE/HT fixtures no longer in FIFA active list');
-    const activeFifaSet = new Set(activeFifaIds);
-
-    for (const fix of dbFixtures) {
-      const f = fix as unknown as Record<string, unknown>;
-      const isActive = f['status'] === 'LIVE' || f['status'] === 'HT';
-      const inFifa = f['fifaMatchId'] && activeFifaSet.has(f['fifaMatchId'] as string);
-      if (isActive && !inFifa) {
-        log('WARN', `S${stepN}`, `${f['fixtureId']} was ${f['status']} but absent from FIFA active list`,
-          `fifaMatchId=${f['fifaMatchId'] ?? 'null'} — leaving as-is for safety`);
-        warnCount++;
-      }
-    }
-
-    // ── SUMMARY ────────────────────────────────────────────────────────────────
     const elapsedMs = Date.now() - startMs;
-    log('OUTPUT', S(), 'WC2026 Live Sync complete',
-      `updated=${updatedCount} | skipped=${skippedCount} | PASS=${passCount} | FAIL=${failCount} | WARN=${warnCount} | elapsed=${elapsedMs}ms`);
-
-    res.json({ ok: true, updated: updatedCount, skipped: skippedCount, pass: passCount, fail: failCount, warn: warnCount, elapsedMs });
-
-  } catch (err: unknown) {
+    log('OUTPUT', S(), `Live sync complete in ${elapsedMs}ms`, `updated=${updatedCount} skipped=${skippedCount} fail=${failCount} warn=${warnCount}`);
+    res.json({ok:true, updated:updatedCount, skipped:skippedCount, errors:failCount, durationMs:elapsedMs});
+  } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack?.slice(0, 500) : undefined;
-    log('FAIL', 'FATAL', 'Unhandled exception in wc2026LiveSyncHandler', `error=${msg}`);
-    res.status(500).json({ ok: false, error: msg, stack, context: { url: req.url, ts: new Date().toISOString() } });
+    log('FAIL', 'FATAL', `Unhandled exception: ${msg}`);
+    res.status(500).json({ok:false, error:msg});
   }
 }
