@@ -4355,3 +4355,21 @@
 - [x] WcScorePanel: score color guards updated to use showScores (includes HT)
 - [x] WcScorePanel: LIVE badge excludes 'ETHT' from minute display
 - [x] Tests: 1229/1229 passing | TypeScript: 0 errors
+
+## Session: 2026-06-30 v2 — WC2026 Live Score Full Forensic Fix (FIFA API + ET/SHOOTOUT)
+### Root Causes Identified
+- [x] [SCRAPER] FIFA.com is a JS SPA — plain fetch() returns shell HTML only. Rewrote to use FIFA API v3 (api.fifa.com/api/v3/live/football)
+- [x] [STATUS_ENUM] DB status enum missing ET and SHOOTOUT — added via ALTER TABLE
+- [x] [RENDER] WcScorePanel had no ET or SHOOTOUT badge — only LIVE/HT/FINAL handled
+- [x] [ADVANCING] Penalty shootout winner not auto-detected — added 3-case detection logic
+### Fixes Applied
+- [x] fifaLiveScraper.ts: Rewrote to use FIFA API v3 with proper status/period code mapping
+- [x] DB: ALTER TABLE wc2026_fixtures MODIFY COLUMN status ENUM(...,'ET','SHOOTOUT',...)
+- [x] Schema: Added ET and SHOOTOUT to Drizzle status enum
+- [x] WcScorePanel: Added isET (orange ET badge) and isShootout (cyan PENS badge)
+- [x] WcScorePanel: showScores v4 = (isLive || isHT || isET || isShootout || isFinal) && hasScores
+- [x] WcScorePanel: Scheduled time row guard updated to exclude ET/SHOOTOUT
+- [x] FifaMatchState: Added homePenScore, awayPenScore, fifaWinnerId, homeTeamFifaId, awayTeamFifaId
+- [x] Patch builder: 3-case penalty winner detection (score diff, FIFA Winner field, pen scores)
+- [x] DB: NED/MAR set to FT 1-1, advancing=mar (Morocco wins 3-2 on penalties)
+- [x] Tests: 1229/1229 passing | TypeScript: 0 errors

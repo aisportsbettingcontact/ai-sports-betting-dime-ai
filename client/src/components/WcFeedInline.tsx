@@ -948,18 +948,20 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const { homeTeam, awayTeam } = fixture;
   const isLive = fixture.status === "LIVE";
   const isHT = fixture.status === "HT";
+  const isET = fixture.status === "ET";   // [2026-06-30] Extra time (1st or 2nd half)
+  const isShootout = fixture.status === "SHOOTOUT"; // [2026-06-30] Penalty shootout in progress
   const isFinal = fixture.status === "FT";
   const matchMinute = fixture.matchMinute ?? null;
   // [FIX 2026-06-30 v3] isExtraTimeHT: special sub-state of HT where match_minute='ETHT'
   // FIFA renders this as 'EXTRA TIME HALF TIME' — stored as status=HT, matchMinute='ETHT'
   const isExtraTimeHT = isHT && matchMinute === 'ETHT';
   const hasScores = fixture.homeScore != null && fixture.awayScore != null;
-  // [FIX 2026-06-30 v3] showScores: include HT — halftime scores must be visible
-  // Previously: (isLive || isFinal) — excluded HT, hiding scores at halftime
-  // Fixed: (isLive || isHT || isFinal) — all active match states show scores
-  const showScores = (isLive || isHT || isFinal) && hasScores;
+  // [FIX 2026-06-30 v4] showScores: include HT/ET/SHOOTOUT — all active match states show scores
+  // v3: (isLive || isHT || isFinal) — excluded ET and SHOOTOUT
+  // v4: (isLive || isHT || isET || isShootout || isFinal) — complete coverage
+  const showScores = (isLive || isHT || isET || isShootout || isFinal) && hasScores;
   // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
-  const isScheduled = !isLive && !isHT && !isFinal;
+  const isScheduled = !isLive && !isHT && !isET && !isShootout && !isFinal;
   const proj = fixture.projection;
   // Projected scores are intentionally hidden from the feed — internal use only
   const hasProjScores = false;
@@ -991,9 +993,9 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const HT_FONT_SIZE = STATUS_FONT_SIZE;
   console.log(
     `[WcScorePanel:Status] fixture=${fixture.fixtureId}` +
-    ` | [STATE] isLive=${isLive} isHT=${isHT} isFinal=${isFinal}` +
+    ` | [STATE] isLive=${isLive} isHT=${isHT} isET=${isET} isShootout=${isShootout} isFinal=${isFinal}` +
     ` | [INPUT] matchMinute=${matchMinute ?? 'null'} status=${fixture.status}` +
-    ` | [VERIFY] badgeType=${isHT ? 'HT' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME'}`
+    ` | [VERIFY] badgeType=${isHT ? (isExtraTimeHT ? 'ET_HT' : 'HT') : isShootout ? 'PENS' : isET ? 'ET' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME'}`
   );
   // [FIX 2026-06-30] Advancing team: team that won this KO match (shown to right of FINAL badge)
   const advancingTeamId = fixture.advancingTeamId ?? null;
@@ -1023,7 +1025,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       {/* [POSITION v3] pt-2 on container + badge first child = badge sits 8px below card top border.
            This places the badge precisely centered between the card's top border line and the
            top (away) team row — matching the pixel-exact requirement. */}
-      {(isLive || isHT || isFinal) && (
+      {(isLive || isHT || isET || isShootout || isFinal) && (
         <div className="flex items-center justify-center mb-1.5">
           {isHT ? (
             // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
@@ -1043,6 +1045,42 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
             >
               <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: isExtraTimeHT ? "#FB923C" : "#FBbf24" }} />
               {isExtraTimeHT ? 'ET HT' : 'HT'}
+            </span>
+          ) : isShootout ? (
+            // [SHOOTOUT] Cyan/blue badge for penalty shootout
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: LIVE_FONT_SIZE,
+                background: "rgba(56,189,248,0.12)",
+                color: "#38BDF8",
+                border: "1px solid rgba(56,189,248,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#38BDF8" }} />
+              PENS
+            </span>
+          ) : isET ? (
+            // [ET] Orange badge for extra time (1st or 2nd half)
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: LIVE_FONT_SIZE,
+                background: "rgba(251,146,60,0.12)",
+                color: "#FB923C",
+                border: "1px solid rgba(251,146,60,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FB923C" }} />
+              ET{matchMinute ? ` ${matchMinute}'` : ''}
             </span>
           ) : isLive ? (
             // [LIVE] Green badge with pulsing dot + match minute (e.g. '● LIVE 45+2\'')
@@ -1085,7 +1123,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       )}
 
       {/* Scheduled time row — shown only for upcoming matches, at top */}
-      {!isLive && !isHT && !isFinal && (
+      {!isLive && !isHT && !isET && !isShootout && !isFinal && (
         <div className="flex items-center gap-1 mb-1">
           <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
             {fmtKickoff(fixture.kickoffUtc)}
