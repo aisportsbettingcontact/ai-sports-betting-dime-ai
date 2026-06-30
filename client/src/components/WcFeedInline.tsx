@@ -1003,9 +1003,105 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
 
   return (
     <div className="flex flex-col pl-2 pr-2 pt-0 pb-0" style={{ minHeight: '100%', justifyContent: 'center' }}>
-      {/* [FIX 2026-06-30] Status row moved to AFTER teams for better vertical positioning.
-           Scheduled time shown at TOP (before teams) — FINAL/LIVE shown at BOTTOM (after teams).
-           This eliminates the whitespace-below-button issue seen in Japan vs Brazil card. */}
+      {/* [FIX 2026-06-30 v2] Status badge at TOP of card — centered between card top border and top team row.
+           FINAL/LIVE/HT badge is the FIRST child element, before teams.
+           Scheduled time also shown at top for upcoming matches.
+           Badge uses justify-center to horizontally center between card left edge and odds panel. */}
+
+      {/* ── TOP STATUS BADGE — FINAL / LIVE / HT ─────────────────────────────── */}
+      {/* [POSITION] Rendered FIRST in flex-col → sits at top of card, above away team row.
+           mb-1 provides the gap between badge and the top team row (away team).
+           justify-center centers the badge horizontally within the score panel column. */}
+      {(isLive || isHT || isFinal) && (
+        <div className="flex items-center justify-center gap-2 mb-1">
+          {isHT ? (
+            // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: HT_FONT_SIZE,
+                background: "rgba(251,191,36,0.12)",
+                color: "#FBbf24",
+                border: "1px solid rgba(251,191,36,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FBbf24" }} />
+              HT
+            </span>
+          ) : isLive ? (
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: LIVE_FONT_SIZE,
+                background: "rgba(57,255,20,0.12)",
+                color: "#39FF14",
+                border: "1px solid rgba(57,255,20,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
+              LIVE{matchMinute ? ` ${matchMinute}'` : ''}
+            </span>
+          ) : (
+            // isFinal branch
+            <>
+              <span
+                className="font-black tracking-widest flex-shrink-0"
+                style={{
+                  fontSize: FINAL_FONT_SIZE,
+                  background: "rgba(57,255,20,0.12)",
+                  color: "#39FF14",
+                  border: "1px solid rgba(57,255,20,0.4)",
+                  borderRadius: '6px',
+                  lineHeight: 1,
+                  padding: '3px 6px',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                FINAL
+              </span>
+              {/* [FIX 2026-06-30] Advancing team display — shown to right of FINAL badge.
+                   Shows flag emoji + FIFA code of the team that advanced past this KO match.
+                   Only rendered when advancingTeamId is populated in DB. */}
+              {advancingFifaCode && (
+                <div
+                  className="flex items-center gap-1 flex-shrink-0"
+                  style={{
+                    background: 'rgba(57,255,20,0.07)',
+                    border: '1px solid rgba(57,255,20,0.25)',
+                    borderRadius: '6px',
+                    padding: '2px 5px',
+                  }}
+                >
+                  <span style={{ fontSize: 'clamp(11px, 3.2vw, 14px)', lineHeight: 1, flexShrink: 0 }}>
+                    {wcFlagEmoji(advancingFifaCode) || '🏳️'}
+                  </span>
+                  <span
+                    className="font-black"
+                    style={{
+                      fontSize: 'clamp(8px, 2.2vw, 10.5px)',
+                      color: '#39FF14',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {advancingFifaCode}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Scheduled time row — shown only for upcoming matches, at top */}
       {!isLive && !isHT && !isFinal && (
         <div className="flex items-center gap-1 mb-1">
@@ -1118,100 +1214,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         );
       })()}
 
-      {/* [FIX 2026-06-30] FINAL/LIVE/HT status badge — positioned AFTER teams, BEFORE venue footer.
-           This anchors the badge lower in the card, eliminating the whitespace gap seen in JPN vs BRA.
-           FINAL badge includes advancing team display (flag + FIFA code) to its right.
-           LIVE badge shows match minute when available (e.g., '● LIVE 18\''). */}
-      {(isLive || isHT || isFinal) && (
-        <div className="flex items-center gap-2 mt-1.5">
-          {isHT ? (
-            // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
-            <span
-              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
-              style={{
-                fontSize: HT_FONT_SIZE,
-                background: "rgba(251,191,36,0.12)",
-                color: "#FBbf24",
-                border: "1px solid rgba(251,191,36,0.4)",
-                letterSpacing: "0.10em",
-                borderRadius: '14px',
-                gap: '6px',
-                lineHeight: 1,
-              }}
-            >
-              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FBbf24" }} />
-              HT
-            </span>
-          ) : isLive ? (
-            <span
-              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
-              style={{
-                fontSize: LIVE_FONT_SIZE,
-                background: "rgba(57,255,20,0.12)",
-                color: "#39FF14",
-                border: "1px solid rgba(57,255,20,0.4)",
-                letterSpacing: "0.10em",
-                borderRadius: '14px',
-                gap: '6px',
-                lineHeight: 1,
-              }}
-            >
-              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
-              LIVE{matchMinute ? ` ${matchMinute}'` : ''}
-            </span>
-          ) : (
-            // isFinal branch
-            <>
-              <span
-                className="font-black tracking-widest flex-shrink-0"
-                style={{
-                  fontSize: FINAL_FONT_SIZE,
-                  background: "rgba(57,255,20,0.12)",
-                  color: "#39FF14",
-                  border: "1px solid rgba(57,255,20,0.4)",
-                  borderRadius: '6px',
-                  lineHeight: 1,
-                  padding: '3px 6px',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                FINAL
-              </span>
-              {/* [FIX 2026-06-30] Advancing team display — shown to right of FINAL badge.
-                   Shows flag emoji + FIFA code of the team that advanced past this KO match.
-                   Only rendered when advancingTeamId is populated in DB. */}
-              {advancingFifaCode && (
-                <div
-                  className="flex items-center gap-1 flex-shrink-0"
-                  style={{
-                    background: 'rgba(57,255,20,0.07)',
-                    border: '1px solid rgba(57,255,20,0.25)',
-                    borderRadius: '6px',
-                    padding: '2px 5px',
-                  }}
-                >
-                  <span style={{ fontSize: 'clamp(11px, 3.2vw, 14px)', lineHeight: 1, flexShrink: 0 }}>
-                    {wcFlagEmoji(advancingFifaCode) || '🏳️'}
-                  </span>
-                  <span
-                    className="font-black"
-                    style={{
-                      fontSize: 'clamp(8px, 2.2vw, 10.5px)',
-                      color: '#39FF14',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      lineHeight: 1,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {advancingFifaCode}
-                  </span>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      {/* [REMOVED 2026-06-30 v2] Old bottom badge block removed — badge is now at TOP of card (first child). */}
 
       {/* Venue footer */}
       {fixture.venue && (
