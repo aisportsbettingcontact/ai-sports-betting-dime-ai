@@ -79,6 +79,10 @@ export const wc2026Fixtures = mysqlTable(
     attendance: int("attendance"),
     // Custom display order for date-based feeds (overrides kickoff_utc sort when set)
     displayOrder: int("display_order"),
+    // Knockout stage: team that advanced past this match (set after result is confirmed)
+    // References wc2026Teams.teamId — e.g. 'bra', 'can', 'par'
+    advancingTeamId: varchar("advancing_team_id", { length: 8 })
+      .references(() => wc2026Teams.teamId),
   },
   (t) => [
     index("idx_date").on(t.matchDate),

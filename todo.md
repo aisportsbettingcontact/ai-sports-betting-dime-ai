@@ -4282,3 +4282,19 @@
 - [ ] Calculate SHA-256 checksums for all artifacts
 - [ ] Save final checkpoint
 - [ ] Deliver certified report with all artifacts attached
+
+## Session: 2026-06-30 — WC2026 Mobile GameCard UI Fixes + Advancing Team Seeding
+
+- [x] Audit WcFeedInline.tsx WcScorePanel FINAL/LIVE button sizing at pixel level
+- [x] Compute exact midpoint between LIVE clamp(13.3px,1.05vw,17.1px) and FINAL clamp(7.6px,0.64vw,9.5px)
+- [x] Apply unified STATUS_FONT_SIZE = clamp(10.5px,0.85vw,13.3px) to both FINAL and LIVE badges
+- [x] Reposition FINAL/LIVE badge: moved from top status row to AFTER teams block (before venue footer)
+- [x] Scheduled time row retained at top for SCHEDULED fixtures only
+- [x] Add advancing team display (flag emoji + FIFA code) to right of FINAL badge
+- [x] Add advancingTeamId field to WcFixtureWithOdds TypeScript type
+- [x] Add advancing_team_id column to wc2026_fixtures schema (wc2026.schema.ts)
+- [x] Apply ALTER TABLE to DB directly (migration conflict workaround)
+- [x] Build seedAdvancingTeams.ts with 7-phase industry-leading logging pipeline
+- [x] Run seedAdvancingTeams.ts: 3/3 R32 advancing teams seeded (CAN, BRA, PAR) — 0 failures
+- [x] Update wc2026Router.ts fixturesByDate to include advancingTeamId in return shape
+- [x] TypeScript: 0 errors throughout
