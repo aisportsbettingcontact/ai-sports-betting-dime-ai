@@ -581,6 +581,20 @@ async function loadPage(
     const html = await page.content();
     const durationMs = Date.now() - t0;
 
+    // Bot-detection guard: ESPN pages are 700KB–1.7MB. A page < 50KB is a block/redirect stub.
+    const MIN_PAGE_BYTES = 50_000;
+    if (html.length < MIN_PAGE_BYTES) {
+      log.warn("BOT_BLOCK", `Page too small (${html.length} bytes < ${MIN_PAGE_BYTES}) — likely bot-detection block. Retrying.`, { url, attempt, bytes: html.length });
+      await page.close();
+      if (attempt <= MAX_RETRIES) {
+        const delay = (RETRY_DELAYS_MS[attempt - 1] ?? 8_000) * 2; // double delay for bot blocks
+        log.retry(url, attempt, MAX_RETRIES, delay, `Bot block detected (${html.length} bytes)`);
+        await new Promise((r) => setTimeout(r, delay));
+        return loadPage(context, url, log, attempt + 1);
+      }
+      throw new Error(`Bot block on ${url} — page returned ${html.length} bytes after ${MAX_RETRIES} attempts`);
+    }
+
     log.http("RES", url, {
       attempt,
       statusCode: 200,
