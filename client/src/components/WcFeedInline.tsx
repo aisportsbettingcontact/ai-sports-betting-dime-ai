@@ -2830,7 +2830,7 @@ function WcProjectionsFeed({ date }: { date: string }) {
   }
 
   return (
-    <div>
+    <div style={{ paddingBottom: 'max(64px, env(safe-area-inset-bottom))' }}>
       {(fixtures as WcFixtureWithOdds[]).map((f) => (
         <WcFixtureCard
           key={f.fixtureId}
