@@ -4319,3 +4319,20 @@
 - [x] Register /api/scheduled/wc2026-live-sync route in wc2026Heartbeat.ts
 - [x] Add matchMinute and fifaMatchId to wc2026Router.ts fixturesByDate return shape
 - [x] TypeScript: 0 errors throughout all changes
+
+## Session: 2026-06-30 — FIFA Injury Time Fix (fifaLiveScraper.ts)
+
+- [x] Audit FIFA HTML: confirmed status label format is "45'+2'" (mid-apostrophe) not "45+2'"
+- [x] Root cause identified: old regex /^\d+[+\d]*'$/ does NOT match "45'+2'" — falls to SCHEDULED
+- [x] Extracted normalizeMinute() pure function — handles all 4 FIFA minute formats with priority chain
+- [x] FORMAT 1: "45'+2'" (mid-apostrophe injury time) → stored as "45+2"
+- [x] FORMAT 2: "45+2'" (legacy no mid-apostrophe) → stored as "45+2"
+- [x] FORMAT 3: "18'" (regular minute) → stored as "18"
+- [x] FORMAT 4: bare integer fallback → stored as-is
+- [x] FT/AET/AP → status=FT, minute=null (checked before normalizeMinute)
+- [x] HT → status=HT, minute=null (checked before normalizeMinute)
+- [x] Storage format: base+injury with NO apostrophes (e.g., "45+2")
+- [x] Display format: apostrophe re-added at render time → "45+2'" (line 1160 WcFeedInline.tsx)
+- [x] Written fifaLiveScraper.test.ts: 30+ unit tests covering all 8 status formats + UI display
+- [x] All 1159 tests passing (56 test files) — 0 failures
+- [x] TypeScript: 0 errors throughout

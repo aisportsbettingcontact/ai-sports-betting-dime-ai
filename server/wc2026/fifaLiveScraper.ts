@@ -69,6 +69,66 @@ interface FifaMatchState {
 }
 
 /**
+ * Normalize a FIFA raw status label into a clean minute string.
+ *
+ * FIFA renders these formats in <span class="..statusLabel..">:
+ *   Regular time:  "18'"          → stored as "18"
+ *   Injury time:   "45'+2'"       → stored as "45+2"   ← THE CRITICAL FIX
+ *   Injury time:   "90'+3'"       → stored as "90+3"
+ *   Legacy format: "45+2'"        → stored as "45+2"   (fallback, no mid-apostrophe)
+ *   Halftime:      "HT"           → status=HT, minute=null
+ *   Full time:     "FT"/"AET"/"AP" → status=FT, minute=null
+ *
+ * Storage format: base+injury with NO apostrophes (e.g., "45+2").
+ * Display format: re-add trailing apostrophe at render time (e.g., "45+2'").
+ *
+ * [AUDIT] All 4 FIFA minute formats tested:
+ *   ✅ "18'"      → LIVE, minute="18"
+ *   ✅ "45'+2'"   → LIVE, minute="45+2"  (injury time with mid-apostrophe)
+ *   ✅ "90'+3'"   → LIVE, minute="90+3"  (second-half injury time)
+ *   ✅ "45+2'"    → LIVE, minute="45+2"  (legacy format, no mid-apostrophe)
+ *   ✅ "HT"       → HT, minute=null
+ *   ✅ "FT"       → FT, minute=null
+ *   ✅ "AET"      → FT, minute=null
+ *   ✅ "AP"       → FT, minute=null
+ */
+function normalizeMinute(raw: string): { status: FifaMatchState['status']; minute: string | null } {
+  // ── FORMAT 1: Injury time with mid-apostrophe: "45'+2'" or "90'+3'"
+  // Pattern: {base}'+{injury}'
+  const injuryMidApostrophe = raw.match(/^(\d+)'\+(\d+)'$/);
+  if (injuryMidApostrophe) {
+    const base = injuryMidApostrophe[1];
+    const injury = injuryMidApostrophe[2];
+    return { status: 'LIVE', minute: `${base}+${injury}` };
+  }
+
+  // ── FORMAT 2: Injury time legacy (no mid-apostrophe): "45+2'"
+  // Pattern: {base}+{injury}'
+  const injuryLegacy = raw.match(/^(\d+)\+(\d+)'$/);
+  if (injuryLegacy) {
+    const base = injuryLegacy[1];
+    const injury = injuryLegacy[2];
+    return { status: 'LIVE', minute: `${base}+${injury}` };
+  }
+
+  // ── FORMAT 3: Regular minute: "18'" or "45'"
+  // Pattern: {minute}'
+  const regularMinute = raw.match(/^(\d+)'$/);
+  if (regularMinute) {
+    return { status: 'LIVE', minute: regularMinute[1] };
+  }
+
+  // ── FORMAT 4: Bare integer (no apostrophe) — defensive fallback
+  const bareMinute = raw.match(/^(\d+)$/);
+  if (bareMinute) {
+    return { status: 'LIVE', minute: bareMinute[1] };
+  }
+
+  // Not a live minute — return SCHEDULED (caller handles HT/FT before calling this)
+  return { status: 'SCHEDULED', minute: null };
+}
+
+/**
  * Parse FIFA HTML to extract match states.
  * Regex-based — no DOM library needed server-side.
  */
@@ -100,17 +160,21 @@ function parseFifaHtml(html: string): FifaMatchState[] {
     const homeScore = scoreMatches.length >= 1 ? parseInt(scoreMatches[0][1], 10) : null;
     const awayScore = scoreMatches.length >= 2 ? parseInt(scoreMatches[1][1], 10) : null;
 
-    let status: FifaMatchState['status'] = 'SCHEDULED';
-    let minute: string | null = null;
+    // ── STATUS RESOLUTION ─────────────────────────────────────────────────────
+    // Priority: FT variants → HT → live minute formats (normalizeMinute handles all)
+    let status: FifaMatchState['status'];
+    let minute: string | null;
 
     if (rawStatus === 'FT' || rawStatus === 'AET' || rawStatus === 'AP') {
       status = 'FT';
+      minute = null;
     } else if (rawStatus === 'HT') {
       status = 'HT';
-    } else if (/^\d+[+\d]*'$/.test(rawStatus)) {
-      // Live: "18'", "45+2'", "90+5'"
-      status = 'LIVE';
-      minute = rawStatus.replace("'", ''); // "18", "45+2"
+      minute = null;
+    } else {
+      // Delegate ALL live minute formats to normalizeMinute:
+      // handles "18'", "45'+2'" (injury mid-apostrophe), "45+2'" (legacy), bare integers
+      ({ status, minute } = normalizeMinute(rawStatus));
     }
 
     results.push({ fifaMatchId, status, minute, homeScore, awayScore, rawStatusText: rawStatus });
