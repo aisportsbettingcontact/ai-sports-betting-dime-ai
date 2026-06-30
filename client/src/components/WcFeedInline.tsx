@@ -1026,7 +1026,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
            This places the badge precisely centered between the card's top border line and the
            top (away) team row — matching the pixel-exact requirement. */}
       {(isLive || isHT || isET || isShootout || isFinal) && (
-        <div className="flex items-center justify-center mb-1.5">
+        <div className="flex items-center justify-start mb-1.5">
           {isHT ? (
             // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
             // [FIX 2026-06-30 v3] Show 'ET HT' when matchMinute='ETHT' (Extra Time Half Time)
@@ -1268,7 +1268,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               borderRadius: '6px',
               padding: '3px 6px',
               flexWrap: 'nowrap',
-              overflow: 'visible',
+              overflow: 'hidden',
+              maxWidth: '100%',
             }}
           >
             {flag && (
@@ -1285,9 +1286,11 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
                 textTransform: 'uppercase',
                 lineHeight: 1.2,
                 whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              {fullName} ADVANCES TO {nextRound}
+              ADVANCES TO {nextRound}
             </span>
           </div>
         );

@@ -4373,3 +4373,10 @@
 - [x] Patch builder: 3-case penalty winner detection (score diff, FIFA Winner field, pen scores)
 - [x] DB: NED/MAR set to FT 1-1, advancing=mar (Morocco wins 3-2 on penalties)
 - [x] Tests: 1229/1229 passing | TypeScript: 0 errors
+
+## Session: 2026-06-30 v3 — WcScorePanel Badge Alignment + Advancing Banner Fix
+- [x] Left-aligned FINAL/LIVE/HT/ET/PENS badges (justify-center → justify-start)
+- [x] Removed country name from advancing banner (was "{BRAZIL} ADVANCES TO R16", now "ADVANCES TO R16")
+- [x] Fixed banner overflow: overflow:hidden + textOverflow:ellipsis + maxWidth:100%
+- [x] Verified clock display logic for all 6 status types (LIVE/HT/ET_HT/ET/SHOOTOUT/FT)
+- [x] Tests: 1229/1229 passing | TypeScript: 0 errors
