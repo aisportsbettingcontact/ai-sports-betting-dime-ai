@@ -42,6 +42,7 @@ import { scrapeWc2026Odds } from "./wc2026OddsScraper";
 import { scrapeWc2026DkSplits } from "./wc2026DkSplitsScraper";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 import { ingestWc2026EspnResults } from "./wc2026EspnResultsIngester";
+import { wc2026LiveSyncHandler } from "./fifaLiveScraper";
 
 // ─── Closing line window: 90 minutes before kickoff ──────────────────────────
 const CLOSING_WINDOW_MS = 90 * 60 * 1000;
@@ -276,8 +277,10 @@ export function registerWc2026Heartbeats(app: Express): void {
   app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
   app.post("/api/scheduled/wc2026-espn-results", handleWc2026EspnResults);
   app.post("/api/scheduled/wc2026-live-scores", handleWc2026LiveScores);
+  // POST /api/scheduled/wc2026-live-sync — FIFA HTML scraper for live minute + HT + FT status
+  app.post("/api/scheduled/wc2026-live-sync", wc2026LiveSyncHandler);
 
   console.log(
-    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-odds | /api/scheduled/wc2026-splits | /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores | /api/scheduled/wc2026-live-sync"
   );
 }
