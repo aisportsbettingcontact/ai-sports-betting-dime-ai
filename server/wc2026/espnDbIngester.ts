@@ -112,7 +112,7 @@ export async function ingestEspnMatchData(
   opts: { dryRun?: boolean } = {}
 ): Promise<EspnIngestResult> {
   const startMs = now();
-  const db = getDb();
+  const db = await getDb();
   const matchId = data.gameId;
   const { dryRun = false } = opts;
 
