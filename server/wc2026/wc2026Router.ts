@@ -16,6 +16,7 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
+import { scrapeEspnMatch, scrapeEspnScoreboard, extractGameId } from "./espnMatchScraper";
 import { getDb } from "../db";
 import {
   wc2026Fixtures,
@@ -659,5 +660,80 @@ export const wc2026Router = router({
         awayTeam: teamMap[f.awayTeamId] ?? null,
         splits: splitsMap[f.fixtureId] ?? [],
       }));
+    }),
+
+  // ─── ESPN Match Scraper ───────────────────────────────────────────────────
+  /**
+   * Scrape full match data from ESPN for any soccer gameId.
+   *
+   * Input:
+   *   urlOrGameId         — ESPN URL or bare gameId ("760487")
+   *   includePlayerStats  — fetch per-player stat splits (default: true)
+   *   includeCommentary   — include full play-by-play commentary (default: true)
+   *
+   * Returns: EspnMatchData — full structured match object with dual-channel logs
+   */
+  espnMatch: publicProcedure
+    .input(
+      z.object({
+        urlOrGameId: z.string().min(1),
+        includePlayerStats: z.boolean().optional().default(true),
+        includeCommentary: z.boolean().optional().default(true),
+      })
+    )
+    .query(async ({ input }) => {
+      const { urlOrGameId, includePlayerStats, includeCommentary } = input;
+
+      // [INPUT] Validate gameId is extractable before hitting ESPN
+      const gameId = extractGameId(urlOrGameId);
+      console.log(`[ESPN] espnMatch called | gameId=${gameId} | includePlayerStats=${includePlayerStats} | includeCommentary=${includeCommentary}`);
+
+      const t0 = Date.now();
+      try {
+        const data = await scrapeEspnMatch(urlOrGameId, {
+          includePlayerStats,
+          includeCommentary,
+        });
+        const elapsed = Date.now() - t0;
+        console.log(`[ESPN] espnMatch complete | gameId=${gameId} | elapsed=${elapsed}ms | apiCalls=${data.apiCallCount} | errors=${data.errors.length} | logFile=${data.logFile}`);
+        return { success: true as const, data, error: null };
+      } catch (err) {
+        const elapsed = Date.now() - t0;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[ESPN] espnMatch FAILED | gameId=${gameId} | elapsed=${elapsed}ms | error=${errMsg}`);
+        return { success: false as const, data: null, error: errMsg };
+      }
+    }),
+
+  /**
+   * Scrape ESPN soccer scoreboard for a given date.
+   *
+   * Input:
+   *   date — YYYYMMDD or YYYY-MM-DD (e.g. "20260629" or "2026-06-29")
+   *
+   * Returns: array of EspnScoreboardEvent
+   */
+  espnScoreboard: publicProcedure
+    .input(
+      z.object({
+        date: z.string().min(6),
+      })
+    )
+    .query(async ({ input }) => {
+      const dateParam = input.date.replace(/-/g, "");
+      console.log(`[ESPN] espnScoreboard called | date=${dateParam}`);
+
+      const t0 = Date.now();
+      try {
+        const events = await scrapeEspnScoreboard(dateParam);
+        const elapsed = Date.now() - t0;
+        console.log(`[ESPN] espnScoreboard complete | date=${dateParam} | events=${events.length} | elapsed=${elapsed}ms`);
+        return { success: true as const, events, error: null };
+      } catch (err) {
+        const elapsed = Date.now() - t0;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[ESPN] espnScoreboard FAILED | date=${dateParam} | error=${errMsg}`);
+        return { success: false as const, events: [], error: errMsg };
+      }
     }),
 });

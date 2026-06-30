@@ -1,0 +1,49 @@
+[
+  {
+    "runId": "ESPN-MR07S7MJ-EL9J55",
+    "gameId": "760487",
+    "startedAt": "2026-06-30T05:36:46.747Z",
+    "completedAt": "2026-06-30T05:37:16.208Z",
+    "totalDurationMs": 29461,
+    "apiCallCount": 112,
+    "retryCount": 0,
+    "errorCount": 0,
+    "fatalCount": 0,
+    "verifyPassCount": 125,
+    "verifyWarnCount": 0,
+    "verifyFailCount": 0,
+    "playersScraped": 51,
+    "bytesTransferred": 2132905,
+    "phases": [
+      "SUMMARY_API",
+      "COMPETITORS",
+      "COMP_STATS",
+      "PARSE_SUMMARY",
+      "PLAYER_STATS",
+      "ROSTER:205",
+      "ROSTER:627",
+      "ASSEMBLE"
+    ],
+    "outcome": "SUCCESS"
+  },
+  {
+    "runId": "ESPN-MR07S5AU-883EUS",
+    "gameId": "scoreboard:20260630",
+    "startedAt": "2026-06-30T05:36:43.734Z",
+    "completedAt": "2026-06-30T05:36:46.746Z",
+    "totalDurationMs": 3012,
+    "apiCallCount": 1,
+    "retryCount": 0,
+    "errorCount": 0,
+    "fatalCount": 0,
+    "verifyPassCount": 2,
+    "verifyWarnCount": 0,
+    "verifyFailCount": 0,
+    "playersScraped": 0,
+    "bytesTransferred": 109976,
+    "phases": [
+      "SCOREBOARD_API"
+    ],
+    "outcome": "SUCCESS"
+  }
+]
