@@ -31,8 +31,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, '../../.env') });
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const MATCH_IDS = ['760487', '760489', '760488', '760486'];
-const TRUTH_ANCHOR = '760487';
+const MATCH_IDS = ['760449', '760487', '760489', '760488', '760486'];
+const TRUTH_ANCHOR = '760487'; // Brazil vs Japan — first match scraped, held as truth
 const LOG_DIR = path.resolve(__dirname, '../../.manus-logs');
 const LOG_FILE = path.join(LOG_DIR, 'forensicAudit500x.txt');
 const REPORT_FILE = path.join(LOG_DIR, 'WC2026_FORENSIC_AUDIT_500X_REPORT.md');
@@ -91,7 +91,19 @@ function utcMsToEtDate(ms) {
 }
 
 // ── DB CONNECTION ─────────────────────────────────────────────────────────────
-const conn = await mysql.createConnection(process.env.DATABASE_URL);
+// Use a connection pool to prevent malform packet errors on long-running audits
+const pool = mysql.createPool({
+  uri: process.env.DATABASE_URL,
+  connectionLimit: 5,
+  waitForConnections: true,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
+});
+// Wrap pool as conn-compatible interface
+const conn = {
+  execute: (...args) => pool.execute(...args),
+  end: () => pool.end(),
+};
 
 // ── GROUND TRUTH ─────────────────────────────────────────────────────────────
 // UTC ms values confirmed from DB + ESPN __espnfitt__ JSON
@@ -153,6 +165,34 @@ const GT = {
     homeFormation: '4-2-3-1', awayFormation: '4-4-2',
     label: 'South Africa vs Canada',
   },
+  '760449': {
+    // MIDNIGHT RULE TEST CASE
+    // Venue: Estadio BBVA, Guadalupe, Mexico
+    // Kickoff: 9:00 PM PT on June 20, 2026 = 12:00 AM ET on June 21, 2026
+    // matchGameDate must be 2026-06-20 (PT date — the day the game actually kicked off)
+    // matchKickoffEt must be 00:00 (midnight ET)
+    // MIDNIGHT RULE: UTC 04:00 = ET 00:00 Jun 21 = PT 21:00 Jun 20
+    //   → matchGameDate stores PT date: 2026-06-20
+    //   → utcMsToEtDate() returns 2026-06-21 (correct UTC→ET, but PT date is 2026-06-20)
+    //   → ET_DATE check must compare matchGameDate (PT date), not UTC→ET conversion
+    homeAbbrev: 'TUN', awayAbbrev: 'JPN',
+    homeScore: 0, awayScore: 4,   // Tunisia 0 – Japan 4
+    attendance: 51243,
+    referee: 'Istvan Kovacs',
+    venue: 'Estadio BBVA', city: 'Guadalupe',
+    utcMs: 1782014400000,        // 2026-06-21T04:00:00.000Z
+    utcIso: '2026-06-21T04:00:00.000Z',
+    etTime: '00:00',             // 12:00 AM ET (midnight) — MIDNIGHT RULE
+    // etDate: PT date (matchGameDate column), NOT the UTC→ET conversion date
+    etDate: '2026-06-20',        // PT date = Jun 20 (matchGameDate column)
+    ptDate: '2026-06-20',        // PT date confirmed
+    // NOTE: utcMsToEtDate(1782014400000) = '2026-06-21' (correct UTC→ET)
+    // The ET_DATE check must use matchGameDate column, not utcMsToEtDate()
+    etDisplay: '12:00 AM ET, June 21 (9:00 PM PT, June 20, 2026)',
+    statusState: 'post',
+    label: 'Tunisia vs Japan (MIDNIGHT RULE TEST)',
+    isMidnightRule: true,
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -212,42 +252,65 @@ async function auditMatch(matchId) {
   // ET conversion check
   const dbEtDate = utcMsToEtDate(dbUtcMs);
   const dbEtStr = utcMsToEtString(dbUtcMs);
-  mc(dbEtDate === gt.etDate, 'ET_DATE',
-    `ET date="${dbEtDate}" ✓ (${gt.etDisplay})`,
-    `ET date MISMATCH: DB UTC→ET="${dbEtDate}" expected "${gt.etDate}"`,
-    { dbUtcMs, dbEtDate, dbEtStr, expected: gt.etDisplay });
+  // For midnight rule matches: compare matchGameDate (PT date) not utcMsToEtDate()
+  // utcMsToEtDate(1782014400000) = '2026-06-21' (correct UTC→ET)
+  // but matchGameDate = '2026-06-20' (PT date = the game date per midnight rule)
+  const effectiveEtDate = gt.isMidnightRule ? (m.matchGameDate || dbEtDate) : dbEtDate;
+  mc(effectiveEtDate === gt.etDate, 'ET_DATE',
+    `${gt.isMidnightRule ? 'MIDNIGHT RULE: matchGameDate' : 'ET date'}="${effectiveEtDate}" ✓ (${gt.etDisplay})`,
+    `ET date MISMATCH: ${gt.isMidnightRule ? 'matchGameDate' : 'DB UTC→ET'}="${effectiveEtDate}" expected "${gt.etDate}"`,
+    { dbUtcMs, dbEtDate, matchGameDate: m.matchGameDate, effectiveEtDate, expected: gt.etDate, isMidnightRule: !!gt.isMidnightRule });
 
-  // matchDateEt column (if it exists)
-  if (m.matchDateEt !== undefined) {
-    mc(!!m.matchDateEt, 'ET_COL_PRESENT', `matchDateEt="${m.matchDateEt}" ✓`, 'matchDateEt column NULL', null, true);
-    // Check the ET string contains the correct time
-    const etHour = gt.etTime.split(':')[0];
-    const etMin = gt.etTime.split(':')[1];
-    const etColStr = String(m.matchDateEt);
-    mc(etColStr.includes(etHour) || etColStr.includes(gt.etTime), 'ET_COL_TIME',
-      `matchDateEt contains ET time ${gt.etTime} ✓`,
-      `matchDateEt="${etColStr}" does not contain expected ET time ${gt.etTime}`, null, true);
-  } else {
-    log('WARN', `${matchId}/ET_COL_MISSING`, 'matchDateEt column not present in matches table — UTC stored, ET derivable from matchDateUtc');
-    mp.warn++;
+  // matchGameDate (PT date) and matchKickoffEt (ET time) — new midnight rule columns
+  mc(m.matchGameDate === gt.etDate, 'GAME_DATE_PT',
+    `matchGameDate="${m.matchGameDate}" (PT date) ✓`,
+    `matchGameDate MISMATCH: got "${m.matchGameDate}" expected "${gt.etDate}" (PT date)`,
+    { stored: m.matchGameDate, expected: gt.etDate, utcIso: dbUtcIso });
+
+  mc(m.matchKickoffEt === gt.etTime, 'KICKOFF_ET',
+    `matchKickoffEt="${m.matchKickoffEt}" (ET time) ✓`,
+    `matchKickoffEt MISMATCH: got "${m.matchKickoffEt}" expected "${gt.etTime}"`,
+    { stored: m.matchKickoffEt, expected: gt.etTime });
+
+  // Midnight rule specific check
+  if (gt.isMidnightRule) {
+    const isMidnight = m.matchKickoffEt === '00:00';
+    const ptDateCorrect = m.matchGameDate === gt.ptDate;
+    mc(isMidnight, 'MIDNIGHT_RULE_ET_TIME',
+      `MIDNIGHT RULE: matchKickoffEt="00:00" ✓ — game stored at midnight ET`,
+      `MIDNIGHT RULE FAIL: matchKickoffEt="${m.matchKickoffEt}" should be "00:00"`);
+    mc(ptDateCorrect, 'MIDNIGHT_RULE_PT_DATE',
+      `MIDNIGHT RULE: matchGameDate="${m.matchGameDate}" = PT date ${gt.ptDate} ✓ (NOT UTC date ${dbUtcIso.slice(0,10)})`,
+      `MIDNIGHT RULE FAIL: matchGameDate="${m.matchGameDate}" should be PT date "${gt.ptDate}" not UTC date "${dbUtcIso.slice(0,10)}"`,
+      { ptDate: m.matchGameDate, utcDate: dbUtcIso.slice(0,10), etDate: dbEtDate });
+    log('INFO', `${matchId}/MIDNIGHT_RULE`,
+      `9:00 PM PT Jun 20 = 12:00 AM ET Jun 21 | stored as PT date 2026-06-20 ET time 00:00 ✓`);
   }
 
   // Chronological date assignment: game at 9 PM ET Jun 29 should be dated Jun 29, not Jun 30
-  mc(dbEtDate === gt.etDate, 'ET_DATE_ASSIGN',
-    `ET date assignment correct: ${dbEtDate} ✓ (not UTC date ${dbUtcIso.slice(0,10)})`,
-    `ET date assignment WRONG: got ${dbEtDate} expected ${gt.etDate}`,
-    { utcDate: dbUtcIso.slice(0,10), etDate: dbEtDate, expected: gt.etDate });
+  // For midnight rule: use matchGameDate (PT date) for the assignment check
+  mc(effectiveEtDate === gt.etDate, 'ET_DATE_ASSIGN',
+    `Date assignment correct: ${effectiveEtDate} ✓${gt.isMidnightRule ? ' (PT date, midnight rule)' : ' (ET date)'}`,
+    `Date assignment WRONG: got ${effectiveEtDate} expected ${gt.etDate}${gt.isMidnightRule ? ' (PT date, midnight rule)' : ''}`,
+    { utcDate: dbUtcIso.slice(0,10), etDate: dbEtDate, matchGameDate: m.matchGameDate, effectiveDate: effectiveEtDate, expected: gt.etDate });
 
   log('INFO', `${matchId}/TZ_SUMMARY`,
-    `UTC: ${dbUtcIso} | ET: ${dbEtStr} | ET date: ${dbEtDate} | Expected: ${gt.etDisplay}`);
+    `UTC: ${dbUtcIso} | ET: ${dbEtStr} | PT_date: ${m.matchGameDate} | ET_time: ${m.matchKickoffEt} | Expected: ${gt.etDisplay}`);
 
   // Status
   mc(m.statusState === gt.statusState, 'STATUS_STATE', `statusState="${m.statusState}" ✓`, `statusState MISMATCH: got "${m.statusState}" expected "${gt.statusState}"`);
-  mc(m.statusDetail === gt.statusDetail, 'STATUS_DETAIL', `statusDetail="${m.statusDetail}" ✓`, `statusDetail MISMATCH: got "${m.statusDetail}" expected "${gt.statusDetail}"`);
+  if (gt.statusDetail) {
+    mc(m.statusDetail === gt.statusDetail, 'STATUS_DETAIL', `statusDetail="${m.statusDetail}" ✓`, `statusDetail MISMATCH: got "${m.statusDetail}" expected "${gt.statusDetail}"`);
+  }
 
-  // Formations
-  mc(m.homeFormation === gt.homeFormation, 'HOME_FORMATION', `homeFormation="${m.homeFormation}" ✓`, `homeFormation MISMATCH: got "${m.homeFormation}" expected "${gt.homeFormation}"`);
-  mc(m.awayFormation === gt.awayFormation, 'AWAY_FORMATION', `awayFormation="${m.awayFormation}" ✓`, `awayFormation MISMATCH: got "${m.awayFormation}" expected "${gt.awayFormation}"`);
+  // Formations (skip for 760449 if not available)
+  if (gt.homeFormation) {
+    mc(m.homeFormation === gt.homeFormation, 'HOME_FORMATION', `homeFormation="${m.homeFormation}" ✓`, `homeFormation MISMATCH: got "${m.homeFormation}" expected "${gt.homeFormation}"`);
+    mc(m.awayFormation === gt.awayFormation, 'AWAY_FORMATION', `awayFormation="${m.awayFormation}" ✓`, `awayFormation MISMATCH: got "${m.awayFormation}" expected "${gt.awayFormation}"`);
+  } else {
+    mc(!!m.homeFormation, 'HOME_FORMATION', `homeFormation="${m.homeFormation}" present ✓`, 'homeFormation MISSING', null, true);
+    mc(!!m.awayFormation, 'AWAY_FORMATION', `awayFormation="${m.awayFormation}" present ✓`, 'awayFormation MISSING', null, true);
+  }
 
   // Metadata
   mc(m.scrapeVersion === '250x', 'SCRAPE_VERSION', `scrapeVersion="250x" ✓`, `scrapeVersion="${m.scrapeVersion}" ≠ "250x"`);
@@ -582,20 +645,22 @@ async function quadAudit() {
   log('INFO', 'QUAD/TZ_POLICY', 'Policy: matchDateUtc = UTC epoch ms | ET derivable via America/New_York | games stored under ET date');
   for (const mid of MATCH_IDS) {
     const gt = GT[mid];
-    const [[dtRow]] = await conn.execute(`SELECT matchDateUtc FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[dtRow]] = await conn.execute(`SELECT matchDateUtc, matchGameDate, matchKickoffEt FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
     const dbMs = Number(dtRow.matchDateUtc);
     const dbIso = new Date(dbMs).toISOString();
     const dbEtDate = utcMsToEtDate(dbMs);
     const dbEtStr = utcMsToEtString(dbMs);
+    // For midnight rule: use matchGameDate (PT date) as authoritative game date
+    const effectiveDate = gt.isMidnightRule ? (dtRow.matchGameDate || dbEtDate) : dbEtDate;
     check(dbMs === gt.utcMs, `QUAD/UTC_${mid}`,
       `[${mid}] UTC: ${dbIso} ✓`,
       `[${mid}] UTC MISMATCH: DB=${dbIso} GT=${gt.utcIso}`,
       { dbMs, dbIso, gtMs: gt.utcMs });
-    check(dbEtDate === gt.etDate, `QUAD/ET_DATE_${mid}`,
-      `[${mid}] ET date: ${dbEtDate} ✓ (${gt.etDisplay})`,
-      `[${mid}] ET date WRONG: DB UTC→ET="${dbEtDate}" expected "${gt.etDate}"`,
-      { dbMs, dbEtDate, dbEtStr, expected: gt.etDisplay });
-    log('INFO', `QUAD/TZ_${mid}`, `UTC=${dbIso} | ET=${dbEtStr} | ET date=${dbEtDate} | Expected: ${gt.etDisplay}`);
+    check(effectiveDate === gt.etDate, `QUAD/ET_DATE_${mid}`,
+      `[${mid}] ${gt.isMidnightRule ? 'matchGameDate(PT)' : 'ET date'}="${effectiveDate}" ✓ (${gt.etDisplay})`,
+      `[${mid}] ET date WRONG: ${gt.isMidnightRule ? 'matchGameDate' : 'DB UTC→ET'}="${effectiveDate}" expected "${gt.etDate}"`,
+      { dbMs, dbEtDate, matchGameDate: dtRow.matchGameDate, effectiveDate, expected: gt.etDate });
+    log('INFO', `QUAD/TZ_${mid}`, `UTC=${dbIso} | ET=${dbEtStr} | matchGameDate=${dtRow.matchGameDate} | matchKickoffEt=${dtRow.matchKickoffEt} | Expected: ${gt.etDisplay}`);
   }
 
   // Special case: 760488 (NED vs MAR) — 01:00 UTC = 21:00 ET Jun 29 (not Jun 30)
@@ -659,56 +724,79 @@ async function quadAudit() {
   }
 
   // 9. Scrape Version
+  // NOTE: Using individual queries per match to avoid TiDB malform packet on IN (?,?,?,?)
   subsection('9. Scrape Version Consistency (250x)');
-  const [vRows] = await conn.execute(`SELECT matchId, scrapeVersion FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?)`, MATCH_IDS);
-  for (const r of vRows) {
-    check(r.scrapeVersion === '250x', `QUAD/VERSION_${r.matchId}`, `[${r.matchId}] scrapeVersion="250x" ✓`, `[${r.matchId}] scrapeVersion="${r.scrapeVersion}" ≠ "250x"`);
+  for (const mid of MATCH_IDS) {
+    const [[vr]] = await conn.execute(`SELECT matchId, scrapeVersion FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    if (vr) check(vr.scrapeVersion === '250x', `QUAD/VERSION_${mid}`, `[${mid}] scrapeVersion="250x" ✓`, `[${mid}] scrapeVersion="${vr.scrapeVersion}" ≠ "250x"`);
+    else check(false, `QUAD/VERSION_${mid}`, '', `[${mid}] match row missing`);
   }
 
   // 10. Venue, Attendance & Referee
   subsection('10. Venue, Attendance & Referee Ground Truth');
-  const [vRows2] = await conn.execute(`SELECT matchId, venue, city, attendance, referee FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?)`, MATCH_IDS);
-  for (const r of vRows2) {
-    const gt = GT[r.matchId];
-    check(r.venue === gt.venue, `QUAD/VENUE_${r.matchId}`, `[${r.matchId}] venue="${r.venue}" ✓`, `[${r.matchId}] venue MISMATCH: got "${r.venue}" expected "${gt.venue}"`);
-    check(Number(r.attendance) === gt.attendance, `QUAD/ATT_${r.matchId}`, `[${r.matchId}] attendance=${r.attendance} ✓`, `[${r.matchId}] attendance MISMATCH: got ${r.attendance} expected ${gt.attendance}`);
-    check(r.referee === gt.referee, `QUAD/REF_${r.matchId}`, `[${r.matchId}] referee="${r.referee}" ✓`, `[${r.matchId}] referee MISMATCH: got "${r.referee}" expected "${gt.referee}"`);
+  for (const mid of MATCH_IDS) {
+    const [[vr2]] = await conn.execute(`SELECT matchId, venue, city, attendance, referee FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    if (!vr2) { check(false, `QUAD/VENUE_${mid}`, '', `[${mid}] match row missing`); continue; }
+    const gt = GT[mid];
+    if (gt.venue) check(vr2.venue === gt.venue, `QUAD/VENUE_${mid}`, `[${mid}] venue="${vr2.venue}" ✓`, `[${mid}] venue MISMATCH: got "${vr2.venue}" expected "${gt.venue}"`);
+    if (gt.attendance) check(Number(vr2.attendance) === gt.attendance, `QUAD/ATT_${mid}`, `[${mid}] attendance=${vr2.attendance} ✓`, `[${mid}] attendance MISMATCH: got ${vr2.attendance} expected ${gt.attendance}`);
+    if (gt.referee) check(vr2.referee === gt.referee, `QUAD/REF_${mid}`, `[${mid}] referee="${vr2.referee}" ✓`, `[${mid}] referee MISMATCH: got "${vr2.referee}" expected "${gt.referee}"`);
   }
 
-  // 11. Aggregate Stats
-  subsection('11. Aggregate Stats Summary (All 4 Matches Combined)');
-  const [[aggShots]] = await conn.execute(
-    `SELECT COUNT(*) AS total, SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) AS goals,
-            SUM(CASE WHEN iconType='save' THEN 1 ELSE 0 END) AS saves,
-            SUM(CASE WHEN iconType='blocked' THEN 1 ELSE 0 END) AS blocked
-     FROM wc2026_espn_shot_map WHERE matchId IN (?,?,?,?)`, MATCH_IDS
-  );
-  const [[aggPlayers]] = await conn.execute(
-    `SELECT COUNT(*) AS total, SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) AS gks FROM wc2026_espn_player_stats WHERE matchId IN (?,?,?,?)`, MATCH_IDS
-  );
-  const [[aggLineups]] = await conn.execute(
-    `SELECT COUNT(*) AS total, SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) AS starters,
-            SUM(CASE WHEN role='substitute' THEN 1 ELSE 0 END) AS subs,
-            SUM(CASE WHEN role='unused' THEN 1 ELSE 0 END) AS unused
-     FROM wc2026_espn_lineups WHERE matchId IN (?,?,?,?)`, MATCH_IDS
-  );
-  const [[aggXg]] = await conn.execute(
-    `SELECT AVG(homeXG) AS avgH, AVG(awayXG) AS avgA, SUM(homeXG+awayXG) AS totalXg FROM wc2026_espn_expected_goals WHERE matchId IN (?,?,?,?)`, MATCH_IDS
-  );
-  const [[aggAtt]] = await conn.execute(
-    `SELECT AVG(attendance) AS avgAtt, MIN(attendance) AS minAtt, MAX(attendance) AS maxAtt FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?)`, MATCH_IDS
-  );
+  // 11. Aggregate Stats — run per-match and sum
+  subsection('11. Aggregate Stats Summary (All 5 Matches Combined)');
+  let aggShots = { total: 0, goals: 0, saves: 0, blocked: 0 };
+  let aggPlayers = { total: 0, gks: 0 };
+  let aggLineups = { total: 0, starters: 0, subs: 0, unused: 0 };
+  let aggXgSum = { h: 0, a: 0, count: 0 };
+  let aggAtt = { sum: 0, min: Infinity, max: 0 };
+  for (const mid of MATCH_IDS) {
+    const [[sm]] = await conn.execute(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) AS goals,
+              SUM(CASE WHEN iconType='save' THEN 1 ELSE 0 END) AS saves,
+              SUM(CASE WHEN iconType='blocked' THEN 1 ELSE 0 END) AS blocked
+       FROM wc2026_espn_shot_map WHERE matchId=?`, [mid]);
+    aggShots.total += Number(sm.total); aggShots.goals += Number(sm.goals);
+    aggShots.saves += Number(sm.saves); aggShots.blocked += Number(sm.blocked);
+    const [[pl]] = await conn.execute(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) AS gks FROM wc2026_espn_player_stats WHERE matchId=?`, [mid]);
+    aggPlayers.total += Number(pl.total); aggPlayers.gks += Number(pl.gks);
+    const [[lu]] = await conn.execute(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) AS starters,
+              SUM(CASE WHEN role='substitute' THEN 1 ELSE 0 END) AS subs,
+              SUM(CASE WHEN role='unused' THEN 1 ELSE 0 END) AS unused
+       FROM wc2026_espn_lineups WHERE matchId=?`, [mid]);
+    aggLineups.total += Number(lu.total); aggLineups.starters += Number(lu.starters);
+    aggLineups.subs += Number(lu.subs); aggLineups.unused += Number(lu.unused);
+    const [[xg]] = await conn.execute(
+      `SELECT homeXG, awayXG FROM wc2026_espn_expected_goals WHERE matchId=?`, [mid]);
+    if (xg) { aggXgSum.h += Number(xg.homeXG); aggXgSum.a += Number(xg.awayXG); aggXgSum.count++; }
+    const [[att]] = await conn.execute(`SELECT attendance FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    if (att && att.attendance) {
+      const a = Number(att.attendance);
+      aggAtt.sum += a;
+      if (a < aggAtt.min) aggAtt.min = a;
+      if (a > aggAtt.max) aggAtt.max = a;
+    }
+  }
+  const avgH = aggXgSum.count ? aggXgSum.h / aggXgSum.count : 0;
+  const avgA = aggXgSum.count ? aggXgSum.a / aggXgSum.count : 0;
+  const avgAtt = MATCH_IDS.length ? aggAtt.sum / MATCH_IDS.length : 0;
   log('INFO', 'QUAD/AGG_SHOTS', `Shots: total=${aggShots.total} goals=${aggShots.goals} saves=${aggShots.saves} blocked=${aggShots.blocked}`);
   log('INFO', 'QUAD/AGG_PLAYERS', `Players: total=${aggPlayers.total} GKs=${aggPlayers.gks}`);
   log('INFO', 'QUAD/AGG_LINEUPS', `Lineups: total=${aggLineups.total} starters=${aggLineups.starters} subs=${aggLineups.subs} unused=${aggLineups.unused}`);
-  log('INFO', 'QUAD/AGG_XG', `xG: avgHome=${parseFloat(aggXg.avgH).toFixed(3)} avgAway=${parseFloat(aggXg.avgA).toFixed(3)} totalXg=${parseFloat(aggXg.totalXg).toFixed(3)}`);
-  log('INFO', 'QUAD/AGG_ATT', `Attendance: avg=${Math.round(aggAtt.avgAtt).toLocaleString()} min=${Number(aggAtt.minAtt).toLocaleString()} max=${Number(aggAtt.maxAtt).toLocaleString()}`);
+  log('INFO', 'QUAD/AGG_XG', `xG: avgHome=${avgH.toFixed(3)} avgAway=${avgA.toFixed(3)} totalXg=${(aggXgSum.h+aggXgSum.a).toFixed(3)}`);
+  log('INFO', 'QUAD/AGG_ATT', `Attendance: avg=${Math.round(avgAtt).toLocaleString()} min=${aggAtt.min === Infinity ? 'N/A' : Number(aggAtt.min).toLocaleString()} max=${Number(aggAtt.max).toLocaleString()}`);
 
+  // Note: 5 matches now (760449 added), so starters = 22×5 = 110
+  const expectedStarters = MATCH_IDS.length * 22;
   check(Number(aggShots.total) > 80, 'QUAD/AGG_SHOTS_OK', `${aggShots.total} total shots >80 ✓`, `Only ${aggShots.total} total shots`);
-  check(Number(aggLineups.starters) === 88, 'QUAD/AGG_STARTERS_88', `88 total starters (22×4) ✓`, `${aggLineups.starters} total starters ≠ 88`);
-  check(parseFloat(aggXg.avgH) > 0, 'QUAD/AGG_XG_H', `Avg homeXG=${parseFloat(aggXg.avgH).toFixed(3)} >0 ✓`, 'Avg homeXG = 0');
-  check(parseFloat(aggXg.avgA) > 0, 'QUAD/AGG_XG_A', `Avg awayXG=${parseFloat(aggXg.avgA).toFixed(3)} >0 ✓`, 'Avg awayXG = 0');
-  check(Number(aggAtt.minAtt) > 40000, 'QUAD/AGG_ATT_OK', `Min attendance=${Number(aggAtt.minAtt).toLocaleString()} >40,000 ✓`, `Min attendance=${aggAtt.minAtt} <40,000`);
+  check(Number(aggLineups.starters) === expectedStarters, 'QUAD/AGG_STARTERS',
+    `${aggLineups.starters} total starters (22×${MATCH_IDS.length}=${expectedStarters}) ✓`,
+    `${aggLineups.starters} total starters ≠ ${expectedStarters}`);
+  check(avgH > 0, 'QUAD/AGG_XG_H', `Avg homeXG=${avgH.toFixed(3)} >0 ✓`, 'Avg homeXG = 0');
+  check(avgA > 0, 'QUAD/AGG_XG_A', `Avg awayXG=${avgA.toFixed(3)} >0 ✓`, 'Avg awayXG = 0');
+  check(aggAtt.min !== Infinity && aggAtt.min > 40000, 'QUAD/AGG_ATT_OK', `Min attendance=${Number(aggAtt.min).toLocaleString()} >40,000 ✓`, `Min attendance=${aggAtt.min} <40,000`);
 
   // 12. ESPN HTML Game Information — Time Extraction Audit
   subsection('12. ESPN HTML Game Information — Time Extraction Method Audit');
@@ -776,7 +864,7 @@ function writeReport() {
     '| matchId | Match | UTC | ET | ET Date | Venue | Attendance | Referee |',
     '|---------|-------|-----|-----|---------|-------|-----------|---------|',
     ...Object.entries(GT).map(([mid, gt]) =>
-      `| ${mid} | ${gt.label} | ${gt.utcIso} | ${gt.etDisplay} | ${gt.etDate} | ${gt.venue} | ${gt.attendance.toLocaleString()} | ${gt.referee} |`
+      `| ${mid} | ${gt.label} | ${gt.utcIso} | ${gt.etDisplay} | ${gt.etDate} | ${gt.venue} | ${gt.attendance != null ? Number(gt.attendance).toLocaleString() : 'N/A'} | ${gt.referee || 'N/A'} |`
     ),
     '',
     '## Log File',

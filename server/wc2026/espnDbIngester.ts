@@ -137,7 +137,24 @@ export async function ingestEspnMatchData(
     logInput(`gameStrip: ${gs.homeTeam.abbrev} vs ${gs.awayTeam.abbrev} | ${gs.status}`);
 
     const matchDateUtc = gs.dateTimeUTC ? new Date(gs.dateTimeUTC).getTime() : now();
-    logState(`matchDateUtc=${matchDateUtc} venue="${gs.venue}" attendance=${gs.attendance}`);
+
+    // ── Midnight Rule ─────────────────────────────────────────────────────────
+    // Game date  = PT date (Pacific Time) — the calendar date at the venue.
+    //   9:00 PM PT Jun 20 → matchGameDate = "2026-06-20"
+    // Game time  = ET time (Eastern Time) — the clock time shown to bettors.
+    //   9:00 PM PT = 12:00 AM ET → matchKickoffEt = "00:00"
+    // If ET time is 00:00 (midnight), the PT date is the correct game date
+    // (one day earlier than the UTC date), which is what we store.
+    const _kickoffDt = new Date(matchDateUtc);
+    const matchGameDate = _kickoffDt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD in PT
+    const _etH = parseInt(_kickoffDt.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }), 10);
+    const _etM = parseInt(_kickoffDt.toLocaleString('en-US', { timeZone: 'America/New_York', minute: '2-digit' }), 10);
+    const matchKickoffEt = `${String(isNaN(_etH) ? 0 : _etH).padStart(2,'0')}:${String(isNaN(_etM) ? 0 : _etM).padStart(2,'0')}`;
+    const _isMidnight = matchKickoffEt === '00:00';
+
+    logState(`matchDateUtc=${matchDateUtc} matchGameDate(PT)=${matchGameDate} matchKickoffEt=${matchKickoffEt} midnight=${_isMidnight}`);
+    logState(`[MIDNIGHT_RULE] UTC=${_kickoffDt.toISOString()} → PT_date=${matchGameDate} ET_time=${matchKickoffEt}${_isMidnight ? ' ← MIDNIGHT RULE APPLIED' : ''}`);
+    logState(`venue="${gs.venue}" attendance=${gs.attendance}`);
     logState(`homeScore=${gs.homeTeam.score} awayScore=${gs.awayTeam.score}`);
     logState(`homeFormation=${data.lineups.home.formation} awayFormation=${data.lineups.away.formation}`);
 
@@ -148,6 +165,8 @@ export async function ingestEspnMatchData(
       round: gs.competition?.split(",")[1]?.trim() ?? null,
       season: "2026",
       matchDateUtc,
+      matchGameDate,
+      matchKickoffEt,
       statusState: gs.statusState ?? null,
       statusDetail: gs.statusDetail ?? null,
       statusDisplay: gs.status ?? null,
