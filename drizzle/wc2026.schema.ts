@@ -67,7 +67,7 @@ export const wc2026Fixtures = mysqlTable(
       .references(() => wc2026Venues.venueId),
     homeScore: tinyint("home_score"),
     awayScore: tinyint("away_score"),
-    status: mysqlEnum("status", ["SCHEDULED", "LIVE", "FT"])
+    status: mysqlEnum("status", ["SCHEDULED", "LIVE", "HT", "FT"])
       .notNull()
       .default("SCHEDULED"),
     // TRUE only for USA/CAN/MEX playing inside their own country —

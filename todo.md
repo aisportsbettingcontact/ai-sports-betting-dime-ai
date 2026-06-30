@@ -4298,3 +4298,24 @@
 - [x] Run seedAdvancingTeams.ts: 3/3 R32 advancing teams seeded (CAN, BRA, PAR) — 0 failures
 - [x] Update wc2026Router.ts fixturesByDate to include advancingTeamId in return shape
 - [x] TypeScript: 0 errors throughout
+
+## Session: 2026-06-30 — WC2026 Mobile GameCard UI Fixes + Advancing Team Seeding
+
+- [x] Audit WcScorePanel FINAL/LIVE button sizing — LIVE: clamp(13.3px,1.05vw,17.1px) vs FINAL: clamp(7.6px,0.64vw,9.5px)
+- [x] Compute exact midpoint: clamp(10.5px, 0.85vw, 13.3px) — applied uniformly to both FINAL and LIVE badges
+- [x] Reposition FINAL/LIVE badge AFTER teams block (before venue footer) — eliminates whitespace gap in JPN/BRA card
+- [x] Add advancing team display to right of FINAL badge (flag emoji + FIFA code pill in neon-green)
+- [x] Add HT (halftime) badge — amber/yellow pill with static dot, same midpoint font size
+- [x] Add live match minute to LIVE badge (e.g., "● LIVE 18'") — reads matchMinute from DB
+- [x] Fix isScheduled and scheduled time row condition to exclude HT state
+- [x] Add matchMinute and fifaMatchId fields to WcFixtureWithOdds TypeScript type
+- [x] Add advancing_team_id column to wc2026_fixtures DB table
+- [x] Add fifa_match_id and match_minute columns to wc2026_fixtures DB table
+- [x] Add HT to status enum in wc2026.schema.ts and DB column
+- [x] Seed advancing teams for 3 completed R32 matches (CAN, BRA, PAR) via seedAdvancingTeams.ts
+- [x] Seed 12 missing R32 fixtures (wc26-r32-077 through wc26-r32-088) via seedR32Fixtures.ts
+- [x] Seed FIFA match IDs for all 16 R32 fixtures via seedFifaMatchIds.ts
+- [x] Write fifaLiveScraper.ts — FIFA HTML poll handler with 7-phase logging pipeline
+- [x] Register /api/scheduled/wc2026-live-sync route in wc2026Heartbeat.ts
+- [x] Add matchMinute and fifaMatchId to wc2026Router.ts fixturesByDate return shape
+- [x] TypeScript: 0 errors throughout all changes

@@ -422,6 +422,10 @@ type WcFixtureWithOdds = {
   status: string;
   // [KO] advancing_team_id: team that won this knockout match (null if not yet played)
   advancingTeamId: string | null;
+  // [LIVE] matchMinute: live match minute string ("18", "45+2") or null when not live
+  matchMinute?: string | null;
+  // [LIVE] fifaMatchId: FIFA official match ID for live scraping correlation
+  fifaMatchId?: string | null;
   homeTeam: WcTeamInfo | null;
   awayTeam: WcTeamInfo | null;
   venue: WcVenueInfo | null;
@@ -943,10 +947,12 @@ function WcMktCol({
 function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const { homeTeam, awayTeam } = fixture;
   const isLive = fixture.status === "LIVE";
+  const isHT = fixture.status === "HT";
   const isFinal = fixture.status === "FT";
+  const matchMinute = fixture.matchMinute ?? null;
   const hasScores = fixture.homeScore != null && fixture.awayScore != null;
   // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
-  const isScheduled = !isLive && !isFinal;
+  const isScheduled = !isLive && !isHT && !isFinal;
   const proj = fixture.projection;
   // Projected scores are intentionally hidden from the feed — internal use only
   const hasProjScores = false;
@@ -975,6 +981,13 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const STATUS_FONT_SIZE = 'clamp(10.5px, 0.85vw, 13.3px)';
   const LIVE_FONT_SIZE = STATUS_FONT_SIZE;
   const FINAL_FONT_SIZE = STATUS_FONT_SIZE;
+  const HT_FONT_SIZE = STATUS_FONT_SIZE;
+  console.log(
+    `[WcScorePanel:Status] fixture=${fixture.fixtureId}` +
+    ` | [STATE] isLive=${isLive} isHT=${isHT} isFinal=${isFinal}` +
+    ` | [INPUT] matchMinute=${matchMinute ?? 'null'} status=${fixture.status}` +
+    ` | [VERIFY] badgeType=${isHT ? 'HT' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME'}`
+  );
   // [FIX 2026-06-30] Advancing team: team that won this KO match (shown to right of FINAL badge)
   const advancingTeamId = fixture.advancingTeamId ?? null;
   const advancingTeam = advancingTeamId
@@ -994,7 +1007,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
            Scheduled time shown at TOP (before teams) — FINAL/LIVE shown at BOTTOM (after teams).
            This eliminates the whitespace-below-button issue seen in Japan vs Brazil card. */}
       {/* Scheduled time row — shown only for upcoming matches, at top */}
-      {!isLive && !isFinal && (
+      {!isLive && !isHT && !isFinal && (
         <div className="flex items-center gap-1 mb-1">
           <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
             {fmtKickoff(fixture.kickoffUtc)}
@@ -1105,12 +1118,31 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         );
       })()}
 
-      {/* [FIX 2026-06-30] FINAL/LIVE status badge — positioned AFTER teams, BEFORE venue footer.
+      {/* [FIX 2026-06-30] FINAL/LIVE/HT status badge — positioned AFTER teams, BEFORE venue footer.
            This anchors the badge lower in the card, eliminating the whitespace gap seen in JPN vs BRA.
-           FINAL badge includes advancing team display (flag + FIFA code) to its right. */}
-      {(isLive || isFinal) && (
+           FINAL badge includes advancing team display (flag + FIFA code) to its right.
+           LIVE badge shows match minute when available (e.g., '● LIVE 18\''). */}
+      {(isLive || isHT || isFinal) && (
         <div className="flex items-center gap-2 mt-1.5">
-          {isLive ? (
+          {isHT ? (
+            // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
+            <span
+              className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
+              style={{
+                fontSize: HT_FONT_SIZE,
+                background: "rgba(251,191,36,0.12)",
+                color: "#FBbf24",
+                border: "1px solid rgba(251,191,36,0.4)",
+                letterSpacing: "0.10em",
+                borderRadius: '14px',
+                gap: '6px',
+                lineHeight: 1,
+              }}
+            >
+              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FBbf24" }} />
+              HT
+            </span>
+          ) : isLive ? (
             <span
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
@@ -1125,7 +1157,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               }}
             >
               <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
-              LIVE
+              LIVE{matchMinute ? ` ${matchMinute}'` : ''}
             </span>
           ) : (
             // isFinal branch

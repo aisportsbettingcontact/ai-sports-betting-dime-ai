@@ -224,6 +224,11 @@ export const wc2026Router = router({
           // Populated by seedAdvancingTeams.ts after each completed knockout fixture.
           // Null for group stage matches and unplayed knockout matches.
           advancingTeamId: (f as any).advancingTeamId ?? null,
+          // [LIVE 2026-06-30] matchMinute: live match minute string ("18", "45+2") or null.
+          // Set by fifaLiveScraper.ts Heartbeat handler. Null when not live.
+          matchMinute: (f as any).matchMinute ?? null,
+          // [LIVE 2026-06-30] fifaMatchId: FIFA official match ID for live scraping correlation.
+          fifaMatchId: (f as any).fifaMatchId ?? null,
           // [FREEZE] Use frozen book odds when available, otherwise fall back to live DK snapshot
           dkOdds: frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.fixtureId] ?? null),
           // [FREEZE] Use frozen model projection when is_frozen=1, otherwise fall back to book_id=0 snapshot
