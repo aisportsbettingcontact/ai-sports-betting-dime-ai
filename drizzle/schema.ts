@@ -2503,6 +2503,8 @@ export const wc2026EspnMatches = mysqlTable("wc2026_espn_matches", {
 
   // Timing
   matchDateUtc:   bigint("matchDateUtc", { mode: "number" }).notNull(),  // UTC ms kickoff time
+  matchGameDate:  varchar("matchGameDate", { length: 10 }),              // PT kickoff date YYYY-MM-DD (midnight rule: 9PM PT Jun20 → "2026-06-20")
+  matchKickoffEt: varchar("matchKickoffEt", { length: 8 }),              // ET kickoff time HH:MM 24h (midnight rule: 12:00 AM ET → "00:00")
   statusState:    varchar("statusState", { length: 32 }),                // "post" | "pre" | "in"
   statusDetail:   varchar("statusDetail", { length: 64 }),               // "Final" | "HT" | "90'"
   statusDisplay:  varchar("statusDisplay", { length: 32 }),              // "FT" | "LIVE" | etc.
