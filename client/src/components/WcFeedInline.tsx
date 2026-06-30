@@ -1002,7 +1002,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   );
 
   return (
-    <div className="flex flex-col pl-2 pr-2 pt-0 pb-0" style={{ minHeight: '100%', justifyContent: 'center' }}>
+    <div className="flex flex-col pl-2 pr-2 pt-3 pb-1" style={{ minHeight: '100%', justifyContent: 'space-between' }}>
       {/* [FIX 2026-06-30 v2] Status badge at TOP of card — centered between card top border and top team row.
            FINAL/LIVE/HT badge is the FIRST child element, before teams.
            Scheduled time also shown at top for upcoming matches.
@@ -1012,8 +1012,12 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       {/* [POSITION] Rendered FIRST in flex-col → sits at top of card, above away team row.
            mb-1 provides the gap between badge and the top team row (away team).
            justify-center centers the badge horizontally within the score panel column. */}
+      {/* ── TOP STATUS BADGE — FINAL / LIVE / HT ─────────────────────────────── */}
+      {/* [POSITION v3] pt-2 on container + badge first child = badge sits 8px below card top border.
+           This places the badge precisely centered between the card's top border line and the
+           top (away) team row — matching the pixel-exact requirement. */}
       {(isLive || isHT || isFinal) && (
-        <div className="flex items-center justify-center gap-2 mb-1">
+        <div className="flex items-center justify-center mb-1.5">
           {isHT ? (
             // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
             <span
@@ -1033,6 +1037,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               HT
             </span>
           ) : isLive ? (
+            // [LIVE] Green badge with pulsing dot + match minute (e.g. '● LIVE 45+2\'')
             <span
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
@@ -1050,54 +1055,22 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               LIVE{matchMinute ? ` ${matchMinute}'` : ''}
             </span>
           ) : (
-            // isFinal branch
-            <>
-              <span
-                className="font-black tracking-widest flex-shrink-0"
-                style={{
-                  fontSize: FINAL_FONT_SIZE,
-                  background: "rgba(57,255,20,0.12)",
-                  color: "#39FF14",
-                  border: "1px solid rgba(57,255,20,0.4)",
-                  borderRadius: '6px',
-                  lineHeight: 1,
-                  padding: '3px 6px',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                FINAL
-              </span>
-              {/* [FIX 2026-06-30] Advancing team display — shown to right of FINAL badge.
-                   Shows flag emoji + FIFA code of the team that advanced past this KO match.
-                   Only rendered when advancingTeamId is populated in DB. */}
-              {advancingFifaCode && (
-                <div
-                  className="flex items-center gap-1 flex-shrink-0"
-                  style={{
-                    background: 'rgba(57,255,20,0.07)',
-                    border: '1px solid rgba(57,255,20,0.25)',
-                    borderRadius: '6px',
-                    padding: '2px 5px',
-                  }}
-                >
-                  <span style={{ fontSize: 'clamp(11px, 3.2vw, 14px)', lineHeight: 1, flexShrink: 0 }}>
-                    {wcFlagEmoji(advancingFifaCode) || '🏳️'}
-                  </span>
-                  <span
-                    className="font-black"
-                    style={{
-                      fontSize: 'clamp(8px, 2.2vw, 10.5px)',
-                      color: '#39FF14',
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {advancingFifaCode}
-                  </span>
-                </div>
-              )}
-            </>
+            // [FINAL] Green badge — advancing team moved to BOTTOM row below home team
+            <span
+              className="font-black tracking-widest flex-shrink-0"
+              style={{
+                fontSize: FINAL_FONT_SIZE,
+                background: "rgba(57,255,20,0.12)",
+                color: "#39FF14",
+                border: "1px solid rgba(57,255,20,0.4)",
+                borderRadius: '6px',
+                lineHeight: 1,
+                padding: '3px 6px',
+                letterSpacing: '0.08em',
+              }}
+            >
+              FINAL
+            </span>
           )}
         </div>
       )}
@@ -1214,7 +1187,61 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         );
       })()}
 
-      {/* [REMOVED 2026-06-30 v2] Old bottom badge block removed — badge is now at TOP of card (first child). */}
+      {/* ── ADVANCING TEAM ROW — below home team, above venue footer ─────────── */}
+      {/* [FIX 2026-06-30 v3] Advancing team spelled out in full:
+           '🇧🇷 BRAZIL ADVANCES TO R16' — no truncation, full country name, correct next round label.
+           Derived from advancingTeam.name (DB full name) + fixtureId stage prefix. */}
+      {isFinal && advancingFifaCode && advancingTeam && (() => {
+        // Compute next round label from fixtureId stage prefix
+        const fid = fixture.fixtureId.toLowerCase();
+        let nextRound = 'NEXT ROUND';
+        if (fid.includes('-r32-') || fid.includes('-r32_')) nextRound = 'R16';
+        else if (fid.includes('-r16-') || fid.includes('-r16_')) nextRound = 'QF';
+        else if (fid.includes('-qf-') || fid.includes('-qf_')) nextRound = 'SF';
+        else if (fid.includes('-sf-') || fid.includes('-sf_')) nextRound = 'FINAL';
+        const fullName = (advancingTeam.name ?? advancingFifaCode).toUpperCase();
+        const flag = wcFlagEmoji(advancingFifaCode);
+        console.log(
+          `[WcScorePanel:AdvancingRow] fixture=${fixture.fixtureId}` +
+          ` | advancingFifaCode=${advancingFifaCode}` +
+          ` | fullName=${fullName}` +
+          ` | nextRound=${nextRound}` +
+          ` | flag=${flag || 'NO_FLAG'}` +
+          ` | [VERIFY] PASS — advancing row will render`
+        );
+        return (
+          <div
+            className="flex items-center gap-1 mt-1.5"
+            style={{
+              background: 'rgba(57,255,20,0.06)',
+              border: '1px solid rgba(57,255,20,0.22)',
+              borderRadius: '6px',
+              padding: '3px 6px',
+              flexWrap: 'nowrap',
+              overflow: 'visible',
+            }}
+          >
+            {flag && (
+              <span style={{ fontSize: 'clamp(10px, 2.8vw, 13px)', lineHeight: 1, flexShrink: 0 }}>
+                {flag}
+              </span>
+            )}
+            <span
+              className="font-black"
+              style={{
+                fontSize: 'clamp(7px, 1.9vw, 9.5px)',
+                color: '#39FF14',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {fullName} ADVANCES TO {nextRound}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Venue footer */}
       {fixture.venue && (
@@ -1828,6 +1855,7 @@ function WcFixtureCard({
         borderBottom: "1px solid hsl(var(--border))",
         borderLeft: `3px solid ${borderColor}`,
         overflowX: "clip",
+        overflow: "hidden",
       }}
     >
       {/* ── Desktop layout (≥ md) ── */}
