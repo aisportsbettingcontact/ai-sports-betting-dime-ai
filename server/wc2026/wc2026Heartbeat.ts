@@ -12,7 +12,6 @@
  *
  * 2. POST /api/scheduled/wc2026-splits
  *    Cadence: every 5 min
- *    Action:  Scrape DK Network splits → wc2026_betting_splits
  *
  * 3. POST /api/scheduled/wc2026-lineups
  *    Cadence: every 10 min

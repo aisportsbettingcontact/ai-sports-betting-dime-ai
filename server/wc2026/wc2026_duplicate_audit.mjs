@@ -9,7 +9,6 @@
  *   4. wc2026_match_events — duplicate events (same fixture_id + event_type + player_name + minute_num)
  *   5. wc2026_lineups — duplicate player entries (same fixture_id + team_id + player_name)
  *   6. wc2026_odds_snapshots — duplicate model odds (book_id=0, same fixture+market+selection)
- *   7. wc2026_betting_splits — duplicate splits (same fixture+team+market within same snapshot window)
  *
  * For each duplicate found: logs the full detail and removes the duplicate (keeps most recent).
  */
@@ -181,33 +180,8 @@ if (dkClosingDups.length === 0) {
   }
 }
 
-// ─── 8. wc2026_betting_splits: duplicate splits ───────────────────────────────
-console.log('\n[WC2026_AUDIT] [STEP 8] Checking wc2026_betting_splits for duplicates...');
-const [splitsDups] = await conn.query(`
-  SELECT fixture_id, team_id, market, COUNT(*) as cnt,
-         GROUP_CONCAT(id ORDER BY id) as ids
-  FROM wc2026_betting_splits
-  GROUP BY fixture_id, team_id, market
-  HAVING cnt > 1
-`);
-if (splitsDups.length === 0) {
-  console.log('[WC2026_AUDIT] [VERIFY] PASS — No duplicate betting splits ✅');
-} else {
-  console.warn(`[WC2026_AUDIT] [VERIFY] WARNING — ${splitsDups.length} duplicate splits groups:`);
-  for (const dup of splitsDups) {
-    console.warn(`  fixture=${dup.fixture_id} team=${dup.team_id} market=${dup.market} count=${dup.cnt}`);
-    totalDuplicatesFound++;
-    const ids = dup.ids.split(',').map(Number);
-    const keepId = Math.max(...ids);
-    const deleteIds = ids.filter(id => id !== keepId);
-    await conn.query(`DELETE FROM wc2026_betting_splits WHERE id IN (?)`, [deleteIds]);
-    totalDuplicatesRemoved += deleteIds.length;
-    console.warn(`  → Deleted ${deleteIds.length} duplicate splits row(s) ✅`);
-  }
-}
-
-// ─── 9. Full fixture count audit ─────────────────────────────────────────────
-console.log('\n[WC2026_AUDIT] [STEP 9] Full fixture inventory audit...');
+// ─── 8. Full fixture count audit ─────────────────────────────────────────────
+console.log('\n[WC2026_AUDIT] [STEP 8] Full fixture inventory audit...');
 const [fixtureCounts] = await conn.query(`
   SELECT 
     COUNT(*) as total_fixtures,
