@@ -83,6 +83,12 @@ export const wc2026Fixtures = mysqlTable(
     // References wc2026Teams.teamId — e.g. 'bra', 'can', 'par'
     advancingTeamId: varchar("advancing_team_id", { length: 8 })
       .references(() => wc2026Teams.teamId),
+    // [LIVE 2026-06-30] Live match minute string set by fifaLiveScraper.ts
+    // Examples: "18", "45+2", "90+3", "ETHT" (extra time half time), null when not live
+    matchMinute: varchar("match_minute", { length: 16 }),
+    // [LIVE 2026-06-30] FIFA official match ID for live scraping correlation
+    // Used by fifaLiveScraper.ts to map FIFA match IDs to DB fixture IDs
+    fifaMatchId: varchar("fifa_match_id", { length: 32 }),
   },
   (t) => [
     index("idx_date").on(t.matchDate),

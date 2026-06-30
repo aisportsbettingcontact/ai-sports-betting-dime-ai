@@ -950,7 +950,14 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const isHT = fixture.status === "HT";
   const isFinal = fixture.status === "FT";
   const matchMinute = fixture.matchMinute ?? null;
+  // [FIX 2026-06-30 v3] isExtraTimeHT: special sub-state of HT where match_minute='ETHT'
+  // FIFA renders this as 'EXTRA TIME HALF TIME' — stored as status=HT, matchMinute='ETHT'
+  const isExtraTimeHT = isHT && matchMinute === 'ETHT';
   const hasScores = fixture.homeScore != null && fixture.awayScore != null;
+  // [FIX 2026-06-30 v3] showScores: include HT — halftime scores must be visible
+  // Previously: (isLive || isFinal) — excluded HT, hiding scores at halftime
+  // Fixed: (isLive || isHT || isFinal) — all active match states show scores
+  const showScores = (isLive || isHT || isFinal) && hasScores;
   // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
   const isScheduled = !isLive && !isHT && !isFinal;
   const proj = fixture.projection;
@@ -1020,21 +1027,22 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         <div className="flex items-center justify-center mb-1.5">
           {isHT ? (
             // [HT] Halftime badge — amber/yellow to distinguish from LIVE green
+            // [FIX 2026-06-30 v3] Show 'ET HT' when matchMinute='ETHT' (Extra Time Half Time)
             <span
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
                 fontSize: HT_FONT_SIZE,
-                background: "rgba(251,191,36,0.12)",
-                color: "#FBbf24",
-                border: "1px solid rgba(251,191,36,0.4)",
+                background: isExtraTimeHT ? "rgba(251,146,60,0.12)" : "rgba(251,191,36,0.12)",
+                color: isExtraTimeHT ? "#FB923C" : "#FBbf24",
+                border: isExtraTimeHT ? "1px solid rgba(251,146,60,0.4)" : "1px solid rgba(251,191,36,0.4)",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
                 gap: '6px',
                 lineHeight: 1,
               }}
             >
-              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FBbf24" }} />
-              HT
+              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: isExtraTimeHT ? "#FB923C" : "#FBbf24" }} />
+              {isExtraTimeHT ? 'ET HT' : 'HT'}
             </span>
           ) : isLive ? (
             // [LIVE] Green badge with pulsing dot + match minute (e.g. '● LIVE 45+2\'')
@@ -1052,7 +1060,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               }}
             >
               <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
-              LIVE{matchMinute ? ` ${matchMinute}'` : ''}
+              {/* [FIX 2026-06-30 v3] Exclude 'ETHT' from live minute display — that's an HT state not a minute */}
+              LIVE{matchMinute && matchMinute !== 'ETHT' ? ` ${matchMinute}'` : ''}
             </span>
           ) : (
             // [FINAL] Green badge — advancing team moved to BOTTOM row below home team
@@ -1108,14 +1117,15 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
           ` | [VERIFY] hasScores=${hasScores} isLive=${isLive} isFinal=${isFinal}`
         );
         // [STEP] Score color: winner = #39FF14 bold, loser/draw = white unbolded
-        const homeScoreColor = (isLive || isFinal) && hasScores
-          ? 'rgba(255,255,255,0.95)'
+        // [FIX 2026-06-30 v3] Use showScores (includes HT) — halftime scores are real scores
+        const homeScoreColor = showScores
+          ? (isFinal && homeWins ? '#39FF14' : 'rgba(255,255,255,0.95)')
           : 'rgba(251,191,36,0.75)';
-        const homeScoreBold = (isLive || isFinal) && hasScores && homeWins ? 700 : 400;
-        const awayScoreColor = (isLive || isFinal) && hasScores
-          ? 'rgba(255,255,255,0.95)'
+        const homeScoreBold = showScores && homeWins ? 700 : 400;
+        const awayScoreColor = showScores
+          ? (isFinal && awayWins ? '#39FF14' : 'rgba(255,255,255,0.95)')
           : 'rgba(251,191,36,0.75)';
-        const awayScoreBold = (isLive || isFinal) && hasScores && awayWins ? 700 : 400;
+        const awayScoreBold = showScores && awayWins ? 700 : 400;
         // [STEP] Projected score color: winner proj = #39FF14 bold, loser/draw = amber unbolded
         const projHomeWins = hasProjScores && (proj!.projHomeScore ?? 0) > (proj!.projAwayScore ?? 0);
         const projAwayWins = hasProjScores && (proj!.projAwayScore ?? 0) > (proj!.projHomeScore ?? 0);
@@ -1142,7 +1152,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
-              {(isLive || isFinal) && hasScores ? (
+              {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
+              {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
                   {fixture.awayScore}
                 </span>
@@ -1173,7 +1184,8 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
                 </span>
               </div>
               {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
-              {(isLive || isFinal) && hasScores ? (
+              {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
+              {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
                   {fixture.homeScore}
                 </span>
