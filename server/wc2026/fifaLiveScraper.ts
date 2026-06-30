@@ -171,9 +171,20 @@ function parseFifaHtml(html: string): FifaMatchState[] {
     } else if (rawStatus === 'HT') {
       status = 'HT';
       minute = null;
+    } else if (
+      rawStatus.toUpperCase().includes('EXTRA TIME HALF TIME') ||
+      rawStatus.toUpperCase() === 'ET HT' ||
+      rawStatus.toUpperCase() === 'ETHT'
+    ) {
+      // [FIX 2026-06-30] Extra Time Half Time — treat as HT with special minute marker
+      // FIFA renders: 'EXTRA TIME HALF TIME' in the statusLabel span
+      // Stored as: status=HT, matchMinute='ETHT'
+      status = 'HT';
+      minute = 'ETHT';
     } else {
       // Delegate ALL live minute formats to normalizeMinute:
       // handles "18'", "45'+2'" (injury mid-apostrophe), "45+2'" (legacy), bare integers
+      // Also handles ET minutes: "105'+2'", "120'+3'"
       ({ status, minute } = normalizeMinute(rawStatus));
     }
 

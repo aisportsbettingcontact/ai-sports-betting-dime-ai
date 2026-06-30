@@ -4336,3 +4336,22 @@
 - [x] Written fifaLiveScraper.test.ts: 30+ unit tests covering all 8 status formats + UI display
 - [x] All 1159 tests passing (56 test files) — 0 failures
 - [x] TypeScript: 0 errors throughout
+
+## Session: 2026-06-30 — WC2026 Score Rendering Forensic Audit + Full Fix
+
+### Root Causes Identified (4 layers)
+- [x] [DB] NED/MAR (wc26-r32-076): scraper wrote FT 0-2 while match was LIVE in ET (1-1) — corrected to LIVE 1-1 matchMinute=ETHT
+- [x] [SCHEMA] Drizzle schema missing matchMinute and fifaMatchId columns — added to wc2026.schema.ts
+- [x] [SCRAPER] FIFA scraper did not parse 'EXTRA TIME HALF TIME' status — added ET/ETHT branch
+- [x] [RENDER] WcScorePanel showScores guard excluded isHT — halftime scores were hidden
+
+### Fixes Applied
+- [x] DB: UPDATE wc26-r32-076 SET status=LIVE, home_score=1, away_score=1, match_minute=ETHT, advancing_team_id=NULL
+- [x] Schema: Added matchMinute varchar(16) and fifaMatchId varchar(32) to wc2026Fixtures Drizzle schema
+- [x] Router: Removed (f as any) casts for advancingTeamId, matchMinute, fifaMatchId — now proper typed Drizzle fields
+- [x] Scraper: Added EXTRA TIME HALF TIME / ET HT / ETHT → status=HT, minute='ETHT' branch
+- [x] WcScorePanel: showScores = (isLive || isHT || isFinal) && hasScores (was: isLive || isFinal)
+- [x] WcScorePanel: isExtraTimeHT = isHT && matchMinute === 'ETHT' — shows orange 'ET HT' badge
+- [x] WcScorePanel: score color guards updated to use showScores (includes HT)
+- [x] WcScorePanel: LIVE badge excludes 'ETHT' from minute display
+- [x] Tests: 1229/1229 passing | TypeScript: 0 errors
