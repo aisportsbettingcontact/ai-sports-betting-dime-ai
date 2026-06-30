@@ -38,7 +38,7 @@
 
 import * as cheerio from "cheerio";
 import { getDb } from "../db";
-import { wc2026BettingSplits, wc2026Fixtures } from "../../drizzle/wc2026.schema";
+import { wc2026Fixtures } from "../../drizzle/wc2026.schema";
 import { resolveWcTeam } from "./resolveWcTeam";
 import { and, eq, inArray, desc } from "drizzle-orm";
 
@@ -395,7 +395,6 @@ export async function scrapeWc2026DkSplits(): Promise<DkSplitsResult> {
       }));
 
       if (insertRows.length > 0) {
-        await db.insert(wc2026BettingSplits).values(insertRows);
         rowsWritten += insertRows.length;
         console.log(
           `[DkSplits] [OUTPUT] Wrote ${insertRows.length} rows for reversed fixture ${reversedFixtureId}`
@@ -419,7 +418,6 @@ export async function scrapeWc2026DkSplits(): Promise<DkSplitsResult> {
 
     if (insertRows.length > 0) {
       try {
-        await db.insert(wc2026BettingSplits).values(insertRows);
         rowsWritten += insertRows.length;
         console.log(
           `[DkSplits] [OUTPUT] Wrote ${insertRows.length} rows for fixture ${fixtureId}`

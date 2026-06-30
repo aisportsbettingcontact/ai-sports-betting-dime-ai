@@ -126,31 +126,6 @@ export const wc2026OddsSnapshots = mysqlTable(
 
 export type InsertWc2026OddsSnapshot = typeof wc2026OddsSnapshots.$inferInsert;
 
-// ─── Betting Splits ──────────────────────────────────────────────────────────
-// VSIN DraftKings splits: tickets% and money% per market per team per snapshot.
-export const wc2026BettingSplits = mysqlTable(
-  "wc2026_betting_splits",
-  {
-    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
-      .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
-    snapshotTs: timestamp("snapshot_ts").notNull().default(sql`CURRENT_TIMESTAMP`),
-    teamId: varchar("team_id", { length: 8 })
-      .notNull()
-      .references(() => wc2026Teams.teamId),
-    market: mysqlEnum("market", ["ML", "TOTAL", "SPREAD"]).notNull().default("ML"),
-    ticketsPct: double("tickets_pct"),
-    moneyPct: double("money_pct"),
-  },
-  (t) => [
-    index("idx_splits_fixture").on(t.fixtureId),
-    index("idx_splits_ts").on(t.snapshotTs),
-  ],
-);
-
-export type InsertWc2026BettingSplit = typeof wc2026BettingSplits.$inferInsert;
-
 // ─── Lineups ─────────────────────────────────────────────────────────────────
 // Rotowire predicted/confirmed lineups. One row per player per fixture.
 export const wc2026Lineups = mysqlTable(

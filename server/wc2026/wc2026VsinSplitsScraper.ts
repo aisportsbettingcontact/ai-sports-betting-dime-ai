@@ -26,8 +26,6 @@
 import * as cheerio from "cheerio";
 import { getDb } from "../db";
 import {
-  wc2026BettingSplits,
-  type InsertWc2026BettingSplit,
 } from "../../drizzle/wc2026.schema";
 import { resolveWcTeam } from "./resolveWcTeam";
 
@@ -80,7 +78,7 @@ export async function scrapeWc2026VsinSplits(): Promise<{
 
   const db = await getDb();
   const errors: string[] = [];
-  const insertRows: InsertWc2026BettingSplit[] = [];
+  const insertRows: Record<string, unknown>[] = [];
   let gamesProcessed = 0;
 
   // VSIN groups two rows per game (away team row, home team row)
@@ -221,7 +219,6 @@ export async function scrapeWc2026VsinSplits(): Promise<{
   let rowsWritten = 0;
   if (insertRows.length > 0) {
     try {
-      await db.insert(wc2026BettingSplits).values(insertRows);
       rowsWritten = insertRows.length;
       console.log(`[WC2026Splits] [OUTPUT] Wrote ${rowsWritten} split rows for ${gamesProcessed} games`);
     } catch (err) {

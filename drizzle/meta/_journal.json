@@ -729,6 +729,27 @@
       "when": 1782791988631,
       "tag": "0103_nappy_brother_voodoo",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "5",
+      "when": 1782808384507,
+      "tag": "0104_outgoing_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "5",
+      "when": 1782808513661,
+      "tag": "0105_puzzling_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1782809234911,
+      "tag": "0106_espn_table_renames",
+      "breakpoints": true
     }
   ]
 }
