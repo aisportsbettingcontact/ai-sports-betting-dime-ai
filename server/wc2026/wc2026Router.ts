@@ -17,6 +17,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
 import { scrapeEspnMatch, scrapeEspnScoreboard, extractGameId } from "./espnMatchScraper";
+import { scrapeEspnMatchPage } from "./espnPageScraper";
 import { getDb } from "../db";
 import {
   wc2026Fixtures,
@@ -734,6 +735,56 @@ export const wc2026Router = router({
         const errMsg = err instanceof Error ? err.message : String(err);
         console.error(`[ESPN] espnScoreboard FAILED | date=${dateParam} | error=${errMsg}`);
         return { success: false as const, events: [], error: errMsg };
+      }
+    }),
+
+  /**
+   * espnMatchPage — 100x direct Playwright page scraper (ZERO API fallback)
+   *
+   * Loads 3 ESPN pages directly and extracts all 13 tables:
+   *   1. Game Strip        6. Team Stats       11. Passes
+   *   2. Boxscore          7. Expected Goals   12. Duels
+   *   3. Goalkeeping       8. Shot Map         13. Fouls
+   *   4. Formations        9. Shots            14. Attack
+   *   5. Lineups          10. Full Team Stats
+   *
+   * Input:
+   *   urlOrGameId — ESPN game URL or numeric gameId (e.g. "760487")
+   *   saveHtml    — save raw HTML to .manus-logs/ for debugging (default false)
+   */
+  espnMatchPage: publicProcedure
+    .input(
+      z.object({
+        urlOrGameId: z.string().min(1),
+        saveHtml: z.boolean().optional().default(false),
+      })
+    )
+    .query(async ({ input }) => {
+      const { urlOrGameId, saveHtml } = input;
+      const gameIdMatch = urlOrGameId.match(/gameId[=/](\d+)/);
+      const gameId = gameIdMatch ? gameIdMatch[1] : urlOrGameId.replace(/\D/g, "");
+      console.log(`[ESPN_PAGE] espnMatchPage called | gameId=${gameId} | saveHtml=${saveHtml}`);
+      const t0 = Date.now();
+      try {
+        const data = await scrapeEspnMatchPage(urlOrGameId, {
+          logDir: ".manus-logs",
+          saveHtml,
+        });
+        const elapsed = Date.now() - t0;
+        const homePlayers = data.boxscore.homeTeam.outfieldPlayers.length;
+        const awayPlayers = data.boxscore.awayTeam.outfieldPlayers.length;
+        console.log(
+          `[ESPN_PAGE] espnMatchPage complete | gameId=${gameId} | elapsed=${elapsed}ms | ` +
+          `players=${homePlayers + awayPlayers} | shots=${data.shotMap.shots.length} | ` +
+          `teamStats=${data.teamStats.stats.length} | ` +
+          `homeFormation=${data.lineups.home.formation} | awayFormation=${data.lineups.away.formation}`
+        );
+        return { success: true as const, data, error: null };
+      } catch (err) {
+        const elapsed = Date.now() - t0;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[ESPN_PAGE] espnMatchPage FAILED | gameId=${gameId} | elapsed=${elapsed}ms | error=${errMsg}`);
+        return { success: false as const, data: null, error: errMsg };
       }
     }),
 });
