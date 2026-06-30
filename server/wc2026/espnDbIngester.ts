@@ -272,7 +272,7 @@ export async function ingestEspnMatchData(
 
     const get = (key: string) => statMap[key.toLowerCase()] ?? { home: "", away: "" };
 
-    const possession = get("ball possession");
+    const possession = get("possession");
     const sog = get("shots on goal");
     const shots = get("shot attempts");
     const fouls = get("fouls");
@@ -317,9 +317,13 @@ export async function ingestEspnMatchData(
       });
     }
 
-    const pass = ts.stats.length >= 7;
+    const pass = ts.stats.length >= 8 && !!row.possession && row.shotsOnGoal !== null;
     logOutput(`1 row upserted — ${ts.stats.length} stats mapped`);
-    logVerify(pass, `${ts.stats.length} stats (expected 8) | possession=${possession.home}/${possession.away}`);
+    logVerify(ts.stats.length >= 8, `TEAM_STATS ROW COUNT: ${ts.stats.length} (expected exactly 8)`);
+    logVerify(!!row.possession, `POSSESSION: home=${row.possession} away=${row.possessionAway}`);
+    logVerify(row.shotsOnGoal !== null, `SHOTS_ON_GOAL: home=${row.shotsOnGoal} away=${row.shotsOnGoalAway}`);
+    logVerify(row.cornerKicks !== null, `CORNER_KICKS: home=${row.cornerKicks} away=${row.cornerKicksAway}`);
+    logVerify(pass, `All 8 tmStatsGrph rows mapped and verified`);
     result.phases.push({ phase: 3, table: "wc2026_espn_team_stats", rowsWritten: 1, pass });
     result.totalRowsWritten += 1;
   } catch (err) {
@@ -615,6 +619,24 @@ export async function ingestEspnMatchData(
   logPhase(7, 9, "wc2026_espn_player_stats");
   try {
     const bx = data.boxscore;
+
+    // Build a lookup of lineup stats by athleteId (appearances, foulsCommitted, etc.)
+    // These come from lineUps[].playersMap[].stats in the ESPN __espnfitt__ data
+    const lineupStatsByAthleteId: Record<string, Record<string, string>> = {};
+    for (const luArr of [data.lineups.home, data.lineups.away]) {
+      const allLineupPlayers = [
+        ...luArr.starters,
+        ...luArr.substitutes,
+        ...luArr.unused,
+      ];
+      for (const lp of allLineupPlayers) {
+        if (lp.athleteId && lp.stats) {
+          lineupStatsByAthleteId[lp.athleteId] = lp.stats as Record<string, string>;
+        }
+      }
+    }
+    logState(`Lineup stats lookup built for ${Object.keys(lineupStatsByAthleteId).length} athletes`);
+
     const allPlayers: Array<{
       teamAbbrev: string;
       teamId: string;
@@ -638,9 +660,28 @@ export async function ingestEspnMatchData(
     logInput(`GK: home=${bx.homeTeam.goalkeeper?.name ?? "none"} away=${bx.awayTeam.goalkeeper?.name ?? "none"}`);
 
     let rowsWritten = 0;
+    let statNonNullCount = 0;
     for (const entry of allPlayers) {
       const p = entry.player;
       const stats = p.stats ?? {};
+      // Merge lineup-derived stats (appearances, fouls, cards, etc.)
+      const luStats = lineupStatsByAthleteId[p.athleteId] ?? {};
+
+      // ── CRITICAL: Use abbreviated schema column names (tch, g, a, sog, shot, bcc, dint, duelw)
+      // Drizzle silently ignores unknown keys — long names like 'touches' would write NULL
+      const tch  = safeInt(stats["TCH"]);
+      const g    = safeInt(stats["G"]);
+      const a    = safeInt(stats["A"]);
+      const xG   = safeDecimal(stats["xG"]);
+      const xA   = safeDecimal(stats["xA"]);
+      const sog  = safeInt(stats["SOG"]);
+      const shot = safeInt(stats["SHOT"]);
+      const bcc  = safeInt(stats["BCC"]);
+      const dint = safeInt(stats["DINT"]);
+      const duelw = safeInt(stats["DUELW"]);
+
+      if (tch !== null || g !== null || sog !== null) statNonNullCount++;
+
       const row = {
         matchId,
         athleteId: p.athleteId,
@@ -653,29 +694,38 @@ export async function ingestEspnMatchData(
         isHome: entry.isHome ? 1 : 0,
         positionGroup: p.positionGroup ?? null,
         isGoalkeeper: 0,
-        // Outfield stats
-        touches: safeInt(stats["TCH"]),
-        goals: safeInt(stats["G"]),
-        assists: safeInt(stats["A"]),
-        xG: safeDecimal(stats["xG"]),
-        xA: safeDecimal(stats["xA"]),
-        shotsOnGoal: safeInt(stats["SOG"]),
-        shots: safeInt(stats["SHOT"]),
-        bigChancesCreated: safeInt(stats["BCC"]),
-        defensiveInterventions: safeInt(stats["DINT"]),
-        duelsWon: safeInt(stats["DUELW"]),
-        // GK stats (null for outfield)
-        goalsConceded: null,
-        saves: null,
-        shotsOnGoalAgainst: null,
-        xGConceded: null,
-        xGOTConceded: null,
-        goalsPrevented: null,
-        bigChanceSaves: null,
-        clearances: null,
-        crossesClaimed: null,
-        keeperSweepers: null,
-        shotsFaced: null,
+        // ── OUTFIELD STATS (abbreviated schema column names) ──────────────────
+        tch,
+        g,
+        a,
+        xG,
+        xA,
+        sog,
+        shot,
+        bcc,
+        dint,
+        duelw,
+        // ── GK STATS (null for outfield) ──────────────────────────────────────
+        ga:    null,
+        sv:    null,
+        soga:  null,
+        xGC:   null,
+        xGOTC: null,
+        gp:    null,
+        bcs:   null,
+        clr:   null,
+        cc:    null,
+        ks:    null,
+        // ── LINEUP-DERIVED STATS (from lineUps[].playersMap[].stats) ──────────
+        appearances:    safeInt(luStats["appearances"] ?? luStats["AP"]),
+        foulsCommitted: safeInt(luStats["foulsCommitted"] ?? luStats["FC"]),
+        foulsSuffered:  safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
+        ownGoals:       safeInt(luStats["ownGoals"] ?? luStats["OG"]),
+        redCards:       safeInt(luStats["redCards"] ?? luStats["RC"]),
+        subIns:         safeInt(luStats["subIns"] ?? luStats["SI"]),
+        yellowCards:    safeInt(luStats["yellowCards"] ?? luStats["YC"]),
+        offsides:       safeInt(luStats["offsides"] ?? luStats["OF"]),
+        shotsFaced:     null,  // GK only
         createdAt: now(),
         updatedAt: now(),
       };
@@ -695,6 +745,22 @@ export async function ingestEspnMatchData(
     ] as const) {
       if (!gkData) continue;
       const stats = gkData.stats ?? {};
+      const luStats = lineupStatsByAthleteId[gkData.athleteId] ?? {};
+
+      // ── CRITICAL: Use abbreviated schema column names (ga, sv, soga, xGC, xGOTC, gp, bcs, clr, cc, ks)
+      const ga    = safeInt(stats["GA"]);
+      const sv    = safeInt(stats["SV"]);
+      const soga  = safeInt(stats["SOGA"]);
+      const xGC   = safeDecimal(stats["xGC"]);
+      const xGOTC = safeDecimal(stats["xGOTC"]);
+      const gp    = safeDecimal(stats["GP"]);
+      const bcs   = safeInt(stats["BCS"]);
+      const clr   = safeInt(stats["CLR"]);
+      const cc    = safeInt(stats["CC"]);
+      const ks    = safeInt(stats["KS"]);
+
+      if (sv !== null || ga !== null) statNonNullCount++;
+
       const row = {
         matchId,
         athleteId: gkData.athleteId,
@@ -707,29 +773,38 @@ export async function ingestEspnMatchData(
         isHome: isHome ? 1 : 0,
         positionGroup: "Goalkeepers",
         isGoalkeeper: 1,
-        // Outfield stats (null for GK)
-        touches: null,
-        goals: null,
-        assists: null,
-        xG: null,
-        xA: null,
-        shotsOnGoal: null,
-        shots: null,
-        bigChancesCreated: null,
-        defensiveInterventions: null,
-        duelsWon: null,
-        // GK stats
-        goalsConceded: safeInt(stats["GA"]),
-        saves: safeInt(stats["SV"]),
-        shotsOnGoalAgainst: safeInt(stats["SOGA"]),
-        xGConceded: safeDecimal(stats["xGC"]),
-        xGOTConceded: safeDecimal(stats["xGOTC"]),
-        goalsPrevented: safeDecimal(stats["GP"]),
-        bigChanceSaves: safeInt(stats["BCS"]),
-        clearances: safeInt(stats["CLR"]),
-        crossesClaimed: safeInt(stats["CC"]),
-        keeperSweepers: safeInt(stats["KS"]),
-        shotsFaced: null,
+        // ── OUTFIELD STATS (null for GK) ──────────────────────────────────────
+        tch:   null,
+        g:     null,
+        a:     null,
+        xG:    null,
+        xA:    null,
+        sog:   null,
+        shot:  null,
+        bcc:   null,
+        dint:  null,
+        duelw: null,
+        // ── GK STATS (abbreviated schema column names) ────────────────────────
+        ga,
+        sv,
+        soga,
+        xGC,
+        xGOTC,
+        gp,
+        bcs,
+        clr,
+        cc,
+        ks,
+        // ── LINEUP-DERIVED STATS ──────────────────────────────────────────────
+        appearances:    safeInt(luStats["appearances"] ?? luStats["AP"]),
+        foulsCommitted: safeInt(luStats["foulsCommitted"] ?? luStats["FC"]),
+        foulsSuffered:  safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
+        ownGoals:       safeInt(luStats["ownGoals"] ?? luStats["OG"]),
+        redCards:       safeInt(luStats["redCards"] ?? luStats["RC"]),
+        subIns:         safeInt(luStats["subIns"] ?? luStats["SI"]),
+        yellowCards:    safeInt(luStats["yellowCards"] ?? luStats["YC"]),
+        offsides:       safeInt(luStats["offsides"] ?? luStats["OF"]),
+        shotsFaced:     safeInt(luStats["shotsFaced"] ?? luStats["SF"]),
         createdAt: now(),
         updatedAt: now(),
       };
@@ -742,9 +817,11 @@ export async function ingestEspnMatchData(
       rowsWritten++;
     }
 
-    const pass = rowsWritten >= 20; // minimum 20 players expected
-    logOutput(`${rowsWritten} player rows upserted`);
-    logVerify(pass, `${rowsWritten} players (expected ≥20) | statCols=${bx.statColumns.length} gkCols=${bx.gkStatColumns.length}`);
+    const pass = rowsWritten >= 20 && statNonNullCount >= 10; // minimum 20 players, at least 10 with non-null stats
+    logOutput(`${rowsWritten} player rows upserted | ${statNonNullCount} with non-null stat values`);
+    logVerify(rowsWritten >= 20, `PLAYER COUNT: ${rowsWritten} rows (expected ≥20)`);
+    logVerify(statNonNullCount >= 10, `STAT COVERAGE: ${statNonNullCount} players have non-null tch/g/sog/sv/ga values (expected ≥10)`);
+    logVerify(pass, `Phase 7 complete | statCols=${bx.statColumns.length} gkCols=${bx.gkStatColumns.length}`);
     result.phases.push({ phase: 7, table: "wc2026_espn_player_stats", rowsWritten, pass });
     result.totalRowsWritten += rowsWritten;
   } catch (err) {
