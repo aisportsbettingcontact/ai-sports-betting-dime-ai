@@ -267,6 +267,10 @@ export class EspnLogger {
     this.emit("VERIFY", msg, data);
   }
 
+  warn(label: string, msg: string, data?: Record<string, unknown>): void {
+    this.emit("WARN", `${label} — ${msg}`, data);
+  }
+
   error(msg: string, err?: unknown, data?: Record<string, unknown>): void {
     this.errorCount++;
     const errStr =
