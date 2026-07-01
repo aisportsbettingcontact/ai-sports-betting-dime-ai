@@ -1,5 +1,5 @@
 # WC2026 ESPN Scraper — 79-Match Forensic Audit Report v5.1
-**Generated:** 2026-07-01T04:24:49.145Z
+**Generated:** 2026-07-01T04:53:42.110Z
 **Audit Engine:** v5.1 | 500x depth | 79 matches (72 GS + 7 R32) | 9 tables
 **Group Stage:** June 11–27, 2026 | **R32 Knockout Stage:** June 28–30, 2026
 

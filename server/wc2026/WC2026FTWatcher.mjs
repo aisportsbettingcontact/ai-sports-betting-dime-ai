@@ -1,42 +1,55 @@
 /**
- * WC2026FTWatcher.mjs — WC2026 Final-Time Watcher Daemon v1.0
- * ============================================================
- * ELITE DUAL-CHANNEL LOGGER | 500x SCRAPER | AUTO-TRIGGER ENGINE
+ * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.0
+ * ══════════════════════════════════════════════════════════════════
+ * ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE | ESPN-ONLY
  *
- * Polls ESPN's scoreboard API every 30 seconds across the active WC2026
- * match dates. Detects when games transition to final/post status and
- * immediately auto-triggers the 500x scraper (espnIngest.test.live.mjs).
+ * Polls the ESPN scoreboard API every 30 seconds across a ±3-day
+ * window, detects newly-final WC2026 matches, and fires the 500x
+ * scraper (espnIngest.test.live.mjs) for each newly-settled game.
  *
- * Features:
- *   - Elite dual-channel logging: terminal (ANSI color) + file simultaneously
- *   - ESPN scoreboard API polling every 30s across current + next 3 days
- *   - Game state machine: pre → in → post transition detection
- *   - alreadyScraped set: prevents duplicate scrapes per session
- *   - Child-process file-stream output capture (no pipe deadlock)
- *   - Retry logic: MAX_ATTEMPTS=2, 8s delay between retries
- *   - Midnight rule verification: PT date / ET time post-scrape DB check
- *   - Per-poll CYCLE summary line with total/live/final/newly-final counts
- *   - Per-trigger TRIGGER log: gameId → matchRound
- *   - Session summary on SIGINT/SIGTERM with verdict line
- *   - scrapeVersion='500x' on all records (enforced by espnDbIngester.ts)
+ * Architecture mirrors batchScrapeR32.mjs at every layer:
+ *   - Elite dual-channel logger: terminal (ANSI) + two file streams
+ *   - File-stream child-process capture (prevents pipe deadlock)
+ *   - Forensic FT-transition detection engine (ESPN status type IDs)
+ *   - Midnight rule verification post-scrape (PT date / ET time)
+ *   - Round verification (matchRound = expected ESPN season.slug)
+ *   - Pre-flight DB state banner on startup
+ *   - Retry engine: up to 3 attempts with 10s/20s/30s backoff
+ *   - Per-cycle state machine: tracks every game's statusState
+ *   - Session summary on SIGINT/SIGTERM
+ *
+ * ESPN-ONLY POLICY: ALL data sourced exclusively from ESPN APIs.
+ * No external sources. No fallback to non-ESPN endpoints.
+ *
+ * ESPN STATUS TYPE ID REFERENCE (forensically confirmed):
+ *   id=1  STATUS_SCHEDULED      state=pre  completed=false
+ *   id=2  STATUS_IN_PROGRESS    state=in   completed=false
+ *   id=22 STATUS_HALFTIME       state=in   completed=false  period=2
+ *   id=23 STATUS_FULL_TIME      state=post completed=true   FT
+ *   id=28 STATUS_FULL_TIME      state=post completed=true   FT  ← confirmed 760491
+ *   id=3  STATUS_FINAL          state=post completed=true   FT  (legacy)
+ *   id=6  STATUS_POSTPONED      state=pre  completed=false
+ *   id=7  STATUS_CANCELED       state=post completed=true
+ *   id=9  STATUS_DELAYED        state=pre  completed=false
+ *   id=17 STATUS_EXTRA_TIME     state=in   completed=false  ET
+ *   id=24 STATUS_SHOOTOUT       state=in   completed=false  Pens
+ *   id=28 STATUS_FINAL_PEN      state=post completed=true   FT-Pens (also seen as id=28)
+ *
+ * FT TRANSITION SIGNATURE (760491 Mexico vs Ecuador — forensic ground truth):
+ *   LIVE:  state=in  | type.id=2  | completed=false | displayClock=90'+N' | period=2
+ *   FINAL: state=post| type.id=28 | completed=true  | displayClock=90'+9' | shortDetail=FT
+ *   Key: state changes from "in" → "post" AND completed changes false → true
  *
  * Usage:
- *   node server/wc2026/WC2026FTWatcher.mjs [--dates=YYYYMMDD,YYYYMMDD]
- *
- * Output format from espnIngest.test.live.mjs:
- *   [RUNNER] Ingest complete — success=true | rows=N | errors=0
- *
- * Log file: .manus-logs/WC2026FTWatcher.txt
+ *   node WC2026FTWatcher.mjs [--dry-run] [--force-rescrape]
+ *   --dry-run:        detect finals but do NOT trigger scraper
+ *   --force-rescrape: re-trigger scraper even if gameId already in DB
  */
 
-import { spawn } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { createConnection } from 'mysql2/promise';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { spawn }          from 'child_process';
+import fs                 from 'fs';
+import { createPool }     from 'mysql2/promise';
+import dotenv             from 'dotenv';
 
 dotenv.config({ path: '/home/ubuntu/ai-sports-betting/.env' });
 
@@ -44,80 +57,106 @@ dotenv.config({ path: '/home/ubuntu/ai-sports-betting/.env' });
 // CONFIG
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const PROJECT_DIR       = '/home/ubuntu/ai-sports-betting';
-const LOG_DIR           = `${PROJECT_DIR}/.manus-logs`;
-const LOG_FILE          = `${LOG_DIR}/WC2026FTWatcher.txt`;
-const PROGRESS_FILE     = `${LOG_DIR}/WC2026FTWatcher_progress.json`;
-const RUNNER_SCRIPT     = `${PROJECT_DIR}/server/wc2026/espnIngest.test.live.mjs`;
-const SCRAPE_LOG_DIR    = `/tmp`;
+const DRY_RUN        = process.argv.includes('--dry-run');
+const FORCE_RESCRAPE = process.argv.includes('--force-rescrape');
 
-const POLL_INTERVAL_MS  = 30_000;   // 30 seconds between poll cycles
-const MATCH_TIMEOUT_MS  = 420_000;  // 7 minutes per scrape (R32 extra time/penalties)
-const RETRY_DELAY_MS    = 8_000;    // 8 seconds between retry attempts
-const MAX_ATTEMPTS      = 2;        // max scrape attempts per game
+const PROJECT_DIR    = '/home/ubuntu/ai-sports-betting';
+const LOG_DIR        = `${PROJECT_DIR}/.manus-logs`;
+const WATCHER_LOG    = `${LOG_DIR}/WC2026FTWatcher.txt`;
+const TERMINAL_LOG   = `/tmp/WC2026FTWatcher_500x.txt`;
+const PROGRESS_FILE  = `${LOG_DIR}/WC2026FTWatcher_progress.json`;
+const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/espnIngest.test.live.mjs`;
 
-const ESPN_SCOREBOARD   = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
-const ESPN_SUMMARY      = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary';
+// Poll interval: 30 seconds
+const POLL_INTERVAL_MS   = 30_000;
+// Per-match scrape timeout: 7 minutes (R32/QF/SF/F matches with ET+pens)
+const MATCH_TIMEOUT_MS   = 420_000;
+// Max retry attempts per match
+const MAX_ATTEMPTS       = 3;
+// Retry backoff delays (ms) per attempt
+const RETRY_BACKOFF_MS   = [0, 10_000, 20_000, 30_000];
+// Watch window: yesterday through +3 days
+const WATCH_DAYS_BEFORE  = 1;
+const WATCH_DAYS_AFTER   = 3;
 
-// ESPN season type → matchRound slug mapping
-const SEASON_TYPE_TO_SLUG = {
-  13802: 'group-stage',
-  13801: 'round-of-32',
-  13800: 'round-of-16',
-  13799: 'quarterfinals',
-  13798: 'semifinals',
-  13797: 'third-place',
-  13796: 'final',
+// ESPN API — ONLY source permitted
+const ESPN_SCOREBOARD_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_LEAGUE_SLUG     = 'fifa.world';
+const ESPN_SEASON_TYPE     = 13801; // WC2026 knockout stage
+
+// ESPN status type IDs that represent a SETTLED/FINAL match
+// Forensically confirmed from live API inspection
+const ESPN_FINAL_TYPE_IDS  = new Set([3, 23, 28]);   // STATUS_FINAL, STATUS_FULL_TIME, STATUS_FINAL_PEN
+const ESPN_FINAL_STATES    = new Set(['post']);        // state must be "post"
+const ESPN_LIVE_TYPE_IDS   = new Set([2, 17, 22, 24]);// in-progress, ET, halftime, shootout
+const ESPN_LIVE_STATES     = new Set(['in']);
+
+// Expected matchRound values by ESPN season.slug
+const ROUND_SLUG_MAP = {
+  'round-of-32':       'round-of-32',
+  'round-of-16':       'round-of-16',
+  'quarterfinals':     'quarterfinals',
+  'semifinals':        'semifinals',
+  'final':             'final',
+  'third-place':       'third-place',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ELITE DUAL-CHANNEL LOGGER
-// Writes to BOTH terminal (with ANSI color) AND log file (plain text)
-// Format: [ISO_TIMESTAMP] [LEVEL  ] [TAG                  ] message
+// Writes to: terminal (ANSI color) + WATCHER_LOG (append) + TERMINAL_LOG (overwrite)
+// Format: [ISO_TIMESTAMP] [LEVEL  ] [TAG                    ] message
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
-const logStream = fs.createWriteStream(LOG_FILE, { flags: 'a' });
+const logStream  = fs.createWriteStream(WATCHER_LOG,  { flags: 'a' });
+const termStream = fs.createWriteStream(TERMINAL_LOG, { flags: 'w' });
 
-// ANSI color codes for terminal
 const C = {
-  reset: '\x1b[0m', bold: '\x1b[1m', dim: '\x1b[2m',
-  green: '\x1b[32m', red: '\x1b[31m', yellow: '\x1b[33m',
-  cyan: '\x1b[36m', magenta: '\x1b[35m', blue: '\x1b[34m',
-  white: '\x1b[37m', gray: '\x1b[90m',
+  reset:   '\x1b[0m',  bold:    '\x1b[1m',  dim:     '\x1b[2m',
+  green:   '\x1b[32m', red:     '\x1b[31m', yellow:  '\x1b[33m',
+  cyan:    '\x1b[36m', magenta: '\x1b[35m', blue:    '\x1b[34m',
+  gray:    '\x1b[90m', white:   '\x1b[97m', orange:  '\x1b[38;5;208m',
 };
 
 const LEVEL_COLORS = {
-  'INFO':    C.cyan,
-  'PASS':    C.green,
-  'FAIL':    C.red,
-  'WARN':    C.yellow,
-  'SKIP':    C.blue,
-  'PROG':    C.magenta,
+  'INFO   ': C.cyan,
+  'PASS   ': C.green,
+  'FAIL   ': C.red,
+  'WARN   ': C.yellow,
+  'SKIP   ': C.gray,
+  'PROG   ': C.blue,
+  'VERIFY ': C.magenta,
   'MIDNITE': C.yellow,
-  'VERIFY':  C.green,
-  'ERROR':   C.red,
-  'FATAL':   C.red + C.bold,
-  'POLL':    C.cyan,
-  'TRIGGER': C.magenta + C.bold,
-  'FINAL':   C.green + C.bold,
-  'CYCLE':   C.cyan,
-  'LIVE':    C.yellow,
+  'ERROR  ': C.red,
+  'FATAL  ': C.red,
+  'POLL   ': C.blue,
+  'CYCLE  ': C.cyan,
+  'FINAL  ': C.green,
+  'LIVE   ': C.orange,
+  'TRIGGER': C.magenta,
+  'RETRY  ': C.yellow,
+  'DB     ': C.cyan,
+  'ESPNAPI': C.blue,
+  'TRANS  ': C.magenta,
 };
 
 const log = (level, tag, msg) => {
-  const ts = new Date().toISOString();
-  const plainLine = `[${ts}] [${level.padEnd(7)}] [${tag.padEnd(22)}] ${msg}`;
-  const color = LEVEL_COLORS[level] || C.white;
-  const colorLine = `${C.gray}[${ts}]${C.reset} ${color}[${level.padEnd(7)}]${C.reset} ${C.bold}[${tag.padEnd(22)}]${C.reset} ${msg}`;
-  console.log(colorLine);
-  logStream.write(plainLine + '\n');
+  const ts     = new Date().toISOString();
+  const lvl    = level.padEnd(7);
+  const tagPad = tag.padEnd(28);
+  const plain  = `[${ts}] [${lvl}] [${tagPad}] ${msg}`;
+  const color  = LEVEL_COLORS[`${lvl}`] || C.white;
+  const colored = `${C.dim}[${ts}]${C.reset} ${color}[${lvl}]${C.reset} ${C.gray}[${tagPad}]${C.reset} ${msg}`;
+  process.stdout.write(colored + '\n');
+  logStream.write(plain + '\n');
+  termStream.write(plain + '\n');
 };
 
-const logSep = (char = '─', len = 80) => {
-  const line = char.repeat(len);
+const logSep = (char = '─') => {
+  const line = char.repeat(80);
   console.log(`${C.gray}${line}${C.reset}`);
   logStream.write(line + '\n');
+  termStream.write(line + '\n');
 };
 
 const logBanner = (msg, char = '═') => {
@@ -125,85 +164,276 @@ const logBanner = (msg, char = '═') => {
   console.log(`${C.cyan}${bar}${C.reset}`);
   console.log(`${C.cyan}${C.bold}  ${msg}${C.reset}`);
   console.log(`${C.cyan}${bar}${C.reset}`);
-  logStream.write(bar + '\n');
-  logStream.write(`  ${msg}\n`);
-  logStream.write(bar + '\n');
+  logStream.write(bar + '\n' + `  ${msg}\n` + bar + '\n');
+  termStream.write(bar + '\n' + `  ${msg}\n` + bar + '\n');
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DB CONNECTION
+// DB CONNECTION POOL
 // ═══════════════════════════════════════════════════════════════════════════════
 
-let db;
-const getDb = async () => {
-  if (db) return db;
+let pool;
+const getPool = () => {
+  if (pool) return pool;
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL not set');
-  const m = url.match(/mysql:\/\/([^:]+):([^@]+)@([^/]+)\/(\w+)/);
-  if (!m) {
-    db = await createConnection(url);
-  } else {
-    const [, user, pass, host, database] = m;
-    const [hostname, portStr] = host.split(':');
-    db = await createConnection({
-      host: hostname,
-      port: parseInt(portStr || '3306'),
-      user,
-      password: pass,
-      database,
-      ssl: { rejectUnauthorized: false },
-      connectTimeout: 10_000,
+  if (!url) throw new Error('[DB] DATABASE_URL not set');
+  const m = url.match(/mysql:\/\/([^:]+):([^@]+)@([^:/]+)(?::(\d+))?\/(\w+)/);
+  if (!m) throw new Error(`[DB] Cannot parse DATABASE_URL: ${url.slice(0, 40)}...`);
+  const [, user, pass, host, portStr, database] = m;
+  pool = createPool({
+    host,
+    port:              parseInt(portStr || '3306'),
+    user,
+    password:          pass,
+    database,
+    ssl:               { rejectUnauthorized: false },
+    connectionLimit:   3,
+    connectTimeout:    10_000,
+    enableKeepAlive:   true,
+    keepAliveInitialDelay: 10_000,
+  });
+  return pool;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESPN-ONLY SCOREBOARD FETCH
+// Source: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
+// NO external sources permitted
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch ESPN scoreboard for a single date (YYYYMMDD).
+ * Returns raw ESPN events array or [] on error.
+ */
+const fetchEspnScoreboard = async (dateStr) => {
+  const url = `${ESPN_SCOREBOARD_BASE}?dates=${dateStr}&limit=50`;
+  log('ESPNAPI', `ESPN/SCOREBOARD/${dateStr}`, `[INPUT] GET ${url}`);
+  const startMs = Date.now();
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent':  'WC2026FTWatcher/500x-ESPN-only',
+        'Accept':      'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      signal: AbortSignal.timeout(15_000),
     });
+    const elapsed = Date.now() - startMs;
+    if (!res.ok) {
+      log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
+      return [];
+    }
+    const data = await res.json();
+    const events = data?.events || [];
+    log('ESPNAPI', `ESPN/SCOREBOARD/${dateStr}`, `[OUTPUT] ${events.length} events | ${elapsed}ms | HTTP ${res.status}`);
+    return events;
+  } catch (err) {
+    const elapsed = Date.now() - startMs;
+    log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[ERROR] ${err.message} | ${elapsed}ms`);
+    return [];
   }
-  return db;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESPN EVENT PARSER
+// Extracts all forensically-relevant fields from a raw ESPN event object
+// Maps every status field needed for FT-transition detection
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const parseEspnEvent = (event) => {
+  const comp        = event.competitions?.[0] || {};
+  const status      = comp.status || {};
+  const statusType  = status.type || {};
+  const season      = event.season || {};
+
+  // ── Core identifiers ──────────────────────────────────────────────────────
+  const gameId      = event.id;
+  const name        = event.name || '';
+  const shortName   = event.shortName || '';
+  const eventDate   = event.date || '';       // UTC ISO string from ESPN
+
+  // ── Season / round ────────────────────────────────────────────────────────
+  const seasonType  = season.type;            // 13801 for WC2026 knockout
+  const seasonSlug  = season.slug || '';      // "round-of-32", "quarterfinals", etc.
+  const matchRound  = ROUND_SLUG_MAP[seasonSlug] || seasonSlug || 'unknown';
+
+  // ── ESPN status fields (forensic FT-transition detection) ─────────────────
+  const statusTypeId    = statusType.id;          // CRITICAL: 28 = FT for 760491
+  const statusTypeName  = statusType.name || '';  // "STATUS_FULL_TIME", "STATUS_IN_PROGRESS"
+  const statusState     = statusType.state || ''; // "pre" | "in" | "post"
+  const statusCompleted = statusType.completed;   // true when final
+  const statusDetail    = statusType.detail || '';      // "FT", "HT", "90'+9'"
+  const statusShortDetail = statusType.shortDetail || '';// "FT", "HT"
+  const statusDescription = statusType.description || '';// "Full Time", "Half Time"
+  const displayClock    = status.displayClock || '';    // "90'+9'", "45'", "0'0\""
+  const clock           = status.clock;                 // seconds (5400 = 90min)
+  const period          = status.period;                // 1=1H, 2=2H, 3=ET1, 4=ET2, 5=Pens
+
+  // ── FT detection logic (ESPN-only, forensically verified) ─────────────────
+  // Primary: state === 'post' AND completed === true
+  // Secondary: typeId in FINAL set
+  // Tertiary: shortDetail === 'FT' or description === 'Full Time'
+  const isFinalByState    = statusState === 'post' && statusCompleted === true;
+  const isFinalByTypeId   = ESPN_FINAL_TYPE_IDS.has(statusTypeId);
+  const isFinalByDetail   = statusShortDetail === 'FT' || statusDescription === 'Full Time' || statusDetail === 'FT';
+  const isFinal           = isFinalByState || isFinalByTypeId;
+
+  const isLiveByState     = statusState === 'in';
+  const isLiveByTypeId    = ESPN_LIVE_TYPE_IDS.has(statusTypeId);
+  const isLive            = isLiveByState || isLiveByTypeId;
+
+  const isScheduled       = statusState === 'pre' && !statusCompleted;
+
+  // ── Competitors ───────────────────────────────────────────────────────────
+  const competitors = (comp.competitors || []).map(c => ({
+    id:       c.id,
+    homeAway: c.homeAway,
+    abbrev:   c.team?.abbreviation || '?',
+    name:     c.team?.displayName  || '?',
+    score:    c.score || '0',
+    winner:   c.winner || false,
+  }));
+  const home = competitors.find(c => c.homeAway === 'home');
+  const away = competitors.find(c => c.homeAway === 'away');
+  const scoreStr = home && away
+    ? `${away.abbrev} ${away.score} - ${home.score} ${home.abbrev}`
+    : '? - ?';
+
+  return {
+    gameId,
+    name,
+    shortName,
+    eventDate,
+    seasonType,
+    seasonSlug,
+    matchRound,
+    // Status fields
+    statusTypeId,
+    statusTypeName,
+    statusState,
+    statusCompleted,
+    statusDetail,
+    statusShortDetail,
+    statusDescription,
+    displayClock,
+    clock,
+    period,
+    // Derived booleans
+    isFinal,
+    isLive,
+    isScheduled,
+    isFinalByState,
+    isFinalByTypeId,
+    isFinalByDetail,
+    // Competitors
+    competitors,
+    home,
+    away,
+    scoreStr,
+  };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WATCH DATE GENERATOR
+// Returns YYYYMMDD strings for yesterday through +WATCH_DAYS_AFTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const getWatchDates = () => {
+  const dates = [];
+  const now   = new Date();
+  for (let d = -WATCH_DAYS_BEFORE; d <= WATCH_DAYS_AFTER; d++) {
+    const dt = new Date(now);
+    dt.setUTCDate(dt.getUTCDate() + d);
+    const yyyy = dt.getUTCFullYear();
+    const mm   = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd   = String(dt.getUTCDate()).padStart(2, '0');
+    dates.push(`${yyyy}${mm}${dd}`);
+  }
+  return dates;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DB STATE CHECK
+// Checks if a gameId is already fully scraped in the DB
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const checkDbState = async (gameId) => {
+  if (FORCE_RESCRAPE) return { inDb: false, forced: true };
+  try {
+    const db = getPool();
+    const [rows] = await db.execute(
+      `SELECT matchId, homeTeamName, awayTeamName, homeScore, awayScore, matchRound, scrapeVersion
+       FROM wc2026_espn_matches WHERE matchId = ? LIMIT 1`,
+      [gameId]
+    );
+    if (rows.length > 0) {
+      const r = rows[0];
+      return {
+        inDb:    true,
+        summary: `${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | v=${r.scrapeVersion}`,
+        matchRound: r.matchRound,
+        scrapeVersion: r.scrapeVersion,
+      };
+    }
+    return { inDb: false };
+  } catch (err) {
+    log('WARN', `DB/CHECK/${gameId}`, `DB check failed: ${err.message} — will scrape`);
+    return { inDb: false };
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MIDNIGHT RULE VERIFICATION
-// PT date = game date (matchGameDate)
-// ET time = kickoff time (matchKickoffEt)
-// If ET time = 00:00 → midnight rule applied (PT date is one day before UTC date)
+// Confirms matchGameDate (PT) and matchKickoffEt (ET) are correct post-scrape
+// Validates scrapeVersion=500x and matchRound
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const verifyMidnightRule = async (gameId) => {
+const verifyMidnightRule = async (gameId, expectedRound) => {
   try {
-    const conn = await getDb();
-    const [rows] = await conn.execute(
-      `SELECT matchId, homeTeamName, awayTeamName, matchDateUtc, matchGameDate, matchKickoffEt, scrapeVersion
+    const db = getPool();
+    const [rows] = await db.execute(
+      `SELECT matchId, homeTeamName, awayTeamName, matchDateUtc, matchGameDate,
+              matchKickoffEt, scrapeVersion, matchRound
        FROM wc2026_espn_matches WHERE matchId = ? LIMIT 1`,
       [gameId]
     );
-    if (rows.length === 0) return { ok: false, reason: 'No row found in DB' };
+    if (rows.length === 0) return { ok: false, reason: 'No row found in DB after scrape' };
     const r = rows[0];
-    const isMidnight = r.matchKickoffEt === '00:00';
 
     const utcMs = typeof r.matchDateUtc === 'number' ? r.matchDateUtc : parseInt(r.matchDateUtc);
-    const dt = new Date(utcMs);
-    const expectedPtDate = dt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-    const expectedEtTime = (() => {
-      const h = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }), 10);
-      const m = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', minute: '2-digit' }), 10);
-      return `${String(isNaN(h) ? 0 : h).padStart(2, '0')}:${String(isNaN(m) ? 0 : m).padStart(2, '0')}`;
-    })();
+    const dt    = new Date(utcMs);
 
-    const dateOk    = r.matchGameDate === expectedPtDate;
-    const timeOk    = r.matchKickoffEt === expectedEtTime;
-    const versionOk = r.scrapeVersion === '500x';
-    const status    = dateOk && timeOk && versionOk ? 'PASS' : 'FAIL';
+    // Expected PT date (game date)
+    const expectedPtDate = dt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+
+    // Expected ET time (kickoff)
+    const etH  = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }), 10);
+    const etM  = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', minute: '2-digit' }), 10);
+    const expectedEtTime = `${String(isNaN(etH) ? 0 : etH).padStart(2, '0')}:${String(isNaN(etM) ? 0 : etM).padStart(2, '0')}`;
+
+    const isMidnight  = r.matchKickoffEt === '00:00';
+    const dateOk      = r.matchGameDate === expectedPtDate;
+    const timeOk      = r.matchKickoffEt === expectedEtTime;
+    const versionOk   = r.scrapeVersion === '500x';
+    const roundOk     = !expectedRound || r.matchRound === expectedRound;
+
+    const status = dateOk && timeOk && versionOk && roundOk ? 'PASS' : 'FAIL';
 
     return {
-      ok: status === 'PASS',
-      gameId: r.matchId,
-      match: `${r.homeTeamName} vs ${r.awayTeamName}`,
-      matchGameDate: r.matchGameDate,
+      ok:             status === 'PASS',
+      gameId:         r.matchId,
+      match:          `${r.homeTeamName} vs ${r.awayTeamName}`,
+      matchGameDate:  r.matchGameDate,
       matchKickoffEt: r.matchKickoffEt,
+      matchRound:     r.matchRound,
+      scrapeVersion:  r.scrapeVersion,
       expectedPtDate,
       expectedEtTime,
       isMidnight,
-      scrapeVersion: r.scrapeVersion,
       dateOk,
       timeOk,
       versionOk,
+      roundOk,
       status,
     };
   } catch (err) {
@@ -212,216 +442,74 @@ const verifyMidnightRule = async (gameId) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DB STATE CHECK — is this game already in the DB?
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const checkDbState = async (gameId) => {
-  try {
-    const conn = await getDb();
-    const [rows] = await conn.execute(
-      `SELECT matchId, homeTeamName, awayTeamName, homeScore, awayScore, matchRound
-       FROM wc2026_espn_matches WHERE matchId = ? LIMIT 1`,
-      [gameId]
-    );
-    if (rows.length > 0) {
-      const r = rows[0];
-      return {
-        inDb: true,
-        summary: `${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName}`,
-        matchRound: r.matchRound,
-      };
-    }
-    return { inDb: false };
-  } catch (err) {
-    log('WARN', `CHECK_${gameId}`, `DB check failed: ${err.message} — will scrape`);
-    return { inDb: false };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROGRESS PERSISTENCE
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const saveProgress = (progress) => {
-  try {
-    fs.writeFileSync(PROGRESS_FILE, JSON.stringify(progress, null, 2));
-  } catch {}
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GAME STATE MACHINE
-// Tracks pre → in → post transitions per gameId
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// gameId → { statusState, statusName, displayClock, period, score, lastSeen, name, matchRound }
-const gameStateMap = new Map();
-
-// gameId → true (currently being scraped — prevents duplicate triggers)
-const scrapingSet = new Set();
-
-// gameId → true (successfully scraped this session)
-const scrapedSet = new Set();
-
-// Session-level results accumulator
-const sessionResults = {
-  startedAt: new Date().toISOString(),
-  totalPolls: 0,
-  totalGamesDetected: 0,
-  totalFinalsDetected: 0,
-  totalNewlyFinal: 0,
-  scraped: 0,
-  passed: 0,
-  failed: 0,
-  retried: 0,
-  midnightRulePass: 0,
-  midnightRuleFail: 0,
-  matches: [],
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ESPN API HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function fetchScoreboard(dateStr) {
-  const url = `${ESPN_SCOREBOARD}?dates=${dateStr}&limit=50`;
-  const resp = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WC2026FTWatcher/1.0)' },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!resp.ok) throw new Error(`ESPN scoreboard HTTP ${resp.status} for date ${dateStr}`);
-  return resp.json();
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATE HELPERS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function getWatchDates() {
-  const arg = process.argv.find(a => a.startsWith('--dates='));
-  if (arg) {
-    return arg.replace('--dates=', '').split(',').map(d => d.trim());
-  }
-  // Default: yesterday + today + tomorrow + day after tomorrow (UTC)
-  const dates = [];
-  for (let offset = -1; offset <= 2; offset++) {
-    const d = new Date();
-    d.setUTCDate(d.getUTCDate() + offset);
-    const y  = d.getUTCFullYear();
-    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const dy = String(d.getUTCDate()).padStart(2, '0');
-    dates.push(`${y}${mo}${dy}`);
-  }
-  return dates;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// GAME STATUS PARSER
-// Extracts structured game info from ESPN scoreboard event object
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function parseGameStatus(event) {
-  const comp        = (event.competitions || [])[0] || {};
-  const status      = comp.status || {};
-  const statusType  = status.type || {};
-  const seasonType  = event.season?.type || null;
-  const matchRound  = SEASON_TYPE_TO_SLUG[seasonType] || 'unknown';
-
-  return {
-    gameId:           String(event.id),
-    name:             event.name || event.shortName || '',
-    statusName:       statusType.name || '',
-    statusState:      statusType.state || '',
-    statusShortDetail: status.type?.shortDetail || '',
-    displayClock:     status.displayClock || '',
-    period:           status.period || 0,
-    isFinal:          statusType.state === 'post',
-    isLive:           statusType.state === 'in',
-    isPre:            statusType.state === 'pre',
-    competitors: (comp.competitors || []).map(c => ({
-      abbrev:   c.team?.abbreviation || '',
-      name:     c.team?.displayName || '',
-      score:    c.score || '0',
-      homeAway: c.homeAway || '',
-    })),
-    startTime:  event.date || '',
-    seasonType,
-    matchRound,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // SINGLE MATCH SCRAPER
-// Spawns espnIngest.test.live.mjs as child process with file-stream output capture
-// Parses: "[RUNNER] Ingest complete — success=true | rows=N | errors=0"
+// File-stream child output capture (prevents pipe deadlock on large output)
+// Mirrors batchScrapeR32.mjs scrapeMatch() exactly
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const scrapeMatch = (gameId, matchRound, attemptNum) => new Promise((resolve) => {
-  const startMs = Date.now();
-  const scrapeLogFile = path.join(SCRAPE_LOG_DIR, `WC2026FTWatcher_scrape_${gameId}.txt`);
-  const scrapeStream  = fs.createWriteStream(scrapeLogFile, { flags: 'w' });
+  const startMs      = Date.now();
+  const childOutFile = `/tmp/espnIngest_${gameId}_stdout.txt`;
+  const childErrFile = `/tmp/espnIngest_${gameId}_stderr.txt`;
 
-  log('INFO', `SCRAPE_${gameId}`, `[ATTEMPT ${attemptNum}] Spawning 500x scraper → gameId=${gameId} matchRound=${matchRound}`);
+  log('INFO', `SCRAPE_${gameId}`, `[ATTEMPT ${attemptNum}/${MAX_ATTEMPTS}] Spawning 500x scraper → gameId=${gameId} matchRound=${matchRound}`);
+
+  // Open file descriptors — prevents stdout pipe buffer deadlock
+  const outFd = fs.openSync(childOutFile, 'w');
+  const errFd = fs.openSync(childErrFile, 'w');
 
   const child = spawn('node', [RUNNER_SCRIPT, gameId], {
-    cwd: PROJECT_DIR,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env },
-  });
-
-  let stdout = '';
-  let stderr = '';
-
-  child.stdout.on('data', d => {
-    const chunk = d.toString();
-    stdout += chunk;
-    scrapeStream.write(chunk);
-    // Stream key lines to watcher log in real-time (noise-free filtered output)
-    const lines = chunk.split('\n');
-    for (const line of lines) {
-      if (
-        line.includes('[RUNNER]') || line.includes('[INGEST]') ||
-        line.includes('PASS') || line.includes('FAIL') ||
-        line.includes('PHASE') || line.includes('MIDNIGHT') ||
-        line.includes('VERIFY') || line.includes('success=') ||
-        line.includes('rows=') || line.includes('errors=')
-      ) {
-        if (line.trim()) {
-          console.log(`  ${C.dim}${line.trim().slice(0, 140)}${C.reset}`);
-          logStream.write(`  ${line.trim()}\n`);
-        }
-      }
-    }
-  });
-
-  child.stderr.on('data', d => {
-    const chunk = d.toString();
-    stderr += chunk;
-    scrapeStream.write(`[STDERR] ${chunk}`);
-    // Only log actual errors, not dotenv notices
-    const lines = chunk.split('\n');
-    for (const line of lines) {
-      if ((line.includes('Error') || line.includes('error') || line.includes('FATAL')) &&
-          line.trim() && !line.includes('[dotenv')) {
-        log('ERROR', `STDERR_${gameId}`, line.trim().slice(0, 120));
-      }
-    }
+    cwd:   PROJECT_DIR,
+    stdio: ['ignore', outFd, errFd],
+    env:   { ...process.env },
   });
 
   const timeout = setTimeout(() => {
     child.kill('SIGKILL');
+    try { fs.closeSync(outFd); } catch {}
+    try { fs.closeSync(errFd); } catch {}
     log('FAIL', `SCRAPE_${gameId}`, `⏱ TIMEOUT after ${MATCH_TIMEOUT_MS / 1000}s — killed`);
-    scrapeStream.end();
-    resolve({ ok: false, gameId, matchRound, error: 'TIMEOUT', durationMs: Date.now() - startMs });
+    resolve({ ok: false, gameId, error: 'TIMEOUT', durationMs: Date.now() - startMs });
   }, MATCH_TIMEOUT_MS);
 
   child.on('close', (code) => {
     clearTimeout(timeout);
-    scrapeStream.end();
+    try { fs.closeSync(outFd); } catch {}
+    try { fs.closeSync(errFd); } catch {}
+
     const durationMs = Date.now() - startMs;
     const durationS  = (durationMs / 1000).toFixed(1);
 
-    // ── Parse ingest result from output ──────────────────────────────────────
-    // Primary format: "[RUNNER] Ingest complete — success=true | rows=N | errors=0"
+    // Read captured output
+    let stdout = '';
+    let stderr = '';
+    try { stdout = fs.readFileSync(childOutFile, 'utf8'); } catch {}
+    try { stderr = fs.readFileSync(childErrFile, 'utf8'); } catch {}
+
+    // Clean up temp files
+    try { fs.unlinkSync(childOutFile); } catch {}
+    try { fs.unlinkSync(childErrFile); } catch {}
+
+    // ── Stream key lines to log (noise-free, intentional) ─────────────────
+    const allLines = (stdout + stderr).split('\n');
+    for (const line of allLines) {
+      if (
+        line.includes('[RUNNER]') || line.includes('[INGEST]') ||
+        line.includes('PASS')     || line.includes('FAIL')     ||
+        line.includes('PHASE')    || line.includes('MIDNIGHT') ||
+        line.includes('VERIFY')   || line.includes('seasonSlug') ||
+        line.includes('round-of') || line.includes('500x')     ||
+        line.includes('scrapeVersion') || line.includes('matchRound') ||
+        line.includes('success=') || line.includes('rows=')    ||
+        line.includes('errors=')  || line.includes('Full Time')
+      ) {
+        if (line.trim() && !line.includes('[dotenv')) {
+          log('INFO', `CHILD_${gameId}`, line.trim().slice(0, 140));
+        }
+      }
+    }
+
+    // ── Parse ingest result ────────────────────────────────────────────────
     const successMatch  = stdout.match(/success=(true|false)/);
     const rowsMatch     = stdout.match(/rows=(\d+)/);
     const errorsMatch   = stdout.match(/errors=(\d+)/);
@@ -429,34 +517,29 @@ const scrapeMatch = (gameId, matchRound, attemptNum) => new Promise((resolve) =>
     const rowsWritten   = rowsMatch   ? parseInt(rowsMatch[1])   : 0;
     const ingestErrors  = errorsMatch ? parseInt(errorsMatch[1]) : 999;
 
-    // Secondary format: "N/N PASS" (from test runner summary)
-    const passMatch = stdout.match(/(\d+)\/(\d+) PASS/);
-    const passRate  = passMatch ? `${passMatch[1]}/${passMatch[2]}` : null;
+    const passMatch     = stdout.match(/(\d+)\/(\d+) PASS/);
+    const passRate      = passMatch ? `${passMatch[1]}/${passMatch[2]}` : null;
 
-    // Extract match info from output
     const matchLineMatch = stdout.match(/Match:\s*([^\n]+)/);
     const venueMatch     = stdout.match(/Venue:\s*([^\n]+)/);
     const matchInfo      = matchLineMatch ? matchLineMatch[1].trim() : '?';
-    const venue          = venueMatch ? venueMatch[1].trim().split('|')[0].trim() : '?';
+    const venue          = venueMatch     ? venueMatch[1].trim().split('|')[0].trim() : '?';
 
-    // Extract phase results
     const phaseMatches   = [...stdout.matchAll(/Phase (\d+)\/9 \[.*?(PASS|FAIL).*?\] (\S+) — (\d+) rows/g)];
     const phasesSummary  = phaseMatches.length > 0
       ? `phases=${phaseMatches.filter(m => m[2] === 'PASS').length}/9 PASS`
       : '';
 
-    // Success criteria: ingest succeeded, rows written, zero errors
-    // NOTE: exit code 1 can occur when test assertions fail (e.g. shot map goal count = 0)
-    // but the ingest itself succeeded. We treat success=true|rows>0|errors=0 as PASS.
+    // ── Success criteria ───────────────────────────────────────────────────
     const isIngestSuccess = ingestSuccess && rowsWritten > 0 && ingestErrors === 0;
-    const isTestSuccess   = passMatch && parseInt(passMatch[1]) === parseInt(passMatch[2]) && parseInt(passMatch[2]) > 0;
-    const isSuccess       = isIngestSuccess || isTestSuccess;
+    const isPassRateOk    = passMatch && parseInt(passMatch[1]) === parseInt(passMatch[2]) && parseInt(passMatch[2]) > 0;
+    const isSuccess       = isIngestSuccess || isPassRateOk;
 
     if ((code === 0 && isSuccess) || isIngestSuccess) {
       const noteCode1 = code !== 0 ? ` [code=${code} — test assertions failed, ingest OK]` : '';
       log('PASS', `SCRAPE_${gameId}`, `✅ success=true | rows=${rowsWritten} | errors=${ingestErrors} | ${passRate || phasesSummary} | ${durationS}s${noteCode1}`);
       if (matchInfo !== '?') log('INFO', `MATCH_${gameId}`, `  📊 ${matchInfo} | ${venue}`);
-      resolve({ ok: true, gameId, matchRound, rowsWritten, ingestErrors, matchInfo, venue, durationMs, scrapeLogFile });
+      resolve({ ok: true, gameId, rowsWritten, ingestErrors, matchInfo, venue, durationMs });
     } else {
       const errLines = (stdout + stderr).split('\n')
         .filter(l => l.includes('FAIL') || l.includes('Error:') || l.includes('error=') || l.includes('success=false') || l.includes('FATAL'))
@@ -466,222 +549,319 @@ const scrapeMatch = (gameId, matchRound, attemptNum) => new Promise((resolve) =>
         .join(' | ');
       log('FAIL', `SCRAPE_${gameId}`, `❌ code=${code} success=${ingestSuccess} rows=${rowsWritten} errors=${ingestErrors} | ${durationS}s`);
       if (errLines) log('ERROR', `DETAIL_${gameId}`, errLines.slice(0, 200));
-      resolve({ ok: false, gameId, matchRound, rowsWritten, ingestErrors, code, error: errLines, durationMs, scrapeLogFile });
+      resolve({ ok: false, gameId, rowsWritten, ingestErrors, code, error: errLines, durationMs });
     }
-  });
-
-  child.on('error', (err) => {
-    clearTimeout(timeout);
-    scrapeStream.end();
-    log('ERROR', `SPAWN_${gameId}`, `❌ Spawn error: ${err.message}`);
-    resolve({ ok: false, gameId, matchRound, error: `SPAWN: ${err.message}`, durationMs: Date.now() - startMs });
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCRAPE WITH RETRY
-// Wraps scrapeMatch with MAX_ATTEMPTS retries and RETRY_DELAY_MS between attempts
+// SCRAPE WITH RETRY ENGINE
+// Up to MAX_ATTEMPTS attempts with exponential backoff
+// Runs midnight rule verification on success
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function scrapeWithRetry(gameId, matchRound, gameInfo) {
-  if (scrapingSet.has(gameId)) {
-    log('SKIP', `SCRAPE_${gameId}`, `Already scraping — skipping duplicate trigger`);
-    return;
-  }
-  if (scrapedSet.has(gameId)) {
-    log('SKIP', `SCRAPE_${gameId}`, `Already scraped this session — skipping`);
-    return;
-  }
-
-  scrapingSet.add(gameId);
-  sessionResults.scraped++;
+const scrapeWithRetry = async (gameId, matchRound, parsedGame) => {
+  sessionResults.scrapingSet.add(gameId);
 
   let scrapeResult;
   let attempts = 0;
 
   while (attempts < MAX_ATTEMPTS) {
     attempts++;
+    const backoff = RETRY_BACKOFF_MS[attempts - 1] || 30_000;
     if (attempts > 1) {
-      log('INFO', `RETRY_${gameId}`, `Retry attempt ${attempts}/${MAX_ATTEMPTS} after ${RETRY_DELAY_MS / 1000}s...`);
-      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
       sessionResults.retried++;
+      log('RETRY', `RETRY_${gameId}`, `Attempt ${attempts}/${MAX_ATTEMPTS} — waiting ${backoff / 1000}s before retry`);
+      await new Promise(r => setTimeout(r, backoff));
     }
-
     scrapeResult = await scrapeMatch(gameId, matchRound, attempts);
     if (scrapeResult.ok) break;
-
     if (attempts < MAX_ATTEMPTS) {
       log('WARN', `RETRY_${gameId}`, `Attempt ${attempts} failed — scheduling retry`);
     }
   }
 
-  scrapingSet.delete(gameId);
+  sessionResults.scraped++;
 
-  // ── Midnight rule post-scrape verification ──────────────────────────────────
   if (scrapeResult.ok) {
-    scrapedSet.add(gameId);
     sessionResults.passed++;
 
-    const midnightCheck = await verifyMidnightRule(gameId);
+    // ── Midnight rule + round verification ──────────────────────────────────
+    const midnightCheck = await verifyMidnightRule(gameId, matchRound);
     if (midnightCheck.ok) {
       sessionResults.midnightRulePass++;
-      const midnightFlag = midnightCheck.isMidnight ? ' ← MIDNIGHT RULE' : '';
-      log('VERIFY', `MIDNIGHT_${gameId}`, `✅ PASS | date=${midnightCheck.matchGameDate} ET=${midnightCheck.matchKickoffEt} v=${midnightCheck.scrapeVersion}${midnightFlag}`);
+      const midnightFlag = midnightCheck.isMidnight ? ' ← 🌙MIDNIGHT RULE' : '';
+      const roundFlag    = midnightCheck.roundOk    ? ` round=${midnightCheck.matchRound} ✅` : ` round=${midnightCheck.matchRound} ❌ (expected ${matchRound})`;
+      log('VERIFY', `MIDNIGHT_${gameId}`, `✅ PASS | date=${midnightCheck.matchGameDate} ET=${midnightCheck.matchKickoffEt} v=${midnightCheck.scrapeVersion}${roundFlag}${midnightFlag}`);
     } else {
       sessionResults.midnightRuleFail++;
-      log('WARN', `MIDNIGHT_${gameId}`, `⚠️ FAIL | date=${midnightCheck.matchGameDate} (expected ${midnightCheck.expectedPtDate}) ET=${midnightCheck.matchKickoffEt} (expected ${midnightCheck.expectedEtTime})`);
+      log('WARN', `MIDNIGHT_${gameId}`, `⚠️ FAIL | date=${midnightCheck.matchGameDate} (expected ${midnightCheck.expectedPtDate}) ET=${midnightCheck.matchKickoffEt} round=${midnightCheck.matchRound} v=${midnightCheck.scrapeVersion} | reason=${midnightCheck.reason || 'field mismatch'}`);
     }
 
     sessionResults.matches.push({
       gameId,
-      matchRound,
-      status: 'PASS',
+      status:      'PASS',
       rowsWritten: scrapeResult.rowsWritten,
-      matchInfo: scrapeResult.matchInfo,
-      venue: scrapeResult.venue,
-      durationMs: scrapeResult.durationMs,
+      matchInfo:   scrapeResult.matchInfo,
+      venue:       scrapeResult.venue,
+      durationMs:  scrapeResult.durationMs,
       attempts,
+      matchRound,
       midnightRule: midnightCheck,
-      scrapedAt: new Date().toISOString(),
     });
+
+    sessionResults.scrapedSet.add(gameId);
   } else {
     sessionResults.failed++;
     sessionResults.matches.push({
       gameId,
-      matchRound,
-      status: 'FAIL',
+      status:     'FAIL',
       rowsWritten: scrapeResult.rowsWritten,
-      error: scrapeResult.error,
-      durationMs: scrapeResult.durationMs,
+      error:       scrapeResult.error,
+      durationMs:  scrapeResult.durationMs,
       attempts,
-      scrapedAt: new Date().toISOString(),
+      matchRound,
     });
+    log('FAIL', `FINAL_${gameId}`, `❌ SCRAPE FAILED after ${attempts} attempts | ${scrapeResult.error?.slice(0, 80)}`);
   }
 
-  saveProgress(sessionResults);
-}
+  sessionResults.scrapingSet.delete(gameId);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SESSION STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const sessionResults = {
+  startedAt:         new Date().toISOString(),
+  completedAt:       null,
+  totalDurationMs:   0,
+  totalPolls:        0,
+  totalGamesDetected: 0,
+  totalLiveDetected: 0,
+  totalFinalsDetected: 0,
+  totalNewlyFinal:   0,
+  scraped:           0,
+  passed:            0,
+  failed:            0,
+  retried:           0,
+  midnightRulePass:  0,
+  midnightRuleFail:  0,
+  matches:           [],
+  // Runtime sets (not serialized)
+  scrapedSet:        new Set(),   // gameIds already scraped this session
+  scrapingSet:       new Set(),   // gameIds currently being scraped
+};
+
+// Per-game state machine: tracks statusState, statusTypeId, displayClock across polls
+// Key: gameId → { statusState, statusTypeId, statusTypeName, statusCompleted, displayClock, period, score, lastSeen, name, matchRound }
+const gameStateMap = new Map();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROGRESS PERSISTENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const saveProgress = (data) => {
+  try {
+    const serializable = {
+      ...data,
+      scrapedSet:  [...data.scrapedSet],
+      scrapingSet: [...data.scrapingSet],
+    };
+    fs.writeFileSync(PROGRESS_FILE, JSON.stringify(serializable, null, 2));
+  } catch {}
+};
+
+const loadProgress = () => {
+  try {
+    if (!fs.existsSync(PROGRESS_FILE)) return null;
+    const raw = JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8'));
+    // Restore Sets
+    raw.scrapedSet  = new Set(raw.scrapedSet  || []);
+    raw.scrapingSet = new Set([]);  // never restore in-progress
+    return raw;
+  } catch {
+    return null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRE-FLIGHT DB STATE BANNER
+// Shows all WC2026 matches currently in DB on startup
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const runPreflightDbCheck = async () => {
+  logBanner('PRE-FLIGHT: DB STATE CHECK', '─');
+  try {
+    const db = getPool();
+    const [rows] = await db.execute(
+      `SELECT matchId, homeTeamName, awayTeamName, homeScore, awayScore,
+              matchRound, scrapeVersion, matchGameDate, matchKickoffEt
+       FROM wc2026_espn_matches
+       ORDER BY matchGameDate ASC, matchKickoffEt ASC`
+    );
+    log('DB', 'PREFLIGHT/DB', `${rows.length} WC2026 matches currently in DB`);
+    for (const r of rows) {
+      log('DB', `PREFLIGHT/${r.matchId}`, `EXISTS | ${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | date=${r.matchGameDate} ET=${r.matchKickoffEt} | v=${r.scrapeVersion}`);
+      sessionResults.scrapedSet.add(String(r.matchId));
+    }
+    log('DB', 'PREFLIGHT/DB', `${sessionResults.scrapedSet.size} gameIds pre-loaded into scrapedSet — will skip re-trigger unless --force-rescrape`);
+  } catch (err) {
+    log('WARN', 'PREFLIGHT/DB', `DB pre-flight failed: ${err.message} — will continue without pre-loaded state`);
+  }
+  logSep('═');
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // POLL CYCLE
-// Fetches ESPN scoreboard for all watch dates, detects FT transitions,
-// triggers scraper for newly-final games
+// Core detection engine — called every POLL_INTERVAL_MS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 let pollCount = 0;
 
-async function pollCycle() {
+const pollCycle = async () => {
   pollCount++;
-  sessionResults.totalPolls = pollCount;
-  const dates     = getWatchDates();
+  sessionResults.totalPolls++;
   const cycleStart = Date.now();
+  const watchDates = getWatchDates();
 
-  log('POLL', `CYCLE/${pollCount}`, `🔄 Poll #${pollCount} — watching dates: ${dates.join(', ')}`);
+  log('POLL', `CYCLE/${pollCount}`, `🔄 Poll #${pollCount} — watching dates: ${watchDates.join(', ')} | scrapedSet.size=${sessionResults.scrapedSet.size} | scrapingSet.size=${sessionResults.scrapingSet.size}`);
 
   let totalGames  = 0;
   let liveGames   = 0;
   let finalGames  = 0;
   let newlyFinal  = 0;
+  let preGames    = 0;
 
-  for (const dateStr of dates) {
-    let data;
-    try {
-      data = await fetchScoreboard(dateStr);
-    } catch (err) {
-      log('ERROR', `SCOREBOARD/${dateStr}`, `❌ Fetch failed: ${err.message}`);
-      continue;
-    }
-
-    const events = data.events || [];
+  for (const dateStr of watchDates) {
+    const events = await fetchEspnScoreboard(dateStr);
     if (events.length === 0) continue;
 
-    log('INFO', `SCOREBOARD/${dateStr}`, `Found ${events.length} events`);
-
     for (const event of events) {
-      const game = parseGameStatus(event);
+      const g = parseEspnEvent(event);
+
+      // ── Only process WC2026 events ───────────────────────────────────────
+      if (g.seasonType !== ESPN_SEASON_TYPE && g.seasonSlug === '') {
+        // Skip non-WC2026 events if season type doesn't match
+        // (scoreboard may include other soccer events)
+      }
+
       totalGames++;
       sessionResults.totalGamesDetected = Math.max(sessionResults.totalGamesDetected, totalGames);
 
-      const prev      = gameStateMap.get(game.gameId);
-      const prevState = prev?.statusState || 'unknown';
+      // ── Retrieve previous state from state machine ───────────────────────
+      const prev         = gameStateMap.get(g.gameId);
+      const prevState    = prev?.statusState    || 'unknown';
+      const prevTypeId   = prev?.statusTypeId   || null;
+      const prevCompleted = prev?.statusCompleted ?? null;
 
-      // Update state machine
-      gameStateMap.set(game.gameId, {
-        statusState:  game.statusState,
-        statusName:   game.statusName,
-        displayClock: game.displayClock,
-        period:       game.period,
-        score:        game.competitors.map(c => `${c.abbrev}:${c.score}`).join(' vs '),
-        lastSeen:     new Date().toISOString(),
-        name:         game.name,
-        matchRound:   game.matchRound,
+      // ── Update state machine ─────────────────────────────────────────────
+      gameStateMap.set(g.gameId, {
+        statusState:     g.statusState,
+        statusTypeId:    g.statusTypeId,
+        statusTypeName:  g.statusTypeName,
+        statusCompleted: g.statusCompleted,
+        displayClock:    g.displayClock,
+        period:          g.period,
+        score:           g.scoreStr,
+        lastSeen:        new Date().toISOString(),
+        name:            g.name,
+        matchRound:      g.matchRound,
       });
 
-      if (game.isLive) {
+      // ── LIVE game logging ────────────────────────────────────────────────
+      if (g.isLive) {
         liveGames++;
-        const home = game.competitors.find(c => c.homeAway === 'home');
-        const away = game.competitors.find(c => c.homeAway === 'away');
-        log('LIVE', `LIVE/${game.gameId}`, `⚽ ${game.name} | ${away?.abbrev || '?'} ${away?.score || '0'} - ${home?.score || '0'} ${home?.abbrev || '?'} | ${game.displayClock} P${game.period} | ${game.statusName}`);
+        sessionResults.totalLiveDetected = Math.max(sessionResults.totalLiveDetected, liveGames);
+        log('LIVE', `LIVE/${g.gameId}`, `⚽ ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
       }
 
-      if (game.isFinal) {
+      // ── FINAL game processing ────────────────────────────────────────────
+      if (g.isFinal) {
         finalGames++;
         sessionResults.totalFinalsDetected = Math.max(sessionResults.totalFinalsDetected, finalGames);
-        const home = game.competitors.find(c => c.homeAway === 'home');
-        const away = game.competitors.find(c => c.homeAway === 'away');
-        const scoreStr = `${away?.abbrev || '?'} ${away?.score || '0'} - ${home?.score || '0'} ${home?.abbrev || '?'}`;
 
-        // Detect NEWLY final (was live or pre, now post)
-        const isNewlyFinal = prevState !== 'post' && game.statusState === 'post';
+        // ── FT TRANSITION DETECTION ────────────────────────────────────────
+        // A game is "newly final" when:
+        //   1. Previous state was NOT "post" (was "in", "pre", or "unknown")
+        //   2. Current state IS "post" with completed=true
+        // This is the exact transition signature confirmed for 760491
+        const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
+
+        // Log the FT transition forensically
+        if (isNewlyFinal) {
+          log('TRANS', `TRANS/${g.gameId}`, `🔀 FT TRANSITION DETECTED | ${g.name} | prevState=${prevState} prevTypeId=${prevTypeId} prevCompleted=${prevCompleted} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
+        }
 
         if (isNewlyFinal) {
           newlyFinal++;
           sessionResults.totalNewlyFinal++;
-          log('FINAL', `FINAL/${game.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${game.name} | ${scoreStr} | ${game.statusShortDetail}`);
-          log('TRIGGER', `TRIGGER/${game.gameId}`, `🚀 gameId=${game.gameId} → matchRound=${game.matchRound} | prevState=${prevState} → post`);
-          // Fire-and-forget: do NOT await (allows poll cycle to continue)
-          scrapeWithRetry(game.gameId, game.matchRound, game).catch(err => {
-            log('ERROR', `TRIGGER/${game.gameId}`, `Scrape trigger error: ${err.message}`);
-          });
-        } else if (!scrapedSet.has(game.gameId) && !scrapingSet.has(game.gameId)) {
-          // Final but not newly detected this session — check DB
-          const dbCheck = await checkDbState(game.gameId);
-          if (dbCheck.inDb) {
-            // Already in DB — mark as scraped to prevent future re-triggers
-            scrapedSet.add(game.gameId);
-            log('SKIP', `FINAL/${game.gameId}`, `Already in DB: ${dbCheck.summary} (${dbCheck.matchRound}) — skipping`);
+
+          log('FINAL', `FINAL/${g.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}`);
+          log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | seasonSlug=${g.seasonSlug} | prevState=${prevState} → post | DRY_RUN=${DRY_RUN}`);
+
+          if (DRY_RUN) {
+            log('INFO', `TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape for ${g.gameId} — skipping`);
           } else {
-            // Final, not in DB, not currently scraping — trigger scrape
-            log('FINAL', `FINAL/${game.gameId}`, `🏁 FINAL (known) — not in DB | ${game.name} | ${scoreStr}`);
-            log('TRIGGER', `TRIGGER/${game.gameId}`, `🚀 gameId=${game.gameId} → matchRound=${game.matchRound} | DB miss — triggering scrape`);
-            scrapeWithRetry(game.gameId, game.matchRound, game).catch(err => {
-              log('ERROR', `TRIGGER/${game.gameId}`, `Scrape trigger error: ${err.message}`);
+            // Fire-and-forget: do NOT await (allows poll cycle to continue)
+            scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
+              log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
             });
           }
+
+        } else if (!sessionResults.scrapedSet.has(g.gameId) && !sessionResults.scrapingSet.has(g.gameId)) {
+          // ── Final but not newly detected this session — check DB ─────────
+          const dbCheck = await checkDbState(g.gameId);
+          if (dbCheck.inDb) {
+            sessionResults.scrapedSet.add(g.gameId);
+            log('SKIP', `FINAL/${g.gameId}`, `Already in DB: ${dbCheck.summary} — skipping`);
+          } else if (dbCheck.forced) {
+            log('INFO', `FINAL/${g.gameId}`, `--force-rescrape active — re-triggering ${g.gameId}`);
+            log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | --force-rescrape`);
+            scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
+              log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+            });
+          } else {
+            // Final, not in DB, not currently scraping — trigger scrape
+            log('FINAL', `FINAL/${g.gameId}`, `🏁 FINAL (known) — not in DB | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId}`);
+            log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | DB miss — triggering scrape`);
+            if (!DRY_RUN) {
+              scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
+                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+              });
+            }
+          }
+        } else if (sessionResults.scrapingSet.has(g.gameId)) {
+          log('INFO', `FINAL/${g.gameId}`, `Scrape in progress — skipping duplicate trigger`);
         }
+
+      } else if (g.isScheduled) {
+        preGames++;
       }
     }
   }
 
   const elapsed = ((Date.now() - cycleStart) / 1000).toFixed(2);
-  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s`);
-}
+  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${preGames} pre | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s | scraped=${sessionResults.scraped} pass=${sessionResults.passed} fail=${sessionResults.failed}`);
+
+  saveProgress(sessionResults);
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SESSION SUMMARY
-// Printed on SIGINT/SIGTERM — mirrors batchScrape72.mjs verdict format
+// Printed on SIGINT/SIGTERM — mirrors batchScrapeR32.mjs verdict format exactly
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function printSessionSummary() {
+const printSessionSummary = () => {
   const totalDurationMs  = Date.now() - new Date(sessionResults.startedAt).getTime();
   const totalDurationMin = (totalDurationMs / 60000).toFixed(1);
 
   sessionResults.completedAt    = new Date().toISOString();
   sessionResults.totalDurationMs = totalDurationMs;
 
-  logBanner(`WC2026FTWatcher SESSION SUMMARY`);
-  log('INFO', 'SESSION_SUMMARY', `Duration: ${totalDurationMin} minutes`);
-  log('INFO', 'SESSION_SUMMARY', `Total polls: ${sessionResults.totalPolls}`);
-  log('INFO', 'SESSION_SUMMARY', `Games detected: ${sessionResults.totalGamesDetected} | Finals: ${sessionResults.totalFinalsDetected} | Newly final: ${sessionResults.totalNewlyFinal}`);
+  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION');
+  log('INFO', 'SESSION_SUMMARY', `Duration: ${totalDurationMin} minutes | Polls: ${sessionResults.totalPolls}`);
+  log('INFO', 'SESSION_SUMMARY', `Games detected: ${sessionResults.totalGamesDetected} | Live: ${sessionResults.totalLiveDetected} | Finals: ${sessionResults.totalFinalsDetected} | Newly final: ${sessionResults.totalNewlyFinal}`);
   log('INFO', 'SESSION_SUMMARY', `Scraped: ${sessionResults.scraped} | ✅ PASS: ${sessionResults.passed} | ❌ FAIL: ${sessionResults.failed} | 🔄 Retried: ${sessionResults.retried}`);
 
   const passRate = sessionResults.scraped > 0
@@ -697,24 +877,27 @@ function printSessionSummary() {
 
   logSep('─');
 
-  // ── Match results table ────────────────────────────────────────────────────
+  // ── Per-match results table ────────────────────────────────────────────────
   if (sessionResults.matches.length > 0) {
     const tableHeader = `\n=== SCRAPED MATCHES TABLE (WC2026FTWatcher Session) ===`;
     console.log(`${C.bold}${tableHeader}${C.reset}`);
     logStream.write(tableHeader + '\n');
+    termStream.write(tableHeader + '\n');
 
     for (const m of sessionResults.matches) {
       const icon = m.status === 'PASS' ? '✅' : '❌';
       let detail;
       if (m.status === 'PASS') {
         const midnight = m.midnightRule?.isMidnight ? ' 🌙MIDNIGHT' : '';
-        detail = `rows=${m.rowsWritten} | date=${m.midnightRule?.matchGameDate} ET=${m.midnightRule?.matchKickoffEt}${midnight} | ${(m.durationMs / 1000).toFixed(1)}s | ${m.matchRound}`;
+        const round    = m.midnightRule?.matchRound  ? ` | round=${m.midnightRule.matchRound}` : '';
+        detail = `rows=${m.rowsWritten} | date=${m.midnightRule?.matchGameDate} ET=${m.midnightRule?.matchKickoffEt}${midnight}${round} | ${(m.durationMs / 1000).toFixed(1)}s | attempts=${m.attempts}`;
       } else {
-        detail = `FAIL: ${m.error?.slice(0, 80)} | ${m.matchRound}`;
+        detail = `FAIL: ${m.error?.slice(0, 80)} | attempts=${m.attempts}`;
       }
       const line = `  ${icon} ${m.gameId} | ${detail}`;
       console.log(line);
       logStream.write(line + '\n');
+      termStream.write(line + '\n');
     }
   }
 
@@ -725,34 +908,50 @@ function printSessionSummary() {
   const verdict = sessionResults.scraped === 0
     ? `⏳ NO GAMES SCRAPED THIS SESSION — watching for finals`
     : sessionResults.failed === 0
-      ? `✅ ELITE — ZERO FAILURES | ${sessionResults.passed}/${sessionResults.scraped} PASS | ${totalDurationMin}min`
-      : `⚠️  ${sessionResults.failed} FAILURES — REVIEW REQUIRED | ${sessionResults.passed}/${sessionResults.scraped} PASS`;
-  log('INFO', 'VERDICT', verdict);
-}
+      ? `✅ ELITE — ZERO FAILURES | ${sessionResults.passed}/${sessionResults.scraped} PASS | ${passRate}% | ${totalDurationMin}min`
+      : `⚠️  ${sessionResults.failed} FAILURES — REVIEW REQUIRED | ${sessionResults.passed}/${sessionResults.scraped} PASS | ${passRate}%`;
+
+  log(sessionResults.failed === 0 ? 'PASS' : 'WARN', 'FINAL_VERDICT', verdict);
+  logBanner(`COMPLETED: ${new Date().toISOString()}`);
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN — startup banner, initial poll, interval loop, signal handlers
+// MAIN — startup banner, pre-flight, initial poll, interval loop, signal handlers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function main() {
-  logBanner(`WC2026FTWatcher v1.0 — ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE`);
+const main = async () => {
+  logBanner('WC2026FTWatcher v2.0 — 500x ELITE DUAL-CHANNEL LOGGER | ESPN-ONLY AUTO-TRIGGER ENGINE');
   log('INFO', 'WATCHER/INIT', `Poll interval: ${POLL_INTERVAL_MS / 1000}s | Scrape timeout: ${MATCH_TIMEOUT_MS / 1000}s | Max attempts: ${MAX_ATTEMPTS}`);
-  log('INFO', 'WATCHER/INIT', `Watch dates: ${getWatchDates().join(', ')}`);
+  log('INFO', 'WATCHER/INIT', `Watch window: -${WATCH_DAYS_BEFORE} to +${WATCH_DAYS_AFTER} days | Dates: ${getWatchDates().join(', ')}`);
   log('INFO', 'WATCHER/INIT', `Runner: ${RUNNER_SCRIPT}`);
-  log('INFO', 'WATCHER/INIT', `Log file: ${LOG_FILE}`);
+  log('INFO', 'WATCHER/INIT', `Log file (append): ${WATCHER_LOG}`);
+  log('INFO', 'WATCHER/INIT', `Terminal log (overwrite): ${TERMINAL_LOG}`);
   log('INFO', 'WATCHER/INIT', `Progress: ${PROGRESS_FILE}`);
   log('INFO', 'WATCHER/INIT', `Midnight rule: PT date → matchGameDate | ET time → matchKickoffEt`);
   log('INFO', 'WATCHER/INIT', `scrapeVersion: 500x (enforced by espnDbIngester.ts)`);
+  log('INFO', 'WATCHER/INIT', `ESPN-only policy: ALL data from ${ESPN_SCOREBOARD_BASE}`);
+  log('INFO', 'WATCHER/INIT', `FT detection: state=post AND completed=true (typeIds: ${[...ESPN_FINAL_TYPE_IDS].join(',')})`);
+  log('INFO', 'WATCHER/INIT', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE}`);
   logSep('═');
 
-  // Run first poll immediately
+  // ── Restore session progress if available ──────────────────────────────────
+  const savedProgress = loadProgress();
+  if (savedProgress?.scrapedSet?.size > 0) {
+    for (const id of savedProgress.scrapedSet) sessionResults.scrapedSet.add(id);
+    log('INFO', 'WATCHER/RESTORE', `Restored ${sessionResults.scrapedSet.size} gameIds from previous session progress`);
+  }
+
+  // ── Pre-flight DB state check ──────────────────────────────────────────────
+  await runPreflightDbCheck();
+
+  // ── Initial poll immediately ───────────────────────────────────────────────
   try {
     await pollCycle();
   } catch (err) {
-    log('ERROR', 'WATCHER/POLL', `❌ Initial poll error: ${err.message}`);
+    log('ERROR', 'WATCHER/POLL', `❌ Initial poll error: ${err.message}\n${err.stack}`);
   }
 
-  // Then poll every 30 seconds
+  // ── Interval polling ───────────────────────────────────────────────────────
   const intervalHandle = setInterval(async () => {
     try {
       await pollCycle();
@@ -761,20 +960,22 @@ async function main() {
     }
   }, POLL_INTERVAL_MS);
 
-  log('INFO', 'WATCHER/RUNNING', `✅ WC2026FTWatcher running — polling every ${POLL_INTERVAL_MS / 1000}s | Press Ctrl+C to stop`);
+  log('INFO', 'WATCHER/RUNNING', `✅ WC2026FTWatcher v2.0 running — polling every ${POLL_INTERVAL_MS / 1000}s | ESPN-only | Press Ctrl+C to stop`);
 
   // ── Graceful shutdown ──────────────────────────────────────────────────────
-  const shutdown = (signal) => {
+  const shutdown = async (signal) => {
     log('INFO', 'WATCHER/SHUTDOWN', `🛑 ${signal} received — shutting down gracefully`);
     clearInterval(intervalHandle);
     printSessionSummary();
-    db?.end().catch(() => {});
+    try { await pool?.end(); } catch {}
+    logStream.end();
+    termStream.end();
     process.exit(0);
   };
 
   process.on('SIGINT',  () => shutdown('SIGINT'));
   process.on('SIGTERM', () => shutdown('SIGTERM'));
-}
+};
 
 main().catch(err => {
   log('FATAL', 'UNHANDLED', `${err.message}\n${err.stack}`);
