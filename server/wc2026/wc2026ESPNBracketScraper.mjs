@@ -105,6 +105,31 @@ async function fetchWithRetry(url, maxRetries = 3, delayMs = 2000) {
   throw new Error(`All ${maxRetries} fetch attempts failed: ${lastErr.message}`);
 }
 
+// ─── Static match number map for R16–Final (from ESPN bracket HTML forensic audit) ─────
+// These never change — bracket positions are fixed at tournament draw
+const STATIC_MATCH_NUMBERS = {
+  // Round of 16 (Match 89–96)
+  "760503": "Match 89",  // Paraguay vs France
+  "760502": "Match 90",  // Canada vs Morocco
+  "760504": "Match 91",  // Brazil vs Norway
+  "760505": "Match 92",  // Mexico vs RD32 W8 (Winner Match 82)
+  "760506": "Match 93",  // RD32 W11 vs RD32 W12 (Winners Match 79 vs 80)
+  "760507": "Match 94",  // RD32 W9 vs RD32 W10 (Winners Match 76 vs 78)
+  "760509": "Match 95",  // RD32 W14 vs RD32 W16 (Winners Match 88 vs 87)
+  "760508": "Match 96",  // RD32 W13 vs RD32 W15 (Winners Match 86 vs 85)
+  // Quarterfinals (Match 97–100)
+  "760510": "Match 97",  // RD16 W1 vs RD16 W2
+  "760511": "Match 98",  // RD16 W5 vs RD16 W6
+  "760512": "Match 99",  // RD16 W3 vs RD16 W4
+  "760513": "Match 100", // RD16 W7 vs RD16 W8
+  // Semifinals (Match 101–102)
+  "760514": "Match 101", // QF W1 vs QF W2
+  "760515": "Match 102", // QF W3 vs QF W4
+  // 3rd Place & Final (Match 103–104)
+  "760516": "Match 103", // 3rd Place: SF L1 vs SF L2
+  "760517": "Match 104", // Final: SF W1 vs SF W2
+};
+
 // ─── Load match number map from wc2026_fixtures ───────────────────────────────
 async function loadMatchNumberMap() {
   const mysql = require("mysql2/promise");
@@ -156,8 +181,10 @@ function transformEvent(event, matchNumberMap, bracketLocationByRound) {
   const roundId = ROUND_SLUG_TO_ID[roundSlug] ?? 0;
   const roundLabel = ROUND_SLUG_TO_LABEL[roundSlug] ?? roundSlug;
 
-  // Match number — from fixtures DB map
-  const matchNumber = matchNumberMap.byEventId.get(String(event.id)) ?? null;
+  // Match number — static map (R16+) takes priority, fixtures DB for R32
+  const matchNumber = STATIC_MATCH_NUMBERS[String(event.id)]
+    ?? matchNumberMap.byEventId.get(String(event.id))
+    ?? null;
 
   // Bracket location — sequential within round
   if (!bracketLocationByRound[roundId]) bracketLocationByRound[roundId] = 0;
