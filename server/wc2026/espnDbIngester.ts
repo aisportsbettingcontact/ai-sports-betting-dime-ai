@@ -195,12 +195,13 @@ export async function ingestEspnMatchData(
       awayFormation: data.lineups.away.formation ?? null,
       scrapedAt: new Date(data.scrapedAt).getTime(),
       scrapeDurationMs: data.scrapeDurationMs ?? null,
-      scrapeVersion: "250x",
+      scrapeVersion: "500x",
+      matchRound: data.seasonSlug || null,
       createdAt: now(),
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_matches matchId=${matchId}`);
+    logStep(`Upserting wc2026_espn_matches matchId=${matchId} matchRound=${row.matchRound}`);
     if (!dryRun) {
       await db.insert(wc2026EspnMatches).values(row).onDuplicateKeyUpdate({
         set: { ...row, updatedAt: now() },
@@ -235,6 +236,7 @@ export async function ingestEspnMatchData(
 
       const row = {
         matchId,
+        matchRound: data.seasonSlug || null,
         provider: odds.provider ?? null,
         headerText: odds.headerText ?? null,
         homeTeamAbbrev: odds.homeTeam.teamAbbrev ?? data.gameStrip.homeTeam.abbrev,
@@ -307,6 +309,7 @@ export async function ingestEspnMatchData(
 
     const row = {
       matchId,
+      matchRound: data.seasonSlug || null,
       homeTeamAbbrev: ts.homeAbbrev,
       awayTeamAbbrev: ts.awayAbbrev,
       possession: possession.home || null,
@@ -376,6 +379,7 @@ export async function ingestEspnMatchData(
 
     const row = {
       matchId,
+      matchRound: data.seasonSlug || null,
       homeTeamAbbrev: data.gameStrip.homeTeam.abbrev,
       awayTeamAbbrev: data.gameStrip.awayTeam.abbrev,
 
@@ -521,6 +525,7 @@ export async function ingestEspnMatchData(
 
     const row = {
       matchId,
+      matchRound: data.seasonSlug || null,
       homeTeamAbbrev: data.gameStrip.homeTeam.abbrev,
       awayTeamAbbrev: data.gameStrip.awayTeam.abbrev,
       homeXG: safeDecimal(eg.homeTeamXG),
@@ -576,6 +581,7 @@ export async function ingestEspnMatchData(
 
       const rows = shots.map((shot, idx) => ({
         matchId,
+        matchRound: data.seasonSlug || null,
         shotId: shot.shotId || `${matchId}-${idx}`,
         sequence: shot.sequence ?? idx,
         playerId: shot.playerId || null,
@@ -703,6 +709,7 @@ export async function ingestEspnMatchData(
 
       const row = {
         matchId,
+        matchRound: data.seasonSlug || null,
         athleteId: p.athleteId,
         name: p.name,
         nameShort: p.nameShort ?? null,
@@ -782,6 +789,7 @@ export async function ingestEspnMatchData(
 
       const row = {
         matchId,
+        matchRound: data.seasonSlug || null,
         athleteId: gkData.athleteId,
         name: gkData.name,
         nameShort: gkData.nameShort ?? null,
@@ -876,6 +884,7 @@ export async function ingestEspnMatchData(
       const p = entry.player;
       const row = {
         matchId,
+        matchRound: data.seasonSlug || null,
         teamId: entry.lineup.teamId ?? null,
         teamAbbrev: entry.lineup.teamAbbrev,
         teamName: entry.lineup.teamName ?? null,
@@ -895,6 +904,7 @@ export async function ingestEspnMatchData(
       if (!dryRun) {
         await db.insert(wc2026EspnLineups).values(row).onDuplicateKeyUpdate({
           set: {
+            matchRound: row.matchRound,
             teamAbbrev: row.teamAbbrev,
             formation: row.formation,
             isHome: row.isHome,
@@ -940,6 +950,7 @@ export async function ingestEspnMatchData(
 
       const row = {
         abbreviation: entry.abbreviation,
+        matchRound: data.seasonSlug || null,
         displayName: entry.displayName,
         category: category as "outfield" | "goalkeeper" | "both",
         description: null,
@@ -999,6 +1010,6 @@ export async function scrapeAndIngest(
   const { scrapeEspnMatchPage } = await import("./espnPageScraper");
   console.log(`${TAG} [SCRAPE] Starting scrape for gameId=${gameId}`);
   const data = await scrapeEspnMatchPage(gameId);
-  console.log(`${TAG} [SCRAPE] Complete — ${data.scrapeDurationMs}ms | pages=${data.pagesLoaded.join(",")}`);
+  console.log(`${TAG} [SCRAPE] Complete — ${data.scrapeDurationMs}ms | pages=${data.pagesLoaded.join(",")} | seasonSlug=${data.seasonSlug} | seasonName=${data.seasonName}`);
   return ingestEspnMatchData(data, opts);
 }

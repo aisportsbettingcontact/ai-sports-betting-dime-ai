@@ -1,15 +1,15 @@
 {
   "batchArg": "1",
   "force": true,
-  "startedAt": "2026-06-30T22:25:44.189Z",
+  "startedAt": "2026-07-01T00:44:18.474Z",
   "totalTargeted": 24,
   "skipped": 0,
   "scraped": 24,
-  "passed": 23,
-  "failed": 1,
-  "retried": 2,
-  "midnightRulePass": 23,
-  "midnightRuleFail": 0,
+  "passed": 24,
+  "failed": 0,
+  "retried": 0,
+  "midnightRulePass": 0,
+  "midnightRuleFail": 24,
   "matches": [
     {
       "gameId": "760414",
@@ -17,10 +17,10 @@
       "rowsWritten": 130,
       "matchInfo": "South Korea 2-1 Czechia",
       "venue": "Estadio Akron",
-      "durationMs": 63341,
+      "durationMs": 70813,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760414",
         "match": "South Korea vs Czechia",
         "matchGameDate": "2026-06-11",
@@ -28,11 +28,11 @@
         "expectedPtDate": "2026-06-11",
         "expectedEtTime": "22:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -41,10 +41,10 @@
       "rowsWritten": 127,
       "matchInfo": "Mexico 2-0 South Africa",
       "venue": "Estadio Banorte",
-      "durationMs": 52366,
+      "durationMs": 70490,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760415",
         "match": "Mexico vs South Africa",
         "matchGameDate": "2026-06-11",
@@ -52,11 +52,11 @@
         "expectedPtDate": "2026-06-11",
         "expectedEtTime": "15:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -65,10 +65,10 @@
       "rowsWritten": 130,
       "matchInfo": "Canada 1-1 Bosnia-Herzegovina",
       "venue": "BMO Field",
-      "durationMs": 50752,
+      "durationMs": 68461,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760416",
         "match": "Canada vs Bosnia-Herzegovina",
         "matchGameDate": "2026-06-12",
@@ -76,11 +76,11 @@
         "expectedPtDate": "2026-06-12",
         "expectedEtTime": "15:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -89,10 +89,10 @@
       "rowsWritten": 134,
       "matchInfo": "United States 4-1 Paraguay",
       "venue": "SoFi Stadium",
-      "durationMs": 62470,
+      "durationMs": 62594,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760417",
         "match": "United States vs Paraguay",
         "matchGameDate": "2026-06-12",
@@ -100,11 +100,11 @@
         "expectedPtDate": "2026-06-12",
         "expectedEtTime": "21:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -113,10 +113,10 @@
       "rowsWritten": 131,
       "matchInfo": "Haiti 0-1 Scotland",
       "venue": "Gillette Stadium",
-      "durationMs": 52810,
+      "durationMs": 66445,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760418",
         "match": "Haiti vs Scotland",
         "matchGameDate": "2026-06-13",
@@ -124,11 +124,11 @@
         "expectedPtDate": "2026-06-13",
         "expectedEtTime": "21:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -137,10 +137,10 @@
       "rowsWritten": 134,
       "matchInfo": "Brazil 1-1 Morocco",
       "venue": "MetLife Stadium",
-      "durationMs": 62237,
+      "durationMs": 62714,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760419",
         "match": "Brazil vs Morocco",
         "matchGameDate": "2026-06-13",
@@ -148,11 +148,11 @@
         "expectedPtDate": "2026-06-13",
         "expectedEtTime": "18:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -161,10 +161,10 @@
       "rowsWritten": 142,
       "matchInfo": "Qatar 1-1 Switzerland",
       "venue": "Levi's Stadium",
-      "durationMs": 63201,
+      "durationMs": 63534,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760420",
         "match": "Qatar vs Switzerland",
         "matchGameDate": "2026-06-13",
@@ -172,11 +172,11 @@
         "expectedPtDate": "2026-06-13",
         "expectedEtTime": "15:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -185,10 +185,10 @@
       "rowsWritten": 148,
       "matchInfo": "Australia 2-0 Türkiye",
       "venue": "BC Place",
-      "durationMs": 60669,
+      "durationMs": 66241,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760421",
         "match": "Australia vs Türkiye",
         "matchGameDate": "2026-06-13",
@@ -196,11 +196,11 @@
         "expectedPtDate": "2026-06-13",
         "expectedEtTime": "00:00",
         "isMidnight": true,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -209,10 +209,10 @@
       "rowsWritten": 141,
       "matchInfo": "Germany 7-1 Curaçao",
       "venue": "NRG Stadium",
-      "durationMs": 57520,
+      "durationMs": 61380,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760422",
         "match": "Germany vs Curaçao",
         "matchGameDate": "2026-06-14",
@@ -220,11 +220,11 @@
         "expectedPtDate": "2026-06-14",
         "expectedEtTime": "13:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -233,10 +233,10 @@
       "rowsWritten": 135,
       "matchInfo": "Ivory Coast 1-0 Ecuador",
       "venue": "Lincoln Financial Field",
-      "durationMs": 57905,
+      "durationMs": 73407,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760423",
         "match": "Ivory Coast vs Ecuador",
         "matchGameDate": "2026-06-14",
@@ -244,11 +244,11 @@
         "expectedPtDate": "2026-06-14",
         "expectedEtTime": "19:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -257,10 +257,10 @@
       "rowsWritten": 128,
       "matchInfo": "Sweden 5-1 Tunisia",
       "venue": "Estadio BBVA",
-      "durationMs": 52153,
+      "durationMs": 54244,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760424",
         "match": "Sweden vs Tunisia",
         "matchGameDate": "2026-06-14",
@@ -268,11 +268,11 @@
         "expectedPtDate": "2026-06-14",
         "expectedEtTime": "22:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -281,10 +281,10 @@
       "rowsWritten": 129,
       "matchInfo": "Netherlands 2-2 Japan",
       "venue": "AT&T Stadium",
-      "durationMs": 59306,
+      "durationMs": 60902,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760425",
         "match": "Netherlands vs Japan",
         "matchGameDate": "2026-06-14",
@@ -292,11 +292,11 @@
         "expectedPtDate": "2026-06-14",
         "expectedEtTime": "16:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -305,10 +305,10 @@
       "rowsWritten": 138,
       "matchInfo": "Belgium 1-1 Egypt",
       "venue": "Lumen Field",
-      "durationMs": 53873,
+      "durationMs": 68454,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760426",
         "match": "Belgium vs Egypt",
         "matchGameDate": "2026-06-15",
@@ -316,11 +316,11 @@
         "expectedPtDate": "2026-06-15",
         "expectedEtTime": "15:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -329,10 +329,10 @@
       "rowsWritten": 138,
       "matchInfo": "Iran 2-2 New Zealand",
       "venue": "SoFi Stadium",
-      "durationMs": 56695,
+      "durationMs": 55897,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760427",
         "match": "Iran vs New Zealand",
         "matchGameDate": "2026-06-15",
@@ -340,20 +340,36 @@
         "expectedPtDate": "2026-06-15",
         "expectedEtTime": "21:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
       "gameId": "760428",
-      "status": "FAIL",
+      "status": "PASS",
       "rowsWritten": 141,
-      "error": "\u001b[1mVerify FAIL  \u001b[0m\u001b[92m0\u001b[0m | [2026-06-30T22:41:56.006Z]   \u001b[31m✗ FAIL\u001b[0m  shot map goal count = 0 (expected > 0) | [2026-06-30T22:41:56.007Z]   \u001b[1mPASS: 67 | FAIL: 1 | TOTAL: 68\u001b[0m | \u001b[31mFAILURES:\u001b[0m",
-      "durationMs": 55980,
-      "attempts": 2
+      "matchInfo": "Spain 0-0 Cape Verde",
+      "venue": "Mercedes-Benz Stadium",
+      "durationMs": 53607,
+      "attempts": 1,
+      "midnightRule": {
+        "ok": false,
+        "gameId": "760428",
+        "match": "Spain vs Cape Verde",
+        "matchGameDate": "2026-06-15",
+        "matchKickoffEt": "12:00",
+        "expectedPtDate": "2026-06-15",
+        "expectedEtTime": "12:00",
+        "isMidnight": false,
+        "scrapeVersion": "500x",
+        "dateOk": true,
+        "timeOk": true,
+        "versionOk": false,
+        "status": "FAIL"
+      }
     },
     {
       "gameId": "760429",
@@ -361,10 +377,10 @@
       "rowsWritten": 141,
       "matchInfo": "Saudi Arabia 1-1 Uruguay",
       "venue": "Hard Rock Stadium",
-      "durationMs": 58111,
+      "durationMs": 55156,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760429",
         "match": "Saudi Arabia vs Uruguay",
         "matchGameDate": "2026-06-15",
@@ -372,11 +388,11 @@
         "expectedPtDate": "2026-06-15",
         "expectedEtTime": "18:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -385,10 +401,10 @@
       "rowsWritten": 133,
       "matchInfo": "Iraq 1-4 Norway",
       "venue": "Gillette Stadium",
-      "durationMs": 54868,
+      "durationMs": 55589,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760430",
         "match": "Iraq vs Norway",
         "matchGameDate": "2026-06-16",
@@ -396,11 +412,11 @@
         "expectedPtDate": "2026-06-16",
         "expectedEtTime": "18:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -409,10 +425,10 @@
       "rowsWritten": 123,
       "matchInfo": "France 3-1 Senegal",
       "venue": "MetLife Stadium",
-      "durationMs": 56789,
+      "durationMs": 53646,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760432",
         "match": "France vs Senegal",
         "matchGameDate": "2026-06-16",
@@ -420,11 +436,11 @@
         "expectedPtDate": "2026-06-16",
         "expectedEtTime": "15:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -433,10 +449,10 @@
       "rowsWritten": 126,
       "matchInfo": "Argentina 3-0 Algeria",
       "venue": "GEHA Field at Arrowhead Stadium",
-      "durationMs": 62469,
+      "durationMs": 57615,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760433",
         "match": "Argentina vs Algeria",
         "matchGameDate": "2026-06-16",
@@ -444,11 +460,11 @@
         "expectedPtDate": "2026-06-16",
         "expectedEtTime": "21:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -457,10 +473,10 @@
       "rowsWritten": 132,
       "matchInfo": "Austria 3-1 Jordan",
       "venue": "Levi's Stadium",
-      "durationMs": 61929,
+      "durationMs": 55695,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760431",
         "match": "Austria vs Jordan",
         "matchGameDate": "2026-06-16",
@@ -468,11 +484,11 @@
         "expectedPtDate": "2026-06-16",
         "expectedEtTime": "00:00",
         "isMidnight": true,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -481,10 +497,10 @@
       "rowsWritten": 124,
       "matchInfo": "Ghana 1-0 Panama",
       "venue": "BMO Field",
-      "durationMs": 60601,
+      "durationMs": 59093,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760434",
         "match": "Ghana vs Panama",
         "matchGameDate": "2026-06-17",
@@ -492,11 +508,11 @@
         "expectedPtDate": "2026-06-17",
         "expectedEtTime": "19:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -505,10 +521,10 @@
       "rowsWritten": 123,
       "matchInfo": "Portugal 1-1 Congo DR",
       "venue": "NRG Stadium",
-      "durationMs": 103268,
-      "attempts": 2,
+      "durationMs": 52826,
+      "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760435",
         "match": "Portugal vs Congo DR",
         "matchGameDate": "2026-06-17",
@@ -516,11 +532,11 @@
         "expectedPtDate": "2026-06-17",
         "expectedEtTime": "13:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -529,10 +545,10 @@
       "rowsWritten": 132,
       "matchInfo": "Uzbekistan 1-3 Colombia",
       "venue": "Estadio Banorte",
-      "durationMs": 57786,
+      "durationMs": 56028,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760436",
         "match": "Uzbekistan vs Colombia",
         "matchGameDate": "2026-06-17",
@@ -540,11 +556,11 @@
         "expectedPtDate": "2026-06-17",
         "expectedEtTime": "22:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     },
     {
@@ -553,10 +569,10 @@
       "rowsWritten": 140,
       "matchInfo": "England 4-2 Croatia",
       "venue": "AT&T Stadium",
-      "durationMs": 57478,
+      "durationMs": 63172,
       "attempts": 1,
       "midnightRule": {
-        "ok": true,
+        "ok": false,
         "gameId": "760437",
         "match": "England vs Croatia",
         "matchGameDate": "2026-06-17",
@@ -564,14 +580,14 @@
         "expectedPtDate": "2026-06-17",
         "expectedEtTime": "16:00",
         "isMidnight": false,
-        "scrapeVersion": "250x",
+        "scrapeVersion": "500x",
         "dateOk": true,
         "timeOk": true,
-        "versionOk": true,
-        "status": "PASS"
+        "versionOk": false,
+        "status": "FAIL"
       }
     }
   ],
-  "completedAt": "2026-06-30T22:55:04.496Z",
-  "totalDurationMs": 1760307
+  "completedAt": "2026-07-01T01:09:56.144Z",
+  "totalDurationMs": 1537670
 }

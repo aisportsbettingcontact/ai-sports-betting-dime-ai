@@ -254,6 +254,14 @@ export interface EspnMatchPageData {
   scrapedAt: string;
   scrapeDurationMs: number;
   pagesLoaded: string[];
+  /** ESPN-native round label from site.api.espn.com header.season.slug
+   *  e.g. "group-stage" | "round-of-32" | "round-of-16" | "quarterfinals" | "semifinals" | "final"
+   */
+  seasonSlug: string;
+  /** ESPN season type code: 13802=group-stage, 13801=round-of-32, etc. */
+  seasonType: number;
+  /** ESPN full season name: e.g. "2026 FIFA World Cup, Group Stage" */
+  seasonName: string;
 
   // ── 1. Game Strip ─────────────────────────────────────────────────────────
   gameStrip: GameStrip;
@@ -1729,6 +1737,48 @@ export async function scrapeEspnMatchPage(
 
     log.output("Browser context created", { ua: ua.substring(0, 60) });
 
+    // ── ESPN Summary API: Fetch season.slug (round label) ─────────────────────
+    // This is ESPN's own API (same domain) — returns native season.slug = "group-stage" etc.
+    // No JS rendering required — lightweight JSON fetch
+    log.step("FETCH_SEASON_SLUG", "Fetching ESPN season.slug from summary API");
+    let seasonSlug = "";
+    let seasonType = 0;
+    let seasonName = "";
+    try {
+      const summaryUrl = `https://site.web.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${gameId}`;
+      const summaryResp = await fetch(summaryUrl, {
+        headers: { "User-Agent": ua, "Accept": "application/json" },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (summaryResp.ok) {
+        const summaryData = await summaryResp.json() as Record<string, unknown>;
+        const header = (summaryData["header"] as Record<string, unknown>) ?? {};
+        const season = (header["season"] as Record<string, unknown>) ?? {};
+        seasonType = typeof season["type"] === "number" ? season["type"] as number : 0;
+        seasonName = typeof season["name"] === "string" ? season["name"] as string : "";
+        // Derive slug from type (ESPN scoreboard API uses slug directly; summary API uses type)
+        const SEASON_TYPE_TO_SLUG: Record<number, string> = {
+          13802: "group-stage",
+          13801: "round-of-32",
+          13800: "round-of-16",
+          13799: "quarterfinals",
+          13798: "semifinals",
+          13797: "final",
+          13796: "third-place",
+        };
+        seasonSlug = SEASON_TYPE_TO_SLUG[seasonType] ?? `season-type-${seasonType}`;
+        log.verify(seasonSlug !== "" ? "PASS" : "WARN",
+          "SEASON_SLUG: ESPN round label fetched",
+          { seasonSlug, seasonType, seasonName });
+      } else {
+        log.verify("WARN", "SEASON_SLUG: summary API returned non-200", { status: summaryResp.status });
+      }
+    } catch (err) {
+      log.verify("WARN", "SEASON_SLUG: summary API fetch failed (non-fatal)",
+        { error: err instanceof Error ? err.message : String(err) });
+    }
+    log.state("Season slug resolved", { seasonSlug, seasonType, seasonName });
+
     // ── Load Page A: Player Stats ─────────────────────────────────────────
     log.step("LOAD_PLAYER_STATS", `Loading player-stats page`);
     const { html: htmlPlayerStats, durationMs: dur1 } = await loadPage(
@@ -1941,6 +1991,9 @@ export async function scrapeEspnMatchPage(
       scrapedAt: new Date().toISOString(),
       scrapeDurationMs: totalDurationMs,
       pagesLoaded,
+      seasonSlug,
+      seasonType,
+      seasonName,
       gameStrip,
       boxscore,
       lineups,
@@ -2236,8 +2289,11 @@ export async function scrapeEspnMatchPage(
 
     log.summary("SUCCESS");
 
-    log.output("SCRAPE COMPLETE — 250x EDITION", {
+    log.output("SCRAPE COMPLETE — 500x EDITION", {
       gameId: result.gameId,
+      seasonSlug: result.seasonSlug,
+      seasonType: result.seasonType,
+      seasonName: result.seasonName,
       competition: result.gameStrip.competition,
       score: `${result.gameStrip.homeTeam.abbrev} ${result.gameStrip.homeTeam.score}-${result.gameStrip.awayTeam.score} ${result.gameStrip.awayTeam.abbrev}`,
       venue: result.gameStrip.venue,
