@@ -1,17 +1,14 @@
 /**
- * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.1
+ * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.2
  * ══════════════════════════════════════════════════════════════════
  * ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE | ESPN-ONLY
- *
- * Polls the ESPN scoreboard API every 30 seconds across a ±3-day
- * window, detects newly-final WC2026 matches, and fires the 500x
- * scraper (espnIngest.test.live.mjs) for each newly-settled game.
+ * 44-SCENARIO TEST MATRIX | DAY_ADVANCE ROLLING WINDOW ENGINE
  *
  * Architecture mirrors batchScrapeR32.mjs at every layer:
  *   - Elite dual-channel logger: terminal (ANSI) + two file streams
  *   - File-stream child-process capture (prevents pipe deadlock)
  *   - Forensic FT-transition detection engine (ESPN status type IDs)
- *   - FT-confirmation double-check poll (re-confirms state=post before trigger)
+ *   - FT-confirmation DOUBLE-CHECK poll (2 consecutive state=post required)
  *   - TRANS_DETAIL log level: all 12 ESPN status fields per transition
  *   - Midnight rule verification post-scrape (PT date / ET time)
  *   - Round verification (matchRound = expected ESPN season.slug)
@@ -19,6 +16,30 @@
  *   - Retry engine: up to 3 attempts with 10s/20s/30s backoff
  *   - Per-cycle state machine: tracks every game's statusState
  *   - Session summary on SIGINT/SIGTERM
+ *
+ * NEW IN v2.2 — 44-SCENARIO ENGINE:
+ *   - DAY_ADVANCE rolling window: once all games on earliest date are final,
+ *     drop that date and add the next day at the far end (rolling 4-day window)
+ *   - DAY_FINAL detection: logs when all games on a date are settled
+ *   - Status-specific state machines for all 12 ESPN type IDs:
+ *       id=1  SCHEDULED   → log PRE, no trigger
+ *       id=2  IN_PROGRESS → log WATCHING, record kickoff
+ *       id=22 HALFTIME    → log LIVE/HT, no trigger
+ *       id=26 SECOND_HALF → log LIVE/2H, no trigger (760491 ground truth)
+ *       id=17 EXTRA_TIME  → log ET_ACTIVE, tighten poll to 15s
+ *       id=24 SHOOTOUT    → log PENS_ACTIVE, tighten poll to 15s
+ *       id=28 FULL_TIME   → TRANS_D + double-confirm + TRIGGER (760491 confirmed)
+ *       id=23 FULL_TIME   → same as id=28 (alt FT)
+ *       id=3  FINAL       → same as id=28 (legacy FT)
+ *       id=6  POSTPONED   → log POSTPONED, extend window +7d, add to postponedSet
+ *       id=9  DELAYED     → log DELAYED, extend window +2h, add to delayedSet
+ *       id=7  CANCELED    → log CANCELED, add to canceledSet, NEVER trigger
+ *   - Cancel guard: id=7 games NEVER trigger scraper even if state=post/completed=true
+ *   - Postponed window recalc: adds +7 days to watch window
+ *   - Delayed window recalc: adds +2 hours (next poll cycle)
+ *   - Cancel-then-reschedule: if canceledSet game transitions to pre, log RESCHEDULED
+ *   - ET extended warning: if id=17/24 persists >30 min, log ET_EXTENDED
+ *   - Double false-positive guard: requires 2 consecutive state=post confirmations
  *
  * ESPN-ONLY POLICY: ALL data sourced exclusively from ESPN APIs.
  * No external sources. No fallback to non-ESPN endpoints.
@@ -67,7 +88,7 @@
  *   id=28 STATUS_FULL_TIME      state=post completed=true   FT ← 760491 confirmed
  *   id=3  STATUS_FINAL          state=post completed=true   FT (legacy)
  *   id=6  STATUS_POSTPONED      state=pre  completed=false
- *   id=7  STATUS_CANCELED       state=post completed=true
+ *   id=7  STATUS_CANCELED       state=post completed=true   ← NEVER trigger scraper
  *   id=9  STATUS_DELAYED        state=pre  completed=false
  *   id=17 STATUS_EXTRA_TIME     state=in   completed=false  ET
  *   id=24 STATUS_SHOOTOUT       state=in   completed=false  Pens
@@ -106,48 +127,60 @@ const TERMINAL_LOG   = `/tmp/WC2026FTWatcher_500x.txt`;
 const PROGRESS_FILE  = `${LOG_DIR}/WC2026FTWatcher_progress.json`;
 const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/espnIngest.test.live.mjs`;
 
-// Poll interval: 30 seconds
-const POLL_INTERVAL_MS      = 30_000;
+// Poll interval: 30 seconds (normal)
+const POLL_INTERVAL_MS        = 30_000;
+// Tightened poll interval when ET or Pens is active
+const POLL_INTERVAL_ET_MS     = 15_000;
 // FT-confirmation re-poll delay: 5 seconds after initial FT detection
-const FT_CONFIRM_DELAY_MS   = 5_000;
+const FT_CONFIRM_DELAY_MS     = 5_000;
+// Second FT-confirmation re-poll delay: 8 seconds after first confirm
+const FT_CONFIRM2_DELAY_MS    = 8_000;
 // Per-match scrape timeout: 7 minutes (R32/QF/SF/F matches with ET+pens)
-const MATCH_TIMEOUT_MS      = 420_000;
+const MATCH_TIMEOUT_MS        = 420_000;
 // Max retry attempts per match
-const MAX_ATTEMPTS          = 3;
+const MAX_ATTEMPTS            = 3;
 // Retry backoff delays (ms) per attempt
-const RETRY_BACKOFF_MS      = [0, 10_000, 20_000, 30_000];
-// Watch window: yesterday through +3 days
-const WATCH_DAYS_BEFORE     = 1;
-const WATCH_DAYS_AFTER      = 3;
+const RETRY_BACKOFF_MS        = [0, 10_000, 20_000, 30_000];
+// Watch window: yesterday through +3 days (rolling, managed by DAY_ADVANCE engine)
+const WATCH_DAYS_BEFORE       = 1;
+const WATCH_DAYS_AFTER        = 3;
+// ET/Pens extended warning threshold: 30 minutes
+const ET_EXTENDED_WARN_MS     = 30 * 60 * 1000;
+// Postponed window extension: +7 days
+const POSTPONED_WINDOW_DAYS   = 7;
 
 // ESPN API — ONLY source permitted (ESPN-only policy, no external sources)
-const ESPN_SCOREBOARD_BASE  = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
-const ESPN_LEAGUE_SLUG      = 'fifa.world';
-const ESPN_SEASON_TYPE      = 13801; // WC2026 knockout stage
+const ESPN_SCOREBOARD_BASE    = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_LEAGUE_SLUG        = 'fifa.world';
 
 // ESPN status type IDs that represent a SETTLED/FINAL match
 // Forensically confirmed from live API inspection + 760491 audit
-const ESPN_FINAL_TYPE_IDS   = new Set([3, 23, 28]);    // STATUS_FINAL, STATUS_FULL_TIME, STATUS_FINAL_PEN
-const ESPN_FINAL_STATES     = new Set(['post']);         // state must be "post"
-const ESPN_LIVE_TYPE_IDS    = new Set([2, 17, 22, 24, 26]); // in-progress, ET, halftime, shootout, 2nd half
-const ESPN_LIVE_STATES      = new Set(['in']);
+// CRITICAL: id=7 (CANCELED) is in FINAL_TYPE_IDS for state detection but
+//           is EXCLUDED from trigger logic via canceledSet guard
+const ESPN_FINAL_TYPE_IDS     = new Set([3, 23, 28]);    // STATUS_FINAL, STATUS_FULL_TIME (×2)
+const ESPN_CANCELED_TYPE_IDS  = new Set([7]);             // STATUS_CANCELED — NEVER trigger scraper
+const ESPN_FINAL_STATES       = new Set(['post']);
+const ESPN_LIVE_TYPE_IDS      = new Set([2, 17, 22, 24, 26]); // in-progress, ET, halftime, shootout, 2nd half
+const ESPN_LIVE_STATES        = new Set(['in']);
+const ESPN_ET_TYPE_IDS        = new Set([17]);            // STATUS_EXTRA_TIME
+const ESPN_PENS_TYPE_IDS      = new Set([24]);            // STATUS_SHOOTOUT
+const ESPN_POSTPONED_TYPE_IDS = new Set([6]);             // STATUS_POSTPONED
+const ESPN_DELAYED_TYPE_IDS   = new Set([9]);             // STATUS_DELAYED
 
 // Expected matchRound values by ESPN season.slug
 const ROUND_SLUG_MAP = {
-  'round-of-32':       'round-of-32',
-  'round-of-16':       'round-of-16',
-  'quarterfinals':     'quarterfinals',
-  'semifinals':        'semifinals',
-  'final':             'final',
-  'third-place':       'third-place',
+  'round-of-32':   'round-of-32',
+  'round-of-16':   'round-of-16',
+  'quarterfinals': 'quarterfinals',
+  'semifinals':    'semifinals',
+  'final':         'final',
+  'third-place':   'third-place',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ELITE DUAL-CHANNEL LOGGER
 // Writes to: terminal (ANSI color) + WATCHER_LOG (append) + TERMINAL_LOG (overwrite)
 // Format: [ISO_TIMESTAMP] [LEVEL  ] [TAG                    ] message
-// Log levels: INFO PASS FAIL WARN SKIP PROG VERIFY MIDNITE ERROR FATAL
-//             POLL CYCLE FINAL LIVE TRIGGER RETRY DB ESPNAPI TRANS TRANS_D
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -159,7 +192,7 @@ const C = {
   green:   '\x1b[32m', red:     '\x1b[31m', yellow:  '\x1b[33m',
   cyan:    '\x1b[36m', magenta: '\x1b[35m', blue:    '\x1b[34m',
   gray:    '\x1b[90m', white:   '\x1b[97m', orange:  '\x1b[38;5;208m',
-  purple:  '\x1b[38;5;141m',
+  purple:  '\x1b[38;5;141m',  teal: '\x1b[38;5;51m', lime: '\x1b[38;5;154m',
 };
 
 const LEVEL_COLORS = {
@@ -184,14 +217,23 @@ const LEVEL_COLORS = {
   'TRANS  ': C.magenta,
   'TRANS_D': C.purple,   // TRANS_DETAIL: full 12-field ESPN status dump
   'CONFIRM': C.green,    // FT-confirmation re-poll result
+  'CONFIRM': C.green,
+  'DAY_ADV': C.lime,     // DAY_ADVANCE rolling window engine
+  'DAY_FIN': C.lime,     // DAY_FINAL: all games on a date settled
+  'CANCEL ': C.red,      // STATUS_CANCELED guard
+  'POSTPON': C.yellow,   // STATUS_POSTPONED
+  'DELAYED': C.yellow,   // STATUS_DELAYED
+  'ET_ACT ': C.orange,   // STATUS_EXTRA_TIME active
+  'PENS_AC': C.orange,   // STATUS_SHOOTOUT active
+  'WATCH  ': C.teal,     // Game enters STATUS_IN_PROGRESS (id=2)
 };
 
 const log = (level, tag, msg) => {
-  const ts     = new Date().toISOString();
-  const lvl    = level.padEnd(7);
-  const tagPad = tag.padEnd(28);
-  const plain  = `[${ts}] [${lvl}] [${tagPad}] ${msg}`;
-  const color  = LEVEL_COLORS[`${lvl}`] || C.white;
+  const ts      = new Date().toISOString();
+  const lvl     = level.padEnd(7);
+  const tagPad  = tag.padEnd(28);
+  const plain   = `[${ts}] [${lvl}] [${tagPad}] ${msg}`;
+  const color   = LEVEL_COLORS[`${lvl}`] || C.white;
   const colored = `${C.dim}[${ts}]${C.reset} ${color}[${lvl}]${C.reset} ${C.gray}[${tagPad}]${C.reset} ${msg}`;
   process.stdout.write(colored + '\n');
   logStream.write(plain + '\n');
@@ -217,7 +259,6 @@ const logBanner = (msg, char = '═') => {
 /**
  * logTransDetail — logs ALL 12 ESPN status fields for a transition event.
  * Called on every FT detection, confirmation, and scrape trigger.
- * Noise-free: only fires on state transitions, not every poll.
  */
 const logTransDetail = (tag, label, g, prev) => {
   const prevStr = prev
@@ -258,15 +299,8 @@ const getPool = () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ESPN-ONLY SCOREBOARD FETCH
-// Source: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
-// ESPN-ONLY POLICY: NO external sources permitted under any circumstances
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Fetch ESPN scoreboard for a single date (YYYYMMDD).
- * Returns raw ESPN events array or [] on error.
- * ESPN-only: no fallback, no alternate sources.
- */
 const fetchEspnScoreboard = async (dateStr) => {
   const url = `${ESPN_SCOREBOARD_BASE}?dates=${dateStr}&limit=50`;
   log('ESPNAPI', `ESPN/SCOREBOARD/${dateStr}`, `[INPUT] GET ${url}`);
@@ -274,7 +308,7 @@ const fetchEspnScoreboard = async (dateStr) => {
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent':    'WC2026FTWatcher/500x-ESPN-only',
+        'User-Agent':    'WC2026FTWatcher/500x-v2.2-ESPN-only',
         'Accept':        'application/json',
         'Referer':       'https://www.espn.com/',
         'Cache-Control': 'no-cache',
@@ -283,33 +317,39 @@ const fetchEspnScoreboard = async (dateStr) => {
     });
     const elapsed = Date.now() - startMs;
     if (!res.ok) {
-      log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
+      if (res.status === 429) {
+        log('WARN', `ESPN/SCOREBOARD/${dateStr}`, `[RATE_LIMIT] 429 Too Many Requests | ${elapsed}ms — backing off`);
+      } else {
+        log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
+      }
       return [];
     }
     const data = await res.json();
     const events = data?.events || [];
     log('ESPNAPI', `ESPN/SCOREBOARD/${dateStr}`, `[OUTPUT] ${events.length} events | ${elapsed}ms | HTTP ${res.status}`);
+    if (events.length === 0) {
+      log('INFO', `ESPN/SCOREBOARD/${dateStr}`, `[NO_EVENTS] No events returned for date ${dateStr}`);
+    }
     return events;
   } catch (err) {
     const elapsed = Date.now() - startMs;
-    log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[ERROR] ${err.message} | ${elapsed}ms`);
+    if (err.name === 'SyntaxError') {
+      log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[PARSE_ERROR] Malformed JSON response | ${elapsed}ms`);
+    } else {
+      log('ERROR', `ESPN/SCOREBOARD/${dateStr}`, `[ERROR] ${err.message} | ${elapsed}ms`);
+    }
     return [];
   }
 };
 
-/**
- * fetchSingleGame — ESPN-only single-game status fetch for FT confirmation.
- * Called 5 seconds after initial FT detection to confirm state=post persists.
- * Uses the same ESPN scoreboard API with the game's date.
- */
-const fetchSingleGameConfirm = async (gameId, dateStr) => {
+const fetchSingleGameConfirm = async (gameId, dateStr, confirmNum = 1) => {
   const url = `${ESPN_SCOREBOARD_BASE}?dates=${dateStr}&limit=50`;
-  log('ESPNAPI', `ESPN/CONFIRM/${gameId}`, `[INPUT] FT-CONFIRM re-poll → GET ${url}`);
+  log('ESPNAPI', `ESPN/CONFIRM${confirmNum}/${gameId}`, `[INPUT] FT-CONFIRM#${confirmNum} re-poll → GET ${url}`);
   const startMs = Date.now();
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent':    'WC2026FTWatcher/500x-ESPN-only-confirm',
+        'User-Agent':    `WC2026FTWatcher/500x-v2.2-confirm${confirmNum}`,
         'Accept':        'application/json',
         'Referer':       'https://www.espn.com/',
         'Cache-Control': 'no-cache, no-store',
@@ -318,22 +358,22 @@ const fetchSingleGameConfirm = async (gameId, dateStr) => {
     });
     const elapsed = Date.now() - startMs;
     if (!res.ok) {
-      log('ERROR', `ESPN/CONFIRM/${gameId}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
+      log('ERROR', `ESPN/CONFIRM${confirmNum}/${gameId}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
       return null;
     }
     const data = await res.json();
     const events = data?.events || [];
     const event = events.find(e => e.id === gameId);
     if (!event) {
-      log('WARN', `ESPN/CONFIRM/${gameId}`, `[OUTPUT] gameId=${gameId} not found in confirm response | ${elapsed}ms`);
+      log('WARN', `ESPN/CONFIRM${confirmNum}/${gameId}`, `[OUTPUT] gameId=${gameId} not found in confirm response | ${elapsed}ms`);
       return null;
     }
     const g = parseEspnEvent(event);
-    log('ESPNAPI', `ESPN/CONFIRM/${gameId}`, `[OUTPUT] state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} clock=${g.displayClock} | ${elapsed}ms`);
+    log('ESPNAPI', `ESPN/CONFIRM${confirmNum}/${gameId}`, `[OUTPUT] state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} clock=${g.displayClock} | ${elapsed}ms`);
     return g;
   } catch (err) {
     const elapsed = Date.now() - startMs;
-    log('ERROR', `ESPN/CONFIRM/${gameId}`, `[ERROR] ${err.message} | ${elapsed}ms`);
+    log('ERROR', `ESPN/CONFIRM${confirmNum}/${gameId}`, `[ERROR] ${err.message} | ${elapsed}ms`);
     return null;
   }
 };
@@ -341,60 +381,42 @@ const fetchSingleGameConfirm = async (gameId, dateStr) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ESPN EVENT PARSER
 // Extracts ALL forensically-relevant fields from a raw ESPN event object
-// Maps every status field needed for FT-transition detection
-// Forensic ground truth: 760491 Mexico vs Ecuador
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const parseEspnEvent = (event) => {
-  const comp        = event.competitions?.[0] || {};
-  const status      = comp.status || {};
-  const statusType  = status.type || {};
-  const season      = event.season || {};
+  const comp          = event.competitions?.[0] || {};
+  const status        = comp.status || {};
+  const statusType    = status.type || {};
+  const season        = event.season || {};
 
-  // ── Core identifiers ──────────────────────────────────────────────────────
-  const gameId      = event.id;
-  const name        = event.name || '';
-  const shortName   = event.shortName || '';
-  const eventDate   = event.date || '';       // UTC ISO string from ESPN
+  const gameId        = event.id;
+  const name          = event.name || '';
+  const shortName     = event.shortName || '';
+  const eventDate     = event.date || '';
 
-  // ── Season / round ────────────────────────────────────────────────────────
-  const seasonType  = season.type;            // 13801 for WC2026 knockout
-  const seasonSlug  = season.slug || '';      // "round-of-32", "quarterfinals", etc.
-  const matchRound  = ROUND_SLUG_MAP[seasonSlug] || seasonSlug || 'unknown';
+  const seasonType    = season.type;
+  const seasonSlug    = season.slug || '';
+  const matchRound    = ROUND_SLUG_MAP[seasonSlug] || seasonSlug || 'unknown';
 
-  // ── ESPN status fields — ALL 12 forensically confirmed ────────────────────
-  // Field 1:  status.type.id         — CRITICAL: 28 = FT for 760491
-  const statusTypeId    = statusType.id;
-  // Field 2:  status.type.name       — "STATUS_FULL_TIME", "STATUS_IN_PROGRESS"
-  const statusTypeName  = statusType.name || '';
-  // Field 3:  status.type.state      — "pre" | "in" | "post"
-  const statusState     = statusType.state || '';
-  // Field 4:  status.type.completed  — true when final (false when live)
-  const statusCompleted = statusType.completed;
-  // Field 5:  status.type.detail     — "FT", "HT", "83'", "90'+9'"
-  const statusDetail    = statusType.detail || '';
-  // Field 6:  status.type.shortDetail— "FT", "HT"
+  // All 12 ESPN status fields (forensically confirmed from 760491)
+  const statusTypeId      = statusType.id;
+  const statusTypeName    = statusType.name || '';
+  const statusState       = statusType.state || '';
+  const statusCompleted   = statusType.completed;
+  const statusDetail      = statusType.detail || '';
   const statusShortDetail = statusType.shortDetail || '';
-  // Field 7:  status.type.description— "Full Time", "Half Time", "Second Half"
   const statusDescription = statusType.description || '';
-  // Field 8:  status.displayClock    — "90'+9'", "83'", "45'", "0'0\""
-  const displayClock    = status.displayClock || '';
-  // Field 9:  status.clock           — seconds (5400 = 90min)
-  const clock           = status.clock;
-  // Field 10: status.period          — 1=1H, 2=2H, 3=ET1, 4=ET2, 5=Pens
-  const period          = status.period;
-  // Field 11: event.date             — UTC ISO kickoff timestamp
-  // (already captured above as eventDate)
-  // Field 12: season.slug            — "round-of-32", "quarterfinals", etc.
-  // (already captured above as seasonSlug)
+  const displayClock      = status.displayClock || '';
+  const clock             = status.clock;
+  const period            = status.period;
 
-  // ── FT detection logic (ESPN-only, forensically verified from 760491) ─────
+  // FT detection (ESPN-only, forensically verified from 760491)
   // PRIMARY:   state === 'post' AND completed === true
   // SECONDARY: typeId in FINAL set {3, 23, 28}
-  // TERTIARY:  shortDetail === 'FT' OR description === 'Full Time'
-  const isFinalByState    = statusState === 'post' && statusCompleted === true;
+  // CANCEL GUARD: typeId=7 is NEVER a valid FT trigger
+  const isCanceled        = ESPN_CANCELED_TYPE_IDS.has(statusTypeId);
+  const isFinalByState    = statusState === 'post' && statusCompleted === true && !isCanceled;
   const isFinalByTypeId   = ESPN_FINAL_TYPE_IDS.has(statusTypeId);
-  const isFinalByDetail   = statusShortDetail === 'FT' || statusDescription === 'Full Time' || statusDetail === 'FT';
   const isFinal           = isFinalByState || isFinalByTypeId;
 
   const isLiveByState     = statusState === 'in';
@@ -402,8 +424,14 @@ const parseEspnEvent = (event) => {
   const isLive            = isLiveByState || isLiveByTypeId;
 
   const isScheduled       = statusState === 'pre' && !statusCompleted;
+  const isPostponed       = ESPN_POSTPONED_TYPE_IDS.has(statusTypeId);
+  const isDelayed         = ESPN_DELAYED_TYPE_IDS.has(statusTypeId);
+  const isExtraTime       = ESPN_ET_TYPE_IDS.has(statusTypeId);
+  const isShootout        = ESPN_PENS_TYPE_IDS.has(statusTypeId);
+  const isInProgress      = String(statusTypeId) === '2';
+  const isHalftime        = String(statusTypeId) === '22';
+  const isSecondHalf      = String(statusTypeId) === '26';
 
-  // ── Competitors ───────────────────────────────────────────────────────────
   const competitors = (comp.competitors || []).map(c => ({
     id:       c.id,
     homeAway: c.homeAway,
@@ -418,69 +446,295 @@ const parseEspnEvent = (event) => {
     ? `${away.abbrev} ${away.score} - ${home.score} ${home.abbrev}`
     : '? - ?';
 
-  // ── Date string for confirm re-poll ───────────────────────────────────────
-  // Extract YYYYMMDD from eventDate (UTC)
+  // Date string for confirm re-poll (UTC date from ESPN event)
   const eventDateStr = eventDate
     ? eventDate.replace(/[-T:Z.]/g, '').slice(0, 8)
     : '';
 
   return {
-    gameId,
-    name,
-    shortName,
-    eventDate,
-    eventDateStr,
-    seasonType,
-    seasonSlug,
-    matchRound,
-    // All 12 ESPN status fields
-    statusTypeId,
-    statusTypeName,
-    statusState,
-    statusCompleted,
-    statusDetail,
-    statusShortDetail,
-    statusDescription,
-    displayClock,
-    clock,
-    period,
-    // Derived booleans
-    isFinal,
-    isLive,
-    isScheduled,
-    isFinalByState,
-    isFinalByTypeId,
-    isFinalByDetail,
-    // Competitors
-    competitors,
-    home,
-    away,
-    scoreStr,
+    gameId, name, shortName, eventDate, eventDateStr,
+    seasonType, seasonSlug, matchRound,
+    statusTypeId, statusTypeName, statusState, statusCompleted,
+    statusDetail, statusShortDetail, statusDescription,
+    displayClock, clock, period,
+    isFinal, isLive, isScheduled, isCanceled,
+    isFinalByState, isFinalByTypeId,
+    isPostponed, isDelayed, isExtraTime, isShootout,
+    isInProgress, isHalftime, isSecondHalf,
+    competitors, home, away, scoreStr,
   };
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WATCH DATE GENERATOR
-// Returns YYYYMMDD strings for yesterday through +WATCH_DAYS_AFTER
+// DYNAMIC WATCH WINDOW ENGINE (DAY_ADVANCE)
+// ─────────────────────────────────────────────────────────────────────────────
+// The watch window is a rolling set of YYYYMMDD date strings.
+// Initial window: yesterday through +WATCH_DAYS_AFTER (4 dates total).
+//
+// DAY_ADVANCE logic:
+//   After each poll cycle, if ALL games on the earliest date in the window
+//   are in state=post (settled), that date is dropped and the next day is
+//   appended at the far end.
+//
+//   Example:
+//     Window: [20260630, 20260701, 20260702, 20260703]
+//     760491 (last game on 20260630) goes final
+//     DAY_FINAL fires for 20260630
+//     20260630 dropped → 20260704 added
+//     New window: [20260701, 20260702, 20260703, 20260704]
+//
+// Postponed/delayed extension:
+//   If a game on a date is postponed (id=6), that date's window is extended
+//   by POSTPONED_WINDOW_DAYS (7 days) — the date stays in the window longer.
+//   If a game is delayed (id=9), the date stays in the window for the next cycle.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const getWatchDates = () => {
+// The active watch window — initialized in main()
+let watchWindow = [];
+
+// Track which dates have been extended due to postponed games
+// Key: dateStr → extensionExpiryDateStr (YYYYMMDD)
+const postponedExtensions = new Map();
+
+// Track which dates have delayed games (keep in window for next cycle)
+const delayedDates = new Set();
+
+/**
+ * initWatchWindow — builds the initial watch window on startup.
+ * Returns array of YYYYMMDD strings: yesterday through +WATCH_DAYS_AFTER.
+ */
+const initWatchWindow = () => {
   const dates = [];
   const now   = new Date();
   for (let d = -WATCH_DAYS_BEFORE; d <= WATCH_DAYS_AFTER; d++) {
     const dt = new Date(now);
     dt.setUTCDate(dt.getUTCDate() + d);
-    const yyyy = dt.getUTCFullYear();
-    const mm   = String(dt.getUTCMonth() + 1).padStart(2, '0');
-    const dd   = String(dt.getUTCDate()).padStart(2, '0');
-    dates.push(`${yyyy}${mm}${dd}`);
+    dates.push(toDateStr(dt));
   }
   return dates;
 };
 
+/**
+ * toDateStr — converts a Date to YYYYMMDD UTC string.
+ */
+const toDateStr = (dt) => {
+  const yyyy = dt.getUTCFullYear();
+  const mm   = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const dd   = String(dt.getUTCDate()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}`;
+};
+
+/**
+ * addDaysToDateStr — adds N days to a YYYYMMDD string, returns new YYYYMMDD.
+ */
+const addDaysToDateStr = (dateStr, days) => {
+  const dt = new Date(
+    parseInt(dateStr.slice(0, 4)),
+    parseInt(dateStr.slice(4, 6)) - 1,
+    parseInt(dateStr.slice(6, 8))
+  );
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return toDateStr(dt);
+};
+
+/**
+ * advanceWatchWindow — called after each poll cycle.
+ * For each date in the window, checks if all games on that date are settled.
+ * If the EARLIEST date is fully settled, drops it and appends the next day.
+ * Respects postponed extensions and delayed dates.
+ *
+ * @param {Map<string, {statusState, isFinal, isPostponed, isDelayed}>} dateGameStates
+ *   Map of dateStr → array of game states seen on that date in this cycle
+ */
+const advanceWatchWindow = (dateGameStates) => {
+  if (watchWindow.length === 0) return;
+
+  const earliest = watchWindow[0];
+
+  // Check if earliest date has a postponed extension
+  if (postponedExtensions.has(earliest)) {
+    const expiryStr = postponedExtensions.get(earliest);
+    const today     = toDateStr(new Date());
+    if (today < expiryStr) {
+      log('INFO', `DAY_ADV/POSTPONE`, `Date ${earliest} has postponed extension until ${expiryStr} — keeping in window`);
+      return;
+    } else {
+      postponedExtensions.delete(earliest);
+      log('INFO', `DAY_ADV/POSTPONE`, `Postponed extension for ${earliest} expired — evaluating for advance`);
+    }
+  }
+
+  // Check if earliest date has delayed games
+  if (delayedDates.has(earliest)) {
+    log('INFO', `DAY_ADV/DELAYED`, `Date ${earliest} has delayed games — keeping in window`);
+    return;
+  }
+
+  const gamesOnEarliest = dateGameStates.get(earliest) || [];
+
+  // If no games were found on this date at all, it may be a future date with
+  // no scheduled games yet — keep it for now (ESPN may not list it yet)
+  if (gamesOnEarliest.length === 0) {
+    log('INFO', `DAY_ADV/${earliest}`, `No games found on ${earliest} this cycle — keeping in window`);
+    return;
+  }
+
+  // Check if ALL games on earliest date are final
+  const allFinal = gamesOnEarliest.every(g => g.isFinal);
+  const anyLive  = gamesOnEarliest.some(g => g.isLive);
+  const anyPre   = gamesOnEarliest.some(g => g.isScheduled || g.isPostponed || g.isDelayed);
+
+  if (anyLive || anyPre) {
+    // Still active games on earliest date — do not advance
+    return;
+  }
+
+  if (allFinal) {
+    // All games on earliest date are settled — advance the window
+    const newFarDate = addDaysToDateStr(watchWindow[watchWindow.length - 1], 1);
+    watchWindow.shift();
+    watchWindow.push(newFarDate);
+
+    log('DAY_ADV', `DAY_ADV/ADVANCE`, `🗓️  DAY_ADVANCE: ${earliest} fully settled (${gamesOnEarliest.length} games) → dropped | ${newFarDate} added | window=[${watchWindow.join(', ')}]`);
+    log('DAY_FIN', `DAY_FIN/${earliest}`, `🏁 DAY_FINAL: ALL ${gamesOnEarliest.length} games on ${earliest} are settled | window now starts at ${watchWindow[0]}`);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPECIAL STATUS STATE MACHINES
+// Tracks per-game special states: postponed, delayed, canceled, ET, pens
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// canceledSet: gameIds confirmed canceled — NEVER trigger scraper
+const canceledSet = new Set();
+// postponedSet: gameIds currently postponed
+const postponedSet = new Set();
+// delayedSet: gameIds currently delayed
+const delayedSet = new Set();
+// etActiveMap: gameId → { firstSeenMs } — tracks when ET/pens started
+const etActiveMap = new Map();
+// watchingSet: gameIds that have been seen as id=2 (in-progress) this session
+const watchingSet = new Set();
+
+/**
+ * handleSpecialStatus — processes non-FT status transitions.
+ * Called for every game in every poll cycle.
+ * Returns { handled: true } if the game was handled by a special case.
+ */
+const handleSpecialStatus = (g, prev) => {
+  const prevTypeId = prev?.statusTypeId;
+
+  // ── CANCELED (id=7) ───────────────────────────────────────────────────────
+  if (g.isCanceled) {
+    if (!canceledSet.has(g.gameId)) {
+      canceledSet.add(g.gameId);
+      log('CANCEL', `CANCEL/${g.gameId}`, `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | state=${g.statusState} | completed=${g.statusCompleted} | SCRAPER WILL NEVER TRIGGER`);
+    }
+    return { handled: true, isCanceled: true };
+  }
+
+  // ── CANCEL-THEN-RESCHEDULE: was canceled, now pre ────────────────────────
+  if (canceledSet.has(g.gameId) && g.isScheduled) {
+    canceledSet.delete(g.gameId);
+    log('INFO', `CANCEL/${g.gameId}`, `♻️  RESCHEDULED — was canceled, now pre/scheduled | ${g.name} | typeId=${g.statusTypeId}`);
+    return { handled: false }; // allow normal pre handling
+  }
+
+  // ── POSTPONED (id=6) ─────────────────────────────────────────────────────
+  if (g.isPostponed) {
+    if (!postponedSet.has(g.gameId)) {
+      postponedSet.add(g.gameId);
+      delayedDates.delete(g.eventDateStr); // clear delayed if now postponed
+      // Extend watch window for this date
+      if (g.eventDateStr) {
+        const expiryStr = addDaysToDateStr(g.eventDateStr, POSTPONED_WINDOW_DAYS);
+        postponedExtensions.set(g.eventDateStr, expiryStr);
+        // Ensure the extended dates are in the watch window
+        for (let d = 1; d <= POSTPONED_WINDOW_DAYS; d++) {
+          const extDate = addDaysToDateStr(g.eventDateStr, d);
+          if (!watchWindow.includes(extDate)) {
+            watchWindow.push(extDate);
+            log('DAY_ADV', `DAY_ADV/POSTPONE`, `📅 POSTPONED extension: added ${extDate} to watch window`);
+          }
+        }
+        log('POSTPON', `POSTPON/${g.gameId}`, `⏸️  STATUS_POSTPONED | ${g.name} | typeId=6 | date=${g.eventDateStr} | window extended +${POSTPONED_WINDOW_DAYS}d until ${expiryStr}`);
+      }
+    }
+    return { handled: true };
+  }
+
+  // ── POSTPONED-THEN-RESCHEDULED: was postponed, now pre ──────────────────
+  if (postponedSet.has(g.gameId) && g.isScheduled) {
+    postponedSet.delete(g.gameId);
+    log('INFO', `POSTPON/${g.gameId}`, `♻️  RESCHEDULED — was postponed, now pre/scheduled | ${g.name} | new date=${g.eventDate}`);
+  }
+
+  // ── DELAYED (id=9) ───────────────────────────────────────────────────────
+  if (g.isDelayed) {
+    if (!delayedSet.has(g.gameId)) {
+      delayedSet.add(g.gameId);
+      if (g.eventDateStr) delayedDates.add(g.eventDateStr);
+      log('DELAYED', `DELAYED/${g.gameId}`, `⏳ STATUS_DELAYED | ${g.name} | typeId=9 | date=${g.eventDateStr} | keeping date in window for next cycle`);
+    }
+    return { handled: true };
+  }
+
+  // ── DELAYED-THEN-RESOLVED: was delayed, now in-progress ─────────────────
+  if (delayedSet.has(g.gameId) && (g.isLive || g.isInProgress)) {
+    delayedSet.delete(g.gameId);
+    if (g.eventDateStr) delayedDates.delete(g.eventDateStr);
+    log('INFO', `DELAYED/${g.gameId}`, `▶️  DELAY_RESOLVED — was delayed, now in-progress | ${g.name} | typeId=${g.statusTypeId}`);
+  }
+
+  // ── IN_PROGRESS (id=2) — game kicked off ─────────────────────────────────
+  if (g.isInProgress && !watchingSet.has(g.gameId)) {
+    watchingSet.add(g.gameId);
+    log('WATCH', `WATCH/${g.gameId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate} | ${g.scoreStr}`);
+  }
+
+  // ── EXTRA_TIME (id=17) ───────────────────────────────────────────────────
+  if (g.isExtraTime) {
+    if (!etActiveMap.has(g.gameId)) {
+      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'ET' });
+      log('ET_ACT', `ET_ACT/${g.gameId}`, `⚡ ET_ACTIVE — STATUS_EXTRA_TIME | ${g.name} | typeId=17 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    } else {
+      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
+        etActiveMap.get(g.gameId).warnedExtended = true;
+        log('WARN', `ET_ACT/${g.gameId}`, `⚠️  ET_EXTENDED — Extra time has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
+      }
+    }
+    return { handled: false, tightenPoll: true }; // still needs FT detection
+  }
+
+  // ── SHOOTOUT (id=24) ─────────────────────────────────────────────────────
+  if (g.isShootout) {
+    if (!etActiveMap.has(g.gameId)) {
+      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'PENS' });
+      log('PENS_AC', `PENS_AC/${g.gameId}`, `🥅 PENS_ACTIVE — STATUS_SHOOTOUT | ${g.name} | typeId=24 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    } else {
+      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
+        etActiveMap.get(g.gameId).warnedExtended = true;
+        log('WARN', `PENS_AC/${g.gameId}`, `⚠️  PENS_EXTENDED — Shootout has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
+      }
+    }
+    return { handled: false, tightenPoll: true };
+  }
+
+  // ── ET/PENS resolved (game went FT after ET/pens) ────────────────────────
+  if (etActiveMap.has(g.gameId) && g.isFinal) {
+    const etInfo = etActiveMap.get(g.gameId);
+    const elapsed = ((Date.now() - etInfo.firstSeenMs) / 1000).toFixed(0);
+    log('INFO', `ET_ACT/${g.gameId}`, `✅ ${etInfo.type}_RESOLVED — game went final after ${etInfo.type} | ${g.name} | ${g.scoreStr} | duration=${elapsed}s`);
+    etActiveMap.delete(g.gameId);
+  }
+
+  return { handled: false };
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DB STATE CHECK
-// Checks if a gameId is already fully scraped in the DB
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const checkDbState = async (gameId) => {
@@ -510,8 +764,6 @@ const checkDbState = async (gameId) => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MIDNIGHT RULE VERIFICATION
-// Confirms matchGameDate (PT) and matchKickoffEt (ET) are correct post-scrape
-// Validates scrapeVersion=500x and matchRound
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const verifyMidnightRule = async (gameId, expectedRound) => {
@@ -529,21 +781,17 @@ const verifyMidnightRule = async (gameId, expectedRound) => {
     const utcMs = typeof r.matchDateUtc === 'number' ? r.matchDateUtc : parseInt(r.matchDateUtc);
     const dt    = new Date(utcMs);
 
-    // Expected PT date (game date)
     const expectedPtDate = dt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-
-    // Expected ET time (kickoff)
     const etH  = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }), 10);
     const etM  = parseInt(dt.toLocaleString('en-US', { timeZone: 'America/New_York', minute: '2-digit' }), 10);
     const expectedEtTime = `${String(isNaN(etH) ? 0 : etH).padStart(2, '0')}:${String(isNaN(etM) ? 0 : etM).padStart(2, '0')}`;
 
-    const isMidnight  = r.matchKickoffEt === '00:00';
-    const dateOk      = r.matchGameDate === expectedPtDate;
-    const timeOk      = r.matchKickoffEt === expectedEtTime;
-    const versionOk   = r.scrapeVersion === '500x';
-    const roundOk     = !expectedRound || r.matchRound === expectedRound;
-
-    const status = dateOk && timeOk && versionOk && roundOk ? 'PASS' : 'FAIL';
+    const isMidnight = r.matchKickoffEt === '00:00';
+    const dateOk     = r.matchGameDate === expectedPtDate;
+    const timeOk     = r.matchKickoffEt === expectedEtTime;
+    const versionOk  = r.scrapeVersion === '500x';
+    const roundOk    = !expectedRound || r.matchRound === expectedRound;
+    const status     = dateOk && timeOk && versionOk && roundOk ? 'PASS' : 'FAIL';
 
     return {
       ok:             status === 'PASS',
@@ -560,7 +808,6 @@ const verifyMidnightRule = async (gameId, expectedRound) => {
       timeOk,
       versionOk,
       roundOk,
-      status,
     };
   } catch (err) {
     return { ok: false, reason: `DB error: ${err.message}` };
@@ -568,151 +815,112 @@ const verifyMidnightRule = async (gameId, expectedRound) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SINGLE MATCH SCRAPER
-// File-stream child output capture (prevents pipe deadlock on large output)
-// Mirrors batchScrapeR32.mjs scrapeMatch() exactly
+// CHILD PROCESS RUNNER — 500x SCRAPER INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const scrapeMatch = (gameId, matchRound, attemptNum) => new Promise((resolve) => {
-  const startMs      = Date.now();
-  const childOutFile = `/tmp/espnIngest_${gameId}_stdout.txt`;
-  const childErrFile = `/tmp/espnIngest_${gameId}_stderr.txt`;
+const scrapeMatch = (gameId, matchRound) => {
+  return new Promise((resolve) => {
+    const startMs  = Date.now();
+    const outFile  = `/tmp/wc2026_scrape_${gameId}_${Date.now()}.txt`;
+    const errFile  = `/tmp/wc2026_scrape_${gameId}_${Date.now()}_err.txt`;
+    const outStream = fs.createWriteStream(outFile);
+    const errStream = fs.createWriteStream(errFile);
 
-  log('INFO', `SCRAPE_${gameId}`, `[ATTEMPT ${attemptNum}/${MAX_ATTEMPTS}] Spawning 500x scraper → gameId=${gameId} matchRound=${matchRound}`);
+    log('PROG', `SCRAPE/${gameId}`, `▶ Spawning 500x scraper | gameId=${gameId} matchRound=${matchRound} | outFile=${outFile}`);
 
-  // Open file descriptors — prevents stdout pipe buffer deadlock
-  const outFd = fs.openSync(childOutFile, 'w');
-  const errFd = fs.openSync(childErrFile, 'w');
+    const child = spawn('node', [RUNNER_SCRIPT, gameId, matchRound], {
+      cwd:   PROJECT_DIR,
+      env:   { ...process.env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
 
-  const child = spawn('node', [RUNNER_SCRIPT, gameId], {
-    cwd:   PROJECT_DIR,
-    stdio: ['ignore', outFd, errFd],
-    env:   { ...process.env },
-  });
+    child.stdout.pipe(outStream);
+    child.stderr.pipe(errStream);
 
-  const timeout = setTimeout(() => {
-    child.kill('SIGKILL');
-    try { fs.closeSync(outFd); } catch {}
-    try { fs.closeSync(errFd); } catch {}
-    log('FAIL', `SCRAPE_${gameId}`, `⏱ TIMEOUT after ${MATCH_TIMEOUT_MS / 1000}s — killed`);
-    resolve({ ok: false, gameId, error: 'TIMEOUT', durationMs: Date.now() - startMs });
-  }, MATCH_TIMEOUT_MS);
-
-  child.on('close', (code) => {
-    clearTimeout(timeout);
-    try { fs.closeSync(outFd); } catch {}
-    try { fs.closeSync(errFd); } catch {}
-
-    const durationMs = Date.now() - startMs;
-    const durationS  = (durationMs / 1000).toFixed(1);
-
-    // Read captured output
-    let stdout = '';
-    let stderr = '';
-    try { stdout = fs.readFileSync(childOutFile, 'utf8'); } catch {}
-    try { stderr = fs.readFileSync(childErrFile, 'utf8'); } catch {}
-
-    // Clean up temp files
-    try { fs.unlinkSync(childOutFile); } catch {}
-    try { fs.unlinkSync(childErrFile); } catch {}
-
-    // ── Stream key lines to log (noise-free, intentional) ─────────────────
-    const allLines = (stdout + stderr).split('\n');
-    for (const line of allLines) {
-      if (
-        line.includes('[RUNNER]') || line.includes('[INGEST]') ||
-        line.includes('PASS')     || line.includes('FAIL')     ||
-        line.includes('PHASE')    || line.includes('MIDNIGHT') ||
-        line.includes('VERIFY')   || line.includes('seasonSlug') ||
-        line.includes('round-of') || line.includes('500x')     ||
-        line.includes('scrapeVersion') || line.includes('matchRound') ||
-        line.includes('success=') || line.includes('rows=')    ||
-        line.includes('errors=')  || line.includes('Full Time')
-      ) {
-        if (line.trim() && !line.includes('[dotenv')) {
-          log('INFO', `CHILD_${gameId}`, line.trim().slice(0, 140));
-        }
+    // Stream stdout to our log in real-time
+    child.stdout.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(Boolean);
+      for (const line of lines) {
+        log('PROG', `SCRAPE/${gameId}`, line.slice(0, 200));
       }
-    }
+    });
 
-    // ── Parse ingest result ────────────────────────────────────────────────
-    const successMatch  = stdout.match(/success=(true|false)/);
-    const rowsMatch     = stdout.match(/rows=(\d+)/);
-    const errorsMatch   = stdout.match(/errors=(\d+)/);
-    const ingestSuccess = successMatch?.[1] === 'true';
-    const rowsWritten   = rowsMatch   ? parseInt(rowsMatch[1])   : 0;
-    const ingestErrors  = errorsMatch ? parseInt(errorsMatch[1]) : 999;
+    child.stderr.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(Boolean);
+      for (const line of lines) {
+        log('WARN', `SCRAPE/${gameId}`, `[STDERR] ${line.slice(0, 200)}`);
+      }
+    });
 
-    const passMatch     = stdout.match(/(\d+)\/(\d+) PASS/);
-    const passRate      = passMatch ? `${passMatch[1]}/${passMatch[2]}` : null;
+    // Timeout guard
+    const timeout = setTimeout(() => {
+      child.kill('SIGKILL');
+      log('WARN', `SCRAPE/${gameId}`, `⏱️  TIMEOUT — scraper exceeded ${MATCH_TIMEOUT_MS / 1000}s — process killed`);
+      resolve({ success: false, error: 'TIMEOUT', rowsWritten: 0, durationMs: Date.now() - startMs });
+    }, MATCH_TIMEOUT_MS);
 
-    const matchLineMatch = stdout.match(/Match:\s*([^\n]+)/);
-    const venueMatch     = stdout.match(/Venue:\s*([^\n]+)/);
-    const matchInfo      = matchLineMatch ? matchLineMatch[1].trim() : '?';
-    const venue          = venueMatch     ? venueMatch[1].trim().split('|')[0].trim() : '?';
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      const durationMs = Date.now() - startMs;
+      outStream.end();
+      errStream.end();
 
-    const phaseMatches   = [...stdout.matchAll(/Phase (\d+)\/9 \[.*?(PASS|FAIL).*?\] (\S+) — (\d+) rows/g)];
-    const phasesSummary  = phaseMatches.length > 0
-      ? `phases=${phaseMatches.filter(m => m[2] === 'PASS').length}/9 PASS`
-      : '';
+      // Parse output for success markers
+      let rawOut = '';
+      try { rawOut = fs.readFileSync(outFile, 'utf8'); } catch {}
 
-    // ── Success criteria ───────────────────────────────────────────────────
-    const isIngestSuccess = ingestSuccess && rowsWritten > 0 && ingestErrors === 0;
-    const isPassRateOk    = passMatch && parseInt(passMatch[1]) === parseInt(passMatch[2]) && parseInt(passMatch[2]) > 0;
-    const isSuccess       = isIngestSuccess || isPassRateOk;
+      const successMatch = rawOut.match(/success=(true|false)/);
+      const rowsMatch    = rawOut.match(/rows=(\d+)/);
+      const errorsMatch  = rawOut.match(/errors=(\d+)/);
+      const matchInfoMatch = rawOut.match(/matchInfo=([^\|]+)/);
+      const venueMatch   = rawOut.match(/venue=([^\|]+)/);
 
-    if ((code === 0 && isSuccess) || isIngestSuccess) {
-      const noteCode1 = code !== 0 ? ` [code=${code} — test assertions failed, ingest OK]` : '';
-      log('PASS', `SCRAPE_${gameId}`, `✅ success=true | rows=${rowsWritten} | errors=${ingestErrors} | ${passRate || phasesSummary} | ${durationS}s${noteCode1}`);
-      if (matchInfo !== '?') log('INFO', `MATCH_${gameId}`, `  📊 ${matchInfo} | ${venue}`);
-      resolve({ ok: true, gameId, rowsWritten, ingestErrors, matchInfo, venue, durationMs });
-    } else {
-      const errLines = (stdout + stderr).split('\n')
-        .filter(l => l.includes('FAIL') || l.includes('Error:') || l.includes('error=') || l.includes('success=false') || l.includes('FATAL'))
-        .filter(l => !l.includes('[dotenv'))
-        .slice(0, 5)
-        .map(l => l.trim().slice(0, 100))
-        .join(' | ');
-      log('FAIL', `SCRAPE_${gameId}`, `❌ code=${code} success=${ingestSuccess} rows=${rowsWritten} errors=${ingestErrors} | ${durationS}s`);
-      if (errLines) log('ERROR', `DETAIL_${gameId}`, errLines.slice(0, 200));
-      resolve({ ok: false, gameId, rowsWritten, ingestErrors, code, error: errLines, durationMs });
-    }
+      const success    = successMatch?.[1] === 'true' && code === 0;
+      const rowsWritten = parseInt(rowsMatch?.[1] || '0', 10);
+      const errors     = parseInt(errorsMatch?.[1] || '0', 10);
+      const matchInfo  = matchInfoMatch?.[1]?.trim() || '';
+      const venue      = venueMatch?.[1]?.trim() || '';
+
+      log('PROG', `SCRAPE/${gameId}`, `◀ Scraper exited | code=${code} | success=${success} | rows=${rowsWritten} | errors=${errors} | ${(durationMs / 1000).toFixed(1)}s`);
+
+      resolve({ success, rowsWritten, errors, matchInfo, venue, durationMs, code, error: success ? null : `exit code ${code}` });
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      const durationMs = Date.now() - startMs;
+      log('ERROR', `SCRAPE/${gameId}`, `Spawn error: ${err.message}`);
+      resolve({ success: false, error: err.message, rowsWritten: 0, durationMs });
+    });
   });
-});
+};
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SCRAPE WITH RETRY ENGINE
-// Up to MAX_ATTEMPTS attempts with exponential backoff
-// Runs midnight rule verification on success
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const scrapeWithRetry = async (gameId, matchRound, parsedGame) => {
+const scrapeWithRetry = async (gameId, matchRound, g) => {
+  sessionResults.scraped++;
   sessionResults.scrapingSet.add(gameId);
 
-  let scrapeResult;
   let attempts = 0;
+  let scrapeResult;
 
   while (attempts < MAX_ATTEMPTS) {
     attempts++;
-    const backoff = RETRY_BACKOFF_MS[attempts - 1] || 30_000;
-    if (attempts > 1) {
-      sessionResults.retried++;
-      log('RETRY', `RETRY_${gameId}`, `Attempt ${attempts}/${MAX_ATTEMPTS} — waiting ${backoff / 1000}s before retry`);
+    const backoff = RETRY_BACKOFF_MS[attempts - 1] || 0;
+    if (backoff > 0) {
+      log('RETRY', `RETRY/${gameId}`, `⏳ Attempt ${attempts}/${MAX_ATTEMPTS} — waiting ${backoff / 1000}s before retry`);
       await new Promise(r => setTimeout(r, backoff));
+      sessionResults.retried++;
     }
-    scrapeResult = await scrapeMatch(gameId, matchRound, attempts);
-    if (scrapeResult.ok) break;
-    if (attempts < MAX_ATTEMPTS) {
-      log('WARN', `RETRY_${gameId}`, `Attempt ${attempts} failed — scheduling retry`);
-    }
+    log('PROG', `SCRAPE/${gameId}`, `▶ Attempt ${attempts}/${MAX_ATTEMPTS} | gameId=${gameId} matchRound=${matchRound}`);
+    scrapeResult = await scrapeMatch(gameId, matchRound);
+    if (scrapeResult.success) break;
+    log('WARN', `SCRAPE/${gameId}`, `Attempt ${attempts} failed: ${scrapeResult.error}`);
   }
 
-  sessionResults.scraped++;
-
-  if (scrapeResult.ok) {
+  if (scrapeResult.success) {
     sessionResults.passed++;
+    log('PASS', `FINAL_${gameId}`, `✅ SCRAPE PASS | success=true | rows=${scrapeResult.rowsWritten} | errors=${scrapeResult.errors} | ${(scrapeResult.durationMs / 1000).toFixed(1)}s | attempts=${attempts}`);
 
-    // ── Midnight rule + round verification ──────────────────────────────────
+    // Midnight rule verification
     const midnightCheck = await verifyMidnightRule(gameId, matchRound);
     if (midnightCheck.ok) {
       sessionResults.midnightRulePass++;
@@ -725,28 +933,22 @@ const scrapeWithRetry = async (gameId, matchRound, parsedGame) => {
     }
 
     sessionResults.matches.push({
-      gameId,
-      status:      'PASS',
+      gameId, status: 'PASS',
       rowsWritten: scrapeResult.rowsWritten,
       matchInfo:   scrapeResult.matchInfo,
       venue:       scrapeResult.venue,
       durationMs:  scrapeResult.durationMs,
-      attempts,
-      matchRound,
-      midnightRule: midnightCheck,
+      attempts, matchRound, midnightRule: midnightCheck,
     });
-
     sessionResults.scrapedSet.add(gameId);
   } else {
     sessionResults.failed++;
     sessionResults.matches.push({
-      gameId,
-      status:     'FAIL',
+      gameId, status: 'FAIL',
       rowsWritten: scrapeResult.rowsWritten,
       error:       scrapeResult.error,
       durationMs:  scrapeResult.durationMs,
-      attempts,
-      matchRound,
+      attempts, matchRound,
     });
     log('FAIL', `FINAL_${gameId}`, `❌ SCRAPE FAILED after ${attempts} attempts | ${scrapeResult.error?.slice(0, 80)}`);
   }
@@ -755,35 +957,107 @@ const scrapeWithRetry = async (gameId, matchRound, parsedGame) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// FT-CONFIRMATION ENGINE — DOUBLE-CHECK (2 consecutive state=post required)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const confirmFinalState = async (gameId, matchRound, initialGame) => {
+  // ── CONFIRM #1 ────────────────────────────────────────────────────────────
+  log('CONFIRM', `CONFIRM/${gameId}`, `⏳ Waiting ${FT_CONFIRM_DELAY_MS / 1000}s before FT-CONFIRM #1 re-poll...`);
+  await new Promise(r => setTimeout(r, FT_CONFIRM_DELAY_MS));
+
+  // Determine date string for the confirm fetch (use UTC date from ESPN event)
+  // CRITICAL: For midnight-boundary games like 760491 (22:00 ET = next UTC day),
+  // the eventDateStr is the UTC date of the ESPN event, not the local date.
+  let confirmDateStr = initialGame.eventDateStr;
+  if (!confirmDateStr) {
+    confirmDateStr = toDateStr(new Date());
+    log('WARN', `CONFIRM/${gameId}`, `eventDateStr missing — using today's UTC date: ${confirmDateStr}`);
+  }
+
+  const confirm1 = await fetchSingleGameConfirm(gameId, confirmDateStr, 1);
+
+  if (confirm1 === null) {
+    // ESPN returned no data — conservative pass (game may have crossed midnight)
+    log('CONFIRM', `CONFIRM/${gameId}`, `⚠️  CONFIRM#1 fetch returned null — conservative pass (possible midnight boundary)`);
+    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_CONFIRMED_CONSERVATIVE', initialGame, null);
+    sessionResults.ftConfirmPass++;
+    return { confirmed: true, confirmedGame: initialGame };
+  }
+
+  // Check if game is still final after confirm #1
+  const still1Final = confirm1.statusState === 'post' && confirm1.statusCompleted === true && !confirm1.isCanceled;
+
+  if (!still1Final) {
+    // State reverted — FALSE POSITIVE
+    log('WARN', `CONFIRM/${gameId}`, `⚠️  FALSE POSITIVE #1 — state reverted to ${confirm1.statusState} | typeId=${confirm1.statusTypeId} | completed=${confirm1.statusCompleted} | clock=${confirm1.displayClock} — SUPPRESSING TRIGGER`);
+    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_REVERTED_1', confirm1, null);
+    sessionResults.ftConfirmFail++;
+    return { confirmed: false, confirmedGame: confirm1 };
+  }
+
+  log('CONFIRM', `CONFIRM/${gameId}`, `✅ CONFIRM#1 PASS | state=post | typeId=${confirm1.statusTypeId} ${confirm1.statusTypeName} | completed=true | clock=${confirm1.displayClock} | score=${confirm1.scoreStr}`);
+  logTransDetail(`CONFIRM_D/${gameId}`, 'FT_CONFIRMED_1', confirm1, null);
+
+  // ── CONFIRM #2 (double-check) ─────────────────────────────────────────────
+  log('CONFIRM', `CONFIRM/${gameId}`, `⏳ Waiting ${FT_CONFIRM2_DELAY_MS / 1000}s before FT-CONFIRM #2 double-check...`);
+  await new Promise(r => setTimeout(r, FT_CONFIRM2_DELAY_MS));
+
+  const confirm2 = await fetchSingleGameConfirm(gameId, confirmDateStr, 2);
+
+  if (confirm2 === null) {
+    // Conservative pass on second confirm too
+    log('CONFIRM', `CONFIRM/${gameId}`, `⚠️  CONFIRM#2 fetch returned null — using CONFIRM#1 result (conservative)`);
+    sessionResults.ftConfirmPass++;
+    return { confirmed: true, confirmedGame: confirm1 };
+  }
+
+  const still2Final = confirm2.statusState === 'post' && confirm2.statusCompleted === true && !confirm2.isCanceled;
+
+  if (!still2Final) {
+    log('WARN', `CONFIRM/${gameId}`, `⚠️  FALSE POSITIVE #2 — state reverted on second check | state=${confirm2.statusState} | typeId=${confirm2.statusTypeId} | SUPPRESSING TRIGGER`);
+    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_REVERTED_2', confirm2, null);
+    sessionResults.ftConfirmFail++;
+    return { confirmed: false, confirmedGame: confirm2 };
+  }
+
+  log('CONFIRM', `CONFIRM/${gameId}`, `✅ CONFIRM#2 PASS — DOUBLE-CONFIRMED | state=post | typeId=${confirm2.statusTypeId} | clock=${confirm2.displayClock} | score=${confirm2.scoreStr}`);
+  logTransDetail(`CONFIRM_D/${gameId}`, 'FT_CONFIRMED_2', confirm2, null);
+  sessionResults.ftConfirmPass++;
+  return { confirmed: true, confirmedGame: confirm2 };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // SESSION STATE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const sessionResults = {
-  startedAt:         new Date().toISOString(),
-  completedAt:       null,
-  totalDurationMs:   0,
-  totalPolls:        0,
-  totalGamesDetected: 0,
-  totalLiveDetected: 0,
+  startedAt:           new Date().toISOString(),
+  completedAt:         null,
+  totalDurationMs:     0,
+  totalPolls:          0,
+  totalGamesDetected:  0,
+  totalLiveDetected:   0,
   totalFinalsDetected: 0,
-  totalNewlyFinal:   0,
-  scraped:           0,
-  passed:            0,
-  failed:            0,
-  retried:           0,
-  midnightRulePass:  0,
-  midnightRuleFail:  0,
-  ftConfirmPass:     0,   // FT-confirmation re-polls that confirmed state=post
-  ftConfirmFail:     0,   // FT-confirmation re-polls that found state reverted (false positive)
-  matches:           [],
-  // Runtime sets (not serialized)
-  scrapedSet:        new Set(),   // gameIds already scraped this session
-  scrapingSet:       new Set(),   // gameIds currently being scraped
+  totalNewlyFinal:     0,
+  scraped:             0,
+  passed:              0,
+  failed:              0,
+  retried:             0,
+  midnightRulePass:    0,
+  midnightRuleFail:    0,
+  ftConfirmPass:       0,
+  ftConfirmFail:       0,
+  dayAdvanceCount:     0,
+  canceledCount:       0,
+  postponedCount:      0,
+  delayedCount:        0,
+  etActiveCount:       0,
+  matches:             [],
+  scrapedSet:          new Set(),
+  scrapingSet:         new Set(),
 };
 
-// Per-game state machine: tracks statusState, statusTypeId, displayClock across polls
-// Key: gameId → { statusState, statusTypeId, statusTypeName, statusCompleted,
-//                 displayClock, period, score, lastSeen, name, matchRound }
+// Per-game state machine
 const gameStateMap = new Map();
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -796,6 +1070,7 @@ const saveProgress = (data) => {
       ...data,
       scrapedSet:  [...data.scrapedSet],
       scrapingSet: [...data.scrapingSet],
+      watchWindow,
     };
     fs.writeFileSync(PROGRESS_FILE, JSON.stringify(serializable, null, 2));
   } catch {}
@@ -805,9 +1080,8 @@ const loadProgress = () => {
   try {
     if (!fs.existsSync(PROGRESS_FILE)) return null;
     const raw = JSON.parse(fs.readFileSync(PROGRESS_FILE, 'utf8'));
-    // Restore Sets
     raw.scrapedSet  = new Set(raw.scrapedSet  || []);
-    raw.scrapingSet = new Set([]);  // never restore in-progress
+    raw.scrapingSet = new Set([]);
     return raw;
   } catch {
     return null;
@@ -816,7 +1090,6 @@ const loadProgress = () => {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRE-FLIGHT DB STATE BANNER
-// Shows all WC2026 matches currently in DB on startup
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const runPreflightDbCheck = async () => {
@@ -842,86 +1115,50 @@ const runPreflightDbCheck = async () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FT-CONFIRMATION ENGINE
-// After initial FT detection, waits FT_CONFIRM_DELAY_MS and re-polls ESPN
-// to confirm state=post persists before triggering the 500x scraper.
-// Prevents false positives from transient ESPN API state flips.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * confirmFinalState — re-polls ESPN after FT_CONFIRM_DELAY_MS to verify
- * the game is still in state=post/completed=true.
- * Returns { confirmed: true/false, confirmedGame: parsedGame | null }
- */
-const confirmFinalState = async (gameId, matchRound, initialGame) => {
-  log('CONFIRM', `CONFIRM/${gameId}`, `⏳ Waiting ${FT_CONFIRM_DELAY_MS / 1000}s before FT-confirmation re-poll...`);
-  await new Promise(r => setTimeout(r, FT_CONFIRM_DELAY_MS));
-
-  // Determine date string for the confirm fetch
-  // Use the game's eventDate to build the YYYYMMDD string
-  const dateStr = initialGame.eventDateStr || getWatchDates()[0];
-
-  const confirmedGame = await fetchSingleGameConfirm(gameId, dateStr);
-
-  if (!confirmedGame) {
-    // Could not fetch — proceed with initial detection (conservative: trust initial)
-    log('CONFIRM', `CONFIRM/${gameId}`, `⚠️ CONFIRM fetch failed — proceeding with initial FT detection (conservative)`);
-    sessionResults.ftConfirmPass++;
-    return { confirmed: true, confirmedGame: initialGame };
-  }
-
-  if (confirmedGame.isFinal) {
-    sessionResults.ftConfirmPass++;
-    log('CONFIRM', `CONFIRM/${gameId}`, `✅ CONFIRMED state=post | typeId=${confirmedGame.statusTypeId} ${confirmedGame.statusTypeName} | completed=${confirmedGame.statusCompleted} | clock=${confirmedGame.displayClock} | score=${confirmedGame.scoreStr}`);
-    // Log full TRANS_DETAIL for the confirmed state
-    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_CONFIRMED', confirmedGame, null);
-    return { confirmed: true, confirmedGame };
-  } else {
-    sessionResults.ftConfirmFail++;
-    log('WARN', `CONFIRM/${gameId}`, `⚠️ FALSE POSITIVE — state reverted to ${confirmedGame.statusState} | typeId=${confirmedGame.statusTypeId} | completed=${confirmedGame.statusCompleted} | clock=${confirmedGame.displayClock} — SUPPRESSING TRIGGER`);
-    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_REVERTED', confirmedGame, null);
-    return { confirmed: false, confirmedGame };
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// POLL CYCLE
-// Core detection engine — called every POLL_INTERVAL_MS
+// POLL CYCLE — CORE DETECTION ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
 let pollCount = 0;
+// Dynamic poll interval — tightened when ET/pens is active
+let currentPollInterval = POLL_INTERVAL_MS;
 
 const pollCycle = async () => {
   pollCount++;
   sessionResults.totalPolls++;
   const cycleStart = Date.now();
-  const watchDates = getWatchDates();
 
-  log('POLL', `CYCLE/${pollCount}`, `🔄 Poll #${pollCount} — watching dates: ${watchDates.join(', ')} | scrapedSet.size=${sessionResults.scrapedSet.size} | scrapingSet.size=${sessionResults.scrapingSet.size}`);
+  log('POLL', `CYCLE/${pollCount}`, `🔄 Poll #${pollCount} — watching dates: ${watchWindow.join(', ')} | scrapedSet.size=${sessionResults.scrapedSet.size} | scrapingSet.size=${sessionResults.scrapingSet.size}`);
 
   let totalGames  = 0;
   let liveGames   = 0;
   let finalGames  = 0;
   let newlyFinal  = 0;
   let preGames    = 0;
+  let etPensActive = false;
 
-  for (const dateStr of watchDates) {
+  // dateGameStates: dateStr → array of parsed game objects (for DAY_ADVANCE)
+  const dateGameStates = new Map();
+
+  for (const dateStr of watchWindow) {
     const events = await fetchEspnScoreboard(dateStr);
+    if (!dateGameStates.has(dateStr)) dateGameStates.set(dateStr, []);
+
     if (events.length === 0) continue;
 
     for (const event of events) {
       const g = parseEspnEvent(event);
+      dateGameStates.get(dateStr).push(g);
 
       totalGames++;
       sessionResults.totalGamesDetected = Math.max(sessionResults.totalGamesDetected, totalGames);
 
-      // ── Retrieve previous state from state machine ───────────────────────
+      // Retrieve previous state
       const prev          = gameStateMap.get(g.gameId);
       const prevState     = prev?.statusState    || 'unknown';
       const prevTypeId    = prev?.statusTypeId   || null;
       const prevCompleted = prev?.statusCompleted ?? null;
 
-      // ── Update state machine ─────────────────────────────────────────────
+      // Update state machine
       gameStateMap.set(g.gameId, {
         statusState:     g.statusState,
         statusTypeId:    g.statusTypeId,
@@ -935,31 +1172,36 @@ const pollCycle = async () => {
         matchRound:      g.matchRound,
       });
 
-      // ── LIVE game logging ────────────────────────────────────────────────
+      // ── Special status state machines ──────────────────────────────────────
+      const special = handleSpecialStatus(g, prev);
+      if (special.tightenPoll) etPensActive = true;
+      if (special.isCanceled) {
+        // Canceled games: log but never trigger
+        finalGames++; // ESPN marks canceled as post/completed
+        continue;
+      }
+      if (special.handled) continue;
+
+      // ── LIVE game logging ──────────────────────────────────────────────────
       if (g.isLive) {
         liveGames++;
         sessionResults.totalLiveDetected = Math.max(sessionResults.totalLiveDetected, liveGames);
-        log('LIVE', `LIVE/${g.gameId}`, `⚽ ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
+        const liveType = g.isExtraTime ? 'ET' : g.isShootout ? 'PENS' : g.isHalftime ? 'HT' : g.isSecondHalf ? '2H' : 'LIVE';
+        log('LIVE', `LIVE/${g.gameId}`, `⚽ [${liveType}] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
       }
 
-      // ── FINAL game processing ────────────────────────────────────────────
+      // ── FINAL game processing ──────────────────────────────────────────────
       if (g.isFinal) {
         finalGames++;
         sessionResults.totalFinalsDetected = Math.max(sessionResults.totalFinalsDetected, finalGames);
 
-        // ── FT TRANSITION DETECTION ────────────────────────────────────────
-        // A game is "newly final" when:
-        //   1. Previous state was NOT "post" (was "in", "pre", or "unknown")
-        //   2. Current state IS "post" with completed=true
-        // This is the exact transition signature confirmed for 760491:
-        //   LIVE: state="in" typeId=26 (Second Half) → FINAL: state="post" typeId=28 (Full Time)
+        // FT TRANSITION DETECTION
+        // Newly final = previous state was NOT "post" AND current is "post"/completed=true
+        // Forensically confirmed for 760491: in/typeId=26 → post/typeId=28
         const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
 
         if (isNewlyFinal) {
-          // ── Log TRANS (summary) ──────────────────────────────────────────
           log('TRANS', `TRANS/${g.gameId}`, `🔀 FT TRANSITION DETECTED | ${g.name} | prevState=${prevState} prevTypeId=${prevTypeId} prevCompleted=${prevCompleted} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
-
-          // ── Log TRANS_DETAIL (all 12 ESPN status fields) ─────────────────
           logTransDetail(`TRANS_D/${g.gameId}`, 'FT_DETECTED', g, prev);
         }
 
@@ -972,26 +1214,20 @@ const pollCycle = async () => {
           if (DRY_RUN) {
             log('INFO', `TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape for ${g.gameId} — skipping`);
           } else {
-            // ── FT-CONFIRMATION ENGINE ───────────────────────────────────
-            // Re-poll ESPN after 5s to confirm state=post persists
-            // Prevents false positives from transient ESPN API state flips
+            // Double-confirm before trigger
             confirmFinalState(g.gameId, g.matchRound, g).then(({ confirmed, confirmedGame }) => {
               if (!confirmed) {
-                // False positive — do NOT trigger
-                log('WARN', `TRIGGER/${g.gameId}`, `⚠️ FT-CONFIRM FAILED — suppressing scrape trigger for ${g.gameId}`);
+                log('WARN', `TRIGGER/${g.gameId}`, `⚠️ FT-CONFIRM FAILED (false positive) — suppressing scrape trigger for ${g.gameId}`);
                 return;
               }
-              // Use the confirmed game state for the trigger log
               const cg = confirmedGame || g;
               log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${cg.matchRound} | seasonSlug=${cg.seasonSlug} | prevState=${prevState} → post | typeId=${cg.statusTypeId} | completed=${cg.statusCompleted} | DRY_RUN=${DRY_RUN}`);
-              // Fire-and-forget: do NOT await (allows poll cycle to continue)
               scrapeWithRetry(g.gameId, cg.matchRound, cg).catch(err => {
                 log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
               });
             }).catch(err => {
-              // Confirm engine error — proceed with trigger (conservative)
               log('WARN', `CONFIRM/${g.gameId}`, `Confirm engine error: ${err.message} — proceeding with trigger`);
-              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | seasonSlug=${g.seasonSlug} | prevState=${prevState} → post | DRY_RUN=${DRY_RUN}`);
+              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | confirm engine error — conservative trigger`);
               scrapeWithRetry(g.gameId, g.matchRound, g).catch(e => {
                 log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${e.message}`);
               });
@@ -999,7 +1235,7 @@ const pollCycle = async () => {
           }
 
         } else if (!sessionResults.scrapedSet.has(g.gameId) && !sessionResults.scrapingSet.has(g.gameId)) {
-          // ── Final but not newly detected this session — check DB ─────────
+          // Final, known from previous poll — check DB
           const dbCheck = await checkDbState(g.gameId);
           if (dbCheck.inDb) {
             sessionResults.scrapedSet.add(g.gameId);
@@ -1011,7 +1247,6 @@ const pollCycle = async () => {
               log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
             });
           } else {
-            // Final, not in DB, not currently scraping — trigger scrape
             log('FINAL', `FINAL/${g.gameId}`, `🏁 FINAL (known) — not in DB | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId}`);
             log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | DB miss — triggering scrape`);
             if (!DRY_RUN) {
@@ -1030,15 +1265,24 @@ const pollCycle = async () => {
     }
   }
 
+  // ── DAY_ADVANCE: check if earliest date is fully settled ──────────────────
+  advanceWatchWindow(dateGameStates);
+
+  // ── Adjust poll interval based on ET/pens activity ────────────────────────
+  const targetInterval = etPensActive ? POLL_INTERVAL_ET_MS : POLL_INTERVAL_MS;
+  if (targetInterval !== currentPollInterval) {
+    currentPollInterval = targetInterval;
+    log('INFO', 'POLL_INTERVAL', `⚡ Poll interval adjusted to ${currentPollInterval / 1000}s (${etPensActive ? 'ET/PENS active' : 'normal'})`);
+  }
+
   const elapsed = ((Date.now() - cycleStart) / 1000).toFixed(2);
-  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${preGames} pre | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s | scraped=${sessionResults.scraped} pass=${sessionResults.passed} fail=${sessionResults.failed} ftConfirm=${sessionResults.ftConfirmPass}✅/${sessionResults.ftConfirmFail}⚠️`);
+  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${preGames} pre | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s | scraped=${sessionResults.scraped} pass=${sessionResults.passed} fail=${sessionResults.failed} ftConfirm=${sessionResults.ftConfirmPass}✅/${sessionResults.ftConfirmFail}⚠️ | window=[${watchWindow.join(',')}]`);
 
   saveProgress(sessionResults);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SESSION SUMMARY
-// Printed on SIGINT/SIGTERM — mirrors batchScrapeR32.mjs verdict format exactly
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const printSessionSummary = () => {
@@ -1048,11 +1292,13 @@ const printSessionSummary = () => {
   sessionResults.completedAt    = new Date().toISOString();
   sessionResults.totalDurationMs = totalDurationMs;
 
-  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION v2.1');
+  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION v2.2');
   log('INFO', 'SESSION_SUMMARY', `Duration: ${totalDurationMin} minutes | Polls: ${sessionResults.totalPolls}`);
   log('INFO', 'SESSION_SUMMARY', `Games detected: ${sessionResults.totalGamesDetected} | Live: ${sessionResults.totalLiveDetected} | Finals: ${sessionResults.totalFinalsDetected} | Newly final: ${sessionResults.totalNewlyFinal}`);
   log('INFO', 'SESSION_SUMMARY', `Scraped: ${sessionResults.scraped} | ✅ PASS: ${sessionResults.passed} | ❌ FAIL: ${sessionResults.failed} | 🔄 Retried: ${sessionResults.retried}`);
   log('INFO', 'SESSION_SUMMARY', `FT-Confirm: ✅${sessionResults.ftConfirmPass} confirmed | ⚠️${sessionResults.ftConfirmFail} false positives suppressed`);
+  log('INFO', 'SESSION_SUMMARY', `DAY_ADVANCE: ${sessionResults.dayAdvanceCount} advances | Canceled: ${canceledSet.size} | Postponed: ${postponedSet.size} | Delayed: ${delayedSet.size} | ET/Pens: ${etActiveMap.size} active`);
+  log('INFO', 'SESSION_SUMMARY', `Final watch window: [${watchWindow.join(', ')}]`);
 
   const passRate = sessionResults.scraped > 0
     ? ((sessionResults.passed / sessionResults.scraped) * 100).toFixed(1)
@@ -1067,9 +1313,8 @@ const printSessionSummary = () => {
 
   logSep('─');
 
-  // ── Per-match results table ────────────────────────────────────────────────
   if (sessionResults.matches.length > 0) {
-    const tableHeader = `\n=== SCRAPED MATCHES TABLE (WC2026FTWatcher Session) ===`;
+    const tableHeader = `\n=== SCRAPED MATCHES TABLE (WC2026FTWatcher Session v2.2) ===`;
     console.log(`${C.bold}${tableHeader}${C.reset}`);
     logStream.write(tableHeader + '\n');
     termStream.write(tableHeader + '\n');
@@ -1114,18 +1359,40 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DYNAMIC POLL LOOP — respects currentPollInterval (tightened for ET/pens)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let pollTimer = null;
+
+const schedulePoll = () => {
+  pollTimer = setTimeout(async () => {
+    try {
+      await pollCycle();
+    } catch (err) {
+      log('ERROR', 'POLL_LOOP', `Poll cycle error: ${err.message}`);
+    }
+    schedulePoll(); // reschedule with potentially updated interval
+  }, currentPollInterval);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const main = async () => {
-  logBanner(`WC2026FTWatcher v2.1 — 500x ELITE LIVE DETECTION ENGINE`);
+  logBanner(`WC2026FTWatcher v2.2 — 500x ELITE LIVE DETECTION ENGINE | 44-SCENARIO`);
   log('INFO', 'STARTUP', `ESPN-ONLY POLICY: All data sourced exclusively from ${ESPN_SCOREBOARD_BASE}`);
-  log('INFO', 'STARTUP', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE} | POLL_INTERVAL=${POLL_INTERVAL_MS / 1000}s | FT_CONFIRM_DELAY=${FT_CONFIRM_DELAY_MS / 1000}s`);
-  log('INFO', 'STARTUP', `WATCH_WINDOW: -${WATCH_DAYS_BEFORE}d to +${WATCH_DAYS_AFTER}d | MAX_ATTEMPTS=${MAX_ATTEMPTS} | MATCH_TIMEOUT=${MATCH_TIMEOUT_MS / 1000}s`);
-  log('INFO', 'STARTUP', `FINAL_TYPE_IDS: [${[...ESPN_FINAL_TYPE_IDS].join(', ')}] | LIVE_TYPE_IDS: [${[...ESPN_LIVE_TYPE_IDS].join(', ')}]`);
+  log('INFO', 'STARTUP', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE} | POLL_INTERVAL=${POLL_INTERVAL_MS / 1000}s | ET_POLL=${POLL_INTERVAL_ET_MS / 1000}s | FT_CONFIRM_DELAY=${FT_CONFIRM_DELAY_MS / 1000}s+${FT_CONFIRM2_DELAY_MS / 1000}s`);
+  log('INFO', 'STARTUP', `FINAL_TYPE_IDS: [${[...ESPN_FINAL_TYPE_IDS].join(', ')}] | CANCELED_TYPE_IDS: [${[...ESPN_CANCELED_TYPE_IDS].join(', ')}] | LIVE_TYPE_IDS: [${[...ESPN_LIVE_TYPE_IDS].join(', ')}]`);
+  log('INFO', 'STARTUP', `ET_TYPE_IDS: [${[...ESPN_ET_TYPE_IDS].join(', ')}] | PENS_TYPE_IDS: [${[...ESPN_PENS_TYPE_IDS].join(', ')}] | POSTPONED: [${[...ESPN_POSTPONED_TYPE_IDS].join(', ')}] | DELAYED: [${[...ESPN_DELAYED_TYPE_IDS].join(', ')}]`);
+  log('INFO', 'STARTUP', `MAX_ATTEMPTS=${MAX_ATTEMPTS} | MATCH_TIMEOUT=${MATCH_TIMEOUT_MS / 1000}s | POSTPONED_WINDOW_DAYS=${POSTPONED_WINDOW_DAYS} | ET_EXTENDED_WARN=${ET_EXTENDED_WARN_MS / 60000}min`);
   log('INFO', 'STARTUP', `LOG_FILES: ${WATCHER_LOG} | ${TERMINAL_LOG}`);
   log('INFO', 'STARTUP', `RUNNER_SCRIPT: ${RUNNER_SCRIPT}`);
   logSep('─');
+
+  // ── Initialize watch window ─────────────────────────────────────────────
+  watchWindow.push(...initWatchWindow());
+  log('INFO', 'STARTUP', `Initial watch window: [${watchWindow.join(', ')}]`);
 
   // ── Restore progress from previous session ──────────────────────────────
   const savedProgress = loadProgress();
@@ -1135,6 +1402,12 @@ const main = async () => {
     }
     log('INFO', 'STARTUP', `Restored ${sessionResults.scrapedSet.size} scraped gameIds from previous session`);
   }
+  // Restore watch window from previous session if available
+  if (savedProgress?.watchWindow?.length > 0) {
+    watchWindow.length = 0;
+    watchWindow.push(...savedProgress.watchWindow);
+    log('INFO', 'STARTUP', `Restored watch window from previous session: [${watchWindow.join(', ')}]`);
+  }
 
   // ── Pre-flight DB check ─────────────────────────────────────────────────
   await runPreflightDbCheck();
@@ -1142,16 +1415,10 @@ const main = async () => {
   // ── Initial poll ────────────────────────────────────────────────────────
   await pollCycle();
 
-  // ── Recurring poll loop ─────────────────────────────────────────────────
-  setInterval(async () => {
-    try {
-      await pollCycle();
-    } catch (err) {
-      log('ERROR', 'POLL_LOOP', `Poll cycle error: ${err.message}`);
-    }
-  }, POLL_INTERVAL_MS);
+  // ── Dynamic poll loop ───────────────────────────────────────────────────
+  schedulePoll();
 
-  log('INFO', 'STARTUP', `✅ WC2026FTWatcher v2.1 running — polling every ${POLL_INTERVAL_MS / 1000}s | Press Ctrl+C for session summary`);
+  log('INFO', 'STARTUP', `✅ WC2026FTWatcher v2.2 running — dynamic poll ${POLL_INTERVAL_MS / 1000}s (${POLL_INTERVAL_ET_MS / 1000}s during ET/pens) | Press Ctrl+C for session summary`);
 };
 
 main().catch(err => {

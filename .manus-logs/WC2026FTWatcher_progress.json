@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-07-01T05:04:32.528Z",
+  "startedAt": "2026-07-01T05:26:16.811Z",
   "completedAt": null,
   "totalDurationMs": 0,
   "totalPolls": 2,
@@ -7,7 +7,7 @@
   "totalLiveDetected": 0,
   "totalFinalsDetected": 3,
   "totalNewlyFinal": 3,
-  "scraped": 0,
+  "scraped": 3,
   "passed": 0,
   "failed": 0,
   "retried": 0,
@@ -15,6 +15,11 @@
   "midnightRuleFail": 0,
   "ftConfirmPass": 3,
   "ftConfirmFail": 0,
+  "dayAdvanceCount": 0,
+  "canceledCount": 0,
+  "postponedCount": 0,
+  "delayedCount": 0,
+  "etActiveCount": 0,
   "matches": [],
   "scrapedSet": [
     "760415",
@@ -98,8 +103,15 @@
     "760491"
   ],
   "scrapingSet": [
-    "760492",
     "760491",
-    "760490"
+    "760490",
+    "760492"
+  ],
+  "watchWindow": [
+    "20260701",
+    "20260702",
+    "20260703",
+    "20260704",
+    "20260705"
   ]
 }
