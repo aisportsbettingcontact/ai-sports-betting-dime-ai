@@ -1,0 +1,31 @@
+
+════════════════════════════════════════════════════════════════════════════════
+  WC2026 R32 KNOCKOUT STAGE BATCH SCRAPER v1.0 — 500x EDITION
+════════════════════════════════════════════════════════════════════════════════
+
+[2026-07-01T02:45:01.791Z] [INFO   ] [BATCH/INIT                  ] Starting R32 batch scrape | matches=6 | force=true
+[2026-07-01T02:45:01.791Z] [INFO   ] [BATCH/INIT                  ] Log file: /tmp/batchR32_500x.txt
+[2026-07-01T02:45:01.791Z] [INFO   ] [BATCH/INIT                  ] Batch log: /home/ubuntu/ai-sports-betting/.manus-logs/batchScrapeR32_v1.txt
+[2026-07-01T02:45:01.791Z] [INFO   ] [BATCH/INIT                  ] Runner: /home/ubuntu/ai-sports-betting/server/wc2026/espnIngest.test.live.mjs
+[2026-07-01T02:45:01.791Z] [INFO   ] [BATCH/INIT                  ] Timeout per match: 240s | Max retries: 2
+[2026-07-01T02:45:01.792Z] [INFO   ] [BATCH/INIT                  ] matchRound expected: "round-of-32" (ESPN season.type=13801)
+[2026-07-01T02:45:02.089Z] [INFO   ] [DB/CONNECT                  ] DB connection established ✓
+
+════════════════════════════════════════════════════════════════════════════════
+  PRE-FLIGHT: DB STATE CHECK
+════════════════════════════════════════════════════════════════════════════════
+
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE                    ] 4/6 R32 matches already in DB
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760486             ] EXISTS | round=null | version=250x | WILL RE-SCRAPE (--force)
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760487             ] EXISTS | round=null | version=250x | WILL RE-SCRAPE (--force)
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760489             ] EXISTS | round=null | version=250x | WILL RE-SCRAPE (--force)
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760488             ] EXISTS | round=null | version=250x | WILL RE-SCRAPE (--force)
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760490             ] NOT IN DB | WILL SCRAPE
+[2026-07-01T02:45:02.103Z] [INFO   ] [DB/STATE/760492             ] NOT IN DB | WILL SCRAPE
+
+════════════════════════════════════════════════════════════════════════════════
+  BATCH EXECUTION: 6 R32 KNOCKOUT STAGE MATCHES
+════════════════════════════════════════════════════════════════════════════════
+
+[2026-07-01T02:45:02.103Z] [PROG   ] [M760486/START               ] [1/6] Canada vs South Africa | elapsed=0.0min | eta=?min remaining | {"gameId":"760486","ptDate":"2026-06-28","etTime":"15:00","midnight":"normal","round":"round-of-32"}
+[2026-07-01T02:45:02.103Z] [INFO   ] [M760486/SCRAPE              ] Launching scraper | attempt=1 | Canada vs South Africa
