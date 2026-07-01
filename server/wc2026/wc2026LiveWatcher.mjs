@@ -1,5 +1,5 @@
 /**
- * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.3
+ * wc2026LiveWatcher.mjs — WC2026 Live Match Final-State Watcher v2.3
  * ══════════════════════════════════════════════════════════════════
  * ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE | ESPN-ONLY
  * 44-SCENARIO TEST MATRIX | DAY_ADVANCE ROLLING WINDOW ENGINE
@@ -21,7 +21,7 @@
  *   - Per-cycle state machine: tracks every game's statusState
  *   - Session summary on SIGINT/SIGTERM
  *
- * NEW IN v2.3 — LIVE SCRAPER INTEGRATION (from wc2026EspnResultsIngester.ts):
+ * NEW IN v2.3 — LIVE SCRAPER INTEGRATION (from wc2026Ingester.ts):
  *   - ESPN_LIVE_STATUS_NAMES name-based fallback (secondary path alongside typeId):
  *       STATUS_FIRST_HALF, STATUS_HALFTIME, STATUS_SECOND_HALF,
  *       STATUS_EXTRA_TIME, STATUS_EXTRA_TIME_HALF_TIME, STATUS_PENALTY,
@@ -120,7 +120,7 @@
  *   [04:19:51Z] VERIFY | MIDNIGHT_760491 ✅ PASS | date=2026-06-30 ET=22:00 v=500x
  *
  * Usage:
- *   node WC2026FTWatcher.mjs [--dry-run] [--force-rescrape]
+ *   node wc2026LiveWatcher.mjs [--dry-run] [--force-rescrape]
  *   --dry-run:        detect finals but do NOT trigger scraper
  *   --force-rescrape: re-trigger scraper even if gameId already in DB
  */
@@ -141,10 +141,10 @@ const FORCE_RESCRAPE = process.argv.includes('--force-rescrape');
 
 const PROJECT_DIR    = '/home/ubuntu/ai-sports-betting';
 const LOG_DIR        = `${PROJECT_DIR}/.manus-logs`;
-const WATCHER_LOG    = `${LOG_DIR}/WC2026FTWatcher.txt`;
-const TERMINAL_LOG   = `/tmp/WC2026FTWatcher_500x.txt`;
-const PROGRESS_FILE  = `${LOG_DIR}/WC2026FTWatcher_progress.json`;
-const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/espnIngest.test.live.mjs`;
+const WATCHER_LOG    = `${LOG_DIR}/wc2026LiveWatcher.txt`;
+const TERMINAL_LOG   = `/tmp/wc2026LiveWatcher_500x.txt`;
+const PROGRESS_FILE  = `${LOG_DIR}/wc2026LiveWatcher_progress.json`;
+const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/wc2026ESPNScraper.mjs`;
 
 // Poll interval: 30 seconds (normal)
 const POLL_INTERVAL_MS        = 30_000;
@@ -187,7 +187,7 @@ const ESPN_PENS_TYPE_IDS      = new Set([24]);            // STATUS_SHOOTOUT
 const ESPN_POSTPONED_TYPE_IDS = new Set([6]);             // STATUS_POSTPONED
 const ESPN_DELAYED_TYPE_IDS   = new Set([9]);             // STATUS_DELAYED
 
-// v2.3: ESPN_LIVE_STATUS_NAMES — name-based fallback (from wc2026EspnResultsIngester.ts)
+// v2.3: ESPN_LIVE_STATUS_NAMES — name-based fallback (from wc2026Ingester.ts)
 // Prevents silent skip if ESPN changes a typeId but keeps the name stable.
 // Root cause of original STATUS_SECOND_HALF silent skip: name not in set.
 const ESPN_LIVE_STATUS_NAMES = new Set([
@@ -485,7 +485,7 @@ const parseEspnEvent = (event) => {
   // v2.3: statusPrimary — from gmStrp.statusPrimary if present
   const statusPrimary     = event.statusPrimary || comp.statusPrimary || null;
 
-  // v2.3: isSwapped — orientation flag (from wc2026EspnResultsIngester.ts)
+  // v2.3: isSwapped — orientation flag (from wc2026Ingester.ts)
   // ESPN sometimes lists home team as index[0] instead of index[1]
   const homeIdx           = (comp.competitors || []).findIndex(c => c.homeAway === 'home');
   const isSwapped         = homeIdx === 0; // true if home is first in array (non-standard)
@@ -509,7 +509,7 @@ const parseEspnEvent = (event) => {
     ? eventDate.replace(/[-T:Z.]/g, '').slice(0, 8)
     : '';
 
-  // v2.3: fixtureStatus classification (from wc2026EspnResultsIngester.ts)
+  // v2.3: fixtureStatus classification (from wc2026Ingester.ts)
   // FT = completed=true | LIVE = in-progress by any detection path | PRE = scheduled | SKIP = none
   const isLiveFinal = isLiveByState || isLiveByTypeId || isLiveByName;
   // v2.3: canceled must be SKIP even if ESPN marks completed=true
