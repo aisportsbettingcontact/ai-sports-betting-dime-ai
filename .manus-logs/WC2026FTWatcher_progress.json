@@ -1,101 +1,21 @@
 {
-  "startedAt": "2026-07-01T04:52:50.022Z",
+  "startedAt": "2026-07-01T05:04:32.528Z",
   "completedAt": null,
   "totalDurationMs": 0,
-  "totalPolls": 4,
+  "totalPolls": 2,
   "totalGamesDetected": 14,
   "totalLiveDetected": 0,
   "totalFinalsDetected": 3,
   "totalNewlyFinal": 3,
-  "scraped": 3,
-  "passed": 3,
+  "scraped": 0,
+  "passed": 0,
   "failed": 0,
   "retried": 0,
-  "midnightRulePass": 3,
+  "midnightRulePass": 0,
   "midnightRuleFail": 0,
-  "matches": [
-    {
-      "gameId": "760490",
-      "status": "PASS",
-      "rowsWritten": 130,
-      "matchInfo": "Ivory Coast 1-2 Norway",
-      "venue": "AT&T Stadium",
-      "durationMs": 59484,
-      "attempts": 1,
-      "matchRound": "round-of-32",
-      "midnightRule": {
-        "ok": true,
-        "gameId": "760490",
-        "match": "Ivory Coast vs Norway",
-        "matchGameDate": "2026-06-30",
-        "matchKickoffEt": "13:00",
-        "matchRound": "round-of-32",
-        "scrapeVersion": "500x",
-        "expectedPtDate": "2026-06-30",
-        "expectedEtTime": "13:00",
-        "isMidnight": false,
-        "dateOk": true,
-        "timeOk": true,
-        "versionOk": true,
-        "roundOk": true,
-        "status": "PASS"
-      }
-    },
-    {
-      "gameId": "760492",
-      "status": "PASS",
-      "rowsWritten": 141,
-      "matchInfo": "France 3-0 Sweden",
-      "venue": "MetLife Stadium",
-      "durationMs": 79262,
-      "attempts": 1,
-      "matchRound": "round-of-32",
-      "midnightRule": {
-        "ok": true,
-        "gameId": "760492",
-        "match": "France vs Sweden",
-        "matchGameDate": "2026-06-30",
-        "matchKickoffEt": "17:00",
-        "matchRound": "round-of-32",
-        "scrapeVersion": "500x",
-        "expectedPtDate": "2026-06-30",
-        "expectedEtTime": "17:00",
-        "isMidnight": false,
-        "dateOk": true,
-        "timeOk": true,
-        "versionOk": true,
-        "roundOk": true,
-        "status": "PASS"
-      }
-    },
-    {
-      "gameId": "760491",
-      "status": "PASS",
-      "rowsWritten": 131,
-      "matchInfo": "Mexico 2-0 Ecuador",
-      "venue": "Estadio Banorte",
-      "durationMs": 79516,
-      "attempts": 1,
-      "matchRound": "round-of-32",
-      "midnightRule": {
-        "ok": true,
-        "gameId": "760491",
-        "match": "Mexico vs Ecuador",
-        "matchGameDate": "2026-06-30",
-        "matchKickoffEt": "22:00",
-        "matchRound": "round-of-32",
-        "scrapeVersion": "500x",
-        "expectedPtDate": "2026-06-30",
-        "expectedEtTime": "22:00",
-        "isMidnight": false,
-        "dateOk": true,
-        "timeOk": true,
-        "versionOk": true,
-        "roundOk": true,
-        "status": "PASS"
-      }
-    }
-  ],
+  "ftConfirmPass": 3,
+  "ftConfirmFail": 0,
+  "matches": [],
   "scrapedSet": [
     "760415",
     "760414",
@@ -177,5 +97,9 @@
     "760492",
     "760491"
   ],
-  "scrapingSet": []
+  "scrapingSet": [
+    "760492",
+    "760491",
+    "760490"
+  ]
 }

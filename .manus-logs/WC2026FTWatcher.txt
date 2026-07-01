@@ -3104,3 +3104,396 @@
 [2026-07-01T04:54:27.850Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
 [2026-07-01T04:54:28.267Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 304ms | HTTP 200
 [2026-07-01T04:54:28.268Z] [CYCLE  ] [CYCLE/4                     ] ✅ CYCLE/4 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 4.53s | scraped=3 pass=3 fail=0
+[2026-07-01T04:54:53.743Z] [POLL   ] [CYCLE/5                     ] 🔄 Poll #5 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:54:53.743Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:54:54.854Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1061ms | HTTP 200
+[2026-07-01T04:54:54.855Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:54:55.213Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 264ms | HTTP 200
+[2026-07-01T04:54:55.213Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:54:55.594Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 279ms | HTTP 200
+[2026-07-01T04:54:55.595Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:54:55.951Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 258ms | HTTP 200
+[2026-07-01T04:54:55.952Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:54:56.292Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 241ms | HTTP 200
+[2026-07-01T04:54:56.293Z] [CYCLE  ] [CYCLE/5                     ] ✅ CYCLE/5 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 2.55s | scraped=3 pass=3 fail=0
+[2026-07-01T04:55:23.756Z] [POLL   ] [CYCLE/6                     ] 🔄 Poll #6 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:55:23.756Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:55:26.154Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 2198ms | HTTP 200
+[2026-07-01T04:55:26.154Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:55:27.420Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 1032ms | HTTP 200
+[2026-07-01T04:55:27.420Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:55:28.620Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 633ms | HTTP 200
+[2026-07-01T04:55:28.620Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:55:29.835Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 1031ms | HTTP 200
+[2026-07-01T04:55:29.835Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:55:30.517Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 467ms | HTTP 200
+[2026-07-01T04:55:30.518Z] [CYCLE  ] [CYCLE/6                     ] ✅ CYCLE/6 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 6.76s | scraped=3 pass=3 fail=0
+[2026-07-01T04:55:53.765Z] [POLL   ] [CYCLE/7                     ] 🔄 Poll #7 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:55:53.765Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:55:54.421Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 601ms | HTTP 200
+[2026-07-01T04:55:54.421Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:55:54.786Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 280ms | HTTP 200
+[2026-07-01T04:55:54.786Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:55:55.478Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 615ms | HTTP 200
+[2026-07-01T04:55:55.478Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:55:55.871Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 321ms | HTTP 200
+[2026-07-01T04:55:55.871Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:55:56.120Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 186ms | HTTP 200
+[2026-07-01T04:55:56.120Z] [CYCLE  ] [CYCLE/7                     ] ✅ CYCLE/7 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 2.35s | scraped=3 pass=3 fail=0
+[2026-07-01T04:56:23.778Z] [POLL   ] [CYCLE/8                     ] 🔄 Poll #8 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:56:23.778Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:56:25.819Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1909ms | HTTP 200
+[2026-07-01T04:56:25.819Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:56:26.504Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 523ms | HTTP 200
+[2026-07-01T04:56:26.504Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:56:27.801Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 1134ms | HTTP 200
+[2026-07-01T04:56:27.802Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:56:28.952Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 1015ms | HTTP 200
+[2026-07-01T04:56:28.952Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:56:30.243Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 1128ms | HTTP 200
+[2026-07-01T04:56:30.243Z] [CYCLE  ] [CYCLE/8                     ] ✅ CYCLE/8 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 6.46s | scraped=3 pass=3 fail=0
+[2026-07-01T04:56:53.786Z] [POLL   ] [CYCLE/9                     ] 🔄 Poll #9 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:56:53.786Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:56:54.709Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 875ms | HTTP 200
+[2026-07-01T04:56:54.709Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:56:55.073Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 244ms | HTTP 200
+[2026-07-01T04:56:55.073Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:56:55.498Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 322ms | HTTP 200
+[2026-07-01T04:56:55.498Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:56:55.850Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 251ms | HTTP 200
+[2026-07-01T04:56:55.850Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:56:56.298Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 343ms | HTTP 200
+[2026-07-01T04:56:56.298Z] [CYCLE  ] [CYCLE/9                     ] ✅ CYCLE/9 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 2.51s | scraped=3 pass=3 fail=0
+[2026-07-01T04:57:23.799Z] [POLL   ] [CYCLE/10                    ] 🔄 Poll #10 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:57:23.800Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:57:25.855Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1888ms | HTTP 200
+[2026-07-01T04:57:25.855Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:57:27.388Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 800ms | HTTP 200
+[2026-07-01T04:57:27.388Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:57:29.037Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 1531ms | HTTP 200
+[2026-07-01T04:57:29.037Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:57:29.536Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 349ms | HTTP 200
+[2026-07-01T04:57:29.536Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:57:30.019Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 333ms | HTTP 200
+[2026-07-01T04:57:30.019Z] [CYCLE  ] [CYCLE/10                    ] ✅ CYCLE/10 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 6.22s | scraped=3 pass=3 fail=0
+[2026-07-01T04:57:53.809Z] [POLL   ] [CYCLE/11                    ] 🔄 Poll #11 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:57:53.809Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:57:56.769Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 2830ms | HTTP 200
+[2026-07-01T04:57:56.769Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:57:57.733Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 764ms | HTTP 200
+[2026-07-01T04:57:57.733Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:57:58.399Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 468ms | HTTP 200
+[2026-07-01T04:57:58.400Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:57:59.082Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 467ms | HTTP 200
+[2026-07-01T04:57:59.082Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:57:59.774Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 487ms | HTTP 200
+[2026-07-01T04:57:59.774Z] [CYCLE  ] [CYCLE/11                    ] ✅ CYCLE/11 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 5.96s | scraped=3 pass=3 fail=0
+[2026-07-01T04:58:23.819Z] [POLL   ] [CYCLE/12                    ] 🔄 Poll #12 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:58:23.819Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:58:25.774Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1894ms | HTTP 200
+[2026-07-01T04:58:25.774Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:58:26.447Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 465ms | HTTP 200
+[2026-07-01T04:58:26.447Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:58:27.156Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 459ms | HTTP 200
+[2026-07-01T04:58:27.156Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:58:28.288Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 915ms | HTTP 200
+[2026-07-01T04:58:28.289Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:58:28.987Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 483ms | HTTP 200
+[2026-07-01T04:58:28.988Z] [CYCLE  ] [CYCLE/12                    ] ✅ CYCLE/12 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 5.17s | scraped=3 pass=3 fail=0
+[2026-07-01T04:58:53.825Z] [POLL   ] [CYCLE/13                    ] 🔄 Poll #13 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:58:53.826Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:58:57.936Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 3550ms | HTTP 200
+[2026-07-01T04:58:57.936Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:58:59.556Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 1279ms | HTTP 200
+[2026-07-01T04:58:59.556Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:59:00.880Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 1203ms | HTTP 200
+[2026-07-01T04:59:00.880Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:59:01.318Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 333ms | HTTP 200
+[2026-07-01T04:59:01.318Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:59:01.758Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 328ms | HTTP 200
+[2026-07-01T04:59:01.758Z] [CYCLE  ] [CYCLE/13                    ] ✅ CYCLE/13 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 7.93s | scraped=3 pass=3 fail=0
+[2026-07-01T04:59:23.833Z] [POLL   ] [CYCLE/14                    ] 🔄 Poll #14 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:59:23.833Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:59:26.306Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 2471ms | HTTP 200
+[2026-07-01T04:59:26.306Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:59:26.906Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 457ms | HTTP 200
+[2026-07-01T04:59:26.906Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:59:28.539Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 1459ms | HTTP 200
+[2026-07-01T04:59:28.539Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:59:29.947Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 1233ms | HTTP 200
+[2026-07-01T04:59:29.947Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:59:31.220Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 1098ms | HTTP 200
+[2026-07-01T04:59:31.220Z] [CYCLE  ] [CYCLE/14                    ] ✅ CYCLE/14 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 7.39s | scraped=3 pass=3 fail=0
+[2026-07-01T04:59:53.842Z] [POLL   ] [CYCLE/15                    ] 🔄 Poll #15 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T04:59:53.842Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T04:59:55.010Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1032ms | HTTP 200
+[2026-07-01T04:59:55.010Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T04:59:55.393Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 267ms | HTTP 200
+[2026-07-01T04:59:55.393Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T04:59:56.124Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 486ms | HTTP 200
+[2026-07-01T04:59:56.124Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T04:59:57.159Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 816ms | HTTP 200
+[2026-07-01T04:59:57.159Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T04:59:57.681Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 422ms | HTTP 200
+[2026-07-01T04:59:57.681Z] [CYCLE  ] [CYCLE/15                    ] ✅ CYCLE/15 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 3.84s | scraped=3 pass=3 fail=0
+[2026-07-01T05:00:23.846Z] [POLL   ] [CYCLE/16                    ] 🔄 Poll #16 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:00:23.846Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:00:25.257Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1261ms | HTTP 200
+[2026-07-01T05:00:25.257Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:00:26.206Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 800ms | HTTP 200
+[2026-07-01T05:00:26.207Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:00:26.723Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 332ms | HTTP 200
+[2026-07-01T05:00:26.723Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:00:27.239Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 367ms | HTTP 200
+[2026-07-01T05:00:27.239Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:00:27.755Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 367ms | HTTP 200
+[2026-07-01T05:00:27.755Z] [CYCLE  ] [CYCLE/16                    ] ✅ CYCLE/16 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 3.91s | scraped=3 pass=3 fail=0
+[2026-07-01T05:00:53.857Z] [POLL   ] [CYCLE/17                    ] 🔄 Poll #17 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:00:53.858Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:00:55.430Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1450ms | HTTP 200
+[2026-07-01T05:00:55.430Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:00:56.107Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 477ms | HTTP 200
+[2026-07-01T05:00:56.108Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:00:56.925Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 499ms | HTTP 200
+[2026-07-01T05:00:56.925Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:00:58.053Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 1066ms | HTTP 200
+[2026-07-01T05:00:58.053Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:00:59.156Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 886ms | HTTP 200
+[2026-07-01T05:00:59.156Z] [CYCLE  ] [CYCLE/17                    ] ✅ CYCLE/17 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 5.30s | scraped=3 pass=3 fail=0
+[2026-07-01T05:01:23.860Z] [POLL   ] [CYCLE/18                    ] 🔄 Poll #18 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:01:23.860Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:01:26.840Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 2780ms | HTTP 200
+[2026-07-01T05:01:26.840Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:01:28.058Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 950ms | HTTP 200
+[2026-07-01T05:01:28.058Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:01:29.239Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 965ms | HTTP 200
+[2026-07-01T05:01:29.239Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:01:30.705Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 1250ms | HTTP 200
+[2026-07-01T05:01:30.705Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:01:31.388Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 467ms | HTTP 200
+[2026-07-01T05:01:31.388Z] [CYCLE  ] [CYCLE/18                    ] ✅ CYCLE/18 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 7.53s | scraped=3 pass=3 fail=0
+[2026-07-01T05:01:53.866Z] [POLL   ] [CYCLE/19                    ] 🔄 Poll #19 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:01:53.866Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:01:55.514Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1481ms | HTTP 200
+[2026-07-01T05:01:55.514Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:01:56.096Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 349ms | HTTP 200
+[2026-07-01T05:01:56.096Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:01:56.680Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 416ms | HTTP 200
+[2026-07-01T05:01:56.680Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:01:57.196Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 366ms | HTTP 200
+[2026-07-01T05:01:57.196Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:01:57.711Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 361ms | HTTP 200
+[2026-07-01T05:01:57.712Z] [CYCLE  ] [CYCLE/19                    ] ✅ CYCLE/19 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 3.85s | scraped=3 pass=3 fail=0
+[2026-07-01T05:02:23.874Z] [POLL   ] [CYCLE/20                    ] 🔄 Poll #20 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:02:23.874Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:02:25.002Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 1047ms | HTTP 200
+[2026-07-01T05:02:25.002Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:02:25.573Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 510ms | HTTP 200
+[2026-07-01T05:02:25.573Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:02:25.929Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 297ms | HTTP 200
+[2026-07-01T05:02:25.929Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:02:26.203Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 207ms | HTTP 200
+[2026-07-01T05:02:26.203Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:02:26.409Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 140ms | HTTP 200
+[2026-07-01T05:02:26.409Z] [CYCLE  ] [CYCLE/20                    ] ✅ CYCLE/20 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 2.54s | scraped=3 pass=3 fail=0
+[2026-07-01T05:02:53.887Z] [POLL   ] [CYCLE/21                    ] 🔄 Poll #21 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:02:53.888Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:02:57.370Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 3033ms | HTTP 200
+[2026-07-01T05:02:57.371Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:02:59.502Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 1931ms | HTTP 200
+[2026-07-01T05:02:59.502Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:03:00.665Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 901ms | HTTP 200
+[2026-07-01T05:03:00.665Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:03:01.737Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 871ms | HTTP 200
+[2026-07-01T05:03:01.737Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:03:02.400Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 466ms | HTTP 200
+[2026-07-01T05:03:02.400Z] [CYCLE  ] [CYCLE/21                    ] ✅ CYCLE/21 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 8.51s | scraped=3 pass=3 fail=0
+[2026-07-01T05:03:23.895Z] [POLL   ] [CYCLE/22                    ] 🔄 Poll #22 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:03:23.895Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:03:24.869Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 964ms | HTTP 200
+[2026-07-01T05:03:24.870Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:03:25.255Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 281ms | HTTP 200
+[2026-07-01T05:03:25.255Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:03:25.714Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 341ms | HTTP 200
+[2026-07-01T05:03:25.715Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:03:26.084Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 262ms | HTTP 200
+[2026-07-01T05:03:26.084Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:03:26.584Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 386ms | HTTP 200
+[2026-07-01T05:03:26.585Z] [CYCLE  ] [CYCLE/22                    ] ✅ CYCLE/22 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 2.69s | scraped=3 pass=3 fail=0
+[2026-07-01T05:03:53.908Z] [POLL   ] [CYCLE/23                    ] 🔄 Poll #23 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:03:53.908Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:03:59.011Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 5102ms | HTTP 200
+[2026-07-01T05:03:59.012Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:03:59.023Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 9ms | HTTP 200
+[2026-07-01T05:03:59.023Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:03:59.041Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 16ms | HTTP 200
+[2026-07-01T05:03:59.041Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:03:59.060Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 17ms | HTTP 200
+[2026-07-01T05:03:59.060Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:03:59.079Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 18ms | HTTP 200
+[2026-07-01T05:03:59.079Z] [CYCLE  ] [CYCLE/23                    ] ✅ CYCLE/23 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 5.17s | scraped=3 pass=3 fail=0
+[2026-07-01T05:04:23.918Z] [POLL   ] [CYCLE/24                    ] 🔄 Poll #24 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:04:23.919Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+════════════════════════════════════════════════════════════════════════════════
+  WC2026FTWatcher v2.1 — 500x ELITE LIVE DETECTION ENGINE
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] ESPN-ONLY POLICY: All data sourced exclusively from https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] DRY_RUN=false | FORCE_RESCRAPE=false | POLL_INTERVAL=30s | FT_CONFIRM_DELAY=5s
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] WATCH_WINDOW: -1d to +3d | MAX_ATTEMPTS=3 | MATCH_TIMEOUT=420s
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] FINAL_TYPE_IDS: [3, 23, 28] | LIVE_TYPE_IDS: [2, 17, 22, 24, 26]
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] LOG_FILES: /home/ubuntu/ai-sports-betting/.manus-logs/WC2026FTWatcher.txt | /tmp/WC2026FTWatcher_500x.txt
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] RUNNER_SCRIPT: /home/ubuntu/ai-sports-betting/server/wc2026/espnIngest.test.live.mjs
+────────────────────────────────────────────────────────────────────────────────
+[2026-07-01T05:04:32.529Z] [INFO   ] [STARTUP                     ] Restored 79 scraped gameIds from previous session
+────────────────────────────────────────────────────────────────────────────────
+  PRE-FLIGHT: DB STATE CHECK
+────────────────────────────────────────────────────────────────────────────────
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/DB                ] 79 WC2026 matches currently in DB
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760415            ] EXISTS | Mexico 2-0 South Africa | round=group-stage | date=2026-06-11 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760414            ] EXISTS | South Korea 2-1 Czechia | round=group-stage | date=2026-06-11 ET=22:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760416            ] EXISTS | Canada 1-1 Bosnia-Herzegovina | round=group-stage | date=2026-06-12 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760417            ] EXISTS | United States 4-1 Paraguay | round=group-stage | date=2026-06-12 ET=21:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760421            ] EXISTS | Australia 2-0 Türkiye | round=group-stage | date=2026-06-13 ET=00:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760420            ] EXISTS | Qatar 1-1 Switzerland | round=group-stage | date=2026-06-13 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760419            ] EXISTS | Brazil 1-1 Morocco | round=group-stage | date=2026-06-13 ET=18:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760418            ] EXISTS | Haiti 0-1 Scotland | round=group-stage | date=2026-06-13 ET=21:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760422            ] EXISTS | Germany 7-1 Curaçao | round=group-stage | date=2026-06-14 ET=13:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760425            ] EXISTS | Netherlands 2-2 Japan | round=group-stage | date=2026-06-14 ET=16:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760423            ] EXISTS | Ivory Coast 1-0 Ecuador | round=group-stage | date=2026-06-14 ET=19:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760424            ] EXISTS | Sweden 5-1 Tunisia | round=group-stage | date=2026-06-14 ET=22:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760428            ] EXISTS | Spain 0-0 Cape Verde | round=group-stage | date=2026-06-15 ET=12:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760426            ] EXISTS | Belgium 1-1 Egypt | round=group-stage | date=2026-06-15 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760429            ] EXISTS | Saudi Arabia 1-1 Uruguay | round=group-stage | date=2026-06-15 ET=18:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760427            ] EXISTS | Iran 2-2 New Zealand | round=group-stage | date=2026-06-15 ET=21:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760431            ] EXISTS | Austria 3-1 Jordan | round=group-stage | date=2026-06-16 ET=00:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760432            ] EXISTS | France 3-1 Senegal | round=group-stage | date=2026-06-16 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760430            ] EXISTS | Iraq 1-4 Norway | round=group-stage | date=2026-06-16 ET=18:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760433            ] EXISTS | Argentina 3-0 Algeria | round=group-stage | date=2026-06-16 ET=21:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760435            ] EXISTS | Portugal 1-1 Congo DR | round=group-stage | date=2026-06-17 ET=13:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760437            ] EXISTS | England 4-2 Croatia | round=group-stage | date=2026-06-17 ET=16:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760434            ] EXISTS | Ghana 1-0 Panama | round=group-stage | date=2026-06-17 ET=19:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760436            ] EXISTS | Uzbekistan 1-3 Colombia | round=group-stage | date=2026-06-17 ET=22:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760438            ] EXISTS | Czechia 1-1 South Africa | round=group-stage | date=2026-06-18 ET=12:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760439            ] EXISTS | Switzerland 4-1 Bosnia-Herzegovina | round=group-stage | date=2026-06-18 ET=15:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760440            ] EXISTS | Canada 6-0 Qatar | round=group-stage | date=2026-06-18 ET=18:00 | v=500x
+[2026-07-01T05:04:32.849Z] [DB     ] [PREFLIGHT/760441            ] EXISTS | Mexico 1-0 South Korea | round=group-stage | date=2026-06-18 ET=21:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760442            ] EXISTS | United States 2-0 Australia | round=group-stage | date=2026-06-19 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760445            ] EXISTS | Scotland 0-1 Morocco | round=group-stage | date=2026-06-19 ET=18:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760444            ] EXISTS | Brazil 3-0 Haiti | round=group-stage | date=2026-06-19 ET=20:30 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760443            ] EXISTS | Türkiye 0-1 Paraguay | round=group-stage | date=2026-06-19 ET=23:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760449            ] EXISTS | Tunisia 0-4 Japan | round=group-stage | date=2026-06-20 ET=00:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760447            ] EXISTS | Netherlands 5-1 Sweden | round=group-stage | date=2026-06-20 ET=13:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760448            ] EXISTS | Germany 2-1 Ivory Coast | round=group-stage | date=2026-06-20 ET=16:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760446            ] EXISTS | Ecuador 0-0 Curaçao | round=group-stage | date=2026-06-20 ET=20:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760453            ] EXISTS | Spain 4-0 Saudi Arabia | round=group-stage | date=2026-06-21 ET=12:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760451            ] EXISTS | Belgium 0-0 Iran | round=group-stage | date=2026-06-21 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760450            ] EXISTS | Uruguay 2-2 Cape Verde | round=group-stage | date=2026-06-21 ET=18:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760452            ] EXISTS | New Zealand 1-3 Egypt | round=group-stage | date=2026-06-21 ET=21:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760456            ] EXISTS | Argentina 2-0 Austria | round=group-stage | date=2026-06-22 ET=13:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760457            ] EXISTS | France 3-0 Iraq | round=group-stage | date=2026-06-22 ET=17:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760454            ] EXISTS | Norway 3-2 Senegal | round=group-stage | date=2026-06-22 ET=20:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760455            ] EXISTS | Jordan 1-2 Algeria | round=group-stage | date=2026-06-22 ET=23:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760461            ] EXISTS | Portugal 5-0 Uzbekistan | round=group-stage | date=2026-06-23 ET=13:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760458            ] EXISTS | England 0-0 Ghana | round=group-stage | date=2026-06-23 ET=16:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760460            ] EXISTS | Panama 0-1 Croatia | round=group-stage | date=2026-06-23 ET=19:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760459            ] EXISTS | Colombia 1-0 Congo DR | round=group-stage | date=2026-06-23 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760463            ] EXISTS | Switzerland 2-1 Canada | round=group-stage | date=2026-06-24 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760462            ] EXISTS | Bosnia-Herzegovina 3-1 Qatar | round=group-stage | date=2026-06-24 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760464            ] EXISTS | Morocco 4-2 Haiti | round=group-stage | date=2026-06-24 ET=18:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760465            ] EXISTS | Scotland 0-3 Brazil | round=group-stage | date=2026-06-24 ET=18:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760467            ] EXISTS | Czechia 0-3 Mexico | round=group-stage | date=2026-06-24 ET=21:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760466            ] EXISTS | South Africa 1-0 South Korea | round=group-stage | date=2026-06-24 ET=21:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760473            ] EXISTS | Curaçao 0-2 Ivory Coast | round=group-stage | date=2026-06-25 ET=16:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760468            ] EXISTS | Ecuador 2-1 Germany | round=group-stage | date=2026-06-25 ET=16:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760472            ] EXISTS | Tunisia 1-3 Netherlands | round=group-stage | date=2026-06-25 ET=19:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760471            ] EXISTS | Japan 1-1 Sweden | round=group-stage | date=2026-06-25 ET=19:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760470            ] EXISTS | Türkiye 3-2 United States | round=group-stage | date=2026-06-25 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760469            ] EXISTS | Paraguay 0-0 Australia | round=group-stage | date=2026-06-25 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760475            ] EXISTS | Norway 1-4 France | round=group-stage | date=2026-06-26 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760474            ] EXISTS | Senegal 5-0 Iraq | round=group-stage | date=2026-06-26 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760478            ] EXISTS | Cape Verde 0-0 Saudi Arabia | round=group-stage | date=2026-06-26 ET=20:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760479            ] EXISTS | Uruguay 0-1 Spain | round=group-stage | date=2026-06-26 ET=20:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760476            ] EXISTS | Egypt 1-1 Iran | round=group-stage | date=2026-06-26 ET=23:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760477            ] EXISTS | New Zealand 1-5 Belgium | round=group-stage | date=2026-06-26 ET=23:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760480            ] EXISTS | Croatia 2-1 Ghana | round=group-stage | date=2026-06-27 ET=17:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760485            ] EXISTS | Panama 0-2 England | round=group-stage | date=2026-06-27 ET=17:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760482            ] EXISTS | Congo DR 3-1 Uzbekistan | round=group-stage | date=2026-06-27 ET=19:30 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760481            ] EXISTS | Colombia 0-0 Portugal | round=group-stage | date=2026-06-27 ET=19:30 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760483            ] EXISTS | Jordan 1-3 Argentina | round=group-stage | date=2026-06-27 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760484            ] EXISTS | Algeria 3-3 Austria | round=group-stage | date=2026-06-27 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760486            ] EXISTS | South Africa 0-1 Canada | round=round-of-32 | date=2026-06-28 ET=15:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760487            ] EXISTS | Brazil 2-1 Japan | round=round-of-32 | date=2026-06-29 ET=13:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760489            ] EXISTS | Germany 1-1 Paraguay | round=round-of-32 | date=2026-06-29 ET=16:30 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760488            ] EXISTS | Netherlands 1-1 Morocco | round=round-of-32 | date=2026-06-29 ET=21:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760490            ] EXISTS | Ivory Coast 1-2 Norway | round=round-of-32 | date=2026-06-30 ET=13:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760492            ] EXISTS | France 3-0 Sweden | round=round-of-32 | date=2026-06-30 ET=17:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/760491            ] EXISTS | Mexico 2-0 Ecuador | round=round-of-32 | date=2026-06-30 ET=22:00 | v=500x
+[2026-07-01T05:04:32.850Z] [DB     ] [PREFLIGHT/DB                ] 79 gameIds pre-loaded into scrapedSet — will skip re-trigger unless --force-rescrape
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-01T05:04:32.851Z] [POLL   ] [CYCLE/1                     ] 🔄 Poll #1 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=0
+[2026-07-01T05:04:32.851Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:04:38.009Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 5153ms | HTTP 200
+[2026-07-01T05:04:38.010Z] [TRANS  ] [TRANS/760490                ] 🔀 FT TRANSITION DETECTED | Norway at Ivory Coast | prevState=unknown prevTypeId=null prevCompleted=null → state=post typeId=28 completed=true | 90'+8' | Full Time (FT)
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760490              ] FT_DETECTED | prev: state=unknown typeId=null typeName=null completed=null clock=null period=null
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760490              ] FT_DETECTED | curr: state=post typeId=28 typeName=STATUS_FULL_TIME completed=true clock=90'+8' period=2 detail=FT shortDetail=FT description=Full Time clockSecs=5400
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760490              ] FT_DETECTED | score=NOR 2 - 1 CIV | round=round-of-32 | seasonSlug=round-of-32 | date=2026-06-30T17:00Z
+[2026-07-01T05:04:38.010Z] [FINAL  ] [FINAL/760490                ] 🏁 GAME FINAL — NEWLY DETECTED | Norway at Ivory Coast | NOR 2 - 1 CIV | typeId=28 STATUS_FULL_TIME | FT | clock=90'+8' P2
+[2026-07-01T05:04:38.010Z] [CONFIRM] [CONFIRM/760490              ] ⏳ Waiting 5s before FT-confirmation re-poll...
+[2026-07-01T05:04:38.010Z] [TRANS  ] [TRANS/760492                ] 🔀 FT TRANSITION DETECTED | Sweden at France | prevState=unknown prevTypeId=null prevCompleted=null → state=post typeId=28 completed=true | 90'+4' | Full Time (FT)
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760492              ] FT_DETECTED | prev: state=unknown typeId=null typeName=null completed=null clock=null period=null
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760492              ] FT_DETECTED | curr: state=post typeId=28 typeName=STATUS_FULL_TIME completed=true clock=90'+4' period=2 detail=FT shortDetail=FT description=Full Time clockSecs=5400
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760492              ] FT_DETECTED | score=SWE 0 - 3 FRA | round=round-of-32 | seasonSlug=round-of-32 | date=2026-06-30T21:00Z
+[2026-07-01T05:04:38.010Z] [FINAL  ] [FINAL/760492                ] 🏁 GAME FINAL — NEWLY DETECTED | Sweden at France | SWE 0 - 3 FRA | typeId=28 STATUS_FULL_TIME | FT | clock=90'+4' P2
+[2026-07-01T05:04:38.010Z] [CONFIRM] [CONFIRM/760492              ] ⏳ Waiting 5s before FT-confirmation re-poll...
+[2026-07-01T05:04:38.010Z] [TRANS  ] [TRANS/760491                ] 🔀 FT TRANSITION DETECTED | Ecuador at Mexico | prevState=unknown prevTypeId=null prevCompleted=null → state=post typeId=28 completed=true | 90'+9' | Full Time (FT)
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760491              ] FT_DETECTED | prev: state=unknown typeId=null typeName=null completed=null clock=null period=null
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760491              ] FT_DETECTED | curr: state=post typeId=28 typeName=STATUS_FULL_TIME completed=true clock=90'+9' period=2 detail=FT shortDetail=FT description=Full Time clockSecs=5400
+[2026-07-01T05:04:38.010Z] [TRANS_D] [TRANS_D/760491              ] FT_DETECTED | score=ECU 0 - 2 MEX | round=round-of-32 | seasonSlug=round-of-32 | date=2026-07-01T02:00Z
+[2026-07-01T05:04:38.010Z] [FINAL  ] [FINAL/760491                ] 🏁 GAME FINAL — NEWLY DETECTED | Ecuador at Mexico | ECU 0 - 2 MEX | typeId=28 STATUS_FULL_TIME | FT | clock=90'+9' P2
+[2026-07-01T05:04:38.010Z] [CONFIRM] [CONFIRM/760491              ] ⏳ Waiting 5s before FT-confirmation re-poll...
+[2026-07-01T05:04:38.010Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:04:38.030Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 18ms | HTTP 200
+[2026-07-01T05:04:38.030Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:04:38.060Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 28ms | HTTP 200
+[2026-07-01T05:04:38.060Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:04:38.083Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 21ms | HTTP 200
+[2026-07-01T05:04:38.083Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:04:38.105Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 21ms | HTTP 200
+[2026-07-01T05:04:38.105Z] [CYCLE  ] [CYCLE/1                     ] ✅ CYCLE/1 — 14 total | 0 live | 11 pre | 3 final | 3 newly final | 5.25s | scraped=0 pass=0 fail=0 ftConfirm=0✅/0⚠️
+[2026-07-01T05:04:38.106Z] [INFO   ] [STARTUP                     ] ✅ WC2026FTWatcher v2.1 running — polling every 30s | Press Ctrl+C for session summary
+[2026-07-01T05:04:43.012Z] [ESPNAPI] [ESPN/CONFIRM/760490         ] [INPUT] FT-CONFIRM re-poll → GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:04:43.014Z] [ESPNAPI] [ESPN/CONFIRM/760492         ] [INPUT] FT-CONFIRM re-poll → GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:04:43.015Z] [ESPNAPI] [ESPN/CONFIRM/760491         ] [INPUT] FT-CONFIRM re-poll → GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:04:45.450Z] [ESPNAPI] [ESPN/CONFIRM/760492         ] [OUTPUT] state=post typeId=28 completed=true clock=90'+4' | 2219ms
+[2026-07-01T05:04:45.450Z] [CONFIRM] [CONFIRM/760492              ] ✅ CONFIRMED state=post | typeId=28 STATUS_FULL_TIME | completed=true | clock=90'+4' | score=SWE 0 - 3 FRA
+[2026-07-01T05:04:45.450Z] [TRANS_D] [CONFIRM_D/760492            ] FT_CONFIRMED | prev: state=unknown typeId=null typeName=null completed=null clock=null period=null
+[2026-07-01T05:04:45.450Z] [TRANS_D] [CONFIRM_D/760492            ] FT_CONFIRMED | curr: state=post typeId=28 typeName=STATUS_FULL_TIME completed=true clock=90'+4' period=2 detail=FT shortDetail=FT description=Full Time clockSecs=5400
+[2026-07-01T05:04:45.450Z] [TRANS_D] [CONFIRM_D/760492            ] FT_CONFIRMED | score=SWE 0 - 3 FRA | round=round-of-32 | seasonSlug=round-of-32 | date=2026-06-30T21:00Z
+[2026-07-01T05:04:45.450Z] [TRIGGER] [TRIGGER/760492              ] 🚀 gameId=760492 → matchRound=round-of-32 | seasonSlug=round-of-32 | prevState=unknown → post | typeId=28 | completed=true | DRY_RUN=false
+[2026-07-01T05:04:45.451Z] [INFO   ] [SCRAPE_760492               ] [ATTEMPT 1/3] Spawning 500x scraper → gameId=760492 matchRound=round-of-32
+[2026-07-01T05:04:45.632Z] [WARN   ] [ESPN/CONFIRM/760491         ] [OUTPUT] gameId=760491 not found in confirm response | 2400ms
+[2026-07-01T05:04:45.632Z] [CONFIRM] [CONFIRM/760491              ] ⚠️ CONFIRM fetch failed — proceeding with initial FT detection (conservative)
+[2026-07-01T05:04:45.632Z] [TRIGGER] [TRIGGER/760491              ] 🚀 gameId=760491 → matchRound=round-of-32 | seasonSlug=round-of-32 | prevState=unknown → post | typeId=28 | completed=true | DRY_RUN=false
+[2026-07-01T05:04:45.632Z] [INFO   ] [SCRAPE_760491               ] [ATTEMPT 1/3] Spawning 500x scraper → gameId=760491 matchRound=round-of-32
+[2026-07-01T05:04:48.121Z] [ESPNAPI] [ESPN/CONFIRM/760490         ] [OUTPUT] state=post typeId=28 completed=true clock=90'+8' | 5107ms
+[2026-07-01T05:04:48.121Z] [CONFIRM] [CONFIRM/760490              ] ✅ CONFIRMED state=post | typeId=28 STATUS_FULL_TIME | completed=true | clock=90'+8' | score=NOR 2 - 1 CIV
+[2026-07-01T05:04:48.121Z] [TRANS_D] [CONFIRM_D/760490            ] FT_CONFIRMED | prev: state=unknown typeId=null typeName=null completed=null clock=null period=null
+[2026-07-01T05:04:48.121Z] [TRANS_D] [CONFIRM_D/760490            ] FT_CONFIRMED | curr: state=post typeId=28 typeName=STATUS_FULL_TIME completed=true clock=90'+8' period=2 detail=FT shortDetail=FT description=Full Time clockSecs=5400
+[2026-07-01T05:04:48.121Z] [TRANS_D] [CONFIRM_D/760490            ] FT_CONFIRMED | score=NOR 2 - 1 CIV | round=round-of-32 | seasonSlug=round-of-32 | date=2026-06-30T17:00Z
+[2026-07-01T05:04:48.121Z] [TRIGGER] [TRIGGER/760490              ] 🚀 gameId=760490 → matchRound=round-of-32 | seasonSlug=round-of-32 | prevState=unknown → post | typeId=28 | completed=true | DRY_RUN=false
+[2026-07-01T05:04:48.121Z] [INFO   ] [SCRAPE_760490               ] [ATTEMPT 1/3] Spawning 500x scraper → gameId=760490 matchRound=round-of-32
+[2026-07-01T05:05:08.118Z] [POLL   ] [CYCLE/2                     ] 🔄 Poll #2 — watching dates: 20260630, 20260701, 20260702, 20260703, 20260704 | scrapedSet.size=79 | scrapingSet.size=3
+[2026-07-01T05:05:08.119Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260630&limit=50
+[2026-07-01T05:05:13.247Z] [ESPNAPI] [ESPN/SCOREBOARD/20260630    ] [OUTPUT] 3 events | 5125ms | HTTP 200
+[2026-07-01T05:05:13.247Z] [INFO   ] [FINAL/760490                ] Scrape in progress — skipping duplicate trigger
+[2026-07-01T05:05:13.247Z] [INFO   ] [FINAL/760492                ] Scrape in progress — skipping duplicate trigger
+[2026-07-01T05:05:13.247Z] [INFO   ] [FINAL/760491                ] Scrape in progress — skipping duplicate trigger
+[2026-07-01T05:05:13.247Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260701&limit=50
+[2026-07-01T05:05:13.264Z] [ESPNAPI] [ESPN/SCOREBOARD/20260701    ] [OUTPUT] 3 events | 14ms | HTTP 200
+[2026-07-01T05:05:13.264Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260702&limit=50
+[2026-07-01T05:05:13.285Z] [ESPNAPI] [ESPN/SCOREBOARD/20260702    ] [OUTPUT] 3 events | 19ms | HTTP 200
+[2026-07-01T05:05:13.285Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260703&limit=50
+[2026-07-01T05:05:13.303Z] [ESPNAPI] [ESPN/SCOREBOARD/20260703    ] [OUTPUT] 3 events | 17ms | HTTP 200
+[2026-07-01T05:05:13.303Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [INPUT] GET https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260704&limit=50
+[2026-07-01T05:05:13.323Z] [ESPNAPI] [ESPN/SCOREBOARD/20260704    ] [OUTPUT] 2 events | 18ms | HTTP 200
+[2026-07-01T05:05:13.324Z] [CYCLE  ] [CYCLE/2                     ] ✅ CYCLE/2 — 14 total | 0 live | 11 pre | 3 final | 0 newly final | 5.21s | scraped=0 pass=0 fail=0 ftConfirm=3✅/0⚠️
