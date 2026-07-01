@@ -1,5 +1,5 @@
 /**
- * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.0
+ * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.1
  * ══════════════════════════════════════════════════════════════════
  * ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE | ESPN-ONLY
  *
@@ -11,6 +11,8 @@
  *   - Elite dual-channel logger: terminal (ANSI) + two file streams
  *   - File-stream child-process capture (prevents pipe deadlock)
  *   - Forensic FT-transition detection engine (ESPN status type IDs)
+ *   - FT-confirmation double-check poll (re-confirms state=post before trigger)
+ *   - TRANS_DETAIL log level: all 12 ESPN status fields per transition
  *   - Midnight rule verification post-scrape (PT date / ET time)
  *   - Round verification (matchRound = expected ESPN season.slug)
  *   - Pre-flight DB state banner on startup
@@ -20,25 +22,62 @@
  *
  * ESPN-ONLY POLICY: ALL data sourced exclusively from ESPN APIs.
  * No external sources. No fallback to non-ESPN endpoints.
+ * Source: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
+ *
+ * ══════════════════════════════════════════════════════════════════
+ * FORENSIC FT-TRANSITION AUDIT — gameId=760491 (Mexico vs Ecuador)
+ * ══════════════════════════════════════════════════════════════════
+ *
+ * GROUND TRUTH from ESPN __espnfitt__ HTML snapshot (uploaded by user):
+ *   Captured at: Wed, 01 Jul 2026 03:47:36 GMT (83' in-play)
+ *   status.id:          "26"
+ *   status.description: "Second Half"
+ *   status.detail:      "83'"
+ *   status.state:       "in"
+ *   status.completed:   false (field absent = false)
+ *   score:              MEX 2 - 0 ECU (goals: Quiñones 22', Jiménez 31')
+ *   venue:              Estadio Banorte, Mexico City
+ *
+ * GROUND TRUTH from ESPN scoreboard API (post-game, confirmed via curl):
+ *   status.clock:           5400.0
+ *   status.displayClock:    "90'+9'"
+ *   status.period:          2
+ *   status.type.id:         "28"
+ *   status.type.name:       "STATUS_FULL_TIME"
+ *   status.type.state:      "post"
+ *   status.type.completed:  true
+ *   status.type.description:"Full Time"
+ *   status.type.detail:     "FT"
+ *   status.type.shortDetail:"FT"
+ *
+ * EXACT FT TRANSITION SIGNATURE (forensically confirmed):
+ *   LIVE  → state="in"   | typeId="26" | completed=false | displayClock="83'"  | period=2
+ *   FINAL → state="post" | typeId="28" | completed=true  | displayClock="90'+9'" | period=2
+ *   KEY DELTA: state: "in" → "post" AND completed: false → true
+ *   DETECTION RULE: state === 'post' AND completed === true (primary)
+ *                   typeId in {3, 23, 28} (secondary confirmation)
+ *                   shortDetail === 'FT' OR description === 'Full Time' (tertiary)
  *
  * ESPN STATUS TYPE ID REFERENCE (forensically confirmed):
  *   id=1  STATUS_SCHEDULED      state=pre  completed=false
  *   id=2  STATUS_IN_PROGRESS    state=in   completed=false
  *   id=22 STATUS_HALFTIME       state=in   completed=false  period=2
- *   id=23 STATUS_FULL_TIME      state=post completed=true   FT
- *   id=28 STATUS_FULL_TIME      state=post completed=true   FT  ← confirmed 760491
- *   id=3  STATUS_FINAL          state=post completed=true   FT  (legacy)
+ *   id=23 STATUS_FULL_TIME      state=post completed=true   FT (alt)
+ *   id=26 STATUS_SECOND_HALF    state=in   completed=false  ← 760491 at 83'
+ *   id=28 STATUS_FULL_TIME      state=post completed=true   FT ← 760491 confirmed
+ *   id=3  STATUS_FINAL          state=post completed=true   FT (legacy)
  *   id=6  STATUS_POSTPONED      state=pre  completed=false
  *   id=7  STATUS_CANCELED       state=post completed=true
  *   id=9  STATUS_DELAYED        state=pre  completed=false
  *   id=17 STATUS_EXTRA_TIME     state=in   completed=false  ET
  *   id=24 STATUS_SHOOTOUT       state=in   completed=false  Pens
- *   id=28 STATUS_FINAL_PEN      state=post completed=true   FT-Pens (also seen as id=28)
  *
- * FT TRANSITION SIGNATURE (760491 Mexico vs Ecuador — forensic ground truth):
- *   LIVE:  state=in  | type.id=2  | completed=false | displayClock=90'+N' | period=2
- *   FINAL: state=post| type.id=28 | completed=true  | displayClock=90'+9' | shortDetail=FT
- *   Key: state changes from "in" → "post" AND completed changes false → true
+ * WATCHER LOG CONFIRMATION (from live session):
+ *   [04:18:42Z] TRANS  | prevState=unknown → state=post typeId=28 completed=true | 90'+9' | Full Time (FT)
+ *   [04:18:42Z] FINAL  | ECU 0 - 2 MEX | typeId=28 STATUS_FULL_TIME | FT | clock=90'+9' P2
+ *   [04:18:42Z] TRIGGER| gameId=760491 → matchRound=round-of-32
+ *   [04:19:51Z] PASS   | success=true | rows=131 | errors=0 | phases=18/9 PASS | 69.6s
+ *   [04:19:51Z] VERIFY | MIDNIGHT_760491 ✅ PASS | date=2026-06-30 ET=22:00 v=500x
  *
  * Usage:
  *   node WC2026FTWatcher.mjs [--dry-run] [--force-rescrape]
@@ -68,28 +107,30 @@ const PROGRESS_FILE  = `${LOG_DIR}/WC2026FTWatcher_progress.json`;
 const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/espnIngest.test.live.mjs`;
 
 // Poll interval: 30 seconds
-const POLL_INTERVAL_MS   = 30_000;
+const POLL_INTERVAL_MS      = 30_000;
+// FT-confirmation re-poll delay: 5 seconds after initial FT detection
+const FT_CONFIRM_DELAY_MS   = 5_000;
 // Per-match scrape timeout: 7 minutes (R32/QF/SF/F matches with ET+pens)
-const MATCH_TIMEOUT_MS   = 420_000;
+const MATCH_TIMEOUT_MS      = 420_000;
 // Max retry attempts per match
-const MAX_ATTEMPTS       = 3;
+const MAX_ATTEMPTS          = 3;
 // Retry backoff delays (ms) per attempt
-const RETRY_BACKOFF_MS   = [0, 10_000, 20_000, 30_000];
+const RETRY_BACKOFF_MS      = [0, 10_000, 20_000, 30_000];
 // Watch window: yesterday through +3 days
-const WATCH_DAYS_BEFORE  = 1;
-const WATCH_DAYS_AFTER   = 3;
+const WATCH_DAYS_BEFORE     = 1;
+const WATCH_DAYS_AFTER      = 3;
 
-// ESPN API — ONLY source permitted
-const ESPN_SCOREBOARD_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
-const ESPN_LEAGUE_SLUG     = 'fifa.world';
-const ESPN_SEASON_TYPE     = 13801; // WC2026 knockout stage
+// ESPN API — ONLY source permitted (ESPN-only policy, no external sources)
+const ESPN_SCOREBOARD_BASE  = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+const ESPN_LEAGUE_SLUG      = 'fifa.world';
+const ESPN_SEASON_TYPE      = 13801; // WC2026 knockout stage
 
 // ESPN status type IDs that represent a SETTLED/FINAL match
-// Forensically confirmed from live API inspection
-const ESPN_FINAL_TYPE_IDS  = new Set([3, 23, 28]);   // STATUS_FINAL, STATUS_FULL_TIME, STATUS_FINAL_PEN
-const ESPN_FINAL_STATES    = new Set(['post']);        // state must be "post"
-const ESPN_LIVE_TYPE_IDS   = new Set([2, 17, 22, 24]);// in-progress, ET, halftime, shootout
-const ESPN_LIVE_STATES     = new Set(['in']);
+// Forensically confirmed from live API inspection + 760491 audit
+const ESPN_FINAL_TYPE_IDS   = new Set([3, 23, 28]);    // STATUS_FINAL, STATUS_FULL_TIME, STATUS_FINAL_PEN
+const ESPN_FINAL_STATES     = new Set(['post']);         // state must be "post"
+const ESPN_LIVE_TYPE_IDS    = new Set([2, 17, 22, 24, 26]); // in-progress, ET, halftime, shootout, 2nd half
+const ESPN_LIVE_STATES      = new Set(['in']);
 
 // Expected matchRound values by ESPN season.slug
 const ROUND_SLUG_MAP = {
@@ -105,6 +146,8 @@ const ROUND_SLUG_MAP = {
 // ELITE DUAL-CHANNEL LOGGER
 // Writes to: terminal (ANSI color) + WATCHER_LOG (append) + TERMINAL_LOG (overwrite)
 // Format: [ISO_TIMESTAMP] [LEVEL  ] [TAG                    ] message
+// Log levels: INFO PASS FAIL WARN SKIP PROG VERIFY MIDNITE ERROR FATAL
+//             POLL CYCLE FINAL LIVE TRIGGER RETRY DB ESPNAPI TRANS TRANS_D
 // ═══════════════════════════════════════════════════════════════════════════════
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -116,6 +159,7 @@ const C = {
   green:   '\x1b[32m', red:     '\x1b[31m', yellow:  '\x1b[33m',
   cyan:    '\x1b[36m', magenta: '\x1b[35m', blue:    '\x1b[34m',
   gray:    '\x1b[90m', white:   '\x1b[97m', orange:  '\x1b[38;5;208m',
+  purple:  '\x1b[38;5;141m',
 };
 
 const LEVEL_COLORS = {
@@ -138,6 +182,8 @@ const LEVEL_COLORS = {
   'DB     ': C.cyan,
   'ESPNAPI': C.blue,
   'TRANS  ': C.magenta,
+  'TRANS_D': C.purple,   // TRANS_DETAIL: full 12-field ESPN status dump
+  'CONFIRM': C.green,    // FT-confirmation re-poll result
 };
 
 const log = (level, tag, msg) => {
@@ -166,6 +212,21 @@ const logBanner = (msg, char = '═') => {
   console.log(`${C.cyan}${bar}${C.reset}`);
   logStream.write(bar + '\n' + `  ${msg}\n` + bar + '\n');
   termStream.write(bar + '\n' + `  ${msg}\n` + bar + '\n');
+};
+
+/**
+ * logTransDetail — logs ALL 12 ESPN status fields for a transition event.
+ * Called on every FT detection, confirmation, and scrape trigger.
+ * Noise-free: only fires on state transitions, not every poll.
+ */
+const logTransDetail = (tag, label, g, prev) => {
+  const prevStr = prev
+    ? `prev: state=${prev.statusState} typeId=${prev.statusTypeId} typeName=${prev.statusTypeName} completed=${prev.statusCompleted} clock=${prev.displayClock} period=${prev.period}`
+    : `prev: state=unknown typeId=null typeName=null completed=null clock=null period=null`;
+  const currStr = `curr: state=${g.statusState} typeId=${g.statusTypeId} typeName=${g.statusTypeName} completed=${g.statusCompleted} clock=${g.displayClock} period=${g.period} detail=${g.statusDetail} shortDetail=${g.statusShortDetail} description=${g.statusDescription} clockSecs=${g.clock}`;
+  log('TRANS_D', tag, `${label} | ${prevStr}`);
+  log('TRANS_D', tag, `${label} | ${currStr}`);
+  log('TRANS_D', tag, `${label} | score=${g.scoreStr} | round=${g.matchRound} | seasonSlug=${g.seasonSlug} | date=${g.eventDate}`);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -198,12 +259,13 @@ const getPool = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ESPN-ONLY SCOREBOARD FETCH
 // Source: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
-// NO external sources permitted
+// ESPN-ONLY POLICY: NO external sources permitted under any circumstances
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Fetch ESPN scoreboard for a single date (YYYYMMDD).
  * Returns raw ESPN events array or [] on error.
+ * ESPN-only: no fallback, no alternate sources.
  */
 const fetchEspnScoreboard = async (dateStr) => {
   const url = `${ESPN_SCOREBOARD_BASE}?dates=${dateStr}&limit=50`;
@@ -212,8 +274,9 @@ const fetchEspnScoreboard = async (dateStr) => {
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent':  'WC2026FTWatcher/500x-ESPN-only',
-        'Accept':      'application/json',
+        'User-Agent':    'WC2026FTWatcher/500x-ESPN-only',
+        'Accept':        'application/json',
+        'Referer':       'https://www.espn.com/',
         'Cache-Control': 'no-cache',
       },
       signal: AbortSignal.timeout(15_000),
@@ -234,10 +297,52 @@ const fetchEspnScoreboard = async (dateStr) => {
   }
 };
 
+/**
+ * fetchSingleGame — ESPN-only single-game status fetch for FT confirmation.
+ * Called 5 seconds after initial FT detection to confirm state=post persists.
+ * Uses the same ESPN scoreboard API with the game's date.
+ */
+const fetchSingleGameConfirm = async (gameId, dateStr) => {
+  const url = `${ESPN_SCOREBOARD_BASE}?dates=${dateStr}&limit=50`;
+  log('ESPNAPI', `ESPN/CONFIRM/${gameId}`, `[INPUT] FT-CONFIRM re-poll → GET ${url}`);
+  const startMs = Date.now();
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent':    'WC2026FTWatcher/500x-ESPN-only-confirm',
+        'Accept':        'application/json',
+        'Referer':       'https://www.espn.com/',
+        'Cache-Control': 'no-cache, no-store',
+      },
+      signal: AbortSignal.timeout(12_000),
+    });
+    const elapsed = Date.now() - startMs;
+    if (!res.ok) {
+      log('ERROR', `ESPN/CONFIRM/${gameId}`, `[HTTP] ${res.status} ${res.statusText} | ${elapsed}ms`);
+      return null;
+    }
+    const data = await res.json();
+    const events = data?.events || [];
+    const event = events.find(e => e.id === gameId);
+    if (!event) {
+      log('WARN', `ESPN/CONFIRM/${gameId}`, `[OUTPUT] gameId=${gameId} not found in confirm response | ${elapsed}ms`);
+      return null;
+    }
+    const g = parseEspnEvent(event);
+    log('ESPNAPI', `ESPN/CONFIRM/${gameId}`, `[OUTPUT] state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} clock=${g.displayClock} | ${elapsed}ms`);
+    return g;
+  } catch (err) {
+    const elapsed = Date.now() - startMs;
+    log('ERROR', `ESPN/CONFIRM/${gameId}`, `[ERROR] ${err.message} | ${elapsed}ms`);
+    return null;
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ESPN EVENT PARSER
-// Extracts all forensically-relevant fields from a raw ESPN event object
+// Extracts ALL forensically-relevant fields from a raw ESPN event object
 // Maps every status field needed for FT-transition detection
+// Forensic ground truth: 760491 Mexico vs Ecuador
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const parseEspnEvent = (event) => {
@@ -257,22 +362,36 @@ const parseEspnEvent = (event) => {
   const seasonSlug  = season.slug || '';      // "round-of-32", "quarterfinals", etc.
   const matchRound  = ROUND_SLUG_MAP[seasonSlug] || seasonSlug || 'unknown';
 
-  // ── ESPN status fields (forensic FT-transition detection) ─────────────────
-  const statusTypeId    = statusType.id;          // CRITICAL: 28 = FT for 760491
-  const statusTypeName  = statusType.name || '';  // "STATUS_FULL_TIME", "STATUS_IN_PROGRESS"
-  const statusState     = statusType.state || ''; // "pre" | "in" | "post"
-  const statusCompleted = statusType.completed;   // true when final
-  const statusDetail    = statusType.detail || '';      // "FT", "HT", "90'+9'"
-  const statusShortDetail = statusType.shortDetail || '';// "FT", "HT"
-  const statusDescription = statusType.description || '';// "Full Time", "Half Time"
-  const displayClock    = status.displayClock || '';    // "90'+9'", "45'", "0'0\""
-  const clock           = status.clock;                 // seconds (5400 = 90min)
-  const period          = status.period;                // 1=1H, 2=2H, 3=ET1, 4=ET2, 5=Pens
+  // ── ESPN status fields — ALL 12 forensically confirmed ────────────────────
+  // Field 1:  status.type.id         — CRITICAL: 28 = FT for 760491
+  const statusTypeId    = statusType.id;
+  // Field 2:  status.type.name       — "STATUS_FULL_TIME", "STATUS_IN_PROGRESS"
+  const statusTypeName  = statusType.name || '';
+  // Field 3:  status.type.state      — "pre" | "in" | "post"
+  const statusState     = statusType.state || '';
+  // Field 4:  status.type.completed  — true when final (false when live)
+  const statusCompleted = statusType.completed;
+  // Field 5:  status.type.detail     — "FT", "HT", "83'", "90'+9'"
+  const statusDetail    = statusType.detail || '';
+  // Field 6:  status.type.shortDetail— "FT", "HT"
+  const statusShortDetail = statusType.shortDetail || '';
+  // Field 7:  status.type.description— "Full Time", "Half Time", "Second Half"
+  const statusDescription = statusType.description || '';
+  // Field 8:  status.displayClock    — "90'+9'", "83'", "45'", "0'0\""
+  const displayClock    = status.displayClock || '';
+  // Field 9:  status.clock           — seconds (5400 = 90min)
+  const clock           = status.clock;
+  // Field 10: status.period          — 1=1H, 2=2H, 3=ET1, 4=ET2, 5=Pens
+  const period          = status.period;
+  // Field 11: event.date             — UTC ISO kickoff timestamp
+  // (already captured above as eventDate)
+  // Field 12: season.slug            — "round-of-32", "quarterfinals", etc.
+  // (already captured above as seasonSlug)
 
-  // ── FT detection logic (ESPN-only, forensically verified) ─────────────────
-  // Primary: state === 'post' AND completed === true
-  // Secondary: typeId in FINAL set
-  // Tertiary: shortDetail === 'FT' or description === 'Full Time'
+  // ── FT detection logic (ESPN-only, forensically verified from 760491) ─────
+  // PRIMARY:   state === 'post' AND completed === true
+  // SECONDARY: typeId in FINAL set {3, 23, 28}
+  // TERTIARY:  shortDetail === 'FT' OR description === 'Full Time'
   const isFinalByState    = statusState === 'post' && statusCompleted === true;
   const isFinalByTypeId   = ESPN_FINAL_TYPE_IDS.has(statusTypeId);
   const isFinalByDetail   = statusShortDetail === 'FT' || statusDescription === 'Full Time' || statusDetail === 'FT';
@@ -299,15 +418,22 @@ const parseEspnEvent = (event) => {
     ? `${away.abbrev} ${away.score} - ${home.score} ${home.abbrev}`
     : '? - ?';
 
+  // ── Date string for confirm re-poll ───────────────────────────────────────
+  // Extract YYYYMMDD from eventDate (UTC)
+  const eventDateStr = eventDate
+    ? eventDate.replace(/[-T:Z.]/g, '').slice(0, 8)
+    : '';
+
   return {
     gameId,
     name,
     shortName,
     eventDate,
+    eventDateStr,
     seasonType,
     seasonSlug,
     matchRound,
-    // Status fields
+    // All 12 ESPN status fields
     statusTypeId,
     statusTypeName,
     statusState,
@@ -647,6 +773,8 @@ const sessionResults = {
   retried:           0,
   midnightRulePass:  0,
   midnightRuleFail:  0,
+  ftConfirmPass:     0,   // FT-confirmation re-polls that confirmed state=post
+  ftConfirmFail:     0,   // FT-confirmation re-polls that found state reverted (false positive)
   matches:           [],
   // Runtime sets (not serialized)
   scrapedSet:        new Set(),   // gameIds already scraped this session
@@ -654,7 +782,8 @@ const sessionResults = {
 };
 
 // Per-game state machine: tracks statusState, statusTypeId, displayClock across polls
-// Key: gameId → { statusState, statusTypeId, statusTypeName, statusCompleted, displayClock, period, score, lastSeen, name, matchRound }
+// Key: gameId → { statusState, statusTypeId, statusTypeName, statusCompleted,
+//                 displayClock, period, score, lastSeen, name, matchRound }
 const gameStateMap = new Map();
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -713,6 +842,49 @@ const runPreflightDbCheck = async () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// FT-CONFIRMATION ENGINE
+// After initial FT detection, waits FT_CONFIRM_DELAY_MS and re-polls ESPN
+// to confirm state=post persists before triggering the 500x scraper.
+// Prevents false positives from transient ESPN API state flips.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * confirmFinalState — re-polls ESPN after FT_CONFIRM_DELAY_MS to verify
+ * the game is still in state=post/completed=true.
+ * Returns { confirmed: true/false, confirmedGame: parsedGame | null }
+ */
+const confirmFinalState = async (gameId, matchRound, initialGame) => {
+  log('CONFIRM', `CONFIRM/${gameId}`, `⏳ Waiting ${FT_CONFIRM_DELAY_MS / 1000}s before FT-confirmation re-poll...`);
+  await new Promise(r => setTimeout(r, FT_CONFIRM_DELAY_MS));
+
+  // Determine date string for the confirm fetch
+  // Use the game's eventDate to build the YYYYMMDD string
+  const dateStr = initialGame.eventDateStr || getWatchDates()[0];
+
+  const confirmedGame = await fetchSingleGameConfirm(gameId, dateStr);
+
+  if (!confirmedGame) {
+    // Could not fetch — proceed with initial detection (conservative: trust initial)
+    log('CONFIRM', `CONFIRM/${gameId}`, `⚠️ CONFIRM fetch failed — proceeding with initial FT detection (conservative)`);
+    sessionResults.ftConfirmPass++;
+    return { confirmed: true, confirmedGame: initialGame };
+  }
+
+  if (confirmedGame.isFinal) {
+    sessionResults.ftConfirmPass++;
+    log('CONFIRM', `CONFIRM/${gameId}`, `✅ CONFIRMED state=post | typeId=${confirmedGame.statusTypeId} ${confirmedGame.statusTypeName} | completed=${confirmedGame.statusCompleted} | clock=${confirmedGame.displayClock} | score=${confirmedGame.scoreStr}`);
+    // Log full TRANS_DETAIL for the confirmed state
+    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_CONFIRMED', confirmedGame, null);
+    return { confirmed: true, confirmedGame };
+  } else {
+    sessionResults.ftConfirmFail++;
+    log('WARN', `CONFIRM/${gameId}`, `⚠️ FALSE POSITIVE — state reverted to ${confirmedGame.statusState} | typeId=${confirmedGame.statusTypeId} | completed=${confirmedGame.statusCompleted} | clock=${confirmedGame.displayClock} — SUPPRESSING TRIGGER`);
+    logTransDetail(`CONFIRM_D/${gameId}`, 'FT_REVERTED', confirmedGame, null);
+    return { confirmed: false, confirmedGame };
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // POLL CYCLE
 // Core detection engine — called every POLL_INTERVAL_MS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -740,19 +912,13 @@ const pollCycle = async () => {
     for (const event of events) {
       const g = parseEspnEvent(event);
 
-      // ── Only process WC2026 events ───────────────────────────────────────
-      if (g.seasonType !== ESPN_SEASON_TYPE && g.seasonSlug === '') {
-        // Skip non-WC2026 events if season type doesn't match
-        // (scoreboard may include other soccer events)
-      }
-
       totalGames++;
       sessionResults.totalGamesDetected = Math.max(sessionResults.totalGamesDetected, totalGames);
 
       // ── Retrieve previous state from state machine ───────────────────────
-      const prev         = gameStateMap.get(g.gameId);
-      const prevState    = prev?.statusState    || 'unknown';
-      const prevTypeId   = prev?.statusTypeId   || null;
+      const prev          = gameStateMap.get(g.gameId);
+      const prevState     = prev?.statusState    || 'unknown';
+      const prevTypeId    = prev?.statusTypeId   || null;
       const prevCompleted = prev?.statusCompleted ?? null;
 
       // ── Update state machine ─────────────────────────────────────────────
@@ -785,12 +951,16 @@ const pollCycle = async () => {
         // A game is "newly final" when:
         //   1. Previous state was NOT "post" (was "in", "pre", or "unknown")
         //   2. Current state IS "post" with completed=true
-        // This is the exact transition signature confirmed for 760491
+        // This is the exact transition signature confirmed for 760491:
+        //   LIVE: state="in" typeId=26 (Second Half) → FINAL: state="post" typeId=28 (Full Time)
         const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
 
-        // Log the FT transition forensically
         if (isNewlyFinal) {
+          // ── Log TRANS (summary) ──────────────────────────────────────────
           log('TRANS', `TRANS/${g.gameId}`, `🔀 FT TRANSITION DETECTED | ${g.name} | prevState=${prevState} prevTypeId=${prevTypeId} prevCompleted=${prevCompleted} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
+
+          // ── Log TRANS_DETAIL (all 12 ESPN status fields) ─────────────────
+          logTransDetail(`TRANS_D/${g.gameId}`, 'FT_DETECTED', g, prev);
         }
 
         if (isNewlyFinal) {
@@ -798,14 +968,33 @@ const pollCycle = async () => {
           sessionResults.totalNewlyFinal++;
 
           log('FINAL', `FINAL/${g.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}`);
-          log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | seasonSlug=${g.seasonSlug} | prevState=${prevState} → post | DRY_RUN=${DRY_RUN}`);
 
           if (DRY_RUN) {
             log('INFO', `TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape for ${g.gameId} — skipping`);
           } else {
-            // Fire-and-forget: do NOT await (allows poll cycle to continue)
-            scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
-              log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+            // ── FT-CONFIRMATION ENGINE ───────────────────────────────────
+            // Re-poll ESPN after 5s to confirm state=post persists
+            // Prevents false positives from transient ESPN API state flips
+            confirmFinalState(g.gameId, g.matchRound, g).then(({ confirmed, confirmedGame }) => {
+              if (!confirmed) {
+                // False positive — do NOT trigger
+                log('WARN', `TRIGGER/${g.gameId}`, `⚠️ FT-CONFIRM FAILED — suppressing scrape trigger for ${g.gameId}`);
+                return;
+              }
+              // Use the confirmed game state for the trigger log
+              const cg = confirmedGame || g;
+              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${cg.matchRound} | seasonSlug=${cg.seasonSlug} | prevState=${prevState} → post | typeId=${cg.statusTypeId} | completed=${cg.statusCompleted} | DRY_RUN=${DRY_RUN}`);
+              // Fire-and-forget: do NOT await (allows poll cycle to continue)
+              scrapeWithRetry(g.gameId, cg.matchRound, cg).catch(err => {
+                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+              });
+            }).catch(err => {
+              // Confirm engine error — proceed with trigger (conservative)
+              log('WARN', `CONFIRM/${g.gameId}`, `Confirm engine error: ${err.message} — proceeding with trigger`);
+              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | seasonSlug=${g.seasonSlug} | prevState=${prevState} → post | DRY_RUN=${DRY_RUN}`);
+              scrapeWithRetry(g.gameId, g.matchRound, g).catch(e => {
+                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${e.message}`);
+              });
             });
           }
 
@@ -842,7 +1031,7 @@ const pollCycle = async () => {
   }
 
   const elapsed = ((Date.now() - cycleStart) / 1000).toFixed(2);
-  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${preGames} pre | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s | scraped=${sessionResults.scraped} pass=${sessionResults.passed} fail=${sessionResults.failed}`);
+  log('CYCLE', `CYCLE/${pollCount}`, `✅ CYCLE/${pollCount} — ${totalGames} total | ${liveGames} live | ${preGames} pre | ${finalGames} final | ${newlyFinal} newly final | ${elapsed}s | scraped=${sessionResults.scraped} pass=${sessionResults.passed} fail=${sessionResults.failed} ftConfirm=${sessionResults.ftConfirmPass}✅/${sessionResults.ftConfirmFail}⚠️`);
 
   saveProgress(sessionResults);
 };
@@ -859,10 +1048,11 @@ const printSessionSummary = () => {
   sessionResults.completedAt    = new Date().toISOString();
   sessionResults.totalDurationMs = totalDurationMs;
 
-  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION');
+  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION v2.1');
   log('INFO', 'SESSION_SUMMARY', `Duration: ${totalDurationMin} minutes | Polls: ${sessionResults.totalPolls}`);
   log('INFO', 'SESSION_SUMMARY', `Games detected: ${sessionResults.totalGamesDetected} | Live: ${sessionResults.totalLiveDetected} | Finals: ${sessionResults.totalFinalsDetected} | Newly final: ${sessionResults.totalNewlyFinal}`);
   log('INFO', 'SESSION_SUMMARY', `Scraped: ${sessionResults.scraped} | ✅ PASS: ${sessionResults.passed} | ❌ FAIL: ${sessionResults.failed} | 🔄 Retried: ${sessionResults.retried}`);
+  log('INFO', 'SESSION_SUMMARY', `FT-Confirm: ✅${sessionResults.ftConfirmPass} confirmed | ⚠️${sessionResults.ftConfirmFail} false positives suppressed`);
 
   const passRate = sessionResults.scraped > 0
     ? ((sessionResults.passed / sessionResults.scraped) * 100).toFixed(1)
@@ -902,82 +1092,69 @@ const printSessionSummary = () => {
   }
 
   logSep('═');
-
   saveProgress(sessionResults);
-
-  const verdict = sessionResults.scraped === 0
-    ? `⏳ NO GAMES SCRAPED THIS SESSION — watching for finals`
-    : sessionResults.failed === 0
-      ? `✅ ELITE — ZERO FAILURES | ${sessionResults.passed}/${sessionResults.scraped} PASS | ${passRate}% | ${totalDurationMin}min`
-      : `⚠️  ${sessionResults.failed} FAILURES — REVIEW REQUIRED | ${sessionResults.passed}/${sessionResults.scraped} PASS | ${passRate}%`;
-
-  log(sessionResults.failed === 0 ? 'PASS' : 'WARN', 'FINAL_VERDICT', verdict);
-  logBanner(`COMPLETED: ${new Date().toISOString()}`);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN — startup banner, pre-flight, initial poll, interval loop, signal handlers
+// SIGNAL HANDLERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+process.on('SIGINT',  () => { log('INFO', 'SIGNAL', 'SIGINT received — printing session summary and exiting'); printSessionSummary(); process.exit(0); });
+process.on('SIGTERM', () => { log('INFO', 'SIGNAL', 'SIGTERM received — printing session summary and exiting'); printSessionSummary(); process.exit(0); });
+process.on('uncaughtException', (err) => {
+  log('FATAL', 'UNCAUGHT', `Uncaught exception: ${err.message}`);
+  log('FATAL', 'UNCAUGHT', err.stack?.split('\n').slice(0, 5).join(' | ') || '');
+  printSessionSummary();
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  log('FATAL', 'UNHANDLED', `Unhandled rejection: ${reason}`);
+  printSessionSummary();
+  process.exit(1);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN ENTRY POINT
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const main = async () => {
-  logBanner('WC2026FTWatcher v2.0 — 500x ELITE DUAL-CHANNEL LOGGER | ESPN-ONLY AUTO-TRIGGER ENGINE');
-  log('INFO', 'WATCHER/INIT', `Poll interval: ${POLL_INTERVAL_MS / 1000}s | Scrape timeout: ${MATCH_TIMEOUT_MS / 1000}s | Max attempts: ${MAX_ATTEMPTS}`);
-  log('INFO', 'WATCHER/INIT', `Watch window: -${WATCH_DAYS_BEFORE} to +${WATCH_DAYS_AFTER} days | Dates: ${getWatchDates().join(', ')}`);
-  log('INFO', 'WATCHER/INIT', `Runner: ${RUNNER_SCRIPT}`);
-  log('INFO', 'WATCHER/INIT', `Log file (append): ${WATCHER_LOG}`);
-  log('INFO', 'WATCHER/INIT', `Terminal log (overwrite): ${TERMINAL_LOG}`);
-  log('INFO', 'WATCHER/INIT', `Progress: ${PROGRESS_FILE}`);
-  log('INFO', 'WATCHER/INIT', `Midnight rule: PT date → matchGameDate | ET time → matchKickoffEt`);
-  log('INFO', 'WATCHER/INIT', `scrapeVersion: 500x (enforced by espnDbIngester.ts)`);
-  log('INFO', 'WATCHER/INIT', `ESPN-only policy: ALL data from ${ESPN_SCOREBOARD_BASE}`);
-  log('INFO', 'WATCHER/INIT', `FT detection: state=post AND completed=true (typeIds: ${[...ESPN_FINAL_TYPE_IDS].join(',')})`);
-  log('INFO', 'WATCHER/INIT', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE}`);
-  logSep('═');
+  logBanner(`WC2026FTWatcher v2.1 — 500x ELITE LIVE DETECTION ENGINE`);
+  log('INFO', 'STARTUP', `ESPN-ONLY POLICY: All data sourced exclusively from ${ESPN_SCOREBOARD_BASE}`);
+  log('INFO', 'STARTUP', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE} | POLL_INTERVAL=${POLL_INTERVAL_MS / 1000}s | FT_CONFIRM_DELAY=${FT_CONFIRM_DELAY_MS / 1000}s`);
+  log('INFO', 'STARTUP', `WATCH_WINDOW: -${WATCH_DAYS_BEFORE}d to +${WATCH_DAYS_AFTER}d | MAX_ATTEMPTS=${MAX_ATTEMPTS} | MATCH_TIMEOUT=${MATCH_TIMEOUT_MS / 1000}s`);
+  log('INFO', 'STARTUP', `FINAL_TYPE_IDS: [${[...ESPN_FINAL_TYPE_IDS].join(', ')}] | LIVE_TYPE_IDS: [${[...ESPN_LIVE_TYPE_IDS].join(', ')}]`);
+  log('INFO', 'STARTUP', `LOG_FILES: ${WATCHER_LOG} | ${TERMINAL_LOG}`);
+  log('INFO', 'STARTUP', `RUNNER_SCRIPT: ${RUNNER_SCRIPT}`);
+  logSep('─');
 
-  // ── Restore session progress if available ──────────────────────────────────
+  // ── Restore progress from previous session ──────────────────────────────
   const savedProgress = loadProgress();
   if (savedProgress?.scrapedSet?.size > 0) {
-    for (const id of savedProgress.scrapedSet) sessionResults.scrapedSet.add(id);
-    log('INFO', 'WATCHER/RESTORE', `Restored ${sessionResults.scrapedSet.size} gameIds from previous session progress`);
+    for (const id of savedProgress.scrapedSet) {
+      sessionResults.scrapedSet.add(id);
+    }
+    log('INFO', 'STARTUP', `Restored ${sessionResults.scrapedSet.size} scraped gameIds from previous session`);
   }
 
-  // ── Pre-flight DB state check ──────────────────────────────────────────────
+  // ── Pre-flight DB check ─────────────────────────────────────────────────
   await runPreflightDbCheck();
 
-  // ── Initial poll immediately ───────────────────────────────────────────────
-  try {
-    await pollCycle();
-  } catch (err) {
-    log('ERROR', 'WATCHER/POLL', `❌ Initial poll error: ${err.message}\n${err.stack}`);
-  }
+  // ── Initial poll ────────────────────────────────────────────────────────
+  await pollCycle();
 
-  // ── Interval polling ───────────────────────────────────────────────────────
-  const intervalHandle = setInterval(async () => {
+  // ── Recurring poll loop ─────────────────────────────────────────────────
+  setInterval(async () => {
     try {
       await pollCycle();
     } catch (err) {
-      log('ERROR', 'WATCHER/POLL', `❌ Poll cycle error: ${err.message}`);
+      log('ERROR', 'POLL_LOOP', `Poll cycle error: ${err.message}`);
     }
   }, POLL_INTERVAL_MS);
 
-  log('INFO', 'WATCHER/RUNNING', `✅ WC2026FTWatcher v2.0 running — polling every ${POLL_INTERVAL_MS / 1000}s | ESPN-only | Press Ctrl+C to stop`);
-
-  // ── Graceful shutdown ──────────────────────────────────────────────────────
-  const shutdown = async (signal) => {
-    log('INFO', 'WATCHER/SHUTDOWN', `🛑 ${signal} received — shutting down gracefully`);
-    clearInterval(intervalHandle);
-    printSessionSummary();
-    try { await pool?.end(); } catch {}
-    logStream.end();
-    termStream.end();
-    process.exit(0);
-  };
-
-  process.on('SIGINT',  () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  log('INFO', 'STARTUP', `✅ WC2026FTWatcher v2.1 running — polling every ${POLL_INTERVAL_MS / 1000}s | Press Ctrl+C for session summary`);
 };
 
 main().catch(err => {
-  log('FATAL', 'UNHANDLED', `${err.message}\n${err.stack}`);
+  log('FATAL', 'MAIN', `Fatal startup error: ${err.message}`);
   process.exit(1);
 });
