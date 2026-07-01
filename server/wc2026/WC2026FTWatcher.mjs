@@ -1,8 +1,12 @@
 /**
- * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.2
+ * WC2026FTWatcher.mjs — WC2026 Live Match Final-State Watcher v2.3
  * ══════════════════════════════════════════════════════════════════
  * ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE | ESPN-ONLY
  * 44-SCENARIO TEST MATRIX | DAY_ADVANCE ROLLING WINDOW ENGINE
+ * ESPN_LIVE_STATUS_NAMES DUAL-PATH (typeId + name-based fallback)
+ * STATUS_EXTRA_TIME_HALF_TIME | STATUS_PENALTY name alias
+ * fixtureStatus classification log | hasWinner/isTdy/statusPrimary
+ * isSwapped orientation note | statusDesc in every LIVE log line
  *
  * Architecture mirrors batchScrapeR32.mjs at every layer:
  *   - Elite dual-channel logger: terminal (ANSI) + two file streams
@@ -16,6 +20,21 @@
  *   - Retry engine: up to 3 attempts with 10s/20s/30s backoff
  *   - Per-cycle state machine: tracks every game's statusState
  *   - Session summary on SIGINT/SIGTERM
+ *
+ * NEW IN v2.3 — LIVE SCRAPER INTEGRATION (from wc2026EspnResultsIngester.ts):
+ *   - ESPN_LIVE_STATUS_NAMES name-based fallback (secondary path alongside typeId):
+ *       STATUS_FIRST_HALF, STATUS_HALFTIME, STATUS_SECOND_HALF,
+ *       STATUS_EXTRA_TIME, STATUS_EXTRA_TIME_HALF_TIME, STATUS_PENALTY,
+ *       STATUS_IN_PROGRESS — prevents silent skip if ESPN changes a typeId
+ *   - STATUS_EXTRA_TIME_HALF_TIME: new state — ET halftime break
+ *       Classified as LIVE, logs ET_HT_ACTIVE, tightens poll to 15s
+ *   - STATUS_PENALTY name fallback: alias for typeId=24 (isShootout detection)
+ *   - fixtureStatus classification: logs FT|LIVE|PRE|SKIP on every event
+ *   - statusDesc in every LIVE log line (description field)
+ *   - hasWinner flag as tertiary FT confirmation signal
+ *   - isTdy (isToday) flag logged per event in CYCLE summary
+ *   - statusPrimary from gmStrp logged when present
+ *   - isSwapped orientation note on FINAL detection
  *
  * NEW IN v2.2 — 44-SCENARIO ENGINE:
  *   - DAY_ADVANCE rolling window: once all games on earliest date are final,
@@ -160,12 +179,26 @@ const ESPN_LEAGUE_SLUG        = 'fifa.world';
 const ESPN_FINAL_TYPE_IDS     = new Set([3, 23, 28]);    // STATUS_FINAL, STATUS_FULL_TIME (×2)
 const ESPN_CANCELED_TYPE_IDS  = new Set([7]);             // STATUS_CANCELED — NEVER trigger scraper
 const ESPN_FINAL_STATES       = new Set(['post']);
-const ESPN_LIVE_TYPE_IDS      = new Set([2, 17, 22, 24, 26]); // in-progress, ET, halftime, shootout, 2nd half
+const ESPN_LIVE_TYPE_IDS      = new Set([2, 17, 22, 24, 25, 26]); // in-progress, ET, ET-HT, halftime, shootout, 2nd half
 const ESPN_LIVE_STATES        = new Set(['in']);
 const ESPN_ET_TYPE_IDS        = new Set([17]);            // STATUS_EXTRA_TIME
+const ESPN_ET_HT_TYPE_IDS     = new Set([25]);            // STATUS_EXTRA_TIME_HALF_TIME (ET halftime break)
 const ESPN_PENS_TYPE_IDS      = new Set([24]);            // STATUS_SHOOTOUT
 const ESPN_POSTPONED_TYPE_IDS = new Set([6]);             // STATUS_POSTPONED
 const ESPN_DELAYED_TYPE_IDS   = new Set([9]);             // STATUS_DELAYED
+
+// v2.3: ESPN_LIVE_STATUS_NAMES — name-based fallback (from wc2026EspnResultsIngester.ts)
+// Prevents silent skip if ESPN changes a typeId but keeps the name stable.
+// Root cause of original STATUS_SECOND_HALF silent skip: name not in set.
+const ESPN_LIVE_STATUS_NAMES = new Set([
+  'STATUS_IN_PROGRESS',
+  'STATUS_FIRST_HALF',
+  'STATUS_HALFTIME',
+  'STATUS_SECOND_HALF',
+  'STATUS_EXTRA_TIME',
+  'STATUS_EXTRA_TIME_HALF_TIME',
+  'STATUS_PENALTY',          // name alias for typeId=24 (shootout)
+]);
 
 // Expected matchRound values by ESPN season.slug
 const ROUND_SLUG_MAP = {
@@ -226,6 +259,8 @@ const LEVEL_COLORS = {
   'ET_ACT ': C.orange,   // STATUS_EXTRA_TIME active
   'PENS_AC': C.orange,   // STATUS_SHOOTOUT active
   'WATCH  ': C.teal,     // Game enters STATUS_IN_PROGRESS (id=2)
+  'ET_HT  ': C.orange,   // STATUS_EXTRA_TIME_HALF_TIME (ET halftime break)
+  'FIXTURE': C.gray,     // fixtureStatus classification log (FT|LIVE|PRE|SKIP)
 };
 
 const log = (level, tag, msg) => {
@@ -308,7 +343,7 @@ const fetchEspnScoreboard = async (dateStr) => {
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent':    'WC2026FTWatcher/500x-v2.2-ESPN-only',
+        'User-Agent':    'WC2026FTWatcher/500x-v2.3-ESPN-only',
         'Accept':        'application/json',
         'Referer':       'https://www.espn.com/',
         'Cache-Control': 'no-cache',
@@ -349,7 +384,7 @@ const fetchSingleGameConfirm = async (gameId, dateStr, confirmNum = 1) => {
   try {
     const res = await fetch(url, {
       headers: {
-        'User-Agent':    `WC2026FTWatcher/500x-v2.2-confirm${confirmNum}`,
+        'User-Agent':    `WC2026FTWatcher/500x-v2.3-confirm${confirmNum}`,
         'Accept':        'application/json',
         'Referer':       'https://www.espn.com/',
         'Cache-Control': 'no-cache, no-store',
@@ -421,16 +456,39 @@ const parseEspnEvent = (event) => {
 
   const isLiveByState     = statusState === 'in';
   const isLiveByTypeId    = ESPN_LIVE_TYPE_IDS.has(statusTypeId);
+  // v2.3: name-based fallback — evaluated AFTER isLiveByName is computed below
   const isLive            = isLiveByState || isLiveByTypeId;
 
   const isScheduled       = statusState === 'pre' && !statusCompleted;
   const isPostponed       = ESPN_POSTPONED_TYPE_IDS.has(statusTypeId);
   const isDelayed         = ESPN_DELAYED_TYPE_IDS.has(statusTypeId);
   const isExtraTime       = ESPN_ET_TYPE_IDS.has(statusTypeId);
-  const isShootout        = ESPN_PENS_TYPE_IDS.has(statusTypeId);
-  const isInProgress      = String(statusTypeId) === '2';
-  const isHalftime        = String(statusTypeId) === '22';
-  const isSecondHalf      = String(statusTypeId) === '26';
+  const isExtraTimeHT     = ESPN_ET_HT_TYPE_IDS.has(statusTypeId) || statusTypeName === 'STATUS_EXTRA_TIME_HALF_TIME';
+  const isShootout        = ESPN_PENS_TYPE_IDS.has(statusTypeId) || statusTypeName === 'STATUS_PENALTY';
+  const isInProgress      = String(statusTypeId) === '2' || statusTypeName === 'STATUS_IN_PROGRESS';
+  const isHalftime        = String(statusTypeId) === '22' || statusTypeName === 'STATUS_HALFTIME';
+  const isSecondHalf      = String(statusTypeId) === '26' || statusTypeName === 'STATUS_SECOND_HALF';
+  const isFirstHalf       = statusTypeName === 'STATUS_FIRST_HALF';
+
+  // v2.3: name-based LIVE fallback (secondary path alongside typeId)
+  // Prevents silent skip if ESPN changes a typeId but keeps the name stable
+  const isLiveByName      = ESPN_LIVE_STATUS_NAMES.has(statusTypeName);
+
+  // v2.3: hasWinner — tertiary FT confirmation signal (from gmStrp)
+  const hasWinner         = (comp.competitors || []).some(c => c.winner === true);
+
+  // v2.3: isTdy — isToday flag (from espn_deep_audit gmStrp.isTdy)
+  const eventDateUTC      = eventDate ? eventDate.slice(0, 10) : '';
+  const todayUTC          = new Date().toISOString().slice(0, 10);
+  const isTdy             = eventDateUTC === todayUTC;
+
+  // v2.3: statusPrimary — from gmStrp.statusPrimary if present
+  const statusPrimary     = event.statusPrimary || comp.statusPrimary || null;
+
+  // v2.3: isSwapped — orientation flag (from wc2026EspnResultsIngester.ts)
+  // ESPN sometimes lists home team as index[0] instead of index[1]
+  const homeIdx           = (comp.competitors || []).findIndex(c => c.homeAway === 'home');
+  const isSwapped         = homeIdx === 0; // true if home is first in array (non-standard)
 
   const competitors = (comp.competitors || []).map(c => ({
     id:       c.id,
@@ -451,16 +509,28 @@ const parseEspnEvent = (event) => {
     ? eventDate.replace(/[-T:Z.]/g, '').slice(0, 8)
     : '';
 
+  // v2.3: fixtureStatus classification (from wc2026EspnResultsIngester.ts)
+  // FT = completed=true | LIVE = in-progress by any detection path | PRE = scheduled | SKIP = none
+  const isLiveFinal = isLiveByState || isLiveByTypeId || isLiveByName;
+  // v2.3: canceled must be SKIP even if ESPN marks completed=true
+  const fixtureStatus = (statusCompleted === true && !isCanceled) ? 'FT'
+    : isLiveFinal ? 'LIVE'
+    : statusState === 'pre' ? 'PRE'
+    : 'SKIP';
+
   return {
     gameId, name, shortName, eventDate, eventDateStr,
     seasonType, seasonSlug, matchRound,
     statusTypeId, statusTypeName, statusState, statusCompleted,
     statusDetail, statusShortDetail, statusDescription,
     displayClock, clock, period,
-    isFinal, isLive, isScheduled, isCanceled,
+    isFinal, isLive: isLiveFinal, isScheduled, isCanceled,
     isFinalByState, isFinalByTypeId,
-    isPostponed, isDelayed, isExtraTime, isShootout,
-    isInProgress, isHalftime, isSecondHalf,
+    isPostponed, isDelayed, isExtraTime, isExtraTimeHT, isShootout,
+    isInProgress, isHalftime, isSecondHalf, isFirstHalf,
+    isLiveByState, isLiveByTypeId, isLiveByName,
+    hasWinner, isTdy, statusPrimary, isSwapped,
+    fixtureStatus,
     competitors, home, away, scoreStr,
   };
 };
@@ -690,6 +760,15 @@ const handleSpecialStatus = (g, prev) => {
   if (g.isInProgress && !watchingSet.has(g.gameId)) {
     watchingSet.add(g.gameId);
     log('WATCH', `WATCH/${g.gameId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate} | ${g.scoreStr}`);
+  }
+
+  // ── EXTRA_TIME_HALF_TIME (id=25 / name=STATUS_EXTRA_TIME_HALF_TIME) ───────
+  if (g.isExtraTimeHT) {
+    if (!etActiveMap.has(g.gameId)) {
+      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'ET_HT' });
+      log('ET_HT', `ET_HT/${g.gameId}`, `⚡ ET_HT_ACTIVE — STATUS_EXTRA_TIME_HALF_TIME | ${g.name} | typeId=${g.statusTypeId} name=${g.statusTypeName} | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    }
+    return { handled: false, tightenPoll: true };
   }
 
   // ── EXTRA_TIME (id=17) ───────────────────────────────────────────────────
@@ -1183,11 +1262,14 @@ const pollCycle = async () => {
       if (special.handled) continue;
 
       // ── LIVE game logging ──────────────────────────────────────────────────
+      // v2.3: fixtureStatus classification log — every event, every cycle
+      log('FIXTURE', `FIXTURE/${g.gameId}`, `[CLASSIFY] ${g.name} | fixtureStatus=${g.fixtureStatus} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} | isTdy=${g.isTdy} hasWinner=${g.hasWinner}${g.statusPrimary ? ` statusPrimary=${g.statusPrimary}` : ''} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
+
       if (g.isLive) {
         liveGames++;
         sessionResults.totalLiveDetected = Math.max(sessionResults.totalLiveDetected, liveGames);
-        const liveType = g.isExtraTime ? 'ET' : g.isShootout ? 'PENS' : g.isHalftime ? 'HT' : g.isSecondHalf ? '2H' : 'LIVE';
-        log('LIVE', `LIVE/${g.gameId}`, `⚽ [${liveType}] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
+        const liveType = g.isExtraTimeHT ? 'ET_HT' : g.isExtraTime ? 'ET' : g.isShootout ? 'PENS' : g.isHalftime ? 'HT' : g.isFirstHalf ? '1H' : g.isSecondHalf ? '2H' : g.isInProgress ? 'IP' : 'LIVE';
+        log('LIVE', `LIVE/${g.gameId}`, `⚽ [${liveType}] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState} | desc=${g.statusDescription} | isTdy=${g.isTdy}`);
       }
 
       // ── FINAL game processing ──────────────────────────────────────────────
@@ -1209,7 +1291,11 @@ const pollCycle = async () => {
           newlyFinal++;
           sessionResults.totalNewlyFinal++;
 
-          log('FINAL', `FINAL/${g.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}`);
+          // v2.3: isSwapped orientation note on FINAL detection
+          const swapNote = g.isSwapped ? ' | ⚠️ isSwapped=true (home at idx[0])' : ' | isSwapped=false';
+          // v2.3: hasWinner as tertiary FT confirmation signal
+          const winnerNote = g.hasWinner ? ' | hasWinner=true ✅' : ' | hasWinner=false ⚠️';
+          log('FINAL', `FINAL/${g.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}${swapNote}${winnerNote}`);
 
           if (DRY_RUN) {
             log('INFO', `TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape for ${g.gameId} — skipping`);
@@ -1292,7 +1378,7 @@ const printSessionSummary = () => {
   sessionResults.completedAt    = new Date().toISOString();
   sessionResults.totalDurationMs = totalDurationMs;
 
-  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION v2.2');
+  logBanner('WC2026FTWatcher SESSION SUMMARY — 500x EDITION v2.3');
   log('INFO', 'SESSION_SUMMARY', `Duration: ${totalDurationMin} minutes | Polls: ${sessionResults.totalPolls}`);
   log('INFO', 'SESSION_SUMMARY', `Games detected: ${sessionResults.totalGamesDetected} | Live: ${sessionResults.totalLiveDetected} | Finals: ${sessionResults.totalFinalsDetected} | Newly final: ${sessionResults.totalNewlyFinal}`);
   log('INFO', 'SESSION_SUMMARY', `Scraped: ${sessionResults.scraped} | ✅ PASS: ${sessionResults.passed} | ❌ FAIL: ${sessionResults.failed} | 🔄 Retried: ${sessionResults.retried}`);
@@ -1314,7 +1400,7 @@ const printSessionSummary = () => {
   logSep('─');
 
   if (sessionResults.matches.length > 0) {
-    const tableHeader = `\n=== SCRAPED MATCHES TABLE (WC2026FTWatcher Session v2.2) ===`;
+    const tableHeader = `\n=== SCRAPED MATCHES TABLE (WC2026FTWatcher Session v2.3) ===`;
     console.log(`${C.bold}${tableHeader}${C.reset}`);
     logStream.write(tableHeader + '\n');
     termStream.write(tableHeader + '\n');
@@ -1380,9 +1466,11 @@ const schedulePoll = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const main = async () => {
-  logBanner(`WC2026FTWatcher v2.2 — 500x ELITE LIVE DETECTION ENGINE | 44-SCENARIO`);
+  logBanner(`WC2026FTWatcher v2.3 — 500x ELITE LIVE DETECTION ENGINE | 44-SCENARIO | ESPN_LIVE_STATUS_NAMES`);
   log('INFO', 'STARTUP', `ESPN-ONLY POLICY: All data sourced exclusively from ${ESPN_SCOREBOARD_BASE}`);
   log('INFO', 'STARTUP', `DRY_RUN=${DRY_RUN} | FORCE_RESCRAPE=${FORCE_RESCRAPE} | POLL_INTERVAL=${POLL_INTERVAL_MS / 1000}s | ET_POLL=${POLL_INTERVAL_ET_MS / 1000}s | FT_CONFIRM_DELAY=${FT_CONFIRM_DELAY_MS / 1000}s+${FT_CONFIRM2_DELAY_MS / 1000}s`);
+  log('INFO', 'STARTUP', `ESPN_LIVE_STATUS_NAMES (v2.3 name-based fallback): [${[...ESPN_LIVE_STATUS_NAMES].join(', ')}]`);
+  log('INFO', 'STARTUP', `ET_HT_TYPE_IDS: [${[...ESPN_ET_HT_TYPE_IDS].join(', ')}] (STATUS_EXTRA_TIME_HALF_TIME)`);
   log('INFO', 'STARTUP', `FINAL_TYPE_IDS: [${[...ESPN_FINAL_TYPE_IDS].join(', ')}] | CANCELED_TYPE_IDS: [${[...ESPN_CANCELED_TYPE_IDS].join(', ')}] | LIVE_TYPE_IDS: [${[...ESPN_LIVE_TYPE_IDS].join(', ')}]`);
   log('INFO', 'STARTUP', `ET_TYPE_IDS: [${[...ESPN_ET_TYPE_IDS].join(', ')}] | PENS_TYPE_IDS: [${[...ESPN_PENS_TYPE_IDS].join(', ')}] | POSTPONED: [${[...ESPN_POSTPONED_TYPE_IDS].join(', ')}] | DELAYED: [${[...ESPN_DELAYED_TYPE_IDS].join(', ')}]`);
   log('INFO', 'STARTUP', `MAX_ATTEMPTS=${MAX_ATTEMPTS} | MATCH_TIMEOUT=${MATCH_TIMEOUT_MS / 1000}s | POSTPONED_WINDOW_DAYS=${POSTPONED_WINDOW_DAYS} | ET_EXTENDED_WARN=${ET_EXTENDED_WARN_MS / 60000}min`);
@@ -1418,7 +1506,7 @@ const main = async () => {
   // ── Dynamic poll loop ───────────────────────────────────────────────────
   schedulePoll();
 
-  log('INFO', 'STARTUP', `✅ WC2026FTWatcher v2.2 running — dynamic poll ${POLL_INTERVAL_MS / 1000}s (${POLL_INTERVAL_ET_MS / 1000}s during ET/pens) | Press Ctrl+C for session summary`);
+  log('INFO', 'STARTUP', `✅ WC2026FTWatcher v2.3 running — dynamic poll ${POLL_INTERVAL_MS / 1000}s (${POLL_INTERVAL_ET_MS / 1000}s during ET/pens/ET_HT) | Press Ctrl+C for session summary`);
 };
 
 main().catch(err => {
