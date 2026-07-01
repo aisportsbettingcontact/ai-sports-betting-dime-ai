@@ -1,0 +1,1374 @@
+════════════════════════════════════════════════════════════════════════════════
+  WC2026FTWatcher v1.0 — ELITE DUAL-CHANNEL LOGGER | 500x AUTO-TRIGGER ENGINE
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Poll interval: 30s | Scrape timeout: 420s | Max attempts: 2
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Watch dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Runner: /home/ubuntu/ai-sports-betting/server/wc2026/espnIngest.test.live.mjs
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Log file: /home/ubuntu/ai-sports-betting/.manus-logs/WC2026FTWatcher.txt
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Progress: /home/ubuntu/ai-sports-betting/.manus-logs/WC2026FTWatcher_progress.json
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] Midnight rule: PT date → matchGameDate | ET time → matchKickoffEt
+[2026-07-01T04:18:40.685Z] [INFO   ] [WATCHER/INIT          ] scrapeVersion: 500x (enforced by espnDbIngester.ts)
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-01T04:18:40.686Z] [POLL   ] [CYCLE/1               ] 🔄 Poll #1 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:18:42.183Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:18:42.184Z] [FINAL  ] [FINAL/760490          ] 🏁 GAME FINAL — NEWLY DETECTED | Norway at Ivory Coast | NOR 2 - 1 CIV | FT
+[2026-07-01T04:18:42.184Z] [TRIGGER] [TRIGGER/760490        ] 🚀 gameId=760490 → matchRound=round-of-32 | prevState=unknown → post
+[2026-07-01T04:18:42.185Z] [INFO   ] [SCRAPE_760490         ] [ATTEMPT 1] Spawning 500x scraper → gameId=760490 matchRound=round-of-32
+[2026-07-01T04:18:42.190Z] [FINAL  ] [FINAL/760492          ] 🏁 GAME FINAL — NEWLY DETECTED | Sweden at France | SWE 0 - 3 FRA | FT
+[2026-07-01T04:18:42.190Z] [TRIGGER] [TRIGGER/760492        ] 🚀 gameId=760492 → matchRound=round-of-32 | prevState=unknown → post
+[2026-07-01T04:18:42.190Z] [INFO   ] [SCRAPE_760492         ] [ATTEMPT 1] Spawning 500x scraper → gameId=760492 matchRound=round-of-32
+[2026-07-01T04:18:42.192Z] [FINAL  ] [FINAL/760491          ] 🏁 GAME FINAL — NEWLY DETECTED | Ecuador at Mexico | ECU 0 - 2 MEX | FT
+[2026-07-01T04:18:42.192Z] [TRIGGER] [TRIGGER/760491        ] 🚀 gameId=760491 → matchRound=round-of-32 | prevState=unknown → post
+[2026-07-01T04:18:42.192Z] [INFO   ] [SCRAPE_760491         ] [ATTEMPT 1] Spawning 500x scraper → gameId=760491 matchRound=round-of-32
+[2026-07-01T04:18:42.999Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+  [RUNNER] ════════════════════════════════════════════════════════════
+  [RUNNER]   ESPN WC2026 INGEST RUNNER — gameId=760491
+  [RUNNER] ════════════════════════════════════════════════════════════
+  [RUNNER] ════════════════════════════════════════════════════════════
+  [RUNNER]   ESPN WC2026 INGEST RUNNER — gameId=760490
+  [RUNNER] ════════════════════════════════════════════════════════════
+  [RUNNER] ════════════════════════════════════════════════════════════
+  [RUNNER]   ESPN WC2026 INGEST RUNNER — gameId=760492
+  [RUNNER] ════════════════════════════════════════════════════════════
+[2026-07-01T04:18:43.640Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+  [INGEST] [SCRAPE] Starting scrape for gameId=760491
+  [1m[94m  PHASE: BROWSER_LAUNCH[0m
+  [INGEST] [SCRAPE] Starting scrape for gameId=760490
+  [1m[94m  PHASE: BROWSER_LAUNCH[0m
+  [INGEST] [SCRAPE] Starting scrape for gameId=760492
+  [1m[94m  PHASE: BROWSER_LAUNCH[0m
+  [2m2026-07-01 04:18:44.011[0m [94m[1m[STEP  ][0m [2m[BROWSER_LAUNCH][0m [94m▶[0m ◀ END PHASE [BROWSER_LAUNCH] — 323ms
+  [1m[94m  PHASE: FETCH_SEASON_SLUG[0m
+  [2m2026-07-01 04:18:44.025[0m [94m[1m[STEP  ][0m [2m[BROWSER_LAUNCH][0m [94m▶[0m ◀ END PHASE [BROWSER_LAUNCH] — 318ms
+  [1m[94m  PHASE: FETCH_SEASON_SLUG[0m
+  [2m2026-07-01 04:18:44.058[0m [94m[1m[STEP  ][0m [2m[BROWSER_LAUNCH][0m [94m▶[0m ◀ END PHASE [BROWSER_LAUNCH] — 303ms
+  [1m[94m  PHASE: FETCH_SEASON_SLUG[0m
+[2026-07-01T04:18:44.191Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:18:44.192Z] [CYCLE  ] [CYCLE/1               ] ✅ CYCLE/1 — 12 total | 0 live | 3 final | 3 newly final | 3.51s
+[2026-07-01T04:18:44.192Z] [INFO   ] [WATCHER/RUNNING       ] ✅ WC2026FTWatcher running — polling every 30s | Press Ctrl+C to stop
+  [2m2026-07-01 04:18:45.845[0m [92m[1m[VERIFY][0m [2m[FETCH_SEASON_SLUG][0m [92m✔[0m [92mPASS[0m — SEASON_SLUG: ESPN round label fetched
+  [2m2026-07-01 04:18:45.846[0m [94m[1m[STEP  ][0m [2m[FETCH_SEASON_SLUG][0m [94m▶[0m ◀ END PHASE [FETCH_SEASON_SLUG] — 1788ms
+  [1m[94m  PHASE: LOAD_PLAYER_STATS[0m
+  [2m2026-07-01 04:18:46.133[0m [92m[1m[VERIFY][0m [2m[FETCH_SEASON_SLUG][0m [92m✔[0m [92mPASS[0m — SEASON_SLUG: ESPN round label fetched
+  [2m2026-07-01 04:18:46.134[0m [94m[1m[STEP  ][0m [2m[FETCH_SEASON_SLUG][0m [94m▶[0m ◀ END PHASE [FETCH_SEASON_SLUG] — 2123ms
+  [1m[94m  PHASE: LOAD_PLAYER_STATS[0m
+  [2m2026-07-01 04:18:46.262[0m [92m[1m[VERIFY][0m [2m[FETCH_SEASON_SLUG][0m [92m✔[0m [92mPASS[0m — SEASON_SLUG: ESPN round label fetched
+  [2m2026-07-01 04:18:46.263[0m [94m[1m[STEP  ][0m [2m[FETCH_SEASON_SLUG][0m [94m▶[0m ◀ END PHASE [FETCH_SEASON_SLUG] — 2238ms
+  [1m[94m  PHASE: LOAD_PLAYER_STATS[0m
+  [2m2026-07-01 04:18:59.751[0m [92m[1m[VERIFY][0m [2m[LOAD_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from player-stats page
+  [2m2026-07-01 04:19:00.528[0m [94m[1m[STEP  ][0m [2m[LOAD_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_PLAYER_STATS] — 14682ms
+  [1m[94m  PHASE: LOAD_MATCH_STATS[0m
+  [2m2026-07-01 04:19:02.288[0m [92m[1m[VERIFY][0m [2m[LOAD_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from player-stats page
+  [2m2026-07-01 04:19:02.858[0m [94m[1m[STEP  ][0m [2m[LOAD_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_PLAYER_STATS] — 16595ms
+  [1m[94m  PHASE: LOAD_MATCH_STATS[0m
+  [2m2026-07-01 04:19:07.862[0m [92m[1m[VERIFY][0m [2m[LOAD_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from player-stats page
+  [2m2026-07-01 04:19:08.429[0m [94m[1m[STEP  ][0m [2m[LOAD_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_PLAYER_STATS] — 22295ms
+  [1m[94m  PHASE: LOAD_MATCH_STATS[0m
+[2026-07-01T04:19:14.198Z] [POLL   ] [CYCLE/2               ] 🔄 Poll #2 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:19:15.451Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:19:15.974Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:19:16.495Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:19:17.073Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:19:17.073Z] [CYCLE  ] [CYCLE/2               ] ✅ CYCLE/2 — 12 total | 0 live | 3 final | 0 newly final | 2.88s
+  [2m2026-07-01 04:19:17.668[0m [92m[1m[VERIFY][0m [2m[LOAD_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from matchstats page
+  [2m2026-07-01 04:19:18.480[0m [94m[1m[STEP  ][0m [2m[LOAD_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_MATCH_STATS] — 15622ms
+  [1m[94m  PHASE: LOAD_TEAM_STATS[0m
+  [2m2026-07-01 04:19:21.604[0m [92m[1m[VERIFY][0m [2m[LOAD_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from matchstats page
+  [2m2026-07-01 04:19:22.016[0m [94m[1m[STEP  ][0m [2m[LOAD_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_MATCH_STATS] — 21488ms
+  [1m[94m  PHASE: LOAD_TEAM_STATS[0m
+  [2m2026-07-01 04:19:29.432[0m [92m[1m[VERIFY][0m [2m[LOAD_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from matchstats page
+  [2m2026-07-01 04:19:29.824[0m [94m[1m[STEP  ][0m [2m[LOAD_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_MATCH_STATS] — 21395ms
+  [1m[94m  PHASE: LOAD_TEAM_STATS[0m
+  [2m2026-07-01 04:19:32.289[0m [92m[1m[VERIFY][0m [2m[LOAD_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from team-stats page
+  [2m2026-07-01 04:19:32.289[0m [94m[1m[STEP  ][0m [2m[LOAD_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_TEAM_STATS] — 13809ms
+  [1m[94m  PHASE: PARSE_ALL[0m
+  [2m2026-07-01 04:19:32.291[0m [94m[1m[STEP  ][0m [2m[PARSE_ALL][0m [94m▶[0m ◀ END PHASE [PARSE_ALL] — 2ms
+  [1m[94m  PHASE: PARSE_PLAYER_STATS[0m
+  [2m2026-07-01 04:19:32.292[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [2m2026-07-01 04:19:32.292[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: 2 teams present in bxscr
+  [2m2026-07-01 04:19:32.295[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:32.295[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:32.296[0m [94m[1m[STEP  ][0m [2m[PARSE_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_PLAYER_STATS] — 5ms
+  [1m[94m  PHASE: PARSE_LINEUPS[0m
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — LINEUPS: 2 teams present
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:32.296[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:32.296[0m [94m[1m[STEP  ][0m [2m[PARSE_LINEUPS][0m [94m▶[0m ◀ END PHASE [PARSE_LINEUPS] — 0ms
+  [1m[94m  PHASE: PARSE_GAME_STRIP[0m
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:32.297[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home goal scorers present
+  [2m2026-07-01 04:19:32.297[0m [94m[1m[STEP  ][0m [2m[PARSE_GAME_STRIP][0m [94m▶[0m ◀ END PHASE [PARSE_GAME_STRIP] — 1ms
+  [1m[94m  PHASE: PARSE_MATCH_STATS[0m
+  [2m2026-07-01 04:19:32.298[0m [94m[1m[STEP  ][0m [2m[PARSE_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_MATCH_STATS] — 1ms
+  [1m[94m  PHASE: SECTION_TEAM_STATS[0m
+  [2m2026-07-01 04:19:32.298[0m [92m[1m[VERIFY][0m [2m[SECTION_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: expected 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:32.298[0m [94m[1m[STEP  ][0m [2m[SECTION_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_MATCH_STATS[0m
+  [2m2026-07-01 04:19:32.298[0m [92m[1m[VERIFY][0m [2m[SECTION_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: expected 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:32.298[0m [94m[1m[STEP  ][0m [2m[SECTION_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_MATCH_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_SHOT_MAP[0m
+  [2m2026-07-01 04:19:32.304[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:32.304[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x coordinate
+  [2m2026-07-01 04:19:32.304[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:32.304[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:32.304[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOT_MAP][0m [94m▶[0m ◀ END PHASE [SECTION_SHOT_MAP] — 6ms
+  [1m[94m  PHASE: SECTION_GAME_ODDS[0m
+  [2m2026-07-01 04:19:32.304[0m [92m[1m[VERIFY][0m [2m[SECTION_GAME_ODDS][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: extracted successfully
+  [2m2026-07-01 04:19:32.305[0m [94m[1m[STEP  ][0m [2m[SECTION_GAME_ODDS][0m [94m▶[0m ◀ END PHASE [SECTION_GAME_ODDS] — 1ms
+  [1m[94m  PHASE: PARSE_TEAM_STATS[0m
+  [2m2026-07-01 04:19:32.305[0m [94m[1m[STEP  ][0m [2m[PARSE_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_DEFERRED_TABLES[0m
+  [2m2026-07-01 04:19:32.305[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFERRED_TABLES][0m [92m✔[0m [92mPASS[0m — DEFERRED_TABLES: expected 5 sections in tmStatsTbls
+  [2m2026-07-01 04:19:32.306[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFERRED_TABLES][0m [94m▶[0m ◀ END PHASE [SECTION_DEFERRED_TABLES] — 1ms
+  [1m[94m  PHASE: SECTION_EXPECTED_GOALS[0m
+  [2m2026-07-01 04:19:32.306[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: expected 4 rows (xG/xGOpenPlay/xGSetPlay/xGOT)
+  [2m2026-07-01 04:19:32.306[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:32.306[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:32.306[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:32.306[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:32.306[0m [94m[1m[STEP  ][0m [2m[SECTION_EXPECTED_GOALS][0m [94m▶[0m ◀ END PHASE [SECTION_EXPECTED_GOALS] — 0ms
+  [1m[94m  PHASE: SECTION_GOALKEEPING[0m
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: expected 5 rows
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: saves present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: shots faced present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: goal kicks present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: high claims present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: penalty kicks saved present
+  [2m2026-07-01 04:19:32.307[0m [94m[1m[STEP  ][0m [2m[SECTION_GOALKEEPING][0m [94m▶[0m ◀ END PHASE [SECTION_GOALKEEPING] — 1ms
+  [1m[94m  PHASE: SECTION_DEFENSE[0m
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: expected 4 rows (tackles/interceptions/clearances/recoveries)
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: tackles present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: interceptions present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: clearances present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: recoveries present
+  [2m2026-07-01 04:19:32.307[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFENSE][0m [94m▶[0m ◀ END PHASE [SECTION_DEFENSE] — 0ms
+  [1m[94m  PHASE: SECTION_DUELS[0m
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: expected 3 rows (duelsWon/duels/aerialsWon)
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: duels won present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: total duels present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: aerials won present
+  [2m2026-07-01 04:19:32.307[0m [94m[1m[STEP  ][0m [2m[SECTION_DUELS][0m [94m▶[0m ◀ END PHASE [SECTION_DUELS] — 0ms
+  [1m[94m  PHASE: SECTION_FOULS[0m
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: expected 4 rows (foulsCommitted/offsides/yellowCards/redCards)
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: fouls committed present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: offsides present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: yellow cards present
+  [2m2026-07-01 04:19:32.307[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: red cards present
+  [2m2026-07-01 04:19:32.308[0m [94m[1m[STEP  ][0m [2m[SECTION_FOULS][0m [94m▶[0m ◀ END PHASE [SECTION_FOULS] — 1ms
+  [1m[94m  PHASE: SECTION_SHOTS_TABLE[0m
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS_TABLE: expected 6 rows
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: shots on goal present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: total shots present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: blocked shots present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: hit woodwork present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts inside box present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts outside box present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:32.308[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOTS_TABLE][0m [94m▶[0m ◀ END PHASE [SECTION_SHOTS_TABLE] — 0ms
+  [1m[94m  PHASE: SECTION_PASSES[0m
+  [2m2026-07-01 04:19:32.308[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m Extracting pssTbls (passes breakdown)
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: expected 8 rows
+  [2m2026-07-01 04:19:32.308[0m [96m[1m[PARSE ][0m [2m[SECTION_PASSES][0m [96m⚙[0m Passes extracted
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate passes present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total passes present
+  [2m2026-07-01 04:19:32.308[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: back zone pass present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: forward zone pass present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate long balls present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate crosses present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total throws present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: touches in opp box present
+  [2m2026-07-01 04:19:32.309[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m ◀ END PHASE [SECTION_PASSES] — 1ms
+  [1m[94m  PHASE: SECTION_ATTACK[0m
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: expected 6 rows
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances created present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances missed present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: through balls present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: touches in opp box present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: fouled in final third present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: corners won present
+  [2m2026-07-01 04:19:32.309[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:32.309[0m [94m[1m[STEP  ][0m [2m[SECTION_ATTACK][0m [94m▶[0m ◀ END PHASE [SECTION_ATTACK] — 0ms
+  [1m[94m  PHASE: BUILD_XG_TABLE[0m
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[BUILD_XG_TABLE][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:32.313[0m [94m[1m[STEP  ][0m [2m[BUILD_XG_TABLE][0m [94m▶[0m ◀ END PHASE [BUILD_XG_TABLE] — 4ms
+  [1m[94m  PHASE: ASSEMBLE_RESULT[0m
+  [2m2026-07-01 04:19:32.313[0m [94m[1m[STEP  ][0m [2m[ASSEMBLE_RESULT][0m [94m▶[0m ◀ END PHASE [ASSEMBLE_RESULT] — 0ms
+  [1m[94m  PHASE: FINAL_VERIFY[0m
+  [2m2026-07-01 04:19:32.313[0m [94m[1m[STEP  ][0m [2m[FINAL_VERIFY][0m [94m▶[0m Running final verification gates — 250x edition
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: competition present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: away score present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:32.313[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: all home players have jersey numbers
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: stat columns present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home saves present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home shots faced present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home goal kicks present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home high claims present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home pk saved present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x
+  [2m2026-07-01 04:19:32.314[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home shots on goal present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home hit woodwork present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home attempts inside box present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home total shots from shot map present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate passes present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home pass accuracy % present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total passes present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home back zone passes present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home forward zone passes present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate long balls present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate crosses present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total throws present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home touches in opp box present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances created present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances missed present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home through balls present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home touches in opp box present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home fouled in final third present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home corners won present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home tackles present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home interceptions present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home clearances present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home recoveries present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home duels won present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home total duels present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home aerials won present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home fouls committed present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home offsides present
+  [2m2026-07-01 04:19:32.315[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home yellow cards present
+  [2m2026-07-01 04:19:32.316[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home red cards present
+  [2m2026-07-01 04:19:32.316[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: odds data present
+  [2m2026-07-01 04:19:32.316[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:32.316[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [1mVerify PASS  [0m[92m147[0m
+  [1mVerify FAIL  [0m[92m0[0m
+  [1mPhases       [0mBROWSER_LAUNCH → FETCH_SEASON_SLUG → LOAD_PLAYER_STATS → LOAD_MATCH_STATS → LOAD_TEAM_STATS → PARSE_ALL → PARSE_PLAYER_STATS → PARSE_LINEUPS → PARSE_GAME_STRIP → PARSE_MATCH_STATS → SECTION_TEAM_STATS → SECTION_MATCH_STATS → SECTION_SHOT_MAP → SECTION_GAME_ODDS → PARSE_TEAM_STATS → SECTION_DEFERRED_TABLES → SECTION_EXPECTED_GOALS → SECTION_GOALKEEPING → SECTION_DEFENSE → SECTION_DUELS → SECTION_FOULS → SECTION_SHOTS_TABLE → SECTION_PASSES → SECTION_ATTACK → BUILD_XG_TABLE → ASSEMBLE_RESULT → FINAL_VERIFY
+  [2m2026-07-01 04:19:32.318[0m [92m[1m[OUTPUT][0m [2m[FINAL_VERIFY][0m [92m✓[0m SCRAPE COMPLETE — 500x EDITION
+  [INGEST] [SCRAPE] Complete — 48607ms | pages=https://www.espn.com/soccer/player-stats/_/gameId/760490,https://www.espn.com/soccer/matchstats/_/gameId/760490,https://www.espn.com/soccer/team-stats/_/gameId/760490 | seasonSlug=round-of-32 | seasonName=2026 FIFA World Cup, Round of 32
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] ESPN DB INGEST — matchId=760490 dryRun=false
+  [INGEST] scrapedAt=2026-07-01T04:19:32.313Z scrapeDurationMs=48607
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 1/9] WC2026_ESPN_MATCHES
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  gameStrip: CIV vs NOR | Full Time
+  [INGEST] [STATE]  matchDateUtc=1782838800000 matchGameDate(PT)=2026-06-30 matchKickoffEt=13:00 midnight=false
+  [INGEST] [STATE]  [MIDNIGHT_RULE] UTC=2026-06-30T17:00:00.000Z → PT_date=2026-06-30 ET_time=13:00
+  [INGEST] [STATE]  venue="AT&T Stadium" attendance=69665
+  [INGEST] [STATE]  homeScore=1 awayScore=2
+  [INGEST] [STATE]  homeFormation=4-1-4-1 awayFormation=4-3-3
+  [INGEST] [STEP]   Upserting wc2026_espn_matches matchId=760490 matchRound=round-of-32
+  [INGEST] [OUTPUT] 1 row upserted — CIV 1-2 NOR
+  [INGEST] [VERIFY] ✓ PASS — homeTeamAbbrev="CIV" awayTeamAbbrev="NOR" matchDateUtc=1782838800000
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 2/9] WC2026_ESPN_MATCH_ODDS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  provider="draftkings" headerText="Game Odds"
+  [INGEST] [STATE]  home: ML=+260 spread=+0.5 total=o2.5
+  [INGEST] [STATE]  away: ML=+115 spread=-0.5 total=u2.5
+  [INGEST] [STATE]  draw: ML=+230
+  [INGEST] [STEP]   Upserting wc2026_espn_match_odds matchId=760490
+  [INGEST] [OUTPUT] 1 row upserted — draftkings
+  [INGEST] [VERIFY] ✓ PASS — homeML=+260 awayML=+115 draw=+230
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 3/9] WC2026_ESPN_TEAM_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  teamStats: CIV vs NOR — 8 rows
+  [INGEST] [STATE]  possession: 47.1% / 52.9%
+  [INGEST] [STATE]  SoG: 5 / 4 | shots: 14 / 9
+  [INGEST] [STATE]  fouls: 6 / 7 | YC: 0 / 1 | RC: 0 / 0
+  [INGEST] [STATE]  corners: 14 / 3 | saves: 1 / 4
+  [INGEST] [STEP]   Upserting wc2026_espn_team_stats matchId=760490
+  [INGEST] [OUTPUT] 1 row upserted — 8 stats mapped
+  [INGEST] [VERIFY] ✓ PASS — TEAM_STATS ROW COUNT: 8 (expected exactly 8)
+  [INGEST] [VERIFY] ✓ PASS — POSSESSION: home=47.1% away=52.9%
+  [INGEST] [VERIFY] ✓ PASS — SHOTS_ON_GOAL: home=5 away=4
+  [INGEST] [VERIFY] ✓ PASS — CORNER_KICKS: home=14 away=3
+  [INGEST] [VERIFY] ✓ PASS — All 8 tmStatsGrph rows mapped and verified
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 4/9] WC2026_ESPN_MATCH_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  shots(6) + passes(8) + attack(6) + xG(4) + GK(5) + defense(4) + duels(3) + fouls(4) = 40 cols
+  [INGEST] [STATE]  shots: SoG=5/4 total=5/4 blocked=1/3
+  [INGEST] [STATE]  passes: accurate=339/415 pct=84%/88% total=339/415
+  [INGEST] [STATE]  attack: bigChances=3/3 corners=14/3
+  [INGEST] [STATE]  xG: 1.49/1.90 openPlay=1.00/1.29
+  [INGEST] [STATE]  defense: tackles=18/11 interceptions=4/6
+  [INGEST] [STATE]  defense: clearances=11/37 recoveries=44/34
+  [INGEST] [STATE]  duels: won=49/41 total=49/41 aerials=11/16
+  [INGEST] [STATE]  fouls: committed=6/7 offsides=2/2
+  [INGEST] [STEP]   Upserting wc2026_espn_match_stats matchId=760490
+  [INGEST] [OUTPUT] 1 row upserted — 40 stat columns
+  [INGEST] [VERIFY] ✓ PASS — SHOTS: SoG=5/4
+  [INGEST] [VERIFY] ✓ PASS — PASSES: total=339/415 pct=84%/88%
+  [INGEST] [VERIFY] ✓ PASS — DEFENSE: tackles=18/11 interceptions=4/6 clearances=11/37 recoveries=44/34
+  [INGEST] [VERIFY] ✓ PASS — All 8 stat sections populated
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 5/9] WC2026_ESPN_EXPECTED_GOALS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  xG team totals + 30 per-player entries
+  [INGEST] [STATE]  homeXG=1.49 awayXG=1.90
+  [INGEST] [STATE]  homeXGOpenPlay=1.00 awayXGOpenPlay=1.29
+  [INGEST] [STATE]  homeXGOT=1.40 awayXGOT=2.02
+  [INGEST] [STATE]  homeXA=1.64 awayXA=2.62
+  [INGEST] [STEP]   Upserting wc2026_espn_expected_goals matchId=760490
+  [INGEST] [OUTPUT] 1 row upserted — 30 per-player xG entries in JSON
+  [INGEST] [VERIFY] ✓ PASS — homeXG=1.490 awayXG=1.900 perPlayer=30
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 6/9] WC2026_ESPN_SHOT_MAP
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  23 shots — home=14 away=9
+  [INGEST] [STEP]   Deleting existing shots for matchId=760490
+  [INGEST] [STEP]   Inserting 23 shot rows
+  [INGEST] [OUTPUT] 23 shot rows inserted
+  [INGEST] [VERIFY] ✓ PASS — 23 shots | goals in map=3 vs scoreGoals=3
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 7/9] WC2026_ESPN_PLAYER_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [STATE]  Lineup stats lookup built for 52 athletes
+  [INGEST] [INPUT]  15 home outfield + 13 away outfield players
+  [INGEST] [INPUT]  GK: home=Yahia Fofana away=Ørjan Nyland
+  [INGEST] [OUTPUT] 30 player rows upserted | 30 with non-null stat values
+  [INGEST] [VERIFY] ✓ PASS — PLAYER COUNT: 30 rows (expected ≥20)
+  [INGEST] [VERIFY] ✓ PASS — STAT COVERAGE: 30 players have non-null tch/g/sog/sv/ga values (expected ≥10)
+  [INGEST] [VERIFY] ✓ PASS — Phase 7 complete | statCols=10 gkCols=10
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 8/9] WC2026_ESPN_LINEUPS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  home: 11 starters + 5 subs + 10 unused
+  [INGEST] [INPUT]  away: 11 starters + 3 subs + 12 unused
+  [INGEST] [STATE]  homeFormation=4-1-4-1 awayFormation=4-3-3
+  [INGEST] [OUTPUT] 52 lineup rows upserted
+  [INGEST] [VERIFY] ✓ PASS — 52 players (expected ≥22) | homeFormation=4-1-4-1 awayFormation=4-3-3
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 9/9] WC2026_ESPN_GLOSSARY
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  20 glossary entries from boxscore
+  [INGEST] [OUTPUT] 20 glossary entries upserted
+  [INGEST] [VERIFY] ✓ PASS — 20 entries (expected ≥10 of 20 confirmed)
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] INGEST COMPLETE — matchId=760490
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST]   Phase 1/9 [✓ PASS] wc2026_espn_matches — 1 rows
+  [INGEST]   Phase 2/9 [✓ PASS] wc2026_espn_match_odds — 1 rows
+  [INGEST]   Phase 3/9 [✓ PASS] wc2026_espn_team_stats — 1 rows
+  [INGEST]   Phase 4/9 [✓ PASS] wc2026_espn_match_stats — 1 rows
+  [INGEST]   Phase 5/9 [✓ PASS] wc2026_espn_expected_goals — 1 rows
+  [INGEST]   Phase 6/9 [✓ PASS] wc2026_espn_shot_map — 23 rows
+  [INGEST]   Phase 7/9 [✓ PASS] wc2026_espn_player_stats — 30 rows
+  [INGEST]   Phase 8/9 [✓ PASS] wc2026_espn_lineups — 52 rows
+  [INGEST]   Phase 9/9 [✓ PASS] wc2026_espn_glossary — 20 rows
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST] RESULT: 9/9 phases PASS | 130 total rows | 1681ms
+  [INGEST] SUCCESS: true
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [RUNNER] Ingest complete — success=true | rows=130 | errors=0
+  [RUNNER] Table wc2026_espn_matches → 1 rows
+  [RUNNER] Table wc2026_espn_match_odds → 3 rows
+  [RUNNER] Table wc2026_espn_team_stats → 1 rows
+  [RUNNER] Table wc2026_espn_match_stats → 1 rows
+  [RUNNER] Table wc2026_espn_expected_goals → 1 rows
+  [RUNNER] Table wc2026_espn_shot_map → 23 rows
+  [RUNNER] Table wc2026_espn_player_stats → 30 rows
+  [RUNNER] Table wc2026_espn_lineups → 52 rows
+  [RUNNER] Table wc2026_espn_glossary → 20 rows
+  [RUNNER] Result written to /tmp/espn_ingest_result_760490.json
+  [2026-07-01T04:19:34.348Z]   Phase 1/9 [[32m✓ PASS[0m] wc2026_espn_matches — 1 rows
+  [2026-07-01T04:19:34.348Z]   Phase 2/9 [[32m✓ PASS[0m] wc2026_espn_match_odds — 1 rows
+  [2026-07-01T04:19:34.348Z]   Phase 3/9 [[32m✓ PASS[0m] wc2026_espn_team_stats — 1 rows
+  [2026-07-01T04:19:34.348Z]   Phase 4/9 [[32m✓ PASS[0m] wc2026_espn_match_stats — 1 rows
+  [2026-07-01T04:19:34.348Z]   Phase 5/9 [[32m✓ PASS[0m] wc2026_espn_expected_goals — 1 rows
+  [2026-07-01T04:19:34.348Z]   Phase 6/9 [[32m✓ PASS[0m] wc2026_espn_shot_map — 23 rows
+  [2026-07-01T04:19:34.348Z]   Phase 7/9 [[32m✓ PASS[0m] wc2026_espn_player_stats — 30 rows
+  [2026-07-01T04:19:34.348Z]   Phase 8/9 [[32m✓ PASS[0m] wc2026_espn_lineups — 52 rows
+  [2026-07-01T04:19:34.348Z]   Phase 9/9 [[32m✓ PASS[0m] wc2026_espn_glossary — 20 rows
+  [2026-07-01T04:19:34.348Z]   [32m✓ PASS[0m  result.success = true
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  result.totalRowsWritten = 130 (> 50)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  result.errors.length = 0
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  result.phases.length = 9
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  phases all pass (9/9) = 9
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_matches = 1 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_match_odds = 3 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_team_stats = 1 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_match_stats = 1 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_expected_goals = 1 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_shot_map = 23 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_player_stats = 30 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_lineups = 52 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  wc2026_espn_glossary = 20 (> 0)
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeTeamName = "Ivory Coast"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  awayTeamName = "Norway"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  venue = "AT&T Stadium"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeScore = 1
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  awayScore = 2
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeFormation = "4-1-4-1"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  awayFormation = "4-3-3"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  matchDateUtc = 1782838800000
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeTeamId = "4789"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeTeamAbbrev = "CIV"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  statusState = "post"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  possession = "47.1%"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  shotsOnGoal = 5
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  shotAttempts = 14
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  fouls = 6
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  cornerKicks = 14
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  saves = 1
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  possessionAway = "52.9%"
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeShotsOnGoal = 5
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeShots = 5
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeTackles = 18
+  [2026-07-01T04:19:34.349Z]   [32m✓ PASS[0m  homeClearances = 11
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeInterceptions = 4
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeRecoveries = 44
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeDuelsWon = 49
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeFoulsCommitted = 6
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homePasses = 339
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homePassAccuracyPct = "84%"
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeAccurateLongBalls = 17
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeBigChancesCreated = 3
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeAttemptsInsideBox = 10
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeGkSaves = 1
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeGoalKicks = 3
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeXG = "1.490"
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  homeXGOT = "1.400"
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  perPlayer count = 30 (> 5)
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  fieldStartX = "88.60"
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  playerName = "Erling Haaland"
+  [2026-07-01T04:19:34.351Z]   [32m✓ PASS[0m  iconType = "blocked"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  xG = "0.0300"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  period = 1
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  shot map goal count = 3 (> 0)
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  player.name = "Yan Diomande"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  player.teamAbbrev = "CIV"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  player.tch (touches) = 62
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  gkPlayer.name = "Yahia Fofana"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  gkPlayer.isGoalkeeper = 1
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  gkPlayer.sv (saves) = 1
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  lineup.name = "Yahia Fofana"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  lineup.jersey = "1"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  lineup.role = "starter"
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  starters count = 22 = 22
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  total lineup entries = 52 (> 22)
+  [2026-07-01T04:19:34.352Z]   [32m✓ PASS[0m  odds.provider = "draftkings"
+  [2026-07-01T04:19:34.352Z]   [1mPASS: 68 | FAIL: 0 | TOTAL: 68[0m
+  [2026-07-01T04:19:34.352Z]   [32m[1mPASS RATE: 100.0%[0m
+[2026-07-01T04:19:34.359Z] [PASS   ] [SCRAPE_760490         ] ✅ success=true | rows=130 | errors=0 | phases=18/9 PASS | 52.2s
+[2026-07-01T04:19:34.359Z] [INFO   ] [MATCH_760490          ]   📊 Ivory Coast 1-2 Norway | AT&T Stadium
+[2026-07-01T04:19:34.658Z] [VERIFY ] [MIDNIGHT_760490       ] ✅ PASS | date=2026-06-30 ET=13:00 v=500x
+  [2m2026-07-01 04:19:41.417[0m [92m[1m[VERIFY][0m [2m[LOAD_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from team-stats page
+  [2m2026-07-01 04:19:41.418[0m [94m[1m[STEP  ][0m [2m[LOAD_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_TEAM_STATS] — 19402ms
+  [1m[94m  PHASE: PARSE_ALL[0m
+  [2m2026-07-01 04:19:41.428[0m [94m[1m[STEP  ][0m [2m[PARSE_ALL][0m [94m▶[0m ◀ END PHASE [PARSE_ALL] — 10ms
+  [1m[94m  PHASE: PARSE_PLAYER_STATS[0m
+  [2m2026-07-01 04:19:41.429[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [2m2026-07-01 04:19:41.429[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: 2 teams present in bxscr
+  [2m2026-07-01 04:19:41.437[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:41.437[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:41.437[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:41.437[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:41.437[0m [94m[1m[STEP  ][0m [2m[PARSE_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_PLAYER_STATS] — 9ms
+  [1m[94m  PHASE: PARSE_LINEUPS[0m
+  [2m2026-07-01 04:19:41.437[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — LINEUPS: 2 teams present
+  [2m2026-07-01 04:19:41.438[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:41.438[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:41.438[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:41.438[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:41.438[0m [94m[1m[STEP  ][0m [2m[PARSE_LINEUPS][0m [94m▶[0m ◀ END PHASE [PARSE_LINEUPS] — 1ms
+  [1m[94m  PHASE: PARSE_GAME_STRIP[0m
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:41.439[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home goal scorers present
+  [2m2026-07-01 04:19:41.439[0m [94m[1m[STEP  ][0m [2m[PARSE_GAME_STRIP][0m [94m▶[0m ◀ END PHASE [PARSE_GAME_STRIP] — 1ms
+  [1m[94m  PHASE: PARSE_MATCH_STATS[0m
+  [2m2026-07-01 04:19:41.440[0m [94m[1m[STEP  ][0m [2m[PARSE_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_MATCH_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_TEAM_STATS[0m
+  [2m2026-07-01 04:19:41.440[0m [92m[1m[VERIFY][0m [2m[SECTION_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: expected 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:41.440[0m [94m[1m[STEP  ][0m [2m[SECTION_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_MATCH_STATS[0m
+  [2m2026-07-01 04:19:41.440[0m [92m[1m[VERIFY][0m [2m[SECTION_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: expected 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:41.440[0m [94m[1m[STEP  ][0m [2m[SECTION_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_MATCH_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_SHOT_MAP[0m
+  [2m2026-07-01 04:19:41.444[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:41.444[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x coordinate
+  [2m2026-07-01 04:19:41.444[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:41.444[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:41.444[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOT_MAP][0m [94m▶[0m ◀ END PHASE [SECTION_SHOT_MAP] — 4ms
+  [1m[94m  PHASE: SECTION_GAME_ODDS[0m
+  [2m2026-07-01 04:19:41.444[0m [92m[1m[VERIFY][0m [2m[SECTION_GAME_ODDS][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: extracted successfully
+  [2m2026-07-01 04:19:41.445[0m [94m[1m[STEP  ][0m [2m[SECTION_GAME_ODDS][0m [94m▶[0m ◀ END PHASE [SECTION_GAME_ODDS] — 1ms
+  [1m[94m  PHASE: PARSE_TEAM_STATS[0m
+  [2m2026-07-01 04:19:41.445[0m [94m[1m[STEP  ][0m [2m[PARSE_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_DEFERRED_TABLES[0m
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFERRED_TABLES][0m [92m✔[0m [92mPASS[0m — DEFERRED_TABLES: expected 5 sections in tmStatsTbls
+  [2m2026-07-01 04:19:41.446[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFERRED_TABLES][0m [94m▶[0m ◀ END PHASE [SECTION_DEFERRED_TABLES] — 1ms
+  [1m[94m  PHASE: SECTION_EXPECTED_GOALS[0m
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: expected 4 rows (xG/xGOpenPlay/xGSetPlay/xGOT)
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:41.446[0m [94m[1m[STEP  ][0m [2m[SECTION_EXPECTED_GOALS][0m [94m▶[0m ◀ END PHASE [SECTION_EXPECTED_GOALS] — 0ms
+  [1m[94m  PHASE: SECTION_GOALKEEPING[0m
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: expected 5 rows
+  [2m2026-07-01 04:19:41.446[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: saves present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: shots faced present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: goal kicks present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: high claims present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: penalty kicks saved present
+  [2m2026-07-01 04:19:41.447[0m [94m[1m[STEP  ][0m [2m[SECTION_GOALKEEPING][0m [94m▶[0m ◀ END PHASE [SECTION_GOALKEEPING] — 1ms
+  [1m[94m  PHASE: SECTION_DEFENSE[0m
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: expected 4 rows (tackles/interceptions/clearances/recoveries)
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: tackles present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: interceptions present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: clearances present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: recoveries present
+  [2m2026-07-01 04:19:41.447[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFENSE][0m [94m▶[0m ◀ END PHASE [SECTION_DEFENSE] — 0ms
+  [1m[94m  PHASE: SECTION_DUELS[0m
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: expected 3 rows (duelsWon/duels/aerialsWon)
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: duels won present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: total duels present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: aerials won present
+  [2m2026-07-01 04:19:41.447[0m [94m[1m[STEP  ][0m [2m[SECTION_DUELS][0m [94m▶[0m ◀ END PHASE [SECTION_DUELS] — 0ms
+  [1m[94m  PHASE: SECTION_FOULS[0m
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: expected 4 rows (foulsCommitted/offsides/yellowCards/redCards)
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: fouls committed present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: offsides present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: yellow cards present
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: red cards present
+  [2m2026-07-01 04:19:41.447[0m [94m[1m[STEP  ][0m [2m[SECTION_FOULS][0m [94m▶[0m ◀ END PHASE [SECTION_FOULS] — 0ms
+  [1m[94m  PHASE: SECTION_SHOTS_TABLE[0m
+  [2m2026-07-01 04:19:41.447[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS_TABLE: expected 6 rows
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: shots on goal present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: total shots present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: blocked shots present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: hit woodwork present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts inside box present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts outside box present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:41.448[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOTS_TABLE][0m [94m▶[0m ◀ END PHASE [SECTION_SHOTS_TABLE] — 1ms
+  [1m[94m  PHASE: SECTION_PASSES[0m
+  [2m2026-07-01 04:19:41.448[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m Extracting pssTbls (passes breakdown)
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: expected 8 rows
+  [2m2026-07-01 04:19:41.448[0m [96m[1m[PARSE ][0m [2m[SECTION_PASSES][0m [96m⚙[0m Passes extracted
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate passes present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total passes present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: back zone pass present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: forward zone pass present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate long balls present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate crosses present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total throws present
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: touches in opp box present
+  [2m2026-07-01 04:19:41.448[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m ◀ END PHASE [SECTION_PASSES] — 0ms
+  [1m[94m  PHASE: SECTION_ATTACK[0m
+  [2m2026-07-01 04:19:41.448[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: expected 6 rows
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances created present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances missed present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: through balls present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: touches in opp box present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: fouled in final third present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: corners won present
+  [2m2026-07-01 04:19:41.451[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:41.451[0m [94m[1m[STEP  ][0m [2m[SECTION_ATTACK][0m [94m▶[0m ◀ END PHASE [SECTION_ATTACK] — 3ms
+  [1m[94m  PHASE: BUILD_XG_TABLE[0m
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[BUILD_XG_TABLE][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:41.453[0m [94m[1m[STEP  ][0m [2m[BUILD_XG_TABLE][0m [94m▶[0m ◀ END PHASE [BUILD_XG_TABLE] — 1ms
+  [1m[94m  PHASE: ASSEMBLE_RESULT[0m
+  [2m2026-07-01 04:19:41.453[0m [94m[1m[STEP  ][0m [2m[ASSEMBLE_RESULT][0m [94m▶[0m ◀ END PHASE [ASSEMBLE_RESULT] — 0ms
+  [1m[94m  PHASE: FINAL_VERIFY[0m
+  [2m2026-07-01 04:19:41.453[0m [94m[1m[STEP  ][0m [2m[FINAL_VERIFY][0m [94m▶[0m Running final verification gates — 250x edition
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: competition present
+  [2m2026-07-01 04:19:41.453[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: away score present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: all home players have jersey numbers
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: stat columns present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home saves present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home shots faced present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home goal kicks present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home high claims present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home pk saved present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:41.454[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home shots on goal present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home hit woodwork present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home attempts inside box present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home total shots from shot map present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate passes present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home pass accuracy % present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total passes present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home back zone passes present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home forward zone passes present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate long balls present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate crosses present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total throws present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home touches in opp box present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances created present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances missed present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home through balls present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home touches in opp box present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home fouled in final third present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home corners won present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home tackles present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home interceptions present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home clearances present
+  [2m2026-07-01 04:19:41.455[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home recoveries present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home duels won present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home total duels present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home aerials won present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home fouls committed present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home offsides present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home yellow cards present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home red cards present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: odds data present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:41.456[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [1mVerify PASS  [0m[92m147[0m
+  [1mVerify FAIL  [0m[92m0[0m
+  [1mPhases       [0mBROWSER_LAUNCH → FETCH_SEASON_SLUG → LOAD_PLAYER_STATS → LOAD_MATCH_STATS → LOAD_TEAM_STATS → PARSE_ALL → PARSE_PLAYER_STATS → PARSE_LINEUPS → PARSE_GAME_STRIP → PARSE_MATCH_STATS → SECTION_TEAM_STATS → SECTION_MATCH_STATS → SECTION_SHOT_MAP → SECTION_GAME_ODDS → PARSE_TEAM_STATS → SECTION_DEFERRED_TABLES → SECTION_EXPECTED_GOALS → SECTION_GOALKEEPING → SECTION_DEFENSE → SECTION_DUELS → SECTION_FOULS → SECTION_SHOTS_TABLE → SECTION_PASSES → SECTION_ATTACK → BUILD_XG_TABLE → ASSEMBLE_RESULT → FINAL_VERIFY
+  [2m2026-07-01 04:19:41.460[0m [92m[1m[OUTPUT][0m [2m[FINAL_VERIFY][0m [92m✓[0m SCRAPE COMPLETE — 500x EDITION
+  [INGEST] [SCRAPE] Complete — 57699ms | pages=https://www.espn.com/soccer/player-stats/_/gameId/760492,https://www.espn.com/soccer/matchstats/_/gameId/760492,https://www.espn.com/soccer/team-stats/_/gameId/760492 | seasonSlug=round-of-32 | seasonName=2026 FIFA World Cup, Round of 32
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] ESPN DB INGEST — matchId=760492 dryRun=false
+  [INGEST] scrapedAt=2026-07-01T04:19:41.453Z scrapeDurationMs=57699
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 1/9] WC2026_ESPN_MATCHES
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  gameStrip: FRA vs SWE | Full Time
+  [INGEST] [STATE]  matchDateUtc=1782853200000 matchGameDate(PT)=2026-06-30 matchKickoffEt=17:00 midnight=false
+  [INGEST] [STATE]  [MIDNIGHT_RULE] UTC=2026-06-30T21:00:00.000Z → PT_date=2026-06-30 ET_time=17:00
+  [INGEST] [STATE]  venue="MetLife Stadium" attendance=80663
+  [INGEST] [STATE]  homeScore=3 awayScore=0
+  [INGEST] [STATE]  homeFormation=4-2-3-1 awayFormation=4-4-2
+  [INGEST] [STEP]   Upserting wc2026_espn_matches matchId=760492 matchRound=round-of-32
+  [INGEST] [OUTPUT] 1 row upserted — FRA 3-0 SWE
+  [INGEST] [VERIFY] ✓ PASS — homeTeamAbbrev="FRA" awayTeamAbbrev="SWE" matchDateUtc=1782853200000
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 2/9] WC2026_ESPN_MATCH_ODDS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  provider="draftkings" headerText="Game Odds"
+  [INGEST] [STATE]  home: ML=-340 spread=-1.5 total=o3.5
+  [INGEST] [STATE]  away: ML=+900 spread=+1.5 total=u3.5
+  [INGEST] [STATE]  draw: ML=+500
+  [INGEST] [STEP]   Upserting wc2026_espn_match_odds matchId=760492
+  [INGEST] [OUTPUT] 1 row upserted — draftkings
+  [INGEST] [VERIFY] ✓ PASS — homeML=-340 awayML=+900 draw=+500
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 3/9] WC2026_ESPN_TEAM_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  teamStats: FRA vs SWE — 8 rows
+  [INGEST] [STATE]  possession: 61% / 39%
+  [INGEST] [STATE]  SoG: 12 / 3 | shots: 25 / 8
+  [INGEST] [STATE]  fouls: 14 / 10 | YC: 0 / 0 | RC: 0 / 0
+  [INGEST] [STATE]  corners: 9 / 1 | saves: 3 / 9
+  [INGEST] [STEP]   Upserting wc2026_espn_team_stats matchId=760492
+  [INGEST] [OUTPUT] 1 row upserted — 8 stats mapped
+  [INGEST] [VERIFY] ✓ PASS — TEAM_STATS ROW COUNT: 8 (expected exactly 8)
+  [INGEST] [VERIFY] ✓ PASS — POSSESSION: home=61% away=39%
+  [INGEST] [VERIFY] ✓ PASS — SHOTS_ON_GOAL: home=12 away=3
+  [INGEST] [VERIFY] ✓ PASS — CORNER_KICKS: home=9 away=1
+  [INGEST] [VERIFY] ✓ PASS — All 8 tmStatsGrph rows mapped and verified
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 4/9] WC2026_ESPN_MATCH_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  shots(6) + passes(8) + attack(6) + xG(4) + GK(5) + defense(4) + duels(3) + fouls(4) = 40 cols
+  [INGEST] [STATE]  shots: SoG=12/3 total=12/3 blocked=4/1
+  [INGEST] [STATE]  passes: accurate=484/278 pct=88%/79% total=484/278
+  [INGEST] [STATE]  attack: bigChances=6/0 corners=9/1
+  [INGEST] [STATE]  xG: 3.24/0.70 openPlay=2.90/0.51
+  [INGEST] [STATE]  defense: tackles=7/9 interceptions=5/12
+  [INGEST] [STATE]  defense: clearances=23/26 recoveries=46/35
+  [INGEST] [STATE]  duels: won=46/40 total=46/40 aerials=13/7
+  [INGEST] [STATE]  fouls: committed=14/10 offsides=3/1
+  [INGEST] [STEP]   Upserting wc2026_espn_match_stats matchId=760492
+  [INGEST] [OUTPUT] 1 row upserted — 40 stat columns
+  [INGEST] [VERIFY] ✓ PASS — SHOTS: SoG=12/3
+  [INGEST] [VERIFY] ✓ PASS — PASSES: total=484/278 pct=88%/79%
+  [INGEST] [VERIFY] ✓ PASS — DEFENSE: tackles=7/9 interceptions=5/12 clearances=23/26 recoveries=46/35
+  [INGEST] [VERIFY] ✓ PASS — All 8 stat sections populated
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 5/9] WC2026_ESPN_EXPECTED_GOALS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  xG team totals + 32 per-player entries
+  [INGEST] [STATE]  homeXG=3.24 awayXG=0.70
+  [INGEST] [STATE]  homeXGOpenPlay=2.90 awayXGOpenPlay=0.51
+  [INGEST] [STATE]  homeXGOT=3.83 awayXGOT=0.65
+  [INGEST] [STATE]  homeXA=1.65 awayXA=0.38
+  [INGEST] [STEP]   Upserting wc2026_espn_expected_goals matchId=760492
+  [INGEST] [OUTPUT] 1 row upserted — 32 per-player xG entries in JSON
+  [INGEST] [VERIFY] ✓ PASS — homeXG=3.240 awayXG=0.700 perPlayer=32
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 6/9] WC2026_ESPN_SHOT_MAP
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  33 shots — home=25 away=8
+  [INGEST] [STEP]   Deleting existing shots for matchId=760492
+  [INGEST] [STEP]   Inserting 33 shot rows
+  [INGEST] [OUTPUT] 33 shot rows inserted
+  [INGEST] [VERIFY] ✓ PASS — 33 shots | goals in map=3 vs scoreGoals=3
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 7/9] WC2026_ESPN_PLAYER_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [STATE]  Lineup stats lookup built for 51 athletes
+  [INGEST] [INPUT]  15 home outfield + 15 away outfield players
+  [INGEST] [INPUT]  GK: home=Mike Maignan away=Jacob Widell Zetterström
+  [INGEST] [OUTPUT] 32 player rows upserted | 32 with non-null stat values
+  [INGEST] [VERIFY] ✓ PASS — PLAYER COUNT: 32 rows (expected ≥20)
+  [INGEST] [VERIFY] ✓ PASS — STAT COVERAGE: 32 players have non-null tch/g/sog/sv/ga values (expected ≥10)
+  [INGEST] [VERIFY] ✓ PASS — Phase 7 complete | statCols=10 gkCols=10
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 8/9] WC2026_ESPN_LINEUPS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  home: 11 starters + 5 subs + 10 unused
+  [INGEST] [INPUT]  away: 11 starters + 5 subs + 9 unused
+  [INGEST] [STATE]  homeFormation=4-2-3-1 awayFormation=4-4-2
+  [INGEST] [OUTPUT] 51 lineup rows upserted
+  [INGEST] [VERIFY] ✓ PASS — 51 players (expected ≥22) | homeFormation=4-2-3-1 awayFormation=4-4-2
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 9/9] WC2026_ESPN_GLOSSARY
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  20 glossary entries from boxscore
+  [INGEST] [OUTPUT] 20 glossary entries upserted
+  [INGEST] [VERIFY] ✓ PASS — 20 entries (expected ≥10 of 20 confirmed)
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] INGEST COMPLETE — matchId=760492
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST]   Phase 1/9 [✓ PASS] wc2026_espn_matches — 1 rows
+  [INGEST]   Phase 2/9 [✓ PASS] wc2026_espn_match_odds — 1 rows
+  [INGEST]   Phase 3/9 [✓ PASS] wc2026_espn_team_stats — 1 rows
+  [INGEST]   Phase 4/9 [✓ PASS] wc2026_espn_match_stats — 1 rows
+  [INGEST]   Phase 5/9 [✓ PASS] wc2026_espn_expected_goals — 1 rows
+  [INGEST]   Phase 6/9 [✓ PASS] wc2026_espn_shot_map — 33 rows
+  [INGEST]   Phase 7/9 [✓ PASS] wc2026_espn_player_stats — 32 rows
+  [INGEST]   Phase 8/9 [✓ PASS] wc2026_espn_lineups — 51 rows
+  [INGEST]   Phase 9/9 [✓ PASS] wc2026_espn_glossary — 20 rows
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST] RESULT: 9/9 phases PASS | 141 total rows | 1565ms
+  [INGEST] SUCCESS: true
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [RUNNER] Ingest complete — success=true | rows=141 | errors=0
+  [RUNNER] Table wc2026_espn_matches → 1 rows
+  [RUNNER] Table wc2026_espn_match_odds → 3 rows
+  [RUNNER] Table wc2026_espn_team_stats → 1 rows
+  [RUNNER] Table wc2026_espn_match_stats → 1 rows
+  [RUNNER] Table wc2026_espn_expected_goals → 1 rows
+  [RUNNER] Table wc2026_espn_shot_map → 33 rows
+  [RUNNER] Table wc2026_espn_player_stats → 32 rows
+  [RUNNER] Table wc2026_espn_lineups → 51 rows
+  [RUNNER] Table wc2026_espn_glossary → 20 rows
+  [RUNNER] Result written to /tmp/espn_ingest_result_760492.json
+  [2026-07-01T04:19:43.370Z]   Phase 1/9 [[32m✓ PASS[0m] wc2026_espn_matches — 1 rows
+  [2026-07-01T04:19:43.370Z]   Phase 2/9 [[32m✓ PASS[0m] wc2026_espn_match_odds — 1 rows
+  [2026-07-01T04:19:43.370Z]   Phase 3/9 [[32m✓ PASS[0m] wc2026_espn_team_stats — 1 rows
+  [2026-07-01T04:19:43.370Z]   Phase 4/9 [[32m✓ PASS[0m] wc2026_espn_match_stats — 1 rows
+  [2026-07-01T04:19:43.370Z]   Phase 5/9 [[32m✓ PASS[0m] wc2026_espn_expected_goals — 1 rows
+  [2026-07-01T04:19:43.370Z]   Phase 6/9 [[32m✓ PASS[0m] wc2026_espn_shot_map — 33 rows
+  [2026-07-01T04:19:43.370Z]   Phase 7/9 [[32m✓ PASS[0m] wc2026_espn_player_stats — 32 rows
+  [2026-07-01T04:19:43.370Z]   Phase 8/9 [[32m✓ PASS[0m] wc2026_espn_lineups — 51 rows
+  [2026-07-01T04:19:43.370Z]   Phase 9/9 [[32m✓ PASS[0m] wc2026_espn_glossary — 20 rows
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  result.success = true
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  result.totalRowsWritten = 141 (> 50)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  result.errors.length = 0
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  result.phases.length = 9
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  phases all pass (9/9) = 9
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_matches = 1 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_match_odds = 3 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_team_stats = 1 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_match_stats = 1 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_expected_goals = 1 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_shot_map = 33 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_player_stats = 32 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_lineups = 51 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  wc2026_espn_glossary = 20 (> 0)
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  homeTeamName = "France"
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  awayTeamName = "Sweden"
+  [2026-07-01T04:19:43.370Z]   [32m✓ PASS[0m  venue = "MetLife Stadium"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeScore = 3
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  awayScore = 0
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeFormation = "4-2-3-1"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  awayFormation = "4-4-2"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  matchDateUtc = 1782853200000
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeTeamId = "478"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeTeamAbbrev = "FRA"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  statusState = "post"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  possession = "61%"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  shotsOnGoal = 12
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  shotAttempts = 25
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  fouls = 14
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  cornerKicks = 9
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  saves = 3
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  possessionAway = "39%"
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeShotsOnGoal = 12
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeShots = 12
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeTackles = 7
+  [2026-07-01T04:19:43.371Z]   [32m✓ PASS[0m  homeClearances = 23
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homeInterceptions = 5
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homeRecoveries = 46
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homeDuelsWon = 46
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homeFoulsCommitted = 14
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homePasses = 484
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homePassAccuracyPct = "88%"
+  [2026-07-01T04:19:43.372Z]   [32m✓ PASS[0m  homeAccurateLongBalls = 17
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeBigChancesCreated = 6
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeAttemptsInsideBox = 16
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeGkSaves = 3
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeGoalKicks = 8
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeXG = "3.240"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  homeXGOT = "3.830"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  perPlayer count = 32 (> 5)
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  fieldStartX = "83.10"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  playerName = "Alexander Isak"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  iconType = "save"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  xG = "0.0300"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  period = 1
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  shot map goal count = 3 (> 0)
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  player.name = "Kylian Mbappé"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  player.teamAbbrev = "FRA"
+  [2026-07-01T04:19:43.373Z]   [32m✓ PASS[0m  player.tch (touches) = 55
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  gkPlayer.name = "Mike Maignan"
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  gkPlayer.isGoalkeeper = 1
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  gkPlayer.sv (saves) = 3
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  lineup.name = "Mike Maignan"
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  lineup.jersey = "16"
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  lineup.role = "starter"
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  starters count = 22 = 22
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  total lineup entries = 51 (> 22)
+  [2026-07-01T04:19:43.374Z]   [32m✓ PASS[0m  odds.provider = "draftkings"
+  [2026-07-01T04:19:43.374Z]   [1mPASS: 68 | FAIL: 0 | TOTAL: 68[0m
+  [2026-07-01T04:19:43.374Z]   [32m[1mPASS RATE: 100.0%[0m
+[2026-07-01T04:19:43.380Z] [PASS   ] [SCRAPE_760492         ] ✅ success=true | rows=141 | errors=0 | phases=18/9 PASS | 61.2s
+[2026-07-01T04:19:43.380Z] [INFO   ] [MATCH_760492          ]   📊 France 3-0 Sweden | MetLife Stadium
+[2026-07-01T04:19:43.387Z] [VERIFY ] [MIDNIGHT_760492       ] ✅ PASS | date=2026-06-30 ET=17:00 v=500x
+[2026-07-01T04:19:44.199Z] [POLL   ] [CYCLE/3               ] 🔄 Poll #3 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:19:45.298Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:19:45.727Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:19:46.166Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:19:46.597Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:19:46.597Z] [CYCLE  ] [CYCLE/3               ] ✅ CYCLE/3 — 12 total | 0 live | 3 final | 0 newly final | 2.40s
+  [2m2026-07-01 04:19:49.776[0m [92m[1m[VERIFY][0m [2m[LOAD_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — __espnfitt__ extracted from team-stats page
+  [2m2026-07-01 04:19:49.776[0m [94m[1m[STEP  ][0m [2m[LOAD_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [LOAD_TEAM_STATS] — 19952ms
+  [1m[94m  PHASE: PARSE_ALL[0m
+  [2m2026-07-01 04:19:49.777[0m [94m[1m[STEP  ][0m [2m[PARSE_ALL][0m [94m▶[0m ◀ END PHASE [PARSE_ALL] — 1ms
+  [1m[94m  PHASE: PARSE_PLAYER_STATS[0m
+  [2m2026-07-01 04:19:49.777[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [2m2026-07-01 04:19:49.777[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: 2 teams present in bxscr
+  [2m2026-07-01 04:19:49.785[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:49.785[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:49.785[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:49.785[0m [92m[1m[VERIFY][0m [2m[PARSE_PLAYER_STATS][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:49.785[0m [94m[1m[STEP  ][0m [2m[PARSE_PLAYER_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_PLAYER_STATS] — 8ms
+  [1m[94m  PHASE: PARSE_LINEUPS[0m
+  [2m2026-07-01 04:19:49.785[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — LINEUPS: 2 teams present
+  [2m2026-07-01 04:19:49.786[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:49.786[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:49.786[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:49.786[0m [92m[1m[VERIFY][0m [2m[PARSE_LINEUPS][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:49.786[0m [94m[1m[STEP  ][0m [2m[PARSE_LINEUPS][0m [94m▶[0m ◀ END PHASE [PARSE_LINEUPS] — 1ms
+  [1m[94m  PHASE: PARSE_GAME_STRIP[0m
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:49.787[0m [92m[1m[VERIFY][0m [2m[PARSE_GAME_STRIP][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home goal scorers present
+  [2m2026-07-01 04:19:49.788[0m [94m[1m[STEP  ][0m [2m[PARSE_GAME_STRIP][0m [94m▶[0m ◀ END PHASE [PARSE_GAME_STRIP] — 1ms
+  [1m[94m  PHASE: PARSE_MATCH_STATS[0m
+  [2m2026-07-01 04:19:49.788[0m [94m[1m[STEP  ][0m [2m[PARSE_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_MATCH_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_TEAM_STATS[0m
+  [2m2026-07-01 04:19:49.788[0m [92m[1m[VERIFY][0m [2m[SECTION_TEAM_STATS][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: expected 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:49.788[0m [94m[1m[STEP  ][0m [2m[SECTION_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_MATCH_STATS[0m
+  [2m2026-07-01 04:19:49.788[0m [92m[1m[VERIFY][0m [2m[SECTION_MATCH_STATS][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: expected 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:49.789[0m [94m[1m[STEP  ][0m [2m[SECTION_MATCH_STATS][0m [94m▶[0m ◀ END PHASE [SECTION_MATCH_STATS] — 1ms
+  [1m[94m  PHASE: SECTION_SHOT_MAP[0m
+  [2m2026-07-01 04:19:49.791[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:49.791[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x coordinate
+  [2m2026-07-01 04:19:49.791[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:49.791[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOT_MAP][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:49.791[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOT_MAP][0m [94m▶[0m ◀ END PHASE [SECTION_SHOT_MAP] — 2ms
+  [1m[94m  PHASE: SECTION_GAME_ODDS[0m
+  [2m2026-07-01 04:19:49.791[0m [92m[1m[VERIFY][0m [2m[SECTION_GAME_ODDS][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: extracted successfully
+  [2m2026-07-01 04:19:49.792[0m [94m[1m[STEP  ][0m [2m[SECTION_GAME_ODDS][0m [94m▶[0m ◀ END PHASE [SECTION_GAME_ODDS] — 1ms
+  [1m[94m  PHASE: PARSE_TEAM_STATS[0m
+  [2m2026-07-01 04:19:49.792[0m [94m[1m[STEP  ][0m [2m[PARSE_TEAM_STATS][0m [94m▶[0m ◀ END PHASE [PARSE_TEAM_STATS] — 0ms
+  [1m[94m  PHASE: SECTION_DEFERRED_TABLES[0m
+  [2m2026-07-01 04:19:49.792[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFERRED_TABLES][0m [92m✔[0m [92mPASS[0m — DEFERRED_TABLES: expected 5 sections in tmStatsTbls
+  [2m2026-07-01 04:19:49.793[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFERRED_TABLES][0m [94m▶[0m ◀ END PHASE [SECTION_DEFERRED_TABLES] — 1ms
+  [1m[94m  PHASE: SECTION_EXPECTED_GOALS[0m
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: expected 4 rows (xG/xGOpenPlay/xGSetPlay/xGOT)
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_EXPECTED_GOALS][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:49.793[0m [94m[1m[STEP  ][0m [2m[SECTION_EXPECTED_GOALS][0m [94m▶[0m ◀ END PHASE [SECTION_EXPECTED_GOALS] — 0ms
+  [1m[94m  PHASE: SECTION_GOALKEEPING[0m
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: expected 5 rows
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: saves present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: shots faced present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: goal kicks present
+  [2m2026-07-01 04:19:49.793[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: high claims present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_GOALKEEPING][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: penalty kicks saved present
+  [2m2026-07-01 04:19:49.794[0m [94m[1m[STEP  ][0m [2m[SECTION_GOALKEEPING][0m [94m▶[0m ◀ END PHASE [SECTION_GOALKEEPING] — 1ms
+  [1m[94m  PHASE: SECTION_DEFENSE[0m
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: expected 4 rows (tackles/interceptions/clearances/recoveries)
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: tackles present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: interceptions present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: clearances present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DEFENSE][0m [92m✔[0m [92mPASS[0m — DEFENSE: recoveries present
+  [2m2026-07-01 04:19:49.794[0m [94m[1m[STEP  ][0m [2m[SECTION_DEFENSE][0m [94m▶[0m ◀ END PHASE [SECTION_DEFENSE] — 0ms
+  [1m[94m  PHASE: SECTION_DUELS[0m
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: expected 3 rows (duelsWon/duels/aerialsWon)
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: duels won present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: total duels present
+  [2m2026-07-01 04:19:49.794[0m [92m[1m[VERIFY][0m [2m[SECTION_DUELS][0m [92m✔[0m [92mPASS[0m — DUELS: aerials won present
+  [2m2026-07-01 04:19:49.794[0m [94m[1m[STEP  ][0m [2m[SECTION_DUELS][0m [94m▶[0m ◀ END PHASE [SECTION_DUELS] — 0ms
+  [1m[94m  PHASE: SECTION_FOULS[0m
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: expected 4 rows (foulsCommitted/offsides/yellowCards/redCards)
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: fouls committed present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: offsides present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: yellow cards present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_FOULS][0m [92m✔[0m [92mPASS[0m — FOULS: red cards present
+  [2m2026-07-01 04:19:49.795[0m [94m[1m[STEP  ][0m [2m[SECTION_FOULS][0m [94m▶[0m ◀ END PHASE [SECTION_FOULS] — 1ms
+  [1m[94m  PHASE: SECTION_SHOTS_TABLE[0m
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS_TABLE: expected 6 rows
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: shots on goal present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: total shots present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: blocked shots present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: hit woodwork present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts inside box present
+  [2m2026-07-01 04:19:49.795[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOTS: attempts outside box present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_SHOTS_TABLE][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:49.796[0m [94m[1m[STEP  ][0m [2m[SECTION_SHOTS_TABLE][0m [94m▶[0m ◀ END PHASE [SECTION_SHOTS_TABLE] — 1ms
+  [1m[94m  PHASE: SECTION_PASSES[0m
+  [2m2026-07-01 04:19:49.796[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m Extracting pssTbls (passes breakdown)
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: expected 8 rows
+  [2m2026-07-01 04:19:49.796[0m [96m[1m[PARSE ][0m [2m[SECTION_PASSES][0m [96m⚙[0m Passes extracted
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate passes present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total passes present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: back zone pass present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: forward zone pass present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate long balls present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: accurate crosses present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: total throws present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_PASSES][0m [92m✔[0m [92mPASS[0m — PASSES: touches in opp box present
+  [2m2026-07-01 04:19:49.796[0m [94m[1m[STEP  ][0m [2m[SECTION_PASSES][0m [94m▶[0m ◀ END PHASE [SECTION_PASSES] — 0ms
+  [1m[94m  PHASE: SECTION_ATTACK[0m
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: expected 6 rows
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances created present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: big chances missed present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: through balls present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: touches in opp box present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: fouled in final third present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — ATTACK: corners won present
+  [2m2026-07-01 04:19:49.796[0m [92m[1m[VERIFY][0m [2m[SECTION_ATTACK][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:49.796[0m [94m[1m[STEP  ][0m [2m[SECTION_ATTACK][0m [94m▶[0m ◀ END PHASE [SECTION_ATTACK] — 0ms
+  [1m[94m  PHASE: BUILD_XG_TABLE[0m
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[BUILD_XG_TABLE][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:49.798[0m [94m[1m[STEP  ][0m [2m[BUILD_XG_TABLE][0m [94m▶[0m ◀ END PHASE [BUILD_XG_TABLE] — 2ms
+  [1m[94m  PHASE: ASSEMBLE_RESULT[0m
+  [2m2026-07-01 04:19:49.798[0m [94m[1m[STEP  ][0m [2m[ASSEMBLE_RESULT][0m [94m▶[0m ◀ END PHASE [ASSEMBLE_RESULT] — 0ms
+  [1m[94m  PHASE: FINAL_VERIFY[0m
+  [2m2026-07-01 04:19:49.798[0m [94m[1m[STEP  ][0m [2m[FINAL_VERIFY][0m [94m▶[0m Running final verification gates — 250x edition
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: gameId present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: venue present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: attendance present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: referee present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: competition present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: home score present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_STRIP: away score present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: home outfield players present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: away outfield players present
+  [2m2026-07-01 04:19:49.798[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: all home players have jersey numbers
+  [2m2026-07-01 04:19:49.799[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — BOXSCORE: stat columns present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: home GK present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING: away GK present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home saves present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home shots faced present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home goal kicks present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home high claims present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GOALKEEPING_TABLE: home pk saved present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home has 11 starters
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away has 11 starters
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: home formation string present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FORMATIONS: away formation string present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — TEAM_STATS: 8 rows from tmStatsGrph
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — MATCH_STATS: 9 rows from mtchStatsGrph
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Open Play present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xG Set Play present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: home xGOT present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — EXPECTED_GOALS: per-player xG present
+  [2m2026-07-01 04:19:49.800[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: shots present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have fieldStart.x
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player name
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: all shots have player jersey
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOT_MAP: goal frame map has 2 teams
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home shots on goal present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home hit woodwork present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home attempts inside box present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — SHOTS: home total shots from shot map present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate passes present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home pass accuracy % present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total passes present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home back zone passes present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home forward zone passes present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate long balls present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home accurate crosses present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home total throws present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — PASSES: home touches in opp box present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances created present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home big chances missed present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home through balls present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home touches in opp box present
+  [2m2026-07-01 04:19:49.801[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home fouled in final third present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — ATTACK: home corners won present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home tackles present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home interceptions present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home clearances present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DEFENSE: home recoveries present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home duels won present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home total duels present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — DUELS: home aerials won present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home fouls committed present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home offsides present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home yellow cards present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FOULS: home red cards present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GAME_ODDS: odds data present
+  [2m2026-07-01 04:19:49.803[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — FULL_TEAM_STATS: rows present
+  [2m2026-07-01 04:19:49.804[0m [92m[1m[VERIFY][0m [2m[FINAL_VERIFY][0m [92m✔[0m [92mPASS[0m — GLOSSARY: entries present
+  [1mVerify PASS  [0m[92m147[0m
+  [1mVerify FAIL  [0m[92m0[0m
+  [1mPhases       [0mBROWSER_LAUNCH → FETCH_SEASON_SLUG → LOAD_PLAYER_STATS → LOAD_MATCH_STATS → LOAD_TEAM_STATS → PARSE_ALL → PARSE_PLAYER_STATS → PARSE_LINEUPS → PARSE_GAME_STRIP → PARSE_MATCH_STATS → SECTION_TEAM_STATS → SECTION_MATCH_STATS → SECTION_SHOT_MAP → SECTION_GAME_ODDS → PARSE_TEAM_STATS → SECTION_DEFERRED_TABLES → SECTION_EXPECTED_GOALS → SECTION_GOALKEEPING → SECTION_DEFENSE → SECTION_DUELS → SECTION_FOULS → SECTION_SHOTS_TABLE → SECTION_PASSES → SECTION_ATTACK → BUILD_XG_TABLE → ASSEMBLE_RESULT → FINAL_VERIFY
+  [2m2026-07-01 04:19:49.805[0m [92m[1m[OUTPUT][0m [2m[FINAL_VERIFY][0m [92m✓[0m SCRAPE COMPLETE — 500x EDITION
+  [INGEST] [SCRAPE] Complete — 66110ms | pages=https://www.espn.com/soccer/player-stats/_/gameId/760491,https://www.espn.com/soccer/matchstats/_/gameId/760491,https://www.espn.com/soccer/team-stats/_/gameId/760491 | seasonSlug=round-of-32 | seasonName=2026 FIFA World Cup, Round of 32
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] ESPN DB INGEST — matchId=760491 dryRun=false
+  [INGEST] scrapedAt=2026-07-01T04:19:49.798Z scrapeDurationMs=66110
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 1/9] WC2026_ESPN_MATCHES
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  gameStrip: MEX vs ECU | Full Time
+  [INGEST] [STATE]  matchDateUtc=1782871200000 matchGameDate(PT)=2026-06-30 matchKickoffEt=22:00 midnight=false
+  [INGEST] [STATE]  [MIDNIGHT_RULE] UTC=2026-07-01T02:00:00.000Z → PT_date=2026-06-30 ET_time=22:00
+  [INGEST] [STATE]  venue="Estadio Banorte" attendance=80824
+  [INGEST] [STATE]  homeScore=2 awayScore=0
+  [INGEST] [STATE]  homeFormation=4-3-3 awayFormation=4-4-2
+  [INGEST] [STEP]   Upserting wc2026_espn_matches matchId=760491 matchRound=round-of-32
+  [INGEST] [OUTPUT] 1 row upserted — MEX 2-0 ECU
+  [INGEST] [VERIFY] ✓ PASS — homeTeamAbbrev="MEX" awayTeamAbbrev="ECU" matchDateUtc=1782871200000
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 2/9] WC2026_ESPN_MATCH_ODDS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  provider="draftkings" headerText="Game Odds"
+  [INGEST] [STATE]  home: ML=+135 spread=-0.5 total=o1.5
+  [INGEST] [STATE]  away: ML=+295 spread=+0.5 total=u1.5
+  [INGEST] [STATE]  draw: ML=+175
+  [INGEST] [STEP]   Upserting wc2026_espn_match_odds matchId=760491
+  [INGEST] [OUTPUT] 1 row upserted — draftkings
+  [INGEST] [VERIFY] ✓ PASS — homeML=+135 awayML=+295 draw=+175
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 3/9] WC2026_ESPN_TEAM_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  teamStats: MEX vs ECU — 8 rows
+  [INGEST] [STATE]  possession: 43.2% / 56.8%
+  [INGEST] [STATE]  SoG: 3 / 1 | shots: 15 / 7
+  [INGEST] [STATE]  fouls: 10 / 14 | YC: 0 / 3 | RC: 0 / 1
+  [INGEST] [STATE]  corners: 3 / 8 | saves: 1 / 1
+  [INGEST] [STEP]   Upserting wc2026_espn_team_stats matchId=760491
+  [INGEST] [OUTPUT] 1 row upserted — 8 stats mapped
+  [INGEST] [VERIFY] ✓ PASS — TEAM_STATS ROW COUNT: 8 (expected exactly 8)
+  [INGEST] [VERIFY] ✓ PASS — POSSESSION: home=43.2% away=56.8%
+  [INGEST] [VERIFY] ✓ PASS — SHOTS_ON_GOAL: home=3 away=1
+  [INGEST] [VERIFY] ✓ PASS — CORNER_KICKS: home=3 away=8
+  [INGEST] [VERIFY] ✓ PASS — All 8 tmStatsGrph rows mapped and verified
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 4/9] WC2026_ESPN_MATCH_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  shots(6) + passes(8) + attack(6) + xG(4) + GK(5) + defense(4) + duels(3) + fouls(4) = 40 cols
+  [INGEST] [STATE]  shots: SoG=3/1 total=3/1 blocked=3/1
+  [INGEST] [STATE]  passes: accurate=249/340 pct=78%/84% total=249/340
+  [INGEST] [STATE]  attack: bigChances=2/1 corners=3/8
+  [INGEST] [STATE]  xG: 1.02/0.72 openPlay=0.89/0.66
+  [INGEST] [STATE]  defense: tackles=5/8 interceptions=7/6
+  [INGEST] [STATE]  defense: clearances=38/21 recoveries=35/33
+  [INGEST] [STATE]  duels: won=49/40 total=49/40 aerials=21/12
+  [INGEST] [STATE]  fouls: committed=10/14 offsides=0/1
+  [INGEST] [STEP]   Upserting wc2026_espn_match_stats matchId=760491
+  [INGEST] [OUTPUT] 1 row upserted — 40 stat columns
+  [INGEST] [VERIFY] ✓ PASS — SHOTS: SoG=3/1
+  [INGEST] [VERIFY] ✓ PASS — PASSES: total=249/340 pct=78%/84%
+  [INGEST] [VERIFY] ✓ PASS — DEFENSE: tackles=5/8 interceptions=7/6 clearances=38/21 recoveries=35/33
+  [INGEST] [VERIFY] ✓ PASS — All 8 stat sections populated
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 5/9] WC2026_ESPN_EXPECTED_GOALS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  xG team totals + 32 per-player entries
+  [INGEST] [STATE]  homeXG=1.02 awayXG=0.72
+  [INGEST] [STATE]  homeXGOpenPlay=0.89 awayXGOpenPlay=0.66
+  [INGEST] [STATE]  homeXGOT=1.43 awayXGOT=0.63
+  [INGEST] [STATE]  homeXA=0.76 awayXA=0.58
+  [INGEST] [STEP]   Upserting wc2026_espn_expected_goals matchId=760491
+  [INGEST] [OUTPUT] 1 row upserted — 32 per-player xG entries in JSON
+  [INGEST] [VERIFY] ✓ PASS — homeXG=1.020 awayXG=0.720 perPlayer=32
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 6/9] WC2026_ESPN_SHOT_MAP
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  22 shots — home=15 away=7
+  [INGEST] [STEP]   Deleting existing shots for matchId=760491
+  [INGEST] [STEP]   Inserting 22 shot rows
+  [INGEST] [OUTPUT] 22 shot rows inserted
+  [INGEST] [VERIFY] ✓ PASS — 22 shots | goals in map=2 vs scoreGoals=2
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 7/9] WC2026_ESPN_PLAYER_STATS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [STATE]  Lineup stats lookup built for 52 athletes
+  [INGEST] [INPUT]  15 home outfield + 15 away outfield players
+  [INGEST] [INPUT]  GK: home=Raúl Rangel away=Hernán Galíndez
+  [INGEST] [OUTPUT] 32 player rows upserted | 32 with non-null stat values
+  [INGEST] [VERIFY] ✓ PASS — PLAYER COUNT: 32 rows (expected ≥20)
+  [INGEST] [VERIFY] ✓ PASS — STAT COVERAGE: 32 players have non-null tch/g/sog/sv/ga values (expected ≥10)
+  [INGEST] [VERIFY] ✓ PASS — Phase 7 complete | statCols=10 gkCols=10
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 8/9] WC2026_ESPN_LINEUPS
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  home: 11 starters + 5 subs + 10 unused
+  [INGEST] [INPUT]  away: 11 starters + 5 subs + 10 unused
+  [INGEST] [STATE]  homeFormation=4-3-3 awayFormation=4-4-2
+  [INGEST] [OUTPUT] 52 lineup rows upserted
+  [INGEST] [VERIFY] ✓ PASS — 52 players (expected ≥22) | homeFormation=4-3-3 awayFormation=4-4-2
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [PHASE 9/9] WC2026_ESPN_GLOSSARY
+  [INGEST] [════════════════════════════════════════════════════════════]
+  [INGEST] [INPUT]  20 glossary entries from boxscore
+  [INGEST] [OUTPUT] 20 glossary entries upserted
+  [INGEST] [VERIFY] ✓ PASS — 20 entries (expected ≥10 of 20 confirmed)
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [INGEST] INGEST COMPLETE — matchId=760491
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST]   Phase 1/9 [✓ PASS] wc2026_espn_matches — 1 rows
+  [INGEST]   Phase 2/9 [✓ PASS] wc2026_espn_match_odds — 1 rows
+  [INGEST]   Phase 3/9 [✓ PASS] wc2026_espn_team_stats — 1 rows
+  [INGEST]   Phase 4/9 [✓ PASS] wc2026_espn_match_stats — 1 rows
+  [INGEST]   Phase 5/9 [✓ PASS] wc2026_espn_expected_goals — 1 rows
+  [INGEST]   Phase 6/9 [✓ PASS] wc2026_espn_shot_map — 22 rows
+  [INGEST]   Phase 7/9 [✓ PASS] wc2026_espn_player_stats — 32 rows
+  [INGEST]   Phase 8/9 [✓ PASS] wc2026_espn_lineups — 52 rows
+  [INGEST]   Phase 9/9 [✓ PASS] wc2026_espn_glossary — 20 rows
+  [INGEST] ──────────────────────────────────────────────────────────────────────
+  [INGEST] RESULT: 9/9 phases PASS | 131 total rows | 1663ms
+  [INGEST] SUCCESS: true
+  [INGEST] ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  [RUNNER] Ingest complete — success=true | rows=131 | errors=0
+  [RUNNER] Table wc2026_espn_matches → 1 rows
+  [RUNNER] Table wc2026_espn_match_odds → 2 rows
+  [RUNNER] Table wc2026_espn_team_stats → 1 rows
+  [RUNNER] Table wc2026_espn_match_stats → 1 rows
+  [RUNNER] Table wc2026_espn_expected_goals → 1 rows
+  [RUNNER] Table wc2026_espn_shot_map → 22 rows
+  [RUNNER] Table wc2026_espn_player_stats → 32 rows
+  [RUNNER] Table wc2026_espn_lineups → 52 rows
+  [RUNNER] Table wc2026_espn_glossary → 20 rows
+  [RUNNER] Result written to /tmp/espn_ingest_result_760491.json
+  [2026-07-01T04:19:51.812Z]   Phase 1/9 [[32m✓ PASS[0m] wc2026_espn_matches — 1 rows
+  [2026-07-01T04:19:51.812Z]   Phase 2/9 [[32m✓ PASS[0m] wc2026_espn_match_odds — 1 rows
+  [2026-07-01T04:19:51.812Z]   Phase 3/9 [[32m✓ PASS[0m] wc2026_espn_team_stats — 1 rows
+  [2026-07-01T04:19:51.812Z]   Phase 4/9 [[32m✓ PASS[0m] wc2026_espn_match_stats — 1 rows
+  [2026-07-01T04:19:51.812Z]   Phase 5/9 [[32m✓ PASS[0m] wc2026_espn_expected_goals — 1 rows
+  [2026-07-01T04:19:51.812Z]   Phase 6/9 [[32m✓ PASS[0m] wc2026_espn_shot_map — 22 rows
+  [2026-07-01T04:19:51.812Z]   Phase 7/9 [[32m✓ PASS[0m] wc2026_espn_player_stats — 32 rows
+  [2026-07-01T04:19:51.812Z]   Phase 8/9 [[32m✓ PASS[0m] wc2026_espn_lineups — 52 rows
+  [2026-07-01T04:19:51.812Z]   Phase 9/9 [[32m✓ PASS[0m] wc2026_espn_glossary — 20 rows
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  result.success = true
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  result.totalRowsWritten = 131 (> 50)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  result.errors.length = 0
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  result.phases.length = 9
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  phases all pass (9/9) = 9
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_matches = 1 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_match_odds = 2 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_team_stats = 1 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_match_stats = 1 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_expected_goals = 1 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_shot_map = 22 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_player_stats = 32 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_lineups = 52 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  wc2026_espn_glossary = 20 (> 0)
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  homeTeamName = "Mexico"
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  awayTeamName = "Ecuador"
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  venue = "Estadio Banorte"
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  homeScore = 2
+  [2026-07-01T04:19:51.812Z]   [32m✓ PASS[0m  awayScore = 0
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeFormation = "4-3-3"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  awayFormation = "4-4-2"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  matchDateUtc = 1782871200000
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeTeamId = "203"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeTeamAbbrev = "MEX"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  statusState = "post"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  possession = "43.2%"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  shotsOnGoal = 3
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  shotAttempts = 15
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  fouls = 10
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  cornerKicks = 3
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  saves = 1
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  possessionAway = "56.8%"
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeShotsOnGoal = 3
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeShots = 3
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeTackles = 5
+  [2026-07-01T04:19:51.813Z]   [32m✓ PASS[0m  homeClearances = 38
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeInterceptions = 7
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeRecoveries = 35
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeDuelsWon = 49
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeFoulsCommitted = 10
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homePasses = 249
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homePassAccuracyPct = "78%"
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeAccurateLongBalls = 28
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeBigChancesCreated = 2
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeAttemptsInsideBox = 10
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeGkSaves = 1
+  [2026-07-01T04:19:51.814Z]   [32m✓ PASS[0m  homeGoalKicks = 13
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  homeXG = "1.020"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  homeXGOT = "1.430"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  perPlayer count = 32 (> 5)
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  fieldStartX = "77.70"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  playerName = "Roberto Alvarado"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  iconType = "blocked"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  xG = "0.0300"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  period = 1
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  shot map goal count = 2 (> 0)
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  player.name = "Roberto Alvarado"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  player.teamAbbrev = "MEX"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  player.tch (touches) = 38
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  gkPlayer.name = "Raúl Rangel"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  gkPlayer.isGoalkeeper = 1
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  gkPlayer.sv (saves) = 1
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  lineup.name = "Raúl Rangel"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  lineup.jersey = "1"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  lineup.role = "starter"
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  starters count = 22 = 22
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  total lineup entries = 52 (> 22)
+  [2026-07-01T04:19:51.815Z]   [32m✓ PASS[0m  odds.provider = "draftkings"
+  [2026-07-01T04:19:51.815Z]   [1mPASS: 68 | FAIL: 0 | TOTAL: 68[0m
+  [2026-07-01T04:19:51.815Z]   [32m[1mPASS RATE: 100.0%[0m
+[2026-07-01T04:19:51.821Z] [PASS   ] [SCRAPE_760491         ] ✅ success=true | rows=131 | errors=0 | phases=18/9 PASS | 69.6s
+[2026-07-01T04:19:51.821Z] [INFO   ] [MATCH_760491          ]   📊 Mexico 2-0 Ecuador | Estadio Banorte
+[2026-07-01T04:19:51.829Z] [VERIFY ] [MIDNIGHT_760491       ] ✅ PASS | date=2026-06-30 ET=22:00 v=500x
+[2026-07-01T04:20:14.206Z] [POLL   ] [CYCLE/4               ] 🔄 Poll #4 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:20:15.341Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:20:15.898Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:20:16.381Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:20:17.029Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:20:17.029Z] [CYCLE  ] [CYCLE/4               ] ✅ CYCLE/4 — 12 total | 0 live | 3 final | 0 newly final | 2.82s
+[2026-07-01T04:20:44.218Z] [POLL   ] [CYCLE/5               ] 🔄 Poll #5 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:20:47.756Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:20:50.006Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:20:50.988Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:20:51.954Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:20:51.955Z] [CYCLE  ] [CYCLE/5               ] ✅ CYCLE/5 — 12 total | 0 live | 3 final | 0 newly final | 7.74s
+[2026-07-01T04:21:14.227Z] [POLL   ] [CYCLE/6               ] 🔄 Poll #6 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:21:15.446Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:21:15.996Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:21:17.346Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:21:18.828Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:21:18.828Z] [CYCLE  ] [CYCLE/6               ] ✅ CYCLE/6 — 12 total | 0 live | 3 final | 0 newly final | 4.60s
+[2026-07-01T04:21:44.239Z] [POLL   ] [CYCLE/7               ] 🔄 Poll #7 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:21:47.990Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:21:48.939Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:21:49.539Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:21:50.321Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:21:50.321Z] [CYCLE  ] [CYCLE/7               ] ✅ CYCLE/7 — 12 total | 0 live | 3 final | 0 newly final | 6.08s
+[2026-07-01T04:22:14.248Z] [POLL   ] [CYCLE/8               ] 🔄 Poll #8 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:22:16.053Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:22:16.652Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:22:17.131Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:22:17.471Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:22:17.471Z] [CYCLE  ] [CYCLE/8               ] ✅ CYCLE/8 — 12 total | 0 live | 3 final | 0 newly final | 3.22s
+[2026-07-01T04:22:44.250Z] [POLL   ] [CYCLE/9               ] 🔄 Poll #9 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:22:45.384Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:22:45.856Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:22:46.337Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:22:46.810Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:22:46.810Z] [CYCLE  ] [CYCLE/9               ] ✅ CYCLE/9 — 12 total | 0 live | 3 final | 0 newly final | 2.56s
+[2026-07-01T04:23:14.263Z] [POLL   ] [CYCLE/10              ] 🔄 Poll #10 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:23:15.216Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:23:15.627Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:23:16.092Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:23:16.641Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:23:16.641Z] [CYCLE  ] [CYCLE/10              ] ✅ CYCLE/10 — 12 total | 0 live | 3 final | 0 newly final | 2.38s
+[2026-07-01T04:23:44.276Z] [POLL   ] [CYCLE/11              ] 🔄 Poll #11 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:23:45.675Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:23:46.285Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:23:47.429Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:23:48.032Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:23:48.033Z] [CYCLE  ] [CYCLE/11              ] ✅ CYCLE/11 — 12 total | 0 live | 3 final | 0 newly final | 3.76s
+[2026-07-01T04:24:14.288Z] [POLL   ] [CYCLE/12              ] 🔄 Poll #12 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:24:15.114Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:24:15.514Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:24:15.955Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:24:16.357Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:24:16.357Z] [CYCLE  ] [CYCLE/12              ] ✅ CYCLE/12 — 12 total | 0 live | 3 final | 0 newly final | 2.07s
+[2026-07-01T04:24:44.301Z] [POLL   ] [CYCLE/13              ] 🔄 Poll #13 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:24:45.288Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:24:45.777Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:24:46.184Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:24:46.615Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:24:46.615Z] [CYCLE  ] [CYCLE/13              ] ✅ CYCLE/13 — 12 total | 0 live | 3 final | 0 newly final | 2.31s
+[2026-07-01T04:25:14.314Z] [POLL   ] [CYCLE/14              ] 🔄 Poll #14 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:25:15.682Z] [INFO   ] [SCOREBOARD/20260630   ] Found 3 events
+[2026-07-01T04:25:16.194Z] [INFO   ] [SCOREBOARD/20260701   ] Found 3 events
+[2026-07-01T04:25:17.334Z] [INFO   ] [SCOREBOARD/20260702   ] Found 3 events
+[2026-07-01T04:25:18.482Z] [INFO   ] [SCOREBOARD/20260703   ] Found 3 events
+[2026-07-01T04:25:18.482Z] [CYCLE  ] [CYCLE/14              ] ✅ CYCLE/14 — 12 total | 0 live | 3 final | 0 newly final | 4.17s

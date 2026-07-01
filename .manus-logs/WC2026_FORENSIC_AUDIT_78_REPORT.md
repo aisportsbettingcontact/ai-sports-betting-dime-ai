@@ -1,19 +1,19 @@
-# WC2026 ESPN Scraper — 78-Match Forensic Audit Report v5.0
-**Generated:** 2026-07-01T03:32:37.483Z
-**Audit Engine:** v5.0 | 500x depth | 78 matches (72 GS + 6 R32) | 9 tables
+# WC2026 ESPN Scraper — 79-Match Forensic Audit Report v5.1
+**Generated:** 2026-07-01T04:24:49.145Z
+**Audit Engine:** v5.1 | 500x depth | 79 matches (72 GS + 7 R32) | 9 tables
 **Group Stage:** June 11–27, 2026 | **R32 Knockout Stage:** June 28–30, 2026
 
 ## Final Summary
 | Metric | Value |
 |--------|-------|
-| **Total Checks** | 3647 |
-| **PASS** | 3647 |
+| **Total Checks** | 3693 |
+| **PASS** | 3693 |
 | **FAIL** | 0 |
 | **WARN** | 0 |
 | **Pass Rate** | 100.0% |
 | **Verdict** | ✅ ELITE — ZERO FAILURES |
 | **Group Stage Matches** | 72 (760414–760485) |
-| **R32 Knockout Matches** | 6 (760486–760492) |
+| **R32 Knockout Matches** | 7 (760486–760492) |
 | **Midnight Rule Matches** | 3 |
 
 ## Midnight Rule Matches
@@ -99,7 +99,7 @@
 | 71 | 760484 | Austria at Algeria | group-stage | 2026-06-27 | 22:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
 | 72 | 760485 | England at Panama | group-stage | 2026-06-27 | 17:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
 
-## R32 Knockout Stage Results (6 Matches)
+## R32 Knockout Stage Results (7 Matches)
 | # | gameId | Match | Round | PT Date | ET Time | PASS | FAIL | WARN | % | Verdict |
 |---|--------|-------|-------|---------|---------|------|------|------|---|---------|
 | 1 | 760486 | South Africa vs Canada | round-of-32 | 2026-06-28 | 15:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
@@ -107,4 +107,5 @@
 | 3 | 760488 | Netherlands vs Morocco | round-of-32 | 2026-06-29 | 21:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
 | 4 | 760489 | Germany vs Paraguay | round-of-32 | 2026-06-29 | 16:30 | 46 | 0 | 0 | 100.0% | ✅ PASS |
 | 5 | 760490 | Ivory Coast vs Norway | round-of-32 | 2026-06-30 | 13:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
-| 6 | 760492 | France vs Sweden | round-of-32 | 2026-06-30 | 17:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
+| 6 | 760491 | Mexico vs Ecuador | round-of-32 | 2026-06-30 | 22:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |
+| 7 | 760492 | France vs Sweden | round-of-32 | 2026-06-30 | 17:00 | 46 | 0 | 0 | 100.0% | ✅ PASS |

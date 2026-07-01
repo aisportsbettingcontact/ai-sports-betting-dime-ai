@@ -1,0 +1,229 @@
+
+════════════════════════════════════════════════════════════════════════════════
+  WC2026 LIVE GAME WATCHER — 500x EDITION
+  Started: 2026-07-01T04:01:30.621Z
+  Poll Interval: 30s
+  Scrape Timeout: 600s
+  Log: /home/ubuntu/ai-sports-betting/.manus-logs/wc2026LiveWatcher.txt
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-01T04:01:30.623Z] [INFO   ] [WATCHER/INIT                    ] 🚀 WC2026 Live Watcher starting | {"pollIntervalSec":30,"scrapeTimeoutSec":600,"watchDates":["20260630","20260701","20260702","20260703"],"logFile":"/home/ubuntu/ai-sports-betting/.manus-logs/wc2026LiveWatcher.txt"}
+[2026-07-01T04:01:30.623Z] [POLL   ] [CYCLE/1                         ] 🔄 Poll #1 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:01:31.779Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:01:31.779Z] [FINAL  ] [FINAL/760490                    ] 🏁 GAME FINAL — NEWLY DETECTED | {"match":"Norway at Ivory Coast","score":"NOR 2 - 1 CIV","statusDetail":"FT","prevState":"unknown","seasonType":13801}
+[2026-07-01T04:01:31.780Z] [TRIGGER] [SCRAPE/760490                   ] 🚀 TRIGGERING 500x SCRAPE | {"match":"Norway at Ivory Coast","score":"CIV:1 vs NOR:2","status":"STATUS_FULL_TIME","logFile":"/tmp/watcher_scrape_760490.txt"}
+[2026-07-01T04:01:31.784Z] [FINAL  ] [FINAL/760492                    ] 🏁 GAME FINAL — NEWLY DETECTED | {"match":"Sweden at France","score":"SWE 0 - 3 FRA","statusDetail":"FT","prevState":"unknown","seasonType":13801}
+[2026-07-01T04:01:31.784Z] [TRIGGER] [SCRAPE/760492                   ] 🚀 TRIGGERING 500x SCRAPE | {"match":"Sweden at France","score":"FRA:3 vs SWE:0","status":"STATUS_FULL_TIME","logFile":"/tmp/watcher_scrape_760492.txt"}
+[2026-07-01T04:01:31.787Z] [LIVE   ] [LIVE/760491                     ] ⚽ Ecuador at Mexico | {"score":"ECU 0 - 2 MEX","clock":"90'+9' | Period 2","status":"STATUS_SECOND_HALF"}
+[2026-07-01T04:01:32.188Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:01:32.619Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:01:33.184Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:01:33.185Z] [POLL   ] [CYCLE/1                         ] ✅ Poll #1 complete — 12 total | 1 live | 2 final | 2 newly final | 2.56s
+[2026-07-01T04:01:33.185Z] [INFO   ] [WATCHER/RUNNING                 ] ✅ Watcher running — polling every 30s | Press Ctrl+C to stop
+[2026-07-01T04:02:03.189Z] [POLL   ] [CYCLE/2                         ] 🔄 Poll #2 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:02:04.640Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:02:04.640Z] [LIVE   ] [LIVE/760491                     ] ⚽ Ecuador at Mexico | {"score":"ECU 0 - 2 MEX","clock":"90'+9' | Period 2","status":"STATUS_SECOND_HALF"}
+[2026-07-01T04:02:05.118Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:02:05.650Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:02:06.238Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:02:06.238Z] [POLL   ] [CYCLE/2                         ] ✅ Poll #2 complete — 12 total | 1 live | 2 final | 0 newly final | 3.05s
+[2026-07-01T04:02:28.674Z] [SCRAPE ] [OUTPUT/760490                   ] [RUNNER] Ingest complete — success=true | rows=130 | errors=0
+[2026-07-01T04:02:28.928Z] [PASS   ] [SCRAPE/760490                   ] ✅ SCRAPE COMPLETE — 130 rows in 57.1s | {"match":"Norway at Ivory Coast","exitCode":0,"rows":130,"elapsed":"57.1s","logFile":"/tmp/watcher_scrape_760490.txt"}
+[2026-07-01T04:02:33.192Z] [POLL   ] [CYCLE/3                         ] 🔄 Poll #3 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:02:35.280Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:02:35.280Z] [FINAL  ] [FINAL/760491                    ] 🏁 GAME FINAL — NEWLY DETECTED | {"match":"Ecuador at Mexico","score":"ECU 0 - 2 MEX","statusDetail":"FT","prevState":"in","seasonType":13801}
+[2026-07-01T04:02:35.280Z] [TRIGGER] [SCRAPE/760491                   ] 🚀 TRIGGERING 500x SCRAPE | {"match":"Ecuador at Mexico","score":"MEX:2 vs ECU:0","status":"STATUS_FULL_TIME","logFile":"/tmp/watcher_scrape_760491.txt"}
+[2026-07-01T04:02:35.442Z] [SCRAPE ] [OUTPUT/760492                   ] [RUNNER] Ingest complete — success=true | rows=141 | errors=0
+[2026-07-01T04:02:35.689Z] [PASS   ] [SCRAPE/760492                   ] ✅ SCRAPE COMPLETE — 141 rows in 63.9s | {"match":"Sweden at France","exitCode":0,"rows":141,"elapsed":"63.9s","logFile":"/tmp/watcher_scrape_760492.txt"}
+[2026-07-01T04:02:36.479Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:02:38.669Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:02:41.027Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:02:41.027Z] [POLL   ] [CYCLE/3                         ] ✅ Poll #3 complete — 12 total | 0 live | 3 final | 1 newly final | 7.83s
+[2026-07-01T04:03:03.196Z] [POLL   ] [CYCLE/4                         ] 🔄 Poll #4 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:03:05.851Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:03:06.751Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:03:08.162Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:03:11.492Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:03:11.492Z] [POLL   ] [CYCLE/4                         ] ✅ Poll #4 complete — 12 total | 0 live | 3 final | 0 newly final | 8.30s
+[2026-07-01T04:03:33.206Z] [POLL   ] [CYCLE/5                         ] 🔄 Poll #5 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:03:34.069Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:03:34.465Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:03:34.845Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:03:35.551Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:03:35.551Z] [POLL   ] [CYCLE/5                         ] ✅ Poll #5 complete — 12 total | 0 live | 3 final | 0 newly final | 2.35s
+[2026-07-01T04:03:37.154Z] [SCRAPE ] [OUTPUT/760491                   ] [RUNNER] Ingest complete — success=true | rows=131 | errors=0
+[2026-07-01T04:03:37.399Z] [PASS   ] [SCRAPE/760491                   ] ✅ SCRAPE COMPLETE — 131 rows in 62.1s | {"match":"Ecuador at Mexico","exitCode":0,"rows":131,"elapsed":"62.1s","logFile":"/tmp/watcher_scrape_760491.txt"}
+[2026-07-01T04:04:03.219Z] [POLL   ] [CYCLE/6                         ] 🔄 Poll #6 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:04:04.519Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:04:05.144Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:04:05.584Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:04:06.420Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:04:06.420Z] [POLL   ] [CYCLE/6                         ] ✅ Poll #6 complete — 12 total | 0 live | 3 final | 0 newly final | 3.20s
+[2026-07-01T04:04:33.232Z] [POLL   ] [CYCLE/7                         ] 🔄 Poll #7 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:04:34.642Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:04:35.707Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:04:37.991Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:04:38.506Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:04:38.506Z] [POLL   ] [CYCLE/7                         ] ✅ Poll #7 complete — 12 total | 0 live | 3 final | 0 newly final | 5.27s
+[2026-07-01T04:05:03.243Z] [POLL   ] [CYCLE/8                         ] 🔄 Poll #8 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:05:04.189Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:05:04.655Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:05:05.090Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:05:05.643Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:05:05.643Z] [POLL   ] [CYCLE/8                         ] ✅ Poll #8 complete — 12 total | 0 live | 3 final | 0 newly final | 2.40s
+[2026-07-01T04:05:33.257Z] [POLL   ] [CYCLE/9                         ] 🔄 Poll #9 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:05:35.733Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:05:37.198Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:05:39.045Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:05:42.461Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:05:42.461Z] [POLL   ] [CYCLE/9                         ] ✅ Poll #9 complete — 12 total | 0 live | 3 final | 0 newly final | 9.20s
+[2026-07-01T04:06:03.266Z] [POLL   ] [CYCLE/10                        ] 🔄 Poll #10 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:06:04.521Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:06:05.303Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:06:05.853Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:06:06.620Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:06:06.620Z] [POLL   ] [CYCLE/10                        ] ✅ Poll #10 complete — 12 total | 0 live | 3 final | 0 newly final | 3.35s
+[2026-07-01T04:06:33.279Z] [POLL   ] [CYCLE/11                        ] 🔄 Poll #11 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:06:35.833Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:06:38.615Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:06:40.147Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:06:40.931Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:06:40.931Z] [POLL   ] [CYCLE/11                        ] ✅ Poll #11 complete — 12 total | 0 live | 3 final | 0 newly final | 7.65s
+[2026-07-01T04:07:03.287Z] [POLL   ] [CYCLE/12                        ] 🔄 Poll #12 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:07:05.021Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:07:05.976Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:07:07.865Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:07:08.604Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:07:08.604Z] [POLL   ] [CYCLE/12                        ] ✅ Poll #12 complete — 12 total | 0 live | 3 final | 0 newly final | 5.32s
+[2026-07-01T04:07:33.298Z] [POLL   ] [CYCLE/13                        ] 🔄 Poll #13 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:07:35.639Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:07:36.231Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:07:36.975Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:07:37.554Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:07:37.554Z] [POLL   ] [CYCLE/13                        ] ✅ Poll #13 complete — 12 total | 0 live | 3 final | 0 newly final | 4.26s
+[2026-07-01T04:08:03.310Z] [POLL   ] [CYCLE/14                        ] 🔄 Poll #14 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:08:05.150Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:08:06.200Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:08:07.431Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:08:08.715Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:08:08.715Z] [POLL   ] [CYCLE/14                        ] ✅ Poll #14 complete — 12 total | 0 live | 3 final | 0 newly final | 5.41s
+[2026-07-01T04:08:33.321Z] [POLL   ] [CYCLE/15                        ] 🔄 Poll #15 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:08:37.501Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:08:38.801Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:08:39.515Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:08:40.765Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:08:40.765Z] [POLL   ] [CYCLE/15                        ] ✅ Poll #15 complete — 12 total | 0 live | 3 final | 0 newly final | 7.44s
+[2026-07-01T04:09:03.330Z] [POLL   ] [CYCLE/16                        ] 🔄 Poll #16 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:09:04.666Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:09:05.644Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:09:06.251Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:09:06.677Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:09:06.677Z] [POLL   ] [CYCLE/16                        ] ✅ Poll #16 complete — 12 total | 0 live | 3 final | 0 newly final | 3.35s
+[2026-07-01T04:09:33.342Z] [POLL   ] [CYCLE/17                        ] 🔄 Poll #17 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:09:38.455Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:09:38.483Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:09:38.504Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:09:38.522Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:09:38.522Z] [POLL   ] [CYCLE/17                        ] ✅ Poll #17 complete — 12 total | 0 live | 3 final | 0 newly final | 5.18s
+[2026-07-01T04:10:03.352Z] [POLL   ] [CYCLE/18                        ] 🔄 Poll #18 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:10:04.159Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:10:04.557Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:10:04.973Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:10:05.377Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:10:05.377Z] [POLL   ] [CYCLE/18                        ] ✅ Poll #18 complete — 12 total | 0 live | 3 final | 0 newly final | 2.02s
+[2026-07-01T04:10:33.365Z] [POLL   ] [CYCLE/19                        ] 🔄 Poll #19 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:10:34.982Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:10:35.651Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:10:36.567Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:10:37.775Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:10:37.775Z] [POLL   ] [CYCLE/19                        ] ✅ Poll #19 complete — 12 total | 0 live | 3 final | 0 newly final | 4.41s
+[2026-07-01T04:11:03.378Z] [POLL   ] [CYCLE/20                        ] 🔄 Poll #20 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:11:05.485Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:11:05.893Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:11:06.398Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:11:08.586Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:11:08.586Z] [POLL   ] [CYCLE/20                        ] ✅ Poll #20 complete — 12 total | 0 live | 3 final | 0 newly final | 5.21s
+[2026-07-01T04:11:33.389Z] [POLL   ] [CYCLE/21                        ] 🔄 Poll #21 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:11:35.031Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:11:35.513Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:11:36.710Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:11:37.662Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:11:37.663Z] [POLL   ] [CYCLE/21                        ] ✅ Poll #21 complete — 12 total | 0 live | 3 final | 0 newly final | 4.27s
+[2026-07-01T04:12:03.401Z] [POLL   ] [CYCLE/22                        ] 🔄 Poll #22 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:12:04.898Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:12:05.589Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:12:06.058Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:12:06.609Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:12:06.609Z] [POLL   ] [CYCLE/22                        ] ✅ Poll #22 complete — 12 total | 0 live | 3 final | 0 newly final | 3.21s
+[2026-07-01T04:12:33.410Z] [POLL   ] [CYCLE/23                        ] 🔄 Poll #23 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:12:35.111Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:12:35.800Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:12:36.491Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:12:37.214Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:12:37.214Z] [POLL   ] [CYCLE/23                        ] ✅ Poll #23 complete — 12 total | 0 live | 3 final | 0 newly final | 3.80s
+[2026-07-01T04:13:03.422Z] [POLL   ] [CYCLE/24                        ] 🔄 Poll #24 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:13:08.495Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:13:08.517Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:13:08.543Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:13:08.566Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:13:08.566Z] [POLL   ] [CYCLE/24                        ] ✅ Poll #24 complete — 12 total | 0 live | 3 final | 0 newly final | 5.14s
+[2026-07-01T04:13:33.433Z] [POLL   ] [CYCLE/25                        ] 🔄 Poll #25 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:13:34.599Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:13:35.138Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:13:35.581Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:13:36.106Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:13:36.106Z] [POLL   ] [CYCLE/25                        ] ✅ Poll #25 complete — 12 total | 0 live | 3 final | 0 newly final | 2.67s
+[2026-07-01T04:14:03.445Z] [POLL   ] [CYCLE/26                        ] 🔄 Poll #26 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:14:05.353Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:14:06.654Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:14:07.658Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:14:08.774Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:14:08.774Z] [POLL   ] [CYCLE/26                        ] ✅ Poll #26 complete — 12 total | 0 live | 3 final | 0 newly final | 5.33s
+[2026-07-01T04:14:33.457Z] [POLL   ] [CYCLE/27                        ] 🔄 Poll #27 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:14:34.855Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:14:35.746Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:14:36.235Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:14:36.714Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:14:36.714Z] [POLL   ] [CYCLE/27                        ] ✅ Poll #27 complete — 12 total | 0 live | 3 final | 0 newly final | 3.26s
+[2026-07-01T04:15:03.457Z] [POLL   ] [CYCLE/28                        ] 🔄 Poll #28 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:15:05.031Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:15:05.633Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:15:06.108Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:15:06.712Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:15:06.712Z] [POLL   ] [CYCLE/28                        ] ✅ Poll #28 complete — 12 total | 0 live | 3 final | 0 newly final | 3.25s
+[2026-07-01T04:15:33.470Z] [POLL   ] [CYCLE/29                        ] 🔄 Poll #29 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:15:34.410Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:15:34.788Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:15:35.216Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:15:35.765Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:15:35.765Z] [POLL   ] [CYCLE/29                        ] ✅ Poll #29 complete — 12 total | 0 live | 3 final | 0 newly final | 2.29s
+[2026-07-01T04:16:03.476Z] [POLL   ] [CYCLE/30                        ] 🔄 Poll #30 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:16:14.621Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:16:17.298Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:16:18.003Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:16:18.819Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:16:18.820Z] [POLL   ] [CYCLE/30                        ] ✅ Poll #30 complete — 12 total | 0 live | 3 final | 0 newly final | 15.34s
+[2026-07-01T04:16:33.476Z] [POLL   ] [CYCLE/31                        ] 🔄 Poll #31 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:16:35.021Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:16:35.689Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:16:36.354Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:16:37.899Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:16:37.899Z] [POLL   ] [CYCLE/31                        ] ✅ Poll #31 complete — 12 total | 0 live | 3 final | 0 newly final | 4.42s
+[2026-07-01T04:17:03.489Z] [POLL   ] [CYCLE/32                        ] 🔄 Poll #32 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:17:04.591Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:17:05.015Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:17:05.443Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:17:05.875Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:17:05.875Z] [POLL   ] [CYCLE/32                        ] ✅ Poll #32 complete — 12 total | 0 live | 3 final | 0 newly final | 2.39s
+[2026-07-01T04:17:33.503Z] [POLL   ] [CYCLE/33                        ] 🔄 Poll #33 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:17:35.233Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:17:36.360Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:17:37.160Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:17:38.044Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:17:38.044Z] [POLL   ] [CYCLE/33                        ] ✅ Poll #33 complete — 12 total | 0 live | 3 final | 0 newly final | 4.54s
+[2026-07-01T04:18:03.514Z] [POLL   ] [CYCLE/34                        ] 🔄 Poll #34 — watching dates: 20260630, 20260701, 20260702, 20260703
+[2026-07-01T04:18:05.572Z] [STATUS ] [SCOREBOARD/20260630             ] Found 3 events
+[2026-07-01T04:18:06.278Z] [STATUS ] [SCOREBOARD/20260701             ] Found 3 events
+[2026-07-01T04:18:06.956Z] [STATUS ] [SCOREBOARD/20260702             ] Found 3 events
+[2026-07-01T04:18:07.739Z] [STATUS ] [SCOREBOARD/20260703             ] Found 3 events
+[2026-07-01T04:18:07.739Z] [POLL   ] [CYCLE/34                        ] ✅ Poll #34 complete — 12 total | 0 live | 3 final | 0 newly final | 4.22s
+[2026-07-01T04:18:33.526Z] [POLL   ] [CYCLE/35                        ] 🔄 Poll #35 — watching dates: 20260630, 20260701, 20260702, 20260703
