@@ -57,6 +57,7 @@ export const wc2026Router = router({
     .input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
     .query(async ({ input }) => {
       const db = await getDb();
+      console.log(`[wc2026.fixturesByDate] INPUT date='${input.date}'`);
       const fixtures = await db
         .select()
         .from(wc2026Fixtures)
@@ -68,7 +69,14 @@ export const wc2026Router = router({
           asc(wc2026Fixtures.fixtureId)
         );
 
-      if (fixtures.length === 0) return [];
+      console.log(`[wc2026.fixturesByDate] RESULT date='${input.date}' fixtures=${fixtures.length} ids=[${fixtures.map((f: WcFixture) => f.fixtureId).join(',')}]`);
+      if (fixtures.length === 0) {
+        console.log(`[wc2026.fixturesByDate] EMPTY — no fixtures found for date='${input.date}'. Checking raw matchDate values...`);
+        // Diagnostic: dump first 5 rows to see what match_date looks like
+        const sample = await db.select({ fixtureId: wc2026Fixtures.fixtureId, matchDate: wc2026Fixtures.matchDate }).from(wc2026Fixtures).limit(5);
+        console.log(`[wc2026.fixturesByDate] SAMPLE rows:`, JSON.stringify(sample));
+        return [];
+      }
 
       const [teams, venues] = await Promise.all([
         db.select().from(wc2026Teams),
