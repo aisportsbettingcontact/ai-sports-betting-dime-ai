@@ -2964,22 +2964,10 @@ function WcProjectionsFeed({ date }: { date: string }) {
     }
   );
 
-  // Splits query — MUST be called unconditionally before any early return (Rules of Hooks)
-  const { data: splitsData } = trpc.wc2026.splitsByDate.useQuery(
-    { date },
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-    }
-  );
-
   const { data: fixtures, isLoading, isFetching } = dateQuery;
 
-  // Build a map: fixtureId → WcFixtureSplits for O(1) lookup
-  const splitsMap = (splitsData as WcFixtureSplits[] | undefined)?.reduce<Record<string, WcFixtureSplits>>(
-    (acc, s) => { acc[s.fixtureId] = s; return acc; },
-    {}
-  ) ?? {};
+  // Splits data removed — wc2026_betting_splits table dropped (checkpoint 8aa8a5b)
+  const splitsMap: Record<string, WcFixtureSplits> = {};
 
   // [FIX 2026-06-24] Show skeleton during: (a) initial load, (b) date transition where
   // placeholderData from prev date is filtered out → fixtures=[] while isFetching=true.
@@ -3080,16 +3068,12 @@ function WcLineupsFeed({ date }: { date: string }) {
 
 // ─── Splits Feed ─────────────────────────────────────────────────────────────
 
-function WcSplitsFeed({ date }: { date: string }) {
-  // [FIX 2026-06-24] keepPreviousData + isFetching guard: prevents blank screen on date change.
-  const { data: splitsData, isLoading, isFetching } = trpc.wc2026.splitsByDate.useQuery(
-    { date },
-    {
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-      placeholderData: keepPreviousData,
-    }
-  );
+function WcSplitsFeed({ date: _date }: { date: string }) {
+  // Splits removed — wc2026_betting_splits table dropped (checkpoint 8aa8a5b)
+  // WcSplitsFeed is retained as a stub; SPLITS tab is already hidden in the UI.
+  const splitsData = undefined;
+  const isLoading = false;
+  const isFetching = false;
 
   if (isLoading || (isFetching && (!splitsData || (splitsData as WcFixtureSplits[]).length === 0))) {
     return (
@@ -3115,7 +3099,7 @@ function WcSplitsFeed({ date }: { date: string }) {
         <CalendarDays className="w-10 h-10 text-zinc-600" />
         <div>
           <p className="text-sm font-semibold text-zinc-400 mb-1">
-            No betting splits available for {WC_DATE_LABELS[date] ?? date}
+            No betting splits available for {WC_DATE_LABELS[_date] ?? _date}
           </p>
           <p className="text-xs text-zinc-600">Splits sourced from DraftKings Network · Updated every 5 min</p>
         </div>

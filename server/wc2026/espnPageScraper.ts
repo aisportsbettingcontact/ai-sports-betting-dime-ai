@@ -1145,7 +1145,7 @@ function parseMatchStatsPage(
     const providerName = safeStr(rawOdds["providerName"]);
     const headerText = safeStr(rawOdds["headerText"]);
 
-    function parseOddsTeam(item: Record<string, unknown>): GameOddsTeam {
+    const parseOddsTeam = (item: Record<string, unknown>): GameOddsTeam => {
       const line = (item["line"] as Record<string, unknown>) ?? {};
       const open = (item["open"] as Record<string, unknown>) ?? {};
       const ml = (item["moneyline"] as Record<string, unknown>) ?? {};
