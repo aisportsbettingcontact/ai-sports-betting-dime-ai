@@ -173,9 +173,10 @@ async function phase1_existenceCheck() {
   const missing = ALL_IDS.filter(id => !dbIds.has(id));
   const extra = [...dbIds].filter(id => !ALL_IDS.includes(id));
 
-  check(rows.length === 72, 'PHASE1/TOTAL_COUNT',
-    `72 matches in DB ✓`,
-    `Match count MISMATCH: DB has ${rows.length}, expected 72`,
+  // DB may have extra R32 matches from earlier sessions — check ≥72 and all 72 GS IDs present
+  check(rows.length >= 72, 'PHASE1/TOTAL_COUNT',
+    `${rows.length} matches in DB (≥72) ✓`,
+    `Match count CRITICAL: DB has only ${rows.length}, expected ≥72`,
     { dbCount: rows.length, expected: 72 });
 
   check(missing.length === 0, 'PHASE1/MISSING_MATCHES',
@@ -327,8 +328,14 @@ async function phase3_perMatchAudit(dbIds) {
         { ptDate: dbPtDate, etDate: etDateFromUtc });
     }
 
-    // Scrape version
-    mc(m.scrapeVersion === '250x', 'SCRAPE_VERSION', `scrapeVersion="250x" ✓`, `scrapeVersion="${m.scrapeVersion}" ≠ "250x"`);
+    // Scrape version — 500x is the current enhanced version
+    mc(m.scrapeVersion === '500x', 'SCRAPE_VERSION', `scrapeVersion="500x" ✓`, `scrapeVersion="${m.scrapeVersion}" ≠ "500x"`);
+
+    // matchRound — must be 'group-stage' for all 72 Group Stage matches (ESPN native season.slug)
+    mc(m.matchRound === 'group-stage', 'MATCH_ROUND',
+      `matchRound="group-stage" (ESPN season.slug) ✓`,
+      `matchRound="${m.matchRound}" ≠ "group-stage" — ESPN season.slug not stored correctly`,
+      { stored: m.matchRound, expected: 'group-stage' });
     mc(!!m.createdAt, 'CREATED_AT', 'createdAt present ✓', 'createdAt MISSING');
 
     // ── B. wc2026_espn_match_odds ──────────────────────────────────────────
@@ -531,11 +538,37 @@ async function phase5_aggregateValidation() {
     `Midnight match count MISMATCH: DB=${midnightRows.length} expected=${MIDNIGHT_MATCHES.length}`,
     { dbMidnightIds: [...dbMidnightIds], expectedMidnightIds: [...expectedMidnightIds] });
 
-  // Scrape version: all GROUP STAGE 72 should be "250x" (may have extra R32 matches)
-  const [[v250Count]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='250x'`);
-  check(Number(v250Count.cnt) >= 72, 'AGG/SCRAPE_VERSION_250X',
-    `${v250Count.cnt} matches have scrapeVersion='250x' (≥72) ✓`,
-    `Only ${v250Count.cnt} matches have scrapeVersion='250x' (< 72)`);
+  // Scrape version: all 72 GROUP STAGE matches should be '500x' (enhanced version)
+  const [[v500Count]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='500x' AND matchId IN (${ALL_IDS.map(id => `'${id}'`).join(',')})`);
+  check(Number(v500Count.cnt) === 72, 'AGG/SCRAPE_VERSION_500X',
+    `${v500Count.cnt}/72 Group Stage matches have scrapeVersion='500x' ✓`,
+    `Only ${v500Count.cnt}/72 Group Stage matches have scrapeVersion='500x'`,
+    { count: Number(v500Count.cnt), expected: 72 });
+
+  // matchRound: all 72 GROUP STAGE matches should have matchRound='group-stage' (ESPN native)
+  const [[gsRoundCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE matchRound='group-stage' AND matchId IN (${ALL_IDS.map(id => `'${id}'`).join(',')})`);
+  check(Number(gsRoundCount.cnt) === 72, 'AGG/MATCH_ROUND_GROUP_STAGE',
+    `${gsRoundCount.cnt}/72 Group Stage matches have matchRound='group-stage' ✓`,
+    `Only ${gsRoundCount.cnt}/72 Group Stage matches have matchRound='group-stage' — ESPN season.slug missing`,
+    { count: Number(gsRoundCount.cnt), expected: 72 });
+
+  // matchRound across all 9 tables: verify group-stage label propagated to all tables
+  const roundTables = [
+    { tbl: 'wc2026_espn_match_odds', label: 'match_odds' },
+    { tbl: 'wc2026_espn_team_stats', label: 'team_stats' },
+    { tbl: 'wc2026_espn_match_stats', label: 'match_stats' },
+    { tbl: 'wc2026_espn_expected_goals', label: 'expected_goals' },
+    { tbl: 'wc2026_espn_shot_map', label: 'shot_map' },
+    { tbl: 'wc2026_espn_player_stats', label: 'player_stats' },
+    { tbl: 'wc2026_espn_lineups', label: 'lineups' },
+  ];
+  for (const rt of roundTables) {
+    const [[rtCount]] = await conn.execute(`SELECT COUNT(DISTINCT matchId) as cnt FROM ${rt.tbl} WHERE matchRound='group-stage' AND matchId IN (${ALL_IDS.map(id => `'${id}'`).join(',')})`);
+    check(Number(rtCount.cnt) === 72, `AGG/MATCH_ROUND_${rt.label.toUpperCase()}`,
+      `${rtCount.cnt}/72 matches have matchRound='group-stage' in ${rt.label} ✓`,
+      `Only ${rtCount.cnt}/72 matches have matchRound='group-stage' in ${rt.label}`,
+      { count: Number(rtCount.cnt), expected: 72 });
+  }
 
   // Status: all GROUP STAGE 72 should be statusState='post'
   const [[postCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE statusState='post'`);
