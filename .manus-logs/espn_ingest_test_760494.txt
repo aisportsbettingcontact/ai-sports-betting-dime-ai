@@ -1,0 +1,217 @@
+[2026-07-01T11:27:33.807Z] [35m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:27:33.809Z] [35m[1m  ESPN WC2026 INGEST LIVE TEST — gameId=760494[0m
+[2026-07-01T11:27:33.809Z] [35m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:27:33.809Z]   Target: https://www.espn.com/soccer/match/_/gameId/760494
+[2026-07-01T11:27:33.810Z]   Tables: 9 wc2026_espn_* tables
+[2026-07-01T11:27:33.810Z]   Timeout: 300s (3 ESPN page loads + DB writes)
+[2026-07-01T11:27:33.810Z]   Log file: /home/ubuntu/ai-sports-betting/.manus-logs/espn_ingest_test_760494.txt
+[2026-07-01T11:28:42.852Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.852Z] [36m[1m  Phase Results (9 Tables)[0m
+[2026-07-01T11:28:42.853Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.853Z]   Phase 1/9 [[32m✓ PASS[0m] wc2026_espn_matches — 1 rows
+[2026-07-01T11:28:42.853Z]   Phase 2/9 [[32m✓ PASS[0m] wc2026_espn_match_odds — 1 rows
+[2026-07-01T11:28:42.853Z]   Phase 3/9 [[31m✗ FAIL[0m] wc2026_espn_team_stats — 1 rows
+[2026-07-01T11:28:42.853Z]   Phase 4/9 [[31m✗ FAIL[0m] wc2026_espn_match_stats — 1 rows
+[2026-07-01T11:28:42.853Z]   Phase 5/9 [[31m✗ FAIL[0m] wc2026_espn_expected_goals — 1 rows
+[2026-07-01T11:28:42.853Z]   Phase 6/9 [[32m✓ PASS[0m] wc2026_espn_shot_map — 0 rows
+[2026-07-01T11:28:42.853Z]   Phase 7/9 [[31m✗ FAIL[0m] wc2026_espn_player_stats — 0 rows
+[2026-07-01T11:28:42.853Z]   Phase 8/9 [[31m✗ FAIL[0m] wc2026_espn_lineups — 0 rows
+[2026-07-01T11:28:42.853Z]   Phase 9/9 [[31m✗ FAIL[0m] wc2026_espn_glossary — 0 rows
+[2026-07-01T11:28:42.853Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.853Z] [36m[1m  Ingest Result Validation[0m
+[2026-07-01T11:28:42.853Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  result.success = false (expected true)
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  result.totalRowsWritten = 5 (expected > 50)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  result.errors.length = 0
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  result.phases.length = 9
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  phases all pass (9/9) = 3 (expected 9)
+[2026-07-01T11:28:42.853Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.853Z] [36m[1m  Database Row Counts[0m
+[2026-07-01T11:28:42.853Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_matches = 1 (> 0)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_match_odds = 1 (> 0)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_team_stats = 1 (> 0)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_match_stats = 1 (> 0)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_expected_goals = 1 (> 0)
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  wc2026_espn_shot_map = 0 (expected > 0)
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  wc2026_espn_player_stats = 0 (expected > 0)
+[2026-07-01T11:28:42.853Z]   [31m✗ FAIL[0m  wc2026_espn_lineups = 0 (expected > 0)
+[2026-07-01T11:28:42.853Z]   [32m✓ PASS[0m  wc2026_espn_glossary = 20 (> 0)
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z] [36m[1m  Match Metadata (wc2026_espn_matches)[0m
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z]   Match: United States 0-0 Bosnia-Herzegovina
+[2026-07-01T11:28:42.854Z]   Venue: Levi's Stadium | Attendance: 0 | Referee: 
+[2026-07-01T11:28:42.854Z]   Competition: FIFA World Cup, Round of 32 | Round: Round of 32 | Season: 2026
+[2026-07-01T11:28:42.854Z]   Formations:  vs 
+[2026-07-01T11:28:42.854Z]   Status: pre / 7/1 - 8:00 PM EDT / Scheduled
+[2026-07-01T11:28:42.854Z]   matchDateUtc: 1782950400000 | homeTeamId: 660
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  homeTeamName = "United States"
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  awayTeamName = "Bosnia-Herzegovina"
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  venue = "Levi's Stadium"
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  homeScore = 0
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  awayScore = 0
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeFormation = "" (expected truthy)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  awayFormation = "" (expected truthy)
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  matchDateUtc = 1782950400000
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  homeTeamId = "660"
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  homeTeamAbbrev = "USA"
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  statusState = "pre"
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z] [36m[1m  Team Stats (wc2026_espn_team_stats — 8 summary stats)[0m
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z]   Possession: H=58% A=46%
+[2026-07-01T11:28:42.854Z]   Shots on Goal: H=null A=null
+[2026-07-01T11:28:42.854Z]   Shot Attempts: H=null A=null
+[2026-07-01T11:28:42.854Z]   Fouls: H=null A=null
+[2026-07-01T11:28:42.854Z]   Yellow Cards: H=null A=null
+[2026-07-01T11:28:42.854Z]   Red Cards: H=null A=null
+[2026-07-01T11:28:42.854Z]   Corner Kicks: H=null A=null
+[2026-07-01T11:28:42.854Z]   Saves: H=null A=null
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  possession = "58%"
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  shotsOnGoal = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  shotAttempts = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  fouls = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  cornerKicks = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  saves = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [32m✓ PASS[0m  possessionAway = "46%"
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z] [36m[1m  Shots (wc2026_espn_match_stats — shtsTbls)[0m
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z]   SoG: H=null A=null
+[2026-07-01T11:28:42.854Z]   Total Shots: H=null A=null
+[2026-07-01T11:28:42.854Z]   Blocked: H=null A=null
+[2026-07-01T11:28:42.854Z]   Hit Woodwork: H=null A=null
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeShotsOnGoal = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeShots = null (expected non-null)
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z] [36m[1m  Defense (wc2026_espn_match_stats — tmStatsTbls[defense])[0m
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z]   Tackles: H=null A=null
+[2026-07-01T11:28:42.854Z]   Interceptions: H=null A=null
+[2026-07-01T11:28:42.854Z]   Clearances: H=null A=null
+[2026-07-01T11:28:42.854Z]   Recoveries: H=null A=null
+[2026-07-01T11:28:42.854Z]   Duels Won: H=null A=null | Aerials: H=null A=null
+[2026-07-01T11:28:42.854Z]   Fouls: H=null A=null | Offsides: H=null A=null
+[2026-07-01T11:28:42.854Z]   Yellow: H=null A=null | Red: H=null A=null
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeTackles = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeClearances = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeInterceptions = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeRecoveries = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeDuelsWon = null (expected non-null)
+[2026-07-01T11:28:42.854Z]   [31m✗ FAIL[0m  homeFoulsCommitted = null (expected non-null)
+[2026-07-01T11:28:42.854Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.854Z] [36m[1m  Passes (wc2026_espn_match_stats — pssTbls)[0m
+[2026-07-01T11:28:42.855Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.855Z]   Total Passes: H=null A=null
+[2026-07-01T11:28:42.855Z]   Accurate Passes: H=null A=null
+[2026-07-01T11:28:42.855Z]   Pass Accuracy: H=null A=null
+[2026-07-01T11:28:42.855Z]   Long Balls: H=null A=null
+[2026-07-01T11:28:42.855Z]   Crosses: H=null A=null
+[2026-07-01T11:28:42.855Z]   Throws: H=null A=null
+[2026-07-01T11:28:42.855Z]   Opp Box Touches: H=null A=null
+[2026-07-01T11:28:42.855Z]   [31m✗ FAIL[0m  homePasses = null (expected non-null)
+[2026-07-01T11:28:42.855Z]   [31m✗ FAIL[0m  homePassAccuracyPct = null (expected non-null)
+[2026-07-01T11:28:42.855Z]   [31m✗ FAIL[0m  homeAccurateLongBalls = null (expected non-null)
+[2026-07-01T11:28:42.855Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.855Z] [36m[1m  Attack (wc2026_espn_match_stats — attkTbls)[0m
+[2026-07-01T11:28:42.855Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.855Z]   Big Chances Created: H=null A=null
+[2026-07-01T11:28:42.855Z]   Big Chances Missed: H=null A=null
+[2026-07-01T11:28:42.855Z]   Attempts Inside Box: H=null A=null
+[2026-07-01T11:28:42.855Z]   Attempts Outside Box: H=null A=null
+[2026-07-01T11:28:42.855Z]   Through Balls: H=null A=null
+[2026-07-01T11:28:42.855Z]   Corners Won: H=null A=null
+[2026-07-01T11:28:42.855Z]   [31m✗ FAIL[0m  homeBigChancesCreated = null (expected non-null)
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  homeAttemptsInsideBox = null (expected non-null)
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Goalkeeping (wc2026_espn_match_stats — tmStatsTbls[goalkeeping])[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   GK Saves: H=null A=null
+[2026-07-01T11:28:42.856Z]   Goal Kicks: H=null A=null
+[2026-07-01T11:28:42.856Z]   Shots Faced: H=null A=null
+[2026-07-01T11:28:42.856Z]   High Claims: H=null A=null
+[2026-07-01T11:28:42.856Z]   PKs Saved: H=null A=null
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  homeGkSaves = null (expected non-null)
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  homeGoalKicks = null (expected non-null)
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Expected Goals (wc2026_espn_expected_goals)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   xG: H=null A=null
+[2026-07-01T11:28:42.856Z]   xGOT: H=null A=null
+[2026-07-01T11:28:42.856Z]   Open Play xG: H=null A=null
+[2026-07-01T11:28:42.856Z]   Set Play xG: H=null A=null
+[2026-07-01T11:28:42.856Z]   xA: H=0.000 A=0.000
+[2026-07-01T11:28:42.856Z]   Per-player entries: 0
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  homeXG = null (expected non-null)
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  homeXGOT = null (expected non-null)
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  perPlayer count = 0 (expected > 5)
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Shot Map (wc2026_espn_shot_map)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   Goals in shot map: 0
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  shot map goal count = 0 (expected > 0)
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Player Stats — Outfield (wc2026_espn_player_stats)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Player Stats — Goalkeeper (wc2026_espn_player_stats)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Lineups (wc2026_espn_lineups)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   Starters: 0 (expected 22)
+[2026-07-01T11:28:42.856Z]   Total lineup entries: 0
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  starters count = 22 = 0 (expected 22)
+[2026-07-01T11:28:42.856Z]   [31m✗ FAIL[0m  total lineup entries = 0 (expected > 22)
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [36m[1m  Match Odds (wc2026_espn_match_odds)[0m
+[2026-07-01T11:28:42.856Z] [36m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   Provider: draftkings
+[2026-07-01T11:28:42.856Z]   Moneylines: H=-255 D=+380 A=+750
+[2026-07-01T11:28:42.856Z]   Open: H=-185 A=u2.5
+[2026-07-01T11:28:42.856Z]   Spread: -1.5 | Total: o2.5
+[2026-07-01T11:28:42.856Z]   [32m✓ PASS[0m  odds.provider = "draftkings"
+[2026-07-01T11:28:42.856Z] [35m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z] [35m[1m  LIVE INGEST TEST COMPLETE[0m
+[2026-07-01T11:28:42.856Z] [35m══════════════════════════════════════════════════════════════════════[0m
+[2026-07-01T11:28:42.856Z]   [1mgameId: 760494[0m
+[2026-07-01T11:28:42.856Z]   [1mPASS: 20 | FAIL: 34 | TOTAL: 54[0m
+[2026-07-01T11:28:42.856Z]   [31m[1mPASS RATE: 37.0%[0m
+[2026-07-01T11:28:42.856Z]   Duration: 69.0s
+[2026-07-01T11:28:42.856Z] 
+  [31mFAILURES:[0m
+[2026-07-01T11:28:42.856Z]     [31m✗[0m result.success = false (expected true)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m result.totalRowsWritten = 5 (expected > 50)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m phases all pass (9/9) = 3 (expected 9)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m wc2026_espn_shot_map = 0 (expected > 0)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m wc2026_espn_player_stats = 0 (expected > 0)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m wc2026_espn_lineups = 0 (expected > 0)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m homeFormation = "" (expected truthy)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m awayFormation = "" (expected truthy)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m shotsOnGoal = null (expected non-null)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m shotAttempts = null (expected non-null)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m fouls = null (expected non-null)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m cornerKicks = null (expected non-null)
+[2026-07-01T11:28:42.856Z]     [31m✗[0m saves = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeShotsOnGoal = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeShots = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeTackles = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeClearances = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeInterceptions = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeRecoveries = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeDuelsWon = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeFoulsCommitted = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homePasses = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homePassAccuracyPct = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeAccurateLongBalls = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeBigChancesCreated = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeAttemptsInsideBox = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeGkSaves = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeGoalKicks = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeXG = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m homeXGOT = null (expected non-null)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m perPlayer count = 0 (expected > 5)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m shot map goal count = 0 (expected > 0)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m starters count = 22 = 0 (expected 22)
+[2026-07-01T11:28:42.857Z]     [31m✗[0m total lineup entries = 0 (expected > 22)
