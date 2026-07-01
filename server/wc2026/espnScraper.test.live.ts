@@ -177,7 +177,7 @@ async function main(): Promise<void> {
     console.log(`\n${C.bold}[TEST 4] Deferred Core API Sections (8 sections)${C.reset}`);
 
     // Helper: assert a deferred section was fetched and has data
-    function assertDeferred(section: typeof data.shotsDetail, label: string): void {
+    const assertDeferred = (section: NonNullable<typeof data>["shotsDetail"], label: string): void => {
       assert(section.fetched, `${label}: fetched=true`, `url=${section.apiUrl.slice(-60)}`);
       assert(
         section.teamRows.length > 0 || section.playerRows.length > 0 || section.rawKeys.length > 0,
