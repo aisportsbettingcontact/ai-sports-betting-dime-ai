@@ -395,3 +395,103 @@ export const wc2026FixturesRelations = relations(wc2026Fixtures, ({ one }) => ({
     references: [wc2026Venues.venueId],
   }),
 }));
+
+// ─── WC2026 ESPN Bracket ─────────────────────────────────────────────────────
+//
+// Stores the full bracket tree from https://www.espn.com/soccer/bracket
+// Primary source: embedded JSON blob → matchups[] array
+// Covers all 32 matchups: R32 (16) + R16 (8) + QF (4) + SF (2) + Final/3rd (2)
+//
+// Key design decisions:
+//   - gameId (ESPN event ID) is the natural PK and FK to wc2026_espn_matches
+//   - matchNumber is the human-readable label ("Match 80") — critical for bracket display
+//   - matchupId is ESPN's internal bracket slot ID (used for advancement seeding)
+//   - roundId: 1=R32, 2=R16, 3=QF, 4=SF, 5=Final/3rd
+//   - bracketLocation: ESPN positional slot within the round (1-based)
+//   - homeAway: competitorOne=home (order=1), competitorTwo=away (order=2)
+//   - isTBD flags: true for unresolved future slots
+//   - advancementSlug: URL slug from ESPN link (e.g. "congo-dr-england")
+//
+export const wc2026EspnBracket = mysqlTable(
+  "wc2026_espn_bracket",
+  {
+    id:              bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+
+    // ── ESPN identifiers ──────────────────────────────────────────────────────
+    /** ESPN event/game ID (e.g. "760495"). FK → wc2026_espn_matches.matchId */
+    gameId:          varchar("game_id", { length: 16 }).notNull().unique(),
+    /** ESPN internal bracket slot ID (e.g. "78"). Used for advancement seeding chain */
+    matchupId:       varchar("matchup_id", { length: 8 }).notNull(),
+
+    // ── Bracket structure ─────────────────────────────────────────────────────
+    /** Human-readable match label (e.g. "Match 80"). Critical for bracket display */
+    matchNumber:     varchar("match_number", { length: 32 }),
+    /** Round ID: 1=R32, 2=R16, 3=QF, 4=SF, 5=Final/3rd */
+    roundId:         smallint("round_id").notNull(),
+    /** Round human label */
+    roundLabel:      varchar("round_label", { length: 64 }).notNull(),
+    /** ESPN positional slot within the round (1-based). Used for bracket layout */
+    bracketLocation: smallint("bracket_location"),
+
+    // ── Schedule ──────────────────────────────────────────────────────────────
+    /** Kickoff datetime in UTC ISO format (e.g. "2026-07-01T16:00:00Z") */
+    dateUtc:         varchar("date_utc", { length: 32 }),
+    /** ESPN status detail: "FT", "FT-Pens", "Scheduled", "Live", etc. */
+    statusDetail:    varchar("status_detail", { length: 32 }),
+    /** ESPN status state: "pre", "in", "post" */
+    statusState:     varchar("status_state", { length: 8 }),
+    /** Venue city/state (e.g. "Inglewood, California") */
+    location:        varchar("location", { length: 128 }),
+    /** Broadcast networks comma-separated (e.g. "FOX,Tele") */
+    broadcasts:      varchar("broadcasts", { length: 64 }),
+
+    // ── Odds (pre-match only, null post-match) ────────────────────────────────
+    /** ESPN odds string as displayed on bracket (e.g. "ENG -340") */
+    oddsDisplay:     varchar("odds_display", { length: 32 }),
+
+    // ── Home team (competitorOne, order=1, homeAway="home") ───────────────────
+    homeTeamId:      varchar("home_team_id", { length: 16 }),
+    homeTeamName:    varchar("home_team_name", { length: 64 }),
+    homeTeamAbbrev:  varchar("home_team_abbrev", { length: 8 }),
+    homeTeamLogo:    text("home_team_logo"),
+    homeScore:       varchar("home_score", { length: 16 }),
+    homeWinner:      tinyint("home_winner").default(0).notNull(),
+    /** True when home team is not yet determined (future bracket slot) */
+    homeIsTBD:       tinyint("home_is_tbd").default(0).notNull(),
+
+    // ── Away team (competitorTwo, order=2, homeAway="away") ───────────────────
+    awayTeamId:      varchar("away_team_id", { length: 16 }),
+    awayTeamName:    varchar("away_team_name", { length: 64 }),
+    awayTeamAbbrev:  varchar("away_team_abbrev", { length: 8 }),
+    awayTeamLogo:    text("away_team_logo"),
+    awayScore:       varchar("away_score", { length: 16 }),
+    awayWinner:      tinyint("away_winner").default(0).notNull(),
+    /** True when away team is not yet determined (future bracket slot) */
+    awayIsTBD:       tinyint("away_is_tbd").default(0).notNull(),
+
+    // ── Advancement seeding ───────────────────────────────────────────────────
+    /** Full ESPN match URL path */
+    espnLink:        text("espn_link"),
+    /** URL slug only (e.g. "congo-dr-england"). Encodes away-home order */
+    advancementSlug: varchar("advancement_slug", { length: 128 }),
+
+    // ── Metadata ──────────────────────────────────────────────────────────────
+    /** UTC ms timestamp of last successful bracket scrape */
+    scrapedAt:       bigint("scraped_at", { mode: "number" }).notNull(),
+    createdAt:       bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt:       bigint("updated_at", { mode: "number" }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_wc2026_espn_bracket_game_id").on(t.gameId),
+    index("idx_wc2026_espn_bracket_matchup_id").on(t.matchupId),
+    index("idx_wc2026_espn_bracket_round_id").on(t.roundId),
+    index("idx_wc2026_espn_bracket_match_number").on(t.matchNumber),
+    index("idx_wc2026_espn_bracket_bracket_loc").on(t.roundId, t.bracketLocation),
+    index("idx_wc2026_espn_bracket_status_state").on(t.statusState),
+    index("idx_wc2026_espn_bracket_home_team").on(t.homeTeamAbbrev),
+    index("idx_wc2026_espn_bracket_away_team").on(t.awayTeamAbbrev),
+  ],
+);
+
+export type InsertWc2026EspnBracket = typeof wc2026EspnBracket.$inferInsert;
+export type SelectWc2026EspnBracket = typeof wc2026EspnBracket.$inferSelect;

@@ -3029,3 +3029,4 @@ export const wc2026EspnGlossary = mysqlTable("wc2026_espn_glossary", {
 }));
 export type Wc2026EspnGlossaryEntry       = typeof wc2026EspnGlossary.$inferSelect;
 export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInsert;
+
