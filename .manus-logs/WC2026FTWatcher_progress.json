@@ -1,0 +1,93 @@
+{
+  "startedAt": "2026-07-01T04:18:40.684Z",
+  "totalPolls": 3,
+  "totalGamesDetected": 12,
+  "totalFinalsDetected": 3,
+  "totalNewlyFinal": 3,
+  "scraped": 3,
+  "passed": 3,
+  "failed": 0,
+  "retried": 0,
+  "midnightRulePass": 3,
+  "midnightRuleFail": 0,
+  "matches": [
+    {
+      "gameId": "760490",
+      "matchRound": "round-of-32",
+      "status": "PASS",
+      "rowsWritten": 130,
+      "matchInfo": "Ivory Coast 1-2 Norway",
+      "venue": "AT&T Stadium",
+      "durationMs": 52174,
+      "attempts": 1,
+      "midnightRule": {
+        "ok": true,
+        "gameId": "760490",
+        "match": "Ivory Coast vs Norway",
+        "matchGameDate": "2026-06-30",
+        "matchKickoffEt": "13:00",
+        "expectedPtDate": "2026-06-30",
+        "expectedEtTime": "13:00",
+        "isMidnight": false,
+        "scrapeVersion": "500x",
+        "dateOk": true,
+        "timeOk": true,
+        "versionOk": true,
+        "status": "PASS"
+      },
+      "scrapedAt": "2026-07-01T04:19:34.658Z"
+    },
+    {
+      "gameId": "760492",
+      "matchRound": "round-of-32",
+      "status": "PASS",
+      "rowsWritten": 141,
+      "matchInfo": "France 3-0 Sweden",
+      "venue": "MetLife Stadium",
+      "durationMs": 61190,
+      "attempts": 1,
+      "midnightRule": {
+        "ok": true,
+        "gameId": "760492",
+        "match": "France vs Sweden",
+        "matchGameDate": "2026-06-30",
+        "matchKickoffEt": "17:00",
+        "expectedPtDate": "2026-06-30",
+        "expectedEtTime": "17:00",
+        "isMidnight": false,
+        "scrapeVersion": "500x",
+        "dateOk": true,
+        "timeOk": true,
+        "versionOk": true,
+        "status": "PASS"
+      },
+      "scrapedAt": "2026-07-01T04:19:43.387Z"
+    },
+    {
+      "gameId": "760491",
+      "matchRound": "round-of-32",
+      "status": "PASS",
+      "rowsWritten": 131,
+      "matchInfo": "Mexico 2-0 Ecuador",
+      "venue": "Estadio Banorte",
+      "durationMs": 69628,
+      "attempts": 1,
+      "midnightRule": {
+        "ok": true,
+        "gameId": "760491",
+        "match": "Mexico vs Ecuador",
+        "matchGameDate": "2026-06-30",
+        "matchKickoffEt": "22:00",
+        "expectedPtDate": "2026-06-30",
+        "expectedEtTime": "22:00",
+        "isMidnight": false,
+        "scrapeVersion": "500x",
+        "dateOk": true,
+        "timeOk": true,
+        "versionOk": true,
+        "status": "PASS"
+      },
+      "scrapedAt": "2026-07-01T04:19:51.829Z"
+    }
+  ]
+}
