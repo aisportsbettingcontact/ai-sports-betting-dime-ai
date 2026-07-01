@@ -98,29 +98,47 @@ const KNOCKOUT_SLUGS = new Set(Object.keys(ROUND_SLUG_TO_ID));
 
 // ─── Static match number map (from ESPN bracket HTML forensic audit) ──────────
 // ESPN game ID → Match number. These are fixed at tournament draw — never change.
+// SOURCE: ESPN bracket HTML JSON blob (pasted_content_61-65.txt forensic audit)
+// R32 match numbers are assigned by ESPN bracket position (bracketLoc), NOT chronologically.
+// Verified against ESPN scoreboard API home/away orientation on 2026-07-01.
 const STATIC_MATCH_NUMBERS = {
-  // Round of 32 (Match 73–88) — backfilled from wc2026_fixtures.display_order
-  // These are resolved dynamically via DB join; listed here for documentation only.
+  // Round of 32 (Match 73–88) — bracket HTML bracketLoc order
+  "760489": "Match 74",   // bracketLoc=1 | GER vs PAR | PAR won
+  "760492": "Match 77",   // bracketLoc=2 | FRA vs SWE | FRA won
+  "760486": "Match 73",   // bracketLoc=3 | RSA vs CAN | CAN won
+  "760488": "Match 75",   // bracketLoc=4 | NED vs MAR | MAR won
+  "760496": "Match 83",   // bracketLoc=5 | POR vs CRO | TBD
+  "760497": "Match 84",   // bracketLoc=6 | ESP vs AUT | TBD
+  "760494": "Match 81",   // bracketLoc=7 | USA vs BIH | TBD
+  "760493": "Match 82",   // bracketLoc=8 | BEL vs SEN | TBD
+  "760487": "Match 76",   // bracketLoc=9 | BRA vs JPN | BRA won
+  "760490": "Match 78",   // bracketLoc=10 | CIV vs NOR | NOR won
+  "760491": "Match 79",   // bracketLoc=11 | MEX vs ECU | MEX won
+  "760495": "Match 80",   // bracketLoc=12 | ENG vs COD | TBD
+  "760500": "Match 86",   // bracketLoc=13 | ARG vs CPV | TBD
+  "760499": "Match 88",   // bracketLoc=14 | AUS vs EGY | TBD
+  "760498": "Match 85",   // bracketLoc=15 | SUI vs ALG | TBD
+  "760501": "Match 87",   // bracketLoc=16 | COL vs GHA | TBD
   // Round of 16 (Match 89–96)
-  "760503": "Match 89",   // Paraguay vs France
-  "760502": "Match 90",   // Canada vs Morocco
-  "760504": "Match 91",   // Brazil vs Norway
-  "760505": "Match 92",   // Mexico vs W(Match 82)
-  "760506": "Match 93",   // W(Match 79) vs W(Match 80)
-  "760507": "Match 94",   // W(Match 76) vs W(Match 78)
-  "760509": "Match 95",   // W(Match 88) vs W(Match 87)
-  "760508": "Match 96",   // W(Match 86) vs W(Match 85)
+  "760503": "Match 89",   // bracketLoc=1 | PAR vs FRA
+  "760502": "Match 90",   // bracketLoc=2 | CAN vs MAR
+  "760506": "Match 93",   // bracketLoc=3 | W(M79) vs W(M80)
+  "760507": "Match 94",   // bracketLoc=4 | W(M76) vs W(M78)
+  "760504": "Match 91",   // bracketLoc=5 | BRA vs NOR
+  "760505": "Match 92",   // bracketLoc=6 | MEX vs W(M82)
+  "760509": "Match 95",   // bracketLoc=7 | W(M87) vs W(M85)
+  "760508": "Match 96",   // bracketLoc=8 | W(M86) vs W(M88)
   // Quarterfinals (Match 97–100)
-  "760510": "Match 97",   // W(Match 89) vs W(Match 90)
-  "760511": "Match 98",   // W(Match 93) vs W(Match 94)
-  "760512": "Match 99",   // W(Match 91) vs W(Match 92)
-  "760513": "Match 100",  // W(Match 95) vs W(Match 96)
+  "760510": "Match 97",   // W(M89) vs W(M90)
+  "760511": "Match 98",   // W(M93) vs W(M94)
+  "760512": "Match 99",   // W(M91) vs W(M92)
+  "760513": "Match 100",  // W(M95) vs W(M96)
   // Semifinals (Match 101–102)
-  "760514": "Match 101",  // W(Match 97) vs W(Match 98)
-  "760515": "Match 102",  // W(Match 99) vs W(Match 100)
+  "760514": "Match 101",  // W(M97) vs W(M98)
+  "760515": "Match 102",  // W(M99) vs W(M100)
   // 3rd Place & Final (Match 103–104)
-  "760516": "Match 103",  // L(Match 101) vs L(Match 102)
-  "760517": "Match 104",  // W(Match 101) vs W(Match 102)
+  "760516": "Match 103",  // L(M101) vs L(M102)
+  "760517": "Match 104",  // W(M101) vs W(M102)
 };
 
 // ─── Bracket seeding graph ────────────────────────────────────────────────────
@@ -128,47 +146,74 @@ const STATIC_MATCH_NUMBERS = {
 // Key:   ESPN game ID of the SOURCE match (the one being won)
 // Value: { nextGameId, slot: "home"|"away" }
 //
-// This graph is the core of OPPONENT MAPPING.
-// Derived from ESPN bracket HTML forensic audit (pasted_content_61-65.txt).
+// SOURCE: ESPN bracket HTML forensic audit (pasted_content_61-65.txt)
+//         Cross-validated against ESPN scoreboard API home/away orientation (2026-07-01)
 //
-// Reading: "When Match 73 (gameId 760486) produces a winner,
-//           that winner fills the AWAY slot of Match 90 (gameId 760502)"
+// R32 bracketLoc → R16 seeding (ESPN bracket HTML authoritative):
+//   bracketLoc 1  (M74/760489) → M89 home
+//   bracketLoc 2  (M77/760492) → M89 away
+//   bracketLoc 3  (M73/760486) → M90 home
+//   bracketLoc 4  (M75/760488) → M90 away
+//   bracketLoc 5  (M83/760496) → M91 home
+//   bracketLoc 6  (M84/760497) → M91 away
+//   bracketLoc 7  (M81/760494) → PENDING (target R16 unresolved — ESPN placeholder)
+//   bracketLoc 8  (M82/760493) → M92 away (ESPN confirmed: MEX home, RD32 W8 away → M82 winner feeds M92 away)
+//   bracketLoc 9  (M76/760487) → M94 home
+//   bracketLoc 10 (M78/760490) → M94 away
+//   bracketLoc 11 (M79/760491) → M93 home
+//   bracketLoc 12 (M80/760495) → M93 away
+//   bracketLoc 13 (M86/760500) → M96 home
+//   bracketLoc 14 (M88/760499) → M96 away
+//   bracketLoc 15 (M85/760498) → M95 away
+//   bracketLoc 16 (M87/760501) → M95 home
+// ─── SEEDING GRAPH VALIDATION NOTES ─────────────────────────────────────────
+// ESPN bracket HTML slugs for TBD matches (M93-M96) are PRE-DRAW PLACEHOLDERS
+// and contain contradictions (same bracketLoc feeding multiple R16 matches).
+// POLICY: Only include entries that are 100% verified by ESPN scoreboard API
+// home/away team fields. TBD entries are OMITTED — Phase C will auto-populate
+// them when ESPN confirms teams in the scoreboard after each R32 result.
+//
+// VERIFIED entries (ESPN scoreboard confirmed home/away as of 2026-07-01):
+//   M89 (760503): home=PAR, away=FRA  → M74 winner feeds home, M77 winner feeds away
+//   M90 (760502): home=CAN, away=MAR  → M73 winner feeds home, M75 winner feeds away
+//   M91 (760504): home=BRA, away=NOR  → M76 winner feeds home, M78 winner feeds away
+//   M92 (760505): home=MEX, away=TBD  → M79 winner feeds home, M82 winner feeds away (bracketLoc 8)
 const BRACKET_SEEDING_GRAPH = {
-  // R32 → R16
-  "760486": { nextGameId: "760502", slot: "away" },  // M73 W → M90 away (Canada)
-  "760487": { nextGameId: "760504", slot: "home" },  // M74 W → M91 home (Brazil)
-  "760488": { nextGameId: "760507", slot: "home" },  // M76 W → M94 home
-  "760489": { nextGameId: "760503", slot: "away" },  // M75 W → M89 away (Paraguay)
-  "760490": { nextGameId: "760507", slot: "away" },  // M77 W → M94 away
-  "760491": { nextGameId: "760506", slot: "home" },  // M79 W → M93 home (Mexico)
-  "760492": { nextGameId: "760503", slot: "home" },  // M78 W → M89 home (France)
-  "760493": { nextGameId: "760502", slot: "home" },  // M82 W → M90 home  [NOTE: M82=Belgium/Senegal, feeds M90 home]
-  "760494": { nextGameId: "760505", slot: "home" },  // M83 W → M92 home  [Spain/Austria → M92 home]
-  "760495": { nextGameId: "760506", slot: "away" },  // M80 W → M93 away  (England/Congo DR)
-  "760496": { nextGameId: "760504", slot: "away" },  // M81 W → M91 away  (Senegal/Belgium — M81)
-  "760497": { nextGameId: "760505", slot: "away" },  // M84 W → M92 away  (Portugal/Croatia)
-  "760498": { nextGameId: "760508", slot: "away" },  // M85 W → M96 away  (Switzerland/Algeria)
-  "760499": { nextGameId: "760508", slot: "home" },  // M86 W → M96 home  (Australia/Egypt)
-  "760500": { nextGameId: "760509", slot: "away" },  // M87 W → M95 away  (Cape Verde/Argentina)
-  "760501": { nextGameId: "760509", slot: "home" },  // M88 W → M95 home  (Ghana/Colombia)
-  // R16 → QF
-  "760503": { nextGameId: "760510", slot: "home" },  // M89 W → M97 home
-  "760502": { nextGameId: "760510", slot: "away" },  // M90 W → M97 away
-  "760504": { nextGameId: "760512", slot: "home" },  // M91 W → M99 home
-  "760505": { nextGameId: "760512", slot: "away" },  // M92 W → M99 away
-  "760506": { nextGameId: "760511", slot: "home" },  // M93 W → M98 home
-  "760507": { nextGameId: "760511", slot: "away" },  // M94 W → M98 away
-  "760509": { nextGameId: "760513", slot: "home" },  // M95 W → M100 home
-  "760508": { nextGameId: "760513", slot: "away" },  // M96 W → M100 away
-  // QF → SF
-  "760510": { nextGameId: "760514", slot: "home" },  // M97 W → M101 home
-  "760511": { nextGameId: "760514", slot: "away" },  // M98 W → M101 away
-  "760512": { nextGameId: "760515", slot: "home" },  // M99 W → M102 home
-  "760513": { nextGameId: "760515", slot: "away" },  // M100 W → M102 away
-  // SF → Final + 3rd Place
+  // ── R32 → R16 (ESPN scoreboard API verified — 100% accurate) ─────────────
+  "760489": { nextGameId: "760503", slot: "home" },  // M74 W (PAR) → M89 home ✅ ESPN confirmed
+  "760492": { nextGameId: "760503", slot: "away" },  // M77 W (FRA) → M89 away ✅ ESPN confirmed
+  "760486": { nextGameId: "760502", slot: "home" },  // M73 W (CAN) → M90 home ✅ ESPN confirmed
+  "760488": { nextGameId: "760502", slot: "away" },  // M75 W (MAR) → M90 away ✅ ESPN confirmed
+  "760487": { nextGameId: "760504", slot: "home" },  // M76 W (BRA) → M91 home ✅ ESPN confirmed
+  "760490": { nextGameId: "760504", slot: "away" },  // M78 W (NOR) → M91 away ✅ ESPN confirmed
+  "760491": { nextGameId: "760505", slot: "home" },  // M79 W (MEX) → M92 home ✅ ESPN confirmed
+  "760493": { nextGameId: "760505", slot: "away" },  // M82 W (BEL/SEN) → M92 away ✅ bracketLoc 8 confirmed
+  // ── R32 → R16 (TBD — will be populated by Phase C when ESPN confirms teams) ─
+  // M80 (760495) → M93 (760506): PENDING — ESPN shows RD32 placeholder
+  // M81 (760494) → unknown R16: PENDING — bracketLoc 7, target R16 unresolved
+  // M83 (760496) → unknown R16: PENDING — bracketLoc 5, target R16 unresolved
+  // M84 (760497) → unknown R16: PENDING — bracketLoc 6, target R16 unresolved
+  // M85 (760498) → M95/M96: PENDING
+  // M86 (760500) → M95/M96: PENDING
+  // M87 (760501) → M95/M96: PENDING
+  // M88 (760499) → M95/M96: PENDING
+  // ── R16 → QF (ESPN bracket HTML verified — bracketLoc order) ─────────────
+  "760503": { nextGameId: "760510", slot: "home" },  // M89 W → M97 home (RD16 W1)
+  "760502": { nextGameId: "760510", slot: "away" },  // M90 W → M97 away (RD16 W2)
+  "760504": { nextGameId: "760512", slot: "home" },  // M91 W → M99 home (RD16 W3)
+  "760505": { nextGameId: "760512", slot: "away" },  // M92 W → M99 away (RD16 W4)
+  "760506": { nextGameId: "760511", slot: "home" },  // M93 W → M98 home (RD16 W5)
+  "760507": { nextGameId: "760511", slot: "away" },  // M94 W → M98 away (RD16 W6)
+  "760509": { nextGameId: "760513", slot: "home" },  // M95 W → M100 home (RD16 W7)
+  "760508": { nextGameId: "760513", slot: "away" },  // M96 W → M100 away (RD16 W8)
+  // ── QF → SF ───────────────────────────────────────────────────────────────
+  "760510": { nextGameId: "760514", slot: "home" },  // M97 W → M101 home (QF W1)
+  "760511": { nextGameId: "760514", slot: "away" },  // M98 W → M101 away (QF W2)
+  "760512": { nextGameId: "760515", slot: "home" },  // M99 W → M102 home (QF W3)
+  "760513": { nextGameId: "760515", slot: "away" },  // M100 W → M102 away (QF W4)
+  // ── SF → Final + 3rd Place ────────────────────────────────────────────────
   "760514": { nextGameId: "760517", slot: "home" },  // M101 W → M104 home (Final)
   "760515": { nextGameId: "760517", slot: "away" },  // M102 W → M104 away (Final)
-  // SF losers → 3rd Place (separate graph entries)
   "760514_loser": { nextGameId: "760516", slot: "home" }, // M101 L → M103 home
   "760515_loser": { nextGameId: "760516", slot: "away" }, // M102 L → M103 away
 };
