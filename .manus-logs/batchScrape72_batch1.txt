@@ -1,0 +1,52 @@
+════════════════════════════════════════════════════════════════════════════════
+[2026-06-30T22:09:42.746Z] [INFO] [BATCH_RUNNER        ] WC2026 Group Stage Batch Scraper v1.0
+[2026-06-30T22:09:42.746Z] [INFO] [BATCH_RUNNER        ] Batch: 1 | Target: 24 matches | Force: false
+[2026-06-30T22:09:42.746Z] [INFO] [BATCH_RUNNER        ] GameId range: 760414 - 760437
+[2026-06-30T22:09:42.747Z] [INFO] [BATCH_RUNNER        ] Log file: /home/ubuntu/ai-sports-betting/.manus-logs/batchScrape72_batch1.txt
+[2026-06-30T22:09:42.747Z] [INFO] [BATCH_RUNNER        ] Started: 2026-06-30T22:09:42.747Z
+════════════════════════════════════════════════════════════════════════════════
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:09:42.747Z] [INFO] [MATCH_1/24          ] Processing gameId=760414 (1 of 24)
+[2026-06-30T22:09:43.057Z] [INFO] [SCRAPE_760414       ] Spawning scraper for gameId=760414
+[2026-06-30T22:12:00.529Z] [FAIL] [SCRAPE_760414       ] ❌ code=0 pass=0/0 | 137.5s |         [2murl[0m=[96mhttps://www.espn.com/soccer/player-stats/_/gameId/760414[0m  [2mdurationMs[0m=[96m18985[0m  [2mattempt[0m=[96m1[0m  [2merror[0m=[96mlog.warn is not a function[0m |   [1mErrors       [0m[92m0[0m | [RUNNER] Ingest complete — success=true | rows=130 | errors=0
+[2026-06-30T22:12:00.530Z] [WARN] [RETRY_760414        ] Attempt 1 failed — will retry
+[2026-06-30T22:12:00.530Z] [INFO] [RETRY_760414        ] Retry attempt 2/2 after 5s...
+[2026-06-30T22:12:05.532Z] [INFO] [SCRAPE_760414       ] Spawning scraper for gameId=760414
+[2026-06-30T22:13:08.257Z] [FAIL] [SCRAPE_760414       ] ❌ code=0 pass=0/0 | 62.7s |   [1mErrors       [0m[92m0[0m | [RUNNER] Ingest complete — success=true | rows=130 | errors=0 | [2026-06-30T22:13:08.247Z]   [32m✓ PASS[0m  result.errors.length = 0
+[2026-06-30T22:13:08.257Z] [INFO] [PROGRESS            ] [1/24] Pass=0 Fail=1 Skip=0 | ETA: 78.8min
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:13:10.261Z] [INFO] [MATCH_2/24          ] Processing gameId=760415 (2 of 24)
+[2026-06-30T22:13:10.267Z] [INFO] [SCRAPE_760415       ] Spawning scraper for gameId=760415
+[2026-06-30T22:14:10.666Z] [FAIL] [SCRAPE_760415       ] ❌ code=0 pass=0/0 | 60.4s |   [1mErrors       [0m[92m0[0m | [RUNNER] Ingest complete — success=true | rows=127 | errors=0 | [2026-06-30T22:14:10.655Z]   [32m✓ PASS[0m  result.errors.length = 0
+[2026-06-30T22:14:10.666Z] [WARN] [RETRY_760415        ] Attempt 1 failed — will retry
+[2026-06-30T22:14:10.666Z] [INFO] [RETRY_760415        ] Retry attempt 2/2 after 5s...
+[2026-06-30T22:14:15.671Z] [INFO] [SCRAPE_760415       ] Spawning scraper for gameId=760415
+[2026-06-30T22:15:13.701Z] [FAIL] [SCRAPE_760415       ] ❌ code=0 pass=0/0 | 58.0s |   [1mErrors       [0m[92m0[0m | [RUNNER] Ingest complete — success=true | rows=127 | errors=0 | [2026-06-30T22:15:13.684Z]   [32m✓ PASS[0m  result.errors.length = 0
+[2026-06-30T22:15:13.701Z] [INFO] [PROGRESS            ] [2/24] Pass=0 Fail=2 Skip=0 | ETA: 60.7min
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:15:15.704Z] [INFO] [MATCH_3/24          ] Processing gameId=760416 (3 of 24)
+[2026-06-30T22:15:15.710Z] [INFO] [SCRAPE_760416       ] Spawning scraper for gameId=760416
+[2026-06-30T22:18:15.730Z] [FAIL] [SCRAPE_760416       ] TIMEOUT after 180s — killed
+[2026-06-30T22:18:15.730Z] [WARN] [RETRY_760416        ] Attempt 1 failed — will retry
+[2026-06-30T22:18:15.730Z] [INFO] [RETRY_760416        ] Retry attempt 2/2 after 5s...
+════════════════════════════════════════════════════════════════════════════════
+[2026-06-30T22:19:23.190Z] [INFO] [BATCH_RUNNER        ] WC2026 Group Stage Batch Scraper v1.0
+[2026-06-30T22:19:23.191Z] [INFO] [BATCH_RUNNER        ] Batch: 1 | Target: 24 matches | Force: false
+[2026-06-30T22:19:23.191Z] [INFO] [BATCH_RUNNER        ] GameId range: 760414 - 760437
+[2026-06-30T22:19:23.191Z] [INFO] [BATCH_RUNNER        ] Log file: /home/ubuntu/ai-sports-betting/.manus-logs/batchScrape72_batch1.txt
+[2026-06-30T22:19:23.191Z] [INFO] [BATCH_RUNNER        ] Started: 2026-06-30T22:19:23.191Z
+════════════════════════════════════════════════════════════════════════════════
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:19:23.191Z] [INFO] [MATCH_1/24          ] Processing gameId=760414 (1 of 24)
+[2026-06-30T22:19:23.518Z] [SKIP] [MATCH_1/24          ] Already in DB: South Korea 2-1 Czechia — skipping (use --force to re-scrape)
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:19:23.518Z] [INFO] [MATCH_2/24          ] Processing gameId=760415 (2 of 24)
+[2026-06-30T22:19:23.525Z] [SKIP] [MATCH_2/24          ] Already in DB: Mexico 2-0 South Africa — skipping (use --force to re-scrape)
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:19:23.525Z] [INFO] [MATCH_3/24          ] Processing gameId=760416 (3 of 24)
+[2026-06-30T22:19:23.531Z] [INFO] [SCRAPE_760416       ] Spawning scraper for gameId=760416
+[2026-06-30T22:20:22.563Z] [PASS] [SCRAPE_760416       ] ✅ rows=130 errors=0 | 1-1 | BMO Field | Attendance: 43002 | Referee: Facundo Tello | 59.0s
+[2026-06-30T22:20:22.564Z] [INFO] [PROGRESS            ] [3/24] Pass=1 Fail=0 Skip=2 | ETA: 6.9min
+────────────────────────────────────────────────────────────────────────────────
+[2026-06-30T22:20:24.567Z] [INFO] [MATCH_4/24          ] Processing gameId=760417 (4 of 24)
+[2026-06-30T22:20:24.573Z] [INFO] [SCRAPE_760417       ] Spawning scraper for gameId=760417
