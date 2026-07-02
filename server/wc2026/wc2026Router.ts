@@ -15,6 +15,7 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
+import { ownerProcedure } from "../routers/appUsers";
 import { scrapeEspnMatch, scrapeEspnScoreboard, extractGameId } from "./espnMatchScraper";
 import { scrapeEspnMatchPage } from "./espnPageScraper";
 import { scrapeAndIngest } from "./espnDbIngester";
@@ -29,6 +30,7 @@ import {
   wc2026FrozenBookOdds,
 } from "../../drizzle/wc2026.schema";
 import { eq, and, asc, desc, sql, inArray } from "drizzle-orm";
+import { wc2026MatchOdds, wc2026EspnMatches, type Wc2026MatchOddsRow } from "../../drizzle/schema";
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
@@ -745,5 +747,212 @@ export const wc2026Router = router({
         console.error(`[ESPN_INGEST] FAILED | gameId=${gameId} | elapsed=${elapsed}ms | error=${errMsg}`);
         return { success: false as const, result: null, error: errMsg };
       }
+    }),
+
+  // ─── wc2026MatchOdds: listMatchOdds ─────────────────────────────────────────
+  // Owner-only. Returns all rows from wc2026MatchOdds for a given round.
+  // Queries ONLY the wc2026MatchOdds table — no joins, no other tables.
+  listMatchOdds: ownerProcedure
+    .input(z.object({
+      round: z.enum(["r32", "quarterfinals", "semifinals", "third_place", "finals"]).optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const t0 = Date.now();
+      const userId = ctx.appUser.id;
+      const username = ctx.appUser.username;
+      const round = input?.round ?? "r32";
+      console.log(`[WC2026_MATCH_ODDS] listMatchOdds START | userId=${userId} username=${username} round=${round}`);
+
+      const db = await getDb();
+      if (!db) {
+        console.error(`[WC2026_MATCH_ODDS] listMatchOdds FATAL | DB unavailable | userId=${userId}`);
+        throw new Error("[WC2026_MATCH_ODDS] Database connection unavailable");
+      }
+      console.log(`[WC2026_MATCH_ODDS] listMatchOdds DB_READY | querying wc2026MatchOdds WHERE world_cup_round='${round}'`);
+
+      const rows = await db
+        .select()
+        .from(wc2026MatchOdds)
+        .where(eq(wc2026MatchOdds.worldCupRound, round))
+        .orderBy(asc(wc2026MatchOdds.fixtureId));
+
+      // Enrich with team names from wc2026_espn_matches (join on espn_match_id)
+      // This is a secondary query to avoid a complex Drizzle join — wc2026MatchOdds
+      // is the source of truth; espn_matches provides display names only.
+      const espnMatchIds = rows
+        .map((r: Wc2026MatchOddsRow) => r.espnMatchId)
+        .filter((id: string | null | undefined): id is string => !!id);
+      let teamNameMap: Record<string, { awayTeamName: string; homeTeamName: string; awayTeamAbbrev: string; homeTeamAbbrev: string; awayTeamLogo: string | null; homeTeamLogo: string | null }> = {};
+      if (espnMatchIds.length > 0) {
+        const espnRows = await db
+          .select({
+            matchId:       wc2026EspnMatches.matchId,
+            awayTeamName:  wc2026EspnMatches.awayTeamName,
+            homeTeamName:  wc2026EspnMatches.homeTeamName,
+            awayTeamAbbrev: wc2026EspnMatches.awayTeamAbbrev,
+            homeTeamAbbrev: wc2026EspnMatches.homeTeamAbbrev,
+            awayTeamLogo:  wc2026EspnMatches.awayTeamLogo,
+            homeTeamLogo:  wc2026EspnMatches.homeTeamLogo,
+          })
+          .from(wc2026EspnMatches)
+          .where(inArray(wc2026EspnMatches.matchId, espnMatchIds));
+        teamNameMap = Object.fromEntries(espnRows.map((r: typeof espnRows[0]) => [r.matchId, r]));
+        console.log(`[WC2026_MATCH_ODDS] listMatchOdds ENRICH | espnMatchIds=${espnMatchIds.length} resolved=${espnRows.length}`);
+      }
+
+      const elapsed = Date.now() - t0;
+      console.log(
+        `[WC2026_MATCH_ODDS] listMatchOdds COMPLETE | userId=${userId} round=${round}` +
+        ` rows=${rows.length} elapsed=${elapsed}ms`
+      );
+
+      // Integrity check: flag any rows missing fixture_id
+      const invalid = rows.filter((r: Wc2026MatchOddsRow) => !r.fixtureId);
+      if (invalid.length > 0) {
+        console.error(`[WC2026_MATCH_ODDS] listMatchOdds INTEGRITY_WARN | ${invalid.length} rows missing fixture_id`);
+      }
+
+      // Audit: count rows with all core book_ columns populated
+      const fullyPopulated = rows.filter((r: Wc2026MatchOddsRow) =>
+        r.bookAwayMl !== null && r.bookHomeMl !== null && r.bookDraw !== null &&
+        r.bookPrimarySpread !== null && r.bookTotal !== null &&
+        r.bookBttsYes !== null && r.bookBttsNo !== null
+      );
+      console.log(
+        `[WC2026_MATCH_ODDS] listMatchOdds AUDIT | total=${rows.length}` +
+        ` fully_populated=${fullyPopulated.length}` +
+        ` partial=${rows.length - fullyPopulated.length}` +
+        ` invalid_fixture_id=${invalid.length}`
+      );
+
+      // Attach team names to each row
+      const enrichedRows = rows.map((r: Wc2026MatchOddsRow) => ({
+        ...r,
+        awayTeamName:   teamNameMap[r.espnMatchId ?? '']?.awayTeamName   ?? null,
+        homeTeamName:   teamNameMap[r.espnMatchId ?? '']?.homeTeamName   ?? null,
+        awayTeamAbbrev: teamNameMap[r.espnMatchId ?? '']?.awayTeamAbbrev ?? null,
+        homeTeamAbbrev: teamNameMap[r.espnMatchId ?? '']?.homeTeamAbbrev ?? null,
+        awayTeamLogo:   teamNameMap[r.espnMatchId ?? '']?.awayTeamLogo   ?? null,
+        homeTeamLogo:   teamNameMap[r.espnMatchId ?? '']?.homeTeamLogo   ?? null,
+      }));
+
+      return { rows: enrichedRows, meta: { total: rows.length, round, fullyPopulated: fullyPopulated.length, elapsedMs: elapsed } };
+    }),
+
+  // ─── wc2026MatchOdds: updateMatchOdds ───────────────────────────────────────
+  // Owner-only. Updates model_* columns for a single fixture in wc2026MatchOdds.
+  // Writes ONLY to wc2026MatchOdds — no other tables touched.
+  updateMatchOdds: ownerProcedure
+    .input(z.object({
+      fixtureId:                   z.string().min(1).max(16),
+      // To Advance
+      modelAwayToAdvance:          z.number().int().nullable().optional(),
+      modelHomeToAdvance:          z.number().int().nullable().optional(),
+      // Moneyline
+      modelAwayMl:                 z.number().int().nullable().optional(),
+      modelHomeMl:                 z.number().int().nullable().optional(),
+      // Draw / No Draw
+      modelDraw:                   z.number().int().nullable().optional(),
+      modelNoDraw:                 z.number().int().nullable().optional(),
+      // Double Chance
+      modelAwayWd:                 z.number().int().nullable().optional(),
+      modelHomeWd:                 z.number().int().nullable().optional(),
+      // Spread
+      modelPrimarySpread:          z.number().nullable().optional(),
+      modelAwayPrimarySpreadOdds:  z.number().int().nullable().optional(),
+      modelHomePrimarySpreadOdds:  z.number().int().nullable().optional(),
+      // Total
+      modelTotal:                  z.number().nullable().optional(),
+      modelOverOdds:               z.number().int().nullable().optional(),
+      modelUnderOdds:              z.number().int().nullable().optional(),
+      // BTTS
+      modelBttsYes:                z.number().int().nullable().optional(),
+      modelBttsNo:                 z.number().int().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const t0 = Date.now();
+      const userId = ctx.appUser.id;
+      const username = ctx.appUser.username;
+      const { fixtureId, ...fields } = input;
+
+      const definedKeys = Object.keys(fields).filter(
+        k => (fields as Record<string, unknown>)[k] !== undefined
+      );
+      console.log(
+        `[WC2026_MATCH_ODDS] updateMatchOdds START | userId=${userId} username=${username}` +
+        ` fixtureId=${fixtureId} fields=[${definedKeys.join(",")}]`
+      );
+
+      const db = await getDb();
+      if (!db) {
+        console.error(`[WC2026_MATCH_ODDS] updateMatchOdds FATAL | DB unavailable | userId=${userId} fixtureId=${fixtureId}`);
+        throw new Error("[WC2026_MATCH_ODDS] Database connection unavailable");
+      }
+
+      // Build update payload — only include fields that were explicitly provided
+      type UpdatePayload = Partial<{
+        modelAwayToAdvance: number | null;
+        modelHomeToAdvance: number | null;
+        modelAwayMl: number | null;
+        modelHomeMl: number | null;
+        modelDraw: number | null;
+        modelNoDraw: number | null;
+        modelAwayWd: number | null;
+        modelHomeWd: number | null;
+        modelPrimarySpread: number | null;
+        modelAwayPrimarySpreadOdds: number | null;
+        modelHomePrimarySpreadOdds: number | null;
+        modelTotal: number | null;
+        modelOverOdds: number | null;
+        modelUnderOdds: number | null;
+        modelBttsYes: number | null;
+        modelBttsNo: number | null;
+      }>;
+      const payload: UpdatePayload = {};
+      if (fields.modelAwayToAdvance          !== undefined) payload.modelAwayToAdvance          = fields.modelAwayToAdvance;
+      if (fields.modelHomeToAdvance          !== undefined) payload.modelHomeToAdvance          = fields.modelHomeToAdvance;
+      if (fields.modelAwayMl                !== undefined) payload.modelAwayMl                = fields.modelAwayMl;
+      if (fields.modelHomeMl                !== undefined) payload.modelHomeMl                = fields.modelHomeMl;
+      if (fields.modelDraw                  !== undefined) payload.modelDraw                  = fields.modelDraw;
+      if (fields.modelNoDraw                !== undefined) payload.modelNoDraw                = fields.modelNoDraw;
+      if (fields.modelAwayWd                !== undefined) payload.modelAwayWd                = fields.modelAwayWd;
+      if (fields.modelHomeWd                !== undefined) payload.modelHomeWd                = fields.modelHomeWd;
+      if (fields.modelPrimarySpread         !== undefined) payload.modelPrimarySpread         = fields.modelPrimarySpread;
+      if (fields.modelAwayPrimarySpreadOdds !== undefined) payload.modelAwayPrimarySpreadOdds = fields.modelAwayPrimarySpreadOdds;
+      if (fields.modelHomePrimarySpreadOdds !== undefined) payload.modelHomePrimarySpreadOdds = fields.modelHomePrimarySpreadOdds;
+      if (fields.modelTotal                 !== undefined) payload.modelTotal                 = fields.modelTotal;
+      if (fields.modelOverOdds              !== undefined) payload.modelOverOdds              = fields.modelOverOdds;
+      if (fields.modelUnderOdds             !== undefined) payload.modelUnderOdds             = fields.modelUnderOdds;
+      if (fields.modelBttsYes               !== undefined) payload.modelBttsYes               = fields.modelBttsYes;
+      if (fields.modelBttsNo                !== undefined) payload.modelBttsNo                = fields.modelBttsNo;
+
+      if (Object.keys(payload).length === 0) {
+        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds NOOP | fixtureId=${fixtureId} — no fields to update`);
+        return { success: true, fixtureId, updated: 0, elapsedMs: 0 };
+      }
+
+      console.log(
+        `[WC2026_MATCH_ODDS] updateMatchOdds EXECUTING | fixtureId=${fixtureId}` +
+        ` payload=${JSON.stringify(payload)}`
+      );
+
+      const result = await db
+        .update(wc2026MatchOdds)
+        .set(payload)
+        .where(eq(wc2026MatchOdds.fixtureId, fixtureId));
+
+      const elapsed = Date.now() - t0;
+      // result[0] is the OkPacket from mysql2
+      const affectedRows = (result as unknown as [{ affectedRows: number }])[0]?.affectedRows ?? -1;
+      console.log(
+        `[WC2026_MATCH_ODDS] updateMatchOdds COMPLETE | fixtureId=${fixtureId}` +
+        ` affectedRows=${affectedRows} elapsed=${elapsed}ms userId=${userId}`
+      );
+
+      if (affectedRows === 0) {
+        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds WARN | fixtureId=${fixtureId} — 0 rows affected (fixture may not exist)`);
+      }
+
+      return { success: true, fixtureId, updated: affectedRows, elapsedMs: elapsed };
     }),
 });
