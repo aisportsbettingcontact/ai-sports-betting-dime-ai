@@ -558,6 +558,12 @@ export const wc2026MatchOdds = mysqlTable(
     awayTeam:          int("away_team"),
     homeTeam:          int("home_team"),
 
+    // ── Model Lambdas & Projected Goals ─────────────────────────────────────
+    lambdaAway:                  double("lamba_away"),
+    lambdaHome:                  double("lamba_home"),
+    modelProjectedAwayGoals:     double("model_projected_away_goals"),
+    modelProjectedHomeGoals:     double("model_projected_home_goals"),
+
     // ── To Advance (Knockout only — NULL if unavailable) ─────────────────────
     bookAwayToAdvance:  smallint("book_away_to_advance"),
     modelAwayToAdvance: smallint("model_away_to_advance"),
