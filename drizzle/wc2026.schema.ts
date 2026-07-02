@@ -538,6 +538,15 @@ export const wc2026MatchOdds = mysqlTable(
     // ── Identity ─────────────────────────────────────────────────────────────
     fixtureId:         varchar("fixture_id", { length: 16 }).notNull(),
     espnMatchId:       varchar("espn_match_id", { length: 64 }),
+    espnSlug:          varchar("espn_slug", { length: 64 }),
+
+    // ── BetExplorer Identity ─────────────────────────────────────────────────
+    betExplorerMatchId: varchar("bet_explorer_match_id", { length: 16 }),
+    betExplorerSlug:    varchar("bet_explorer_slug", { length: 128 }),
+
+    // ── Tournament Context ────────────────────────────────────────────────────
+    worldCupStage: mysqlEnum("world_cup_stage", ["group", "knockout"]),
+    worldCupRound: mysqlEnum("world_cup_round", ["group", "r32", "quarterfinals", "semifinals", "third_place", "finals"]),
 
     // ── Audit / Provenance ────────────────────────────────────────────────────
     insertedAt:        timestamp("inserted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -545,9 +554,9 @@ export const wc2026MatchOdds = mysqlTable(
     lastInsertedAt:    timestamp("last_inserted_at"),
     lastInsertMethod:  varchar("last_insert_method", { length: 255 }),
 
-    // ── Teams ─────────────────────────────────────────────────────────────────
-    awayTeam:          varchar("away_team", { length: 64 }),
-    homeTeam:          varchar("home_team", { length: 64 }),
+    // ── Teams (ESPN team IDs as integers) ────────────────────────────────────
+    awayTeam:          int("away_team"),
+    homeTeam:          int("home_team"),
 
     // ── To Advance (Knockout only — NULL if unavailable) ─────────────────────
     bookAwayToAdvance:  smallint("book_away_to_advance"),

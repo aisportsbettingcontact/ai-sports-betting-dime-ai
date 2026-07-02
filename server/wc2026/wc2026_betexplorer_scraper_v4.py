@@ -89,38 +89,56 @@ FIXTURES = [
     # ── CONFIRMED: DB fixture_id + BetExplorer event_id + ESPN match_id all forensically verified ──
     # BetExplorer be_name format: HOME - AWAY (BetExplorer slug is always home-away)
     # ESPN match IDs sourced from site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
+    # ESPN team IDs sourced from site.api.espn.com/apis/site/v2/sports/soccer/FIFA.WORLD/teams/{id}
+    # espn_slug = {away_team_slug}-{home_team_slug} (derived from ESPN team slugs)
+    # away_team / home_team = ESPN integer team IDs
     # R32 — Completed (FT)
     {"id": "wc26-r32-073", "event_id": "EZmXxG15", "espn_match_id": "760486",
-     "be_name": "South Africa - Canada",       "slug": "south-africa-canada"},
+     "be_name": "South Africa - Canada",       "slug": "south-africa-canada",
+     "espn_slug": "can-rsa",   "espn_away_team_id": 206,   "espn_home_team_id": 467},
     {"id": "wc26-r32-074", "event_id": "f7ENGzPc", "espn_match_id": "760487",
-     "be_name": "Brazil - Japan",              "slug": "brazil-japan"},
+     "be_name": "Brazil - Japan",              "slug": "brazil-japan",
+     "espn_slug": "jpn-bra",   "espn_away_team_id": 627,   "espn_home_team_id": 205},
     {"id": "wc26-r32-075", "event_id": "2y2UKhp1", "espn_match_id": "760489",
-     "be_name": "Germany - Paraguay",          "slug": "germany-paraguay"},
+     "be_name": "Germany - Paraguay",          "slug": "germany-paraguay",
+     "espn_slug": "par-ger",   "espn_away_team_id": 210,   "espn_home_team_id": 481},
     {"id": "wc26-r32-076", "event_id": "S0MygXWj", "espn_match_id": "760488",
-     "be_name": "Netherlands - Morocco",       "slug": "netherlands-morocco"},
+     "be_name": "Netherlands - Morocco",       "slug": "netherlands-morocco",
+     "espn_slug": "mar-ned",   "espn_away_team_id": 2869,  "espn_home_team_id": 449},
     {"id": "wc26-r32-077", "event_id": "tx2IC6G7", "espn_match_id": "760490",
-     "be_name": "Ivory Coast - Norway",        "slug": "ivory-coast-norway"},
+     "be_name": "Ivory Coast - Norway",        "slug": "ivory-coast-norway",
+     "espn_slug": "nor-civ",   "espn_away_team_id": 464,   "espn_home_team_id": 4789},
     {"id": "wc26-r32-078", "event_id": "UN3MMEFl", "espn_match_id": "760492",
-     "be_name": "France - Sweden",             "slug": "france-sweden"},
+     "be_name": "France - Sweden",             "slug": "france-sweden",
+     "espn_slug": "swe-fra",   "espn_away_team_id": 466,   "espn_home_team_id": 478},
     {"id": "wc26-r32-079", "event_id": "fydIxpfR", "espn_match_id": "760491",
-     "be_name": "Mexico - Ecuador",            "slug": "mexico-ecuador"},
+     "be_name": "Mexico - Ecuador",            "slug": "mexico-ecuador",
+     "espn_slug": "ecu-mex",   "espn_away_team_id": 209,   "espn_home_team_id": 203},
     {"id": "wc26-r32-080", "event_id": "nkoQVAgB", "espn_match_id": "760495",
-     "be_name": "England - D.R. Congo",        "slug": "england-d-r-congo"},
+     "be_name": "England - D.R. Congo",        "slug": "england-d-r-congo",
+     "espn_slug": "rdc-eng",   "espn_away_team_id": 2850,  "espn_home_team_id": 448},
     {"id": "wc26-r32-081", "event_id": "vPsIXWOb", "espn_match_id": "760493",
-     "be_name": "Belgium - Senegal",           "slug": "belgium-senegal"},
+     "be_name": "Belgium - Senegal",           "slug": "belgium-senegal",
+     "espn_slug": "sen-bel",   "espn_away_team_id": 654,   "espn_home_team_id": 459},
     {"id": "wc26-r32-082", "event_id": "A1Jughll", "espn_match_id": "760494",
-     "be_name": "USA - Bosnia & Herzegovina",  "slug": "usa-bosnia-herzegovina"},
+     "be_name": "USA - Bosnia & Herzegovina",  "slug": "usa-bosnia-herzegovina",
+     "espn_slug": "bih-usa",   "espn_away_team_id": 452,   "espn_home_team_id": 660},
     # R32 — Scheduled (upcoming — odds available on BetExplorer)
     {"id": "wc26-r32-083", "event_id": "jJucpA84", "espn_match_id": "760497",
-     "be_name": "Spain - Austria",             "slug": "spain-austria"},
+     "be_name": "Spain - Austria",             "slug": "spain-austria",
+     "espn_slug": "aut-esp",   "espn_away_team_id": 474,   "espn_home_team_id": 164},
     {"id": "wc26-r32-084", "event_id": "6BqAZhfn", "espn_match_id": "760496",
-     "be_name": "Portugal - Croatia",          "slug": "portugal-croatia"},
+     "be_name": "Portugal - Croatia",          "slug": "portugal-croatia",
+     "espn_slug": "cro-por",   "espn_away_team_id": 477,   "espn_home_team_id": 482},
     {"id": "wc26-r32-085", "event_id": "rgxknWwh", "espn_match_id": "760498",
-     "be_name": "Switzerland - Algeria",       "slug": "switzerland-algeria"},
+     "be_name": "Switzerland - Algeria",       "slug": "switzerland-algeria",
+     "espn_slug": "alg-sui",   "espn_away_team_id": 624,   "espn_home_team_id": 475},
     {"id": "wc26-r32-086", "event_id": "Whg00tL7", "espn_match_id": "760499",
-     "be_name": "Australia - Egypt",           "slug": "australia-egypt"},
+     "be_name": "Australia - Egypt",           "slug": "australia-egypt",
+     "espn_slug": "egy-aus",   "espn_away_team_id": 2620,  "espn_home_team_id": 628},
     {"id": "wc26-r32-087", "event_id": "O4oeJu9d", "espn_match_id": "760500",
-     "be_name": "Argentina - Cape Verde",      "slug": "argentina-cape-verde"},
+     "be_name": "Argentina - Cape Verde",      "slug": "argentina-cape-verde",
+     "espn_slug": "cpv-arg",   "espn_away_team_id": 2597,  "espn_home_team_id": 202},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
@@ -913,7 +931,7 @@ class ValidationGateEngine:
 
     # Keys that hold non-odds identifiers and must be excluded from sign-format checks
     _G12_SKIP_KEYS = frozenset({
-        "espn_match_id", "event_id", "fixture_id", "be_name", "slug",
+        "espn_match_id", "espn_slug", "event_id", "fixture_id", "be_name", "slug", "bet_explorer_match_id", "bet_explorer_slug", "world_cup_stage", "world_cup_round",
         "away_display", "home_display", "session", "script", "version",
         "bid_target", "markets", "type", "ts", "seq",
     })
@@ -2087,7 +2105,9 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
     upsert_sql = f"""
         INSERT INTO `{MYSQL_TABLE}` (
-            fixture_id, espn_match_id,
+            fixture_id, espn_match_id, espn_slug,
+            bet_explorer_match_id, bet_explorer_slug,
+            world_cup_stage, world_cup_round,
             insert_method,
             last_inserted_at, last_insert_method,
             away_team, home_team,
@@ -2099,6 +2119,8 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
             book_total, book_over_odds, book_under_odds,
             book_primary_spread, book_home_primary_spread_odds, book_away_primary_spread_odds
         ) VALUES (
+            %s, %s, %s,
+            %s, %s,
             %s, %s,
             %s,
             CURRENT_TIMESTAMP, %s,
@@ -2113,6 +2135,11 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
         )
         ON DUPLICATE KEY UPDATE
             espn_match_id                  = VALUES(espn_match_id),
+            espn_slug                      = VALUES(espn_slug),
+            bet_explorer_match_id          = VALUES(bet_explorer_match_id),
+            bet_explorer_slug              = VALUES(bet_explorer_slug),
+            world_cup_stage                = VALUES(world_cup_stage),
+            world_cup_round                = VALUES(world_cup_round),
             last_inserted_at               = CURRENT_TIMESTAMP,
             last_insert_method             = VALUES(last_insert_method),
             away_team                      = VALUES(away_team),
@@ -2178,9 +2205,10 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 book_away_to_advance = None  # NULL — not available on BetExplorer
                 book_home_to_advance = None  # NULL — not available on BetExplorer
 
-                # ── Team names from fixture definition ───────────────────────────
-                away_team = m.get("away_display")  # canonical display name
-                home_team = m.get("home_display")
+                # ── ESPN team IDs from fixture definition ──────────────────────────────
+                away_team = m.get("espn_away_team_id")  # ESPN integer team ID
+                home_team = m.get("espn_home_team_id")  # ESPN integer team ID
+                espn_slug = m.get("espn_slug")
 
                 # ── Validation gate: require all BetExplorer markets populated ───
                 # NOTE: to_advance columns are intentionally excluded from this gate
@@ -2221,8 +2249,16 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
                 espn_match_id = m.get("espn_match_id")
 
+                # ── BetExplorer identity for this fixture ──────────────────────────
+                bet_explorer_match_id = m.get("event_id")   # 8-char BetExplorer event ID
+                bet_explorer_slug     = m.get("slug")        # BetExplorer match slug
+                world_cup_stage       = "knockout"           # R32 = knockout stage
+                world_cup_round       = "r32"                # R32 round
+
                 params = (
-                    fixture_id, espn_match_id,
+                    fixture_id, espn_match_id, espn_slug,
+                    bet_explorer_match_id, bet_explorer_slug,
+                    world_cup_stage, world_cup_round,
                     SCRAPER_FILENAME,          # insert_method
                     SCRAPER_FILENAME,          # last_insert_method (same value on first insert)
                     away_team, home_team,
