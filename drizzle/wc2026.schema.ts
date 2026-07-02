@@ -326,6 +326,9 @@ export type SelectWc2026ModelProjection = typeof wc2026ModelProjections.$inferSe
 
 // ─── Frozen Book Odds Snapshot ───────────────────────────────────────────────
 // Stores the hardcoded book lines at the time of freezing.
+// Column layout mirrors the feed display order: Away top, Home bottom.
+// DC semantics: 1X = Away WD (Away or Draw), X2 = Home WD (Home or Draw),
+//               12 = No Draw (either team wins, no draw — single combined price).
 // Once a row exists for a fixture_id, the router serves these values and
 // never overwrites them unless explicitly instructed.
 export const wc2026FrozenBookOdds = mysqlTable(
@@ -337,32 +340,50 @@ export const wc2026FrozenBookOdds = mysqlTable(
       .references(() => wc2026Fixtures.fixtureId),
     frozenAt: timestamp("frozen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     frozenBy: varchar("frozen_by", { length: 64 }).notNull().default("system"),
-    // Book (DraftKings) 1X2 moneylines
-    bookHomeMl: smallint("book_home_ml"),
-    bookDrawMl: smallint("book_draw_ml"),
+    // ── To Advance (Knockout) ─────────────────────────────────────────────────
+    bookAwayToAdvance: smallint("book_away_to_advance"),
+    modelAwayToAdvance: smallint("model_away_to_advance"),
+    bookHomeToAdvance: smallint("book_home_to_advance"),
+    modelHomeToAdvance: smallint("model_home_to_advance"),
+    // ── 1X2 Moneylines ───────────────────────────────────────────────────────
     bookAwayMl: smallint("book_away_ml"),
-    // Book spread
-    bookSpreadLine: double("book_spread_line"),
-    bookHomeSpreadOdds: smallint("book_home_spread_odds"),
-    bookAwaySpreadOdds: smallint("book_away_spread_odds"),
-    // Book total
-    bookTotalLine: double("book_total_line"),
+    modelAwayMl: smallint("model_away_ml"),
+    // ── Double Chance: Away WD (1X = Away or Draw) ───────────────────────────
+    bookAwayWd: smallint("book_away_wd"),
+    modelAwayWd: smallint("model_away_wd"),
+    // ── Draw ML ──────────────────────────────────────────────────────────────
+    bookDraw: smallint("book_draw"),
+    modelDraw: smallint("model_draw"),
+    // ── No Draw (12 = either team wins, no draw — single combined price) ─────
+    bookNoDraw: smallint("book_no_draw"),
+    modelNoDraw: smallint("model_no_draw"),
+    // ── Home ML ──────────────────────────────────────────────────────────────
+    bookHomeMl: smallint("book_home_ml"),
+    modelHomeMl: smallint("model_home_ml"),
+    // ── Double Chance: Home WD (X2 = Home or Draw) ───────────────────────────
+    bookHomeWd: smallint("book_home_wd"),
+    modelHomeWd: smallint("model_home_wd"),
+    // ── Spread (Asian Handicap) ───────────────────────────────────────────────
+    bookPrimarySpread: double("book_primary_spread"),
+    modelPrimarySpread: double("model_primary_spread"),
+    bookAwayPrimarySpreadOdds: smallint("book_away_primary_spread_odds"),
+    modelAwayPrimarySpreadOdds: smallint("model_away_primary_spread_odds"),
+    bookHomePrimarySpreadOdds: smallint("book_home_primary_spread_odds"),
+    modelHomePrimarySpreadOdds: smallint("model_home_primary_spread_odds"),
+    // ── Total (Over/Under) ────────────────────────────────────────────────────
+    bookTotal: double("book_total"),
+    modelTotal: double("model_total"),
     bookOverOdds: smallint("book_over_odds"),
+    modelOverOdds: smallint("model_over_odds"),
     bookUnderOdds: smallint("book_under_odds"),
-    // Book BTTS
-    bookBttsYesOdds: smallint("book_btts_yes_odds"),
-    bookBttsNoOdds: smallint("book_btts_no_odds"),
-    // Book double chance
-    bookDc1XOdds: smallint("book_dc_1x_odds"),
-    bookDcX2Odds: smallint("book_dc_x2_odds"),
-    // Book no draw
-    bookNoDrawHomeOdds: smallint("book_no_draw_home_odds"),
-    bookNoDrawAwayOdds: smallint("book_no_draw_away_odds"),
-    // Book to advance (knockout rounds — who advances past this match)
-    toAdvanceHomeOdds: smallint("to_advance_home_odds"),
-    toAdvanceAwayOdds: smallint("to_advance_away_odds"),
-    // Source label
-    bookSource: varchar("book_source", { length: 32 }).notNull().default("DraftKings"),
+    modelUnderOdds: smallint("model_under_odds"),
+    // ── Both Teams To Score ───────────────────────────────────────────────────
+    bookBttsYes: smallint("book_btts_yes"),
+    modelBttsYes: smallint("model_btts_yes"),
+    bookBttsNo: smallint("book_btts_no"),
+    modelBttsNo: smallint("model_btts_no"),
+    // ── Source / Audit ────────────────────────────────────────────────────────
+    bookSource: varchar("book_source", { length: 32 }).notNull().default("bet365"),
   },
   (t) => [
     uniqueIndex("uq_frozen_book_fixture").on(t.fixtureId),
@@ -495,3 +516,86 @@ export const wc2026EspnBracket = mysqlTable(
 
 export type InsertWc2026EspnBracket = typeof wc2026EspnBracket.$inferInsert;
 export type SelectWc2026EspnBracket = typeof wc2026EspnBracket.$inferSelect;
+
+// ─── WC2026 Match Odds (Book + Model) ────────────────────────────────────────
+// Production odds table — stores both bet365 book lines (scraped via BetExplorer
+// AJAX endpoint, bid=16) and v15 model projections side-by-side.
+//
+// Column layout mirrors feed display order: Away top, Home bottom.
+// DC semantics: 1X = Away WD (Away or Draw), X2 = Home WD (Home or Draw),
+//               12 = No Draw (either team wins, no draw — single combined price).
+// AH/Spread: line is from HOME perspective (negative = home favored).
+// book_source default = 'bet365' (BetExplorer AJAX bid=16 international).
+//
+// Upserted by: wc2026_betexplorer_scraper_v4.py (book_ columns)
+// Upserted by: v15_engine.mjs (model_ columns)
+export const wc2026MatchOdds = mysqlTable(
+  "wc2026MatchOdds",
+  {
+    id:           bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    fixtureId:    varchar("fixture_id", { length: 16 }).notNull(),
+    espnMatchId:  varchar("espn_match_id", { length: 64 }),
+    insertedAt:   timestamp("inserted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    scraperFile:  varchar("scraper_file", { length: 255 }),
+    bookSource:   varchar("book_source", { length: 32 }).notNull().default("bet365"),
+
+    // ── To Advance (Knockout only) ────────────────────────────────────────────
+    bookAwayToAdvance:  smallint("book_away_to_advance"),
+    modelAwayToAdvance: smallint("model_away_to_advance"),
+    bookHomeToAdvance:  smallint("book_home_to_advance"),
+    modelHomeToAdvance: smallint("model_home_to_advance"),
+
+    // ── 1X2 Moneylines (Away top / Home bottom) ───────────────────────────────
+    bookAwayMl:  smallint("book_away_ml"),
+    modelAwayMl: smallint("model_away_ml"),
+
+    // ── Double Chance: Away WD (1X = Away or Draw) ────────────────────────────
+    bookAwayWd:  smallint("book_away_wd"),
+    modelAwayWd: smallint("model_away_wd"),
+
+    // ── Draw ML ───────────────────────────────────────────────────────────────
+    bookDraw:  smallint("book_draw"),
+    modelDraw: smallint("model_draw"),
+
+    // ── No Draw (12 = either team wins, no draw — single combined price) ──────
+    bookNoDraw:  smallint("book_no_draw"),
+    modelNoDraw: smallint("model_no_draw"),
+
+    // ── Home ML ───────────────────────────────────────────────────────────────
+    bookHomeMl:  smallint("book_home_ml"),
+    modelHomeMl: smallint("model_home_ml"),
+
+    // ── Double Chance: Home WD (X2 = Home or Draw) ────────────────────────────
+    bookHomeWd:  smallint("book_home_wd"),
+    modelHomeWd: smallint("model_home_wd"),
+
+    // ── Spread / Asian Handicap (line from HOME perspective, negative = home fav)
+    bookPrimarySpread:          double("book_primary_spread"),
+    modelPrimarySpread:         double("model_primary_spread"),
+    bookAwayPrimarySpreadOdds:  smallint("book_away_primary_spread_odds"),
+    modelAwayPrimarySpreadOdds: smallint("model_away_primary_spread_odds"),
+    bookHomePrimarySpreadOdds:  smallint("book_home_primary_spread_odds"),
+    modelHomePrimarySpreadOdds: smallint("model_home_primary_spread_odds"),
+
+    // ── Total (Over/Under) ────────────────────────────────────────────────────
+    bookTotal:      double("book_total"),
+    modelTotal:     double("model_total"),
+    bookOverOdds:   smallint("book_over_odds"),
+    modelOverOdds:  smallint("model_over_odds"),
+    bookUnderOdds:  smallint("book_under_odds"),
+    modelUnderOdds: smallint("model_under_odds"),
+
+    // ── Both Teams To Score ───────────────────────────────────────────────────
+    bookBttsYes:  smallint("book_btts_yes"),
+    modelBttsYes: smallint("model_btts_yes"),
+    bookBttsNo:   smallint("book_btts_no"),
+    modelBttsNo:  smallint("model_btts_no"),
+  },
+  (t) => [
+    uniqueIndex("uq_wc2026_match_odds_fixture").on(t.fixtureId),
+    index("idx_wc2026_match_odds_fixture").on(t.fixtureId),
+  ],
+);
+
+export type InsertWc2026MatchOdds = typeof wc2026MatchOdds.$inferInsert;
+export type SelectWc2026MatchOdds = typeof wc2026MatchOdds.$inferSelect;
