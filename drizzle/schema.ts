@@ -7,6 +7,7 @@ import {
   int,
   mysqlEnum,
   mysqlTable,
+  smallint,
   text,
   timestamp,
   tinyint,
@@ -3030,3 +3031,62 @@ export const wc2026EspnGlossary = mysqlTable("wc2026_espn_glossary", {
 export type Wc2026EspnGlossaryEntry       = typeof wc2026EspnGlossary.$inferSelect;
 export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInsert;
 
+
+// ─── wc2026MatchOdds ─────────────────────────────────────────────────────────
+// Primary odds table for WC2026 knockout stage fixtures.
+// book_* = BetExplorer/bet365 market odds (American format, integers).
+// model_* = owner-entered model projections (editable via Publish Projections).
+export const wc2026MatchOdds = mysqlTable("wc2026MatchOdds", {
+  id:                         bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+  fixtureId:                  varchar("fixture_id", { length: 16 }).notNull().unique(),
+  espnMatchId:                varchar("espn_match_id", { length: 64 }),
+  espnSlug:                   varchar("espn_slug", { length: 64 }),
+  betExplorerMatchId:         varchar("bet_explorer_match_id", { length: 16 }),
+  betExplorerSlug:            varchar("bet_explorer_slug", { length: 128 }),
+  worldCupStage:              mysqlEnum("world_cup_stage", ["group", "knockout"]),
+  worldCupRound:              mysqlEnum("world_cup_round", ["group", "r32", "quarterfinals", "semifinals", "third_place", "finals"]),
+  insertedAt:                 timestamp("inserted_at").defaultNow(),
+  insertMethod:               varchar("insert_method", { length: 255 }),
+  lastInsertedAt:             timestamp("last_inserted_at"),
+  lastInsertMethod:           varchar("last_insert_method", { length: 255 }),
+  awayTeam:                   int("away_team"),
+  homeTeam:                   int("home_team"),
+  bookAwayToAdvance:          smallint("book_away_to_advance"),
+  modelAwayToAdvance:         smallint("model_away_to_advance"),
+  bookHomeToAdvance:          smallint("book_home_to_advance"),
+  modelHomeToAdvance:         smallint("model_home_to_advance"),
+  bookAwayMl:                 smallint("book_away_ml"),
+  modelAwayMl:                smallint("model_away_ml"),
+  bookAwayWd:                 smallint("book_away_wd"),
+  modelAwayWd:                smallint("model_away_wd"),
+  bookDraw:                   smallint("book_draw"),
+  modelDraw:                  smallint("model_draw"),
+  bookNoDraw:                 smallint("book_no_draw"),
+  modelNoDraw:                smallint("model_no_draw"),
+  bookHomeMl:                 smallint("book_home_ml"),
+  modelHomeMl:                smallint("model_home_ml"),
+  bookHomeWd:                 smallint("book_home_wd"),
+  modelHomeWd:                smallint("model_home_wd"),
+  bookPrimarySpread:          double("book_primary_spread"),
+  modelPrimarySpread:         double("model_primary_spread"),
+  bookAwayPrimarySpreadOdds:  smallint("book_away_primary_spread_odds"),
+  modelAwayPrimarySpreadOdds: smallint("model_away_primary_spread_odds"),
+  bookHomePrimarySpreadOdds:  smallint("book_home_primary_spread_odds"),
+  modelHomePrimarySpreadOdds: smallint("model_home_primary_spread_odds"),
+  bookTotal:                  double("book_total"),
+  modelTotal:                 double("model_total"),
+  bookOverOdds:               smallint("book_over_odds"),
+  modelOverOdds:              smallint("model_over_odds"),
+  bookUnderOdds:              smallint("book_under_odds"),
+  modelUnderOdds:             smallint("model_under_odds"),
+  bookBttsYes:                smallint("book_btts_yes"),
+  modelBttsYes:               smallint("model_btts_yes"),
+  bookBttsNo:                 smallint("book_btts_no"),
+  modelBttsNo:                smallint("model_btts_no"),
+}, (t) => ({
+  idxFixtureId: uniqueIndex("idx_wc2026MatchOdds_fixtureId").on(t.fixtureId),
+  idxRound:     index("idx_wc2026MatchOdds_round").on(t.worldCupRound),
+  idxStage:     index("idx_wc2026MatchOdds_stage").on(t.worldCupStage),
+}));
+export type Wc2026MatchOddsRow    = typeof wc2026MatchOdds.$inferSelect;
+export type InsertWc2026MatchOdds = typeof wc2026MatchOdds.$inferInsert;

@@ -1609,9 +1609,11 @@ export default function PublishProjections() {
   const { appUser, isOwner, loading: authLoading } = useAppAuth();
   const [filter, setFilter] = useState<"all" | "regular_season" | "conference_tournament">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "upcoming" | "live" | "final" | "missing_odds" | "modeled" | "not_modeled">("all");
-  const [selectedSport, setSelectedSport] = useState<"NBA" | "NHL" | "MLB">("MLB");
+  const [selectedSport, setSelectedSport] = useState<"NBA" | "NHL" | "MLB" | "WC2026">("MLB");
   const [gameDate, setGameDate] = useState(() => todayPst());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  // WC2026-specific state
+  const [wcRound, setWcRound] = useState<"r32" | "quarterfinals" | "semifinals" | "third_place" | "finals">("r32");
 
   // Reset status filter when sport changes to NBA (no status tracking yet)
   useEffect(() => {
@@ -1637,9 +1639,47 @@ export default function PublishProjections() {
     isLoading,
     refetch,
   } = trpc.games.listStaging.useQuery(
-    { gameDate, sport: selectedSport },
-    { enabled: !!appUser && isOwner, refetchOnWindowFocus: false }
+    { gameDate, sport: selectedSport === "WC2026" ? "MLB" : selectedSport },
+    { enabled: !!appUser && isOwner && selectedSport !== "WC2026", refetchOnWindowFocus: false }
   );
+
+  // ── WC2026 Match Odds query ─────────────────────────────────────────────────
+  const {
+    data: wcMatchOddsData,
+    isLoading: wcIsLoading,
+    refetch: wcRefetch,
+  } = trpc.wc2026.listMatchOdds.useQuery(
+    { round: wcRound },
+    {
+      enabled: !!appUser && isOwner && selectedSport === "WC2026",
+      refetchOnWindowFocus: false,
+    }
+  );
+  const wcRows = wcMatchOddsData?.rows ?? [];
+
+  // ── WC2026 updateMatchOdds mutation ─────────────────────────────────────────
+  const wcUpdateMatchOddsMutation = trpc.wc2026.updateMatchOdds.useMutation({
+    onMutate: (vars) => {
+      console.log(
+        `[PublishProjections][WC2026][updateMatchOdds] ► START | fixtureId=${vars.fixtureId}` +
+        ` fields=${JSON.stringify(Object.keys(vars).filter(k => k !== 'fixtureId'))}`
+      );
+    },
+    onSuccess: (data) => {
+      console.log(
+        `[PublishProjections][WC2026][updateMatchOdds] ✅ COMPLETE | fixtureId=${data.fixtureId}` +
+        ` updated=${data.updated} elapsed=${data.elapsedMs}ms`
+      );
+      toast.success(`WC2026 odds saved — ${data.updated} row updated`);
+      wcRefetch();
+    },
+    onError: (err, vars) => {
+      console.error(
+        `[PublishProjections][WC2026][updateMatchOdds] ❌ FAILED | fixtureId=${vars.fixtureId} error:`, err
+      );
+      toast.error(`WC2026 save failed: ${err.message}`);
+    },
+  });
 
   const publishAllMutation = trpc.games.publishAll.useMutation({
     onMutate: (vars) => {
@@ -1903,7 +1943,7 @@ export default function PublishProjections() {
             {pendingApprovalCount > 0 && (
               <Button
                 size="sm"
-                onClick={() => bulkApproveModelsMutation.mutate({ gameDate, sport: selectedSport })}
+                onClick={() => bulkApproveModelsMutation.mutate({ gameDate, sport: selectedSport as "MLB" | "NBA" | "NHL" })}
                 disabled={bulkApproveModelsMutation.isPending}
                 className="gap-1.5 text-xs h-8 font-bold border"
                 style={{
@@ -1928,7 +1968,7 @@ export default function PublishProjections() {
             )}
             <Button
               size="sm"
-              onClick={() => publishAllMutation.mutate({ gameDate, sport: selectedSport })}
+              onClick={() => publishAllMutation.mutate({ gameDate, sport: selectedSport as "MLB" | "NBA" | "NHL" })}
               disabled={publishAllMutation.isPending || totalCount === 0}
               className="gap-1.5 text-xs h-8 font-bold"
               style={{ background: "#39FF14", color: "#000" }}
@@ -2048,6 +2088,17 @@ export default function PublishProjections() {
               style={{ opacity: selectedSport === "NBA" ? 1 : 0.5 }}
             />
             NBA
+          </button>
+          {/* WC2026 button */}
+          <button type="button" onClick={() => setSelectedSport("WC2026")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+            style={selectedSport === "WC2026"
+              ? { background: "rgba(0,168,80,0.18)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
+              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+            }
+          >
+            <span style={{ fontSize: 14 }}>⚽</span>
+            WC 2026
           </button>
         </div>
 
@@ -2278,7 +2329,16 @@ export default function PublishProjections() {
 
       {/* Game cards — same max-width and padding as Dashboard */}
       <main className="max-w-5xl mx-auto px-4 pb-8 pt-3 space-y-3">
-        {isLoading ? (
+        {selectedSport === "WC2026" ? (
+          <WcMatchOddsPanel
+            rows={wcRows}
+            isLoading={wcIsLoading}
+            round={wcRound}
+            onRoundChange={setWcRound}
+            onSave={(fixtureId, fields) => wcUpdateMatchOddsMutation.mutate({ fixtureId, ...fields })}
+            isSaving={wcUpdateMatchOddsMutation.isPending}
+          />
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="animate-spin" style={{ color: "#39FF14" }} />
           </div>
@@ -2308,6 +2368,552 @@ export default function PublishProjections() {
           ))
         )}
       </main>
+    </div>
+  );
+}
+
+// ─── WC2026 Match Odds Panel ──────────────────────────────────────────────────
+// Owner-only panel for entering model odds for wc2026MatchOdds rows.
+// Queries ONLY wc2026MatchOdds (enriched with team names from wc2026_espn_matches).
+// 8 markets per fixture: TO ADV, ML (3-way), DRAW/NO DRAW, TOTAL, SPREAD, DBL CHC, BTTS.
+
+type WcMatchOddsRow = {
+  id: number;
+  fixtureId: string;
+  espnMatchId: string | null;
+  espnSlug: string | null;
+  worldCupRound: string | null;
+  worldCupStage: string | null;
+  // Book odds
+  bookAwayToAdvance: number | null;
+  bookHomeToAdvance: number | null;
+  bookAwayMl: number | null;
+  bookHomeMl: number | null;
+  bookDraw: number | null;
+  bookNoDraw: number | null;
+  bookAwayWd: number | null;
+  bookHomeWd: number | null;
+  bookPrimarySpread: number | null;
+  bookAwayPrimarySpreadOdds: number | null;
+  bookHomePrimarySpreadOdds: number | null;
+  bookTotal: number | null;
+  bookOverOdds: number | null;
+  bookUnderOdds: number | null;
+  bookBttsYes: number | null;
+  bookBttsNo: number | null;
+  // Model odds
+  modelAwayToAdvance: number | null;
+  modelHomeToAdvance: number | null;
+  modelAwayMl: number | null;
+  modelHomeMl: number | null;
+  modelDraw: number | null;
+  modelNoDraw: number | null;
+  modelAwayWd: number | null;
+  modelHomeWd: number | null;
+  modelPrimarySpread: number | null;
+  modelAwayPrimarySpreadOdds: number | null;
+  modelHomePrimarySpreadOdds: number | null;
+  modelTotal: number | null;
+  modelOverOdds: number | null;
+  modelUnderOdds: number | null;
+  modelBttsYes: number | null;
+  modelBttsNo: number | null;
+  // Enriched from wc2026_espn_matches
+  awayTeamName: string | null;
+  homeTeamName: string | null;
+  awayTeamAbbrev: string | null;
+  homeTeamAbbrev: string | null;
+  awayTeamLogo: string | null;
+  homeTeamLogo: string | null;
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function wcFmtAmerican(odds: number | null | undefined): string {
+  if (odds == null) return "—";
+  const r = Math.round(odds);
+  return r > 0 ? `+${r}` : `${r}`;
+}
+
+function wcFmtSpreadLine(line: number | null | undefined): string {
+  if (line == null) return "—";
+  return line > 0 ? `+${line}` : `${line}`;
+}
+
+function wcParseOdds(val: string): number | null {
+  const trimmed = val.trim();
+  if (!trimmed || trimmed === "—") return null;
+  const n = Number(trimmed);
+  if (isNaN(n)) return null;
+  return Math.round(n);
+}
+
+function wcParseSpread(val: string): number | null {
+  const trimmed = val.trim();
+  if (!trimmed || trimmed === "—") return null;
+  const n = parseFloat(trimmed);
+  if (isNaN(n)) return null;
+  return n;
+}
+
+// ─── WcOddsInput — inline editable cell ──────────────────────────────────────
+
+function WcOddsInput({
+  value,
+  onChange,
+  placeholder = "—",
+  isSpread = false,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  isSpread?: boolean;
+}) {
+  return (
+    <input
+      type="text"
+      inputMode={isSpread ? "decimal" : "numeric"}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full text-center font-mono font-bold text-xs rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-green-400/60"
+      style={{
+        background: "rgba(57,255,20,0.08)",
+        color: "#39FF14",
+        border: "1px solid rgba(57,255,20,0.25)",
+        minWidth: 44,
+        maxWidth: 64,
+      }}
+    />
+  );
+}
+
+// ─── WcMatchOddsCard — one fixture row ────────────────────────────────────────
+
+function WcMatchOddsCard({
+  row,
+  onSave,
+  isSaving,
+}: {
+  row: WcMatchOddsRow;
+  onSave: (fixtureId: string, fields: Record<string, number | null>) => void;
+  isSaving: boolean;
+}) {
+  const awayName = row.awayTeamName ?? row.awayTeamAbbrev ?? row.espnSlug?.split("-")[0]?.toUpperCase() ?? "AWAY";
+  const homeName = row.homeTeamName ?? row.homeTeamAbbrev ?? row.espnSlug?.split("-")[1]?.toUpperCase() ?? "HOME";
+  const awayAbbr = row.awayTeamAbbrev ?? awayName.slice(0, 3).toUpperCase();
+  const homeAbbr = row.homeTeamAbbrev ?? homeName.slice(0, 3).toUpperCase();
+
+  // ── Local draft state — all model fields as strings ──────────────────────────
+  const [mAwayAdv,  setMAwayAdv]  = useState(row.modelAwayToAdvance  != null ? String(row.modelAwayToAdvance)  : "");
+  const [mHomeAdv,  setMHomeAdv]  = useState(row.modelHomeToAdvance  != null ? String(row.modelHomeToAdvance)  : "");
+  const [mAwayMl,   setMAwayMl]   = useState(row.modelAwayMl         != null ? String(row.modelAwayMl)         : "");
+  const [mHomeMl,   setMHomeMl]   = useState(row.modelHomeMl         != null ? String(row.modelHomeMl)         : "");
+  const [mDraw,     setMDraw]     = useState(row.modelDraw            != null ? String(row.modelDraw)           : "");
+  const [mNoDraw,   setMNoDraw]   = useState(row.modelNoDraw          != null ? String(row.modelNoDraw)         : "");
+  const [mAwayWd,   setMAwayWd]   = useState(row.modelAwayWd          != null ? String(row.modelAwayWd)         : "");
+  const [mHomeWd,   setMHomeWd]   = useState(row.modelHomeWd          != null ? String(row.modelHomeWd)         : "");
+  const [mSpread,   setMSpread]   = useState(row.modelPrimarySpread   != null ? String(row.modelPrimarySpread)  : "");
+  const [mAwaySpOdds, setMAwaySpOdds] = useState(row.modelAwayPrimarySpreadOdds != null ? String(row.modelAwayPrimarySpreadOdds) : "");
+  const [mHomeSpOdds, setMHomeSpOdds] = useState(row.modelHomePrimarySpreadOdds != null ? String(row.modelHomePrimarySpreadOdds) : "");
+  const [mTotal,    setMTotal]    = useState(row.modelTotal           != null ? String(row.modelTotal)          : "");
+  const [mOverOdds, setMOverOdds] = useState(row.modelOverOdds        != null ? String(row.modelOverOdds)       : "");
+  const [mUnderOdds,setMUnderOdds]= useState(row.modelUnderOdds       != null ? String(row.modelUnderOdds)      : "");
+  const [mBttsYes,  setMBttsYes]  = useState(row.modelBttsYes         != null ? String(row.modelBttsYes)        : "");
+  const [mBttsNo,   setMBttsNo]   = useState(row.modelBttsNo          != null ? String(row.modelBttsNo)         : "");
+  const [isDirty,   setIsDirty]   = useState(false);
+
+  // Mark dirty on any change
+  const mkChange = (setter: (v: string) => void) => (v: string) => {
+    setter(v);
+    setIsDirty(true);
+  };
+
+  const handleSave = () => {
+    const fields: Record<string, number | null> = {
+      modelAwayToAdvance:          wcParseOdds(mAwayAdv),
+      modelHomeToAdvance:          wcParseOdds(mHomeAdv),
+      modelAwayMl:                 wcParseOdds(mAwayMl),
+      modelHomeMl:                 wcParseOdds(mHomeMl),
+      modelDraw:                   wcParseOdds(mDraw),
+      modelNoDraw:                 wcParseOdds(mNoDraw),
+      modelAwayWd:                 wcParseOdds(mAwayWd),
+      modelHomeWd:                 wcParseOdds(mHomeWd),
+      modelPrimarySpread:          wcParseSpread(mSpread),
+      modelAwayPrimarySpreadOdds:  wcParseOdds(mAwaySpOdds),
+      modelHomePrimarySpreadOdds:  wcParseOdds(mHomeSpOdds),
+      modelTotal:                  wcParseSpread(mTotal),
+      modelOverOdds:               wcParseOdds(mOverOdds),
+      modelUnderOdds:              wcParseOdds(mUnderOdds),
+      modelBttsYes:                wcParseOdds(mBttsYes),
+      modelBttsNo:                 wcParseOdds(mBttsNo),
+    };
+    console.log(
+      `[WcMatchOddsCard][handleSave] fixtureId=${row.fixtureId}` +
+      ` | [INPUT] fields=${JSON.stringify(fields)}` +
+      ` | [VERIFY] dirtyFields=${Object.entries(fields).filter(([,v]) => v !== null).map(([k]) => k).join(",")}`
+    );
+    onSave(row.fixtureId, fields);
+    setIsDirty(false);
+  };
+
+  // ── Market cell helper ──────────────────────────────────────────────────────
+  // Each market column: label | book value | model input
+  const MktCell = ({
+    label,
+    bookVal,
+    modelVal,
+    onModelChange,
+    isSpread = false,
+  }: {
+    label: string;
+    bookVal: number | null | undefined;
+    modelVal: string;
+    onModelChange: (v: string) => void;
+    isSpread?: boolean;
+  }) => (
+    <div className="flex flex-col items-center gap-0.5 min-w-[52px]">
+      <span className="text-[10px] uppercase tracking-widest font-semibold text-center leading-tight"
+        style={{ color: "rgba(255,255,255,0.4)" }}>
+        {label}
+      </span>
+      {/* Book value — static */}
+      <span className="font-mono font-bold text-xs"
+        style={{ color: bookVal != null ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.2)" }}>
+        {isSpread ? wcFmtSpreadLine(bookVal) : wcFmtAmerican(bookVal)}
+      </span>
+      {/* Model input */}
+      <WcOddsInput
+        value={modelVal}
+        onChange={onModelChange}
+        isSpread={isSpread}
+      />
+    </div>
+  );
+
+  return (
+    <div
+      className="w-full rounded-lg overflow-hidden"
+      style={{
+        background: "hsl(var(--card))",
+        border: "1px solid hsl(var(--border))",
+        borderLeft: "3px solid #00A850",
+      }}
+    >
+      {/* Header row: fixture ID + team names + save button */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {row.fixtureId}
+          </span>
+          <span className="font-bold text-sm text-white">
+            {awayAbbr} vs {homeAbbr}
+          </span>
+          <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+            {awayName} vs {homeName}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !isDirty}
+          className="flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition-all"
+          style={isDirty
+            ? { background: "rgba(57,255,20,0.15)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.4)" }
+            : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)" }
+          }
+        >
+          {isSaving ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+          {isDirty ? "Submit" : "Saved"}
+        </button>
+      </div>
+
+      {/* Markets grid */}
+      <div className="px-3 py-2 overflow-x-auto">
+        {/* Column headers */}
+        <div className="flex items-start gap-3 min-w-max">
+
+          {/* ── TO ADVANCE ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#00A850" }}>TO ADV</span>
+            <div className="flex gap-2">
+              <MktCell
+                label={`${homeAbbr} ADV`}
+                bookVal={row.bookHomeToAdvance}
+                modelVal={mHomeAdv}
+                onModelChange={mkChange(setMHomeAdv)}
+              />
+              <MktCell
+                label={`${awayAbbr} ADV`}
+                bookVal={row.bookAwayToAdvance}
+                modelVal={mAwayAdv}
+                onModelChange={mkChange(setMAwayAdv)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── 3-WAY ML ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#FFB800" }}>ML (3-WAY)</span>
+            <div className="flex gap-2">
+              <MktCell
+                label={`${homeAbbr} ML`}
+                bookVal={row.bookHomeMl}
+                modelVal={mHomeMl}
+                onModelChange={mkChange(setMHomeMl)}
+              />
+              <MktCell
+                label="DRAW"
+                bookVal={row.bookDraw}
+                modelVal={mDraw}
+                onModelChange={mkChange(setMDraw)}
+              />
+              <MktCell
+                label={`${awayAbbr} ML`}
+                bookVal={row.bookAwayMl}
+                modelVal={mAwayMl}
+                onModelChange={mkChange(setMAwayMl)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── DRAW / NO DRAW ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#9CA3AF" }}>DRAW/NO DRAW</span>
+            <div className="flex gap-2">
+              <MktCell
+                label="DRAW"
+                bookVal={row.bookDraw}
+                modelVal={mDraw}
+                onModelChange={mkChange(setMDraw)}
+              />
+              <MktCell
+                label="NO DRAW"
+                bookVal={row.bookNoDraw}
+                modelVal={mNoDraw}
+                onModelChange={mkChange(setMNoDraw)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── TOTAL ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 160 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#39FF14" }}>
+              TOTAL {row.bookTotal != null ? `(${row.bookTotal})` : ""}
+            </span>
+            <div className="flex gap-2">
+              <MktCell
+                label="LINE"
+                bookVal={row.bookTotal}
+                modelVal={mTotal}
+                onModelChange={mkChange(setMTotal)}
+                isSpread
+              />
+              <MktCell
+                label="OVER"
+                bookVal={row.bookOverOdds}
+                modelVal={mOverOdds}
+                onModelChange={mkChange(setMOverOdds)}
+              />
+              <MktCell
+                label="UNDER"
+                bookVal={row.bookUnderOdds}
+                modelVal={mUnderOdds}
+                onModelChange={mkChange(setMUnderOdds)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── SPREAD ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#60A5FA" }}>
+              SPREAD {row.bookPrimarySpread != null ? `(${wcFmtSpreadLine(row.bookPrimarySpread)})` : ""}
+            </span>
+            <div className="flex gap-2">
+              <MktCell
+                label="LINE"
+                bookVal={row.bookPrimarySpread}
+                modelVal={mSpread}
+                onModelChange={mkChange(setMSpread)}
+                isSpread
+              />
+              <MktCell
+                label={`${homeAbbr} ODS`}
+                bookVal={row.bookHomePrimarySpreadOdds}
+                modelVal={mHomeSpOdds}
+                onModelChange={mkChange(setMHomeSpOdds)}
+              />
+              <MktCell
+                label={`${awayAbbr} ODS`}
+                bookVal={row.bookAwayPrimarySpreadOdds}
+                modelVal={mAwaySpOdds}
+                onModelChange={mkChange(setMAwaySpOdds)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── DOUBLE CHANCE ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#C084FC" }}>DBL CHC</span>
+            <div className="flex gap-2">
+              <MktCell
+                label={`${homeAbbr}/D`}
+                bookVal={row.bookHomeWd}
+                modelVal={mHomeWd}
+                onModelChange={mkChange(setMHomeWd)}
+              />
+              <MktCell
+                label={`${awayAbbr}/D`}
+                bookVal={row.bookAwayWd}
+                modelVal={mAwayWd}
+                onModelChange={mkChange(setMAwayWd)}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+
+          {/* ── BTTS ── */}
+          <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-center"
+              style={{ color: "#22D3EE" }}>BTTS</span>
+            <div className="flex gap-2">
+              <MktCell
+                label="YES"
+                bookVal={row.bookBttsYes}
+                modelVal={mBttsYes}
+                onModelChange={mkChange(setMBttsYes)}
+              />
+              <MktCell
+                label="NO"
+                bookVal={row.bookBttsNo}
+                modelVal={mBttsNo}
+                onModelChange={mkChange(setMBttsNo)}
+              />
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WcMatchOddsPanel — round selector + list of cards ───────────────────────
+
+const WC_ROUND_LABELS: Record<string, string> = {
+  r32:          "Round of 32",
+  quarterfinals: "Quarterfinals",
+  semifinals:   "Semifinals",
+  third_place:  "Third Place",
+  finals:       "Final",
+};
+
+function WcMatchOddsPanel({
+  rows,
+  isLoading,
+  round,
+  onRoundChange,
+  onSave,
+  isSaving,
+}: {
+  rows: WcMatchOddsRow[];
+  isLoading: boolean;
+  round: string;
+  onRoundChange: (r: "r32" | "quarterfinals" | "semifinals" | "third_place" | "finals") => void;
+  onSave: (fixtureId: string, fields: Record<string, number | null>) => void;
+  isSaving: boolean;
+}) {
+  console.log(
+    `[WcMatchOddsPanel] RENDER | round=${round} rows=${rows.length} isLoading=${isLoading} isSaving=${isSaving}`
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Round selector */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {(["r32", "quarterfinals", "semifinals", "third_place", "finals"] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={() => {
+              console.log(`[WcMatchOddsPanel] Round changed: ${round} → ${r}`);
+              onRoundChange(r);
+            }}
+            className="px-3 py-1 rounded-full text-xs font-bold transition-all"
+            style={round === r
+              ? { background: "rgba(0,168,80,0.2)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
+              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+            }
+          >
+            {WC_ROUND_LABELS[r] ?? r}
+          </button>
+        ))}
+        <span className="text-xs ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+          {rows.length} fixture{rows.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>+100</span>
+          <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>= Book</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs font-bold" style={{ color: "#39FF14" }}>+100</span>
+          <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>= Model (editable)</span>
+        </div>
+      </div>
+
+      {/* Loading */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="animate-spin" style={{ color: "#00A850" }} />
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-2">
+          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            No fixtures found for {WC_ROUND_LABELS[round] ?? round}
+          </span>
+        </div>
+      ) : (
+        rows.map((row) => {
+          console.log(
+            `[WcMatchOddsPanel] Rendering card fixtureId=${row.fixtureId}` +
+            ` away=${row.awayTeamName ?? row.awayTeamAbbrev ?? "?"}` +
+            ` home=${row.homeTeamName ?? row.homeTeamAbbrev ?? "?"}` +
+            ` bookAwayMl=${row.bookAwayMl ?? "null"}` +
+            ` bookHomeMl=${row.bookHomeMl ?? "null"}` +
+            ` modelAwayMl=${row.modelAwayMl ?? "null"}` +
+            ` modelHomeMl=${row.modelHomeMl ?? "null"}`
+          );
+          return (
+            <WcMatchOddsCard
+              key={row.fixtureId}
+              row={row}
+              onSave={onSave}
+              isSaving={isSaving}
+            />
+          );
+        })
+      )}
     </div>
   );
 }
