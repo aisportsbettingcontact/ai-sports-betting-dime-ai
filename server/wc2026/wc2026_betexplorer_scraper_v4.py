@@ -75,7 +75,7 @@ DEBUG_DUMP_DIR.mkdir(exist_ok=True)
 
 # MySQL target table for production upsert
 MYSQL_TABLE = "wc2026MatchOdds"
-# Exact scraper filename — written to scraper_file column on every upsert
+# Exact scraper filename — written to insert_method column on every upsert
 SCRAPER_FILENAME = "wc2026_betexplorer_scraper_v4.py"
 # DATABASE_URL parsed at runtime from environment (set by Manus platform)
 import os, urllib.parse as _urlparse
@@ -2087,14 +2087,24 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
     upsert_sql = f"""
         INSERT INTO `{MYSQL_TABLE}` (
-            fixture_id, espn_match_id, scraper_file, book_source,
+            fixture_id, espn_match_id,
+            insert_method,
+            last_inserted_at, last_insert_method,
+            away_team, home_team,
+            book_away_to_advance,
+            book_home_to_advance,
             book_home_ml, book_draw, book_away_ml,
             book_home_wd, book_away_wd, book_no_draw,
             book_btts_yes, book_btts_no,
             book_total, book_over_odds, book_under_odds,
             book_primary_spread, book_home_primary_spread_odds, book_away_primary_spread_odds
         ) VALUES (
-            %s, %s, %s, %s,
+            %s, %s,
+            %s,
+            CURRENT_TIMESTAMP, %s,
+            %s, %s,
+            %s,
+            %s,
             %s, %s, %s,
             %s, %s, %s,
             %s, %s,
@@ -2103,8 +2113,12 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
         )
         ON DUPLICATE KEY UPDATE
             espn_match_id                  = VALUES(espn_match_id),
-            scraper_file                   = VALUES(scraper_file),
-            book_source                    = VALUES(book_source),
+            last_inserted_at               = CURRENT_TIMESTAMP,
+            last_insert_method             = VALUES(last_insert_method),
+            away_team                      = VALUES(away_team),
+            home_team                      = VALUES(home_team),
+            book_away_to_advance           = VALUES(book_away_to_advance),
+            book_home_to_advance           = VALUES(book_home_to_advance),
             book_home_ml                   = VALUES(book_home_ml),
             book_draw                      = VALUES(book_draw),
             book_away_ml                   = VALUES(book_away_ml),
@@ -2118,8 +2132,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
             book_under_odds                = VALUES(book_under_odds),
             book_primary_spread            = VALUES(book_primary_spread),
             book_home_primary_spread_odds  = VALUES(book_home_primary_spread_odds),
-            book_away_primary_spread_odds  = VALUES(book_away_primary_spread_odds),
-            inserted_at                    = CURRENT_TIMESTAMP
+            book_away_primary_spread_odds  = VALUES(book_away_primary_spread_odds)
     """
 
     try:
@@ -2160,7 +2173,18 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 # ── AH/Spread ────────────────────────────────────────────────────
                 book_primary_spread, book_home_spread_odds, book_away_spread_odds = _select_primary_ah_line(ah_data)
 
-                # ── Validation gate: require all 5 markets populated ─────────────
+                # ── To Advance: BetExplorer does not carry this market.
+                # Always write NULL — will be backfilled from other sources.
+                book_away_to_advance = None  # NULL — not available on BetExplorer
+                book_home_to_advance = None  # NULL — not available on BetExplorer
+
+                # ── Team names from fixture definition ───────────────────────────
+                away_team = m.get("away_display")  # canonical display name
+                home_team = m.get("home_display")
+
+                # ── Validation gate: require all BetExplorer markets populated ───
+                # NOTE: to_advance columns are intentionally excluded from this gate
+                # because they are never available on BetExplorer.
                 missing = []
                 if book_home_ml is None: missing.append("home_ml")
                 if book_draw is None:    missing.append("draw")
@@ -2186,6 +2210,8 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
                 logger.emit("STATE",
                     f"[MYSQL_UPSERT] {fixture_id}: "
+                    f"Teams={away_team} vs {home_team} | "
+                    f"ToAdv=NULL/NULL (BetExplorer N/A) | "
                     f"ML={book_home_ml}/{book_draw}/{book_away_ml} | "
                     f"DC_HWD={book_home_wd} DC_AWD={book_away_wd} ND={book_no_draw} | "
                     f"BTTS={book_btts_yes}/{book_btts_no} | "
@@ -2196,7 +2222,12 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 espn_match_id = m.get("espn_match_id")
 
                 params = (
-                    fixture_id, espn_match_id, SCRAPER_FILENAME, "bet365",
+                    fixture_id, espn_match_id,
+                    SCRAPER_FILENAME,          # insert_method
+                    SCRAPER_FILENAME,          # last_insert_method (same value on first insert)
+                    away_team, home_team,
+                    book_away_to_advance,      # NULL — not on BetExplorer
+                    book_home_to_advance,      # NULL — not on BetExplorer
                     book_home_ml, book_draw, book_away_ml,
                     book_home_wd, book_away_wd, book_no_draw,
                     book_btts_yes, book_btts_no,
