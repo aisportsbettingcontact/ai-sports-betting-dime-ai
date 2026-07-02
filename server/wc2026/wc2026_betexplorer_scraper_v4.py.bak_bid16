@@ -67,8 +67,6 @@ except ImportError:
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 BET365_BID = 16
-BET365_BID_US = 549  # bet365.us — fallback when bid=16 absent (US-served pages)
-BET365_BIDS = [BET365_BID, BET365_BID_US]  # priority order: intl first, US second
 LOG_PATH = Path("/home/ubuntu/wc2026oddslog.txt")
 DB_PATH = Path("/home/ubuntu/wc2026_betexplorer_v4.db")
 OUTPUT_JSON = Path("/home/ubuntu/wc2026_betexplorer_odds_v4.json")
@@ -141,9 +139,6 @@ FIXTURES = [
     {"id": "wc26-r32-087", "event_id": "O4oeJu9d", "espn_match_id": "760500",
      "be_name": "Argentina - Cape Verde",      "slug": "argentina-cape-verde",
      "espn_slug": "cpv-arg",   "espn_away_team_id": 2597,  "espn_home_team_id": 202},
-    {"id": "wc26-r32-088", "event_id": "IF40Fk9U", "espn_match_id": "760501",
-     "be_name": "Colombia - Ghana",               "slug": "colombia-ghana",
-     "espn_slug": "gha-col",   "espn_away_team_id": 4469,  "espn_home_team_id": 208},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
@@ -393,7 +388,6 @@ class TeamMapper:
         "Netherlands - Morocco":           ("mar",  "ned"),
         "Ivory Coast - Norway":            ("nor",  "civ"),
         "France - Sweden":                 ("swe",  "fra"),
-        "Colombia - Ghana":               ("gha",  "col"),
     }
 
     def resolve(self, be_name: str) -> tuple:
@@ -794,9 +788,9 @@ class ValidationGateEngine:
         for m in data.get("matches", []):
             for mk, mv in m.get("markets", {}).items():
                 bid = mv.get("bid") if isinstance(mv, dict) else None
-                if bid is not None and bid not in (BET365_BID, BET365_BID_US):
+                if bid is not None and bid != BET365_BID:
                     violations.append(f"{m['event_id']}/{mk}/bid={bid}")
-        return len(violations) == 0, (f"Non-bet365: {violations[:3]}" if violations else "100% bid=16/549")
+        return len(violations) == 0, (f"Non-bet365: {violations[:3]}" if violations else "100% bid=16")
 
     def _g03_market_completeness(self, data):
         missing = []
@@ -1137,11 +1131,8 @@ def parse_1x2(soup: BeautifulSoup, logger: ForensicLogger, event_id: str) -> dic
     """
     bid16_rows = soup.select(f'tr[data-bid="{BET365_BID}"]')
     if not bid16_rows:
-        bid16_rows = soup.select(f'tr[data-bid="{BET365_BID_US}"]')
-        if bid16_rows:
-            logger.emit("INFO", f"1x2: bid=16 absent, using bid={BET365_BID_US} (bet365.us) fallback", event_id=event_id)
-        else:
-            raise ValueError(f"bid=16 and bid={BET365_BID_US} both absent in 1x2 response for {event_id}")
+        raise ValueError(f"bid=16 not found in 1x2 response for {event_id}")
+
     row = bid16_rows[0]
     cells = row.select("td[data-odd]")
 
@@ -1201,11 +1192,7 @@ def parse_dc(soup: BeautifulSoup, logger: ForensicLogger, event_id: str) -> dict
     """
     bid16_rows = soup.select(f'tr[data-bid="{BET365_BID}"]')
     if not bid16_rows:
-        bid16_rows = soup.select(f'tr[data-bid="{BET365_BID_US}"]')
-        if bid16_rows:
-            logger.emit("INFO", f"DC: bid=16 absent, using bid={BET365_BID_US} (bet365.us) fallback", event_id=event_id)
-        else:
-            raise ValueError(f"bid=16 and bid={BET365_BID_US} both absent in dc response for {event_id}")
+        raise ValueError(f"bid=16 not found in dc response for {event_id}")
 
     # Find the DC row — should have 3 cells with values between 1.0 and 3.0 decimal
     dc_row = None
@@ -1260,11 +1247,7 @@ def parse_bts(soup: BeautifulSoup, logger: ForensicLogger, event_id: str) -> dic
     """
     bid16_rows = soup.select(f'tr[data-bid="{BET365_BID}"]')
     if not bid16_rows:
-        bid16_rows = soup.select(f'tr[data-bid="{BET365_BID_US}"]')
-        if bid16_rows:
-            logger.emit("INFO", f"BTS: bid=16 absent, using bid={BET365_BID_US} (bet365.us) fallback", event_id=event_id)
-        else:
-            raise ValueError(f"bid=16 and bid={BET365_BID_US} both absent in bts response for {event_id}")
+        raise ValueError(f"bid=16 not found in bts response for {event_id}")
 
     row = bid16_rows[0]
     cells = row.select("td[data-odd]")
@@ -1302,12 +1285,9 @@ def parse_ou(soup: BeautifulSoup, logger: ForensicLogger, event_id: str) -> dict
     """
     bid16_rows = soup.select(f'tr[data-bid="{BET365_BID}"]')
     if not bid16_rows:
-        bid16_rows = soup.select(f'tr[data-bid="{BET365_BID_US}"]')
-        if bid16_rows:
-            logger.emit("INFO", f"OU: bid=16 absent, using bid={BET365_BID_US} (bet365.us) fallback", event_id=event_id)
-        else:
-            raise ValueError(f"bid=16 and bid={BET365_BID_US} both absent in ou response for {event_id}")
-    logger.emit("DEBUG", f"OU: {len(bid16_rows)} bid rows found", event_id=event_id)
+        raise ValueError(f"bid=16 not found in ou response for {event_id}")
+
+    logger.emit("DEBUG", f"OU: {len(bid16_rows)} bid=16 rows found", event_id=event_id)
 
     # Inspect first row to understand structure
     first_row = bid16_rows[0]
@@ -1394,12 +1374,9 @@ def parse_ah(soup: BeautifulSoup, logger: ForensicLogger, event_id: str) -> dict
     """
     bid16_rows = soup.select(f'tr[data-bid="{BET365_BID}"]')
     if not bid16_rows:
-        bid16_rows = soup.select(f'tr[data-bid="{BET365_BID_US}"]')
-        if bid16_rows:
-            logger.emit("INFO", f"AH: bid=16 absent, using bid={BET365_BID_US} (bet365.us) fallback", event_id=event_id)
-        else:
-            raise ValueError(f"bid=16 and bid={BET365_BID_US} both absent in ah response for {event_id}")
-    logger.emit("DEBUG", f"AH: {len(bid16_rows)} bid rows found", event_id=event_id)
+        raise ValueError(f"bid=16 not found in ah response for {event_id}")
+
+    logger.emit("DEBUG", f"AH: {len(bid16_rows)} bid=16 rows found", event_id=event_id)
 
     # CONFIRMED FROM LIVE FORENSIC INSPECTION:
     # data-hcp is on TD cells (not TR rows). Same encoding as OU:
@@ -2029,23 +2006,18 @@ def _parse_am_int(v) -> int:
     return None
 
 
-OU_ODDS_CEILING = 175  # max absolute value for over/under odds (< -176 threshold: -175 or lower passes)
-
-
 def _select_primary_ou_line(ou_data: dict) -> tuple:
     """
     Select the primary O/U line from the parsed ou dict.
-    Rule: find the line closest to 2.5 where BOTH over and under odds are
-    within the OU_ODDS_CEILING (170). If 2.5 violates the ceiling, step to
-    adjacent lines searching outward until a compliant line is found.
-    Fallback: return closest to 2.5 regardless of ceiling.
+    Strategy: pick the .50 line closest to 2.5 (typical soccer total).
     Returns (line_float, over_odds_int, under_odds_int) or (None, None, None).
     """
     if not isinstance(ou_data, dict) or not ou_data:
         return None, None, None
-
-    # Build list of (line_val, over_odds, under_odds) for all valid entries
-    candidates = []
+    best_line = None
+    best_dist = float('inf')
+    best_over = None
+    best_under = None
     for line_str, line_data in ou_data.items():
         if not isinstance(line_data, dict):
             continue
@@ -2053,46 +2025,27 @@ def _select_primary_ou_line(ou_data: dict) -> tuple:
             lv = float(line_str)
         except (ValueError, TypeError):
             continue
-        over = _parse_am_int(line_data.get('over_odds'))
-        under = _parse_am_int(line_data.get('under_odds'))
-        if over is None or under is None:
-            continue
-        candidates.append((lv, over, under))
-
-    if not candidates:
-        return None, None, None
-
-    # Sort by distance from 2.5 (ascending), then by line value (ascending) as tiebreak
-    candidates.sort(key=lambda x: (abs(x[0] - 2.5), x[0]))
-
-    # Find first candidate where BOTH sides are within the ceiling
-    for lv, over, under in candidates:
-        if abs(over) <= OU_ODDS_CEILING and abs(under) <= OU_ODDS_CEILING:
-            return lv, over, under
-
-    # Fallback: return closest to 2.5 regardless of ceiling
-    lv, over, under = candidates[0]
-    return lv, over, under
+        dist = abs(lv - 2.5)
+        if dist < best_dist:
+            best_dist = dist
+            best_line = lv
+            best_over = _parse_am_int(line_data.get('over_odds'))
+            best_under = _parse_am_int(line_data.get('under_odds'))
+    return best_line, best_over, best_under
 
 
-def _select_primary_ah_line(ah_data: dict, home_ml: int = None, away_ml: int = None) -> tuple:
+def _select_primary_ah_line(ah_data: dict) -> tuple:
     """
     Select the primary AH/Spread line from the parsed ah dict.
-    Rule: NO pk (0.0) lines allowed.
-    - If the closest line is 0.0 (pk), force to \u00b11.5:
-        * Favorite (lower/more-negative ML) gets -1.5
-        * Underdog (higher/more-positive ML) gets +1.5
-      home_spread is from HOME team perspective:
-        * If HOME is favorite: home_spread = -1.5
-        * If AWAY is favorite: home_spread = +1.5 (home is dog)
-    - Otherwise: pick the line with smallest absolute value (excluding 0.0).
+    Strategy: pick the line closest to 0 (pick'em) — i.e. the smallest absolute value.
     Returns (home_spread_float, home_odds_int, away_odds_int) or (None, None, None).
     """
     if not isinstance(ah_data, dict) or not ah_data:
         return None, None, None
-
-    # Build candidates: (abs_val, line_val, home_odds, away_odds)
-    candidates = []
+    best_line = None
+    best_abs = float('inf')
+    best_home_odds = None
+    best_away_odds = None
     for line_disp, line_data in ah_data.items():
         if not isinstance(line_data, dict):
             continue
@@ -2103,57 +2056,11 @@ def _select_primary_ah_line(ah_data: dict, home_ml: int = None, away_ml: int = N
             hs_f = float(hs)
         except (ValueError, TypeError):
             continue
-        ho = _parse_am_int(line_data.get('home_odds'))
-        ao = _parse_am_int(line_data.get('away_odds'))
-        candidates.append((abs(hs_f), hs_f, ho, ao))
-
-    if not candidates:
-        return None, None, None
-
-    # Sort by absolute value ascending
-    candidates.sort(key=lambda x: x[0])
-    best_abs, best_line, best_home_odds, best_away_odds = candidates[0]
-
-    # NO PK RULE: if closest line is 0.0, force to \u00b11.5
-    if best_line == 0.0:
-        # Find the \u00b11.5 entry
-        line_15_home = None
-        line_15_ho = None
-        line_15_ao = None
-        for _, lv, ho, ao in candidates:
-            if abs(lv) == 1.5:
-                line_15_home = lv
-                line_15_ho = ho
-                line_15_ao = ao
-                break
-
-        if line_15_home is not None:
-            # Determine favorite from ML (lower = more favored)
-            hml = home_ml if home_ml is not None else 0
-            aml = away_ml if away_ml is not None else 0
-            home_is_fav = hml <= aml
-
-            if home_is_fav:
-                # Home is favorite -> home_spread = -1.5
-                if line_15_home < 0:
-                    return line_15_home, line_15_ho, line_15_ao
-                else:
-                    # Entry has home_spread=+1.5 (away-fav orientation) -> flip
-                    return -1.5, line_15_ao, line_15_ho
-            else:
-                # Away is favorite -> home_spread = +1.5 (home is dog)
-                if line_15_home > 0:
-                    return line_15_home, line_15_ho, line_15_ao
-                else:
-                    # Entry has home_spread=-1.5 -> flip
-                    return 1.5, line_15_ao, line_15_ho
-        else:
-            # No \u00b11.5 line available: use next smallest non-zero line
-            for _, lv, ho, ao in candidates:
-                if lv != 0.0:
-                    return lv, ho, ao
-            return None, None, None
-
+        if abs(hs_f) < best_abs:
+            best_abs = abs(hs_f)
+            best_line = hs_f
+            best_home_odds = _parse_am_int(line_data.get('home_odds'))
+            best_away_odds = _parse_am_int(line_data.get('away_odds'))
     return best_line, best_home_odds, best_away_odds
 
 
@@ -2295,10 +2202,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 book_total, book_over_odds, book_under_odds = _select_primary_ou_line(ou_data)
 
                 # ── AH/Spread ────────────────────────────────────────────────────
-                # Pass ML values so pk→±1.5 rule can determine favorite
-                book_primary_spread, book_home_spread_odds, book_away_spread_odds = _select_primary_ah_line(
-                    ah_data, home_ml=book_home_ml, away_ml=book_away_ml
-                )
+                book_primary_spread, book_home_spread_odds, book_away_spread_odds = _select_primary_ah_line(ah_data)
 
                 # ── To Advance: BetExplorer does not carry this market.
                 # Always write NULL — will be backfilled from other sources.
@@ -2826,10 +2730,7 @@ def upsert_gs_to_mysql(dataset, logger):
                 book_btts_yes = _parse_am_int(bts_data.get("btts_yes"))
                 book_btts_no  = _parse_am_int(bts_data.get("btts_no"))
                 book_total, book_over_odds, book_under_odds = _select_primary_ou_line(ou_data)
-                # Pass ML values so pk→±1.5 rule can determine favorite
-                book_primary_spread, book_home_spread_odds, book_away_spread_odds = _select_primary_ah_line(
-                    ah_data, home_ml=book_home_ml, away_ml=book_away_ml
-                )
+                book_primary_spread, book_home_spread_odds, book_away_spread_odds = _select_primary_ah_line(ah_data)
 
                 # Validate all required fields present
                 missing = []
