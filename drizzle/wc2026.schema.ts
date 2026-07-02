@@ -529,27 +529,37 @@ export type SelectWc2026EspnBracket = typeof wc2026EspnBracket.$inferSelect;
 //
 // Upserted by: wc2026_betexplorer_scraper_v4.py (book_ columns)
 // Upserted by: v15_engine.mjs (model_ columns)
+// Column order is canonical — matches DB exactly (id + 40 user-spec columns)
 export const wc2026MatchOdds = mysqlTable(
   "wc2026MatchOdds",
   {
-    id:           bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId:    varchar("fixture_id", { length: 16 }).notNull(),
-    espnMatchId:  varchar("espn_match_id", { length: 64 }),
-    insertedAt:   timestamp("inserted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-    scraperFile:  varchar("scraper_file", { length: 255 }),
-    bookSource:   varchar("book_source", { length: 32 }).notNull().default("bet365"),
+    id:                bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
 
-    // ── To Advance (Knockout only) ────────────────────────────────────────────
+    // ── Identity ─────────────────────────────────────────────────────────────
+    fixtureId:         varchar("fixture_id", { length: 16 }).notNull(),
+    espnMatchId:       varchar("espn_match_id", { length: 64 }),
+
+    // ── Audit / Provenance ────────────────────────────────────────────────────
+    insertedAt:        timestamp("inserted_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    insertMethod:      varchar("insert_method", { length: 255 }),
+    lastInsertedAt:    timestamp("last_inserted_at"),
+    lastInsertMethod:  varchar("last_insert_method", { length: 255 }),
+
+    // ── Teams ─────────────────────────────────────────────────────────────────
+    awayTeam:          varchar("away_team", { length: 64 }),
+    homeTeam:          varchar("home_team", { length: 64 }),
+
+    // ── To Advance (Knockout only — NULL if unavailable) ─────────────────────
     bookAwayToAdvance:  smallint("book_away_to_advance"),
     modelAwayToAdvance: smallint("model_away_to_advance"),
     bookHomeToAdvance:  smallint("book_home_to_advance"),
     modelHomeToAdvance: smallint("model_home_to_advance"),
 
-    // ── 1X2 Moneylines (Away top / Home bottom) ───────────────────────────────
+    // ── 1X2 Moneylines ────────────────────────────────────────────────────────
     bookAwayMl:  smallint("book_away_ml"),
     modelAwayMl: smallint("model_away_ml"),
 
-    // ── Double Chance: Away WD (1X = Away or Draw) ────────────────────────────
+    // ── Double Chance: Away WD (X2 = Away or Draw) ────────────────────────────
     bookAwayWd:  smallint("book_away_wd"),
     modelAwayWd: smallint("model_away_wd"),
 
@@ -557,7 +567,7 @@ export const wc2026MatchOdds = mysqlTable(
     bookDraw:  smallint("book_draw"),
     modelDraw: smallint("model_draw"),
 
-    // ── No Draw (12 = either team wins, no draw — single combined price) ──────
+    // ── No Draw (12 = either team wins, no draw) ──────────────────────────────
     bookNoDraw:  smallint("book_no_draw"),
     modelNoDraw: smallint("model_no_draw"),
 
@@ -565,11 +575,11 @@ export const wc2026MatchOdds = mysqlTable(
     bookHomeMl:  smallint("book_home_ml"),
     modelHomeMl: smallint("model_home_ml"),
 
-    // ── Double Chance: Home WD (X2 = Home or Draw) ────────────────────────────
+    // ── Double Chance: Home WD (1X = Home or Draw) ────────────────────────────
     bookHomeWd:  smallint("book_home_wd"),
     modelHomeWd: smallint("model_home_wd"),
 
-    // ── Spread / Asian Handicap (line from HOME perspective, negative = home fav)
+    // ── Spread / Asian Handicap (line from HOME perspective) ──────────────────
     bookPrimarySpread:          double("book_primary_spread"),
     modelPrimarySpread:         double("model_primary_spread"),
     bookAwayPrimarySpreadOdds:  smallint("book_away_primary_spread_odds"),
