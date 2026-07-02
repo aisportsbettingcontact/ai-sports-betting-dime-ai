@@ -27,7 +27,6 @@ import {
   wc2026OddsSnapshots,
   wc2026Lineups,
   wc2026ModelProjections,
-  wc2026FrozenBookOdds,
 } from "../../drizzle/wc2026.schema";
 import { eq, and, asc, desc, sql, inArray } from "drizzle-orm";
 import { wc2026MatchOdds, wc2026EspnMatches, type Wc2026MatchOddsRow } from "../../drizzle/schema";
@@ -143,9 +142,10 @@ export const wc2026Router = router({
       // Pre-fix: fetched ALL odds rows (3,724+) then filtered in-memory → O(N) per request.
       // Post-fix: fetches only rows for the 4-8 fixtures on this date → O(1) per request.
       // This eliminates the primary server-side latency cause for the blank WC feed on date change.
-      // [FREEZE v7.0 2026-06-25] Also fetch frozen book odds — when a frozen row exists for a fixture,
-      // it is served as dkOdds instead of the live snapshot, preventing any fluctuation.
-      const [dkOddsRows, modelOddsRows, projRows, frozenBookRows] = await Promise.all([
+      // [v8.0 2026-07-02] Book odds now sourced from wc2026MatchOdds (replaces wc2026FrozenBookOdds).
+      // wc2026FrozenBookOdds had mismatched column names vs DB schema causing 500 errors.
+      // wc2026MatchOdds is the authoritative source for all book + model odds.
+      const [dkOddsRows, modelOddsRows, projRows, matchOddsRows] = await Promise.all([
         db.select().from(wc2026OddsSnapshots)
           .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
@@ -154,8 +154,8 @@ export const wc2026Router = router({
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
         db.select().from(wc2026ModelProjections)
           .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
-        db.select().from(wc2026FrozenBookOdds)
-          .where(inArray(wc2026FrozenBookOdds.fixtureId, fixtureIds)),
+        db.select().from(wc2026MatchOdds)
+          .where(inArray(wc2026MatchOdds.fixtureId, fixtureIds)),
       ]);
 
       const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
@@ -163,32 +163,30 @@ export const wc2026Router = router({
       const projMap = Object.fromEntries(
         (projRows as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
       );
-      // [FREEZE v7.0] Build a map of frozen book odds — keyed by fixture_id.
-      // When a frozen row exists, it is served as dkOdds, bypassing all live snapshot queries.
-      type FrozenBookRow = typeof wc2026FrozenBookOdds.$inferSelect;
-      const frozenBookMap = Object.fromEntries(
-        (frozenBookRows as FrozenBookRow[]).map((r) => [r.fixtureId, r])
+      // [v8.0 2026-07-02] wc2026MatchOdds book odds map — keyed by fixture_id.
+      // Field mapping: wc2026MatchOdds Drizzle camelCase → OddsShape keys.
+      type MatchOddsRow = typeof wc2026MatchOdds.$inferSelect;
+      const matchOddsMap = Object.fromEntries(
+        (matchOddsRows as MatchOddsRow[]).map((r) => [r.fixtureId, r])
       );
-      const frozenBookToOdds = (r: FrozenBookRow): Record<string, number | undefined> => ({
-        home: r.bookHomeMl ?? undefined,
-        draw: r.bookDrawMl ?? undefined,
-        away: r.bookAwayMl ?? undefined,
-        homeSpreadLine: r.bookSpreadLine ?? undefined,
-        homeSpreadOdds: r.bookHomeSpreadOdds ?? undefined,
-        awaySpreadLine: r.bookSpreadLine != null ? -r.bookSpreadLine : undefined,
-        awaySpreadOdds: r.bookAwaySpreadOdds ?? undefined,
-        overLine: r.bookTotalLine ?? undefined,
-        overOdds: r.bookOverOdds ?? undefined,
-        underOdds: r.bookUnderOdds ?? undefined,
-        bttsYes: r.bookBttsYesOdds ?? undefined,
-        bttsNo: r.bookBttsNoOdds ?? undefined,
-        homeDrawOdds: r.bookDc1XOdds ?? undefined,
-        awayDrawOdds: r.bookDcX2Odds ?? undefined,
-        // [FIX v7.1-NODRAW] book_no_draw_away_odds holds the "no draw" market (home OR away wins).
-        // book_no_draw_home_odds was always NULL — it was never seeded. Use away column.
-        noDraw: r.bookNoDrawAwayOdds ?? undefined,
-        toAdvanceHome: r.toAdvanceHomeOdds ?? undefined,
-        toAdvanceAway: r.toAdvanceAwayOdds ?? undefined,
+      const matchOddsToBookOdds = (r: MatchOddsRow): Record<string, number | undefined> => ({
+        home:           r.bookHomeMl ?? undefined,
+        draw:           r.bookDraw ?? undefined,
+        away:           r.bookAwayMl ?? undefined,
+        homeSpreadLine: r.bookPrimarySpread ?? undefined,
+        homeSpreadOdds: r.bookHomePrimarySpreadOdds ?? undefined,
+        awaySpreadLine: r.bookPrimarySpread != null ? -r.bookPrimarySpread : undefined,
+        awaySpreadOdds: r.bookAwayPrimarySpreadOdds ?? undefined,
+        overLine:       r.bookTotal ?? undefined,
+        overOdds:       r.bookOverOdds ?? undefined,
+        underOdds:      r.bookUnderOdds ?? undefined,
+        bttsYes:        r.bookBttsYes ?? undefined,
+        bttsNo:         r.bookBttsNo ?? undefined,
+        homeDrawOdds:   r.bookHomeWd ?? undefined,
+        awayDrawOdds:   r.bookAwayWd ?? undefined,
+        noDraw:         r.bookNoDraw ?? undefined,
+        toAdvanceHome:  r.bookHomeToAdvance ?? undefined,
+        toAdvanceAway:  r.bookAwayToAdvance ?? undefined,
       });
       // [FIX v7.0] Build modelOdds from wc2026_model_projections when a projection row exists.
       // Previously: modelOdds was always read from wc2026_odds_snapshots book_id=0 (stale AI snapshot).
@@ -225,7 +223,6 @@ export const wc2026Router = router({
       });
       return fixtures.map((f: WcFixture) => {
         const proj = projMap[f.fixtureId] ?? null;
-        const frozenBook = frozenBookMap[f.fixtureId] ?? null;
         return {
           ...f,
           homeTeam: teamMap[f.homeTeamId] ?? null,
@@ -243,9 +240,9 @@ export const wc2026Router = router({
           // [LIVE 2026-06-30] fifaMatchId: FIFA official match ID for live scraping correlation.
           // [SCHEMA v2 2026-06-30] Now a proper Drizzle column — no (f as any) cast needed.
           fifaMatchId: f.fifaMatchId ?? null,
-          // [FREEZE] Use frozen book odds when available, otherwise fall back to live DK snapshot
-          dkOdds: frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.fixtureId] ?? null),
-          // [FREEZE] Use frozen model projection when is_frozen=1, otherwise fall back to book_id=0 snapshot
+          // [v8.0] Use wc2026MatchOdds book odds when available, otherwise fall back to live DK snapshot
+          dkOdds: matchOddsMap[f.fixtureId] ? matchOddsToBookOdds(matchOddsMap[f.fixtureId]!) : (dkMap[f.fixtureId] ?? null),
+          // [v8.0] Use wc2026_model_projections when available, otherwise fall back to book_id=0 snapshot
           modelOdds: proj ? projToModelOdds(proj) : (modelMap[f.fixtureId] ?? null),
           projection: proj,
           modelVersion: proj?.modelVersion ?? null,
@@ -494,8 +491,8 @@ export const wc2026Router = router({
     };
 
     // [FIX 2026-06-24] PERFORMANCE: Same fixture_id IN filter as fixturesByDate.
-    // [FREEZE v7.0 2026-06-25] Also fetch frozen book odds.
-    const [dkOddsRowsT, modelOddsRowsT, projRowsT, frozenBookRowsT] = await Promise.all([
+    // [v8.0 2026-07-02] Book odds now sourced from wc2026MatchOdds (replaces wc2026FrozenBookOdds).
+    const [dkOddsRowsT, modelOddsRowsT, projRowsT, matchOddsRowsT] = await Promise.all([
       db.select().from(wc2026OddsSnapshots)
         .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
@@ -504,8 +501,8 @@ export const wc2026Router = router({
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
       db.select().from(wc2026ModelProjections)
         .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
-      db.select().from(wc2026FrozenBookOdds)
-        .where(inArray(wc2026FrozenBookOdds.fixtureId, fixtureIds)),
+      db.select().from(wc2026MatchOdds)
+        .where(inArray(wc2026MatchOdds.fixtureId, fixtureIds)),
     ]);
 
     const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
@@ -513,30 +510,29 @@ export const wc2026Router = router({
     const projMapT = Object.fromEntries(
       (projRowsT as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
     );
-    // [FREEZE v7.0] Frozen book odds map for todayWithOdds procedure
-    type FrozenBookRowT = typeof wc2026FrozenBookOdds.$inferSelect;
-    const frozenBookMapT = Object.fromEntries(
-      (frozenBookRowsT as FrozenBookRowT[]).map((r) => [r.fixtureId, r])
+    // [v8.0 2026-07-02] wc2026MatchOdds book odds map for todayWithOdds procedure
+    type MatchOddsRowT = typeof wc2026MatchOdds.$inferSelect;
+    const matchOddsMapT = Object.fromEntries(
+      (matchOddsRowsT as MatchOddsRowT[]).map((r) => [r.fixtureId, r])
     );
-    const frozenBookToOddsT = (r: FrozenBookRowT): Record<string, number | undefined> => ({
-      home: r.bookHomeMl ?? undefined,
-      draw: r.bookDrawMl ?? undefined,
-      away: r.bookAwayMl ?? undefined,
-      homeSpreadLine: r.bookSpreadLine ?? undefined,
-      homeSpreadOdds: r.bookHomeSpreadOdds ?? undefined,
-      awaySpreadLine: r.bookSpreadLine != null ? -r.bookSpreadLine : undefined,
-      awaySpreadOdds: r.bookAwaySpreadOdds ?? undefined,
-      overLine: r.bookTotalLine ?? undefined,
-      overOdds: r.bookOverOdds ?? undefined,
-      underOdds: r.bookUnderOdds ?? undefined,
-      bttsYes: r.bookBttsYesOdds ?? undefined,
-      bttsNo: r.bookBttsNoOdds ?? undefined,
-      homeDrawOdds: r.bookDc1XOdds ?? undefined,
-      awayDrawOdds: r.bookDcX2Odds ?? undefined,
-      // [FIX v7.1-NODRAW] book_no_draw_away_odds = the actual "no draw" market. Home column always NULL.
-      noDraw: r.bookNoDrawAwayOdds ?? undefined,
-      toAdvanceHome: r.toAdvanceHomeOdds ?? undefined,
-      toAdvanceAway: r.toAdvanceAwayOdds ?? undefined,
+    const matchOddsToBookOddsT = (r: MatchOddsRowT): Record<string, number | undefined> => ({
+      home:           r.bookHomeMl ?? undefined,
+      draw:           r.bookDraw ?? undefined,
+      away:           r.bookAwayMl ?? undefined,
+      homeSpreadLine: r.bookPrimarySpread ?? undefined,
+      homeSpreadOdds: r.bookHomePrimarySpreadOdds ?? undefined,
+      awaySpreadLine: r.bookPrimarySpread != null ? -r.bookPrimarySpread : undefined,
+      awaySpreadOdds: r.bookAwayPrimarySpreadOdds ?? undefined,
+      overLine:       r.bookTotal ?? undefined,
+      overOdds:       r.bookOverOdds ?? undefined,
+      underOdds:      r.bookUnderOdds ?? undefined,
+      bttsYes:        r.bookBttsYes ?? undefined,
+      bttsNo:         r.bookBttsNo ?? undefined,
+      homeDrawOdds:   r.bookHomeWd ?? undefined,
+      awayDrawOdds:   r.bookAwayWd ?? undefined,
+      noDraw:         r.bookNoDraw ?? undefined,
+      toAdvanceHome:  r.bookHomeToAdvance ?? undefined,
+      toAdvanceAway:  r.bookAwayToAdvance ?? undefined,
     });
         // [FIX v7.1-NODRAW] Same projection-first modelOdds logic as fixturesByDate
       type ProjRowT = typeof wc2026ModelProjections.$inferSelect;
@@ -571,15 +567,14 @@ export const wc2026Router = router({
     });
     return fixtures.map((f: WcFixture) => {
       const proj = projMapT[f.fixtureId] ?? null;
-      const frozenBookT = frozenBookMapT[f.fixtureId] ?? null;
-      return {
+        return {
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
         venue: venueMap[f.venueId] ?? null,
-        // [FREEZE] Use frozen book odds when available, otherwise fall back to live DK snapshot
-        dkOdds: frozenBookT ? frozenBookToOddsT(frozenBookT) : (dkMapT[f.fixtureId] ?? null),
-        // [FREEZE] Use frozen model projection when is_frozen=1, otherwise fall back to book_id=0 snapshot
+        // [v8.0] Use wc2026MatchOdds book odds when available, otherwise fall back to live DK snapshot
+        dkOdds: matchOddsMapT[f.fixtureId] ? matchOddsToBookOddsT(matchOddsMapT[f.fixtureId]!) : (dkMapT[f.fixtureId] ?? null),
+        // [v8.0] Use wc2026_model_projections when available, otherwise fall back to book_id=0 snapshot
         modelOdds: proj ? projToModelOddsT(proj) : (modelMapT[f.fixtureId] ?? null),
         projection: proj,
         modelVersion: proj?.modelVersion ?? null,
