@@ -165,7 +165,7 @@ async function main() {
   // Verify fixtures exist in DB
   const fixtureIds = FIXTURES.map(f => f.id);
   const [fixtureCheck] = await conn.execute(
-    `SELECT fixture_id, status FROM wc2026_fixtures WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
+    `SELECT fixture_id, status FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
     fixtureIds
   );
   console.log(`${TAG} [VERIFY] DB fixtures: ${fixtureCheck.map(r => `${r.fixture_id}(${r.status})`).join(', ')}`);

@@ -27,14 +27,14 @@ console.log(`${TAG} ============================================================
 // ─── PHASE 1: Populate wc_bt_matches for June 20 ─────────────────────────────
 console.log(`${TAG} [STEP 1] Populating wc_bt_matches for June 20 matches...`);
 
-// Pull June 20 fixtures from wc2026_fixtures
+// Pull June 20 fixtures from wc2026_matches
 const [june20Fixtures] = await conn.query(`
   SELECT f.fixture_id, f.home_score, f.away_score, f.status,
          f.kickoff_utc, f.attendance,
          ht.name as home_name, ht.fifa_code as home_code,
          at2.name as away_name, at2.fifa_code as away_code,
          f.group_letter, f.matchday, f.match_date
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
   WHERE f.fixture_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')
@@ -58,7 +58,7 @@ for (const f of june20Fixtures) {
       home_score, away_score, result, total_goals,
       venue, city, country, attendance,
       source, source_match_id, ingested_at, updated_at
-    ) VALUES (?, 2026, 'group', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'wc2026_fixtures', ?, NOW(), NOW())
+    ) VALUES (?, 2026, 'group', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'wc2026_matches', ?, NOW(), NOW())
     ON DUPLICATE KEY UPDATE
       home_score = VALUES(home_score),
       away_score = VALUES(away_score),
@@ -103,7 +103,7 @@ const [june20Proj] = await conn.query(`
          ht.name as home_team_name, ht.fifa_code as home_code,
          at2.name as away_team_name, at2.fifa_code as away_code
   FROM wc2026_model_projections p
-  JOIN wc2026_fixtures f ON f.fixture_id = p.fixture_id
+  JOIN wc2026_matches f ON f.fixture_id = p.fixture_id
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at2 ON at2.team_id = f.away_team_id
   WHERE p.fixture_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')

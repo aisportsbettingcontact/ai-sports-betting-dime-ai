@@ -22,7 +22,7 @@
  *   market: '1X2' | 'TOTAL'
  *   selection: 'home'|'draw'|'away' for 1X2; 'over'|'under' for TOTAL
  *
- * DB Orientation (home/away as stored in wc2026_fixtures):
+ * DB Orientation (home/away as stored in wc2026_matches):
  *   wc26-g-021: DB home=cod (DR Congo), DB away=por (Portugal)
  *   wc26-g-023: DB home=eng, DB away=cro
  *   wc26-g-024: DB home=gha, DB away=pan

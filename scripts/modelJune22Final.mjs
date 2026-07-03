@@ -146,7 +146,7 @@ async function main() {
 
   // Verify fixtures
   const [fixtureCheck] = await conn.execute(`
-    SELECT fixture_id, status FROM wc2026_fixtures
+    SELECT fixture_id, status FROM wc2026_matches
     WHERE fixture_id IN ('wc26-g-043','wc26-g-041','wc26-g-042','wc26-g-044')
     ORDER BY kickoff_utc
   `);

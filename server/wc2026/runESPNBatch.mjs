@@ -82,17 +82,17 @@ const conn = await mysql.createConnection({
 });
 
 const [before] = await conn.execute(
-  "SELECT match_id, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_id = 'wc26-r32-079'"
+  "SELECT match_id, match_date, kickoff_utc FROM wc2026_matches WHERE match_id = 'wc26-r32-079'"
 );
 console.log(`[STATE]  Before: match_date=${before[0]?.match_date instanceof Date ? before[0].match_date.toISOString().split('T')[0] : before[0]?.match_date}`);
 
 const [result] = await conn.execute(
-  "UPDATE wc2026_fixtures SET match_date = '2026-06-30' WHERE match_id = 'wc26-r32-079'"
+  "UPDATE wc2026_matches SET match_date = '2026-06-30' WHERE match_id = 'wc26-r32-079'"
 );
 console.log(`[STATE]  UPDATE affected rows: ${result.affectedRows}`);
 
 const [after] = await conn.execute(
-  "SELECT match_id, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_id = 'wc26-r32-079'"
+  "SELECT match_id, match_date, kickoff_utc FROM wc2026_matches WHERE match_id = 'wc26-r32-079'"
 );
 const newDate = after[0]?.match_date instanceof Date ? after[0].match_date.toISOString().split('T')[0] : after[0]?.match_date;
 console.log(`[OUTPUT] After: match_date=${newDate}`);

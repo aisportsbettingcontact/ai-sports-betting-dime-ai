@@ -99,12 +99,12 @@ async function main() {
       continue;
     }
     let [fixtures] = await conn.query(
-      'SELECT match_id FROM wc2026_fixtures WHERE home_team_id=? AND away_team_id=? LIMIT 1',
+      'SELECT match_id FROM wc2026_matches WHERE home_team_id=? AND away_team_id=? LIMIT 1',
       [homeId, awayId]
     );
     if (!fixtures[0]) {
       [fixtures] = await conn.query(
-        'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }

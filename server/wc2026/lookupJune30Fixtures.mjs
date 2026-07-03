@@ -8,7 +8,7 @@ const [rows] = await db.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage, 
          f.home_team_id, f.away_team_id, f.display_order,
          ht.name as home_name, at.name as away_name
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_date = '2026-06-30'

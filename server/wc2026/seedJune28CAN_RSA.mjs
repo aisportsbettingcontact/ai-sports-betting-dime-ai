@@ -104,20 +104,20 @@ async function run() {
     // ── STEP 3: Check for duplicate fixture ───────────────────────────────────
     console.log(`[STEP] Checking for existing fixture: ${FIXTURE_ID}`);
     const [existing] = await conn.execute(
-      'SELECT match_id FROM wc2026_fixtures WHERE match_id = ?',
+      'SELECT match_id FROM wc2026_matches WHERE match_id = ?',
       [FIXTURE_ID]
     );
     if (existing.length > 0) {
       console.log(`[STATE] Fixture ${FIXTURE_ID} already exists — deleting and re-inserting`);
       await conn.execute('DELETE FROM wc2026_frozen_book_odds WHERE match_id = ?', [FIXTURE_ID]);
-      await conn.execute('DELETE FROM wc2026_fixtures WHERE match_id = ?', [FIXTURE_ID]);
+      await conn.execute('DELETE FROM wc2026_matches WHERE match_id = ?', [FIXTURE_ID]);
       console.log('[STATE] Deleted existing fixture and frozen odds');
     }
 
     // ── STEP 4: Insert fixture ─────────────────────────────────────────────────
     console.log(`[STEP] Inserting fixture ${FIXTURE_ID}: RSA(H) vs CAN(A) at ${KICKOFF_UTC}`);
     await conn.execute(
-      `INSERT INTO wc2026_fixtures
+      `INSERT INTO wc2026_matches
         (match_id, match_date, kickoff_utc, stage, group_letter, matchday,
          home_team_id, away_team_id, venue_id, home_score, away_score,
          status, is_host_home, display_order)
@@ -164,7 +164,7 @@ async function run() {
     // ── STEP 6: Verify insertion ───────────────────────────────────────────────
     console.log('[STEP] Verifying inserted data...');
     const [verFix] = await conn.execute(
-      'SELECT match_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, display_order FROM wc2026_fixtures WHERE match_id = ?',
+      'SELECT match_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, display_order FROM wc2026_matches WHERE match_id = ?',
       [FIXTURE_ID]
     );
     console.log('[VERIFY] Fixture row:', JSON.stringify(verFix[0]));

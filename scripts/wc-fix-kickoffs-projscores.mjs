@@ -35,7 +35,7 @@ const kickoffFixes = [
 
 for (const fix of kickoffFixes) {
   const [result] = await conn.query(
-    'UPDATE wc2026_fixtures SET kickoff_utc = ? WHERE fixture_id = ?',
+    'UPDATE wc2026_matches SET kickoff_utc = ? WHERE fixture_id = ?',
     [fix.utc, fix.id]
   );
   const ok = result.affectedRows === 1;
@@ -47,7 +47,7 @@ console.log('\n[FIX] === STEP 2: VERIFYING KICKOFF TIMES ===');
 const [fixtures] = await conn.query(`
   SELECT f.fixture_id, f.kickoff_utc,
     ht.fifa_code AS home_code, at.fifa_code AS away_code
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_date = '2026-06-24'

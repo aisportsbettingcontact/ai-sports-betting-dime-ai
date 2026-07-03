@@ -26,7 +26,7 @@ function parseDbUrl(url) {
       ht.team_id AS home_id, ht.fifa_code AS home_fifa, ht.name AS home_name,
       at.team_id AS away_id, at.fifa_code AS away_fifa, at.name AS away_name,
       v.city AS venue_city
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
@@ -79,7 +79,7 @@ function parseDbUrl(url) {
       SUM(CASE WHEN o.market='DOUBLE_CHANCE' AND o.selection='away_draw' THEN 1 ELSE 0 END) AS dc_away,
       SUM(CASE WHEN o.market='BTTS' AND o.selection='yes' THEN 1 ELSE 0 END) AS btts_yes,
       SUM(CASE WHEN o.market='BTTS' AND o.selection='no' THEN 1 ELSE 0 END) AS btts_no
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     LEFT JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 68

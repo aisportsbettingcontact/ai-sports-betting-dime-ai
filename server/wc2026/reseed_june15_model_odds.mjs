@@ -160,7 +160,7 @@ const [verify] = await c.execute(`
   SELECT o.match_id, o.market, o.selection, o.american_odds,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_odds_snapshots o
-  JOIN wc2026_fixtures f ON o.match_id = f.match_id
+  JOIN wc2026_matches f ON o.match_id = f.match_id
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE o.match_id IN (${ph}) AND o.book_id = 0

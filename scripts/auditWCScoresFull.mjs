@@ -9,7 +9,7 @@
  * Scope:
  *   - 2018 WC: 48 group stage matches (wc_bt_matches, tournament_year=2018)
  *   - 2022 WC: 48 group stage matches (wc_bt_matches, tournament_year=2022)
- *   - 2026 WC: 40 completed group stage matches (wc2026_fixtures, stage=GROUP, status=FT)
+ *   - 2026 WC: 40 completed group stage matches (wc2026_matches, stage=GROUP, status=FT)
  *
  * ESPN API:
  *   - 2018: Jun 14–Jun 28, 2018
@@ -240,7 +240,7 @@ async function main() {
   const [fx2026] = await conn.execute(
     `SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
             home_score, away_score, status, espn_event_id
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE stage = 'GROUP' AND status = 'FT'
      ORDER BY kickoff_utc`
   );
@@ -278,10 +278,10 @@ async function main() {
     for (const d of allDisc) {
       if (d.isWc2026) {
         const [res] = await conn.execute(
-          `UPDATE wc2026_fixtures SET home_score = ?, away_score = ? WHERE fixture_id = ?`,
+          `UPDATE wc2026_matches SET home_score = ?, away_score = ? WHERE fixture_id = ?`,
           [d.espnHomeScore, d.espnAwayScore, d.rowId]
         );
-        console.log(`${TAG}   [FIX] wc2026_fixtures ${d.rowId}: ${d.homeId} ${d.dbHome}-${d.dbAway} → ${d.espnHomeScore}-${d.espnAwayScore} | rows=${res.affectedRows}`);
+        console.log(`${TAG}   [FIX] wc2026_matches ${d.rowId}: ${d.homeId} ${d.dbHome}-${d.dbAway} → ${d.espnHomeScore}-${d.espnAwayScore} | rows=${res.affectedRows}`);
       } else {
         const [res] = await conn.execute(
           `UPDATE wc_bt_matches SET home_score = ?, away_score = ? WHERE id = ?`,

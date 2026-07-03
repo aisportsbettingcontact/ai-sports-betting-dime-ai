@@ -817,7 +817,7 @@ async function main() {
   const [jul1Fix] = await db.execute(`
     SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE DATE(f.match_date) = '2026-07-01'

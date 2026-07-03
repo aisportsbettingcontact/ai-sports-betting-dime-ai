@@ -45,8 +45,8 @@ export const wc2026Venues = mysqlTable("wc2026_venues", {
   elevationM: smallint("elevation_m").notNull(), // model feature: altitude (Azteca = 2240m)
 });
 
-export const wc2026Fixtures = mysqlTable(
-  "wc2026_fixtures",
+export const wc2026Matches = mysqlTable(
+  "wc2026_matches",
   {
     matchId: varchar("match_id", { length: 16 }).primaryKey(), // wc26-g-001..072
     matchDate: date("match_date").notNull(),       // local date; kickoff from odds/FIFA feed
@@ -105,7 +105,7 @@ export const wc2026OddsSnapshots = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     snapshotTs: timestamp("snapshot_ts").notNull().default(sql`CURRENT_TIMESTAMP`),
     bookId: smallint("book_id").notNull(),
     market: mysqlEnum("market", ["1X2", "TOTAL", "ASIAN_HANDICAP", "BTTS", "DOUBLE_CHANCE"])
@@ -134,7 +134,7 @@ export const wc2026Lineups = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     teamId: varchar("team_id", { length: 8 })
       .notNull()
       .references(() => wc2026Teams.teamId),
@@ -161,7 +161,7 @@ export const wc2026MatchStats = mysqlTable(
   {
     matchId: varchar("match_id", { length: 16 })
       .primaryKey()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     ingestedAt: timestamp("ingested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     // Possession
     homePossessionPct: double("home_possession_pct"),
@@ -223,7 +223,7 @@ export const wc2026MatchEvents = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     teamId: varchar("team_id", { length: 8 })
       .references(() => wc2026Teams.teamId),
     eventType: mysqlEnum("event_type", ["GOAL", "OWN_GOAL", "PENALTY", "YELLOW", "RED", "SUB", "VAR"])
@@ -250,7 +250,7 @@ export const wc2026ModelProjections = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     modelVersion: varchar("model_version", { length: 32 }).notNull(),
     nSimulations: int("n_simulations").notNull().default(1000000),
     homeTeam: varchar("home_team", { length: 64 }),
@@ -337,7 +337,7 @@ export const wc2026FrozenBookOdds = mysqlTable(
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
     matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.matchId),
+      .references(() => wc2026Matches.matchId),
     frozenAt: timestamp("frozen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     frozenBy: varchar("frozen_by", { length: 64 }).notNull().default("system"),
     // ── To Advance (Knockout) ─────────────────────────────────────────────────
@@ -396,23 +396,23 @@ export type SelectWc2026FrozenBookOdds = typeof wc2026FrozenBookOdds.$inferSelec
 
 export const wc2026TeamsRelations = relations(wc2026Teams, ({ many }) => ({
   aliases: many(wc2026TeamAliases),
-  homeMatches: many(wc2026Fixtures, { relationName: "home" }),
-  awayMatches: many(wc2026Fixtures, { relationName: "away" }),
+  homeMatches: many(wc2026Matches, { relationName: "home" }),
+  awayMatches: many(wc2026Matches, { relationName: "away" }),
 }));
 
-export const wc2026FixturesRelations = relations(wc2026Fixtures, ({ one }) => ({
+export const wc2026MatchesRelations = relations(wc2026Matches, ({ one }) => ({
   homeTeam: one(wc2026Teams, {
-    fields: [wc2026Fixtures.homeTeamId],
+    fields: [wc2026Matches.homeTeamId],
     references: [wc2026Teams.teamId],
     relationName: "home",
   }),
   awayTeam: one(wc2026Teams, {
-    fields: [wc2026Fixtures.awayTeamId],
+    fields: [wc2026Matches.awayTeamId],
     references: [wc2026Teams.teamId],
     relationName: "away",
   }),
   venue: one(wc2026Venues, {
-    fields: [wc2026Fixtures.venueId],
+    fields: [wc2026Matches.venueId],
     references: [wc2026Venues.venueId],
   }),
 }));

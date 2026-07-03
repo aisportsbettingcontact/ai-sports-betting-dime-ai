@@ -108,7 +108,7 @@ async function main() {
   // Step 1: Verify all 4 fixture IDs exist in DB
   const fixtureIds = MODEL_ODDS.map(f => f.fixtureId);
   const [fixtureCheck] = await conn.execute(
-    `SELECT fixture_id, status FROM wc2026_fixtures WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
+    `SELECT fixture_id, status FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
     fixtureIds
   );
   console.log(`${TAG} [VERIFY] DB fixtures found: ${fixtureCheck.length}/4`);

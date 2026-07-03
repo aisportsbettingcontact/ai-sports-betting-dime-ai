@@ -3,8 +3,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * PURPOSE:
  *   Parse FIFA scores/fixtures HTML → identify R32 winners → map to wc2026_teams
- *   → update wc2026_fixtures.advancing_team_id for completed KO matches
- *   → update wc2026_fixtures scores and status for completed KO matches
+ *   → update wc2026_matches.advancing_team_id for completed KO matches
+ *   → update wc2026_matches scores and status for completed KO matches
  *
  * BULLETPROOF MAPPING STRATEGY:
  *   1. FIFA 3-letter code (e.g. 'BRA') → exact match on wc2026_teams.fifa_code
@@ -22,7 +22,7 @@
 
 import { getDb } from "../db";
 import {
-  wc2026Fixtures,
+  wc2026Matches,
   wc2026Teams,
 } from "../../drizzle/wc2026.schema";
 import { eq, inArray, sql } from "drizzle-orm";
@@ -80,7 +80,7 @@ function flushLog() {
 // ─── KNOWN R32 RESULTS (from FIFA HTML + DB cross-reference) ─────────────────
 //
 // Source: FIFA scores/fixtures HTML (pasted_content_29.txt) parsed 2026-06-30
-// Cross-referenced: wc2026_fixtures DB (wc26-r32-073/074/075 already show FT + scores)
+// Cross-referenced: wc2026_matches DB (wc26-r32-073/074/075 already show FT + scores)
 //
 // FIXTURE MAP:
 //   wc26-r32-073: RSA (home) vs CAN (away) → CAN advances (0-1 FT)
@@ -159,7 +159,7 @@ async function main() {
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  WC2026 ADVANCING TEAMS SEEDER — AUTOMATED PIPELINE                        ║
 ║  Source: FIFA scores/fixtures HTML (pasted_content_29.txt)                 ║
-║  Target: wc2026_fixtures.advancing_team_id                                 ║
+║  Target: wc2026_matches.advancing_team_id                                 ║
 ║  Run: ${new Date().toISOString()}                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝`;
   console.log(header);
@@ -214,8 +214,8 @@ async function main() {
   log("STEP", `P3-S${stepCount}`, `Fetching ${allFixtureIds.length} R32 fixtures from DB`);
   const dbFixtures = await db
     .select()
-    .from(wc2026Fixtures)
-    .where(inArray(wc2026Fixtures.matchId, allFixtureIds));
+    .from(wc2026Matches)
+    .where(inArray(wc2026Matches.matchId, allFixtureIds));
 
   log("STATE", `P3-S${stepCount}`, `DB returned ${dbFixtures.length} fixtures`);
   type DbFixture = typeof dbFixtures[0];
@@ -305,14 +305,14 @@ async function main() {
       if (adv.homeScore !== null) (updatePayload as any).homeScore = adv.homeScore;
       if (adv.awayScore !== null) (updatePayload as any).awayScore = adv.awayScore;
 
-      log("DB", `P5-S${stepCount}`, `Executing UPDATE wc2026_fixtures SET ...`,
+      log("DB", `P5-S${stepCount}`, `Executing UPDATE wc2026_matches SET ...`,
         `matchId=${adv.matchId} | payload=${JSON.stringify(updatePayload)}`
       );
 
       await db
-        .update(wc2026Fixtures)
+        .update(wc2026Matches)
         .set(updatePayload)
-        .where(eq(wc2026Fixtures.matchId, adv.matchId));
+        .where(eq(wc2026Matches.matchId, adv.matchId));
 
       log("PASS", `P5-S${stepCount}`, `${adv.matchId} updated successfully`,
         `advancing_team_id='${adv.advancingTeamId}' (${adv.advancingFifaCode}) | method=${adv.advancingMethod}`
@@ -333,8 +333,8 @@ async function main() {
 
   const verifyFixtures = await db
     .select()
-    .from(wc2026Fixtures)
-    .where(inArray(wc2026Fixtures.matchId, allFixtureIds));
+    .from(wc2026Matches)
+    .where(inArray(wc2026Matches.matchId, allFixtureIds));
 
   let verifyPass = 0;
   let verifyFail = 0;
@@ -371,7 +371,7 @@ async function main() {
 
   // ─── PHASE 7: FULL R32 STATE AUDIT ─────────────────────────────────────────
   logSection("PHASE 7: FULL R32 STATE AUDIT — FINAL SNAPSHOT");
-  log("AUDIT", "P7", "Final state of all R32 fixtures in wc2026_fixtures:");
+  log("AUDIT", "P7", "Final state of all R32 fixtures in wc2026_matches:");
   for (const f of verifyFixtures) {
     const advId = (f as any).advancingTeamId;
     const advTeam = allTeams.find((t: typeof allTeams[0]) => t.teamId === advId);

@@ -669,7 +669,7 @@ async function main() {
   console.log(`${TAG} [STEP 3] Loading 2026 matches (through Jun 23)...`);
   const [wc26] = await conn.execute(
     `SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score, v.city
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
      WHERE f.match_date < '2026-06-24' AND f.home_score IS NOT NULL
      ORDER BY f.match_date, f.fixture_id`

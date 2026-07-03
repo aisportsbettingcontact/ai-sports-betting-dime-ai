@@ -22,7 +22,7 @@ const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
 const TABLES = [
   { name: 'wc2026MatchOdds', expectedRows: 88, keyType: 'UNIQUE' },
-  { name: 'wc2026_fixtures', expectedRows: 104, keyType: 'PRIMARY KEY' },
+  { name: 'wc2026_matches', expectedRows: 104, keyType: 'PRIMARY KEY' },
   { name: 'wc2026_frozen_book_odds', expectedRows: 37, keyType: 'UNIQUE' },
   { name: 'wc2026_lineups', expectedRows: 2484, keyType: 'INDEX' },
   { name: 'wc2026_match_events', expectedRows: 1422, keyType: 'INDEX' },

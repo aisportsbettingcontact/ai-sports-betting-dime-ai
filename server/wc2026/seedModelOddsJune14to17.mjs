@@ -237,7 +237,7 @@ async function main() {
   for (const m of MODEL_DATA) {
     // Verify fixture exists
     const [fixtures] = await conn.query(
-      'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ? LIMIT 1',
+      'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ? LIMIT 1',
       [m.matchId]
     );
     if (!fixtures[0]) {

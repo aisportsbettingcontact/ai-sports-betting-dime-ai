@@ -27,7 +27,7 @@
 
 import type { Express, Request, Response } from "express";
 import { getDb } from "../db";
-import { wc2026Fixtures } from "../../drizzle/wc2026.schema";
+import { wc2026Matches } from "../../drizzle/wc2026.schema";
 import { and, gte, lte, eq } from "drizzle-orm";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 import { ingestWc2026EspnResults } from "./wc2026Ingester";

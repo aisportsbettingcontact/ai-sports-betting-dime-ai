@@ -13,7 +13,7 @@ const [rows] = await conn.execute(`
   SELECT s.fixture_id, s.selection, s.american_odds,
          f.home_team_id, f.away_team_id
   FROM wc2026_odds_snapshots s
-  JOIN wc2026_fixtures f ON s.fixture_id = f.fixture_id
+  JOIN wc2026_matches f ON s.fixture_id = f.fixture_id
   WHERE s.fixture_id IN ('wc26-g-037','wc26-g-038','wc26-g-039','wc26-g-040')
     AND s.book_id = 68
     AND s.market = '1X2'

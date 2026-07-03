@@ -74,7 +74,7 @@ async function main() {
       SELECT f.fixture_id, ht.name as home_name, at2.name as away_name,
              f.home_score, f.away_score, f.status,
              DATE_FORMAT(f.kickoff_utc, '%Y-%m-%d %H:%i UTC') as kickoff
-      FROM wc2026_fixtures f
+      FROM wc2026_matches f
       JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
       JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
       WHERE f.fixture_id = ?
@@ -109,7 +109,7 @@ async function main() {
       COUNT(*) as total_2026,
       SUM(CASE WHEN status IN ('FT', 'Full Time') THEN 1 ELSE 0 END) as completed_2026,
       SUM(CASE WHEN status NOT IN ('FT', 'Full Time') THEN 1 ELSE 0 END) as upcoming_2026
-    FROM wc2026_fixtures WHERE fixture_id LIKE 'wc26-%'
+    FROM wc2026_matches WHERE fixture_id LIKE 'wc26-%'
   `);
   
   const cnt = cntRows[0];
@@ -132,7 +132,7 @@ async function main() {
     SELECT f.fixture_id, ht.name as home_name, at2.name as away_name,
            f.home_score, f.away_score, f.status,
            DATE_FORMAT(f.kickoff_utc, '%Y-%m-%d') as match_date
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.fixture_id LIKE 'wc26-%' AND f.status IN ('FT', 'Full Time')

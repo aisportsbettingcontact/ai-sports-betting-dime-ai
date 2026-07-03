@@ -234,7 +234,7 @@ async function main() {
   // Verify fixture orientation (already fixed in v1)
   const fixtureIds = FIXTURES.map(f => f.fixtureId);
   const [dbFixtures] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
+    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
     fixtureIds
   );
   console.log(`\n${TAG} [STEP] Verifying fixture orientation...`);
@@ -242,7 +242,7 @@ async function main() {
     const dbF = dbFixtures.find(r => r.fixture_id === f.fixtureId);
     const ok = dbF?.home_team_id === f.correctHomeId && dbF?.away_team_id === f.correctAwayId;
     if (!ok) {
-      await conn.query(`UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE fixture_id=?`, [f.correctHomeId, f.correctAwayId, f.fixtureId]);
+      await conn.query(`UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE fixture_id=?`, [f.correctHomeId, f.correctAwayId, f.fixtureId]);
       console.log(`${TAG} [STATE] FIXED orientation ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     } else {
       console.log(`${TAG} [STATE] OK ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId}`);

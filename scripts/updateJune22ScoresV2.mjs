@@ -1,7 +1,7 @@
 /**
  * updateJune22ScoresV2.mjs
  * Updates June 22, 2026 WC2026 final scores using confirmed fixture IDs.
- * Note: wc2026_fixtures has no 'result' column — result is derived from scores.
+ * Note: wc2026_matches has no 'result' column — result is derived from scores.
  *
  * Confirmed DB orientations:
  *   wc26-g-043: Austria (H) vs Argentina (A) → Argentina 2-0 Austria → H=0, A=2
@@ -36,7 +36,7 @@ console.log('\n[STEP 1] Pre-update orientation verification...');
 const [preRows] = await db.execute(
   `SELECT f.fixture_id, ht.name AS home_name, at.name AS away_name,
           f.home_score, f.away_score, f.status
-   FROM wc2026_fixtures f
+   FROM wc2026_matches f
    JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
    JOIN wc2026_teams at ON f.away_team_id = at.team_id
    WHERE f.fixture_id IN (${placeholders})
@@ -75,7 +75,7 @@ for (const u of UPDATES) {
   console.log(`  [INPUT] home_score=${u.home_score}, away_score=${u.away_score}, status=FT`);
 
   const [res] = await db.execute(
-    `UPDATE wc2026_fixtures SET home_score=?, away_score=?, status='FT' WHERE fixture_id=?`,
+    `UPDATE wc2026_matches SET home_score=?, away_score=?, status='FT' WHERE fixture_id=?`,
     [u.home_score, u.away_score, u.fixture_id]
   );
 
@@ -93,7 +93,7 @@ console.log('\n[STEP 3] Read-back verification...');
 const [postRows] = await db.execute(
   `SELECT f.fixture_id, ht.name AS home_name, at.name AS away_name,
           f.home_score, f.away_score, f.status
-   FROM wc2026_fixtures f
+   FROM wc2026_matches f
    JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
    JOIN wc2026_teams at ON f.away_team_id = at.team_id
    WHERE f.fixture_id IN (${placeholders})

@@ -118,7 +118,7 @@ console.log("  - Must use ALTER TABLE RENAME COLUMN (MySQL 8.0+)");
 console.log("");
 console.log("[RISK] Foreign Key references:");
 for (const r of fkCols) {
-  console.log(`  - ${r.table}.${r.column} references wc2026_fixtures.match_id`);
+  console.log(`  - ${r.table}.${r.column} references wc2026_matches.match_id`);
 }
 console.log("");
 console.log("[OUTPUT] Audit complete. Zero mutations performed.");

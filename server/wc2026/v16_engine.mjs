@@ -25,7 +25,7 @@
  * ║     wc2026_espn_match_stats:    homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
  * ║     wc2026_espn_player_stats:   g, a, xG, xA, sog, shot, tch, duelw        ║
  * ║     wc2026_espn_shot_map:       xg, xgot, isGoal, distanceYards            ║
- * ║     wc2026_fixtures:            home_score, away_score, status              ║
+ * ║     wc2026_matches:            home_score, away_score, status              ║
  * ║     wc2026_frozen_book_odds:    all markets for backtest fixtures            ║
  * ║                                                                              ║
  * ║   DB TABLES WRITTEN:                                                         ║
@@ -761,13 +761,13 @@ async function main() {
     const { fixture, lambdaH, lambdaA, ldH, ldA, markets } = proj;
     subBanner(`DB WRITE: ${fid} → wc2026_model_projections`);
 
-    // Check if fixture exists in wc2026_fixtures
-    const [fidRows] = await conn.query(`SELECT match_id FROM wc2026_fixtures WHERE match_id = ?`, [fid]);
+    // Check if fixture exists in wc2026_matches
+    const [fidRows] = await conn.query(`SELECT match_id FROM wc2026_matches WHERE match_id = ?`, [fid]);
     if (fidRows.length === 0) {
-      log('WARN', 'DB_WRITE', `${fid}: NOT found in wc2026_fixtures — SKIPPING DB write`);
+      log('WARN', 'DB_WRITE', `${fid}: NOT found in wc2026_matches — SKIPPING DB write`);
       continue;
     }
-    log('PASS', 'DB_WRITE', `${fid}: confirmed in wc2026_fixtures ✓`);
+    log('PASS', 'DB_WRITE', `${fid}: confirmed in wc2026_matches ✓`);
 
     // Upsert into wc2026_model_projections
     const mpRow = {

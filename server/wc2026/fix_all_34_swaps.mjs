@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Fixes all 34 home/away orientation mismatches identified by the full audit.
  * For each swapped fixture:
- *   1. Swap home_team_id ↔ away_team_id in wc2026_fixtures
+ *   1. Swap home_team_id ↔ away_team_id in wc2026_matches
  *   2. Swap home ↔ away selection labels in wc2026_odds_snapshots (1X2 market)
  *   3. Swap home ↔ away selection labels in wc2026_odds_snapshots (ASIAN_HANDICAP)
  *   4. Swap home ↔ away in wc2026_model_odds
@@ -58,7 +58,7 @@ async function main() {
 
     // Get current state
     const [rows] = await conn.execute(
-      'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?',
+      'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
       [matchId]
     );
     if (!rows.length) {
@@ -76,7 +76,7 @@ async function main() {
 
     // Step 1: Swap fixture home/away
     await conn.execute(
-      'UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?',
+      'UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?',
       [oldAway, oldHome, matchId]
     );
     fixturesFixed++;
@@ -179,7 +179,7 @@ async function main() {
 
     // Verify
     const [verify] = await conn.execute(
-      'SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?',
+      'SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
       [matchId]
     );
     const v = verify[0];

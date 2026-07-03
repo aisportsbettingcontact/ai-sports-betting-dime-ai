@@ -281,11 +281,11 @@ async function main() {
 
   const [fixtureRows] = await conn.query(`
     SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc
-    FROM wc2026_fixtures
+    FROM wc2026_matches
     WHERE match_date = '2026-07-02'
     ORDER BY kickoff_utc, match_id
   `);
-  log('FEED', 'FEED', `wc2026_fixtures for 2026-07-02: ${fixtureRows.length} rows found`);
+  log('FEED', 'FEED', `wc2026_matches for 2026-07-02: ${fixtureRows.length} rows found`);
   fixtureRows.forEach(f => {
     log('FEED', 'FEED', `  ${f.match_id} | home_team_id=${f.home_team_id} away_team_id=${f.away_team_id} | kickoff=${f.kickoff_utc}`);
   });

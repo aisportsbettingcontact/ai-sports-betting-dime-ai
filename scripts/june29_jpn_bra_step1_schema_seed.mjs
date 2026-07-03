@@ -340,7 +340,7 @@ async function run() {
 
   logStep(`Check for existing fixture: ${FIXTURE_ID}`);
   const [existing] = await conn.execute(
-    'SELECT fixture_id, match_date, kickoff_utc FROM wc2026_fixtures WHERE fixture_id = ?',
+    'SELECT fixture_id, match_date, kickoff_utc FROM wc2026_matches WHERE fixture_id = ?',
     [FIXTURE_ID]
   );
   logState(`Existing rows for ${FIXTURE_ID}: ${existing.length}`);
@@ -365,7 +365,7 @@ async function run() {
 
     logStep(`Delete existing fixture record: ${FIXTURE_ID}`);
     const [delFix] = await conn.execute(
-      'DELETE FROM wc2026_fixtures WHERE fixture_id = ?', [FIXTURE_ID]
+      'DELETE FROM wc2026_matches WHERE fixture_id = ?', [FIXTURE_ID]
     );
     logState(`Deleted ${delFix.affectedRows} fixture rows`);
     logPass(`Fixture record cleared for ${FIXTURE_ID}`);
@@ -379,7 +379,7 @@ async function run() {
 
   try {
     await conn.execute(
-      `INSERT INTO wc2026_fixtures
+      `INSERT INTO wc2026_matches
         (fixture_id, match_date, kickoff_utc, stage, group_letter, matchday,
          home_team_id, away_team_id, venue_id, home_score, away_score,
          status, is_host_home, display_order)
@@ -450,7 +450,7 @@ async function run() {
   const [verFix] = await conn.execute(
     `SELECT fixture_id, match_date, kickoff_utc, stage, home_team_id, away_team_id,
             venue_id, status, display_order, is_host_home
-     FROM wc2026_fixtures WHERE fixture_id = ?`,
+     FROM wc2026_matches WHERE fixture_id = ?`,
     [FIXTURE_ID]
   );
   if (verFix.length === 0) fatal(`Fixture ${FIXTURE_ID} not found in DB after insert`);

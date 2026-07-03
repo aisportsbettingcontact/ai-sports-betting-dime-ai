@@ -130,12 +130,12 @@ async function scrapeDate(dateStr) {
 
     // Find fixture — try both orientations (AN home/away may differ from DB)
     let [fixtures] = await conn.query(
-      'SELECT match_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+      'SELECT match_id, kickoff_utc FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
     if (!fixtures[0]) {
       [fixtures] = await conn.query(
-        'SELECT match_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id, kickoff_utc FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
@@ -152,7 +152,7 @@ async function scrapeDate(dateStr) {
     // Update kickoff_utc if not set
     if (!fixture.kickoff_utc && game.start_time) {
       await conn.query(
-        'UPDATE wc2026_fixtures SET kickoff_utc=? WHERE match_id=?',
+        'UPDATE wc2026_matches SET kickoff_utc=? WHERE match_id=?',
         [new Date(game.start_time), fixture.match_id]
       );
       console.log(`[SEED] [STEP] Set kickoff_utc=${game.start_time} for ${fixture.match_id}`);
@@ -285,13 +285,13 @@ async function scrapeLineups() {
     }
 
     let [fixtures] = await conn.query(
-      'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+      'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
     if (!fixtures[0]) {
       // Try reversed orientation
       [fixtures] = await conn.query(
-        'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }

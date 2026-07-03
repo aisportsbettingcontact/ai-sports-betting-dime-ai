@@ -19,7 +19,7 @@ async function main() {
            f.home_team_id, ht.name AS home_name, ht.fifa_code AS home_code,
            f.away_team_id, at.name AS away_name, at.fifa_code AS away_code,
            f.status, f.venue_id, f.is_host_home
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     ORDER BY f.match_date, f.match_id

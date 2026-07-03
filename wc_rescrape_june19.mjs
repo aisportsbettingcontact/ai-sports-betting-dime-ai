@@ -75,7 +75,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     SELECT f.match_id, f.home_team_id, f.away_team_id,
       ht.name AS home_name, at.name AS away_name,
       ht.fifa_code AS home_code, at.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19'
@@ -272,7 +272,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     SELECT o.match_id, o.market, o.selection, o.line, o.american_odds,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.match_id = o.match_id
+    JOIN wc2026_matches f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19' AND o.book_id = 68

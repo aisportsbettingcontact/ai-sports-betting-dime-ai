@@ -1,6 +1,6 @@
 /**
  * JUNE 14, 2026 — WC2026 FIXTURE AUDIT (confirmed column names)
- * wc2026_fixtures: match_id, match_date, kickoff_utc, group_letter, home_team_id, away_team_id
+ * wc2026_matches: match_id, match_date, kickoff_utc, group_letter, home_team_id, away_team_id
  * wc2026_teams: team_id, name, fifa_code, group_letter, flag_code, flag_url, slug
  * wc2026_odds_snapshots: id, match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
  */
@@ -37,7 +37,7 @@ const [wcFixtures] = await conn.execute(`
     at.team_id AS awayId,
     f.home_team_id AS homeTeamId, 
     f.away_team_id AS awayTeamId
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_date = '2026-06-14'

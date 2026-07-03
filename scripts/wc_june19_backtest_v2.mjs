@@ -27,7 +27,7 @@ const [projRows] = await conn.query(`
          ht.name as home_team_name, ht.fifa_code as home_code,
          at.name as away_team_name, at.fifa_code as away_code
   FROM wc2026_model_projections p
-  JOIN wc2026_fixtures f ON f.fixture_id = p.fixture_id
+  JOIN wc2026_matches f ON f.fixture_id = p.fixture_id
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at ON at.team_id = f.away_team_id
   WHERE f.match_date = '2026-06-19'

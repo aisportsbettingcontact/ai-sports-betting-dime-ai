@@ -465,7 +465,7 @@ try {
 
   // Upsert fixture
   await conn.execute(`
-    INSERT INTO wc2026_fixtures
+    INSERT INTO wc2026_matches
       (fixture_id, home_team_id, away_team_id, kickoff_utc, venue, round, status, group_name)
     VALUES (?, ?, ?, ?, ?, ?, 'scheduled', NULL)
     ON DUPLICATE KEY UPDATE

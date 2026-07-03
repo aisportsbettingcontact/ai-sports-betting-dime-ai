@@ -27,7 +27,7 @@ console.log('[DB] Connected');
 const [dbFixtures] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY kickoff_utc ASC
 `);

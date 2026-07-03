@@ -27,7 +27,7 @@ for (const date of dates) {
            b.book_total_line, b.book_spread_line,
            b.book_btts_yes_odds, b.to_advance_home_odds, b.to_advance_away_odds,
            b.frozen_at, b.frozen_by
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     LEFT JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id

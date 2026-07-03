@@ -16,7 +16,7 @@ console.log('[DB] Connected');
 const [completedFixtures] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE home_score IS NOT NULL AND away_score IS NOT NULL
   ORDER BY kickoff_utc
 `);
@@ -30,7 +30,7 @@ const [matchStats] = await db.execute(`
          ms.home_saves, ms.away_saves,
          ms.home_xg, ms.away_xg
   FROM wc2026_match_stats ms
-  JOIN wc2026_fixtures f ON ms.match_id = f.match_id
+  JOIN wc2026_matches f ON ms.match_id = f.match_id
   WHERE f.home_score IS NOT NULL AND f.away_score IS NOT NULL
   ORDER BY f.kickoff_utc
 `);
@@ -40,7 +40,7 @@ console.log(`[STATS] ${matchStats.length} match stats rows`);
 const [fixtures27] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
          group_letter, matchday, status
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE match_date = '2026-06-27'
   ORDER BY kickoff_utc
 `);

@@ -233,7 +233,7 @@ async function main() {
   console.log('\n[ModelSeed] [PHASE 2] DB fixture orientation verification...');
   for (const m of MODEL_DATA) {
     const [fixtures] = await conn.query(
-      'SELECT match_id, home_team_id, away_team_id, kickoff_utc FROM wc2026_fixtures WHERE match_id = ? LIMIT 1',
+      'SELECT match_id, home_team_id, away_team_id, kickoff_utc FROM wc2026_matches WHERE match_id = ? LIMIT 1',
       [m.matchId]
     );
     if (!fixtures[0]) {

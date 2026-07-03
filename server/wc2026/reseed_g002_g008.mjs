@@ -144,7 +144,7 @@ async function main() {
            MAX(CASE WHEN o.market='1X2' AND o.selection='away' THEN o.american_odds END) as away_ml,
            MAX(CASE WHEN o.market='TOTAL' AND o.selection='over' THEN o.american_odds END) as over_odds,
            MAX(CASE WHEN o.market='TOTAL' AND o.selection='under' THEN o.american_odds END) as under_odds
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 0
     WHERE f.match_id IN ('wc26-g-002', 'wc26-g-008')
     GROUP BY f.match_id, f.home_team_id, f.away_team_id

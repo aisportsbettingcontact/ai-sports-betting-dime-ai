@@ -85,14 +85,14 @@ async function main() {
 
   // Load all DB fixtures
   const [dbFixtures] = await conn.execute(
-    'SELECT match_id, home_team_id, away_team_id, match_date FROM wc2026_fixtures ORDER BY match_date, match_id'
+    'SELECT match_id, home_team_id, away_team_id, match_date FROM wc2026_matches ORDER BY match_date, match_id'
   );
 
   // Load all odds for June 11-17
   const [allOdds] = await conn.execute(`
     SELECT o.match_id, o.book_id, o.market, o.selection, o.american_odds
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON o.match_id = f.match_id
+    JOIN wc2026_matches f ON o.match_id = f.match_id
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
   `);
 

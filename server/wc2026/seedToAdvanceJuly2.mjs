@@ -134,11 +134,11 @@ async function main() {
   for (const s of SEED) {
     log('▶▶ [STEP]', 'PRE', `Verifying orientation for ${s.matchId}`);
     const [rows] = await conn.execute(
-      'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?',
+      'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
       [s.matchId]
     );
     if (!rows.length) {
-      log('✗✗ [FAIL]', 'PRE', `  ${s.matchId}: NOT FOUND in wc2026_fixtures — ABORT`);
+      log('✗✗ [FAIL]', 'PRE', `  ${s.matchId}: NOT FOUND in wc2026_matches — ABORT`);
       preflightFail++;
       continue;
     }

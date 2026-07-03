@@ -29,7 +29,7 @@ import * as cheerio from "cheerio";
 import { getDb } from "../db";
 import {
   wc2026Lineups,
-  wc2026Fixtures,
+  wc2026Matches,
   type InsertWc2026Lineup,
 } from "../../drizzle/wc2026.schema";
 import { resolveWcTeam } from "./resolveWcTeam";
@@ -102,12 +102,12 @@ export async function scrapeWc2026Lineups(): Promise<{
 
     // ─── Find fixture ─────────────────────────────────────────────────────────
     const fixtures = await db
-      .select({ matchId: wc2026Fixtures.matchId })
-      .from(wc2026Fixtures)
+      .select({ matchId: wc2026Matches.matchId })
+      .from(wc2026Matches)
       .where(
         and(
-          eq(wc2026Fixtures.homeTeamId, resolvedHome),
-          eq(wc2026Fixtures.awayTeamId, resolvedAway)
+          eq(wc2026Matches.homeTeamId, resolvedHome),
+          eq(wc2026Matches.awayTeamId, resolvedAway)
         )
       )
       .limit(1);

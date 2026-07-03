@@ -19,7 +19,7 @@
 
 import type { Request, Response } from 'express';
 import { getDb } from '../db';
-import { wc2026Fixtures } from '../../drizzle/wc2026.schema';
+import { wc2026Matches } from '../../drizzle/wc2026.schema';
 import { eq, isNotNull } from 'drizzle-orm';
 
 type ScrapeLevel = 'INPUT'|'STEP'|'STATE'|'OUTPUT'|'VERIFY'|'PASS'|'FAIL'|'WARN'|'DB'|'SKIP'|'AUDIT';
@@ -145,16 +145,16 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
     // Load all fixtures that have a fifaMatchId
     log('STEP', S(), 'Loading tracked fixtures from DB');
     const allFixtures = await db.select({
-      matchId: wc2026Fixtures.matchId,
-      fifaMatchId: wc2026Fixtures.fifaMatchId,
-      status: wc2026Fixtures.status,
-      homeScore: wc2026Fixtures.homeScore,
-      awayScore: wc2026Fixtures.awayScore,
-      matchMinute: wc2026Fixtures.matchMinute,
-      homeTeamId: wc2026Fixtures.homeTeamId,
-      awayTeamId: wc2026Fixtures.awayTeamId,
-      advancingTeamId: wc2026Fixtures.advancingTeamId,
-    }).from(wc2026Fixtures).where(isNotNull(wc2026Fixtures.fifaMatchId));
+      matchId: wc2026Matches.matchId,
+      fifaMatchId: wc2026Matches.fifaMatchId,
+      status: wc2026Matches.status,
+      homeScore: wc2026Matches.homeScore,
+      awayScore: wc2026Matches.awayScore,
+      matchMinute: wc2026Matches.matchMinute,
+      homeTeamId: wc2026Matches.homeTeamId,
+      awayTeamId: wc2026Matches.awayTeamId,
+      advancingTeamId: wc2026Matches.advancingTeamId,
+    }).from(wc2026Matches).where(isNotNull(wc2026Matches.fifaMatchId));
 
     log('STATE', S(), `Tracking ${allFixtures.length} fixtures with fifaMatchId`);
     if (allFixtures.length === 0) {
@@ -191,7 +191,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
       const fixture = fifaToFixture.get(liveMatch.fifaMatchId);
       if (!fixture) { skippedCount++; continue; }
 
-      const patch: Partial<typeof wc2026Fixtures.$inferInsert> = {};
+      const patch: Partial<typeof wc2026Matches.$inferInsert> = {};
       if (liveMatch.status !== fixture.status) patch.status = liveMatch.status;
       if (liveMatch.homeScore !== null && liveMatch.homeScore !== fixture.homeScore) patch.homeScore = liveMatch.homeScore;
       if (liveMatch.awayScore !== null && liveMatch.awayScore !== fixture.awayScore) patch.awayScore = liveMatch.awayScore;
@@ -234,7 +234,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
 
       log('DB', S(), `UPDATE ${fixture.matchId}`, JSON.stringify(patch));
       try {
-        await db.update(wc2026Fixtures).set(patch).where(eq(wc2026Fixtures.matchId, fixture.matchId));
+        await db.update(wc2026Matches).set(patch).where(eq(wc2026Matches.matchId, fixture.matchId));
         log('PASS', S(), `✅ ${fixture.matchId} updated`);
         updatedCount++;
       } catch (err) {

@@ -291,7 +291,7 @@ const FIXTURES = [
 
       // Verify current DB state before swap
       const [pre] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        `SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?`,
         [f.matchId]
       );
       if (!pre.length) {
@@ -304,13 +304,13 @@ const FIXTURES = [
 
       // Perform swap using temp to avoid unique constraint issues
       await conn.query(
-        `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
+        `UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
         [f.homeId, f.awayId, f.matchId]
       );
 
       // Verify post-swap
       const [post] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        `SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?`,
         [f.matchId]
       );
       const swapOk = post[0].home_team_id === f.homeId && post[0].away_team_id === f.awayId;
@@ -324,7 +324,7 @@ const FIXTURES = [
     } else {
       // Verify existing orientation is correct
       const [row] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        `SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?`,
         [f.matchId]
       );
       if (!row.length) {

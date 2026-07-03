@@ -52,7 +52,7 @@
  * LOGGING FORMAT: [BT_V10] [INPUT/STEP/STATE/OUTPUT/VERIFY]
  *
  * ZERO HALLUCINATION: All data sourced from wc_bt_matches (2018/2022) and
- *   wc2026_fixtures (2026). No fabricated or assumed scores.
+ *   wc2026_matches (2026). No fabricated or assumed scores.
  *
  * Author: AI Sports Betting Models
  * Date: 2026-06-24
@@ -764,12 +764,12 @@ async function main() {
   console.log(`${TAG} [STATE] 2018: ${bt2018Rows.length} matches | 2022: ${bt2022Rows.length} matches`);
   console.log(`${TAG} [VERIFY] 2018=${bt2018Rows.length === 48 ? '✅ 48' : `❌ ${bt2018Rows.length}`} | 2022=${bt2022Rows.length === 48 ? '✅ 48' : `❌ ${bt2022Rows.length}`}`);
 
-  // ── Step 2: Load 2026 matches from wc2026_fixtures (all through Jun 23) ───
-  console.log(`\n${TAG} [STEP 2] Loading 2026 matches from wc2026_fixtures (through Jun 23)...`);
+  // ── Step 2: Load 2026 matches from wc2026_matches (all through Jun 23) ───
+  console.log(`\n${TAG} [STEP 2] Loading 2026 matches from wc2026_matches (through Jun 23)...`);
   const [wc26Rows] = await conn.execute(
     `SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
             f.match_date, v.city
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
      WHERE f.match_date <= '2026-06-23' AND f.home_score IS NOT NULL
      ORDER BY f.match_date, f.fixture_id`

@@ -392,9 +392,9 @@ pass('DB connection established');
 
 // ── STEP 3: Verify fixtures exist ─────────────────────────────────────────────
 stepCount++;
-log('STEP', 'Verifying June 29 fixtures exist in wc2026_fixtures', stepCount);
+log('STEP', 'Verifying June 29 fixtures exist in wc2026_matches', stepCount);
 const [fixRows] = await conn.execute(
-  `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_fixtures WHERE match_id IN (?,?,?)`,
+  `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_matches WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 log('STATE', `Found ${fixRows.length} fixture rows`);
@@ -656,7 +656,7 @@ const [joinRows] = await conn.execute(
     p.to_advance_home_odds AS model_adv_h, p.to_advance_away_odds AS model_adv_a,
     p.no_draw_away_odds AS model_no_draw,
     p.model_version, p.is_frozen
-   FROM wc2026_fixtures f
+   FROM wc2026_matches f
    JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id
    JOIN wc2026_model_projections p ON p.match_id = f.match_id
    WHERE f.match_id IN (?,?,?) ORDER BY f.match_id`,

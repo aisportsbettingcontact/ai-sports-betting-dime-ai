@@ -399,7 +399,7 @@ const [espnMatches] = await conn.execute(
           m.matchKickoffEt,
           f.match_id, f.espn_event_id
    FROM wc2026_espn_matches m
-   JOIN wc2026_fixtures f ON f.espn_event_id = m.matchId
+   JOIN wc2026_matches f ON f.espn_event_id = m.matchId
    WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
@@ -418,7 +418,7 @@ const [espnTeamStats] = await conn.execute(
           ts.saves as homeSaves, ts.savesAway as awaySaves,
           f.match_id
    FROM wc2026_espn_team_stats ts
-   JOIN wc2026_fixtures f ON f.espn_event_id = ts.matchId
+   JOIN wc2026_matches f ON f.espn_event_id = ts.matchId
    WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
@@ -433,7 +433,7 @@ const [espnXG] = await conn.execute(
           xg.homeXA, xg.awayXA,
           f.match_id
    FROM wc2026_espn_expected_goals xg
-   JOIN wc2026_fixtures f ON f.espn_event_id = xg.matchId
+   JOIN wc2026_matches f ON f.espn_event_id = xg.matchId
    WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );

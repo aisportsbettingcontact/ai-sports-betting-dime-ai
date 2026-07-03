@@ -4,7 +4,7 @@
  * Full ESPN API audit of all WC Group Stage completed matches:
  *   - 2018: 48 matches (wc_bt_matches, tournament='2018 FIFA World Cup')
  *   - 2022: 48 matches (wc_bt_matches, tournament='2022 FIFA World Cup')
- *   - 2026: 44 matches (wc2026_fixtures, status='FT')
+ *   - 2026: 44 matches (wc2026_matches, status='FT')
  *
  * For each match:
  *   1. Pull ESPN event by date range
@@ -263,16 +263,16 @@ async function audit2018and2022(espnEvents, tournamentYear, label) {
   return { total: dbRows.length, matched, discrepancies, unmatched };
 }
 
-// ─── Audit 2026 (wc2026_fixtures) ────────────────────────────────────────────
+// ─── Audit 2026 (wc2026_matches) ────────────────────────────────────────────
 async function audit2026(espnEvents) {
   console.log(`\n${'═'.repeat(70)}`);
-  console.log(`[AUDIT] 2026 WC Group Stage — wc2026_fixtures`);
+  console.log(`[AUDIT] 2026 WC Group Stage — wc2026_matches`);
   console.log(`${'═'.repeat(70)}`);
 
   const [dbRows] = await db.execute(`
     SELECT f.fixture_id, f.kickoff_utc, f.home_score, f.away_score, f.status,
            ht.name AS home_name, at.name AS away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.status = 'FT'

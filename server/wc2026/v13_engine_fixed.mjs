@@ -467,7 +467,7 @@ async function main() {
             fbo.to_advance_home_odds, fbo.to_advance_away_odds,
             f.espn_event_id, f.home_team_id, f.away_team_id
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
+     JOIN wc2026_matches f ON f.match_id = fbo.match_id
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
@@ -485,7 +485,7 @@ async function main() {
             ht.fifa_code as homeAbbrev, at2.fifa_code as awayAbbrev,
             ht.name as homeName, at2.name as awayName
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
+     JOIN wc2026_matches f ON f.match_id = fbo.match_id
      JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
      JOIN wc2026_teams at2 ON at2.team_id = f.away_team_id
      WHERE f.match_date = '2026-07-01'

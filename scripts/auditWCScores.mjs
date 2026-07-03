@@ -4,10 +4,10 @@
  * Full rigorous audit of all WC Group Stage matches across:
  *   - 2018 World Cup (48 group stage matches)
  *   - 2022 World Cup (48 group stage matches)
- *   - 2026 World Cup Group Stage (completed matches only, stored in wc2026_fixtures)
+ *   - 2026 World Cup Group Stage (completed matches only, stored in wc2026_matches)
  *
  * For 2018 and 2022: data is in wc_bt_matches (tournament_year = 2018 or 2022)
- * For 2026: data is in wc2026_fixtures
+ * For 2026: data is in wc2026_matches
  *
  * ESPN API endpoints:
  *   2018: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20180614-20180628
@@ -189,7 +189,7 @@ async function main() {
   const [fx2026] = await conn.execute(
     `SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
             home_score, away_score, status, espn_event_id
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE stage = 'GROUP' AND status = 'FT'
      ORDER BY kickoff_utc`
   );
@@ -338,12 +338,12 @@ async function main() {
 
     for (const d of allDiscrepancies) {
       if (d.isWc2026) {
-        // Fix in wc2026_fixtures
+        // Fix in wc2026_matches
         const [res] = await conn.execute(
-          `UPDATE wc2026_fixtures SET home_score = ?, away_score = ? WHERE fixture_id = ?`,
+          `UPDATE wc2026_matches SET home_score = ?, away_score = ? WHERE fixture_id = ?`,
           [d.espnHomeScore, d.espnAwayScore, d.rowId]
         );
-        console.log(`${TAG}   [FIX] wc2026_fixtures ${d.rowId}: ${d.homeId} ${d.dbHomeScore}-${d.dbAwayScore} → ${d.espnHomeScore}-${d.espnAwayScore} | affectedRows=${res.affectedRows}`);
+        console.log(`${TAG}   [FIX] wc2026_matches ${d.rowId}: ${d.homeId} ${d.dbHomeScore}-${d.dbAwayScore} → ${d.espnHomeScore}-${d.espnAwayScore} | affectedRows=${res.affectedRows}`);
       } else {
         // Fix in wc_bt_matches
         const [res] = await conn.execute(

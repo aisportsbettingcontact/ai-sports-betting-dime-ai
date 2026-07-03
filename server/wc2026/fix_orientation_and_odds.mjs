@@ -178,7 +178,7 @@ async function main() {
 
   // 089 should be Morocco (Away) @ Canada (Home)
   const [r089] = await conn.execute(
-    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-089'`,
+    `UPDATE wc2026_matches SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-089'`,
     [teamMap['MAR'], teamMap['CAN']]
   );
   STATE(`089 update: affectedRows=${r089.affectedRows}`);
@@ -187,7 +187,7 @@ async function main() {
 
   // 090 should be France (Away) @ Paraguay (Home)
   const [r090] = await conn.execute(
-    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-090'`,
+    `UPDATE wc2026_matches SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-090'`,
     [teamMap['FRA'], teamMap['PAR']]
   );
   STATE(`090 update: affectedRows=${r090.affectedRows}`);
@@ -267,7 +267,7 @@ async function main() {
             o.book_no_draw_home_odds,
             o.to_advance_home_odds, o.to_advance_away_odds
      FROM wc2026_frozen_book_odds o
-     JOIN wc2026_fixtures f ON f.match_id = o.match_id
+     JOIN wc2026_matches f ON f.match_id = o.match_id
      JOIN wc2026_teams ta ON ta.team_id = f.away_team_id
      JOIN wc2026_teams th ON th.team_id = f.home_team_id
      WHERE o.match_id IN (${FIXTURES.map(() => '?').join(',')})

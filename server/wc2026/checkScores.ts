@@ -8,7 +8,7 @@
 import 'dotenv/config';
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
-import { wc2026Fixtures } from '../../drizzle/wc2026.schema';
+import { wc2026Matches } from '../../drizzle/wc2026.schema';
 import { inArray } from 'drizzle-orm';
 
 const LOG = (tag: string, msg: string) =>
@@ -29,12 +29,12 @@ async function main() {
   const db = drizzle(conn);
   LOG('INIT', 'Connection established ✓');
 
-  LOG('QUERY', 'Fetching wc2026_fixtures for IDs: wc26-r32-073, 074, 075, 076...');
+  LOG('QUERY', 'Fetching wc2026_matches for IDs: wc26-r32-073, 074, 075, 076...');
   const rows = await db
     .select()
-    .from(wc2026Fixtures)
+    .from(wc2026Matches)
     .where(
-      inArray(wc2026Fixtures.matchId, [
+      inArray(wc2026Matches.matchId, [
         'wc26-r32-073',
         'wc26-r32-074',
         'wc26-r32-075',

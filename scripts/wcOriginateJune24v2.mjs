@@ -642,7 +642,7 @@ async function main() {
     `SELECT o.fixture_id, o.market, o.selection, o.american_odds, o.line,
             ht.fifa_code AS home_code, at.fifa_code AS away_code
      FROM wc2026_odds_snapshots o
-     JOIN wc2026_fixtures f ON o.fixture_id = f.fixture_id
+     JOIN wc2026_matches f ON o.fixture_id = f.fixture_id
      JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
      JOIN wc2026_teams at ON f.away_team_id = at.team_id
      WHERE o.book_id = 0

@@ -19,7 +19,7 @@ const conn = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: 
 // Columns: match_id, homeML, drawML, awayML, spread, homeSpreadOdds, awaySpreadOdds,
 //          totalLine, overOdds, underOdds, bttsYes, bttsNo, dc1x, dcX2, noDrawHome, noDrawAway, toAdvH, toAdvA
 //
-// NOTE: "Home" = the team listed as HOME in wc2026_fixtures (left column in user's table is Away, right is Home)
+// NOTE: "Home" = the team listed as HOME in wc2026_matches (left column in user's table is Away, right is Home)
 // User table columns: Away | Home | Away ML | Home ML | Draw | Total | Spread | BTTS Y | ToAdv Home | ToAdv Away
 // "ToAdv Home" = home team advances odds, "ToAdv Away" = away team advances odds
 //
