@@ -86,23 +86,23 @@ function flushLog() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MATCH MANIFEST — 10 R32 MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
-// Columns: matchId, homeTeamAbbrev, awayTeamAbbrev
+// Columns: espn_match_id, homeTeamAbbrev, awayTeamAbbrev
 // These are the HOME/AWAY designations from wc2026_model_projections
 // Used to verify orientation before writing
 const MATCH_MANIFEST = [
-  { matchId: "wc26-r32-073", homeAbbrev: "RSA", awayAbbrev: "CAN"         },
-  { matchId: "wc26-r32-074", homeAbbrev: "Brazil", awayAbbrev: "Japan"     },
-  { matchId: "wc26-r32-075", homeAbbrev: "Germany", awayAbbrev: "Paraguay" },
-  { matchId: "wc26-r32-076", homeAbbrev: "Netherlands", awayAbbrev: "Morocco" },
-  { matchId: "wc26-r32-077", homeAbbrev: "CIV", awayAbbrev: "NOR"         },
-  { matchId: "wc26-r32-078", homeAbbrev: "FRA", awayAbbrev: "SWE"         },
-  { matchId: "wc26-r32-079", homeAbbrev: "MEX", awayAbbrev: "ECU"         },
-  { matchId: "wc26-r32-080", homeAbbrev: "England", awayAbbrev: "Congo DR" },
-  { matchId: "wc26-r32-081", homeAbbrev: "Belgium", awayAbbrev: "Senegal"  },
-  { matchId: "wc26-r32-082", homeAbbrev: "USA", awayAbbrev: "Bosnia-Herz" },
+  { espn_match_id: "wc26-r32-073", homeAbbrev: "RSA", awayAbbrev: "CAN"         },
+  { espn_match_id: "wc26-r32-074", homeAbbrev: "Brazil", awayAbbrev: "Japan"     },
+  { espn_match_id: "wc26-r32-075", homeAbbrev: "Germany", awayAbbrev: "Paraguay" },
+  { espn_match_id: "wc26-r32-076", homeAbbrev: "Netherlands", awayAbbrev: "Morocco" },
+  { espn_match_id: "wc26-r32-077", homeAbbrev: "CIV", awayAbbrev: "NOR"         },
+  { espn_match_id: "wc26-r32-078", homeAbbrev: "FRA", awayAbbrev: "SWE"         },
+  { espn_match_id: "wc26-r32-079", homeAbbrev: "MEX", awayAbbrev: "ECU"         },
+  { espn_match_id: "wc26-r32-080", homeAbbrev: "England", awayAbbrev: "Congo DR" },
+  { espn_match_id: "wc26-r32-081", homeAbbrev: "Belgium", awayAbbrev: "Senegal"  },
+  { espn_match_id: "wc26-r32-082", homeAbbrev: "USA", awayAbbrev: "Bosnia-Herz" },
 ];
 
-const MATCH_IDS = MATCH_MANIFEST.map(f => f.matchId);
+const MATCH_IDS = MATCH_MANIFEST.map(f => f.espn_match_id);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FIELD MAPPING: source column → target column
@@ -153,12 +153,12 @@ async function main() {
   const existingMap = Object.fromEntries(existingRows.map(r => [r.match_id, r]));
 
   let preflight_pass = true;
-  for (const { matchId } of MATCH_MANIFEST) {
-    if (existingMap[matchId]) {
-      log("PASS", "PREFLIGHT", `${matchId} EXISTS in wc2026MatchOdds`,
-        `home_team_id=${existingMap[matchId].home_team} away_team_id=${existingMap[matchId].away_team}`);
+  for (const { espn_match_id } of MATCH_MANIFEST) {
+    if (existingMap[espn_match_id]) {
+      log("PASS", "PREFLIGHT", `${espn_match_id} EXISTS in wc2026MatchOdds`,
+        `home_team_id=${existingMap[espn_match_id].home_team} away_team_id=${existingMap[espn_match_id].away_team}`);
     } else {
-      log("FAIL", "PREFLIGHT", `${matchId} MISSING from wc2026MatchOdds — ABORT`);
+      log("FAIL", "PREFLIGHT", `${espn_match_id} MISSING from wc2026MatchOdds — ABORT`);
       preflight_pass = false;
     }
   }
@@ -197,24 +197,24 @@ async function main() {
   log("STATE", "SOURCE", `Rows returned from wc2026_model_projections: ${srcRows.length}`);
 
   let source_pass = true;
-  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
+  for (const { espn_match_id, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
     if (!src) {
-      log("FAIL", "SOURCE", `${matchId} — NO frozen model projection row found`);
+      log("FAIL", "SOURCE", `${espn_match_id} — NO frozen model projection row found`);
       source_pass = false;
       continue;
     }
-    log("DATA", "SOURCE", `${matchId} | model_version=${src.model_version} | home=${src.home_team} away=${src.away_team} | is_frozen=${src.is_frozen}`);
+    log("DATA", "SOURCE", `${espn_match_id} | model_version=${src.model_version} | home=${src.home_team} away=${src.away_team} | is_frozen=${src.is_frozen}`);
 
     // Log all source values
-    log("DATA", "SOURCE", `${matchId} | λH=${src.home_lambda} λA=${src.away_lambda}`);
-    log("DATA", "SOURCE", `${matchId} | projH=${src.proj_home_score} projA=${src.proj_away_score}`);
-    log("DATA", "SOURCE", `${matchId} | modelHML=${src.model_home_ml} modelDraw=${src.model_draw_ml} modelAML=${src.model_away_ml}`);
-    log("DATA", "SOURCE", `${matchId} | spread=${src.model_spread} total=${src.model_total}`);
-    log("DATA", "SOURCE", `${matchId} | hSprdOdds=${src.home_spread_odds} aSprdOdds=${src.away_spread_odds}`);
-    log("DATA", "SOURCE", `${matchId} | overOdds=${src.over_odds} underOdds=${src.under_odds}`);
-    log("DATA", "SOURCE", `${matchId} | dc1X=${src.dc_1x_odds} dcX2=${src.dc_x2_odds}`);
-    log("DATA", "SOURCE", `${matchId} | bttsY=${src.btts_yes_odds} bttsN=${src.btts_no_odds}`);
+    log("DATA", "SOURCE", `${espn_match_id} | λH=${src.home_lambda} λA=${src.away_lambda}`);
+    log("DATA", "SOURCE", `${espn_match_id} | projH=${src.proj_home_score} projA=${src.proj_away_score}`);
+    log("DATA", "SOURCE", `${espn_match_id} | modelHML=${src.model_home_ml} modelDraw=${src.model_draw_ml} modelAML=${src.model_away_ml}`);
+    log("DATA", "SOURCE", `${espn_match_id} | spread=${src.model_spread} total=${src.model_total}`);
+    log("DATA", "SOURCE", `${espn_match_id} | hSprdOdds=${src.home_spread_odds} aSprdOdds=${src.away_spread_odds}`);
+    log("DATA", "SOURCE", `${espn_match_id} | overOdds=${src.over_odds} underOdds=${src.under_odds}`);
+    log("DATA", "SOURCE", `${espn_match_id} | dc1X=${src.dc_1x_odds} dcX2=${src.dc_x2_odds}`);
+    log("DATA", "SOURCE", `${espn_match_id} | bttsY=${src.btts_yes_odds} bttsN=${src.btts_no_odds}`);
   }
 
   if (!source_pass) {
@@ -230,18 +230,18 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────
   log("SECTION", "PHASE3", "ORIENTATION CHECK: Verifying home/away team alignment per match");
 
-  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
+  for (const { espn_match_id, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
     if (!src) continue;
 
     const srcHomeMatch = src.home_team === homeAbbrev;
     const srcAwayMatch = src.away_team === awayAbbrev;
 
     if (srcHomeMatch && srcAwayMatch) {
-      log("PASS", "ORIENT", `${matchId} | HOME=${src.home_team} ✓ | AWAY=${src.away_team} ✓`);
+      log("PASS", "ORIENT", `${espn_match_id} | HOME=${src.home_team} ✓ | AWAY=${src.away_team} ✓`);
     } else {
       log("WARN", "ORIENT",
-        `${matchId} | HOME: expected=${homeAbbrev} got=${src.home_team} | AWAY: expected=${awayAbbrev} got=${src.away_team}`,
+        `${espn_match_id} | HOME: expected=${homeAbbrev} got=${src.home_team} | AWAY: expected=${awayAbbrev} got=${src.away_team}`,
         "Proceeding with DB values — home values → home columns, away values → away columns"
       );
     }
@@ -254,11 +254,11 @@ async function main() {
 
   const writeResults = {};
 
-  for (const { matchId } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
+  for (const { espn_match_id } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
     if (!src) {
-      log("FAIL", "WRITE", `${matchId} — skipping (no source row)`);
-      writeResults[matchId] = { status: "SKIPPED", fieldsWritten: 0 };
+      log("FAIL", "WRITE", `${espn_match_id} — skipping (no source row)`);
+      writeResults[espn_match_id] = { status: "SKIPPED", fieldsWritten: 0 };
       continue;
     }
 
@@ -284,14 +284,14 @@ async function main() {
     };
 
     // Log every field being written
-    log("STEP", "WRITE", `${matchId} — Building UPDATE payload (${Object.keys(payload).length} fields):`);
+    log("STEP", "WRITE", `${espn_match_id} — Building UPDATE payload (${Object.keys(payload).length} fields):`);
     for (const [col, val] of Object.entries(payload)) {
-      log("CALC", "PAYLOAD", `  ${matchId}.${col} = ${val === null ? "NULL" : val}`);
+      log("CALC", "PAYLOAD", `  ${espn_match_id}.${col} = ${val === null ? "NULL" : val}`);
     }
 
     // Build SET clause
     const setClauses = Object.keys(payload).map(col => `${col} = ?`).join(", ");
-    const values = [...Object.values(payload), matchId];
+    const values = [...Object.values(payload), espn_match_id];
 
     const [result] = await conn.execute(
       `UPDATE wc2026MatchOdds SET ${setClauses} WHERE match_id = ?`,
@@ -299,11 +299,11 @@ async function main() {
     );
 
     if (result.affectedRows === 1) {
-      log("PASS", "WRITE", `${matchId} — UPDATE succeeded (affectedRows=1, changedRows=${result.changedRows})`);
-      writeResults[matchId] = { status: "OK", fieldsWritten: Object.keys(payload).length };
+      log("PASS", "WRITE", `${espn_match_id} — UPDATE succeeded (affectedRows=1, changedRows=${result.changedRows})`);
+      writeResults[espn_match_id] = { status: "OK", fieldsWritten: Object.keys(payload).length };
     } else {
-      log("FAIL", "WRITE", `${matchId} — UPDATE failed (affectedRows=${result.affectedRows})`);
-      writeResults[matchId] = { status: "FAIL", fieldsWritten: 0 };
+      log("FAIL", "WRITE", `${espn_match_id} — UPDATE failed (affectedRows=${result.affectedRows})`);
+      writeResults[espn_match_id] = { status: "FAIL", fieldsWritten: 0 };
     }
   }
 
@@ -357,17 +357,17 @@ async function main() {
   let totalFieldFail = 0;
   let totalFieldNull = 0;
 
-  for (const { matchId } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
-    const tgt = verifyMap[matchId];
-    auditResults[matchId] = { pass: 0, fail: 0, null_src: 0, fields: {} };
+  for (const { espn_match_id } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
+    const tgt = verifyMap[espn_match_id];
+    auditResults[espn_match_id] = { pass: 0, fail: 0, null_src: 0, fields: {} };
 
     if (!src || !tgt) {
-      log("FAIL", "READBACK", `${matchId} — missing source or target row`);
+      log("FAIL", "READBACK", `${espn_match_id} — missing source or target row`);
       continue;
     }
 
-    log("AUDIT", "READBACK", `${matchId} — Verifying ${Object.keys(compareMap).length} fields:`);
+    log("AUDIT", "READBACK", `${espn_match_id} — Verifying ${Object.keys(compareMap).length} fields:`);
 
     for (const [tgtField, srcField] of Object.entries(compareMap)) {
       totalFieldChecks++;
@@ -379,14 +379,14 @@ async function main() {
         const ok = tgtVal === null;
         totalFieldNull++;
         if (ok) {
-          log("PASS", "FIELD", `  ${matchId}.${tgtField} = NULL (source NULL → correctly stored NULL)`);
-          auditResults[matchId].pass++;
-          auditResults[matchId].fields[tgtField] = "NULL_OK";
+          log("PASS", "FIELD", `  ${espn_match_id}.${tgtField} = NULL (source NULL → correctly stored NULL)`);
+          auditResults[espn_match_id].pass++;
+          auditResults[espn_match_id].fields[tgtField] = "NULL_OK";
           totalFieldPass++;
         } else {
-          log("FAIL", "FIELD", `  ${matchId}.${tgtField} MISMATCH: src=NULL but tgt=${tgtVal}`);
-          auditResults[matchId].fail++;
-          auditResults[matchId].fields[tgtField] = `MISMATCH src=NULL tgt=${tgtVal}`;
+          log("FAIL", "FIELD", `  ${espn_match_id}.${tgtField} MISMATCH: src=NULL but tgt=${tgtVal}`);
+          auditResults[espn_match_id].fail++;
+          auditResults[espn_match_id].fields[tgtField] = `MISMATCH src=NULL tgt=${tgtVal}`;
           totalFieldFail++;
         }
         continue;
@@ -400,21 +400,21 @@ async function main() {
       const ok = Math.abs(srcNum - tgtNum) <= tolerance;
 
       if (ok) {
-        log("PASS", "FIELD", `  ${matchId}.${tgtField} = ${tgtNum} ✓ (src=${srcNum})`);
-        auditResults[matchId].pass++;
-        auditResults[matchId].fields[tgtField] = `OK: ${tgtNum}`;
+        log("PASS", "FIELD", `  ${espn_match_id}.${tgtField} = ${tgtNum} ✓ (src=${srcNum})`);
+        auditResults[espn_match_id].pass++;
+        auditResults[espn_match_id].fields[tgtField] = `OK: ${tgtNum}`;
         totalFieldPass++;
       } else {
-        log("FAIL", "FIELD", `  ${matchId}.${tgtField} MISMATCH: src=${srcNum} tgt=${tgtNum}`);
-        auditResults[matchId].fail++;
-        auditResults[matchId].fields[tgtField] = `MISMATCH src=${srcNum} tgt=${tgtNum}`;
+        log("FAIL", "FIELD", `  ${espn_match_id}.${tgtField} MISMATCH: src=${srcNum} tgt=${tgtNum}`);
+        auditResults[espn_match_id].fail++;
+        auditResults[espn_match_id].fields[tgtField] = `MISMATCH src=${srcNum} tgt=${tgtNum}`;
         totalFieldFail++;
       }
     }
 
-    const matchOk = auditResults[matchId].fail === 0;
+    const matchOk = auditResults[espn_match_id].fail === 0;
     log(matchOk ? "PASS" : "FAIL", "MATCH",
-      `${matchId} — ${auditResults[matchId].pass}/${Object.keys(compareMap).length} fields PASS, ${auditResults[matchId].fail} FAIL`
+      `${espn_match_id} — ${auditResults[espn_match_id].pass}/${Object.keys(compareMap).length} fields PASS, ${auditResults[espn_match_id].fail} FAIL`
     );
   }
 
@@ -428,22 +428,22 @@ async function main() {
   log("OUTPUT", "SUMMARY", `Overall PASS rate: ${((totalFieldPass / totalFieldChecks) * 100).toFixed(2)}%`);
 
   log("SECTION", "REPORT", "Per-Match Summary:");
-  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
-    const ar = auditResults[matchId];
+  for (const { espn_match_id, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
+    const ar = auditResults[espn_match_id];
     const status = ar && ar.fail === 0 ? "✅ PASS" : "❌ FAIL";
     const version = src ? src.model_version : "N/A";
     log("OUTPUT", "MATCH",
-      `${status} | ${matchId} | ${homeAbbrev} (H) vs ${awayAbbrev} (A) | model=${version} | fields=${ar ? ar.pass : 0}/${Object.keys(compareMap).length}`
+      `${status} | ${espn_match_id} | ${homeAbbrev} (H) vs ${awayAbbrev} (A) | model=${version} | fields=${ar ? ar.pass : 0}/${Object.keys(compareMap).length}`
     );
   }
 
   log("SECTION", "REPORT", "Per-Match Data Snapshot (source → stored):");
-  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
-    const src = srcMap[matchId];
-    const tgt = verifyMap[matchId];
+  for (const { espn_match_id, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
+    const src = srcMap[espn_match_id];
+    const tgt = verifyMap[espn_match_id];
     if (!src || !tgt) continue;
-    log("DATA", "SNAPSHOT", `${matchId} | ${homeAbbrev} vs ${awayAbbrev}`);
+    log("DATA", "SNAPSHOT", `${espn_match_id} | ${homeAbbrev} vs ${awayAbbrev}`);
     log("DATA", "SNAPSHOT", `  λH: ${src.home_lambda} → ${tgt.lamba_home} | λA: ${src.away_lambda} → ${tgt.lamba_away}`);
     log("DATA", "SNAPSHOT", `  projH: ${src.proj_home_score} → ${tgt.model_projected_home_goals} | projA: ${src.proj_away_score} → ${tgt.model_projected_away_goals}`);
     log("DATA", "SNAPSHOT", `  ML: H=${src.model_home_ml}→${tgt.model_home_ml} D=${src.model_draw_ml}→${tgt.model_draw} A=${src.model_away_ml}→${tgt.model_away_ml}`);

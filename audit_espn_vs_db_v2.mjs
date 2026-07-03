@@ -26,7 +26,7 @@ console.log('[DB] Connected');
 // ─── STEP 1: Pull all completed matches ─────────────────────────────────────
 const [dbMatches] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
-         match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
+         match_date, kickoff_utc, group_letter, matchday, status, espn_match_id
   FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY kickoff_utc ASC
@@ -62,8 +62,8 @@ for (const t of dbTeams) teamById[t.team_id] = t;
 // ─── STEP 4: Fetch ESPN API for all matches ──────────────────────────────────
 // ESPN Soccer API: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={id}
 // We need ESPN event IDs. Two sources:
-// 1. espn_event_id column in wc2026_matches (if populated)
-// 2. Derive from the match stats JSON file (which has game_id)
+// 1. espn_match_id column in wc2026_matches (if populated)
+// 2. Derive from the match stats JSON file (which has espn_match_id)
 
 // Load the match stats JSON to get ESPN game_ids
 import { readFileSync } from 'fs';
@@ -75,21 +75,21 @@ try {
   console.log(`[WARN] Could not load wc2026_match_stats.json: ${e.message}`);
 }
 
-// Build match_id → ESPN game_id from JSON stats
-// JSON stats have: game_id, team_abbr (uppercase), home_away, game_name
+// Build match_id → ESPN espn_match_id from JSON stats
+// JSON stats have: espn_match_id, team_abbr (uppercase), home_away, game_name
 const jsonGameIdToTeams = {};
 for (const row of statJson) {
-  const gid = row.game_id;
+  const gid = row.espn_match_id;
   if (!jsonGameIdToTeams[gid]) jsonGameIdToTeams[gid] = new Set();
   jsonGameIdToTeams[gid].add(row.team_abbr.toLowerCase());
 }
 
-// Match each match to game_id by team set
+// Match each match to espn_match_id by team set
 const matchToEspnId = {};
 for (const f of dbMatches) {
-  // First check espn_event_id column
-  if (f.espn_event_id) {
-    matchToEspnId[f.match_id] = f.espn_event_id;
+  // First check espn_match_id column
+  if (f.espn_match_id) {
+    matchToEspnId[f.match_id] = f.espn_match_id;
     continue;
   }
   // Fall back to JSON matching
@@ -148,8 +148,8 @@ const espnFetchErrors = [];
 for (const f of dbMatches) {
   const espnId = matchToEspnId[f.match_id];
   if (!espnId) {
-    espnFetchErrors.push({ match_id: f.match_id, error: 'No ESPN game_id found' });
-    console.log(`  [SKIP] ${f.match_id}: No ESPN game_id`);
+    espnFetchErrors.push({ match_id: f.match_id, error: 'No ESPN espn_match_id found' });
+    console.log(`  [SKIP] ${f.match_id}: No ESPN espn_match_id`);
     continue;
   }
   

@@ -763,24 +763,24 @@ const handleSpecialStatus = (g, prev) => {
 
   // ── CANCELED (id=7) ───────────────────────────────────────────────────────
   if (g.isCanceled) {
-    if (!canceledSet.has(g.gameId)) {
-      canceledSet.add(g.gameId);
-      log('CANCEL', `CANCEL/${g.gameId}`, `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | state=${g.statusState} | completed=${g.statusCompleted} | SCRAPER WILL NEVER TRIGGER`);
+    if (!canceledSet.has(g.espnMatchId)) {
+      canceledSet.add(g.espnMatchId);
+      log('CANCEL', `CANCEL/${g.espnMatchId}`, `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | state=${g.statusState} | completed=${g.statusCompleted} | SCRAPER WILL NEVER TRIGGER`);
     }
     return { handled: true, isCanceled: true };
   }
 
   // ── CANCEL-THEN-RESCHEDULE: was canceled, now pre ────────────────────────
-  if (canceledSet.has(g.gameId) && g.isScheduled) {
-    canceledSet.delete(g.gameId);
-    log('INFO', `CANCEL/${g.gameId}`, `♻️  RESCHEDULED — was canceled, now pre/scheduled | ${g.name} | typeId=${g.statusTypeId}`);
+  if (canceledSet.has(g.espnMatchId) && g.isScheduled) {
+    canceledSet.delete(g.espnMatchId);
+    log('INFO', `CANCEL/${g.espnMatchId}`, `♻️  RESCHEDULED — was canceled, now pre/scheduled | ${g.name} | typeId=${g.statusTypeId}`);
     return { handled: false }; // allow normal pre handling
   }
 
   // ── POSTPONED (id=6) ─────────────────────────────────────────────────────
   if (g.isPostponed) {
-    if (!postponedSet.has(g.gameId)) {
-      postponedSet.add(g.gameId);
+    if (!postponedSet.has(g.espnMatchId)) {
+      postponedSet.add(g.espnMatchId);
       delayedDates.delete(g.eventDateStr); // clear delayed if now postponed
       // Extend watch window for this date
       if (g.eventDateStr) {
@@ -794,60 +794,60 @@ const handleSpecialStatus = (g, prev) => {
             log('DAY_ADV', `DAY_ADV/POSTPONE`, `📅 POSTPONED extension: added ${extDate} to watch window`);
           }
         }
-        log('POSTPON', `POSTPON/${g.gameId}`, `⏸️  STATUS_POSTPONED | ${g.name} | typeId=6 | date=${g.eventDateStr} | window extended +${POSTPONED_WINDOW_DAYS}d until ${expiryStr}`);
+        log('POSTPON', `POSTPON/${g.espnMatchId}`, `⏸️  STATUS_POSTPONED | ${g.name} | typeId=6 | date=${g.eventDateStr} | window extended +${POSTPONED_WINDOW_DAYS}d until ${expiryStr}`);
       }
     }
     return { handled: true };
   }
 
   // ── POSTPONED-THEN-RESCHEDULED: was postponed, now pre ──────────────────
-  if (postponedSet.has(g.gameId) && g.isScheduled) {
-    postponedSet.delete(g.gameId);
-    log('INFO', `POSTPON/${g.gameId}`, `♻️  RESCHEDULED — was postponed, now pre/scheduled | ${g.name} | new date=${g.eventDate}`);
+  if (postponedSet.has(g.espnMatchId) && g.isScheduled) {
+    postponedSet.delete(g.espnMatchId);
+    log('INFO', `POSTPON/${g.espnMatchId}`, `♻️  RESCHEDULED — was postponed, now pre/scheduled | ${g.name} | new date=${g.eventDate}`);
   }
 
   // ── DELAYED (id=9) ───────────────────────────────────────────────────────
   if (g.isDelayed) {
-    if (!delayedSet.has(g.gameId)) {
-      delayedSet.add(g.gameId);
+    if (!delayedSet.has(g.espnMatchId)) {
+      delayedSet.add(g.espnMatchId);
       if (g.eventDateStr) delayedDates.add(g.eventDateStr);
-      log('DELAYED', `DELAYED/${g.gameId}`, `⏳ STATUS_DELAYED | ${g.name} | typeId=9 | date=${g.eventDateStr} | keeping date in window for next cycle`);
+      log('DELAYED', `DELAYED/${g.espnMatchId}`, `⏳ STATUS_DELAYED | ${g.name} | typeId=9 | date=${g.eventDateStr} | keeping date in window for next cycle`);
     }
     return { handled: true };
   }
 
   // ── DELAYED-THEN-RESOLVED: was delayed, now in-progress ─────────────────
-  if (delayedSet.has(g.gameId) && (g.isLive || g.isInProgress)) {
-    delayedSet.delete(g.gameId);
+  if (delayedSet.has(g.espnMatchId) && (g.isLive || g.isInProgress)) {
+    delayedSet.delete(g.espnMatchId);
     if (g.eventDateStr) delayedDates.delete(g.eventDateStr);
-    log('INFO', `DELAYED/${g.gameId}`, `▶️  DELAY_RESOLVED — was delayed, now in-progress | ${g.name} | typeId=${g.statusTypeId}`);
+    log('INFO', `DELAYED/${g.espnMatchId}`, `▶️  DELAY_RESOLVED — was delayed, now in-progress | ${g.name} | typeId=${g.statusTypeId}`);
   }
 
   // ── IN_PROGRESS (id=2) — game kicked off ─────────────────────────────────
-  if (g.isInProgress && !watchingSet.has(g.gameId)) {
-    watchingSet.add(g.gameId);
-    log('WATCH', `WATCH/${g.gameId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate} | ${g.scoreStr}`);
+  if (g.isInProgress && !watchingSet.has(g.espnMatchId)) {
+    watchingSet.add(g.espnMatchId);
+    log('WATCH', `WATCH/${g.espnMatchId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate} | ${g.scoreStr}`);
   }
 
   // ── EXTRA_TIME_HALF_TIME (id=25 / name=STATUS_EXTRA_TIME_HALF_TIME) ───────
   if (g.isExtraTimeHT) {
-    if (!etActiveMap.has(g.gameId)) {
-      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'ET_HT' });
-      log('ET_HT', `ET_HT/${g.gameId}`, `⚡ ET_HT_ACTIVE — STATUS_EXTRA_TIME_HALF_TIME | ${g.name} | typeId=${g.statusTypeId} name=${g.statusTypeName} | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    if (!etActiveMap.has(g.espnMatchId)) {
+      etActiveMap.set(g.espnMatchId, { firstSeenMs: Date.now(), type: 'ET_HT' });
+      log('ET_HT', `ET_HT/${g.espnMatchId}`, `⚡ ET_HT_ACTIVE — STATUS_EXTRA_TIME_HALF_TIME | ${g.name} | typeId=${g.statusTypeId} name=${g.statusTypeName} | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
     }
     return { handled: false, tightenPoll: true };
   }
 
   // ── EXTRA_TIME (id=17) ───────────────────────────────────────────────────
   if (g.isExtraTime) {
-    if (!etActiveMap.has(g.gameId)) {
-      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'ET' });
-      log('ET_ACT', `ET_ACT/${g.gameId}`, `⚡ ET_ACTIVE — STATUS_EXTRA_TIME | ${g.name} | typeId=17 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    if (!etActiveMap.has(g.espnMatchId)) {
+      etActiveMap.set(g.espnMatchId, { firstSeenMs: Date.now(), type: 'ET' });
+      log('ET_ACT', `ET_ACT/${g.espnMatchId}`, `⚡ ET_ACTIVE — STATUS_EXTRA_TIME | ${g.name} | typeId=17 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
     } else {
-      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
-      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
-        etActiveMap.get(g.gameId).warnedExtended = true;
-        log('WARN', `ET_ACT/${g.gameId}`, `⚠️  ET_EXTENDED — Extra time has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
+      const elapsed = Date.now() - etActiveMap.get(g.espnMatchId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.espnMatchId).warnedExtended) {
+        etActiveMap.get(g.espnMatchId).warnedExtended = true;
+        log('WARN', `ET_ACT/${g.espnMatchId}`, `⚠️  ET_EXTENDED — Extra time has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
       }
     }
     return { handled: false, tightenPoll: true }; // still needs FT detection
@@ -855,25 +855,25 @@ const handleSpecialStatus = (g, prev) => {
 
   // ── SHOOTOUT (id=24) ─────────────────────────────────────────────────────
   if (g.isShootout) {
-    if (!etActiveMap.has(g.gameId)) {
-      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'PENS' });
-      log('PENS_AC', `PENS_AC/${g.gameId}`, `🥅 PENS_ACTIVE — STATUS_SHOOTOUT | ${g.name} | typeId=24 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
+    if (!etActiveMap.has(g.espnMatchId)) {
+      etActiveMap.set(g.espnMatchId, { firstSeenMs: Date.now(), type: 'PENS' });
+      log('PENS_AC', `PENS_AC/${g.espnMatchId}`, `🥅 PENS_ACTIVE — STATUS_SHOOTOUT | ${g.name} | typeId=24 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to ${POLL_INTERVAL_ET_MS / 1000}s`);
     } else {
-      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
-      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
-        etActiveMap.get(g.gameId).warnedExtended = true;
-        log('WARN', `PENS_AC/${g.gameId}`, `⚠️  PENS_EXTENDED — Shootout has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
+      const elapsed = Date.now() - etActiveMap.get(g.espnMatchId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.espnMatchId).warnedExtended) {
+        etActiveMap.get(g.espnMatchId).warnedExtended = true;
+        log('WARN', `PENS_AC/${g.espnMatchId}`, `⚠️  PENS_EXTENDED — Shootout has been active for ${Math.round(elapsed / 60000)} min | ${g.name} | ${g.displayClock}`);
       }
     }
     return { handled: false, tightenPoll: true };
   }
 
   // ── ET/PENS resolved (game went FT after ET/pens) ────────────────────────
-  if (etActiveMap.has(g.gameId) && g.isFinal) {
-    const etInfo = etActiveMap.get(g.gameId);
+  if (etActiveMap.has(g.espnMatchId) && g.isFinal) {
+    const etInfo = etActiveMap.get(g.espnMatchId);
     const elapsed = ((Date.now() - etInfo.firstSeenMs) / 1000).toFixed(0);
-    log('INFO', `ET_ACT/${g.gameId}`, `✅ ${etInfo.type}_RESOLVED — game went final after ${etInfo.type} | ${g.name} | ${g.scoreStr} | duration=${elapsed}s`);
-    etActiveMap.delete(g.gameId);
+    log('INFO', `ET_ACT/${g.espnMatchId}`, `✅ ${etInfo.type}_RESOLVED — game went final after ${etInfo.type} | ${g.name} | ${g.scoreStr} | duration=${elapsed}s`);
+    etActiveMap.delete(g.espnMatchId);
   }
 
   return { handled: false };
@@ -888,8 +888,8 @@ const checkDbState = async (gameId) => {
   try {
     const db = getPool();
     const [rows] = await db.execute(
-      `SELECT matchId, homeTeamName, awayTeamName, homeScore, awayScore, matchRound, scrapeVersion
-       FROM wc2026_espn_matches WHERE matchId = ? LIMIT 1`,
+      `SELECT espn_match_id, homeTeamName, awayTeamName, homeScore, awayScore, matchRound, scrapeVersion
+       FROM wc2026_espn_matches WHERE espn_match_id = ? LIMIT 1`,
       [gameId]
     );
     if (rows.length > 0) {
@@ -916,9 +916,9 @@ const verifyMidnightRule = async (gameId, expectedRound) => {
   try {
     const db = getPool();
     const [rows] = await db.execute(
-      `SELECT matchId, homeTeamName, awayTeamName, matchDateUtc, matchGameDate,
+      `SELECT espn_match_id, homeTeamName, awayTeamName, matchDateUtc, matchGameDate,
               matchKickoffEt, scrapeVersion, matchRound
-       FROM wc2026_espn_matches WHERE matchId = ? LIMIT 1`,
+       FROM wc2026_espn_matches WHERE espn_match_id = ? LIMIT 1`,
       [gameId]
     );
     if (rows.length === 0) return { ok: false, reason: 'No row found in DB after scrape' };
@@ -941,7 +941,7 @@ const verifyMidnightRule = async (gameId, expectedRound) => {
 
     return {
       ok:             status === 'PASS',
-      gameId:         r.matchId,
+      gameId:         r.espn_match_id,
       match:          `${r.homeTeamName} vs ${r.awayTeamName}`,
       matchGameDate:  r.matchGameDate,
       matchKickoffEt: r.matchKickoffEt,
@@ -1255,7 +1255,7 @@ const runPreflightDbCheck = async () => {
   try {
     const db = getPool();
     const [rows] = await db.execute(
-      `SELECT matchId, homeTeamName, awayTeamName, homeScore, awayScore,
+      `SELECT espn_match_id, homeTeamName, awayTeamName, homeScore, awayScore,
               matchRound, scrapeVersion, matchGameDate, matchKickoffEt
        FROM wc2026_espn_matches
        ORDER BY matchGameDate ASC, matchKickoffEt ASC`
@@ -1265,9 +1265,9 @@ const runPreflightDbCheck = async () => {
     for (const r of rows) {
       const isActuallyScraped = r.scrapeVersion === '500x' && (Number(r.homeScore) + Number(r.awayScore) > 0 || r.matchRound === 'group-stage');
       const tag = isActuallyScraped ? 'EXISTS' : 'STUB  ';
-      log('DB', `PREFLIGHT/${r.matchId}`, `${tag} | ${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | date=${r.matchGameDate} ET=${r.matchKickoffEt} | v=${r.scrapeVersion}`);
+      log('DB', `PREFLIGHT/${r.espn_match_id}`, `${tag} | ${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | date=${r.matchGameDate} ET=${r.matchKickoffEt} | v=${r.scrapeVersion}`);
       if (isActuallyScraped) {
-        sessionResults.scrapedSet.add(String(r.matchId));
+        sessionResults.scrapedSet.add(String(r.espn_match_id));
         preloadCount++;
       }
     }
@@ -1317,13 +1317,13 @@ const pollCycle = async () => {
       sessionResults.totalGamesDetected = Math.max(sessionResults.totalGamesDetected, totalGames);
 
       // Retrieve previous state
-      const prev          = gameStateMap.get(g.gameId);
+      const prev          = gameStateMap.get(g.espnMatchId);
       const prevState     = prev?.statusState    || 'unknown';
       const prevTypeId    = prev?.statusTypeId   || null;
       const prevCompleted = prev?.statusCompleted ?? null;
 
       // Update state machine
-      gameStateMap.set(g.gameId, {
+      gameStateMap.set(g.espnMatchId, {
         statusState:     g.statusState,
         statusTypeId:    g.statusTypeId,
         statusTypeName:  g.statusTypeName,
@@ -1348,13 +1348,13 @@ const pollCycle = async () => {
 
       // ── LIVE game logging ──────────────────────────────────────────────────
       // v2.3: matchStatus classification log — every event, every cycle
-      log('MATCH', `MATCH/${g.gameId}`, `[CLASSIFY] ${g.name} | matchStatus=${g.matchStatus} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} | isTdy=${g.isTdy} hasWinner=${g.hasWinner}${g.statusPrimary ? ` statusPrimary=${g.statusPrimary}` : ''} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
+      log('MATCH', `MATCH/${g.espnMatchId}`, `[CLASSIFY] ${g.name} | matchStatus=${g.matchStatus} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} | isTdy=${g.isTdy} hasWinner=${g.hasWinner}${g.statusPrimary ? ` statusPrimary=${g.statusPrimary}` : ''} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
 
       if (g.isLive) {
         liveGames++;
         sessionResults.totalLiveDetected = Math.max(sessionResults.totalLiveDetected, liveGames);
         const liveType = g.isExtraTimeHT ? 'ET_HT' : g.isExtraTime ? 'ET' : g.isShootout ? 'PENS' : g.isHalftime ? 'HT' : g.isFirstHalf ? '1H' : g.isSecondHalf ? '2H' : g.isInProgress ? 'IP' : 'LIVE';
-        log('LIVE', `LIVE/${g.gameId}`, `⚽ [${liveType}] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState} | desc=${g.statusDescription} | isTdy=${g.isTdy}`);
+        log('LIVE', `LIVE/${g.espnMatchId}`, `⚽ [${liveType}] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState} | desc=${g.statusDescription} | isTdy=${g.isTdy}`);
       }
 
       // ── FINAL game processing ──────────────────────────────────────────────
@@ -1368,8 +1368,8 @@ const pollCycle = async () => {
         const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
 
         if (isNewlyFinal) {
-          log('TRANS', `TRANS/${g.gameId}`, `🔀 FT TRANSITION DETECTED | ${g.name} | prevState=${prevState} prevTypeId=${prevTypeId} prevCompleted=${prevCompleted} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
-          logTransDetail(`TRANS_D/${g.gameId}`, 'FT_DETECTED', g, prev);
+          log('TRANS', `TRANS/${g.espnMatchId}`, `🔀 FT TRANSITION DETECTED | ${g.name} | prevState=${prevState} prevTypeId=${prevTypeId} prevCompleted=${prevCompleted} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
+          logTransDetail(`TRANS_D/${g.espnMatchId}`, 'FT_DETECTED', g, prev);
         }
 
         if (isNewlyFinal) {
@@ -1380,54 +1380,54 @@ const pollCycle = async () => {
           const swapNote = g.isSwapped ? ' | ⚠️ isSwapped=true (home at idx[0])' : ' | isSwapped=false';
           // v2.3: hasWinner as tertiary FT confirmation signal
           const winnerNote = g.hasWinner ? ' | hasWinner=true ✅' : ' | hasWinner=false ⚠️';
-          log('FINAL', `FINAL/${g.gameId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}${swapNote}${winnerNote}`);
+          log('FINAL', `FINAL/${g.espnMatchId}`, `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}${swapNote}${winnerNote}`);
 
           if (DRY_RUN) {
-            log('INFO', `TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape for ${g.gameId} — skipping`);
+            log('INFO', `TRIGGER/${g.espnMatchId}`, `[DRY-RUN] Would trigger scrape for ${g.espnMatchId} — skipping`);
           } else {
             // Double-confirm before trigger
-            confirmFinalState(g.gameId, g.matchRound, g).then(({ confirmed, confirmedGame }) => {
+            confirmFinalState(g.espnMatchId, g.matchRound, g).then(({ confirmed, confirmedGame }) => {
               if (!confirmed) {
-                log('WARN', `TRIGGER/${g.gameId}`, `⚠️ FT-CONFIRM FAILED (false positive) — suppressing scrape trigger for ${g.gameId}`);
+                log('WARN', `TRIGGER/${g.espnMatchId}`, `⚠️ FT-CONFIRM FAILED (false positive) — suppressing scrape trigger for ${g.espnMatchId}`);
                 return;
               }
               const cg = confirmedGame || g;
-              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${cg.matchRound} | seasonSlug=${cg.seasonSlug} | prevState=${prevState} → post | typeId=${cg.statusTypeId} | completed=${cg.statusCompleted} | DRY_RUN=${DRY_RUN}`);
-              scrapeWithRetry(g.gameId, cg.matchRound, cg).catch(err => {
-                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+              log('TRIGGER', `TRIGGER/${g.espnMatchId}`, `🚀 gameId=${g.espnMatchId} → matchRound=${cg.matchRound} | seasonSlug=${cg.seasonSlug} | prevState=${prevState} → post | typeId=${cg.statusTypeId} | completed=${cg.statusCompleted} | DRY_RUN=${DRY_RUN}`);
+              scrapeWithRetry(g.espnMatchId, cg.matchRound, cg).catch(err => {
+                log('ERROR', `TRIGGER/${g.espnMatchId}`, `Scrape trigger error: ${err.message}`);
               });
             }).catch(err => {
-              log('WARN', `CONFIRM/${g.gameId}`, `Confirm engine error: ${err.message} — proceeding with trigger`);
-              log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | confirm engine error — conservative trigger`);
-              scrapeWithRetry(g.gameId, g.matchRound, g).catch(e => {
-                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${e.message}`);
+              log('WARN', `CONFIRM/${g.espnMatchId}`, `Confirm engine error: ${err.message} — proceeding with trigger`);
+              log('TRIGGER', `TRIGGER/${g.espnMatchId}`, `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | confirm engine error — conservative trigger`);
+              scrapeWithRetry(g.espnMatchId, g.matchRound, g).catch(e => {
+                log('ERROR', `TRIGGER/${g.espnMatchId}`, `Scrape trigger error: ${e.message}`);
               });
             });
           }
 
-        } else if (!sessionResults.scrapedSet.has(g.gameId) && !sessionResults.scrapingSet.has(g.gameId)) {
+        } else if (!sessionResults.scrapedSet.has(g.espnMatchId) && !sessionResults.scrapingSet.has(g.espnMatchId)) {
           // Final, known from previous poll — check DB
-          const dbCheck = await checkDbState(g.gameId);
+          const dbCheck = await checkDbState(g.espnMatchId);
           if (dbCheck.inDb) {
-            sessionResults.scrapedSet.add(g.gameId);
-            log('SKIP', `FINAL/${g.gameId}`, `Already in DB: ${dbCheck.summary} — skipping`);
+            sessionResults.scrapedSet.add(g.espnMatchId);
+            log('SKIP', `FINAL/${g.espnMatchId}`, `Already in DB: ${dbCheck.summary} — skipping`);
           } else if (dbCheck.forced) {
-            log('INFO', `FINAL/${g.gameId}`, `--force-rescrape active — re-triggering ${g.gameId}`);
-            log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | --force-rescrape`);
-            scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
-              log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+            log('INFO', `FINAL/${g.espnMatchId}`, `--force-rescrape active — re-triggering ${g.espnMatchId}`);
+            log('TRIGGER', `TRIGGER/${g.espnMatchId}`, `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | --force-rescrape`);
+            scrapeWithRetry(g.espnMatchId, g.matchRound, g).catch(err => {
+              log('ERROR', `TRIGGER/${g.espnMatchId}`, `Scrape trigger error: ${err.message}`);
             });
           } else {
-            log('FINAL', `FINAL/${g.gameId}`, `🏁 FINAL (known) — not in DB | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId}`);
-            log('TRIGGER', `TRIGGER/${g.gameId}`, `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | DB miss — triggering scrape`);
+            log('FINAL', `FINAL/${g.espnMatchId}`, `🏁 FINAL (known) — not in DB | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId}`);
+            log('TRIGGER', `TRIGGER/${g.espnMatchId}`, `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | DB miss — triggering scrape`);
             if (!DRY_RUN) {
-              scrapeWithRetry(g.gameId, g.matchRound, g).catch(err => {
-                log('ERROR', `TRIGGER/${g.gameId}`, `Scrape trigger error: ${err.message}`);
+              scrapeWithRetry(g.espnMatchId, g.matchRound, g).catch(err => {
+                log('ERROR', `TRIGGER/${g.espnMatchId}`, `Scrape trigger error: ${err.message}`);
               });
             }
           }
-        } else if (sessionResults.scrapingSet.has(g.gameId)) {
-          log('INFO', `FINAL/${g.gameId}`, `Scrape in progress — skipping duplicate trigger`);
+        } else if (sessionResults.scrapingSet.has(g.espnMatchId)) {
+          log('INFO', `FINAL/${g.espnMatchId}`, `Scrape in progress — skipping duplicate trigger`);
         }
 
       } else if (g.isScheduled) {
@@ -1478,7 +1478,7 @@ const printSessionSummary = () => {
   log('INFO', 'SESSION_SUMMARY', `Midnight rule: ✅${sessionResults.midnightRulePass} PASS | ⚠️${sessionResults.midnightRuleFail} FAIL`);
 
   if (sessionResults.failed > 0) {
-    const failedIds = sessionResults.matches.filter(m => m.status === 'FAIL').map(m => m.gameId).join(', ');
+    const failedIds = sessionResults.matches.filter(m => m.status === 'FAIL').map(m => m.espnMatchId).join(', ');
     log('WARN', 'SESSION_SUMMARY', `Failed gameIds: ${failedIds}`);
   }
 
@@ -1500,7 +1500,7 @@ const printSessionSummary = () => {
       } else {
         detail = `FAIL: ${m.error?.slice(0, 80)} | attempts=${m.attempts}`;
       }
-      const line = `  ${icon} ${m.gameId} | ${detail}`;
+      const line = `  ${icon} ${m.espnMatchId} | ${detail}`;
       console.log(line);
       logStream.write(line + '\n');
       termStream.write(line + '\n');

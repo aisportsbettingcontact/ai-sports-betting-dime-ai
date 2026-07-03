@@ -137,7 +137,7 @@ function calibrateLambdas(targetHomeWinProb, totalLine, maxIter = 50, tol = 1e-6
 // ─── June 24 Matchs with exact ground truth ────────────────────────────────
 const MATCHES = [
   {
-    matchId: 'wc26-g-049',
+    espn_match_id: 'wc26-g-049',
     correctHomeId: 'sui', correctAwayId: 'can',
     homeName: 'Switzerland', awayName: 'Canada',
     homeAbbr: 'SUI', awayAbbr: 'CAN',
@@ -151,7 +151,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-050',
+    espn_match_id: 'wc26-g-050',
     correctHomeId: 'bih', correctAwayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
     homeAbbr: 'BIH', awayAbbr: 'QAT',
@@ -165,7 +165,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-051',
+    espn_match_id: 'wc26-g-051',
     correctHomeId: 'sco', correctAwayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
     homeAbbr: 'SCO', awayAbbr: 'BRA',
@@ -180,7 +180,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-052',
+    espn_match_id: 'wc26-g-052',
     correctHomeId: 'mar', correctAwayId: 'hai',
     homeName: 'Morocco', awayName: 'Haiti',
     homeAbbr: 'MAR', awayAbbr: 'HAI',
@@ -194,7 +194,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-053',
+    espn_match_id: 'wc26-g-053',
     correctHomeId: 'cze', correctAwayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
     homeAbbr: 'CZE', awayAbbr: 'MEX',
@@ -209,7 +209,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-054',
+    espn_match_id: 'wc26-g-054',
     correctHomeId: 'rsa', correctAwayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
     homeAbbr: 'RSA', awayAbbr: 'KOR',
@@ -232,20 +232,20 @@ async function main() {
   const snapshotTs = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
 
   // Verify match orientation (already fixed in v1)
-  const matchIds = MATCHES.map(f => f.matchId);
+  const matchIds = MATCHES.map(f => f.espn_match_id);
   const [dbMatches] = await conn.query(
     `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
     matchIds
   );
   console.log(`\n${TAG} [STEP] Verifying match orientation...`);
   for (const f of MATCHES) {
-    const dbF = dbMatches.find(r => r.match_id === f.matchId);
+    const dbF = dbMatches.find(r => r.match_id === f.espn_match_id);
     const ok = dbF?.home_team_id === f.correctHomeId && dbF?.away_team_id === f.correctAwayId;
     if (!ok) {
-      await conn.query(`UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?`, [f.correctHomeId, f.correctAwayId, f.matchId]);
-      console.log(`${TAG} [STATE] FIXED orientation ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      await conn.query(`UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?`, [f.correctHomeId, f.correctAwayId, f.espn_match_id]);
+      console.log(`${TAG} [STATE] FIXED orientation ${f.espn_match_id}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     } else {
-      console.log(`${TAG} [STATE] OK ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      console.log(`${TAG} [STATE] OK ${f.espn_match_id}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     }
   }
 
@@ -263,7 +263,7 @@ async function main() {
 
   for (const f of MATCHES) {
     const b = f.book;
-    console.log(`\n${TAG} [STEP] Processing ${f.matchId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
+    console.log(`\n${TAG} [STEP] Processing ${f.espn_match_id} | ${f.awayName}(away) @ ${f.homeName}(home)`);
 
     // ── Step 1: Remove vig from 1X2 ──
     const rawHome = americanToProb(b.mlHome);
@@ -352,7 +352,7 @@ async function main() {
     for (const row of bookRows) {
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalBookRows++;
     }
@@ -376,7 +376,7 @@ async function main() {
       if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null odds: ${row.market}:${row.selection}`); continue; }
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalModelRows++;
     }
@@ -400,7 +400,7 @@ async function main() {
         home_edge, draw_edge, away_edge, model_lean, lean_prob, top_scorelines, modeled_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
-      f.matchId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
+      f.espn_match_id, MODEL_VERSION, 1000000, f.homeName, f.awayName,
       lambdaH, lambdaA, finalHome, finalDraw, finalAway,
       projHomeScore, projAwayScore, projTotal, projSpread,
       sim.over25, sim.under25, sim.over35, sim.btts,
@@ -412,8 +412,8 @@ async function main() {
       finalHome > finalAway ? 'home' : 'away', Math.max(finalHome, finalAway), sim.top,
     ]);
 
-    results.push({ id: f.matchId, home: f.homeAbbr, away: f.awayAbbr, homeML: modelHomeML, awayML: modelAwayML, homeSpread: modelHomeSpreadOdds, awaySpread: modelAwaySpreadOdds, spreadSanity });
-    console.log(`${TAG} [OUTPUT] ${f.matchId}: DONE — bookRows=12 modelRows=12`);
+    results.push({ id: f.espn_match_id, home: f.homeAbbr, away: f.awayAbbr, homeML: modelHomeML, awayML: modelAwayML, homeSpread: modelHomeSpreadOdds, awaySpread: modelAwaySpreadOdds, spreadSanity });
+    console.log(`${TAG} [OUTPUT] ${f.espn_match_id}: DONE — bookRows=12 modelRows=12`);
   }
 
   // ── Final verification ──

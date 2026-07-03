@@ -43,7 +43,7 @@ const snapshotTs = new Date();
 // home_draw = 1X (Home Win OR Draw), away_draw = X2 (Away Win OR Draw)
 const MATCHES = [
   {
-    matchId: 'wc26-g-039',
+    espn_match_id: 'wc26-g-039',
     label: 'Spain vs Saudi Arabia',
     homeTeamId: 'esp',
     awayTeamId: 'ksa',
@@ -51,7 +51,7 @@ const MATCHES = [
     away_draw: 500,     // Saudi Arabia or Draw (X2)
   },
   {
-    matchId: 'wc26-g-037',
+    espn_match_id: 'wc26-g-037',
     label: 'Iran vs Belgium',
     homeTeamId: 'irn',
     awayTeamId: 'bel',
@@ -59,7 +59,7 @@ const MATCHES = [
     away_draw: -1000,   // Belgium or Draw (X2)
   },
   {
-    matchId: 'wc26-g-040',
+    espn_match_id: 'wc26-g-040',
     label: 'Cape Verde vs Uruguay',
     homeTeamId: 'cpv',
     awayTeamId: 'uru',
@@ -67,7 +67,7 @@ const MATCHES = [
     away_draw: -1100,   // Uruguay or Draw (X2)
   },
   {
-    matchId: 'wc26-g-038',
+    espn_match_id: 'wc26-g-038',
     label: 'New Zealand vs Egypt',
     homeTeamId: 'nzl',
     awayTeamId: 'egy',
@@ -88,7 +88,7 @@ async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
   // Delete existing DK double chance rows for these matches to avoid duplicates
-  const matchIds = MATCHES.map(f => f.matchId);
+  const matchIds = MATCHES.map(f => f.espn_match_id);
   const placeholders = matchIds.map(() => '?').join(',');
   const [deleteResult] = await conn.execute(
     `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${placeholders}) AND book_id = ? AND market = ?`,
@@ -98,18 +98,18 @@ async function main() {
 
   const rows = [];
   for (const f of MATCHES) {
-    console.log(`\n[STATE] ${f.matchId} — ${f.label}`);
+    console.log(`\n[STATE] ${f.espn_match_id} — ${f.label}`);
     console.log(`  [STATE] home(${f.homeTeamId}) 1X (home_draw): ${f.home_draw > 0 ? '+' : ''}${f.home_draw} → implied=${(americanToImplied(f.home_draw) * 100).toFixed(3)}%`);
     console.log(`  [STATE] away(${f.awayTeamId}) X2 (away_draw): ${f.away_draw > 0 ? '+' : ''}${f.away_draw} → implied=${(americanToImplied(f.away_draw) * 100).toFixed(3)}%`);
 
     rows.push({
-      matchId: f.matchId,
+      espn_match_id: f.espn_match_id,
       selection: 'home_draw',
       americanOdds: f.home_draw,
       impliedProb: americanToImplied(f.home_draw),
     });
     rows.push({
-      matchId: f.matchId,
+      espn_match_id: f.espn_match_id,
       selection: 'away_draw',
       americanOdds: f.away_draw,
       impliedProb: americanToImplied(f.away_draw),
@@ -122,10 +122,10 @@ async function main() {
     await conn.execute(
       `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, american_odds, implied_prob, is_closing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [row.matchId, snapshotTs, BOOK_ID_DK, MARKET, row.selection, row.americanOdds, row.impliedProb, false]
+      [row.espn_match_id, snapshotTs, BOOK_ID_DK, MARKET, row.selection, row.americanOdds, row.impliedProb, false]
     );
     inserted++;
-    console.log(`[STEP] Inserted: match=${row.matchId} selection=${row.selection} odds=${row.americanOdds > 0 ? '+' : ''}${row.americanOdds}`);
+    console.log(`[STEP] Inserted: match=${row.espn_match_id} selection=${row.selection} odds=${row.americanOdds > 0 ? '+' : ''}${row.americanOdds}`);
   }
 
   // Verify

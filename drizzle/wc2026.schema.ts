@@ -73,8 +73,8 @@ export const wc2026Matches = mysqlTable(
     // TRUE only for USA/CAN/MEX playing inside their own country —
     // zero out neutral-site home advantage in the model otherwise.
     isHostHome: boolean("is_host_home").notNull().default(false),
-    // ESPN event ID for automated result ingestion
-    espnEventId: varchar("espn_event_id", { length: 16 }),
+    // ESPN match ID for automated result ingestion (unified from legacy espn_event_id)
+    espnMatchId: varchar("espn_match_id", { length: 16 }),
     // Attendance (from ESPN)
     attendance: int("attendance"),
     // Custom display order for date-based feeds (overrides kickoff_utc sort when set)
@@ -424,7 +424,7 @@ export const wc2026MatchesRelations = relations(wc2026Matches, ({ one }) => ({
 // Covers all 32 matchups: R32 (16) + R16 (8) + QF (4) + SF (2) + Final/3rd (2)
 //
 // Key design decisions:
-//   - gameId (ESPN event ID) is the natural PK and FK to wc2026_espn_matches
+//   - espnMatchId (ESPN match ID) is the natural PK and FK to wc2026_espn_matches
 //   - matchNumber is the human-readable label ("Match 80") — critical for bracket display
 //   - matchupId is ESPN's internal bracket slot ID (used for advancement seeding)
 //   - roundId: 1=R32, 2=R16, 3=QF, 4=SF, 5=Final/3rd
@@ -439,8 +439,8 @@ export const wc2026EspnBracket = mysqlTable(
     id:              bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
 
     // ── ESPN identifiers ──────────────────────────────────────────────────────
-    /** ESPN event/game ID (e.g. "760495"). FK → wc2026_espn_matches.matchId */
-    gameId:          varchar("game_id", { length: 16 }).notNull().unique(),
+    /** ESPN match ID (e.g. "760495"). FK → wc2026_espn_matches.espnMatchId */
+    espnMatchId:     varchar("espn_match_id", { length: 16 }).notNull().unique(),
     /** ESPN internal bracket slot ID (e.g. "78"). Used for advancement seeding chain */
     matchupId:       varchar("matchup_id", { length: 8 }).notNull(),
 
@@ -503,7 +503,7 @@ export const wc2026EspnBracket = mysqlTable(
     updatedAt:       bigint("updated_at", { mode: "number" }).notNull(),
   },
   (t) => [
-    uniqueIndex("idx_wc2026_espn_bracket_game_id").on(t.gameId),
+    uniqueIndex("idx_wc2026_espn_bracket_espn_match_id").on(t.espnMatchId),
     index("idx_wc2026_espn_bracket_matchup_id").on(t.matchupId),
     index("idx_wc2026_espn_bracket_round_id").on(t.roundId),
     index("idx_wc2026_espn_bracket_match_number").on(t.matchNumber),

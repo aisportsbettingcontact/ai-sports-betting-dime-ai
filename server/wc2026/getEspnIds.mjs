@@ -19,7 +19,7 @@ const TARGET_IDS = [
 const ph = TARGET_IDS.map(() => '?').join(',');
 const [rows] = await conn.execute(`
   SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
-         f.espn_event_id, f.venue_id,
+         f.espn_match_id, f.venue_id,
          v.stadium, v.city, v.country, v.timezone,
          ht.name AS home_name, at.name AS away_name
   FROM wc2026_matches f
@@ -31,12 +31,12 @@ const [rows] = await conn.execute(`
 `, TARGET_IDS);
 
 console.log('\n[MATCH DATA — 13 TARGET MATCHES]');
-console.log('match_id          | match_date | kickoff_utc (UTC)    | espn_event_id | venue_id | stadium                    | city          | away @ home');
+console.log('match_id          | match_date | kickoff_utc (UTC)    | espn_match_id | venue_id | stadium                    | city          | away @ home');
 console.log('─'.repeat(160));
 for (const r of rows) {
   const md = r.match_date instanceof Date ? r.match_date.toISOString().split('T')[0] : String(r.match_date).split('T')[0];
   const ku = r.kickoff_utc instanceof Date ? r.kickoff_utc.toISOString().replace('T',' ').substring(0,16) : String(r.kickoff_utc);
-  const espnId = r.espn_event_id ?? 'NULL';
+  const espnId = r.espn_match_id ?? 'NULL';
   const venueId = r.venue_id ?? 'NULL';
   const stadium = (r.stadium ?? 'NULL').padEnd(26);
   const city = (r.city ?? 'NULL').padEnd(13);

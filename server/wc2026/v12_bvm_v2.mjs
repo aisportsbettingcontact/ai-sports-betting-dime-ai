@@ -201,7 +201,7 @@ function main() {
     return;
   }
 
-  const p080 = reportData.projections.find(x => x.matchId === 'wc26-r32-080');
+  const p080 = reportData.projections.find(x => x.espn_match_id === 'wc26-r32-080');
   if (!p080) { L.fail('AUDIT', 'wc26-r32-080 not found in JSON report'); return; }
 
   L.step('AUDIT', 'INSPECTING RAW JSON REPORT VALUES FOR wc26-r32-080 (COD @ ENG)');
@@ -420,18 +420,18 @@ function main() {
   L.section('COMPUTE', 'PHASE 2 — VALIDATED PROBABILITY COMPUTATION FOR ALL 3 MATCHS');
 
   // Strict prob2ml with validation
-  function prob2ml_STRICT(p, label, matchId) {
+  function prob2ml_STRICT(p, label, espn_match_id) {
     const pNum = Number(p);
     if (isNaN(pNum)) {
-      L.fail('PROB2ML', `${matchId} ${label}: p=${p} is NaN`);
+      L.fail('PROB2ML', `${espn_match_id} ${label}: p=${p} is NaN`);
       return null;
     }
     if (pNum <= 0 || pNum >= 1) {
-      L.fail('PROB2ML', `${matchId} ${label}: p=${pNum} out of range (0,1)`);
+      L.fail('PROB2ML', `${espn_match_id} ${label}: p=${pNum} out of range (0,1)`);
       return null;
     }
     if (pNum < 0.001 || pNum > 0.999) {
-      L.warn('PROB2ML', `${matchId} ${label}: p=${pNum} near boundary — ML may be extreme`);
+      L.warn('PROB2ML', `${espn_match_id} ${label}: p=${pNum} near boundary — ML may be extreme`);
     }
     let ml;
     if (pNum >= 0.5) {
@@ -444,9 +444,9 @@ function main() {
     const pBack = mlRounded > 0 ? 100/(mlRounded+100) : (-mlRounded)/(-mlRounded+100);
     const roundTripErr = Math.abs(pBack - pNum);
     if (roundTripErr > 0.005) {
-      L.warn('PROB2ML', `${matchId} ${label}: round-trip error ${roundTripErr.toFixed(6)} (p=${pNum.toFixed(6)} → ML=${mlRounded} → p_back=${pBack.toFixed(6)})`);
+      L.warn('PROB2ML', `${espn_match_id} ${label}: round-trip error ${roundTripErr.toFixed(6)} (p=${pNum.toFixed(6)} → ML=${mlRounded} → p_back=${pBack.toFixed(6)})`);
     } else {
-      L.atomic('PROB2ML', `${matchId} ${label}: P=${pNum.toFixed(6)} → ML=${mlRounded>0?'+':''}${mlRounded} | round-trip err=${roundTripErr.toFixed(6)} ✓`);
+      L.atomic('PROB2ML', `${espn_match_id} ${label}: P=${pNum.toFixed(6)} → ML=${mlRounded>0?'+':''}${mlRounded} | round-trip err=${roundTripErr.toFixed(6)} ✓`);
     }
     return mlRounded;
   }
@@ -498,7 +498,7 @@ function main() {
   for (const f of MATCHS) {
     const b = BOOK[f.id];
     // Get projection from JSON report — use explicit property access, NO destructuring
-    const proj = reportData.projections.find(x => x.matchId === f.id);
+    const proj = reportData.projections.find(x => x.espn_match_id === f.id);
     if (!proj) { L.fail('MARKETS', `${f.id}: projection not found`); continue; }
 
     L.step('MARKETS', `Processing ${f.id}: ${b.Away} @ ${b.Home}`);

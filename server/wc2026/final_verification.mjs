@@ -96,7 +96,7 @@ async function main() {
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
   `);
 
-  // Build odds lookup: matchId → {bookId → {market → {selection → odds}}}
+  // Build odds lookup: espn_match_id → {bookId → {market → {selection → odds}}}
   const oddsMap = {};
   for (const o of allOdds) {
     if (!oddsMap[o.match_id]) oddsMap[o.match_id] = {};

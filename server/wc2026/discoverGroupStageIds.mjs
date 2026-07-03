@@ -115,11 +115,11 @@ log('INFO', 'SUMMARY', `Total matches found: ${totalFound} across ${dates.length
 // Sort by date then gameId
 allMatches.sort((a, b) => {
   if (a.date !== b.date) return a.date.localeCompare(b.date);
-  return parseInt(a.gameId) - parseInt(b.gameId);
+  return parseInt(a.espnMatchId) - parseInt(b.espnMatchId);
 });
 
 // Extract just the gameIds in order
-const gameIds = allMatches.map(m => m.gameId);
+const gameIds = allMatches.map(m => m.espnMatchId);
 const uniqueGameIds = [...new Set(gameIds)];
 
 log('INFO', 'SUMMARY', `Unique gameIds: ${uniqueGameIds.length}`);
@@ -141,7 +141,7 @@ log('INFO', 'OUTPUT', `Saved to: ${OUTPUT_FILE}`);
 // Print summary table
 console.log('\n=== DISCOVERED MATCHES ===');
 for (const m of allMatches) {
-  console.log(`  ${m.date} | ${m.gameId} | ${m.homeTeam} ${m.homeScore}-${m.awayScore} ${m.awayTeam} | ${m.status}`);
+  console.log(`  ${m.date} | ${m.espnMatchId} | ${m.homeTeam} ${m.homeScore}-${m.awayScore} ${m.awayTeam} | ${m.status}`);
 }
 console.log(`\nTotal: ${uniqueGameIds.length} matches`);
 console.log(`GameIds: [${uniqueGameIds.join(', ')}]`);

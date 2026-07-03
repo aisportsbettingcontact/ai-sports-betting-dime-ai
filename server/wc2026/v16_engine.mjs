@@ -298,25 +298,25 @@ function buildGSRows(teamCode, xgAll, tsAll, msAll) {
   }
   return rows.map(r => {
     const side = r.homeTeamAbbrev === teamCode ? 'home' : 'away';
-    const tsRow = tsAll.find(t => t.matchId === r.matchId);
-    if (!tsRow) hardFail('N1_POSS', `${teamCode} match ${r.matchId}: NO team stats row`);
+    const tsRow = tsAll.find(t => t.espn_match_id === r.espn_match_id);
+    if (!tsRow) hardFail('N1_POSS', `${teamCode} match ${r.espn_match_id}: NO team stats row`);
     const possRawHome = tsRow.possession;
     const possRawAway = tsRow.possessionAway;
     const possHome = parseFloat(String(possRawHome ?? '').replace('%', ''));
     const possAway = parseFloat(String(possRawAway ?? '').replace('%', ''));
-    if (isNaN(possHome)) hardFail('N1_POSS_NAN', `${teamCode} match ${r.matchId}: possHome='${possRawHome}' → NaN`);
-    if (isNaN(possAway)) hardFail('N1_POSS_NAN', `${teamCode} match ${r.matchId}: possAway='${possRawAway}' → NaN`);
+    if (isNaN(possHome)) hardFail('N1_POSS_NAN', `${teamCode} match ${r.espn_match_id}: possHome='${possRawHome}' → NaN`);
+    if (isNaN(possAway)) hardFail('N1_POSS_NAN', `${teamCode} match ${r.espn_match_id}: possAway='${possRawAway}' → NaN`);
     const poss = side === 'home' ? possHome : possAway;
-    log('REAL_DATA', 'POSS_PARSE', `  ${teamCode} ${r.matchId} [${side}]: raw='${side==='home'?possRawHome:possRawAway}' → ${poss.toFixed(1)}%`);
-    const msRow = msAll.find(m => m.matchId === r.matchId);
-    if (!msRow) hardFail('N2_SHOTS', `${teamCode} match ${r.matchId}: NO match stats row`);
+    log('REAL_DATA', 'POSS_PARSE', `  ${teamCode} ${r.espn_match_id} [${side}]: raw='${side==='home'?possRawHome:possRawAway}' → ${poss.toFixed(1)}%`);
+    const msRow = msAll.find(m => m.espn_match_id === r.espn_match_id);
+    if (!msRow) hardFail('N2_SHOTS', `${teamCode} match ${r.espn_match_id}: NO match stats row`);
     const sot   = side === 'home' ? msRow.homeShotsOnGoal : msRow.awayShotsOnGoal;
     const shots = side === 'home' ? msRow.homeShots       : msRow.awayShots;
-    if (sot   === null || sot   === undefined) hardFail('N2_SOT_NULL',   `${teamCode} match ${r.matchId}: SOT is NULL`);
-    if (shots === null || shots === undefined) hardFail('N2_SHOTS_NULL', `${teamCode} match ${r.matchId}: shots is NULL`);
-    log('REAL_DATA', 'SHOTS_PARSE', `  ${teamCode} ${r.matchId} [${side}]: SOT=${sot} shots=${shots}`);
+    if (sot   === null || sot   === undefined) hardFail('N2_SOT_NULL',   `${teamCode} match ${r.espn_match_id}: SOT is NULL`);
+    if (shots === null || shots === undefined) hardFail('N2_SHOTS_NULL', `${teamCode} match ${r.espn_match_id}: shots is NULL`);
+    log('REAL_DATA', 'SHOTS_PARSE', `  ${teamCode} ${r.espn_match_id} [${side}]: SOT=${sot} shots=${shots}`);
     return {
-      matchId: r.matchId, side,
+      espn_match_id: r.espn_match_id, side,
       xG:    side === 'home' ? parseFloat(r.homeXG)   : parseFloat(r.awayXG),
       xGOT:  side === 'home' ? parseFloat(r.homeXGOT) : parseFloat(r.awayXGOT),
       xA:    side === 'home' ? parseFloat(r.homeXA)   : parseFloat(r.awayXA),
@@ -338,11 +338,11 @@ function computeLambda(teamCode, gsRows, psAll, smAll, v) {
   const avgSOT  = gsRows.reduce((s,r) => s + r.sot, 0)   / gsRows.length;
   const avgShots= gsRows.reduce((s,r) => s + r.shots, 0) / gsRows.length;
   // Shot map component
-  const smRows = smAll.filter(r => gsRows.some(g => g.matchId === r.matchId) && r.teamAbbrev === teamCode);
+  const smRows = smAll.filter(r => gsRows.some(g => g.espn_match_id === r.espn_match_id) && r.teamAbbrev === teamCode);
   const avgSmXG   = smRows.length > 0 ? smRows.reduce((s,r) => s + (parseFloat(r.shotXG)   || 0), 0) / smRows.length : avgXG;
   const avgSmXGOT = smRows.length > 0 ? smRows.reduce((s,r) => s + (parseFloat(r.shotXGOT) || 0), 0) / smRows.length : avgXGOT;
   // Player stats component
-  const psRows = psAll.filter(r => gsRows.some(g => g.matchId === r.matchId) && r.teamAbbrev === teamCode);
+  const psRows = psAll.filter(r => gsRows.some(g => g.espn_match_id === r.espn_match_id) && r.teamAbbrev === teamCode);
   const avgPsXG   = psRows.length > 0 ? psRows.reduce((s,r) => s + (parseFloat(r.pXG)   || 0), 0) / psRows.length : avgXG;
   const avgPsXGOT = psRows.length > 0 ? psRows.reduce((s,r) => s + (parseFloat(r.pXGOT) || 0), 0) / psRows.length : avgXGOT;
   // Conversion rate
@@ -555,69 +555,69 @@ async function main() {
   // xG data
   subBanner('PULLING wc2026_espn_expected_goals');
   const [xgAll] = await conn.query(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
     FROM wc2026_espn_expected_goals
     WHERE (homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
     AND matchRound = 'group-stage'
     AND homeXG IS NOT NULL AND awayXG IS NOT NULL
-    ORDER BY matchId ASC
+    ORDER BY espn_match_id ASC
   `, [...allTeams, ...allTeams]);
   log('PASS', 'ESPN_XG', `Loaded ${xgAll.length} xG rows for ${allTeams.length} teams`);
-  xgAll.forEach(r => log('REAL_DATA', 'XG_ROW', `  ${r.matchId} ${r.homeTeamAbbrev} xG=${r.homeXG} xGOT=${r.homeXGOT} | ${r.awayTeamAbbrev} xG=${r.awayXG} xGOT=${r.awayXGOT}`));
+  xgAll.forEach(r => log('REAL_DATA', 'XG_ROW', `  ${r.espn_match_id} ${r.homeTeamAbbrev} xG=${r.homeXG} xGOT=${r.homeXGOT} | ${r.awayTeamAbbrev} xG=${r.awayXG} xGOT=${r.awayXGOT}`));
 
   // Team stats (possession)
   subBanner('PULLING wc2026_espn_team_stats');
-  const xgMatchIds = [...new Set(xgAll.map(r => r.matchId))];
+  const xgMatchIds = [...new Set(xgAll.map(r => r.espn_match_id))];
   const [tsAll] = await conn.query(`
-    SELECT matchId, possession, possessionAway
+    SELECT espn_match_id, possession, possessionAway
     FROM wc2026_espn_team_stats
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')})
-    ORDER BY matchId ASC
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')})
+    ORDER BY espn_match_id ASC
   `, xgMatchIds);
   log('PASS', 'ESPN_TS', `Loaded ${tsAll.length} team stats rows`);
 
   // Match stats (shots)
   subBanner('PULLING wc2026_espn_match_stats');
   const [msAll] = await conn.query(`
-    SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
            homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
     FROM wc2026_espn_match_stats
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')})
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')})
     AND homeShots IS NOT NULL
-    ORDER BY matchId ASC
+    ORDER BY espn_match_id ASC
   `, xgMatchIds);
   log('PASS', 'ESPN_MS', `Loaded ${msAll.length} match stats rows`);
 
   // Player stats (aggregated per team per match)
   subBanner('PULLING wc2026_espn_player_stats');
   const [psAll] = await conn.query(`
-    SELECT matchId, teamAbbrev,
+    SELECT espn_match_id, teamAbbrev,
            SUM(xG) as pXG, SUM(xA) as pXA, SUM(sog) as pSOG,
            SUM(shot) as pShot, SUM(tch) as pTch, SUM(duelw) as pDuelW,
            SUM(xGOTC) as pXGOT
     FROM wc2026_espn_player_stats
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')})
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')})
     AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    GROUP BY matchId, teamAbbrev
-    ORDER BY matchId, teamAbbrev ASC
+    GROUP BY espn_match_id, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev ASC
   `, [...xgMatchIds, ...allTeams]);
   log('PASS', 'ESPN_PS', `Loaded ${psAll.length} player stats rows`);
 
   // Shot map (aggregated per team per match)
   subBanner('PULLING wc2026_espn_shot_map');
   const [smAll] = await conn.query(`
-    SELECT matchId, teamAbbrev,
+    SELECT espn_match_id, teamAbbrev,
            SUM(xG) as shotXG, SUM(xGOT) as shotXGOT,
            COUNT(*) as shots,
            SUM(CASE WHEN isOwnGoal=0 AND iconType='goal' THEN 1 ELSE 0 END) as goals,
            AVG(distance) as avgDist
     FROM wc2026_espn_shot_map
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')})
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')})
     AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    GROUP BY matchId, teamAbbrev
-    ORDER BY matchId, teamAbbrev ASC
+    GROUP BY espn_match_id, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev ASC
   `, [...xgMatchIds, ...allTeams]);
   log('PASS', 'ESPN_SM', `Loaded ${smAll.length} shot map rows`);
 

@@ -103,7 +103,7 @@ function calculateRoi(modelML, bookML, bookOppML) {
 // ─── Match data (from seed script) ─────────────────────────────────────────
 const MATCHES = [
   {
-    matchId: 'wc26-g-039',
+    espn_match_id: 'wc26-g-039',
     homeName: 'Spain', homeCode: 'esp',
     awayName: 'Saudi Arabia', awayCode: 'ksa',
     eloHome: 2050, eloAway: 1615,
@@ -114,7 +114,7 @@ const MATCHES = [
     bookTotalLine: 3.5, bookOverML: -105, bookUnderML: -120,
   },
   {
-    matchId: 'wc26-g-037',
+    espn_match_id: 'wc26-g-037',
     homeName: 'Iran', homeCode: 'irn',
     awayName: 'Belgium', awayCode: 'bel',
     eloHome: 1695, eloAway: 1890,
@@ -125,7 +125,7 @@ const MATCHES = [
     bookTotalLine: 2.5, bookOverML: -125, bookUnderML: 100,
   },
   {
-    matchId: 'wc26-g-040',
+    espn_match_id: 'wc26-g-040',
     homeName: 'Cape Verde', homeCode: 'cpv',
     awayName: 'Uruguay', awayCode: 'uru',
     eloHome: 1598, eloAway: 1855,
@@ -136,7 +136,7 @@ const MATCHES = [
     bookTotalLine: 2.5, bookOverML: 130, bookUnderML: -160,
   },
   {
-    matchId: 'wc26-g-038',
+    espn_match_id: 'wc26-g-038',
     homeName: 'New Zealand', homeCode: 'nzl',
     awayName: 'Egypt', awayCode: 'egy',
     eloHome: 1598, eloAway: 1720,
@@ -151,7 +151,7 @@ const MATCHES = [
 // ─── Audit each match ───────────────────────────────────────────────────────
 function auditMatch(f) {
   console.log(`\n${'═'.repeat(80)}`);
-  console.log(`${TAG}[INPUT] ${f.homeName} (${f.homeCode}) vs ${f.awayName} (${f.awayCode}) | ${f.matchId}`);
+  console.log(`${TAG}[INPUT] ${f.homeName} (${f.homeCode}) vs ${f.awayName} (${f.awayCode}) | ${f.espn_match_id}`);
   console.log(`${TAG}[INPUT] Elo: home=${f.eloHome} away=${f.eloAway} | FIFA: home=#${f.fifaRankHome} away=#${f.fifaRankAway}`);
   console.log(`${TAG}[INPUT] Form: home=${f.formHome} away=${f.formAway} | Altitude: ${f.altitudeM}m`);
   console.log(`${TAG}[INPUT] Book: home=${f.bookHomeML} draw=${f.bookDrawML} away=${f.bookAwayML} | Total: O${f.bookTotalLine}=${f.bookOverML} U${f.bookTotalLine}=${f.bookUnderML}`);
@@ -385,7 +385,7 @@ function auditMatch(f) {
   console.log(`${TAG}[OUTPUT]   Lambda inflation impact: +${((analyticalOverProb - correctOverProb)*100).toFixed(2)}pp on over probability`);
 
   return {
-    matchId: f.matchId,
+    espn_match_id: f.espn_match_id,
     homeName: f.homeName, awayName: f.awayName,
     bookFavorite, modelFavorite, modelAgreesWithBook,
     currentOverEdge, correctOverEdge,
@@ -424,7 +424,7 @@ for (const r of results) {
   allOversInflated += r.currentOverEdge > 1.5 ? 1 : 0;
   totalLambdaInflation += r.lambdaInflationImpact;
 
-  console.log(`\n${TAG}[OUTPUT] ${r.homeName} vs ${r.awayName} (${r.matchId}):`);
+  console.log(`\n${TAG}[OUTPUT] ${r.homeName} vs ${r.awayName} (${r.espn_match_id}):`);
   console.log(`${TAG}[OUTPUT]   ML: Book fav=${r.bookFavorite} | Model fav=${r.modelFavorite} | Agrees=${r.modelAgreesWithBook}`);
   console.log(`${TAG}[OUTPUT]   Current model: H=${probToAmerican(r.currentFinalH)} D=${probToAmerican(r.currentFinalD)} A=${probToAmerican(r.currentFinalA)}`);
   console.log(`${TAG}[OUTPUT]   Corrected:     H=${probToAmerican(r.correctFinalH)} D=${probToAmerican(r.correctFinalD)} A=${probToAmerican(r.correctFinalA)}`);

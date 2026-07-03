@@ -192,7 +192,7 @@ async function main() {
 
   // Check which xG columns the engine actually uses vs what's available
   const xgUsedByEngine = ['homeXG','awayXG','homeXGOT','awayXGOT','homeXGSetPlay','awayXGSetPlay','homeXA','awayXA'];
-  const xgAvailableNotUsed = xgColNames.filter(c => !xgUsedByEngine.includes(c) && c !== 'id' && c !== 'matchId' && c !== 'homeTeamAbbrev' && c !== 'awayTeamAbbrev');
+  const xgAvailableNotUsed = xgColNames.filter(c => !xgUsedByEngine.includes(c) && c !== 'id' && c !== 'espn_match_id' && c !== 'homeTeamAbbrev' && c !== 'awayTeamAbbrev');
   L.data('A1', `Engine uses: [${xgUsedByEngine.join(', ')}]`);
   L.data('A1', `Available but NOT used by engine: [${xgAvailableNotUsed.join(', ')}]`);
 
@@ -211,7 +211,7 @@ async function main() {
   L.data('A2', `wc2026_espn_team_stats columns (${tsColNames.length}): ${tsColNames.join(', ')}`);
 
   const tsUsedByEngine = ['possession','possessionAway','homeGoals','awayGoals'];
-  const tsAvailableNotUsed = tsColNames.filter(c => !tsUsedByEngine.includes(c) && !['id','matchId','homeTeamAbbrev','awayTeamAbbrev'].includes(c));
+  const tsAvailableNotUsed = tsColNames.filter(c => !tsUsedByEngine.includes(c) && !['id','espn_match_id','homeTeamAbbrev','awayTeamAbbrev'].includes(c));
   L.data('A2', `Engine uses: [${tsUsedByEngine.join(', ')}]`);
   L.data('A2', `Available but NOT used: [${tsAvailableNotUsed.join(', ')}]`);
 
@@ -230,7 +230,7 @@ async function main() {
   L.data('A3', `wc2026_espn_shot_map columns (${smColNames.length}): ${smColNames.join(', ')}`);
 
   const smUsedByEngine = ['xG','xGOT','situation'];
-  const smAvailableNotUsed = smColNames.filter(c => !smUsedByEngine.includes(c) && !['id','matchId','teamAbbrev','iconType'].includes(c));
+  const smAvailableNotUsed = smColNames.filter(c => !smUsedByEngine.includes(c) && !['id','espn_match_id','teamAbbrev','iconType'].includes(c));
   L.data('A3', `Engine uses: [${smUsedByEngine.join(', ')}]`);
   L.data('A3', `Available but NOT used: [${smAvailableNotUsed.join(', ')}]`);
 
@@ -241,7 +241,7 @@ async function main() {
   L.data('A4', `wc2026_espn_player_stats columns (${psColNames.length}): ${psColNames.join(', ')}`);
 
   const psUsedByEngine = ['xG','xA','g','sog','shot','sv','xGC','xGOTC'];
-  const psAvailableNotUsed = psColNames.filter(c => !psUsedByEngine.includes(c) && !['id','matchId','teamAbbrev','playerId','playerName','position','minutesPlayed'].includes(c));
+  const psAvailableNotUsed = psColNames.filter(c => !psUsedByEngine.includes(c) && !['id','espn_match_id','teamAbbrev','playerId','playerName','position','minutesPlayed'].includes(c));
   L.data('A4', `Engine uses: [${psUsedByEngine.join(', ')}]`);
   L.data('A4', `Available but NOT used: [${psAvailableNotUsed.join(', ')}]`);
 
@@ -256,7 +256,7 @@ async function main() {
       SUM(CASE WHEN homeXA IS NULL THEN 1 ELSE 0 END) as null_homeXA,
       SUM(CASE WHEN homeXGSetPlay IS NULL THEN 1 ELSE 0 END) as null_homeXGSetPlay
     FROM wc2026_espn_expected_goals e
-    JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+    JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
     WHERE (m.homeTeamAbbrev IN (${phT}) OR m.awayTeamAbbrev IN (${phT}))
   `, [...jul1Teams, ...jul1Teams]);
 
@@ -286,7 +286,7 @@ async function main() {
       CASE WHEN m.homeTeamAbbrev IN (${phT}) THEN m.homeTeamAbbrev ELSE m.awayTeamAbbrev END as team,
       COUNT(*) as gs_matches
     FROM wc2026_espn_expected_goals e
-    JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+    JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
     WHERE (m.homeTeamAbbrev IN (${phT}) OR m.awayTeamAbbrev IN (${phT}))
       AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
     GROUP BY team
@@ -316,7 +316,7 @@ async function main() {
   L.step('B1', 'Verifying FIFA code ↔ ESPN abbreviation mapping for July 1 teams...');
   const [teamMapping] = await conn.execute(`
     SELECT t.team_id, t.fifa_code, t.name, t.slug,
-           COUNT(DISTINCT m.matchId) as espn_matches
+           COUNT(DISTINCT m.espn_match_id) as espn_matches
     FROM wc2026_teams t
     LEFT JOIN wc2026_espn_matches m ON (m.homeTeamAbbrev = t.fifa_code OR m.awayTeamAbbrev = t.fifa_code)
     WHERE t.fifa_code IN (${phT})
@@ -338,17 +338,17 @@ async function main() {
   // B2: Check player stats aggregation — are all players mapped to correct team?
   L.step('B2', 'Checking player stats team aggregation integrity...');
   const [psTeamCheck] = await conn.execute(`
-    SELECT ps.matchId, ps.teamAbbrev,
+    SELECT ps.espn_match_id, ps.teamAbbrev,
            COUNT(DISTINCT ps.athleteId) as player_count,
            SUM(ps.xG) as total_xG,
            SUM(ps.g) as total_goals,
            m.homeTeamAbbrev, m.awayTeamAbbrev, m.homeScore, m.awayScore
     FROM wc2026_espn_player_stats ps
-    JOIN wc2026_espn_matches m ON m.matchId = ps.matchId
+    JOIN wc2026_espn_matches m ON m.espn_match_id = ps.espn_match_id
     WHERE ps.teamAbbrev IN (${phT})
       AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
-    GROUP BY ps.matchId, ps.teamAbbrev, m.homeTeamAbbrev, m.awayTeamAbbrev, m.homeScore, m.awayScore
-    ORDER BY ps.matchId, ps.teamAbbrev
+    GROUP BY ps.espn_match_id, ps.teamAbbrev, m.homeTeamAbbrev, m.awayTeamAbbrev, m.homeScore, m.awayScore
+    ORDER BY ps.espn_match_id, ps.teamAbbrev
   `, jul1Teams);
 
   L.data('B2', `Player stats aggregation: ${psTeamCheck.length} team-match records`);
@@ -357,10 +357,10 @@ async function main() {
     const isHome = r.teamAbbrev === r.homeTeamAbbrev;
     const actualGoals = isHome ? parseInt(r.homeScore||0) : parseInt(r.awayScore||0);
     const xgRatio = r.total_goals > 0 ? r.total_xG / r.total_goals : null;
-    L.atomic('B2', `  ${r.matchId} ${r.teamAbbrev}: players=${r.player_count} xG=${parseFloat(r.total_xG||0).toFixed(3)} goals=${r.total_goals} actual=${actualGoals} xG/goal=${xgRatio?xgRatio.toFixed(3):'N/A'}`);
+    L.atomic('B2', `  ${r.espn_match_id} ${r.teamAbbrev}: players=${r.player_count} xG=${parseFloat(r.total_xG||0).toFixed(3)} goals=${r.total_goals} actual=${actualGoals} xG/goal=${xgRatio?xgRatio.toFixed(3):'N/A'}`);
     if (r.total_goals !== actualGoals) {
       playerXGvsMatchXGMismatches++;
-      L.warn('B2', `  MISMATCH: ${r.teamAbbrev} match ${r.matchId} player goals=${r.total_goals} vs match score=${actualGoals}`);
+      L.warn('B2', `  MISMATCH: ${r.teamAbbrev} match ${r.espn_match_id} player goals=${r.total_goals} vs match score=${actualGoals}`);
     }
   }
   if (playerXGvsMatchXGMismatches === 0) {
@@ -368,13 +368,13 @@ async function main() {
     addFinding('strengths', 'S2', 'Player stats aggregation is consistent with match score records',
       'HIGH', 'Domain B — Team Mapping',
       `All ${psTeamCheck.length} team-match player aggregations have goal totals matching the official match score. No player-team misassignment detected.`,
-      'Maintain current GROUP BY matchId, teamAbbrev aggregation pattern. Consider adding a runtime assertion: assert(playerGoals === matchGoals) for each team-match combination.'
+      'Maintain current GROUP BY espn_match_id, teamAbbrev aggregation pattern. Consider adding a runtime assertion: assert(playerGoals === matchGoals) for each team-match combination.'
     );
   } else {
     addFinding('critical', 'C4', `${playerXGvsMatchXGMismatches} player goal aggregation mismatches vs match scores`,
       'HIGH', 'Domain B — Team Mapping',
       `${playerXGvsMatchXGMismatches} team-match combinations have player goal totals that don't match the official match score. This indicates either missing player records or team abbrev mismatches in the ESPN player stats table.`,
-      'Add a post-aggregation validation step: for each (matchId, teamAbbrev) pair, assert that SUM(ps.g) equals the official match score. Flag and exclude any team-match with a mismatch from the lambda computation.'
+      'Add a post-aggregation validation step: for each (espn_match_id, teamAbbrev) pair, assert that SUM(ps.g) equals the official match score. Flag and exclude any team-match with a mismatch from the lambda computation.'
     );
   }
 
@@ -384,21 +384,21 @@ async function main() {
   L.state('B3', 'Critical: if homeTeamAbbrev/awayTeamAbbrev are swapped in the xgRow, all lambdas are inverted');
 
   const [roleCheck] = await conn.execute(`
-    SELECT e.matchId, e.homeTeamAbbrev, e.awayTeamAbbrev,
+    SELECT e.espn_match_id, e.homeTeamAbbrev, e.awayTeamAbbrev,
            m.homeTeamAbbrev as matchHome, m.awayTeamAbbrev as matchAway,
            e.homeXG, e.awayXG, m.homeScore, m.awayScore
     FROM wc2026_espn_expected_goals e
-    JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+    JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
     WHERE (m.homeTeamAbbrev IN (${phT}) OR m.awayTeamAbbrev IN (${phT}))
       AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
-    ORDER BY e.matchId
+    ORDER BY e.espn_match_id
   `, [...jul1Teams, ...jul1Teams]);
 
   let roleSwaps = 0;
   for (const r of roleCheck) {
     if (r.homeTeamAbbrev !== r.matchHome || r.awayTeamAbbrev !== r.matchAway) {
       roleSwaps++;
-      L.warn('B3', `  ROLE MISMATCH: xgRow home=${r.homeTeamAbbrev} but match home=${r.matchHome} | matchId=${r.matchId}`);
+      L.warn('B3', `  ROLE MISMATCH: xgRow home=${r.homeTeamAbbrev} but match home=${r.matchHome} | espn_match_id=${r.espn_match_id}`);
     }
   }
   if (roleSwaps === 0) {
@@ -650,15 +650,15 @@ async function main() {
   // F2: Validate ET model against NED vs MAR and GER vs PAR (actual ET/Pens matches)
   L.step('F2', 'Validating ET model against actual ET/Pens matches (NED vs MAR, GER vs PAR)...');
   const [etMatches] = await conn.execute(`
-    SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore, statusDetail
+    SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore, statusDetail
     FROM wc2026_espn_matches
     WHERE statusDetail = 'FT-Pens' AND round = 'Round of 32'
-    ORDER BY matchId
+    ORDER BY espn_match_id
   `);
 
   L.data('F2', `ET/Pens matches found: ${etMatches.length}`);
   for (const m of etMatches) {
-    L.data('F2', `  ${m.matchId}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} | ${m.statusDetail}`);
+    L.data('F2', `  ${m.espn_match_id}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} | ${m.statusDetail}`);
   }
 
   if (etMatches.length < 2) {

@@ -305,9 +305,9 @@ function buildGSRows(teamCode, xgAll, tsAll, msAll) {
     const side = r.homeTeamAbbrev === teamCode ? 'home' : 'away';
 
     // N1: HARD_FAIL if team stats row missing (no ?? 50 fallback)
-    const tsRow = tsAll.find(t => t.matchId === r.matchId);
+    const tsRow = tsAll.find(t => t.espn_match_id === r.espn_match_id);
     if (!tsRow) {
-      hardFail('N1_POSS', `${teamCode} match ${r.matchId}: NO team stats row — possession data required, no fallback allowed`);
+      hardFail('N1_POSS', `${teamCode} match ${r.espn_match_id}: NO team stats row — possession data required, no fallback allowed`);
     }
 
     // F3/F4: REAL FIX — possession stored as "68.6%" string, must strip %
@@ -317,19 +317,19 @@ function buildGSRows(teamCode, xgAll, tsAll, msAll) {
     const possAway = parseFloat(String(possRawAway ?? '').replace('%', ''));
 
     if (isNaN(possHome)) {
-      hardFail('N1_POSS_NAN', `${teamCode} match ${r.matchId}: possession home='${possRawHome}' → NaN after strip — real data required`);
+      hardFail('N1_POSS_NAN', `${teamCode} match ${r.espn_match_id}: possession home='${possRawHome}' → NaN after strip — real data required`);
     }
     if (isNaN(possAway)) {
-      hardFail('N1_POSS_NAN', `${teamCode} match ${r.matchId}: possession away='${possRawAway}' → NaN after strip — real data required`);
+      hardFail('N1_POSS_NAN', `${teamCode} match ${r.espn_match_id}: possession away='${possRawAway}' → NaN after strip — real data required`);
     }
 
     const poss = side === 'home' ? possHome : possAway;
-    log('REAL_DATA', 'POSS_PARSE', `  ${teamCode} ${r.matchId} [${side}]: raw='${side==='home'?possRawHome:possRawAway}' → parsed=${poss.toFixed(1)}%`);
+    log('REAL_DATA', 'POSS_PARSE', `  ${teamCode} ${r.espn_match_id} [${side}]: raw='${side==='home'?possRawHome:possRawAway}' → parsed=${poss.toFixed(1)}%`);
 
     // N2: HARD_FAIL if match stats row missing (no ?? 0 fallback)
-    const msRow = msAll.find(m => m.matchId === r.matchId);
+    const msRow = msAll.find(m => m.espn_match_id === r.espn_match_id);
     if (!msRow) {
-      hardFail('N2_SHOTS', `${teamCode} match ${r.matchId}: NO match stats row — shot data required, no fallback allowed`);
+      hardFail('N2_SHOTS', `${teamCode} match ${r.espn_match_id}: NO match stats row — shot data required, no fallback allowed`);
     }
 
     // F1/F2: REAL FIX — correct column names from definitive audit
@@ -338,16 +338,16 @@ function buildGSRows(teamCode, xgAll, tsAll, msAll) {
     const shots = side === 'home' ? msRow.homeShots   : msRow.awayShots;
 
     if (sot === null || sot === undefined) {
-      hardFail('N2_SOT_NULL', `${teamCode} match ${r.matchId}: ${side==='home'?'shotsOnGoal':'shotsOnGoalAway'} is NULL — real data required`);
+      hardFail('N2_SOT_NULL', `${teamCode} match ${r.espn_match_id}: ${side==='home'?'shotsOnGoal':'shotsOnGoalAway'} is NULL — real data required`);
     }
     if (shots === null || shots === undefined) {
-      hardFail('N2_SHOTS_NULL', `${teamCode} match ${r.matchId}: ${side==='home'?'shotAttempts':'shotAttemptsAway'} is NULL — real data required`);
+      hardFail('N2_SHOTS_NULL', `${teamCode} match ${r.espn_match_id}: ${side==='home'?'shotAttempts':'shotAttemptsAway'} is NULL — real data required`);
     }
 
-    log('REAL_DATA', 'SHOTS_PARSE', `  ${teamCode} ${r.matchId} [${side}]: SOT=${sot} shots=${shots}`);
+    log('REAL_DATA', 'SHOTS_PARSE', `  ${teamCode} ${r.espn_match_id} [${side}]: SOT=${sot} shots=${shots}`);
 
     return {
-      matchId: r.matchId,
+      espn_match_id: r.espn_match_id,
       side,
       homeXG: r.homeXG, awayXG: r.awayXG,
       homeXGOT: r.homeXGOT, awayXGOT: r.awayXGOT,
@@ -393,13 +393,13 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, v) {
 
     // C1: HARD_FAIL on NULL in primary lambda fields
     if (xg === null || xg === undefined) {
-      hardFail('C1_NULL_XG', `${teamCode} match ${row.matchId}: xG is NULL`);
+      hardFail('C1_NULL_XG', `${teamCode} match ${row.espn_match_id}: xG is NULL`);
     }
     if (xgot === null || xgot === undefined) {
-      hardFail('C1_NULL_XGOT', `${teamCode} match ${row.matchId}: xGOT is NULL`);
+      hardFail('C1_NULL_XGOT', `${teamCode} match ${row.espn_match_id}: xGOT is NULL`);
     }
 
-    log('REAL_DATA', 'FORM_ROW', `  ${teamCode} ${row.matchId} [${row.side}] xG=${fmt(xg)} xGOT=${fmt(xgot)} xA=${fmt(xa)} SOT=${sot} shots=${shots} poss=${fmt(poss,1)} goals=${goals}`);
+    log('REAL_DATA', 'FORM_ROW', `  ${teamCode} ${row.espn_match_id} [${row.side}] xG=${fmt(xg)} xGOT=${fmt(xgot)} xA=${fmt(xa)} SOT=${sot} shots=${shots} poss=${fmt(poss,1)} goals=${goals}`);
 
     totalXG   += Number(xg);
     totalXGOT += Number(xgot);
@@ -433,15 +433,15 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, v) {
     hardFail('N3_PS_ZERO', `${teamCode}: ZERO player stats rows — psSignal requires real player xG data, no fallback to avgXG`);
   }
   const totalPlayerXG = teamPlayerRows.reduce((s, r) => s + Number(r.xG ?? 0), 0);
-  const playerMatchIds = [...new Set(teamPlayerRows.map(r => r.matchId))];
+  const playerMatchIds = [...new Set(teamPlayerRows.map(r => r.espn_match_id))];
   const psSignal = totalPlayerXG / playerMatchIds.length;
   log('REAL_DATA', 'PS_SIG', `${teamCode}: psSignal=${fmt(psSignal)} from ${teamPlayerRows.length} player rows across ${playerMatchIds.length} matches`);
 
   // C4: Player goal assertion
   for (const mId of playerMatchIds) {
-    const matchPlayerRows = teamPlayerRows.filter(r => r.matchId === mId);
+    const matchPlayerRows = teamPlayerRows.filter(r => r.espn_match_id === mId);
     const playerGoalSum = matchPlayerRows.reduce((s, r) => s + Number(r.g ?? 0), 0);
-    const gsRow = gsRows.find(r => r.matchId === mId);
+    const gsRow = gsRows.find(r => r.espn_match_id === mId);
     if (gsRow) {
       const officialGoals = gsRow.side === 'home' ? gsRow.homeScore : gsRow.awayScore;
       const diff = Math.abs(playerGoalSum - officialGoals);
@@ -459,7 +459,7 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, v) {
     hardFail('N4_SM_ZERO', `${teamCode}: ZERO shot map rows — smSignal requires real shot-level xG data, no fallback to avgXG`);
   }
   const totalShotXG = teamShotRows.reduce((s, r) => s + Number(r.xG ?? 0), 0);
-  const shotMatchIds = [...new Set(teamShotRows.map(r => r.matchId))];
+  const shotMatchIds = [...new Set(teamShotRows.map(r => r.espn_match_id))];
   const smSignal = totalShotXG / shotMatchIds.length;
   log('REAL_DATA', 'SM_SIG', `${teamCode}: smSignal=${fmt(smSignal)} from ${teamShotRows.length} shot rows across ${shotMatchIds.length} matches`);
 
@@ -536,17 +536,17 @@ function backtestVariation(v, completedMatches, db_xg, db_ms, db_ts, db_ps, db_s
     // Exclude the current match from training data (leave-one-out)
     let homeGS, awayGS;
     try {
-      homeGS = buildGSRows(homeCode, db_xg.filter(r => r.matchId !== m.matchId), db_ts, db_ms);
-      awayGS = buildGSRows(awayCode, db_xg.filter(r => r.matchId !== m.matchId), db_ts, db_ms);
+      homeGS = buildGSRows(homeCode, db_xg.filter(r => r.espn_match_id !== m.espn_match_id), db_ts, db_ms);
+      awayGS = buildGSRows(awayCode, db_xg.filter(r => r.espn_match_id !== m.espn_match_id), db_ts, db_ms);
     } catch (e) {
       // N6: Log every skip with full context — no silent swallowing
-      log('WARN', 'BT_SKIP', `[${v.id}] Skipping match ${m.matchId} (${homeCode} vs ${awayCode}): ${e.message}`);
+      log('WARN', 'BT_SKIP', `[${v.id}] Skipping match ${m.espn_match_id} (${homeCode} vs ${awayCode}): ${e.message}`);
       skipped++;
       continue;
     }
 
     if (homeGS.length === 0 || awayGS.length === 0) {
-      log('WARN', 'BT_SKIP', `[${v.id}] Skipping match ${m.matchId}: homeGS=${homeGS.length} awayGS=${awayGS.length} — insufficient GS data`);
+      log('WARN', 'BT_SKIP', `[${v.id}] Skipping match ${m.espn_match_id}: homeGS=${homeGS.length} awayGS=${awayGS.length} — insufficient GS data`);
       skipped++;
       continue;
     }
@@ -636,12 +636,12 @@ async function main() {
   // A1: Expected goals + scores (JOIN with matches for homeScore/awayScore)
   log('STEP', 'A1_XG', `Querying wc2026_espn_expected_goals JOIN wc2026_espn_matches...`);
   const [xgAll] = await db.execute(`
-    SELECT eg.matchId, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
+    SELECT eg.espn_match_id, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
            eg.homeXG, eg.awayXG, eg.homeXGOT, eg.awayXGOT, eg.homeXA, eg.awayXA,
            em.homeScore, em.awayScore
     FROM wc2026_espn_expected_goals eg
-    LEFT JOIN wc2026_espn_matches em ON eg.matchId = em.matchId
-    ORDER BY eg.matchRound, eg.matchId
+    LEFT JOIN wc2026_espn_matches em ON eg.espn_match_id = em.espn_match_id
+    ORDER BY eg.matchRound, eg.espn_match_id
   `);
   const gsXgCount = xgAll.filter(r => r.matchRound === 'group-stage').length;
   const koXgCount = xgAll.filter(r => r.matchRound === 'round-of-32').length;
@@ -651,13 +651,13 @@ async function main() {
   // A2: Team stats (possession — stored as "68.6%" string)
   log('STEP', 'A2_TS', `Querying wc2026_espn_team_stats (possession as string)...`);
   const [tsAll] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
-    FROM wc2026_espn_team_stats ORDER BY matchRound, matchId
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
+    FROM wc2026_espn_team_stats ORDER BY matchRound, espn_match_id
   `);
   log('INPUT', 'A2_TS', `Team stats rows: ${tsAll.length}`);
   if (tsAll.length > 0) {
     const sample = tsAll[0];
-    log('REAL_DATA', 'A2_TS', `Sample row: matchId=${sample.matchId} possession='${sample.possession}' possessionAway='${sample.possessionAway}'`);
+    log('REAL_DATA', 'A2_TS', `Sample row: espn_match_id=${sample.espn_match_id} possession='${sample.possession}' possessionAway='${sample.possessionAway}'`);
     // Validate possession format
     const possTest = parseFloat(String(sample.possession).replace('%',''));
     if (isNaN(possTest)) {
@@ -670,23 +670,23 @@ async function main() {
   // A3: Match stats — REAL column names: homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots
   log('STEP', 'A3_MS', `Querying wc2026_espn_match_stats (REAL columns: shotsOnGoal, shotAttempts)...`);
   const [msAll] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots
-    FROM wc2026_espn_match_stats ORDER BY matchRound, matchId
+    FROM wc2026_espn_match_stats ORDER BY matchRound, espn_match_id
   `);
   log('INPUT', 'A3_MS', `Match stats rows: ${msAll.length}`);
   if (msAll.length > 0) {
     const sample = msAll[0];
-    log('REAL_DATA', 'A3_MS', `Sample row: matchId=${sample.matchId} shotsOnGoal=${sample.shotsOnGoal} shotsOnGoalAway=${sample.shotsOnGoalAway} shotAttempts=${sample.shotAttempts} shotAttemptsAway=${sample.shotAttemptsAway}`);
+    log('REAL_DATA', 'A3_MS', `Sample row: espn_match_id=${sample.espn_match_id} shotsOnGoal=${sample.shotsOnGoal} shotsOnGoalAway=${sample.shotsOnGoalAway} shotAttempts=${sample.shotAttempts} shotAttemptsAway=${sample.shotAttemptsAway}`);
   }
   log('PASS', 'A3_MS', `Match stats loaded with correct column names ✓`);
 
   // A4: Player stats — REAL columns: xG, g (used for psSignal and goal assertion)
   log('STEP', 'A4_PS', `Querying wc2026_espn_player_stats (GS only, columns: xG, g)...`);
   const [psAll] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, name, xG, g
+    SELECT espn_match_id, matchRound, teamAbbrev, name, xG, g
     FROM wc2026_espn_player_stats WHERE matchRound = 'group-stage'
-    ORDER BY matchId, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev
   `);
   log('INPUT', 'A4_PS', `Player stats rows (GS): ${psAll.length}`);
   const psTeams = [...new Set(psAll.map(r => r.teamAbbrev))];
@@ -696,9 +696,9 @@ async function main() {
   // A5: Shot map — REAL columns: xG, xGOT (only these two used for smSignal)
   log('STEP', 'A5_SM', `Querying wc2026_espn_shot_map (GS only, columns: xG, xGOT)...`);
   const [smAll] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, xG, xGOT
+    SELECT espn_match_id, matchRound, teamAbbrev, xG, xGOT
     FROM wc2026_espn_shot_map WHERE matchRound = 'group-stage'
-    ORDER BY matchId, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev
   `);
   log('INPUT', 'A5_SM', `Shot map rows (GS): ${smAll.length}`);
   const smTeams = [...new Set(smAll.map(r => r.teamAbbrev))];
@@ -732,18 +732,18 @@ async function main() {
   banner('PHASE B — BACKTEST ALL 10 VARIATIONS AGAINST COMPLETED KO MATCHES', C.BG_BLUE + C.BOLD + C.WHITE);
 
   const [completedMatches] = await db.execute(`
-    SELECT em.matchId, em.matchRound, em.homeTeamAbbrev, em.awayTeamAbbrev,
+    SELECT em.espn_match_id, em.matchRound, em.homeTeamAbbrev, em.awayTeamAbbrev,
            em.homeScore, em.awayScore
     FROM wc2026_espn_matches em
     WHERE em.matchRound = 'round-of-32'
       AND em.homeScore IS NOT NULL
       AND em.awayScore IS NOT NULL
       AND em.statusState = 'post'
-    ORDER BY em.matchId
+    ORDER BY em.espn_match_id
   `);
   log('INPUT', 'B1_KO', `Completed KO matches for backtest: ${completedMatches.length}`);
   completedMatches.forEach((m, i) => {
-    log('REAL_DATA', 'B1_KO', `  [${i+1}] ${m.matchId}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
+    log('REAL_DATA', 'B1_KO', `  [${i+1}] ${m.espn_match_id}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
   });
 
   if (completedMatches.length === 0) {
@@ -1016,7 +1016,7 @@ async function main() {
     log('PASS', 'XREF', `${fix.match_id}: ALL XREF CHECKS PASSED ✓`);
 
     projections.push({
-      matchId: fix.match_id,
+      espn_match_id: fix.match_id,
       homeCode, awayCode,
       lambdaH: hForm.lambda, lambdaA: aForm.lambda,
       projScoreH: hForm.lambda, projScoreA: aForm.lambda,
@@ -1060,7 +1060,7 @@ async function main() {
     },
     variations: results,
     projections: projections.map(p => ({
-      matchId: p.matchId,
+      espn_match_id: p.espn_match_id,
       homeCode: p.homeCode, awayCode: p.awayCode,
       lambdaH: p.lambdaH, lambdaA: p.lambdaA,
       projScoreH: p.projScoreH, projScoreA: p.projScoreA,

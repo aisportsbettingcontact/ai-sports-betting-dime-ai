@@ -112,10 +112,10 @@ async function main() {
   console.log('[INPUT] Validating June 21 WC2026 feed — 4 matches × all cells');
   console.log('='.repeat(80));
 
-  for (const matchId of MATCHES) {
-    const teams = MATCH_TEAMS[matchId];
-    const expected = EXPECTED_DK[matchId];
-    console.log(`\n[MATCH] ${matchId} | home=${teams.homeName}(${teams.home}) away=${teams.awayName}(${teams.away})`);
+  for (const espn_match_id of MATCHES) {
+    const teams = MATCH_TEAMS[espn_match_id];
+    const expected = EXPECTED_DK[espn_match_id];
+    console.log(`\n[MATCH] ${espn_match_id} | home=${teams.homeName}(${teams.home}) away=${teams.awayName}(${teams.away})`);
 
     // ── Fetch latest DK rows ──────────────────────────────────────────────────
     const [dkRows] = await conn.execute(
@@ -123,7 +123,7 @@ async function main() {
        FROM wc2026_odds_snapshots 
        WHERE match_id=? AND book_id=68 
        ORDER BY snapshot_ts DESC`,
-      [matchId]
+      [espn_match_id]
     );
 
     // Build DK odds map (first-seen per market+selection)
@@ -150,7 +150,7 @@ async function main() {
        FROM wc2026_odds_snapshots 
        WHERE match_id=? AND book_id=0 
        ORDER BY snapshot_ts DESC`,
-      [matchId]
+      [espn_match_id]
     );
 
     const model = {};
@@ -177,7 +177,7 @@ async function main() {
       const status = ok ? '✅' : '❌';
       console.log(`  ${status} [${label}] actual=${actual ?? 'NULL'} expected=${expectedVal}`);
       if (ok) passed++;
-      else { failed++; failures.push(`${matchId} ${label}: actual=${actual} expected=${expectedVal}`); }
+      else { failed++; failures.push(`${espn_match_id} ${label}: actual=${actual} expected=${expectedVal}`); }
     }
 
     function checkExists(label, actual) {
@@ -186,7 +186,7 @@ async function main() {
       const status = ok ? '✅' : '❌';
       console.log(`  ${status} [${label}] actual=${actual ?? 'NULL'} (exists check)`);
       if (ok) passed++;
-      else { failed++; failures.push(`${matchId} ${label}: NULL/missing`); }
+      else { failed++; failures.push(`${espn_match_id} ${label}: NULL/missing`); }
     }
 
     // ── 1. Book DK 1X2 orientation ────────────────────────────────────────────
@@ -240,8 +240,8 @@ async function main() {
       const aOk = awayDrawDelta < 2;
       console.log(`  ${hOk ? '✅' : '❌'} [Model homeDraw consistency] expected≈${(expectedHomeDrawProb*100).toFixed(2)}% actual=${(actualHomeDrawProb*100).toFixed(2)}% delta=${homeDrawDelta.toFixed(2)}pp`);
       console.log(`  ${aOk ? '✅' : '❌'} [Model awayDraw consistency] expected≈${(expectedAwayDrawProb*100).toFixed(2)}% actual=${(actualAwayDrawProb*100).toFixed(2)}% delta=${awayDrawDelta.toFixed(2)}pp`);
-      if (hOk) passed++; else { failed++; failures.push(`${matchId} Model homeDraw consistency: delta=${homeDrawDelta.toFixed(2)}pp`); }
-      if (aOk) passed++; else { failed++; failures.push(`${matchId} Model awayDraw consistency: delta=${awayDrawDelta.toFixed(2)}pp`); }
+      if (hOk) passed++; else { failed++; failures.push(`${espn_match_id} Model homeDraw consistency: delta=${homeDrawDelta.toFixed(2)}pp`); }
+      if (aOk) passed++; else { failed++; failures.push(`${espn_match_id} Model awayDraw consistency: delta=${awayDrawDelta.toFixed(2)}pp`); }
     }
 
     // ── 8. Edge detection ─────────────────────────────────────────────────────

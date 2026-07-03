@@ -22,7 +22,7 @@ const NOW = new Date().toISOString().replace("T", " ").slice(0, 19);
 
 const MATCHS = [
   {
-    matchId: "wc26-g-045",
+    espn_match_id: "wc26-g-045",
     homeSpread: 2.5, awaySpread: -2.5,
     dkBttsYes: 155, dkBttsNo: -195,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -30,7 +30,7 @@ const MATCHS = [
     modelHomeSpreadOdds: -108, modelAwaySpreadOdds: -112,
   },
   {
-    matchId: "wc26-g-046",
+    espn_match_id: "wc26-g-046",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -115, dkBttsNo: -115,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -38,7 +38,7 @@ const MATCHS = [
     modelHomeSpreadOdds: -105, modelAwaySpreadOdds: -115,
   },
   {
-    matchId: "wc26-g-047",
+    espn_match_id: "wc26-g-047",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -120, dkBttsNo: -110,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -46,7 +46,7 @@ const MATCHS = [
     modelHomeSpreadOdds: -112, modelAwaySpreadOdds: -108,
   },
   {
-    matchId: "wc26-g-048",
+    espn_match_id: "wc26-g-048",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -110, dkBttsNo: -120,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -63,7 +63,7 @@ async function main() {
   let errors = 0;
 
   for (const f of MATCHS) {
-    console.log(`\n[STEP] Processing match ${f.matchId}`);
+    console.log(`\n[STEP] Processing match ${f.espn_match_id}`);
 
     const rows = [
       { bookId: BOOK_DK,    market: "BTTS",           selection: "yes",  line: null,        americanOdds: f.dkBttsYes },
@@ -86,7 +86,7 @@ async function main() {
              american_odds = VALUES(american_odds),
              line = VALUES(line),
              snapshot_ts = VALUES(snapshot_ts)`,
-          [f.matchId, r.bookId, r.market, r.selection, r.line, r.americanOdds, NOW]
+          [f.espn_match_id, r.bookId, r.market, r.selection, r.line, r.americanOdds, NOW]
         );
         console.log(`  [STATE] OK book=${r.bookId} ${r.market}/${r.selection} odds=${r.americanOdds} line=${r.line}`);
         inserted++;

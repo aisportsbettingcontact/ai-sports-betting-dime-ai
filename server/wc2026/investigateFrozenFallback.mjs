@@ -126,8 +126,8 @@ async function main() {
   console.log('\n══════════════════════════════════════════════════════════');
   console.log('SECTION 5: ROUTER FALLBACK LOGIC ANALYSIS');
   console.log('══════════════════════════════════════════════════════════');
-  console.log('  Router line 245: dkOdds = frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.matchId] ?? null)');
-  console.log('  frozenBook = frozenBookMap[f.matchId] ?? null');
+  console.log('  Router line 245: dkOdds = frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.espn_match_id] ?? null)');
+  console.log('  frozenBook = frozenBookMap[f.espn_match_id] ?? null');
   console.log('');
   console.log('  LOGIC: If a match_id exists in wc2026_frozen_book_odds → use frozen odds');
   console.log('         If NOT in wc2026_frozen_book_odds → fall back to wc2026_odds_snapshots (DK book_id=68)');

@@ -31,7 +31,7 @@ const TAG = '[SEED_MODEL_J22]';
 // Iraq/France total line = 3.5 (per user specification)
 const MODEL_ODDS = [
   {
-    matchId: 'wc26-g-043',
+    espn_match_id: 'wc26-g-043',
     label: 'Austria (H) vs Argentina (A)',
     markets: [
       // 1X2
@@ -47,7 +47,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    matchId: 'wc26-g-041',
+    espn_match_id: 'wc26-g-041',
     label: 'Iraq (H) vs France (A)',
     markets: [
       // 1X2
@@ -63,7 +63,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    matchId: 'wc26-g-042',
+    espn_match_id: 'wc26-g-042',
     label: 'Norway (H) vs Senegal (A)',
     markets: [
       // 1X2
@@ -79,7 +79,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    matchId: 'wc26-g-044',
+    espn_match_id: 'wc26-g-044',
     label: 'Algeria (H) vs Jordan (A)',
     markets: [
       // 1X2
@@ -106,7 +106,7 @@ async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
   // Step 1: Verify all 4 match IDs exist in DB
-  const matchIds = MODEL_ODDS.map(f => f.matchId);
+  const matchIds = MODEL_ODDS.map(f => f.espn_match_id);
   const [matchCheck] = await conn.execute(
     `SELECT match_id, status FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
     matchIds
@@ -133,14 +133,14 @@ async function main() {
   const now = new Date();
 
   for (const match of MODEL_ODDS) {
-    console.log(`\n${TAG} [STEP] Inserting ${match.markets.length} rows for ${match.matchId} (${match.label})`);
+    console.log(`\n${TAG} [STEP] Inserting ${match.markets.length} rows for ${match.espn_match_id} (${match.label})`);
     for (const mkt of match.markets) {
       try {
         await conn.execute(
           `INSERT INTO wc2026_odds_snapshots
             (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
            VALUES (?, 0, ?, ?, ?, ?, ?, ?, 1)`,
-          [match.matchId, mkt.market, mkt.selection, mkt.line, mkt.americanOdds, mkt.impliedProb, now]
+          [match.espn_match_id, mkt.market, mkt.selection, mkt.line, mkt.americanOdds, mkt.impliedProb, now]
         );
         inserted++;
         const lineStr = mkt.line !== null ? ` line=${mkt.line}` : '';
@@ -148,7 +148,7 @@ async function main() {
         console.log(`${TAG}   [STATE] ✅ ${mkt.market}:${mkt.selection}${lineStr} → ${oddsStr} (${(mkt.impliedProb*100).toFixed(1)}%)`);
       } catch (err) {
         errors++;
-        console.error(`${TAG}   [ERROR] ❌ ${match.matchId}:${mkt.market}:${mkt.selection} → ${err.message}`);
+        console.error(`${TAG}   [ERROR] ❌ ${match.espn_match_id}:${mkt.market}:${mkt.selection} → ${err.message}`);
       }
     }
   }
@@ -170,8 +170,8 @@ async function main() {
   // Step 5: Print final summary per match
   console.log(`\n${TAG} ── Final DB state ──────────────────────────────────────────`);
   for (const match of MODEL_ODDS) {
-    const rows = verifyRows.filter(r => r.match_id === match.matchId);
-    console.log(`${TAG} ${match.matchId} (${match.label}) — ${rows.length} rows:`);
+    const rows = verifyRows.filter(r => r.match_id === match.espn_match_id);
+    console.log(`${TAG} ${match.espn_match_id} (${match.label}) — ${rows.length} rows:`);
     for (const row of rows) {
       const odds = row.american_odds > 0 ? `+${row.american_odds}` : `${row.american_odds}`;
       const lineStr = row.line !== null ? ` [line=${row.line}]` : '';
