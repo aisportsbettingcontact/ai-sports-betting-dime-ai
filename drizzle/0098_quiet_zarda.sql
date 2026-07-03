@@ -23,7 +23,7 @@ CREATE TABLE `waitlist` (
 --> statement-breakpoint
 CREATE TABLE `wc2026_match_events` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`team_id` varchar(8),
 	`event_type` enum('GOAL','OWN_GOAL','PENALTY','YELLOW','RED','SUB','VAR') NOT NULL,
 	`player_name` varchar(96),
@@ -35,7 +35,7 @@ CREATE TABLE `wc2026_match_events` (
 );
 --> statement-breakpoint
 CREATE TABLE `wc2026_match_stats` (
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`ingested_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`home_possession_pct` double,
 	`away_possession_pct` double,
@@ -69,17 +69,17 @@ CREATE TABLE `wc2026_match_stats` (
 	`away_xg` double,
 	`home_blocked_shots` tinyint,
 	`away_blocked_shots` tinyint,
-	CONSTRAINT `wc2026_match_stats_fixture_id` PRIMARY KEY(`fixture_id`)
+	CONSTRAINT `wc2026_match_stats_match_id` PRIMARY KEY(`match_id`)
 );
 --> statement-breakpoint
-ALTER TABLE `wc2026_fixtures` ADD `espn_event_id` varchar(16);--> statement-breakpoint
-ALTER TABLE `wc2026_fixtures` ADD `attendance` int;--> statement-breakpoint
-ALTER TABLE `wc2026_match_events` ADD CONSTRAINT `wc2026_match_events_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_matches` ADD `espn_event_id` varchar(16);--> statement-breakpoint
+ALTER TABLE `wc2026_matches` ADD `attendance` int;--> statement-breakpoint
+ALTER TABLE `wc2026_match_events` ADD CONSTRAINT `wc2026_match_events_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `wc2026_match_events` ADD CONSTRAINT `wc2026_match_events_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_match_stats` ADD CONSTRAINT `wc2026_match_stats_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_match_stats` ADD CONSTRAINT `wc2026_match_stats_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX `idx_waitlist_email` ON `waitlist` (`email`);--> statement-breakpoint
 CREATE INDEX `idx_waitlist_status` ON `waitlist` (`status`);--> statement-breakpoint
 CREATE INDEX `idx_waitlist_created_at` ON `waitlist` (`createdAt`);--> statement-breakpoint
-CREATE INDEX `idx_me_fixture` ON `wc2026_match_events` (`fixture_id`);--> statement-breakpoint
+CREATE INDEX `idx_me_match` ON `wc2026_match_events` (`match_id`);--> statement-breakpoint
 CREATE INDEX `idx_me_type` ON `wc2026_match_events` (`event_type`);--> statement-breakpoint
-CREATE INDEX `idx_ms_fixture` ON `wc2026_match_stats` (`fixture_id`);
+CREATE INDEX `idx_ms_match` ON `wc2026_match_stats` (`match_id`);

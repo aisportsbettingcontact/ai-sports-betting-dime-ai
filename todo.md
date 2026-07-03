@@ -4070,8 +4070,8 @@
 
 - [x] Rename WC pill in ModelProjections.tsx from "WC" to "WORLD CUP" with FIFA WC26 logo
 - [x] Rebuild WorldCup2026.tsx with 5 sub-tabs: PROJECTIONS, SPLITS, LINEUPS, STANDINGS, FUTURES
-- [x] PROJECTIONS tab: date selector (Jun 11–17), fixture cards with 3-way market layout (HOME ML, DRAW, AWAY ML, OVER, UNDER)
-- [x] Update wc2026Router.ts fixturesByDate: include DK NJ 1X2 + TOTAL odds in response (same pattern as todayWithOdds)
+- [x] PROJECTIONS tab: date selector (Jun 11–17), match cards with 3-way market layout (HOME ML, DRAW, AWAY ML, OVER, UNDER)
+- [x] Update wc2026Router.ts matchesByDate: include DK NJ 1X2 + TOTAL odds in response (same pattern as todayWithOdds)
 - [x] Update wc2026Router.ts todayWithOdds: extend odds map to include TOTAL market (overLine, overOdds, underOdds)
 - [x] SPLITS/LINEUPS/STANDINGS/FUTURES tabs: "Coming soon" stubs
 - [x] TypeScript: 0 errors
@@ -4117,10 +4117,10 @@
 
 ## Session: 2026-06-15 — June 15 Full Pipeline
 
-- [x] Audit June 15 DB state: 10 MLB games, 4 WC fixtures
+- [x] Audit June 15 DB state: 10 MLB games, 4 WC matches
 - [x] MLB model auto-ran: 10/10 games modeled + published (publishedToFeed=1, publishedModel=1)
-- [x] WC June 15: Detected all 4 fixtures had home/away SWAPPED (CPV↔ESP, EGY↔BEL, URU↔KSA, NZL↔IRN)
-- [x] Fixed WC fixture orientation: wc26-g-015/013/016/014 — home/away corrected to FIFA official
+- [x] WC June 15: Detected all 4 matches had home/away SWAPPED (CPV↔ESP, EGY↔BEL, URU↔KSA, NZL↔IRN)
+- [x] Fixed WC match orientation: wc26-g-015/013/016/014 — home/away corrected to FIFA official
 - [x] Fixed WC DK odds (book_id=68): deleted stale swapped odds, re-inserted correct team_id-anchored values
 - [x] Fixed WC model odds (book_id=0): deleted stale swapped odds, re-seeded with correct orientation
 - [x] Final validation: 10/10 MLB PASS + 4/4 WC PASS — zero issues
@@ -4167,7 +4167,7 @@
 ## WC2026 Live Score Pipeline + UI Fixes (Jun 24 2026)
 
 - [x] WC2026 ESPN ingester: add `status.type.name` to EspnEvent interface for in-progress detection
-- [x] WC2026 ESPN ingester: fix unconditional FT status bug — now computes `fixtureStatus` dynamically (FT / LIVE / skip)
+- [x] WC2026 ESPN ingester: fix unconditional FT status bug — now computes `matchStatus` dynamically (FT / LIVE / skip)
 - [x] WC2026 ESPN ingester: add `onlyFinalMatches` param (default true) — when false, processes both LIVE and FT events
 - [x] WC2026 ESPN ingester: add LIVE score-only upsert branch (no summary fetch, no stats/events/lineups for in-progress)
 - [x] WC2026 heartbeat: add `handleWc2026LiveScores` handler at POST /api/scheduled/wc2026-live-scores
@@ -4179,11 +4179,11 @@
 ## WC2026 6-Market Feed Redesign (June 24, 2026)
 
 - [x] Extend DkOdds type: noDraw, homeSpreadLine, homeSpreadOdds, awaySpreadLine, awaySpreadOdds, bttsYes, bttsNo
-- [x] Add WcProjection type to WcFixtureWithOdds
+- [x] Add WcProjection type to WcMatchWithOdds
 - [x] Add wc2026ModelProjections Drizzle schema table definition
-- [x] Extend wc2026Router fixturesByDate + todayWithOdds to return projection field
-- [x] Seed June 24 DK odds: 72 rows (6 fixtures × 6 markets × 2 sides) + 72 model rows + 6 projections
-- [x] WcScorePanel: projected scores (amber) for SCHEDULED fixtures
+- [x] Extend wc2026Router matchesByDate + todayWithOdds to return projection field
+- [x] Seed June 24 DK odds: 72 rows (6 matches × 6 markets × 2 sides) + 72 model rows + 6 projections
+- [x] WcScorePanel: projected scores (amber) for SCHEDULED matches
 - [x] WcMobileOddsPanel: expand from 3 to 6 columns (ML, DRAW, TOTAL, SPREAD, DBL CHC, BTTS)
 - [x] WcDesktopMergedPanel: expand from 3 to 6 columns matching mobile layout
 - [x] Sticky column header: update labels from 3 to 6 markets
@@ -4289,14 +4289,14 @@
 - [x] Compute exact midpoint between LIVE clamp(13.3px,1.05vw,17.1px) and FINAL clamp(7.6px,0.64vw,9.5px)
 - [x] Apply unified STATUS_FONT_SIZE = clamp(10.5px,0.85vw,13.3px) to both FINAL and LIVE badges
 - [x] Reposition FINAL/LIVE badge: moved from top status row to AFTER teams block (before venue footer)
-- [x] Scheduled time row retained at top for SCHEDULED fixtures only
+- [x] Scheduled time row retained at top for SCHEDULED matches only
 - [x] Add advancing team display (flag emoji + FIFA code) to right of FINAL badge
-- [x] Add advancingTeamId field to WcFixtureWithOdds TypeScript type
-- [x] Add advancing_team_id column to wc2026_fixtures schema (wc2026.schema.ts)
+- [x] Add advancingTeamId field to WcMatchWithOdds TypeScript type
+- [x] Add advancing_team_id column to wc2026_matches schema (wc2026.schema.ts)
 - [x] Apply ALTER TABLE to DB directly (migration conflict workaround)
 - [x] Build seedAdvancingTeams.ts with 7-phase industry-leading logging pipeline
 - [x] Run seedAdvancingTeams.ts: 3/3 R32 advancing teams seeded (CAN, BRA, PAR) — 0 failures
-- [x] Update wc2026Router.ts fixturesByDate to include advancingTeamId in return shape
+- [x] Update wc2026Router.ts matchesByDate to include advancingTeamId in return shape
 - [x] TypeScript: 0 errors throughout
 
 ## Session: 2026-06-30 — WC2026 Mobile GameCard UI Fixes + Advancing Team Seeding
@@ -4308,16 +4308,16 @@
 - [x] Add HT (halftime) badge — amber/yellow pill with static dot, same midpoint font size
 - [x] Add live match minute to LIVE badge (e.g., "● LIVE 18'") — reads matchMinute from DB
 - [x] Fix isScheduled and scheduled time row condition to exclude HT state
-- [x] Add matchMinute and fifaMatchId fields to WcFixtureWithOdds TypeScript type
-- [x] Add advancing_team_id column to wc2026_fixtures DB table
-- [x] Add fifa_match_id and match_minute columns to wc2026_fixtures DB table
+- [x] Add matchMinute and fifaMatchId fields to WcMatchWithOdds TypeScript type
+- [x] Add advancing_team_id column to wc2026_matches DB table
+- [x] Add fifa_match_id and match_minute columns to wc2026_matches DB table
 - [x] Add HT to status enum in wc2026.schema.ts and DB column
 - [x] Seed advancing teams for 3 completed R32 matches (CAN, BRA, PAR) via seedAdvancingTeams.ts
-- [x] Seed 12 missing R32 fixtures (wc26-r32-077 through wc26-r32-088) via seedR32Fixtures.ts
-- [x] Seed FIFA match IDs for all 16 R32 fixtures via seedFifaMatchIds.ts
+- [x] Seed 12 missing R32 matches (wc26-r32-077 through wc26-r32-088) via seedR32Matches.ts
+- [x] Seed FIFA match IDs for all 16 R32 matches via seedFifaMatchIds.ts
 - [x] Write fifaLiveScraper.ts — FIFA HTML poll handler with 7-phase logging pipeline
 - [x] Register /api/scheduled/wc2026-live-sync route in wc2026Heartbeat.ts
-- [x] Add matchMinute and fifaMatchId to wc2026Router.ts fixturesByDate return shape
+- [x] Add matchMinute and fifaMatchId to wc2026Router.ts matchesByDate return shape
 - [x] TypeScript: 0 errors throughout all changes
 
 ## Session: 2026-06-30 — FIFA Injury Time Fix (fifaLiveScraper.ts)
@@ -4347,7 +4347,7 @@
 
 ### Fixes Applied
 - [x] DB: UPDATE wc26-r32-076 SET status=LIVE, home_score=1, away_score=1, match_minute=ETHT, advancing_team_id=NULL
-- [x] Schema: Added matchMinute varchar(16) and fifaMatchId varchar(32) to wc2026Fixtures Drizzle schema
+- [x] Schema: Added matchMinute varchar(16) and fifaMatchId varchar(32) to wc2026Matches Drizzle schema
 - [x] Router: Removed (f as any) casts for advancingTeamId, matchMinute, fifaMatchId — now proper typed Drizzle fields
 - [x] Scraper: Added EXTRA TIME HALF TIME / ET HT / ETHT → status=HT, minute='ETHT' branch
 - [x] WcScorePanel: showScores = (isLive || isHT || isFinal) && hasScores (was: isLive || isFinal)
@@ -4364,7 +4364,7 @@
 - [x] [ADVANCING] Penalty shootout winner not auto-detected — added 3-case detection logic
 ### Fixes Applied
 - [x] fifaLiveScraper.ts: Rewrote to use FIFA API v3 with proper status/period code mapping
-- [x] DB: ALTER TABLE wc2026_fixtures MODIFY COLUMN status ENUM(...,'ET','SHOOTOUT',...)
+- [x] DB: ALTER TABLE wc2026_matches MODIFY COLUMN status ENUM(...,'ET','SHOOTOUT',...)
 - [x] Schema: Added ET and SHOOTOUT to Drizzle status enum
 - [x] WcScorePanel: Added isET (orange ET badge) and isShootout (cyan PENS badge)
 - [x] WcScorePanel: showScores v4 = (isLive || isHT || isET || isShootout || isFinal) && hasScores

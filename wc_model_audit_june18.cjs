@@ -2,13 +2,13 @@
 /**
  * WC2026 MODEL ODDS DEEP AUDIT — June 18, 2026
  *
- * Audits ALL model odds (book_id=0) for the 4 June 18 fixtures across:
+ * Audits ALL model odds (book_id=0) for the 4 June 18 matches across:
  *   - 1X2 (ML): home, draw, away
  *   - TOTAL: over, under
  *   - ASIAN_HANDICAP: (if present)
  *
  * For each market+selection:
- *   [INPUT]  raw DB row (fixture_id, market, selection, american_odds, line, snapshot_ts, book_id)
+ *   [INPUT]  raw DB row (match_id, market, selection, american_odds, line, snapshot_ts, book_id)
  *   [STATE]  implied probability from american odds
  *   [VERIFY] cross-check against expected no-vig structure
  *
@@ -64,31 +64,31 @@ const DK_GT = {
 
 async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  console.log('[INPUT] Connected to DB. Starting full model odds audit for June 18 fixtures.\n');
+  console.log('[INPUT] Connected to DB. Starting full model odds audit for June 18 matches.\n');
 
-  const fixtureIds = ['wc26-g-025','wc26-g-027','wc26-g-028','wc26-g-026'];
+  const matchIds = ['wc26-g-025','wc26-g-027','wc26-g-028','wc26-g-026'];
 
-  // ── Step 1: Pull fixture orientation ─────────────────────────────────────────
+  // ── Step 1: Pull match orientation ─────────────────────────────────────────
   console.log('═══════════════════════════════════════════════════════════════════');
-  console.log('STEP 1: FIXTURE ORIENTATION AUDIT');
+  console.log('STEP 1: MATCH ORIENTATION AUDIT');
   console.log('═══════════════════════════════════════════════════════════════════');
-  const [fixtures] = await conn.execute(`
-    SELECT f.fixture_id, f.kickoff_utc,
+  const [matches] = await conn.execute(`
+    SELECT f.match_id, f.kickoff_utc,
            ht.name AS home_name, ht.fifa_code AS home_code,
            at2.name AS away_name, at2.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.match_date = '2026-06-18'
     ORDER BY f.kickoff_utc
   `);
-  const fixtureMap = {};
-  for (const f of fixtures) {
-    fixtureMap[f.fixture_id] = f;
-    const gt = DK_GT[f.fixture_id];
+  const matchMap = {};
+  for (const f of matches) {
+    matchMap[f.match_id] = f;
+    const gt = DK_GT[f.match_id];
     const homeOK = f.home_code === gt.homeCode;
     const awayOK = f.away_code === gt.awayCode;
-    console.log(`[INPUT]  ${f.fixture_id} | kickoff=${f.kickoff_utc}`);
+    console.log(`[INPUT]  ${f.match_id} | kickoff=${f.kickoff_utc}`);
     console.log(`[STATE]  DB: home=${f.home_name}(${f.home_code})  away=${f.away_name}(${f.away_code})`);
     console.log(`[STATE]  GT: home=${gt.homeCode}  away=${gt.awayCode}`);
     console.log(`[VERIFY] home=${homeOK?'PASS ✓':'FAIL ✗'}  away=${awayOK?'PASS ✓':'FAIL ✗'}`);
@@ -100,46 +100,46 @@ async function main() {
   console.log('STEP 2: ALL MODEL ODDS SNAPSHOTS (book_id=0)');
   console.log('═══════════════════════════════════════════════════════════════════');
   const [allModelRows] = await conn.execute(`
-    SELECT fixture_id, market, selection, american_odds, line, snapshot_ts, book_id
+    SELECT match_id, market, selection, american_odds, line, snapshot_ts, book_id
     FROM wc2026_odds_snapshots
     WHERE book_id = 0
-      AND fixture_id IN (${fixtureIds.map(()=>'?').join(',')})
-    ORDER BY fixture_id, market, selection, snapshot_ts DESC
-  `, fixtureIds);
+      AND match_id IN (${matchIds.map(()=>'?').join(',')})
+    ORDER BY match_id, market, selection, snapshot_ts DESC
+  `, matchIds);
 
   console.log(`[INPUT]  Total model rows found: ${allModelRows.length}`);
   console.log('');
 
   // ── Step 3: Build latest-snapshot map (deduplicated) ─────────────────────────
-  const modelMap = {}; // fixtureId -> { market -> { selection -> row } }
+  const modelMap = {}; // matchId -> { market -> { selection -> row } }
   const seenKeys = new Set();
   for (const row of allModelRows) {
-    const key = `${row.fixture_id}:${row.market}:${row.selection}`;
+    const key = `${row.match_id}:${row.market}:${row.selection}`;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
-      if (!modelMap[row.fixture_id]) modelMap[row.fixture_id] = {};
-      if (!modelMap[row.fixture_id][row.market]) modelMap[row.fixture_id][row.market] = {};
-      modelMap[row.fixture_id][row.market][row.selection] = row;
+      if (!modelMap[row.match_id]) modelMap[row.match_id] = {};
+      if (!modelMap[row.match_id][row.market]) modelMap[row.match_id][row.market] = {};
+      modelMap[row.match_id][row.market][row.selection] = row;
     }
   }
 
   // ── Step 4: Pull ALL DK odds (book_id=68) for cross-reference ────────────────
   const [allDkRows] = await conn.execute(`
-    SELECT fixture_id, market, selection, american_odds, line, snapshot_ts
+    SELECT match_id, market, selection, american_odds, line, snapshot_ts
     FROM wc2026_odds_snapshots
     WHERE book_id = 68
-      AND fixture_id IN (${fixtureIds.map(()=>'?').join(',')})
-    ORDER BY fixture_id, market, selection, snapshot_ts DESC
-  `, fixtureIds);
+      AND match_id IN (${matchIds.map(()=>'?').join(',')})
+    ORDER BY match_id, market, selection, snapshot_ts DESC
+  `, matchIds);
   const dkMap = {};
   const seenDk = new Set();
   for (const row of allDkRows) {
-    const key = `${row.fixture_id}:${row.market}:${row.selection}`;
+    const key = `${row.match_id}:${row.market}:${row.selection}`;
     if (!seenDk.has(key)) {
       seenDk.add(key);
-      if (!dkMap[row.fixture_id]) dkMap[row.fixture_id] = {};
-      if (!dkMap[row.fixture_id][row.market]) dkMap[row.fixture_id][row.market] = {};
-      dkMap[row.fixture_id][row.market][row.selection] = row;
+      if (!dkMap[row.match_id]) dkMap[row.match_id] = {};
+      if (!dkMap[row.match_id][row.market]) dkMap[row.match_id][row.market] = {};
+      dkMap[row.match_id][row.market][row.selection] = row;
     }
   }
 
@@ -150,14 +150,14 @@ async function main() {
 
   let totalIssues = 0;
 
-  for (const fid of fixtureIds) {
-    const f = fixtureMap[fid];
+  for (const fid of matchIds) {
+    const f = matchMap[fid];
     const gt = DK_GT[fid];
     const mdl = modelMap[fid] || {};
     const dk  = dkMap[fid] || {};
 
     console.log(`┌─────────────────────────────────────────────────────────────────`);
-    console.log(`│ FIXTURE: ${fid}`);
+    console.log(`│ MATCH: ${fid}`);
     console.log(`│ ${f.home_name}(${f.home_code}) vs ${f.away_name}(${f.away_code})`);
     console.log(`│ Kickoff: ${f.kickoff_utc}`);
     console.log(`└─────────────────────────────────────────────────────────────────`);
@@ -317,7 +317,7 @@ async function main() {
   console.log('STEP 4: SUMMARY');
   console.log('═══════════════════════════════════════════════════════════════════');
   if (totalIssues === 0) {
-    console.log('[OUTPUT] ALL CHECKS PASS ✓ — Zero issues detected across all 4 fixtures');
+    console.log('[OUTPUT] ALL CHECKS PASS ✓ — Zero issues detected across all 4 matches');
   } else {
     console.log(`[OUTPUT] ISSUES DETECTED: ${totalIssues} check(s) failed ✗`);
   }
@@ -329,8 +329,8 @@ async function main() {
   console.log('Convention: HOME=top row, AWAY=bottom row (matches DK)');
   console.log('═══════════════════════════════════════════════════════════════════\n');
 
-  for (const fid of fixtureIds) {
-    const f = fixtureMap[fid];
+  for (const fid of matchIds) {
+    const f = matchMap[fid];
     const mdl = modelMap[fid] || {};
     const dk  = dkMap[fid] || {};
 

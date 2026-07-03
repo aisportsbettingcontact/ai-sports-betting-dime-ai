@@ -4,7 +4,7 @@
 
 This audit validated the **World Cup 2026 feed** for the visible production window of **June 11, 2026 through June 17, 2026** across the following dimensions:
 
-1. Fixture date population and per-date counts
+1. Match date population and per-date counts
 2. Home/away team orientation
 3. DraftKings book lines
 4. Model lines
@@ -13,9 +13,9 @@ This audit validated the **World Cup 2026 feed** for the visible production wind
 
 ## Data Audit Summary
 
-The audited window contains **24 fixtures** across 7 dates.
+The audited window contains **24 matches** across 7 dates.
 
-| Date | Expected Fixtures | Verified Fixtures |
+| Date | Expected Matches | Verified Matches |
 | --- | ---: | ---: |
 | 2026-06-11 | 2 | 2 |
 | 2026-06-12 | 3 | 3 |
@@ -29,7 +29,7 @@ Final verification status:
 
 | Check | Result |
 | --- | --- |
-| Fixtures present on correct dates | PASS |
+| Matches present on correct dates | PASS |
 | DK odds present | PASS |
 | DK 1X2 present | PASS |
 | Model odds present | PASS |
@@ -37,7 +37,7 @@ Final verification status:
 | DK totals present | PASS |
 | Model totals present | PASS |
 
-> Final audit result: **24/24 fixtures fully populated and clean** for the June 11–17 visible WC feed range.
+> Final audit result: **24/24 matches fully populated and clean** for the June 11–17 visible WC feed range.
 
 ## Issues Found During Audit
 
@@ -45,7 +45,7 @@ The audit uncovered the following real defects before correction.
 
 | Issue | Impact | Status |
 | --- | --- | --- |
-| Model odds missing for 15 fixtures on June 14–17 | Model columns rendered incomplete across multiple game cards | Fixed |
+| Model odds missing for 15 matches on June 14–17 | Model columns rendered incomplete across multiple game cards | Fixed |
 | DK 1X2 missing for `wc26-g-012` | Netherlands/Japan book moneyline incomplete | Fixed |
 | DK 1X2 missing for `wc26-g-008` | Turkey/Australia book moneyline incomplete | Fixed |
 | Earlier audit logic expected uppercase selections | False-negative validation on model rows | Diagnosed |
@@ -59,7 +59,7 @@ A new seed script was added:
 
 - `server/wc2026/seedModelOddsJune14to17.mjs`
 
-This seeded **75 model odds rows** across **15 fixtures** from June 14–17.
+This seeded **75 model odds rows** across **15 matches** from June 14–17.
 
 ### 2. Re-ran June 13 corrective seed
 
@@ -67,7 +67,7 @@ Existing script executed:
 
 - `server/wc2026/seedJune13Wc.mjs`
 
-This verified and preserved corrected orientation/model data for the June 13 fixtures.
+This verified and preserved corrected orientation/model data for the June 13 matches.
 
 ### 3. Inserted missing DK book odds
 
@@ -94,7 +94,7 @@ Reviewed screenshots:
 
 | Breakpoint | Observation | Result |
 | --- | --- | --- |
-| Mobile 375x812 | All three June 13 fixtures visible with book/model columns and totals populated | PASS |
+| Mobile 375x812 | All three June 13 matches visible with book/model columns and totals populated | PASS |
 | Tablet 768x1024 | Four-column odds layout visible with populated book/model totals | PASS |
 | Desktop 1440x900 | Full merged odds grid visible with book vs model alignment and totals displayed | PASS |
 
@@ -106,7 +106,7 @@ On desktop, the following were visually confirmed for June 13:
 - **Haiti vs Scotland** showed populated book and model ML/draw/total values
 - **Australia vs Turkey** showed populated DK and model ML plus totals after correction
 
-On mobile, the same three fixtures showed fully populated values in compact stacked rows, including totals.
+On mobile, the same three matches showed fully populated values in compact stacked rows, including totals.
 
 ## Important Architectural Finding
 
@@ -134,13 +134,13 @@ Primary validation artifacts:
 
 | Metric | Value |
 | --- | ---: |
-| Total fixtures audited | 24 |
-| Fixtures with DK odds | 24/24 |
-| Fixtures with Model odds | 24/24 |
-| Fixtures with DK 1X2 | 24/24 |
-| Fixtures with Model 1X2 | 24/24 |
-| Fixtures with DK totals | 24/24 |
-| Fixtures with Model totals | 24/24 |
+| Total matches audited | 24 |
+| Matches with DK odds | 24/24 |
+| Matches with Model odds | 24/24 |
+| Matches with DK 1X2 | 24/24 |
+| Matches with Model 1X2 | 24/24 |
+| Matches with DK totals | 24/24 |
+| Matches with Model totals | 24/24 |
 | Final audit errors | 0 |
 
 > Final automated audit output: **PASS — No errors found**.

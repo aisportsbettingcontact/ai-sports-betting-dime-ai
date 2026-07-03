@@ -1,6 +1,6 @@
 CREATE TABLE `wc2026_model_projections` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`model_version` varchar(32) NOT NULL,
 	`n_simulations` int NOT NULL DEFAULT 1000000,
 	`home_team` varchar(64),
@@ -53,8 +53,8 @@ CREATE TABLE `wc2026_model_projections` (
 	`modeled_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT `wc2026_model_projections_id` PRIMARY KEY(`id`),
-	CONSTRAINT `uq_mp_fixture` UNIQUE(`fixture_id`)
+	CONSTRAINT `uq_mp_match` UNIQUE(`match_id`)
 );
 --> statement-breakpoint
-ALTER TABLE `wc2026_model_projections` ADD CONSTRAINT `wc2026_model_projections_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_mp_fixture` ON `wc2026_model_projections` (`fixture_id`);
+ALTER TABLE `wc2026_model_projections` ADD CONSTRAINT `wc2026_model_projections_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX `idx_mp_match` ON `wc2026_model_projections` (`match_id`);

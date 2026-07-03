@@ -3,17 +3,17 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Simulate exactly what the router's buildOddsMap does
-// to confirm what the component receives for all 4 June 18 fixtures
+// to confirm what the component receives for all 4 June 18 matches
 
 async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  console.log('[INPUT] Connected. Simulating router buildOddsMap for June 18 fixtures.\n');
+  console.log('[INPUT] Connected. Simulating router buildOddsMap for June 18 matches.\n');
 
-  const fixtureIds = ['wc26-g-025','wc26-g-027','wc26-g-028','wc26-g-026'];
+  const matchIds = ['wc26-g-025','wc26-g-027','wc26-g-028','wc26-g-026'];
 
   // Pull ALL DK odds rows ordered by snapshot_ts DESC — exactly as router does
   const [dkRows] = await conn.execute(`
-    SELECT fixture_id, market, selection, american_odds, line, snapshot_ts
+    SELECT match_id, market, selection, american_odds, line, snapshot_ts
     FROM wc2026_odds_snapshots
     WHERE book_id = 68
     ORDER BY snapshot_ts DESC
@@ -21,7 +21,7 @@ async function main() {
 
   // Pull ALL MODEL odds rows ordered by snapshot_ts DESC
   const [modelRows] = await conn.execute(`
-    SELECT fixture_id, market, selection, american_odds, line, snapshot_ts
+    SELECT match_id, market, selection, american_odds, line, snapshot_ts
     FROM wc2026_odds_snapshots
     WHERE book_id = 0
     ORDER BY snapshot_ts DESC
@@ -31,12 +31,12 @@ async function main() {
     const map = {};
     const seen = new Set();
     for (const row of rows) {
-      if (!fixtureIds.includes(row.fixture_id)) continue;
-      if (!map[row.fixture_id]) map[row.fixture_id] = {};
-      const key = `${row.fixture_id}:${row.market}:${row.selection}`;
+      if (!matchIds.includes(row.match_id)) continue;
+      if (!map[row.match_id]) map[row.match_id] = {};
+      const key = `${row.match_id}:${row.market}:${row.selection}`;
       if (!seen.has(key)) {
         seen.add(key);
-        const o = map[row.fixture_id];
+        const o = map[row.match_id];
         if (row.market === '1X2') {
           o[row.selection] = row.american_odds;
         } else if (row.market === 'TOTAL') {
@@ -51,12 +51,12 @@ async function main() {
   const dkMap = buildOddsMap(dkRows);
   const modelMap = buildOddsMap(modelRows);
 
-  // Pull fixture team info
-  const [fixtures] = await conn.execute(`
-    SELECT f.fixture_id, f.kickoff_utc,
+  // Pull match team info
+  const [matches] = await conn.execute(`
+    SELECT f.match_id, f.kickoff_utc,
            ht.name AS home_name, ht.fifa_code AS home_code,
            at2.name AS away_name, at2.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.match_date = '2026-06-18'
@@ -77,13 +77,13 @@ async function main() {
 
   let allPass = true;
 
-  for (const f of fixtures) {
-    const dk = dkMap[f.fixture_id] || {};
-    const model = modelMap[f.fixture_id] || {};
-    const gt = GT[f.fixture_id];
+  for (const f of matches) {
+    const dk = dkMap[f.match_id] || {};
+    const model = modelMap[f.match_id] || {};
+    const gt = GT[f.match_id];
 
-    console.log(`${f.fixture_id}  |  ${f.kickoff_utc}`);
-    console.log(`  FIXTURE: home=${f.home_name}(${f.home_code})  away=${f.away_name}(${f.away_code})`);
+    console.log(`${f.match_id}  |  ${f.kickoff_utc}`);
+    console.log(`  MATCH: home=${f.home_name}(${f.home_code})  away=${f.away_name}(${f.away_code})`);
     console.log('');
     console.log('  SCORE PANEL:');
     console.log(`    TOP ROW  (away): ${f.away_name}(${f.away_code})`);
