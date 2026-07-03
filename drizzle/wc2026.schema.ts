@@ -527,7 +527,7 @@ export type SelectWc2026EspnBracket = typeof wc2026EspnBracket.$inferSelect;
 // AH/Spread: line is from HOME perspective (negative = home favored).
 // book_source default = 'bet365' (BetExplorer AJAX bid=16 international).
 //
-// Upserted by: wc2026_betexplorer_scraper_v4.py (book_ columns)
+// Upserted by: betexplorer_scraper.py (book_ columns)
 // Upserted by: v15_engine.mjs (model_ columns)
 // Column order is canonical — matches DB exactly (id + 40 user-spec columns)
 export const wc2026MatchOdds = mysqlTable(
