@@ -1,7 +1,7 @@
 /**
  * june29_pry_ger_db_seed.mjs
- * Seed Paraguay vs Germany fixture + frozen book odds to DB
- * Fixture columns: fixture_id, match_date, kickoff_utc, stage, group_letter, matchday,
+ * Seed Paraguay vs Germany match + frozen book odds to DB
+ * Match columns: match_id, match_date, kickoff_utc, stage, group_letter, matchday,
  *                  home_team_id, away_team_id, venue_id, status, display_order
  */
 import mysql from 'mysql2/promise';
@@ -11,7 +11,7 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.env') });
 
-const FIXTURE_ID   = 'wc26-r32-075';
+const MATCH_ID   = 'wc26-r32-075';
 const HOME_TEAM_ID = 'ger';
 const AWAY_TEAM_ID = 'par'; // FIFA team_id for Paraguay in wc2026_teams
 const KICKOFF_UTC  = '2026-06-29T20:30:00Z';
@@ -39,21 +39,21 @@ const BOOK = {
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 console.log('[STEP] DB connected');
 
-// Upsert fixture
+// Upsert match
 await conn.execute(`
   INSERT INTO wc2026_matches
-    (fixture_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, status, display_order)
+    (match_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, status, display_order)
   VALUES (?, ?, ?, 'R32', ?, ?, 'inglewood', 'scheduled', 75)
   ON DUPLICATE KEY UPDATE
     match_date=VALUES(match_date), kickoff_utc=VALUES(kickoff_utc),
     home_team_id=VALUES(home_team_id), away_team_id=VALUES(away_team_id)
-`, [FIXTURE_ID, MATCH_DATE, KICKOFF_UTC, HOME_TEAM_ID, AWAY_TEAM_ID]);
-console.log('[VERIFY] Fixture upserted:', FIXTURE_ID);
+`, [MATCH_ID, MATCH_DATE, KICKOFF_UTC, HOME_TEAM_ID, AWAY_TEAM_ID]);
+console.log('[VERIFY] Match upserted:', MATCH_ID);
 
 // Upsert frozen book odds
 await conn.execute(`
   INSERT INTO wc2026_frozen_book_odds
-    (fixture_id, book_home_ml, book_draw_ml, book_away_ml,
+    (match_id, book_home_ml, book_draw_ml, book_away_ml,
      book_spread_line, book_home_spread_odds, book_away_spread_odds,
      book_total_line, book_over_odds, book_under_odds,
      book_btts_yes_odds, book_btts_no_odds,
@@ -73,7 +73,7 @@ await conn.execute(`
     to_advance_home_odds=VALUES(to_advance_home_odds), to_advance_away_odds=VALUES(to_advance_away_odds),
     frozen_at=NOW()
 `, [
-  FIXTURE_ID,
+  MATCH_ID,
   BOOK.homeML, BOOK.drawML, BOOK.awayML,
   BOOK.homeSpreadLine, BOOK.homeSpreadOdds, BOOK.awaySpreadOdds,
   BOOK.totalLine, BOOK.overOdds, BOOK.underOdds,
@@ -82,12 +82,12 @@ await conn.execute(`
   BOOK.noDrawAway,
   BOOK.toAdvanceHome, BOOK.toAdvanceAway,
 ]);
-console.log('[VERIFY] Book odds upserted:', FIXTURE_ID);
+console.log('[VERIFY] Book odds upserted:', MATCH_ID);
 
 // Verify
 const [rows] = await conn.execute(
-  'SELECT fixture_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds FROM wc2026_frozen_book_odds WHERE fixture_id=?',
-  [FIXTURE_ID]
+  'SELECT match_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds FROM wc2026_frozen_book_odds WHERE match_id=?',
+  [MATCH_ID]
 );
 console.log('[VERIFY] DB row:', JSON.stringify(rows[0]));
 

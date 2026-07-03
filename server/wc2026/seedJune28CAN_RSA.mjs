@@ -31,7 +31,7 @@ import mysql from 'mysql2/promise';
 import { config } from 'dotenv';
 config();
 
-const FIXTURE_ID = 'wc26-r32-073';
+const MATCH_ID = 'wc26-r32-073';
 const HOME_TEAM = 'rsa';   // South Africa
 const AWAY_TEAM = 'can';   // Canada
 const VENUE_ID  = 'inglewood';
@@ -101,30 +101,30 @@ async function run() {
     }
     console.log(`[VERIFY] Venue OK: ${venues[0].venue_id} = ${venues[0].stadium}, ${venues[0].city}`);
 
-    // ── STEP 3: Check for duplicate fixture ───────────────────────────────────
-    console.log(`[STEP] Checking for existing fixture: ${FIXTURE_ID}`);
+    // ── STEP 3: Check for duplicate match ───────────────────────────────────
+    console.log(`[STEP] Checking for existing match: ${MATCH_ID}`);
     const [existing] = await conn.execute(
       'SELECT match_id FROM wc2026_matches WHERE match_id = ?',
-      [FIXTURE_ID]
+      [MATCH_ID]
     );
     if (existing.length > 0) {
-      console.log(`[STATE] Fixture ${FIXTURE_ID} already exists — deleting and re-inserting`);
-      await conn.execute('DELETE FROM wc2026_frozen_book_odds WHERE match_id = ?', [FIXTURE_ID]);
-      await conn.execute('DELETE FROM wc2026_matches WHERE match_id = ?', [FIXTURE_ID]);
-      console.log('[STATE] Deleted existing fixture and frozen odds');
+      console.log(`[STATE] Match ${MATCH_ID} already exists — deleting and re-inserting`);
+      await conn.execute('DELETE FROM wc2026_frozen_book_odds WHERE match_id = ?', [MATCH_ID]);
+      await conn.execute('DELETE FROM wc2026_matches WHERE match_id = ?', [MATCH_ID]);
+      console.log('[STATE] Deleted existing match and frozen odds');
     }
 
-    // ── STEP 4: Insert fixture ─────────────────────────────────────────────────
-    console.log(`[STEP] Inserting fixture ${FIXTURE_ID}: RSA(H) vs CAN(A) at ${KICKOFF_UTC}`);
+    // ── STEP 4: Insert match ─────────────────────────────────────────────────
+    console.log(`[STEP] Inserting match ${MATCH_ID}: RSA(H) vs CAN(A) at ${KICKOFF_UTC}`);
     await conn.execute(
       `INSERT INTO wc2026_matches
         (match_id, match_date, kickoff_utc, stage, group_letter, matchday,
          home_team_id, away_team_id, venue_id, home_score, away_score,
          status, is_host_home, display_order)
        VALUES (?, ?, ?, ?, NULL, NULL, ?, ?, ?, NULL, NULL, 'SCHEDULED', 0, ?)`,
-      [FIXTURE_ID, MATCH_DATE, KICKOFF_UTC, STAGE, HOME_TEAM, AWAY_TEAM, VENUE_ID, DISPLAY_ORDER]
+      [MATCH_ID, MATCH_DATE, KICKOFF_UTC, STAGE, HOME_TEAM, AWAY_TEAM, VENUE_ID, DISPLAY_ORDER]
     );
-    console.log(`[OUTPUT] Fixture inserted: ${FIXTURE_ID}`);
+    console.log(`[OUTPUT] Match inserted: ${MATCH_ID}`);
 
     // ── STEP 5: Insert frozen book odds ───────────────────────────────────────
     console.log('[STEP] Inserting frozen DK book odds...');
@@ -149,7 +149,7 @@ async function run() {
                ?, ?,
                ?)`,
       [
-        FIXTURE_ID,
+        MATCH_ID,
         ODDS.book_home_ml, ODDS.book_draw_ml, ODDS.book_away_ml,
         ODDS.book_spread_line, ODDS.book_home_spread_odds, ODDS.book_away_spread_odds,
         ODDS.book_total_line, ODDS.book_over_odds, ODDS.book_under_odds,
@@ -165,9 +165,9 @@ async function run() {
     console.log('[STEP] Verifying inserted data...');
     const [verFix] = await conn.execute(
       'SELECT match_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, display_order FROM wc2026_matches WHERE match_id = ?',
-      [FIXTURE_ID]
+      [MATCH_ID]
     );
-    console.log('[VERIFY] Fixture row:', JSON.stringify(verFix[0]));
+    console.log('[VERIFY] Match row:', JSON.stringify(verFix[0]));
 
     const [verOdds] = await conn.execute(
       `SELECT match_id,
@@ -179,7 +179,7 @@ async function run() {
               book_no_draw_home_odds, book_no_draw_away_odds,
               book_source
        FROM wc2026_frozen_book_odds WHERE match_id = ?`,
-      [FIXTURE_ID]
+      [MATCH_ID]
     );
     console.log('[VERIFY] Frozen odds row:', JSON.stringify(verOdds[0]));
 
@@ -212,7 +212,7 @@ async function run() {
 
     if (allPass) {
       console.log('\n[OUTPUT] ✅ ALL CHECKS PASSED — Canada vs South Africa seeded and frozen correctly');
-      console.log(`[OUTPUT] match_id=${FIXTURE_ID} | stage=R32 | date=${MATCH_DATE} | kickoff=${KICKOFF_UTC}`);
+      console.log(`[OUTPUT] match_id=${MATCH_ID} | stage=R32 | date=${MATCH_DATE} | kickoff=${KICKOFF_UTC}`);
       console.log('[OUTPUT] Home: South Africa (RSA) | Away: Canada (CAN) | Venue: SoFi Stadium, Inglewood');
       console.log('[OUTPUT] Model lines: NOT seeded (frozen book odds only)');
     } else {

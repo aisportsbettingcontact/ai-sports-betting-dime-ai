@@ -1,7 +1,7 @@
 /**
  * WC2026 v7.0 Model Seed Script — June 25, 2026
  * ================================================
- * Seeds all 6 June 25 fixtures with v7.0 model projections.
+ * Seeds all 6 June 25 matchs with v7.0 model projections.
  * Deletes v6.0-backtest-optimized-june25 rows first.
  * 
  * v7.0 improvements:
@@ -10,7 +10,7 @@
  * - Dynamic total line (uses book line for O/U grading)
  * - BTTS uses 15% shrinkage (vs 30% for ML/spread)
  * - Market coherence enforcement (5 rules)
- * - User-verified book odds for all 6 fixtures
+ * - User-verified book odds for all 6 matchs
  * - 11 DB home/away inversions corrected
  */
 
@@ -23,7 +23,7 @@ console.log('[v7.0 SEED] Starting...');
 
 // Load v7 results
 const results = JSON.parse(readFileSync('/home/ubuntu/wc2026_v7_june25_final.json', 'utf8'));
-console.log(`[INPUT] ${results.length} fixtures to seed`);
+console.log(`[INPUT] ${results.length} matchs to seed`);
 
 // Delete v6 rows
 const [del] = await conn.execute(
@@ -214,7 +214,7 @@ for (const row of verify) {
 }
 
 if (verify.length === 6) {
-  console.log('\n[COMPLETE] ✓ All 6 v7.0 fixtures seeded and verified');
+  console.log('\n[COMPLETE] ✓ All 6 v7.0 matchs seeded and verified');
 } else {
   console.log(`\n[ERROR] Only ${verify.length}/6 rows found — check for errors above`);
 }

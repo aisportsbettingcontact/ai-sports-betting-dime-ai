@@ -8,26 +8,26 @@ config();
 
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-// Get latest DK 1X2 odds for all 4 June 21 fixtures
+// Get latest DK 1X2 odds for all 4 June 21 matches
 const [rows] = await conn.execute(`
-  SELECT s.fixture_id, s.selection, s.american_odds,
+  SELECT s.match_id, s.selection, s.american_odds,
          f.home_team_id, f.away_team_id
   FROM wc2026_odds_snapshots s
-  JOIN wc2026_matches f ON s.fixture_id = f.fixture_id
-  WHERE s.fixture_id IN ('wc26-g-037','wc26-g-038','wc26-g-039','wc26-g-040')
+  JOIN wc2026_matches f ON s.match_id = f.match_id
+  WHERE s.match_id IN ('wc26-g-037','wc26-g-038','wc26-g-039','wc26-g-040')
     AND s.book_id = 68
     AND s.market = '1X2'
-  ORDER BY s.fixture_id, s.snapshot_ts DESC, s.selection
+  ORDER BY s.match_id, s.snapshot_ts DESC, s.selection
 `);
 
 const seen = new Set();
 const latest = {};
 for (const r of rows) {
-  const k = `${r.fixture_id}:${r.selection}`;
+  const k = `${r.match_id}:${r.selection}`;
   if (!seen.has(k)) {
     seen.add(k);
-    if (!latest[r.fixture_id]) latest[r.fixture_id] = {};
-    latest[r.fixture_id][r.selection] = { odds: r.american_odds, home: r.home_team_id, away: r.away_team_id };
+    if (!latest[r.match_id]) latest[r.match_id] = {};
+    latest[r.match_id][r.selection] = { odds: r.american_odds, home: r.home_team_id, away: r.away_team_id };
   }
 }
 

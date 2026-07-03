@@ -1,7 +1,7 @@
 /**
  * wc_correct_dk_june19.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Corrects DK odds for all 4 June 19 WC2026 fixtures using exact values
+ * Corrects DK odds for all 4 June 19 WC2026 matchs using exact values
  * from the DraftKings screenshot (authoritative source).
  *
  * DK Screenshot (June 19, 2026):
@@ -49,7 +49,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
 }
 
 // ── Authoritative DK lines from screenshot ────────────────────────────────────
-// home/draw/away are relative to OUR DB fixture orientation (home_team_id / away_team_id)
+// home/draw/away are relative to OUR DB match orientation (home_team_id / away_team_id)
 const DK_LINES = [
   {
     matchId: 'wc26-g-029',
@@ -120,7 +120,7 @@ const DK_LINES = [
     const dcX2Odds = impliedToAmerican(dcX2);
     console.log(`[STATE] DC: 1X(home_draw)=${dc1XOdds} (${(dc1X*100).toFixed(3)}%) | X2(away_draw)=${dcX2Odds} (${(dcX2*100).toFixed(3)}%)`);
 
-    // Delete all existing DK rows for this fixture
+    // Delete all existing DK rows for this match
     const [delResult] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 68`,
       [fix.matchId]

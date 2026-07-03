@@ -1,8 +1,8 @@
 /**
  * Pull all data needed for WC2026 v7.0 model — June 27, 2026
- * - All completed fixtures with scores (for team stats building)
+ * - All completed matchs with scores (for team stats building)
  * - Match stats (SOT, shots, saves) for all completed matches
- * - June 27 fixtures (6 matches to model)
+ * - June 27 matchs (6 matches to model)
  */
 import mysql2 from 'mysql2/promise';
 import dotenv from 'dotenv';
@@ -12,17 +12,17 @@ dotenv.config();
 const db = await mysql2.createConnection(process.env.DATABASE_URL);
 console.log('[DB] Connected');
 
-// Pull all completed fixtures (all of WC2026 so far through June 26)
-const [completedFixtures] = await db.execute(`
+// Pull all completed matchs (all of WC2026 so far through June 26)
+const [completedMatchs] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status
   FROM wc2026_matches
   WHERE home_score IS NOT NULL AND away_score IS NOT NULL
   ORDER BY kickoff_utc
 `);
-console.log(`[COMPLETED] ${completedFixtures.length} completed fixtures`);
+console.log(`[COMPLETED] ${completedMatchs.length} completed matchs`);
 
-// Pull match stats for all completed fixtures
+// Pull match stats for all completed matchs
 const [matchStats] = await db.execute(`
   SELECT ms.match_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
          ms.home_shots_on_target, ms.away_shots_on_target,
@@ -36,15 +36,15 @@ const [matchStats] = await db.execute(`
 `);
 console.log(`[STATS] ${matchStats.length} match stats rows`);
 
-// Pull June 27 fixtures
-const [fixtures27] = await db.execute(`
+// Pull June 27 matchs
+const [matchs27] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
          group_letter, matchday, status
   FROM wc2026_matches
   WHERE match_date = '2026-06-27'
   ORDER BY kickoff_utc
 `);
-console.log(`[JUNE27] ${fixtures27.length} June 27 fixtures`);
+console.log(`[JUNE27] ${matchs27.length} June 27 matchs`);
 
 // Pull team names
 const [teams] = await db.execute(`
@@ -61,15 +61,15 @@ if (nullSotRows.length > 0) {
 
 const output = {
   stats: matchStats,
-  fixtures27,
+  matchs27,
   teams,
-  completedFixtures,
+  completedMatchs,
   pulledAt: new Date().toISOString()
 };
 
 writeFileSync('/home/ubuntu/june27_model_data.json', JSON.stringify(output, null, 2));
 console.log('[OUTPUT] Written: /home/ubuntu/june27_model_data.json');
-console.log(`[SUMMARY] ${matchStats.length} stat rows | ${fixtures27.length} June 27 fixtures | ${teams.length} teams`);
+console.log(`[SUMMARY] ${matchStats.length} stat rows | ${matchs27.length} June 27 matchs | ${teams.length} teams`);
 
 await db.end();
 console.log('[DB] Disconnected');

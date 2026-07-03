@@ -1,6 +1,6 @@
 /**
  * wc-june24-audit.mjs
- * Full audit of June 24 WC2026 fixtures:
+ * Full audit of June 24 WC2026 matches:
  * - home/away team orientation
  * - all 6 market odds vs ground truth
  * - model spread accuracy
@@ -109,39 +109,39 @@ const GROUND_TRUTH = {
 async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-  // Step 1: Get fixture home/away orientation from DB
+  // Step 1: Get match home/away orientation from DB
   console.log(`\n${TAG} ═══ STEP 1: HOME/AWAY ORIENTATION AUDIT ═══`);
-  const fixtureIds = Object.keys(GROUND_TRUTH);
-  const [fixtures] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+  const matchIds = Object.keys(GROUND_TRUTH);
+  const [matches] = await conn.query(
+    `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
   const [teams] = await conn.query(`SELECT team_id, name, fifa_code FROM wc2026_teams`);
   const teamMap = Object.fromEntries(teams.map(t => [t.team_id, { name: t.name, abbr: t.fifa_code }]));
 
-  for (const f of fixtures) {
-    const gt = GROUND_TRUTH[f.fixture_id];
+  for (const f of matches) {
+    const gt = GROUND_TRUTH[f.match_id];
     const homeTeam = teamMap[f.home_team_id];
     const awayTeam = teamMap[f.away_team_id];
     const homeOk = homeTeam?.name === gt.homeTeam || homeTeam?.abbr === gt.homeAbbr;
     const awayOk = awayTeam?.name === gt.awayTeam || awayTeam?.abbr === gt.awayAbbr;
-    console.log(`${f.fixture_id} | ${gt.label}`);
+    console.log(`${f.match_id} | ${gt.label}`);
     console.log(`  DB:  home=${homeTeam?.name}(${homeTeam?.abbr}) away=${awayTeam?.name}(${awayTeam?.abbr})`);
     console.log(`  GT:  home=${gt.homeTeam}(${gt.homeAbbr}) away=${gt.awayTeam}(${gt.awayAbbr})`);
     console.log(`  ${homeOk && awayOk ? '✅ CORRECT' : '❌ MISMATCH'}`);
   }
 
-  // Step 2: Get all odds snapshots for June 24 fixtures
+  // Step 2: Get all odds snapshots for June 24 matches
   console.log(`\n${TAG} ═══ STEP 2: BOOK ODDS AUDIT (book_id=68) ═══`);
   const [snaps] = await conn.query(
-    `SELECT fixture_id, book_id, market, selection, line, american_odds FROM wc2026_odds_snapshots WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id, book_id, market, selection`,
-    fixtureIds
+    `SELECT match_id, book_id, market, selection, line, american_odds FROM wc2026_odds_snapshots WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id, book_id, market, selection`,
+    matchIds
   );
 
-  for (const fid of fixtureIds) {
+  for (const fid of matchIds) {
     const gt = GROUND_TRUTH[fid];
-    const bookRows = snaps.filter(r => r.fixture_id === fid && r.book_id === 68);
-    const modelRows = snaps.filter(r => r.fixture_id === fid && r.book_id === 0);
+    const bookRows = snaps.filter(r => r.match_id === fid && r.book_id === 68);
+    const modelRows = snaps.filter(r => r.match_id === fid && r.book_id === 0);
     console.log(`\n${fid} | ${gt.label}`);
     console.log(`  DB book rows: ${bookRows.length} | model rows: ${modelRows.length}`);
 
@@ -166,13 +166,13 @@ async function main() {
 
   // Step 3: Model spread accuracy check
   console.log(`\n${TAG} ═══ STEP 3: MODEL SPREAD ODDS ACCURACY ═══`);
-  for (const fid of fixtureIds) {
+  for (const fid of matchIds) {
     const gt = GROUND_TRUTH[fid];
-    const modelRows = snaps.filter(r => r.fixture_id === fid && r.book_id === 0);
+    const modelRows = snaps.filter(r => r.match_id === fid && r.book_id === 0);
     const modelAwaySpread = modelRows.find(r => r.market === 'ASIAN_HANDICAP' && r.selection === 'away');
     const modelHomeSpread = modelRows.find(r => r.market === 'ASIAN_HANDICAP' && r.selection === 'home');
-    const bookAwaySpread = snaps.find(r => r.fixture_id === fid && r.book_id === 68 && r.market === 'ASIAN_HANDICAP' && r.selection === 'away');
-    const bookHomeSpread = snaps.find(r => r.fixture_id === fid && r.book_id === 68 && r.market === 'ASIAN_HANDICAP' && r.selection === 'home');
+    const bookAwaySpread = snaps.find(r => r.match_id === fid && r.book_id === 68 && r.market === 'ASIAN_HANDICAP' && r.selection === 'away');
+    const bookHomeSpread = snaps.find(r => r.match_id === fid && r.book_id === 68 && r.market === 'ASIAN_HANDICAP' && r.selection === 'home');
     console.log(`${fid} | ${gt.label}`);
     console.log(`  Away spread: book_line=${bookAwaySpread?.line} book_odds=${bookAwaySpread?.american_odds} | model_line=${modelAwaySpread?.line} model_odds=${modelAwaySpread?.american_odds}`);
     console.log(`  Home spread: book_line=${bookHomeSpread?.line} book_odds=${bookHomeSpread?.american_odds} | model_line=${modelHomeSpread?.line} model_odds=${modelHomeSpread?.american_odds}`);
@@ -181,14 +181,14 @@ async function main() {
   // Step 4: Projected scores
   console.log(`\n${TAG} ═══ STEP 4: PROJECTED SCORES ═══`);
   const [projs] = await conn.query(
-    `SELECT fixture_id, proj_home_score, proj_away_score, proj_total, proj_spread, home_lambda, away_lambda FROM wc2026_model_projections WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+    `SELECT match_id, proj_home_score, proj_away_score, proj_total, proj_spread, home_lambda, away_lambda FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
   for (const p of projs) {
-    const gt = GROUND_TRUTH[p.fixture_id];
+    const gt = GROUND_TRUTH[p.match_id];
     const projTotal = Number(p.proj_total);
     const isRound = projTotal === 2.5 || projTotal === 3.5;
-    console.log(`${p.fixture_id} | ${gt.label}`);
+    console.log(`${p.match_id} | ${gt.label}`);
     console.log(`  proj_home=${p.proj_home_score} proj_away=${p.proj_away_score} proj_total=${projTotal} ${isRound ? '⚠️ ROUND NUMBER' : '✅'}`);
     console.log(`  lambdaH=${Number(p.home_lambda).toFixed(4)} lambdaA=${Number(p.away_lambda).toFixed(4)}`);
   }

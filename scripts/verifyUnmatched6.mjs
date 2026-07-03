@@ -1,6 +1,6 @@
 /**
  * verifyUnmatched6.mjs
- * Directly verifies the 6 unmatched 2026 WC fixtures against ESPN API
+ * Directly verifies the 6 unmatched 2026 WC matches against ESPN API
  * by fetching the specific date for each and matching by any name variant.
  */
 import mysql from 'mysql2/promise';
@@ -9,8 +9,8 @@ dotenv.config();
 
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 
-// The 6 unmatched fixtures with their DB data
-const FIXTURES = [
+// The 6 unmatched matches with their DB data
+const MATCHES = [
   { id: 'wc26-g-002', dbHome: 'South Korea',            dbAway: 'Czech Republic',          dbHS: 2, dbAS: 1, date: '20260612' },
   { id: 'wc26-g-003', dbHome: 'Bosnia and Herzegovina', dbAway: 'Canada',                  dbHS: 1, dbAS: 1, date: '20260612' },
   { id: 'wc26-g-008', dbHome: 'Australia',              dbAway: 'Turkey',                  dbHS: 2, dbAS: 0, date: '20260614' },
@@ -51,12 +51,12 @@ async function fetchEspnDate(dateStr) {
 }
 
 console.log('══════════════════════════════════════════════════════════════════════');
-console.log('[STEP] verifyUnmatched6.mjs — Verifying 6 unmatched 2026 WC fixtures');
+console.log('[STEP] verifyUnmatched6.mjs — Verifying 6 unmatched 2026 WC matches');
 console.log('══════════════════════════════════════════════════════════════════════');
 
 let allPass = true;
 
-for (const fix of FIXTURES) {
+for (const fix of MATCHES) {
   console.log(`\n[STEP] ${fix.id} | ${fix.dbHome} vs ${fix.dbAway} | ESPN date: ${fix.date}`);
   const events = await fetchEspnDate(fix.date);
   console.log(`  [ESPN] ${events.length} completed events on ${fix.date}`);
@@ -122,7 +122,7 @@ for (const fix of FIXTURES) {
 }
 
 console.log('\n══════════════════════════════════════════════════════════════════════');
-console.log(`[FINAL] ${allPass ? '✅ ALL 6 UNMATCHED FIXTURES VERIFIED CORRECT' : '❌ DISCREPANCIES FOUND — fixes required'}`);
+console.log(`[FINAL] ${allPass ? '✅ ALL 6 UNMATCHED MATCHES VERIFIED CORRECT' : '❌ DISCREPANCIES FOUND — fixes required'}`);
 console.log('══════════════════════════════════════════════════════════════════════');
 
 await db.end();

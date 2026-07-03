@@ -377,7 +377,7 @@ const ACTUAL_RESULTS = {
 
 banner('PHASE A — ESPN STATS PULL FROM DB');
 
-const FIXTURE_IDS_7 = Object.keys(ACTUAL_RESULTS);
+const MATCH_IDS_7 = Object.keys(ACTUAL_RESULTS);
 
 let conn;
 try {
@@ -400,8 +400,8 @@ const [espnMatches] = await conn.execute(
           f.match_id, f.espn_event_id
    FROM wc2026_espn_matches m
    JOIN wc2026_matches f ON f.espn_event_id = m.matchId
-   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
-  FIXTURE_IDS_7
+   WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
+  MATCH_IDS_7
 );
 log('STATE', `[PHASE A] ESPN matches pulled: ${espnMatches.length} rows`);
 
@@ -419,8 +419,8 @@ const [espnTeamStats] = await conn.execute(
           f.match_id
    FROM wc2026_espn_team_stats ts
    JOIN wc2026_matches f ON f.espn_event_id = ts.matchId
-   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
-  FIXTURE_IDS_7
+   WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
+  MATCH_IDS_7
 );
 log('STATE', `[PHASE A] ESPN team stats pulled: ${espnTeamStats.length} rows`);
 
@@ -434,8 +434,8 @@ const [espnXG] = await conn.execute(
           f.match_id
    FROM wc2026_espn_expected_goals xg
    JOIN wc2026_matches f ON f.espn_event_id = xg.matchId
-   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
-  FIXTURE_IDS_7
+   WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
+  MATCH_IDS_7
 );
 log('STATE', `[PHASE A] ESPN xG data pulled: ${espnXG.length} rows`);
 
@@ -453,24 +453,24 @@ const [modelRows] = await conn.execute(
           to_advance_home_odds, to_advance_away_odds,
           model_lean, lean_prob
    FROM wc2026_model_projections
-   WHERE match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
-  FIXTURE_IDS_7
+   WHERE match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
+  MATCH_IDS_7
 );
 log('STATE', `[PHASE A] Model projections pulled: ${modelRows.length} rows`);
 
 // Index by match_id
-const espnByFixture = {};
-for (const r of espnMatches) { espnByFixture[r.match_id] = r; }
-const xgByFixture = {};
-for (const r of espnXG) { xgByFixture[r.match_id] = r; }
-const modelByFixture = {};
-for (const r of modelRows) { modelByFixture[r.match_id] = r; }
+const espnByMatch = {};
+for (const r of espnMatches) { espnByMatch[r.match_id] = r; }
+const xgByMatch = {};
+for (const r of espnXG) { xgByMatch[r.match_id] = r; }
+const modelByMatch = {};
+for (const r of modelRows) { modelByMatch[r.match_id] = r; }
 
 // Build team stats index: { match_id: { home: {...}, away: {...} } }
-const teamStatsByFixture = {};
+const teamStatsByMatch = {};
 for (const r of espnTeamStats) {
-  if (!teamStatsByFixture[r.match_id]) teamStatsByFixture[r.match_id] = [];
-  teamStatsByFixture[r.match_id].push(r);
+  if (!teamStatsByMatch[r.match_id]) teamStatsByMatch[r.match_id] = [];
+  teamStatsByMatch[r.match_id].push(r);
 }
 
 pass('PHASE A complete: all ESPN and model data indexed by match_id');
@@ -483,13 +483,13 @@ banner('PHASE B — 500x FORENSIC GRADING');
 
 const gradeResults = [];
 
-for (const fid of FIXTURE_IDS_7) {
+for (const fid of MATCH_IDS_7) {
   section(`GRADING: ${fid} — ${ACTUAL_RESULTS[fid].label}`);
   const actual = ACTUAL_RESULTS[fid];
   const m = actual.model;
-  const espn = espnByFixture[fid];
-  const xg = xgByFixture[fid];
-  const dbModel = modelByFixture[fid];
+  const espn = espnByMatch[fid];
+  const xg = xgByMatch[fid];
+  const dbModel = modelByMatch[fid];
 
   log('INPUT', `[${fid}] Actual: ${actual.homeScore}-${actual.awayScore} | Winner: ${actual.winner} | Advancer: ${actual.advancer}`);
   log('INPUT', `[${fid}] Model: λH=${m.lambdaH} λA=${m.lambdaA} | Proj: ${m.projHomeScore}-${m.projAwayScore}`);
@@ -497,7 +497,7 @@ for (const fid of FIXTURE_IDS_7) {
 
   // ── ESPN stats ──────────────────────────────────────────────────────────────
   // Team stats (from wide-format espnTeamStats)
-  const ts = teamStatsByFixture[fid] ? teamStatsByFixture[fid][0] : null;
+  const ts = teamStatsByMatch[fid] ? teamStatsByMatch[fid][0] : null;
   if (espn) {
     log('STATE', `[${fid}] ESPN: Score=${espn.homeScore}-${espn.awayScore} | Venue=${espn.venue}, ${espn.city} | Att=${espn.attendance}`);
     log('STATE', `[${fid}] ESPN: H_Form=${espn.homeFormation} A_Form=${espn.awayFormation} | KO=${espn.matchKickoffEt}`);
@@ -814,7 +814,7 @@ for (const v of VARIATIONS) {
   let totalBrier = 0, totalDirCorrect = 0, totalTotalErr = 0, totalSpreadErr = 0;
   let matchCount = 0;
 
-  for (const fid of FIXTURE_IDS_7) {
+  for (const fid of MATCH_IDS_7) {
     const actual = ACTUAL_RESULTS[fid];
     const m = actual.model;
 
@@ -875,11 +875,11 @@ pass('PHASE D complete: 10-variation backtest done');
 
 banner('PHASE E — v12.0-KO24 FINAL PROJECTIONS — JULY 1, 2026');
 
-// Jul 1 fixture inputs — v12 lambda derivations
+// Jul 1 match inputs — v12 lambda derivations
 // Using winner variation parameters
 const V12_PARAMS = { rho: winner.rho, awayCorr: winner.awayCorr, totalCorr: winner.totalCorr };
 
-const JUL1_FIXTURES = [
+const JUL1_MATCHS = [
   {
     fid: 'wc26-r32-080',
     label: 'DR Congo (H) vs England (A) — 12:00 PM ET | Atlanta',
@@ -951,7 +951,7 @@ const JUL1_FIXTURES = [
 
 const jul1Results = [];
 
-for (const fx of JUL1_FIXTURES) {
+for (const fx of JUL1_MATCHS) {
   section(`v12 PROJECTION: ${fx.fid} — ${fx.label}`);
   log('INPUT', `λH=${fx.lambdaH} λA=${fx.lambdaA} | Params: rho=${V12_PARAMS.rho} awayCorr=${V12_PARAMS.awayCorr} totalCorr=${V12_PARAMS.totalCorr}`);
 

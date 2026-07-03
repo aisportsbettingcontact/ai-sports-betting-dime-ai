@@ -1,13 +1,13 @@
 /**
  * seedJuly1Direct.ts — v12.0-KO24 July 1 WC2026 Seed
  * ═══════════════════════════════════════════════════════════════════════════════
- * Fixtures:
+ * Matches:
  *   wc26-r32-080  England (H) vs Congo DR (A)         — 12:00 PM ET / 16:00 UTC
  *   wc26-r32-081  Belgium (H) vs Senegal (A)          —  4:00 PM ET / 20:00 UTC
  *   wc26-r32-082  USA (H) vs Bosnia & Herzegovina (A) —  8:00 PM ET / 00:00 UTC+1
  *
- * ORIENTATION (critical — verified from DB fixtures table):
- *   Home team = left side of fixture slug (England, Belgium, USA)
+ * ORIENTATION (critical — verified from DB matches table):
+ *   Home team = left side of match slug (England, Belgium, USA)
  *   Away team = right side (Congo DR, Senegal, Bosnia-Herz)
  *
  * COLUMN MAPPING (from pasted_content_69.txt — exact column order):
@@ -125,9 +125,9 @@ function log(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FIXTURE IDs
+// MATCH IDs
 // ═══════════════════════════════════════════════════════════════════════════════
-const FIXTURE_IDS = ["wc26-r32-080", "wc26-r32-081", "wc26-r32-082"];
+const MATCH_IDS = ["wc26-r32-080", "wc26-r32-081", "wc26-r32-082"];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOOK ODDS — EXACT FROM pasted_content_69.txt
@@ -549,7 +549,7 @@ async function main() {
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
 ║  WC2026 JULY 1 DIRECT SEED — v12.0-KO24-V5                                        ║
 ║  Session: ${SESSION_ID}                                                ║
-║  Fixtures:                                                                         ║
+║  Matches:                                                                         ║
 ║    wc26-r32-080  England (H) vs Congo DR (A)         — 12:00 PM ET                ║
 ║    wc26-r32-081  Belgium (H) vs Senegal (A)          —  4:00 PM ET                ║
 ║    wc26-r32-082  USA (H) vs Bosnia & Herzegovina (A) —  8:00 PM ET                ║
@@ -566,9 +566,9 @@ async function main() {
   log("SECTION", "PHASE1", "PRE-FLIGHT INPUT VALIDATION — 500x cross-reference of all source data");
 
   // Validate book rows
-  log("STEP", "BOOK-VAL", `Validating ${FIXTURE_IDS.length} book rows × ${BOOK_MARKET_CHECKS.length} markets = ${FIXTURE_IDS.length * BOOK_MARKET_CHECKS.length} checks`);
+  log("STEP", "BOOK-VAL", `Validating ${MATCH_IDS.length} book rows × ${BOOK_MARKET_CHECKS.length} markets = ${MATCH_IDS.length * BOOK_MARKET_CHECKS.length} checks`);
   let bookValPass = 0, bookValFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const row = BOOK_ROWS[fid];
     if (!row) { log("FAIL", "BOOK-VAL", `${fid}: BOOK_ROWS entry missing`); bookValFail++; continue; }
     log("INPUT", "BOOK-VAL", `${fid}: bookHomeMl=${row.bookHomeMl} bookDrawMl=${row.bookDrawMl} bookAwayMl=${row.bookAwayMl}`,
@@ -594,9 +594,9 @@ async function main() {
   log("PASS", "BOOK-VAL", `All ${bookValPass} book validation checks PASS`);
 
   // Validate model rows
-  log("STEP", "MODEL-VAL", `Validating ${FIXTURE_IDS.length} model rows × ${MODEL_MARKET_CHECKS.length} markets = ${FIXTURE_IDS.length * MODEL_MARKET_CHECKS.length} checks`);
+  log("STEP", "MODEL-VAL", `Validating ${MATCH_IDS.length} model rows × ${MODEL_MARKET_CHECKS.length} markets = ${MATCH_IDS.length * MODEL_MARKET_CHECKS.length} checks`);
   let modelValPass = 0, modelValFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const row = MODEL_ROWS[fid];
     if (!row) { log("FAIL", "MODEL-VAL", `${fid}: MODEL_ROWS entry missing`); modelValFail++; continue; }
     log("INPUT", "MODEL-VAL", `${fid}: λH=${row.homeLambda} λA=${row.awayLambda} | Proj ${row.projHomeScore}-${row.projAwayScore} | pH=${row.homeWinProb} pD=${row.drawProb} pA=${row.awayWinProb}`);
@@ -656,15 +656,15 @@ async function main() {
   }
   log("PASS", "MODEL-VAL", `All ${modelValPass} model validation checks PASS`);
 
-  // ─── PHASE 2: VERIFY FIXTURES EXIST IN DB ────────────────────────────────
-  log("SECTION", "PHASE2", "VERIFYING FIXTURES EXIST IN wc2026_matches");
-  const fixtures = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
-  if (fixtures.length !== 3) {
-    log("FAIL", "FX-CHECK", `Expected 3 fixtures, got ${fixtures.length} — ABORT`);
+  // ─── PHASE 2: VERIFY MATCHES EXIST IN DB ────────────────────────────────
+  log("SECTION", "PHASE2", "VERIFYING MATCHES EXIST IN wc2026_matches");
+  const matches = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, MATCH_IDS));
+  if (matches.length !== 3) {
+    log("FAIL", "FX-CHECK", `Expected 3 matches, got ${matches.length} — ABORT`);
     flushSeedLog(); process.exit(1);
   }
-  log("PASS", "FX-CHECK", `All 3 fixtures confirmed in wc2026_matches`);
-  for (const f of fixtures) {
+  log("PASS", "FX-CHECK", `All 3 matches confirmed in wc2026_matches`);
+  for (const f of matches) {
     log("VERIFY", "FX-CHECK", `${(f as any).matchId}: home=${(f as any).homeTeamId} away=${(f as any).awayTeamId} | kickoff=${(f as any).kickoffUtc} | stage=${(f as any).stage}`);
     // Cross-check orientation
     const mr = MODEL_ROWS[(f as any).matchId];
@@ -682,7 +682,7 @@ async function main() {
   // ─── PHASE 3: UPSERT FROZEN BOOK ODDS ────────────────────────────────────
   log("SECTION", "PHASE3", "UPSERTING FROZEN BOOK ODDS — wc2026_frozen_book_odds");
   let bookInsertPass = 0, bookInsertFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     log("STEP", "BOOK-INS", `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
     try {
@@ -728,7 +728,7 @@ async function main() {
   // ─── PHASE 4: UPSERT MODEL PROJECTIONS ───────────────────────────────────
   log("SECTION", "PHASE4", "UPSERTING MODEL PROJECTIONS — wc2026_model_projections");
   let modelInsertPass = 0, modelInsertFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     log("STEP", "MODEL-INS", `Upserting model projection for ${fid}`);
     const row = MODEL_ROWS[fid];
     try {
@@ -805,8 +805,8 @@ async function main() {
   // ─── PHASE 5: READ-BACK VERIFICATION ─────────────────────────────────────
   log("SECTION", "PHASE5", "READ-BACK VERIFICATION — 500x cross-reference against source data");
 
-  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
-  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, FIXTURE_IDS));
+  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, MATCH_IDS));
+  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, MATCH_IDS));
 
   log("STATE", "READBACK", `Frozen book odds rows returned: ${bos.length} (expected 3)`);
   log("STATE", "READBACK", `Model projection rows returned: ${mps.length} (expected 3)`);
@@ -824,7 +824,7 @@ async function main() {
   mps.forEach((mp: any) => { mpMap[mp.matchId] = mp; });
 
   let xrefPass = 0, xrefFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     log("STEP", "XREF", `Cross-referencing ${fid} — ${BOOK_MARKET_CHECKS.length} book + ${MODEL_MARKET_CHECKS.length} model fields`);
     const bo = boMap[fid];
     const mp = mpMap[fid];
@@ -891,11 +891,11 @@ async function main() {
   }
 
   // ─── PHASE 6: STATE DUMP ──────────────────────────────────────────────────
-  log("SECTION", "PHASE6", "FINAL STATE DUMP — all 3 fixtures with full market values");
-  for (const fid of FIXTURE_IDS) {
+  log("SECTION", "PHASE6", "FINAL STATE DUMP — all 3 matches with full market values");
+  for (const fid of MATCH_IDS) {
     const bo = boMap[fid];
     const mp = mpMap[fid];
-    const fx = fixtures.find((f: any) => f.matchId === fid);
+    const fx = matches.find((f: any) => f.matchId === fid);
     log("STATE", "DUMP", `━━━ ${fid}: ${(fx as any)?.homeTeamId?.toUpperCase()} (H) vs ${(fx as any)?.awayTeamId?.toUpperCase()} (A) ━━━`);
     log("STATE", "DUMP", `  [BOOK ODDS]`);
     log("STATE", "DUMP", `    1X2 ML:       Home=${bo?.bookHomeMl}  Draw=${bo?.bookDrawMl}  Away=${bo?.bookAwayMl}`);
@@ -925,7 +925,7 @@ async function main() {
 ════════════════════════════════════════════════════════════════════════════════════════
 SESSION END: ${new Date().toISOString()} | ELAPSED: ${elapsed}s
 STEPS: ${_STEP} | PASS: ${_PASS} | FAIL: ${_FAIL} | WARN: ${_WARN}
-BOOK INSERTS: ${bookInsertPass}/${FIXTURE_IDS.length} | MODEL INSERTS: ${modelInsertPass}/${FIXTURE_IDS.length}
+BOOK INSERTS: ${bookInsertPass}/${MATCH_IDS.length} | MODEL INSERTS: ${modelInsertPass}/${MATCH_IDS.length}
 XREF CHECKS: ${xrefPass} PASS / ${xrefFail} FAIL
 SCRIPT: seedJuly1Direct.ts | MODEL: v12.0-KO24-V5 (Player xG Dominant)
 SEED LOG: ${SEED_LOG_PATH}

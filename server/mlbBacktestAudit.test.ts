@@ -88,7 +88,7 @@ import {
   type SegmentationReport,
 } from "./mlbSegmentationEngine";
 
-// ─── Test Fixtures ────────────────────────────────────────────────────────────
+// ─── Test Data ────────────────────────────────────────────────────────────
 
 const GAME_START_UTC_MS = Date.UTC(2025, 3, 15, 23, 10, 0); // April 15 2025 7:10 PM EDT
 const MODEL_RUN_BEFORE  = GAME_START_UTC_MS - 2 * 3600_000;  // 2 hours before

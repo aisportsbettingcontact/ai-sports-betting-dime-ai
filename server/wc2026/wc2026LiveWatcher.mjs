@@ -5,7 +5,7 @@
  * 44-SCENARIO TEST MATRIX | DAY_ADVANCE ROLLING WINDOW ENGINE
  * ESPN_LIVE_STATUS_NAMES DUAL-PATH (typeId + name-based fallback)
  * STATUS_EXTRA_TIME_HALF_TIME | STATUS_PENALTY name alias
- * fixtureStatus classification log | hasWinner/isTdy/statusPrimary
+ * matchStatus classification log | hasWinner/isTdy/statusPrimary
  * isSwapped orientation note | statusDesc in every LIVE log line
  *
  * Architecture mirrors batchScrapeR32.mjs at every layer:
@@ -29,7 +29,7 @@
  *   - STATUS_EXTRA_TIME_HALF_TIME: new state — ET halftime break
  *       Classified as LIVE, logs ET_HT_ACTIVE, tightens poll to 15s
  *   - STATUS_PENALTY name fallback: alias for typeId=24 (isShootout detection)
- *   - fixtureStatus classification: logs FT|LIVE|PRE|SKIP on every event
+ *   - matchStatus classification: logs FT|LIVE|PRE|SKIP on every event
  *   - statusDesc in every LIVE log line (description field)
  *   - hasWinner flag as tertiary FT confirmation signal
  *   - isTdy (isToday) flag logged per event in CYCLE summary
@@ -260,7 +260,7 @@ const LEVEL_COLORS = {
   'PENS_AC': C.orange,   // STATUS_SHOOTOUT active
   'WATCH  ': C.teal,     // Game enters STATUS_IN_PROGRESS (id=2)
   'ET_HT  ': C.orange,   // STATUS_EXTRA_TIME_HALF_TIME (ET halftime break)
-  'FIXTURE': C.gray,     // fixtureStatus classification log (FT|LIVE|PRE|SKIP)
+  'MATCH': C.gray,     // matchStatus classification log (FT|LIVE|PRE|SKIP)
 };
 
 const log = (level, tag, msg) => {
@@ -509,11 +509,11 @@ const parseEspnEvent = (event) => {
     ? eventDate.replace(/[-T:Z.]/g, '').slice(0, 8)
     : '';
 
-  // v2.3: fixtureStatus classification (from wc2026Ingester.ts)
+  // v2.3: matchStatus classification (from wc2026Ingester.ts)
   // FT = completed=true | LIVE = in-progress by any detection path | PRE = scheduled | SKIP = none
   const isLiveFinal = isLiveByState || isLiveByTypeId || isLiveByName;
   // v2.3: canceled must be SKIP even if ESPN marks completed=true
-  const fixtureStatus = (statusCompleted === true && !isCanceled) ? 'FT'
+  const matchStatus = (statusCompleted === true && !isCanceled) ? 'FT'
     : isLiveFinal ? 'LIVE'
     : statusState === 'pre' ? 'PRE'
     : 'SKIP';
@@ -530,7 +530,7 @@ const parseEspnEvent = (event) => {
     isInProgress, isHalftime, isSecondHalf, isFirstHalf,
     isLiveByState, isLiveByTypeId, isLiveByName,
     hasWinner, isTdy, statusPrimary, isSwapped,
-    fixtureStatus,
+    matchStatus,
     competitors, home, away, scoreStr,
   };
 };
@@ -1262,8 +1262,8 @@ const pollCycle = async () => {
       if (special.handled) continue;
 
       // ── LIVE game logging ──────────────────────────────────────────────────
-      // v2.3: fixtureStatus classification log — every event, every cycle
-      log('FIXTURE', `FIXTURE/${g.gameId}`, `[CLASSIFY] ${g.name} | fixtureStatus=${g.fixtureStatus} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} | isTdy=${g.isTdy} hasWinner=${g.hasWinner}${g.statusPrimary ? ` statusPrimary=${g.statusPrimary}` : ''} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
+      // v2.3: matchStatus classification log — every event, every cycle
+      log('MATCH', `MATCH/${g.gameId}`, `[CLASSIFY] ${g.name} | matchStatus=${g.matchStatus} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} | isTdy=${g.isTdy} hasWinner=${g.hasWinner}${g.statusPrimary ? ` statusPrimary=${g.statusPrimary}` : ''} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
 
       if (g.isLive) {
         liveGames++;

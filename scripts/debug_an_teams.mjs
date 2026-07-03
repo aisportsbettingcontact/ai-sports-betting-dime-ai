@@ -1,7 +1,7 @@
 /**
  * debug_an_teams.mjs
  * Deep inspection of AN API teams[] objects to find per-team odds
- * and understand the exact home/away mapping for all 4 June 21 fixtures.
+ * and understand the exact home/away mapping for all 4 June 21 matches.
  */
 import https from 'https';
 
@@ -37,8 +37,8 @@ async function main() {
   const data = await fetchAN(url);
   const games = data.games ?? [];
   
-  // DB fixture orientations (ground truth)
-  const dbFixtures = {
+  // DB match orientations (ground truth)
+  const dbMatches = {
     284377: { id: 'wc26-g-039', home: 'esp', away: 'ksa', label: 'Spain vs Saudi Arabia' },
     284378: { id: 'wc26-g-037', home: 'irn', away: 'bel', label: 'Iran vs Belgium' },
     284379: { id: 'wc26-g-040', home: 'cpv', away: 'uru', label: 'Cape Verde vs Uruguay' },
@@ -46,7 +46,7 @@ async function main() {
   };
   
   for (const game of games) {
-    const db = dbFixtures[game.id];
+    const db = dbMatches[game.id];
     if (!db) continue;
     
     const t0 = game.teams?.[0];

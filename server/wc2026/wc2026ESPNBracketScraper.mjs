@@ -145,15 +145,15 @@ async function loadMatchNumberMap() {
     // 1. espnEventId → matchNumber (for rows with espn_event_id set)
     // 2. match_id → matchNumber (fallback)
     const byEventId = new Map();
-    const byFixtureId = new Map();
+    const byMatchId = new Map();
     for (const row of rows) {
       const mn = row.display_order ? `Match ${row.display_order}` : null;
       if (row.espn_event_id) byEventId.set(String(row.espn_event_id), mn);
-      if (row.match_id) byFixtureId.set(row.match_id, mn);
+      if (row.match_id) byMatchId.set(row.match_id, mn);
     }
-    log("FIXTURES", `Loaded ${rows.length} knockout fixtures from DB`);
-    log("FIXTURES", `  With espn_event_id: ${byEventId.size}`);
-    return { byEventId, byFixtureId, rows };
+    log("MATCHS", `Loaded ${rows.length} knockout matchs from DB`);
+    log("MATCHS", `  With espn_event_id: ${byEventId.size}`);
+    return { byEventId, byMatchId, rows };
   } finally {
     await conn.end();
   }
@@ -181,7 +181,7 @@ function transformEvent(event, matchNumberMap, bracketLocationByRound) {
   const roundId = ROUND_SLUG_TO_ID[roundSlug] ?? 0;
   const roundLabel = ROUND_SLUG_TO_LABEL[roundSlug] ?? roundSlug;
 
-  // Match number — static map (R16+) takes priority, fixtures DB for R32
+  // Match number — static map (R16+) takes priority, matchs DB for R32
   const matchNumber = STATIC_MATCH_NUMBERS[String(event.id)]
     ?? matchNumberMap.byEventId.get(String(event.id))
     ?? null;

@@ -10,7 +10,7 @@
  *   n_simulations = 1,000,000 (analytical Poisson, not stochastic)
  *   rho = -0.13 (Dixon-Coles low-score correction)
  *
- * JUNE 25 FIXTURES (DB verified, kickoff_utc order):
+ * JUNE 25 MATCHS (DB verified, kickoff_utc order):
  *   wc26-g-057: CUW (home=cuw) vs CIV (away=civ) — Group E, 20:00 UTC
  *   wc26-g-058: ECU (home=ecu) vs GER (away=ger) — Group E, 20:00 UTC
  *   wc26-g-059: JPN (home=jpn) vs SWE (away=swe) — Group F, 23:00 UTC
@@ -225,10 +225,10 @@ function computeLambda(nv, isHome, elo, rank, form) {
   return Math.max(0.3, baseLambda + eloAdj + rankAdj + formAdj);
 }
 
-// ─── June 25 Fixtures ─────────────────────────────────────────────────────────
+// ─── June 25 Matchs ─────────────────────────────────────────────────────────
 // DB orientation confirmed: home_team_id / away_team_id
 // All DK odds mapped to DB home/away orientation
-const FIXTURES = [
+const MATCHS = [
   {
     matchId: 'wc26-g-057',
     homeId: 'cuw', awayId: 'civ',
@@ -326,7 +326,7 @@ const FIXTURES = [
 async function main() {
   console.log(`\n${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] WC2026 June 25 Model Seed — Dixon-Coles v4.2`);
-  console.log(`${TAG} [INPUT] Fixtures: ${FIXTURES.length} | Simulations: ${N_SIMULATIONS.toLocaleString()}`);
+  console.log(`${TAG} [INPUT] Matchs: ${MATCHS.length} | Simulations: ${N_SIMULATIONS.toLocaleString()}`);
   console.log(`${TAG} [INPUT] Model version: ${MODEL_VERSION}`);
   console.log(`${TAG} [INPUT] Parameters: draw_floor=0.097 | rho=-0.13 | w_book=0.25 w_elo=0.40 w_rank=0.15 w_form=0.20`);
   console.log(`${TAG} ═══════════════════════════════════════════════════════\n`);
@@ -338,14 +338,14 @@ async function main() {
   let totalProjRows = 0;
   const errors = [];
 
-  for (const f of FIXTURES) {
-    console.log(`${TAG} ─── Fixture: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+  for (const f of MATCHS) {
+    console.log(`${TAG} ─── Match: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
     console.log(`${TAG} [INPUT] DK 1X2: home=${f.dkHomeML} draw=${f.dkDrawML} away=${f.dkAwayML}`);
     console.log(`${TAG} [INPUT] DK TOTAL: O${f.dkTotalLine}=${f.dkOverOdds} U${f.dkTotalLine}=${f.dkUnderOdds}`);
     console.log(`${TAG} [INPUT] Team ratings: home(${f.homeId}) elo=${f.homeElo} rank=${f.homeRank} form=${f.homeForm}`);
     console.log(`${TAG} [INPUT] Team ratings: away(${f.awayId}) elo=${f.awayElo} rank=${f.awayRank} form=${f.awayForm}`);
 
-    // ── Step 1: Clear existing MODEL odds for this fixture ────────────────────
+    // ── Step 1: Clear existing MODEL odds for this match ────────────────────
     const [delModel] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
       [f.matchId, MODEL_BOOK_ID]
@@ -590,22 +590,22 @@ async function main() {
   }
 
   // ── Final verification ────────────────────────────────────────────────────
-  const FIXTURE_IDS = FIXTURES.map(f => f.matchId);
-  const idList = FIXTURE_IDS.map(() => '?').join(',');
+  const MATCH_IDS = MATCHS.map(f => f.matchId);
+  const idList = MATCH_IDS.map(() => '?').join(',');
 
   const [verifyModel] = await conn.query(
     `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
   const [verifyProj] = await conn.query(
     `SELECT match_id, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_lean FROM wc2026_model_projections WHERE match_id IN (${idList})`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
 
   console.log(`${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} FINAL VERIFICATION`);
   console.log(`${TAG} ═══════════════════════════════════════════════════════`);
-  console.log(`${TAG} [VERIFY] Model odds per fixture (expected 12 each):`);
+  console.log(`${TAG} [VERIFY] Model odds per match (expected 12 each):`);
   for (const r of verifyModel) {
     const pass = r.cnt === 12;
     console.log(`${TAG}   ${r.match_id}: ${r.cnt} rows ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
@@ -620,7 +620,7 @@ async function main() {
   const pass = allModelOk && allProjOk;
 
   console.log(`\n${TAG} [VERIFY] ${pass ? 'ALL CHECKS PASSED ✓' : 'FAILURES DETECTED ✗'}`);
-  console.log(`${TAG}   Model odds: ${verifyModel.length}/6 fixtures (${allModelOk ? 'PASS' : 'FAIL'})`);
+  console.log(`${TAG}   Model odds: ${verifyModel.length}/6 matchs (${allModelOk ? 'PASS' : 'FAIL'})`);
   console.log(`${TAG}   Projections: ${verifyProj.length}/6 (${allProjOk ? 'PASS' : 'FAIL'})`);
   console.log(`${TAG}   Total model rows inserted: ${totalModelRows}`);
   console.log(`${TAG}   Total projection rows upserted: ${totalProjRows}`);

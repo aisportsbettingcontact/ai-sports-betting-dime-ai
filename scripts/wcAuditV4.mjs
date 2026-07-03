@@ -35,13 +35,13 @@
  *   DB shows g-049 BTTS YES -118, P=0.5415 — this matches v3 output exactly
  *   v3 log: "pBTTSY=54.170% → BTTS Yes: -118"
  *   So v3 DID write g-049 successfully, then failed on model_projections JSON
- *   The remaining 5 fixtures (g-050 through g-054) are from v2 or earlier
+ *   The remaining 5 matches (g-050 through g-054) are from v2 or earlier
  *
  * CRITICAL FINDING: The BRA -1.5 -2000 is a DISPLAY BUG, not a math bug.
  *   The DB correctly stores: away=BRA, line=+1.5, odds=-2000 (BRA +1.5 is -2000 = 97.4% coverage)
  *   The feed is DISPLAYING the away team's +1.5 line as "-1.5" — sign inversion bug in frontend.
  *
- * BTTS BUG: v3 failed mid-run. Need to complete the run for all 6 fixtures.
+ * BTTS BUG: v3 failed mid-run. Need to complete the run for all 6 matches.
  * With baseH=1.350, baseA=1.300:
  *   g-049 SUI vs CAN: λ=2.709 → BTTS YES ≈ 54.2% → -118 (borderline, acceptable)
  *   But WC 2026 actual BTTS rate is 52% — so even v3 is slightly high
@@ -206,7 +206,7 @@ const baseRates = [
   { label: 'v4b (TIGHTER)',     bH: 1.270, bA: 1.220 },
 ];
 
-const FIXTURES_AUDIT = [
+const MATCHES_AUDIT = [
   { id:'g-049', hC:'SUI', aC:'CAN' },
   { id:'g-050', hC:'BIH', aC:'QAT' },
   { id:'g-051', hC:'SCO', aC:'BRA' },
@@ -218,7 +218,7 @@ const FIXTURES_AUDIT = [
 for (const br of baseRates) {
   console.log(`\n${TAG} ── ${br.label}: baseH=${br.bH}, baseA=${br.bA} ──`);
   let totalBTTS = 0, totalTotal = 0;
-  for (const fix of FIXTURES_AUDIT) {
+  for (const fix of MATCHES_AUDIT) {
     const eH = ELO[fix.hC], eA = ELO[fix.aC];
     const ed = (eH - eA) / 400;
     const lH = Math.max(0.25, Math.min(3.5, br.bH * Math.exp(ed * 0.70)));
@@ -274,13 +274,13 @@ console.log(`${TAG}   Pattern 3: Component hardcodes "away gets -1.5 if home get
 console.log(`\n${TAG} FIX: Read awayRow.line directly (it is already +1.5 in DB)`);
 console.log(`${TAG}   OR: Compute awayLine = -homeRow.line`);
 
-// ── SECTION 5: COMPLETE CORRECT LINES FOR ALL 6 FIXTURES ─────────────────────
+// ── SECTION 5: COMPLETE CORRECT LINES FOR ALL 6 MATCHES ─────────────────────
 console.log(`\n${TAG} ═══════════════════════════════════════════════════════`);
 console.log(`${TAG} SECTION 5: CORRECT LINES WITH baseH=1.300, baseA=1.250`);
 console.log(`${TAG} ═══════════════════════════════════════════════════════`);
 
 const FINAL_PARAMS = { ss: 0.70, rho: -0.10, baseH: 1.300, baseA: 1.250 };
-const FIXTURES_FULL = [
+const MATCHES_FULL = [
   { id:'wc26-g-049', hC:'SUI', aC:'CAN', hN:'Switzerland', aN:'Canada', bookTotal:2.5 },
   { id:'wc26-g-050', hC:'BIH', aC:'QAT', hN:'Bosnia-Herzegovina', aN:'Qatar', bookTotal:2.5 },
   { id:'wc26-g-051', hC:'SCO', aC:'BRA', hN:'Scotland', aN:'Brazil', bookTotal:2.5 },
@@ -291,7 +291,7 @@ const FIXTURES_FULL = [
 
 console.log(`\n${TAG} PARAMS: ss=${FINAL_PARAMS.ss} | rho=${FINAL_PARAMS.rho} | baseH=${FINAL_PARAMS.baseH} | baseA=${FINAL_PARAMS.baseA}`);
 
-for (const fix of FIXTURES_FULL) {
+for (const fix of MATCHES_FULL) {
   const eH = ELO[fix.hC], eA = ELO[fix.aC];
   const ed = (eH - eA) / 400;
   const lH = Math.max(0.25, Math.min(3.5, FINAL_PARAMS.baseH * Math.exp(ed * FINAL_PARAMS.ss)));

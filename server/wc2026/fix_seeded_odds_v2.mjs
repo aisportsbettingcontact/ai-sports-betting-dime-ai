@@ -1,7 +1,7 @@
 /**
  * fix_seeded_odds_v2.mjs
  * ══════════════════════════════════════════════════════════════════════════════
- * Corrects all data errors in wc2026_frozen_book_odds for 12 fixtures.
+ * Corrects all data errors in wc2026_frozen_book_odds for 12 matchs.
  * Uses explicit named objects — zero column alignment risk.
  *
  * Source: User-provided book lines table (exact values, Jul 1 2026)
@@ -144,7 +144,7 @@ const CORRECTIONS = [
   },
 ];
 
-console.log('[INPUT] Applying corrections to 12 fixtures with explicit named fields...\n');
+console.log('[INPUT] Applying corrections to 12 matchs with explicit named fields...\n');
 
 let totalUpdated = 0;
 let totalErrors = 0;
@@ -260,7 +260,7 @@ for (const row of rows) {
 
 console.log(`\n[VERIFY] Total verification errors: ${verifyErrors}`);
 if (verifyErrors === 0) {
-  console.log('[VERIFY] ✅ ALL 12 FIXTURES FULLY CORRECT — ZERO ERRORS');
+  console.log('[VERIFY] ✅ ALL 12 MATCHS FULLY CORRECT — ZERO ERRORS');
 } else {
   console.log('[VERIFY] ❌ CORRECTIONS INCOMPLETE — RE-RUN REQUIRED');
 }

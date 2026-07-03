@@ -15,7 +15,7 @@ const [rows] = await db.execute(`
   ORDER BY f.kickoff_utc
 `);
 
-console.log('\n=== JUNE 30 FIXTURES ===');
+console.log('\n=== JUNE 30 MATCHES ===');
 rows.forEach(r => {
   console.log(`${r.match_id} | ${r.kickoff_utc} | HOME: ${r.home_name} (${r.home_team_id}) | AWAY: ${r.away_name} (${r.away_team_id}) | stage=${r.stage} | order=${r.display_order}`);
 });

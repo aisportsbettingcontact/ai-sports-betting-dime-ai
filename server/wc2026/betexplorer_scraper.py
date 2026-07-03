@@ -87,7 +87,7 @@ MARKETS = ["1x2", "ou", "ah", "dc", "bts"]  # ha OMITTED per spec
 REQUIRED_MARKETS = {"1x2", "ou", "ah", "dc", "bts"}
 
 # All 12 WC2026 KO Round matches
-FIXTURES = [
+MATCHES = [
     # ── CONFIRMED: DB match_id + BetExplorer event_id + ESPN match_id all forensically verified ──
     # BetExplorer be_name format: HOME - AWAY (BetExplorer slug is always home-away)
     # ESPN match IDs sourced from site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
@@ -147,7 +147,7 @@ FIXTURES = [
 ]
 
 BASE_URL = "https://www.betexplorer.com"
-FIXTURES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/matches/"
+MATCHES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/matches/"
 AJAX_TEMPLATE = "{base}/match-odds/{event_id}/0/{market}/bestOdds/?lang=en"
 MATCH_PAGE_TEMPLATE = "{base}/football/world/world-championship-2026/{slug}/{event_id}/"
 
@@ -194,7 +194,7 @@ class ForensicLogger:
             "version": "4.0.0",
             "bid_target": BET365_BID,
             "markets": MARKETS,
-            "matches_count": len(FIXTURES),
+            "matches_count": len(MATCHES),
         }
         with open(self.log_path, "a") as f:
             f.write(json.dumps(header) + "\n")
@@ -1603,16 +1603,16 @@ def run_scraper(match_ids: list = None):
     throttle = ThrottleController(logger)
     stealth = StealthHeaders()
     visualizer = ProgressVisualizer(
-        total_matches=len(FIXTURES),
+        total_matches=len(MATCHES),
         total_markets=len(MARKETS)
     )
 
     # Filter matches if subset requested
     # Matches on match_id (e.g. 'wc26-r32-066') OR event_id (e.g. 'nkoQVAgB')
-    matches_to_run = FIXTURES
+    matches_to_run = MATCHES
     if match_ids:
         matches_to_run = [
-            f for f in FIXTURES
+            f for f in MATCHES
             if f["id"] in match_ids or f["event_id"] in match_ids
         ]
         logger.emit("INFO", f"Running subset: {[f['id'] for f in matches_to_run]} "
@@ -1623,10 +1623,10 @@ def run_scraper(match_ids: list = None):
     session.headers.update(stealth.page())
 
     # ── WARMUP: Visit matches page to establish session ──────────────────────
-    logger.emit("STEP", "SESSION WARMUP", url=FIXTURES_PAGE)
+    logger.emit("STEP", "SESSION WARMUP", url=MATCHES_PAGE)
     try:
         t0 = time.time()
-        warmup_resp = session.get(FIXTURES_PAGE, timeout=20)
+        warmup_resp = session.get(MATCHES_PAGE, timeout=20)
         elapsed = time.time() - t0
         throttle.record_response(elapsed, warmup_resp.status_code)
         logger.emit("CHECKPOINT", f"Warmup complete: HTTP {warmup_resp.status_code} "
@@ -1635,7 +1635,7 @@ def run_scraper(match_ids: list = None):
         logger.emit("WARN", f"Warmup failed: {e} — continuing anyway")
 
     # Switch to AJAX headers
-    session.headers.update(stealth.ajax(FIXTURES_PAGE))
+    session.headers.update(stealth.ajax(MATCHES_PAGE))
 
     # Post-warmup delay
     delay = throttle.get_delay("post_warmup")
@@ -1648,7 +1648,7 @@ def run_scraper(match_ids: list = None):
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "_meta": {
             "expected_count": len(matches_to_run),
-            "total_matches": len(FIXTURES),
+            "total_matches": len(MATCHES),
             "subset_mode": match_ids is not None,
             "scraper_version": "v4.0",
             "bid": BET365_BID,
@@ -1666,7 +1666,7 @@ def run_scraper(match_ids: list = None):
         logger.push_breadcrumb(f"match_{match_num}:{match_id}")
 
         print(f"\n\033[96m{'╔'+'═'*78+'╗'}\033[0m", flush=True)
-        print(f"\033[96m║  FIXTURE {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<50}║\033[0m", flush=True)
+        print(f"\033[96m║  MATCH {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<50}║\033[0m", flush=True)
         print(f"\033[96m{'╚'+'═'*78+'╝'}\033[0m", flush=True)
 
         # Resolve team names
@@ -2410,12 +2410,12 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GROUP STAGE FIXTURE LOADER
+# GROUP STAGE MATCH LOADER
 # ─────────────────────────────────────────────────────────────────────────────
 def load_gs_matches_from_db():
     """
     Load all 72 group stage matches from wc2026MatchOdds DB table.
-    Returns list of match dicts with same structure as FIXTURES list.
+    Returns list of match dicts with same structure as MATCHES list.
     Each dict has: id, event_id, be_name, slug, espn_match_id, espn_slug,
                    espn_away_team_id, espn_home_team_id
     """
@@ -2523,10 +2523,10 @@ def run_gs_scraper(match_ids: list = None):
     session.headers.update(stealth.page())
 
     # ── WARMUP ────────────────────────────────────────────────────────────────
-    logger.emit("STEP", "SESSION WARMUP (GS mode)", url=FIXTURES_PAGE)
+    logger.emit("STEP", "SESSION WARMUP (GS mode)", url=MATCHES_PAGE)
     try:
         t0 = time.time()
-        warmup_resp = session.get(FIXTURES_PAGE, timeout=20)
+        warmup_resp = session.get(MATCHES_PAGE, timeout=20)
         elapsed = time.time() - t0
         throttle.record_response(elapsed, warmup_resp.status_code)
         logger.emit("CHECKPOINT", f"Warmup complete: HTTP {warmup_resp.status_code} "
@@ -2534,7 +2534,7 @@ def run_gs_scraper(match_ids: list = None):
     except Exception as e:
         logger.emit("WARN", f"Warmup failed: {e} — continuing anyway")
 
-    session.headers.update(stealth.ajax(FIXTURES_PAGE))
+    session.headers.update(stealth.ajax(MATCHES_PAGE))
     delay = throttle.get_delay("post_warmup")
     logger.emit("INFO", f"Post-warmup delay: {delay:.2f}s")
     time.sleep(delay)
@@ -2561,7 +2561,7 @@ def run_gs_scraper(match_ids: list = None):
         referer    = MATCH_PAGE_TEMPLATE.format(base=BASE_URL, slug=slug, event_id=event_id)
         logger.push_breadcrumb(f"match_{match_num}:{match_id}")
         print(f"\n\033[96m{'╔'+'═'*78+'╗'}\033[0m", flush=True)
-        print(f"\033[96m║  GS FIXTURE {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<47}║\033[0m", flush=True)
+        print(f"\033[96m║  GS MATCH {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<47}║\033[0m", flush=True)
         print(f"\033[96m{'╚'+'═'*78+'╝'}\033[0m", flush=True)
 
         # Resolve team names (best-effort — we have ESPN IDs as fallback)
@@ -2923,10 +2923,10 @@ def upsert_gs_to_mysql(dataset, logger):
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # Modes:
-    #   (default / --mode r32)  : R32 knockout matches from FIXTURES list
+    #   (default / --mode r32)  : R32 knockout matches from MATCHES list
     #   --mode gs               : Group stage matches loaded from DB
     #   --mode all              : Both GS then R32
-    # Fixture filter: pass event_ids or match_ids as positional args
+    # Match filter: pass event_ids or match_ids as positional args
     # Examples:
     #   python3 wc2026_betexplorer_scraper_v4.py                   # all R32
     #   python3 wc2026_betexplorer_scraper_v4.py --mode gs         # all GS

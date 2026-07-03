@@ -37,7 +37,7 @@ vi.mock("./waitlistDb", async (importOriginal) => {
 
 import * as waitlistDb from "./waitlistDb";
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+// ─── Test Data ─────────────────────────────────────────────────────────────────
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 1,

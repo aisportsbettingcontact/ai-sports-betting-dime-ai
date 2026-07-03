@@ -417,7 +417,7 @@ function main() {
   L.pass('AUDIT', 'Phase 1 forensic audit complete — root cause identified and fix confirmed');
 
   // ── PHASE 2: VALIDATED PROBABILITY COMPUTATION ────────────────────────────
-  L.section('COMPUTE', 'PHASE 2 — VALIDATED PROBABILITY COMPUTATION FOR ALL 3 FIXTURES');
+  L.section('COMPUTE', 'PHASE 2 — VALIDATED PROBABILITY COMPUTATION FOR ALL 3 MATCHS');
 
   // Strict prob2ml with validation
   function prob2ml_STRICT(p, label, matchId) {
@@ -451,10 +451,10 @@ function main() {
     return mlRounded;
   }
 
-  // ── PHASE 3: COMPUTE ALL MARKETS FOR ALL 3 FIXTURES ───────────────────────
-  L.section('MARKETS', 'PHASE 3 — COMPUTING ALL MARKETS FOR ALL 3 FIXTURES');
+  // ── PHASE 3: COMPUTE ALL MARKETS FOR ALL 3 MATCHS ───────────────────────
+  L.section('MARKETS', 'PHASE 3 — COMPUTING ALL MARKETS FOR ALL 3 MATCHS');
 
-  const FIXTURES = [
+  const MATCHS = [
     { id: 'wc26-r32-080', kickoff: '12:00 PM ET', venue: 'Atlanta' },
     { id: 'wc26-r32-081', kickoff: '4:00 PM ET',  venue: 'Philadelphia' },
     { id: 'wc26-r32-082', kickoff: '8:00 PM ET',  venue: 'Kansas City' },
@@ -495,7 +495,7 @@ function main() {
 
   const modelMarkets = {};
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     // Get projection from JSON report — use explicit property access, NO destructuring
     const proj = reportData.projections.find(x => x.matchId === f.id);
@@ -706,14 +706,14 @@ function main() {
     'BTTS Yes', 'BTTS No',
   ];
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     const proj = m?._proj;
     if (!b || !m || !proj) continue;
 
     L.thick();
-    L.output('DISPLAY', `FIXTURE: ${f.id} | ${b.Away} (Away) @ ${b.Home} (Home) | ${f.kickoff} | ${f.venue}`);
+    L.output('DISPLAY', `MATCH: ${f.id} | ${b.Away} (Away) @ ${b.Home} (Home) | ${f.kickoff} | ${f.venue}`);
     L.output('DISPLAY', `λH=${proj.lambdaH.toFixed(4)} λA=${proj.lambdaA.toFixed(4)} | Proj: ${proj.projH.toFixed(3)}-${proj.projA.toFixed(3)} | Total: ${proj.projTotal.toFixed(3)}`);
     L.output('DISPLAY', `Win%: ${b.Home} ${(m._probs.pH*100).toFixed(2)}% | Draw ${(m._probs.pD*100).toFixed(2)}% | ${b.Away} ${(m._probs.pA*100).toFixed(2)}%`);
     L.output('DISPLAY', `ET/Pens: ${b.Home} ${(proj.etH*100).toFixed(2)}% | ${b.Away} ${(proj.etA*100).toFixed(2)}%`);
@@ -799,7 +799,7 @@ function main() {
   console.log(`${A.dim}${sepLine}${A.R}`);
   flog(sepLine);
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     if (!b || !m) continue;
@@ -846,7 +846,7 @@ function main() {
     return n > 0 ? 100/(n+100) : (-n)/(-n+100);
   }
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     if (!b || !m) continue;
@@ -891,7 +891,7 @@ function main() {
   L.output('SUMMARY', `Session: ${SESSION_ID} | Elapsed: ${elapsed}s | Steps: ${_STEP}`);
   L.output('SUMMARY', `PASS: ${_PASS} | FAIL: ${_FAIL} | WARN: ${_WARN} | BUGS: ${_BUGS}`);
   L.output('SUMMARY', 'Root cause fixed: Away or Draw +74 → explicit pA+pD computation with validation');
-  L.output('SUMMARY', 'All 14 markets per fixture validated with sign check and round-trip verification');
+  L.output('SUMMARY', 'All 14 markets per match validated with sign check and round-trip verification');
   L.pass('ENGINE', 'v12_bvm_v2.mjs COMPLETE — All markets validated, no invalid ML values');
 
   const footer = [

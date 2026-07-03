@@ -2,7 +2,7 @@
  * seedToAdvanceJuly2.mjs
  * ============================================================
  * PURPOSE: Seed To Advance (To Qualify) odds from DraftKings
- *          into wc2026MatchOdds for all 3 July 2, 2026 fixtures.
+ *          into wc2026MatchOdds for all 3 July 2, 2026 matchs.
  *
  * SOURCE: DraftKings "To Qualify" market (screenshot provided by user)
  * DATE: 2026-07-02
@@ -55,7 +55,7 @@ function flushLog() {
     '='.repeat(96),
     `SESSION START: ${new Date().toISOString()}`,
     `SCRIPT: ${SCRIPT_NAME}`,
-    `PURPOSE: Seed To Advance (To Qualify) odds into wc2026MatchOdds for July 2, 2026 fixtures`,
+    `PURPOSE: Seed To Advance (To Qualify) odds into wc2026MatchOdds for July 2, 2026 matchs`,
     `VERSION: ${VERSION}`,
     '='.repeat(96),
   ].join('\n');
@@ -105,7 +105,7 @@ async function main() {
 
   // ── Section 1: Input Validation ──────────────────────────────────────────
   log('██ [SECTION]', 'INPUT', 'SECTION 1: INPUT VALIDATION');
-  log('◀◀ [INPUT]', 'INPUT', `Fixtures to seed: ${SEED.length}`);
+  log('◀◀ [INPUT]', 'INPUT', `Matchs to seed: ${SEED.length}`);
   for (const s of SEED) {
     log('◀◀ [INPUT]', 'INPUT', `  ${s.matchId}: ${s.homeTeam} (home) vs ${s.awayTeam} (away)`);
     log('   [ATOMIC]', 'INPUT', `    book_home_to_advance = ${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} (${s.homeTeam})`);
@@ -125,9 +125,9 @@ async function main() {
   const conn = await mysql.createConnection(dbUrl);
   log('✅ [PASS]', 'DB', 'Connected to TiDB');
 
-  // ── Section 3: Pre-flight — verify fixture orientation ───────────────────
+  // ── Section 3: Pre-flight — verify match orientation ───────────────────
   log('', '', '');
-  log('██ [SECTION]', 'PRE', 'SECTION 3: PRE-FLIGHT — FIXTURE ORIENTATION VERIFICATION');
+  log('██ [SECTION]', 'PRE', 'SECTION 3: PRE-FLIGHT — MATCH ORIENTATION VERIFICATION');
   let preflightPass = 0;
   let preflightFail = 0;
 
@@ -253,13 +253,13 @@ async function main() {
   log('·· [STATE]', 'SUM', `Updates:    ${updatePass}/${SEED.length} PASS, ${updateFail} FAIL`);
   log('·· [STATE]', 'SUM', `Verify:     ${vfyPass}/${SEED.length} PASS, ${vfyFail} FAIL`);
 
-  const totalChecks = SEED.length * 2; // home + away per fixture
+  const totalChecks = SEED.length * 2; // home + away per match
   const totalPass = vfyPass * 2;
   log('·· [STATE]', 'SUM', `Total field checks: ${totalPass}/${totalChecks}`);
 
   if (vfyFail === 0 && updateFail === 0) {
     log('✅ [PASS]', 'SUM', `ALL CHECKS PASSED — ${totalPass}/${totalChecks} field checks PASS`);
-    log('✅ [PASS]', 'SUM', 'wc2026MatchOdds To Advance odds seeded and verified for all 3 July 2 fixtures');
+    log('✅ [PASS]', 'SUM', 'wc2026MatchOdds To Advance odds seeded and verified for all 3 July 2 matchs');
   } else {
     log('✗✗ [FAIL]', 'SUM', `FAILURES DETECTED — updates=${updateFail} verify=${vfyFail}`);
   }

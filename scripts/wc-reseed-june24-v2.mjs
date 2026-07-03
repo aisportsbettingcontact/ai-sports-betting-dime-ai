@@ -134,10 +134,10 @@ function calibrateLambdas(targetHomeWinProb, totalLine, maxIter = 50, tol = 1e-6
   return { lambdaH: lH, lambdaA: lA };
 }
 
-// ─── June 24 Fixtures with exact ground truth ────────────────────────────────
-const FIXTURES = [
+// ─── June 24 Matchs with exact ground truth ────────────────────────────────
+const MATCHES = [
   {
-    fixtureId: 'wc26-g-049',
+    matchId: 'wc26-g-049',
     correctHomeId: 'sui', correctAwayId: 'can',
     homeName: 'Switzerland', awayName: 'Canada',
     homeAbbr: 'SUI', awayAbbr: 'CAN',
@@ -151,7 +151,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-050',
+    matchId: 'wc26-g-050',
     correctHomeId: 'bih', correctAwayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
     homeAbbr: 'BIH', awayAbbr: 'QAT',
@@ -165,7 +165,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-051',
+    matchId: 'wc26-g-051',
     correctHomeId: 'sco', correctAwayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
     homeAbbr: 'SCO', awayAbbr: 'BRA',
@@ -180,7 +180,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-052',
+    matchId: 'wc26-g-052',
     correctHomeId: 'mar', correctAwayId: 'hai',
     homeName: 'Morocco', awayName: 'Haiti',
     homeAbbr: 'MAR', awayAbbr: 'HAI',
@@ -194,7 +194,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-053',
+    matchId: 'wc26-g-053',
     correctHomeId: 'cze', correctAwayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
     homeAbbr: 'CZE', awayAbbr: 'MEX',
@@ -209,7 +209,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-054',
+    matchId: 'wc26-g-054',
     correctHomeId: 'rsa', correctAwayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
     homeAbbr: 'RSA', awayAbbr: 'KOR',
@@ -226,44 +226,44 @@ const FIXTURES = [
 ];
 
 async function main() {
-  console.log(`${TAG} [INPUT] Starting June 24 reseed v2 — ${FIXTURES.length} fixtures`);
+  console.log(`${TAG} [INPUT] Starting June 24 reseed v2 — ${MATCHES.length} matches`);
   console.log(`${TAG} [INPUT] Fixes: (1) spread formula unified, (2) lambdas via bisection calibration`);
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
 
-  // Verify fixture orientation (already fixed in v1)
-  const fixtureIds = FIXTURES.map(f => f.fixtureId);
-  const [dbFixtures] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+  // Verify match orientation (already fixed in v1)
+  const matchIds = MATCHES.map(f => f.matchId);
+  const [dbMatches] = await conn.query(
+    `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
-  console.log(`\n${TAG} [STEP] Verifying fixture orientation...`);
-  for (const f of FIXTURES) {
-    const dbF = dbFixtures.find(r => r.fixture_id === f.fixtureId);
+  console.log(`\n${TAG} [STEP] Verifying match orientation...`);
+  for (const f of MATCHES) {
+    const dbF = dbMatches.find(r => r.match_id === f.matchId);
     const ok = dbF?.home_team_id === f.correctHomeId && dbF?.away_team_id === f.correctAwayId;
     if (!ok) {
-      await conn.query(`UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE fixture_id=?`, [f.correctHomeId, f.correctAwayId, f.fixtureId]);
-      console.log(`${TAG} [STATE] FIXED orientation ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      await conn.query(`UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?`, [f.correctHomeId, f.correctAwayId, f.matchId]);
+      console.log(`${TAG} [STATE] FIXED orientation ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     } else {
-      console.log(`${TAG} [STATE] OK ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      console.log(`${TAG} [STATE] OK ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     }
   }
 
-  // Delete all existing odds for June 24 fixtures (both v1 and any prior)
-  console.log(`\n${TAG} [STEP] Clearing all odds for June 24 fixtures...`);
-  const [del] = await conn.query(`DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})`, fixtureIds);
+  // Delete all existing odds for June 24 matches (both v1 and any prior)
+  console.log(`\n${TAG} [STEP] Clearing all odds for June 24 matches...`);
+  const [del] = await conn.query(`DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${matchIds.map(() => '?').join(',')})`, matchIds);
   console.log(`${TAG} [STATE] Deleted ${del.affectedRows} rows`);
 
-  // Delete old projections for June 24 fixtures
-  const [delProj] = await conn.query(`DELETE FROM wc2026_model_projections WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})`, fixtureIds);
+  // Delete old projections for June 24 matches
+  const [delProj] = await conn.query(`DELETE FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => '?').join(',')})`, matchIds);
   console.log(`${TAG} [STATE] Deleted ${delProj.affectedRows} projection rows`);
 
   let totalBookRows = 0, totalModelRows = 0;
   const results = [];
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHES) {
     const b = f.book;
-    console.log(`\n${TAG} [STEP] Processing ${f.fixtureId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
+    console.log(`\n${TAG} [STEP] Processing ${f.matchId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
 
     // ── Step 1: Remove vig from 1X2 ──
     const rawHome = americanToProb(b.mlHome);
@@ -351,8 +351,8 @@ async function main() {
     ];
     for (const row of bookRows) {
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [f.fixtureId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalBookRows++;
     }
@@ -375,8 +375,8 @@ async function main() {
     for (const row of modelRows) {
       if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null odds: ${row.market}:${row.selection}`); continue; }
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalModelRows++;
     }
@@ -389,7 +389,7 @@ async function main() {
 
     await conn.query(`
       INSERT INTO wc2026_model_projections (
-        fixture_id, model_version, n_simulations, home_team, away_team,
+        match_id, model_version, n_simulations, home_team, away_team,
         home_lambda, away_lambda, home_win_prob, draw_prob, away_win_prob,
         proj_home_score, proj_away_score, proj_total, proj_spread,
         over_2_5, under_2_5, over_3_5, btts_prob,
@@ -400,7 +400,7 @@ async function main() {
         home_edge, draw_edge, away_edge, model_lean, lean_prob, top_scorelines, modeled_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `, [
-      f.fixtureId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
+      f.matchId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
       lambdaH, lambdaA, finalHome, finalDraw, finalAway,
       projHomeScore, projAwayScore, projTotal, projSpread,
       sim.over25, sim.under25, sim.over35, sim.btts,
@@ -412,26 +412,26 @@ async function main() {
       finalHome > finalAway ? 'home' : 'away', Math.max(finalHome, finalAway), sim.top,
     ]);
 
-    results.push({ id: f.fixtureId, home: f.homeAbbr, away: f.awayAbbr, homeML: modelHomeML, awayML: modelAwayML, homeSpread: modelHomeSpreadOdds, awaySpread: modelAwaySpreadOdds, spreadSanity });
-    console.log(`${TAG} [OUTPUT] ${f.fixtureId}: DONE — bookRows=12 modelRows=12`);
+    results.push({ id: f.matchId, home: f.homeAbbr, away: f.awayAbbr, homeML: modelHomeML, awayML: modelAwayML, homeSpread: modelHomeSpreadOdds, awaySpread: modelAwaySpreadOdds, spreadSanity });
+    console.log(`${TAG} [OUTPUT] ${f.matchId}: DONE — bookRows=12 modelRows=12`);
   }
 
   // ── Final verification ──
   console.log(`\n${TAG} ═══ FINAL VERIFICATION ═══`);
   const [verify] = await conn.query(
-    `SELECT fixture_id, book_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) GROUP BY fixture_id, book_id ORDER BY fixture_id, book_id`,
-    fixtureIds
+    `SELECT match_id, book_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${matchIds.map(() => '?').join(',')}) GROUP BY match_id, book_id ORDER BY match_id, book_id`,
+    matchIds
   );
   const [verifyProj] = await conn.query(
-    `SELECT fixture_id, proj_home_score, proj_away_score, proj_total, model_home_ml, model_away_ml, home_spread_odds, away_spread_odds FROM wc2026_model_projections WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id, modeled_at DESC`,
-    fixtureIds
+    `SELECT match_id, proj_home_score, proj_away_score, proj_total, model_home_ml, model_away_ml, home_spread_odds, away_spread_odds FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id, modeled_at DESC`,
+    matchIds
   );
 
   let allOk = true;
   for (const r of results) {
-    const bookRows = verify.find(v => v.fixture_id === r.id && v.book_id === DK_BOOK_ID);
-    const modelRows = verify.find(v => v.fixture_id === r.id && v.book_id === MODEL_BOOK_ID);
-    const proj = verifyProj.find(v => v.fixture_id === r.id);
+    const bookRows = verify.find(v => v.match_id === r.id && v.book_id === DK_BOOK_ID);
+    const modelRows = verify.find(v => v.match_id === r.id && v.book_id === MODEL_BOOK_ID);
+    const proj = verifyProj.find(v => v.match_id === r.id);
     const bookCnt = Number(bookRows?.cnt ?? 0);
     const modelCnt = Number(modelRows?.cnt ?? 0);
     const projTotal = Number(proj?.proj_total);

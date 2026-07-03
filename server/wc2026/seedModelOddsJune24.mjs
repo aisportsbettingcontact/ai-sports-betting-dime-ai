@@ -9,7 +9,7 @@
  *   blend weights: w_book=0.25, w_elo=0.40, w_rank=0.15, w_form=0.20
  *   n_simulations = 1,000,000
  *
- * JUNE 24 FIXTURES (DB verified, kickoff_utc order):
+ * JUNE 24 MATCHS (DB verified, kickoff_utc order):
  *   wc26-g-049: CAN (home=can) vs SUI (away=sui) — Group D, 17:00 UTC
  *   wc26-g-052: BIH (home=bih) vs QAT (away=qat) — Group F, 17:00 UTC
  *   wc26-g-053: HAI (home=hai) vs MAR (away=mar) — Group H, 17:00 UTC
@@ -18,7 +18,7 @@
  *   wc26-g-051: CZE (home=cze) vs MEX (away=mex) — Group B, 21:00 UTC
  *
  * NOTE ON HOME/AWAY ORIENTATION:
- *   The DB stores home_team_id / away_team_id per the official FIFA fixture.
+ *   The DB stores home_team_id / away_team_id per the official FIFA match.
  *   User-provided odds use "Away" / "Home" labels per the BOOK (DraftKings).
  *   All odds below are mapped to DB orientation (home_team_id = home).
  *
@@ -167,10 +167,10 @@ function computeLambda(nv, isHome, elo, rank, form, drawFloor = 0.097) {
   return Math.max(0.3, baseLambda + eloAdj + rankAdj + formAdj);
 }
 
-// ─── June 24 Fixtures ────────────────────────────────────────────────────────
+// ─── June 24 Matchs ────────────────────────────────────────────────────────
 // DB orientation: home_team_id / away_team_id
 // All odds mapped to DB home/away
-const FIXTURES = [
+const MATCHS = [
   {
     matchId: 'wc26-g-049',
     homeId: 'can', awayId: 'sui',
@@ -266,7 +266,7 @@ const FIXTURES = [
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`${TAG} [INPUT] Starting June 24 seed — ${FIXTURES.length} fixtures`);
+  console.log(`${TAG} [INPUT] Starting June 24 seed — ${MATCHS.length} matchs`);
   console.log(`${TAG} [INPUT] DK book_id=${DK_BOOK_ID} | Model book_id=${MODEL_BOOK_ID} | version=${MODEL_VERSION}`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
@@ -277,10 +277,10 @@ async function main() {
   let totalProjRows = 0;
   const errors = [];
 
-  for (const f of FIXTURES) {
-    console.log(`\n${TAG} [STEP] Processing fixture=${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away)`);
+  for (const f of MATCHS) {
+    console.log(`\n${TAG} [STEP] Processing match=${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away)`);
 
-    // ── Step 1: Clear existing odds for this fixture ──────────────────────────
+    // ── Step 1: Clear existing odds for this match ──────────────────────────
     const [delDk] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
       [f.matchId, DK_BOOK_ID]
@@ -520,9 +520,9 @@ async function main() {
     `SELECT match_id, proj_home_score, proj_away_score, proj_total FROM wc2026_model_projections WHERE match_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054')`
   );
 
-  console.log(`\n${TAG} [VERIFY] DK odds per fixture:`);
+  console.log(`\n${TAG} [VERIFY] DK odds per match:`);
   for (const r of verifyDk) console.log(`  ${r.match_id}: ${r.cnt} rows`);
-  console.log(`${TAG} [VERIFY] Model odds per fixture:`);
+  console.log(`${TAG} [VERIFY] Model odds per match:`);
   for (const r of verifyModel) console.log(`  ${r.match_id}: ${r.cnt} rows`);
   console.log(`${TAG} [VERIFY] Model projections:`);
   for (const r of verifyProj) console.log(`  ${r.match_id}: proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total}`);

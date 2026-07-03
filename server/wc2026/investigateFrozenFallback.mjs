@@ -30,9 +30,9 @@ async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   console.log('[CONNECT] Connected to TiDB');
 
-  // ── 1. Fixture dates and rounds ───────────────────────────────────────────
+  // ── 1. Match dates and rounds ───────────────────────────────────────────
   console.log('\n══════════════════════════════════════════════════════════');
-  console.log('SECTION 1: FROZEN FIXTURE DATES AND ROUNDS');
+  console.log('SECTION 1: FROZEN MATCH DATES AND ROUNDS');
   console.log('══════════════════════════════════════════════════════════');
   const [dates] = await conn.execute(
     'SELECT match_id, match_date, stage FROM wc2026_matches WHERE match_id IN (' + ph + ') ORDER BY match_date',
@@ -79,15 +79,15 @@ async function main() {
   );
   const snapMap = Object.fromEntries(snaps.map(r => [r.match_id, r.cnt]));
   const noSnap = FROZEN_IDS.filter(id => !snapMap[id]);
-  console.log(`  Fixtures WITH DK snapshots: ${snaps.length} / ${FROZEN_IDS.length}`);
+  console.log(`  Matchs WITH DK snapshots: ${snaps.length} / ${FROZEN_IDS.length}`);
   if (noSnap.length > 0) {
-    console.log(`  ❌ NO DK SNAPSHOT for ${noSnap.length} fixtures:`);
+    console.log(`  ❌ NO DK SNAPSHOT for ${noSnap.length} matchs:`);
     noSnap.forEach(id => console.log(`    ${id} | stage=${dateMap[id] ? dateMap[id].stage : 'unknown'}`));
   } else {
-    console.log(`  ✅ ALL 37 frozen fixtures have DK snapshots`);
+    console.log(`  ✅ ALL 37 frozen matchs have DK snapshots`);
   }
 
-  // ── 4. The critical question: for fixtures in frozen table, does wc2026MatchOdds
+  // ── 4. The critical question: for matchs in frozen table, does wc2026MatchOdds
   //       have the SAME odds as frozen? (i.e. is frozen redundant?)
   console.log('\n══════════════════════════════════════════════════════════');
   console.log('SECTION 4: FROZEN vs wc2026MatchOdds — ODDS COMPARISON');
@@ -133,10 +133,10 @@ async function main() {
   console.log('         If NOT in wc2026_frozen_book_odds → fall back to wc2026_odds_snapshots (DK book_id=68)');
   console.log('');
   console.log('  QUESTION: Has the frozen path ever been the ONLY source of odds?');
-  console.log('  (i.e., are there fixtures where frozen has odds but DK snapshot has NONE?)');
+  console.log('  (i.e., are there matchs where frozen has odds but DK snapshot has NONE?)');
   console.log('');
 
-  // Find fixtures where frozen has odds but DK snapshot has zero rows
+  // Find matchs where frozen has odds but DK snapshot has zero rows
   let frozenOnlyCount = 0;
   for (const fr of frozenOdds) {
     const hasDkSnap = !!snapMap[fr.match_id];
@@ -148,16 +148,16 @@ async function main() {
     }
   }
   if (frozenOnlyCount === 0) {
-    console.log('  ✅ ZERO fixtures where frozen was the ONLY source — every frozen fixture also has DK snapshots');
+    console.log('  ✅ ZERO matchs where frozen was the ONLY source — every frozen match also has DK snapshots');
   }
 
   // ── 6. VERDICT ────────────────────────────────────────────────────────────
   console.log('\n══════════════════════════════════════════════════════════');
   console.log('SECTION 6: FINAL VERDICT');
   console.log('══════════════════════════════════════════════════════════');
-  console.log(`  Total frozen fixtures: ${FROZEN_IDS.length}`);
+  console.log(`  Total frozen matchs: ${FROZEN_IDS.length}`);
   console.log(`  All exist in wc2026MatchOdds: ${missingInMatch.length === 0 ? 'YES' : 'NO — ' + missingInMatch.length + ' missing'}`);
-  console.log(`  wc2026MatchOdds has NULL odds for: ${matchHasNoOdds} fixtures`);
+  console.log(`  wc2026MatchOdds has NULL odds for: ${matchHasNoOdds} matchs`);
   console.log(`  Frozen was ONLY source (no DK snapshot): ${frozenOnlyCount}`);
   console.log(`  Odds identical between frozen and wc2026MatchOdds: ${exactMatch}`);
   console.log(`  Odds differ between frozen and wc2026MatchOdds: ${mismatch}`);

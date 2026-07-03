@@ -1,7 +1,7 @@
 /**
  * WC2026 RIGOROUS AUDIT: ESPN API vs DB
  * ======================================
- * Fetches live ESPN API data for all 54 completed WC2026 fixtures
+ * Fetches live ESPN API data for all 54 completed WC2026 matches
  * and cross-validates against every DB field:
  * - Home team (correct team in home slot)
  * - Away team (correct team in away slot)
@@ -23,8 +23,8 @@ dotenv.config();
 const db = await mysql2.createConnection(process.env.DATABASE_URL);
 console.log('[DB] Connected');
 
-// ─── STEP 1: Pull all completed fixtures from DB ──────────────────────────────
-const [dbFixtures] = await db.execute(`
+// ─── STEP 1: Pull all completed matches from DB ──────────────────────────────
+const [dbMatches] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
   FROM wc2026_matches
@@ -32,7 +32,7 @@ const [dbFixtures] = await db.execute(`
   ORDER BY kickoff_utc ASC
 `);
 
-console.log(`[DB] ${dbFixtures.length} completed fixtures loaded`);
+console.log(`[DB] ${dbMatches.length} completed matches loaded`);
 
 // ─── STEP 2: Pull all match stats (ESPN game_ids) ─────────────────────────────
 const [dbStats] = await db.execute(`
@@ -151,27 +151,27 @@ for (const [gid, gdata] of Object.entries(gameData)) {
   gameIdToTeams[gid] = new Set(Object.keys(gdata.teams));
 }
 
-// Match each fixture to a game_id by team set
-const fixtureToGameId = {};
-const unmatchedFixtures = [];
+// Match each match to a game_id by team set
+const matchToGameId = {};
+const unmatchedMatches = [];
 
-for (const f of dbFixtures) {
+for (const f of dbMatches) {
   const fTeams = new Set([f.home_team_id, f.away_team_id]);
   let matched = false;
   for (const [gid, gTeams] of Object.entries(gameIdToTeams)) {
     if (fTeams.size === gTeams.size && [...fTeams].every(t => gTeams.has(t))) {
-      fixtureToGameId[f.match_id] = parseInt(gid);
+      matchToGameId[f.match_id] = parseInt(gid);
       matched = true;
       break;
     }
   }
   if (!matched) {
-    unmatchedFixtures.push(f.match_id);
-    console.log(`  [WARN] No game_id match for fixture ${f.match_id} (${f.home_team_id} vs ${f.away_team_id})`);
+    unmatchedMatches.push(f.match_id);
+    console.log(`  [WARN] No game_id match for match ${f.match_id} (${f.home_team_id} vs ${f.away_team_id})`);
   }
 }
 
-console.log(`[STEP 4] Matched ${Object.keys(fixtureToGameId).length}/${dbFixtures.length} fixtures to game_ids`);
+console.log(`[STEP 4] Matched ${Object.keys(matchToGameId).length}/${dbMatches.length} matches to game_ids`);
 
 // ─── STEP 5: FULL CROSS-AUDIT ─────────────────────────────────────────────────
 console.log('\n[STEP 5] Running full cross-audit: ESPN API vs DB...');
@@ -245,8 +245,8 @@ function normalizeAbbr(abbr) {
   return lower;
 }
 
-for (const f of dbFixtures) {
-  const gid = fixtureToGameId[f.match_id];
+for (const f of dbMatches) {
+  const gid = matchToGameId[f.match_id];
   const espn = gid ? espnResults[gid] : null;
   const dbStats_game = gid ? gameData[gid] : null;
   
@@ -368,7 +368,7 @@ for (const f of dbFixtures) {
         db_home: f.home_team_id,
         stat_home: statHomeTeam,
         game_name: dbStats_game.game_name,
-        note: 'Stat row home_away field disagrees with DB fixture home_team_id',
+        note: 'Stat row home_away field disagrees with DB match home_team_id',
       });
     }
     
@@ -410,8 +410,8 @@ const correctionCount = auditResults.reduce((sum, a) => sum + a.corrections.leng
 
 console.log('\n' + '='.repeat(80));
 console.log('  AUDIT COMPLETE');
-console.log(`  Total fixtures: ${auditResults.length}`);
-console.log(`  Fixtures with errors: ${errorCount}`);
+console.log(`  Total matches: ${auditResults.length}`);
+console.log(`  Matches with errors: ${errorCount}`);
 console.log(`  Total corrections needed: ${correctionCount}`);
 console.log(`  ESPN fetch errors: ${espnErrors.length}`);
 console.log('='.repeat(80));
@@ -432,8 +432,8 @@ if (errorCount > 0) {
 // Save full audit results
 writeFileSync('/home/ubuntu/wc2026_audit_results.json', JSON.stringify({
   summary: {
-    total_fixtures: auditResults.length,
-    fixtures_with_errors: errorCount,
+    total_matches: auditResults.length,
+    matches_with_errors: errorCount,
     corrections_needed: correctionCount,
     espn_fetch_errors: espnErrors.length,
     espn_fetched: Object.keys(espnResults).length,

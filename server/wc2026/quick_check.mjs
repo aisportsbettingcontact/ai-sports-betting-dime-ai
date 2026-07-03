@@ -8,12 +8,12 @@ const m = process.env.DATABASE_URL.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+
 const [, user, password, host, port, database] = m;
 const conn = await mysql.createConnection({user, password, host, port: parseInt(port), database, ssl:{rejectUnauthorized:false}});
 
-const [fixtures] = await conn.execute(
+const [matchs] = await conn.execute(
   'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (?,?) ORDER BY match_id',
   ['wc26-g-002', 'wc26-g-008']
 );
-console.log('FIXTURES:');
-for (const f of fixtures) {
+console.log('MATCHS:');
+for (const f of matchs) {
   console.log(`  ${f.match_id}: home=${f.home_team_id} away=${f.away_team_id}`);
 }
 

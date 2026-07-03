@@ -6,7 +6,7 @@
  * Model Version: v7.2-R32 | Industry-Grade Logging Framework
  * ═══════════════════════════════════════════════════════════════════════════════
  * PIPELINE:
- *   [1] DB SEED   — Fixture + frozen book odds (book lines ONLY, no model)
+ *   [1] DB SEED   — Match + frozen book odds (book lines ONLY, no model)
  *   [2] SIMULATE  — 1M Poisson draws with Elo-adjusted lambdas
  *   [3] COMPUTE   — All market probabilities + no-vig fair odds
  *   [4] EDGE      — Book vs model edge detection (pp + ROI)
@@ -53,7 +53,7 @@ function flushLog() {
 }
 
 // ── MATCH CONSTANTS ───────────────────────────────────────────────────────────
-const FIXTURE_ID     = 'wc26-r32-075';
+const MATCH_ID     = 'wc26-r32-075';
 const HOME_TEAM_ID   = 'ger';
 const AWAY_TEAM_ID   = 'pry';
 const HOME_NAME      = 'Germany';
@@ -455,29 +455,29 @@ for (const [name, pass, detail] of invariants) {
 }
 log(allPass ? 'VERIFY' : 'ERROR', 'INVARIANTS_SUMMARY', `${allPass ? 'ALL PASS' : 'FAILURES DETECTED'} | ${invariants.length} checks`);
 
-// ── STEP 9: SEED FIXTURE + BOOK ODDS TO DB ────────────────────────────────────
-logSep('STEP 9 — SEED FIXTURE + FROZEN BOOK ODDS TO DB');
+// ── STEP 9: SEED MATCH + BOOK ODDS TO DB ────────────────────────────────────
+logSep('STEP 9 — SEED MATCH + FROZEN BOOK ODDS TO DB');
 
 let conn;
 try {
   conn = await mysql.createConnection(process.env.DATABASE_URL);
   log('STEP', 'DB_CONNECT', 'MySQL connection established');
 
-  // Upsert fixture
+  // Upsert match
   await conn.execute(`
     INSERT INTO wc2026_matches
-      (fixture_id, home_team_id, away_team_id, kickoff_utc, venue, round, status, group_name)
+      (match_id, home_team_id, away_team_id, kickoff_utc, venue, round, status, group_name)
     VALUES (?, ?, ?, ?, ?, ?, 'scheduled', NULL)
     ON DUPLICATE KEY UPDATE
       home_team_id=VALUES(home_team_id), away_team_id=VALUES(away_team_id),
       kickoff_utc=VALUES(kickoff_utc), venue=VALUES(venue), round=VALUES(round)
-  `, [FIXTURE_ID, HOME_TEAM_ID, AWAY_TEAM_ID, KICKOFF_ET, VENUE, ROUND]);
-  log('VERIFY', 'DB_FIXTURE_UPSERT', `PASS | fixture_id=${FIXTURE_ID} home=${HOME_TEAM_ID} away=${AWAY_TEAM_ID}`);
+  `, [MATCH_ID, HOME_TEAM_ID, AWAY_TEAM_ID, KICKOFF_ET, VENUE, ROUND]);
+  log('VERIFY', 'DB_MATCH_UPSERT', `PASS | match_id=${MATCH_ID} home=${HOME_TEAM_ID} away=${AWAY_TEAM_ID}`);
 
   // Upsert frozen book odds (BOOK LINES ONLY — no model)
   await conn.execute(`
     INSERT INTO wc2026_frozen_book_odds
-      (fixture_id, book_home_ml, book_draw_ml, book_away_ml,
+      (match_id, book_home_ml, book_draw_ml, book_away_ml,
        book_spread_line, book_home_spread_odds, book_away_spread_odds,
        book_total_line, book_over_odds, book_under_odds,
        book_btts_yes_odds, book_btts_no_odds,
@@ -497,7 +497,7 @@ try {
       to_advance_home_odds=VALUES(to_advance_home_odds), to_advance_away_odds=VALUES(to_advance_away_odds),
       frozen_at=NOW()
   `, [
-    FIXTURE_ID,
+    MATCH_ID,
     BOOK.homeML, BOOK.drawML, BOOK.awayML,
     BOOK.homeSpreadLine, BOOK.homeSpreadOdds, BOOK.awaySpreadOdds,
     BOOK.totalLine, BOOK.overOdds, BOOK.underOdds,
@@ -506,12 +506,12 @@ try {
     BOOK.noDrawAway,
     BOOK.toAdvanceHome, BOOK.toAdvanceAway,
   ]);
-  log('VERIFY', 'DB_BOOK_ODDS_UPSERT', `PASS | fixture_id=${FIXTURE_ID} | homeML=${BOOK.homeML} drawML=${BOOK.drawML} awayML=${BOOK.awayML} | toAdvHome=${BOOK.toAdvanceHome} toAdvAway=${BOOK.toAdvanceAway} | noDrawAway=${BOOK.noDrawAway}`);
+  log('VERIFY', 'DB_BOOK_ODDS_UPSERT', `PASS | match_id=${MATCH_ID} | homeML=${BOOK.homeML} drawML=${BOOK.drawML} awayML=${BOOK.awayML} | toAdvHome=${BOOK.toAdvanceHome} toAdvAway=${BOOK.toAdvanceAway} | noDrawAway=${BOOK.noDrawAway}`);
 
   // Verify the row
   const [verRows] = await conn.execute(
-    'SELECT fixture_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds, frozen_at FROM wc2026_frozen_book_odds WHERE fixture_id=?',
-    [FIXTURE_ID]
+    'SELECT match_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds, frozen_at FROM wc2026_frozen_book_odds WHERE match_id=?',
+    [MATCH_ID]
   );
   if (verRows.length === 1) {
     log('VERIFY', 'DB_BOOK_ODDS_READ', `PASS | ${JSON.stringify(verRows[0])}`);
@@ -530,7 +530,7 @@ try {
 logSep('STEP 10 — WRITE RESULTS JSON');
 
 const results = {
-  fixture_id: FIXTURE_ID,
+  match_id: MATCH_ID,
   home: HOME_NAME, away: AWAY_NAME,
   kickoff_et: '4:30 PM ET', kickoff_utc: KICKOFF_ET,
   n_sims: N_SIMS,
@@ -598,5 +598,5 @@ if (sigEdges.length > 0) {
   log('OUTPUT', 'SIGNIFICANT_EDGES', 'None above 4pp threshold');
 }
 
-log('VERIFY', 'PIPELINE_COMPLETE', `ALL STEPS COMPLETE | fixture=${FIXTURE_ID} | allInvariantsPass=${allPass}`);
+log('VERIFY', 'PIPELINE_COMPLETE', `ALL STEPS COMPLETE | match=${MATCH_ID} | allInvariantsPass=${allPass}`);
 flushLog();

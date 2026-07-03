@@ -9,7 +9,7 @@ config();
 const TAG = '[AUDIT_MODEL_JUNE25]';
 const MODEL_BOOK_ID = 0;
 const DK_BOOK_ID = 68;
-const FIXTURE_IDS = ['wc26-g-057','wc26-g-058','wc26-g-059','wc26-g-060','wc26-g-055','wc26-g-056'];
+const MATCH_IDS = ['wc26-g-057','wc26-g-058','wc26-g-059','wc26-g-060','wc26-g-055','wc26-g-056'];
 
 function americanToProb(ml) {
   if (ml == null || isNaN(ml)) return null;
@@ -25,14 +25,14 @@ function americanToProb(ml) {
 
   let totalErrors = 0;
 
-  // ── Layer 1: Model odds row count per fixture ─────────────────────────────
-  console.log(`${TAG} [LAYER 1] Model odds row count (expected 12 per fixture):`);
-  const idList = FIXTURE_IDS.map(() => '?').join(',');
+  // ── Layer 1: Model odds row count per match ─────────────────────────────
+  console.log(`${TAG} [LAYER 1] Model odds row count (expected 12 per match):`);
+  const idList = MATCH_IDS.map(() => '?').join(',');
   const [modelCounts] = await conn.query(
     `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const row = modelCounts.find(r => r.match_id === fid);
     const cnt = row ? row.cnt : 0;
     const pass = cnt === 12;
@@ -40,7 +40,7 @@ function americanToProb(ml) {
     console.log(`${TAG}   ${fid}: ${cnt} rows ${pass ? 'PASS ✓' : 'FAIL ✗ (expected 12)'}`);
   }
 
-  // ── Layer 2: Market completeness per fixture ──────────────────────────────
+  // ── Layer 2: Market completeness per match ──────────────────────────────
   console.log(`\n${TAG} [LAYER 2] Market completeness (all 6 markets present):`);
   const REQUIRED_MARKETS = [
     ['1X2','home'], ['1X2','draw'], ['1X2','away'], ['1X2','no_draw'],
@@ -49,7 +49,7 @@ function americanToProb(ml) {
     ['DOUBLE_CHANCE','home_draw'], ['DOUBLE_CHANCE','away_draw'],
     ['BTTS','yes'], ['BTTS','no'],
   ];
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const [rows] = await conn.query(
       `SELECT market, selection, line, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ${MODEL_BOOK_ID}`,
       [fid]
@@ -70,7 +70,7 @@ function americanToProb(ml) {
 
   // ── Layer 3: Probability integrity checks ─────────────────────────────────
   console.log(`\n${TAG} [LAYER 3] Probability integrity (1X2 probs sum to 1.0, no-draw = 1-draw):`);
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const [rows] = await conn.query(
       `SELECT market, selection, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ${MODEL_BOOK_ID}`,
       [fid]
@@ -123,7 +123,7 @@ function americanToProb(ml) {
   }
 
   // ── Layer 4: Projection table audit ──────────────────────────────────────
-  console.log(`\n${TAG} [LAYER 4] Projection table — all 6 fixtures present with valid values:`);
+  console.log(`\n${TAG} [LAYER 4] Projection table — all 6 matchs present with valid values:`);
   const [projRows] = await conn.query(
     `SELECT match_id, model_version, n_simulations,
       home_team, away_team,
@@ -139,7 +139,7 @@ function americanToProb(ml) {
       modeled_at
     FROM wc2026_model_projections WHERE match_id IN (${idList})
     AND model_version = 'v4.2-corrected-june25'`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
 
   if (projRows.length !== 6) {

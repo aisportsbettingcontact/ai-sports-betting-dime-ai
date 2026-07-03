@@ -187,7 +187,7 @@ async function main() {
   console.log(`${TAG}   [INPUT] 2022 DB group stage rows: ${bt2022.length}`);
 
   const [fx2026] = await conn.execute(
-    `SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
+    `SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
             home_score, away_score, status, espn_event_id
      FROM wc2026_matches
      WHERE stage = 'GROUP' AND status = 'FT'
@@ -259,7 +259,7 @@ async function main() {
       const awayId = isWc2026 ? row.away_team_id : normalizeTeamName(row.away_team);
       const dbHome = row.home_score;
       const dbAway = row.away_score;
-      const rowId = isWc2026 ? row.fixture_id : row.id;
+      const rowId = isWc2026 ? row.match_id : row.id;
       const dateStr = row.match_date instanceof Date
         ? row.match_date.toISOString().substring(0, 10)
         : String(row.match_date).substring(0, 10);
@@ -340,7 +340,7 @@ async function main() {
       if (d.isWc2026) {
         // Fix in wc2026_matches
         const [res] = await conn.execute(
-          `UPDATE wc2026_matches SET home_score = ?, away_score = ? WHERE fixture_id = ?`,
+          `UPDATE wc2026_matches SET home_score = ?, away_score = ? WHERE match_id = ?`,
           [d.espnHomeScore, d.espnAwayScore, d.rowId]
         );
         console.log(`${TAG}   [FIX] wc2026_matches ${d.rowId}: ${d.homeId} ${d.dbHomeScore}-${d.dbAwayScore} → ${d.espnHomeScore}-${d.espnAwayScore} | affectedRows=${res.affectedRows}`);

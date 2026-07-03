@@ -63,7 +63,7 @@
  *   hasWinner flag       ✅ All FT matches
  *   isTdy flag           ✅ All matches
  *   isSwapped flag       ✅ Match 5 (isSwapped=true test)
- *   fixtureStatus log    ✅ All matches, every cycle
+ *   matchStatus log    ✅ All matches, every cycle
  *   Double-confirm       ✅ All FT matches
  *   False-positive guard ✅ Match 4 (simulated revert)
  *   Cancel guard         ✅ Match 4 (id=7 NEVER triggers)
@@ -107,7 +107,7 @@ const LEVEL_COLORS = {
   'TRANS_D': C.purple,  'CONFIRM': C.green,   'DAY_ADV': C.lime,
   'DAY_FIN': C.lime,    'CANCEL ': C.red,     'POSTPON': C.yellow,
   'DELAYED': C.yellow,  'ET_ACT ': C.orange,  'PENS_AC': C.orange,
-  'WATCH  ': C.teal,    'ET_HT  ': C.orange,  'FIXTURE': C.gray,
+  'WATCH  ': C.teal,    'ET_HT  ': C.orange,  'MATCH': C.gray,
   'TEST   ': C.cyan,    'ASSERT ': C.green,   'FAIL_T ': C.red,
   'MATCH  ': C.bold,    'SUMMARY': C.cyan,
 };
@@ -253,8 +253,8 @@ const parseEspnEvent = (event) => {
   const homeIdx           = (comp.competitors || []).findIndex(c => c.homeAway === 'home');
   const isSwapped         = homeIdx === 0;
 
-  // v2.3: fixtureStatus — canceled must be SKIP even if completed=true
-  const fixtureStatus = (statusCompleted === true && !isCanceled) ? 'FT'
+  // v2.3: matchStatus — canceled must be SKIP even if completed=true
+  const matchStatus = (statusCompleted === true && !isCanceled) ? 'FT'
     : isLive ? 'LIVE'
     : statusState === 'pre' ? 'PRE'
     : 'SKIP';
@@ -289,7 +289,7 @@ const parseEspnEvent = (event) => {
     isInProgress, isHalftime, isSecondHalf, isFirstHalf,
     isLiveByState, isLiveByTypeId, isLiveByName,
     hasWinner, isTdy, statusPrimary, isSwapped,
-    fixtureStatus,
+    matchStatus,
     competitors, home, away, scoreStr,
   };
 };
@@ -841,14 +841,14 @@ const main = () => {
   runTest('MATCH 1 — 760491 Mexico vs Ecuador: STATUS_SECOND_HALF (83\') live state', () => {
     const g = parseEspnEvent(MATCH_1_LIVE);
     log('MATCH', 'M1/LIVE', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} clock=${g.displayClock}`);
-    log('FIXTURE', 'M1/LIVE', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
+    log('MATCH', 'M1/LIVE', `[CLASSIFY] matchStatus=${g.matchStatus} | isLiveByState=${g.isLiveByState} isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName}`);
     log('LIVE', 'M1/LIVE', `⚽ [2H] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState} | desc=${g.statusDescription} | isTdy=${g.isTdy}`);
 
     assert(g.isLive === true,       'M1/LIVE: isLive=true',       true,  g.isLive);
     assert(g.isSecondHalf === true,  'M1/LIVE: isSecondHalf=true', true,  g.isSecondHalf);
     assert(g.isFinal === false,      'M1/LIVE: isFinal=false',     false, g.isFinal);
     assert(g.isCanceled === false,   'M1/LIVE: isCanceled=false',  false, g.isCanceled);
-    assert(g.fixtureStatus === 'LIVE','M1/LIVE: fixtureStatus=LIVE','LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M1/LIVE: matchStatus=LIVE','LIVE',g.matchStatus);
     assert(g.isLiveByName === true,  'M1/LIVE: isLiveByName=true (STATUS_SECOND_HALF)', true, g.isLiveByName);
     assert(g.hasWinner === false,    'M1/LIVE: hasWinner=false',   false, g.hasWinner);
     assert(g.isSwapped === false,    'M1/LIVE: isSwapped=false',   false, g.isSwapped);
@@ -861,7 +861,7 @@ const main = () => {
   runTest('MATCH 1 — 760491 Mexico vs Ecuador: STATUS_FULL_TIME (FT) transition (760491 forensic signature)', () => {
     const g = parseEspnEvent(MATCH_1_FT);
     log('MATCH', 'M1/FT', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} clock=${g.displayClock}`);
-    log('FIXTURE', 'M1/FT', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isFinalByState=${g.isFinalByState} isFinalByTypeId=${g.isFinalByTypeId} | hasWinner=${g.hasWinner}`);
+    log('MATCH', 'M1/FT', `[CLASSIFY] matchStatus=${g.matchStatus} | isFinalByState=${g.isFinalByState} isFinalByTypeId=${g.isFinalByTypeId} | hasWinner=${g.hasWinner}`);
 
     const { prevState, prevTypeId, isNewlyFinal } = detectTransition(g);
     log('TRANS', 'M1/FT', `🔀 FT TRANSITION | prevState=${prevState} prevTypeId=${prevTypeId} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted} | ${g.displayClock} | ${g.statusDescription} (${g.statusShortDetail})`);
@@ -883,7 +883,7 @@ const main = () => {
     assert(g.statusShortDetail === 'FT', 'M1/FT: shortDetail=FT',     'FT',  g.statusShortDetail);
     assert(g.displayClock === "90'+9'", 'M1/FT: clock=90\'+9\'',      "90'+9'", g.displayClock);
     assert(g.period === 2,            'M1/FT: period=2',              2,     g.period);
-    assert(g.fixtureStatus === 'FT',  'M1/FT: fixtureStatus=FT',     'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M1/FT: matchStatus=FT',     'FT',  g.matchStatus);
     assert(g.hasWinner === true,      'M1/FT: hasWinner=true',        true,  g.hasWinner);
     assert(g.isCanceled === false,    'M1/FT: isCanceled=false',      false, g.isCanceled);
     assert(isNewlyFinal === true,     'M1/FT: isNewlyFinal=true',     true,  isNewlyFinal);
@@ -902,12 +902,12 @@ const main = () => {
     const g = parseEspnEvent(MATCH_2_ET);
     log('MATCH', 'M2/ET', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('ET_ACT', 'M2/ET', `⚡ ET_ACTIVE — STATUS_EXTRA_TIME | ${g.name} | typeId=17 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to 15s`);
-    log('FIXTURE', 'M2/ET', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isExtraTime=${g.isExtraTime}`);
+    log('MATCH', 'M2/ET', `[CLASSIFY] matchStatus=${g.matchStatus} | isExtraTime=${g.isExtraTime}`);
 
     assert(g.isExtraTime === true,    'M2/ET: isExtraTime=true',      true,  g.isExtraTime);
     assert(g.isLive === true,         'M2/ET: isLive=true',           true,  g.isLive);
     assert(g.isFinal === false,       'M2/ET: isFinal=false',         false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M2/ET: fixtureStatus=LIVE',   'LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M2/ET: matchStatus=LIVE',   'LIVE',g.matchStatus);
     assert(g.statusTypeId === 17,     'M2/ET: statusTypeId=17',       17,    g.statusTypeId);
     assert(g.period === 3,            'M2/ET: period=3 (ET)',         3,     g.period);
   });
@@ -916,12 +916,12 @@ const main = () => {
     const g = parseEspnEvent(MATCH_2_ET_HT);
     log('MATCH', 'M2/ET_HT', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('ET_HT', 'M2/ET_HT', `⚡ ET_HT_ACTIVE — STATUS_EXTRA_TIME_HALF_TIME | ${g.name} | typeId=${g.statusTypeId} name=${g.statusTypeName} | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to 15s`);
-    log('FIXTURE', 'M2/ET_HT', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isExtraTimeHT=${g.isExtraTimeHT}`);
+    log('MATCH', 'M2/ET_HT', `[CLASSIFY] matchStatus=${g.matchStatus} | isExtraTimeHT=${g.isExtraTimeHT}`);
 
     assert(g.isExtraTimeHT === true,  'M2/ET_HT: isExtraTimeHT=true', true,  g.isExtraTimeHT);
     assert(g.isLive === true,         'M2/ET_HT: isLive=true',        true,  g.isLive);
     assert(g.isFinal === false,       'M2/ET_HT: isFinal=false',      false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M2/ET_HT: fixtureStatus=LIVE','LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M2/ET_HT: matchStatus=LIVE','LIVE',g.matchStatus);
     assert(g.statusTypeId === 25,     'M2/ET_HT: statusTypeId=25',    25,    g.statusTypeId);
     assert(g.statusTypeName === 'STATUS_EXTRA_TIME_HALF_TIME', 'M2/ET_HT: typeName=STATUS_EXTRA_TIME_HALF_TIME', 'STATUS_EXTRA_TIME_HALF_TIME', g.statusTypeName);
     assert(g.isExtraTime === false,   'M2/ET_HT: isExtraTime=false (not id=17)', false, g.isExtraTime);
@@ -931,12 +931,12 @@ const main = () => {
     const g = parseEspnEvent(MATCH_2_PENS);
     log('MATCH', 'M2/PENS', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('PENS_AC', 'M2/PENS', `🥅 PENS_ACTIVE — STATUS_SHOOTOUT | ${g.name} | typeId=24 | ${g.scoreStr} | ${g.displayClock} | POLL TIGHTENED to 15s`);
-    log('FIXTURE', 'M2/PENS', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isShootout=${g.isShootout}`);
+    log('MATCH', 'M2/PENS', `[CLASSIFY] matchStatus=${g.matchStatus} | isShootout=${g.isShootout}`);
 
     assert(g.isShootout === true,     'M2/PENS: isShootout=true',     true,  g.isShootout);
     assert(g.isLive === true,         'M2/PENS: isLive=true',         true,  g.isLive);
     assert(g.isFinal === false,       'M2/PENS: isFinal=false',       false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M2/PENS: fixtureStatus=LIVE', 'LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M2/PENS: matchStatus=LIVE', 'LIVE',g.matchStatus);
     assert(g.statusTypeId === 24,     'M2/PENS: statusTypeId=24',     24,    g.statusTypeId);
     assert(g.period === 4,            'M2/PENS: period=4 (pens)',     4,     g.period);
     // Register PENS state in gameStateMap so FT test sees prevState=in, prevTypeId=24
@@ -957,7 +957,7 @@ const main = () => {
     assert(isNewlyFinal === true,     'M2/FT: isNewlyFinal=true',     true,  isNewlyFinal);
     assert(prevState === 'in',        'M2/FT: prevState=in (from PENS)', 'in', prevState);
     assert(prevTypeId === 24,         'M2/FT: prevTypeId=24 (PENS)',  24,    prevTypeId);
-    assert(g.fixtureStatus === 'FT',  'M2/FT: fixtureStatus=FT',     'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M2/FT: matchStatus=FT',     'FT',  g.matchStatus);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -966,14 +966,14 @@ const main = () => {
   runTest('MATCH 3 — 760488 Morocco vs Netherlands: STATUS_PENALTY name alias (isShootout via name)', () => {
     const g = parseEspnEvent(MATCH_3_PENS);
     log('MATCH', 'M3/PENS', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState}`);
-    log('FIXTURE', 'M3/PENS', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isShootout=${g.isShootout} | isLiveByName=${g.isLiveByName}`);
+    log('MATCH', 'M3/PENS', `[CLASSIFY] matchStatus=${g.matchStatus} | isShootout=${g.isShootout} | isLiveByName=${g.isLiveByName}`);
     log('PENS_AC', 'M3/PENS', `🥅 PENS_ACTIVE (name alias) — STATUS_PENALTY | ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName}`);
 
     // Key test: typeId=24 AND typeName=STATUS_PENALTY — both paths should fire
     assert(g.isShootout === true,     'M3/PENS: isShootout=true (typeId=24 + name=STATUS_PENALTY)', true, g.isShootout);
     assert(g.isLiveByName === true,   'M3/PENS: isLiveByName=true (STATUS_PENALTY in name set)', true, g.isLiveByName);
     assert(g.isLive === true,         'M3/PENS: isLive=true',         true,  g.isLive);
-    assert(g.fixtureStatus === 'LIVE','M3/PENS: fixtureStatus=LIVE', 'LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M3/PENS: matchStatus=LIVE', 'LIVE',g.matchStatus);
   });
 
   runTest('MATCH 3 — 760488 Morocco vs Netherlands: FT-Pens + DAY_ADVANCE signal', () => {
@@ -987,7 +987,7 @@ const main = () => {
     assert(g.isFinal === true,        'M3/FT: isFinal=true',          true,  g.isFinal);
     assert(isNewlyFinal === true,     'M3/FT: isNewlyFinal=true',     true,  isNewlyFinal);
     assert(g.hasWinner === true,      'M3/FT: hasWinner=true',        true,  g.hasWinner);
-    assert(g.fixtureStatus === 'FT',  'M3/FT: fixtureStatus=FT',     'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M3/FT: matchStatus=FT',     'FT',  g.matchStatus);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -996,24 +996,24 @@ const main = () => {
   runTest('MATCH 4 — SIMULATED: id=1 STATUS_SCHEDULED (pre-game)', () => {
     const g = parseEspnEvent(MATCH_4_SCHEDULED);
     log('MATCH', 'M4/SCHED', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState}`);
-    log('FIXTURE', 'M4/SCHED', `[CLASSIFY] fixtureStatus=${g.fixtureStatus}`);
+    log('MATCH', 'M4/SCHED', `[CLASSIFY] matchStatus=${g.matchStatus}`);
 
     assert(g.isScheduled === true,    'M4/SCHED: isScheduled=true',   true,  g.isScheduled);
     assert(g.isLive === false,        'M4/SCHED: isLive=false',       false, g.isLive);
     assert(g.isFinal === false,       'M4/SCHED: isFinal=false',      false, g.isFinal);
-    assert(g.fixtureStatus === 'PRE', 'M4/SCHED: fixtureStatus=PRE', 'PRE', g.fixtureStatus);
+    assert(g.matchStatus === 'PRE', 'M4/SCHED: matchStatus=PRE', 'PRE', g.matchStatus);
   });
 
   runTest('MATCH 4 — SIMULATED: id=6 STATUS_POSTPONED — window extension guard', () => {
     const g = parseEspnEvent(MATCH_4_POSTPONED);
     log('MATCH', 'M4/PPD', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState}`);
     log('POSTPON', 'M4/PPD', `⏸️  STATUS_POSTPONED | ${g.name} | typeId=6 | date=${g.eventDateStr} | window extended +7d`);
-    log('FIXTURE', 'M4/PPD', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isPostponed=${g.isPostponed}`);
+    log('MATCH', 'M4/PPD', `[CLASSIFY] matchStatus=${g.matchStatus} | isPostponed=${g.isPostponed}`);
 
     assert(g.isPostponed === true,    'M4/PPD: isPostponed=true',     true,  g.isPostponed);
     assert(g.isLive === false,        'M4/PPD: isLive=false',         false, g.isLive);
     assert(g.isFinal === false,       'M4/PPD: isFinal=false',        false, g.isFinal);
-    assert(g.fixtureStatus === 'PRE', 'M4/PPD: fixtureStatus=PRE',   'PRE', g.fixtureStatus);
+    assert(g.matchStatus === 'PRE', 'M4/PPD: matchStatus=PRE',   'PRE', g.matchStatus);
     assert(g.statusTypeId === 6,      'M4/PPD: statusTypeId=6',       6,     g.statusTypeId);
   });
 
@@ -1021,12 +1021,12 @@ const main = () => {
     const g = parseEspnEvent(MATCH_4_DELAYED);
     log('MATCH', 'M4/DLY', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState}`);
     log('DELAYED', 'M4/DLY', `⏳ STATUS_DELAYED | ${g.name} | typeId=9 | keeping date in window`);
-    log('FIXTURE', 'M4/DLY', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isDelayed=${g.isDelayed}`);
+    log('MATCH', 'M4/DLY', `[CLASSIFY] matchStatus=${g.matchStatus} | isDelayed=${g.isDelayed}`);
 
     assert(g.isDelayed === true,      'M4/DLY: isDelayed=true',       true,  g.isDelayed);
     assert(g.isLive === false,        'M4/DLY: isLive=false',         false, g.isLive);
     assert(g.isFinal === false,       'M4/DLY: isFinal=false',        false, g.isFinal);
-    assert(g.fixtureStatus === 'PRE', 'M4/DLY: fixtureStatus=PRE',   'PRE', g.fixtureStatus);
+    assert(g.matchStatus === 'PRE', 'M4/DLY: matchStatus=PRE',   'PRE', g.matchStatus);
     assert(g.statusTypeId === 9,      'M4/DLY: statusTypeId=9',       9,     g.statusTypeId);
   });
 
@@ -1034,7 +1034,7 @@ const main = () => {
     const g = parseEspnEvent(MATCH_4_CANCELED);
     log('MATCH', 'M4/CAN', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted}`);
     log('CANCEL', 'M4/CAN', `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | state=${g.statusState} | completed=${g.statusCompleted} | SCRAPER WILL NEVER TRIGGER`);
-    log('FIXTURE', 'M4/CAN', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isCanceled=${g.isCanceled}`);
+    log('MATCH', 'M4/CAN', `[CLASSIFY] matchStatus=${g.matchStatus} | isCanceled=${g.isCanceled}`);
 
     // CRITICAL: ESPN marks canceled as state=post, completed=true
     // The cancel guard MUST prevent scraper trigger
@@ -1044,14 +1044,14 @@ const main = () => {
     // isFinalByState MUST be false because isCanceled=true blocks it
     assert(g.isFinalByState === false,'M4/CAN: isFinalByState=false (cancel guard)', false, g.isFinalByState);
     assert(g.isFinal === false,       'M4/CAN: isFinal=false (cancel guard active)', false, g.isFinal);
-    assert(g.fixtureStatus === 'SKIP','M4/CAN: fixtureStatus=SKIP (canceled)', 'SKIP', g.fixtureStatus);
+    assert(g.matchStatus === 'SKIP','M4/CAN: matchStatus=SKIP (canceled)', 'SKIP', g.matchStatus);
     log('VERIFY', 'M4/CAN', `✅ CANCEL GUARD CONFIRMED: isCanceled=true → isFinal=false → scraper BLOCKED`);
   });
 
   runTest('MATCH 4 — SIMULATED: STATUS_FIRST_HALF (name-based fallback, unknown typeId=99)', () => {
     const g = parseEspnEvent(MATCH_4_FIRST_HALF);
     log('MATCH', 'M4/1H', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState}`);
-    log('FIXTURE', 'M4/1H', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName} isFirstHalf=${g.isFirstHalf}`);
+    log('MATCH', 'M4/1H', `[CLASSIFY] matchStatus=${g.matchStatus} | isLiveByTypeId=${g.isLiveByTypeId} isLiveByName=${g.isLiveByName} isFirstHalf=${g.isFirstHalf}`);
     log('LIVE', 'M4/1H', `⚽ [1H] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
 
     // typeId=99 is unknown — only name-based fallback should detect as LIVE
@@ -1060,7 +1060,7 @@ const main = () => {
     assert(g.isLive === true,         'M4/1H: isLive=true (via name fallback)', true, g.isLive);
     assert(g.isFirstHalf === true,    'M4/1H: isFirstHalf=true',      true,  g.isFirstHalf);
     assert(g.isFinal === false,       'M4/1H: isFinal=false',         false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M4/1H: fixtureStatus=LIVE (name fallback)', 'LIVE', g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M4/1H: matchStatus=LIVE (name fallback)', 'LIVE', g.matchStatus);
     log('VERIFY', 'M4/1H', `✅ NAME-BASED FALLBACK CONFIRMED: typeId=99 unknown → isLiveByName=true via STATUS_FIRST_HALF`);
   });
 
@@ -1074,7 +1074,7 @@ const main = () => {
     assert(g.isFinalByTypeId === true,'M4/FT_ALT: isFinalByTypeId=true (typeId=23)', true, g.isFinalByTypeId);
     assert(g.statusTypeId === 23,     'M4/FT_ALT: statusTypeId=23',   23,    g.statusTypeId);
     assert(isNewlyFinal === true,     'M4/FT_ALT: isNewlyFinal=true', true,  isNewlyFinal);
-    assert(g.fixtureStatus === 'FT',  'M4/FT_ALT: fixtureStatus=FT', 'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M4/FT_ALT: matchStatus=FT', 'FT',  g.matchStatus);
   });
 
   runTest('MATCH 4 — SIMULATED: id=3 STATUS_FINAL (legacy FT typeId)', () => {
@@ -1087,7 +1087,7 @@ const main = () => {
     assert(g.isFinalByTypeId === true,'M4/FT_LEG: isFinalByTypeId=true (typeId=3)', true, g.isFinalByTypeId);
     assert(g.statusTypeId === 3,      'M4/FT_LEG: statusTypeId=3',    3,     g.statusTypeId);
     assert(isNewlyFinal === true,     'M4/FT_LEG: isNewlyFinal=true', true,  isNewlyFinal);
-    assert(g.fixtureStatus === 'FT',  'M4/FT_LEG: fixtureStatus=FT', 'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M4/FT_LEG: matchStatus=FT', 'FT',  g.matchStatus);
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1097,12 +1097,12 @@ const main = () => {
     const g = parseEspnEvent(MATCH_5_KICKOFF);
     log('MATCH', 'M5/KICK', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('WATCH', 'M5/KICK', `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate} | ${g.scoreStr}`);
-    log('FIXTURE', 'M5/KICK', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isInProgress=${g.isInProgress} | isSwapped=${g.isSwapped}`);
+    log('MATCH', 'M5/KICK', `[CLASSIFY] matchStatus=${g.matchStatus} | isInProgress=${g.isInProgress} | isSwapped=${g.isSwapped}`);
 
     assert(g.isInProgress === true,   'M5/KICK: isInProgress=true',   true,  g.isInProgress);
     assert(g.isLive === true,         'M5/KICK: isLive=true',         true,  g.isLive);
     assert(g.isFinal === false,       'M5/KICK: isFinal=false',       false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M5/KICK: fixtureStatus=LIVE', 'LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M5/KICK: matchStatus=LIVE', 'LIVE',g.matchStatus);
     assert(g.statusTypeId === 2,      'M5/KICK: statusTypeId=2',      2,     g.statusTypeId);
     assert(g.isSwapped === true,      'M5/KICK: isSwapped=true (home at idx[0])', true, g.isSwapped);
     log('VERIFY', 'M5/KICK', `✅ isSwapped=true CONFIRMED: home team BRA at competitors[0] (non-standard orientation)`);
@@ -1113,12 +1113,12 @@ const main = () => {
     const { isNewlyFinal } = detectTransition(g);
     log('MATCH', 'M5/HT', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('LIVE', 'M5/HT', `⚽ [HT] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
-    log('FIXTURE', 'M5/HT', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isHalftime=${g.isHalftime}`);
+    log('MATCH', 'M5/HT', `[CLASSIFY] matchStatus=${g.matchStatus} | isHalftime=${g.isHalftime}`);
 
     assert(g.isHalftime === true,     'M5/HT: isHalftime=true',       true,  g.isHalftime);
     assert(g.isLive === true,         'M5/HT: isLive=true',           true,  g.isLive);
     assert(g.isFinal === false,       'M5/HT: isFinal=false',         false, g.isFinal);
-    assert(g.fixtureStatus === 'LIVE','M5/HT: fixtureStatus=LIVE',   'LIVE',g.fixtureStatus);
+    assert(g.matchStatus === 'LIVE','M5/HT: matchStatus=LIVE',   'LIVE',g.matchStatus);
     assert(isNewlyFinal === false,    'M5/HT: isNewlyFinal=false',    false, isNewlyFinal);
   });
 
@@ -1127,7 +1127,7 @@ const main = () => {
     const { isNewlyFinal } = detectTransition(g);
     log('MATCH', 'M5/2H', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} clock=${g.displayClock}`);
     log('LIVE', 'M5/2H', `⚽ [2H] ${g.name} | ${g.scoreStr} | ${g.displayClock} P${g.period} | typeId=${g.statusTypeId} ${g.statusTypeName} | state=${g.statusState}`);
-    log('FIXTURE', 'M5/2H', `[CLASSIFY] fixtureStatus=${g.fixtureStatus} | isSecondHalf=${g.isSecondHalf} | isLiveByName=${g.isLiveByName}`);
+    log('MATCH', 'M5/2H', `[CLASSIFY] matchStatus=${g.matchStatus} | isSecondHalf=${g.isSecondHalf} | isLiveByName=${g.isLiveByName}`);
 
     assert(g.isSecondHalf === true,   'M5/2H: isSecondHalf=true',     true,  g.isSecondHalf);
     assert(g.isLiveByName === true,   'M5/2H: isLiveByName=true (STATUS_SECOND_HALF)', true, g.isLiveByName);
@@ -1155,7 +1155,7 @@ const main = () => {
     assert(prevTypeId === 26,         'M5/FT: prevTypeId=26 (2H)',    26,    prevTypeId);
     assert(g.hasWinner === true,      'M5/FT: hasWinner=true',        true,  g.hasWinner);
     assert(g.isSwapped === true,      'M5/FT: isSwapped=true',        true,  g.isSwapped);
-    assert(g.fixtureStatus === 'FT',  'M5/FT: fixtureStatus=FT',     'FT',  g.fixtureStatus);
+    assert(g.matchStatus === 'FT',  'M5/FT: matchStatus=FT',     'FT',  g.matchStatus);
     assert(g.matchRound === 'round-of-32', 'M5/FT: matchRound=round-of-32', 'round-of-32', g.matchRound);
     log('VERIFY', 'M5/FT', `✅ FULL LIFECYCLE CONFIRMED: id=2 → id=22 → id=26 → id=28 (kickoff → HT → 2H → FT)`);
   });

@@ -19,8 +19,8 @@ function parseDbUrl(url) {
   console.log(`${TAG} JUNE 25 FINAL AUDIT — ORIENTATION + DK ODDS COVERAGE`);
   console.log(`${TAG} ═══════════════════════════════════════════════════════\n`);
 
-  // 1. Fixture orientation audit
-  const [fixtures] = await conn.query(`
+  // 1. Match orientation audit
+  const [matchs] = await conn.query(`
     SELECT 
       f.match_id, f.kickoff_utc, f.group_letter,
       ht.team_id AS home_id, ht.fifa_code AS home_fifa, ht.name AS home_name,
@@ -46,9 +46,9 @@ function parseDbUrl(url) {
 
   console.log(`${TAG} [STEP 1] ORIENTATION AUDIT:`);
   let orientErrors = 0;
-  for (const f of fixtures) {
+  for (const f of matchs) {
     const exp = EXPECTED[f.match_id];
-    if (!exp) { console.log(`${TAG}   UNKNOWN fixture: ${f.match_id}`); continue; }
+    if (!exp) { console.log(`${TAG}   UNKNOWN match: ${f.match_id}`); continue; }
     const ok = f.home_id === exp.home && f.away_id === exp.away;
     const status = ok ? 'PASS ✓' : 'FAIL ✗';
     console.log(`${TAG}   ${f.match_id} | ${f.home_fifa}(home) vs ${f.away_fifa}(away) | ${status}`);
@@ -109,7 +109,7 @@ function parseDbUrl(url) {
   }
   console.log(`${TAG}   Coverage errors: ${coverageErrors}\n`);
 
-  // 3. Spot-check odds values for each fixture
+  // 3. Spot-check odds values for each match
   console.log(`${TAG} [STEP 3] ODDS VALUE SPOT-CHECK:`);
   const EXPECTED_ODDS = {
     'wc26-g-057': { home_ml: 1700, draw: 700, away_ml: -650, no_draw: -1400, total_line: 3.5, over: 125, under: -155, home_spread: 2.5, home_spread_odds: -150, away_spread: -2.5, away_spread_odds: 120, dc_home: 400, dc_away: -5000, btts_yes: 145, btts_no: -185 },
@@ -154,15 +154,15 @@ function parseDbUrl(url) {
       ['BTTS/no', get('BTTS','no'), exp.btts_no],
     ];
 
-    let fixtureErrors = 0;
+    let matchErrors = 0;
     for (const [label, actual, expected] of checks) {
       if (actual !== expected) {
         console.log(`${TAG}   ${fid} ${label}: EXPECTED=${expected} ACTUAL=${actual} ✗`);
-        fixtureErrors++;
+        matchErrors++;
         valueErrors++;
       }
     }
-    if (fixtureErrors === 0) {
+    if (matchErrors === 0) {
       console.log(`${TAG}   ${fid}: ALL 15 VALUE CHECKS PASS ✓`);
     }
   }

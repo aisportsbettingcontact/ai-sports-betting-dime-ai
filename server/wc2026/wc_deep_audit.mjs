@@ -8,13 +8,13 @@ async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
   // ─────────────────────────────────────────────────────────────────
-  // PHASE 1: FIXTURES TABLE — dates, orientations, schema
+  // PHASE 1: MATCHS TABLE — dates, orientations, schema
   // ─────────────────────────────────────────────────────────────────
   console.log(SEP);
-  console.log('WC2026 DEEP AUDIT — PHASE 1: FIXTURES TABLE');
+  console.log('WC2026 DEEP AUDIT — PHASE 1: MATCHS TABLE');
   console.log(SEP);
 
-  const [fixtures] = await conn.query(`
+  const [matchs] = await conn.query(`
     SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage, f.group_letter,
            f.home_team_id, ht.name AS home_name, ht.fifa_code AS home_code,
            f.away_team_id, at.name AS away_name, at.fifa_code AS away_code,
@@ -25,9 +25,9 @@ async function main() {
     ORDER BY f.match_date, f.match_id
   `);
 
-  console.log(`\n[INPUT] Total fixtures in DB: ${fixtures.length}`);
+  console.log(`\n[INPUT] Total matchs in DB: ${matchs.length}`);
   const byDate = {};
-  for (const f of fixtures) {
+  for (const f of matchs) {
     const d = f.match_date instanceof Date
       ? f.match_date.toISOString().split('T')[0]
       : String(f.match_date).split('T')[0];
@@ -36,13 +36,13 @@ async function main() {
     console.log(`[FIX] ${f.match_id} | ${d} | ${f.home_code} (home) vs ${f.away_code} (away) | grp=${f.group_letter} | status=${f.status} | venue=${f.venue_id}`);
   }
 
-  console.log('\n[STATE] Fixtures grouped by date:');
+  console.log('\n[STATE] Matchs grouped by date:');
   for (const [d, fxs] of Object.entries(byDate).sort()) {
-    console.log(`  ${d}: ${fxs.length} fixture(s) — ${fxs.map(x => x.match_id).join(', ')}`);
+    console.log(`  ${d}: ${fxs.length} match(s) — ${fxs.map(x => x.match_id).join(', ')}`);
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // PHASE 2: ODDS SNAPSHOTS — per fixture, per book/model, per market
+  // PHASE 2: ODDS SNAPSHOTS — per match, per book/model, per market
   // ─────────────────────────────────────────────────────────────────
   console.log('\n' + SEP);
   console.log('PHASE 2: ODDS SNAPSHOTS AUDIT');
@@ -57,25 +57,25 @@ async function main() {
 
   console.log(`\n[INPUT] Total odds rows: ${odds.length}`);
 
-  const byFixture = {};
+  const byMatch = {};
   for (const o of odds) {
-    if (!byFixture[o.match_id]) byFixture[o.match_id] = { book: [], model: [] };
-    if (Number(o.book_id) === 0) byFixture[o.match_id].model.push(o);
-    else byFixture[o.match_id].book.push(o);
+    if (!byMatch[o.match_id]) byMatch[o.match_id] = { book: [], model: [] };
+    if (Number(o.book_id) === 0) byMatch[o.match_id].model.push(o);
+    else byMatch[o.match_id].book.push(o);
   }
 
-  const allFixtureIds = fixtures.map(f => f.match_id);
-  const seededFixtures = new Set(Object.keys(byFixture));
+  const allMatchIds = matchs.map(f => f.match_id);
+  const seededMatchs = new Set(Object.keys(byMatch));
 
   let totalIssues = 0;
   const issueLog = [];
 
-  console.log('\n[STATE] Per-fixture odds breakdown:');
-  for (const f of fixtures) {
+  console.log('\n[STATE] Per-match odds breakdown:');
+  for (const f of matchs) {
     const d = f.match_date instanceof Date
       ? f.match_date.toISOString().split('T')[0]
       : String(f.match_date).split('T')[0];
-    const data = byFixture[f.match_id] || { book: [], model: [] };
+    const data = byMatch[f.match_id] || { book: [], model: [] };
 
     const modelMarkets = [...new Set(data.model.map(o => o.market))];
     const bookMarkets = [...new Set(data.book.map(o => o.market))];
@@ -141,7 +141,7 @@ async function main() {
     const verdict = flags.length === 0 ? '✓ OK' : `✗ ISSUES: ${flags.join(', ')}`;
     if (flags.length > 0) {
       totalIssues++;
-      issueLog.push({ fixture: f.match_id, date: d, home: f.home_code, away: f.away_code, flags });
+      issueLog.push({ match: f.match_id, date: d, home: f.home_code, away: f.away_code, flags });
     }
 
     console.log(`\n  [${f.match_id}] ${d} | ${f.home_code} vs ${f.away_code} | ${verdict}`);
@@ -149,16 +149,16 @@ async function main() {
     console.log(`    BOOK:  ${data.book.length} rows | ${bookDetail || 'NONE'}`);
   }
 
-  const noOdds = allFixtureIds.filter(id => !seededFixtures.has(id));
-  console.log(`\n[OUTPUT] Fixtures with ZERO odds rows: ${noOdds.length} — ${noOdds.join(', ') || 'none'}`);
-  console.log(`[OUTPUT] Fixtures with issues: ${totalIssues}`);
+  const noOdds = allMatchIds.filter(id => !seededMatchs.has(id));
+  console.log(`\n[OUTPUT] Matchs with ZERO odds rows: ${noOdds.length} — ${noOdds.join(', ') || 'none'}`);
+  console.log(`[OUTPUT] Matchs with issues: ${totalIssues}`);
   if (issueLog.length > 0) {
     console.log('\n[VERIFY] ISSUE SUMMARY:');
     for (const i of issueLog) {
-      console.log(`  FAIL: ${i.fixture} (${i.date}) ${i.home} vs ${i.away} — ${i.flags.join(', ')}`);
+      console.log(`  FAIL: ${i.match} (${i.date}) ${i.home} vs ${i.away} — ${i.flags.join(', ')}`);
     }
   } else {
-    console.log('[VERIFY] PASS — All seeded fixtures have correct model + book odds');
+    console.log('[VERIFY] PASS — All seeded matchs have correct model + book odds');
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -179,16 +179,16 @@ async function main() {
     ORDER BY l.match_id, l.team_id
   `);
 
-  console.log(`\n[INPUT] Lineup team-fixture combos: ${lineups.length}`);
-  const lineupByFixture = {};
+  console.log(`\n[INPUT] Lineup team-match combos: ${lineups.length}`);
+  const lineupByMatch = {};
   for (const l of lineups) {
-    if (!lineupByFixture[l.match_id]) lineupByFixture[l.match_id] = [];
-    lineupByFixture[l.match_id].push(l);
+    if (!lineupByMatch[l.match_id]) lineupByMatch[l.match_id] = [];
+    lineupByMatch[l.match_id].push(l);
     console.log(`[LINEUP] ${l.match_id} | ${l.fifa_code} | players=${l.player_count} (starters=${l.starters}, bench=${l.bench})`);
   }
 
-  const noLineups = allFixtureIds.filter(id => !lineupByFixture[id]);
-  console.log(`\n[OUTPUT] Fixtures with NO lineups: ${noLineups.length} — ${noLineups.join(', ') || 'none'}`);
+  const noLineups = allMatchIds.filter(id => !lineupByMatch[id]);
+  console.log(`\n[OUTPUT] Matchs with NO lineups: ${noLineups.length} — ${noLineups.join(', ') || 'none'}`);
 
   await conn.end();
   console.log('\n' + SEP);

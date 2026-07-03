@@ -30,7 +30,7 @@
  *   - abbreviation is the key for glossary
  *   - Shot map: DELETE + re-INSERT on each ingest (shots can change mid-match)
  *
- * TERMINOLOGY: All WC fixtures are "matches" — never "games".
+ * TERMINOLOGY: All WC events use "matches" terminology — never "games".
  */
 
 import { getDb } from "../db";

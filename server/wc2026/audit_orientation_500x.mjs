@@ -83,7 +83,7 @@ function check(label, actual, expected, matchId) {
 async function main() {
   BANNER();
   INFO('500x FORENSIC AUDIT — Away/Home Orientation');
-  INFO('Checking DB fixtures, frozen_book_odds, and v12 model orientation');
+  INFO('Checking DB matchs, frozen_book_odds, and v12 model orientation');
   BANNER();
 
   const conn = await mysql.createConnection({
@@ -99,7 +99,7 @@ async function main() {
   INFO('─'.repeat(60));
 
   const matchIds = Object.keys(GROUND_TRUTH);
-  const [fixtures] = await conn.execute(
+  const [matchs] = await conn.execute(
     `SELECT f.match_id, f.away_team_id, f.home_team_id,
             ta.name AS away_name, ta.fifa_code AS away_code,
             th.name AS home_name, th.fifa_code AS home_code
@@ -111,9 +111,9 @@ async function main() {
     matchIds
   );
 
-  const fixtureMap = {};
-  for (const row of fixtures) {
-    fixtureMap[row.match_id] = row;
+  const matchMap = {};
+  for (const row of matchs) {
+    matchMap[row.match_id] = row;
     const gt = GROUND_TRUTH[row.match_id];
     STATE(`[${row.match_id}] DB: Away=${row.away_code}(${row.away_name}) | Home=${row.home_code}(${row.home_name})`);
     STATE(`[${row.match_id}] GT: Away=${gt.awayCode}(${gt.away}) | Home=${gt.homeCode}(${gt.home})`);
@@ -196,13 +196,13 @@ async function main() {
 
   for (const [fid, lam] of Object.entries(V12_LAMBDAS)) {
     const gt = GROUND_TRUTH[fid];
-    const dbFix = fixtureMap[fid];
+    const dbFix = matchMap[fid];
     STATE(`[${fid}] v12 λH=${lam.lambdaH} assigned to ${lam.homeTeam} | λA=${lam.lambdaA} assigned to ${lam.awayTeam}`);
     STATE(`[${fid}] GT  Home=${gt.homeCode} | Away=${gt.awayCode}`);
     check('v12 λH team (home)', lam.homeTeam, gt.homeCode, fid);
     check('v12 λA team (away)', lam.awayTeam, gt.awayCode, fid);
 
-    // Verify DB fixture orientation matches v12 model orientation
+    // Verify DB match orientation matches v12 model orientation
     if (dbFix) {
       check('DB home_code matches v12 λH team', dbFix.home_code, lam.homeTeam, fid);
       check('DB away_code matches v12 λA team', dbFix.away_code, lam.awayTeam, fid);

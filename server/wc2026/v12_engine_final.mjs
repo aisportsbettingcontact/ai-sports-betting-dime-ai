@@ -23,8 +23,8 @@
  *            FIX: awaySpreadCov = 1 - homeSpreadCov (exact inverse for .5 lines)
  *   BUG #3: ET/Pens was flat 50/50
  *            FIX: strength-weighted ET with 70% regression to mean
- *   BUG #4: GROUND_TRUTH had 760488/760489 fixture mapping swapped
- *            FIX: pulled directly from DB — no hardcoded fixture mapping
+ *   BUG #4: GROUND_TRUTH had 760488/760489 match mapping swapped
+ *            FIX: pulled directly from DB — no hardcoded match mapping
  */
 
 import mysql from 'mysql2/promise';
@@ -373,8 +373,8 @@ async function main() {
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
-  // Pull Jul 1 fixture book odds
-  L.step('DB', 'Pulling Jul 1 fixture book odds from wc2026_frozen_book_odds...');
+  // Pull Jul 1 match book odds
+  L.step('DB', 'Pulling Jul 1 match book odds from wc2026_frozen_book_odds...');
   const [jul1BookRows] = await conn.execute(
     `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
@@ -392,7 +392,7 @@ async function main() {
      WHERE f.match_date = '2026-07-01'
      ORDER BY fbo.match_id`
   );
-  L.pass('DB', `Jul 1 fixtures from DB: ${jul1BookRows.length} rows`);
+  L.pass('DB', `Jul 1 matchs from DB: ${jul1BookRows.length} rows`);
   for (const r of jul1BookRows) {
     L.input('DB', `  ${r.match_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml} | Spread=${r.book_spread_line} (${r.book_home_spread_odds}/${r.book_away_spread_odds})`);
   }

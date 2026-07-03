@@ -100,10 +100,10 @@ function calculateRoi(modelML, bookML, bookOppML) {
   return (mI / bookNoVig - 1) * 100;
 }
 
-// ─── Fixture data (from seed script) ─────────────────────────────────────────
-const FIXTURES = [
+// ─── Match data (from seed script) ─────────────────────────────────────────
+const MATCHES = [
   {
-    fixtureId: 'wc26-g-039',
+    matchId: 'wc26-g-039',
     homeName: 'Spain', homeCode: 'esp',
     awayName: 'Saudi Arabia', awayCode: 'ksa',
     eloHome: 2050, eloAway: 1615,
@@ -114,7 +114,7 @@ const FIXTURES = [
     bookTotalLine: 3.5, bookOverML: -105, bookUnderML: -120,
   },
   {
-    fixtureId: 'wc26-g-037',
+    matchId: 'wc26-g-037',
     homeName: 'Iran', homeCode: 'irn',
     awayName: 'Belgium', awayCode: 'bel',
     eloHome: 1695, eloAway: 1890,
@@ -125,7 +125,7 @@ const FIXTURES = [
     bookTotalLine: 2.5, bookOverML: -125, bookUnderML: 100,
   },
   {
-    fixtureId: 'wc26-g-040',
+    matchId: 'wc26-g-040',
     homeName: 'Cape Verde', homeCode: 'cpv',
     awayName: 'Uruguay', awayCode: 'uru',
     eloHome: 1598, eloAway: 1855,
@@ -136,7 +136,7 @@ const FIXTURES = [
     bookTotalLine: 2.5, bookOverML: 130, bookUnderML: -160,
   },
   {
-    fixtureId: 'wc26-g-038',
+    matchId: 'wc26-g-038',
     homeName: 'New Zealand', homeCode: 'nzl',
     awayName: 'Egypt', awayCode: 'egy',
     eloHome: 1598, eloAway: 1720,
@@ -148,10 +148,10 @@ const FIXTURES = [
   },
 ];
 
-// ─── Audit each fixture ───────────────────────────────────────────────────────
-function auditFixture(f) {
+// ─── Audit each match ───────────────────────────────────────────────────────
+function auditMatch(f) {
   console.log(`\n${'═'.repeat(80)}`);
-  console.log(`${TAG}[INPUT] ${f.homeName} (${f.homeCode}) vs ${f.awayName} (${f.awayCode}) | ${f.fixtureId}`);
+  console.log(`${TAG}[INPUT] ${f.homeName} (${f.homeCode}) vs ${f.awayName} (${f.awayCode}) | ${f.matchId}`);
   console.log(`${TAG}[INPUT] Elo: home=${f.eloHome} away=${f.eloAway} | FIFA: home=#${f.fifaRankHome} away=#${f.fifaRankAway}`);
   console.log(`${TAG}[INPUT] Form: home=${f.formHome} away=${f.formAway} | Altitude: ${f.altitudeM}m`);
   console.log(`${TAG}[INPUT] Book: home=${f.bookHomeML} draw=${f.bookDrawML} away=${f.bookAwayML} | Total: O${f.bookTotalLine}=${f.bookOverML} U${f.bookTotalLine}=${f.bookUnderML}`);
@@ -267,7 +267,7 @@ function auditFixture(f) {
   if (LAMBDA_MULT > 1.0) {
     console.log(`${TAG}[BUG] ⚠️  LAMBDA INFLATION: expectedTotal=${expectedTotalGoals.toFixed(3)} > bookTotalLine=${f.bookTotalLine}`);
     console.log(`${TAG}[BUG]     lambda_mult=${LAMBDA_MULT} inflates expected goals by ${((LAMBDA_MULT-1)*100).toFixed(0)}% above book line`);
-    console.log(`${TAG}[BUG]     This SYSTEMATICALLY inflates over probability for ALL fixtures`);
+    console.log(`${TAG}[BUG]     This SYSTEMATICALLY inflates over probability for ALL matches`);
     console.log(`${TAG}[BUG]     For O${f.bookTotalLine}: book NV over=${(bookOverNV*100).toFixed(2)}%, model will produce ~${(poissonOverProb(f.bookTotalLine, lambdaH, lambdaA)*100).toFixed(2)}%`);
   }
 
@@ -385,7 +385,7 @@ function auditFixture(f) {
   console.log(`${TAG}[OUTPUT]   Lambda inflation impact: +${((analyticalOverProb - correctOverProb)*100).toFixed(2)}pp on over probability`);
 
   return {
-    fixtureId: f.fixtureId,
+    matchId: f.matchId,
     homeName: f.homeName, awayName: f.awayName,
     bookFavorite, modelFavorite, modelAgreesWithBook,
     currentOverEdge, correctOverEdge,
@@ -408,11 +408,11 @@ console.log(`${TAG} WC2026 JUNE 21 MODEL AUDIT — MAXIMUM DEPTH`);
 console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
 console.log(`${'═'.repeat(80)}`);
 
-const results = FIXTURES.map(auditFixture);
+const results = MATCHES.map(auditMatch);
 
-// ── Cross-fixture summary ──────────────────────────────────────────────────
+// ── Cross-match summary ──────────────────────────────────────────────────
 console.log(`\n${'═'.repeat(80)}`);
-console.log(`${TAG}[OUTPUT] CROSS-FIXTURE AUDIT SUMMARY`);
+console.log(`${TAG}[OUTPUT] CROSS-MATCH AUDIT SUMMARY`);
 console.log(`${'═'.repeat(80)}`);
 
 let allFavsAgree = 0;
@@ -424,7 +424,7 @@ for (const r of results) {
   allOversInflated += r.currentOverEdge > 1.5 ? 1 : 0;
   totalLambdaInflation += r.lambdaInflationImpact;
 
-  console.log(`\n${TAG}[OUTPUT] ${r.homeName} vs ${r.awayName} (${r.fixtureId}):`);
+  console.log(`\n${TAG}[OUTPUT] ${r.homeName} vs ${r.awayName} (${r.matchId}):`);
   console.log(`${TAG}[OUTPUT]   ML: Book fav=${r.bookFavorite} | Model fav=${r.modelFavorite} | Agrees=${r.modelAgreesWithBook}`);
   console.log(`${TAG}[OUTPUT]   Current model: H=${probToAmerican(r.currentFinalH)} D=${probToAmerican(r.currentFinalD)} A=${probToAmerican(r.currentFinalA)}`);
   console.log(`${TAG}[OUTPUT]   Corrected:     H=${probToAmerican(r.correctFinalH)} D=${probToAmerican(r.correctFinalD)} A=${probToAmerican(r.correctFinalA)}`);
@@ -432,9 +432,9 @@ for (const r of results) {
   console.log(`${TAG}[OUTPUT]   ML 3-way edges: H=${r.homeEdge3W > 0 ? '+' : ''}${r.homeEdge3W.toFixed(2)}pp D=${r.drawEdge3W > 0 ? '+' : ''}${r.drawEdge3W.toFixed(2)}pp A=${r.awayEdge3W > 0 ? '+' : ''}${r.awayEdge3W.toFixed(2)}pp`);
 }
 
-console.log(`\n${TAG}[VERIFY] Favorites: model agrees with book on ${allFavsAgree}/4 fixtures`);
-console.log(`${TAG}[VERIFY] Overs: ${allOversInflated}/4 fixtures show over edge > 1.5pp`);
-console.log(`${TAG}[VERIFY] Avg lambda inflation impact: ${(totalLambdaInflation/4).toFixed(2)}pp per fixture`);
+console.log(`\n${TAG}[VERIFY] Favorites: model agrees with book on ${allFavsAgree}/4 matches`);
+console.log(`${TAG}[VERIFY] Overs: ${allOversInflated}/4 matches show over edge > 1.5pp`);
+console.log(`${TAG}[VERIFY] Avg lambda inflation impact: ${(totalLambdaInflation/4).toFixed(2)}pp per match`);
 
 if (allFavsAgree === 4) {
   console.log(`${TAG}[BUG] ⚠️  SYSTEMATIC FAVORITE BIAS: model agrees with book on ALL 4 favorites`);
@@ -444,7 +444,7 @@ if (allFavsAgree === 4) {
 }
 
 if (allOversInflated >= 3) {
-  console.log(`\n${TAG}[BUG] ⚠️  SYSTEMATIC OVER BIAS: ${allOversInflated}/4 fixtures show inflated over edge`);
+  console.log(`\n${TAG}[BUG] ⚠️  SYSTEMATIC OVER BIAS: ${allOversInflated}/4 matches show inflated over edge`);
   console.log(`${TAG}[BUG]     Root cause: lambda_mult=1.20 applied to book total line (already reflects 2026 pace)`);
   console.log(`${TAG}[BUG]     This double-counts the pace adjustment — book line is the market's 2026-adjusted estimate`);
   console.log(`${TAG}[BUG]     FIX: Remove lambda_mult from book total line calculation`);

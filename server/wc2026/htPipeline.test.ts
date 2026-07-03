@@ -73,24 +73,24 @@ function resolveStatus(rawStatus: string): ResolvedStatus {
 }
 
 // ─── WcScorePanel state derivation (mirrors WcFeedInline.tsx lines 949-955) ───
-interface FixtureStatus {
+interface MatchStatus {
   status: StatusType;
   matchMinute: string | null;
   advancingTeamId: string | null;
 }
 
-function deriveScorePanelState(fixture: FixtureStatus) {
-  const isLive = fixture.status === 'LIVE';
-  const isHT = fixture.status === 'HT';
-  const isFinal = fixture.status === 'FT';
+function deriveScorePanelState(match: MatchStatus) {
+  const isLive = match.status === 'LIVE';
+  const isHT = match.status === 'HT';
+  const isFinal = match.status === 'FT';
   const isScheduled = !isLive && !isHT && !isFinal;
-  const matchMinute = fixture.matchMinute ?? null;
+  const matchMinute = match.matchMinute ?? null;
   const showBadge = isLive || isHT || isFinal;
   const badgeType: 'HT' | 'LIVE' | 'FINAL' | 'TIME' = isHT ? 'HT' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME';
   const badgeColor = isHT ? '#FBbf24' : '#39FF14';
   const badgePulse = isLive; // HT has static dot, LIVE has animate-pulse
   const showMinute = isLive && matchMinute !== null;
-  const showAdvancingTeam = isFinal && fixture.advancingTeamId !== null;
+  const showAdvancingTeam = isFinal && match.advancingTeamId !== null;
   const showScheduledTime = isScheduled;
 
   return {
@@ -223,65 +223,65 @@ describe('HT Pipeline — Layer 2: DB Enum Validation', () => {
 
 describe('HT Pipeline — Layer 4: WcScorePanel State Derivation', () => {
 
-  const htFixture: FixtureStatus = {
+  const htMatch: MatchStatus = {
     status: 'HT',
     matchMinute: null,
     advancingTeamId: null,
   };
 
   it('isHT = true when status = "HT"', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.isHT).toBe(true);
   });
 
   it('isLive = false when status = "HT"', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.isLive).toBe(false);
   });
 
   it('isFinal = false when status = "HT"', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.isFinal).toBe(false);
   });
 
   it('[CRITICAL] isScheduled = false when status = "HT" (HT card must NOT show kickoff time)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.isScheduled).toBe(false);
   });
 
   it('showBadge = true when status = "HT" (badge must render)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.showBadge).toBe(true);
   });
 
   it('badgeType = "HT" when status = "HT"', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.badgeType).toBe('HT');
   });
 
   it('[CRITICAL] badgeColor = "#FBbf24" (amber) for HT — NOT green (#39FF14)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.badgeColor).toBe('#FBbf24');
     expect(state.badgeColor).not.toBe('#39FF14');
   });
 
   it('[CRITICAL] badgePulse = false for HT (static dot, NOT animate-pulse)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.badgePulse).toBe(false);
   });
 
   it('showMinute = false for HT (no game clock during halftime)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.showMinute).toBe(false);
   });
 
   it('showAdvancingTeam = false for HT (match not over yet)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.showAdvancingTeam).toBe(false);
   });
 
   it('showScheduledTime = false for HT (HT card must NOT show kickoff time)', () => {
-    const state = deriveScorePanelState(htFixture);
+    const state = deriveScorePanelState(htMatch);
     expect(state.showScheduledTime).toBe(false);
   });
 });
