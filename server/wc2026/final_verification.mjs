@@ -85,24 +85,24 @@ async function main() {
 
   // Load all DB fixtures
   const [dbFixtures] = await conn.execute(
-    'SELECT fixture_id, home_team_id, away_team_id, match_date FROM wc2026_fixtures ORDER BY match_date, fixture_id'
+    'SELECT match_id, home_team_id, away_team_id, match_date FROM wc2026_fixtures ORDER BY match_date, match_id'
   );
 
   // Load all odds for June 11-17
   const [allOdds] = await conn.execute(`
-    SELECT o.fixture_id, o.book_id, o.market, o.selection, o.american_odds
+    SELECT o.match_id, o.book_id, o.market, o.selection, o.american_odds
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON o.fixture_id = f.fixture_id
+    JOIN wc2026_fixtures f ON o.match_id = f.match_id
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
   `);
 
-  // Build odds lookup: fixtureId → {bookId → {market → {selection → odds}}}
+  // Build odds lookup: matchId → {bookId → {market → {selection → odds}}}
   const oddsMap = {};
   for (const o of allOdds) {
-    if (!oddsMap[o.fixture_id]) oddsMap[o.fixture_id] = {};
-    if (!oddsMap[o.fixture_id][o.book_id]) oddsMap[o.fixture_id][o.book_id] = {};
-    if (!oddsMap[o.fixture_id][o.book_id][o.market]) oddsMap[o.fixture_id][o.book_id][o.market] = {};
-    oddsMap[o.fixture_id][o.book_id][o.market][o.selection] = o.american_odds;
+    if (!oddsMap[o.match_id]) oddsMap[o.match_id] = {};
+    if (!oddsMap[o.match_id][o.book_id]) oddsMap[o.match_id][o.book_id] = {};
+    if (!oddsMap[o.match_id][o.book_id][o.market]) oddsMap[o.match_id][o.book_id][o.market] = {};
+    oddsMap[o.match_id][o.book_id][o.market][o.selection] = o.american_odds;
   }
 
   console.log('');
@@ -143,10 +143,10 @@ async function main() {
 
       const correct = dbFix.away_team_id === anAwayId && dbFix.home_team_id === anHomeId;
       if (correct) {
-        console.log(`  [PASS] ${dbFix.fixture_id}: ${anAwayId} @ ${anHomeId} ✓`);
+        console.log(`  [PASS] ${dbFix.match_id}: ${anAwayId} @ ${anHomeId} ✓`);
         orientationPass++;
       } else {
-        console.log(`  [FAIL] ${dbFix.fixture_id}: DB=${dbFix.away_team_id}@${dbFix.home_team_id} AN=${anAwayId}@${anHomeId} ✗`);
+        console.log(`  [FAIL] ${dbFix.match_id}: DB=${dbFix.away_team_id}@${dbFix.home_team_id} AN=${anAwayId}@${anHomeId} ✗`);
         orientationFail++;
       }
     }
@@ -171,9 +171,9 @@ async function main() {
   const failedFixtures = [];
 
   for (const fix of june1117Fixtures) {
-    const { fixture_id, home_team_id, away_team_id } = fix;
+    const { match_id, home_team_id, away_team_id } = fix;
     const matchDate = fix.match_date.toISOString().slice(0, 10);
-    const fixOdds = oddsMap[fixture_id] ?? {};
+    const fixOdds = oddsMap[match_id] ?? {};
 
     // Check DK 1X2
     const dkHome = fixOdds[DK_BOOK_ID]?.['1X2']?.['home'];
@@ -197,7 +197,7 @@ async function main() {
     const fmt = (v) => v == null ? 'N/A' : (v > 0 ? `+${v}` : `${v}`);
 
     if (pass) {
-      console.log(`[PASS] ${fixture_id} (${matchDate}): ${away_team_id} @ ${home_team_id}`);
+      console.log(`[PASS] ${match_id} (${matchDate}): ${away_team_id} @ ${home_team_id}`);
       console.log(`       DK:    home=${fmt(dkHome)} draw=${fmt(dkDraw)} away=${fmt(dkAway)} | O=${fmt(dkOver)} U=${fmt(dkUnder)}`);
       console.log(`       MODEL: home=${fmt(modHome)} draw=${fmt(modDraw)} away=${fmt(modAway)} | O=${fmt(modOver)} U=${fmt(modUnder)}`);
       oddsPass++;
@@ -218,10 +218,10 @@ async function main() {
         modUnder == null && 'under',
       ].filter(Boolean).join(',')}`);
 
-      console.log(`[FAIL] ${fixture_id} (${matchDate}): ${away_team_id} @ ${home_team_id}`);
+      console.log(`[FAIL] ${match_id} (${matchDate}): ${away_team_id} @ ${home_team_id}`);
       for (const issue of issues) console.log(`       ✗ ${issue}`);
       oddsFail++;
-      failedFixtures.push({ fixture_id, issues });
+      failedFixtures.push({ match_id, issues });
     }
     console.log('');
   }
@@ -244,7 +244,7 @@ async function main() {
     if (oddsFail > 0) {
       console.log(`  - ${oddsFail} fixtures with incomplete odds:`);
       for (const f of failedFixtures) {
-        console.log(`    ${f.fixture_id}: ${f.issues.join('; ')}`);
+        console.log(`    ${f.match_id}: ${f.issues.join('; ')}`);
       }
     }
   }

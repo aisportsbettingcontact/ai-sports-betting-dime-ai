@@ -26,8 +26,8 @@
  *   LineupRows-equivalent: jersey number + position pill + player name (Barlow Condensed)
  *
  * Data source: DK NJ (book_id=68) via Action Network API
- *   → wc2026.todayWithOdds  (today's fixtures)
- *   → wc2026.fixturesByDate (non-today dates)
+ *   → wc2026.todayWithOdds  (today's matches)
+ *   → wc2026.matchesByDate (non-today dates)
  *   → wc2026.lineupsByDate  (lineups tab)
  */
 
@@ -47,7 +47,7 @@ import type { BetCellSide } from "@/components/BetCell";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 // [MODEL GATE] Set to true when model lines are ready to publish.
-// When false, MODEL column shows — across all WC fixture cards.
+// When false, MODEL column shows — across all WC match cards.
 const SHOW_WC_MODEL_ODDS = true;
 
 // Full World Cup 2026 schedule: Group Stage (Jun 11–Jul 2) + Knockouts (Jul 4–Jul 19)
@@ -383,7 +383,7 @@ type WcVenueInfo = {
 
 type WcLineupPlayer = {
   id: number;
-  fixtureId: string;
+  matchId: string;
   teamId: string;
   playerName: string;
   position: string | null;
@@ -408,8 +408,8 @@ type WcProjection = {
   modelVersion: string | null;
 } | null;
 
-type WcFixtureWithOdds = {
-  fixtureId: string;
+type WcMatchWithOdds = {
+  matchId: string;
   matchDate: string | Date;
   kickoffUtc: Date | string | null;
   groupLetter: string | null;
@@ -434,7 +434,7 @@ type WcFixtureWithOdds = {
   projection?: WcProjection;
 };
 
-type WcFixtureWithLineups = WcFixtureWithOdds & {
+type WcMatchWithLineups = WcMatchWithOdds & {
   lineups: WcLineupPlayer[];
 };
 
@@ -631,7 +631,7 @@ function MergedSplitBar({
 
 type WcSplitRow = {
   id: number;
-  fixtureId: string;
+  matchId: string;
   snapshotTs: Date | null;
   teamId: string;
   market: string;
@@ -639,19 +639,19 @@ type WcSplitRow = {
   moneyPct: number | null;
 };
 
-type WcFixtureSplits = {
-  fixtureId: string;
+type WcMatchSplits = {
+  matchId: string;
   homeTeamId: string;
   awayTeamId: string;
   splits: WcSplitRow[];
 };
 
 /**
- * Extract split percentages for a given fixture and market.
+ * Extract split percentages for a given match and market.
  * DB stores fractions (0.0–1.0) — multiply by 100 to get integers for MergedSplitBar.
  */
 function extractWcSplits(
-  splits: WcFixtureSplits | undefined,
+  splits: WcMatchSplits | undefined,
   market: 'ML' | 'TOTAL',
   awayTeamId: string,
   homeTeamId: string,
@@ -944,25 +944,25 @@ function WcMktCol({
 
 // ─── WC Score Panel — exact GameCard ScorePanel structure ─────────────────────
 
-function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
-  const { homeTeam, awayTeam } = fixture;
-  const isLive = fixture.status === "LIVE";
-  const isHT = fixture.status === "HT";
-  const isET = fixture.status === "ET";   // [2026-06-30] Extra time (1st or 2nd half)
-  const isShootout = fixture.status === "SHOOTOUT"; // [2026-06-30] Penalty shootout in progress
-  const isFinal = fixture.status === "FT";
-  const matchMinute = fixture.matchMinute ?? null;
+function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
+  const { homeTeam, awayTeam } = match;
+  const isLive = match.status === "LIVE";
+  const isHT = match.status === "HT";
+  const isET = match.status === "ET";   // [2026-06-30] Extra time (1st or 2nd half)
+  const isShootout = match.status === "SHOOTOUT"; // [2026-06-30] Penalty shootout in progress
+  const isFinal = match.status === "FT";
+  const matchMinute = match.matchMinute ?? null;
   // [FIX 2026-06-30 v3] isExtraTimeHT: special sub-state of HT where match_minute='ETHT'
   // FIFA renders this as 'EXTRA TIME HALF TIME' — stored as status=HT, matchMinute='ETHT'
   const isExtraTimeHT = isHT && matchMinute === 'ETHT';
-  const hasScores = fixture.homeScore != null && fixture.awayScore != null;
+  const hasScores = match.homeScore != null && match.awayScore != null;
   // [FIX 2026-06-30 v4] showScores: include HT/ET/SHOOTOUT — all active match states show scores
   // v3: (isLive || isHT || isFinal) — excluded ET and SHOOTOUT
   // v4: (isLive || isHT || isET || isShootout || isFinal) — complete coverage
   const showScores = (isLive || isHT || isET || isShootout || isFinal) && hasScores;
-  // [LOG] WcScorePanel: projected scores shown for SCHEDULED fixtures when projection is available
+  // [LOG] WcScorePanel: projected scores shown for SCHEDULED matches when projection is available
   const isScheduled = !isLive && !isHT && !isET && !isShootout && !isFinal;
-  const proj = fixture.projection;
+  const proj = match.projection;
   // Projected scores are intentionally hidden from the feed — internal use only
   const hasProjScores = false;
   const fmtProj = (v: number | null | undefined): string => {
@@ -970,14 +970,14 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     return v.toFixed(2);
   };
   console.log(
-    `[WcScorePanel] fixture=${fixture.fixtureId} status=${fixture.status}` +
+    `[WcScorePanel] match=${match.matchId} status=${match.status}` +
     ` | [STATE] isScheduled=${isScheduled} hasProjScores=${hasProjScores}` +
     ` | [INPUT] projHome=${proj?.projHomeScore ?? 'N/A'} projAway=${proj?.projAwayScore ?? 'N/A'}` +
     ` | [VERIFY] projection=${proj != null ? 'PRESENT' : 'MISSING'}`
   );
 
-  const awayFifaCode = awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
-  const homeFifaCode = homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
+  const awayFifaCode = awayTeam?.fifaCode ?? match.awayTeamId.toUpperCase();
+  const homeFifaCode = homeTeam?.fifaCode ?? match.homeTeamId.toUpperCase();
   const awayColors = getWcTeamColors(awayFifaCode);
   const homeColors = getWcTeamColors(homeFifaCode);
 
@@ -992,19 +992,19 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   const FINAL_FONT_SIZE = STATUS_FONT_SIZE;
   const HT_FONT_SIZE = STATUS_FONT_SIZE;
   console.log(
-    `[WcScorePanel:Status] fixture=${fixture.fixtureId}` +
+    `[WcScorePanel:Status] match=${match.matchId}` +
     ` | [STATE] isLive=${isLive} isHT=${isHT} isET=${isET} isShootout=${isShootout} isFinal=${isFinal}` +
-    ` | [INPUT] matchMinute=${matchMinute ?? 'null'} status=${fixture.status}` +
+    ` | [INPUT] matchMinute=${matchMinute ?? 'null'} status=${match.status}` +
     ` | [VERIFY] badgeType=${isHT ? (isExtraTimeHT ? 'ET_HT' : 'HT') : isShootout ? 'PENS' : isET ? 'ET' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME'}`
   );
   // [FIX 2026-06-30] Advancing team: team that won this KO match (shown to right of FINAL badge)
-  const advancingTeamId = fixture.advancingTeamId ?? null;
+  const advancingTeamId = match.advancingTeamId ?? null;
   const advancingTeam = advancingTeamId
-    ? (fixture.homeTeamId === advancingTeamId ? fixture.homeTeam : fixture.awayTeam)
+    ? (match.homeTeamId === advancingTeamId ? match.homeTeam : match.awayTeam)
     : null;
   const advancingFifaCode = advancingTeam?.fifaCode ?? advancingTeamId?.toUpperCase() ?? null;
   console.log(
-    `[WcScorePanel:Advancing] fixture=${fixture.fixtureId}` +
+    `[WcScorePanel:Advancing] match=${match.matchId}` +
     ` | [INPUT] advancingTeamId=${advancingTeamId ?? 'null'}` +
     ` | [OUTPUT] advancingFifaCode=${advancingFifaCode ?? 'null'}` +
     ` | [VERIFY] isFinal=${isFinal} hasAdvancing=${advancingTeamId !== null}`
@@ -1126,10 +1126,10 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       {!isLive && !isHT && !isET && !isShootout && !isFinal && (
         <div className="flex items-center gap-1 mb-1">
           <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
-            {fmtKickoff(fixture.kickoffUtc)}
-            {fixture.groupLetter && (
+            {fmtKickoff(match.kickoffUtc)}
+            {match.groupLetter && (
               <span style={{ fontSize: 'clamp(7.5px, 0.65vw, 9.5px)', color: 'hsl(var(--muted-foreground))', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                &middot; GROUP {fixture.groupLetter}
+                &middot; GROUP {match.groupLetter}
               </span>
             )}
           </span>
@@ -1142,14 +1142,14 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       {/* [VERIFY] Projected scores: amber rgba(251,191,36,0.75) for SCHEDULED; actual scores: green/white for LIVE/FT */}
       {(() => {
         // [STEP] Determine winner for score coloring
-        const homeScoreNum = fixture.homeScore ?? 0;
-        const awayScoreNum = fixture.awayScore ?? 0;
+        const homeScoreNum = match.homeScore ?? 0;
+        const awayScoreNum = match.awayScore ?? 0;
         const homeWins = hasScores && homeScoreNum > awayScoreNum;
         const awayWins = hasScores && awayScoreNum > homeScoreNum;
         const isDraw = hasScores && homeScoreNum === awayScoreNum;
         // [LOG] WcScorePanel:ScoreColor home=${homeScoreNum} away=${awayScoreNum} homeWins=${homeWins} awayWins=${awayWins} isDraw=${isDraw}
         console.log(
-          `[WcScorePanel:ScoreColor] fixture=${fixture.fixtureId}` +
+          `[WcScorePanel:ScoreColor] match=${match.matchId}` +
           ` | [STATE] homeScore=${homeScoreNum} awayScore=${awayScoreNum}` +
           ` | [OUTPUT] homeWins=${homeWins} awayWins=${awayWins} isDraw=${isDraw}` +
           ` | [VERIFY] hasScores=${hasScores} isLive=${isLive} isFinal=${isFinal}`
@@ -1193,7 +1193,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
               {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
-                  {fixture.awayScore}
+                  {match.awayScore}
                 </span>
               ) : hasProjScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: projAwayBold, color: projAwayColor, letterSpacing: '0.01em' }}>
@@ -1225,7 +1225,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
               {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
               {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
-                  {fixture.homeScore}
+                  {match.homeScore}
                 </span>
               ) : hasProjScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(9px, 2.5vw, 11px)', lineHeight: 1, fontWeight: projHomeBold, color: projHomeColor, letterSpacing: '0.01em' }}>
@@ -1240,10 +1240,10 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       {/* ── ADVANCING TEAM ROW — below home team, above venue footer ─────────── */}
       {/* [FIX 2026-06-30 v3] Advancing team spelled out in full:
            '🇧🇷 BRAZIL ADVANCES TO R16' — no truncation, full country name, correct next round label.
-           Derived from advancingTeam.name (DB full name) + fixtureId stage prefix. */}
+           Derived from advancingTeam.name (DB full name) + matchId stage prefix. */}
       {isFinal && advancingFifaCode && advancingTeam && (() => {
-        // Compute next round label from fixtureId stage prefix
-        const fid = fixture.fixtureId.toLowerCase();
+        // Compute next round label from matchId stage prefix
+        const fid = match.matchId.toLowerCase();
         let nextRound = 'NEXT ROUND';
         if (fid.includes('-r32-') || fid.includes('-r32_')) nextRound = 'R16';
         else if (fid.includes('-r16-') || fid.includes('-r16_')) nextRound = 'QF';
@@ -1252,7 +1252,7 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
         const fullName = (advancingTeam.name ?? advancingFifaCode).toUpperCase();
         const flag = wcFlagEmoji(advancingFifaCode);
         console.log(
-          `[WcScorePanel:AdvancingRow] fixture=${fixture.fixtureId}` +
+          `[WcScorePanel:AdvancingRow] match=${match.matchId}` +
           ` | advancingFifaCode=${advancingFifaCode}` +
           ` | fullName=${fullName}` +
           ` | nextRound=${nextRound}` +
@@ -1297,10 +1297,10 @@ function WcScorePanel({ fixture }: { fixture: WcFixtureWithOdds }) {
       })()}
 
       {/* Venue footer */}
-      {fixture.venue && (
+      {match.venue && (
         <div className="flex items-center gap-1 mt-1" style={{ fontSize: 'clamp(9px,0.75vw,11px)', color: 'hsl(var(--muted-foreground))' }}>
           <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
-          <span className="truncate">{fixture.venue.city}</span>
+          <span className="truncate">{match.venue.city}</span>
         </div>
       )}
     </div>
@@ -1520,7 +1520,7 @@ function WcDcDesktopCol({
 // [LOG] WcDcMobileCell: 3-row DC cell matching BetCell visual language
 
 function WcDcMobileCell({
-  fixture,
+  match,
   homeName,
   awayName,
   drawBook,
@@ -1532,7 +1532,7 @@ function WcDcMobileCell({
   threeWayBook,
   threeWayModel,
 }: {
-  fixture: WcFixtureWithOdds;
+  match: WcMatchWithOdds;
   homeName: string;
   awayName: string;
   drawBook?: number | null;
@@ -1592,7 +1592,7 @@ function WcDcMobileCell({
   }
 
   console.log(
-    `[WcDcMobileCell] fixture=${fixture.fixtureId} home=${homeName} away=${awayName}` +
+    `[WcDcMobileCell] match=${match.matchId} home=${homeName} away=${awayName}` +
     ` | [INPUT] drawBook=${drawBook ?? 'N/A'} drawModel=${drawModel ?? 'N/A'}` +
     ` homeDcBook=${homeDcBook ?? 'N/A'} homeDcModel=${homeDcModel ?? 'N/A'}` +
     ` awayDcBook=${awayDcBook ?? 'N/A'} awayDcModel=${awayDcModel ?? 'N/A'}` +
@@ -1703,32 +1703,32 @@ function WcDcMobileCell({
 //   Col 2: DRAW/WIN-DRAW — 3 rows: DRAW + Home W/D (1X) + Away W/D (X2)
 //   Col 3: TOTAL     — OVER (top row) + UNDER (bottom row), BOOK/MODEL
 //
-// [LOG] WcDesktopMergedPanel: renders MLB-style 3-col layout for WC fixtures
+// [LOG] WcDesktopMergedPanel: renders MLB-style 3-col layout for WC matches
 
 function WcDesktopMergedPanel({
-  fixture,
+  match,
   splits,
 }: {
-  fixture: WcFixtureWithOdds;
-  splits?: WcFixtureSplits;
+  match: WcMatchWithOdds;
+  splits?: WcMatchSplits;
 }) {
-  const { dkOdds, modelOdds: _rawModelOdds } = fixture;
+  const { dkOdds, modelOdds: _rawModelOdds } = match;
   const modelOdds = SHOW_WC_MODEL_ODDS ? _rawModelOdds : null;
   const totalLine = dkOdds?.overLine ?? 2.5;
 
-  const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
-  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeFifaCode = match.homeTeam?.fifaCode ?? match.homeTeamId.toUpperCase();
+  const awayFifaCode = match.awayTeam?.fifaCode ?? match.awayTeamId.toUpperCase();
   const homeColors   = getWcTeamColors(homeFifaCode);
   const awayColors   = getWcTeamColors(awayFifaCode);
   // [FIX] Full country name aliases for market labels — never FIFA codes
-  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
-  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
+  const awayName = wcTeamAlias(match.awayTeam?.name ?? awayFifaCode);
+  const homeName = wcTeamAlias(match.homeTeam?.name ?? homeFifaCode);
 
-  const mlSplits    = extractWcSplits(splits, 'ML',    fixture.awayTeamId, fixture.homeTeamId);
-  const totalSplits = extractWcSplits(splits, 'TOTAL', fixture.awayTeamId, fixture.homeTeamId);
+  const mlSplits    = extractWcSplits(splits, 'ML',    match.awayTeamId, match.homeTeamId);
+  const totalSplits = extractWcSplits(splits, 'TOTAL', match.awayTeamId, match.homeTeamId);
 
   console.log(
-    `[WcDesktopMergedPanel] fixture=${fixture.fixtureId}` +
+    `[WcDesktopMergedPanel] match=${match.matchId}` +
     ` away=${awayFifaCode} home=${homeFifaCode}` +
     ` | [INPUT] dkOdds=${JSON.stringify(dkOdds)} modelOdds=${JSON.stringify(modelOdds)}` +
     ` | [STATE] totalLine=${totalLine}` +
@@ -1741,7 +1741,7 @@ function WcDesktopMergedPanel({
   };
 
   console.log(
-    `[WcDesktopMergedPanel:6Markets] fixture=${fixture.fixtureId}` +
+    `[WcDesktopMergedPanel:6Markets] match=${match.matchId}` +
     ` | [INPUT] dkSpread=${dkOdds?.homeSpreadOdds ?? 'N/A'} dkDC=${dkOdds?.homeDrawOdds ?? 'N/A'} dkBTTS=${dkOdds?.bttsYes ?? 'N/A'}` +
     ` | [VERIFY] hasOdds=${dkOdds != null} hasModel=${modelOdds != null}`
   );
@@ -1752,7 +1752,7 @@ function WcDesktopMergedPanel({
   const awayAdvEdgePP = (dkOdds?.toAdvanceAway != null && modelOdds?.toAdvanceAway != null)
     ? calculateEdge(dkOdds.toAdvanceAway, modelOdds.toAdvanceAway) : NaN;
   console.log(
-    `[WcDesktopMergedPanel:ToAdvance] fixture=${fixture.fixtureId}` +
+    `[WcDesktopMergedPanel:ToAdvance] match=${match.matchId}` +
     ` | [INPUT] bookHomeAdv=${dkOdds?.toAdvanceHome ?? 'N/A'} bookAwayAdv=${dkOdds?.toAdvanceAway ?? 'N/A'}` +
     ` | [INPUT] modelHomeAdv=${modelOdds?.toAdvanceHome ?? 'N/A'} modelAwayAdv=${modelOdds?.toAdvanceAway ?? 'N/A'}` +
     ` | [OUTPUT] homeAdvEdgePP=${isNaN(homeAdvEdgePP) ? 'NaN' : homeAdvEdgePP.toFixed(2)}pp` +
@@ -1885,17 +1885,17 @@ function WcDesktopMergedPanel({
   );
 }
 
-// ─── Fixture Card (Projections) — exact GameCard outer shell ──────────────────
+// ─── Match Card (Projections) — exact GameCard outer shell ──────────────────
 
-function WcFixtureCard({
-  fixture,
+function WcMatchCard({
+  match,
   splits,
 }: {
-  fixture: WcFixtureWithOdds;
-  splits?: WcFixtureSplits;
+  match: WcMatchWithOdds;
+  splits?: WcMatchSplits;
 }) {
-  const isLive = fixture.status === "LIVE";
-  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const isLive = match.status === "LIVE";
+  const awayFifaCode = match.awayTeam?.fifaCode ?? match.awayTeamId.toUpperCase();
   const awayColors = getWcTeamColors(awayFifaCode);
   const borderColor = awayColors.primary;
 
@@ -1916,11 +1916,11 @@ function WcFixtureCard({
         {/* Col 1: Score panel */}
         {/* [FIX] Wider score panel to accommodate full country names */}
         <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
-          <WcScorePanel fixture={fixture} />
+          <WcScorePanel match={match} />
         </div>
         {/* Col 2+3: Merged panel */}
         <div className="flex-1 min-w-0" style={{ borderLeft: "1px solid hsl(var(--border) / 0.5)" }}>
-          <WcDesktopMergedPanel fixture={fixture} splits={splits} />
+          <WcDesktopMergedPanel match={match} splits={splits} />
         </div>
       </div>
 
@@ -1931,14 +1931,14 @@ function WcFixtureCard({
         <div style={{ display: "grid", gridTemplateColumns: "clamp(120px, 32%, 150px) 1fr", width: "100%", minHeight: 'clamp(130px, 28vw, 180px)' }}>
           {/* Fixed score panel */}
           <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
-            <WcScorePanel fixture={fixture} />
+            <WcScorePanel match={match} />
           </div>
           {/* Scrollable odds panel */}
           {/* [FIX 2026-06-24] height:100% propagates the grid row minHeight down to WcMobileOddsPanel.
                The grid stretches direct children — but WcMobileOddsPanel is a grandchild inside this div.
                Without height:100% here, WcMobileOddsPanel gets no height from the grid row. */}
           <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", height: '100%' } as React.CSSProperties}>
-            <WcMobileOddsPanel fixture={fixture} />
+            <WcMobileOddsPanel match={match} />
           </div>
         </div>
       </div>
@@ -1958,17 +1958,17 @@ function WcFixtureCard({
 // Edge detection: EDGE_THRESHOLD_PP=1.5 via calculateEdge from edgeUtils.
 // [LOG] WcMobileOddsPanel: renders BetCell-based 3-col layout matching MLB exactly
 
-function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
-  const { dkOdds, modelOdds: _rawModelOdds } = fixture;
+function WcMobileOddsPanel({ match }: { match: WcMatchWithOdds }) {
+  const { dkOdds, modelOdds: _rawModelOdds } = match;
   const modelOdds = SHOW_WC_MODEL_ODDS ? _rawModelOdds : null;
   const totalLine = dkOdds?.overLine ?? 2.5;
 
-  const homeFifaCode = fixture.homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
-  const awayFifaCode = fixture.awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeFifaCode = match.homeTeam?.fifaCode ?? match.homeTeamId.toUpperCase();
+  const awayFifaCode = match.awayTeam?.fifaCode ?? match.awayTeamId.toUpperCase();
 
   // [INPUT] Full country names for labels — aliases applied for spacing
-  const awayName = wcTeamAlias(fixture.awayTeam?.name ?? awayFifaCode);
-  const homeName = wcTeamAlias(fixture.homeTeam?.name ?? homeFifaCode);
+  const awayName = wcTeamAlias(match.awayTeam?.name ?? awayFifaCode);
+  const homeName = wcTeamAlias(match.homeTeam?.name ?? homeFifaCode);
 
   // ── TO ADVANCE edge detection (2-way: home advance vs away advance) ─────────────
   const homeAdvEdgePPMob = (dkOdds?.toAdvanceHome != null && modelOdds?.toAdvanceHome != null)
@@ -2004,7 +2004,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     edgePP: awayAdvEdgePPMob,
   };
   console.log(
-    `[WcMobileOddsPanel:ToAdvance] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:ToAdvance] match=${match.matchId}` +
     ` | [INPUT] bookHomeAdv=${dkOdds?.toAdvanceHome ?? 'N/A'} bookAwayAdv=${dkOdds?.toAdvanceAway ?? 'N/A'}` +
     ` | [INPUT] modelHomeAdv=${modelOdds?.toAdvanceHome ?? 'N/A'} modelAwayAdv=${modelOdds?.toAdvanceAway ?? 'N/A'}` +
     ` | [OUTPUT] homeAdvEdge=${isNaN(homeAdvEdgePPMob) ? 'NaN' : homeAdvEdgePPMob.toFixed(2)}pp` +
@@ -2041,7 +2041,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     // [STATE] Best ML ROI = ROI of the side with the higher 3-way edge pp (HOME vs AWAY only)
     mlBestRoiPct = awayMlEdgePP >= homeMlEdgePP ? mlAwayRoiPct : mlHomeRoiPct;
     console.log(
-      `[WcMobileOddsPanel:3WayCalc] fixture=${fixture.fixtureId}` +
+      `[WcMobileOddsPanel:3WayCalc] match=${match.matchId}` +
       ` | [STATE] bookFair: H=${(calc3.home.bookFairProb*100).toFixed(2)}% D=${(calc3.draw.bookFairProb*100).toFixed(2)}% A=${(calc3.away.bookFairProb*100).toFixed(2)}%` +
       ` | [STATE] modelFair: H=${(calc3.home.modelFairProb*100).toFixed(2)}% D=${(calc3.draw.modelFairProb*100).toFixed(2)}% A=${(calc3.away.modelFairProb*100).toFixed(2)}%` +
       ` | [OUTPUT] edgePP: H=${homeMlEdgePP.toFixed(2)}pp D=${drawEdgePP.toFixed(2)}pp A=${awayMlEdgePP.toFixed(2)}pp` +
@@ -2117,7 +2117,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   };
 
   console.log(
-    `[WcMobileOddsPanel] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel] match=${match.matchId}` +
     ` | [INPUT] away=${awayName} home=${homeName}` +
     ` | [STATE] mlBestEdge=${isNaN(mlBestEdgePPFinal) ? 'NaN' : mlBestEdgePPFinal.toFixed(2)}pp` +
     ` totalBestEdge=${isNaN(totalBestEdgePPFinal) ? 'NaN' : totalBestEdgePPFinal.toFixed(2)}pp` +
@@ -2248,7 +2248,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     const pNoDraw = 1 - pDraw;
     // [GUARD] pNoDraw must be strictly between 0 and 1
     if (pNoDraw <= 0 || pNoDraw >= 1) {
-      console.warn(`[modelNoDrawOdds] fixture=${fixture.fixtureId} GUARD: pNoDraw=${pNoDraw} out of range for drawOdds=${drawOdds}`);
+      console.warn(`[modelNoDrawOdds] match=${match.matchId} GUARD: pNoDraw=${pNoDraw} out of range for drawOdds=${drawOdds}`);
       return null;
     }
     // [STEP] Convert P(no-draw) back to American odds
@@ -2259,7 +2259,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
     // e.g. -488.9999999999998 → -489, -325.9999999999999 → -326
     const result = Math.round(raw);
     console.log(
-      `[modelNoDrawOdds] fixture=${fixture.fixtureId}` +
+      `[modelNoDrawOdds] match=${match.matchId}` +
       ` | [INPUT] drawOdds=${drawOdds}` +
       ` | [STATE] pDraw=${pDraw.toFixed(6)} pNoDraw=${pNoDraw.toFixed(6)} raw=${raw.toFixed(6)}` +
       ` | [OUTPUT] result=${result}` +
@@ -2276,7 +2276,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [LOG] WcMobileOddsPanel:Spread homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()}
   // [LOG] WcMobileOddsPanel:Spread homeSpreadLine=${homeSpreadLine} awaySpreadLine=${awaySpreadLine}
   console.log(
-    `[WcMobileOddsPanel:Spread] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:Spread] match=${match.matchId}` +
     ` | [INPUT] homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()}` +
     ` | [STATE] homeSpreadLine=${homeSpreadLine} awaySpreadLine=${awaySpreadLine}` +
     ` | [OUTPUT] homeLabel="${homeName} ${fmtSpreadLine(homeSpreadLine)}" awayLabel="${awayName} ${fmtSpreadLine(awaySpreadLine)}"` +
@@ -2301,7 +2301,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [FIX] DOUBLE CHANCE: X2 → "{AWAY} WD", 1X → "{HOME} WD"
   // [LOG] WcMobileOddsPanel:DC homeWD=${homeFifaCode.toUpperCase()} WD awayWD=${awayFifaCode.toUpperCase()} WD
   console.log(
-    `[WcMobileOddsPanel:DC] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:DC] match=${match.matchId}` +
     ` | [OUTPUT] awayDC="${awayFifaCode.toUpperCase()} WD" homeDC="${homeFifaCode.toUpperCase()} WD"` +
     ` | [VERIFY] dkAwayDrawOdds=${dkOdds?.awayDrawOdds ?? 'N/A'} dkHomeDrawOdds=${dkOdds?.homeDrawOdds ?? 'N/A'}`
   );
@@ -2322,7 +2322,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [FIX] BTTS: YES on top (bookLine='YES'), NO on bottom (bookLine='NO')
   // [LOG] WcMobileOddsPanel:BTTS YES/NO labels confirmed
   console.log(
-    `[WcMobileOddsPanel:BTTS] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:BTTS] match=${match.matchId}` +
     ` | [OUTPUT] row1="YES ${fmtAmerican(dkOdds?.bttsYes)}" row2="NO ${fmtAmerican(dkOdds?.bttsNo)}"` +
     ` | [VERIFY] dkBttsYes=${dkOdds?.bttsYes ?? 'N/A'} dkBttsNo=${dkOdds?.bttsNo ?? 'N/A'}`
   );
@@ -2339,13 +2339,13 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // [FIX] DRAW column: Row 1 = DRAW odds, Row 2 = "{HOME} OR {AWAY} ML" (no-draw)
   // [LOG] WcMobileOddsPanel:Draw noDrawLabel=${homeFifaCode.toUpperCase()} OR ${awayFifaCode.toUpperCase()} ML
   console.log(
-    `[WcMobileOddsPanel:Draw] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:Draw] match=${match.matchId}` +
     ` | [OUTPUT] row1="DRAW" row2="${homeName} OR ${awayName} ML"` +
     ` | [VERIFY] dkDraw=${dkOdds?.draw ?? 'N/A'} dkNoDraw=${dkOdds?.noDraw ?? 'N/A'}`
   );
 
   console.log(
-    `[WcMobileOddsPanel:6Markets] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:6Markets] match=${match.matchId}` +
     ` | [STATE] spreadEdge=${isNaN(spreadBestEdgePPFinal) ? 'NaN' : spreadBestEdgePPFinal.toFixed(2)}pp` +
     ` dcEdge=${isNaN(dcBestEdgePPFinal) ? 'NaN' : dcBestEdgePPFinal.toFixed(2)}pp` +
     ` bttsEdge=${isNaN(bttsBestEdgePPFinal) ? 'NaN' : bttsBestEdgePPFinal.toFixed(2)}pp` +
@@ -2360,7 +2360,7 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   // - Per-card market header label above each BetCell for clarity
   // [LOG] WcMobileOddsPanel:Layout 3-visible cells, ML+DC wider, per-card headers
   console.log(
-    `[WcMobileOddsPanel:Layout] fixture=${fixture.fixtureId}` +
+    `[WcMobileOddsPanel:Layout] match=${match.matchId}` +
     ` | [STATE] 6 cells, 3 visible before scroll` +
     ` | [OUTPUT] ML+DC wider (flex:0 0 36%), others narrower (flex:0 0 28%)` +
     ` | [VERIFY] per-card market headers rendered above each BetCell`
@@ -2526,9 +2526,9 @@ function WcMobileOddsPanel({ fixture }: { fixture: WcFixtureWithOdds }) {
   );
 }
 
-// ─── Fixture Card Skeleton ────────────────────────────────────────────────────
+// ─── Match Card Skeleton ────────────────────────────────────────────────────
 
-function WcFixtureCardSkeleton() {
+function WcMatchCardSkeleton() {
   return (
     <div
       className="w-full"
@@ -2730,24 +2730,24 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
   );
 }
 
-function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
-  const { homeTeam, awayTeam, venue, lineups } = fixture;
+function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
+  const { homeTeam, awayTeam, venue, lineups } = match;
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
-  const homeFifaCode = homeTeam?.fifaCode ?? fixture.homeTeamId.toUpperCase();
-  const awayFifaCode = awayTeam?.fifaCode ?? fixture.awayTeamId.toUpperCase();
+  const homeFifaCode = homeTeam?.fifaCode ?? match.homeTeamId.toUpperCase();
+  const awayFifaCode = awayTeam?.fifaCode ?? match.awayTeamId.toUpperCase();
   const awayColors = getWcTeamColors(awayFifaCode);
   const homeColors = getWcTeamColors(homeFifaCode);
 
   const homePlayers = lineups
-    .filter((p) => p.teamId === fixture.homeTeamId)
+    .filter((p) => p.teamId === match.homeTeamId)
     .sort((a, b) => {
       if (a.isStarter !== b.isStarter) return a.isStarter ? -1 : 1;
       return posOrder(a.position) - posOrder(b.position);
     });
 
   const awayPlayers = lineups
-    .filter((p) => p.teamId === fixture.awayTeamId)
+    .filter((p) => p.teamId === match.awayTeamId)
     .sort((a, b) => {
       if (a.isStarter !== b.isStarter) return a.isStarter ? -1 : 1;
       return posOrder(a.position) - posOrder(b.position);
@@ -2761,7 +2761,7 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
   const hasLineups = lineups.length > 0;
   const anyConfirmed = lineups.some((p) => p.isConfirmed);
 
-  const startTime = fmtKickoff(fixture.kickoffUtc);
+  const startTime = fmtKickoff(match.kickoffUtc);
 
   return (
     <div
@@ -2939,21 +2939,21 @@ function WcLineupCard({ fixture }: { fixture: WcFixtureWithLineups }) {
 
 function WcProjectionsFeed({ date }: { date: string }) {
   // ─────────────────────────────────────────────────────────────────────────────
-  // [FIX 2026-06-24] ALWAYS use fixturesByDate(date) — never todayWithOdds.
+  // [FIX 2026-06-24] ALWAYS use matchesByDate(date) — never todayWithOdds.
   //
   // ROOT CAUSE of the June 23-on-June-24 bug:
   //   todayWithOdds uses the server's real UTC clock (11:00 UTC cutoff).
   //   When MANUAL_WC_DATE_OVERRIDE advances the client to June 24 but the server
-  //   UTC hour is still < 11, todayWithOdds returns June 23 fixtures.
+  //   UTC hour is still < 11, todayWithOdds returns June 23 matches.
   //   isTodayDate was true (client date === override date), so the feed routed to
   //   todayWithOdds and displayed June 23 games on the June 24 UI.
   //
-  // FIX: fixturesByDate(date) does an exact match_date = :date query.
+  // FIX: matchesByDate(date) does an exact match_date = :date query.
   //   It is correct for any date — today, yesterday, or any future date.
   //   The todayWithOdds split is eliminated entirely to prevent this class of
   //   client/server date disagreement from ever recurring.
   // ─────────────────────────────────────────────────────────────────────────────
-  const dateQuery = trpc.wc2026.fixturesByDate.useQuery(
+  const dateQuery = trpc.wc2026.matchesByDate.useQuery(
     { date },
     {
       enabled: !!date,
@@ -2964,29 +2964,29 @@ function WcProjectionsFeed({ date }: { date: string }) {
     }
   );
 
-  const { data: fixtures, isLoading, isFetching } = dateQuery;
+  const { data: matches, isLoading, isFetching } = dateQuery;
 
   // Splits data removed — wc2026_betting_splits table dropped (checkpoint 8aa8a5b)
-  const splitsMap: Record<string, WcFixtureSplits> = {};
+  const splitsMap: Record<string, WcMatchSplits> = {};
 
   // [FIX 2026-06-24] Show skeleton during: (a) initial load, (b) date transition where
-  // placeholderData from prev date is filtered out → fixtures=[] while isFetching=true.
+  // placeholderData from prev date is filtered out → matches=[] while isFetching=true.
   // Only show genuine empty state when query has settled (isFetching=false) with 0 results.
-  if (isLoading || (isFetching && (!fixtures || fixtures.length === 0))) {
+  if (isLoading || (isFetching && (!matches || matches.length === 0))) {
     return (
       <div className="pt-2">
-        {[1, 2, 3].map((i) => <WcFixtureCardSkeleton key={i} />)}
+        {[1, 2, 3].map((i) => <WcMatchCardSkeleton key={i} />)}
       </div>
     );
   }
 
-  if (!fixtures || fixtures.length === 0) {
+  if (!matches || matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
         <CalendarDays className="w-10 h-10 text-zinc-600" />
         <div>
           <p className="text-sm font-semibold text-zinc-400 mb-1">
-            No World Cup fixtures on {WC_DATE_LABELS[date] ?? date}
+            No World Cup matches on {WC_DATE_LABELS[date] ?? date}
           </p>
           <p className="text-xs text-zinc-600">Group stage runs June 11 – July 2, 2026</p>
         </div>
@@ -2996,11 +2996,11 @@ function WcProjectionsFeed({ date }: { date: string }) {
 
   return (
     <div style={{ paddingBottom: 'max(64px, env(safe-area-inset-bottom))' }}>
-      {(fixtures as WcFixtureWithOdds[]).map((f) => (
-        <WcFixtureCard
-          key={f.fixtureId}
-          fixture={f}
-          splits={splitsMap[f.fixtureId]}
+      {(matches as WcMatchWithOdds[]).map((f) => (
+        <WcMatchCard
+          key={f.matchId}
+          match={f}
+          splits={splitsMap[f.matchId]}
         />
       ))}
     </div>
@@ -3011,7 +3011,7 @@ function WcProjectionsFeed({ date }: { date: string }) {
 
 function WcLineupsFeed({ date }: { date: string }) {
   // [FIX 2026-06-24] keepPreviousData + isFetching guard: prevents blank screen on date change.
-  const { data: fixtures, isLoading, isFetching } = trpc.wc2026.lineupsByDate.useQuery(
+  const { data: matches, isLoading, isFetching } = trpc.wc2026.lineupsByDate.useQuery(
     { date },
     {
       refetchOnWindowFocus: false,
@@ -3020,7 +3020,7 @@ function WcLineupsFeed({ date }: { date: string }) {
     }
   );
 
-  if (isLoading || (isFetching && (!fixtures || fixtures.length === 0))) {
+  if (isLoading || (isFetching && (!matches || matches.length === 0))) {
     return (
       <div className="pt-2">
         {[1, 2].map((i) => (
@@ -3043,7 +3043,7 @@ function WcLineupsFeed({ date }: { date: string }) {
     );
   }
 
-  if (!fixtures || fixtures.length === 0) {
+  if (!matches || matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
         <Users className="w-10 h-10 text-zinc-600" />
@@ -3059,8 +3059,8 @@ function WcLineupsFeed({ date }: { date: string }) {
 
   return (
     <div className="pt-2">
-      {(fixtures as WcFixtureWithLineups[]).map((f) => (
-        <WcLineupCard key={f.fixtureId} fixture={f} />
+      {(matches as WcMatchWithLineups[]).map((f) => (
+        <WcLineupCard key={f.matchId} match={f} />
       ))}
     </div>
   );
@@ -3075,7 +3075,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
   const isLoading = false;
   const isFetching = false;
 
-  if (isLoading || (isFetching && (!splitsData || (splitsData as WcFixtureSplits[]).length === 0))) {
+  if (isLoading || (isFetching && (!splitsData || (splitsData as WcMatchSplits[]).length === 0))) {
     return (
       <div className="pt-4 px-3 space-y-3">
         {[1, 2, 3].map((i) => (
@@ -3091,7 +3091,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
     );
   }
 
-  const splits = splitsData as WcFixtureSplits[] | undefined;
+  const splits = splitsData as WcMatchSplits[] | undefined;
 
   if (!splits || splits.length === 0 || splits.every((s) => s.splits.length === 0)) {
     return (
@@ -3125,7 +3125,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
 
         return (
           <div
-            key={s.fixtureId}
+            key={s.matchId}
             style={{
               background: 'hsl(var(--card))',
               borderTop: '1px solid hsl(var(--border))',
@@ -3135,7 +3135,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
               marginBottom: 0,
             }}
           >
-            {/* Fixture header */}
+            {/* Match header */}
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center gap-1.5">
                 <div style={{

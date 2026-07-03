@@ -99,12 +99,12 @@ async function main() {
       continue;
     }
     let [fixtures] = await conn.query(
-      'SELECT fixture_id FROM wc2026_fixtures WHERE home_team_id=? AND away_team_id=? LIMIT 1',
+      'SELECT match_id FROM wc2026_fixtures WHERE home_team_id=? AND away_team_id=? LIMIT 1',
       [homeId, awayId]
     );
     if (!fixtures[0]) {
       [fixtures] = await conn.query(
-        'SELECT fixture_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
@@ -113,22 +113,22 @@ async function main() {
       console.error(`[ModelSeed] [VERIFY] FAIL — No fixture found for ${match.homeTeamName} vs ${match.awayTeamName}`);
       continue;
     }
-    const fixtureId = fixture.fixture_id;
-    console.log(`[ModelSeed] [STATE] fixture_id=${fixtureId}`);
+    const matchId = fixture.match_id;
+    console.log(`[ModelSeed] [STATE] match_id=${matchId}`);
     const [del] = await conn.query(
-      'DELETE FROM wc2026_odds_snapshots WHERE fixture_id=? AND book_id=?',
-      [fixtureId, MODEL_BOOK_ID]
+      'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
+      [matchId, MODEL_BOOK_ID]
     );
     console.log(`[ModelSeed] [STEP] Deleted ${del.affectedRows} existing model rows`);
     const rows = match.markets.map(m => [
-      fixtureId, snapshotTs, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, 0,
+      matchId, snapshotTs, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, 0,
     ]);
     const [ins] = await conn.query(
-      'INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
+      'INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
       [rows]
     );
     totalInserted += ins.affectedRows;
-    console.log(`[ModelSeed] [OUTPUT] Inserted ${ins.affectedRows} model odds rows for fixture_id=${fixtureId}`);
+    console.log(`[ModelSeed] [OUTPUT] Inserted ${ins.affectedRows} model odds rows for match_id=${matchId}`);
     const oneX2 = match.markets.filter(m => m.market === '1X2');
     const probSum = oneX2.reduce((s, m) => s + m.impliedProb, 0);
     console.log(`[ModelSeed] [VERIFY] 1X2 prob sum=${probSum.toFixed(4)} → ${Math.abs(probSum - 1.0) < 0.001 ? 'PASS' : 'FAIL'}`);

@@ -120,13 +120,13 @@ function dcSim(lH, lA, rho, spread, total, N=100000) {
 
 // ── Ground truth results (verified, zero hallucination) ───────────────────────
 const GROUND_TRUTH = {
-  '760487': { home:'BRA', away:'JPN', homeScore:2, awayScore:1, espnId:'760487', fixtureId:'wc26-r32-073' },
-  '760488': { home:'GER', away:'PAR', homeScore:2, awayScore:0, espnId:'760488', fixtureId:'wc26-r32-074' },
-  '760489': { home:'NED', away:'MAR', homeScore:1, awayScore:0, espnId:'760489', fixtureId:'wc26-r32-075' },
-  '760490': { home:'CAN', away:'RSA', homeScore:2, awayScore:1, espnId:'760490', fixtureId:'wc26-r32-076' },
-  '760491': { home:'CIV', away:'NOR', homeScore:0, awayScore:1, espnId:'760491', fixtureId:'wc26-r32-077' },
-  '760492': { home:'FRA', away:'SWE', homeScore:2, awayScore:0, espnId:'760492', fixtureId:'wc26-r32-078' },
-  '760493': { home:'MEX', away:'ECU', homeScore:2, awayScore:0, espnId:'760493', fixtureId:'wc26-r32-079' },
+  '760487': { home:'BRA', away:'JPN', homeScore:2, awayScore:1, espnId:'760487', matchId:'wc26-r32-073' },
+  '760488': { home:'GER', away:'PAR', homeScore:2, awayScore:0, espnId:'760488', matchId:'wc26-r32-074' },
+  '760489': { home:'NED', away:'MAR', homeScore:1, awayScore:0, espnId:'760489', matchId:'wc26-r32-075' },
+  '760490': { home:'CAN', away:'RSA', homeScore:2, awayScore:1, espnId:'760490', matchId:'wc26-r32-076' },
+  '760491': { home:'CIV', away:'NOR', homeScore:0, awayScore:1, espnId:'760491', matchId:'wc26-r32-077' },
+  '760492': { home:'FRA', away:'SWE', homeScore:2, awayScore:0, espnId:'760492', matchId:'wc26-r32-078' },
+  '760493': { home:'MEX', away:'ECU', homeScore:2, awayScore:0, espnId:'760493', matchId:'wc26-r32-079' },
 };
 
 // ── Book lines for 7 completed matches (from DB — verified correct) ────────────
@@ -347,7 +347,7 @@ async function main() {
     const homeResult = deriveLambda(espnData, 'home');
     const awayResult = deriveLambda(espnData, 'away');
 
-    L.state(`[${gt.fixtureId}] ${gt.home} vs ${gt.away} | Actual: ${gt.homeScore}-${gt.awayScore}`);
+    L.state(`[${gt.matchId}] ${gt.home} vs ${gt.away} | Actual: ${gt.homeScore}-${gt.awayScore}`);
     L.state(`  xG: H=${parseFloat(xg.homeXG).toFixed(3)} A=${parseFloat(xg.awayXG).toFixed(3)} | xGOT: H=${parseFloat(xg.homeXGOT).toFixed(3)} A=${parseFloat(xg.awayXGOT).toFixed(3)}`);
     L.state(`  xA: H=${parseFloat(xg.homeXA).toFixed(3)} A=${parseFloat(xg.awayXA).toFixed(3)} | SetPlay: H=${parseFloat(xg.homeXGSetPlay).toFixed(3)} A=${parseFloat(xg.awayXGSetPlay).toFixed(3)}`);
     L.state(`  Poss: H=${ts.possession}% A=${ts.possessionAway}% | SoG: H=${ts.shotsOnGoal} A=${ts.shotsOnGoalAway} | Shots: H=${ts.shotAttempts} A=${ts.shotAttemptsAway}`);
@@ -437,7 +437,7 @@ async function main() {
     const lambdaBiasH = xGH - lH;
     const lambdaBiasA = xGA - lA;
 
-    L.output(`[${gt.fixtureId}] ${gt.home} ${actualH}-${actualA} ${gt.away} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
+    L.output(`[${gt.matchId}] ${gt.home} ${actualH}-${actualA} ${gt.away} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
     L.output(`  Proj: ${sim.projH.toFixed(2)}-${sim.projA.toFixed(2)} | Total: ${sim.projTotal.toFixed(2)} | Spread: ${(sim.projH-sim.projA).toFixed(2)}`);
     L.output(`  1X2: H=${(sim.pH*100).toFixed(1)}% D=${(sim.pD*100).toFixed(1)}% A=${(sim.pA*100).toFixed(1)}%`);
     L.output(`  Direction: ${directionCorrect?'✅':'❌'} | Total: ${totalCorrect?'✅':'❌'} | BTTS: ${bttsCorrect?'✅':'❌'} | Spread: ${spreadCorrect?'✅':'❌'}`);
@@ -459,7 +459,7 @@ async function main() {
     L.output(`  Home To Advance (${gt.home})   | ${String(bl.advH).padStart(7)} | ${String(modelAdvH).padStart(7)} | ${roi(bl.advH,modelAdvH)}%`);
     L.output(`  Away To Advance (${gt.away})   | ${String(bl.advA).padStart(7)} | ${String(modelAdvA).padStart(7)} | ${roi(bl.advA,modelAdvA)}%`);
 
-    grades.push({ eid:m.eid, fixtureId:gt.fixtureId, home:gt.home, away:gt.away,
+    grades.push({ eid:m.eid, matchId:gt.matchId, home:gt.home, away:gt.away,
       composite, brier, directionCorrect, totalCorrect, bttsCorrect, spreadCorrect,
       scoreErr, totalErr, spreadErr, lH, lA, lambdaBiasH, lambdaBiasA,
       projH:sim.projH, projA:sim.projA });
@@ -781,7 +781,7 @@ async function main() {
     L.pass(`[${fid}] v12 projection complete — STAGED (no DB write)`);
 
     projResults.push({
-      fixtureId:fid, home:f.home, away:f.away, kickoff:f.kickoff, venue:f.venue,
+      matchId:fid, home:f.home, away:f.away, kickoff:f.kickoff, venue:f.venue,
       lambdaH:lH, lambdaA:lA,
       projHomeScore:sim.projH, projAwayScore:sim.projA, projTotal:sim.projTotal,
       rawSpread:sim.projH-sim.projA,
@@ -797,7 +797,7 @@ async function main() {
 
   L.banner('PHASE E COMPLETE — v12.0-KO24 PROJECTIONS STAGED');
   for (const p of projResults) {
-    L.output(`${p.fixtureId} | ${p.away} (Away) vs ${p.home} (Home)`);
+    L.output(`${p.matchId} | ${p.away} (Away) vs ${p.home} (Home)`);
     L.output(`  Proj: ${p.home} ${p.projHomeScore.toFixed(2)} – ${p.away} ${p.projAwayScore.toFixed(2)} | Total: ${p.projTotal.toFixed(2)} | Spread: ${p.rawSpread.toFixed(2)}`);
     L.output(`  ML: H=${p.modelHomeMl} D=${p.modelDrawMl} A=${p.modelAwayMl}`);
     L.output(`  Adv: H=${p.modelAdvH}(${(p.advProbHome*100).toFixed(1)}%) A=${p.modelAdvA}(${(p.advProbAway*100).toFixed(1)}%)`);

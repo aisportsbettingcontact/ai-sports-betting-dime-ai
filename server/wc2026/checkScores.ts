@@ -34,7 +34,7 @@ async function main() {
     .select()
     .from(wc2026Fixtures)
     .where(
-      inArray(wc2026Fixtures.fixtureId, [
+      inArray(wc2026Fixtures.matchId, [
         'wc26-r32-073',
         'wc26-r32-074',
         'wc26-r32-075',
@@ -58,7 +58,7 @@ async function main() {
     const scoreVerify = homeScore != null && awayScore != null ? '✅ SCORES POPULATED' : '❌ SCORES NULL';
 
     LOG('ROW', [
-      `fixture=${r.fixtureId}`,
+      `fixture=${r.matchId}`,
       `teams=${r.homeTeamId} vs ${r.awayTeamId}`,
       `status=${r.status}`,
       `score=${scoreStr} ${scoreVerify}`,
@@ -76,7 +76,7 @@ async function main() {
   LOG('SUMMARY', `Total rows: ${rows.length} | With scores: ${withScores.length} | Missing scores: ${withoutScores.length}`);
 
   if (withoutScores.length > 0) {
-    LOG('WARN', `Fixtures missing scores: ${withoutScores.map(r => r.fixtureId).join(', ')}`);
+    LOG('WARN', `Fixtures missing scores: ${withoutScores.map(r => r.matchId).join(', ')}`);
     LOG('ACTION', 'These fixtures need homeScore/awayScore seeded from FIFA HTML data');
   } else {
     LOG('VERIFY', 'PASS — All queried fixtures have homeScore and awayScore populated');

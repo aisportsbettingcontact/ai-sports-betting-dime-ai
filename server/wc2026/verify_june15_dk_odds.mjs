@@ -86,31 +86,31 @@ const june15Ids = ['wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014'];
 const ph = june15Ids.map(() => '?').join(',');
 
 const [fixtures] = await c.execute(`
-  SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+  SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE f.fixture_id IN (${ph})
+  WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
 `, june15Ids);
 
 const [dkOdds] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 68
+  WHERE match_id IN (${ph}) AND book_id = 68
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 const dkByFix = {};
 for (const o of dkOdds) {
-  if (!dkByFix[o.fixture_id]) dkByFix[o.fixture_id] = {};
-  dkByFix[o.fixture_id][`${o.market}_${o.selection}`] = o.american_odds;
+  if (!dkByFix[o.match_id]) dkByFix[o.match_id] = {};
+  dkByFix[o.match_id][`${o.market}_${o.selection}`] = o.american_odds;
 }
 
 console.log('[STEP] Comparing DB DK odds vs AN API live odds');
@@ -127,10 +127,10 @@ const EXPECTED_DK = {
 
 let allMatch = true;
 for (const f of fixtures) {
-  const db = dkByFix[f.fixture_id] || {};
-  const expected = EXPECTED_DK[f.fixture_id];
+  const db = dkByFix[f.match_id] || {};
+  const expected = EXPECTED_DK[f.match_id];
   
-  console.log(`[FIXTURE] ${f.fixture_id} | ${f.awayCode}(away) @ ${f.homeCode}(home)`);
+  console.log(`[FIXTURE] ${f.match_id} | ${f.awayCode}(away) @ ${f.homeCode}(home)`);
   
   const checks = [
     ['1X2_home', expected.home, `HOME(${f.homeCode}) ML`],

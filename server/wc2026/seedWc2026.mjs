@@ -130,12 +130,12 @@ async function scrapeDate(dateStr) {
 
     // Find fixture — try both orientations (AN home/away may differ from DB)
     let [fixtures] = await conn.query(
-      'SELECT fixture_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+      'SELECT match_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
     if (!fixtures[0]) {
       [fixtures] = await conn.query(
-        'SELECT fixture_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id, kickoff_utc FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
@@ -147,15 +147,15 @@ async function scrapeDate(dateStr) {
       continue;
     }
 
-    console.log(`[SEED] [STATE] Matched fixture_id=${fixture.fixture_id}`);
+    console.log(`[SEED] [STATE] Matched match_id=${fixture.match_id}`);
 
     // Update kickoff_utc if not set
     if (!fixture.kickoff_utc && game.start_time) {
       await conn.query(
-        'UPDATE wc2026_fixtures SET kickoff_utc=? WHERE fixture_id=?',
-        [new Date(game.start_time), fixture.fixture_id]
+        'UPDATE wc2026_fixtures SET kickoff_utc=? WHERE match_id=?',
+        [new Date(game.start_time), fixture.match_id]
       );
-      console.log(`[SEED] [STEP] Set kickoff_utc=${game.start_time} for ${fixture.fixture_id}`);
+      console.log(`[SEED] [STEP] Set kickoff_utc=${game.start_time} for ${fixture.match_id}`);
     }
 
     // Extract odds per book
@@ -177,7 +177,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['home', mlHome], ['away', mlAway], ['draw', mlDraw]]) {
         if (outcome) {
           rows.push([
-            fixture.fixture_id, snapshotTs, bookId, '1X2', sel,
+            fixture.match_id, snapshotTs, bookId, '1X2', sel,
             null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -193,7 +193,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['over', over], ['under', under]]) {
         if (outcome) {
           rows.push([
-            fixture.fixture_id, snapshotTs, bookId, 'TOTAL', sel,
+            fixture.match_id, snapshotTs, bookId, 'TOTAL', sel,
             outcome.value ?? null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -209,7 +209,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['home', spreadHome], ['away', spreadAway]]) {
         if (outcome) {
           rows.push([
-            fixture.fixture_id, snapshotTs, bookId, 'ASIAN_HANDICAP', sel,
+            fixture.match_id, snapshotTs, bookId, 'ASIAN_HANDICAP', sel,
             outcome.value ?? null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -229,7 +229,7 @@ async function scrapeDate(dateStr) {
     for (let i = 0; i < rows.length; i += CHUNK) {
       const chunk = rows.slice(i, i + CHUNK);
       await conn.query(
-        'INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
+        'INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
         [chunk]
       );
       snapshotsWritten += chunk.length;
@@ -285,13 +285,13 @@ async function scrapeLineups() {
     }
 
     let [fixtures] = await conn.query(
-      'SELECT fixture_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+      'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
     if (!fixtures[0]) {
       // Try reversed orientation
       [fixtures] = await conn.query(
-        'SELECT fixture_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
+        'SELECT match_id FROM wc2026_fixtures WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
@@ -303,23 +303,23 @@ async function scrapeLineups() {
     }
 
     // Delete existing lineups for this fixture
-    await conn.query('DELETE FROM wc2026_lineups WHERE fixture_id=?', [fixture.fixture_id]);
+    await conn.query('DELETE FROM wc2026_lineups WHERE match_id=?', [fixture.match_id]);
 
     const scrapedAt = new Date();
     const rows = [];
 
     // Insert away players
     for (const p of game.awayPlayers) {
-      rows.push([fixture.fixture_id, awayId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([fixture.match_id, awayId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
     // Insert home players
     for (const p of game.homePlayers) {
-      rows.push([fixture.fixture_id, homeId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([fixture.match_id, homeId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
 
     if (rows.length > 0) {
       await conn.query(
-        'INSERT INTO wc2026_lineups (fixture_id, team_id, scraped_at, is_confirmed, player_name, position, is_starter, injury_status) VALUES ?',
+        'INSERT INTO wc2026_lineups (match_id, team_id, scraped_at, is_confirmed, player_name, position, is_starter, injury_status) VALUES ?',
         [rows]
       );
       lineupsWritten += rows.length;

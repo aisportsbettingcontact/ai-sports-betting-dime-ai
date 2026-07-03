@@ -25,23 +25,23 @@ function impliedToAmerican(p) {
 
   // Get all model (book_id=0) 1X2 rows for June 19
   const [model1X2] = await conn.query(`
-    SELECT o.fixture_id, o.selection, o.american_odds, o.implied_prob,
+    SELECT o.match_id, o.selection, o.american_odds, o.implied_prob,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.fixture_id = o.fixture_id
+    JOIN wc2026_fixtures f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19'
       AND o.book_id = 0
       AND o.market = '1X2'
-    ORDER BY o.fixture_id, o.selection
+    ORDER BY o.match_id, o.selection
   `);
 
   // Group by fixture
   const byFixture = {};
   for (const row of model1X2) {
-    if (!byFixture[row.fixture_id]) byFixture[row.fixture_id] = { home: null, draw: null, away: null, homeName: row.home_name, awayName: row.away_name };
-    byFixture[row.fixture_id][row.selection] = row;
+    if (!byFixture[row.match_id]) byFixture[row.match_id] = { home: null, draw: null, away: null, homeName: row.home_name, awayName: row.away_name };
+    byFixture[row.match_id][row.selection] = row;
   }
 
   console.log('[INPUT] Model 1X2 odds for June 19 fixtures:');
@@ -89,7 +89,7 @@ function impliedToAmerican(p) {
 
     // Delete existing model DC rows for this fixture
     const [delResult] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 0 AND market = 'DOUBLE_CHANCE'`,
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0 AND market = 'DOUBLE_CHANCE'`,
       [fid]
     );
     console.log(`  [STEP] Deleted ${delResult.affectedRows} old model DC rows`);
@@ -97,12 +97,12 @@ function impliedToAmerican(p) {
     // Insert corrected DC rows
     const snapshotTs = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await conn.query(
-      `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+      `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
        VALUES (?, 0, 'DOUBLE_CHANCE', 'home_draw', NULL, ?, ?, ?, 0)`,
       [fid, dc1XOdds, dc1X.toFixed(6), snapshotTs]
     );
     await conn.query(
-      `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+      `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
        VALUES (?, 0, 'DOUBLE_CHANCE', 'away_draw', NULL, ?, ?, ?, 0)`,
       [fid, dcX2Odds, dcX2.toFixed(6), snapshotTs]
     );
@@ -111,21 +111,21 @@ function impliedToAmerican(p) {
 
   // Final verification
   const [finalDC] = await conn.query(`
-    SELECT o.fixture_id, o.book_id, o.selection, o.american_odds, o.implied_prob,
+    SELECT o.match_id, o.book_id, o.selection, o.american_odds, o.implied_prob,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.fixture_id = o.fixture_id
+    JOIN wc2026_fixtures f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19'
       AND o.market = 'DOUBLE_CHANCE'
-    ORDER BY o.fixture_id, o.book_id, o.selection
+    ORDER BY o.match_id, o.book_id, o.selection
   `);
 
   console.log('\n[VERIFY] Final DOUBLE_CHANCE odds in DB for June 19:');
   for (const r of finalDC) {
     const bookLabel = r.book_id === 68 ? 'DK   ' : (r.book_id === 0 ? 'MODEL' : `b${r.book_id}`);
-    console.log(`  [${r.fixture_id}] ${r.home_name} vs ${r.away_name} | [${bookLabel}] ${r.selection} => ${r.american_odds} (${(parseFloat(r.implied_prob)*100).toFixed(2)}%)`);
+    console.log(`  [${r.match_id}] ${r.home_name} vs ${r.away_name} | [${bookLabel}] ${r.selection} => ${r.american_odds} (${(parseFloat(r.implied_prob)*100).toFixed(2)}%)`);
   }
 
   await conn.end();

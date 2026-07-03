@@ -92,7 +92,7 @@ const june15Ids = ['wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014'];
 const ph = june15Ids.map(() => '?').join(',');
 
 const [fixtures] = await c.execute(`
-  SELECT f.fixture_id, f.kickoff_utc, f.group_letter, f.matchday,
+  SELECT f.match_id, f.kickoff_utc, f.group_letter, f.matchday,
          f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName,
@@ -101,7 +101,7 @@ const [fixtures] = await c.execute(`
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
-  WHERE f.fixture_id IN (${ph})
+  WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
 `, june15Ids);
 
@@ -115,45 +115,45 @@ const OFFICIAL = {
 
 // Get DK odds
 const [dkOdds] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 68
+  WHERE match_id IN (${ph}) AND book_id = 68
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 // Get model odds
 const [modelOdds] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 0
+  WHERE match_id IN (${ph}) AND book_id = 0
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 0
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 0
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 // Group odds
 const dkByFix = {};
 const modelByFix = {};
 for (const o of dkOdds) {
-  if (!dkByFix[o.fixture_id]) dkByFix[o.fixture_id] = {};
-  dkByFix[o.fixture_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
+  if (!dkByFix[o.match_id]) dkByFix[o.match_id] = {};
+  dkByFix[o.match_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
 }
 for (const o of modelOdds) {
-  if (!modelByFix[o.fixture_id]) modelByFix[o.fixture_id] = {};
-  modelByFix[o.fixture_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
+  if (!modelByFix[o.match_id]) modelByFix[o.match_id] = {};
+  modelByFix[o.match_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
 }
 
 let wcIssues = 0;
 for (const f of fixtures) {
-  const official = OFFICIAL[f.fixture_id];
-  const dk = dkByFix[f.fixture_id] || {};
-  const model = modelByFix[f.fixture_id] || {};
+  const official = OFFICIAL[f.match_id];
+  const dk = dkByFix[f.match_id] || {};
+  const model = modelByFix[f.match_id] || {};
   
   const issues = [];
   
@@ -182,7 +182,7 @@ for (const f of fixtures) {
   const status = issues.length === 0 ? 'PASS' : 'FAIL';
   if (issues.length > 0) { wcIssues++; totalIssues++; }
   
-  console.log(`[${status}] ${f.fixture_id} | ${f.awayCode}(${f.awayName}) @ ${f.homeCode}(${f.homeName})`);
+  console.log(`[${status}] ${f.match_id} | ${f.awayCode}(${f.awayName}) @ ${f.homeCode}(${f.homeName})`);
   console.log(`  Kickoff: ${f.kickoff_utc} (${official.kickoffET}) | Group ${f.group_letter} MD${f.matchday}`);
   console.log(`  Venue: ${f.stadium ?? 'N/A'}, ${f.city ?? 'N/A'}`);
   console.log(`  Orientation: home=${f.homeCode} ${f.homeCode === official.home ? '✓' : '✗'} | away=${f.awayCode} ${f.awayCode === official.away ? '✓' : '✗'}`);

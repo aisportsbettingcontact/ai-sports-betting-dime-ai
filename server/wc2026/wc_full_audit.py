@@ -3,10 +3,10 @@
 WC2026 Full Feed Audit
 ======================
 Validates:
-1. All 7 dates have correct fixture counts
-2. Every fixture has correct home/away team orientation
-3. Every fixture has DK book odds (1X2 + TOTAL)
-4. Every fixture has Model odds (1X2 + TOTAL)
+1. All 7 dates have correct match counts
+2. Every match has correct home/away team orientation
+3. Every match has DK book odds (1X2 + TOTAL)
+4. Every match has Model odds (1X2 + TOTAL)
 5. All moneyline values are whole integers
 6. Total line is present and valid (2.5 or similar)
 7. Over/under odds are present for both book and model
@@ -29,7 +29,7 @@ DATES = [
     "2026-06-17",
 ]
 
-# Expected fixture counts per date (based on DB audit)
+# Expected match counts per date (based on DB audit)
 EXPECTED_COUNTS = {
     "2026-06-11": 2,
     "2026-06-12": 3,
@@ -42,7 +42,7 @@ EXPECTED_COUNTS = {
 
 errors = []
 warnings = []
-total_fixtures = 0
+total_matches = 0
 total_with_dk_odds = 0
 total_with_model_odds = 0
 total_with_totals_book = 0
@@ -50,16 +50,16 @@ total_with_totals_model = 0
 total_with_full_1x2_book = 0
 total_with_full_1x2_model = 0
 
-def fetch_fixtures(date):
+def fetch_matches(date):
     import urllib.parse
     input_str = json.dumps({"json": {"date": date}})
     encoded = urllib.parse.quote(input_str)
-    url = f"{BASE}/api/trpc/wc2026.fixturesByDate?input={encoded}"
+    url = f"{BASE}/api/trpc/wc2026.matchesByDate?input={encoded}"
     with urllib.request.urlopen(url, timeout=15) as resp:
         data = json.loads(resp.read())
     return data["result"]["data"]["json"]
 
-def validate_odds(odds, label, fixture_id):
+def validate_odds(odds, label, match_id):
     """Validate an odds object (either dkOdds or modelOdds)"""
     issues = []
     if odds is None:
@@ -121,15 +121,15 @@ for date in DATES:
     print(f"\n{'─'*60}")
     print(f"[DATE] {date}")
     try:
-        fixtures = fetch_fixtures(date)
+        matches = fetch_matches(date)
     except Exception as e:
         errors.append(f"[FETCH_ERR] {date}: {e}")
         print(f"  [ERROR] Failed to fetch: {e}")
         continue
     
-    count = len(fixtures)
+    count = len(matches)
     expected = EXPECTED_COUNTS.get(date, "?")
-    total_fixtures += count
+    total_matches += count
     
     count_status = "✓" if count == expected else "✗"
     print(f"  [FIXTURES] count={count} expected={expected} {count_status}")
@@ -137,8 +137,8 @@ for date in DATES:
     if count != expected:
         errors.append(f"[COUNT_MISMATCH] {date}: got {count}, expected {expected}")
     
-    for f in fixtures:
-        fid = f.get("fixtureId", "?")
+    for f in matches:
+        fid = f.get("matchId", "?")
         home_team = f.get("homeTeam") or {}
         away_team = f.get("awayTeam") or {}
         home_code = home_team.get("fifaCode", f.get("homeTeamId", "?").upper())
@@ -207,13 +207,13 @@ for date in DATES:
 print(f"\n{'='*80}")
 print("AUDIT SUMMARY")
 print(f"{'='*80}")
-print(f"Total fixtures audited: {total_fixtures}")
-print(f"Fixtures with DK odds:  {total_with_dk_odds}/{total_fixtures}")
-print(f"Fixtures with Model odds: {total_with_model_odds}/{total_fixtures}")
-print(f"Fixtures with DK 1X2 (home+draw+away): {total_with_full_1x2_book}/{total_fixtures}")
-print(f"Fixtures with Model 1X2: {total_with_full_1x2_model}/{total_fixtures}")
-print(f"Fixtures with DK Total (over+under): {total_with_totals_book}/{total_fixtures}")
-print(f"Fixtures with Model Total: {total_with_totals_model}/{total_fixtures}")
+print(f"Total matches audited: {total_matches}")
+print(f"Fixtures with DK odds:  {total_with_dk_odds}/{total_matches}")
+print(f"Fixtures with Model odds: {total_with_model_odds}/{total_matches}")
+print(f"Fixtures with DK 1X2 (home+draw+away): {total_with_full_1x2_book}/{total_matches}")
+print(f"Fixtures with Model 1X2: {total_with_full_1x2_model}/{total_matches}")
+print(f"Fixtures with DK Total (over+under): {total_with_totals_book}/{total_matches}")
+print(f"Fixtures with Model Total: {total_with_totals_model}/{total_matches}")
 
 if errors:
     print(f"\n[ERRORS] {len(errors)} errors found:")

@@ -158,7 +158,7 @@ async function main() {
   // ── SECTION 2: Pull all rows from wc2026_frozen_book_odds ─────────────────
   section(2, 'EXTRACT ALL ROWS FROM wc2026_frozen_book_odds');
   const [frozenRows] = await conn.execute(`
-    SELECT fixture_id, book_source, frozen_at, frozen_by,
+    SELECT match_id, book_source, frozen_at, frozen_by,
            book_home_ml, book_draw, book_away_ml,
            book_primary_spread, book_home_primary_spread_odds, book_away_primary_spread_odds,
            book_total, book_over_odds, book_under_odds,
@@ -167,16 +167,16 @@ async function main() {
            book_no_draw, book_no_draw_away_odds,
            book_home_to_advance, book_away_to_advance
     FROM wc2026_frozen_book_odds
-    ORDER BY fixture_id
+    ORDER BY match_id
   `);
   input('FROZEN', `Total rows in wc2026_frozen_book_odds: ${frozenRows.length}`);
   for (const r of frozenRows) {
-    atom('FROZEN', `  ${r.fixture_id.padEnd(20)} | source=${r.book_source} | frozen_at=${r.frozen_at} | frozen_by=${r.frozen_by}`);
+    atom('FROZEN', `  ${r.match_id.padEnd(20)} | source=${r.book_source} | frozen_at=${r.frozen_at} | frozen_by=${r.frozen_by}`);
   }
 
   // ── SECTION 3: Pull corresponding rows from wc2026MatchOdds ───────────────
   section(3, 'EXTRACT CORRESPONDING ROWS FROM wc2026MatchOdds');
-  const frozenFixtureIds = frozenRows.map(r => r.fixture_id);
+  const frozenFixtureIds = frozenRows.map(r => r.match_id);
   if (frozenFixtureIds.length === 0) {
     warn('MATCH', 'No rows in wc2026_frozen_book_odds — nothing to validate');
     await conn.end(); flushLog(); process.exit(0);
@@ -184,7 +184,7 @@ async function main() {
 
   const placeholders = frozenFixtureIds.map(() => '?').join(',');
   const [matchRows] = await conn.execute(`
-    SELECT fixture_id,
+    SELECT match_id,
            book_home_ml, book_draw, book_away_ml,
            book_primary_spread, book_home_primary_spread_odds, book_away_primary_spread_odds,
            book_total, book_over_odds, book_under_odds,
@@ -193,12 +193,12 @@ async function main() {
            book_no_draw,
            book_home_to_advance, book_away_to_advance
     FROM wc2026MatchOdds
-    WHERE fixture_id IN (${placeholders})
-    ORDER BY fixture_id
+    WHERE match_id IN (${placeholders})
+    ORDER BY match_id
   `, frozenFixtureIds);
-  input('MATCH', `wc2026MatchOdds rows found for frozen fixture_ids: ${matchRows.length} / ${frozenFixtureIds.length}`);
+  input('MATCH', `wc2026MatchOdds rows found for frozen match_ids: ${matchRows.length} / ${frozenFixtureIds.length}`);
 
-  const matchMap = Object.fromEntries(matchRows.map(r => [r.fixture_id, r]));
+  const matchMap = Object.fromEntries(matchRows.map(r => [r.match_id, r]));
 
   // ── SECTION 4: FIELD-BY-FIELD TRIPLE VERIFICATION ─────────────────────────
   section(4, 'FIELD-BY-FIELD TRIPLE VERIFICATION — ALL 37 FIXTURES × 16 FIELDS');
@@ -213,7 +213,7 @@ async function main() {
   const fixtureResults = [];
 
   for (const frozen of frozenRows) {
-    const fid = frozen.fixture_id;
+    const fid = frozen.match_id;
     const match = matchMap[fid];
 
     process.stdout.write(`\n${DIVIDER2}\n`);
@@ -280,21 +280,21 @@ async function main() {
   state('PASS2', 'Re-querying both tables independently for cross-validation...');
 
   const [frozenRows2] = await conn.execute(`
-    SELECT fixture_id, book_home_ml, book_draw, book_away_ml,
+    SELECT match_id, book_home_ml, book_draw, book_away_ml,
            book_primary_spread, book_total,
            book_btts_yes, book_btts_no,
            book_home_to_advance, book_away_to_advance
-    FROM wc2026_frozen_book_odds ORDER BY fixture_id
+    FROM wc2026_frozen_book_odds ORDER BY match_id
   `);
   const [matchRows2] = await conn.execute(`
-    SELECT fixture_id, book_home_ml, book_draw, book_away_ml,
+    SELECT match_id, book_home_ml, book_draw, book_away_ml,
            book_primary_spread, book_total,
            book_btts_yes, book_btts_no,
            book_home_to_advance, book_away_to_advance
-    FROM wc2026MatchOdds WHERE fixture_id IN (${placeholders}) ORDER BY fixture_id
+    FROM wc2026MatchOdds WHERE match_id IN (${placeholders}) ORDER BY match_id
   `, frozenFixtureIds);
 
-  const matchMap2 = Object.fromEntries(matchRows2.map(r => [r.fixture_id, r]));
+  const matchMap2 = Object.fromEntries(matchRows2.map(r => [r.match_id, r]));
   let pass2Checks = 0, pass2Pass = 0, pass2Fail = 0;
 
   const SPOT_CHECK_FIELDS = [
@@ -310,15 +310,15 @@ async function main() {
   ];
 
   for (const fr of frozenRows2) {
-    const mr = matchMap2[fr.fixture_id];
-    if (!mr) { fail('PASS2', `  ${fr.fixture_id}: MISSING in wc2026MatchOdds (Pass 2)`); pass2Fail++; continue; }
+    const mr = matchMap2[fr.match_id];
+    if (!mr) { fail('PASS2', `  ${fr.match_id}: MISSING in wc2026MatchOdds (Pass 2)`); pass2Fail++; continue; }
     for (const sc of SPOT_CHECK_FIELDS) {
       const fv = fr[sc.f], mv = mr[sc.m];
       const ok = numEq(fv, mv, sc.label.includes('Spread') || sc.label.includes('Total') ? 0.001 : null);
       pass2Checks++;
       if (ok) { pass2Pass++; }
       else {
-        fail('PASS2', `  ${fr.fixture_id} │ ${sc.label.padEnd(12)} │ frozen=${fmt(fv)} │ match=${fmt(mv)} │ MISMATCH`);
+        fail('PASS2', `  ${fr.match_id} │ ${sc.label.padEnd(12)} │ frozen=${fmt(fv)} │ match=${fmt(mv)} │ MISMATCH`);
         pass2Fail++;
       }
     }
@@ -342,7 +342,7 @@ async function main() {
       SUM(ABS(COALESCE(book_home_to_advance,0)))          as sum_toadv_home,
       SUM(ABS(COALESCE(book_away_to_advance,0)))          as sum_toadv_away
     FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN (${placeholders})
+    WHERE match_id IN (${placeholders})
   `, frozenFixtureIds);
 
   const [matchAgg] = await conn.execute(`
@@ -358,7 +358,7 @@ async function main() {
       SUM(ABS(COALESCE(book_home_to_advance,0)))     as sum_toadv_home,
       SUM(ABS(COALESCE(book_away_to_advance,0)))     as sum_toadv_away
     FROM wc2026MatchOdds
-    WHERE fixture_id IN (${placeholders})
+    WHERE match_id IN (${placeholders})
   `, frozenFixtureIds);
 
   const fa = frozenAgg[0], ma = matchAgg[0];

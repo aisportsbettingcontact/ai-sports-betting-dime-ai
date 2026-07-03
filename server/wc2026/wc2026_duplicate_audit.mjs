@@ -3,11 +3,11 @@
  * Comprehensive duplicate detection and cleanup for all WC2026 tables.
  *
  * Checks:
- *   1. wc2026_fixtures — duplicate fixture_id entries (PK, should be impossible)
+ *   1. wc2026_fixtures — duplicate match_id entries (PK, should be impossible)
  *   2. wc2026_fixtures — duplicate home_team_id + away_team_id combinations
- *   3. wc2026_match_stats — duplicate fixture_id entries (PK, should be impossible)
- *   4. wc2026_match_events — duplicate events (same fixture_id + event_type + player_name + minute_num)
- *   5. wc2026_lineups — duplicate player entries (same fixture_id + team_id + player_name)
+ *   3. wc2026_match_stats — duplicate match_id entries (PK, should be impossible)
+ *   4. wc2026_match_events — duplicate events (same match_id + event_type + player_name + minute_num)
+ *   5. wc2026_lineups — duplicate player entries (same match_id + team_id + player_name)
  *   6. wc2026_odds_snapshots — duplicate model odds (book_id=0, same fixture+market+selection)
  *
  * For each duplicate found: logs the full detail and removes the duplicate (keeps most recent).
@@ -26,25 +26,25 @@ console.log('[WC2026_AUDIT] ====================================================
 let totalDuplicatesFound = 0;
 let totalDuplicatesRemoved = 0;
 
-// ─── 1. wc2026_fixtures: duplicate fixture_id (PK — impossible, but verify) ──
-console.log('[WC2026_AUDIT] [STEP 1] Checking wc2026_fixtures for duplicate fixture_id...');
+// ─── 1. wc2026_fixtures: duplicate match_id (PK — impossible, but verify) ──
+console.log('[WC2026_AUDIT] [STEP 1] Checking wc2026_fixtures for duplicate match_id...');
 const [fixturePkDups] = await conn.query(`
-  SELECT fixture_id, COUNT(*) as cnt
+  SELECT match_id, COUNT(*) as cnt
   FROM wc2026_fixtures
-  GROUP BY fixture_id
+  GROUP BY match_id
   HAVING cnt > 1
 `);
 if (fixturePkDups.length === 0) {
-  console.log('[WC2026_AUDIT] [VERIFY] PASS — No duplicate fixture_id in wc2026_fixtures ✅');
+  console.log('[WC2026_AUDIT] [VERIFY] PASS — No duplicate match_id in wc2026_fixtures ✅');
 } else {
-  console.error('[WC2026_AUDIT] [VERIFY] FAIL — Duplicate fixture_id found:', fixturePkDups);
+  console.error('[WC2026_AUDIT] [VERIFY] FAIL — Duplicate match_id found:', fixturePkDups);
   totalDuplicatesFound += fixturePkDups.length;
 }
 
 // ─── 2. wc2026_fixtures: duplicate home+away team combinations ────────────────
 console.log('\n[WC2026_AUDIT] [STEP 2] Checking wc2026_fixtures for duplicate home+away team combos...');
 const [teamComboDups] = await conn.query(`
-  SELECT home_team_id, away_team_id, COUNT(*) as cnt, GROUP_CONCAT(fixture_id ORDER BY fixture_id) as fixture_ids
+  SELECT home_team_id, away_team_id, COUNT(*) as cnt, GROUP_CONCAT(match_id ORDER BY match_id) as match_ids
   FROM wc2026_fixtures
   GROUP BY home_team_id, away_team_id
   HAVING cnt > 1
@@ -54,33 +54,33 @@ if (teamComboDups.length === 0) {
 } else {
   console.error('[WC2026_AUDIT] [VERIFY] FAIL — Duplicate team combinations:');
   teamComboDups.forEach(r => {
-    console.error(`  home=${r.home_team_id} away=${r.away_team_id} count=${r.cnt} fixtures=[${r.fixture_ids}]`);
+    console.error(`  home=${r.home_team_id} away=${r.away_team_id} count=${r.cnt} fixtures=[${r.match_ids}]`);
   });
   totalDuplicatesFound += teamComboDups.length;
 }
 
-// ─── 3. wc2026_match_stats: duplicate fixture_id (PK) ────────────────────────
+// ─── 3. wc2026_match_stats: duplicate match_id (PK) ────────────────────────
 console.log('\n[WC2026_AUDIT] [STEP 3] Checking wc2026_match_stats for duplicates...');
 const [statsDups] = await conn.query(`
-  SELECT fixture_id, COUNT(*) as cnt
+  SELECT match_id, COUNT(*) as cnt
   FROM wc2026_match_stats
-  GROUP BY fixture_id
+  GROUP BY match_id
   HAVING cnt > 1
 `);
 if (statsDups.length === 0) {
-  console.log('[WC2026_AUDIT] [VERIFY] PASS — No duplicate fixture_id in wc2026_match_stats ✅');
+  console.log('[WC2026_AUDIT] [VERIFY] PASS — No duplicate match_id in wc2026_match_stats ✅');
 } else {
-  console.error('[WC2026_AUDIT] [VERIFY] FAIL — Duplicate fixture_id in match_stats:', statsDups);
+  console.error('[WC2026_AUDIT] [VERIFY] FAIL — Duplicate match_id in match_stats:', statsDups);
   totalDuplicatesFound += statsDups.length;
 }
 
 // ─── 4. wc2026_match_events: duplicate events ────────────────────────────────
 console.log('\n[WC2026_AUDIT] [STEP 4] Checking wc2026_match_events for duplicate events...');
 const [eventDups] = await conn.query(`
-  SELECT fixture_id, event_type, player_name, minute_num, COUNT(*) as cnt,
+  SELECT match_id, event_type, player_name, minute_num, COUNT(*) as cnt,
          GROUP_CONCAT(id ORDER BY id) as ids
   FROM wc2026_match_events
-  GROUP BY fixture_id, event_type, player_name, minute_num
+  GROUP BY match_id, event_type, player_name, minute_num
   HAVING cnt > 1
 `);
 if (eventDups.length === 0) {
@@ -88,7 +88,7 @@ if (eventDups.length === 0) {
 } else {
   console.warn(`[WC2026_AUDIT] [VERIFY] WARNING — ${eventDups.length} duplicate event groups found:`);
   for (const dup of eventDups) {
-    console.warn(`  fixture=${dup.fixture_id} type=${dup.event_type} player="${dup.player_name}" min=${dup.minute_num} count=${dup.cnt} ids=[${dup.ids}]`);
+    console.warn(`  fixture=${dup.match_id} type=${dup.event_type} player="${dup.player_name}" min=${dup.minute_num} count=${dup.cnt} ids=[${dup.ids}]`);
     totalDuplicatesFound++;
     // Keep the lowest ID, delete the rest
     const ids = dup.ids.split(',').map(Number);
@@ -104,10 +104,10 @@ if (eventDups.length === 0) {
 // ─── 5. wc2026_lineups: duplicate player entries ─────────────────────────────
 console.log('\n[WC2026_AUDIT] [STEP 5] Checking wc2026_lineups for duplicate player entries...');
 const [lineupDups] = await conn.query(`
-  SELECT fixture_id, team_id, player_name, COUNT(*) as cnt,
+  SELECT match_id, team_id, player_name, COUNT(*) as cnt,
          GROUP_CONCAT(id ORDER BY id) as ids
   FROM wc2026_lineups
-  GROUP BY fixture_id, team_id, player_name
+  GROUP BY match_id, team_id, player_name
   HAVING cnt > 1
 `);
 if (lineupDups.length === 0) {
@@ -115,7 +115,7 @@ if (lineupDups.length === 0) {
 } else {
   console.warn(`[WC2026_AUDIT] [VERIFY] WARNING — ${lineupDups.length} duplicate lineup groups found:`);
   for (const dup of lineupDups) {
-    console.warn(`  fixture=${dup.fixture_id} team=${dup.team_id} player="${dup.player_name}" count=${dup.cnt} ids=[${dup.ids}]`);
+    console.warn(`  fixture=${dup.match_id} team=${dup.team_id} player="${dup.player_name}" count=${dup.cnt} ids=[${dup.ids}]`);
     totalDuplicatesFound++;
     const ids = dup.ids.split(',').map(Number);
     const keepId = Math.max(...ids); // keep most recent (highest id = confirmed ESPN data)
@@ -130,11 +130,11 @@ if (lineupDups.length === 0) {
 // ─── 6. wc2026_odds_snapshots: duplicate model odds (book_id=0) ───────────────
 console.log('\n[WC2026_AUDIT] [STEP 6] Checking wc2026_odds_snapshots for duplicate model odds (book_id=0)...');
 const [modelOddsDups] = await conn.query(`
-  SELECT fixture_id, market, selection, COUNT(*) as cnt,
+  SELECT match_id, market, selection, COUNT(*) as cnt,
          GROUP_CONCAT(id ORDER BY id) as ids
   FROM wc2026_odds_snapshots
   WHERE book_id = 0
-  GROUP BY fixture_id, market, selection
+  GROUP BY match_id, market, selection
   HAVING cnt > 1
 `);
 if (modelOddsDups.length === 0) {
@@ -142,7 +142,7 @@ if (modelOddsDups.length === 0) {
 } else {
   console.warn(`[WC2026_AUDIT] [VERIFY] WARNING — ${modelOddsDups.length} duplicate model odds groups:`);
   for (const dup of modelOddsDups) {
-    console.warn(`  fixture=${dup.fixture_id} market=${dup.market} sel=${dup.selection} count=${dup.cnt} ids=[${dup.ids}]`);
+    console.warn(`  fixture=${dup.match_id} market=${dup.market} sel=${dup.selection} count=${dup.cnt} ids=[${dup.ids}]`);
     totalDuplicatesFound++;
     const ids = dup.ids.split(',').map(Number);
     const keepId = Math.max(...ids); // keep most recent
@@ -157,11 +157,11 @@ if (modelOddsDups.length === 0) {
 // ─── 7. wc2026_odds_snapshots: duplicate DK closing odds ─────────────────────
 console.log('\n[WC2026_AUDIT] [STEP 7] Checking wc2026_odds_snapshots for duplicate DK closing odds (book_id=68, is_closing=1)...');
 const [dkClosingDups] = await conn.query(`
-  SELECT fixture_id, market, selection, COUNT(*) as cnt,
+  SELECT match_id, market, selection, COUNT(*) as cnt,
          GROUP_CONCAT(id ORDER BY id) as ids
   FROM wc2026_odds_snapshots
   WHERE book_id = 68 AND is_closing = 1
-  GROUP BY fixture_id, market, selection
+  GROUP BY match_id, market, selection
   HAVING cnt > 1
 `);
 if (dkClosingDups.length === 0) {
@@ -169,7 +169,7 @@ if (dkClosingDups.length === 0) {
 } else {
   console.warn(`[WC2026_AUDIT] [VERIFY] WARNING — ${dkClosingDups.length} duplicate DK closing odds groups:`);
   for (const dup of dkClosingDups) {
-    console.warn(`  fixture=${dup.fixture_id} market=${dup.market} sel=${dup.selection} count=${dup.cnt} ids=[${dup.ids}]`);
+    console.warn(`  fixture=${dup.match_id} market=${dup.market} sel=${dup.selection} count=${dup.cnt} ids=[${dup.ids}]`);
     totalDuplicatesFound++;
     const ids = dup.ids.split(',').map(Number);
     const keepId = Math.max(...ids);
@@ -196,21 +196,21 @@ console.log(`[WC2026_AUDIT] [STATE] Fixtures: total=${fc.total_fixtures} complet
 
 // Check June 17 specifically
 const [june17] = await conn.query(`
-  SELECT f.fixture_id, ht.name as home, at2.name as away,
+  SELECT f.match_id, ht.name as home, at2.name as away,
          f.home_score, f.away_score, f.status, f.match_date,
          f.espn_event_id, f.attendance,
-         (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.fixture_id = f.fixture_id) as has_stats,
-         (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.fixture_id = f.fixture_id) as event_count,
-         (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.fixture_id = f.fixture_id AND l.is_confirmed = 1) as confirmed_lineup_count
+         (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.match_id = f.match_id) as has_stats,
+         (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.match_id = f.match_id) as event_count,
+         (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.match_id = f.match_id AND l.is_confirmed = 1) as confirmed_lineup_count
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
   WHERE f.match_date = '2026-06-17'
-  ORDER BY f.fixture_id
+  ORDER BY f.match_id
 `);
 console.log(`\n[WC2026_AUDIT] [STATE] June 17 fixtures (${june17.length} total):`);
 june17.forEach(r => {
-  console.log(`  ${r.fixture_id}: ${r.away} ${r.away_score ?? '?'}-${r.home_score ?? '?'} ${r.home} | status=${r.status} | espnId=${r.espn_event_id} | att=${r.attendance} | stats=${r.has_stats} | events=${r.event_count} | confirmed_lineups=${r.confirmed_lineup_count}`);
+  console.log(`  ${r.match_id}: ${r.away} ${r.away_score ?? '?'}-${r.home_score ?? '?'} ${r.home} | status=${r.status} | espnId=${r.espn_event_id} | att=${r.attendance} | stats=${r.has_stats} | events=${r.event_count} | confirmed_lineups=${r.confirmed_lineup_count}`);
 });
 
 // ─── Final summary ────────────────────────────────────────────────────────────

@@ -20,8 +20,8 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const RESULTS_PATH = "/home/ubuntu/june27_v72_results.json";
 console.log(`[INPUT] Loading v7.2 results from: ${RESULTS_PATH}`);
 const results = JSON.parse(fs.readFileSync(RESULTS_PATH, "utf8"));
-const fixtureIds = Object.keys(results);
-console.log(`[INPUT] ${fixtureIds.length} fixtures to seed: ${fixtureIds.join(", ")}`);
+const matchIds = Object.keys(results);
+console.log(`[INPUT] ${matchIds.length} fixtures to seed: ${matchIds.join(", ")}`);
 
 // ── SMALLINT cap helper ───────────────────────────────────────────────────────
 const SMALLINT_MAX = 32767;
@@ -39,14 +39,14 @@ console.log("[STATE] DB connected");
 // ── Delete existing projections for these fixtures ────────────────────────────
 console.log("[STEP] Deleting existing projections for June 27 fixtures...");
 const [delResult] = await conn.execute(
-  `DELETE FROM wc2026_model_projections WHERE fixture_id IN (${fixtureIds.map(() => "?").join(",")})`,
-  fixtureIds
+  `DELETE FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => "?").join(",")})`,
+  matchIds
 );
 console.log(`[STATE] Deleted ${delResult.affectedRows} existing rows`);
 
 // ── Insert v7.2 projections ───────────────────────────────────────────────────
 let insertCount = 0;
-for (const fid of fixtureIds) {
+for (const fid of matchIds) {
   const r = results[fid];
   console.log(`\n[STEP] Seeding ${fid}: ${r.home_code}(H) vs ${r.away_code}(A)`);
   console.log(`  [STATE] λH=${r.home_lam} λA=${r.away_lam} | proj: ${r.proj_home_score}-${r.proj_away_score} | total: ${r.proj_total}`);
@@ -58,7 +58,7 @@ for (const fid of fixtureIds) {
 
   const [ins] = await conn.execute(
     `INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -130,24 +130,24 @@ for (const fid of fixtureIds) {
 // ── Final verification ────────────────────────────────────────────────────────
 console.log("\n[STEP] Running final verification query...");
 const [verRows] = await conn.execute(
-  `SELECT fixture_id, model_version, model_home_ml, model_draw_ml, model_away_ml,
+  `SELECT match_id, model_version, model_home_ml, model_draw_ml, model_away_ml,
           proj_home_score, proj_away_score, proj_total, model_spread, model_total,
           btts_yes_odds, btts_no_odds, is_frozen, frozen_at
    FROM wc2026_model_projections
-   WHERE fixture_id IN (${fixtureIds.map(() => "?").join(",")})
-   ORDER BY fixture_id`,
-  fixtureIds
+   WHERE match_id IN (${matchIds.map(() => "?").join(",")})
+   ORDER BY match_id`,
+  matchIds
 );
-console.log(`[OUTPUT] ${verRows.length}/${fixtureIds.length} rows verified in DB:`);
+console.log(`[OUTPUT] ${verRows.length}/${matchIds.length} rows verified in DB:`);
 for (const row of verRows) {
-  console.log(`  ${row.fixture_id}: H:${row.model_home_ml} D:${row.model_draw_ml} A:${row.model_away_ml} | ${row.proj_home_score}-${row.proj_away_score} | total:${row.proj_total} | spread:${row.model_spread} | BTTS Y:${row.btts_yes_odds} N:${row.btts_no_odds} | frozen:${row.is_frozen}`);
+  console.log(`  ${row.match_id}: H:${row.model_home_ml} D:${row.model_draw_ml} A:${row.model_away_ml} | ${row.proj_home_score}-${row.proj_away_score} | total:${row.proj_total} | spread:${row.model_spread} | BTTS Y:${row.btts_yes_odds} N:${row.btts_no_odds} | frozen:${row.is_frozen}`);
 }
 
 const allFrozen = verRows.every(r => r.is_frozen === 1);
-const allPresent = verRows.length === fixtureIds.length;
-console.log(`\n[VERIFY] ${allPresent ? "PASS" : "FAIL"} — all ${fixtureIds.length} rows present: ${allPresent}`);
+const allPresent = verRows.length === matchIds.length;
+console.log(`\n[VERIFY] ${allPresent ? "PASS" : "FAIL"} — all ${matchIds.length} rows present: ${allPresent}`);
 console.log(`[VERIFY] ${allFrozen ? "PASS" : "FAIL"} — all rows is_frozen=1: ${allFrozen}`);
-console.log(`[OUTPUT] Seeded ${insertCount}/${fixtureIds.length} v7.2 projections successfully`);
+console.log(`[OUTPUT] Seeded ${insertCount}/${matchIds.length} v7.2 projections successfully`);
 
 await conn.end();
 console.log("[STATE] DB disconnected");

@@ -195,7 +195,7 @@ OFFICIAL_FIXTURES = [
 ]
 
 if __name__ == '__main__':
-    print(f'Total official fixtures: {len(OFFICIAL_FIXTURES)}')
+    print(f'Total official matches: {len(OFFICIAL_FIXTURES)}')
     for i, f in enumerate(OFFICIAL_FIXTURES, 1):
         date, kickoff, home, away, city, grp = f
         print(f'  Match {i:2d}: {date} | {home:5s} vs {away:5s} | {city} | Group {grp}')

@@ -145,7 +145,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
     // Load all fixtures that have a fifaMatchId
     log('STEP', S(), 'Loading tracked fixtures from DB');
     const allFixtures = await db.select({
-      fixtureId: wc2026Fixtures.fixtureId,
+      matchId: wc2026Fixtures.matchId,
       fifaMatchId: wc2026Fixtures.fifaMatchId,
       status: wc2026Fixtures.status,
       homeScore: wc2026Fixtures.homeScore,
@@ -204,7 +204,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
             liveMatch.homeScore !== liveMatch.awayScore) {
           patch.advancingTeamId = liveMatch.homeScore > liveMatch.awayScore
             ? fixture.homeTeamId : fixture.awayTeamId;
-          log('DB', S(), `FT winner (score): ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId}`);
+          log('DB', S(), `FT winner (score): ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId}`);
         }
         // Case 2: Penalty shootout winner via FIFA Winner field
         else if (liveMatch.fifaWinnerId) {
@@ -215,31 +215,31 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
           }
           const penStr = liveMatch.homePenScore !== null
             ? `(${liveMatch.homePenScore}-${liveMatch.awayPenScore} pens)` : '';
-          log('DB', S(), `FT winner (pens) ${penStr}: ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
+          log('DB', S(), `FT winner (pens) ${penStr}: ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
         }
         // Case 3: Penalty shootout winner via penalty scores
         else if (liveMatch.homePenScore !== null && liveMatch.awayPenScore !== null &&
                  liveMatch.homePenScore !== liveMatch.awayPenScore) {
           patch.advancingTeamId = liveMatch.homePenScore > liveMatch.awayPenScore
             ? fixture.homeTeamId : fixture.awayTeamId;
-          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${fixture.fixtureId} → advancingTeamId=${patch.advancingTeamId}`);
+          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId}`);
         }
       }
 
       if (Object.keys(patch).length === 0) {
-        log('SKIP', S(), `${fixture.fixtureId} — no changes`);
+        log('SKIP', S(), `${fixture.matchId} — no changes`);
         skippedCount++;
         continue;
       }
 
-      log('DB', S(), `UPDATE ${fixture.fixtureId}`, JSON.stringify(patch));
+      log('DB', S(), `UPDATE ${fixture.matchId}`, JSON.stringify(patch));
       try {
-        await db.update(wc2026Fixtures).set(patch).where(eq(wc2026Fixtures.fixtureId, fixture.fixtureId));
-        log('PASS', S(), `✅ ${fixture.fixtureId} updated`);
+        await db.update(wc2026Fixtures).set(patch).where(eq(wc2026Fixtures.matchId, fixture.matchId));
+        log('PASS', S(), `✅ ${fixture.matchId} updated`);
         updatedCount++;
       } catch (err) {
         const msg = err instanceof Error ? err.message.slice(0,200) : String(err);
-        log('FAIL', S(), `❌ UPDATE failed for ${fixture.fixtureId}: ${msg}`);
+        log('FAIL', S(), `❌ UPDATE failed for ${fixture.matchId}: ${msg}`);
         failCount++;
       }
     }

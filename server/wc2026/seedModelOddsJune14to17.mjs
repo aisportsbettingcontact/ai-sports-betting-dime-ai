@@ -27,7 +27,7 @@ const MODEL_BOOK_ID = 0;
  * American odds derived from no-vig implied probabilities
  *
  * Format per fixture:
- *   fixtureId, homeId, awayId
+ *   matchId, homeId, awayId
  *   homeWin, draw, awayWin (must sum to 1.0)
  *   overProb, underProb (must sum to 1.0)
  *   total (line), xgHome, xgAway
@@ -36,7 +36,7 @@ const MODEL_BOOK_ID = 0;
 const MODEL_DATA = [
   // ── JUNE 14 ──────────────────────────────────────────────────────────────
   {
-    fixtureId: 'wc26-g-010',
+    matchId: 'wc26-g-010',
     homeId: 'ger', awayId: 'cuw',
     // Germany massive favorite vs Curacao
     homeWin: 0.8412, draw: 0.1012, awayWin: 0.0576,
@@ -46,7 +46,7 @@ const MODEL_DATA = [
     overOdds: -261, underOdds: +261,
   },
   {
-    fixtureId: 'wc26-g-012',
+    matchId: 'wc26-g-012',
     homeId: 'ned', awayId: 'jpn',
     // Netherlands vs Japan — competitive match
     homeWin: 0.4812, draw: 0.2634, awayWin: 0.2554,
@@ -56,7 +56,7 @@ const MODEL_DATA = [
     overOdds: -105, underOdds: -105,
   },
   {
-    fixtureId: 'wc26-g-009',
+    matchId: 'wc26-g-009',
     homeId: 'civ', awayId: 'ecu',
     // Ivory Coast vs Ecuador — slight home edge
     homeWin: 0.3824, draw: 0.2912, awayWin: 0.3264,
@@ -66,7 +66,7 @@ const MODEL_DATA = [
     overOdds: -129, underOdds: +129,
   },
   {
-    fixtureId: 'wc26-g-011',
+    matchId: 'wc26-g-011',
     homeId: 'swe', awayId: 'tun',
     // Sweden vs Tunisia — Sweden slight favorite
     homeWin: 0.4523, draw: 0.2834, awayWin: 0.2643,
@@ -77,7 +77,7 @@ const MODEL_DATA = [
   },
   // ── JUNE 15 ──────────────────────────────────────────────────────────────
   {
-    fixtureId: 'wc26-g-015',
+    matchId: 'wc26-g-015',
     homeId: 'esp', awayId: 'cpv',
     // Spain massive favorite vs Cape Verde
     homeWin: 0.8124, draw: 0.1234, awayWin: 0.0642,
@@ -87,7 +87,7 @@ const MODEL_DATA = [
     overOdds: -217, underOdds: +217,
   },
   {
-    fixtureId: 'wc26-g-013',
+    matchId: 'wc26-g-013',
     homeId: 'bel', awayId: 'egy',
     // Belgium vs Egypt — Belgium strong favorite
     homeWin: 0.5634, draw: 0.2412, awayWin: 0.1954,
@@ -97,7 +97,7 @@ const MODEL_DATA = [
     overOdds: -123, underOdds: +123,
   },
   {
-    fixtureId: 'wc26-g-016',
+    matchId: 'wc26-g-016',
     homeId: 'ksa', awayId: 'uru',
     // Saudi Arabia vs Uruguay — Uruguay strong favorite
     homeWin: 0.1834, draw: 0.2634, awayWin: 0.5532,
@@ -107,7 +107,7 @@ const MODEL_DATA = [
     overOdds: -105, underOdds: -105,
   },
   {
-    fixtureId: 'wc26-g-014',
+    matchId: 'wc26-g-014',
     homeId: 'irn', awayId: 'nzl',
     // Iran vs New Zealand — Iran slight favorite
     homeWin: 0.4234, draw: 0.2834, awayWin: 0.2932,
@@ -118,7 +118,7 @@ const MODEL_DATA = [
   },
   // ── JUNE 16 ──────────────────────────────────────────────────────────────
   {
-    fixtureId: 'wc26-g-018',
+    matchId: 'wc26-g-018',
     homeId: 'fra', awayId: 'sen',
     // France vs Senegal — France strong favorite
     homeWin: 0.5834, draw: 0.2312, awayWin: 0.1854,
@@ -128,7 +128,7 @@ const MODEL_DATA = [
     overOdds: -129, underOdds: +129,
   },
   {
-    fixtureId: 'wc26-g-017',
+    matchId: 'wc26-g-017',
     homeId: 'irq', awayId: 'nor',
     // Iraq vs Norway — Norway strong favorite
     homeWin: 0.1234, draw: 0.2234, awayWin: 0.6532,
@@ -138,7 +138,7 @@ const MODEL_DATA = [
     overOdds: -110, underOdds: +110,
   },
   {
-    fixtureId: 'wc26-g-020',
+    matchId: 'wc26-g-020',
     homeId: 'arg', awayId: 'alg',
     // Argentina vs Algeria — Argentina massive favorite
     homeWin: 0.7234, draw: 0.1834, awayWin: 0.0932,
@@ -148,7 +148,7 @@ const MODEL_DATA = [
     overOdds: -141, underOdds: +141,
   },
   {
-    fixtureId: 'wc26-g-019',
+    matchId: 'wc26-g-019',
     homeId: 'aut', awayId: 'jor',
     // Austria vs Jordan — Austria strong favorite
     homeWin: 0.6234, draw: 0.2134, awayWin: 0.1632,
@@ -159,7 +159,7 @@ const MODEL_DATA = [
   },
   // ── JUNE 17 ──────────────────────────────────────────────────────────────
   {
-    fixtureId: 'wc26-g-021',
+    matchId: 'wc26-g-021',
     homeId: 'por', awayId: 'cod',
     // Portugal vs DR Congo — Portugal massive favorite
     homeWin: 0.7834, draw: 0.1434, awayWin: 0.0732,
@@ -169,7 +169,7 @@ const MODEL_DATA = [
     overOdds: -166, underOdds: +166,
   },
   {
-    fixtureId: 'wc26-g-023',
+    matchId: 'wc26-g-023',
     homeId: 'eng', awayId: 'cro',
     // England vs Croatia — England moderate favorite
     homeWin: 0.4834, draw: 0.2734, awayWin: 0.2432,
@@ -179,7 +179,7 @@ const MODEL_DATA = [
     overOdds: -110, underOdds: +110,
   },
   {
-    fixtureId: 'wc26-g-024',
+    matchId: 'wc26-g-024',
     homeId: 'gha', awayId: 'pan',
     // Ghana vs Panama — very competitive
     homeWin: 0.3634, draw: 0.3012, awayWin: 0.3354,
@@ -193,7 +193,7 @@ const MODEL_DATA = [
 // DK fix for wc26-g-012 (JPN @ NED) — missing home moneyline
 const DK_FIXES = [
   {
-    fixtureId: 'wc26-g-012',
+    matchId: 'wc26-g-012',
     market: '1X2',
     selection: 'home',
     line: null,
@@ -219,10 +219,10 @@ async function main() {
     const pass1x2 = Math.abs(probSum1x2 - 1.0) < 0.001;
     const passTotal = Math.abs(probSumTotal - 1.0) < 0.001;
     if (!pass1x2 || !passTotal) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.fixtureId}: 1X2_sum=${probSum1x2.toFixed(6)} total_sum=${probSumTotal.toFixed(6)}`);
+      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.matchId}: 1X2_sum=${probSum1x2.toFixed(6)} total_sum=${probSumTotal.toFixed(6)}`);
       totalErrors++;
     } else {
-      console.log(`[ModelSeed] [VERIFY] ${m.fixtureId}: 1X2_sum=${probSum1x2.toFixed(6)} total_sum=${probSumTotal.toFixed(6)} → PASS ✓`);
+      console.log(`[ModelSeed] [VERIFY] ${m.matchId}: 1X2_sum=${probSum1x2.toFixed(6)} total_sum=${probSumTotal.toFixed(6)} → PASS ✓`);
     }
   }
 
@@ -237,35 +237,35 @@ async function main() {
   for (const m of MODEL_DATA) {
     // Verify fixture exists
     const [fixtures] = await conn.query(
-      'SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ? LIMIT 1',
-      [m.fixtureId]
+      'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ? LIMIT 1',
+      [m.matchId]
     );
     if (!fixtures[0]) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — fixture ${m.fixtureId} not found in DB`);
+      console.error(`[ModelSeed] [VERIFY] FAIL — fixture ${m.matchId} not found in DB`);
       totalErrors++;
       continue;
     }
     const f = fixtures[0];
-    console.log(`\n[ModelSeed] [STATE] ${m.fixtureId}: home=${f.home_team_id} away=${f.away_team_id}`);
+    console.log(`\n[ModelSeed] [STATE] ${m.matchId}: home=${f.home_team_id} away=${f.away_team_id}`);
 
     // Delete existing model odds
     const [del] = await conn.query(
-      'DELETE FROM wc2026_odds_snapshots WHERE fixture_id=? AND book_id=?',
-      [m.fixtureId, MODEL_BOOK_ID]
+      'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
+      [m.matchId, MODEL_BOOK_ID]
     );
     console.log(`[ModelSeed] [STEP] Deleted ${del.affectedRows} existing model rows`);
 
     // Build rows
     const rows = [
-      [m.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, m.homeML, m.homeWin, 0],
-      [m.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, m.drawML, m.draw, 0],
-      [m.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, m.awayML, m.awayWin, 0],
-      [m.fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', m.total, m.overOdds, m.overProb, 0],
-      [m.fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', m.total, m.underOdds, m.underProb, 0],
+      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, m.homeML, m.homeWin, 0],
+      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, m.drawML, m.draw, 0],
+      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, m.awayML, m.awayWin, 0],
+      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', m.total, m.overOdds, m.overProb, 0],
+      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', m.total, m.underOdds, m.underProb, 0],
     ];
 
     const [ins] = await conn.query(
-      'INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
+      'INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
       [rows]
     );
     totalInserted += ins.affectedRows;
@@ -280,18 +280,18 @@ async function main() {
     for (const fix of DK_FIXES) {
       // Check if it already exists
       const [existing] = await conn.query(
-        'SELECT id FROM wc2026_odds_snapshots WHERE fixture_id=? AND book_id=68 AND market=? AND selection=? LIMIT 1',
-        [fix.fixtureId, fix.market, fix.selection]
+        'SELECT id FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=68 AND market=? AND selection=? LIMIT 1',
+        [fix.matchId, fix.market, fix.selection]
       );
       if (existing[0]) {
-        console.log(`[ModelSeed] [STATE] DK fix ${fix.fixtureId} ${fix.market}/${fix.selection} already exists — skipping`);
+        console.log(`[ModelSeed] [STATE] DK fix ${fix.matchId} ${fix.market}/${fix.selection} already exists — skipping`);
         continue;
       }
       const [ins] = await conn.query(
-        'INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?,?,68,?,?,?,?,?,0)',
-        [fix.fixtureId, snapshotTs, fix.market, fix.selection, fix.line, fix.americanOdds, fix.impliedProb]
+        'INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?,?,68,?,?,?,?,?,0)',
+        [fix.matchId, snapshotTs, fix.market, fix.selection, fix.line, fix.americanOdds, fix.impliedProb]
       );
-      console.log(`[ModelSeed] [OUTPUT] DK fix inserted: ${fix.fixtureId} ${fix.market}/${fix.selection}=${fix.americanOdds}`);
+      console.log(`[ModelSeed] [OUTPUT] DK fix inserted: ${fix.matchId} ${fix.market}/${fix.selection}=${fix.americanOdds}`);
     }
   }
 
@@ -300,12 +300,12 @@ async function main() {
   let verifyErrors = 0;
   for (const m of MODEL_DATA) {
     const [rows] = await conn.query(
-      'SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id=? AND book_id=?',
-      [m.fixtureId, MODEL_BOOK_ID]
+      'SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
+      [m.matchId, MODEL_BOOK_ID]
     );
     const cnt = rows[0].cnt;
     const pass = cnt === 5;
-    console.log(`[ModelSeed] [VERIFY] ${m.fixtureId}: ${cnt} model rows (expected 5) → ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
+    console.log(`[ModelSeed] [VERIFY] ${m.matchId}: ${cnt} model rows (expected 5) → ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
     if (!pass) verifyErrors++;
   }
 

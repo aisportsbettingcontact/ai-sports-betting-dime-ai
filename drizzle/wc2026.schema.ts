@@ -48,7 +48,7 @@ export const wc2026Venues = mysqlTable("wc2026_venues", {
 export const wc2026Fixtures = mysqlTable(
   "wc2026_fixtures",
   {
-    fixtureId: varchar("fixture_id", { length: 16 }).primaryKey(), // wc26-g-001..072
+    matchId: varchar("match_id", { length: 16 }).primaryKey(), // wc26-g-001..072
     matchDate: date("match_date").notNull(),       // local date; kickoff from odds/FIFA feed
     kickoffUtc: datetime("kickoff_utc"),           // populate from Action Network / FIFA
     stage: mysqlEnum("stage", ["GROUP", "R32", "R16", "QF", "SF", "THIRD", "FINAL"])
@@ -103,9 +103,9 @@ export const wc2026OddsSnapshots = mysqlTable(
   "wc2026_odds_snapshots",
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     snapshotTs: timestamp("snapshot_ts").notNull().default(sql`CURRENT_TIMESTAMP`),
     bookId: smallint("book_id").notNull(),
     market: mysqlEnum("market", ["1X2", "TOTAL", "ASIAN_HANDICAP", "BTTS", "DOUBLE_CHANCE"])
@@ -118,9 +118,9 @@ export const wc2026OddsSnapshots = mysqlTable(
     isClosing: boolean("is_closing").notNull().default(false),
   },
   (t) => [
-    index("idx_snap_fixture").on(t.fixtureId),
+    index("idx_snap_fixture").on(t.matchId),
     index("idx_snap_ts").on(t.snapshotTs),
-    index("idx_snap_closing").on(t.fixtureId, t.isClosing),
+    index("idx_snap_closing").on(t.matchId, t.isClosing),
   ],
 );
 
@@ -132,9 +132,9 @@ export const wc2026Lineups = mysqlTable(
   "wc2026_lineups",
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     teamId: varchar("team_id", { length: 8 })
       .notNull()
       .references(() => wc2026Teams.teamId),
@@ -147,7 +147,7 @@ export const wc2026Lineups = mysqlTable(
     jerseyNumber: tinyint("jersey_number"),
   },
   (t) => [
-    index("idx_lineup_fixture").on(t.fixtureId),
+    index("idx_lineup_fixture").on(t.matchId),
     index("idx_lineup_team").on(t.teamId),
   ],
 );
@@ -159,9 +159,9 @@ export type InsertWc2026Lineup = typeof wc2026Lineups.$inferInsert;
 export const wc2026MatchStats = mysqlTable(
   "wc2026_match_stats",
   {
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .primaryKey()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     ingestedAt: timestamp("ingested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     // Possession
     homePossessionPct: double("home_possession_pct"),
@@ -209,7 +209,7 @@ export const wc2026MatchStats = mysqlTable(
     awayBlockedShots: tinyint("away_blocked_shots"),
   },
   (t) => [
-    index("idx_ms_fixture").on(t.fixtureId),
+    index("idx_ms_fixture").on(t.matchId),
   ],
 );
 
@@ -221,9 +221,9 @@ export const wc2026MatchEvents = mysqlTable(
   "wc2026_match_events",
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     teamId: varchar("team_id", { length: 8 })
       .references(() => wc2026Teams.teamId),
     eventType: mysqlEnum("event_type", ["GOAL", "OWN_GOAL", "PENALTY", "YELLOW", "RED", "SUB", "VAR"])
@@ -235,7 +235,7 @@ export const wc2026MatchEvents = mysqlTable(
     isFirstHalf: boolean("is_first_half").notNull().default(true),
   },
   (t) => [
-    index("idx_me_fixture").on(t.fixtureId),
+    index("idx_me_fixture").on(t.matchId),
     index("idx_me_type").on(t.eventType),
   ],
 );
@@ -248,9 +248,9 @@ export const wc2026ModelProjections = mysqlTable(
   "wc2026_model_projections",
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     modelVersion: varchar("model_version", { length: 32 }).notNull(),
     nSimulations: int("n_simulations").notNull().default(1000000),
     homeTeam: varchar("home_team", { length: 64 }),
@@ -316,8 +316,8 @@ export const wc2026ModelProjections = mysqlTable(
     createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (t) => [
-    uniqueIndex("uq_mp_fixture").on(t.fixtureId),
-    index("idx_mp_fixture").on(t.fixtureId),
+    uniqueIndex("uq_mp_fixture").on(t.matchId),
+    index("idx_mp_fixture").on(t.matchId),
   ],
 );
 
@@ -329,15 +329,15 @@ export type SelectWc2026ModelProjection = typeof wc2026ModelProjections.$inferSe
 // Column layout mirrors the feed display order: Away top, Home bottom.
 // DC semantics: 1X = Away WD (Away or Draw), X2 = Home WD (Home or Draw),
 //               12 = No Draw (either team wins, no draw — single combined price).
-// Once a row exists for a fixture_id, the router serves these values and
+// Once a row exists for a match_id, the router serves these values and
 // never overwrites them unless explicitly instructed.
 export const wc2026FrozenBookOdds = mysqlTable(
   "wc2026_frozen_book_odds",
   {
     id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-    fixtureId: varchar("fixture_id", { length: 16 })
+    matchId: varchar("match_id", { length: 16 })
       .notNull()
-      .references(() => wc2026Fixtures.fixtureId),
+      .references(() => wc2026Fixtures.matchId),
     frozenAt: timestamp("frozen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     frozenBy: varchar("frozen_by", { length: 64 }).notNull().default("system"),
     // ── To Advance (Knockout) ─────────────────────────────────────────────────
@@ -386,8 +386,8 @@ export const wc2026FrozenBookOdds = mysqlTable(
     bookSource: varchar("book_source", { length: 32 }).notNull().default("bet365"),
   },
   (t) => [
-    uniqueIndex("uq_frozen_book_fixture").on(t.fixtureId),
-    index("idx_frozen_book_fixture").on(t.fixtureId),
+    uniqueIndex("uq_frozen_book_fixture").on(t.matchId),
+    index("idx_frozen_book_fixture").on(t.matchId),
   ],
 );
 
@@ -396,8 +396,8 @@ export type SelectWc2026FrozenBookOdds = typeof wc2026FrozenBookOdds.$inferSelec
 
 export const wc2026TeamsRelations = relations(wc2026Teams, ({ many }) => ({
   aliases: many(wc2026TeamAliases),
-  homeFixtures: many(wc2026Fixtures, { relationName: "home" }),
-  awayFixtures: many(wc2026Fixtures, { relationName: "away" }),
+  homeMatches: many(wc2026Fixtures, { relationName: "home" }),
+  awayMatches: many(wc2026Fixtures, { relationName: "away" }),
 }));
 
 export const wc2026FixturesRelations = relations(wc2026Fixtures, ({ one }) => ({
@@ -536,7 +536,7 @@ export const wc2026MatchOdds = mysqlTable(
     id:                bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
 
     // ── Identity ─────────────────────────────────────────────────────────────
-    fixtureId:         varchar("fixture_id", { length: 16 }).notNull(),
+    matchId:            varchar("match_id", { length: 16 }).notNull(),
     espnMatchId:       varchar("espn_match_id", { length: 64 }),
     espnSlug:          varchar("espn_slug", { length: 64 }),
 
@@ -617,8 +617,8 @@ export const wc2026MatchOdds = mysqlTable(
     modelBttsNo:  smallint("model_btts_no"),
   },
   (t) => [
-    uniqueIndex("uq_wc2026_match_odds_fixture").on(t.fixtureId),
-    index("idx_wc2026_match_odds_fixture").on(t.fixtureId),
+    uniqueIndex("uq_wc2026_match_odds_fixture").on(t.matchId),
+    index("idx_wc2026_match_odds_fixture").on(t.matchId),
   ],
 );
 

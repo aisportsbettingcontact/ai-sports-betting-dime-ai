@@ -107,24 +107,24 @@ const ph = june15Ids.map(() => '?').join(',');
 
 // Step 1: Show current state
 const [current] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 68
+  WHERE match_id IN (${ph}) AND book_id = 68
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 console.log('[STATE] Current DK odds in DB (to be replaced):');
 for (const o of current) {
-  console.log(`  ${o.fixture_id} ${o.market} ${o.selection}=${o.american_odds}${o.line ? ' line='+o.line : ''}`);
+  console.log(`  ${o.match_id} ${o.market} ${o.selection}=${o.american_odds}${o.line ? ' line='+o.line : ''}`);
 }
 
 // Step 2: Delete all DK odds for these fixtures
 const [del] = await c.execute(
-  `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${ph}) AND book_id = 68`,
+  `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 68`,
   june15Ids
 );
 console.log('[STATE] Deleted', del.affectedRows, 'rows');
@@ -153,43 +153,43 @@ for (const fid of june15Ids) {
 }
 
 await c.execute(
-  `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
+  `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
   rows.flat()
 );
 console.log('[STATE] Inserted', rows.length, 'rows');
 
 // Step 4: Verify
 const [verify] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 68
+  WHERE match_id IN (${ph}) AND book_id = 68
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 const byFix = {};
 for (const o of verify) {
-  if (!byFix[o.fixture_id]) byFix[o.fixture_id] = {};
-  byFix[o.fixture_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
+  if (!byFix[o.match_id]) byFix[o.match_id] = {};
+  byFix[o.match_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
 }
 
 // Get fixture names
 const [fixtures] = await c.execute(`
-  SELECT f.fixture_id, ht.fifa_code as homeCode, ht.name as homeName,
+  SELECT f.match_id, ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName,
          f.kickoff_utc
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE f.fixture_id IN (${ph})
+  WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
 `, june15Ids);
 
 const fxMap = {};
-for (const f of fixtures) fxMap[f.fixture_id] = f;
+for (const f of fixtures) fxMap[f.match_id] = f;
 
 const KICKOFF_ET = {
   'wc26-g-015': '12:00 PM ET',

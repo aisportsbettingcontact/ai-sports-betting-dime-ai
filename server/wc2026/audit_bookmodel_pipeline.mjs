@@ -78,25 +78,25 @@ async function main() {
 
   // ── Check actual scores in DB ─────────────────────────────────────────────
   const [dbScores] = await conn.query(`
-    SELECT f.fixture_id, f.home_score, f.away_score, f.status,
+    SELECT f.match_id, f.home_score, f.away_score, f.status,
            th.name as home_name, ta.name as away_name
     FROM wc2026_fixtures f
     JOIN wc2026_teams th ON f.home_team_id = th.team_id
     JOIN wc2026_teams ta ON f.away_team_id = ta.team_id
-    WHERE f.fixture_id IN (?)
+    WHERE f.match_id IN (?)
     ORDER BY f.match_date, f.kickoff_utc
   `, [ALL_FIDS]);
 
   log('INPUT', `DB returned ${dbScores.length} fixture rows`);
   let scoreErrors = 0;
   for (const row of dbScores) {
-    const expected = CORRECT_RESULTS[row.fixture_id];
+    const expected = CORRECT_RESULTS[row.match_id];
     const dbH = row.home_score;
     const dbA = row.away_score;
     const expH = expected.homeScore;
     const expA = expected.awayScore;
     const match = dbH === expH && dbA === expA;
-    const label = `${row.fixture_id} | ${row.home_name} ${dbH}-${dbA} ${row.away_name}`;
+    const label = `${row.match_id} | ${row.home_name} ${dbH}-${dbA} ${row.away_name}`;
     if (match) {
       pass(`Score OK: ${label} | Expected: ${expected.label}`);
     } else {
@@ -112,14 +112,14 @@ async function main() {
 
   const checkFids = [...ALL_FIDS, ...JUL1_FIDS];
   const [bookRows] = await conn.query(`
-    SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id IN (?)
+    SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (?)
   `, [checkFids]);
 
   log('INPUT', `frozen_book_odds rows: ${bookRows.length} for ${checkFids.length} fixtures`);
 
   let bookErrors = 0;
   for (const fid of checkFids) {
-    const row = bookRows.find(r => r.fixture_id === fid);
+    const row = bookRows.find(r => r.match_id === fid);
     if (!row) {
       fail(`NO BOOK ROW: ${fid}`);
       bookErrors++;
@@ -152,8 +152,8 @@ async function main() {
 
   const [modelRows] = await conn.query(`
     SELECT * FROM wc2026_model_projections
-    WHERE fixture_id IN (?)
-    ORDER BY fixture_id, modeled_at DESC
+    WHERE match_id IN (?)
+    ORDER BY match_id, modeled_at DESC
   `, [checkFids]);
 
   log('INPUT', `model_projections rows: ${modelRows.length} for ${checkFids.length} fixtures`);
@@ -161,7 +161,7 @@ async function main() {
   let modelErrors = 0;
   const seenFids = new Set();
   for (const row of modelRows) {
-    const fid = row.fixture_id;
+    const fid = row.match_id;
     if (seenFids.has(fid)) continue; // only check latest
     seenFids.add(fid);
 
@@ -194,7 +194,7 @@ async function main() {
   const espnIds = dbScores.map(r => r.espn_event_id ?? null).filter(Boolean);
   // Get ESPN IDs from fixtures
   const [fixtureEspn] = await conn.query(`
-    SELECT fixture_id, espn_event_id FROM wc2026_fixtures WHERE fixture_id IN (?)
+    SELECT match_id, espn_event_id FROM wc2026_fixtures WHERE match_id IN (?)
   `, [ALL_FIDS]);
 
   const espnIdList = fixtureEspn.map(r => r.espn_event_id).filter(Boolean);
@@ -208,7 +208,7 @@ async function main() {
 
     log('STATE', `ESPN match rows: ${espnMatches.length}`);
     const fidByEspn = {};
-    fixtureEspn.forEach(r => { fidByEspn[r.espn_event_id] = r.fixture_id; });
+    fixtureEspn.forEach(r => { fidByEspn[r.espn_event_id] = r.match_id; });
 
     for (const em of espnMatches) {
       const fid = fidByEspn[em.matchId];

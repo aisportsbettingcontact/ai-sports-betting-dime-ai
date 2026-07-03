@@ -123,7 +123,7 @@ export interface EspnIngestionResult {
 }
 
 interface MatchSummary {
-  fixtureId: string;
+  matchId: string;
   homeTeam: string;
   awayTeam: string;
   score: string;
@@ -361,7 +361,7 @@ export async function ingestWc2026EspnResults(options: {
     // Without this flag, COD (DB home) gets Colombia's score and COL (DB away) gets DR Congo's score
     let isSwapped = false;
     const fixtureRows = await db
-      .select({ fixtureId: wc2026Fixtures.fixtureId, status: wc2026Fixtures.status })
+      .select({ matchId: wc2026Fixtures.matchId, status: wc2026Fixtures.status })
       .from(wc2026Fixtures)
       .where(
         and(
@@ -374,7 +374,7 @@ export async function ingestWc2026EspnResults(options: {
     if (fixtureRows.length === 0) {
       // Try swapped (some feeds have home/away orientation reversed)
       const swappedRows = await db
-        .select({ fixtureId: wc2026Fixtures.fixtureId, status: wc2026Fixtures.status })
+        .select({ matchId: wc2026Fixtures.matchId, status: wc2026Fixtures.status })
         .from(wc2026Fixtures)
         .where(
           and(
@@ -403,13 +403,13 @@ export async function ingestWc2026EspnResults(options: {
     }
 
     const fixture = fixtureRows[0] ?? (await db
-      .select({ fixtureId: wc2026Fixtures.fixtureId, status: wc2026Fixtures.status })
+      .select({ matchId: wc2026Fixtures.matchId, status: wc2026Fixtures.status })
       .from(wc2026Fixtures)
       .where(and(eq(wc2026Fixtures.homeTeamId, awayTeamId), eq(wc2026Fixtures.awayTeamId, homeTeamId)))
       .limit(1)
     )[0];
 
-    const fixtureId = fixture.fixtureId;
+    const matchId = fixture.matchId;
 
     // [FIX] Apply swap: if ESPN orientation is reversed vs DB, invert scores so DB home team gets correct score
     // isSwapped=false: ESPN home=DB home → dbHomeScore=homeScore, dbAwayScore=awayScore (no change)
@@ -420,11 +420,11 @@ export async function ingestWc2026EspnResults(options: {
       `[WC2026ESPN] [STATE] Score orientation resolved: isSwapped=${isSwapped}` +
       ` | ESPN: ${homeTeamName}(${homeScore}) vs ${awayTeamName}(${awayScore})` +
       ` | DB write: homeScore=${dbHomeScore} awayScore=${dbAwayScore}` +
-      ` | [VERIFY] fixtureId=${fixtureId}`
+      ` | [VERIFY] matchId=${matchId}`
     );
 
     if (fixture.status === "FT" && !forceReingest) {
-      console.log(`[WC2026ESPN] [STEP] Skipping fixture ${fixtureId} — already FT and forceReingest=false`);
+      console.log(`[WC2026ESPN] [STEP] Skipping fixture ${matchId} — already FT and forceReingest=false`);
       continue;
     }
 
@@ -434,7 +434,7 @@ export async function ingestWc2026EspnResults(options: {
       const kickoffStr = (event.competitions?.[0] as any)?.date ?? null;
       const kickoffUtc = kickoffStr ? new Date(kickoffStr) : null;
       console.log(
-        `[WC2026ESPN] [STATE] LIVE upsert fixture ${fixtureId}:` +
+        `[WC2026ESPN] [STATE] LIVE upsert fixture ${matchId}:` +
         ` dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore} status=LIVE espnEventId=${eventId}` +
         ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
       );
@@ -447,10 +447,10 @@ export async function ingestWc2026EspnResults(options: {
           espnEventId: eventId,
           ...(kickoffUtc ? { kickoffUtc } : {}),
         })
-        .where(eq(wc2026Fixtures.fixtureId, fixtureId));
+        .where(eq(wc2026Fixtures.matchId, matchId));
       result.fixturesUpdated++;
       result.matchSummaries.push({
-        fixtureId,
+        matchId,
         homeTeam: homeTeamName,
         awayTeam: awayTeamName,
         score: `${dbHomeScore}-${dbAwayScore}`,
@@ -459,14 +459,14 @@ export async function ingestWc2026EspnResults(options: {
         awayXg: 0,
       });
       console.log(
-        `[WC2026ESPN] [OUTPUT] LIVE fixture ${fixtureId} score updated ✅` +
+        `[WC2026ESPN] [OUTPUT] LIVE fixture ${matchId} score updated ✅` +
         ` | DB: homeScore=${dbHomeScore} awayScore=${dbAwayScore}` +
         ` | [VERIFY] PASS — Colombia(away)=${dbAwayScore} DR Congo(home)=${dbHomeScore}`
       );
       continue;
     }
 
-    console.log(`[WC2026ESPN] [STEP] Processing fixture ${fixtureId} — fetching full summary (FT)`);
+    console.log(`[WC2026ESPN] [STEP] Processing fixture ${matchId} — fetching full summary (FT)`);
 
     // Step 3: Fetch full event summary
     let summary: any;
@@ -512,7 +512,7 @@ export async function ingestWc2026EspnResults(options: {
     // [FIX] fixtureStatus is always 'FT' at this point (LIVE was handled above via continue)
     // [FIX] Uses dbHomeScore/dbAwayScore (swap-corrected) NOT raw homeScore/awayScore
     console.log(
-      `[WC2026ESPN] [STATE] Upserting fixture ${fixtureId}: dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore}` +
+      `[WC2026ESPN] [STATE] Upserting fixture ${matchId}: dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore}` +
       ` status=${fixtureStatus} espnEventId=${eventId}` +
       ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
     );
@@ -526,17 +526,17 @@ export async function ingestWc2026EspnResults(options: {
         attendance,
         ...(kickoffUtc ? { kickoffUtc } : {}),
       })
-      .where(eq(wc2026Fixtures.fixtureId, fixtureId));
+      .where(eq(wc2026Fixtures.matchId, matchId));
     result.fixturesUpdated++;
     console.log(
-      `[WC2026ESPN] [OUTPUT] FT fixture ${fixtureId} fully ingested ✅` +
+      `[WC2026ESPN] [OUTPUT] FT fixture ${matchId} fully ingested ✅` +
       ` | DB: homeScore=${dbHomeScore} awayScore=${dbAwayScore}` +
       ` | [VERIFY] PASS — isSwapped=${isSwapped}`
     );
 
     // Step 6: Upsert wc2026_match_stats
     const matchStatsRow: InsertWc2026MatchStats = {
-      fixtureId,
+      matchId,
       homePossessionPct: statsMap["home_possessionPct"],
       awayPossessionPct: statsMap["away_possessionPct"],
       homeTotalShots: statsMap["home_totalShots"] as number | null,
@@ -576,7 +576,7 @@ export async function ingestWc2026EspnResults(options: {
       .values(matchStatsRow)
       .onDuplicateKeyUpdate({ set: matchStatsRow });
     result.statsWritten++;
-    console.log(`[WC2026ESPN] [OUTPUT] Match stats upserted for ${fixtureId} ✅`);
+    console.log(`[WC2026ESPN] [OUTPUT] Match stats upserted for ${matchId} ✅`);
 
     // Step 7: Ingest match events (goals, cards, subs)
     const keyEvents: any[] = summary.keyEvents ?? [];
@@ -584,7 +584,7 @@ export async function ingestWc2026EspnResults(options: {
     const detailsToProcess = keyEvents.length > 0 ? keyEvents : allDetails;
 
     // Delete existing events for this fixture before reinserting
-    await db.delete(wc2026MatchEvents).where(eq(wc2026MatchEvents.fixtureId, fixtureId));
+    await db.delete(wc2026MatchEvents).where(eq(wc2026MatchEvents.matchId, matchId));
 
     let eventsInserted = 0;
     for (const detail of detailsToProcess) {
@@ -621,7 +621,7 @@ export async function ingestWc2026EspnResults(options: {
         : null;
 
       const eventRow: InsertWc2026MatchEvent = {
-        fixtureId,
+        matchId,
         teamId: eventTeamId,
         eventType,
         playerName,
@@ -636,7 +636,7 @@ export async function ingestWc2026EspnResults(options: {
     }
 
     result.eventsWritten += eventsInserted;
-    console.log(`[WC2026ESPN] [OUTPUT] ${eventsInserted} match events inserted for ${fixtureId} ✅`);
+    console.log(`[WC2026ESPN] [OUTPUT] ${eventsInserted} match events inserted for ${matchId} ✅`);
 
     // Step 8: Ingest confirmed lineups from ESPN rosters
     const rosters: EspnRoster[] = summary.rosters ?? [];
@@ -645,7 +645,7 @@ export async function ingestWc2026EspnResults(options: {
       // Delete existing lineups for this fixture (replace with confirmed ESPN data)
       await (db as any).delete(wc2026Lineups).where(
         and(
-          eq(wc2026Lineups.fixtureId, fixtureId),
+          eq(wc2026Lineups.matchId, matchId),
           eq(wc2026Lineups.isConfirmed, false)
         )
       );
@@ -662,7 +662,7 @@ export async function ingestWc2026EspnResults(options: {
           if (!isStarter && !isSubIn) continue; // skip unused subs
 
           const lineupRow: InsertWc2026Lineup = {
-            fixtureId,
+            matchId,
             teamId: rosterTeamId,
             isConfirmed: true,
             playerName: player.athlete?.displayName ?? "Unknown",
@@ -680,12 +680,12 @@ export async function ingestWc2026EspnResults(options: {
       }
 
       result.lineupsWritten += lineupsInserted;
-      console.log(`[WC2026ESPN] [OUTPUT] ${lineupsInserted} lineup rows upserted for ${fixtureId} ✅`);
+      console.log(`[WC2026ESPN] [OUTPUT] ${lineupsInserted} lineup rows upserted for ${matchId} ✅`);
     }
 
     // Add to match summaries
     result.matchSummaries.push({
-      fixtureId,
+      matchId,
       homeTeam: homeTeamName,
       awayTeam: awayTeamName,
       score: `${awayScore}-${homeScore}`,
@@ -695,7 +695,7 @@ export async function ingestWc2026EspnResults(options: {
       attendance: attendance ?? undefined,
     });
 
-    console.log(`[WC2026ESPN] [VERIFY] PASS — fixture ${fixtureId} fully ingested: score=${awayScore}-${homeScore} xG=${awayXg}-${homeXg} events=${eventsInserted} lineups=${result.lineupsWritten}`);
+    console.log(`[WC2026ESPN] [VERIFY] PASS — fixture ${matchId} fully ingested: score=${awayScore}-${homeScore} xG=${awayXg}-${homeXg} events=${eventsInserted} lineups=${result.lineupsWritten}`);
   }
 
   const overallPass = result.errors.length === 0;

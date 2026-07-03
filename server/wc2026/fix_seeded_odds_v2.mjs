@@ -169,7 +169,7 @@ for (const c of CORRECTIONS) {
       book_no_draw_away_odds = ?,
       to_advance_home_odds   = ?,
       to_advance_away_odds   = ?
-    WHERE fixture_id = ?
+    WHERE match_id = ?
   `, [
     c.homeML, c.drawML, c.awayML,
     c.spreadLine, c.homeSpreadOdds, c.awaySpreadOdds,
@@ -205,7 +205,7 @@ console.log(`\n[OUTPUT] Updated: ${totalUpdated}/12 | Errors: ${totalErrors}`);
 console.log('\n[VERIFY] Re-reading all 12 rows for full validation...\n');
 const fids = CORRECTIONS.map(c => c.fid);
 const [rows] = await conn.query(`
-  SELECT fixture_id,
+  SELECT match_id,
     book_home_ml, book_draw_ml, book_away_ml,
     book_spread_line, book_home_spread_odds, book_away_spread_odds,
     book_total_line, book_over_odds, book_under_odds,
@@ -214,15 +214,15 @@ const [rows] = await conn.query(`
     book_no_draw_home_odds, book_no_draw_away_odds,
     to_advance_home_odds, to_advance_away_odds
   FROM wc2026_frozen_book_odds
-  WHERE fixture_id IN (?)
-  ORDER BY fixture_id
+  WHERE match_id IN (?)
+  ORDER BY match_id
 `, [fids]);
 
 const corrMap = Object.fromEntries(CORRECTIONS.map(c => [c.fid, c]));
 let verifyErrors = 0;
 
 for (const row of rows) {
-  const c = corrMap[row.fixture_id];
+  const c = corrMap[row.match_id];
   const checks = [
     ['book_home_ml',           row.book_home_ml,           c.homeML],
     ['book_draw_ml',           row.book_draw_ml,            c.drawML],
@@ -251,9 +251,9 @@ for (const row of rows) {
   }
 
   if (rowErrors === 0) {
-    console.log(`[VERIFY] ✅ ${row.fixture_id}: ALL ${checks.length} VALUES CORRECT`);
+    console.log(`[VERIFY] ✅ ${row.match_id}: ALL ${checks.length} VALUES CORRECT`);
   } else {
-    console.log(`[VERIFY] ❌ ${row.fixture_id}: ${rowErrors} ERRORS`);
+    console.log(`[VERIFY] ❌ ${row.match_id}: ${rowErrors} ERRORS`);
     errLines.forEach(e => console.log(e));
   }
 }

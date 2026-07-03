@@ -86,23 +86,23 @@ function flushLog() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FIXTURE MANIFEST — 10 R32 MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
-// Columns: fixtureId, homeTeamAbbrev, awayTeamAbbrev
+// Columns: matchId, homeTeamAbbrev, awayTeamAbbrev
 // These are the HOME/AWAY designations from wc2026_model_projections
 // Used to verify orientation before writing
 const FIXTURE_MANIFEST = [
-  { fixtureId: "wc26-r32-073", homeAbbrev: "RSA", awayAbbrev: "CAN"         },
-  { fixtureId: "wc26-r32-074", homeAbbrev: "Brazil", awayAbbrev: "Japan"     },
-  { fixtureId: "wc26-r32-075", homeAbbrev: "Germany", awayAbbrev: "Paraguay" },
-  { fixtureId: "wc26-r32-076", homeAbbrev: "Netherlands", awayAbbrev: "Morocco" },
-  { fixtureId: "wc26-r32-077", homeAbbrev: "CIV", awayAbbrev: "NOR"         },
-  { fixtureId: "wc26-r32-078", homeAbbrev: "FRA", awayAbbrev: "SWE"         },
-  { fixtureId: "wc26-r32-079", homeAbbrev: "MEX", awayAbbrev: "ECU"         },
-  { fixtureId: "wc26-r32-080", homeAbbrev: "England", awayAbbrev: "Congo DR" },
-  { fixtureId: "wc26-r32-081", homeAbbrev: "Belgium", awayAbbrev: "Senegal"  },
-  { fixtureId: "wc26-r32-082", homeAbbrev: "USA", awayAbbrev: "Bosnia-Herz" },
+  { matchId: "wc26-r32-073", homeAbbrev: "RSA", awayAbbrev: "CAN"         },
+  { matchId: "wc26-r32-074", homeAbbrev: "Brazil", awayAbbrev: "Japan"     },
+  { matchId: "wc26-r32-075", homeAbbrev: "Germany", awayAbbrev: "Paraguay" },
+  { matchId: "wc26-r32-076", homeAbbrev: "Netherlands", awayAbbrev: "Morocco" },
+  { matchId: "wc26-r32-077", homeAbbrev: "CIV", awayAbbrev: "NOR"         },
+  { matchId: "wc26-r32-078", homeAbbrev: "FRA", awayAbbrev: "SWE"         },
+  { matchId: "wc26-r32-079", homeAbbrev: "MEX", awayAbbrev: "ECU"         },
+  { matchId: "wc26-r32-080", homeAbbrev: "England", awayAbbrev: "Congo DR" },
+  { matchId: "wc26-r32-081", homeAbbrev: "Belgium", awayAbbrev: "Senegal"  },
+  { matchId: "wc26-r32-082", homeAbbrev: "USA", awayAbbrev: "Bosnia-Herz" },
 ];
 
-const FIXTURE_IDS = FIXTURE_MANIFEST.map(f => f.fixtureId);
+const FIXTURE_IDS = FIXTURE_MANIFEST.map(f => f.matchId);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FIELD MAPPING: source column → target column
@@ -147,18 +147,18 @@ async function main() {
 
   const placeholders = FIXTURE_IDS.map(() => "?").join(",");
   const [existingRows] = await conn.execute(
-    `SELECT fixture_id, home_team, away_team FROM wc2026MatchOdds WHERE fixture_id IN (${placeholders})`,
+    `SELECT match_id, home_team, away_team FROM wc2026MatchOdds WHERE match_id IN (${placeholders})`,
     FIXTURE_IDS
   );
-  const existingMap = Object.fromEntries(existingRows.map(r => [r.fixture_id, r]));
+  const existingMap = Object.fromEntries(existingRows.map(r => [r.match_id, r]));
 
   let preflight_pass = true;
-  for (const { fixtureId } of FIXTURE_MANIFEST) {
-    if (existingMap[fixtureId]) {
-      log("PASS", "PREFLIGHT", `${fixtureId} EXISTS in wc2026MatchOdds`,
-        `home_team_id=${existingMap[fixtureId].home_team} away_team_id=${existingMap[fixtureId].away_team}`);
+  for (const { matchId } of FIXTURE_MANIFEST) {
+    if (existingMap[matchId]) {
+      log("PASS", "PREFLIGHT", `${matchId} EXISTS in wc2026MatchOdds`,
+        `home_team_id=${existingMap[matchId].home_team} away_team_id=${existingMap[matchId].away_team}`);
     } else {
-      log("FAIL", "PREFLIGHT", `${fixtureId} MISSING from wc2026MatchOdds — ABORT`);
+      log("FAIL", "PREFLIGHT", `${matchId} MISSING from wc2026MatchOdds — ABORT`);
       preflight_pass = false;
     }
   }
@@ -176,7 +176,7 @@ async function main() {
   log("SECTION", "PHASE2", "SOURCE PULL: Reading frozen model projections from wc2026_model_projections");
 
   const [srcRows] = await conn.execute(
-    `SELECT fixture_id, model_version, home_team, away_team,
+    `SELECT match_id, model_version, home_team, away_team,
             home_lambda, away_lambda,
             proj_home_score, proj_away_score,
             model_home_ml, model_draw_ml, model_away_ml,
@@ -187,34 +187,34 @@ async function main() {
             btts_yes_odds, btts_no_odds,
             is_frozen
      FROM wc2026_model_projections
-     WHERE fixture_id IN (${placeholders}) AND is_frozen = 1
-     ORDER BY fixture_id`,
+     WHERE match_id IN (${placeholders}) AND is_frozen = 1
+     ORDER BY match_id`,
     FIXTURE_IDS
   );
 
-  const srcMap = Object.fromEntries(srcRows.map(r => [r.fixture_id, r]));
+  const srcMap = Object.fromEntries(srcRows.map(r => [r.match_id, r]));
 
   log("STATE", "SOURCE", `Rows returned from wc2026_model_projections: ${srcRows.length}`);
 
   let source_pass = true;
-  for (const { fixtureId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
+  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
     if (!src) {
-      log("FAIL", "SOURCE", `${fixtureId} — NO frozen model projection row found`);
+      log("FAIL", "SOURCE", `${matchId} — NO frozen model projection row found`);
       source_pass = false;
       continue;
     }
-    log("DATA", "SOURCE", `${fixtureId} | model_version=${src.model_version} | home=${src.home_team} away=${src.away_team} | is_frozen=${src.is_frozen}`);
+    log("DATA", "SOURCE", `${matchId} | model_version=${src.model_version} | home=${src.home_team} away=${src.away_team} | is_frozen=${src.is_frozen}`);
 
     // Log all source values
-    log("DATA", "SOURCE", `${fixtureId} | λH=${src.home_lambda} λA=${src.away_lambda}`);
-    log("DATA", "SOURCE", `${fixtureId} | projH=${src.proj_home_score} projA=${src.proj_away_score}`);
-    log("DATA", "SOURCE", `${fixtureId} | modelHML=${src.model_home_ml} modelDraw=${src.model_draw_ml} modelAML=${src.model_away_ml}`);
-    log("DATA", "SOURCE", `${fixtureId} | spread=${src.model_spread} total=${src.model_total}`);
-    log("DATA", "SOURCE", `${fixtureId} | hSprdOdds=${src.home_spread_odds} aSprdOdds=${src.away_spread_odds}`);
-    log("DATA", "SOURCE", `${fixtureId} | overOdds=${src.over_odds} underOdds=${src.under_odds}`);
-    log("DATA", "SOURCE", `${fixtureId} | dc1X=${src.dc_1x_odds} dcX2=${src.dc_x2_odds}`);
-    log("DATA", "SOURCE", `${fixtureId} | bttsY=${src.btts_yes_odds} bttsN=${src.btts_no_odds}`);
+    log("DATA", "SOURCE", `${matchId} | λH=${src.home_lambda} λA=${src.away_lambda}`);
+    log("DATA", "SOURCE", `${matchId} | projH=${src.proj_home_score} projA=${src.proj_away_score}`);
+    log("DATA", "SOURCE", `${matchId} | modelHML=${src.model_home_ml} modelDraw=${src.model_draw_ml} modelAML=${src.model_away_ml}`);
+    log("DATA", "SOURCE", `${matchId} | spread=${src.model_spread} total=${src.model_total}`);
+    log("DATA", "SOURCE", `${matchId} | hSprdOdds=${src.home_spread_odds} aSprdOdds=${src.away_spread_odds}`);
+    log("DATA", "SOURCE", `${matchId} | overOdds=${src.over_odds} underOdds=${src.under_odds}`);
+    log("DATA", "SOURCE", `${matchId} | dc1X=${src.dc_1x_odds} dcX2=${src.dc_x2_odds}`);
+    log("DATA", "SOURCE", `${matchId} | bttsY=${src.btts_yes_odds} bttsN=${src.btts_no_odds}`);
   }
 
   if (!source_pass) {
@@ -230,18 +230,18 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────
   log("SECTION", "PHASE3", "ORIENTATION CHECK: Verifying home/away team alignment per fixture");
 
-  for (const { fixtureId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
+  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
     if (!src) continue;
 
     const srcHomeMatch = src.home_team === homeAbbrev;
     const srcAwayMatch = src.away_team === awayAbbrev;
 
     if (srcHomeMatch && srcAwayMatch) {
-      log("PASS", "ORIENT", `${fixtureId} | HOME=${src.home_team} ✓ | AWAY=${src.away_team} ✓`);
+      log("PASS", "ORIENT", `${matchId} | HOME=${src.home_team} ✓ | AWAY=${src.away_team} ✓`);
     } else {
       log("WARN", "ORIENT",
-        `${fixtureId} | HOME: expected=${homeAbbrev} got=${src.home_team} | AWAY: expected=${awayAbbrev} got=${src.away_team}`,
+        `${matchId} | HOME: expected=${homeAbbrev} got=${src.home_team} | AWAY: expected=${awayAbbrev} got=${src.away_team}`,
         "Proceeding with DB values — home values → home columns, away values → away columns"
       );
     }
@@ -254,11 +254,11 @@ async function main() {
 
   const writeResults = {};
 
-  for (const { fixtureId } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
+  for (const { matchId } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
     if (!src) {
-      log("FAIL", "WRITE", `${fixtureId} — skipping (no source row)`);
-      writeResults[fixtureId] = { status: "SKIPPED", fieldsWritten: 0 };
+      log("FAIL", "WRITE", `${matchId} — skipping (no source row)`);
+      writeResults[matchId] = { status: "SKIPPED", fieldsWritten: 0 };
       continue;
     }
 
@@ -284,26 +284,26 @@ async function main() {
     };
 
     // Log every field being written
-    log("STEP", "WRITE", `${fixtureId} — Building UPDATE payload (${Object.keys(payload).length} fields):`);
+    log("STEP", "WRITE", `${matchId} — Building UPDATE payload (${Object.keys(payload).length} fields):`);
     for (const [col, val] of Object.entries(payload)) {
-      log("CALC", "PAYLOAD", `  ${fixtureId}.${col} = ${val === null ? "NULL" : val}`);
+      log("CALC", "PAYLOAD", `  ${matchId}.${col} = ${val === null ? "NULL" : val}`);
     }
 
     // Build SET clause
     const setClauses = Object.keys(payload).map(col => `${col} = ?`).join(", ");
-    const values = [...Object.values(payload), fixtureId];
+    const values = [...Object.values(payload), matchId];
 
     const [result] = await conn.execute(
-      `UPDATE wc2026MatchOdds SET ${setClauses} WHERE fixture_id = ?`,
+      `UPDATE wc2026MatchOdds SET ${setClauses} WHERE match_id = ?`,
       values
     );
 
     if (result.affectedRows === 1) {
-      log("PASS", "WRITE", `${fixtureId} — UPDATE succeeded (affectedRows=1, changedRows=${result.changedRows})`);
-      writeResults[fixtureId] = { status: "OK", fieldsWritten: Object.keys(payload).length };
+      log("PASS", "WRITE", `${matchId} — UPDATE succeeded (affectedRows=1, changedRows=${result.changedRows})`);
+      writeResults[matchId] = { status: "OK", fieldsWritten: Object.keys(payload).length };
     } else {
-      log("FAIL", "WRITE", `${fixtureId} — UPDATE failed (affectedRows=${result.affectedRows})`);
-      writeResults[fixtureId] = { status: "FAIL", fieldsWritten: 0 };
+      log("FAIL", "WRITE", `${matchId} — UPDATE failed (affectedRows=${result.affectedRows})`);
+      writeResults[matchId] = { status: "FAIL", fieldsWritten: 0 };
     }
   }
 
@@ -313,7 +313,7 @@ async function main() {
   log("SECTION", "PHASE5", "READ-BACK VERIFICATION: Comparing every written field to source values");
 
   const [verifyRows] = await conn.execute(
-    `SELECT fixture_id,
+    `SELECT match_id,
             lamba_away, lamba_home,
             model_projected_away_goals, model_projected_home_goals,
             model_away_ml, model_home_ml, model_draw,
@@ -323,12 +323,12 @@ async function main() {
             model_away_wd, model_home_wd,
             model_btts_yes, model_btts_no
      FROM wc2026MatchOdds
-     WHERE fixture_id IN (${placeholders})
-     ORDER BY fixture_id`,
+     WHERE match_id IN (${placeholders})
+     ORDER BY match_id`,
     FIXTURE_IDS
   );
 
-  const verifyMap = Object.fromEntries(verifyRows.map(r => [r.fixture_id, r]));
+  const verifyMap = Object.fromEntries(verifyRows.map(r => [r.match_id, r]));
 
   // Field-by-field comparison map: tgtField → srcField
   const compareMap = {
@@ -357,17 +357,17 @@ async function main() {
   let totalFieldFail = 0;
   let totalFieldNull = 0;
 
-  for (const { fixtureId } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
-    const tgt = verifyMap[fixtureId];
-    auditResults[fixtureId] = { pass: 0, fail: 0, null_src: 0, fields: {} };
+  for (const { matchId } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
+    const tgt = verifyMap[matchId];
+    auditResults[matchId] = { pass: 0, fail: 0, null_src: 0, fields: {} };
 
     if (!src || !tgt) {
-      log("FAIL", "READBACK", `${fixtureId} — missing source or target row`);
+      log("FAIL", "READBACK", `${matchId} — missing source or target row`);
       continue;
     }
 
-    log("AUDIT", "READBACK", `${fixtureId} — Verifying ${Object.keys(compareMap).length} fields:`);
+    log("AUDIT", "READBACK", `${matchId} — Verifying ${Object.keys(compareMap).length} fields:`);
 
     for (const [tgtField, srcField] of Object.entries(compareMap)) {
       totalFieldChecks++;
@@ -379,14 +379,14 @@ async function main() {
         const ok = tgtVal === null;
         totalFieldNull++;
         if (ok) {
-          log("PASS", "FIELD", `  ${fixtureId}.${tgtField} = NULL (source NULL → correctly stored NULL)`);
-          auditResults[fixtureId].pass++;
-          auditResults[fixtureId].fields[tgtField] = "NULL_OK";
+          log("PASS", "FIELD", `  ${matchId}.${tgtField} = NULL (source NULL → correctly stored NULL)`);
+          auditResults[matchId].pass++;
+          auditResults[matchId].fields[tgtField] = "NULL_OK";
           totalFieldPass++;
         } else {
-          log("FAIL", "FIELD", `  ${fixtureId}.${tgtField} MISMATCH: src=NULL but tgt=${tgtVal}`);
-          auditResults[fixtureId].fail++;
-          auditResults[fixtureId].fields[tgtField] = `MISMATCH src=NULL tgt=${tgtVal}`;
+          log("FAIL", "FIELD", `  ${matchId}.${tgtField} MISMATCH: src=NULL but tgt=${tgtVal}`);
+          auditResults[matchId].fail++;
+          auditResults[matchId].fields[tgtField] = `MISMATCH src=NULL tgt=${tgtVal}`;
           totalFieldFail++;
         }
         continue;
@@ -400,21 +400,21 @@ async function main() {
       const ok = Math.abs(srcNum - tgtNum) <= tolerance;
 
       if (ok) {
-        log("PASS", "FIELD", `  ${fixtureId}.${tgtField} = ${tgtNum} ✓ (src=${srcNum})`);
-        auditResults[fixtureId].pass++;
-        auditResults[fixtureId].fields[tgtField] = `OK: ${tgtNum}`;
+        log("PASS", "FIELD", `  ${matchId}.${tgtField} = ${tgtNum} ✓ (src=${srcNum})`);
+        auditResults[matchId].pass++;
+        auditResults[matchId].fields[tgtField] = `OK: ${tgtNum}`;
         totalFieldPass++;
       } else {
-        log("FAIL", "FIELD", `  ${fixtureId}.${tgtField} MISMATCH: src=${srcNum} tgt=${tgtNum}`);
-        auditResults[fixtureId].fail++;
-        auditResults[fixtureId].fields[tgtField] = `MISMATCH src=${srcNum} tgt=${tgtNum}`;
+        log("FAIL", "FIELD", `  ${matchId}.${tgtField} MISMATCH: src=${srcNum} tgt=${tgtNum}`);
+        auditResults[matchId].fail++;
+        auditResults[matchId].fields[tgtField] = `MISMATCH src=${srcNum} tgt=${tgtNum}`;
         totalFieldFail++;
       }
     }
 
-    const fixtureOk = auditResults[fixtureId].fail === 0;
+    const fixtureOk = auditResults[matchId].fail === 0;
     log(fixtureOk ? "PASS" : "FAIL", "FIXTURE",
-      `${fixtureId} — ${auditResults[fixtureId].pass}/${Object.keys(compareMap).length} fields PASS, ${auditResults[fixtureId].fail} FAIL`
+      `${matchId} — ${auditResults[matchId].pass}/${Object.keys(compareMap).length} fields PASS, ${auditResults[matchId].fail} FAIL`
     );
   }
 
@@ -428,22 +428,22 @@ async function main() {
   log("OUTPUT", "SUMMARY", `Overall PASS rate: ${((totalFieldPass / totalFieldChecks) * 100).toFixed(2)}%`);
 
   log("SECTION", "REPORT", "Per-Fixture Summary:");
-  for (const { fixtureId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
-    const ar = auditResults[fixtureId];
+  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
+    const ar = auditResults[matchId];
     const status = ar && ar.fail === 0 ? "✅ PASS" : "❌ FAIL";
     const version = src ? src.model_version : "N/A";
     log("OUTPUT", "FIXTURE",
-      `${status} | ${fixtureId} | ${homeAbbrev} (H) vs ${awayAbbrev} (A) | model=${version} | fields=${ar ? ar.pass : 0}/${Object.keys(compareMap).length}`
+      `${status} | ${matchId} | ${homeAbbrev} (H) vs ${awayAbbrev} (A) | model=${version} | fields=${ar ? ar.pass : 0}/${Object.keys(compareMap).length}`
     );
   }
 
   log("SECTION", "REPORT", "Per-Fixture Data Snapshot (source → stored):");
-  for (const { fixtureId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
-    const src = srcMap[fixtureId];
-    const tgt = verifyMap[fixtureId];
+  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+    const src = srcMap[matchId];
+    const tgt = verifyMap[matchId];
     if (!src || !tgt) continue;
-    log("DATA", "SNAPSHOT", `${fixtureId} | ${homeAbbrev} vs ${awayAbbrev}`);
+    log("DATA", "SNAPSHOT", `${matchId} | ${homeAbbrev} vs ${awayAbbrev}`);
     log("DATA", "SNAPSHOT", `  λH: ${src.home_lambda} → ${tgt.lamba_home} | λA: ${src.away_lambda} → ${tgt.lamba_away}`);
     log("DATA", "SNAPSHOT", `  projH: ${src.proj_home_score} → ${tgt.model_projected_home_goals} | projA: ${src.proj_away_score} → ${tgt.model_projected_away_goals}`);
     log("DATA", "SNAPSHOT", `  ML: H=${src.model_home_ml}→${tgt.model_home_ml} D=${src.model_draw_ml}→${tgt.model_draw} A=${src.model_away_ml}→${tgt.model_away_ml}`);

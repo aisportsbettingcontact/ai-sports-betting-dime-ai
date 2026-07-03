@@ -108,7 +108,7 @@ const FIXTURE_IDS = ["wc26-r32-077", "wc26-r32-078", "wc26-r32-079"];
 const BOOK_ROWS: Record<string, any> = {
   // ── wc26-r32-077: IVORY COAST (H) vs NORWAY (A) ──────────────────────────
   "wc26-r32-077": {
-    fixtureId:           "wc26-r32-077",
+    matchId:           "wc26-r32-077",
     // 1X2 Moneylines
     bookHomeMl:          255,   // Ivory Coast ML: +255
     bookDrawMl:          115,   // Draw: +115
@@ -157,7 +157,7 @@ const BOOK_ROWS: Record<string, any> = {
   //   BTTS YES: −135 → bookBttsYesOdds = -135
   //   BTTS NO: +105 → bookBttsNoOdds = +105
   "wc26-r32-078": {
-    fixtureId:           "wc26-r32-078",
+    matchId:           "wc26-r32-078",
     bookHomeMl:          -340,  // France ML: -340
     bookDrawMl:          900,   // Draw: +900
     bookAwayMl:          475,   // Sweden ML: +475
@@ -203,7 +203,7 @@ const BOOK_ROWS: Record<string, any> = {
   //   BTTS YES: +120 → bookBttsYesOdds = +120
   //   BTTS NO: −155 → bookBttsNoOdds = -155
   "wc26-r32-079": {
-    fixtureId:           "wc26-r32-079",
+    matchId:           "wc26-r32-079",
     bookHomeMl:          130,   // Mexico ML: +130
     bookDrawMl:          285,   // Draw: +285
     bookAwayMl:          190,   // Ecuador ML: +190
@@ -237,7 +237,7 @@ const BOOK_ROWS: Record<string, any> = {
 // ─────────────────────────────────────────────────────────────────────────────
 const MODEL_ROWS: Record<string, any> = {
   "wc26-r32-077": {
-    fixtureId:           "wc26-r32-077",
+    matchId:           "wc26-r32-077",
     modelVersion:        "v11.0-KO23",
     homeTeam:            "Ivory Coast",
     awayTeam:            "Norway",
@@ -276,7 +276,7 @@ const MODEL_ROWS: Record<string, any> = {
     isFrozen:            1,
   },
   "wc26-r32-078": {
-    fixtureId:           "wc26-r32-078",
+    matchId:           "wc26-r32-078",
     modelVersion:        "v11.0-KO23",
     homeTeam:            "France",
     awayTeam:            "Sweden",
@@ -314,7 +314,7 @@ const MODEL_ROWS: Record<string, any> = {
     isFrozen:            1,
   },
   "wc26-r32-079": {
-    fixtureId:           "wc26-r32-079",
+    matchId:           "wc26-r32-079",
     modelVersion:        "v11.0-KO23",
     homeTeam:            "Mexico",
     awayTeam:            "Ecuador",
@@ -375,7 +375,7 @@ async function main() {
   // ─── S2: Verify fixtures exist in DB ─────────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying 3 June 30 fixtures exist in wc2026_fixtures");
-  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.fixtureId, FIXTURE_IDS));
+  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
   if (fixtures.length !== 3) {
     log("FAIL", `S${stepCount}`, `Expected 3 fixtures, got ${fixtures.length}`, "Cannot proceed — fixtures missing from wc2026_fixtures");
     failCount++;
@@ -385,7 +385,7 @@ async function main() {
   log("PASS", `S${stepCount}`, `All 3 fixtures confirmed in DB`);
   passCount++;
   fixtures.forEach((f: any) => {
-    log("VERIFY", "FX", `${f.fixtureId}: home=${f.homeTeamId} away=${f.awayTeamId} | kickoff=${f.kickoffUtc} | stage=${f.stage}`);
+    log("VERIFY", "FX", `${f.matchId}: home=${f.homeTeamId} away=${f.awayTeamId} | kickoff=${f.kickoffUtc} | stage=${f.stage}`);
   });
 
   // ─── S3-S5: Upsert frozen book odds ──────────────────────────────────────
@@ -395,10 +395,10 @@ async function main() {
     const row = BOOK_ROWS[fid];
     try {
       // Delete existing (idempotent)
-      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.fixtureId, fid));
+      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.matchId, fid));
       // Insert fresh
       await db.insert(wc2026FrozenBookOdds).values({
-        fixtureId:            row.fixtureId,
+        matchId:            row.matchId,
         bookHomeMl:           row.bookHomeMl,
         bookDrawMl:           row.bookDrawMl,
         bookAwayMl:           row.bookAwayMl,
@@ -435,9 +435,9 @@ async function main() {
     log("STEP", `S${stepCount}`, `Upserting model projection for ${fid}`);
     const row = MODEL_ROWS[fid];
     try {
-      await db.delete(wc2026ModelProjections).where(eq(wc2026ModelProjections.fixtureId, fid));
+      await db.delete(wc2026ModelProjections).where(eq(wc2026ModelProjections.matchId, fid));
       await db.insert(wc2026ModelProjections).values({
-        fixtureId:           row.fixtureId,
+        matchId:           row.matchId,
         modelVersion:        row.modelVersion,
         homeTeam:            row.homeTeam,
         awayTeam:            row.awayTeam,
@@ -482,12 +482,12 @@ async function main() {
   // ─── S9: Verify frozen book odds read-back ────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying frozen book odds read-back from DB");
-  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.fixtureId, FIXTURE_IDS));
+  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
   if (bos.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 frozen book odds confirmed in DB`);
     passCount++;
     bos.forEach((bo: any) => {
-      log("OUTPUT", "BO", `${bo.fixtureId}: ML H=${bo.bookHomeMl} D=${bo.bookDrawMl} A=${bo.bookAwayMl}`,
+      log("OUTPUT", "BO", `${bo.matchId}: ML H=${bo.bookHomeMl} D=${bo.bookDrawMl} A=${bo.bookAwayMl}`,
         `Spread=${bo.bookSpreadLine} (H${bo.bookHomeSpreadOdds}/A${bo.bookAwaySpreadOdds}) | Total=${bo.bookTotalLine} (O${bo.bookOverOdds}/U${bo.bookUnderOdds}) | BTTS Y${bo.bookBttsYesOdds}/N${bo.bookBttsNoOdds} | DC 1X${bo.bookDc1XOdds}/X2${bo.bookDcX2Odds} | NoDraw H${bo.bookNoDrawHomeOdds}/A${bo.bookNoDrawAwayOdds} | ToAdv H=${bo.toAdvanceHomeOdds} A=${bo.toAdvanceAwayOdds}`);
     });
   } else {
@@ -498,12 +498,12 @@ async function main() {
   // ─── S10: Verify model projections read-back ─────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying model projections read-back from DB (isFrozen=1)");
-  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.fixtureId, FIXTURE_IDS));
+  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, FIXTURE_IDS));
   if (mps.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 model projections confirmed in DB`);
     passCount++;
     mps.forEach((mp: any) => {
-      log("OUTPUT", "MP", `${mp.fixtureId}: homeWin=${mp.homeWinProb} draw=${mp.drawProb} awayWin=${mp.awayWinProb}`,
+      log("OUTPUT", "MP", `${mp.matchId}: homeWin=${mp.homeWinProb} draw=${mp.drawProb} awayWin=${mp.awayWinProb}`,
         `toAdvH=${mp.toAdvanceHomeOdds} | toAdvA=${mp.toAdvanceAwayOdds} | noDrawH=${mp.noDrawHomeOdds} | isFrozen=${mp.isFrozen}`);
     });
   } else {
@@ -515,7 +515,7 @@ async function main() {
   stepCount++;
   log("STEP", `S${stepCount}`, "Cross-validating: all 9 market fields populated per fixture");
   const boMap: Record<string, any> = {};
-  bos.forEach((bo: any) => { boMap[bo.fixtureId] = bo; });
+  bos.forEach((bo: any) => { boMap[bo.matchId] = bo; });
   let marketPass = 0;
   let marketFail = 0;
 
@@ -567,8 +567,8 @@ async function main() {
   log("STATE", `S${stepCount}`, "Final state dump — all 3 fixtures with frozen book odds + model projections");
   for (const fid of FIXTURE_IDS) {
     const bo = boMap[fid];
-    const mp = mps.find((m: any) => m.fixtureId === fid);
-    const fixture = fixtures.find((f: any) => f.fixtureId === fid);
+    const mp = mps.find((m: any) => m.matchId === fid);
+    const fixture = fixtures.find((f: any) => f.matchId === fid);
     log("STATE", "DUMP", `━━━ ${fid}: ${fixture?.homeTeamId?.toUpperCase()} vs ${fixture?.awayTeamId?.toUpperCase()} ━━━`);
     log("STATE", "DUMP", `  [BOOK ODDS]`);
     log("STATE", "DUMP", `    1X2 ML:    Home=${bo?.bookHomeMl}  Draw=${bo?.bookDrawMl}  Away=${bo?.bookAwayMl}`);

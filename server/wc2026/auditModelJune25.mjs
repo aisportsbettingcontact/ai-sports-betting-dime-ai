@@ -29,11 +29,11 @@ function americanToProb(ml) {
   console.log(`${TAG} [LAYER 1] Model odds row count (expected 12 per fixture):`);
   const idList = FIXTURE_IDS.map(() => '?').join(',');
   const [modelCounts] = await conn.query(
-    `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY fixture_id`,
+    `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
     FIXTURE_IDS
   );
   for (const fid of FIXTURE_IDS) {
-    const row = modelCounts.find(r => r.fixture_id === fid);
+    const row = modelCounts.find(r => r.match_id === fid);
     const cnt = row ? row.cnt : 0;
     const pass = cnt === 12;
     if (!pass) totalErrors++;
@@ -51,7 +51,7 @@ function americanToProb(ml) {
   ];
   for (const fid of FIXTURE_IDS) {
     const [rows] = await conn.query(
-      `SELECT market, selection, line, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ${MODEL_BOOK_ID}`,
+      `SELECT market, selection, line, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ${MODEL_BOOK_ID}`,
       [fid]
     );
     const missing = [];
@@ -72,7 +72,7 @@ function americanToProb(ml) {
   console.log(`\n${TAG} [LAYER 3] Probability integrity (1X2 probs sum to 1.0, no-draw = 1-draw):`);
   for (const fid of FIXTURE_IDS) {
     const [rows] = await conn.query(
-      `SELECT market, selection, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ${MODEL_BOOK_ID}`,
+      `SELECT market, selection, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ${MODEL_BOOK_ID}`,
       [fid]
     );
     const get = (mkt, sel) => rows.find(r => r.market === mkt && r.selection === sel);
@@ -125,7 +125,7 @@ function americanToProb(ml) {
   // ── Layer 4: Projection table audit ──────────────────────────────────────
   console.log(`\n${TAG} [LAYER 4] Projection table — all 6 fixtures present with valid values:`);
   const [projRows] = await conn.query(
-    `SELECT fixture_id, model_version, n_simulations,
+    `SELECT match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -137,7 +137,7 @@ function americanToProb(ml) {
       model_lean, lean_prob,
       home_edge, draw_edge, away_edge,
       modeled_at
-    FROM wc2026_model_projections WHERE fixture_id IN (${idList})
+    FROM wc2026_model_projections WHERE match_id IN (${idList})
     AND model_version = 'v4.2-corrected-june25'`,
     FIXTURE_IDS
   );
@@ -169,7 +169,7 @@ function americanToProb(ml) {
 
     const pass = checks.length === 0;
     if (!pass) totalErrors += checks.length;
-    console.log(`${TAG}   ${r.fixture_id}: ${r.home_team}(h) vs ${r.away_team}(a) | proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total} | ML: home=${r.model_home_ml > 0 ? '+' : ''}${r.model_home_ml} draw=${r.model_draw_ml > 0 ? '+' : ''}${r.model_draw_ml} away=${r.model_away_ml > 0 ? '+' : ''}${r.model_away_ml} | lean=${r.model_lean} | ${pass ? 'PASS ✓' : 'FAIL ✗: ' + checks.join(', ')}`);
+    console.log(`${TAG}   ${r.match_id}: ${r.home_team}(h) vs ${r.away_team}(a) | proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total} | ML: home=${r.model_home_ml > 0 ? '+' : ''}${r.model_home_ml} draw=${r.model_draw_ml > 0 ? '+' : ''}${r.model_draw_ml} away=${r.model_away_ml > 0 ? '+' : ''}${r.model_away_ml} | lean=${r.model_lean} | ${pass ? 'PASS ✓' : 'FAIL ✗: ' + checks.join(', ')}`);
   }
 
   // ── Final verdict ─────────────────────────────────────────────────────────

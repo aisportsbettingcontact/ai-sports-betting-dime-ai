@@ -2992,7 +2992,7 @@ export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInse
 // model_* = owner-entered model projections (editable via Publish Projections).
 export const wc2026MatchOdds = mysqlTable("wc2026MatchOdds", {
   id:                         bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-  fixtureId:                  varchar("fixture_id", { length: 16 }).notNull().unique(),
+  matchId:                  varchar("match_id", { length: 16 }).notNull().unique(),
   espnMatchId:                varchar("espn_match_id", { length: 64 }),
   espnSlug:                   varchar("espn_slug", { length: 64 }),
   betExplorerMatchId:         varchar("bet_explorer_match_id", { length: 16 }),
@@ -3038,7 +3038,7 @@ export const wc2026MatchOdds = mysqlTable("wc2026MatchOdds", {
   bookBttsNo:                 smallint("book_btts_no"),
   modelBttsNo:                smallint("model_btts_no"),
 }, (t) => ({
-  idxFixtureId: uniqueIndex("idx_wc2026MatchOdds_fixtureId").on(t.fixtureId),
+  idxMatchId: uniqueIndex("idx_wc2026MatchOdds_matchId").on(t.matchId),
   idxRound:     index("idx_wc2026MatchOdds_round").on(t.worldCupRound),
   idxStage:     index("idx_wc2026MatchOdds_stage").on(t.worldCupStage),
 }));

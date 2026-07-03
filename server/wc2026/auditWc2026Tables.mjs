@@ -144,13 +144,13 @@ async function main() {
       log('·· STATE', 'TABLE', `  Latest ${tsCol}: ${latest.latest}`);
     }
 
-    // Distinct fixture_id count (if column exists)
-    const hasFixtureId = cols.some(c => c.Field === 'fixture_id');
+    // Distinct match_id count (if column exists)
+    const hasFixtureId = cols.some(c => c.Field === 'match_id');
     if (hasFixtureId && rowCount > 0) {
       const [[distFix]] = await conn.execute(
-        `SELECT COUNT(DISTINCT fixture_id) as cnt FROM \`${tableName}\``
+        `SELECT COUNT(DISTINCT match_id) as cnt FROM \`${tableName}\``
       );
-      log('·· STATE', 'TABLE', `  Distinct fixture_ids: ${distFix.cnt}`);
+      log('·· STATE', 'TABLE', `  Distinct match_ids: ${distFix.cnt}`);
     }
 
     // Distinct team_id count (if column exists)

@@ -230,7 +230,7 @@ function computeLambda(nv, isHome, elo, rank, form) {
 // All DK odds mapped to DB home/away orientation
 const FIXTURES = [
   {
-    fixtureId: 'wc26-g-057',
+    matchId: 'wc26-g-057',
     homeId: 'cuw', awayId: 'civ',
     homeName: 'Curaçao', awayName: 'Ivory Coast',
     // DK 1X2
@@ -251,7 +251,7 @@ const FIXTURES = [
     awayElo: 1850, awayRank: 16, awayForm: 0.70,
   },
   {
-    fixtureId: 'wc26-g-058',
+    matchId: 'wc26-g-058',
     homeId: 'ecu', awayId: 'ger',
     homeName: 'Ecuador', awayName: 'Germany',
     dkHomeML: 425, dkDrawML: 400, dkAwayML: -190,
@@ -265,7 +265,7 @@ const FIXTURES = [
     awayElo: 1920, awayRank: 13, awayForm: 0.65,
   },
   {
-    fixtureId: 'wc26-g-059',
+    matchId: 'wc26-g-059',
     homeId: 'jpn', awayId: 'swe',
     homeName: 'Japan', awayName: 'Sweden',
     dkHomeML: -115, dkDrawML: 255, dkAwayML: 350,
@@ -279,7 +279,7 @@ const FIXTURES = [
     awayElo: 1790, awayRank: 25, awayForm: 0.45,
   },
   {
-    fixtureId: 'wc26-g-060',
+    matchId: 'wc26-g-060',
     homeId: 'tun', awayId: 'ned',
     homeName: 'Tunisia', awayName: 'Netherlands',
     dkHomeML: 2500, dkDrawML: 1000, dkAwayML: -1100,
@@ -293,7 +293,7 @@ const FIXTURES = [
     awayElo: 1960, awayRank: 7, awayForm: 0.78,
   },
   {
-    fixtureId: 'wc26-g-055',
+    matchId: 'wc26-g-055',
     homeId: 'tur', awayId: 'usa',
     homeName: 'Turkey', awayName: 'United States',
     dkHomeML: 275, dkDrawML: 310, dkAwayML: -115,
@@ -307,7 +307,7 @@ const FIXTURES = [
     awayElo: 1870, awayRank: 11, awayForm: 0.62,
   },
   {
-    fixtureId: 'wc26-g-056',
+    matchId: 'wc26-g-056',
     homeId: 'par', awayId: 'aus',
     homeName: 'Paraguay', awayName: 'Australia',
     dkHomeML: 180, dkDrawML: 125, dkAwayML: 310,
@@ -339,7 +339,7 @@ async function main() {
   const errors = [];
 
   for (const f of FIXTURES) {
-    console.log(`${TAG} ─── Fixture: ${f.fixtureId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+    console.log(`${TAG} ─── Fixture: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
     console.log(`${TAG} [INPUT] DK 1X2: home=${f.dkHomeML} draw=${f.dkDrawML} away=${f.dkAwayML}`);
     console.log(`${TAG} [INPUT] DK TOTAL: O${f.dkTotalLine}=${f.dkOverOdds} U${f.dkTotalLine}=${f.dkUnderOdds}`);
     console.log(`${TAG} [INPUT] Team ratings: home(${f.homeId}) elo=${f.homeElo} rank=${f.homeRank} form=${f.homeForm}`);
@@ -347,10 +347,10 @@ async function main() {
 
     // ── Step 1: Clear existing MODEL odds for this fixture ────────────────────
     const [delModel] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [f.fixtureId, MODEL_BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [f.matchId, MODEL_BOOK_ID]
     );
-    console.log(`${TAG} [STEP 1] Cleared ${delModel.affectedRows} existing model rows for ${f.fixtureId}`);
+    console.log(`${TAG} [STEP 1] Cleared ${delModel.affectedRows} existing model rows for ${f.matchId}`);
 
     // ── Step 2: Compute no-vig probabilities from DK 1X2 ─────────────────────
     const nv = noVigProbs(f.dkHomeML, f.dkDrawML, f.dkAwayML);
@@ -472,15 +472,15 @@ async function main() {
         continue;
       }
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
+        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
       );
       console.log(`${TAG} [STEP 10] INSERT: ${row.market}/${row.selection} line=${row.line ?? 'null'} odds=${row.odds > 0 ? '+' : ''}${row.odds} prob=${row.prob.toFixed(4)}`);
       insertedRows++;
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows} model rows for ${f.fixtureId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows} model rows for ${f.matchId}`);
 
     // ── Step 11: Upsert model projection ─────────────────────────────────────
     const nv_out = { h: nv.h, d: nv.d, a: nv.a };
@@ -492,7 +492,7 @@ async function main() {
 
     await conn.query(`
       INSERT INTO wc2026_model_projections (
-        fixture_id, model_version, n_simulations,
+        match_id, model_version, n_simulations,
         home_team, away_team,
         home_lambda, away_lambda,
         home_win_prob, draw_prob, away_win_prob,
@@ -559,7 +559,7 @@ async function main() {
         btts_no_odds = VALUES(btts_no_odds),
         modeled_at = NOW()
     `, [
-      f.fixtureId, MODEL_VERSION, N_SIMULATIONS,
+      f.matchId, MODEL_VERSION, N_SIMULATIONS,
       f.homeName, f.awayName,
       lambdaH, lambdaA,
       finalHome, finalDraw, finalAway,
@@ -585,20 +585,20 @@ async function main() {
       modelBttsYes, modelBttsNo,
     ]);
     totalProjRows++;
-    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.fixtureId} proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
+    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.matchId} proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
     console.log('');
   }
 
   // ── Final verification ────────────────────────────────────────────────────
-  const FIXTURE_IDS = FIXTURES.map(f => f.fixtureId);
+  const FIXTURE_IDS = FIXTURES.map(f => f.matchId);
   const idList = FIXTURE_IDS.map(() => '?').join(',');
 
   const [verifyModel] = await conn.query(
-    `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY fixture_id`,
+    `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
     FIXTURE_IDS
   );
   const [verifyProj] = await conn.query(
-    `SELECT fixture_id, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_lean FROM wc2026_model_projections WHERE fixture_id IN (${idList})`,
+    `SELECT match_id, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_lean FROM wc2026_model_projections WHERE match_id IN (${idList})`,
     FIXTURE_IDS
   );
 
@@ -608,11 +608,11 @@ async function main() {
   console.log(`${TAG} [VERIFY] Model odds per fixture (expected 12 each):`);
   for (const r of verifyModel) {
     const pass = r.cnt === 12;
-    console.log(`${TAG}   ${r.fixture_id}: ${r.cnt} rows ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
+    console.log(`${TAG}   ${r.match_id}: ${r.cnt} rows ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
   }
   console.log(`${TAG} [VERIFY] Model projections:`);
   for (const r of verifyProj) {
-    console.log(`${TAG}   ${r.fixture_id}: proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total} lean=${r.model_lean} ML: home=${r.model_home_ml} draw=${r.model_draw_ml} away=${r.model_away_ml}`);
+    console.log(`${TAG}   ${r.match_id}: proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total} lean=${r.model_lean} ML: home=${r.model_home_ml} draw=${r.model_draw_ml} away=${r.model_away_ml}`);
   }
 
   const allModelOk = verifyModel.length === 6 && verifyModel.every(r => r.cnt === 12);

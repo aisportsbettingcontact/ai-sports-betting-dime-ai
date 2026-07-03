@@ -187,7 +187,7 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
 // ─── Core: Compute model projection for a fixture ────────────────────────────
 function computeModelProjection(fixture) {
   const {
-    fixtureId, homeName, homeCode, awayName, awayCode,
+    matchId, homeName, homeCode, awayName, awayCode,
     // Elo ratings (from FIFA/Elo World Rankings June 2026)
     eloHome, eloAway,
     // FIFA rankings
@@ -203,7 +203,7 @@ function computeModelProjection(fixture) {
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
-  console.log(`${TAG} [INPUT] fixtureId=${fixtureId}`);
+  console.log(`${TAG} [INPUT] matchId=${matchId}`);
   console.log(`${TAG} [INPUT] Elo: home=${eloHome} away=${eloAway} | FIFA rank: home=${fifaRankHome} away=${fifaRankAway}`);
   console.log(`${TAG} [INPUT] Form: home=${formHome} away=${formAway} | Altitude: ${altitudeM}m`);
   console.log(`${TAG} [INPUT] Book: home=${bookHomeML} draw=${bookDrawML} away=${bookAwayML} | total=${bookTotalLine} O=${bookOverML} U=${bookUnderML}`);
@@ -357,11 +357,11 @@ function computeModelProjection(fixture) {
   const mlOk = modelHomeML !== null && modelDrawML !== null && modelAwayML !== null;
   console.log(`${TAG} [VERIFY] probSum=${(finalH+finalD+finalA).toFixed(6)} ok=${probSumOk} | lambdas ok=${lambdaOk} | ML ok=${mlOk}`);
   if (!probSumOk || !lambdaOk || !mlOk) {
-    throw new Error(`[VERIFY] FAIL — ${fixtureId}: probSum=${finalH+finalD+finalA} lambdaH=${lambdaH} lambdaA=${lambdaA}`);
+    throw new Error(`[VERIFY] FAIL — ${matchId}: probSum=${finalH+finalD+finalA} lambdaH=${lambdaH} lambdaA=${lambdaA}`);
   }
 
   return {
-    fixtureId,
+    matchId,
     homeCode, awayCode,
     finalH, finalD, finalA,
     modelHomeML, modelDrawML, modelAwayML,
@@ -377,7 +377,7 @@ function computeModelProjection(fixture) {
 // ─── Match data ───────────────────────────────────────────────────────────────
 const FIXTURES = [
   {
-    fixtureId: 'wc26-g-035',
+    matchId: 'wc26-g-035',
     homeName: 'Netherlands', homeCode: 'ned',
     awayName: 'Sweden', awayCode: 'swe',
     // Elo ratings (June 2026 estimates based on WC qualifying performance)
@@ -394,7 +394,7 @@ const FIXTURES = [
     bookTotalLine: 2.5, bookOverML: -160, bookUnderML: 130,
   },
   {
-    fixtureId: 'wc26-g-033',
+    matchId: 'wc26-g-033',
     // ESPN/FIFA official: GER is home (Toronto), CIV is away
     // DB corrected: home_team_id=ger, away_team_id=civ
     homeName: 'Germany', homeCode: 'ger',
@@ -409,7 +409,7 @@ const FIXTURES = [
     bookTotalLine: 2.5, bookOverML: -175, bookUnderML: 140,
   },
   {
-    fixtureId: 'wc26-g-034',
+    matchId: 'wc26-g-034',
     // ESPN/FIFA official: ECU is home (Kansas City), CUW is away
     // DB corrected: home_team_id=ecu, away_team_id=cuw
     homeName: 'Ecuador', homeCode: 'ecu',
@@ -424,7 +424,7 @@ const FIXTURES = [
     bookTotalLine: 2.5, bookOverML: -170, bookUnderML: 135,
   },
   {
-    fixtureId: 'wc26-g-036',
+    matchId: 'wc26-g-036',
     homeName: 'Tunisia', homeCode: 'tun',
     awayName: 'Japan', awayCode: 'jpn',
     // JPN is the favorite at -170
@@ -463,21 +463,21 @@ async function main() {
       // Markets: 1X2, TOTAL, DOUBLE_CHANCE
       const rows = [
         // 1X2
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
         // TOTAL (O/U 2.5)
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', 2.5, proj.modelOverML, proj.mc.over25, 0],
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, proj.modelUnderML, 1 - proj.mc.over25, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', 2.5, proj.modelOverML, proj.mc.over25, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, proj.modelUnderML, 1 - proj.mc.over25, 0],
         // DOUBLE_CHANCE
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
-        [fixture.fixtureId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
+        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
       ];
 
       for (const row of rows) {
         await conn.query(`
           INSERT INTO wc2026_odds_snapshots
-            (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+            (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
             american_odds = VALUES(american_odds),
@@ -490,7 +490,7 @@ async function main() {
       // ── Insert into wc2026_model_projections ──────────────────────────────
       await conn.query(`
         INSERT INTO wc2026_model_projections (
-          fixture_id, model_version, n_simulations,
+          match_id, model_version, n_simulations,
           home_team, away_team,
           home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
@@ -555,7 +555,7 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        fixture.fixtureId, MODEL_VERSION, N_SIMULATIONS,
+        fixture.matchId, MODEL_VERSION, N_SIMULATIONS,
         fixture.homeCode, fixture.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
@@ -572,14 +572,14 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${fixture.fixtureId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.fixtureId}: Total=${proj.modelTotalLine} O=${proj.modelOverML} U=${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.fixtureId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.fixtureId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Total=${proj.modelTotalLine} O=${proj.modelOverML} U=${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${fixture.fixtureId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${fixture.matchId}: ${err.message}`);
     }
   }
 

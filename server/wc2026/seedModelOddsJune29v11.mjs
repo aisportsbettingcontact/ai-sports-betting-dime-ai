@@ -394,15 +394,15 @@ pass('DB connection established');
 stepCount++;
 log('STEP', 'Verifying June 29 fixtures exist in wc2026_fixtures', stepCount);
 const [fixRows] = await conn.execute(
-  `SELECT fixture_id, home_team_id, away_team_id, stage, status FROM wc2026_fixtures WHERE fixture_id IN (?,?,?)`,
+  `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_fixtures WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 log('STATE', `Found ${fixRows.length} fixture rows`);
 if (fixRows.length !== 3) fail(`Expected 3 fixtures, found ${fixRows.length}`);
 for (const row of fixRows) {
-  log('STATE', `  ${row.fixture_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
-  if (row.stage !== 'R32') warn(`[${row.fixture_id}] stage=${row.stage} (expected R32)`);
-  pass(`[${row.fixture_id}] fixture verified in DB`);
+  log('STATE', `  ${row.match_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
+  if (row.stage !== 'R32') warn(`[${row.match_id}] stage=${row.stage} (expected R32)`);
+  pass(`[${row.match_id}] fixture verified in DB`);
 }
 
 // ── STEP 4: Seed frozen book odds ─────────────────────────────────────────────
@@ -416,7 +416,7 @@ for (const fid of FIXTURE_IDS) {
 
   const [res] = await conn.execute(
     `INSERT INTO wc2026_frozen_book_odds (
-      fixture_id, frozen_at, frozen_by,
+      match_id, frozen_at, frozen_by,
       book_home_ml, book_draw_ml, book_away_ml,
       book_spread_line, book_home_spread_odds, book_away_spread_odds,
       book_total_line, book_over_odds, book_under_odds,
@@ -456,16 +456,16 @@ log('OUTPUT', `Book odds seeded: ${bookSeedCount}/3`);
 stepCount++;
 log('STEP', 'Verifying frozen book odds in DB', stepCount);
 const [bookVerRows] = await conn.execute(
-  `SELECT fixture_id, book_home_ml, book_draw_ml, book_away_ml,
+  `SELECT match_id, book_home_ml, book_draw_ml, book_away_ml,
           book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds,
           book_btts_yes_odds, book_btts_no_odds, book_dc_1x_odds, book_dc_x2_odds,
           book_over_odds, book_under_odds, book_home_spread_odds, book_away_spread_odds
-   FROM wc2026_frozen_book_odds WHERE fixture_id IN (?,?,?) ORDER BY fixture_id`,
+   FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?) ORDER BY match_id`,
   FIXTURE_IDS
 );
 if (bookVerRows.length !== 3) fail(`Book odds verify: expected 3 rows, got ${bookVerRows.length}`);
 for (const row of bookVerRows) {
-  const b = BOOK[row.fixture_id];
+  const b = BOOK[row.match_id];
   // Verify each critical field
   const checks = [
     ['book_home_ml', row.book_home_ml, b.book_home_ml],
@@ -480,22 +480,22 @@ for (const row of bookVerRows) {
     ['book_under_odds', row.book_under_odds, b.book_under_odds],
   ];
   for (const [field, actual, expected] of checks) {
-    if (actual !== expected) fail(`[${row.fixture_id}] ${field}: DB=${actual} ≠ expected=${expected}`);
-    pass(`[${row.fixture_id}] ${field}: ${actual} ✓`);
+    if (actual !== expected) fail(`[${row.match_id}] ${field}: DB=${actual} ≠ expected=${expected}`);
+    pass(`[${row.match_id}] ${field}: ${actual} ✓`);
   }
   // Critical: TO ADVANCE and NO DRAW non-null
-  if (row.to_advance_home_odds == null) fail(`[${row.fixture_id}] to_advance_home_odds is NULL in DB`);
-  if (row.to_advance_away_odds == null) fail(`[${row.fixture_id}] to_advance_away_odds is NULL in DB`);
-  if (row.book_no_draw_away_odds == null) fail(`[${row.fixture_id}] book_no_draw_away_odds is NULL in DB`);
-  pass(`[${row.fixture_id}] TO ADVANCE and NO DRAW non-null in DB ✓`);
-  log('STATE', `  [${row.fixture_id}] BOOK VERIFY: H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} | NO DRAW=${row.book_no_draw_away_odds}`);
+  if (row.to_advance_home_odds == null) fail(`[${row.match_id}] to_advance_home_odds is NULL in DB`);
+  if (row.to_advance_away_odds == null) fail(`[${row.match_id}] to_advance_away_odds is NULL in DB`);
+  if (row.book_no_draw_away_odds == null) fail(`[${row.match_id}] book_no_draw_away_odds is NULL in DB`);
+  pass(`[${row.match_id}] TO ADVANCE and NO DRAW non-null in DB ✓`);
+  log('STATE', `  [${row.match_id}] BOOK VERIFY: H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} | NO DRAW=${row.book_no_draw_away_odds}`);
 }
 
 // ── STEP 6: Delete existing model projections ─────────────────────────────────
 stepCount++;
 log('STEP', 'Deleting existing model projections for June 29 fixtures', stepCount);
 const [delRes] = await conn.execute(
-  `DELETE FROM wc2026_model_projections WHERE fixture_id IN (?,?,?)`,
+  `DELETE FROM wc2026_model_projections WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 log('STATE', `Deleted ${delRes.affectedRows} existing projection rows`);
@@ -516,7 +516,7 @@ for (const fid of FIXTURE_IDS) {
 
   const [ins] = await conn.execute(
     `INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -595,7 +595,7 @@ log('OUTPUT', `Model projections seeded: ${modelSeedCount}/3`);
 stepCount++;
 log('STEP', 'Verifying model projections in DB — all 14 markets', stepCount);
 const [modelVerRows] = await conn.execute(
-  `SELECT fixture_id, model_version, n_simulations,
+  `SELECT match_id, model_version, n_simulations,
           home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total,
@@ -609,12 +609,12 @@ const [modelVerRows] = await conn.execute(
           to_advance_home_odds, to_advance_away_odds,
           is_frozen, frozen_at
    FROM wc2026_model_projections
-   WHERE fixture_id IN (?,?,?) ORDER BY fixture_id`,
+   WHERE match_id IN (?,?,?) ORDER BY match_id`,
   FIXTURE_IDS
 );
 if (modelVerRows.length !== 3) fail(`Model verify: expected 3 rows, got ${modelVerRows.length}`);
 for (const row of modelVerRows) {
-  const m = MODEL[row.fixture_id];
+  const m = MODEL[row.match_id];
   // Critical field checks
   const mChecks = [
     ['model_home_ml', row.model_home_ml, cap(m.model_home_ml)],
@@ -628,19 +628,19 @@ for (const row of modelVerRows) {
     ['under_odds', row.under_odds, cap(m.model_under_ml)],
   ];
   for (const [field, actual, expected] of mChecks) {
-    if (actual !== expected) fail(`[${row.fixture_id}] model ${field}: DB=${actual} ≠ expected=${expected}`);
-    pass(`[${row.fixture_id}] model ${field}: ${actual} ✓`);
+    if (actual !== expected) fail(`[${row.match_id}] model ${field}: DB=${actual} ≠ expected=${expected}`);
+    pass(`[${row.match_id}] model ${field}: ${actual} ✓`);
   }
   // Critical: TO ADVANCE non-null
-  if (row.to_advance_home_odds == null) fail(`[${row.fixture_id}] model to_advance_home_odds is NULL`);
-  if (row.to_advance_away_odds == null) fail(`[${row.fixture_id}] model to_advance_away_odds is NULL`);
-  if (row.to_advance_home_prob == null) fail(`[${row.fixture_id}] model to_advance_home_prob is NULL`);
-  if (row.to_advance_away_prob == null) fail(`[${row.fixture_id}] model to_advance_away_prob is NULL`);
-  pass(`[${row.fixture_id}] TO ADVANCE model odds + probs non-null ✓`);
+  if (row.to_advance_home_odds == null) fail(`[${row.match_id}] model to_advance_home_odds is NULL`);
+  if (row.to_advance_away_odds == null) fail(`[${row.match_id}] model to_advance_away_odds is NULL`);
+  if (row.to_advance_home_prob == null) fail(`[${row.match_id}] model to_advance_home_prob is NULL`);
+  if (row.to_advance_away_prob == null) fail(`[${row.match_id}] model to_advance_away_prob is NULL`);
+  pass(`[${row.match_id}] TO ADVANCE model odds + probs non-null ✓`);
   // is_frozen check
-  if (row.is_frozen !== 1) fail(`[${row.fixture_id}] is_frozen=${row.is_frozen} (expected 1)`);
-  pass(`[${row.fixture_id}] is_frozen=1 ✓`);
-  log('STATE', `  [${row.fixture_id}] MODEL VERIFY: H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | ADV H=${row.to_advance_home_odds}(${row.to_advance_home_prob}) A=${row.to_advance_away_odds}(${row.to_advance_away_prob}) | frozen=${row.is_frozen}`);
+  if (row.is_frozen !== 1) fail(`[${row.match_id}] is_frozen=${row.is_frozen} (expected 1)`);
+  pass(`[${row.match_id}] is_frozen=1 ✓`);
+  log('STATE', `  [${row.match_id}] MODEL VERIFY: H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | ADV H=${row.to_advance_home_odds}(${row.to_advance_home_prob}) A=${row.to_advance_away_odds}(${row.to_advance_away_prob}) | frozen=${row.is_frozen}`);
 }
 
 // ── STEP 9: Cross-table join audit ────────────────────────────────────────────
@@ -648,7 +648,7 @@ stepCount++;
 log('STEP', 'Cross-table join audit: book + model + fixture alignment', stepCount);
 const [joinRows] = await conn.execute(
   `SELECT 
-    f.fixture_id, f.home_team_id, f.away_team_id, f.stage,
+    f.match_id, f.home_team_id, f.away_team_id, f.stage,
     b.book_home_ml, b.book_draw_ml, b.book_away_ml,
     b.to_advance_home_odds AS book_adv_h, b.to_advance_away_odds AS book_adv_a,
     b.book_no_draw_away_odds,
@@ -657,9 +657,9 @@ const [joinRows] = await conn.execute(
     p.no_draw_away_odds AS model_no_draw,
     p.model_version, p.is_frozen
    FROM wc2026_fixtures f
-   JOIN wc2026_frozen_book_odds b ON b.fixture_id = f.fixture_id
-   JOIN wc2026_model_projections p ON p.fixture_id = f.fixture_id
-   WHERE f.fixture_id IN (?,?,?) ORDER BY f.fixture_id`,
+   JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id
+   JOIN wc2026_model_projections p ON p.match_id = f.match_id
+   WHERE f.match_id IN (?,?,?) ORDER BY f.match_id`,
   FIXTURE_IDS
 );
 if (joinRows.length !== 3) fail(`Join audit: expected 3 rows, got ${joinRows.length}`);
@@ -672,12 +672,12 @@ for (const row of joinRows) {
     'model_adv_h','model_adv_a','model_no_draw',
   ];
   for (const field of nullChecks) {
-    if (row[field] == null) fail(`[${row.fixture_id}] JOIN: ${field} is NULL`);
+    if (row[field] == null) fail(`[${row.match_id}] JOIN: ${field} is NULL`);
   }
-  pass(`[${row.fixture_id}] JOIN: all 12 critical fields non-null ✓`);
-  log('STATE', `  [${row.fixture_id}] JOIN: book ADV H=${row.book_adv_h} A=${row.book_adv_a} | model ADV H=${row.model_adv_h} A=${row.model_adv_a}`);
-  log('STATE', `  [${row.fixture_id}] JOIN: book NO DRAW=${row.book_no_draw_away_odds} | model NO DRAW=${row.model_no_draw}`);
-  log('STATE', `  [${row.fixture_id}] JOIN: version=${row.model_version} frozen=${row.is_frozen}`);
+  pass(`[${row.match_id}] JOIN: all 12 critical fields non-null ✓`);
+  log('STATE', `  [${row.match_id}] JOIN: book ADV H=${row.book_adv_h} A=${row.book_adv_a} | model ADV H=${row.model_adv_h} A=${row.model_adv_a}`);
+  log('STATE', `  [${row.match_id}] JOIN: book NO DRAW=${row.book_no_draw_away_odds} | model NO DRAW=${row.model_no_draw}`);
+  log('STATE', `  [${row.match_id}] JOIN: version=${row.model_version} frozen=${row.is_frozen}`);
 }
 pass('Cross-table join audit: all 3 fixtures fully populated ✓');
 
@@ -704,51 +704,51 @@ const REQUIRED_MODEL_FIELDS = [
 ];
 
 const [fullBookRows] = await conn.execute(
-  `SELECT fixture_id, ${REQUIRED_BOOK_FIELDS.join(',')} FROM wc2026_frozen_book_odds WHERE fixture_id IN (?,?,?) ORDER BY fixture_id`,
+  `SELECT match_id, ${REQUIRED_BOOK_FIELDS.join(',')} FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?) ORDER BY match_id`,
   FIXTURE_IDS
 );
 const [fullModelRows] = await conn.execute(
-  `SELECT fixture_id, ${REQUIRED_MODEL_FIELDS.join(',')} FROM wc2026_model_projections WHERE fixture_id IN (?,?,?) ORDER BY fixture_id`,
+  `SELECT match_id, ${REQUIRED_MODEL_FIELDS.join(',')} FROM wc2026_model_projections WHERE match_id IN (?,?,?) ORDER BY match_id`,
   FIXTURE_IDS
 );
 
 for (const row of fullBookRows) {
   let nullFields = REQUIRED_BOOK_FIELDS.filter(f => row[f] == null && f !== 'book_no_draw_home_odds');
-  if (nullFields.length > 0) fail(`[${row.fixture_id}] BOOK missing: ${nullFields.join(', ')}`);
-  pass(`[${row.fixture_id}] BOOK: all 14 market fields populated ✓`);
+  if (nullFields.length > 0) fail(`[${row.match_id}] BOOK missing: ${nullFields.join(', ')}`);
+  pass(`[${row.match_id}] BOOK: all 14 market fields populated ✓`);
 }
 for (const row of fullModelRows) {
   let nullFields = REQUIRED_MODEL_FIELDS.filter(f => row[f] == null);
-  if (nullFields.length > 0) fail(`[${row.fixture_id}] MODEL missing: ${nullFields.join(', ')}`);
-  pass(`[${row.fixture_id}] MODEL: all 14 market fields populated ✓`);
+  if (nullFields.length > 0) fail(`[${row.match_id}] MODEL missing: ${nullFields.join(', ')}`);
+  pass(`[${row.match_id}] MODEL: all 14 market fields populated ✓`);
 }
 
 // ── STEP 11: Final is_frozen + completeness cross-check ──────────────────────
 stepCount++;
 log('STEP', 'Final is_frozen + completeness cross-check on all seeded rows', stepCount);
 const [frozenCheckRows] = await conn.execute(
-  `SELECT p.fixture_id, p.is_frozen, p.model_version,
+  `SELECT p.match_id, p.is_frozen, p.model_version,
           p.to_advance_home_odds, p.to_advance_away_odds,
           p.no_draw_away_odds,
           b.to_advance_home_odds AS book_adv_h, b.to_advance_away_odds AS book_adv_a,
           b.book_no_draw_away_odds
    FROM wc2026_model_projections p
-   JOIN wc2026_frozen_book_odds b ON b.fixture_id = p.fixture_id
-   WHERE p.fixture_id IN (?,?,?) ORDER BY p.fixture_id`,
+   JOIN wc2026_frozen_book_odds b ON b.match_id = p.match_id
+   WHERE p.match_id IN (?,?,?) ORDER BY p.match_id`,
   FIXTURE_IDS
 );
 if (frozenCheckRows.length !== 3) fail(`Final check: expected 3 rows, got ${frozenCheckRows.length}`);
 for (const row of frozenCheckRows) {
-  if (row.is_frozen !== 1) fail(`[${row.fixture_id}] is_frozen=${row.is_frozen} (expected 1)`);
-  pass(`[${row.fixture_id}] is_frozen=1 ✓`);
-  if (row.to_advance_home_odds == null) fail(`[${row.fixture_id}] model to_advance_home_odds NULL`);
-  if (row.to_advance_away_odds == null) fail(`[${row.fixture_id}] model to_advance_away_odds NULL`);
-  if (row.book_adv_h == null) fail(`[${row.fixture_id}] book to_advance_home_odds NULL`);
-  if (row.book_adv_a == null) fail(`[${row.fixture_id}] book to_advance_away_odds NULL`);
-  if (row.book_no_draw_away_odds == null) fail(`[${row.fixture_id}] book no_draw NULL`);
-  pass(`[${row.fixture_id}] TO ADVANCE: book H=${row.book_adv_h} A=${row.book_adv_a} | model H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} ✓`);
-  pass(`[${row.fixture_id}] NO DRAW: book=${row.book_no_draw_away_odds} | model=${row.no_draw_away_odds} ✓`);
-  log('STATE', `  [${row.fixture_id}] FINAL: version=${row.model_version} | is_frozen=${row.is_frozen}`);
+  if (row.is_frozen !== 1) fail(`[${row.match_id}] is_frozen=${row.is_frozen} (expected 1)`);
+  pass(`[${row.match_id}] is_frozen=1 ✓`);
+  if (row.to_advance_home_odds == null) fail(`[${row.match_id}] model to_advance_home_odds NULL`);
+  if (row.to_advance_away_odds == null) fail(`[${row.match_id}] model to_advance_away_odds NULL`);
+  if (row.book_adv_h == null) fail(`[${row.match_id}] book to_advance_home_odds NULL`);
+  if (row.book_adv_a == null) fail(`[${row.match_id}] book to_advance_away_odds NULL`);
+  if (row.book_no_draw_away_odds == null) fail(`[${row.match_id}] book no_draw NULL`);
+  pass(`[${row.match_id}] TO ADVANCE: book H=${row.book_adv_h} A=${row.book_adv_a} | model H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} ✓`);
+  pass(`[${row.match_id}] NO DRAW: book=${row.book_no_draw_away_odds} | model=${row.no_draw_away_odds} ✓`);
+  log('STATE', `  [${row.match_id}] FINAL: version=${row.model_version} | is_frozen=${row.is_frozen}`);
 }
 
 // ── STEP 12: Final summary ────────────────────────────────────────────────────

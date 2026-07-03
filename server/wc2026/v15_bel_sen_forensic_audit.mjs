@@ -110,7 +110,7 @@ function flushLog() {
 // Away Spread=-1.5, Away Spread Odds=-435, Home Spread=1.5, Home Spread Odds=300
 // BTTS Yes=-133, BTTS No=100
 const GROUND_TRUTH_081 = {
-  fixture_id: 'wc26-r32-081',
+  match_id: 'wc26-r32-081',
   home_team: 'Belgium',
   away_team: 'Senegal',
   book_home_ml: 115,
@@ -186,11 +186,11 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════
   banner('AUDIT BLOCK 3 — FULL TABLE DUMP: ALL wc2026_frozen_book_odds ROWS', C.BG_BLUE + C.BOLD + C.WHITE);
 
-  const [allRows] = await db.execute('SELECT * FROM wc2026_frozen_book_odds ORDER BY fixture_id');
+  const [allRows] = await db.execute('SELECT * FROM wc2026_frozen_book_odds ORDER BY match_id');
   log('DATA', 'FULL_DUMP', `All ${allRows.length} rows in wc2026_frozen_book_odds:`);
   allRows.forEach((r, i) => {
     const nullFields = cols.map(c => c.Field).filter(f => r[f] === null || r[f] === undefined);
-    log('DATA', 'ROW_DUMP', `  [${String(i+1).padStart(2,'0')}] ${pad(r.fixture_id, 20)} home_ml=${pad(r.book_home_ml,6)} draw_ml=${pad(r.book_draw_ml,6)} away_ml=${pad(r.book_away_ml,6)} total=${pad(r.book_total_line,4)} source=${r.book_source} nulls=${nullFields.length > 0 ? nullFields.join(',') : 'NONE'}`);
+    log('DATA', 'ROW_DUMP', `  [${String(i+1).padStart(2,'0')}] ${pad(r.match_id, 20)} home_ml=${pad(r.book_home_ml,6)} draw_ml=${pad(r.book_draw_ml,6)} away_ml=${pad(r.book_away_ml,6)} total=${pad(r.book_total_line,4)} source=${r.book_source} nulls=${nullFields.length > 0 ? nullFields.join(',') : 'NONE'}`);
   });
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -200,7 +200,7 @@ async function main() {
 
   log('STEP', 'FIX_QUERY', `Executing exact engine query: DATE(match_date) = '2026-07-01'`);
   const [jul1Fix] = await db.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
+    SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc, f.match_date, f.home_score, f.away_score, f.status
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -210,11 +210,11 @@ async function main() {
   `);
   log('DATA', 'FIX_QUERY', `Engine query result: ${jul1Fix.length} fixtures`);
   jul1Fix.forEach((f, i) => {
-    log('DATA', 'FIX_ROW', `  [${i+1}] ${f.fixture_id}: ${f.home_code} vs ${f.away_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date} | status=${f.status}`);
+    log('DATA', 'FIX_ROW', `  [${i+1}] ${f.match_id}: ${f.home_code} vs ${f.away_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date} | status=${f.status}`);
   });
 
   // Check if wc26-r32-081 is in the result
-  const r081inFix = jul1Fix.find(f => f.fixture_id === 'wc26-r32-081');
+  const r081inFix = jul1Fix.find(f => f.match_id === 'wc26-r32-081');
   if (!r081inFix) {
     hardFail('FIX_QUERY', `wc26-r32-081 (BEL vs SEN) NOT RETURNED by engine fixture query — this is the root cause`);
   } else {
@@ -226,18 +226,18 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════
   banner('AUDIT BLOCK 5 — BOOK ODDS QUERY (EXACT ENGINE SIMULATION)', C.BG_BLUE + C.BOLD + C.WHITE);
 
-  const fixtureIds = jul1Fix.map(f => f.fixture_id);
-  log('STEP', 'BOOK_QUERY', `Querying wc2026_frozen_book_odds for fixture_ids: ${fixtureIds.join(', ')}`);
+  const matchIds = jul1Fix.map(f => f.match_id);
+  log('STEP', 'BOOK_QUERY', `Querying wc2026_frozen_book_odds for match_ids: ${matchIds.join(', ')}`);
   const [bookOdds] = await db.execute(
-    `SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id IN (${fixtureIds.map(()=>'?').join(',')})`,
-    fixtureIds
+    `SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (${matchIds.map(()=>'?').join(',')})`,
+    matchIds
   );
-  log('DATA', 'BOOK_QUERY', `Book odds rows returned: ${bookOdds.length} (expected ${fixtureIds.length})`);
+  log('DATA', 'BOOK_QUERY', `Book odds rows returned: ${bookOdds.length} (expected ${matchIds.length})`);
 
   for (const fix of jul1Fix) {
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     if (!bookRow) {
-      log('FAIL', 'BOOK_LOOKUP', `${fix.fixture_id} (${fix.home_code} vs ${fix.away_code}): NO book odds row in DB — ROOT CAUSE`);
+      log('FAIL', 'BOOK_LOOKUP', `${fix.match_id} (${fix.home_code} vs ${fix.away_code}): NO book odds row in DB — ROOT CAUSE`);
     } else {
       const REQUIRED = ['book_home_ml','book_draw_ml','book_away_ml','book_spread_line',
         'book_home_spread_odds','book_away_spread_odds','book_total_line','book_over_odds',
@@ -245,11 +245,11 @@ async function main() {
         'book_dc_x2_odds','book_no_draw_home_odds','to_advance_home_odds','to_advance_away_odds'];
       const nullFields = REQUIRED.filter(f => bookRow[f] === null || bookRow[f] === undefined);
       if (nullFields.length > 0) {
-        log('WARN', 'BOOK_LOOKUP', `${fix.fixture_id}: ${nullFields.length} null fields: ${nullFields.join(', ')}`);
+        log('WARN', 'BOOK_LOOKUP', `${fix.match_id}: ${nullFields.length} null fields: ${nullFields.join(', ')}`);
       } else {
-        log('PASS', 'BOOK_LOOKUP', `${fix.fixture_id} (${fix.home_code} vs ${fix.away_code}): ALL ${REQUIRED.length} required fields populated ✓`);
+        log('PASS', 'BOOK_LOOKUP', `${fix.match_id} (${fix.home_code} vs ${fix.away_code}): ALL ${REQUIRED.length} required fields populated ✓`);
       }
-      log('DATA', 'BOOK_VALUES', `  ${fix.fixture_id}: home_ml=${bookRow.book_home_ml} draw_ml=${bookRow.book_draw_ml} away_ml=${bookRow.book_away_ml} spread=${bookRow.book_spread_line} home_sp_odds=${bookRow.book_home_spread_odds} away_sp_odds=${bookRow.book_away_spread_odds} total=${bookRow.book_total_line} over=${bookRow.book_over_odds} under=${bookRow.book_under_odds} btts_y=${bookRow.book_btts_yes_odds} btts_n=${bookRow.book_btts_no_odds} dc1x=${bookRow.book_dc_1x_odds} dcx2=${bookRow.book_dc_x2_odds} no_draw=${bookRow.book_no_draw_home_odds} adv_h=${bookRow.to_advance_home_odds} adv_a=${bookRow.to_advance_away_odds}`);
+      log('DATA', 'BOOK_VALUES', `  ${fix.match_id}: home_ml=${bookRow.book_home_ml} draw_ml=${bookRow.book_draw_ml} away_ml=${bookRow.book_away_ml} spread=${bookRow.book_spread_line} home_sp_odds=${bookRow.book_home_spread_odds} away_sp_odds=${bookRow.book_away_spread_odds} total=${bookRow.book_total_line} over=${bookRow.book_over_odds} under=${bookRow.book_under_odds} btts_y=${bookRow.book_btts_yes_odds} btts_n=${bookRow.book_btts_no_odds} dc1x=${bookRow.book_dc_1x_odds} dcx2=${bookRow.book_dc_x2_odds} no_draw=${bookRow.book_no_draw_home_odds} adv_h=${bookRow.to_advance_home_odds} adv_a=${bookRow.to_advance_away_odds}`);
     }
   }
 
@@ -258,7 +258,7 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════
   banner('AUDIT BLOCK 6 — CROSS-REFERENCE: DB vs GROUND TRUTH (pasted_content_70.txt)', C.BG_BLUE + C.BOLD + C.WHITE);
 
-  const [r081] = await db.execute(`SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id = 'wc26-r32-081'`);
+  const [r081] = await db.execute(`SELECT * FROM wc2026_frozen_book_odds WHERE match_id = 'wc26-r32-081'`);
   if (r081.length === 0) hardFail('XREF_081', `wc26-r32-081 NOT FOUND in wc2026_frozen_book_odds`);
   const db081 = r081[0];
 
@@ -281,7 +281,7 @@ async function main() {
   log('DATA', 'XREF_081', `  to_advance_away_odds=${db081.to_advance_away_odds}  (GT: ${GROUND_TRUTH_081.to_advance_away_odds})`);
 
   // Field-by-field validation
-  const fields = Object.keys(GROUND_TRUTH_081).filter(k => k !== 'fixture_id' && k !== 'home_team' && k !== 'away_team');
+  const fields = Object.keys(GROUND_TRUTH_081).filter(k => k !== 'match_id' && k !== 'home_team' && k !== 'away_team');
   let xrefPass = 0, xrefFail = 0;
   for (const field of fields) {
     const dbVal = Number(db081[field]);
@@ -354,12 +354,12 @@ async function main() {
   banner('AUDIT BLOCK 9 — COMPLETE BOOK vs MODEL TABLE (ALL 3 JULY 1 FIXTURES)', C.BG_GREEN + C.BOLD + C.WHITE);
 
   for (const fix of jul1Fix) {
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     if (!bookRow) {
-      log('FAIL', 'BVM_TABLE', `${fix.fixture_id}: NO book odds row`);
+      log('FAIL', 'BVM_TABLE', `${fix.match_id}: NO book odds row`);
       continue;
     }
-    subBanner(`BOOK LINES — ${fix.home_code} vs ${fix.away_code} (${fix.fixture_id})`);
+    subBanner(`BOOK LINES — ${fix.home_code} vs ${fix.away_code} (${fix.match_id})`);
     const markets = [
       ['Home ML',                    bookRow.book_home_ml],
       ['Draw ML',                    bookRow.book_draw_ml],
@@ -391,14 +391,14 @@ async function main() {
   banner('AUDIT BLOCK 10 — SPREAD SIGN VALIDATION (NO INVERSION)', C.BG_BLUE + C.BOLD + C.WHITE);
 
   for (const fix of jul1Fix) {
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     if (!bookRow) continue;
     const spreadLine = bookRow.book_spread_line;
     const homeSpreadOdds = bookRow.book_home_spread_odds;
     const awaySpreadOdds = bookRow.book_away_spread_odds;
     // Rule: if spread_line < 0, home team is favorite → home spread odds should be LESS favorable (lower abs value)
     // If spread_line > 0, home team is underdog → home spread odds should be MORE favorable (higher abs value)
-    log('DATA', 'SPREAD_CHECK', `${fix.fixture_id} (${fix.home_code} vs ${fix.away_code}): spread_line=${spreadLine} home_sp_odds=${homeSpreadOdds} away_sp_odds=${awaySpreadOdds}`);
+    log('DATA', 'SPREAD_CHECK', `${fix.match_id} (${fix.home_code} vs ${fix.away_code}): spread_line=${spreadLine} home_sp_odds=${homeSpreadOdds} away_sp_odds=${awaySpreadOdds}`);
     if (spreadLine < 0) {
       // Home is favorite on spread
       log('DATA', 'SPREAD_CHECK', `  Home (${fix.home_code}) is spread FAVORITE (${spreadLine})`);
@@ -412,7 +412,7 @@ async function main() {
     } else {
       log('DATA', 'SPREAD_CHECK', `  Home (${fix.home_code}) is spread UNDERDOG (+${spreadLine})`);
     }
-    log('PASS', 'SPREAD_CHECK', `  ${fix.fixture_id}: spread sign validated ✓`);
+    log('PASS', 'SPREAD_CHECK', `  ${fix.match_id}: spread sign validated ✓`);
   }
 
   // ════════════════════════════════════════════════════════════════════════════

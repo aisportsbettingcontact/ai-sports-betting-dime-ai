@@ -172,7 +172,7 @@ function computeLambda(nv, isHome, elo, rank, form, drawFloor = 0.097) {
 // All odds mapped to DB home/away
 const FIXTURES = [
   {
-    fixtureId: 'wc26-g-049',
+    matchId: 'wc26-g-049',
     homeId: 'can', awayId: 'sui',
     homeName: 'Canada', awayName: 'Switzerland',
     // DK 1X2
@@ -193,7 +193,7 @@ const FIXTURES = [
     awayElo: 1800, awayRank: 15, awayForm: 0.68,
   },
   {
-    fixtureId: 'wc26-g-052',
+    matchId: 'wc26-g-052',
     homeId: 'bih', awayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
     dkHomeML: -240, dkDrawML: 400, dkAwayML: 600,
@@ -207,7 +207,7 @@ const FIXTURES = [
     awayElo: 1620, awayRank: 68, awayForm: 0.42,
   },
   {
-    fixtureId: 'wc26-g-053',
+    matchId: 'wc26-g-053',
     homeId: 'hai', awayId: 'mar',
     homeName: 'Haiti', awayName: 'Morocco',
     dkHomeML: 1400, dkDrawML: 600, dkAwayML: -500,
@@ -221,7 +221,7 @@ const FIXTURES = [
     awayElo: 1870, awayRank: 14, awayForm: 0.72,
   },
   {
-    fixtureId: 'wc26-g-054',
+    matchId: 'wc26-g-054',
     homeId: 'sco', awayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
     dkHomeML: 700, dkDrawML: 425, dkAwayML: -265,
@@ -235,7 +235,7 @@ const FIXTURES = [
     awayElo: 2010, awayRank: 5, awayForm: 0.80,
   },
   {
-    fixtureId: 'wc26-g-050',
+    matchId: 'wc26-g-050',
     homeId: 'rsa', awayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
     dkHomeML: 425, dkDrawML: 295, dkAwayML: -150,
@@ -249,7 +249,7 @@ const FIXTURES = [
     awayElo: 1790, awayRank: 22, awayForm: 0.65,
   },
   {
-    fixtureId: 'wc26-g-051',
+    matchId: 'wc26-g-051',
     homeId: 'cze', awayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
     dkHomeML: 265, dkDrawML: 285, dkAwayML: -105,
@@ -278,16 +278,16 @@ async function main() {
   const errors = [];
 
   for (const f of FIXTURES) {
-    console.log(`\n${TAG} [STEP] Processing fixture=${f.fixtureId} | ${f.homeName}(home) vs ${f.awayName}(away)`);
+    console.log(`\n${TAG} [STEP] Processing fixture=${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away)`);
 
     // ── Step 1: Clear existing odds for this fixture ──────────────────────────
     const [delDk] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [f.fixtureId, DK_BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [f.matchId, DK_BOOK_ID]
     );
     const [delModel] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [f.fixtureId, MODEL_BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [f.matchId, MODEL_BOOK_ID]
     );
     console.log(`${TAG} [STATE] Cleared DK rows=${delDk.affectedRows} Model rows=${delModel.affectedRows}`);
 
@@ -410,30 +410,30 @@ async function main() {
     for (const row of dkRows) {
       if (row.odds == null) continue;
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, impliedProb(row.odds)]
+        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, impliedProb(row.odds)]
       );
       totalDkRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${dkRows.length} DK rows for ${f.fixtureId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${dkRows.length} DK rows for ${f.matchId}`);
 
     // ── Step 12: Insert Model odds ────────────────────────────────────────────
     for (const row of modelRows) {
       if (row.odds == null) continue;
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
+        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
       );
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} Model rows for ${f.fixtureId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} Model rows for ${f.matchId}`);
 
     // ── Step 13: Upsert model projections ─────────────────────────────────────
     await conn.query(`
       INSERT INTO wc2026_model_projections (
-        fixture_id, model_version, n_simulations,
+        match_id, model_version, n_simulations,
         home_team, away_team,
         home_lambda, away_lambda,
         home_win_prob, draw_prob, away_win_prob,
@@ -485,7 +485,7 @@ async function main() {
         top_scorelines = VALUES(top_scorelines),
         modeled_at = NOW()
     `, [
-      f.fixtureId, MODEL_VERSION, N_SIMULATIONS,
+      f.matchId, MODEL_VERSION, N_SIMULATIONS,
       f.homeName, f.awayName,
       lambdaH, lambdaA,
       finalHome, finalDraw, finalAway,
@@ -506,26 +506,26 @@ async function main() {
       sim.top,
     ]);
     totalProjRows++;
-    console.log(`${TAG} [OUTPUT] Upserted model projection for ${f.fixtureId}: proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
+    console.log(`${TAG} [OUTPUT] Upserted model projection for ${f.matchId}: proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
   }
 
   // ── Final verification ────────────────────────────────────────────────────
   const [verifyDk] = await conn.query(
-    `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054') AND book_id = ${DK_BOOK_ID} GROUP BY fixture_id`
+    `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054') AND book_id = ${DK_BOOK_ID} GROUP BY match_id`
   );
   const [verifyModel] = await conn.query(
-    `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054') AND book_id = ${MODEL_BOOK_ID} GROUP BY fixture_id`
+    `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054') AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`
   );
   const [verifyProj] = await conn.query(
-    `SELECT fixture_id, proj_home_score, proj_away_score, proj_total FROM wc2026_model_projections WHERE fixture_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054')`
+    `SELECT match_id, proj_home_score, proj_away_score, proj_total FROM wc2026_model_projections WHERE match_id IN ('wc26-g-049','wc26-g-050','wc26-g-051','wc26-g-052','wc26-g-053','wc26-g-054')`
   );
 
   console.log(`\n${TAG} [VERIFY] DK odds per fixture:`);
-  for (const r of verifyDk) console.log(`  ${r.fixture_id}: ${r.cnt} rows`);
+  for (const r of verifyDk) console.log(`  ${r.match_id}: ${r.cnt} rows`);
   console.log(`${TAG} [VERIFY] Model odds per fixture:`);
-  for (const r of verifyModel) console.log(`  ${r.fixture_id}: ${r.cnt} rows`);
+  for (const r of verifyModel) console.log(`  ${r.match_id}: ${r.cnt} rows`);
   console.log(`${TAG} [VERIFY] Model projections:`);
-  for (const r of verifyProj) console.log(`  ${r.fixture_id}: proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total}`);
+  for (const r of verifyProj) console.log(`  ${r.match_id}: proj=${r.proj_home_score}-${r.proj_away_score} total=${r.proj_total}`);
 
   const pass = verifyDk.length === 6 && verifyModel.length === 6 && verifyProj.length === 6;
   console.log(`\n${TAG} [VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} — DK=${verifyDk.length}/6 Model=${verifyModel.length}/6 Proj=${verifyProj.length}/6`);

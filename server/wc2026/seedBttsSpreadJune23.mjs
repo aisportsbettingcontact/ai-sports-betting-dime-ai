@@ -22,7 +22,7 @@ const NOW = new Date().toISOString().replace("T", " ").slice(0, 19);
 
 const FIXTURES = [
   {
-    fixtureId: "wc26-g-045",
+    matchId: "wc26-g-045",
     homeSpread: 2.5, awaySpread: -2.5,
     dkBttsYes: 155, dkBttsNo: -195,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -30,7 +30,7 @@ const FIXTURES = [
     modelHomeSpreadOdds: -108, modelAwaySpreadOdds: -112,
   },
   {
-    fixtureId: "wc26-g-046",
+    matchId: "wc26-g-046",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -115, dkBttsNo: -115,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -38,7 +38,7 @@ const FIXTURES = [
     modelHomeSpreadOdds: -105, modelAwaySpreadOdds: -115,
   },
   {
-    fixtureId: "wc26-g-047",
+    matchId: "wc26-g-047",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -120, dkBttsNo: -110,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -46,7 +46,7 @@ const FIXTURES = [
     modelHomeSpreadOdds: -112, modelAwaySpreadOdds: -108,
   },
   {
-    fixtureId: "wc26-g-048",
+    matchId: "wc26-g-048",
     homeSpread: 1.5, awaySpread: -1.5,
     dkBttsYes: -110, dkBttsNo: -120,
     dkHomeSpreadOdds: -110, dkAwaySpreadOdds: -110,
@@ -63,7 +63,7 @@ async function main() {
   let errors = 0;
 
   for (const f of FIXTURES) {
-    console.log(`\n[STEP] Processing fixture ${f.fixtureId}`);
+    console.log(`\n[STEP] Processing fixture ${f.matchId}`);
 
     const rows = [
       { bookId: BOOK_DK,    market: "BTTS",           selection: "yes",  line: null,        americanOdds: f.dkBttsYes },
@@ -80,13 +80,13 @@ async function main() {
       try {
         await conn.execute(
           `INSERT INTO wc2026_odds_snapshots
-             (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+             (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
            VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 1)
            ON DUPLICATE KEY UPDATE
              american_odds = VALUES(american_odds),
              line = VALUES(line),
              snapshot_ts = VALUES(snapshot_ts)`,
-          [f.fixtureId, r.bookId, r.market, r.selection, r.line, r.americanOdds, NOW]
+          [f.matchId, r.bookId, r.market, r.selection, r.line, r.americanOdds, NOW]
         );
         console.log(`  [STATE] OK book=${r.bookId} ${r.market}/${r.selection} odds=${r.americanOdds} line=${r.line}`);
         inserted++;

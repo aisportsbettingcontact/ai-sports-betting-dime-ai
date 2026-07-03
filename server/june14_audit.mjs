@@ -129,7 +129,7 @@ for (const f of wcFixtures) {
   const [dkOdds] = await conn.execute(`
     SELECT market, selection, price, snapshotTs
     FROM wc2026_odds_snapshots
-    WHERE fixtureId = ? AND bookId = 68
+    WHERE matchId = ? AND bookId = 68
     ORDER BY snapshotTs DESC
     LIMIT 30
   `, [f.id]);
@@ -138,7 +138,7 @@ for (const f of wcFixtures) {
   const [modelOdds] = await conn.execute(`
     SELECT market, selection, price, snapshotTs
     FROM wc2026_odds_snapshots
-    WHERE fixtureId = ? AND bookId = 0
+    WHERE matchId = ? AND bookId = 0
     ORDER BY snapshotTs DESC
     LIMIT 30
   `, [f.id]);

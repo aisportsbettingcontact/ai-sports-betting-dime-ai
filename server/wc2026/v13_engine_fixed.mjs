@@ -460,21 +460,21 @@ async function main() {
   L.pass('DB', `A4 wc2026_espn_player_stats: ${psRows.length} team-aggregates`);
 
   const [bookRows] = await conn.execute(
-    `SELECT fbo.fixture_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
+    `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
             fbo.book_total_line, fbo.book_over_odds, fbo.book_under_odds,
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
             fbo.to_advance_home_odds, fbo.to_advance_away_odds,
             f.espn_event_id, f.home_team_id, f.away_team_id
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.fixture_id = fbo.fixture_id
+     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
   // Pull Jul 1 fixture book odds (C10: includes book_spread_line per fixture)
   L.step('DB', 'Pulling Jul 1 fixture book odds (C10: parameterized spread line per fixture)...');
   const [jul1BookRows] = await conn.execute(
-    `SELECT fbo.fixture_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
+    `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
             fbo.book_total_line, fbo.book_over_odds, fbo.book_under_odds,
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
@@ -485,16 +485,16 @@ async function main() {
             ht.fifa_code as homeAbbrev, at2.fifa_code as awayAbbrev,
             ht.name as homeName, at2.name as awayName
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.fixture_id = fbo.fixture_id
+     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
      JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
      JOIN wc2026_teams at2 ON at2.team_id = f.away_team_id
      WHERE f.match_date = '2026-07-01'
-     ORDER BY fbo.fixture_id`
+     ORDER BY fbo.match_id`
   );
   L.pass('DB', `Jul 1 fixtures from DB: ${jul1BookRows.length} rows`);
   for (const r of jul1BookRows) {
-    L.input('C10', `  ${r.fixture_id}: spreadLine=${r.book_spread_line} (from DB — not hardcoded)`);
-    L.input('DB',  `  ${r.fixture_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml}`);
+    L.input('C10', `  ${r.match_id}: spreadLine=${r.book_spread_line} (from DB — not hardcoded)`);
+    L.input('DB',  `  ${r.match_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml}`);
   }
 
   // Pull group stage xG for Jul 1 teams
@@ -1023,12 +1023,12 @@ async function main() {
     const lA = jul1Lambdas[f.awayAbbrev];
 
     if (!lH || !lA) {
-      L.fail('PHASE_I', `${f.fixture_id}: Missing lambda for ${f.homeAbbrev}(${lH}) or ${f.awayAbbrev}(${lA})`);
+      L.fail('PHASE_I', `${f.match_id}: Missing lambda for ${f.homeAbbrev}(${lH}) or ${f.awayAbbrev}(${lA})`);
       continue;
     }
 
     L.hr();
-    L.step('PHASE_I', `${f.fixture_id}: ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home)`);
+    L.step('PHASE_I', `${f.match_id}: ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home)`);
     L.input('PHASE_I', `  λH (${f.homeAbbrev}) = ${lH.toFixed(6)} | λA (${f.awayAbbrev}) = ${lA.toFixed(6)}`);
 
     // C10: read spread line from DB
@@ -1042,7 +1042,7 @@ async function main() {
       L.warn('C9', `  ET sample n=${etResult.n} < 5 — HIGH VARIANCE: treat ET probabilities as directional only`);
     }
 
-    const sim = dcSim(lH, lA, winV.rho, etResult.point, spreadLine, `${f.fixture_id}`);
+    const sim = dcSim(lH, lA, winV.rho, etResult.point, spreadLine, `${f.match_id}`);
 
     // Validate probability sums
     const sum1X2    = sim.pH + sim.pD + sim.pA;
@@ -1050,22 +1050,22 @@ async function main() {
     const sumSpread = sim.homeSpreadCov + sim.awaySpreadCov;
     const sumTotal  = sim.pO25 + sim.pU25;
 
-    if (Math.abs(sum1X2-1) > 0.0001)    L.fail('VALIDATE', `${f.fixture_id}: 1X2 sum=${sum1X2.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: 1X2 sum=${sum1X2.toFixed(8)} ✓`);
-    if (Math.abs(sumAdv-1) > 0.001)     L.warn('VALIDATE', `${f.fixture_id}: Advance sum=${sumAdv.toFixed(8)}`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Advance sum=${sumAdv.toFixed(8)} ✓`);
-    if (Math.abs(sumSpread-1) > 0.0001) L.fail('VALIDATE', `${f.fixture_id}: Spread sum=${sumSpread.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Spread sum=${sumSpread.toFixed(8)} ✓`);
-    if (Math.abs(sumTotal-1) > 0.0001)  L.fail('VALIDATE', `${f.fixture_id}: Total sum=${sumTotal.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Total sum=${sumTotal.toFixed(8)} ✓`);
+    if (Math.abs(sum1X2-1) > 0.0001)    L.fail('VALIDATE', `${f.match_id}: 1X2 sum=${sum1X2.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: 1X2 sum=${sum1X2.toFixed(8)} ✓`);
+    if (Math.abs(sumAdv-1) > 0.001)     L.warn('VALIDATE', `${f.match_id}: Advance sum=${sumAdv.toFixed(8)}`);
+    else L.pass('VALIDATE', `${f.match_id}: Advance sum=${sumAdv.toFixed(8)} ✓`);
+    if (Math.abs(sumSpread-1) > 0.0001) L.fail('VALIDATE', `${f.match_id}: Spread sum=${sumSpread.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: Spread sum=${sumSpread.toFixed(8)} ✓`);
+    if (Math.abs(sumTotal-1) > 0.0001)  L.fail('VALIDATE', `${f.match_id}: Total sum=${sumTotal.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: Total sum=${sumTotal.toFixed(8)} ✓`);
 
     // DC identity checks
     const p1X_check = Math.abs((sim.pH + sim.pD) - sim.p1X);
     const pX2_check = Math.abs((sim.pA + sim.pD) - sim.pX2);
-    if (p1X_check > 0.0001) L.fail('VALIDATE', `${f.fixture_id}: p1X identity FAIL: pH+pD=${(sim.pH+sim.pD).toFixed(8)} ≠ p1X=${sim.p1X.toFixed(8)}`);
-    else L.pass('VALIDATE', `${f.fixture_id}: p1X identity ✓ (${sim.p1X.toFixed(6)})`);
-    if (pX2_check > 0.0001) L.fail('VALIDATE', `${f.fixture_id}: pX2 identity FAIL: pA+pD=${(sim.pA+sim.pD).toFixed(8)} ≠ pX2=${sim.pX2.toFixed(8)}`);
-    else L.pass('VALIDATE', `${f.fixture_id}: pX2 identity ✓ (${sim.pX2.toFixed(6)})`);
+    if (p1X_check > 0.0001) L.fail('VALIDATE', `${f.match_id}: p1X identity FAIL: pH+pD=${(sim.pH+sim.pD).toFixed(8)} ≠ p1X=${sim.p1X.toFixed(8)}`);
+    else L.pass('VALIDATE', `${f.match_id}: p1X identity ✓ (${sim.p1X.toFixed(6)})`);
+    if (pX2_check > 0.0001) L.fail('VALIDATE', `${f.match_id}: pX2 identity FAIL: pA+pD=${(sim.pA+sim.pD).toFixed(8)} ≠ pX2=${sim.pX2.toFixed(8)}`);
+    else L.pass('VALIDATE', `${f.match_id}: pX2 identity ✓ (${sim.pX2.toFixed(6)})`);
 
     // Convert to ML
     const mHomeMl  = prob2ml(sim.pH);
@@ -1085,7 +1085,7 @@ async function main() {
 
     // Full market table
     L.thick();
-    L.output('MARKET', `╔═══ ${f.fixture_id} | ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home) ═══╗`);
+    L.output('MARKET', `╔═══ ${f.match_id} | ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home) ═══╗`);
     L.output('MARKET', `  Proj Score:  ${f.homeAbbrev} ${sim.projH.toFixed(3)} – ${f.awayAbbrev} ${sim.projA.toFixed(3)}`);
     L.output('MARKET', `  Proj Total:  ${sim.projTotal.toFixed(3)} | Raw Spread: ${(sim.projH-sim.projA).toFixed(3)}`);
     L.output('MARKET', `  Win Probs:   ${f.homeAbbrev} ${(sim.pH*100).toFixed(2)}% | Draw ${(sim.pD*100).toFixed(2)}% | ${f.awayAbbrev} ${(sim.pA*100).toFixed(2)}%`);
@@ -1121,7 +1121,7 @@ async function main() {
     }
 
     projResults.push({
-      fixtureId: f.fixture_id,
+      matchId: f.match_id,
       home: f.homeAbbrev, away: f.awayAbbrev,
       lH, lA, etH: etResult.point, etCI: etResult.ci, etN: etResult.n,
       projH: sim.projH, projA: sim.projA, projTotal: sim.projTotal,
@@ -1155,34 +1155,34 @@ async function main() {
   for (const p of projResults) {
     // 1X2 sum
     const s1 = p.sim.pH + p.sim.pD + p.sim.pA;
-    if (Math.abs(s1-1) > 0.0001) { L.fail('XREF', `${p.fixtureId}: 1X2 sum=${s1.toFixed(8)}`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: 1X2 sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s1-1) > 0.0001) { L.fail('XREF', `${p.matchId}: 1X2 sum=${s1.toFixed(8)}`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: 1X2 sum=1.0 ✓`); xrefPass++; }
 
     // Advance sum
     const s2 = p.sim.pAdvH + p.sim.pAdvA;
-    if (Math.abs(s2-1) > 0.001) { L.warn('XREF', `${p.fixtureId}: Advance sum=${s2.toFixed(8)}`); }
-    else { L.pass('XREF', `${p.fixtureId}: Advance sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s2-1) > 0.001) { L.warn('XREF', `${p.matchId}: Advance sum=${s2.toFixed(8)}`); }
+    else { L.pass('XREF', `${p.matchId}: Advance sum=1.0 ✓`); xrefPass++; }
 
     // Spread sum
     const s3 = p.sim.homeSpreadCov + p.sim.awaySpreadCov;
-    if (Math.abs(s3-1) > 0.0001) { L.fail('XREF', `${p.fixtureId}: Spread sum=${s3.toFixed(8)}`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: Spread sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s3-1) > 0.0001) { L.fail('XREF', `${p.matchId}: Spread sum=${s3.toFixed(8)}`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: Spread sum=1.0 ✓`); xrefPass++; }
 
     // DC identity: p1X = pH + pD
     const dc1 = Math.abs(p.sim.p1X - (p.sim.pH + p.sim.pD));
-    if (dc1 > 0.0001) { L.fail('XREF', `${p.fixtureId}: p1X identity FAIL`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: p1X identity ✓`); xrefPass++; }
+    if (dc1 > 0.0001) { L.fail('XREF', `${p.matchId}: p1X identity FAIL`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: p1X identity ✓`); xrefPass++; }
 
     // DC identity: pX2 = pA + pD
     const dc2 = Math.abs(p.sim.pX2 - (p.sim.pA + p.sim.pD));
-    if (dc2 > 0.0001) { L.fail('XREF', `${p.fixtureId}: pX2 identity FAIL`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: pX2 identity ✓`); xrefPass++; }
+    if (dc2 > 0.0001) { L.fail('XREF', `${p.matchId}: pX2 identity FAIL`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: pX2 identity ✓`); xrefPass++; }
 
     // Lambda sanity
-    if (p.lH < 0.20 || p.lH > 5.0) { L.fail('XREF', `${p.fixtureId}: λH=${p.lH.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: λH=${p.lH.toFixed(4)} in range ✓`); xrefPass++; }
-    if (p.lA < 0.20 || p.lA > 5.0) { L.fail('XREF', `${p.fixtureId}: λA=${p.lA.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
-    else { L.pass('XREF', `${p.fixtureId}: λA=${p.lA.toFixed(4)} in range ✓`); xrefPass++; }
+    if (p.lH < 0.20 || p.lH > 5.0) { L.fail('XREF', `${p.matchId}: λH=${p.lH.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: λH=${p.lH.toFixed(4)} in range ✓`); xrefPass++; }
+    if (p.lA < 0.20 || p.lA > 5.0) { L.fail('XREF', `${p.matchId}: λA=${p.lA.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
+    else { L.pass('XREF', `${p.matchId}: λA=${p.lA.toFixed(4)} in range ✓`); xrefPass++; }
 
     // ML sign check
     for (const [k, v] of Object.entries(p.model)) {
@@ -1194,7 +1194,7 @@ async function main() {
       const expectedSign = prob >= 0.5 ? 'negative' : 'positive';
       const actualSign = v < 0 ? 'negative' : 'positive';
       if (expectedSign !== actualSign) {
-        L.fail('XREF', `${p.fixtureId}: ${k} ML sign mismatch — prob=${(prob*100).toFixed(1)}% but ML=${v}`);
+        L.fail('XREF', `${p.matchId}: ${k} ML sign mismatch — prob=${(prob*100).toFixed(1)}% but ML=${v}`);
         xrefFail++;
       } else {
         xrefPass++;

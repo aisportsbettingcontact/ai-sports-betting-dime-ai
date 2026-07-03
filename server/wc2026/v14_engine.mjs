@@ -628,7 +628,7 @@ async function main() {
   log('SECTION', 'PHASE_C', 'PHASE C — Project July 1 fixtures');
 
   const [jul1Fix] = await db.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
+    SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -640,8 +640,8 @@ async function main() {
 
   const [bookOdds] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN (${jul1Fix.map(()=>'?').join(',')})
-  `, jul1Fix.map(f => f.fixture_id));
+    WHERE match_id IN (${jul1Fix.map(()=>'?').join(',')})
+  `, jul1Fix.map(f => f.match_id));
 
   // Verify all book odds fields are populated
   const REQUIRED_BOOK_FIELDS = [
@@ -654,15 +654,15 @@ async function main() {
   ];
 
   for (const fix of jul1Fix) {
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     if (!bookRow) {
-      hardFail('C1_BOOK', `${fix.fixture_id}: NO book odds row — cannot compute edges`);
+      hardFail('C1_BOOK', `${fix.match_id}: NO book odds row — cannot compute edges`);
     }
     const nullFields = REQUIRED_BOOK_FIELDS.filter(f => bookRow[f] === null || bookRow[f] === undefined);
     if (nullFields.length > 0) {
-      log('WARN', 'C1_BOOK', `${fix.fixture_id}: ${nullFields.length} null book fields: ${nullFields.join(', ')}`);
+      log('WARN', 'C1_BOOK', `${fix.match_id}: ${nullFields.length} null book fields: ${nullFields.join(', ')}`);
     } else {
-      log('PASS', 'C1_BOOK', `${fix.fixture_id}: all book odds populated ✓`);
+      log('PASS', 'C1_BOOK', `${fix.match_id}: all book odds populated ✓`);
     }
   }
 
@@ -672,7 +672,7 @@ async function main() {
     const homeCode = fix.home_code;
     const awayCode = fix.away_code;
 
-    log('SECTION', 'FIXTURE', `━━━ ${fix.fixture_id} | ${homeCode} vs ${awayCode} ━━━`);
+    log('SECTION', 'FIXTURE', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
 
     // C5: Role inversion pre-flight
     const espnRows = xgAll.filter(r =>
@@ -682,9 +682,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.fixture_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.fixture_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
       }
     }
 
@@ -703,12 +703,12 @@ async function main() {
     log('STATE', 'LAMBDAS', `${homeCode} λ=${fmt(hForm.lambda)} | ${awayCode} λ=${fmt(aForm.lambda)}`);
 
     // C10: Spread line from DB
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     // C10: spread line from DB — DB stores as signed (e.g. -1.5 for home favorite)
     // The simulation condition is h - a > threshold, so we always use the absolute value
     const spreadLineRaw = bookRow?.book_spread_line ?? 1.5;
     const spreadLine = Math.abs(spreadLineRaw);
-    log('STATE', 'C10_SPREAD', `${fix.fixture_id}: spread line raw=${spreadLineRaw} → abs=${spreadLine} (from DB)`);
+    log('STATE', 'C10_SPREAD', `${fix.match_id}: spread line raw=${spreadLineRaw} → abs=${spreadLine} (from DB)`);
 
     const sim = runDCSim(hForm.lambda, aForm.lambda, winner.rho, 100000, spreadLine);
 
@@ -773,41 +773,41 @@ async function main() {
     // Prob sum
     const probSum = sim.pH + sim.pD + sim.pA;
     if (Math.abs(probSum - 1.0) > 0.001) {
-      hardFail('XREF_PROB', `${fix.fixture_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
+      hardFail('XREF_PROB', `${fix.match_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: prob sum=${probSum.toFixed(6)} ✓`);
+    log('PASS', 'XREF', `${fix.match_id}: prob sum=${probSum.toFixed(6)} ✓`);
 
     // ET prob sum
     const etSum = et.pETH + et.pETA;
     if (Math.abs(etSum - 1.0) > 0.001) {
-      hardFail('XREF_ET', `${fix.fixture_id}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`);
+      hardFail('XREF_ET', `${fix.match_id}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: ET prob sum=${etSum.toFixed(6)} ✓`);
+    log('PASS', 'XREF', `${fix.match_id}: ET prob sum=${etSum.toFixed(6)} ✓`);
 
     // N10: Advance prob sum — tightened to 0.001
     const advSum = pAdvH + pAdvA;
     if (Math.abs(advSum - 1.0) > 0.001) {
-      hardFail('XREF_ADV', `${fix.fixture_id}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0 (tolerance 0.001)`);
+      hardFail('XREF_ADV', `${fix.match_id}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0 (tolerance 0.001)`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: advance prob sum=${advSum.toFixed(6)} ✓`);
+    log('PASS', 'XREF', `${fix.match_id}: advance prob sum=${advSum.toFixed(6)} ✓`);
 
     // N10: DC market consistency: DC1X + DC X2 = 1 + pD
     const dcCheck = pDC1X + pDCX2;
     const dcExpected = 1 + sim.pD;
     if (Math.abs(dcCheck - dcExpected) > 0.001) {
-      hardFail('XREF_DC', `${fix.fixture_id}: DC1X+DC X2=${dcCheck.toFixed(6)} ≠ 1+pD=${dcExpected.toFixed(6)}`);
+      hardFail('XREF_DC', `${fix.match_id}: DC1X+DC X2=${dcCheck.toFixed(6)} ≠ 1+pD=${dcExpected.toFixed(6)}`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: DC market consistency DC1X+DCX2=${dcCheck.toFixed(6)} = 1+pD=${dcExpected.toFixed(6)} ✓`);
+    log('PASS', 'XREF', `${fix.match_id}: DC market consistency DC1X+DCX2=${dcCheck.toFixed(6)} = 1+pD=${dcExpected.toFixed(6)} ✓`);
 
     // N10: Extreme ML check
     for (const [market, , model] of markets) {
       if (model !== null && Math.abs(model) >= 9999) {
-        log('WARN', 'XREF_ML', `${fix.fixture_id} [${market}]: extreme ML=${model} (p near 0 or 1)`);
+        log('WARN', 'XREF_ML', `${fix.match_id} [${market}]: extreme ML=${model} (p near 0 or 1)`);
       }
     }
 
     projections.push({
-      fixtureId: fix.fixture_id,
+      matchId: fix.match_id,
       homeCode, awayCode,
       lambdaH: hForm.lambda, lambdaA: aForm.lambda,
       projScoreH: hForm.lambda, projScoreA: aForm.lambda,
@@ -830,7 +830,7 @@ async function main() {
     winner: { id: winner.id, ...winner, composite: winnerResult.composite, brier: winnerResult.brier, n: winnerResult.n, skipped: winnerResult.skipped },
     variations: results,
     projections: projections.map(p => ({
-      fixtureId: p.fixtureId,
+      matchId: p.matchId,
       homeCode: p.homeCode, awayCode: p.awayCode,
       lambdaH: p.lambdaH, lambdaA: p.lambdaA,
       projScoreH: p.projScoreH, projScoreA: p.projScoreA,

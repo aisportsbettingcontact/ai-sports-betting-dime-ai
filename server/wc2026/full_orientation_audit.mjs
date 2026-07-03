@@ -98,7 +98,7 @@ async function main() {
 
   // Load all DB fixtures
   const [dbFixtures] = await conn.execute(
-    'SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc FROM wc2026_fixtures ORDER BY match_date, kickoff_utc'
+    'SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc FROM wc2026_fixtures ORDER BY match_date, kickoff_utc'
   );
 
   console.log(`[INPUT] DB has ${dbFixtures.length} total fixtures`);
@@ -144,9 +144,9 @@ async function main() {
       const status = isCorrect ? 'OK' : 'SWAPPED';
 
       if (!isCorrect) {
-        console.log(`  [${status}] ${dbFix.fixture_id}: DB has home=${dbFix.home_team_id}/away=${dbFix.away_team_id} but AN says home=${anHomeId}/away=${anAwayId}`);
+        console.log(`  [${status}] ${dbFix.match_id}: DB has home=${dbFix.home_team_id}/away=${dbFix.away_team_id} but AN says home=${anHomeId}/away=${anAwayId}`);
         mismatches.push({
-          fixtureId: dbFix.fixture_id,
+          matchId: dbFix.match_id,
           dbHome: dbFix.home_team_id,
           dbAway: dbFix.away_team_id,
           anHome: anHomeId,
@@ -156,11 +156,11 @@ async function main() {
           dateStr,
         });
       } else {
-        console.log(`  [OK]  ${dbFix.fixture_id}: ${anAwayId} @ ${anHomeId} ✓`);
-        matched.push(dbFix.fixture_id);
+        console.log(`  [OK]  ${dbFix.match_id}: ${anAwayId} @ ${anHomeId} ✓`);
+        matched.push(dbFix.match_id);
       }
 
-      anGamesAll.push({ dateStr, anAwayId, anHomeId, fixtureId: dbFix.fixture_id });
+      anGamesAll.push({ dateStr, anAwayId, anHomeId, matchId: dbFix.match_id });
     }
     console.log('');
   }
@@ -176,7 +176,7 @@ async function main() {
   if (mismatches.length > 0) {
     console.log('MISMATCHES TO FIX:');
     for (const m of mismatches) {
-      console.log(`  ${m.fixtureId}: DB home=${m.dbHome}/away=${m.dbAway} → should be home=${m.anHome}/away=${m.anAway}`);
+      console.log(`  ${m.matchId}: DB home=${m.dbHome}/away=${m.dbAway} → should be home=${m.anHome}/away=${m.anAway}`);
     }
   } else {
     console.log('ALL ORIENTATIONS CORRECT ✓');

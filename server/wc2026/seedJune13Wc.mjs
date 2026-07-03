@@ -201,35 +201,35 @@ async function run() {
     console.log('\n[STEP] Fixing fixture home/away orientations...');
 
     // wc26-g-004: INSERT (missing)
-    const [existing004] = await conn.query('SELECT fixture_id FROM wc2026_fixtures WHERE fixture_id = "wc26-g-004"');
+    const [existing004] = await conn.query('SELECT match_id FROM wc2026_fixtures WHERE match_id = "wc26-g-004"');
     if (existing004.length === 0) {
       await conn.query(`
-        INSERT INTO wc2026_fixtures (fixture_id, home_team_id, away_team_id, match_date, status, group_letter, venue, city)
+        INSERT INTO wc2026_fixtures (match_id, home_team_id, away_team_id, match_date, status, group_letter, venue, city)
         VALUES ("wc26-g-004", "sui", "qat", "2026-06-13 15:00:00", "SCHEDULED", "A", "MetLife Stadium", "East Rutherford, NJ")
       `);
       console.log('[STATE] wc26-g-004: INSERTED SUI (home) vs QAT (away)');
     } else {
-      await conn.query('UPDATE wc2026_fixtures SET home_team_id="sui", away_team_id="qat" WHERE fixture_id="wc26-g-004"');
+      await conn.query('UPDATE wc2026_fixtures SET home_team_id="sui", away_team_id="qat" WHERE match_id="wc26-g-004"');
       console.log('[STATE] wc26-g-004: UPDATED to SUI (home) vs QAT (away)');
     }
 
     // wc26-g-006: FIX BRA→away, MAR→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="mar", away_team_id="bra" WHERE fixture_id="wc26-g-006"');
+    await conn.query('UPDATE wc2026_fixtures SET home_team_id="mar", away_team_id="bra" WHERE match_id="wc26-g-006"');
     console.log('[STATE] wc26-g-006: FIXED to MAR (home) vs BRA (away)');
 
     // wc26-g-007: FIX HAI→away, SCO→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="sco", away_team_id="hai" WHERE fixture_id="wc26-g-007"');
+    await conn.query('UPDATE wc2026_fixtures SET home_team_id="sco", away_team_id="hai" WHERE match_id="wc26-g-007"');
     console.log('[STATE] wc26-g-007: FIXED to SCO (home) vs HAI (away)');
 
     // wc26-g-008: FIX AUS→away, TUR→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="tur", away_team_id="aus" WHERE fixture_id="wc26-g-008"');
+    await conn.query('UPDATE wc2026_fixtures SET home_team_id="tur", away_team_id="aus" WHERE match_id="wc26-g-008"');
     console.log('[STATE] wc26-g-008: FIXED to TUR (home) vs AUS (away)');
 
     // ── STEP 2: Delete stale odds for all 4 fixtures ──────────────────────────
     console.log('\n[STEP] Deleting stale odds snapshots...');
-    const fixtureIds = ['wc26-g-004', 'wc26-g-006', 'wc26-g-007', 'wc26-g-008'];
-    for (const fid of fixtureIds) {
-      const [del] = await conn.query('DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 0', [fid]);
+    const matchIds = ['wc26-g-004', 'wc26-g-006', 'wc26-g-007', 'wc26-g-008'];
+    for (const fid of matchIds) {
+      const [del] = await conn.query('DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0', [fid]);
       console.log(`[STATE] Deleted ${del.affectedRows} stale model odds rows for ${fid}`);
     }
 
@@ -246,7 +246,7 @@ async function run() {
       for (const r of rows) {
         await conn.query(`
           INSERT INTO wc2026_odds_snapshots
-            (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+            (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
           VALUES (?, 0, ?, ?, ?, ?, ?, ?, 0)
         `, [fid, r.market, r.selection, r.line ?? null, r.american_odds, r.prob, now]);
         totalOddsSeeded++;
@@ -257,8 +257,8 @@ async function run() {
 
     // ── STEP 4: Delete stale lineups and re-seed ──────────────────────────────
     console.log('\n[STEP] Seeding lineups...');
-    for (const fid of fixtureIds) {
-      const [del] = await conn.query('DELETE FROM wc2026_lineups WHERE fixture_id = ?', [fid]);
+    for (const fid of matchIds) {
+      const [del] = await conn.query('DELETE FROM wc2026_lineups WHERE match_id = ?', [fid]);
       console.log(`[STATE] Deleted ${del.affectedRows} stale lineup rows for ${fid}`);
     }
 
@@ -268,7 +268,7 @@ async function run() {
         const teamId = role === 'home' ? m.homeId : m.awayId;
         for (const p of players) {
           await conn.query(`
-            INSERT INTO wc2026_lineups (fixture_id, team_id, player_name, position, jersey_number, scraped_at)
+            INSERT INTO wc2026_lineups (match_id, team_id, player_name, position, jersey_number, scraped_at)
             VALUES (?, ?, ?, ?, ?, ?)
           `, [fid, teamId, p.name, p.position, p.number, now]);
           totalLineupsSeeded++;
@@ -280,19 +280,19 @@ async function run() {
     // ── STEP 5: Final verification ────────────────────────────────────────────
     console.log('\n[STEP] Running final verification...');
     const [verifyFx] = await conn.query(`
-      SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures
-      WHERE fixture_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008")
-      ORDER BY fixture_id
+      SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures
+      WHERE match_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008")
+      ORDER BY match_id
     `);
     const [verifyOdds] = await conn.query(`
-      SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots
-      WHERE fixture_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008") AND book_id = 0
-      GROUP BY fixture_id ORDER BY fixture_id
+      SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots
+      WHERE match_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008") AND book_id = 0
+      GROUP BY match_id ORDER BY match_id
     `);
     const [verifyLineups] = await conn.query(`
-      SELECT fixture_id, COUNT(*) as cnt FROM wc2026_lineups
-      WHERE fixture_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008")
-      GROUP BY fixture_id ORDER BY fixture_id
+      SELECT match_id, COUNT(*) as cnt FROM wc2026_lineups
+      WHERE match_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008")
+      GROUP BY match_id ORDER BY match_id
     `);
 
     const expected = {
@@ -304,16 +304,16 @@ async function run() {
 
     let allPassed = true;
     for (const row of verifyFx) {
-      const exp = expected[row.fixture_id];
+      const exp = expected[row.match_id];
       const pass = row.home_team_id === exp.home && row.away_team_id === exp.away;
-      console.log(`[VERIFY] ${row.fixture_id}: home=${row.home_team_id} away=${row.away_team_id} → ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
+      console.log(`[VERIFY] ${row.match_id}: home=${row.home_team_id} away=${row.away_team_id} → ${pass ? 'PASS ✓' : 'FAIL ✗'}`);
       if (!pass) allPassed = false;
     }
     for (const row of verifyOdds) {
-      console.log(`[VERIFY] ${row.fixture_id}: ${row.cnt} model odds rows (expected 5) → ${row.cnt >= 5 ? 'PASS ✓' : 'FAIL ✗'}`);
+      console.log(`[VERIFY] ${row.match_id}: ${row.cnt} model odds rows (expected 5) → ${row.cnt >= 5 ? 'PASS ✓' : 'FAIL ✗'}`);
     }
     for (const row of verifyLineups) {
-      console.log(`[VERIFY] ${row.fixture_id}: ${row.cnt} lineup rows (expected 24) → ${row.cnt === 24 ? 'PASS ✓' : 'FAIL ✗'}`);
+      console.log(`[VERIFY] ${row.match_id}: ${row.cnt} lineup rows (expected 24) → ${row.cnt === 24 ? 'PASS ✓' : 'FAIL ✗'}`);
     }
 
     console.log(`\n[OUTPUT] Total odds seeded: ${totalOddsSeeded}`);

@@ -86,9 +86,9 @@ _DB_URL = os.environ.get("DATABASE_URL", "")
 MARKETS = ["1x2", "ou", "ah", "dc", "bts"]  # ha OMITTED per spec
 REQUIRED_MARKETS = {"1x2", "ou", "ah", "dc", "bts"}
 
-# All 12 WC2026 KO Round fixtures
+# All 12 WC2026 KO Round matches
 FIXTURES = [
-    # ── CONFIRMED: DB fixture_id + BetExplorer event_id + ESPN match_id all forensically verified ──
+    # ── CONFIRMED: DB match_id + BetExplorer event_id + ESPN match_id all forensically verified ──
     # BetExplorer be_name format: HOME - AWAY (BetExplorer slug is always home-away)
     # ESPN match IDs sourced from site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
     # ESPN team IDs sourced from site.api.espn.com/apis/site/v2/sports/soccer/FIFA.WORLD/teams/{id}
@@ -147,7 +147,7 @@ FIXTURES = [
 ]
 
 BASE_URL = "https://www.betexplorer.com"
-FIXTURES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/fixtures/"
+FIXTURES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/matches/"
 AJAX_TEMPLATE = "{base}/match-odds/{event_id}/0/{market}/bestOdds/?lang=en"
 MATCH_PAGE_TEMPLATE = "{base}/football/world/world-championship-2026/{slug}/{event_id}/"
 
@@ -194,7 +194,7 @@ class ForensicLogger:
             "version": "4.0.0",
             "bid_target": BET365_BID,
             "markets": MARKETS,
-            "fixtures_count": len(FIXTURES),
+            "matches_count": len(FIXTURES),
         }
         with open(self.log_path, "a") as f:
             f.write(json.dumps(header) + "\n")
@@ -377,7 +377,7 @@ class TeamMapper:
     # BetExplorer match name → (away_display, home_display)
     CANONICAL_MAP = {
         # Format: "BetExplorer HOME - AWAY": (away_db_code, home_db_code)
-        # All 15 WC2026 R32 fixtures — forensically confirmed from BetExplorer slugs
+        # All 15 WC2026 R32 matches — forensically confirmed from BetExplorer slugs
         "England - D.R. Congo":            ("cod",  "eng"),
         "Belgium - Senegal":               ("sen",  "bel"),
         "Spain - Austria":                 ("aut",  "esp"),
@@ -478,7 +478,7 @@ class OddsWarehouse:
 
             CREATE TABLE IF NOT EXISTS matches (
                 event_id TEXT PRIMARY KEY,
-                fixture_id TEXT NOT NULL UNIQUE,
+                match_id TEXT NOT NULL UNIQUE,
                 be_name TEXT NOT NULL,
                 away_display TEXT,
                 home_display TEXT,
@@ -536,16 +536,16 @@ class OddsWarehouse:
         """)
         self.conn.commit()
 
-    def upsert_match(self, event_id: str, fixture_id: str, be_name: str,
+    def upsert_match(self, event_id: str, match_id: str, be_name: str,
                      away_display: str, home_display: str):
         self.conn.execute("""
-            INSERT INTO matches(event_id, fixture_id, be_name, away_display, home_display, scraped_at)
+            INSERT INTO matches(event_id, match_id, be_name, away_display, home_display, scraped_at)
             VALUES(?,?,?,?,?,?)
             ON CONFLICT(event_id) DO UPDATE SET
                 away_display=excluded.away_display,
                 home_display=excluded.home_display,
                 scraped_at=excluded.scraped_at
-        """, (event_id, fixture_id, be_name, away_display, home_display,
+        """, (event_id, match_id, be_name, away_display, home_display,
               datetime.now(timezone.utc).isoformat()))
         self.conn.commit()
 
@@ -785,7 +785,7 @@ class ValidationGateEngine:
 
     def _g01_match_count(self, data):
         count = len(data.get("matches", []))
-        # Use dynamic expected count from _meta (set at scraper init to len(fixtures_to_run))
+        # Use dynamic expected count from _meta (set at scraper init to len(matches_to_run))
         expected = data.get("_meta", {}).get("expected_count", 15)
         return count == expected, f"Expected {expected}, found {count}"
 
@@ -937,7 +937,7 @@ class ValidationGateEngine:
 
     # Keys that hold non-odds identifiers and must be excluded from sign-format checks
     _G12_SKIP_KEYS = frozenset({
-        "espn_match_id", "espn_slug", "event_id", "fixture_id", "be_name", "slug", "bet_explorer_match_id", "bet_explorer_slug", "world_cup_stage", "world_cup_round",
+        "espn_match_id", "espn_slug", "event_id", "match_id", "be_name", "slug", "bet_explorer_match_id", "bet_explorer_slug", "world_cup_stage", "world_cup_round",
         "away_display", "home_display", "session", "script", "version",
         "bid_target", "markets", "type", "ts", "seq",
     })
@@ -974,7 +974,7 @@ class ValidationGateEngine:
         return len(violations) == 0, (f"Non-pk zeros: {violations}" if violations else "All zeros → pk ✓")
 
     def _g14_team_mapping(self, data):
-        # Group stage fixtures use ESPN team IDs directly — skip canonical map check.
+        # Group stage matches use ESPN team IDs directly — skip canonical map check.
         # Their be_name is derived from BetExplorer slug, not the canonical map.
         mapper = TeamMapper()
         violations = []
@@ -1591,9 +1591,9 @@ def fetch_market(session: requests.Session, event_id: str, market: str,
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN SCRAPER PIPELINE
 # ─────────────────────────────────────────────────────────────────────────────
-def run_scraper(fixture_ids: list = None):
+def run_scraper(match_ids: list = None):
     """
-    Main scraper pipeline. Runs all 12 fixtures (or subset if fixture_ids provided).
+    Main scraper pipeline. Runs all 12 matches (or subset if match_ids provided).
     """
     logger = ForensicLogger(LOG_PATH)
     inspector = DebugInspector(logger, depth=3)
@@ -1607,22 +1607,22 @@ def run_scraper(fixture_ids: list = None):
         total_markets=len(MARKETS)
     )
 
-    # Filter fixtures if subset requested
-    # Matches on fixture_id (e.g. 'wc26-r32-066') OR event_id (e.g. 'nkoQVAgB')
-    fixtures_to_run = FIXTURES
-    if fixture_ids:
-        fixtures_to_run = [
+    # Filter matches if subset requested
+    # Matches on match_id (e.g. 'wc26-r32-066') OR event_id (e.g. 'nkoQVAgB')
+    matches_to_run = FIXTURES
+    if match_ids:
+        matches_to_run = [
             f for f in FIXTURES
-            if f["id"] in fixture_ids or f["event_id"] in fixture_ids
+            if f["id"] in match_ids or f["event_id"] in match_ids
         ]
-        logger.emit("INFO", f"Running subset: {[f['id'] for f in fixtures_to_run]} "
-                    f"(matched from: {fixture_ids})")
+        logger.emit("INFO", f"Running subset: {[f['id'] for f in matches_to_run]} "
+                    f"(matched from: {match_ids})")
 
     # Build HTTP session
     session = requests.Session()
     session.headers.update(stealth.page())
 
-    # ── WARMUP: Visit fixtures page to establish session ──────────────────────
+    # ── WARMUP: Visit matches page to establish session ──────────────────────
     logger.emit("STEP", "SESSION WARMUP", url=FIXTURES_PAGE)
     try:
         t0 = time.time()
@@ -1647,43 +1647,43 @@ def run_scraper(fixture_ids: list = None):
         "matches": [],
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "_meta": {
-            "expected_count": len(fixtures_to_run),
-            "total_fixtures": len(FIXTURES),
-            "subset_mode": fixture_ids is not None,
+            "expected_count": len(matches_to_run),
+            "total_matches": len(FIXTURES),
+            "subset_mode": match_ids is not None,
             "scraper_version": "v4.0",
             "bid": BET365_BID,
         }
     }
     all_pass = True
 
-    for match_num, fixture in enumerate(fixtures_to_run, 1):
-        event_id = fixture["event_id"]
-        be_name = fixture["be_name"]
-        fixture_id = fixture["id"]
-        slug = fixture["slug"]
+    for match_num, match in enumerate(matches_to_run, 1):
+        event_id = match["event_id"]
+        be_name = match["be_name"]
+        match_id = match["id"]
+        slug = match["slug"]
         referer = MATCH_PAGE_TEMPLATE.format(base=BASE_URL, slug=slug, event_id=event_id)
 
-        logger.push_breadcrumb(f"match_{match_num}:{fixture_id}")
+        logger.push_breadcrumb(f"match_{match_num}:{match_id}")
 
         print(f"\n\033[96m{'╔'+'═'*78+'╗'}\033[0m", flush=True)
-        print(f"\033[96m║  FIXTURE {match_num}/{len(fixtures_to_run)}: {fixture_id} — {be_name:<50}║\033[0m", flush=True)
+        print(f"\033[96m║  FIXTURE {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<50}║\033[0m", flush=True)
         print(f"\033[96m{'╚'+'═'*78+'╝'}\033[0m", flush=True)
 
         # Resolve team names
         try:
             away_display, home_display = mapper.resolve(be_name)
         except ValueError as e:
-            logger.emit("ERROR", f"Team mapping failed: {e}", fixture_id=fixture_id)
+            logger.emit("ERROR", f"Team mapping failed: {e}", match_id=match_id)
             away_display = "Unknown"
             home_display = "Unknown"
 
         # Upsert match record
-        warehouse.upsert_match(event_id, fixture_id, be_name, away_display, home_display)
+        warehouse.upsert_match(event_id, match_id, be_name, away_display, home_display)
 
         match_record = {
             "event_id": event_id,
-            "fixture_id": fixture_id,
-            "espn_match_id": fixture.get("espn_match_id"),
+            "match_id": match_id,
+            "espn_match_id": match.get("espn_match_id"),
             "be_name": be_name,
             "away_display": away_display,
             "home_display": home_display,
@@ -1745,7 +1745,7 @@ def run_scraper(fixture_ids: list = None):
 
             except Exception as e:
                 logger.emit("FAIL", f"Market {market} FAILED: {type(e).__name__}: {e}",
-                            fixture_id=fixture_id, market=market)
+                            match_id=match_id, market=market)
                 logger.emit("DEBUG", traceback.format_exc()[-500:])
                 markets_status[market] = {"ok": False, "detail": str(e)[:60]}
                 logger.increment("MARKET_FAIL")
@@ -1797,7 +1797,7 @@ def run_scraper(fixture_ids: list = None):
             ok_count = sum(1 for v in mysql_results.values() if v == "UPSERT_OK")
             total = len(mysql_results)
             logger.emit("CHECKPOINT",
-                        f"[MYSQL_UPSERT] COMPLETE: {ok_count}/{total} fixtures upserted → {MYSQL_TABLE}")
+                        f"[MYSQL_UPSERT] COMPLETE: {ok_count}/{total} matches upserted → {MYSQL_TABLE}")
 
             # Print MySQL upsert summary table
             print(f"\n\033[92m{'\u2550'*70}\033[0m", flush=True)
@@ -2174,7 +2174,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
       ah:   primary line    → book_primary_spread, book_home_primary_spread_odds,
                                book_away_primary_spread_odds
 
-    Returns dict: {fixture_id: 'UPSERT_OK'|'SKIP'|'ERROR: ...'}
+    Returns dict: {match_id: 'UPSERT_OK'|'SKIP'|'ERROR: ...'}
     """
     results = {}
 
@@ -2202,7 +2202,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
     upsert_sql = f"""
         INSERT INTO `{MYSQL_TABLE}` (
-            fixture_id, espn_match_id, espn_slug,
+            match_id, espn_match_id, espn_slug,
             bet_explorer_match_id, bet_explorer_slug,
             world_cup_stage, world_cup_round,
             insert_method,
@@ -2262,9 +2262,9 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
     try:
         with conn.cursor() as cur:
             for m in matches:
-                fixture_id = m.get("fixture_id")
-                if not fixture_id:
-                    logger.emit("WARN", "[MYSQL_UPSERT] Match missing fixture_id — SKIP",
+                match_id = m.get("match_id")
+                if not match_id:
+                    logger.emit("WARN", "[MYSQL_UPSERT] Match missing match_id — SKIP",
                                 event_id=m.get("event_id"))
                     continue
 
@@ -2305,7 +2305,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 book_away_to_advance = None  # NULL — not available on BetExplorer
                 book_home_to_advance = None  # NULL — not available on BetExplorer
 
-                # ── ESPN team IDs from fixture definition ──────────────────────────────
+                # ── ESPN team IDs from match definition ──────────────────────────────
                 away_team = m.get("espn_away_team_id")  # ESPN integer team ID
                 home_team = m.get("espn_home_team_id")  # ESPN integer team ID
                 espn_slug = m.get("espn_slug")
@@ -2331,13 +2331,13 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 
                 if missing:
                     logger.emit("FAIL",
-                                f"[MYSQL_UPSERT] {fixture_id}: MISSING FIELDS — {missing}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = f"ERROR: missing fields {missing}"
+                                f"[MYSQL_UPSERT] {match_id}: MISSING FIELDS — {missing}",
+                                match_id=match_id)
+                    results[match_id] = f"ERROR: missing fields {missing}"
                     continue
 
                 logger.emit("STATE",
-                    f"[MYSQL_UPSERT] {fixture_id}: "
+                    f"[MYSQL_UPSERT] {match_id}: "
                     f"Teams={away_team} vs {home_team} | "
                     f"ToAdv=NULL/NULL (BetExplorer N/A) | "
                     f"ML={book_home_ml}/{book_draw}/{book_away_ml} | "
@@ -2345,18 +2345,18 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                     f"BTTS={book_btts_yes}/{book_btts_no} | "
                     f"OU={book_total}({book_over_odds}/{book_under_odds}) | "
                     f"AH={book_primary_spread}({book_home_spread_odds}/{book_away_spread_odds})",
-                    fixture_id=fixture_id)
+                    match_id=match_id)
 
                 espn_match_id = m.get("espn_match_id")
 
-                # ── BetExplorer identity for this fixture ──────────────────────────
+                # ── BetExplorer identity for this match ──────────────────────────
                 bet_explorer_match_id = m.get("event_id")   # 8-char BetExplorer event ID
                 bet_explorer_slug     = m.get("slug")        # BetExplorer match slug
                 world_cup_stage       = "knockout"           # R32 = knockout stage
                 world_cup_round       = "r32"                # R32 round
 
                 params = (
-                    fixture_id, espn_match_id, espn_slug,
+                    match_id, espn_match_id, espn_slug,
                     bet_explorer_match_id, bet_explorer_slug,
                     world_cup_stage, world_cup_round,
                     SCRAPER_FILENAME,          # insert_method
@@ -2376,15 +2376,15 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                     conn.commit()
                     rows_affected = cur.rowcount
                     logger.emit("PASS",
-                                f"[MYSQL_UPSERT] {fixture_id}: UPSERT OK | rows_affected={rows_affected}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = "UPSERT_OK"
+                                f"[MYSQL_UPSERT] {match_id}: UPSERT OK | rows_affected={rows_affected}",
+                                match_id=match_id)
+                    results[match_id] = "UPSERT_OK"
                 except Exception as e:
                     conn.rollback()
                     logger.emit("FAIL",
-                                f"[MYSQL_UPSERT] {fixture_id}: SQL ERROR — {type(e).__name__}: {e}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = f"ERROR: {type(e).__name__}: {str(e)[:80]}"
+                                f"[MYSQL_UPSERT] {match_id}: SQL ERROR — {type(e).__name__}: {e}",
+                                match_id=match_id)
+                    results[match_id] = f"ERROR: {type(e).__name__}: {str(e)[:80]}"
 
         # ── Final summary ─────────────────────────────────────────────────────
         ok_count  = sum(1 for v in results.values() if v == "UPSERT_OK")
@@ -2393,7 +2393,7 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                     f"[MYSQL_UPSERT] COMPLETE | OK={ok_count} ERROR={err_count} "
                     f"TOTAL={len(results)} | table={MYSQL_TABLE}")
 
-        # Hard gate: all fixtures must upsert successfully
+        # Hard gate: all matches must upsert successfully
         if err_count > 0:
             logger.emit("FATAL",
                         f"[MYSQL_UPSERT] HARD GATE FAIL: {err_count} upsert errors — "
@@ -2412,17 +2412,17 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # GROUP STAGE FIXTURE LOADER
 # ─────────────────────────────────────────────────────────────────────────────
-def load_gs_fixtures_from_db():
+def load_gs_matches_from_db():
     """
-    Load all 72 group stage fixtures from wc2026MatchOdds DB table.
-    Returns list of fixture dicts with same structure as FIXTURES list.
+    Load all 72 group stage matches from wc2026MatchOdds DB table.
+    Returns list of match dicts with same structure as FIXTURES list.
     Each dict has: id, event_id, be_name, slug, espn_match_id, espn_slug,
                    espn_away_team_id, espn_home_team_id
     """
     if not PYMYSQL_AVAILABLE:
-        raise RuntimeError("pymysql not available — cannot load GS fixtures from DB")
+        raise RuntimeError("pymysql not available — cannot load GS matches from DB")
     if not _DB_URL:
-        raise RuntimeError("DATABASE_URL not set — cannot load GS fixtures from DB")
+        raise RuntimeError("DATABASE_URL not set — cannot load GS matches from DB")
 
     parsed = _urlparse.urlparse(_DB_URL)
     conn = pymysql.connect(
@@ -2439,7 +2439,7 @@ def load_gs_fixtures_from_db():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
-                    fixture_id,
+                    match_id,
                     espn_match_id,
                     espn_slug,
                     bet_explorer_match_id,
@@ -2448,26 +2448,26 @@ def load_gs_fixtures_from_db():
                     home_team
                 FROM wc2026MatchOdds
                 WHERE world_cup_round = 'group'
-                ORDER BY fixture_id
+                ORDER BY match_id
             """)
             rows = cur.fetchall()
     finally:
         conn.close()
 
-    fixtures = []
+    matches = []
     for row in rows:
         # bet_explorer_match_id = event_id (8-char BetExplorer ID)
         # bet_explorer_slug = slug (BetExplorer match slug)
         event_id = row["bet_explorer_match_id"]
         slug     = row["bet_explorer_slug"]
         if not event_id or not slug:
-            print(f"[WARN] GS fixture {row['fixture_id']} missing BE ID/slug — SKIP")
+            print(f"[WARN] GS match {row['match_id']} missing BE ID/slug — SKIP")
             continue
         # be_name: derive from slug (replace hyphens with spaces, title case)
         # Used only for TeamMapper.resolve() — which we bypass for GS (use ESPN IDs directly)
         be_name = slug.replace("-", " ").title()
-        fixtures.append({
-            "id":                 row["fixture_id"],
+        matches.append({
+            "id":                 row["match_id"],
             "event_id":           event_id,
             "be_name":            be_name,
             "slug":               slug,
@@ -2477,24 +2477,24 @@ def load_gs_fixtures_from_db():
             "espn_home_team_id":  int(row["home_team"]) if row["home_team"] else None,
         })
 
-    print(f"[OUTPUT] Loaded {len(fixtures)} group stage fixtures from DB")
-    return fixtures
+    print(f"[OUTPUT] Loaded {len(matches)} group stage matches from DB")
+    return matches
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GROUP STAGE SCRAPER PIPELINE
 # ─────────────────────────────────────────────────────────────────────────────
-def run_gs_scraper(fixture_ids: list = None):
+def run_gs_scraper(match_ids: list = None):
     """
     Group stage scraper pipeline.
-    Loads fixtures from DB (world_cup_round='group'), scrapes all 5 markets,
+    Loads matches from DB (world_cup_round='group'), scrapes all 5 markets,
     upserts book odds columns only. model_* and to_advance columns stay NULL.
     world_cup_stage='group', world_cup_round='group' hardcoded.
     """
-    # Load group stage fixtures from DB
-    gs_fixtures = load_gs_fixtures_from_db()
-    if not gs_fixtures:
-        raise RuntimeError("No group stage fixtures loaded from DB")
+    # Load group stage matches from DB
+    gs_matches = load_gs_matches_from_db()
+    if not gs_matches:
+        raise RuntimeError("No group stage matches loaded from DB")
 
     logger = ForensicLogger(LOG_PATH)
     inspector = DebugInspector(logger, depth=3)
@@ -2504,19 +2504,19 @@ def run_gs_scraper(fixture_ids: list = None):
     throttle = ThrottleController(logger)
     stealth = StealthHeaders()
     visualizer = ProgressVisualizer(
-        total_matches=len(gs_fixtures),
+        total_matches=len(gs_matches),
         total_markets=len(MARKETS)
     )
 
-    # Filter fixtures if subset requested
-    fixtures_to_run = gs_fixtures
-    if fixture_ids:
-        fixtures_to_run = [
-            f for f in gs_fixtures
-            if f["id"] in fixture_ids or f["event_id"] in fixture_ids
+    # Filter matches if subset requested
+    matches_to_run = gs_matches
+    if match_ids:
+        matches_to_run = [
+            f for f in gs_matches
+            if f["id"] in match_ids or f["event_id"] in match_ids
         ]
-        logger.emit("INFO", f"GS subset: {[f['id'] for f in fixtures_to_run]} "
-                    f"(matched from: {fixture_ids})")
+        logger.emit("INFO", f"GS subset: {[f['id'] for f in matches_to_run]} "
+                    f"(matched from: {match_ids})")
 
     # Build HTTP session
     session = requests.Session()
@@ -2544,24 +2544,24 @@ def run_gs_scraper(fixture_ids: list = None):
         "matches": [],
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "_meta": {
-            "expected_count": len(fixtures_to_run),
-            "total_fixtures": len(gs_fixtures),
-            "subset_mode": fixture_ids is not None,
+            "expected_count": len(matches_to_run),
+            "total_matches": len(gs_matches),
+            "subset_mode": match_ids is not None,
             "scraper_version": "v4.0-gs",
             "bid": BET365_BID,
             "mode": "group_stage",
         }
     }
     all_pass = True
-    for match_num, fixture in enumerate(fixtures_to_run, 1):
-        event_id   = fixture["event_id"]
-        be_name    = fixture["be_name"]
-        fixture_id = fixture["id"]
-        slug       = fixture["slug"]
+    for match_num, match in enumerate(matches_to_run, 1):
+        event_id   = match["event_id"]
+        be_name    = match["be_name"]
+        match_id = match["id"]
+        slug       = match["slug"]
         referer    = MATCH_PAGE_TEMPLATE.format(base=BASE_URL, slug=slug, event_id=event_id)
-        logger.push_breadcrumb(f"match_{match_num}:{fixture_id}")
+        logger.push_breadcrumb(f"match_{match_num}:{match_id}")
         print(f"\n\033[96m{'╔'+'═'*78+'╗'}\033[0m", flush=True)
-        print(f"\033[96m║  GS FIXTURE {match_num}/{len(fixtures_to_run)}: {fixture_id} — {be_name:<47}║\033[0m", flush=True)
+        print(f"\033[96m║  GS FIXTURE {match_num}/{len(matches_to_run)}: {match_id} — {be_name:<47}║\033[0m", flush=True)
         print(f"\033[96m{'╚'+'═'*78+'╝'}\033[0m", flush=True)
 
         # Resolve team names (best-effort — we have ESPN IDs as fallback)
@@ -2571,17 +2571,17 @@ def run_gs_scraper(fixture_ids: list = None):
             away_display = be_name.split(" - ")[0] if " - " in be_name else "Away"
             home_display = be_name.split(" - ")[1] if " - " in be_name else "Home"
 
-        warehouse.upsert_match(event_id, fixture_id, be_name, away_display, home_display)
+        warehouse.upsert_match(event_id, match_id, be_name, away_display, home_display)
         match_record = {
             "event_id":           event_id,
-            "fixture_id":         fixture_id,
-            "espn_match_id":      fixture.get("espn_match_id"),
-            "espn_slug":          fixture.get("espn_slug"),
+            "match_id":         match_id,
+            "espn_match_id":      match.get("espn_match_id"),
+            "espn_slug":          match.get("espn_slug"),
             "be_name":            be_name,
             "away_display":       away_display,
             "home_display":       home_display,
-            "espn_away_team_id":  fixture.get("espn_away_team_id"),
-            "espn_home_team_id":  fixture.get("espn_home_team_id"),
+            "espn_away_team_id":  match.get("espn_away_team_id"),
+            "espn_home_team_id":  match.get("espn_home_team_id"),
             "slug":               slug,
             "world_cup_stage":    "group",
             "world_cup_round":    "group",
@@ -2652,7 +2652,7 @@ def run_gs_scraper(fixture_ids: list = None):
                 logger.increment("MARKET_PASS")
             except Exception as e:
                 logger.emit("FAIL", f"Market {market} FAILED: {type(e).__name__}: {e}",
-                            fixture_id=fixture_id, market=market)
+                            match_id=match_id, market=market)
                 logger.emit("DEBUG", traceback.format_exc()[-500:])
                 markets_status[market] = {"ok": False, "detail": str(e)[:60]}
                 logger.increment("MARKET_FAIL")
@@ -2745,7 +2745,7 @@ def upsert_gs_to_mysql(dataset, logger):
 
     upsert_sql = """
         INSERT INTO wc2026MatchOdds (
-            fixture_id, espn_match_id, espn_slug,
+            match_id, espn_match_id, espn_slug,
             bet_explorer_match_id, bet_explorer_slug,
             world_cup_stage, world_cup_round,
             inserted_at, insert_method,
@@ -2806,9 +2806,9 @@ def upsert_gs_to_mysql(dataset, logger):
     try:
         with conn.cursor() as cur:
             for m in dataset.get("matches", []):
-                fixture_id = m.get("fixture_id")
-                if not fixture_id:
-                    logger.emit("WARN", "[MYSQL_UPSERT_GS] Match missing fixture_id — SKIP")
+                match_id = m.get("match_id")
+                if not match_id:
+                    logger.emit("WARN", "[MYSQL_UPSERT_GS] Match missing match_id — SKIP")
                     continue
                 markets = m.get("markets", {})
                 ml_data  = markets.get("1x2", {})
@@ -2849,9 +2849,9 @@ def upsert_gs_to_mysql(dataset, logger):
                 if book_away_spread_odds is None: missing.append("away_spread_odds")
                 if missing:
                     logger.emit("FAIL",
-                                f"[MYSQL_UPSERT_GS] {fixture_id}: MISSING FIELDS — {missing}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = f"ERROR: missing fields {missing}"
+                                f"[MYSQL_UPSERT_GS] {match_id}: MISSING FIELDS — {missing}",
+                                match_id=match_id)
+                    results[match_id] = f"ERROR: missing fields {missing}"
                     continue
 
                 espn_match_id         = m.get("espn_match_id")
@@ -2864,7 +2864,7 @@ def upsert_gs_to_mysql(dataset, logger):
                 home_team             = m.get("espn_home_team_id")
 
                 logger.emit("STATE",
-                    f"[MYSQL_UPSERT_GS] {fixture_id}: "
+                    f"[MYSQL_UPSERT_GS] {match_id}: "
                     f"Teams={away_team} vs {home_team} | "
                     f"ToAdv=NULL/NULL (group stage) | "
                     f"ML={book_home_ml}/{book_draw}/{book_away_ml} | "
@@ -2872,10 +2872,10 @@ def upsert_gs_to_mysql(dataset, logger):
                     f"BTTS={book_btts_yes}/{book_btts_no} | "
                     f"OU={book_total}({book_over_odds}/{book_under_odds}) | "
                     f"AH={book_primary_spread}({book_home_spread_odds}/{book_away_spread_odds})",
-                    fixture_id=fixture_id)
+                    match_id=match_id)
 
                 params = (
-                    fixture_id, espn_match_id, espn_slug,
+                    match_id, espn_match_id, espn_slug,
                     bet_explorer_match_id, bet_explorer_slug,
                     world_cup_stage, world_cup_round,
                     SCRAPER_FILENAME,   # insert_method
@@ -2894,15 +2894,15 @@ def upsert_gs_to_mysql(dataset, logger):
                     conn.commit()
                     rows_affected = cur.rowcount
                     logger.emit("PASS",
-                                f"[MYSQL_UPSERT_GS] {fixture_id}: UPSERT OK | rows_affected={rows_affected}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = "UPSERT_OK"
+                                f"[MYSQL_UPSERT_GS] {match_id}: UPSERT OK | rows_affected={rows_affected}",
+                                match_id=match_id)
+                    results[match_id] = "UPSERT_OK"
                 except Exception as e:
                     conn.rollback()
                     logger.emit("FAIL",
-                                f"[MYSQL_UPSERT_GS] {fixture_id}: SQL ERROR — {type(e).__name__}: {e}",
-                                fixture_id=fixture_id)
-                    results[fixture_id] = f"ERROR: {type(e).__name__}: {str(e)[:80]}"
+                                f"[MYSQL_UPSERT_GS] {match_id}: SQL ERROR — {type(e).__name__}: {e}",
+                                match_id=match_id)
+                    results[match_id] = f"ERROR: {type(e).__name__}: {str(e)[:80]}"
 
         ok_count  = sum(1 for v in results.values() if v == "UPSERT_OK")
         err_count = sum(1 for v in results.values() if v.startswith("ERROR"))
@@ -2923,18 +2923,18 @@ def upsert_gs_to_mysql(dataset, logger):
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # Modes:
-    #   (default / --mode r32)  : R32 knockout fixtures from FIXTURES list
-    #   --mode gs               : Group stage fixtures loaded from DB
+    #   (default / --mode r32)  : R32 knockout matches from FIXTURES list
+    #   --mode gs               : Group stage matches loaded from DB
     #   --mode all              : Both GS then R32
-    # Fixture filter: pass event_ids or fixture_ids as positional args
+    # Fixture filter: pass event_ids or match_ids as positional args
     # Examples:
     #   python3 wc2026_betexplorer_scraper_v4.py                   # all R32
     #   python3 wc2026_betexplorer_scraper_v4.py --mode gs         # all GS
-    #   python3 wc2026_betexplorer_scraper_v4.py --mode gs h4EoUB7T  # single GS fixture
-    #   python3 wc2026_betexplorer_scraper_v4.py wc26-r32-080      # single R32 fixture
+    #   python3 wc2026_betexplorer_scraper_v4.py --mode gs h4EoUB7T  # single GS match
+    #   python3 wc2026_betexplorer_scraper_v4.py wc26-r32-080      # single R32 match
     raw_args = sys.argv[1:]
     mode = "r32"  # default
-    fixture_ids = None
+    match_ids = None
 
     # Parse --mode flag
     if "--mode" in raw_args:
@@ -2946,9 +2946,9 @@ if __name__ == "__main__":
             print("ERROR: --mode requires an argument (gs|r32|all)")
             sys.exit(1)
 
-    # Remaining args are fixture IDs
+    # Remaining args are match IDs
     cleaned = [a for a in raw_args if not a.startswith("--")]
-    fixture_ids = cleaned if cleaned else None
+    match_ids = cleaned if cleaned else None
 
     valid_modes = {"r32", "gs", "all"}
     if mode not in valid_modes:
@@ -2957,13 +2957,13 @@ if __name__ == "__main__":
 
     try:
         if mode == "r32":
-            dataset, gates_passed = run_scraper(fixture_ids)
+            dataset, gates_passed = run_scraper(match_ids)
         elif mode == "gs":
-            dataset, gates_passed = run_gs_scraper(fixture_ids)
+            dataset, gates_passed = run_gs_scraper(match_ids)
         elif mode == "all":
             print("\n[MODE=all] Running GROUP STAGE first, then R32\n")
-            gs_dataset, gs_passed = run_gs_scraper(fixture_ids)
-            r32_dataset, r32_passed = run_scraper(fixture_ids)
+            gs_dataset, gs_passed = run_gs_scraper(match_ids)
+            r32_dataset, r32_passed = run_scraper(match_ids)
             gates_passed = gs_passed and r32_passed
         exit_code = 0 if gates_passed else 1
         sys.exit(exit_code)

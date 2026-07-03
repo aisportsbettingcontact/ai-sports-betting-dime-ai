@@ -32,7 +32,7 @@ console.log('\n[INPUT]  Pulling 500x forensic data for 7 fixtures');
 
 // ── 1. Fixtures ───────────────────────────────────────────────────────────────
 const [fixtures] = await conn.execute(`
-  SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.stage,
+  SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
          f.home_score, f.away_score, f.status, f.espn_event_id,
          f.attendance, f.advancing_team_id,
          ht.name AS home_name, ht.team_id AS home_id, ht.fifa_code AS home_code,
@@ -42,14 +42,14 @@ const [fixtures] = await conn.execute(`
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
-  WHERE f.fixture_id IN (${ph})
+  WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
 `, TARGET_FIXTURES);
 console.log(`[STATE]  Fixtures: ${fixtures.length} rows`);
 
 // ── 2. Model Projections ──────────────────────────────────────────────────────
 const [models] = await conn.execute(`
-  SELECT fixture_id, model_version, n_simulations,
+  SELECT match_id, model_version, n_simulations,
          home_lambda, away_lambda,
          home_win_prob, draw_prob, away_win_prob,
          proj_home_score, proj_away_score, proj_total, proj_spread,
@@ -70,13 +70,13 @@ const [models] = await conn.execute(`
          dc_1x_odds, dc_x2_odds, no_draw_home_odds, no_draw_away_odds,
          modeled_at
   FROM wc2026_model_projections
-  WHERE fixture_id IN (${ph})
+  WHERE match_id IN (${ph})
 `, TARGET_FIXTURES);
 console.log(`[STATE]  Model projections: ${models.length} rows`);
 
 // ── 3. Frozen Book Odds ───────────────────────────────────────────────────────
 const [bookOdds] = await conn.execute(`
-  SELECT fixture_id,
+  SELECT match_id,
          book_home_ml, book_draw_ml, book_away_ml,
          book_spread_line, book_home_spread_odds, book_away_spread_odds,
          book_total_line, book_over_odds, book_under_odds,
@@ -85,7 +85,7 @@ const [bookOdds] = await conn.execute(`
          book_no_draw_home_odds, book_no_draw_away_odds,
          to_advance_home_odds, to_advance_away_odds
   FROM wc2026_frozen_book_odds
-  WHERE fixture_id IN (${ph})
+  WHERE match_id IN (${ph})
 `, TARGET_FIXTURES);
 console.log(`[STATE]  Book odds: ${bookOdds.length} rows`);
 
@@ -154,9 +154,9 @@ if (espnIds.length > 0) {
 
 // ── 5. Assemble master dataset ────────────────────────────────────────────────
 const masterData = TARGET_FIXTURES.map(fid => {
-  const fix = fixtures.find(r => r.fixture_id === fid);
-  const mod = models.find(r => r.fixture_id === fid);
-  const book = bookOdds.find(r => r.fixture_id === fid);
+  const fix = fixtures.find(r => r.match_id === fid);
+  const mod = models.find(r => r.match_id === fid);
+  const book = bookOdds.find(r => r.match_id === fid);
   const eid = fix?.espn_event_id;
   const em = espnMatches.find(r => String(r.matchId) === String(eid));
   const ems = espnMatchStats.find(r => String(r.matchId) === String(eid));

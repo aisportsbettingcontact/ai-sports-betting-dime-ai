@@ -181,14 +181,14 @@ const V14_QUERIES = {
     alias: 'f',
     join: ['wc2026_teams ht ON f.home_team_id = ht.team_id',
            'wc2026_teams at ON f.away_team_id = at.team_id'],
-    columns: ['f.fixture_id','ht.fifa_code AS home_code','at.fifa_code AS away_code','f.kickoff_utc'],
+    columns: ['f.match_id','ht.fifa_code AS home_code','at.fifa_code AS away_code','f.kickoff_utc'],
     filter: "DATE(f.match_date) = '2026-07-01'",
     purpose: 'July 1 fixture IDs and team codes',
   },
   C1_BOOK: {
     table: 'wc2026_frozen_book_odds',
     columns: ['*'],
-    filter: 'fixture_id IN (...)',
+    filter: 'match_id IN (...)',
     requiredFields: [
       'book_home_ml','book_draw_ml','book_away_ml',
       'book_spread_line','book_home_spread_odds','book_away_spread_odds',
@@ -533,7 +533,7 @@ async function main() {
   log('SECTION', 'S4A_FIX', '4A — wc2026_fixtures: all rows and columns');
 
   const [fixAll] = await db.execute(`
-    SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.stage,
+    SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
            f.home_team_id, f.away_team_id, f.venue_id, f.status,
            ht.fifa_code AS home_code, ht.name AS home_name,
            at.fifa_code AS away_code, at.name AS away_name
@@ -553,14 +553,14 @@ async function main() {
   for (const [date, rows] of Object.entries(fixByDate).sort()) {
     log('STATE', 'S4A_FIX', `  ${date}: ${rows.length} fixtures`);
     for (const r of rows) {
-      log('REAL_DATA', 'S4A_FIX', `    ${r.fixture_id} | ${r.home_code} (${r.home_name}) vs ${r.away_code} (${r.away_name}) | ${r.kickoff_utc} | ${r.status}`);
+      log('REAL_DATA', 'S4A_FIX', `    ${r.match_id} | ${r.home_code} (${r.home_name}) vs ${r.away_code} (${r.away_name}) | ${r.kickoff_utc} | ${r.status}`);
     }
   }
 
   // 4B: wc2026_frozen_book_odds — full data validation
   log('SECTION', 'S4B_BOOK', '4B — wc2026_frozen_book_odds: full data validation');
 
-  const [bookAll] = await db.execute(`SELECT * FROM wc2026_frozen_book_odds ORDER BY fixture_id`);
+  const [bookAll] = await db.execute(`SELECT * FROM wc2026_frozen_book_odds ORDER BY match_id`);
   log('STATE', 'S4B_BOOK', `  Total book odds rows: ${bookAll.length}`);
 
   const BOOK_REQUIRED = [
@@ -575,34 +575,34 @@ async function main() {
   for (const row of bookAll) {
     const nullFields = BOOK_REQUIRED.filter(f => row[f] === null || row[f] === undefined);
     if (nullFields.length > 0) {
-      log('WARN', 'S4B_BOOK', `  ${row.fixture_id}: ${nullFields.length} NULL required fields: ${nullFields.join(', ')}`);
+      log('WARN', 'S4B_BOOK', `  ${row.match_id}: ${nullFields.length} NULL required fields: ${nullFields.join(', ')}`);
       addIssue('DB-04', 'HIGH', 'S4B_BOOK',
-        `Book odds row for ${row.fixture_id} has NULL required fields`,
+        `Book odds row for ${row.match_id} has NULL required fields`,
         `NULL fields: ${nullFields.join(', ')}`,
         'Seed the missing book odds fields before running the engine for this fixture'
       );
     } else {
-      log('PASS', 'S4B_BOOK', `  ${row.fixture_id}: all 16 required book fields populated ✓`);
+      log('PASS', 'S4B_BOOK', `  ${row.match_id}: all 16 required book fields populated ✓`);
     }
     // Log all values
     for (const f of BOOK_REQUIRED) {
       const v = row[f];
       const vStr = v > 0 ? `+${v}` : String(v);
-      log('REAL_DATA', 'S4B_BOOK', `    ${pad(row.fixture_id,20)} ${pad(f,30)} = ${vStr}`);
+      log('REAL_DATA', 'S4B_BOOK', `    ${pad(row.match_id,20)} ${pad(f,30)} = ${vStr}`);
     }
     // Check for book_no_draw_away_odds (schema has it, v14 doesn't query it)
     if (row.book_no_draw_away_odds !== null) {
-      log('WARN', 'S4B_BOOK', `  ${row.fixture_id}: book_no_draw_away_odds=${row.book_no_draw_away_odds} EXISTS but v14 does NOT query it — potential unused data`);
+      log('WARN', 'S4B_BOOK', `  ${row.match_id}: book_no_draw_away_odds=${row.book_no_draw_away_odds} EXISTS but v14 does NOT query it — potential unused data`);
     }
   }
 
   // 4C: wc2026_model_projections — check existing projections
   log('SECTION', 'S4C_PROJ', '4C — wc2026_model_projections: existing projections');
 
-  const [projAll] = await db.execute(`SELECT * FROM wc2026_model_projections ORDER BY fixture_id`);
+  const [projAll] = await db.execute(`SELECT * FROM wc2026_model_projections ORDER BY match_id`);
   log('STATE', 'S4C_PROJ', `  Total model projection rows: ${projAll.length}`);
   for (const p of projAll) {
-    log('REAL_DATA', 'S4C_PROJ', `  ${p.fixture_id} | ${p.market_key} | book=${p.book_odds} model=${p.model_odds} isFrozen=${p.is_frozen}`);
+    log('REAL_DATA', 'S4C_PROJ', `  ${p.match_id} | ${p.market_key} | book=${p.book_odds} model=${p.model_odds} isFrozen=${p.is_frozen}`);
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -701,7 +701,7 @@ async function main() {
     'wc2026_espn_player_stats': ['matchId','matchRound','teamAbbrev','name','xG','g','a','sog','shot'],
     'wc2026_espn_shot_map': ['matchId','matchRound','teamAbbrev','xG','xGOT'],
     'wc2026_espn_matches': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeScore','awayScore','statusState'],
-    'wc2026_frozen_book_odds': ['fixture_id','book_home_ml','book_draw_ml','book_away_ml','book_spread_line','book_home_spread_odds','book_away_spread_odds','book_total_line','book_over_odds','book_under_odds','book_btts_yes_odds','book_btts_no_odds','book_dc_1x_odds','book_dc_x2_odds','book_no_draw_home_odds','to_advance_home_odds','to_advance_away_odds'],
+    'wc2026_frozen_book_odds': ['match_id','book_home_ml','book_draw_ml','book_away_ml','book_spread_line','book_home_spread_odds','book_away_spread_odds','book_total_line','book_over_odds','book_under_odds','book_btts_yes_odds','book_btts_no_odds','book_dc_1x_odds','book_dc_x2_odds','book_no_draw_home_odds','to_advance_home_odds','to_advance_away_odds'],
   };
 
   for (const [tbl, queried] of Object.entries(v14QueriedCols)) {

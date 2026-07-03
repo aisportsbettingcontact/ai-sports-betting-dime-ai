@@ -152,7 +152,7 @@ const MEX_HOME_FIXTURES = new Set(['wc26-g-001', 'wc26-g-005']);
 // USA gets home advantage at their venues
 const USA_HOME_FIXTURES = new Set(['wc26-g-005']); // PAR vs USA — USA is "away" but at US venue
 
-function getLambdas(homeId, awayId, fixtureId) {
+function getLambdas(homeId, awayId, matchId) {
   const hp = TEAM_PARAMS[homeId] ?? [1.30, 0.88];
   const ap = TEAM_PARAMS[awayId] ?? [1.30, 0.88];
 
@@ -161,10 +161,10 @@ function getLambdas(homeId, awayId, fixtureId) {
   let lambdaA = ap[0] * hp[1]; // away attack × home defense
 
   // Apply home advantage
-  if (MEX_HOME_FIXTURES.has(fixtureId) && homeId === 'mex') {
+  if (MEX_HOME_FIXTURES.has(matchId) && homeId === 'mex') {
     lambdaH *= HOME_ADV;
     lambdaA /= HOME_ADV;
-  } else if (MEX_HOME_FIXTURES.has(fixtureId) && awayId === 'mex') {
+  } else if (MEX_HOME_FIXTURES.has(matchId) && awayId === 'mex') {
     // Mexico is away but at Azteca — give them home advantage
     lambdaA *= HOME_ADV;
     lambdaH /= HOME_ADV;
@@ -182,21 +182,21 @@ async function main() {
 
   // Get all June 11-17 fixtures with current (corrected) home/away
   const [fixtures] = await conn.execute(`
-    SELECT fixture_id, home_team_id, away_team_id, match_date
+    SELECT match_id, home_team_id, away_team_id, match_date
     FROM wc2026_fixtures
     WHERE match_date BETWEEN '2026-06-11' AND '2026-06-17'
-    ORDER BY match_date, fixture_id
+    ORDER BY match_date, match_id
   `);
 
   console.log(`[INPUT] Found ${fixtures.length} fixtures for June 11-17`);
   console.log('');
 
   // Delete all existing model odds for these fixtures
-  const fixtureIds = fixtures.map(f => f.fixture_id);
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  const matchIds = fixtures.map(f => f.match_id);
+  const placeholders = matchIds.map(() => '?').join(',');
   const [delResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND fixture_id IN (${placeholders})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND match_id IN (${placeholders})`,
+    matchIds
   );
   console.log(`[STEP] Deleted ${delResult.affectedRows} existing model odds rows`);
   console.log('');
@@ -207,12 +207,12 @@ async function main() {
   const errors = [];
 
   for (const fix of fixtures) {
-    const { fixture_id, home_team_id, away_team_id } = fix;
+    const { match_id, home_team_id, away_team_id } = fix;
     const matchDate = fix.match_date.toISOString().slice(0, 10);
 
-    console.log(`[STEP] ${fixture_id}: ${away_team_id} @ ${home_team_id} (${matchDate})`);
+    console.log(`[STEP] ${match_id}: ${away_team_id} @ ${home_team_id} (${matchDate})`);
 
-    const { lambdaH, lambdaA } = getLambdas(home_team_id, away_team_id, fixture_id);
+    const { lambdaH, lambdaA } = getLambdas(home_team_id, away_team_id, match_id);
     const probs = computeMatchProbs(lambdaH, lambdaA);
 
     const homeML = probToAmerican(probs.home);
@@ -230,7 +230,7 @@ async function main() {
     const probSum = probs.home + probs.draw + probs.away;
     if (Math.abs(probSum - 1.0) > 0.001) {
       console.log(`  [VERIFY] FAIL — prob sum=${probSum.toFixed(6)}`);
-      errors.push(`${fixture_id}: prob sum=${probSum}`);
+      errors.push(`${match_id}: prob sum=${probSum}`);
       continue;
     }
 
@@ -245,7 +245,7 @@ async function main() {
 
     for (const r of marketRows) {
       rows.push([
-        fixture_id, snapshotTs, MODEL_BOOK_ID, r.market, r.selection,
+        match_id, snapshotTs, MODEL_BOOK_ID, r.market, r.selection,
         r.line, r.americanOdds, r.impliedProb, 0
       ]);
     }
@@ -263,7 +263,7 @@ async function main() {
       const chunk = rows.slice(i, i + CHUNK);
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots 
-         (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+         (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES ?`,
         [chunk]
       );
@@ -276,17 +276,17 @@ async function main() {
   console.log('');
   console.log('[VERIFY] Post-seed check:');
   const [verify] = await conn.execute(`
-    SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.home_team_id, f.away_team_id,
            SUM(CASE WHEN o.market='1X2' AND o.selection='home' THEN 1 ELSE 0 END) as has_home_ml,
            SUM(CASE WHEN o.market='1X2' AND o.selection='away' THEN 1 ELSE 0 END) as has_away_ml,
            SUM(CASE WHEN o.market='TOTAL' AND o.selection='over' THEN 1 ELSE 0 END) as has_over,
            MAX(CASE WHEN o.market='1X2' AND o.selection='home' THEN o.american_odds END) as home_ml,
            MAX(CASE WHEN o.market='1X2' AND o.selection='away' THEN o.american_odds END) as away_ml
     FROM wc2026_fixtures f
-    JOIN wc2026_odds_snapshots o ON f.fixture_id = o.fixture_id AND o.book_id = 0
+    JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 0
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
-    GROUP BY f.fixture_id, f.home_team_id, f.away_team_id
-    ORDER BY f.match_date, f.fixture_id
+    GROUP BY f.match_id, f.home_team_id, f.away_team_id
+    ORDER BY f.match_date, f.match_id
   `);
 
   let allPass = true;
@@ -296,7 +296,7 @@ async function main() {
     if (!pass) allPass = false;
     const homeSign = v.home_ml > 0 ? '+' : '';
     const awaySign = v.away_ml > 0 ? '+' : '';
-    console.log(`  [${status}] ${v.fixture_id}: ${v.away_team_id} @ ${v.home_team_id} | home=${homeSign}${v.home_ml} away=${awaySign}${v.away_ml}`);
+    console.log(`  [${status}] ${v.match_id}: ${v.away_team_id} @ ${v.home_team_id} | home=${homeSign}${v.home_ml} away=${awaySign}${v.away_ml}`);
   }
 
   console.log('');

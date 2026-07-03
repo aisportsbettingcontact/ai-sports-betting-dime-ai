@@ -420,7 +420,7 @@ console.log('══════════════════════�
 
 // Get column names from wc2026_model_projections (use same as June 24 working script)
 // Columns from working June 24 script:
-// fixture_id, home_team, away_team, home_score_proj, away_score_proj,
+// match_id, home_team, away_team, home_score_proj, away_score_proj,
 // home_win_prob, draw_prob, away_win_prob,
 // home_ml_odds, draw_odds, away_ml_odds,
 // over_2_5, under_2_5, over_line,
@@ -442,12 +442,12 @@ console.log('══════════════════════�
 // First delete existing June 25 rows to ensure clean upsert
 for (const r of results) {
   await db.execute(
-    `DELETE FROM wc2026_model_projections WHERE fixture_id = ? AND model_version LIKE 'v5%'`,
+    `DELETE FROM wc2026_model_projections WHERE match_id = ? AND model_version LIKE 'v5%'`,
     [r.fix.id]
   );
   // Also delete older versions to show only latest
   await db.execute(
-    `DELETE FROM wc2026_model_projections WHERE fixture_id = ? AND model_version NOT LIKE 'v5%'`,
+    `DELETE FROM wc2026_model_projections WHERE match_id = ? AND model_version NOT LIKE 'v5%'`,
     [r.fix.id]
   );
 }
@@ -458,7 +458,7 @@ for (const r of results) {
 
   const sql = `
     INSERT INTO wc2026_model_projections (
-      fixture_id, home_team, away_team,
+      match_id, home_team, away_team,
       home_lambda, away_lambda,
       proj_home_score, proj_away_score, proj_total, proj_spread,
       home_win_prob, draw_prob, away_win_prob,
@@ -493,7 +493,7 @@ for (const r of results) {
   `;
 
   const vals = [
-    // fixture_id, home_team, away_team
+    // match_id, home_team, away_team
     fix.id, fix.homeAbbr, fix.awayAbbr,
     // home_lambda, away_lambda
     parseFloat(lH.toFixed(4)), parseFloat(lA.toFixed(4)),
@@ -539,7 +539,7 @@ for (const r of results) {
 
   // Delete old model rows for this fixture
   await db.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 0`,
+    `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0`,
     [fix.id]
   );
 
@@ -560,7 +560,7 @@ for (const r of results) {
 
   for (const row of modelRows) {
     await db.execute(
-      `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, american_odds, implied_prob, snapshot_ts)
+      `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, american_odds, implied_prob, snapshot_ts)
        VALUES (?, 0, ?, ?, ?, ?, NOW())`,
       [fix.id, row.market, row.selection, row.odds, parseFloat(row.prob.toFixed(4))]
     );
@@ -575,7 +575,7 @@ console.log('  FINAL VERIFICATION');
 console.log('═══════════════════════════════════════════════════════════════════');
 
 const [projRows] = await db.execute(
-  `SELECT fixture_id, home_team, away_team, proj_home_score, proj_away_score,
+  `SELECT match_id, home_team, away_team, proj_home_score, proj_away_score,
           home_win_prob, draw_prob, away_win_prob,
           model_home_ml, model_draw_ml, model_away_ml,
           over_odds, under_odds, model_total,
@@ -583,7 +583,7 @@ const [projRows] = await db.execute(
           btts_prob, btts_prob as btts_no_prob,
           model_lean, model_version, modeled_at
    FROM wc2026_model_projections
-   WHERE fixture_id IN (${FIXTURES.map(() => '?').join(',')})
+   WHERE match_id IN (${FIXTURES.map(() => '?').join(',')})
    ORDER BY modeled_at DESC`,
   FIXTURES.map(f => f.id)
 );
@@ -591,8 +591,8 @@ const [projRows] = await db.execute(
 // Get latest row per fixture
 const latestByFixture = {};
 for (const row of projRows) {
-  if (!latestByFixture[row.fixture_id]) {
-    latestByFixture[row.fixture_id] = row;
+  if (!latestByFixture[row.match_id]) {
+    latestByFixture[row.match_id] = row;
   }
 }
 
@@ -626,16 +626,16 @@ for (const fix of FIXTURES) {
 
 // Check odds snapshots
 const [snapRows] = await db.execute(
-  `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots
-   WHERE fixture_id IN (${FIXTURES.map(() => '?').join(',')}) AND source = 'model_v5'
-   GROUP BY fixture_id`,
+  `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots
+   WHERE match_id IN (${FIXTURES.map(() => '?').join(',')}) AND source = 'model_v5'
+   GROUP BY match_id`,
   FIXTURES.map(f => f.id)
 );
 
 console.log('\n  [SNAPSHOT COUNTS]');
 for (const row of snapRows) {
   const pass = row.cnt === 12;
-  console.log(`  [${pass ? 'PASS' : 'FAIL'}] ${row.fixture_id}: ${row.cnt}/12 model snapshot rows`);
+  console.log(`  [${pass ? 'PASS' : 'FAIL'}] ${row.match_id}: ${row.cnt}/12 model snapshot rows`);
   if (!pass) allVerifyPass = false;
 }
 

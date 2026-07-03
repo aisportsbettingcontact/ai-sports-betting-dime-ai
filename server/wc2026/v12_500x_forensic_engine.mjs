@@ -397,10 +397,10 @@ const [espnMatches] = await conn.execute(
           m.venue, m.city, m.attendance,
           m.homeFormation, m.awayFormation,
           m.matchKickoffEt,
-          f.fixture_id, f.espn_event_id
+          f.match_id, f.espn_event_id
    FROM wc2026_espn_matches m
    JOIN wc2026_fixtures f ON f.espn_event_id = m.matchId
-   WHERE f.fixture_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
+   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
 log('STATE', `[PHASE A] ESPN matches pulled: ${espnMatches.length} rows`);
@@ -416,10 +416,10 @@ const [espnTeamStats] = await conn.execute(
           ts.yellowCards as homeYellow, ts.yellowCardsAway as awayYellow,
           ts.redCards as homeRed, ts.redCardsAway as awayRed,
           ts.saves as homeSaves, ts.savesAway as awaySaves,
-          f.fixture_id
+          f.match_id
    FROM wc2026_espn_team_stats ts
    JOIN wc2026_fixtures f ON f.espn_event_id = ts.matchId
-   WHERE f.fixture_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
+   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
 log('STATE', `[PHASE A] ESPN team stats pulled: ${espnTeamStats.length} rows`);
@@ -431,17 +431,17 @@ const [espnXG] = await conn.execute(
           xg.homeXGOpenPlay, xg.awayXGOpenPlay,
           xg.homeXGSetPlay, xg.awayXGSetPlay,
           xg.homeXA, xg.awayXA,
-          f.fixture_id
+          f.match_id
    FROM wc2026_espn_expected_goals xg
    JOIN wc2026_fixtures f ON f.espn_event_id = xg.matchId
-   WHERE f.fixture_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
+   WHERE f.match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
 log('STATE', `[PHASE A] ESPN xG data pulled: ${espnXG.length} rows`);
 
 // Pull model projections from DB
 const [modelRows] = await conn.execute(
-  `SELECT fixture_id, model_version, home_lambda, away_lambda,
+  `SELECT match_id, model_version, home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total,
           model_home_ml, model_draw_ml, model_away_ml,
@@ -453,27 +453,27 @@ const [modelRows] = await conn.execute(
           to_advance_home_odds, to_advance_away_odds,
           model_lean, lean_prob
    FROM wc2026_model_projections
-   WHERE fixture_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
+   WHERE match_id IN (${FIXTURE_IDS_7.map(() => '?').join(',')})`,
   FIXTURE_IDS_7
 );
 log('STATE', `[PHASE A] Model projections pulled: ${modelRows.length} rows`);
 
-// Index by fixture_id
+// Index by match_id
 const espnByFixture = {};
-for (const r of espnMatches) { espnByFixture[r.fixture_id] = r; }
+for (const r of espnMatches) { espnByFixture[r.match_id] = r; }
 const xgByFixture = {};
-for (const r of espnXG) { xgByFixture[r.fixture_id] = r; }
+for (const r of espnXG) { xgByFixture[r.match_id] = r; }
 const modelByFixture = {};
-for (const r of modelRows) { modelByFixture[r.fixture_id] = r; }
+for (const r of modelRows) { modelByFixture[r.match_id] = r; }
 
-// Build team stats index: { fixture_id: { home: {...}, away: {...} } }
+// Build team stats index: { match_id: { home: {...}, away: {...} } }
 const teamStatsByFixture = {};
 for (const r of espnTeamStats) {
-  if (!teamStatsByFixture[r.fixture_id]) teamStatsByFixture[r.fixture_id] = [];
-  teamStatsByFixture[r.fixture_id].push(r);
+  if (!teamStatsByFixture[r.match_id]) teamStatsByFixture[r.match_id] = [];
+  teamStatsByFixture[r.match_id].push(r);
 }
 
-pass('PHASE A complete: all ESPN and model data indexed by fixture_id');
+pass('PHASE A complete: all ESPN and model data indexed by match_id');
 
 // ══════════════════════════════════════════════════════════════════════════════
 // PHASE B: 500x FORENSIC GRADING — ALL 7 MATCHES

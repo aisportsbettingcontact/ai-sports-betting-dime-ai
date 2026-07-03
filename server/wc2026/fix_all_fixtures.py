@@ -1,7 +1,7 @@
 """
-fix_all_fixtures.py
+fix_all_matches.py
 ===================
-Compare DB fixtures against official FIFA WC2026 schedule.
+Compare DB matches against official FIFA WC2026 schedule.
 Identify ALL mismatches in: date, home_team_id, away_team_id, group_letter.
 Generate and execute SQL UPDATE statements to fix them.
 
@@ -126,18 +126,18 @@ print('[STEP 1] LOADING DB FIXTURES')
 print('=' * 80)
 
 cur.execute("""
-    SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.group_letter,
+    SELECT f.match_id, f.match_date, f.kickoff_utc, f.group_letter,
            f.home_team_id, f.away_team_id
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     ORDER BY f.kickoff_utc
 """)
-db_fixtures = cur.fetchall()
-print(f'[INPUT] DB fixtures: {len(db_fixtures)}')
-print(f'[INPUT] Official fixtures: {len(OFFICIAL)}')
+db_matches = cur.fetchall()
+print(f'[INPUT] DB matches: {len(db_matches)}')
+print(f'[INPUT] Official matches: {len(OFFICIAL)}')
 
-# Build lookup: (home, away) -> fixture_id from DB
+# Build lookup: (home, away) -> match_id from DB
 db_by_teams = {}
-for f in db_fixtures:
+for f in db_matches:
     key = (f['home_team_id'], f['away_team_id'])
     db_by_teams[key] = f
 
@@ -166,7 +166,7 @@ for o in OFFICIAL:
         continue
     
     db = db_by_teams[key]
-    fid = db['fixture_id']
+    fid = db['match_id']
     
     # Normalize dates for comparison
     db_date = db['match_date']
@@ -200,13 +200,13 @@ for o in OFFICIAL:
     else:
         ok_count += 1
 
-# Check for DB fixtures not in official schedule
+# Check for DB matches not in official schedule
 print()
 print('[STEP 2b] DB FIXTURES NOT IN OFFICIAL SCHEDULE:')
 extra_count = 0
 for key, db in db_by_teams.items():
     if key not in official_by_teams:
-        fid = db['fixture_id']
+        fid = db['match_id']
         db_date = db['match_date']
         if hasattr(db_date, 'strftime'):
             db_date = db_date.strftime('%Y-%m-%d')
@@ -225,16 +225,16 @@ fixed = 0
 for fid, off_date, off_kickoff, off_grp, off_home, off_away in fixes_needed:
     print(f'[FIX] {fid}: setting match_date={off_date}, kickoff_utc={off_kickoff}, group_letter={off_grp}')
     cur.execute("""
-        UPDATE wc2026_fixtures
+        UPDATE wc2026_matches
         SET match_date = %s, kickoff_utc = %s, group_letter = %s
-        WHERE fixture_id = %s
+        WHERE match_id = %s
     """, (off_date, off_kickoff, off_grp, fid))
     rows = cur.rowcount
     print(f'  [OUTPUT] Rows updated: {rows}')
     fixed += rows
 
 conn.commit()
-print(f'\n[OUTPUT] Total fixtures fixed: {fixed}')
+print(f'\n[OUTPUT] Total matches fixed: {fixed}')
 
 print()
 print('=' * 80)
@@ -242,15 +242,15 @@ print('[STEP 4] POST-FIX VERIFICATION')
 print('=' * 80)
 
 cur.execute("""
-    SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.group_letter,
+    SELECT f.match_id, f.match_date, f.kickoff_utc, f.group_letter,
            f.home_team_id, f.away_team_id,
            ht.fifa_code as home_code, at.fifa_code as away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     ORDER BY f.kickoff_utc
 """)
-post_fixtures = cur.fetchall()
+post_matches = cur.fetchall()
 
 verify_pass = 0
 verify_fail = 0
@@ -259,7 +259,7 @@ for o in OFFICIAL:
     key = (off_home, off_away)
     
     found = None
-    for f in post_fixtures:
+    for f in post_matches:
         if f['home_team_id'] == off_home and f['away_team_id'] == off_away:
             found = f
             break
@@ -280,7 +280,7 @@ for o in OFFICIAL:
     if db_date == off_date and db_kickoff == off_kickoff:
         verify_pass += 1
     else:
-        print(f'[VERIFY FAIL] {found["fixture_id"]} | {off_home} vs {off_away}')
+        print(f'[VERIFY FAIL] {found["match_id"]} | {off_home} vs {off_away}')
         print(f'  date: DB={db_date} vs OFFICIAL={off_date}')
         print(f'  kickoff: DB={db_kickoff} vs OFFICIAL={off_kickoff}')
         verify_fail += 1
@@ -291,13 +291,13 @@ print()
 print('=' * 80)
 print('[STEP 5] PRINT CORRECTED JUNE 11-17 FIXTURES')
 print('=' * 80)
-for f in post_fixtures:
+for f in post_matches:
     db_date = f['match_date']
     if hasattr(db_date, 'strftime'):
         db_date = db_date.strftime('%Y-%m-%d')
     if db_date >= '2026-06-11' and db_date <= '2026-06-17':
-        print(f'  {f["fixture_id"]} | {db_date} | {f["away_code"]:5s} @ {f["home_code"]:5s} | Group {f["group_letter"]} | kickoff={f["kickoff_utc"]}')
+        print(f'  {f["match_id"]} | {db_date} | {f["away_code"]:5s} @ {f["home_code"]:5s} | Group {f["group_letter"]} | kickoff={f["kickoff_utc"]}')
 
 conn.close()
 print()
-print('[DONE] fix_all_fixtures.py complete')
+print('[DONE] fix_all_matches.py complete')

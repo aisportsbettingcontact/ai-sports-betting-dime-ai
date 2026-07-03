@@ -138,7 +138,7 @@ function simulateMatch(lambdaH, lambdaA, rho=0, N=100000) {
 // VERIFIED actual results (zero hallucination)
 const MATCHES = [
   {
-    fixtureId: 'wc26-r32-073', espnId: '760487',
+    matchId: 'wc26-r32-073', espnId: '760487',
     home: 'BRA', away: 'JPN', homeScore: 2, awayScore: 1,
     version: 'v7.2',
     // v7.2 lambda inputs (from seedJune28CAN_RSA.mjs — note: this was CAN/RSA, not BRA/JPN)
@@ -151,7 +151,7 @@ const MATCHES = [
     bookAdvH: -215, bookAdvA: 170,
   },
   {
-    fixtureId: 'wc26-r32-074', espnId: '760488',
+    matchId: 'wc26-r32-074', espnId: '760488',
     home: 'GER', away: 'PAR', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO22',
     lambdaH: 2.10, lambdaA: 0.65,
@@ -162,7 +162,7 @@ const MATCHES = [
     bookAdvH: -750, bookAdvA: 475,
   },
   {
-    fixtureId: 'wc26-r32-075', espnId: '760489',
+    matchId: 'wc26-r32-075', espnId: '760489',
     home: 'NED', away: 'MAR', homeScore: 1, awayScore: 0,
     version: 'v11.0-KO22',
     lambdaH: 1.65, lambdaA: 0.80,
@@ -173,7 +173,7 @@ const MATCHES = [
     bookAdvH: -270, bookAdvA: 205,
   },
   {
-    fixtureId: 'wc26-r32-076', espnId: '760490',
+    matchId: 'wc26-r32-076', espnId: '760490',
     home: 'CAN', away: 'RSA', homeScore: 2, awayScore: 1,
     version: 'v7.2',
     lambdaH: 1.45, lambdaA: 0.90,
@@ -184,7 +184,7 @@ const MATCHES = [
     bookAdvH: -700, bookAdvA: 450,
   },
   {
-    fixtureId: 'wc26-r32-077', espnId: '760491',
+    matchId: 'wc26-r32-077', espnId: '760491',
     home: 'CIV', away: 'NOR', homeScore: 0, awayScore: 1,
     version: 'v11.0-KO23',
     lambdaH: 1.20, lambdaA: 1.05,
@@ -195,7 +195,7 @@ const MATCHES = [
     bookAdvH: -175, bookAdvA: 135,
   },
   {
-    fixtureId: 'wc26-r32-078', espnId: '760492',
+    matchId: 'wc26-r32-078', espnId: '760492',
     home: 'FRA', away: 'SWE', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO23',
     lambdaH: 1.85, lambdaA: 0.75,
@@ -206,7 +206,7 @@ const MATCHES = [
     bookAdvH: -750, bookAdvA: 475,
   },
   {
-    fixtureId: 'wc26-r32-079', espnId: '760493',
+    matchId: 'wc26-r32-079', espnId: '760493',
     home: 'MEX', away: 'ECU', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO23',
     lambdaH: 1.55, lambdaA: 0.85,
@@ -221,7 +221,7 @@ const MATCHES = [
 // ── Jul 1 fixtures to project ─────────────────────────────────────────────────
 const JUL1_FIXTURES = [
   {
-    fixtureId: 'wc26-r32-080', home: 'ENG', away: 'COD',
+    matchId: 'wc26-r32-080', home: 'ENG', away: 'COD',
     kickoff: '12:00 PM ET', venue: 'Atlanta',
     lambdaH: 2.20, lambdaA: 0.58, // ENG strong home, COD defensive
     bookHomeMl: -345, bookDrawMl: 400, bookAwayMl: 1100,
@@ -231,7 +231,7 @@ const JUL1_FIXTURES = [
     bookAdvH: -1100, bookAdvA: 600,
   },
   {
-    fixtureId: 'wc26-r32-081', home: 'BEL', away: 'SEN',
+    matchId: 'wc26-r32-081', home: 'BEL', away: 'SEN',
     kickoff: '4:00 PM ET', venue: 'Philadelphia',
     lambdaH: 1.35, lambdaA: 1.12,
     bookHomeMl: 115, bookDrawMl: 220, bookAwayMl: 270,
@@ -241,7 +241,7 @@ const JUL1_FIXTURES = [
     bookAdvH: -175, bookAdvA: 135,
   },
   {
-    fixtureId: 'wc26-r32-082', home: 'USA', away: 'BIH',
+    matchId: 'wc26-r32-082', home: 'USA', away: 'BIH',
     kickoff: '8:00 PM ET', venue: 'Kansas City',
     lambdaH: 1.55, lambdaA: 0.88,
     bookHomeMl: -250, bookDrawMl: 400, bookAwayMl: 600,
@@ -364,7 +364,7 @@ async function main() {
   const lambdaBiases = []; // [homeXG-lambdaH, awayXG-lambdaA] for recalibration
 
   for (const m of MATCHES) {
-    L.section(`GRADING: ${m.fixtureId} | ${m.home} vs ${m.away} | ${m.version}`);
+    L.section(`GRADING: ${m.matchId} | ${m.home} vs ${m.away} | ${m.version}`);
 
     const sim = simulateMatch(m.lambdaH, m.lambdaA, -0.07);
     const xg = xgMap[m.espnId];
@@ -386,7 +386,7 @@ async function main() {
       const homeXGBias = parseFloat(xg.homeXG) - m.lambdaH;
       const awayXGBias = parseFloat(xg.awayXG) - m.lambdaA;
       L.state(`λ Bias: H=${homeXGBias.toFixed(3)} (xG-λH) | A=${awayXGBias.toFixed(3)} (xG-λA)`);
-      lambdaBiases.push({ home: homeXGBias, away: awayXGBias, match: m.fixtureId });
+      lambdaBiases.push({ home: homeXGBias, away: awayXGBias, match: m.matchId });
     }
     if (ts) {
       L.state(`Possession: ${m.home}=${ts.possession} | ${m.away}=${ts.possessionAway}`);
@@ -476,7 +476,7 @@ async function main() {
       L.state(`Conversion Rate: ${m.home}=${homeConvRate.toFixed(2)}x xG | ${m.away}=${awayConvRate.toFixed(2)}x xG`);
     }
 
-    grades.push({ match: m.fixtureId, composite, brier, dirCorrect, bttsCorrect, totalCorrect, spreadDirCorrect, scoreErr, totalErr, spreadErr });
+    grades.push({ match: m.matchId, composite, brier, dirCorrect, bttsCorrect, totalCorrect, spreadDirCorrect, scoreErr, totalErr, spreadErr });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -660,7 +660,7 @@ async function main() {
   const projResults = [];
 
   for (const f of JUL1_FIXTURES) {
-    L.section(`v12 PROJECTION: ${f.fixtureId} — ${f.away} (Away) vs ${f.home} (Home) — ${f.kickoff} | ${f.venue}`);
+    L.section(`v12 PROJECTION: ${f.matchId} — ${f.away} (Away) vs ${f.home} (Home) — ${f.kickoff} | ${f.venue}`);
 
     const lH = f.lambdaH * v12Params.homeMult * (1 - v12Params.paceD);
     const lA = f.lambdaA * v12Params.awayMult * (1 - v12Params.paceD);
@@ -672,10 +672,10 @@ async function main() {
     // Validate probabilities
     const sum1X2 = sim.pH+sim.pD+sim.pA;
     const sumAdv = sim.pAdvH+sim.pAdvA;
-    if (Math.abs(sum1X2-1)>0.001) L.fail(`[${f.fixtureId}] 1X2 sum=${sum1X2.toFixed(6)} ≠ 1`);
-    else L.pass(`[${f.fixtureId}] 1X2 sum=${sum1X2.toFixed(6)} ✓`);
-    if (Math.abs(sumAdv-1)>0.01) L.warn(`[${f.fixtureId}] Advance sum=${sumAdv.toFixed(6)} (includes ET/pens)`);
-    else L.pass(`[${f.fixtureId}] Advance sum=${sumAdv.toFixed(6)} ✓`);
+    if (Math.abs(sum1X2-1)>0.001) L.fail(`[${f.matchId}] 1X2 sum=${sum1X2.toFixed(6)} ≠ 1`);
+    else L.pass(`[${f.matchId}] 1X2 sum=${sum1X2.toFixed(6)} ✓`);
+    if (Math.abs(sumAdv-1)>0.01) L.warn(`[${f.matchId}] Advance sum=${sumAdv.toFixed(6)} (includes ET/pens)`);
+    else L.pass(`[${f.matchId}] Advance sum=${sumAdv.toFixed(6)} ✓`);
 
     // Model odds
     const [nvH,nvD,nvA] = noVig3(sim.pH,sim.pD,sim.pA);
@@ -719,18 +719,18 @@ async function main() {
       return (ev*100).toFixed(2);
     };
 
-    L.state(`[${f.fixtureId}] Effective λ: H=${lH.toFixed(4)} A=${lA.toFixed(4)}`);
-    L.state(`[${f.fixtureId}] Proj Score: ${f.home} ${sim.projH.toFixed(2)} - ${sim.projA.toFixed(2)} ${f.away} | Total: ${sim.projTotal.toFixed(2)} | Raw Spread: ${rawSpread.toFixed(2)}`);
-    L.state(`[${f.fixtureId}] 1X2: H=${(sim.pH*100).toFixed(2)}% D=${(sim.pD*100).toFixed(2)}% A=${(sim.pA*100).toFixed(2)}%`);
-    L.state(`[${f.fixtureId}] Model ML: H=${modelHomeMl} D=${modelDrawMl} A=${modelAwayMl}`);
-    L.state(`[${f.fixtureId}] Advance: H=${(sim.pAdvH*100).toFixed(2)}% A=${(sim.pAdvA*100).toFixed(2)}% | ML H=${modelAdvH} A=${modelAdvA}`);
-    L.state(`[${f.fixtureId}] Spread ${f.bookSpread}: H_cov=${(homeSpreadCov*100).toFixed(2)}% A_cov=${(awaySpreadCov*100).toFixed(2)}% | ML H=${modelHomeSpreadOdds} A=${modelAwaySpreadOdds}`);
-    L.state(`[${f.fixtureId}] O/U ${f.bookTotal}: O=${(sim.pO25*100).toFixed(2)}% U=${(sim.pU25*100).toFixed(2)}% | ML O=${modelOverOdds} U=${modelUnderOdds}`);
-    L.state(`[${f.fixtureId}] BTTS: Y=${(sim.pBTTS*100).toFixed(2)}% N=${((1-sim.pBTTS)*100).toFixed(2)}% | ML Y=${modelBttsY} N=${modelBttsN}`);
-    L.state(`[${f.fixtureId}] DC 1X=${(sim.p1X*100).toFixed(2)}%(${model1X}) X2=${(sim.pX2*100).toFixed(2)}%(${modelX2}) NoDraw=${(sim.pNoDraw*100).toFixed(2)}%(${modelNoDraw})`);
+    L.state(`[${f.matchId}] Effective λ: H=${lH.toFixed(4)} A=${lA.toFixed(4)}`);
+    L.state(`[${f.matchId}] Proj Score: ${f.home} ${sim.projH.toFixed(2)} - ${sim.projA.toFixed(2)} ${f.away} | Total: ${sim.projTotal.toFixed(2)} | Raw Spread: ${rawSpread.toFixed(2)}`);
+    L.state(`[${f.matchId}] 1X2: H=${(sim.pH*100).toFixed(2)}% D=${(sim.pD*100).toFixed(2)}% A=${(sim.pA*100).toFixed(2)}%`);
+    L.state(`[${f.matchId}] Model ML: H=${modelHomeMl} D=${modelDrawMl} A=${modelAwayMl}`);
+    L.state(`[${f.matchId}] Advance: H=${(sim.pAdvH*100).toFixed(2)}% A=${(sim.pAdvA*100).toFixed(2)}% | ML H=${modelAdvH} A=${modelAdvA}`);
+    L.state(`[${f.matchId}] Spread ${f.bookSpread}: H_cov=${(homeSpreadCov*100).toFixed(2)}% A_cov=${(awaySpreadCov*100).toFixed(2)}% | ML H=${modelHomeSpreadOdds} A=${modelAwaySpreadOdds}`);
+    L.state(`[${f.matchId}] O/U ${f.bookTotal}: O=${(sim.pO25*100).toFixed(2)}% U=${(sim.pU25*100).toFixed(2)}% | ML O=${modelOverOdds} U=${modelUnderOdds}`);
+    L.state(`[${f.matchId}] BTTS: Y=${(sim.pBTTS*100).toFixed(2)}% N=${((1-sim.pBTTS)*100).toFixed(2)}% | ML Y=${modelBttsY} N=${modelBttsN}`);
+    L.state(`[${f.matchId}] DC 1X=${(sim.p1X*100).toFixed(2)}%(${model1X}) X2=${(sim.pX2*100).toFixed(2)}%(${modelX2}) NoDraw=${(sim.pNoDraw*100).toFixed(2)}%(${modelNoDraw})`);
 
     // Full market table
-    L.output(`[${f.fixtureId}] ═══ FULL MARKET TABLE (Book vs Model) ═══`);
+    L.output(`[${f.matchId}] ═══ FULL MARKET TABLE (Book vs Model) ═══`);
     L.output(`  Market                        | Book     | Model    | ROI%`);
     L.output(`  ─────────────────────────────────────────────────────────`);
     L.output(`  Home ML (${f.home.padEnd(3)})              |  ${String(f.bookHomeMl).padStart(6)} |  ${String(modelHomeMl).padStart(6)} | ${roi(f.bookHomeMl,modelHomeMl)}%`);
@@ -748,10 +748,10 @@ async function main() {
     L.output(`  Home To Advance (${f.home.padEnd(3)})       |  ${String(f.bookAdvH).padStart(6)} |  ${String(modelAdvH).padStart(6)} | ${roi(f.bookAdvH,modelAdvH)}%`);
     L.output(`  Away To Advance (${f.away.padEnd(3)})       |  ${String(f.bookAdvA).padStart(6)} |  ${String(modelAdvA).padStart(6)} | ${roi(f.bookAdvA,modelAdvA)}%`);
 
-    L.pass(`[${f.fixtureId}] v12 projection complete — STAGED (no DB write)`);
+    L.pass(`[${f.matchId}] v12 projection complete — STAGED (no DB write)`);
 
     projResults.push({
-      fixtureId: f.fixtureId, home: f.home, away: f.away,
+      matchId: f.matchId, home: f.home, away: f.away,
       projHomeScore: sim.projH, projAwayScore: sim.projA, projTotal: sim.projTotal,
       rawSpread: rawSpread,
       modelHomeMl, modelDrawMl, modelAwayMl,
@@ -770,7 +770,7 @@ async function main() {
   // Final summary
   L.banner('PHASE E COMPLETE — v12.0-KO24 PROJECTIONS STAGED');
   for (const p of projResults) {
-    L.output(`${p.fixtureId} | ${p.away} (Away) vs ${p.home} (Home)`);
+    L.output(`${p.matchId} | ${p.away} (Away) vs ${p.home} (Home)`);
     L.output(`  Proj: ${p.projHomeScore.toFixed(2)}-${p.projAwayScore.toFixed(2)} | Total: ${p.projTotal.toFixed(2)} | Spread: ${p.rawSpread.toFixed(2)}`);
     L.output(`  ML: H=${p.modelHomeMl} D=${p.modelDrawMl} A=${p.modelAwayMl}`);
     L.output(`  Adv: H=${p.modelAdvH}(${(p.homeAdvProb*100).toFixed(1)}%) A=${p.modelAdvA}(${(p.awayAdvProb*100).toFixed(1)}%)`);

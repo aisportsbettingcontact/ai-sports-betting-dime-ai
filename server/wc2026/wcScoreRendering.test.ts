@@ -229,7 +229,7 @@ describe("DB state validation — NED/MAR wc26-r32-076", () => {
     // The scraper had written FT 0-2 incorrectly while the match was still live in ET
     // We corrected to: status=LIVE, homeScore=1, awayScore=1, matchMinute=ETHT, advancingTeamId=null
     const correctedState = {
-      fixtureId: "wc26-r32-076",
+      matchId: "wc26-r32-076",
       status: "LIVE",
       homeScore: 1,
       awayScore: 1,

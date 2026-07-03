@@ -67,7 +67,7 @@ async function runAudit() {
   // ── Step 1: Get July 1 fixtures and team IDs ─────────────────────────────
   log('SECTION', 'STEP_1', 'STEP 1 — Pull July 1 fixture and team metadata');
   const [fixtures] = await db.execute(`
-    SELECT f.fixture_id, f.espn_event_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.espn_event_id, f.home_team_id, f.away_team_id,
            f.match_date, f.kickoff_utc,
            ht.fifa_code AS home_code, ht.name AS home_name,
            at.fifa_code AS away_code, at.name AS away_name
@@ -79,7 +79,7 @@ async function runAudit() {
   `);
   log('INPUT', 'FIXTURES', `Found ${fixtures.length} July 1 fixtures`);
   fixtures.forEach(f => {
-    log('STATE', 'FIXTURE', `${f.fixture_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
+    log('STATE', 'FIXTURE', `${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
   });
 
   const teamIds = [];

@@ -762,7 +762,7 @@ async function main() {
     subBanner(`DB WRITE: ${fid} → wc2026_model_projections`);
 
     // Check if fixture exists in wc2026_fixtures
-    const [fidRows] = await conn.query(`SELECT fixture_id FROM wc2026_fixtures WHERE fixture_id = ?`, [fid]);
+    const [fidRows] = await conn.query(`SELECT match_id FROM wc2026_fixtures WHERE match_id = ?`, [fid]);
     if (fidRows.length === 0) {
       log('WARN', 'DB_WRITE', `${fid}: NOT found in wc2026_fixtures — SKIPPING DB write`);
       continue;
@@ -771,7 +771,7 @@ async function main() {
 
     // Upsert into wc2026_model_projections
     const mpRow = {
-      fixture_id: fid,
+      match_id: fid,
       model_version: ENGINE_VERSION,
       is_frozen: 0,
       home_team: fixture.home,
@@ -817,12 +817,12 @@ async function main() {
     };
 
     // Check if row exists
-    const [existingMp] = await conn.query(`SELECT fixture_id FROM wc2026_model_projections WHERE fixture_id = ?`, [fid]);
+    const [existingMp] = await conn.query(`SELECT match_id FROM wc2026_model_projections WHERE match_id = ?`, [fid]);
     if (existingMp.length > 0) {
       log('STEP', 'DB_WRITE', `${fid}: updating existing wc2026_model_projections row`);
-      const setClauses = Object.keys(mpRow).filter(k => k !== 'fixture_id').map(k => `${k} = ?`).join(', ');
-      const vals = Object.keys(mpRow).filter(k => k !== 'fixture_id').map(k => mpRow[k]);
-      await conn.query(`UPDATE wc2026_model_projections SET ${setClauses} WHERE fixture_id = ?`, [...vals, fid]);
+      const setClauses = Object.keys(mpRow).filter(k => k !== 'match_id').map(k => `${k} = ?`).join(', ');
+      const vals = Object.keys(mpRow).filter(k => k !== 'match_id').map(k => mpRow[k]);
+      await conn.query(`UPDATE wc2026_model_projections SET ${setClauses} WHERE match_id = ?`, [...vals, fid]);
     } else {
       log('STEP', 'DB_WRITE', `${fid}: inserting new wc2026_model_projections row`);
       const cols = Object.keys(mpRow).join(', ');
@@ -833,7 +833,7 @@ async function main() {
 
     // ── Write to wc2026MatchOdds ─────────────────────────────────────────
     subBanner(`DB WRITE: ${fid} → wc2026MatchOdds`);
-    const [moRows] = await conn.query(`SELECT fixture_id FROM wc2026MatchOdds WHERE fixture_id = ?`, [fid]);
+    const [moRows] = await conn.query(`SELECT match_id FROM wc2026MatchOdds WHERE match_id = ?`, [fid]);
 
     const moFields = {
       lamba_home: lambdaH,
@@ -861,7 +861,7 @@ async function main() {
     if (moRows.length > 0) {
       log('STEP', 'DB_WRITE', `${fid}: updating existing wc2026MatchOdds row (${Object.keys(moFields).length} fields)`);
       const setClauses = Object.keys(moFields).map(k => `${k} = ?`).join(', ');
-      await conn.query(`UPDATE wc2026MatchOdds SET ${setClauses} WHERE fixture_id = ?`, [...Object.values(moFields), fid]);
+      await conn.query(`UPDATE wc2026MatchOdds SET ${setClauses} WHERE match_id = ?`, [...Object.values(moFields), fid]);
       log('PASS', 'DB_WRITE', `${fid}: wc2026MatchOdds UPDATE complete ✓`);
     } else {
       log('WARN', 'DB_WRITE', `${fid}: NOT found in wc2026MatchOdds — row needs to be seeded first`);
@@ -873,7 +873,7 @@ async function main() {
   for (const fid of Object.keys(projections)) {
     subBanner(`READ-BACK AUDIT: ${fid}`);
     const [mpAudit] = await conn.query(`
-      SELECT fixture_id, model_version, home_lambda, away_lambda,
+      SELECT match_id, model_version, home_lambda, away_lambda,
              proj_home_score, proj_away_score, proj_total,
              model_home_ml, model_draw_ml, model_away_ml,
              model_spread, home_spread_odds, away_spread_odds,
@@ -881,7 +881,7 @@ async function main() {
              btts_yes_odds, btts_no_odds,
              to_advance_home_odds, to_advance_away_odds,
              dc_1x_odds, dc_x2_odds
-      FROM wc2026_model_projections WHERE fixture_id = ?
+      FROM wc2026_model_projections WHERE match_id = ?
     `, [fid]);
 
     if (mpAudit.length === 0) {

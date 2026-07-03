@@ -353,21 +353,21 @@ async function main() {
   // Pull book odds for completed KO matches
   L.step('DB', 'Pulling book odds for completed KO matches from wc2026_frozen_book_odds...');
   const [bookRows] = await conn.execute(
-    `SELECT fbo.fixture_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
+    `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
             fbo.book_total_line, fbo.book_over_odds, fbo.book_under_odds,
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
             fbo.to_advance_home_odds, fbo.to_advance_away_odds,
             f.espn_event_id, f.home_team_id, f.away_team_id
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.fixture_id = fbo.fixture_id
+     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
   // ── PULL JULY 2 FIXTURES FROM DB (ZERO HARDCODING) ─────────────────────────
   L.step('DB', 'Pulling July 2 fixture book odds from wc2026_frozen_book_odds...');
   const [jul2BookRows] = await conn.execute(
-    `SELECT fbo.fixture_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
+    `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
             fbo.book_total_line, fbo.book_over_odds, fbo.book_under_odds,
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
@@ -378,15 +378,15 @@ async function main() {
             ht.fifa_code as homeAbbrev, at2.fifa_code as awayAbbrev,
             ht.name as homeName, at2.name as awayName
      FROM wc2026_frozen_book_odds fbo
-     JOIN wc2026_fixtures f ON f.fixture_id = fbo.fixture_id
+     JOIN wc2026_fixtures f ON f.match_id = fbo.match_id
      JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
      JOIN wc2026_teams at2 ON at2.team_id = f.away_team_id
      WHERE f.match_date = '2026-07-02'
-     ORDER BY fbo.fixture_id`
+     ORDER BY fbo.match_id`
   );
   L.pass('DB', `July 2 fixtures from DB: ${jul2BookRows.length} rows`);
   for (const r of jul2BookRows) {
-    L.input('DB', `  ${r.fixture_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml} | Spread=${r.book_spread_line} (H${r.book_home_spread_odds}/A${r.book_away_spread_odds}) | Total=${r.book_total_line} (O${r.book_over_odds}/U${r.book_under_odds})`);
+    L.input('DB', `  ${r.match_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml} | Spread=${r.book_spread_line} (H${r.book_home_spread_odds}/A${r.book_away_spread_odds}) | Total=${r.book_total_line} (O${r.book_over_odds}/U${r.book_under_odds})`);
   }
 
   if (jul2BookRows.length === 0) {
@@ -792,12 +792,12 @@ async function main() {
     const lA = jul2Lambdas[f.awayAbbrev];
 
     if (!lH || !lA) {
-      L.fail('PHASE_F', `${f.fixture_id}: Missing lambda for ${f.homeAbbrev}(${lH}) or ${f.awayAbbrev}(${lA})`);
+      L.fail('PHASE_F', `${f.match_id}: Missing lambda for ${f.homeAbbrev}(${lH}) or ${f.awayAbbrev}(${lA})`);
       continue;
     }
 
     L.hr();
-    L.step('PHASE_F', `${f.fixture_id}: ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home)`);
+    L.step('PHASE_F', `${f.match_id}: ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home)`);
     L.input('PHASE_F', `  λH (${f.homeAbbrev}) = ${lH.toFixed(6)} | λA (${f.awayAbbrev}) = ${lA.toFixed(6)}`);
     L.input('PHASE_F', `  Book: ML H=${f.book_home_ml} D=${f.book_draw_ml} A=${f.book_away_ml} | Spread=${f.book_spread_line} (H${f.book_home_spread_odds}/A${f.book_away_spread_odds}) | Total=${f.book_total_line} (O${f.book_over_odds}/U${f.book_under_odds})`);
 
@@ -805,7 +805,7 @@ async function main() {
     const etA = 1 - etH;
     L.calc('PHASE_F', `  ET/Pens: λH/(λH+λA)=${(lH/(lH+lA)).toFixed(4)} → etH=${(etH*100).toFixed(2)}% etA=${(etA*100).toFixed(2)}% (70% regression to mean)`);
 
-    const sim = dcSim(lH, lA, winV.rho, etH, `${f.fixture_id}`);
+    const sim = dcSim(lH, lA, winV.rho, etH, `${f.match_id}`);
 
     // Validate probability sums
     const sum1X2    = sim.pH + sim.pD + sim.pA;
@@ -813,14 +813,14 @@ async function main() {
     const sumSpread = sim.homeSpreadCov + sim.awaySpreadCov;
     const sumTotal  = sim.pO25 + sim.pU25;
 
-    if (Math.abs(sum1X2-1) > 0.0001)    L.fail('VALIDATE', `${f.fixture_id}: 1X2 sum=${sum1X2.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: 1X2 sum=${sum1X2.toFixed(8)} ✓`);
-    if (Math.abs(sumAdv-1) > 0.001)     L.warn('VALIDATE', `${f.fixture_id}: Advance sum=${sumAdv.toFixed(8)}`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Advance sum=${sumAdv.toFixed(8)} ✓`);
-    if (Math.abs(sumSpread-1) > 0.0001) L.fail('VALIDATE', `${f.fixture_id}: Spread sum=${sumSpread.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Spread sum=${sumSpread.toFixed(8)} ✓`);
-    if (Math.abs(sumTotal-1) > 0.0001)  L.fail('VALIDATE', `${f.fixture_id}: Total sum=${sumTotal.toFixed(8)} ≠ 1`);
-    else L.pass('VALIDATE', `${f.fixture_id}: Total sum=${sumTotal.toFixed(8)} ✓`);
+    if (Math.abs(sum1X2-1) > 0.0001)    L.fail('VALIDATE', `${f.match_id}: 1X2 sum=${sum1X2.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: 1X2 sum=${sum1X2.toFixed(8)} ✓`);
+    if (Math.abs(sumAdv-1) > 0.001)     L.warn('VALIDATE', `${f.match_id}: Advance sum=${sumAdv.toFixed(8)}`);
+    else L.pass('VALIDATE', `${f.match_id}: Advance sum=${sumAdv.toFixed(8)} ✓`);
+    if (Math.abs(sumSpread-1) > 0.0001) L.fail('VALIDATE', `${f.match_id}: Spread sum=${sumSpread.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: Spread sum=${sumSpread.toFixed(8)} ✓`);
+    if (Math.abs(sumTotal-1) > 0.0001)  L.fail('VALIDATE', `${f.match_id}: Total sum=${sumTotal.toFixed(8)} ≠ 1`);
+    else L.pass('VALIDATE', `${f.match_id}: Total sum=${sumTotal.toFixed(8)} ✓`);
 
     // Convert to ML
     const mHomeMl  = prob2ml(sim.pH);
@@ -842,12 +842,12 @@ async function main() {
     const pAwayOrDraw = sim.pA + sim.pD;
     const pHomeOrDraw = sim.pH + sim.pD;
     const pNoDraw     = sim.pH + sim.pA;
-    L.verify('PHASE_F', `${f.fixture_id} DC: AwayOrDraw=${(pAwayOrDraw*100).toFixed(4)}% → ML=${mX2} | HomeOrDraw=${(pHomeOrDraw*100).toFixed(4)}% → ML=${m1X} | NoDraw=${(pNoDraw*100).toFixed(4)}% → ML=${mNoDraw}`);
-    L.verify('PHASE_F', `${f.fixture_id} BTTS: pBTTS=${(sim.pBTTS*100).toFixed(4)}% → Yes=${mBttsY} No=${mBttsN}`);
+    L.verify('PHASE_F', `${f.match_id} DC: AwayOrDraw=${(pAwayOrDraw*100).toFixed(4)}% → ML=${mX2} | HomeOrDraw=${(pHomeOrDraw*100).toFixed(4)}% → ML=${m1X} | NoDraw=${(pNoDraw*100).toFixed(4)}% → ML=${mNoDraw}`);
+    L.verify('PHASE_F', `${f.match_id} BTTS: pBTTS=${(sim.pBTTS*100).toFixed(4)}% → Yes=${mBttsY} No=${mBttsN}`);
 
     // Full market table
     L.thick();
-    L.output('MARKET', `╔═══ ${f.fixture_id} | ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home) ═══╗`);
+    L.output('MARKET', `╔═══ ${f.match_id} | ${f.awayAbbrev} (Away) @ ${f.homeAbbrev} (Home) ═══╗`);
     L.output('MARKET', `  Proj Score:  ${f.homeAbbrev} ${sim.projH.toFixed(3)} – ${f.awayAbbrev} ${sim.projA.toFixed(3)}`);
     L.output('MARKET', `  Proj Total:  ${sim.projTotal.toFixed(3)} | Raw Spread: ${(sim.projH-sim.projA).toFixed(3)}`);
     L.output('MARKET', `  Win Probs:   ${f.homeAbbrev} ${(sim.pH*100).toFixed(2)}% | Draw ${(sim.pD*100).toFixed(2)}% | ${f.awayAbbrev} ${(sim.pA*100).toFixed(2)}%`);
@@ -883,12 +883,12 @@ async function main() {
     }
 
     // Spread inverse verification
-    L.verify('MARKET', `${f.fixture_id} Spread: ${(sim.homeSpreadCov*100).toFixed(4)}% + ${(sim.awaySpreadCov*100).toFixed(4)}% = ${((sim.homeSpreadCov+sim.awaySpreadCov)*100).toFixed(6)}% (must = 100.000000%)`);
-    L.verify('MARKET', `${f.fixture_id} Total:  ${(sim.pO25*100).toFixed(4)}% + ${(sim.pU25*100).toFixed(4)}% = ${((sim.pO25+sim.pU25)*100).toFixed(6)}% (must = 100.000000%)`);
-    L.verify('MARKET', `${f.fixture_id} BTTS:   ${(sim.pBTTS*100).toFixed(4)}% + ${((1-sim.pBTTS)*100).toFixed(4)}% = 100.000000%`);
+    L.verify('MARKET', `${f.match_id} Spread: ${(sim.homeSpreadCov*100).toFixed(4)}% + ${(sim.awaySpreadCov*100).toFixed(4)}% = ${((sim.homeSpreadCov+sim.awaySpreadCov)*100).toFixed(6)}% (must = 100.000000%)`);
+    L.verify('MARKET', `${f.match_id} Total:  ${(sim.pO25*100).toFixed(4)}% + ${(sim.pU25*100).toFixed(4)}% = ${((sim.pO25+sim.pU25)*100).toFixed(6)}% (must = 100.000000%)`);
+    L.verify('MARKET', `${f.match_id} BTTS:   ${(sim.pBTTS*100).toFixed(4)}% + ${((1-sim.pBTTS)*100).toFixed(4)}% = 100.000000%`);
 
     projResults.push({
-      fixtureId: f.fixture_id,
+      matchId: f.match_id,
       home: f.homeAbbrev, homeName: f.homeName,
       away: f.awayAbbrev, awayName: f.awayName,
       lambdaH: lH, lambdaA: lA, etH, etA,
@@ -924,7 +924,7 @@ async function main() {
 
   for (const p of projResults) {
     L.hr();
-    L.step('XREF', `Cross-referencing ${p.fixtureId}: ${p.away} @ ${p.home}`);
+    L.step('XREF', `Cross-referencing ${p.matchId}: ${p.away} @ ${p.home}`);
 
     if (p.lambdaH < 0.20 || p.lambdaH > 5.0) { L.fail('XREF', `λH=${p.lambdaH.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
     else { L.pass('XREF', `λH=${p.lambdaH.toFixed(4)} in range [0.20, 5.0]`); xrefPass++; }
@@ -992,7 +992,7 @@ async function main() {
   L.output('SUMMARY', '');
   L.output('SUMMARY', 'JULY 2 PROJECTIONS SUMMARY (MANUAL REVIEW — NOT PUBLISHED):');
   for (const p of projResults) {
-    L.output('SUMMARY', `  ${p.fixtureId}: ${p.away} @ ${p.home} | λH=${p.lambdaH.toFixed(4)} λA=${p.lambdaA.toFixed(4)} | Proj ${p.projH.toFixed(2)}-${p.projA.toFixed(2)} | ML H=${p.mHomeMl} D=${p.mDrawMl} A=${p.mAwayMl} | Spread H=${p.mHSpread} A=${p.mASpread} | O=${p.mOver} U=${p.mUnder}`);
+    L.output('SUMMARY', `  ${p.matchId}: ${p.away} @ ${p.home} | λH=${p.lambdaH.toFixed(4)} λA=${p.lambdaA.toFixed(4)} | Proj ${p.projH.toFixed(2)}-${p.projA.toFixed(2)} | ML H=${p.mHomeMl} D=${p.mDrawMl} A=${p.mAwayMl} | Spread H=${p.mHSpread} A=${p.mASpread} | O=${p.mOver} U=${p.mUnder}`);
   }
 
   // Save JSON report

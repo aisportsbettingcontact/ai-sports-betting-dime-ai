@@ -118,7 +118,7 @@ async function main() {
 
   // Get all July 1 fixtures
   const [july1Fixtures] = await conn.execute(`
-    SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
+    SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
            ht.name as home_name, ht.fifa_code as home_code,
            at.name as away_name, at.fifa_code as away_code
     FROM wc2026_fixtures f
@@ -129,29 +129,29 @@ async function main() {
   `);
   log('STATE', 'FIXTURES', `July 1 fixtures found: ${july1Fixtures.length}`);
   july1Fixtures.forEach(f => {
-    log('STATE', 'FIXTURE', `  ${f.fixture_id}: ${f.away_code} @ ${f.home_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date}`);
+    log('STATE', 'FIXTURE', `  ${f.match_id}: ${f.away_code} @ ${f.home_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date}`);
   });
 
   // Get frozen book odds for July 1
-  const fixtureIds = july1Fixtures.map(f => f.fixture_id);
-  if (fixtureIds.length === 0) {
+  const matchIds = july1Fixtures.map(f => f.match_id);
+  if (matchIds.length === 0) {
     log('HARD_FAIL', 'DB', 'No July 1 fixtures found — cannot proceed');
     flushLog();
     await conn.end();
     process.exit(1);
   }
 
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  const placeholders = matchIds.map(() => '?').join(',');
   const [frozenRows] = await conn.execute(
-    `SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id IN (${placeholders}) ORDER BY fixture_id`,
-    fixtureIds
+    `SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (${placeholders}) ORDER BY match_id`,
+    matchIds
   );
   log('STATE', 'FROZEN_ODDS', `Frozen book odds rows for July 1: ${frozenRows.length}`);
   
   for (const row of frozenRows) {
-    const fix = july1Fixtures.find(f => f.fixture_id === row.fixture_id);
-    const matchup = fix ? `${fix.away_code} @ ${fix.home_code}` : row.fixture_id;
-    log('STATE', 'FROZEN_ROW', `  ${matchup} (${row.fixture_id}):`, {
+    const fix = july1Fixtures.find(f => f.match_id === row.match_id);
+    const matchup = fix ? `${fix.away_code} @ ${fix.home_code}` : row.match_id;
+    log('STATE', 'FROZEN_ROW', `  ${matchup} (${row.match_id}):`, {
       book_home_ml: row.book_home_ml,
       book_away_ml: row.book_away_ml,
       book_draw_ml: row.book_draw_ml,
@@ -183,10 +183,10 @@ async function main() {
   }
 
   // Check which fixtures are MISSING from frozen_book_odds
-  const frozenFixtureIds = new Set(frozenRows.map(r => r.fixture_id));
+  const frozenFixtureIds = new Set(frozenRows.map(r => r.match_id));
   for (const f of july1Fixtures) {
-    if (!frozenFixtureIds.has(f.fixture_id)) {
-      log('FAIL', 'MISSING_FROZEN', `  ${f.fixture_id} (${f.away_code} @ ${f.home_code}) — NO ROW in wc2026_frozen_book_odds`);
+    if (!frozenFixtureIds.has(f.match_id)) {
+      log('FAIL', 'MISSING_FROZEN', `  ${f.match_id} (${f.away_code} @ ${f.home_code}) — NO ROW in wc2026_frozen_book_odds`);
     }
   }
 
@@ -323,14 +323,14 @@ async function main() {
     }
     
     const isSwapped = dbFix.home_code?.toLowerCase() === awayCode;
-    log('STATE', 'DB_MATCH', `  Matched to fixture ${dbFix.fixture_id} (${dbFix.away_code} @ ${dbFix.home_code})${isSwapped ? ' [SWAPPED]' : ''}`);
+    log('STATE', 'DB_MATCH', `  Matched to fixture ${dbFix.match_id} (${dbFix.away_code} @ ${dbFix.home_code})${isSwapped ? ' [SWAPPED]' : ''}`);
     
     // Check if frozen odds exist for this fixture
-    const frozenRow = frozenRows.find(r => r.fixture_id === dbFix.fixture_id);
+    const frozenRow = frozenRows.find(r => r.match_id === dbFix.match_id);
     if (!frozenRow) {
-      log('FAIL', 'NO_FROZEN_ODDS', `  ${dbFix.fixture_id} — NO ROW in wc2026_frozen_book_odds`);
+      log('FAIL', 'NO_FROZEN_ODDS', `  ${dbFix.match_id} — NO ROW in wc2026_frozen_book_odds`);
     } else {
-      log('PASS', 'FROZEN_EXISTS', `  ${dbFix.fixture_id} — frozen odds row exists`);
+      log('PASS', 'FROZEN_EXISTS', `  ${dbFix.match_id} — frozen odds row exists`);
       
       // Compare AN odds vs frozen DB odds
       const dbHomeML = isSwapped ? frozenRow.book_away_ml : frozenRow.book_home_ml;
@@ -338,7 +338,7 @@ async function main() {
       const anHomeML = ag.dkHomeML;
       const anAwayML = ag.dkAwayML;
       
-      log('STATE', 'ODDS_COMPARE', `  ${dbFix.fixture_id}:`, {
+      log('STATE', 'ODDS_COMPARE', `  ${dbFix.match_id}:`, {
         'AN_home_ML': anHomeML, 'DB_home_ML': dbHomeML,
         'AN_away_ML': anAwayML, 'DB_away_ML': dbAwayML,
         'AN_draw_ML': ag.dkDrawML, 'DB_draw_ML': frozenRow.book_draw_ml,
@@ -360,17 +360,17 @@ async function main() {
   if (!belSenFix) {
     log('FAIL', 'BEL_SEN', 'BEL vs SEN fixture NOT FOUND in July 1 fixtures');
   } else {
-    log('PASS', 'BEL_SEN_FIXTURE', `Found: ${belSenFix.fixture_id} — ${belSenFix.away_code} @ ${belSenFix.home_code}`, {
+    log('PASS', 'BEL_SEN_FIXTURE', `Found: ${belSenFix.match_id} — ${belSenFix.away_code} @ ${belSenFix.home_code}`, {
       match_date: belSenFix.match_date,
       kickoff_utc: belSenFix.kickoff_utc,
     });
     
-    const belSenFrozen = frozenRows.find(r => r.fixture_id === belSenFix.fixture_id);
+    const belSenFrozen = frozenRows.find(r => r.match_id === belSenFix.match_id);
     if (!belSenFrozen) {
-      log('FAIL', 'BEL_SEN_FROZEN', `NO ROW in wc2026_frozen_book_odds for ${belSenFix.fixture_id}`);
+      log('FAIL', 'BEL_SEN_FROZEN', `NO ROW in wc2026_frozen_book_odds for ${belSenFix.match_id}`);
       log('ROOT_CAUSE', 'BEL_SEN', 'BEL vs SEN shows N/A because frozen_book_odds row is MISSING');
     } else {
-      log('PASS', 'BEL_SEN_FROZEN', `Frozen row exists for ${belSenFix.fixture_id}`, {
+      log('PASS', 'BEL_SEN_FROZEN', `Frozen row exists for ${belSenFix.match_id}`, {
         book_home_ml: belSenFrozen.book_home_ml,
         book_away_ml: belSenFrozen.book_away_ml,
         book_draw_ml: belSenFrozen.book_draw_ml,
@@ -392,10 +392,10 @@ async function main() {
     // Check wc2026_odds_snapshots for BEL vs SEN
     const [snapRows] = await conn.execute(
       `SELECT book_id, market, selection, american_odds, snapshot_ts FROM wc2026_odds_snapshots 
-       WHERE fixture_id = ? ORDER BY snapshot_ts DESC, book_id, market`,
-      [belSenFix.fixture_id]
+       WHERE match_id = ? ORDER BY snapshot_ts DESC, book_id, market`,
+      [belSenFix.match_id]
     );
-    log('STATE', 'BEL_SEN_SNAPSHOTS', `wc2026_odds_snapshots rows for ${belSenFix.fixture_id}: ${snapRows.length}`);
+    log('STATE', 'BEL_SEN_SNAPSHOTS', `wc2026_odds_snapshots rows for ${belSenFix.match_id}: ${snapRows.length}`);
     const dk68Rows = snapRows.filter(r => r.book_id === 68);
     log('STATE', 'BEL_SEN_DK_SNAPSHOTS', `DK (book_id=68) rows: ${dk68Rows.length}`);
     dk68Rows.slice(0, 10).forEach(r => {
@@ -433,7 +433,7 @@ async function main() {
   log('OUTPUT', 'VERDICT', '');
   
   if (belSenFix) {
-    const belSenFrozen = frozenRows.find(r => r.fixture_id === belSenFix.fixture_id);
+    const belSenFrozen = frozenRows.find(r => r.match_id === belSenFix.match_id);
     if (!belSenFrozen) {
       log('OUTPUT', 'VERDICT', 'ROOT CAUSE: wc2026_frozen_book_odds has NO ROW for BEL vs SEN');
       log('OUTPUT', 'VERDICT', 'IMPACT: v15 engine uses frozen_book_odds as primary source');

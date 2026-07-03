@@ -16,7 +16,7 @@ import mysql from 'mysql2/promise';
 const conn = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
 // ── Exact correct values from user's table ────────────────────────────────────
-// Columns: fixture_id, homeML, drawML, awayML, spread, homeSpreadOdds, awaySpreadOdds,
+// Columns: match_id, homeML, drawML, awayML, spread, homeSpreadOdds, awaySpreadOdds,
 //          totalLine, overOdds, underOdds, bttsYes, bttsNo, dc1x, dcX2, noDrawHome, noDrawAway, toAdvH, toAdvA
 //
 // NOTE: "Home" = the team listed as HOME in wc2026_fixtures (left column in user's table is Away, right is Home)
@@ -103,7 +103,7 @@ const conn = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: 
 //   ToAdv Home=-215 ToAdv Away=+170
 
 const CORRECTIONS = [
-  // fixture_id, homeML, drawML, awayML, spreadLine, homeSpreadOdds, awaySpreadOdds, totalLine, overOdds, underOdds, bttsYes, bttsNo, dc1x, dcX2, noDrawHome, noDrawAway, toAdvH, toAdvA
+  // match_id, homeML, drawML, awayML, spreadLine, homeSpreadOdds, awaySpreadOdds, totalLine, overOdds, underOdds, bttsYes, bttsNo, dc1x, dcX2, noDrawHome, noDrawAway, toAdvH, toAdvA
   ['wc26-r32-080', -345, 400, 1100, 1.5,  -105, -111, 2.5, 103,  -120, 163,  -163, 250,  -2000, -588, 1100, -1100, 600  ],
   ['wc26-r32-081',  115, 220,  270, 1.5,   300, -435, 2.5, 100,  -118, -133,  133, -149, -345,  -278,  135, -175,  135  ],
   ['wc26-r32-082', -250, 400,  600, 1.5,   108, -137, 2.5, -137,  110, -105,  105, 175,  -1000, -588, -700, 450  ],
@@ -143,7 +143,7 @@ for (const row of CORRECTIONS) {
       book_no_draw_away_odds = ?,
       to_advance_home_odds = ?,
       to_advance_away_odds = ?
-    WHERE fixture_id = ?
+    WHERE match_id = ?
   `, [homeML, drawML, awayML, spreadLine, homeSpreadOdds, awaySpreadOdds, totalLine, overOdds, underOdds, bttsYes, bttsNo, dc1x, dcX2, noDrawHome, noDrawAway, toAdvH, toAdvA, fid]);
   
   const affected = result.affectedRows;
@@ -162,15 +162,15 @@ console.log(`\n[OUTPUT] Total rows updated: ${totalUpdated}/12`);
 console.log('\n[VERIFY] Re-reading all 12 rows to confirm...');
 const fids = CORRECTIONS.map(r => r[0]);
 const [verifyRows] = await conn.query(`
-  SELECT fixture_id, book_home_ml, book_away_ml, book_spread_line, 
+  SELECT match_id, book_home_ml, book_away_ml, book_spread_line, 
          book_home_spread_odds, book_away_spread_odds,
          book_over_odds, book_under_odds, to_advance_home_odds, to_advance_away_odds
-  FROM wc2026_frozen_book_odds WHERE fixture_id IN (?)
-  ORDER BY fixture_id
+  FROM wc2026_frozen_book_odds WHERE match_id IN (?)
+  ORDER BY match_id
 `, [fids]);
 
 for (const vr of verifyRows) {
-  console.log(`[VERIFY] ${vr.fixture_id}: homeML=${vr.book_home_ml} awayML=${vr.book_away_ml} spread=${vr.book_spread_line} hSpreadOdds=${vr.book_home_spread_odds} aSpreadOdds=${vr.book_away_spread_odds} over=${vr.book_over_odds} under=${vr.book_under_odds} toAdvH=${vr.to_advance_home_odds} toAdvA=${vr.to_advance_away_odds}`);
+  console.log(`[VERIFY] ${vr.match_id}: homeML=${vr.book_home_ml} awayML=${vr.book_away_ml} spread=${vr.book_spread_line} hSpreadOdds=${vr.book_home_spread_odds} aSpreadOdds=${vr.book_away_spread_odds} over=${vr.book_over_odds} under=${vr.book_under_odds} toAdvH=${vr.to_advance_home_odds} toAdvA=${vr.to_advance_away_odds}`);
 }
 
 await conn.end();
