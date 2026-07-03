@@ -61,7 +61,7 @@ async function computeLambda(teamAbbrev) {
   const [xgRows] = await db.query(
     `SELECT e.homeXG, e.awayXG, m.homeTeamAbbrev, m.awayTeamAbbrev
      FROM wc2026_espn_expected_goals e
-     JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
      WHERE (m.homeTeamAbbrev = ? OR m.awayTeamAbbrev = ?)
        AND e.homeXG IS NOT NULL
        AND m.round = 'Group Stage'`,
@@ -87,27 +87,27 @@ async function computeLambda(teamAbbrev) {
     const [smRows] = await db.query(
       `SELECT SUM(xG) as smXG, SUM(xGOT) as smXGOT
        FROM wc2026_espn_shot_map sm
-       JOIN wc2026_espn_matches m ON m.matchId = sm.matchId
-       WHERE m.matchId = ? AND sm.teamAbbrev = ?`,
-      [row.matchId || xgRows[0].matchId, teamAbbrev]
+       JOIN wc2026_espn_matches m ON m.espn_match_id = sm.espn_match_id
+       WHERE m.espn_match_id = ? AND sm.teamAbbrev = ?`,
+      [row.espn_match_id || xgRows[0].espn_match_id, teamAbbrev]
     );
 
     // player stats xG
     const [psRows] = await db.query(
       `SELECT SUM(xG) as psXG
        FROM wc2026_espn_player_stats ps
-       JOIN wc2026_espn_matches m ON m.matchId = ps.matchId
-       WHERE m.matchId = ? AND ps.teamAbbrev = ?`,
-      [row.matchId || xgRows[0].matchId, teamAbbrev]
+       JOIN wc2026_espn_matches m ON m.espn_match_id = ps.espn_match_id
+       WHERE m.espn_match_id = ? AND ps.teamAbbrev = ?`,
+      [row.espn_match_id || xgRows[0].espn_match_id, teamAbbrev]
     );
 
     // possession
     const [tsRows] = await db.query(
       `SELECT ts.possession, ts.possessionAway, m.homeTeamAbbrev
        FROM wc2026_espn_team_stats ts
-       JOIN wc2026_espn_matches m ON m.matchId = ts.matchId
-       WHERE m.matchId = ?`,
-      [row.matchId || xgRows[0].matchId]
+       JOIN wc2026_espn_matches m ON m.espn_match_id = ts.espn_match_id
+       WHERE m.espn_match_id = ?`,
+      [row.espn_match_id || xgRows[0].espn_match_id]
     );
 
     const smXG = smRows[0]?.smXG ?? xG;
@@ -141,8 +141,8 @@ async function computeLambda(teamAbbrev) {
   const [convRows] = await db.query(
     `SELECT m.homeTeamAbbrev, ts.shotsOnGoal, ts.shotsOnGoalAway
      FROM wc2026_espn_team_stats ts
-     JOIN wc2026_espn_matches m ON m.matchId = ts.matchId
-     JOIN wc2026_espn_matches m2 ON m2.matchId = ts.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = ts.espn_match_id
+     JOIN wc2026_espn_matches m2 ON m2.espn_match_id = ts.espn_match_id
      WHERE (m.homeTeamAbbrev = ? OR m2.awayTeamAbbrev = ?)
        AND m.round = 'Group Stage'`,
     [teamAbbrev, teamAbbrev]
@@ -172,18 +172,18 @@ async function computeLambda(teamAbbrev) {
 async function computeLambdaSimple(teamAbbrev) {
   const [rows] = await db.query(
     `SELECT 
-       e.matchId,
+       e.espn_match_id,
        m.homeTeamAbbrev, m.awayTeamAbbrev,
        e.homeXG, e.awayXG,
        e.homeXGOT, e.awayXGOT,
        e.homeXA, e.awayXA,
        e.homeXGSetPlay, e.awayXGSetPlay
      FROM wc2026_espn_expected_goals e
-     JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
      WHERE (m.homeTeamAbbrev = ? OR m.awayTeamAbbrev = ?)
        AND e.homeXG IS NOT NULL
        AND m.round = 'Group Stage'
-     ORDER BY e.matchId`,
+     ORDER BY e.espn_match_id`,
     [teamAbbrev, teamAbbrev]
   );
 
@@ -205,16 +205,16 @@ async function computeLambdaSimple(teamAbbrev) {
     // shot map
     const [sm] = await db.query(
       `SELECT COALESCE(SUM(xG),0) as smXG FROM wc2026_espn_shot_map
-       WHERE matchId=? AND teamAbbrev=?`, [r.matchId, teamAbbrev]
+       WHERE espn_match_id=? AND teamAbbrev=?`, [r.espn_match_id, teamAbbrev]
     );
     // player stats
     const [ps] = await db.query(
       `SELECT COALESCE(SUM(xG),0) as psXG FROM wc2026_espn_player_stats
-       WHERE matchId=? AND teamAbbrev=?`, [r.matchId, teamAbbrev]
+       WHERE espn_match_id=? AND teamAbbrev=?`, [r.espn_match_id, teamAbbrev]
     );
     // possession
     const [ts] = await db.query(
-      `SELECT possession, possessionAway FROM wc2026_espn_team_stats WHERE matchId=?`, [r.matchId]
+      `SELECT possession, possessionAway FROM wc2026_espn_team_stats WHERE espn_match_id=?`, [r.espn_match_id]
     );
     const poss = ts.length > 0 ? (isHome ? +ts[0].possession : +ts[0].possessionAway) : 50;
 
@@ -291,8 +291,8 @@ console.log('═'.repeat(80));
 
 // Ground truth
 const GROUND_TRUTH = [
-  { matchId: '760488', home: 'NED', away: 'MAR', homeScore: 1, awayScore: 1, advancer: 'away', advancerName: 'MAR', note: 'MAR wins pens 3-2' },
-  { matchId: '760489', home: 'GER', away: 'PAR', homeScore: 1, awayScore: 1, advancer: 'away', advancerName: 'PAR', note: 'PAR wins pens 4-3' },
+  { espn_match_id: '760488', home: 'NED', away: 'MAR', homeScore: 1, awayScore: 1, advancer: 'away', advancerName: 'MAR', note: 'MAR wins pens 3-2' },
+  { espn_match_id: '760489', home: 'GER', away: 'PAR', homeScore: 1, awayScore: 1, advancer: 'away', advancerName: 'PAR', note: 'PAR wins pens 4-3' },
 ];
 
 // Compute lambdas for all 4 teams

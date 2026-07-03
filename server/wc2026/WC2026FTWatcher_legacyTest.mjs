@@ -353,12 +353,12 @@ const makeEvent = ({
 const gameStateMap = new Map();
 
 const detectTransition = (g) => {
-  const prev          = gameStateMap.get(g.gameId);
+  const prev          = gameStateMap.get(g.espnMatchId);
   const prevState     = prev?.statusState    || 'unknown';
   const prevTypeId    = prev?.statusTypeId   || null;
   const prevCompleted = prev?.statusCompleted ?? null;
 
-  gameStateMap.set(g.gameId, {
+  gameStateMap.set(g.espnMatchId, {
     statusState:     g.statusState,
     statusTypeId:    g.statusTypeId,
     statusTypeName:  g.statusTypeName,
@@ -871,7 +871,7 @@ const main = () => {
     const swapNote = g.isSwapped ? ' | ⚠️ isSwapped=true (home at idx[0])' : ' | isSwapped=false';
     const winnerNote = g.hasWinner ? ' | hasWinner=true ✅' : ' | hasWinner=false ⚠️';
     log('FINAL', 'M1/FT', `🏁 GAME FINAL — NEWLY DETECTED | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} ${g.statusTypeName} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}${swapNote}${winnerNote}`);
-    log('TRIGGER', 'M1/FT', `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | prevState=${prevState} → post | typeId=${g.statusTypeId} | completed=${g.statusCompleted} | DRY_RUN=true`);
+    log('TRIGGER', 'M1/FT', `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | prevState=${prevState} → post | typeId=${g.statusTypeId} | completed=${g.statusCompleted} | DRY_RUN=true`);
 
     assert(g.isFinal === true,        'M1/FT: isFinal=true',          true,  g.isFinal);
     assert(g.isFinalByState === true, 'M1/FT: isFinalByState=true',   true,  g.isFinalByState);
@@ -949,7 +949,7 @@ const main = () => {
     log('MATCH', 'M2/FT', `[INPUT] ${g.name} | typeId=${g.statusTypeId} typeName=${g.statusTypeName} state=${g.statusState} completed=${g.statusCompleted} clock=${g.displayClock}`);
     log('TRANS', 'M2/FT', `🔀 FT TRANSITION | prevState=${prevState} prevTypeId=${prevTypeId} → state=${g.statusState} typeId=${g.statusTypeId} completed=${g.statusCompleted}`);
     log('FINAL', 'M2/FT', `🏁 GAME FINAL (FT-Pens) | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} | ${g.statusShortDetail} | hasWinner=${g.hasWinner}`);
-    log('TRIGGER', 'M2/FT', `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | prevState=${prevState} → post | DRY_RUN=true`);
+    log('TRIGGER', 'M2/FT', `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | prevState=${prevState} → post | DRY_RUN=true`);
 
     assert(g.isFinal === true,        'M2/FT: isFinal=true',          true,  g.isFinal);
     assert(g.statusShortDetail === 'FT-Pens', 'M2/FT: shortDetail=FT-Pens', 'FT-Pens', g.statusShortDetail);
@@ -1145,7 +1145,7 @@ const main = () => {
     const swapNote = g.isSwapped ? ' | ⚠️ isSwapped=true (home at idx[0])' : ' | isSwapped=false';
     const winnerNote = g.hasWinner ? ' | hasWinner=true ✅' : ' | hasWinner=false ⚠️';
     log('FINAL', 'M5/FT', `🏁 GAME FINAL | ${g.name} | ${g.scoreStr} | typeId=${g.statusTypeId} | ${g.statusShortDetail} | clock=${g.displayClock} P${g.period}${swapNote}${winnerNote}`);
-    log('TRIGGER', 'M5/FT', `🚀 gameId=${g.gameId} → matchRound=${g.matchRound} | prevState=${prevState} → post | DRY_RUN=true`);
+    log('TRIGGER', 'M5/FT', `🚀 gameId=${g.espnMatchId} → matchRound=${g.matchRound} | prevState=${prevState} → post | DRY_RUN=true`);
     log('DAY_FIN', 'M5/DAY', `🏁 DAY_FINAL: 760487 + 760488 + 760489 all settled on 20260629 → DAY_ADVANCE fires`);
     log('DAY_ADV', 'M5/DAY', `🗓️  DAY_ADVANCE: 20260629 fully settled (3 games) → dropped | 20260704 added | window=[20260630, 20260701, 20260702, 20260703, 20260704]`);
 

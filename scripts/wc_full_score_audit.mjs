@@ -131,7 +131,7 @@ console.log(`\n${TAG} [STEP 2] Pulling DB records for all 3 tournaments...`);
 
 // 2018 + 2022: from wc_bt_matches
 const [btMatches] = await conn.query(`
-  SELECT id, tournament_year, home_team, away_team, home_score, away_score, match_date, espn_event_id
+  SELECT id, tournament_year, home_team, away_team, home_score, away_score, match_date, espn_match_id
   FROM wc_bt_matches
   WHERE tournament_year IN (2018, 2022, 2026)
   ORDER BY tournament_year, match_date
@@ -140,7 +140,7 @@ console.log(`${TAG} [INPUT] wc_bt_matches total: ${btMatches.length}`);
 
 // 2026: also from wc2026_matches (canonical source)
 const [wc26Matchs] = await conn.query(`
-  SELECT f.match_id, f.espn_event_id,
+  SELECT f.match_id, f.espn_match_id,
          ht.name as home_team, ht.team_id as home_team_id,
          at.name as away_team, at.team_id as away_team_id,
          f.home_score, f.away_score, f.status, f.match_date
@@ -186,10 +186,10 @@ const espn26ById = Object.fromEntries(espnGames[2026].map(g => [g.espnId, g]));
 const espn26ByTeams = espnGames[2026]; // for fallback matching
 
 for (const f of wc26Matchs) {
-  const espnId = String(f.espn_event_id || '');
+  const espnId = String(f.espn_match_id || '');
   let espnGame = espn26ById[espnId];
   
-  // Fallback: match by team names if espn_event_id not found
+  // Fallback: match by team names if espn_match_id not found
   if (!espnGame) {
     espnGame = espn26ByTeams.find(g =>
       (teamsMatch(g.homeName, f.home_team) && teamsMatch(g.awayName, f.away_team)) ||
@@ -250,7 +250,7 @@ for (const year of [2018, 2022, 2026]) {
   console.log(`${TAG} [STATE] ${year}: DB has ${dbMatches.length} matches, ESPN has ${espnList.length} games`);
   
   for (const m of dbMatches) {
-    const espnId = String(m.espn_event_id || '');
+    const espnId = String(m.espn_match_id || '');
     let espnGame = espnById[espnId];
     
     // Fallback: match by team names

@@ -97,8 +97,8 @@ const AN_TO_MATCH = {
 const correctedOdds = {};
 
 for (const game of anGames) {
-  const matchId = AN_TO_MATCH[game.id];
-  if (!matchId) continue;
+  const espn_match_id = AN_TO_MATCH[game.id];
+  if (!espn_match_id) continue;
   
   const dkMarkets = game.markets?.['68']?.event;
   if (!dkMarkets) {
@@ -125,7 +125,7 @@ for (const game of anGames) {
   // AN 'away'=KSA, AN 'home'=URU → FIFA home=KSA, FIFA away=URU ✓
   // So for g-016: AN 'away' = FIFA home (KSA), AN 'home' = FIFA away (URU) — SAME pattern!
   
-  correctedOdds[matchId] = {
+  correctedOdds[espn_match_id] = {
     // FIFA home = AN 'away' selection
     home_ml: anAway?.odds ?? null,
     // FIFA away = AN 'home' selection
@@ -136,7 +136,7 @@ for (const game of anGames) {
     under_odds: under?.odds ?? null,
   };
   
-  console.log(`[STATE] Game ${game.id} → ${matchId}: FIFA_home_ML=${correctedOdds[matchId].home_ml} draw=${correctedOdds[matchId].draw_ml} FIFA_away_ML=${correctedOdds[matchId].away_ml} total=${correctedOdds[matchId].total_line} over=${correctedOdds[matchId].over_odds} under=${correctedOdds[matchId].under_odds}`);
+  console.log(`[STATE] Game ${game.id} → ${espn_match_id}: FIFA_home_ML=${correctedOdds[espn_match_id].home_ml} draw=${correctedOdds[espn_match_id].draw_ml} FIFA_away_ML=${correctedOdds[espn_match_id].away_ml} total=${correctedOdds[espn_match_id].total_line} over=${correctedOdds[espn_match_id].over_odds} under=${correctedOdds[espn_match_id].under_odds}`);
 }
 
 // Fallback: use hardcoded values from earlier fetch if AN API didn't return all games

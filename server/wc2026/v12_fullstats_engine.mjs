@@ -138,7 +138,7 @@ function simulateMatch(lambdaH, lambdaA, rho=0, N=100000) {
 // VERIFIED actual results (zero hallucination)
 const MATCHES = [
   {
-    matchId: 'wc26-r32-073', espnId: '760487',
+    espn_match_id: 'wc26-r32-073', espnId: '760487',
     home: 'BRA', away: 'JPN', homeScore: 2, awayScore: 1,
     version: 'v7.2',
     // v7.2 lambda inputs (from seedJune28CAN_RSA.mjs — note: this was CAN/RSA, not BRA/JPN)
@@ -151,7 +151,7 @@ const MATCHES = [
     bookAdvH: -215, bookAdvA: 170,
   },
   {
-    matchId: 'wc26-r32-074', espnId: '760488',
+    espn_match_id: 'wc26-r32-074', espnId: '760488',
     home: 'GER', away: 'PAR', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO22',
     lambdaH: 2.10, lambdaA: 0.65,
@@ -162,7 +162,7 @@ const MATCHES = [
     bookAdvH: -750, bookAdvA: 475,
   },
   {
-    matchId: 'wc26-r32-075', espnId: '760489',
+    espn_match_id: 'wc26-r32-075', espnId: '760489',
     home: 'NED', away: 'MAR', homeScore: 1, awayScore: 0,
     version: 'v11.0-KO22',
     lambdaH: 1.65, lambdaA: 0.80,
@@ -173,7 +173,7 @@ const MATCHES = [
     bookAdvH: -270, bookAdvA: 205,
   },
   {
-    matchId: 'wc26-r32-076', espnId: '760490',
+    espn_match_id: 'wc26-r32-076', espnId: '760490',
     home: 'CAN', away: 'RSA', homeScore: 2, awayScore: 1,
     version: 'v7.2',
     lambdaH: 1.45, lambdaA: 0.90,
@@ -184,7 +184,7 @@ const MATCHES = [
     bookAdvH: -700, bookAdvA: 450,
   },
   {
-    matchId: 'wc26-r32-077', espnId: '760491',
+    espn_match_id: 'wc26-r32-077', espnId: '760491',
     home: 'CIV', away: 'NOR', homeScore: 0, awayScore: 1,
     version: 'v11.0-KO23',
     lambdaH: 1.20, lambdaA: 1.05,
@@ -195,7 +195,7 @@ const MATCHES = [
     bookAdvH: -175, bookAdvA: 135,
   },
   {
-    matchId: 'wc26-r32-078', espnId: '760492',
+    espn_match_id: 'wc26-r32-078', espnId: '760492',
     home: 'FRA', away: 'SWE', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO23',
     lambdaH: 1.85, lambdaA: 0.75,
@@ -206,7 +206,7 @@ const MATCHES = [
     bookAdvH: -750, bookAdvA: 475,
   },
   {
-    matchId: 'wc26-r32-079', espnId: '760493',
+    espn_match_id: 'wc26-r32-079', espnId: '760493',
     home: 'MEX', away: 'ECU', homeScore: 2, awayScore: 0,
     version: 'v11.0-KO23',
     lambdaH: 1.55, lambdaA: 0.85,
@@ -221,7 +221,7 @@ const MATCHES = [
 // ── Jul 1 matchs to project ─────────────────────────────────────────────────
 const JUL1_MATCHS = [
   {
-    matchId: 'wc26-r32-080', home: 'ENG', away: 'COD',
+    espn_match_id: 'wc26-r32-080', home: 'ENG', away: 'COD',
     kickoff: '12:00 PM ET', venue: 'Atlanta',
     lambdaH: 2.20, lambdaA: 0.58, // ENG strong home, COD defensive
     bookHomeMl: -345, bookDrawMl: 400, bookAwayMl: 1100,
@@ -231,7 +231,7 @@ const JUL1_MATCHS = [
     bookAdvH: -1100, bookAdvA: 600,
   },
   {
-    matchId: 'wc26-r32-081', home: 'BEL', away: 'SEN',
+    espn_match_id: 'wc26-r32-081', home: 'BEL', away: 'SEN',
     kickoff: '4:00 PM ET', venue: 'Philadelphia',
     lambdaH: 1.35, lambdaA: 1.12,
     bookHomeMl: 115, bookDrawMl: 220, bookAwayMl: 270,
@@ -241,7 +241,7 @@ const JUL1_MATCHS = [
     bookAdvH: -175, bookAdvA: 135,
   },
   {
-    matchId: 'wc26-r32-082', home: 'USA', away: 'BIH',
+    espn_match_id: 'wc26-r32-082', home: 'USA', away: 'BIH',
     kickoff: '8:00 PM ET', venue: 'Kansas City',
     lambdaH: 1.55, lambdaA: 0.88,
     bookHomeMl: -250, bookDrawMl: 400, bookAwayMl: 600,
@@ -270,16 +270,16 @@ async function main() {
 
   // A1: Match metadata
   const [matchRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore,
             statusDetail, attendance, venue, city,
             homeGoalScorers, awayGoalScorers, homeFormation, awayFormation,
             matchKickoffEt, matchGameDate
-     FROM wc2026_espn_matches WHERE matchId IN (${idPlaceholders})`, espnIds);
+     FROM wc2026_espn_matches WHERE espn_match_id IN (${idPlaceholders})`, espnIds);
   L.pass(`A1: wc2026_espn_matches — ${matchRows.length} rows`);
 
   // A2: Team stats
   const [teamRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             possession, possessionAway,
             shotsOnGoal, shotsOnGoalAway,
             shotAttempts, shotAttemptsAway,
@@ -288,12 +288,12 @@ async function main() {
             redCards, redCardsAway,
             cornerKicks, cornerKicksAway,
             saves, savesAway
-     FROM wc2026_espn_team_stats WHERE matchId IN (${idPlaceholders})`, espnIds);
+     FROM wc2026_espn_team_stats WHERE espn_match_id IN (${idPlaceholders})`, espnIds);
   L.pass(`A2: wc2026_espn_team_stats — ${teamRows.length} rows`);
 
   // A3: Player stats — aggregate per team per match
   const [playerRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev, isHome,
+    `SELECT espn_match_id, teamAbbrev, isHome,
             SUM(CAST(xG AS DECIMAL(6,4))) as teamXG,
             SUM(CAST(xA AS DECIMAL(6,4))) as teamXA,
             SUM(sog) as teamSOG,
@@ -309,13 +309,13 @@ async function main() {
             SUM(CASE WHEN isGoalkeeper=1 THEN CAST(sv AS DECIMAL(6,0)) ELSE 0 END) as gkSaves,
             SUM(CASE WHEN isGoalkeeper=1 THEN CAST(xGC AS DECIMAL(6,4)) ELSE 0 END) as gkXGC
      FROM wc2026_espn_player_stats
-     WHERE matchId IN (${idPlaceholders})
-     GROUP BY matchId, teamAbbrev, isHome`, espnIds);
+     WHERE espn_match_id IN (${idPlaceholders})
+     GROUP BY espn_match_id, teamAbbrev, isHome`, espnIds);
   L.pass(`A3: wc2026_espn_player_stats — ${playerRows.length} team-aggregates`);
 
   // A4: Shot map — aggregate per team
   const [shotRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev, isAway,
+    `SELECT espn_match_id, teamAbbrev, isAway,
             COUNT(*) as totalShots,
             SUM(CAST(xG AS DECIMAL(6,4))) as totalXG,
             SUM(CAST(xGOT AS DECIMAL(6,4))) as totalXGOT,
@@ -327,33 +327,33 @@ async function main() {
             SUM(CASE WHEN situation='Penalty' THEN 1 ELSE 0 END) as penalties,
             AVG(CAST(distance AS DECIMAL(6,1))) as avgDistance
      FROM wc2026_espn_shot_map
-     WHERE matchId IN (${idPlaceholders})
-     GROUP BY matchId, teamAbbrev, isAway`, espnIds);
+     WHERE espn_match_id IN (${idPlaceholders})
+     GROUP BY espn_match_id, teamAbbrev, isAway`, espnIds);
   L.pass(`A4: wc2026_espn_shot_map — ${shotRows.length} team-aggregates`);
 
   // A5: Expected goals totals
   const [xgRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             homeXG, awayXG, homeXGOT, awayXGOT,
             homeXGOpenPlay, awayXGOpenPlay, homeXGSetPlay, awayXGSetPlay,
             homeXA, awayXA
-     FROM wc2026_espn_expected_goals WHERE matchId IN (${idPlaceholders})`, espnIds);
+     FROM wc2026_espn_expected_goals WHERE espn_match_id IN (${idPlaceholders})`, espnIds);
   L.pass(`A5: wc2026_espn_expected_goals — ${xgRows.length} rows`);
 
   // Build lookup maps
-  const matchMap = Object.fromEntries(matchRows.map(r => [r.matchId, r]));
-  const teamMap = Object.fromEntries(teamRows.map(r => [r.matchId, r]));
+  const matchMap = Object.fromEntries(matchRows.map(r => [r.espn_match_id, r]));
+  const teamMap = Object.fromEntries(teamRows.map(r => [r.espn_match_id, r]));
   const playerMap = {};
   for (const r of playerRows) {
-    if (!playerMap[r.matchId]) playerMap[r.matchId] = {};
-    playerMap[r.matchId][r.teamAbbrev] = r;
+    if (!playerMap[r.espn_match_id]) playerMap[r.espn_match_id] = {};
+    playerMap[r.espn_match_id][r.teamAbbrev] = r;
   }
   const shotMap = {};
   for (const r of shotRows) {
-    if (!shotMap[r.matchId]) shotMap[r.matchId] = {};
-    shotMap[r.matchId][r.teamAbbrev] = r;
+    if (!shotMap[r.espn_match_id]) shotMap[r.espn_match_id] = {};
+    shotMap[r.espn_match_id][r.teamAbbrev] = r;
   }
-  const xgMap = Object.fromEntries(xgRows.map(r => [r.matchId, r]));
+  const xgMap = Object.fromEntries(xgRows.map(r => [r.espn_match_id, r]));
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PHASE B: 500x FORENSIC GRADING — ALL 7 MATCHES
@@ -364,7 +364,7 @@ async function main() {
   const lambdaBiases = []; // [homeXG-lambdaH, awayXG-lambdaA] for recalibration
 
   for (const m of MATCHES) {
-    L.section(`GRADING: ${m.matchId} | ${m.home} vs ${m.away} | ${m.version}`);
+    L.section(`GRADING: ${m.espn_match_id} | ${m.home} vs ${m.away} | ${m.version}`);
 
     const sim = simulateMatch(m.lambdaH, m.lambdaA, -0.07);
     const xg = xgMap[m.espnId];
@@ -386,7 +386,7 @@ async function main() {
       const homeXGBias = parseFloat(xg.homeXG) - m.lambdaH;
       const awayXGBias = parseFloat(xg.awayXG) - m.lambdaA;
       L.state(`λ Bias: H=${homeXGBias.toFixed(3)} (xG-λH) | A=${awayXGBias.toFixed(3)} (xG-λA)`);
-      lambdaBiases.push({ home: homeXGBias, away: awayXGBias, match: m.matchId });
+      lambdaBiases.push({ home: homeXGBias, away: awayXGBias, match: m.espn_match_id });
     }
     if (ts) {
       L.state(`Possession: ${m.home}=${ts.possession} | ${m.away}=${ts.possessionAway}`);
@@ -476,7 +476,7 @@ async function main() {
       L.state(`Conversion Rate: ${m.home}=${homeConvRate.toFixed(2)}x xG | ${m.away}=${awayConvRate.toFixed(2)}x xG`);
     }
 
-    grades.push({ match: m.matchId, composite, brier, dirCorrect, bttsCorrect, totalCorrect, spreadDirCorrect, scoreErr, totalErr, spreadErr });
+    grades.push({ match: m.espn_match_id, composite, brier, dirCorrect, bttsCorrect, totalCorrect, spreadDirCorrect, scoreErr, totalErr, spreadErr });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -660,7 +660,7 @@ async function main() {
   const projResults = [];
 
   for (const f of JUL1_MATCHS) {
-    L.section(`v12 PROJECTION: ${f.matchId} — ${f.away} (Away) vs ${f.home} (Home) — ${f.kickoff} | ${f.venue}`);
+    L.section(`v12 PROJECTION: ${f.espn_match_id} — ${f.away} (Away) vs ${f.home} (Home) — ${f.kickoff} | ${f.venue}`);
 
     const lH = f.lambdaH * v12Params.homeMult * (1 - v12Params.paceD);
     const lA = f.lambdaA * v12Params.awayMult * (1 - v12Params.paceD);
@@ -672,10 +672,10 @@ async function main() {
     // Validate probabilities
     const sum1X2 = sim.pH+sim.pD+sim.pA;
     const sumAdv = sim.pAdvH+sim.pAdvA;
-    if (Math.abs(sum1X2-1)>0.001) L.fail(`[${f.matchId}] 1X2 sum=${sum1X2.toFixed(6)} ≠ 1`);
-    else L.pass(`[${f.matchId}] 1X2 sum=${sum1X2.toFixed(6)} ✓`);
-    if (Math.abs(sumAdv-1)>0.01) L.warn(`[${f.matchId}] Advance sum=${sumAdv.toFixed(6)} (includes ET/pens)`);
-    else L.pass(`[${f.matchId}] Advance sum=${sumAdv.toFixed(6)} ✓`);
+    if (Math.abs(sum1X2-1)>0.001) L.fail(`[${f.espn_match_id}] 1X2 sum=${sum1X2.toFixed(6)} ≠ 1`);
+    else L.pass(`[${f.espn_match_id}] 1X2 sum=${sum1X2.toFixed(6)} ✓`);
+    if (Math.abs(sumAdv-1)>0.01) L.warn(`[${f.espn_match_id}] Advance sum=${sumAdv.toFixed(6)} (includes ET/pens)`);
+    else L.pass(`[${f.espn_match_id}] Advance sum=${sumAdv.toFixed(6)} ✓`);
 
     // Model odds
     const [nvH,nvD,nvA] = noVig3(sim.pH,sim.pD,sim.pA);
@@ -719,18 +719,18 @@ async function main() {
       return (ev*100).toFixed(2);
     };
 
-    L.state(`[${f.matchId}] Effective λ: H=${lH.toFixed(4)} A=${lA.toFixed(4)}`);
-    L.state(`[${f.matchId}] Proj Score: ${f.home} ${sim.projH.toFixed(2)} - ${sim.projA.toFixed(2)} ${f.away} | Total: ${sim.projTotal.toFixed(2)} | Raw Spread: ${rawSpread.toFixed(2)}`);
-    L.state(`[${f.matchId}] 1X2: H=${(sim.pH*100).toFixed(2)}% D=${(sim.pD*100).toFixed(2)}% A=${(sim.pA*100).toFixed(2)}%`);
-    L.state(`[${f.matchId}] Model ML: H=${modelHomeMl} D=${modelDrawMl} A=${modelAwayMl}`);
-    L.state(`[${f.matchId}] Advance: H=${(sim.pAdvH*100).toFixed(2)}% A=${(sim.pAdvA*100).toFixed(2)}% | ML H=${modelAdvH} A=${modelAdvA}`);
-    L.state(`[${f.matchId}] Spread ${f.bookSpread}: H_cov=${(homeSpreadCov*100).toFixed(2)}% A_cov=${(awaySpreadCov*100).toFixed(2)}% | ML H=${modelHomeSpreadOdds} A=${modelAwaySpreadOdds}`);
-    L.state(`[${f.matchId}] O/U ${f.bookTotal}: O=${(sim.pO25*100).toFixed(2)}% U=${(sim.pU25*100).toFixed(2)}% | ML O=${modelOverOdds} U=${modelUnderOdds}`);
-    L.state(`[${f.matchId}] BTTS: Y=${(sim.pBTTS*100).toFixed(2)}% N=${((1-sim.pBTTS)*100).toFixed(2)}% | ML Y=${modelBttsY} N=${modelBttsN}`);
-    L.state(`[${f.matchId}] DC 1X=${(sim.p1X*100).toFixed(2)}%(${model1X}) X2=${(sim.pX2*100).toFixed(2)}%(${modelX2}) NoDraw=${(sim.pNoDraw*100).toFixed(2)}%(${modelNoDraw})`);
+    L.state(`[${f.espn_match_id}] Effective λ: H=${lH.toFixed(4)} A=${lA.toFixed(4)}`);
+    L.state(`[${f.espn_match_id}] Proj Score: ${f.home} ${sim.projH.toFixed(2)} - ${sim.projA.toFixed(2)} ${f.away} | Total: ${sim.projTotal.toFixed(2)} | Raw Spread: ${rawSpread.toFixed(2)}`);
+    L.state(`[${f.espn_match_id}] 1X2: H=${(sim.pH*100).toFixed(2)}% D=${(sim.pD*100).toFixed(2)}% A=${(sim.pA*100).toFixed(2)}%`);
+    L.state(`[${f.espn_match_id}] Model ML: H=${modelHomeMl} D=${modelDrawMl} A=${modelAwayMl}`);
+    L.state(`[${f.espn_match_id}] Advance: H=${(sim.pAdvH*100).toFixed(2)}% A=${(sim.pAdvA*100).toFixed(2)}% | ML H=${modelAdvH} A=${modelAdvA}`);
+    L.state(`[${f.espn_match_id}] Spread ${f.bookSpread}: H_cov=${(homeSpreadCov*100).toFixed(2)}% A_cov=${(awaySpreadCov*100).toFixed(2)}% | ML H=${modelHomeSpreadOdds} A=${modelAwaySpreadOdds}`);
+    L.state(`[${f.espn_match_id}] O/U ${f.bookTotal}: O=${(sim.pO25*100).toFixed(2)}% U=${(sim.pU25*100).toFixed(2)}% | ML O=${modelOverOdds} U=${modelUnderOdds}`);
+    L.state(`[${f.espn_match_id}] BTTS: Y=${(sim.pBTTS*100).toFixed(2)}% N=${((1-sim.pBTTS)*100).toFixed(2)}% | ML Y=${modelBttsY} N=${modelBttsN}`);
+    L.state(`[${f.espn_match_id}] DC 1X=${(sim.p1X*100).toFixed(2)}%(${model1X}) X2=${(sim.pX2*100).toFixed(2)}%(${modelX2}) NoDraw=${(sim.pNoDraw*100).toFixed(2)}%(${modelNoDraw})`);
 
     // Full market table
-    L.output(`[${f.matchId}] ═══ FULL MARKET TABLE (Book vs Model) ═══`);
+    L.output(`[${f.espn_match_id}] ═══ FULL MARKET TABLE (Book vs Model) ═══`);
     L.output(`  Market                        | Book     | Model    | ROI%`);
     L.output(`  ─────────────────────────────────────────────────────────`);
     L.output(`  Home ML (${f.home.padEnd(3)})              |  ${String(f.bookHomeMl).padStart(6)} |  ${String(modelHomeMl).padStart(6)} | ${roi(f.bookHomeMl,modelHomeMl)}%`);
@@ -748,10 +748,10 @@ async function main() {
     L.output(`  Home To Advance (${f.home.padEnd(3)})       |  ${String(f.bookAdvH).padStart(6)} |  ${String(modelAdvH).padStart(6)} | ${roi(f.bookAdvH,modelAdvH)}%`);
     L.output(`  Away To Advance (${f.away.padEnd(3)})       |  ${String(f.bookAdvA).padStart(6)} |  ${String(modelAdvA).padStart(6)} | ${roi(f.bookAdvA,modelAdvA)}%`);
 
-    L.pass(`[${f.matchId}] v12 projection complete — STAGED (no DB write)`);
+    L.pass(`[${f.espn_match_id}] v12 projection complete — STAGED (no DB write)`);
 
     projResults.push({
-      matchId: f.matchId, home: f.home, away: f.away,
+      espn_match_id: f.espn_match_id, home: f.home, away: f.away,
       projHomeScore: sim.projH, projAwayScore: sim.projA, projTotal: sim.projTotal,
       rawSpread: rawSpread,
       modelHomeMl, modelDrawMl, modelAwayMl,
@@ -770,7 +770,7 @@ async function main() {
   // Final summary
   L.banner('PHASE E COMPLETE — v12.0-KO24 PROJECTIONS STAGED');
   for (const p of projResults) {
-    L.output(`${p.matchId} | ${p.away} (Away) vs ${p.home} (Home)`);
+    L.output(`${p.espn_match_id} | ${p.away} (Away) vs ${p.home} (Home)`);
     L.output(`  Proj: ${p.projHomeScore.toFixed(2)}-${p.projAwayScore.toFixed(2)} | Total: ${p.projTotal.toFixed(2)} | Spread: ${p.rawSpread.toFixed(2)}`);
     L.output(`  ML: H=${p.modelHomeMl} D=${p.modelDrawMl} A=${p.modelAwayMl}`);
     L.output(`  Adv: H=${p.modelAdvH}(${(p.homeAdvProb*100).toFixed(1)}%) A=${p.modelAdvA}(${(p.awayAdvProb*100).toFixed(1)}%)`);

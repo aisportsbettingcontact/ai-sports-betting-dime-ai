@@ -13,10 +13,10 @@ dotenv.config();
 const DB_URL = process.env.DATABASE_URL;
 
 // ESPN Ground Truth for June 20 matches (verified directly from ESPN API)
-// Format: { matchId, espnHome, espnAway, espnHomeScore, espnAwayScore, result }
+// Format: { espn_match_id, espnHome, espnAway, espnHomeScore, espnAwayScore, result }
 const JUNE20_GROUND_TRUTH = [
   {
-    matchId: 'wc26-g-035',
+    espn_match_id: 'wc26-g-035',
     espnHome: 'Netherlands',
     espnAway: 'Sweden',
     espnHomeScore: 5,
@@ -25,7 +25,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'D'
   },
   {
-    matchId: 'wc26-g-033',
+    espn_match_id: 'wc26-g-033',
     espnHome: 'Germany',
     espnAway: 'Ivory Coast',
     espnHomeScore: 2,
@@ -34,7 +34,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'C'
   },
   {
-    matchId: 'wc26-g-034',
+    espn_match_id: 'wc26-g-034',
     espnHome: 'Ecuador',
     espnAway: 'Curaçao',
     espnHomeScore: 0,
@@ -43,7 +43,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'C'
   },
   {
-    matchId: 'wc26-g-036',
+    espn_match_id: 'wc26-g-036',
     espnHome: 'Tunisia',
     espnAway: 'Japan',
     espnHomeScore: 0,
@@ -78,10 +78,10 @@ async function main() {
       JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
       JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
       WHERE f.match_id = ?
-    `, [gt.matchId]);
+    `, [gt.espn_match_id]);
     
     if (rows.length === 0) {
-      console.error(`[VERIFY] FAIL — ${gt.matchId} NOT FOUND in DB`);
+      console.error(`[VERIFY] FAIL — ${gt.espn_match_id} NOT FOUND in DB`);
       allPass = false;
       continue;
     }
@@ -94,7 +94,7 @@ async function main() {
     const pass = homeScoreOk && awayScoreOk && statusOk;
     if (!pass) allPass = false;
     
-    console.log(`[STATE] ${gt.matchId}: DB home=${row.home_name} ${row.home_score}-${row.away_score} away=${row.away_name} status=${row.status}`);
+    console.log(`[STATE] ${gt.espn_match_id}: DB home=${row.home_name} ${row.home_score}-${row.away_score} away=${row.away_name} status=${row.status}`);
     console.log(`[STATE]   ESPN GT: ${gt.espnHome} ${gt.espnHomeScore}-${gt.espnAwayScore} ${gt.espnAway}`);
     console.log(`[VERIFY] ${pass ? 'PASS' : 'FAIL'} — score=${homeScoreOk && awayScoreOk ? 'OK' : 'MISMATCH'} status=${statusOk ? 'OK' : 'NOT_FT'}`);
     console.log(`[OUTPUT] ${gt.result}`);

@@ -191,29 +191,29 @@ async function main() {
   // ── Check ESPN matches for actual score confirmation ──────────────────────
   banner('LAYER 1D — DB: ESPN Match Scores vs Actual Results');
 
-  const espnIds = dbScores.map(r => r.espn_event_id ?? null).filter(Boolean);
+  const espnIds = dbScores.map(r => r.espn_match_id ?? null).filter(Boolean);
   // Get ESPN IDs from matchs
   const [matchEspn] = await conn.query(`
-    SELECT match_id, espn_event_id FROM wc2026_matches WHERE match_id IN (?)
+    SELECT match_id, espn_match_id FROM wc2026_matches WHERE match_id IN (?)
   `, [ALL_FIDS]);
 
-  const espnIdList = matchEspn.map(r => r.espn_event_id).filter(Boolean);
+  const espnIdList = matchEspn.map(r => r.espn_match_id).filter(Boolean);
   log('INPUT', `ESPN IDs for 7 matches: ${espnIdList.join(', ')}`);
 
   if (espnIdList.length > 0) {
     const [espnMatches] = await conn.query(`
-      SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore, statusState, statusDetail
-      FROM wc2026_espn_matches WHERE matchId IN (?)
+      SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, homeScore, awayScore, statusState, statusDetail
+      FROM wc2026_espn_matches WHERE espn_match_id IN (?)
     `, [espnIdList]);
 
     log('STATE', `ESPN match rows: ${espnMatches.length}`);
     const fidByEspn = {};
-    matchEspn.forEach(r => { fidByEspn[r.espn_event_id] = r.match_id; });
+    matchEspn.forEach(r => { fidByEspn[r.espn_match_id] = r.match_id; });
 
     for (const em of espnMatches) {
-      const fid = fidByEspn[em.matchId];
+      const fid = fidByEspn[em.espn_match_id];
       const expected = CORRECT_RESULTS[fid];
-      if (!expected) { warn(`No expected result for ESPN ${em.matchId}`); continue; }
+      if (!expected) { warn(`No expected result for ESPN ${em.espn_match_id}`); continue; }
       const espnH = parseInt(em.homeScore);
       const espnA = parseInt(em.awayScore);
       const match = espnH === expected.homeScore && espnA === expected.awayScore;

@@ -172,7 +172,7 @@ function computeLambda(nv, isHome, elo, rank, form, drawFloor = 0.097) {
 // All odds mapped to DB home/away
 const MATCHS = [
   {
-    matchId: 'wc26-g-049',
+    espn_match_id: 'wc26-g-049',
     homeId: 'can', awayId: 'sui',
     homeName: 'Canada', awayName: 'Switzerland',
     // DK 1X2
@@ -193,7 +193,7 @@ const MATCHS = [
     awayElo: 1800, awayRank: 15, awayForm: 0.68,
   },
   {
-    matchId: 'wc26-g-052',
+    espn_match_id: 'wc26-g-052',
     homeId: 'bih', awayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
     dkHomeML: -240, dkDrawML: 400, dkAwayML: 600,
@@ -207,7 +207,7 @@ const MATCHS = [
     awayElo: 1620, awayRank: 68, awayForm: 0.42,
   },
   {
-    matchId: 'wc26-g-053',
+    espn_match_id: 'wc26-g-053',
     homeId: 'hai', awayId: 'mar',
     homeName: 'Haiti', awayName: 'Morocco',
     dkHomeML: 1400, dkDrawML: 600, dkAwayML: -500,
@@ -221,7 +221,7 @@ const MATCHS = [
     awayElo: 1870, awayRank: 14, awayForm: 0.72,
   },
   {
-    matchId: 'wc26-g-054',
+    espn_match_id: 'wc26-g-054',
     homeId: 'sco', awayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
     dkHomeML: 700, dkDrawML: 425, dkAwayML: -265,
@@ -235,7 +235,7 @@ const MATCHS = [
     awayElo: 2010, awayRank: 5, awayForm: 0.80,
   },
   {
-    matchId: 'wc26-g-050',
+    espn_match_id: 'wc26-g-050',
     homeId: 'rsa', awayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
     dkHomeML: 425, dkDrawML: 295, dkAwayML: -150,
@@ -249,7 +249,7 @@ const MATCHS = [
     awayElo: 1790, awayRank: 22, awayForm: 0.65,
   },
   {
-    matchId: 'wc26-g-051',
+    espn_match_id: 'wc26-g-051',
     homeId: 'cze', awayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
     dkHomeML: 265, dkDrawML: 285, dkAwayML: -105,
@@ -278,16 +278,16 @@ async function main() {
   const errors = [];
 
   for (const f of MATCHS) {
-    console.log(`\n${TAG} [STEP] Processing match=${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away)`);
+    console.log(`\n${TAG} [STEP] Processing match=${f.espn_match_id} | ${f.homeName}(home) vs ${f.awayName}(away)`);
 
     // ── Step 1: Clear existing odds for this match ──────────────────────────
     const [delDk] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-      [f.matchId, DK_BOOK_ID]
+      [f.espn_match_id, DK_BOOK_ID]
     );
     const [delModel] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-      [f.matchId, MODEL_BOOK_ID]
+      [f.espn_match_id, MODEL_BOOK_ID]
     );
     console.log(`${TAG} [STATE] Cleared DK rows=${delDk.affectedRows} Model rows=${delModel.affectedRows}`);
 
@@ -412,11 +412,11 @@ async function main() {
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, impliedProb(row.odds)]
+        [f.espn_match_id, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, impliedProb(row.odds)]
       );
       totalDkRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${dkRows.length} DK rows for ${f.matchId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${dkRows.length} DK rows for ${f.espn_match_id}`);
 
     // ── Step 12: Insert Model odds ────────────────────────────────────────────
     for (const row of modelRows) {
@@ -424,11 +424,11 @@ async function main() {
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
+        [f.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob ?? impliedProb(row.odds)]
       );
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} Model rows for ${f.matchId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} Model rows for ${f.espn_match_id}`);
 
     // ── Step 13: Upsert model projections ─────────────────────────────────────
     await conn.query(`
@@ -485,7 +485,7 @@ async function main() {
         top_scorelines = VALUES(top_scorelines),
         modeled_at = NOW()
     `, [
-      f.matchId, MODEL_VERSION, N_SIMULATIONS,
+      f.espn_match_id, MODEL_VERSION, N_SIMULATIONS,
       f.homeName, f.awayName,
       lambdaH, lambdaA,
       finalHome, finalDraw, finalAway,
@@ -506,7 +506,7 @@ async function main() {
       sim.top,
     ]);
     totalProjRows++;
-    console.log(`${TAG} [OUTPUT] Upserted model projection for ${f.matchId}: proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
+    console.log(`${TAG} [OUTPUT] Upserted model projection for ${f.espn_match_id}: proj=${projHomeScore}-${projAwayScore} spread=${projSpread} btts=${sim.btts.toFixed(4)}`);
   }
 
   // ── Final verification ────────────────────────────────────────────────────

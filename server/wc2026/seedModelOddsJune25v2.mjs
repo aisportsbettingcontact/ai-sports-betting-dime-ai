@@ -196,7 +196,7 @@ function runSimulation(lambdaH, lambdaA, spreadLine, totalLine) {
 
 const MATCHES = [
   {
-    matchId: 'wc26-g-057',
+    espn_match_id: 'wc26-g-057',
     homeId: 'cuw', awayId: 'civ',
     homeName: 'Curaçao', awayName: 'Ivory Coast',
     homeElo: 1580, homeRank: 90, homeForm: 0.33,
@@ -212,7 +212,7 @@ const MATCHES = [
     dkNoDraw: -1400,
   },
   {
-    matchId: 'wc26-g-058',
+    espn_match_id: 'wc26-g-058',
     homeId: 'ecu', awayId: 'ger',
     homeName: 'Ecuador', awayName: 'Germany',
     homeElo: 1710, homeRank: 44, homeForm: 0.33,
@@ -226,7 +226,7 @@ const MATCHES = [
     dkNoDraw: -550,
   },
   {
-    matchId: 'wc26-g-059',
+    espn_match_id: 'wc26-g-059',
     homeId: 'jpn', awayId: 'swe',
     homeName: 'Japan', awayName: 'Sweden',
     homeElo: 1840, homeRank: 17, homeForm: 1.00,
@@ -240,7 +240,7 @@ const MATCHES = [
     dkNoDraw: -330,
   },
   {
-    matchId: 'wc26-g-060',
+    espn_match_id: 'wc26-g-060',
     homeId: 'tun', awayId: 'ned',
     homeName: 'Tunisia', awayName: 'Netherlands',
     homeElo: 1740, homeRank: 32, homeForm: 0.17,
@@ -254,7 +254,7 @@ const MATCHES = [
     dkNoDraw: -2500,
   },
   {
-    matchId: 'wc26-g-055',
+    espn_match_id: 'wc26-g-055',
     homeId: 'tur', awayId: 'usa',
     homeName: 'Turkey', awayName: 'United States',
     homeElo: 1760, homeRank: 29, homeForm: 0.67,
@@ -268,7 +268,7 @@ const MATCHES = [
     dkNoDraw: -400,
   },
   {
-    matchId: 'wc26-g-056',
+    espn_match_id: 'wc26-g-056',
     homeId: 'par', awayId: 'aus',
     homeName: 'Paraguay', awayName: 'Australia',
     homeElo: 1680, homeRank: 58, homeForm: 0.00,
@@ -302,12 +302,12 @@ async function main() {
   const errors = [];
 
   for (const f of MATCHES) {
-    console.log(`${TAG} ─── ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+    console.log(`${TAG} ─── ${f.espn_match_id} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
     // ── Step 1: Clear existing MODEL odds ─────────────────────────────────────
     const [delModel] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-      [f.matchId, MODEL_BOOK_ID]
+      [f.espn_match_id, MODEL_BOOK_ID]
     );
     console.log(`${TAG} [STEP 1] Cleared ${delModel.affectedRows} existing model rows`);
 
@@ -411,20 +411,20 @@ async function main() {
     let insertedRows = 0;
     for (const row of modelRows) {
       if (row.odds == null) {
-        errors.push(`${f.matchId} ${row.market}/${row.selection}: null odds`);
+        errors.push(`${f.espn_match_id} ${row.market}/${row.selection}: null odds`);
         console.log(`${TAG} [STEP 9] WARN null odds: ${row.market}/${row.selection} prob=${row.prob.toFixed(4)}`);
         continue;
       }
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       console.log(`${TAG} [STEP 9] INSERT: ${row.market}/${row.selection} line=${row.line??'null'} odds=${row.odds>0?'+':''}${row.odds} prob=${row.prob.toFixed(4)}`);
       insertedRows++;
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows}/12 model rows for ${f.matchId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows}/12 model rows for ${f.espn_match_id}`);
 
     // ── Step 10: Upsert projection ─────────────────────────────────────────────
     const nvDc1x = (finalHome + finalDraw);
@@ -469,7 +469,7 @@ async function main() {
         top_scorelines=VALUES(top_scorelines),
         modeled_at=NOW()
     `, [
-      f.matchId, MODEL_VERSION, N_SIMULATIONS,
+      f.espn_match_id, MODEL_VERSION, N_SIMULATIONS,
       f.homeName, f.awayName,
       rawLambdaH, rawLambdaA,
       finalHome, finalDraw, finalAway,
@@ -486,12 +486,12 @@ async function main() {
       sim.top,
     ]);
     totalProjRows++;
-    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.matchId} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
+    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.espn_match_id} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
     console.log('');
   }
 
   // ── Final verification ─────────────────────────────────────────────────────
-  const MATCH_IDS = MATCHES.map(f => f.matchId);
+  const MATCH_IDS = MATCHES.map(f => f.espn_match_id);
   const idList = MATCH_IDS.map(() => '?').join(',');
 
   const [verifyModel] = await conn.query(

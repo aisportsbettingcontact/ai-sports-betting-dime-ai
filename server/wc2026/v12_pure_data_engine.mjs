@@ -120,13 +120,13 @@ function dcSim(lH, lA, rho, spread, total, N=100000) {
 
 // ── Ground truth results (verified, zero hallucination) ───────────────────────
 const GROUND_TRUTH = {
-  '760487': { home:'BRA', away:'JPN', homeScore:2, awayScore:1, espnId:'760487', matchId:'wc26-r32-073' },
-  '760488': { home:'GER', away:'PAR', homeScore:2, awayScore:0, espnId:'760488', matchId:'wc26-r32-074' },
-  '760489': { home:'NED', away:'MAR', homeScore:1, awayScore:0, espnId:'760489', matchId:'wc26-r32-075' },
-  '760490': { home:'CAN', away:'RSA', homeScore:2, awayScore:1, espnId:'760490', matchId:'wc26-r32-076' },
-  '760491': { home:'CIV', away:'NOR', homeScore:0, awayScore:1, espnId:'760491', matchId:'wc26-r32-077' },
-  '760492': { home:'FRA', away:'SWE', homeScore:2, awayScore:0, espnId:'760492', matchId:'wc26-r32-078' },
-  '760493': { home:'MEX', away:'ECU', homeScore:2, awayScore:0, espnId:'760493', matchId:'wc26-r32-079' },
+  '760487': { home:'BRA', away:'JPN', homeScore:2, awayScore:1, espnId:'760487', espn_match_id:'wc26-r32-073' },
+  '760488': { home:'GER', away:'PAR', homeScore:2, awayScore:0, espnId:'760488', espn_match_id:'wc26-r32-074' },
+  '760489': { home:'NED', away:'MAR', homeScore:1, awayScore:0, espnId:'760489', espn_match_id:'wc26-r32-075' },
+  '760490': { home:'CAN', away:'RSA', homeScore:2, awayScore:1, espnId:'760490', espn_match_id:'wc26-r32-076' },
+  '760491': { home:'CIV', away:'NOR', homeScore:0, awayScore:1, espnId:'760491', espn_match_id:'wc26-r32-077' },
+  '760492': { home:'FRA', away:'SWE', homeScore:2, awayScore:0, espnId:'760492', espn_match_id:'wc26-r32-078' },
+  '760493': { home:'MEX', away:'ECU', homeScore:2, awayScore:0, espnId:'760493', espn_match_id:'wc26-r32-079' },
 };
 
 // ── Book lines for 7 completed matches (from DB — verified correct) ────────────
@@ -258,15 +258,15 @@ async function main() {
 
   // Pull all 5 tables
   const [xgRows] = await conn.execute(
-    `SELECT matchId,homeTeamAbbrev,awayTeamAbbrev,
+    `SELECT espn_match_id,homeTeamAbbrev,awayTeamAbbrev,
             homeXG,awayXG,homeXGOT,awayXGOT,
             homeXGOpenPlay,awayXGOpenPlay,homeXGSetPlay,awayXGSetPlay,
             homeXA,awayXA
-     FROM wc2026_espn_expected_goals WHERE matchId IN (${ph})`, espnIds);
+     FROM wc2026_espn_expected_goals WHERE espn_match_id IN (${ph})`, espnIds);
   L.pass(`A1: wc2026_espn_expected_goals — ${xgRows.length} rows`);
 
   const [tsRows] = await conn.execute(
-    `SELECT matchId,homeTeamAbbrev,awayTeamAbbrev,
+    `SELECT espn_match_id,homeTeamAbbrev,awayTeamAbbrev,
             possession,possessionAway,
             shotsOnGoal,shotsOnGoalAway,
             shotAttempts,shotAttemptsAway,
@@ -275,60 +275,60 @@ async function main() {
             fouls,foulsAway,
             yellowCards,yellowCardsAway,
             redCards,redCardsAway
-     FROM wc2026_espn_team_stats WHERE matchId IN (${ph})`, espnIds);
+     FROM wc2026_espn_team_stats WHERE espn_match_id IN (${ph})`, espnIds);
   L.pass(`A2: wc2026_espn_team_stats — ${tsRows.length} rows`);
 
   const [smRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as shotXG, SUM(xGOT) as shotXGOT,
             COUNT(*) as shots,
             SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) as goals,
             SUM(CASE WHEN situation='Set Piece' OR situation='Penalty' THEN xG ELSE 0 END) as setXG
-     FROM wc2026_espn_shot_map WHERE matchId IN (${ph})
-     GROUP BY matchId, teamAbbrev`, espnIds);
+     FROM wc2026_espn_shot_map WHERE espn_match_id IN (${ph})
+     GROUP BY espn_match_id, teamAbbrev`, espnIds);
   L.pass(`A3: wc2026_espn_shot_map — ${smRows.length} team-aggregates`);
 
   const [psRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as playerXG, SUM(xA) as playerXA,
             SUM(tch) as touches, SUM(duelw) as duelWins,
             SUM(sv) as saves, SUM(xGC) as xgc, SUM(xGOTC) as xgotc,
             SUM(g) as goals, SUM(sog) as shotsOnGoal, SUM(shot) as shots
-     FROM wc2026_espn_player_stats WHERE matchId IN (${ph})
-     GROUP BY matchId, teamAbbrev`, espnIds);
+     FROM wc2026_espn_player_stats WHERE espn_match_id IN (${ph})
+     GROUP BY espn_match_id, teamAbbrev`, espnIds);
   L.pass(`A4: wc2026_espn_player_stats — ${psRows.length} team-aggregates`);
 
   const [mtRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             homeScore, awayScore, homeFormation, awayFormation,
             matchKickoffEt, attendance
-     FROM wc2026_espn_matches WHERE matchId IN (${ph})`, espnIds);
+     FROM wc2026_espn_matches WHERE espn_match_id IN (${ph})`, espnIds);
   L.pass(`A5: wc2026_espn_matches — ${mtRows.length} rows`);
 
   await conn.end();
 
   // Build lookup maps
-  const xgMap = Object.fromEntries(xgRows.map(r=>[r.matchId,r]));
-  const tsMap = Object.fromEntries(tsRows.map(r=>[r.matchId,r]));
+  const xgMap = Object.fromEntries(xgRows.map(r=>[r.espn_match_id,r]));
+  const tsMap = Object.fromEntries(tsRows.map(r=>[r.espn_match_id,r]));
   const smMap = {};
   for (const r of smRows) {
-    if (!smMap[r.matchId]) smMap[r.matchId] = {};
-    const gt = GROUND_TRUTH[r.matchId];
+    if (!smMap[r.espn_match_id]) smMap[r.espn_match_id] = {};
+    const gt = GROUND_TRUTH[r.espn_match_id];
     if (!gt) continue;
     const role = r.teamAbbrev === gt.home ? 'home' : 'away';
-    smMap[r.matchId][role] = r;
+    smMap[r.espn_match_id][role] = r;
   }
   const psMap = {};
   for (const r of psRows) {
-    if (!psMap[r.matchId]) psMap[r.matchId] = {};
-    const gt = GROUND_TRUTH[r.matchId];
+    if (!psMap[r.espn_match_id]) psMap[r.espn_match_id] = {};
+    const gt = GROUND_TRUTH[r.espn_match_id];
     if (!gt) continue;
     const role = r.teamAbbrev === gt.home ? 'home' : 'away';
-    psMap[r.matchId][role] = r;
+    psMap[r.espn_match_id][role] = r;
     // Inject into ts for convenience
-    if (tsMap[r.matchId]) {
-      if (role === 'home') tsMap[r.matchId].homeGoals = r.goals;
-      else tsMap[r.matchId].awayGoals = r.goals;
+    if (tsMap[r.espn_match_id]) {
+      if (role === 'home') tsMap[r.espn_match_id].homeGoals = r.goals;
+      else tsMap[r.espn_match_id].awayGoals = r.goals;
     }
   }
 
@@ -347,7 +347,7 @@ async function main() {
     const homeResult = deriveLambda(espnData, 'home');
     const awayResult = deriveLambda(espnData, 'away');
 
-    L.state(`[${gt.matchId}] ${gt.home} vs ${gt.away} | Actual: ${gt.homeScore}-${gt.awayScore}`);
+    L.state(`[${gt.espn_match_id}] ${gt.home} vs ${gt.away} | Actual: ${gt.homeScore}-${gt.awayScore}`);
     L.state(`  xG: H=${parseFloat(xg.homeXG).toFixed(3)} A=${parseFloat(xg.awayXG).toFixed(3)} | xGOT: H=${parseFloat(xg.homeXGOT).toFixed(3)} A=${parseFloat(xg.awayXGOT).toFixed(3)}`);
     L.state(`  xA: H=${parseFloat(xg.homeXA).toFixed(3)} A=${parseFloat(xg.awayXA).toFixed(3)} | SetPlay: H=${parseFloat(xg.homeXGSetPlay).toFixed(3)} A=${parseFloat(xg.awayXGSetPlay).toFixed(3)}`);
     L.state(`  Poss: H=${ts.possession}% A=${ts.possessionAway}% | SoG: H=${ts.shotsOnGoal} A=${ts.shotsOnGoalAway} | Shots: H=${ts.shotAttempts} A=${ts.shotAttemptsAway}`);
@@ -437,7 +437,7 @@ async function main() {
     const lambdaBiasH = xGH - lH;
     const lambdaBiasA = xGA - lA;
 
-    L.output(`[${gt.matchId}] ${gt.home} ${actualH}-${actualA} ${gt.away} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
+    L.output(`[${gt.espn_match_id}] ${gt.home} ${actualH}-${actualA} ${gt.away} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
     L.output(`  Proj: ${sim.projH.toFixed(2)}-${sim.projA.toFixed(2)} | Total: ${sim.projTotal.toFixed(2)} | Spread: ${(sim.projH-sim.projA).toFixed(2)}`);
     L.output(`  1X2: H=${(sim.pH*100).toFixed(1)}% D=${(sim.pD*100).toFixed(1)}% A=${(sim.pA*100).toFixed(1)}%`);
     L.output(`  Direction: ${directionCorrect?'✅':'❌'} | Total: ${totalCorrect?'✅':'❌'} | BTTS: ${bttsCorrect?'✅':'❌'} | Spread: ${spreadCorrect?'✅':'❌'}`);
@@ -459,7 +459,7 @@ async function main() {
     L.output(`  Home To Advance (${gt.home})   | ${String(bl.advH).padStart(7)} | ${String(modelAdvH).padStart(7)} | ${roi(bl.advH,modelAdvH)}%`);
     L.output(`  Away To Advance (${gt.away})   | ${String(bl.advA).padStart(7)} | ${String(modelAdvA).padStart(7)} | ${roi(bl.advA,modelAdvA)}%`);
 
-    grades.push({ eid:m.eid, matchId:gt.matchId, home:gt.home, away:gt.away,
+    grades.push({ eid:m.eid, espn_match_id:gt.espn_match_id, home:gt.home, away:gt.away,
       composite, brier, directionCorrect, totalCorrect, bttsCorrect, spreadCorrect,
       scoreErr, totalErr, spreadErr, lH, lA, lambdaBiasH, lambdaBiasA,
       projH:sim.projH, projA:sim.projA });
@@ -599,7 +599,7 @@ async function main() {
 
   // Get all xG data for these 6 teams from all available matches
   const [allXG] = await conn2.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             homeXG, awayXG, homeXGOT, awayXGOT,
             homeXGOpenPlay, awayXGOpenPlay, homeXGSetPlay, awayXGSetPlay,
             homeXA, awayXA
@@ -609,7 +609,7 @@ async function main() {
        AND homeXG IS NOT NULL`);  // exclude upcoming matches
 
   const [allTS] = await conn2.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             possession, possessionAway,
             shotsOnGoal, shotsOnGoalAway,
             shotAttempts, shotAttemptsAway,
@@ -619,23 +619,23 @@ async function main() {
         OR awayTeamAbbrev IN ('ENG','COD','BEL','SEN','USA','BIH')`);
 
   const [allPS] = await conn2.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as playerXG, SUM(xA) as playerXA,
             SUM(tch) as touches, SUM(duelw) as duelWins, SUM(sv) as saves,
             SUM(xGC) as xgc, SUM(xGOTC) as xgotc,
             SUM(g) as goals, SUM(sog) as shotsOnGoal, SUM(shot) as shots
      FROM wc2026_espn_player_stats WHERE teamAbbrev IN ('ENG','COD','BEL','SEN','USA','BIH')
-     GROUP BY matchId, teamAbbrev`);
+     GROUP BY espn_match_id, teamAbbrev`);
 
   const [allSM] = await conn2.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as shotXG, SUM(xGOT) as shotXGOT,
             COUNT(*) as shots,
             SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) as goals,
             SUM(CASE WHEN situation='Set Piece' OR situation='Penalty' THEN xG ELSE 0 END) as setXG
      FROM wc2026_espn_shot_map
      WHERE teamAbbrev IN ('ENG','COD','BEL','SEN','USA','BIH')
-     GROUP BY matchId, teamAbbrev`);
+     GROUP BY espn_match_id, teamAbbrev`);
 
   await conn2.end();
 
@@ -781,7 +781,7 @@ async function main() {
     L.pass(`[${fid}] v12 projection complete — STAGED (no DB write)`);
 
     projResults.push({
-      matchId:fid, home:f.home, away:f.away, kickoff:f.kickoff, venue:f.venue,
+      espn_match_id:fid, home:f.home, away:f.away, kickoff:f.kickoff, venue:f.venue,
       lambdaH:lH, lambdaA:lA,
       projHomeScore:sim.projH, projAwayScore:sim.projA, projTotal:sim.projTotal,
       rawSpread:sim.projH-sim.projA,
@@ -797,7 +797,7 @@ async function main() {
 
   L.banner('PHASE E COMPLETE — v12.0-KO24 PROJECTIONS STAGED');
   for (const p of projResults) {
-    L.output(`${p.matchId} | ${p.away} (Away) vs ${p.home} (Home)`);
+    L.output(`${p.espn_match_id} | ${p.away} (Away) vs ${p.home} (Home)`);
     L.output(`  Proj: ${p.home} ${p.projHomeScore.toFixed(2)} – ${p.away} ${p.projAwayScore.toFixed(2)} | Total: ${p.projTotal.toFixed(2)} | Spread: ${p.rawSpread.toFixed(2)}`);
     L.output(`  ML: H=${p.modelHomeMl} D=${p.modelDrawMl} A=${p.modelAwayMl}`);
     L.output(`  Adv: H=${p.modelAdvH}(${(p.advProbHome*100).toFixed(1)}%) A=${p.modelAdvA}(${(p.advProbAway*100).toFixed(1)}%)`);

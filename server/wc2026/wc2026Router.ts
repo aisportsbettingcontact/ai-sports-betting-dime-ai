@@ -781,7 +781,7 @@ export const wc2026Router = router({
       if (espnMatchIds.length > 0) {
         const espnRows = await db
           .select({
-            matchId:       wc2026EspnMatches.matchId,
+            matchId:       wc2026EspnMatches.espnMatchId,
             awayTeamName:  wc2026EspnMatches.awayTeamName,
             homeTeamName:  wc2026EspnMatches.homeTeamName,
             awayTeamAbbrev: wc2026EspnMatches.awayTeamAbbrev,
@@ -790,7 +790,7 @@ export const wc2026Router = router({
             homeTeamLogo:  wc2026EspnMatches.homeTeamLogo,
           })
           .from(wc2026EspnMatches)
-          .where(inArray(wc2026EspnMatches.matchId, espnMatchIds));
+          .where(inArray(wc2026EspnMatches.espnMatchId, espnMatchIds));
         teamNameMap = Object.fromEntries(espnRows.map((r: typeof espnRows[0]) => [r.matchId, r]));
         console.log(`[WC2026_MATCH_ODDS] listMatchOdds ENRICH | espnMatchIds=${espnMatchIds.length} resolved=${espnRows.length}`);
       }

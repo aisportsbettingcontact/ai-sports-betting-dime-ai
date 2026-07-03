@@ -26,7 +26,7 @@ console.log('[DB] Connected');
 // ─── STEP 1: Pull all completed matches from DB ──────────────────────────────
 const [dbMatches] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
-         match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
+         match_date, kickoff_utc, group_letter, matchday, status, espn_match_id
   FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY kickoff_utc ASC
@@ -36,18 +36,18 @@ console.log(`[DB] ${dbMatches.length} completed matches loaded`);
 
 // ─── STEP 2: Pull all match stats (ESPN game_ids) ─────────────────────────────
 const [dbStats] = await db.execute(`
-  SELECT DISTINCT game_id, team_abbr, home_away, goals_scored, goals_conceded, game_name
+  SELECT DISTINCT espn_match_id, team_abbr, home_away, goals_scored, goals_conceded, game_name
   FROM wc2026_match_stats
-  ORDER BY game_id, home_away
+  ORDER BY espn_match_id, home_away
 `);
 
 console.log(`[DB] ${dbStats.length} stat rows loaded`);
 
-// Build game_id → {home_team, away_team, home_goals, away_goals, game_name}
+// Build espn_match_id → {home_team, away_team, home_goals, away_goals, game_name}
 const gameData = {};
 for (const row of dbStats) {
-  const gid = row.game_id;
-  if (!gameData[gid]) gameData[gid] = { game_id: gid, teams: {}, game_name: row.game_name };
+  const gid = row.espn_match_id;
+  if (!gameData[gid]) gameData[gid] = { espn_match_id: gid, teams: {}, game_name: row.game_name };
   gameData[gid].teams[row.team_abbr.toLowerCase()] = {
     home_away: row.home_away,
     goals_scored: row.goals_scored,
@@ -55,8 +55,8 @@ for (const row of dbStats) {
   };
 }
 
-// ─── STEP 3: Fetch ESPN API for each game_id ─────────────────────────────────
-// ESPN Soccer API endpoint: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={game_id}
+// ─── STEP 3: Fetch ESPN API for each espn_match_id ─────────────────────────────────
+// ESPN Soccer API endpoint: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={espn_match_id}
 // This returns authoritative: home team, away team, home score, away score, date, venue
 
 console.log('\n[ESPN] Fetching live data for all game_ids...');
@@ -75,8 +75,8 @@ for (const gid of allGameIds) {
       signal: AbortSignal.timeout(10000)
     });
     if (!resp.ok) {
-      espnErrors.push({ game_id: gid, error: `HTTP ${resp.status}` });
-      console.log(`  [WARN] game_id=${gid}: HTTP ${resp.status}`);
+      espnErrors.push({ espn_match_id: gid, error: `HTTP ${resp.status}` });
+      console.log(`  [WARN] espn_match_id=${gid}: HTTP ${resp.status}`);
       continue;
     }
     const data = await resp.json();
@@ -84,8 +84,8 @@ for (const gid of allGameIds) {
     // Extract from ESPN response
     const event = data.header?.competitions?.[0];
     if (!event) {
-      espnErrors.push({ game_id: gid, error: 'No competition data' });
-      console.log(`  [WARN] game_id=${gid}: No competition data`);
+      espnErrors.push({ espn_match_id: gid, error: 'No competition data' });
+      console.log(`  [WARN] espn_match_id=${gid}: No competition data`);
       continue;
     }
     
@@ -114,7 +114,7 @@ for (const gid of allGameIds) {
     const venueCountry = data.gameInfo?.venue?.address?.country;
     
     espnResults[gid] = {
-      game_id: gid,
+      espn_match_id: gid,
       home_team: homeTeam,
       away_team: awayTeam,
       match_date: matchDate,
@@ -125,11 +125,11 @@ for (const gid of allGameIds) {
       raw_date: event.date,
     };
     
-    console.log(`  [OK] game_id=${gid}: ${homeTeam?.abbr} ${homeTeam?.score} - ${awayTeam?.score} ${awayTeam?.abbr} (${matchDate})`);
+    console.log(`  [OK] espn_match_id=${gid}: ${homeTeam?.abbr} ${homeTeam?.score} - ${awayTeam?.score} ${awayTeam?.abbr} (${matchDate})`);
     
   } catch (err) {
-    espnErrors.push({ game_id: gid, error: err.message });
-    console.log(`  [ERROR] game_id=${gid}: ${err.message}`);
+    espnErrors.push({ espn_match_id: gid, error: err.message });
+    console.log(`  [ERROR] espn_match_id=${gid}: ${err.message}`);
   }
   
   // Small delay to avoid rate limiting
@@ -139,19 +139,19 @@ for (const gid of allGameIds) {
 console.log(`\n[ESPN] Fetched ${Object.keys(espnResults).length}/${allGameIds.length} games successfully`);
 if (espnErrors.length > 0) {
   console.log(`[ESPN] ${espnErrors.length} fetch errors:`);
-  for (const e of espnErrors) console.log(`  game_id=${e.game_id}: ${e.error}`);
+  for (const e of espnErrors) console.log(`  espn_match_id=${e.espn_match_id}: ${e.error}`);
 }
 
-// ─── STEP 4: Build match_id → game_id mapping ───────────────────────────────
-console.log('\n[STEP 4] Building match_id → game_id mapping...');
+// ─── STEP 4: Build match_id → espn_match_id mapping ───────────────────────────────
+console.log('\n[STEP 4] Building match_id → espn_match_id mapping...');
 
-// Build game_id → team set from DB stats
+// Build espn_match_id → team set from DB stats
 const gameIdToTeams = {};
 for (const [gid, gdata] of Object.entries(gameData)) {
   gameIdToTeams[gid] = new Set(Object.keys(gdata.teams));
 }
 
-// Match each match to a game_id by team set
+// Match each match to a espn_match_id by team set
 const matchToGameId = {};
 const unmatchedMatches = [];
 
@@ -167,7 +167,7 @@ for (const f of dbMatches) {
   }
   if (!matched) {
     unmatchedMatches.push(f.match_id);
-    console.log(`  [WARN] No game_id match for match ${f.match_id} (${f.home_team_id} vs ${f.away_team_id})`);
+    console.log(`  [WARN] No espn_match_id match for match ${f.match_id} (${f.home_team_id} vs ${f.away_team_id})`);
   }
 }
 
@@ -252,7 +252,7 @@ for (const f of dbMatches) {
   
   const audit = {
     match_id: f.match_id,
-    game_id: gid || null,
+    espn_match_id: gid || null,
     db: {
       home_team: f.home_team_id,
       away_team: f.away_team_id,
@@ -419,7 +419,7 @@ console.log('='.repeat(80));
 if (errorCount > 0) {
   console.log('\n[ERRORS REQUIRING CORRECTION]:');
   for (const a of auditResults.filter(r => r.has_errors)) {
-    console.log(`\n  ${a.match_id} (game_id=${a.game_id}):`);
+    console.log(`\n  ${a.match_id} (espn_match_id=${a.espn_match_id}):`);
     for (const e of a.errors) {
       console.log(`    ERROR: ${JSON.stringify(e)}`);
     }

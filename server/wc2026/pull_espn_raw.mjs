@@ -9,14 +9,14 @@ const ph = espnIds.map(()=>'?').join(',');
 const c = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
 const [xg] = await c.execute(
-  `SELECT matchId,homeTeamAbbrev,awayTeamAbbrev,
+  `SELECT espn_match_id,homeTeamAbbrev,awayTeamAbbrev,
           homeXG,awayXG,homeXGOT,awayXGOT,
           homeXGOpenPlay,awayXGOpenPlay,homeXGSetPlay,awayXGSetPlay,
           homeXA,awayXA
-   FROM wc2026_espn_expected_goals WHERE matchId IN (${ph})`, espnIds);
+   FROM wc2026_espn_expected_goals WHERE espn_match_id IN (${ph})`, espnIds);
 
 const [ts] = await c.execute(
-  `SELECT matchId,
+  `SELECT espn_match_id,
           homePossession,awayPossession,
           homeShotsOnGoal,awayShotsOnGoal,
           homeShotAttempts,awayShotAttempts,
@@ -25,30 +25,30 @@ const [ts] = await c.execute(
           homeFouls,awayFouls,
           homeYellowCards,awayYellowCards,
           homeRedCards,awayRedCards
-   FROM wc2026_espn_team_stats WHERE matchId IN (${ph})`, espnIds);
+   FROM wc2026_espn_team_stats WHERE espn_match_id IN (${ph})`, espnIds);
 
 const [sm] = await c.execute(
-  `SELECT matchId, teamAbbrev,
+  `SELECT espn_match_id, teamAbbrev,
           SUM(xg) as shotXG, SUM(xgot) as shotXGOT,
           COUNT(*) as shots,
           SUM(CASE WHEN isGoal=1 THEN 1 ELSE 0 END) as goals,
           AVG(distanceYards) as avgDist
-   FROM wc2026_espn_shot_map WHERE matchId IN (${ph})
-   GROUP BY matchId, teamAbbrev`, espnIds);
+   FROM wc2026_espn_shot_map WHERE espn_match_id IN (${ph})
+   GROUP BY espn_match_id, teamAbbrev`, espnIds);
 
 const [ps] = await c.execute(
-  `SELECT matchId, teamAbbrev,
+  `SELECT espn_match_id, teamAbbrev,
           SUM(xg) as pXG, SUM(xgot) as pXGOT, SUM(xa) as pXA,
           SUM(touches) as touches, SUM(duelWins) as duelWins,
           SUM(saves) as saves, SUM(xgc) as xgc
-   FROM wc2026_espn_player_stats WHERE matchId IN (${ph})
-   GROUP BY matchId, teamAbbrev`, espnIds);
+   FROM wc2026_espn_player_stats WHERE espn_match_id IN (${ph})
+   GROUP BY espn_match_id, teamAbbrev`, espnIds);
 
 const [mt] = await c.execute(
-  `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+  `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
           homeScore, awayScore, homeFormation, awayFormation,
           matchKickoffEt, matchGameDate, attendance
-   FROM wc2026_espn_matches WHERE matchId IN (${ph})`, espnIds);
+   FROM wc2026_espn_matches WHERE espn_match_id IN (${ph})`, espnIds);
 
 await c.end();
 

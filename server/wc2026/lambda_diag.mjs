@@ -9,7 +9,7 @@ const TEAMS = ['ENG','COD','BEL','SEN','USA','BIH'];
 
 // Pull all xG data
 const [xgRows] = await conn.execute(`
-  SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+  SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
          homeXG, awayXG, homeXGOT, awayXGOT,
          homeXGOpenPlay, awayXGOpenPlay, homeXGSetPlay, awayXGSetPlay,
          homeXA, awayXA
@@ -19,7 +19,7 @@ const [xgRows] = await conn.execute(`
 `, [...TEAMS, ...TEAMS]);
 
 const [tsRows] = await conn.execute(`
-  SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+  SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
          possession, possessionAway, shotAttempts, shotAttemptsAway
   FROM wc2026_espn_team_stats
   WHERE homeTeamAbbrev IN (${TEAMS.map(()=>'?').join(',')})
@@ -27,18 +27,18 @@ const [tsRows] = await conn.execute(`
 `, [...TEAMS, ...TEAMS]);
 
 const [psRows] = await conn.execute(`
-  SELECT matchId, teamAbbrev,
+  SELECT espn_match_id, teamAbbrev,
          SUM(xG) as playerXG, SUM(xA) as playerXA
   FROM wc2026_espn_player_stats
   WHERE teamAbbrev IN (${TEAMS.map(()=>'?').join(',')})
-  GROUP BY matchId, teamAbbrev
+  GROUP BY espn_match_id, teamAbbrev
 `, TEAMS);
 
 const [smRows] = await conn.execute(`
-  SELECT matchId, teamAbbrev, SUM(xG) as shotXG
+  SELECT espn_match_id, teamAbbrev, SUM(xG) as shotXG
   FROM wc2026_espn_shot_map
   WHERE teamAbbrev IN (${TEAMS.map(()=>'?').join(',')})
-  GROUP BY matchId, teamAbbrev
+  GROUP BY espn_match_id, teamAbbrev
 `, TEAMS);
 
 await conn.end();

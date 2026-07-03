@@ -116,7 +116,7 @@ for (const p of projRows) {
   const hasEdge = modelHomeProb && bookHomeProb && Math.abs(modelHomeProb - bookHomeProb) > 0.03;
   
   const result = {
-    matchId: p.match_id,
+    espn_match_id: p.match_id,
     homeTeam: p.home_team_name,
     awayTeam: p.away_team_name,
     homeCode: p.home_code,
@@ -196,13 +196,13 @@ console.log(`${TAG} [STATE] June 19 in wc_bt_projections: ${june19BtIds.size}`);
 
 // Upsert June 19 results into wc_bt_projections
 for (const r of june19Results) {
-  const matchId = r.matchId; // wc26-g-029 etc
+  const espn_match_id = r.espn_match_id; // wc26-g-029 etc
   const modelTotalLean = r.modelTotalLean;
   const actualTotalResult = r.actualTotalResult === 'PUSH' ? 'PUSH' : r.actualTotalResult;
   const totalCorrect = r.totalCorrect ? 1 : 0;
   const mlCorrect = r.mlCorrect ? 1 : 0;
   
-  if (june19BtIds.has(matchId)) {
+  if (june19BtIds.has(espn_match_id)) {
     // Update existing
     await conn.query(`
       UPDATE wc_bt_projections SET
@@ -211,8 +211,8 @@ for (const r of june19Results) {
         model_correct_result = ?,
         model_correct_total = ?
       WHERE match_id = ? AND tournament_year = 2026
-    `, [r.actualResult, r.actualTotalGoals, mlCorrect, totalCorrect, matchId]);
-    console.log(`${TAG} [FIX] Updated wc_bt_projections ${matchId}: actual=${r.actualResult} total=${r.actualTotalGoals}`);
+    `, [r.actualResult, r.actualTotalGoals, mlCorrect, totalCorrect, espn_match_id]);
+    console.log(`${TAG} [FIX] Updated wc_bt_projections ${espn_match_id}: actual=${r.actualResult} total=${r.actualTotalGoals}`);
   } else {
     // Insert new
     await conn.query(`
@@ -230,12 +230,12 @@ for (const r of june19Results) {
         model_correct_total = VALUES(model_correct_total),
         created_at = NOW()
     `, [
-      matchId, r.modelLean, r.actualResult,
+      espn_match_id, r.modelLean, r.actualResult,
       r.actualTotalGoals, mlCorrect, totalCorrect,
       parseFloat(r.homeWinProb)/100, parseFloat(r.drawProb)/100, parseFloat(r.awayWinProb)/100,
       bookTotal, modelTotalLean
     ]);
-    console.log(`${TAG} [FIX] Inserted wc_bt_projections ${matchId}: actual=${r.actualResult} total=${r.actualTotalGoals}`);
+    console.log(`${TAG} [FIX] Inserted wc_bt_projections ${espn_match_id}: actual=${r.actualResult} total=${r.actualTotalGoals}`);
   }
 }
 

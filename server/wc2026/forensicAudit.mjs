@@ -152,8 +152,8 @@ async function main() {
     checkNotNull(`${table}: PRIMARY KEY`, pkIdx ? pkIdx.COLUMN_NAME : null);
     checkGt(`${table}: total index count`, idxs.length, 0, "must have at least 1 index");
     if (table !== "wc2026_espn_glossary") {
-      const hasMatchId = cols.find(c => c.COLUMN_NAME === "matchId");
-      checkNotNull(`${table}: matchId column exists`, hasMatchId ? "yes" : null);
+      const hasMatchId = cols.find(c => c.COLUMN_NAME === "espn_match_id");
+      checkNotNull(`${table}: espn_match_id column exists`, hasMatchId ? "yes" : null);
     }
     const hasCreatedAt = cols.find(c => c.COLUMN_NAME === "createdAt");
     checkNotNull(`${table}: createdAt column exists`, hasCreatedAt ? "yes" : null);
@@ -169,11 +169,11 @@ async function main() {
   for (const mid of MATCH_IDS) {
     const label = MATCH_LABELS[mid];
     banner(`SECTION 1.${MATCH_IDS.indexOf(mid)+1} — INDIVIDUAL AUDIT: ${mid} (${label})`, C.cyan);
-    const audit = { matchId: mid, label, tables: {} };
+    const audit = { espn_match_id: mid, label, tables: {} };
 
     // ── TABLE 1: wc2026_espn_matches ─────────────────────────────────────────
     section("TABLE 1: wc2026_espn_matches");
-    const m = await q1(db, `SELECT * FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const m = await q1(db, `SELECT * FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     if (!m) { fail(`${mid}: match row exists`, null, "1 row"); continue; }
     audit.tables.matches = m;
 
@@ -232,7 +232,7 @@ async function main() {
 
     // ── TABLE 2: wc2026_espn_match_odds ──────────────────────────────────────
     section("TABLE 2: wc2026_espn_match_odds");
-    const odds = await q1(db, `SELECT * FROM wc2026_espn_match_odds WHERE matchId=?`, [mid]);
+    const odds = await q1(db, `SELECT * FROM wc2026_espn_match_odds WHERE espn_match_id=?`, [mid]);
     audit.tables.odds = odds;
     if (odds) {
       log(`  Provider: ${odds.provider}`);
@@ -253,7 +253,7 @@ async function main() {
 
     // ── TABLE 3: wc2026_espn_team_stats ──────────────────────────────────────
     section("TABLE 3: wc2026_espn_team_stats (tmStatsGrph — 8 summary stats)");
-    const ts = await q1(db, `SELECT * FROM wc2026_espn_team_stats WHERE matchId=?`, [mid]);
+    const ts = await q1(db, `SELECT * FROM wc2026_espn_team_stats WHERE espn_match_id=?`, [mid]);
     audit.tables.teamStats = ts;
     if (ts) {
       log(`  Possession: H=${ts.possession} A=${ts.possessionAway}`);
@@ -296,7 +296,7 @@ async function main() {
 
     // ── TABLE 4: wc2026_espn_match_stats ─────────────────────────────────────
     section("TABLE 4: wc2026_espn_match_stats (40 deferred stats — 6 categories)");
-    const ms = await q1(db, `SELECT * FROM wc2026_espn_match_stats WHERE matchId=?`, [mid]);
+    const ms = await q1(db, `SELECT * FROM wc2026_espn_match_stats WHERE espn_match_id=?`, [mid]);
     audit.tables.matchStats = ms;
     if (ms) {
       // SHOTS (shtsTbls — 6 rows)
@@ -472,7 +472,7 @@ async function main() {
 
     // ── TABLE 5: wc2026_espn_expected_goals ──────────────────────────────────
     section("TABLE 5: wc2026_espn_expected_goals");
-    const xg = await q1(db, `SELECT * FROM wc2026_espn_expected_goals WHERE matchId=?`, [mid]);
+    const xg = await q1(db, `SELECT * FROM wc2026_espn_expected_goals WHERE espn_match_id=?`, [mid]);
     audit.tables.xg = xg;
     if (xg) {
       const players = JSON.parse(xg.perPlayerJson || "[]");
@@ -515,7 +515,7 @@ async function main() {
 
     // ── TABLE 6: wc2026_espn_shot_map ────────────────────────────────────────
     section("TABLE 6: wc2026_espn_shot_map");
-    const shots = await q(db, `SELECT * FROM wc2026_espn_shot_map WHERE matchId=? ORDER BY sequence`, [mid]);
+    const shots = await q(db, `SELECT * FROM wc2026_espn_shot_map WHERE espn_match_id=? ORDER BY sequence`, [mid]);
     audit.tables.shots = shots;
     const shotsByType = {};
     for (const s of shots) {
@@ -556,7 +556,7 @@ async function main() {
 
     // ── TABLE 7: wc2026_espn_player_stats ────────────────────────────────────
     section("TABLE 7: wc2026_espn_player_stats");
-    const players = await q(db, `SELECT * FROM wc2026_espn_player_stats WHERE matchId=? ORDER BY isHome DESC, isGoalkeeper ASC, name ASC`, [mid]);
+    const players = await q(db, `SELECT * FROM wc2026_espn_player_stats WHERE espn_match_id=? ORDER BY isHome DESC, isGoalkeeper ASC, name ASC`, [mid]);
     audit.tables.players = players;
     const outfield = players.filter(p => p.isGoalkeeper === 0);
     const gks = players.filter(p => p.isGoalkeeper === 1);
@@ -606,7 +606,7 @@ async function main() {
 
     // ── TABLE 8: wc2026_espn_lineups ─────────────────────────────────────────
     section("TABLE 8: wc2026_espn_lineups");
-    const lineups = await q(db, `SELECT * FROM wc2026_espn_lineups WHERE matchId=? ORDER BY isHome DESC, role, formationPlace`, [mid]);
+    const lineups = await q(db, `SELECT * FROM wc2026_espn_lineups WHERE espn_match_id=? ORDER BY isHome DESC, role, formationPlace`, [mid]);
     audit.tables.lineups = lineups;
     const starters = lineups.filter(l => l.role === "starter");
     const subs = lineups.filter(l => l.role === "substitute");
@@ -660,26 +660,26 @@ async function main() {
 
   // 2A. Match metadata consistency
   section("2A. Match Metadata Consistency");
-  const allMatches = await q(db, `SELECT * FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?) ORDER BY matchDateUtc`, MATCH_IDS);
+  const allMatches = await q(db, `SELECT * FROM wc2026_espn_matches WHERE espn_match_id IN (?,?,?,?) ORDER BY matchDateUtc`, MATCH_IDS);
   log(`  Matches in DB: ${allMatches.length}`);
   checkEq("quad: all 4 matches present", allMatches.length, 4);
   for (const m2 of allMatches) {
-    log(`  ${m2.matchId}: ${m2.homeTeamName} ${m2.homeScore}-${m2.awayScore} ${m2.awayTeamName} | ${m2.venue} | ${m2.homeFormation} vs ${m2.awayFormation} | ${m2.statusState}`);
-    checkEq(`quad: ${m2.matchId} statusState='post'`, m2.statusState, "post");
-    checkEq(`quad: ${m2.matchId} season='2026'`, m2.season, "2026");
-    checkEq(`quad: ${m2.matchId} scrapeVersion='250x'`, m2.scrapeVersion, "250x");
+    log(`  ${m2.espn_match_id}: ${m2.homeTeamName} ${m2.homeScore}-${m2.awayScore} ${m2.awayTeamName} | ${m2.venue} | ${m2.homeFormation} vs ${m2.awayFormation} | ${m2.statusState}`);
+    checkEq(`quad: ${m2.espn_match_id} statusState='post'`, m2.statusState, "post");
+    checkEq(`quad: ${m2.espn_match_id} season='2026'`, m2.season, "2026");
+    checkEq(`quad: ${m2.espn_match_id} scrapeVersion='250x'`, m2.scrapeVersion, "250x");
   }
   // All matchIds unique
-  const uniqueMids = new Set(allMatches.map(m2 => m2.matchId));
+  const uniqueMids = new Set(allMatches.map(m2 => m2.espn_match_id));
   checkEq("quad: no duplicate matchIds in matches table", uniqueMids.size, 4);
 
   // 2B. Row count cross-reference
   section("2B. Row Count Cross-Reference (All 9 Tables × 4 Matches)");
   const rowCountTable = [];
   for (const mid of MATCH_IDS) {
-    const row = { matchId: mid, label: MATCH_LABELS[mid] };
+    const row = { espn_match_id: mid, label: MATCH_LABELS[mid] };
     for (const table of tables.filter(t => t !== "wc2026_espn_glossary")) {
-      const [cnt] = await q(db, `SELECT COUNT(*) as cnt FROM \`${table}\` WHERE matchId=?`, [mid]);
+      const [cnt] = await q(db, `SELECT COUNT(*) as cnt FROM \`${table}\` WHERE espn_match_id=?`, [mid]);
       row[table] = Number(cnt.cnt);
     }
     const [gcnt] = await q(db, `SELECT COUNT(*) as cnt FROM wc2026_espn_glossary`);
@@ -687,19 +687,19 @@ async function main() {
     rowCountTable.push(row);
   }
   // Print table
-  log(`\n  ${"matchId".padEnd(10)} ${"matches".padEnd(8)} ${"odds".padEnd(6)} ${"t_stats".padEnd(8)} ${"m_stats".padEnd(8)} ${"xg".padEnd(5)} ${"shots".padEnd(7)} ${"players".padEnd(8)} ${"lineups".padEnd(8)} ${"glossary".padEnd(9)}`);
+  log(`\n  ${"espn_match_id".padEnd(10)} ${"matches".padEnd(8)} ${"odds".padEnd(6)} ${"t_stats".padEnd(8)} ${"m_stats".padEnd(8)} ${"xg".padEnd(5)} ${"shots".padEnd(7)} ${"players".padEnd(8)} ${"lineups".padEnd(8)} ${"glossary".padEnd(9)}`);
   log(`  ${"─".repeat(82)}`);
   for (const r of rowCountTable) {
-    log(`  ${r.matchId.padEnd(10)} ${String(r["wc2026_espn_matches"]).padEnd(8)} ${String(r["wc2026_espn_match_odds"]).padEnd(6)} ${String(r["wc2026_espn_team_stats"]).padEnd(8)} ${String(r["wc2026_espn_match_stats"]).padEnd(8)} ${String(r["wc2026_espn_expected_goals"]).padEnd(5)} ${String(r["wc2026_espn_shot_map"]).padEnd(7)} ${String(r["wc2026_espn_player_stats"]).padEnd(8)} ${String(r["wc2026_espn_lineups"]).padEnd(8)} ${String(r["wc2026_espn_glossary"]).padEnd(9)}`);
-    checkEq(`quad: ${r.matchId} matches=1`, r["wc2026_espn_matches"], 1);
-    checkGt(`quad: ${r.matchId} odds>0`, r["wc2026_espn_match_odds"], 0);
-    checkEq(`quad: ${r.matchId} team_stats=1`, r["wc2026_espn_team_stats"], 1);
-    checkEq(`quad: ${r.matchId} match_stats=1`, r["wc2026_espn_match_stats"], 1);
-    checkEq(`quad: ${r.matchId} expected_goals=1`, r["wc2026_espn_expected_goals"], 1);
-    checkGt(`quad: ${r.matchId} shots>0`, r["wc2026_espn_shot_map"], 0);
-    checkGt(`quad: ${r.matchId} players>20`, r["wc2026_espn_player_stats"], 20);
-    checkGt(`quad: ${r.matchId} lineups>22`, r["wc2026_espn_lineups"], 22);
-    checkEq(`quad: ${r.matchId} glossary=20`, r["wc2026_espn_glossary"], 20);
+    log(`  ${r.espn_match_id.padEnd(10)} ${String(r["wc2026_espn_matches"]).padEnd(8)} ${String(r["wc2026_espn_match_odds"]).padEnd(6)} ${String(r["wc2026_espn_team_stats"]).padEnd(8)} ${String(r["wc2026_espn_match_stats"]).padEnd(8)} ${String(r["wc2026_espn_expected_goals"]).padEnd(5)} ${String(r["wc2026_espn_shot_map"]).padEnd(7)} ${String(r["wc2026_espn_player_stats"]).padEnd(8)} ${String(r["wc2026_espn_lineups"]).padEnd(8)} ${String(r["wc2026_espn_glossary"]).padEnd(9)}`);
+    checkEq(`quad: ${r.espn_match_id} matches=1`, r["wc2026_espn_matches"], 1);
+    checkGt(`quad: ${r.espn_match_id} odds>0`, r["wc2026_espn_match_odds"], 0);
+    checkEq(`quad: ${r.espn_match_id} team_stats=1`, r["wc2026_espn_team_stats"], 1);
+    checkEq(`quad: ${r.espn_match_id} match_stats=1`, r["wc2026_espn_match_stats"], 1);
+    checkEq(`quad: ${r.espn_match_id} expected_goals=1`, r["wc2026_espn_expected_goals"], 1);
+    checkGt(`quad: ${r.espn_match_id} shots>0`, r["wc2026_espn_shot_map"], 0);
+    checkGt(`quad: ${r.espn_match_id} players>20`, r["wc2026_espn_player_stats"], 20);
+    checkGt(`quad: ${r.espn_match_id} lineups>22`, r["wc2026_espn_lineups"], 22);
+    checkEq(`quad: ${r.espn_match_id} glossary=20`, r["wc2026_espn_glossary"], 20);
   }
 
   // 2C. Stat category completeness (all 6 categories × 4 matches)
@@ -716,7 +716,7 @@ async function main() {
   ];
   for (const cat of statCategories) {
     for (const mid of MATCH_IDS) {
-      const row = await q1(db, `SELECT ${cat.cols.join(",")} FROM wc2026_espn_match_stats WHERE matchId=?`, [mid]);
+      const row = await q1(db, `SELECT ${cat.cols.join(",")} FROM wc2026_espn_match_stats WHERE espn_match_id=?`, [mid]);
       if (!row) { fail(`quad: ${mid} ${cat.name} row exists`, null, "1 row"); continue; }
       const nullCols = cat.cols.filter(c => row[c] === null);
       if (nullCols.length === 0) {
@@ -730,16 +730,16 @@ async function main() {
   // 2D. Shot map cross-reference
   section("2D. Shot Map Cross-Reference (iconType distribution)");
   const shotMapSummary = await q(db, `
-    SELECT matchId, iconType, COUNT(*) as cnt, AVG(CAST(xG AS DECIMAL(6,4))) as avgXG
+    SELECT espn_match_id, iconType, COUNT(*) as cnt, AVG(CAST(xG AS DECIMAL(6,4))) as avgXG
     FROM wc2026_espn_shot_map 
-    WHERE matchId IN (?,?,?,?)
-    GROUP BY matchId, iconType
-    ORDER BY matchId, iconType
+    WHERE espn_match_id IN (?,?,?,?)
+    GROUP BY espn_match_id, iconType
+    ORDER BY espn_match_id, iconType
   `, MATCH_IDS);
   const smByMatch = {};
   for (const r of shotMapSummary) {
-    if (!smByMatch[r.matchId]) smByMatch[r.matchId] = {};
-    smByMatch[r.matchId][r.iconType] = { cnt: Number(r.cnt), avgXG: Number(r.avgXG) };
+    if (!smByMatch[r.espn_match_id]) smByMatch[r.espn_match_id] = {};
+    smByMatch[r.espn_match_id][r.iconType] = { cnt: Number(r.cnt), avgXG: Number(r.avgXG) };
   }
   for (const mid of MATCH_IDS) {
     const sm = smByMatch[mid] || {};
@@ -753,7 +753,7 @@ async function main() {
   // 2E. Player stats cross-reference
   section("2E. Player Stats Cross-Reference");
   const playerSummary = await q(db, `
-    SELECT matchId, 
+    SELECT espn_match_id, 
            COUNT(*) as total,
            SUM(CASE WHEN isGoalkeeper=0 THEN 1 ELSE 0 END) as outfield,
            SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) as gks,
@@ -762,30 +762,30 @@ async function main() {
            SUM(CASE WHEN tch IS NULL AND isGoalkeeper=0 THEN 1 ELSE 0 END) as tchNulls,
            SUM(CASE WHEN appearances IS NULL THEN 1 ELSE 0 END) as appNulls
     FROM wc2026_espn_player_stats 
-    WHERE matchId IN (?,?,?,?)
-    GROUP BY matchId
+    WHERE espn_match_id IN (?,?,?,?)
+    GROUP BY espn_match_id
   `, MATCH_IDS);
   for (const r of playerSummary) {
-    log(`  ${r.matchId}: total=${r.total} outfield=${r.outfield} gks=${r.gks} home=${r.home} away=${r.away} tchNulls=${r.tchNulls} appNulls=${r.appNulls}`);
-    checkGt(`quad: ${r.matchId} player_stats total`, Number(r.total), 20);
-    checkEq(`quad: ${r.matchId} GKs = 2`, Number(r.gks), 2);
-    checkNullRate(`quad: ${r.matchId} outfield tch null rate`, Number(r.tchNulls), Number(r.outfield), 0.1);
-    checkNullRate(`quad: ${r.matchId} appearances null rate`, Number(r.appNulls), Number(r.total), 0.1);
+    log(`  ${r.espn_match_id}: total=${r.total} outfield=${r.outfield} gks=${r.gks} home=${r.home} away=${r.away} tchNulls=${r.tchNulls} appNulls=${r.appNulls}`);
+    checkGt(`quad: ${r.espn_match_id} player_stats total`, Number(r.total), 20);
+    checkEq(`quad: ${r.espn_match_id} GKs = 2`, Number(r.gks), 2);
+    checkNullRate(`quad: ${r.espn_match_id} outfield tch null rate`, Number(r.tchNulls), Number(r.outfield), 0.1);
+    checkNullRate(`quad: ${r.espn_match_id} appearances null rate`, Number(r.appNulls), Number(r.total), 0.1);
   }
 
   // 2F. Lineup cross-reference
   section("2F. Lineup Cross-Reference");
   const lineupSummary = await q(db, `
-    SELECT matchId, role, COUNT(*) as cnt
+    SELECT espn_match_id, role, COUNT(*) as cnt
     FROM wc2026_espn_lineups 
-    WHERE matchId IN (?,?,?,?)
-    GROUP BY matchId, role
-    ORDER BY matchId, role
+    WHERE espn_match_id IN (?,?,?,?)
+    GROUP BY espn_match_id, role
+    ORDER BY espn_match_id, role
   `, MATCH_IDS);
   const luByMatch = {};
   for (const r of lineupSummary) {
-    if (!luByMatch[r.matchId]) luByMatch[r.matchId] = {};
-    luByMatch[r.matchId][r.role] = Number(r.cnt);
+    if (!luByMatch[r.espn_match_id]) luByMatch[r.espn_match_id] = {};
+    luByMatch[r.espn_match_id][r.role] = Number(r.cnt);
   }
   for (const mid of MATCH_IDS) {
     const lu = luByMatch[mid] || {};
@@ -797,28 +797,28 @@ async function main() {
   // 2G. xG consistency across tables (match_stats vs expected_goals)
   section("2G. xG Cross-Table Consistency (match_stats vs expected_goals)");
   const xgCompare = await q(db, `
-    SELECT ms.matchId,
+    SELECT ms.espn_match_id,
            ms.homeXG as ms_homeXG, eg.homeXG as eg_homeXG,
            ms.awayXG as ms_awayXG, eg.awayXG as eg_awayXG,
            ABS(CAST(ms.homeXG AS DECIMAL(6,3)) - CAST(eg.homeXG AS DECIMAL(6,3))) as homeXGDiff,
            ABS(CAST(ms.awayXG AS DECIMAL(6,3)) - CAST(eg.awayXG AS DECIMAL(6,3))) as awayXGDiff
     FROM wc2026_espn_match_stats ms
-    JOIN wc2026_espn_expected_goals eg ON ms.matchId = eg.matchId
-    WHERE ms.matchId IN (?,?,?,?)
+    JOIN wc2026_espn_expected_goals eg ON ms.espn_match_id = eg.espn_match_id
+    WHERE ms.espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   for (const r of xgCompare) {
-    log(`  ${r.matchId}: ms.homeXG=${r.ms_homeXG} eg.homeXG=${r.eg_homeXG} diff=${Number(r.homeXGDiff).toFixed(4)}`);
-    log(`  ${r.matchId}: ms.awayXG=${r.ms_awayXG} eg.awayXG=${r.eg_awayXG} diff=${Number(r.awayXGDiff).toFixed(4)}`);
-    if (Number(r.homeXGDiff) < 0.01) pass(`quad: ${r.matchId} homeXG consistent across tables`, `diff=${Number(r.homeXGDiff).toFixed(4)}`);
-    else warn(`quad: ${r.matchId} homeXG discrepancy`, `diff=${Number(r.homeXGDiff).toFixed(4)}`, "match_stats vs expected_goals");
-    if (Number(r.awayXGDiff) < 0.01) pass(`quad: ${r.matchId} awayXG consistent across tables`, `diff=${Number(r.awayXGDiff).toFixed(4)}`);
-    else warn(`quad: ${r.matchId} awayXG discrepancy`, `diff=${Number(r.awayXGDiff).toFixed(4)}`, "match_stats vs expected_goals");
+    log(`  ${r.espn_match_id}: ms.homeXG=${r.ms_homeXG} eg.homeXG=${r.eg_homeXG} diff=${Number(r.homeXGDiff).toFixed(4)}`);
+    log(`  ${r.espn_match_id}: ms.awayXG=${r.ms_awayXG} eg.awayXG=${r.eg_awayXG} diff=${Number(r.awayXGDiff).toFixed(4)}`);
+    if (Number(r.homeXGDiff) < 0.01) pass(`quad: ${r.espn_match_id} homeXG consistent across tables`, `diff=${Number(r.homeXGDiff).toFixed(4)}`);
+    else warn(`quad: ${r.espn_match_id} homeXG discrepancy`, `diff=${Number(r.homeXGDiff).toFixed(4)}`, "match_stats vs expected_goals");
+    if (Number(r.awayXGDiff) < 0.01) pass(`quad: ${r.espn_match_id} awayXG consistent across tables`, `diff=${Number(r.awayXGDiff).toFixed(4)}`);
+    else warn(`quad: ${r.espn_match_id} awayXG discrepancy`, `diff=${Number(r.awayXGDiff).toFixed(4)}`, "match_stats vs expected_goals");
   }
 
   // 2H. Fouls/saves cross-table consistency (team_stats vs match_stats)
   section("2H. Fouls & Saves Cross-Table Consistency (team_stats vs match_stats)");
   const crossCheck = await q(db, `
-    SELECT ts.matchId,
+    SELECT ts.espn_match_id,
            ts.fouls as ts_fouls, ms.homeFoulsCommitted as ms_fouls,
            ts.foulsAway as ts_foulsAway, ms.awayFoulsCommitted as ms_foulsAway,
            ts.saves as ts_saves, ms.homeGkSaves as ms_saves,
@@ -826,17 +826,17 @@ async function main() {
            ts.yellowCards as ts_yc, ms.homeFoulYellowCards as ms_yc,
            ts.yellowCardsAway as ts_ycAway, ms.awayFoulYellowCards as ms_ycAway
     FROM wc2026_espn_team_stats ts
-    JOIN wc2026_espn_match_stats ms ON ts.matchId = ms.matchId
-    WHERE ts.matchId IN (?,?,?,?)
+    JOIN wc2026_espn_match_stats ms ON ts.espn_match_id = ms.espn_match_id
+    WHERE ts.espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   for (const r of crossCheck) {
-    log(`  ${r.matchId}: fouls ts=${r.ts_fouls} ms=${r.ms_fouls} | saves ts=${r.ts_saves} ms=${r.ms_saves} | YC ts=${r.ts_yc} ms=${r.ms_yc}`);
-    checkEq(`quad: ${r.matchId} fouls consistent`, Number(r.ts_fouls), Number(r.ms_fouls));
-    checkEq(`quad: ${r.matchId} foulsAway consistent`, Number(r.ts_foulsAway), Number(r.ms_foulsAway));
-    checkEq(`quad: ${r.matchId} saves consistent`, Number(r.ts_saves), Number(r.ms_saves));
-    checkEq(`quad: ${r.matchId} savesAway consistent`, Number(r.ts_savesAway), Number(r.ms_savesAway));
-    checkEq(`quad: ${r.matchId} yellowCards consistent`, Number(r.ts_yc), Number(r.ms_yc));
-    checkEq(`quad: ${r.matchId} yellowCardsAway consistent`, Number(r.ts_ycAway), Number(r.ms_ycAway));
+    log(`  ${r.espn_match_id}: fouls ts=${r.ts_fouls} ms=${r.ms_fouls} | saves ts=${r.ts_saves} ms=${r.ms_saves} | YC ts=${r.ts_yc} ms=${r.ms_yc}`);
+    checkEq(`quad: ${r.espn_match_id} fouls consistent`, Number(r.ts_fouls), Number(r.ms_fouls));
+    checkEq(`quad: ${r.espn_match_id} foulsAway consistent`, Number(r.ts_foulsAway), Number(r.ms_foulsAway));
+    checkEq(`quad: ${r.espn_match_id} saves consistent`, Number(r.ts_saves), Number(r.ms_saves));
+    checkEq(`quad: ${r.espn_match_id} savesAway consistent`, Number(r.ts_savesAway), Number(r.ms_savesAway));
+    checkEq(`quad: ${r.espn_match_id} yellowCards consistent`, Number(r.ts_yc), Number(r.ms_yc));
+    checkEq(`quad: ${r.espn_match_id} yellowCardsAway consistent`, Number(r.ts_ycAway), Number(r.ms_ycAway));
   }
 
   // 2I. Aggregate stats across all 4 matches
@@ -849,7 +849,7 @@ async function main() {
       AVG(attendance) as avgAttendance,
       MIN(attendance) as minAttendance,
       MAX(attendance) as maxAttendance
-    FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?)
+    FROM wc2026_espn_matches WHERE espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   log(`  Total matches: ${aggStats.matches}`);
   log(`  Total goals: ${aggStats.totalGoals} | Avg goals/match: ${Number(aggStats.avgGoals).toFixed(2)}`);
@@ -858,7 +858,7 @@ async function main() {
   const aggXG = await q1(db, `
     SELECT AVG(CAST(homeXG AS DECIMAL(6,3))) as avgHomeXG, AVG(CAST(awayXG AS DECIMAL(6,3))) as avgAwayXG,
            MIN(CAST(homeXG AS DECIMAL(6,3))) as minHomeXG, MAX(CAST(homeXG AS DECIMAL(6,3))) as maxHomeXG
-    FROM wc2026_espn_expected_goals WHERE matchId IN (?,?,?,?)
+    FROM wc2026_espn_expected_goals WHERE espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   log(`  Avg xG: H=${Number(aggXG.avgHomeXG).toFixed(3)} A=${Number(aggXG.avgAwayXG).toFixed(3)}`);
   log(`  homeXG range: [${Number(aggXG.minHomeXG).toFixed(3)}, ${Number(aggXG.maxHomeXG).toFixed(3)}]`);
@@ -870,7 +870,7 @@ async function main() {
            SUM(CASE WHEN iconType='blocked' THEN 1 ELSE 0 END) as blocked,
            SUM(CASE WHEN iconType='offTarget' THEN 1 ELSE 0 END) as offTarget,
            AVG(CAST(xG AS DECIMAL(6,4))) as avgXG
-    FROM wc2026_espn_shot_map WHERE matchId IN (?,?,?,?)
+    FROM wc2026_espn_shot_map WHERE espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   log(`  Shot map totals: ${aggShots.totalShots} shots | ${aggShots.goals} goals | ${aggShots.saves} saves | ${aggShots.blocked} blocked | ${aggShots.offTarget} off-target`);
   log(`  Avg xG per shot: ${Number(aggShots.avgXG).toFixed(4)}`);
@@ -878,7 +878,7 @@ async function main() {
   const aggPlayers = await q1(db, `
     SELECT COUNT(*) as total, SUM(CASE WHEN isGoalkeeper=0 THEN 1 ELSE 0 END) as outfield,
            SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) as gks
-    FROM wc2026_espn_player_stats WHERE matchId IN (?,?,?,?)
+    FROM wc2026_espn_player_stats WHERE espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   log(`  Total player-match records: ${aggPlayers.total} (${aggPlayers.outfield} outfield + ${aggPlayers.gks} GKs)`);
 
@@ -887,19 +887,19 @@ async function main() {
            SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) as starters,
            SUM(CASE WHEN role='substitute' THEN 1 ELSE 0 END) as subs,
            SUM(CASE WHEN role='unused' THEN 1 ELSE 0 END) as unused
-    FROM wc2026_espn_lineups WHERE matchId IN (?,?,?,?)
+    FROM wc2026_espn_lineups WHERE espn_match_id IN (?,?,?,?)
   `, MATCH_IDS);
   log(`  Total lineup records: ${aggLineups.total} (${aggLineups.starters} starters + ${aggLineups.subs} subs + ${aggLineups.unused} unused)`);
   checkEq("quad: total starters across 4 matches = 88", Number(aggLineups.starters), 88);
 
   // 2J. Scraper performance
   section("2J. Scraper Performance Metrics");
-  const perfData = await q(db, `SELECT matchId, scrapeDurationMs, scrapeVersion, scrapedAt FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?) ORDER BY scrapedAt`, MATCH_IDS);
+  const perfData = await q(db, `SELECT espn_match_id, scrapeDurationMs, scrapeVersion, scrapedAt FROM wc2026_espn_matches WHERE espn_match_id IN (?,?,?,?) ORDER BY scrapedAt`, MATCH_IDS);
   for (const p of perfData) {
-    log(`  ${p.matchId}: duration=${p.scrapeDurationMs}ms version=${p.scrapeVersion} scrapedAt=${new Date(Number(p.scrapedAt)).toISOString()}`);
-    checkNotNull(`quad: ${p.matchId} scrapeDurationMs`, p.scrapeDurationMs);
-    checkGt(`quad: ${p.matchId} scrapeDurationMs > 0`, Number(p.scrapeDurationMs), 0);
-    checkEq(`quad: ${p.matchId} scrapeVersion='250x'`, p.scrapeVersion, "250x");
+    log(`  ${p.espn_match_id}: duration=${p.scrapeDurationMs}ms version=${p.scrapeVersion} scrapedAt=${new Date(Number(p.scrapedAt)).toISOString()}`);
+    checkNotNull(`quad: ${p.espn_match_id} scrapeDurationMs`, p.scrapeDurationMs);
+    checkGt(`quad: ${p.espn_match_id} scrapeDurationMs > 0`, Number(p.scrapeDurationMs), 0);
+    checkEq(`quad: ${p.espn_match_id} scrapeVersion='250x'`, p.scrapeVersion, "250x");
   }
 
   // 2K. Truth anchor comparison (760487 as reference)
@@ -933,18 +933,18 @@ async function main() {
   banner("SECTION 3 — DATA INTEGRITY DEEP CHECKS", C.cyan);
 
   // 3A. Orphan rows check
-  section("3A. Orphan Row Check (matchId FK consistency)");
+  section("3A. Orphan Row Check (espn_match_id FK consistency)");
   const orphanTables = ["wc2026_espn_match_odds","wc2026_espn_team_stats","wc2026_espn_match_stats","wc2026_espn_expected_goals","wc2026_espn_shot_map","wc2026_espn_player_stats","wc2026_espn_lineups"];
   for (const table of orphanTables) {
-    const orphans = await q(db, `SELECT COUNT(*) as cnt FROM \`${table}\` t WHERE NOT EXISTS (SELECT 1 FROM wc2026_espn_matches m WHERE m.matchId = t.matchId)`);
+    const orphans = await q(db, `SELECT COUNT(*) as cnt FROM \`${table}\` t WHERE NOT EXISTS (SELECT 1 FROM wc2026_espn_matches m WHERE m.espn_match_id = t.espn_match_id)`);
     checkEq(`${table}: no orphan rows`, Number(orphans[0].cnt), 0);
   }
 
-  // 3B. Duplicate matchId check (for 1:1 tables)
-  section("3B. Duplicate matchId Check (1:1 Tables)");
+  // 3B. Duplicate espn_match_id check (for 1:1 tables)
+  section("3B. Duplicate espn_match_id Check (1:1 Tables)");
   const oneToOneTables = ["wc2026_espn_team_stats","wc2026_espn_match_stats","wc2026_espn_expected_goals"];
   for (const table of oneToOneTables) {
-    const dups = await q(db, `SELECT matchId, COUNT(*) as cnt FROM \`${table}\` GROUP BY matchId HAVING cnt > 1`);
+    const dups = await q(db, `SELECT espn_match_id, COUNT(*) as cnt FROM \`${table}\` GROUP BY espn_match_id HAVING cnt > 1`);
     checkEq(`${table}: no duplicate matchIds`, dups.length, 0);
   }
 
@@ -952,7 +952,7 @@ async function main() {
   section("3C. Shot Map Coordinate Range Check");
   const coordOutOfRange = await q1(db, `
     SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map 
-    WHERE matchId IN (?,?,?,?)
+    WHERE espn_match_id IN (?,?,?,?)
     AND (CAST(fieldStartX AS DECIMAL(6,2)) < 0 OR CAST(fieldStartX AS DECIMAL(6,2)) > 100
       OR CAST(fieldStartY AS DECIMAL(6,2)) < 0 OR CAST(fieldStartY AS DECIMAL(6,2)) > 100)
   `, MATCH_IDS);
@@ -962,7 +962,7 @@ async function main() {
   section("3D. xG Range Check (all shot-level xG in [0,1])");
   const xgOutOfRange = await q1(db, `
     SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map 
-    WHERE matchId IN (?,?,?,?)
+    WHERE espn_match_id IN (?,?,?,?)
     AND xG IS NOT NULL AND (CAST(xG AS DECIMAL(6,4)) < 0 OR CAST(xG AS DECIMAL(6,4)) > 1)
   `, MATCH_IDS);
   checkEq("shot_map: all xG in [0,1]", Number(xgOutOfRange.cnt), 0);
@@ -970,27 +970,27 @@ async function main() {
   // 3E. Player-match uniqueness
   section("3E. Player-Match Uniqueness (no duplicate athleteId per match)");
   const dupPlayers = await q(db, `
-    SELECT matchId, athleteId, COUNT(*) as cnt 
+    SELECT espn_match_id, athleteId, COUNT(*) as cnt 
     FROM wc2026_espn_player_stats 
-    WHERE matchId IN (?,?,?,?)
-    GROUP BY matchId, athleteId HAVING cnt > 1
+    WHERE espn_match_id IN (?,?,?,?)
+    GROUP BY espn_match_id, athleteId HAVING cnt > 1
   `, MATCH_IDS);
-  checkEq("player_stats: no duplicate (matchId,athleteId)", dupPlayers.length, 0);
+  checkEq("player_stats: no duplicate (espn_match_id,athleteId)", dupPlayers.length, 0);
 
   const dupLineups = await q(db, `
-    SELECT matchId, athleteId, COUNT(*) as cnt 
+    SELECT espn_match_id, athleteId, COUNT(*) as cnt 
     FROM wc2026_espn_lineups 
-    WHERE matchId IN (?,?,?,?)
-    GROUP BY matchId, athleteId HAVING cnt > 1
+    WHERE espn_match_id IN (?,?,?,?)
+    GROUP BY espn_match_id, athleteId HAVING cnt > 1
   `, MATCH_IDS);
-  checkEq("lineups: no duplicate (matchId,athleteId)", dupLineups.length, 0);
+  checkEq("lineups: no duplicate (espn_match_id,athleteId)", dupLineups.length, 0);
 
   // 3F. Attendance sanity
   section("3F. Attendance Sanity Check");
-  const attendanceData = await q(db, `SELECT matchId, attendance, venue FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?)`, MATCH_IDS);
+  const attendanceData = await q(db, `SELECT espn_match_id, attendance, venue FROM wc2026_espn_matches WHERE espn_match_id IN (?,?,?,?)`, MATCH_IDS);
   for (const a of attendanceData) {
-    log(`  ${a.matchId}: ${a.venue} attendance=${a.attendance}`);
-    checkRange(`${a.matchId}: attendance range`, Number(a.attendance), 10000, 200000, "World Cup stadium range");
+    log(`  ${a.espn_match_id}: ${a.venue} attendance=${a.attendance}`);
+    checkRange(`${a.espn_match_id}: attendance range`, Number(a.attendance), 10000, 200000, "World Cup stadium range");
   }
 
   // ══════════════════════════════════════════════════════════════════════════

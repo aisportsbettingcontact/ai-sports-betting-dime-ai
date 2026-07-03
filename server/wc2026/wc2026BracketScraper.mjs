@@ -220,7 +220,7 @@ const BRACKET_SEEDING_GRAPH = {
 // ESPN game ID → match_id in wc2026_matches
 // Populated dynamically from DB; this static map is the fallback for R16+
 const STATIC_GAME_ID_TO_MATCH_ID = {
-  // R32 — dynamically resolved via espn_event_id in wc2026_matches
+  // R32 — dynamically resolved via espn_match_id in wc2026_matches
   // R16
   "760503": "wc26-r16-089",
   "760502": "wc26-r16-090",
@@ -281,13 +281,13 @@ async function getConn() {
 
 // ─── Load match map from wc2026_matches ────────────────────────────────────
 // Returns:
-//   byEspnId:   Map<espn_event_id → { matchId, homeTeamId, awayTeamId, advancingTeamId, matchDate, kickoffUtc, status }>
+//   byEspnId:   Map<espn_match_id → { espn_match_id, homeTeamId, awayTeamId, advancingTeamId, matchDate, kickoffUtc, status }>
 //   byMatchId: Map<match_id → same>
 async function loadMatchMap(conn) {
   log("INPUT", "Loading wc2026_matches knockout rows");
   const [rows] = await conn.query(`
     SELECT
-      match_id, espn_event_id, stage, display_order,
+      match_id, espn_match_id, stage, display_order,
       home_team_id, away_team_id, advancing_team_id,
       match_date, kickoff_utc, status
     FROM wc2026_matches
@@ -297,10 +297,10 @@ async function loadMatchMap(conn) {
   const byEspnId    = new Map();
   const byMatchId = new Map();
   for (const r of rows) {
-    if (r.espn_event_id) byEspnId.set(String(r.espn_event_id), r);
+    if (r.espn_match_id) byEspnId.set(String(r.espn_match_id), r);
     byMatchId.set(r.match_id, r);
   }
-  log("INPUT", `Loaded ${rows.length} knockout matchs | with espn_event_id: ${byEspnId.size}`);
+  log("INPUT", `Loaded ${rows.length} knockout matchs | with espn_match_id: ${byEspnId.size}`);
   return { byEspnId, byMatchId, rows };
 }
 
@@ -363,7 +363,7 @@ function transformEvent(event, matchNumberMap, bracketLocationByRound) {
 
   const now = Date.now();
   return {
-    game_id:          String(event.id),
+    espn_match_id:          String(event.id),
     matchup_id:       String(event.id),
     match_number:     matchNumber,
     round_id:         roundId,
@@ -404,7 +404,7 @@ function transformEvent(event, matchNumberMap, bracketLocationByRound) {
 // ─── Validate bracket row ─────────────────────────────────────────────────────
 function validateRow(row) {
   const errors = [];
-  if (!row.game_id)     errors.push("game_id empty");
+  if (!row.espn_match_id)     errors.push("espn_match_id empty");
   if (!row.round_id)    errors.push("round_id=0 (unknown round slug)");
   if (!row.round_label) errors.push("round_label empty");
   if (!row.home_is_tbd && !row.home_team_name) errors.push("home_team_name missing (non-TBD)");
@@ -422,7 +422,7 @@ async function upsertBracketSnapshot(conn, rows) {
     try {
       await conn.execute(
         `INSERT INTO wc2026_espn_bracket (
-          game_id, matchup_id, match_number, round_id, round_label, bracket_location,
+          espn_match_id, matchup_id, match_number, round_id, round_label, bracket_location,
           date_utc, status_detail, status_state, location, broadcasts,
           home_team_id, home_team_name, home_team_abbrev, home_team_logo,
           home_score, home_winner, home_is_tbd,
@@ -468,7 +468,7 @@ async function upsertBracketSnapshot(conn, rows) {
           scraped_at       = VALUES(scraped_at),
           updated_at       = VALUES(updated_at)`,
         [
-          row.game_id, row.matchup_id, row.match_number, row.round_id, row.round_label, row.bracket_location,
+          row.espn_match_id, row.matchup_id, row.match_number, row.round_id, row.round_label, row.bracket_location,
           row.date_utc, row.status_detail, row.status_state, row.location, row.broadcasts,
           row.home_team_id, row.home_team_name, row.home_team_abbrev, row.home_team_logo,
           row.home_score, row.home_winner, row.home_is_tbd,
@@ -478,11 +478,11 @@ async function upsertBracketSnapshot(conn, rows) {
         ]
       );
       inserted++;
-      logV("DB", `  ✓ gameId=${row.game_id} ${row.match_number ?? "?"} ${row.home_team_name ?? "TBD"} vs ${row.away_team_name ?? "TBD"}`);
+      logV("DB", `  ✓ gameId=${row.espn_match_id} ${row.match_number ?? "?"} ${row.home_team_name ?? "TBD"} vs ${row.away_team_name ?? "TBD"}`);
     } catch (err) {
       errors++;
-      errorDetails.push(`gameId=${row.game_id}: ${err.message}`);
-      log("DB", `  ✗ ERROR gameId=${row.game_id}: ${err.message}`);
+      errorDetails.push(`gameId=${row.espn_match_id}: ${err.message}`);
+      log("DB", `  ✗ ERROR gameId=${row.espn_match_id}: ${err.message}`);
     }
   }
 
@@ -508,7 +508,7 @@ async function resolveAdvancement(conn, rows, matchMap) {
   log("STATE", `[PHASE-B] FT matches: ${ftRows.length} / ${rows.length} total`);
 
   for (const row of ftRows) {
-    const gameId = row.game_id;
+    const gameId = row.espn_match_id;
 
     // Determine winner from ESPN flags
     const winnerIsHome = row.home_winner === 1;
@@ -631,7 +631,7 @@ async function resolveOpponentMapping(conn, rows, matchMap) {
   const errors = [];
 
   for (const row of rows) {
-    const gameId = row.game_id;
+    const gameId = row.espn_match_id;
     const seedEntry = BRACKET_SEEDING_GRAPH[gameId];
     if (!seedEntry) {
       // Final and 3rd-place have no next round — expected
@@ -735,23 +735,23 @@ async function seedCalendar(conn, rows, matchMap) {
 
   for (const row of rows) {
     if (!row.date_utc) {
-      logV("STATE", `[PHASE-D] gameId=${row.game_id}: no date_utc from ESPN — skipping`);
+      logV("STATE", `[PHASE-D] gameId=${row.espn_match_id}: no date_utc from ESPN — skipping`);
       skipped++;
       continue;
     }
 
     // Skip TBD matches (both teams unknown — date may be placeholder)
     if (row.home_is_tbd && row.away_is_tbd) {
-      logV("STATE", `[PHASE-D] gameId=${row.game_id} ${row.match_number ?? "?"}: both teams TBD — skipping calendar seed`);
+      logV("STATE", `[PHASE-D] gameId=${row.espn_match_id} ${row.match_number ?? "?"}: both teams TBD — skipping calendar seed`);
       skipped++;
       continue;
     }
 
-    const match = matchMap.byEspnId.get(row.game_id)
-      ?? matchMap.byMatchId.get(STATIC_GAME_ID_TO_MATCH_ID[row.game_id] ?? "");
+    const match = matchMap.byEspnId.get(row.espn_match_id)
+      ?? matchMap.byMatchId.get(STATIC_GAME_ID_TO_MATCH_ID[row.espn_match_id] ?? "");
 
     if (!match) {
-      logV("STATE", `[PHASE-D] gameId=${row.game_id}: no match in wc2026_matches — skipping`);
+      logV("STATE", `[PHASE-D] gameId=${row.espn_match_id}: no match in wc2026_matches — skipping`);
       skipped++;
       continue;
     }
@@ -837,7 +837,7 @@ export async function runBracketSync(options = {}) {
     };
     for (const r of matchMap.rows) {
       const mn = r.display_order ? `Match ${r.display_order}` : null;
-      if (r.espn_event_id) matchNumberMap.byEventId.set(String(r.espn_event_id), mn);
+      if (r.espn_match_id) matchNumberMap.byEventId.set(String(r.espn_match_id), mn);
       matchNumberMap.byMatchId.set(r.match_id, mn);
     }
 
@@ -876,8 +876,8 @@ export async function runBracketSync(options = {}) {
       const row  = transformEvent(event, matchNumberMap, bracketLocationByRound);
       const errs = validateRow(row);
       if (errs.length > 0) {
-        validationErrors.push({ gameId: row.game_id, errors: errs });
-        log("WARN", `gameId=${row.game_id} validation: ${errs.join(", ")}`);
+        validationErrors.push({ gameId: row.espn_match_id, errors: errs });
+        log("WARN", `gameId=${row.espn_match_id} validation: ${errs.join(", ")}`);
       }
       rows.push(row);
     }
@@ -898,7 +898,7 @@ export async function runBracketSync(options = {}) {
         const score = r.is_completed
           ? `${r.home_score ?? 0}-${r.away_score ?? 0} FT`
           : (r.status_state === "in" ? `${r.home_score ?? 0}-${r.away_score ?? 0} LIVE` : "vs");
-        const mn   = r.match_number ?? `gameId=${r.game_id}`;
+        const mn   = r.match_number ?? `gameId=${r.espn_match_id}`;
         const date = r.date_utc ? r.date_utc.slice(0, 10) : "?";
         log("STEP", `  ${mn} | ${date} | ${home} ${score} ${away} | ${r.status_detail ?? "Scheduled"}`);
       }

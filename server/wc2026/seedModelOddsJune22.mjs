@@ -165,7 +165,7 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
 // ─── Core: Compute model projection for a match ────────────────────────────
 function computeModelProjection(match) {
   const {
-    matchId, homeName, homeCode, awayName, awayCode,
+    espn_match_id, homeName, homeCode, awayName, awayCode,
     eloHome, eloAway,
     fifaRankHome, fifaRankAway,
     formHome, formAway,
@@ -176,7 +176,7 @@ function computeModelProjection(match) {
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
-  console.log(`${TAG} [INPUT] matchId=${matchId}`);
+  console.log(`${TAG} [INPUT] espn_match_id=${espn_match_id}`);
   console.log(`${TAG} [INPUT] Elo: home=${eloHome} away=${eloAway} | FIFA rank: home=${fifaRankHome} away=${fifaRankAway}`);
   console.log(`${TAG} [INPUT] Form: home=${formHome} away=${formAway} | Altitude: ${altitudeM}m`);
   console.log(`${TAG} [INPUT] DK ML: home=${bookHomeML > 0 ? '+' : ''}${bookHomeML} draw=${bookDrawML > 0 ? '+' : ''}${bookDrawML} away=${bookAwayML > 0 ? '+' : ''}${bookAwayML}`);
@@ -344,7 +344,7 @@ function computeModelProjection(match) {
 // ─── Match definitions ─────────────────────────────────────────────────────
 const MATCHS = [
   {
-    matchId: 'wc26-g-043',
+    espn_match_id: 'wc26-g-043',
     // DB: home=aut, away=arg | DK display: Argentina on top (DK home) but DB has Austria as home
     homeName: 'Austria', homeCode: 'aut',
     awayName: 'Argentina', awayCode: 'arg',
@@ -364,7 +364,7 @@ const MATCHS = [
     bookTotalLine: 2.5, bookOverML: -105, bookUnderML: -120,
   },
   {
-    matchId: 'wc26-g-041',
+    espn_match_id: 'wc26-g-041',
     // DB: home=irq, away=fra
     homeName: 'Iraq', homeCode: 'irq',
     awayName: 'France', awayCode: 'fra',
@@ -384,7 +384,7 @@ const MATCHS = [
     bookTotalLine: 3.5, bookOverML: -115, bookUnderML: -110,
   },
   {
-    matchId: 'wc26-g-042',
+    espn_match_id: 'wc26-g-042',
     // DB: home=nor, away=sen
     homeName: 'Norway', homeCode: 'nor',
     awayName: 'Senegal', awayCode: 'sen',
@@ -404,7 +404,7 @@ const MATCHS = [
     bookTotalLine: 2.5, bookOverML: -115, bookUnderML: -110,
   },
   {
-    matchId: 'wc26-g-044',
+    espn_match_id: 'wc26-g-044',
     // DB: home=alg, away=jor
     homeName: 'Algeria', homeCode: 'alg',
     awayName: 'Jordan', awayCode: 'jor',
@@ -450,7 +450,7 @@ async function main() {
       // ── Delete existing model rows for this match ──────────────────────
       await conn.execute(
         `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-        [match.matchId, MODEL_BOOK_ID]
+        [match.espn_match_id, MODEL_BOOK_ID]
       );
 
       // ── Insert model odds rows ────────────────────────────────────────────
@@ -470,7 +470,7 @@ async function main() {
           `INSERT INTO wc2026_odds_snapshots
              (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [match.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection,
+          [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection,
            row.line, row.odds, impliedProb, false]
         );
         totalInserted++;
@@ -527,7 +527,7 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        match.matchId, MODEL_VERSION, N_SIMULATIONS,
+        match.espn_match_id, MODEL_VERSION, N_SIMULATIONS,
         match.homeCode, match.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
@@ -544,14 +544,14 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: ML home=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} draw=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} away=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML > 0 ? '+' : ''}${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML > 0 ? '+' : ''}${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: DC 1X=${proj.modelHomeDrawML > 0 ? '+' : ''}${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML > 0 ? '+' : ''}${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: ML home=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} draw=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} away=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML > 0 ? '+' : ''}${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML > 0 ? '+' : ''}${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: DC 1X=${proj.modelHomeDrawML > 0 ? '+' : ''}${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML > 0 ? '+' : ''}${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${match.matchId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${match.espn_match_id}: ${err.message}`);
       console.error(err.stack);
     }
   }
@@ -569,7 +569,7 @@ async function main() {
   }
 
   // ── Verify DB state ────────────────────────────────────────────────────────
-  const matchIds = MATCHS.map(f => f.matchId);
+  const matchIds = MATCHS.map(f => f.espn_match_id);
   const ph = matchIds.map(() => '?').join(',');
   const [verifyRows] = await conn.execute(
     `SELECT match_id, book_id, market, selection, american_odds FROM wc2026_odds_snapshots

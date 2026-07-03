@@ -193,26 +193,26 @@ async function main() {
   // Exact column references from v14_engine.mjs (every single one)
   const V14_COLUMN_REFS = {
     'wc2026_espn_expected_goals': [
-      'matchId', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
+      'espn_match_id', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
       'homeXG', 'awayXG', 'homeXGOT', 'awayXGOT', 'homeXA', 'awayXA'
     ],
     'wc2026_espn_matches': [
-      'matchId', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
+      'espn_match_id', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
       'homeScore', 'awayScore', 'statusState'
     ],
     'wc2026_espn_team_stats': [
-      'matchId', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
+      'espn_match_id', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
       'possession', 'possessionAway'
     ],
     'wc2026_espn_match_stats': [
-      'matchId', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
+      'espn_match_id', 'matchRound', 'homeTeamAbbrev', 'awayTeamAbbrev',
       'homeShotsOnGoal', 'awayShotsOnGoal', 'homeShots', 'awayShots'
     ],
     'wc2026_espn_player_stats': [
-      'matchId', 'matchRound', 'teamAbbrev', 'name', 'xG', 'g'
+      'espn_match_id', 'matchRound', 'teamAbbrev', 'name', 'xG', 'g'
     ],
     'wc2026_espn_shot_map': [
-      'matchId', 'matchRound', 'teamAbbrev', 'xG', 'xGOT'
+      'espn_match_id', 'matchRound', 'teamAbbrev', 'xG', 'xGOT'
     ],
     'wc2026_matches': [
       'match_id', 'home_team_id', 'away_team_id', 'match_date', 'kickoff_utc'
@@ -435,10 +435,10 @@ async function main() {
   } else {
     log('PASS', 'S9_POSS', `possessionAway EXISTS in wc2026_espn_team_stats ✓`);
     const [samplePoss] = await db.execute(
-      `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway FROM wc2026_espn_team_stats LIMIT 5`
+      `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway FROM wc2026_espn_team_stats LIMIT 5`
     );
     for (const row of samplePoss) {
-      log('REAL_DATA', 'S9_POSS', `  ${row.matchId}: home=${row.homeTeamAbbrev} poss=${row.possession} | away=${row.awayTeamAbbrev} possAway=${row.possessionAway}`);
+      log('REAL_DATA', 'S9_POSS', `  ${row.espn_match_id}: home=${row.homeTeamAbbrev} poss=${row.possession} | away=${row.awayTeamAbbrev} possAway=${row.possessionAway}`);
     }
   }
 

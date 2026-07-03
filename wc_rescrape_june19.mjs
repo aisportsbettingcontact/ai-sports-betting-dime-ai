@@ -87,15 +87,15 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     console.log(`  [STATE] ${f.match_id}: home=${f.home_name}(${f.home_code}) away=${f.away_name}(${f.away_code})`);
   }
 
-  // ── 3. Build name→matchId lookup (bidirectional) ──────────────────────────
-  // Key: normalized team name → { matchId, role: 'home'|'away' }
+  // ── 3. Build name→espn_match_id lookup (bidirectional) ──────────────────────────
+  // Key: normalized team name → { espn_match_id, role: 'home'|'away' }
   const teamLookup = new Map();
   for (const f of dbMatchs) {
     const normalize = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
-    teamLookup.set(normalize(f.home_name), { matchId: f.match_id, role: 'home', match: f });
-    teamLookup.set(normalize(f.away_name), { matchId: f.match_id, role: 'away', match: f });
-    teamLookup.set(normalize(f.home_code), { matchId: f.match_id, role: 'home', match: f });
-    teamLookup.set(normalize(f.away_code), { matchId: f.match_id, role: 'away', match: f });
+    teamLookup.set(normalize(f.home_name), { espn_match_id: f.match_id, role: 'home', match: f });
+    teamLookup.set(normalize(f.away_name), { espn_match_id: f.match_id, role: 'away', match: f });
+    teamLookup.set(normalize(f.home_code), { espn_match_id: f.match_id, role: 'home', match: f });
+    teamLookup.set(normalize(f.away_code), { espn_match_id: f.match_id, role: 'away', match: f });
     // Common AN aliases
     const homeAliases = {
       'usa': 'usa', 'unitedstates': 'usa', 'unitedstatesofamerica': 'usa',
@@ -107,7 +107,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
   }
 
   // ── 4. Process each AN game ──────────────────────────────────────────────────
-  const updates = []; // { matchId, market, selection, line, americanOdds, impliedProb }
+  const updates = []; // { espn_match_id, market, selection, line, americanOdds, impliedProb }
 
   for (const game of games) {
     const t0 = game.teams[0];
@@ -121,22 +121,22 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     const res0 = teamLookup.get(name0);
     const res1 = teamLookup.get(name1);
 
-    let matchId = null;
+    let espn_match_id = null;
     let anHomeIsTeams1 = true; // AN convention: teams[0]=away, teams[1]=home
 
-    if (res0 && res1 && res0.matchId === res1.matchId) {
-      matchId = res0.matchId;
+    if (res0 && res1 && res0.espn_match_id === res1.espn_match_id) {
+      espn_match_id = res0.espn_match_id;
       // Determine if AN orientation matches DB orientation
       // If res0.role === 'away' and res1.role === 'home' → standard AN convention
       // If res0.role === 'home' and res1.role === 'away' → AN has flipped orientation
       if (res0.role === 'away' && res1.role === 'home') {
         anHomeIsTeams1 = true;
-        console.log(`[STATE] ${matchId}: Standard AN orientation (teams[0]=away, teams[1]=home) ✓`);
+        console.log(`[STATE] ${espn_match_id}: Standard AN orientation (teams[0]=away, teams[1]=home) ✓`);
       } else if (res0.role === 'home' && res1.role === 'away') {
         anHomeIsTeams1 = false;
-        console.log(`[STATE] ${matchId}: FLIPPED AN orientation (teams[0]=home, teams[1]=away) — correcting`);
+        console.log(`[STATE] ${espn_match_id}: FLIPPED AN orientation (teams[0]=home, teams[1]=away) — correcting`);
       } else {
-        console.log(`[STATE] ${matchId}: Ambiguous orientation — defaulting to standard`);
+        console.log(`[STATE] ${espn_match_id}: Ambiguous orientation — defaulting to standard`);
       }
     } else {
       // Fallback: try manual name matching
@@ -147,21 +147,21 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
         'turkey': 'wc26-g-030', 'turkiye': 'wc26-g-030', 'paraguay': 'wc26-g-030',
         'australia': 'wc26-g-029', 'morocco': 'wc26-g-031', 'brazil': 'wc26-g-032',
       };
-      matchId = manualMap[name0] ?? manualMap[name1] ?? null;
-      if (!matchId) {
+      espn_match_id = manualMap[name0] ?? manualMap[name1] ?? null;
+      if (!espn_match_id) {
         console.log(`[VERIFY] FAIL — Cannot resolve match for game ${game.id}: "${t0?.full_name}" vs "${t1?.full_name}"`);
         continue;
       }
       // Check DB orientation for this match
-      const dbF = dbMatchs.find(f => f.match_id === matchId);
+      const dbF = dbMatchs.find(f => f.match_id === espn_match_id);
       const dbHomeName = dbF?.home_name?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
       const dbAwayName = dbF?.away_name?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
       if (name0 === dbHomeName || name0.includes(dbHomeName) || dbHomeName.includes(name0)) {
         anHomeIsTeams1 = false; // teams[0] is actually the DB home team
-        console.log(`[STATE] ${matchId}: Fallback — teams[0] matches DB home → FLIPPED`);
+        console.log(`[STATE] ${espn_match_id}: Fallback — teams[0] matches DB home → FLIPPED`);
       } else {
         anHomeIsTeams1 = true;
-        console.log(`[STATE] ${matchId}: Fallback — standard orientation`);
+        console.log(`[STATE] ${espn_match_id}: Fallback — standard orientation`);
       }
     }
 
@@ -188,15 +188,15 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     const mlDbAway = anHomeIsTeams1 ? mlAnAway : mlAnHome;
     const mlDbDraw = mlAnDraw;
 
-    const dbF = dbMatchs.find(f => f.match_id === matchId);
-    console.log(`[STATE] ${matchId} (${dbF?.home_name} vs ${dbF?.away_name}):`);
+    const dbF = dbMatchs.find(f => f.match_id === espn_match_id);
+    console.log(`[STATE] ${espn_match_id} (${dbF?.home_name} vs ${dbF?.away_name}):`);
     console.log(`  AN raw: home=${mlAnHome?.odds ?? 'N/A'} draw=${mlAnDraw?.odds ?? 'N/A'} away=${mlAnAway?.odds ?? 'N/A'}`);
     console.log(`  DB mapped: home(${dbF?.home_name})=${mlDbHome?.odds ?? 'N/A'} draw=${mlDbDraw?.odds ?? 'N/A'} away(${dbF?.away_name})=${mlDbAway?.odds ?? 'N/A'}`);
 
     // Add 1X2 rows
-    if (mlDbHome) updates.push({ matchId, market: '1X2', selection: 'home', line: null, americanOdds: mlDbHome.odds, impliedProb: americanToImplied(mlDbHome.odds) });
-    if (mlDbAway) updates.push({ matchId, market: '1X2', selection: 'away', line: null, americanOdds: mlDbAway.odds, impliedProb: americanToImplied(mlDbAway.odds) });
-    if (mlDbDraw) updates.push({ matchId, market: '1X2', selection: 'draw', line: null, americanOdds: mlDbDraw.odds, impliedProb: americanToImplied(mlDbDraw.odds) });
+    if (mlDbHome) updates.push({ espn_match_id, market: '1X2', selection: 'home', line: null, americanOdds: mlDbHome.odds, impliedProb: americanToImplied(mlDbHome.odds) });
+    if (mlDbAway) updates.push({ espn_match_id, market: '1X2', selection: 'away', line: null, americanOdds: mlDbAway.odds, impliedProb: americanToImplied(mlDbAway.odds) });
+    if (mlDbDraw) updates.push({ espn_match_id, market: '1X2', selection: 'draw', line: null, americanOdds: mlDbDraw.odds, impliedProb: americanToImplied(mlDbDraw.odds) });
 
     // Compute DK Double Chance from no-vig fair probs
     if (mlDbHome && mlDbDraw && mlDbAway) {
@@ -207,8 +207,8 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
       const dcX2Odds = impliedToAmerican(dcX2);
       console.log(`  DC (no-vig): fairH=${(fairH*100).toFixed(2)}% fairD=${(fairD*100).toFixed(2)}% fairA=${(fairA*100).toFixed(2)}% vig=${(vig*100).toFixed(2)}%`);
       console.log(`  DC odds: 1X(home_draw)=${dc1XOdds} X2(away_draw)=${dcX2Odds}`);
-      updates.push({ matchId, market: 'DOUBLE_CHANCE', selection: 'home_draw', line: null, americanOdds: dc1XOdds, impliedProb: dc1X });
-      updates.push({ matchId, market: 'DOUBLE_CHANCE', selection: 'away_draw', line: null, americanOdds: dcX2Odds, impliedProb: dcX2 });
+      updates.push({ espn_match_id, market: 'DOUBLE_CHANCE', selection: 'home_draw', line: null, americanOdds: dc1XOdds, impliedProb: dc1X });
+      updates.push({ espn_match_id, market: 'DOUBLE_CHANCE', selection: 'away_draw', line: null, americanOdds: dcX2Odds, impliedProb: dcX2 });
     }
 
     // Total
@@ -216,10 +216,10 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     const under = totals.find(o => o.side === 'under');
     if (over) {
       console.log(`  Total: line=${over.value} over=${over.odds} under=${under?.odds ?? 'N/A'}`);
-      updates.push({ matchId, market: 'TOTAL', selection: 'over', line: over.value ?? null, americanOdds: over.odds, impliedProb: americanToImplied(over.odds) });
+      updates.push({ espn_match_id, market: 'TOTAL', selection: 'over', line: over.value ?? null, americanOdds: over.odds, impliedProb: americanToImplied(over.odds) });
     }
     if (under) {
-      updates.push({ matchId, market: 'TOTAL', selection: 'under', line: under.value ?? null, americanOdds: under.odds, impliedProb: americanToImplied(under.odds) });
+      updates.push({ espn_match_id, market: 'TOTAL', selection: 'under', line: under.value ?? null, americanOdds: under.odds, impliedProb: americanToImplied(under.odds) });
     }
 
     // Asian Handicap
@@ -229,18 +229,18 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     const spreadDbAway = anHomeIsTeams1 ? spreadAnAway : spreadAnHome;
     if (spreadDbHome) {
       const selH = `home${spreadDbHome.value >= 0 ? '+' : ''}${spreadDbHome.value}`;
-      updates.push({ matchId, market: 'ASIAN_HANDICAP', selection: selH, line: spreadDbHome.value ?? null, americanOdds: spreadDbHome.odds, impliedProb: americanToImplied(spreadDbHome.odds) });
+      updates.push({ espn_match_id, market: 'ASIAN_HANDICAP', selection: selH, line: spreadDbHome.value ?? null, americanOdds: spreadDbHome.odds, impliedProb: americanToImplied(spreadDbHome.odds) });
     }
     if (spreadDbAway) {
       const selA = `away${spreadDbAway.value >= 0 ? '+' : ''}${spreadDbAway.value}`;
-      updates.push({ matchId, market: 'ASIAN_HANDICAP', selection: selA, line: spreadDbAway.value ?? null, americanOdds: spreadDbAway.odds, impliedProb: americanToImplied(spreadDbAway.odds) });
+      updates.push({ espn_match_id, market: 'ASIAN_HANDICAP', selection: selA, line: spreadDbAway.value ?? null, americanOdds: spreadDbAway.odds, impliedProb: americanToImplied(spreadDbAway.odds) });
     }
   }
 
   console.log(`\n[STEP] Prepared ${updates.length} update rows`);
 
   // ── 5. Update DB: delete old DK rows for June 19, insert fresh ───────────────
-  const matchIds = [...new Set(updates.map(u => u.matchId))];
+  const matchIds = [...new Set(updates.map(u => u.espn_match_id))];
   console.log(`[STEP] Updating DB for matchs: ${matchIds.join(', ')}`);
 
   // Delete existing DK rows for these matchs
@@ -259,10 +259,10 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     await conn.query(
       `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
        VALUES (?, 68, ?, ?, ?, ?, ?, ?, 1)`,
-      [u.matchId, u.market, u.selection, u.line, u.americanOdds, u.impliedProb.toFixed(6), snapshotTs]
+      [u.espn_match_id, u.market, u.selection, u.line, u.americanOdds, u.impliedProb.toFixed(6), snapshotTs]
     );
     inserted++;
-    console.log(`[OUTPUT] Inserted: ${u.matchId} | DK | ${u.market} | ${u.selection} | line=${u.line ?? 'null'} | odds=${u.americanOdds}`);
+    console.log(`[OUTPUT] Inserted: ${u.espn_match_id} | DK | ${u.market} | ${u.selection} | line=${u.line ?? 'null'} | odds=${u.americanOdds}`);
   }
 
   console.log(`\n[OUTPUT] Total inserted: ${inserted} rows`);

@@ -186,7 +186,7 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
 // ─── Core: Compute model projection for a match ────────────────────────────
 function computeModelProjection(match) {
   const {
-    matchId, homeName, homeCode, awayName, awayCode,
+    espn_match_id, homeName, homeCode, awayName, awayCode,
     eloHome, eloAway,
     fifaRankHome, fifaRankAway,
     formHome, formAway,
@@ -197,7 +197,7 @@ function computeModelProjection(match) {
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
-  console.log(`${TAG} [INPUT] matchId=${matchId}`);
+  console.log(`${TAG} [INPUT] espn_match_id=${espn_match_id}`);
   console.log(`${TAG} [INPUT] Elo: home=${eloHome} away=${eloAway} | FIFA rank: home=${fifaRankHome} away=${fifaRankAway}`);
   console.log(`${TAG} [INPUT] Form: home=${formHome} away=${formAway} | Altitude: ${altitudeM}m`);
   console.log(`${TAG} [INPUT] Book: home=${bookHomeML} draw=${bookDrawML} away=${bookAwayML} | total=${bookTotalLine} O=${bookOverML} U=${bookUnderML}`);
@@ -358,11 +358,11 @@ function computeModelProjection(match) {
   const lambdaRatioOk = Math.abs((lambdaH + lambdaA) / bookTotalLine - 1) < 0.15; // within 15% of book total
   console.log(`${TAG} [VERIFY] probSum=${(finalH+finalD+finalA).toFixed(6)} ok=${probSumOk} | lambdas ok=${lambdaOk} | ML ok=${mlOk} | lambdaRatio ok=${lambdaRatioOk}`);
   if (!probSumOk || !lambdaOk || !mlOk) {
-    throw new Error(`[VERIFY] FAIL — ${matchId}: probSum=${finalH+finalD+finalA} lambdaH=${lambdaH} lambdaA=${lambdaA}`);
+    throw new Error(`[VERIFY] FAIL — ${espn_match_id}: probSum=${finalH+finalD+finalA} lambdaH=${lambdaH} lambdaA=${lambdaA}`);
   }
 
   return {
-    matchId,
+    espn_match_id,
     homeCode, awayCode, homeName, awayName,
     finalH, finalD, finalA,
     modelHomeML, modelDrawML, modelAwayML,
@@ -384,7 +384,7 @@ function computeModelProjection(match) {
 // Venues: all WC 2026 group stage venues are neutral (no home advantage)
 const MATCHS = [
   {
-    matchId: 'wc26-g-039',
+    espn_match_id: 'wc26-g-039',
     // DB: home=esp, away=ksa | AN: home_id=1961=Spain ✅
     homeName: 'Spain', homeCode: 'esp',
     awayName: 'Saudi Arabia', awayCode: 'ksa',
@@ -402,7 +402,7 @@ const MATCHS = [
     bookTotalLine: 3.5, bookOverML: -105, bookUnderML: -120,
   },
   {
-    matchId: 'wc26-g-037',
+    espn_match_id: 'wc26-g-037',
     // DB: home=irn, away=bel
     homeName: 'Iran', homeCode: 'irn',
     awayName: 'Belgium', awayCode: 'bel',
@@ -420,7 +420,7 @@ const MATCHS = [
     bookTotalLine: 2.5, bookOverML: -125, bookUnderML: 100,
   },
   {
-    matchId: 'wc26-g-040',
+    espn_match_id: 'wc26-g-040',
     // DB: home=cpv, away=uru
     homeName: 'Cape Verde', homeCode: 'cpv',
     awayName: 'Uruguay', awayCode: 'uru',
@@ -438,7 +438,7 @@ const MATCHS = [
     bookTotalLine: 2.5, bookOverML: 130, bookUnderML: -160,
   },
   {
-    matchId: 'wc26-g-038',
+    espn_match_id: 'wc26-g-038',
     // DB: home=nzl, away=egy
     homeName: 'New Zealand', homeCode: 'nzl',
     awayName: 'Egypt', awayCode: 'egy',
@@ -484,8 +484,8 @@ async function main() {
       await conn.query(`
         DELETE FROM wc2026_odds_snapshots
         WHERE match_id = ? AND book_id = ?
-      `, [match.matchId, MODEL_BOOK_ID]);
-      console.log(`${TAG} [STEP] Deleted existing model odds for ${match.matchId}`);
+      `, [match.espn_match_id, MODEL_BOOK_ID]);
+      console.log(`${TAG} [STEP] Deleted existing model odds for ${match.espn_match_id}`);
 
       // ── Insert into wc2026_odds_snapshots (book_id=0 = AI Model) ──────────
       const totalLine = match.bookTotalLine;
@@ -494,15 +494,15 @@ async function main() {
 
       const rows = [
         // 1X2
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
         // TOTAL (use book total line)
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', totalLine, proj.modelOverML, overProb, 0],
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', totalLine, proj.modelUnderML, underProb, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', totalLine, proj.modelOverML, overProb, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', totalLine, proj.modelUnderML, underProb, 0],
         // DOUBLE_CHANCE
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
-        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
+        [match.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
       ];
 
       for (const row of rows) {
@@ -586,7 +586,7 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        match.matchId, MODEL_VERSION, N_SIMULATIONS,
+        match.espn_match_id, MODEL_VERSION, N_SIMULATIONS,
         match.homeCode, match.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
@@ -603,14 +603,14 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${match.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${match.espn_match_id}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${match.matchId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${match.espn_match_id}: ${err.message}`);
     }
   }
 

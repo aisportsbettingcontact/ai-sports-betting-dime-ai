@@ -160,7 +160,7 @@ for (const p of june20Proj) {
   console.log(`${TAG}   Probs: H=${(homeWinProb*100).toFixed(1)}% D=${(drawProb*100).toFixed(1)}% A=${(awayWinProb*100).toFixed(1)}%`);
   
   june20Results.push({
-    matchId: p.match_id,
+    espn_match_id: p.match_id,
     homeTeam: p.home_team_name,
     awayTeam: p.away_team_name,
     homeScore, awayScore,

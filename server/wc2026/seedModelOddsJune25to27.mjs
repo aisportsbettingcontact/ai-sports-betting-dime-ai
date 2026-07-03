@@ -120,26 +120,26 @@ function computeLambdas(homeElo, awayElo, homeRank, awayRank, homeForm, awayForm
 // ─── June 25–27 Matchs ─────────────────────────────────────────────────────
 const MATCHS = [
   // JUNE 25
-  { matchId: 'wc26-g-055', matchDate: '2026-06-25', homeId: 'tur', awayId: 'usa', homeName: 'Turkey', awayName: 'United States', homeElo: 1780, homeRank: 28, homeForm: 0.65, awayElo: 1760, awayRank: 13, awayForm: 0.62 },
-  { matchId: 'wc26-g-056', matchDate: '2026-06-25', homeId: 'par', awayId: 'aus', homeName: 'Paraguay', awayName: 'Australia', homeElo: 1680, homeRank: 58, homeForm: 0.48, awayElo: 1700, awayRank: 24, awayForm: 0.52 },
-  { matchId: 'wc26-g-057', matchDate: '2026-06-25', homeId: 'cuw', awayId: 'civ', homeName: 'Curaçao', awayName: "Côte d'Ivoire", homeElo: 1580, homeRank: 88, homeForm: 0.32, awayElo: 1820, awayRank: 12, awayForm: 0.70 },
-  { matchId: 'wc26-g-058', matchDate: '2026-06-25', homeId: 'ecu', awayId: 'ger', homeName: 'Ecuador', awayName: 'Germany', homeElo: 1720, homeRank: 44, homeForm: 0.55, awayElo: 1950, awayRank: 4, awayForm: 0.78 },
-  { matchId: 'wc26-g-059', matchDate: '2026-06-25', homeId: 'swe', awayId: 'jpn', homeName: 'Sweden', awayName: 'Japan', homeElo: 1800, homeRank: 18, homeForm: 0.65, awayElo: 1840, awayRank: 17, awayForm: 0.68 },
-  { matchId: 'wc26-g-060', matchDate: '2026-06-25', homeId: 'ned', awayId: 'tun', homeName: 'Netherlands', awayName: 'Tunisia', homeElo: 1930, homeRank: 6, homeForm: 0.75, awayElo: 1660, awayRank: 32, awayForm: 0.48 },
+  { espn_match_id: 'wc26-g-055', matchDate: '2026-06-25', homeId: 'tur', awayId: 'usa', homeName: 'Turkey', awayName: 'United States', homeElo: 1780, homeRank: 28, homeForm: 0.65, awayElo: 1760, awayRank: 13, awayForm: 0.62 },
+  { espn_match_id: 'wc26-g-056', matchDate: '2026-06-25', homeId: 'par', awayId: 'aus', homeName: 'Paraguay', awayName: 'Australia', homeElo: 1680, homeRank: 58, homeForm: 0.48, awayElo: 1700, awayRank: 24, awayForm: 0.52 },
+  { espn_match_id: 'wc26-g-057', matchDate: '2026-06-25', homeId: 'cuw', awayId: 'civ', homeName: 'Curaçao', awayName: "Côte d'Ivoire", homeElo: 1580, homeRank: 88, homeForm: 0.32, awayElo: 1820, awayRank: 12, awayForm: 0.70 },
+  { espn_match_id: 'wc26-g-058', matchDate: '2026-06-25', homeId: 'ecu', awayId: 'ger', homeName: 'Ecuador', awayName: 'Germany', homeElo: 1720, homeRank: 44, homeForm: 0.55, awayElo: 1950, awayRank: 4, awayForm: 0.78 },
+  { espn_match_id: 'wc26-g-059', matchDate: '2026-06-25', homeId: 'swe', awayId: 'jpn', homeName: 'Sweden', awayName: 'Japan', homeElo: 1800, homeRank: 18, homeForm: 0.65, awayElo: 1840, awayRank: 17, awayForm: 0.68 },
+  { espn_match_id: 'wc26-g-060', matchDate: '2026-06-25', homeId: 'ned', awayId: 'tun', homeName: 'Netherlands', awayName: 'Tunisia', homeElo: 1930, homeRank: 6, homeForm: 0.75, awayElo: 1660, awayRank: 32, awayForm: 0.48 },
   // JUNE 26
-  { matchId: 'wc26-g-061', matchDate: '2026-06-26', homeId: 'cpv', awayId: 'ksa', homeName: 'Cape Verde', awayName: 'Saudi Arabia', homeElo: 1660, homeRank: 42, homeForm: 0.52, awayElo: 1700, awayRank: 56, awayForm: 0.48 },
-  { matchId: 'wc26-g-062', matchDate: '2026-06-26', homeId: 'irn', awayId: 'egy', homeName: 'Iran', awayName: 'Egypt', homeElo: 1760, homeRank: 20, homeForm: 0.60, awayElo: 1740, awayRank: 34, awayForm: 0.55 },
-  { matchId: 'wc26-g-063', matchDate: '2026-06-26', homeId: 'nzl', awayId: 'bel', homeName: 'New Zealand', awayName: 'Belgium', homeElo: 1620, homeRank: 98, homeForm: 0.38, awayElo: 1880, awayRank: 3, awayForm: 0.72 },
-  { matchId: 'wc26-g-064', matchDate: '2026-06-26', homeId: 'nor', awayId: 'fra', homeName: 'Norway', awayName: 'France', homeElo: 1800, homeRank: 25, homeForm: 0.62, awayElo: 1990, awayRank: 2, awayForm: 0.80 },
-  { matchId: 'wc26-g-065', matchDate: '2026-06-26', homeId: 'irq', awayId: 'sen', homeName: 'Iraq', awayName: 'Senegal', homeElo: 1640, homeRank: 65, homeForm: 0.42, awayElo: 1820, awayRank: 19, awayForm: 0.68 },
-  { matchId: 'wc26-g-066', matchDate: '2026-06-26', homeId: 'uru', awayId: 'esp', homeName: 'Uruguay', awayName: 'Spain', homeElo: 1840, homeRank: 11, homeForm: 0.68, awayElo: 1970, awayRank: 8, awayForm: 0.78 },
+  { espn_match_id: 'wc26-g-061', matchDate: '2026-06-26', homeId: 'cpv', awayId: 'ksa', homeName: 'Cape Verde', awayName: 'Saudi Arabia', homeElo: 1660, homeRank: 42, homeForm: 0.52, awayElo: 1700, awayRank: 56, awayForm: 0.48 },
+  { espn_match_id: 'wc26-g-062', matchDate: '2026-06-26', homeId: 'irn', awayId: 'egy', homeName: 'Iran', awayName: 'Egypt', homeElo: 1760, homeRank: 20, homeForm: 0.60, awayElo: 1740, awayRank: 34, awayForm: 0.55 },
+  { espn_match_id: 'wc26-g-063', matchDate: '2026-06-26', homeId: 'nzl', awayId: 'bel', homeName: 'New Zealand', awayName: 'Belgium', homeElo: 1620, homeRank: 98, homeForm: 0.38, awayElo: 1880, awayRank: 3, awayForm: 0.72 },
+  { espn_match_id: 'wc26-g-064', matchDate: '2026-06-26', homeId: 'nor', awayId: 'fra', homeName: 'Norway', awayName: 'France', homeElo: 1800, homeRank: 25, homeForm: 0.62, awayElo: 1990, awayRank: 2, awayForm: 0.80 },
+  { espn_match_id: 'wc26-g-065', matchDate: '2026-06-26', homeId: 'irq', awayId: 'sen', homeName: 'Iraq', awayName: 'Senegal', homeElo: 1640, homeRank: 65, homeForm: 0.42, awayElo: 1820, awayRank: 19, awayForm: 0.68 },
+  { espn_match_id: 'wc26-g-066', matchDate: '2026-06-26', homeId: 'uru', awayId: 'esp', homeName: 'Uruguay', awayName: 'Spain', homeElo: 1840, homeRank: 11, homeForm: 0.68, awayElo: 1970, awayRank: 8, awayForm: 0.78 },
   // JUNE 27
-  { matchId: 'wc26-g-067', matchDate: '2026-06-27', homeId: 'cod', awayId: 'uzb', homeName: 'DR Congo', awayName: 'Uzbekistan', homeElo: 1680, homeRank: 62, homeForm: 0.50, awayElo: 1660, awayRank: 74, awayForm: 0.45 },
-  { matchId: 'wc26-g-068', matchDate: '2026-06-27', homeId: 'pan', awayId: 'eng', homeName: 'Panama', awayName: 'England', homeElo: 1660, homeRank: 52, homeForm: 0.45, awayElo: 1920, awayRank: 5, awayForm: 0.75 },
-  { matchId: 'wc26-g-069', matchDate: '2026-06-27', homeId: 'alg', awayId: 'aut', homeName: 'Algeria', awayName: 'Austria', homeElo: 1720, homeRank: 36, homeForm: 0.55, awayElo: 1780, awayRank: 22, awayForm: 0.62 },
-  { matchId: 'wc26-g-070', matchDate: '2026-06-27', homeId: 'jor', awayId: 'arg', homeName: 'Jordan', awayName: 'Argentina', homeElo: 1640, homeRank: 72, homeForm: 0.40, awayElo: 2050, awayRank: 1, awayForm: 0.85 },
-  { matchId: 'wc26-g-071', matchDate: '2026-06-27', homeId: 'por', awayId: 'col', homeName: 'Portugal', awayName: 'Colombia', homeElo: 1960, homeRank: 7, homeForm: 0.78, awayElo: 1820, awayRank: 9, awayForm: 0.68 },
-  { matchId: 'wc26-g-072', matchDate: '2026-06-27', homeId: 'gha', awayId: 'cro', homeName: 'Ghana', awayName: 'Croatia', homeElo: 1680, homeRank: 60, homeForm: 0.48, awayElo: 1860, awayRank: 10, awayForm: 0.70 },
+  { espn_match_id: 'wc26-g-067', matchDate: '2026-06-27', homeId: 'cod', awayId: 'uzb', homeName: 'DR Congo', awayName: 'Uzbekistan', homeElo: 1680, homeRank: 62, homeForm: 0.50, awayElo: 1660, awayRank: 74, awayForm: 0.45 },
+  { espn_match_id: 'wc26-g-068', matchDate: '2026-06-27', homeId: 'pan', awayId: 'eng', homeName: 'Panama', awayName: 'England', homeElo: 1660, homeRank: 52, homeForm: 0.45, awayElo: 1920, awayRank: 5, awayForm: 0.75 },
+  { espn_match_id: 'wc26-g-069', matchDate: '2026-06-27', homeId: 'alg', awayId: 'aut', homeName: 'Algeria', awayName: 'Austria', homeElo: 1720, homeRank: 36, homeForm: 0.55, awayElo: 1780, awayRank: 22, awayForm: 0.62 },
+  { espn_match_id: 'wc26-g-070', matchDate: '2026-06-27', homeId: 'jor', awayId: 'arg', homeName: 'Jordan', awayName: 'Argentina', homeElo: 1640, homeRank: 72, homeForm: 0.40, awayElo: 2050, awayRank: 1, awayForm: 0.85 },
+  { espn_match_id: 'wc26-g-071', matchDate: '2026-06-27', homeId: 'por', awayId: 'col', homeName: 'Portugal', awayName: 'Colombia', homeElo: 1960, homeRank: 7, homeForm: 0.78, awayElo: 1820, awayRank: 9, awayForm: 0.68 },
+  { espn_match_id: 'wc26-g-072', matchDate: '2026-06-27', homeId: 'gha', awayId: 'cro', homeName: 'Ghana', awayName: 'Croatia', homeElo: 1680, homeRank: 60, homeForm: 0.48, awayElo: 1860, awayRank: 10, awayForm: 0.70 },
 ];
 
 async function main() {
@@ -148,7 +148,7 @@ async function main() {
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
-  const matchIds = MATCHS.map(f => f.matchId);
+  const matchIds = MATCHS.map(f => f.espn_match_id);
 
   // Clear existing model + enforce no DK rows
   const [delModel] = await conn.query(
@@ -165,7 +165,7 @@ async function main() {
   let totalProjRows = 0;
 
   for (const f of MATCHS) {
-    console.log(`\n${TAG} [STEP] ${f.matchId} (${f.matchDate}) | ${f.homeName} vs ${f.awayName}`);
+    console.log(`\n${TAG} [STEP] ${f.espn_match_id} (${f.matchDate}) | ${f.homeName} vs ${f.awayName}`);
 
     const { lambdaH, lambdaA } = computeLambdas(f.homeElo, f.awayElo, f.homeRank, f.awayRank, f.homeForm, f.awayForm);
     const sim = runPoisson(lambdaH, lambdaA);
@@ -219,14 +219,14 @@ async function main() {
     ];
 
     for (const row of modelRows) {
-      if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null: ${f.matchId} ${row.market} ${row.selection}`); continue; }
+      if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null: ${f.espn_match_id} ${row.market} ${row.selection}`); continue; }
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} model rows for ${f.matchId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${modelRows.length} model rows for ${f.espn_match_id}`);
 
     // Upsert projection
     const projHomeScore = parseFloat(lambdaH.toFixed(2));
@@ -256,7 +256,7 @@ async function main() {
         model_lean=VALUES(model_lean), lean_prob=VALUES(lean_prob),
         top_scorelines=VALUES(top_scorelines), modeled_at=NOW()
     `, [
-      f.matchId, MODEL_VERSION, N_SIMULATIONS, f.homeName, f.awayName,
+      f.espn_match_id, MODEL_VERSION, N_SIMULATIONS, f.homeName, f.awayName,
       lambdaH, lambdaA, finalHome, finalDraw, finalAway,
       projHomeScore, projAwayScore, parseFloat((lambdaH + lambdaA).toFixed(2)), parseFloat((lambdaH - lambdaA).toFixed(2)),
       sim.over05, sim.over15, sim.over25, sim.under25, sim.over35, sim.btts,

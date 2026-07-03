@@ -116,7 +116,7 @@ async function main() {
 
   const [matchRows] = await conn.execute(
     `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status,
-            espn_event_id
+            espn_match_id
      FROM wc2026_matches
      WHERE match_id IN (${TARGET_MATCHS.map(() => '?').join(',')})
      ORDER BY match_id`,

@@ -5,7 +5,7 @@
  * Accepts gameId as CLI argument (defaults to 760487 for backward compat).
  *
  * SCHEMA-VERIFIED COLUMN NAMES (from drizzle/schema.ts forensic audit):
- *   wc2026_espn_matches:     matchId, homeTeamId, homeTeamAbbrev, homeTeamName,
+ *   wc2026_espn_matches:     espn_match_id, homeTeamId, homeTeamAbbrev, homeTeamName,
  *                            homeScore, awayScore, venue, matchDateUtc,
  *                            statusState, statusDetail, statusDisplay,
  *                            homeFormation, awayFormation, attendance, referee
@@ -182,7 +182,7 @@ async function run() {
     const isGlossary = table === "wc2026_espn_glossary";
     const query = isGlossary
       ? sql.raw(\`SELECT COUNT(*) as cnt FROM \${table}\`)
-      : sql.raw(\`SELECT COUNT(*) as cnt FROM \${table} WHERE matchId = '${GAME_ID}'\`);
+      : sql.raw(\`SELECT COUNT(*) as cnt FROM \${table} WHERE espn_match_id = '${GAME_ID}'\`);
     const [rows] = await db.execute(query);
     rowCounts[table] = Number((rows as any)[0]?.cnt ?? 0);
     console.log("[RUNNER] Table " + table + " → " + rowCounts[table] + " rows");
@@ -195,7 +195,7 @@ async function run() {
     \`SELECT homeTeamName, awayTeamName, homeScore, awayScore, venue, attendance, referee,
             homeFormation, awayFormation, matchDateUtc, statusState, statusDetail, statusDisplay,
             homeTeamAbbrev, awayTeamAbbrev, homeTeamId, awayTeamId, competition, round, season
-     FROM wc2026_espn_matches WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_matches WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 2. Shot map (iconType=outcome, goalZone=zone, period, clock)
@@ -203,7 +203,7 @@ async function run() {
     \`SELECT shotType, iconType, fieldStartX, fieldStartY, fieldEndX, fieldEndY,
             goalPositionY, goalPositionZ, playerName, playerJersey, xG, xGOT,
             period, clock, situation, goalZone, teamAbbrev, isAway
-     FROM wc2026_espn_shot_map WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_shot_map WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 3. Defense stats (from match_stats)
@@ -213,21 +213,21 @@ async function run() {
             homeFoulsCommitted, awayFoulsCommitted, homeOffsides, awayOffsides,
             homeFoulYellowCards, awayFoulYellowCards, homeFoulRedCards, awayFoulRedCards,
             homeDuelsWon, awayDuelsWon, homeAerialsWon, awayAerialsWon
-     FROM wc2026_espn_match_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 4. Expected goals
   const [xgData] = await db.execute(sql.raw(
     \`SELECT homeXG, awayXG, homeXGOpenPlay, awayXGOpenPlay,
             homeXGSetPlay, awayXGSetPlay, homeXGOT, awayXGOT, homeXA, awayXA, perPlayerJson
-     FROM wc2026_espn_expected_goals WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_expected_goals WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 5. Match odds
   const [oddsData] = await db.execute(sql.raw(
     \`SELECT provider, homeMoneylineCurrent, awayMoneylineCurrent, drawMoneylineCurrent,
             homeSpreadLine, homeTotalSide, homeMoneylineOpen, awayMoneylineOpen
-     FROM wc2026_espn_match_odds WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_odds WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 6. Team stats (tmStatsGrph)
@@ -236,7 +236,7 @@ async function run() {
             shotAttempts, shotAttemptsAway, fouls, foulsAway,
             yellowCards, yellowCardsAway, redCards, redCardsAway,
             cornerKicks, cornerKicksAway, saves, savesAway
-     FROM wc2026_espn_team_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_team_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 7. Passes (from match_stats)
@@ -249,7 +249,7 @@ async function run() {
             homeTotalForwardZonePass, awayTotalForwardZonePass,
             homePassTouchesInOppBox, awayPassTouchesInOppBox,
             homeTotalThrows, awayTotalThrows
-     FROM wc2026_espn_match_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 8. Attack (from match_stats)
@@ -262,7 +262,7 @@ async function run() {
             homeAttkTouchesInOppBox, awayAttkTouchesInOppBox,
             homeFouledInFinalThird, awayFouledInFinalThird,
             homeCornersWon, awayCornersWon
-     FROM wc2026_espn_match_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 9. Goalkeeping (from match_stats)
@@ -271,14 +271,14 @@ async function run() {
             homeShotsFaced, awayShotsFaced,
             homeTotalHighClaims, awayTotalHighClaims,
             homePenaltyKicksSaved, awayPenaltyKicksSaved
-     FROM wc2026_espn_match_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 10. Shots (from match_stats)
   const [shotsData] = await db.execute(sql.raw(
     \`SELECT homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots,
             homeShotsBlocked, awayShotsBlocked, homeHitWoodwork, awayHitWoodwork
-     FROM wc2026_espn_match_stats WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_match_stats WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 11. Player stats (outfield) — use 'name' not 'playerName', 'teamAbbrev' not 'teamSide'
@@ -286,35 +286,35 @@ async function run() {
     \`SELECT name, jersey, teamAbbrev, isHome, positionGroup, isGoalkeeper,
             tch, g, a, xG, xA, sog, shot, bcc, dint, duelw,
             appearances, foulsCommitted, foulsSuffered, yellowCards, redCards, offsides
-     FROM wc2026_espn_player_stats WHERE matchId = '${GAME_ID}' AND isGoalkeeper = 0 LIMIT 1\`
+     FROM wc2026_espn_player_stats WHERE espn_match_id = '${GAME_ID}' AND isGoalkeeper = 0 LIMIT 1\`
   ));
 
   // 12. GK stats
   const [gkPlayerData] = await db.execute(sql.raw(
     \`SELECT name, jersey, teamAbbrev, isGoalkeeper,
             ga, sv, soga, xGC, xGOTC, gp, bcs, clr, cc, ks, shotsFaced
-     FROM wc2026_espn_player_stats WHERE matchId = '${GAME_ID}' AND isGoalkeeper = 1 LIMIT 1\`
+     FROM wc2026_espn_player_stats WHERE espn_match_id = '${GAME_ID}' AND isGoalkeeper = 1 LIMIT 1\`
   ));
 
   // 13. Lineups — use 'name' not 'playerName', 'jersey' not 'jerseyNumber', 'role' enum not 'isStarter'
   const [lineupData] = await db.execute(sql.raw(
     \`SELECT name, jersey, teamAbbrev, isHome, role, formationPlace
-     FROM wc2026_espn_lineups WHERE matchId = '${GAME_ID}' LIMIT 1\`
+     FROM wc2026_espn_lineups WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
   // 14. Starters count (role = 'starter')
   const [starterCount] = await db.execute(sql.raw(
-    \`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE matchId = '${GAME_ID}' AND role = 'starter'\`
+    \`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE espn_match_id = '${GAME_ID}' AND role = 'starter'\`
   ));
 
   // 15. Total lineup count
   const [lineupTotal] = await db.execute(sql.raw(
-    \`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE matchId = '${GAME_ID}'\`
+    \`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE espn_match_id = '${GAME_ID}'\`
   ));
 
   // 16. Shot count by iconType
   const [shotGoals] = await db.execute(sql.raw(
-    \`SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map WHERE matchId = '${GAME_ID}' AND iconType = 'goal'\`
+    \`SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map WHERE espn_match_id = '${GAME_ID}' AND iconType = 'goal'\`
   ));
 
   const output = {
