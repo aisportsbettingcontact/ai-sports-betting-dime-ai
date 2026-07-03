@@ -32,6 +32,27 @@ import { and, gte, lte, eq } from "drizzle-orm";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 import { ingestWc2026EspnResults } from "./wc2026Ingester";
 import { wc2026LiveSyncHandler } from "./fifaLiveScraper";
+import { spawn } from "child_process";
+import { join } from "path";
+
+// ─── Bracket sync helper (spawns the MJS scraper as a child process) ─────────
+// We spawn instead of import because the bracket scraper is ESM (.mjs) and
+// the heartbeat is CJS-compiled TS. Spawn is also safer for memory isolation.
+function triggerBracketSync(reason: string): void {
+  const scraperPath = join(__dirname, "wc2026BracketScraper.mjs");
+  console.log(`[WC2026HB] [STEP] Triggering bracket-sync (reason: ${reason})`);
+  const child = spawn("node", [scraperPath], {
+    stdio: "inherit",
+    env: { ...process.env },
+    detached: false,
+  });
+  child.on("exit", (code) => {
+    console.log(`[WC2026HB] [OUTPUT] bracket-sync exited with code=${code} (reason: ${reason})`);
+  });
+  child.on("error", (err) => {
+    console.error(`[WC2026HB] [VERIFY] FAIL — bracket-sync spawn error: ${err.message}`);
+  });
+}
 
 // ─── Handler: lineups ─────────────────────────────────────────────────────────
 async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
@@ -80,6 +101,17 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
     const pass = result.errors.length === 0;
     console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-espn-results`);
 
+    // POST-FT HOOK: If any knockout match went FT, trigger bracket advancement
+    const ftKnockoutMatches = (result.matchSummaries ?? []).filter(
+      (s: any) => s.matchId?.startsWith("wc26-r32") || s.matchId?.startsWith("wc26-r16") ||
+                  s.matchId?.startsWith("wc26-qf") || s.matchId?.startsWith("wc26-sf") ||
+                  s.matchId?.startsWith("wc26-final")
+    );
+    if (ftKnockoutMatches.length > 0) {
+      console.log(`[WC2026HB] [STEP] ${ftKnockoutMatches.length} knockout match(es) updated — triggering bracket-sync`);
+      triggerBracketSync(`post-FT-hook: ${ftKnockoutMatches.map((m: any) => m.matchId).join(",")}`);
+    }
+
     res.json({
       ok: pass,
       date: dateStr,
@@ -88,6 +120,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
       eventsWritten: result.eventsWritten,
       lineupsWritten: result.lineupsWritten,
       matchSummaries: result.matchSummaries,
+      bracketSyncTriggered: ftKnockoutMatches.length > 0,
       errors: result.errors,
     });
   } catch (err) {
@@ -154,6 +187,18 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
     const pass = merged.errors.length === 0;
     console.log(`[WC2026HB] [VERIFY] ${pass ? "PASS" : "PARTIAL"} — /wc2026-live-scores`);
 
+    // POST-FT HOOK: If any knockout match went FT during live sync, trigger bracket advancement
+    const ftKnockoutMatches = merged.matchSummaries.filter(
+      (s: any) => (s.matchId?.startsWith("wc26-r32") || s.matchId?.startsWith("wc26-r16") ||
+                   s.matchId?.startsWith("wc26-qf") || s.matchId?.startsWith("wc26-sf") ||
+                   s.matchId?.startsWith("wc26-final")) &&
+                  (s.status === "FT" || s.status === "AET" || s.status === "PEN")
+    );
+    if (ftKnockoutMatches.length > 0) {
+      console.log(`[WC2026HB] [STEP] ${ftKnockoutMatches.length} knockout match(es) went FT during live-sync — triggering bracket-sync`);
+      triggerBracketSync(`live-sync-FT: ${ftKnockoutMatches.map((m: any) => m.matchId).join(",")}`);
+    }
+
     res.json({
       ok: pass,
       dates: datesToQuery,
@@ -161,10 +206,54 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
       liveCount,
       ftCount,
       matchSummaries: merged.matchSummaries,
+      bracketSyncTriggered: ftKnockoutMatches.length > 0,
       errors: merged.errors,
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-live-scores unhandled: ${String(err)}`);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+}
+
+// ─── Handler: bracket sync (every 30 min during knockout phase) ──────────────
+async function handleWc2026BracketSync(req: Request, res: Response): Promise<void> {
+  const now = new Date();
+  console.log(`[WC2026HB] [INPUT] /wc2026-bracket-sync triggered at ${now.toISOString()}`);
+
+  try {
+    // Spawn the bracket scraper as a child process and wait for completion
+    const scraperPath = join(__dirname, "wc2026BracketScraper.mjs");
+    const result = await new Promise<{ ok: boolean; code: number | null }>((resolve) => {
+      const child = spawn("node", [scraperPath], {
+        stdio: "pipe",
+        env: { ...process.env },
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout?.on("data", (d) => { stdout += d.toString(); });
+      child.stderr?.on("data", (d) => { stderr += d.toString(); });
+      child.on("exit", (code) => {
+        // Log last 20 lines of output
+        const lines = stdout.split("\n").filter(Boolean).slice(-20);
+        for (const line of lines) console.log(`[WC2026HB] [bracket-sync] ${line}`);
+        if (stderr) console.error(`[WC2026HB] [bracket-sync] STDERR: ${stderr.slice(-500)}`);
+        resolve({ ok: code === 0, code });
+      });
+      child.on("error", (err) => {
+        console.error(`[WC2026HB] [VERIFY] FAIL — bracket-sync spawn: ${err.message}`);
+        resolve({ ok: false, code: null });
+      });
+    });
+
+    console.log(`[WC2026HB] [OUTPUT] bracket-sync: ok=${result.ok} exitCode=${result.code}`);
+    console.log(`[WC2026HB] [VERIFY] ${result.ok ? "PASS" : "PARTIAL"} — /wc2026-bracket-sync`);
+
+    res.json({
+      ok: result.ok,
+      exitCode: result.code,
+    });
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-bracket-sync unhandled: ${String(err)}`);
     res.status(500).json({ ok: false, error: String(err) });
   }
 }
@@ -176,8 +265,10 @@ export function registerWc2026Heartbeats(app: Express): void {
   app.post("/api/scheduled/wc2026-live-scores", handleWc2026LiveScores);
   // POST /api/scheduled/wc2026-live-sync — FIFA HTML scraper for live minute + HT + FT status
   app.post("/api/scheduled/wc2026-live-sync", wc2026LiveSyncHandler);
+  // POST /api/scheduled/wc2026-bracket-sync — Bracket advancement + opponent mapping + calendar seeding
+  app.post("/api/scheduled/wc2026-bracket-sync", handleWc2026BracketSync);
 
   console.log(
-    "[WC2026HB] Registered: /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores | /api/scheduled/wc2026-live-sync"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores | /api/scheduled/wc2026-live-sync | /api/scheduled/wc2026-bracket-sync"
   );
 }
