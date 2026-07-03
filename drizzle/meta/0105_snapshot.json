@@ -9716,8 +9716,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -9762,10 +9762,10 @@
         }
       },
       "indexes": {
-        "idx_splits_fixture": {
-          "name": "idx_splits_fixture",
+        "idx_splits_match": {
+          "name": "idx_splits_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         },
@@ -9778,15 +9778,15 @@
         }
       },
       "foreignKeys": {
-        "wc2026_betting_splits_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_betting_splits_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_betting_splits_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_betting_splits_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_betting_splits",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -9816,11 +9816,11 @@
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
-    "wc2026_fixtures": {
-      "name": "wc2026_fixtures",
+    "wc2026_matches": {
+      "name": "wc2026_matches",
       "columns": {
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -9974,9 +9974,9 @@
         }
       },
       "foreignKeys": {
-        "wc2026_fixtures_home_team_id_wc2026_teams_team_id_fk": {
-          "name": "wc2026_fixtures_home_team_id_wc2026_teams_team_id_fk",
-          "tableFrom": "wc2026_fixtures",
+        "wc2026_matches_home_team_id_wc2026_teams_team_id_fk": {
+          "name": "wc2026_matches_home_team_id_wc2026_teams_team_id_fk",
+          "tableFrom": "wc2026_matches",
           "tableTo": "wc2026_teams",
           "columnsFrom": [
             "home_team_id"
@@ -9987,9 +9987,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "wc2026_fixtures_away_team_id_wc2026_teams_team_id_fk": {
-          "name": "wc2026_fixtures_away_team_id_wc2026_teams_team_id_fk",
-          "tableFrom": "wc2026_fixtures",
+        "wc2026_matches_away_team_id_wc2026_teams_team_id_fk": {
+          "name": "wc2026_matches_away_team_id_wc2026_teams_team_id_fk",
+          "tableFrom": "wc2026_matches",
           "tableTo": "wc2026_teams",
           "columnsFrom": [
             "away_team_id"
@@ -10000,9 +10000,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "wc2026_fixtures_venue_id_wc2026_venues_venue_id_fk": {
-          "name": "wc2026_fixtures_venue_id_wc2026_venues_venue_id_fk",
-          "tableFrom": "wc2026_fixtures",
+        "wc2026_matches_venue_id_wc2026_venues_venue_id_fk": {
+          "name": "wc2026_matches_venue_id_wc2026_venues_venue_id_fk",
+          "tableFrom": "wc2026_matches",
           "tableTo": "wc2026_venues",
           "columnsFrom": [
             "venue_id"
@@ -10013,9 +10013,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "wc2026_fixtures_advancing_team_id_wc2026_teams_team_id_fk": {
-          "name": "wc2026_fixtures_advancing_team_id_wc2026_teams_team_id_fk",
-          "tableFrom": "wc2026_fixtures",
+        "wc2026_matches_advancing_team_id_wc2026_teams_team_id_fk": {
+          "name": "wc2026_matches_advancing_team_id_wc2026_teams_team_id_fk",
+          "tableFrom": "wc2026_matches",
           "tableTo": "wc2026_teams",
           "columnsFrom": [
             "advancing_team_id"
@@ -10028,10 +10028,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "wc2026_fixtures_fixture_id": {
-          "name": "wc2026_fixtures_fixture_id",
+        "wc2026_matches_match_id": {
+          "name": "wc2026_matches_match_id",
           "columns": [
-            "fixture_id"
+            "match_id"
           ]
         }
       },
@@ -10048,8 +10048,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -10200,31 +10200,31 @@
         }
       },
       "indexes": {
-        "uq_frozen_book_fixture": {
-          "name": "uq_frozen_book_fixture",
+        "uq_frozen_book_match": {
+          "name": "uq_frozen_book_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": true
         },
-        "idx_frozen_book_fixture": {
-          "name": "idx_frozen_book_fixture",
+        "idx_frozen_book_match": {
+          "name": "idx_frozen_book_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "wc2026_frozen_book_odds_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_frozen_book_odds_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_frozen_book_odds_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_frozen_book_odds_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_frozen_book_odds",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -10251,8 +10251,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -10319,10 +10319,10 @@
         }
       },
       "indexes": {
-        "idx_lineup_fixture": {
-          "name": "idx_lineup_fixture",
+        "idx_lineup_match": {
+          "name": "idx_lineup_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         },
@@ -10335,15 +10335,15 @@
         }
       },
       "foreignKeys": {
-        "wc2026_lineups_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_lineups_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_lineups_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_lineups_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_lineups",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -10383,8 +10383,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -10442,10 +10442,10 @@
         }
       },
       "indexes": {
-        "idx_me_fixture": {
-          "name": "idx_me_fixture",
+        "idx_me_match": {
+          "name": "idx_me_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         },
@@ -10458,15 +10458,15 @@
         }
       },
       "foreignKeys": {
-        "wc2026_match_events_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_match_events_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_match_events_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_match_events_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_match_events",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -10499,8 +10499,8 @@
     "wc2026_match_stats": {
       "name": "wc2026_match_stats",
       "columns": {
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -10740,34 +10740,34 @@
         }
       },
       "indexes": {
-        "idx_ms_fixture": {
-          "name": "idx_ms_fixture",
+        "idx_ms_match": {
+          "name": "idx_ms_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "wc2026_match_stats_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_match_stats_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_match_stats_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_match_stats_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_match_stats",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "wc2026_match_stats_fixture_id": {
-          "name": "wc2026_match_stats_fixture_id",
+        "wc2026_match_stats_match_id": {
+          "name": "wc2026_match_stats_match_id",
           "columns": [
-            "fixture_id"
+            "match_id"
           ]
         }
       },
@@ -10784,8 +10784,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -11196,31 +11196,31 @@
         }
       },
       "indexes": {
-        "uq_mp_fixture": {
-          "name": "uq_mp_fixture",
+        "uq_mp_match": {
+          "name": "uq_mp_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": true
         },
-        "idx_mp_fixture": {
-          "name": "idx_mp_fixture",
+        "idx_mp_match": {
+          "name": "idx_mp_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "wc2026_model_projections_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_model_projections_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_model_projections_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_model_projections_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_model_projections",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -11247,8 +11247,8 @@
           "notNull": true,
           "autoincrement": true
         },
-        "fixture_id": {
-          "name": "fixture_id",
+        "match_id": {
+          "name": "match_id",
           "type": "varchar(16)",
           "primaryKey": false,
           "notNull": true,
@@ -11315,10 +11315,10 @@
         }
       },
       "indexes": {
-        "idx_snap_fixture": {
-          "name": "idx_snap_fixture",
+        "idx_snap_match": {
+          "name": "idx_snap_match",
           "columns": [
-            "fixture_id"
+            "match_id"
           ],
           "isUnique": false
         },
@@ -11332,22 +11332,22 @@
         "idx_snap_closing": {
           "name": "idx_snap_closing",
           "columns": [
-            "fixture_id",
+            "match_id",
             "is_closing"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "wc2026_odds_snapshots_fixture_id_wc2026_fixtures_fixture_id_fk": {
-          "name": "wc2026_odds_snapshots_fixture_id_wc2026_fixtures_fixture_id_fk",
+        "wc2026_odds_snapshots_match_id_wc2026_matches_match_id_fk": {
+          "name": "wc2026_odds_snapshots_match_id_wc2026_matches_match_id_fk",
           "tableFrom": "wc2026_odds_snapshots",
-          "tableTo": "wc2026_fixtures",
+          "tableTo": "wc2026_matches",
           "columnsFrom": [
-            "fixture_id"
+            "match_id"
           ],
           "columnsTo": [
-            "fixture_id"
+            "match_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"

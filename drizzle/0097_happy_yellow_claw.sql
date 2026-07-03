@@ -1,6 +1,6 @@
 CREATE TABLE `wc2026_betting_splits` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`snapshot_ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`team_id` varchar(8) NOT NULL,
 	`market` enum('ML','TOTAL','SPREAD') NOT NULL DEFAULT 'ML',
@@ -9,8 +9,8 @@ CREATE TABLE `wc2026_betting_splits` (
 	CONSTRAINT `wc2026_betting_splits_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
-CREATE TABLE `wc2026_fixtures` (
-	`fixture_id` varchar(16) NOT NULL,
+CREATE TABLE `wc2026_matches` (
+	`match_id` varchar(16) NOT NULL,
 	`match_date` date NOT NULL,
 	`kickoff_utc` datetime,
 	`stage` enum('GROUP','R32','R16','QF','SF','THIRD','FINAL') NOT NULL DEFAULT 'GROUP',
@@ -23,12 +23,12 @@ CREATE TABLE `wc2026_fixtures` (
 	`away_score` tinyint,
 	`status` enum('SCHEDULED','LIVE','FT') NOT NULL DEFAULT 'SCHEDULED',
 	`is_host_home` boolean NOT NULL DEFAULT false,
-	CONSTRAINT `wc2026_fixtures_fixture_id` PRIMARY KEY(`fixture_id`)
+	CONSTRAINT `wc2026_matches_match_id` PRIMARY KEY(`match_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `wc2026_lineups` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`team_id` varchar(8) NOT NULL,
 	`scraped_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`is_confirmed` boolean NOT NULL DEFAULT false,
@@ -42,7 +42,7 @@ CREATE TABLE `wc2026_lineups` (
 --> statement-breakpoint
 CREATE TABLE `wc2026_odds_snapshots` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`snapshot_ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`book_id` smallint NOT NULL,
 	`market` enum('1X2','TOTAL','ASIAN_HANDICAP','BTTS','DOUBLE_CHANCE') NOT NULL DEFAULT '1X2',
@@ -84,22 +84,22 @@ CREATE TABLE `wc2026_venues` (
 	CONSTRAINT `wc2026_venues_venue_id` PRIMARY KEY(`venue_id`)
 );
 --> statement-breakpoint
-ALTER TABLE `wc2026_betting_splits` ADD CONSTRAINT `wc2026_betting_splits_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_betting_splits` ADD CONSTRAINT `wc2026_betting_splits_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `wc2026_betting_splits` ADD CONSTRAINT `wc2026_betting_splits_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_fixtures` ADD CONSTRAINT `wc2026_fixtures_home_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`home_team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_fixtures` ADD CONSTRAINT `wc2026_fixtures_away_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`away_team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_fixtures` ADD CONSTRAINT `wc2026_fixtures_venue_id_wc2026_venues_venue_id_fk` FOREIGN KEY (`venue_id`) REFERENCES `wc2026_venues`(`venue_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_lineups` ADD CONSTRAINT `wc2026_lineups_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_matches` ADD CONSTRAINT `wc2026_matches_home_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`home_team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_matches` ADD CONSTRAINT `wc2026_matches_away_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`away_team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_matches` ADD CONSTRAINT `wc2026_matches_venue_id_wc2026_venues_venue_id_fk` FOREIGN KEY (`venue_id`) REFERENCES `wc2026_venues`(`venue_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_lineups` ADD CONSTRAINT `wc2026_lineups_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `wc2026_lineups` ADD CONSTRAINT `wc2026_lineups_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `wc2026_odds_snapshots` ADD CONSTRAINT `wc2026_odds_snapshots_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `wc2026_odds_snapshots` ADD CONSTRAINT `wc2026_odds_snapshots_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `wc2026_team_aliases` ADD CONSTRAINT `wc2026_team_aliases_team_id_wc2026_teams_team_id_fk` FOREIGN KEY (`team_id`) REFERENCES `wc2026_teams`(`team_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_splits_fixture` ON `wc2026_betting_splits` (`fixture_id`);--> statement-breakpoint
+CREATE INDEX `idx_splits_match` ON `wc2026_betting_splits` (`match_id`);--> statement-breakpoint
 CREATE INDEX `idx_splits_ts` ON `wc2026_betting_splits` (`snapshot_ts`);--> statement-breakpoint
-CREATE INDEX `idx_date` ON `wc2026_fixtures` (`match_date`);--> statement-breakpoint
-CREATE INDEX `idx_group_md` ON `wc2026_fixtures` (`group_letter`,`matchday`);--> statement-breakpoint
-CREATE INDEX `idx_lineup_fixture` ON `wc2026_lineups` (`fixture_id`);--> statement-breakpoint
+CREATE INDEX `idx_date` ON `wc2026_matches` (`match_date`);--> statement-breakpoint
+CREATE INDEX `idx_group_md` ON `wc2026_matches` (`group_letter`,`matchday`);--> statement-breakpoint
+CREATE INDEX `idx_lineup_match` ON `wc2026_lineups` (`match_id`);--> statement-breakpoint
 CREATE INDEX `idx_lineup_team` ON `wc2026_lineups` (`team_id`);--> statement-breakpoint
-CREATE INDEX `idx_snap_fixture` ON `wc2026_odds_snapshots` (`fixture_id`);--> statement-breakpoint
+CREATE INDEX `idx_snap_match` ON `wc2026_odds_snapshots` (`match_id`);--> statement-breakpoint
 CREATE INDEX `idx_snap_ts` ON `wc2026_odds_snapshots` (`snapshot_ts`);--> statement-breakpoint
-CREATE INDEX `idx_snap_closing` ON `wc2026_odds_snapshots` (`fixture_id`,`is_closing`);--> statement-breakpoint
+CREATE INDEX `idx_snap_closing` ON `wc2026_odds_snapshots` (`match_id`,`is_closing`);--> statement-breakpoint
 CREATE INDEX `idx_group` ON `wc2026_teams` (`group_letter`);

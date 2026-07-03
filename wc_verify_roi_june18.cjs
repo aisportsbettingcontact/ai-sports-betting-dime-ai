@@ -1,7 +1,7 @@
 /**
  * wc_verify_roi_june18.cjs
  * 
- * Full ROI + edge verification for all 4 June 18 WC2026 fixtures.
+ * Full ROI + edge verification for all 4 June 18 WC2026 matches.
  * Validates:
  * 1. Team display order (home top, away bottom in component convention)
  * 2. DK ML odds correctly mapped to teams
@@ -58,7 +58,7 @@ function impliedToAmerican(prob) {
 async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   console.log('[INPUT] Connected to DB');
-  console.log('[INPUT] Verifying all 4 June 18 WC2026 fixtures: team order, odds, TOTAL, DRAW, ROI\n');
+  console.log('[INPUT] Verifying all 4 June 18 WC2026 matches: team order, odds, TOTAL, DRAW, ROI\n');
 
   // Ground truth from DK screenshot
   const DK_GT = {
@@ -68,11 +68,11 @@ async function main() {
     'wc26-g-026': { homeCode: 'MEX', awayCode: 'KOR', homeML: 105, awayML: 295, draw: 230 },
   };
 
-  const [fixtures] = await conn.execute(`
-    SELECT f.fixture_id, f.kickoff_utc,
+  const [matches] = await conn.execute(`
+    SELECT f.match_id, f.kickoff_utc,
            ht.name AS home_name, ht.fifa_code AS home_code,
            at2.name AS away_name, at2.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.match_date = '2026-06-18'
@@ -81,38 +81,38 @@ async function main() {
 
   let overallPass = true;
 
-  for (const fix of fixtures) {
-    const gt = DK_GT[fix.fixture_id];
+  for (const fix of matches) {
+    const gt = DK_GT[fix.match_id];
     console.log(`\n${'='.repeat(70)}`);
-    console.log(`FIXTURE: ${fix.fixture_id} | ${fix.kickoff_utc}`);
+    console.log(`MATCH: ${fix.match_id} | ${fix.kickoff_utc}`);
     console.log(`  HOME: ${fix.home_name} (${fix.home_code})`);
     console.log(`  AWAY: ${fix.away_name} (${fix.away_code})`);
 
     // Get latest DK odds
     const [dkTs] = await conn.execute(`
       SELECT MAX(snapshot_ts) AS maxTs FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 68
-    `, [fix.fixture_id]);
+      WHERE match_id = ? AND book_id = 68
+    `, [fix.match_id]);
     const dkMaxTs = dkTs[0]?.maxTs;
 
     const [dkOdds] = await conn.execute(`
       SELECT market, selection, american_odds, line FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 68 AND snapshot_ts = ?
+      WHERE match_id = ? AND book_id = 68 AND snapshot_ts = ?
       ORDER BY market, selection
-    `, [fix.fixture_id, dkMaxTs]);
+    `, [fix.match_id, dkMaxTs]);
 
     // Get latest MODEL odds (book_id=0)
     const [modelTs] = await conn.execute(`
       SELECT MAX(snapshot_ts) AS maxTs FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 0
-    `, [fix.fixture_id]);
+      WHERE match_id = ? AND book_id = 0
+    `, [fix.match_id]);
     const modelMaxTs = modelTs[0]?.maxTs;
 
     const [modelOdds] = await conn.execute(`
       SELECT market, selection, american_odds, line FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 0 AND snapshot_ts = ?
+      WHERE match_id = ? AND book_id = 0 AND snapshot_ts = ?
       ORDER BY market, selection
-    `, [fix.fixture_id, modelMaxTs]);
+    `, [fix.match_id, modelMaxTs]);
 
     // ── 1X2 ML ──
     const dkHome1X2 = dkOdds.find(o => o.market === '1X2' && o.selection === 'home');
@@ -145,7 +145,7 @@ async function main() {
     const dkDrawOk = gt ? dkDraw1X2?.american_odds === gt.draw : null;
 
     console.log(`\n  [ORIENTATION VERIFY]`);
-    console.log(`  Fixture home/away: ${orientOk === true ? 'PASS ✓' : orientOk === false ? 'FAIL ✗' : 'NO GT'}`);
+    console.log(`  Match home/away: ${orientOk === true ? 'PASS ✓' : orientOk === false ? 'FAIL ✗' : 'NO GT'}`);
     console.log(`  DK home ML: ${dkHomeOk === true ? 'PASS ✓' : dkHomeOk === false ? `FAIL ✗ (got ${dkHome1X2?.american_odds} expected ${gt?.homeML})` : 'NO GT'}`);
     console.log(`  DK away ML: ${dkAwayOk === true ? 'PASS ✓' : dkAwayOk === false ? `FAIL ✗ (got ${dkAway1X2?.american_odds} expected ${gt?.awayML})` : 'NO GT'}`);
     console.log(`  DK draw:    ${dkDrawOk === true ? 'PASS ✓' : dkDrawOk === false ? `FAIL ✗ (got ${dkDraw1X2?.american_odds} expected ${gt?.draw})` : 'NO GT'}`);

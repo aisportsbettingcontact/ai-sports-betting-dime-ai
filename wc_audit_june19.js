@@ -4,16 +4,16 @@ require('dotenv').config();
 (async () => {
   const conn = await createConnection(process.env.DATABASE_URL);
 
-  // ── FIXTURE AUDIT ──────────────────────────────────────────────────────────
-  const [fixtures] = await conn.query(`
-    SELECT f.fixture_id, f.kickoff_utc,
+  // ── MATCH AUDIT ──────────────────────────────────────────────────────────
+  const [matches] = await conn.query(`
+    SELECT f.match_id, f.kickoff_utc,
       CONVERT_TZ(f.kickoff_utc, '+00:00', '-04:00') AS kickoff_edt,
       f.home_team_id, f.away_team_id,
       ht.name AS home_name, at.name AS away_name,
       ht.fifa_code AS home_code, at.fifa_code AS away_code,
       v.city AS venue_city, v.stadium AS venue_stadium,
       f.matchday, f.group_letter, f.status
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     LEFT JOIN wc2026_venues v ON v.venue_id = f.venue_id
@@ -21,16 +21,16 @@ require('dotenv').config();
     ORDER BY f.kickoff_utc
   `);
 
-  console.log('\n[FIXTURE AUDIT] June 19, 2026 — 4 matches');
+  console.log('\n[MATCH AUDIT] June 19, 2026 — 4 matches');
   console.log('='.repeat(80));
-  for (const f of fixtures) {
+  for (const f of matches) {
     const edt = new Date(f.kickoff_edt);
     const h = edt.getHours();
     const m = String(edt.getMinutes()).padStart(2,'0');
     const ampm = h >= 12 ? 'PM' : 'AM';
     const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
     const timeStr = `${h12}:${m} ${ampm} EDT`;
-    console.log(`[${f.fixture_id}] ${f.home_name} (${f.home_code}) vs ${f.away_name} (${f.away_code})`);
+    console.log(`[${f.match_id}] ${f.home_name} (${f.home_code}) vs ${f.away_name} (${f.away_code})`);
     console.log(`  DB home_team_id=${f.home_team_id} away_team_id=${f.away_team_id}`);
     console.log(`  Kickoff UTC: ${f.kickoff_utc} → EDT: ${timeStr}`);
     console.log(`  Venue: ${f.venue_city} | ${f.venue_stadium}`);
@@ -39,32 +39,32 @@ require('dotenv').config();
 
   // ── ODDS AUDIT ─────────────────────────────────────────────────────────────
   const [odds] = await conn.query(`
-    SELECT o.fixture_id, o.book_id, o.market, o.selection, o.line, o.american_odds, o.implied_prob
+    SELECT o.match_id, o.book_id, o.market, o.selection, o.line, o.american_odds, o.implied_prob
     FROM wc2026_odds_snapshots o
-    WHERE o.fixture_id IN ('wc26-g-029','wc26-g-030','wc26-g-031','wc26-g-032')
+    WHERE o.match_id IN ('wc26-g-029','wc26-g-030','wc26-g-031','wc26-g-032')
       AND o.market IN ('1X2','TOTAL','DOUBLE_CHANCE')
-    ORDER BY o.fixture_id, o.market, o.book_id, o.selection
+    ORDER BY o.match_id, o.market, o.book_id, o.selection
   `);
 
-  // Group by fixture
-  const byFixture = {};
+  // Group by match
+  const byMatch = {};
   for (const row of odds) {
-    const key = row.fixture_id;
-    if (!byFixture[key]) byFixture[key] = [];
-    byFixture[key].push(row);
+    const key = row.match_id;
+    if (!byMatch[key]) byMatch[key] = [];
+    byMatch[key].push(row);
   }
 
-  const fixtureMap = {
+  const matchMap = {
     'wc26-g-029': 'USA(home) vs AUS(away)',
     'wc26-g-030': 'TUR(home) vs PAR(away)',
     'wc26-g-031': 'SCO(home) vs MAR(away)',
     'wc26-g-032': 'HAI(home) vs BRA(away)',
   };
 
-  console.log('\n[ODDS AUDIT] All markets for June 19 fixtures');
+  console.log('\n[ODDS AUDIT] All markets for June 19 matches');
   console.log('='.repeat(80));
-  for (const [fid, rows] of Object.entries(byFixture)) {
-    console.log(`\n--- ${fid}: ${fixtureMap[fid]} ---`);
+  for (const [fid, rows] of Object.entries(byMatch)) {
+    console.log(`\n--- ${fid}: ${matchMap[fid]} ---`);
     for (const r of rows) {
       const bookLabel = r.book_id === 68 ? 'DK  ' : (r.book_id === 0 ? 'MDL ' : `b${r.book_id}`);
       const lineStr = r.line ? ` line=${r.line}` : '';
@@ -76,7 +76,7 @@ require('dotenv').config();
   // ── MODEL VALIDATION: 3-way probability check ─────────────────────────────
   console.log('\n[MODEL VALIDATION] 3-way probability sums');
   console.log('='.repeat(80));
-  for (const [fid, rows] of Object.entries(byFixture)) {
+  for (const [fid, rows] of Object.entries(byMatch)) {
     const modelRows = rows.filter(r => r.book_id === 0 && r.market === '1X2');
     const dkRows    = rows.filter(r => r.book_id === 68 && r.market === '1X2');
     const modelSum  = modelRows.reduce((s, r) => s + parseFloat(r.implied_prob), 0);
@@ -87,7 +87,7 @@ require('dotenv').config();
     const dkH       = dkRows.find(r => r.selection === 'home');
     const dkD       = dkRows.find(r => r.selection === 'draw');
     const dkA       = dkRows.find(r => r.selection === 'away');
-    console.log(`\n${fid}: ${fixtureMap[fid]}`);
+    console.log(`\n${fid}: ${matchMap[fid]}`);
     console.log(`  MODEL 1X2: home=${modelH?.american_odds} draw=${modelD?.american_odds} away=${modelA?.american_odds} | prob_sum=${modelSum.toFixed(4)}`);
     console.log(`  DK    1X2: home=${dkH?.american_odds} draw=${dkD?.american_odds} away=${dkA?.american_odds} | prob_sum=${dkSum.toFixed(4)}`);
     
