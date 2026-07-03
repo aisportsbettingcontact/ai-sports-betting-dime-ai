@@ -2,18 +2,22 @@
   "startedAt": "2026-07-01T05:41:52.395Z",
   "completedAt": null,
   "totalDurationMs": 0,
+<<<<<<< Updated upstream
   "totalPolls": 2696,
+=======
+  "totalPolls": 2867,
+>>>>>>> Stashed changes
   "totalGamesDetected": 13,
   "totalLiveDetected": 1,
   "totalFinalsDetected": 3,
-  "totalNewlyFinal": 3,
-  "scraped": 3,
+  "totalNewlyFinal": 6,
+  "scraped": 6,
   "passed": 0,
-  "failed": 3,
-  "retried": 6,
+  "failed": 6,
+  "retried": 12,
   "midnightRulePass": 0,
   "midnightRuleFail": 0,
-  "ftConfirmPass": 3,
+  "ftConfirmPass": 6,
   "ftConfirmFail": 0,
   "dayAdvanceCount": 0,
   "canceledCount": 0,
@@ -45,6 +49,33 @@
       "rowsWritten": 0,
       "error": "exit code 1",
       "durationMs": 39,
+      "attempts": 3,
+      "matchRound": "round-of-32"
+    },
+    {
+      "gameId": "760497",
+      "status": "FAIL",
+      "rowsWritten": 0,
+      "error": "exit code 1",
+      "durationMs": 54,
+      "attempts": 3,
+      "matchRound": "round-of-32"
+    },
+    {
+      "gameId": "760496",
+      "status": "FAIL",
+      "rowsWritten": 0,
+      "error": "exit code 1",
+      "durationMs": 55,
+      "attempts": 3,
+      "matchRound": "round-of-32"
+    },
+    {
+      "gameId": "760498",
+      "status": "FAIL",
+      "rowsWritten": 0,
+      "error": "exit code 1",
+      "durationMs": 41,
       "attempts": 3,
       "matchRound": "round-of-32"
     }
@@ -130,14 +161,16 @@
     "760492",
     "760491",
     "760495",
-    "760493"
+    "760493",
+    "760497",
+    "760496"
   ],
   "scrapingSet": [],
   "watchWindow": [
-    "20260702",
     "20260703",
     "20260704",
     "20260705",
-    "20260706"
+    "20260706",
+    "20260707"
   ]
 }
