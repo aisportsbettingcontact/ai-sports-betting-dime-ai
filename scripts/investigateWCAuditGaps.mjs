@@ -61,7 +61,7 @@ async function main() {
   const [gap2] = await conn.execute(
     `SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
             home_score, away_score, status, espn_event_id
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE fixture_id IN ('wc26-g-001', 'wc26-g-002')`
   );
   gap2.forEach(r => {

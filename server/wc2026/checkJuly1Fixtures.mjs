@@ -1,17 +1,17 @@
 import { getDb } from "../db.js";
-import { wc2026Fixtures, wc2026ModelProjections, wc2026FrozenBookOdds } from "../../drizzle/wc2026.schema.js";
+import { wc2026Matches, wc2026ModelProjections, wc2026FrozenBookOdds } from "../../drizzle/wc2026.schema.js";
 import { sql, inArray } from "drizzle-orm";
 
 const db = await getDb();
 
 // Check match_date for July 1 fixtures
 const fxRows = await db.select({
-  matchId: wc2026Fixtures.matchId,
-  matchDate: wc2026Fixtures.matchDate,
-  kickoffUtc: wc2026Fixtures.kickoffUtc,
-  homeTeamId: wc2026Fixtures.homeTeamId,
-  awayTeamId: wc2026Fixtures.awayTeamId,
-}).from(wc2026Fixtures).where(
+  matchId: wc2026Matches.matchId,
+  matchDate: wc2026Matches.matchDate,
+  kickoffUtc: wc2026Matches.kickoffUtc,
+  homeTeamId: wc2026Matches.homeTeamId,
+  awayTeamId: wc2026Matches.awayTeamId,
+}).from(wc2026Matches).where(
   sql`match_date LIKE '2026-07-01%' OR match_id IN ('wc26-r32-080','wc26-r32-081','wc26-r32-082')`
 );
 console.log("\n[FIXTURES]", JSON.stringify(fxRows, null, 2));

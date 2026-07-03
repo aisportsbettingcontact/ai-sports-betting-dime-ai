@@ -39,23 +39,23 @@ console.log('[STEP] Connected to DB');
 // ─── Step 1: Fix wc26-g-003 orientation ──────────────────────────────────────
 console.log('\n[STEP] Fixing wc26-g-003: swapping home=BIH, away=CAN');
 const [before003] = await conn.execute(
-  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-003'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = 'wc26-g-003'"
 );
 console.log('[INPUT] Before:', JSON.stringify(before003[0]));
 
 await conn.execute(
-  "UPDATE wc2026_fixtures SET home_team_id = 'bih', away_team_id = 'can' WHERE match_id = 'wc26-g-003'"
+  "UPDATE wc2026_matches SET home_team_id = 'bih', away_team_id = 'can' WHERE match_id = 'wc26-g-003'"
 );
 
 const [after003] = await conn.execute(
-  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-003'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = 'wc26-g-003'"
 );
 console.log('[OUTPUT] After:', JSON.stringify(after003[0]));
 console.log('[VERIFY] wc26-g-003 home=bih, away=can:', after003[0].home_team_id === 'bih' && after003[0].away_team_id === 'can' ? 'PASS' : 'FAIL');
 
 // ─── Step 2: Verify wc26-g-005 ────────────────────────────────────────────────
 const [row005] = await conn.execute(
-  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-005'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = 'wc26-g-005'"
 );
 console.log('\n[VERIFY] wc26-g-005:', JSON.stringify(row005[0]));
 console.log('[VERIFY] wc26-g-005 home=usa, away=par:', row005[0].home_team_id === 'usa' && row005[0].away_team_id === 'par' ? 'PASS' : 'FAIL');
@@ -119,7 +119,7 @@ for (const pred of PREDICTIONS) {
 
   // Mark fixture as SCHEDULED (status only — no xg/spread columns in this table)
   await conn.execute(
-    `UPDATE wc2026_fixtures SET status = 'SCHEDULED' WHERE match_id = ?`,
+    `UPDATE wc2026_matches SET status = 'SCHEDULED' WHERE match_id = ?`,
     [pred.matchId]
   );
 
@@ -225,7 +225,7 @@ for (const lineup of LINEUPS) {
 // ─── Final verification ───────────────────────────────────────────────────────
 console.log('\n[STEP] Final verification...');
   const [fixtures] = await conn.execute(
-  "SELECT match_id, home_team_id, away_team_id, status FROM wc2026_fixtures WHERE match_id IN ('wc26-g-003', 'wc26-g-005') ORDER BY match_id"
+  "SELECT match_id, home_team_id, away_team_id, status FROM wc2026_matches WHERE match_id IN ('wc26-g-003', 'wc26-g-005') ORDER BY match_id"
 );
 for (const f of fixtures) {
   console.log(`[VERIFY] ${f.match_id}: home=${f.home_team_id} away=${f.away_team_id} status=${f.status}`);

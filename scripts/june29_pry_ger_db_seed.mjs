@@ -41,7 +41,7 @@ console.log('[STEP] DB connected');
 
 // Upsert fixture
 await conn.execute(`
-  INSERT INTO wc2026_fixtures
+  INSERT INTO wc2026_matches
     (fixture_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, status, display_order)
   VALUES (?, ?, ?, 'R32', ?, ?, 'inglewood', 'scheduled', 75)
   ON DUPLICATE KEY UPDATE

@@ -5,7 +5,7 @@
  * 
  * For each tournament:
  *   1. Pull all group stage matches from ESPN API (ground truth)
- *   2. Compare against DB records in wc_bt_matches + wc2026_fixtures
+ *   2. Compare against DB records in wc_bt_matches + wc2026_matches
  *   3. Identify every score mismatch and home/away orientation error
  *   4. Correct all mismatches in-place
  *   5. Re-validate after correction
@@ -138,19 +138,19 @@ const [btMatches] = await conn.query(`
 `);
 console.log(`${TAG} [INPUT] wc_bt_matches total: ${btMatches.length}`);
 
-// 2026: also from wc2026_fixtures (canonical source)
+// 2026: also from wc2026_matches (canonical source)
 const [wc26Fixtures] = await conn.query(`
   SELECT f.fixture_id, f.espn_event_id,
          ht.name as home_team, ht.team_id as home_team_id,
          at.name as away_team, at.team_id as away_team_id,
          f.home_score, f.away_score, f.status, f.match_date
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at ON at.team_id = f.away_team_id
   WHERE f.status = 'FT'
   ORDER BY f.kickoff_utc
 `);
-console.log(`${TAG} [INPUT] wc2026_fixtures (FT): ${wc26Fixtures.length}`);
+console.log(`${TAG} [INPUT] wc2026_matches (FT): ${wc26Fixtures.length}`);
 
 // ─── Step 3: Cross-reference and identify mismatches ─────────────────────────
 console.log(`\n${TAG} [STEP 3] Cross-referencing DB vs ESPN ground truth...`);
@@ -180,8 +180,8 @@ function teamsMatch(a, b) {
   return false;
 }
 
-// Audit 2026 fixtures (wc2026_fixtures is canonical)
-console.log(`\n${TAG} [STEP 3a] Auditing 2026 wc2026_fixtures vs ESPN...`);
+// Audit 2026 fixtures (wc2026_matches is canonical)
+console.log(`\n${TAG} [STEP 3a] Auditing 2026 wc2026_matches vs ESPN...`);
 const espn26ById = Object.fromEntries(espnGames[2026].map(g => [g.espnId, g]));
 const espn26ByTeams = espnGames[2026]; // for fallback matching
 
@@ -234,7 +234,7 @@ for (const f of wc26Fixtures) {
     console.log(`${TAG} [MISMATCH] 2026 ${f.fixture_id}: ${issue}`);
     console.log(`${TAG}   DB:    ${f.home_team}(H) ${dbHomeScore}-${dbAwayScore} ${f.away_team}(A)`);
     console.log(`${TAG}   ESPN:  ${espnGame.homeName}(H) ${espnHomeScore}-${espnAwayScore} ${espnGame.awayName}(A)`);
-    mismatches.push({ year: 2026, table: 'wc2026_fixtures', id: f.fixture_id, issue, f, espnGame, orientationFlipped });
+    mismatches.push({ year: 2026, table: 'wc2026_matches', id: f.fixture_id, issue, f, espnGame, orientationFlipped });
   } else {
     console.log(`${TAG} [OK] 2026 ${f.fixture_id}: ${f.home_team} ${dbHomeScore}-${dbAwayScore} ${f.away_team} ✓`);
   }
@@ -312,7 +312,7 @@ if (mismatches.length === 0) {
 } else {
   for (const mm of mismatches) {
     console.log(`${TAG}   ${mm.year} [${mm.table}] ${mm.id}: ${mm.issue}`);
-    if (mm.table === 'wc2026_fixtures') {
+    if (mm.table === 'wc2026_matches') {
       const f = mm.f;
       console.log(`${TAG}     DB:   ${f.home_team}(H) ${f.home_score}-${f.away_score} ${f.away_team}(A)`);
     } else {
@@ -332,25 +332,25 @@ if (mismatches.length > 0) {
   for (const mm of mismatches) {
     const g = mm.espnGame;
     
-    if (mm.table === 'wc2026_fixtures') {
+    if (mm.table === 'wc2026_matches') {
       const f = mm.f;
       if (mm.orientationFlipped) {
         // Swap home_team_id and away_team_id, then set correct scores
         await conn.query(`
-          UPDATE wc2026_fixtures SET
+          UPDATE wc2026_matches SET
             home_team_id = ?,
             away_team_id = ?,
             home_score = ?,
             away_score = ?
           WHERE fixture_id = ?
         `, [f.away_team_id, f.home_team_id, g.homeScore, g.awayScore, f.fixture_id]);
-        console.log(`${TAG} [FIX] wc2026_fixtures ${f.fixture_id}: SWAPPED home/away + set scores ${g.homeScore}-${g.awayScore}`);
+        console.log(`${TAG} [FIX] wc2026_matches ${f.fixture_id}: SWAPPED home/away + set scores ${g.homeScore}-${g.awayScore}`);
       } else {
         // Just fix scores
         await conn.query(`
-          UPDATE wc2026_fixtures SET home_score = ?, away_score = ? WHERE fixture_id = ?
+          UPDATE wc2026_matches SET home_score = ?, away_score = ? WHERE fixture_id = ?
         `, [g.homeScore, g.awayScore, f.fixture_id]);
-        console.log(`${TAG} [FIX] wc2026_fixtures ${f.fixture_id}: SCORE corrected to ${g.homeScore}-${g.awayScore}`);
+        console.log(`${TAG} [FIX] wc2026_matches ${f.fixture_id}: SCORE corrected to ${g.homeScore}-${g.awayScore}`);
       }
       fixed++;
     }
@@ -414,7 +414,7 @@ console.log(`\n${TAG} [STEP 6] Post-correction verification...`);
 const [verifyRows] = await conn.query(`
   SELECT f.fixture_id, ht.name as home_team, at.name as away_team,
          f.home_score, f.away_score, f.status
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at ON at.team_id = f.away_team_id
   WHERE f.status = 'FT'

@@ -80,7 +80,7 @@ async function main() {
   const [dbScores] = await conn.query(`
     SELECT f.match_id, f.home_score, f.away_score, f.status,
            th.name as home_name, ta.name as away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams th ON f.home_team_id = th.team_id
     JOIN wc2026_teams ta ON f.away_team_id = ta.team_id
     WHERE f.match_id IN (?)
@@ -194,7 +194,7 @@ async function main() {
   const espnIds = dbScores.map(r => r.espn_event_id ?? null).filter(Boolean);
   // Get ESPN IDs from fixtures
   const [fixtureEspn] = await conn.query(`
-    SELECT match_id, espn_event_id FROM wc2026_fixtures WHERE match_id IN (?)
+    SELECT match_id, espn_event_id FROM wc2026_matches WHERE match_id IN (?)
   `, [ALL_FIDS]);
 
   const espnIdList = fixtureEspn.map(r => r.espn_event_id).filter(Boolean);

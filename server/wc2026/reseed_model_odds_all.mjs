@@ -183,7 +183,7 @@ async function main() {
   // Get all June 11-17 fixtures with current (corrected) home/away
   const [fixtures] = await conn.execute(`
     SELECT match_id, home_team_id, away_team_id, match_date
-    FROM wc2026_fixtures
+    FROM wc2026_matches
     WHERE match_date BETWEEN '2026-06-11' AND '2026-06-17'
     ORDER BY match_date, match_id
   `);
@@ -282,7 +282,7 @@ async function main() {
            SUM(CASE WHEN o.market='TOTAL' AND o.selection='over' THEN 1 ELSE 0 END) as has_over,
            MAX(CASE WHEN o.market='1X2' AND o.selection='home' THEN o.american_odds END) as home_ml,
            MAX(CASE WHEN o.market='1X2' AND o.selection='away' THEN o.american_odds END) as away_ml
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 0
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
     GROUP BY f.match_id, f.home_team_id, f.away_team_id

@@ -22,7 +22,7 @@ const [rows] = await conn.execute(`
          f.espn_event_id, f.venue_id,
          v.stadium, v.city, v.country, v.timezone,
          ht.name AS home_name, at.name AS away_name
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id

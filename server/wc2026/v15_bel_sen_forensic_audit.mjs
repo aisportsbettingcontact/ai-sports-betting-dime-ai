@@ -202,7 +202,7 @@ async function main() {
   const [jul1Fix] = await db.execute(`
     SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc, f.match_date, f.home_score, f.away_score, f.status
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE DATE(f.match_date) = '2026-07-01'
@@ -307,7 +307,7 @@ async function main() {
   banner('AUDIT BLOCK 7 — ROOT CAUSE DETERMINATION', C.BG_RED + C.BOLD + C.WHITE);
 
   log('AUDIT', 'ROOT_CAUSE', `INVESTIGATION FINDINGS:`);
-  log('AUDIT', 'ROOT_CAUSE', `  1. wc26-r32-081 EXISTS in wc2026_fixtures with home_team_id=bel, away_team_id=sen`);
+  log('AUDIT', 'ROOT_CAUSE', `  1. wc26-r32-081 EXISTS in wc2026_matches with home_team_id=bel, away_team_id=sen`);
   log('AUDIT', 'ROOT_CAUSE', `  2. wc26-r32-081 EXISTS in wc2026_frozen_book_odds with ALL 16 required fields populated`);
   log('AUDIT', 'ROOT_CAUSE', `  3. Engine fixture query (DATE(match_date)='2026-07-01') RETURNS wc26-r32-081 ✓`);
   log('AUDIT', 'ROOT_CAUSE', `  4. Engine book odds query returns wc26-r32-081 row with zero null fields ✓`);

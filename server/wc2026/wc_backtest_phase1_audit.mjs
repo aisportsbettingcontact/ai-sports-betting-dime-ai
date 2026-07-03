@@ -65,8 +65,8 @@ presentBacktestTables.forEach(t => console.log(`  ✅ ${t}`));
 console.log(`[AUDIT] [STATE] Missing backtest tables (${missingBacktestTables.length}):`);
 missingBacktestTables.forEach(t => console.log(`  ❌ ${t}`));
 
-// ─── Step 3: Audit wc2026_fixtures — 2026 match counts ───────────────────────
-console.log('\n[AUDIT] [STEP 3] Auditing wc2026_fixtures for 2026 match counts...');
+// ─── Step 3: Audit wc2026_matches — 2026 match counts ───────────────────────
+console.log('\n[AUDIT] [STEP 3] Auditing wc2026_matches for 2026 match counts...');
 const [fixtureSummary] = await conn.query(`
   SELECT
     COUNT(*) as total,
@@ -75,10 +75,10 @@ const [fixtureSummary] = await conn.query(`
     SUM(CASE WHEN match_date <= '2026-06-16' AND status = 'FT' THEN 1 ELSE 0 END) as completed_through_june16,
     SUM(CASE WHEN match_date = '2026-06-17' AND status = 'FT' THEN 1 ELSE 0 END) as completed_june17,
     SUM(CASE WHEN match_date <= '2026-06-17' AND status = 'FT' THEN 1 ELSE 0 END) as completed_through_june17
-  FROM wc2026_fixtures
+  FROM wc2026_matches
 `);
 const fs = fixtureSummary[0];
-console.log(`[AUDIT] [STATE] wc2026_fixtures:`);
+console.log(`[AUDIT] [STATE] wc2026_matches:`);
 console.log(`  Total fixtures: ${fs.total}`);
 console.log(`  Completed (FT): ${fs.completed}`);
 console.log(`  Scheduled: ${fs.scheduled}`);
@@ -110,7 +110,7 @@ const [completedMatches] = await conn.query(`
          (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.match_id = f.match_id AND l.is_confirmed = 1) as confirmed_lineups,
          (SELECT COUNT(*) FROM wc2026_odds_snapshots os WHERE os.match_id = f.match_id AND os.book_id = 68 AND os.is_closing = 1) as dk_closing_odds,
          (SELECT COUNT(*) FROM wc2026_odds_snapshots os2 WHERE os2.match_id = f.match_id AND os2.book_id = 0) as model_odds
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
   WHERE f.status = 'FT'
@@ -138,7 +138,7 @@ for (const fid of june17Fixtures) {
            f.home_score, f.away_score, f.status, f.group_letter, f.matchday,
            f.kickoff_utc, f.espn_event_id, f.attendance,
            v.name as venue_name, v.city as venue_city
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
@@ -146,7 +146,7 @@ for (const fid of june17Fixtures) {
   `, [fid]);
 
   if (rows.length === 0) {
-    console.log(`[AUDIT] [VERIFY] FAIL ❌ — ${fid} NOT FOUND in wc2026_fixtures`);
+    console.log(`[AUDIT] [VERIFY] FAIL ❌ — ${fid} NOT FOUND in wc2026_matches`);
     continue;
   }
   const r = rows[0];

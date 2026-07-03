@@ -98,7 +98,7 @@ async function main() {
 
   // Load all DB fixtures
   const [dbFixtures] = await conn.execute(
-    'SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc FROM wc2026_fixtures ORDER BY match_date, kickoff_utc'
+    'SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc FROM wc2026_matches ORDER BY match_date, kickoff_utc'
   );
 
   console.log(`[INPUT] DB has ${dbFixtures.length} total fixtures`);

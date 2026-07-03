@@ -9,7 +9,7 @@ const [rows] = await db.execute(`
          at.fifa_code as away_code, at.name as away_name,
          DATE(f.kickoff_utc) as match_date,
          f.kickoff_utc
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE DATE(f.kickoff_utc) BETWEEN '2026-06-27' AND '2026-06-28'

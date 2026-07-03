@@ -35,7 +35,7 @@ async function main() {
   console.log('SECTION 1: FROZEN FIXTURE DATES AND ROUNDS');
   console.log('══════════════════════════════════════════════════════════');
   const [dates] = await conn.execute(
-    'SELECT match_id, match_date, stage FROM wc2026_fixtures WHERE match_id IN (' + ph + ') ORDER BY match_date',
+    'SELECT match_id, match_date, stage FROM wc2026_matches WHERE match_id IN (' + ph + ') ORDER BY match_date',
     FROZEN_IDS
   );
   const dateMap = {};

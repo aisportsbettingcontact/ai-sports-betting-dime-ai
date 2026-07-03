@@ -89,7 +89,7 @@ const [fixtures] = await c.execute(`
   SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_id IN (${ph})

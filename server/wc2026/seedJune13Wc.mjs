@@ -201,28 +201,28 @@ async function run() {
     console.log('\n[STEP] Fixing fixture home/away orientations...');
 
     // wc26-g-004: INSERT (missing)
-    const [existing004] = await conn.query('SELECT match_id FROM wc2026_fixtures WHERE match_id = "wc26-g-004"');
+    const [existing004] = await conn.query('SELECT match_id FROM wc2026_matches WHERE match_id = "wc26-g-004"');
     if (existing004.length === 0) {
       await conn.query(`
-        INSERT INTO wc2026_fixtures (match_id, home_team_id, away_team_id, match_date, status, group_letter, venue, city)
+        INSERT INTO wc2026_matches (match_id, home_team_id, away_team_id, match_date, status, group_letter, venue, city)
         VALUES ("wc26-g-004", "sui", "qat", "2026-06-13 15:00:00", "SCHEDULED", "A", "MetLife Stadium", "East Rutherford, NJ")
       `);
       console.log('[STATE] wc26-g-004: INSERTED SUI (home) vs QAT (away)');
     } else {
-      await conn.query('UPDATE wc2026_fixtures SET home_team_id="sui", away_team_id="qat" WHERE match_id="wc26-g-004"');
+      await conn.query('UPDATE wc2026_matches SET home_team_id="sui", away_team_id="qat" WHERE match_id="wc26-g-004"');
       console.log('[STATE] wc26-g-004: UPDATED to SUI (home) vs QAT (away)');
     }
 
     // wc26-g-006: FIX BRA→away, MAR→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="mar", away_team_id="bra" WHERE match_id="wc26-g-006"');
+    await conn.query('UPDATE wc2026_matches SET home_team_id="mar", away_team_id="bra" WHERE match_id="wc26-g-006"');
     console.log('[STATE] wc26-g-006: FIXED to MAR (home) vs BRA (away)');
 
     // wc26-g-007: FIX HAI→away, SCO→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="sco", away_team_id="hai" WHERE match_id="wc26-g-007"');
+    await conn.query('UPDATE wc2026_matches SET home_team_id="sco", away_team_id="hai" WHERE match_id="wc26-g-007"');
     console.log('[STATE] wc26-g-007: FIXED to SCO (home) vs HAI (away)');
 
     // wc26-g-008: FIX AUS→away, TUR→home
-    await conn.query('UPDATE wc2026_fixtures SET home_team_id="tur", away_team_id="aus" WHERE match_id="wc26-g-008"');
+    await conn.query('UPDATE wc2026_matches SET home_team_id="tur", away_team_id="aus" WHERE match_id="wc26-g-008"');
     console.log('[STATE] wc26-g-008: FIXED to TUR (home) vs AUS (away)');
 
     // ── STEP 2: Delete stale odds for all 4 fixtures ──────────────────────────
@@ -280,7 +280,7 @@ async function run() {
     // ── STEP 5: Final verification ────────────────────────────────────────────
     console.log('\n[STEP] Running final verification...');
     const [verifyFx] = await conn.query(`
-      SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures
+      SELECT match_id, home_team_id, away_team_id FROM wc2026_matches
       WHERE match_id IN ("wc26-g-004","wc26-g-006","wc26-g-007","wc26-g-008")
       ORDER BY match_id
     `);

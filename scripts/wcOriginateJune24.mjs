@@ -686,7 +686,7 @@ async function main() {
            p.dc_1x_odds, p.dc_x2_odds, p.no_draw_home_odds, p.no_draw_away_odds,
            p.model_lean, p.lean_prob, p.top_scorelines
     FROM wc2026_model_projections p
-    JOIN wc2026_fixtures f ON p.fixture_id = f.fixture_id
+    JOIN wc2026_matches f ON p.fixture_id = f.fixture_id
     WHERE f.match_date = '2026-06-24' AND p.model_version = 'v10e-june24-v2'
     ORDER BY f.kickoff_utc
   `);

@@ -9,7 +9,7 @@ const [, user, password, host, port, database] = m;
 const conn = await mysql.createConnection({user, password, host, port: parseInt(port), database, ssl:{rejectUnauthorized:false}});
 
 const [fixtures] = await conn.execute(
-  'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id IN (?,?) ORDER BY match_id',
+  'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (?,?) ORDER BY match_id',
   ['wc26-g-002', 'wc26-g-008']
 );
 console.log('FIXTURES:');

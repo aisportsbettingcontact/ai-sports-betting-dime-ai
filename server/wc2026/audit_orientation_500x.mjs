@@ -1,7 +1,7 @@
 /**
  * 500x FORENSIC AUDIT — Away/Home Orientation
  * Verifies correct Away/Home mapping across:
- *   1. wc2026_fixtures (away_team_id / home_team_id)
+ *   1. wc2026_matches (away_team_id / home_team_id)
  *   2. wc2026_frozen_book_odds (all away/home columns)
  *   3. v12 model lambda assignments (λH / λA)
  *   4. Router frozenBookToOdds mapping
@@ -92,10 +92,10 @@ async function main() {
   });
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PHASE A: Audit wc2026_fixtures — away_team_id / home_team_id
+  // PHASE A: Audit wc2026_matches — away_team_id / home_team_id
   // ─────────────────────────────────────────────────────────────────────────
   INFO('');
-  INFO('PHASE A: wc2026_fixtures — away_team_id / home_team_id');
+  INFO('PHASE A: wc2026_matches — away_team_id / home_team_id');
   INFO('─'.repeat(60));
 
   const matchIds = Object.keys(GROUND_TRUTH);
@@ -103,7 +103,7 @@ async function main() {
     `SELECT f.match_id, f.away_team_id, f.home_team_id,
             ta.name AS away_name, ta.fifa_code AS away_code,
             th.name AS home_name, th.fifa_code AS home_code
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      LEFT JOIN wc2026_teams ta ON ta.team_id = f.away_team_id
      LEFT JOIN wc2026_teams th ON th.team_id = f.home_team_id
      WHERE f.match_id IN (${matchIds.map(() => '?').join(',')})

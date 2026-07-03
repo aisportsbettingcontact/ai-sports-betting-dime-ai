@@ -112,7 +112,7 @@ const [wcFixtures] = await conn.execute(`
     ht.name AS homeName, ht.abbreviation AS homeAbbr,
     at.name AS awayName, at.abbreviation AS awayAbbr,
     f.homeTeamId, f.awayTeamId
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.homeTeamId = ht.id
   JOIN wc2026_teams at ON f.awayTeamId = at.id
   WHERE f.matchDate = '2026-06-14'

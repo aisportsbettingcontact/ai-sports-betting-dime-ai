@@ -177,7 +177,7 @@ const V14_QUERIES = {
     purpose: 'Completed KO matches for backtest',
   },
   C1_FIX: {
-    table: 'wc2026_fixtures',
+    table: 'wc2026_matches',
     alias: 'f',
     join: ['wc2026_teams ht ON f.home_team_id = ht.team_id',
            'wc2026_teams at ON f.away_team_id = at.team_id'],
@@ -529,15 +529,15 @@ async function main() {
   // ════════════════════════════════════════════════════════════════════════════
   sectionHeader('SECTION 4 — FIXTURES AND BOOK ODDS: FULL SCHEMA AND DATA VALIDATION');
 
-  // 4A: wc2026_fixtures
-  log('SECTION', 'S4A_FIX', '4A — wc2026_fixtures: all rows and columns');
+  // 4A: wc2026_matches
+  log('SECTION', 'S4A_FIX', '4A — wc2026_matches: all rows and columns');
 
   const [fixAll] = await db.execute(`
     SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
            f.home_team_id, f.away_team_id, f.venue_id, f.status,
            ht.fifa_code AS home_code, ht.name AS home_name,
            at.fifa_code AS away_code, at.name AS away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     ORDER BY f.kickoff_utc
@@ -620,7 +620,7 @@ async function main() {
     'wc2026_espn_player_stats',
     'wc2026_espn_shot_map',
     'wc2026_espn_matches',
-    'wc2026_fixtures',
+    'wc2026_matches',
     'wc2026_teams',
     'wc2026_frozen_book_odds',
   ];

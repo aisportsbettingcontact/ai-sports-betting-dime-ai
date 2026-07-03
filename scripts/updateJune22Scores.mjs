@@ -1,6 +1,6 @@
 /**
  * updateJune22Scores.mjs
- * Updates June 22, 2026 WC2026 final scores in wc2026_fixtures.
+ * Updates June 22, 2026 WC2026 final scores in wc2026_matches.
  * Validates DB home/away orientation before writing any score.
  *
  * Confirmed results (user-provided):
@@ -35,7 +35,7 @@ const [rows] = await db.execute(`
     f.status,
     ht.name AS home_name,
     at.name AS away_name
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE DATE(f.kickoff_utc) = '2026-06-22'
@@ -126,7 +126,7 @@ for (const expected of RESULTS) {
 console.log('[VERIFY] All 4 fixtures matched ✅');
 
 // ─── Step 4: Update scores ────────────────────────────────────────────────────
-console.log('\n[STEP 3] Updating scores in wc2026_fixtures...');
+console.log('\n[STEP 3] Updating scores in wc2026_matches...');
 
 let updateCount = 0;
 for (const expected of RESULTS) {
@@ -134,7 +134,7 @@ for (const expected of RESULTS) {
   console.log(`  [INPUT] home_score=${expected.home_score}, away_score=${expected.away_score}, status=FT, result=${expected.result}`);
 
   const [updateResult] = await db.execute(
-    `UPDATE wc2026_fixtures
+    `UPDATE wc2026_matches
      SET home_score = ?, away_score = ?, status = 'FT', result = ?
      WHERE fixture_id = ?`,
     [expected.home_score, expected.away_score, expected.result, expected.fixture_id]
@@ -162,7 +162,7 @@ const [verifyRows] = await db.execute(`
     f.away_score,
     f.status,
     f.result
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE DATE(f.kickoff_utc) = '2026-06-22'
