@@ -4380,3 +4380,19 @@
 - [x] Fixed banner overflow: overflow:hidden + textOverflow:ellipsis + maxWidth:100%
 - [x] Verified clock display logic for all 6 status types (LIVE/HT/ET_HT/ET/SHOOTOUT/FT)
 - [x] Tests: 1229/1229 passing | TypeScript: 0 errors
+
+## Session: 2026-07-03 — WC2026 R32 Ingestion + Bracket Automation (Continued)
+
+- [x] Fix wc2026_espn_matches for AUS/EGY (760499): statusState=post, homeScore=1, awayScore=1, statusDetail=FT-Pens
+- [x] Clean up temp files: ingest_760499_api.mjs (project root) + check_espn_status.py (/home/ubuntu/)
+- [x] Full bracket scraper re-run: all phases PASS, 0 errors, EGY confirmed in wc26-r16-095 away slot
+- [x] LiveWatcher typeId=54 (STATUS_END_OF_EXTRATIME) added to LIVE detection set
+- [x] LiveWatcher typeId=47 (STATUS_FINAL_PEN) added to FT detection set
+- [x] LiveWatcher preflight scrapedSet fixed to only count scrapeVersion='500x' matches
+- [x] LiveWatcher triggerBracketSync() function added and integrated into scrapeWithRetry success path
+- [x] AUS vs EGY (wc26-r32-086) fully ingested: FT 1-1 (Pens), EGY advances, 56 stats, bracket propagated
+- [ ] Ingest ARG vs CPV (wc26-r32-087) when final — winner → wc26-r16-096 away slot
+- [ ] Ingest COL vs GHA (wc26-r32-088) when final — winner → wc26-r16-095 home slot
+- [ ] Run full bracket scraper after both Jul 3 matches ingested
+- [ ] Model R16 matches (Jul 4-7) using v17 engine methodology
+- [ ] Verify wc2026MatchOdds for R16 projections

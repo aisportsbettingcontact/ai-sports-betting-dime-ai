@@ -59,6 +59,7 @@ type LogLevel =
   | "PARSE"
   | "OUTPUT"
   | "VERIFY"
+  | "WARN"
   | "ERROR"
   | "FATAL";
 
@@ -78,7 +79,8 @@ const LEVEL_CONFIG: Record<LogLevel, LevelConfig> = {
   PARSE:  { color: C.cyan,    badge: "PARSE ", icon: "⚙", priority: 5 },
   OUTPUT: { color: C.green,   badge: "OUTPUT", icon: "✓", priority: 6 },
   VERIFY: { color: C.green,   badge: "VERIFY", icon: "✔", priority: 7 },
-  ERROR:  { color: C.red,     badge: "ERROR ", icon: "✗", priority: 8 },
+  WARN:   { color: C.yellow,  badge: "WARN  ", icon: "⚠", priority: 8 },
+  ERROR:  { color: C.red,     badge: "ERROR ", icon: "✗", priority: 9 },
   FATAL:  { color: C.bgRed + C.white, badge: "FATAL ", icon: "☠", priority: 9 },
 };
 

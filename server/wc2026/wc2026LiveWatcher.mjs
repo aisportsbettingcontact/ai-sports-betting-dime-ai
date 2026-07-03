@@ -145,6 +145,11 @@ const WATCHER_LOG    = `${LOG_DIR}/wc2026LiveWatcher.txt`;
 const TERMINAL_LOG   = `/tmp/wc2026LiveWatcher_500x.txt`;
 const PROGRESS_FILE  = `${LOG_DIR}/wc2026LiveWatcher_progress.json`;
 const RUNNER_SCRIPT  = `${PROJECT_DIR}/server/wc2026/wc2026ESPNScraper.mjs`;
+const BRACKET_SCRIPT = `${PROJECT_DIR}/server/wc2026/wc2026BracketScraper.mjs`;
+
+// Knockout round prefixes that trigger bracket advancement
+const KO_ROUND_PREFIXES = ['round-of-32', 'round-of-16', 'quarterfinal', 'semifinal', 'final', 'third'];
+const isKnockoutRound = (round) => KO_ROUND_PREFIXES.some(p => (round || '').toLowerCase().includes(p));
 
 // Poll interval: 30 seconds (normal)
 const POLL_INTERVAL_MS        = 30_000;
@@ -179,11 +184,11 @@ const ESPN_LEAGUE_SLUG        = 'fifa.world';
 const ESPN_FINAL_TYPE_IDS     = new Set([3, 23, 28]);    // STATUS_FINAL, STATUS_FULL_TIME (×2)
 const ESPN_CANCELED_TYPE_IDS  = new Set([7]);             // STATUS_CANCELED — NEVER trigger scraper
 const ESPN_FINAL_STATES       = new Set(['post']);
-const ESPN_LIVE_TYPE_IDS      = new Set([2, 17, 22, 24, 25, 26]); // in-progress, ET, ET-HT, halftime, shootout, 2nd half
+const ESPN_LIVE_TYPE_IDS      = new Set([2, 17, 22, 24, 25, 26, 54]); // in-progress, ET, ET-HT, halftime, shootout, 2nd half, end-of-ET-pens
 const ESPN_LIVE_STATES        = new Set(['in']);
 const ESPN_ET_TYPE_IDS        = new Set([17]);            // STATUS_EXTRA_TIME
 const ESPN_ET_HT_TYPE_IDS     = new Set([25]);            // STATUS_EXTRA_TIME_HALF_TIME (ET halftime break)
-const ESPN_PENS_TYPE_IDS      = new Set([24]);            // STATUS_SHOOTOUT
+const ESPN_PENS_TYPE_IDS      = new Set([24, 54]);        // STATUS_SHOOTOUT + STATUS_END_OF_EXTRATIME (pens phase)
 const ESPN_POSTPONED_TYPE_IDS = new Set([6]);             // STATUS_POSTPONED
 const ESPN_DELAYED_TYPE_IDS   = new Set([9]);             // STATUS_DELAYED
 
@@ -208,6 +213,68 @@ const ROUND_SLUG_MAP = {
   'semifinals':    'semifinals',
   'final':         'final',
   'third-place':   'third-place',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BRACKET SYNC TRIGGER — spawns bracket scraper as child process after KO match FT
+// Mirrors the pattern from wc2026Heartbeat.ts triggerBracketSync()
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const triggerBracketSync = (gameId, matchRound) => {
+  return new Promise((resolve) => {
+    const startMs = Date.now();
+    log('BRACKET', `BRACKET_SYNC/${gameId}`, `▶ Spawning bracket scraper | reason=post-FT-${matchRound} | script=${BRACKET_SCRIPT}`);
+
+    const child = spawn('node', [BRACKET_SCRIPT], {
+      cwd: PROJECT_DIR,
+      env: { ...process.env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(Boolean);
+      for (const line of lines) {
+        stdout += line + '\n';
+        log('BRACKET', `BRACKET_SYNC/${gameId}`, `[OUT] ${line.slice(0, 200)}`);
+      }
+    });
+
+    child.stderr.on('data', (chunk) => {
+      const lines = chunk.toString().split('\n').filter(Boolean);
+      for (const line of lines) {
+        stderr += line + '\n';
+        log('WARN', `BRACKET_SYNC/${gameId}`, `[ERR] ${line.slice(0, 200)}`);
+      }
+    });
+
+    // 60s timeout for bracket sync
+    const timeout = setTimeout(() => {
+      child.kill('SIGKILL');
+      log('WARN', `BRACKET_SYNC/${gameId}`, `⏱️ BRACKET SYNC TIMEOUT (60s) — killed`);
+      resolve({ success: false, error: 'TIMEOUT', durationMs: Date.now() - startMs });
+    }, 60_000);
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      const durationMs = Date.now() - startMs;
+      const success = code === 0;
+      if (success) {
+        log('BRACKET', `BRACKET_SYNC/${gameId}`, `✅ BRACKET SYNC COMPLETE | code=0 | ${(durationMs / 1000).toFixed(1)}s | Advancement propagated`);
+      } else {
+        log('WARN', `BRACKET_SYNC/${gameId}`, `⚠️ BRACKET SYNC FAILED | code=${code} | ${(durationMs / 1000).toFixed(1)}s`);
+      }
+      resolve({ success, code, durationMs, stdout: stdout.slice(-500), stderr: stderr.slice(-500) });
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      log('ERROR', `BRACKET_SYNC/${gameId}`, `Spawn error: ${err.message}`);
+      resolve({ success: false, error: err.message, durationMs: Date.now() - startMs });
+    });
+  });
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1020,6 +1087,18 @@ const scrapeWithRetry = async (gameId, matchRound, g) => {
       attempts, matchRound, midnightRule: midnightCheck,
     });
     sessionResults.scrapedSet.add(gameId);
+
+    // ═══ BRACKET ADVANCEMENT TRIGGER ═══════════════════════════════════════════
+    // After successful ESPN scrape of a knockout match, trigger bracket sync
+    // to propagate the winner to the next round slot and seed future dates
+    if (isKnockoutRound(matchRound)) {
+      log('BRACKET', `BRACKET/${gameId}`, `🏆 KO match scraped successfully — triggering bracket advancement | matchRound=${matchRound}`);
+      triggerBracketSync(gameId, matchRound).catch(err => {
+        log('ERROR', `BRACKET/${gameId}`, `Bracket sync error: ${err.message}`);
+      });
+    } else {
+      log('INFO', `BRACKET/${gameId}`, `Group stage match — bracket sync not needed | matchRound=${matchRound}`);
+    }
   } else {
     sessionResults.failed++;
     sessionResults.matches.push({
@@ -1182,9 +1261,15 @@ const runPreflightDbCheck = async () => {
        ORDER BY matchGameDate ASC, matchKickoffEt ASC`
     );
     log('DB', 'PREFLIGHT/DB', `${rows.length} WC2026 matches currently in DB`);
+    let preloadCount = 0;
     for (const r of rows) {
-      log('DB', `PREFLIGHT/${r.matchId}`, `EXISTS | ${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | date=${r.matchGameDate} ET=${r.matchKickoffEt} | v=${r.scrapeVersion}`);
-      sessionResults.scrapedSet.add(String(r.matchId));
+      const isActuallyScraped = r.scrapeVersion === '500x' && (Number(r.homeScore) + Number(r.awayScore) > 0 || r.matchRound === 'group-stage');
+      const tag = isActuallyScraped ? 'EXISTS' : 'STUB  ';
+      log('DB', `PREFLIGHT/${r.matchId}`, `${tag} | ${r.homeTeamName} ${r.homeScore}-${r.awayScore} ${r.awayTeamName} | round=${r.matchRound} | date=${r.matchGameDate} ET=${r.matchKickoffEt} | v=${r.scrapeVersion}`);
+      if (isActuallyScraped) {
+        sessionResults.scrapedSet.add(String(r.matchId));
+        preloadCount++;
+      }
     }
     log('DB', 'PREFLIGHT/DB', `${sessionResults.scrapedSet.size} gameIds pre-loaded into scrapedSet — will skip re-trigger unless --force-rescrape`);
   } catch (err) {
