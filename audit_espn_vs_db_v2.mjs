@@ -2,7 +2,7 @@
  * WC2026 RIGOROUS AUDIT v2: ESPN API vs DB
  * =========================================
  * Uses CORRECT DB schema:
- * - wc2026_fixtures: match_id, home_team_id, away_team_id, home_score, away_score, etc.
+ * - wc2026_matches: match_id, home_team_id, away_team_id, home_score, away_score, etc.
  * - wc2026_match_stats: match_id, home_*, away_* (fixture-level, not team-level)
  *
  * Cross-validates every fixture against live ESPN API:
@@ -27,7 +27,7 @@ console.log('[DB] Connected');
 const [dbFixtures] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY kickoff_utc ASC
 `);
@@ -62,7 +62,7 @@ for (const t of dbTeams) teamById[t.team_id] = t;
 // ─── STEP 4: Fetch ESPN API for all fixtures ──────────────────────────────────
 // ESPN Soccer API: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={id}
 // We need ESPN event IDs. Two sources:
-// 1. espn_event_id column in wc2026_fixtures (if populated)
+// 1. espn_event_id column in wc2026_matches (if populated)
 // 2. Derive from the match stats JSON file (which has game_id)
 
 // Load the match stats JSON to get ESPN game_ids
@@ -275,7 +275,7 @@ for (const f of dbFixtures) {
     result.corrections.push({
       type: 'SWAP_HOME_AWAY',
       match_id: f.match_id,
-      sql: `UPDATE wc2026_fixtures SET home_team_id='${espn.home_abbr}', away_team_id='${espn.away_abbr}', home_score=${espn.home_score}, away_score=${espn.away_score} WHERE match_id='${f.match_id}';`,
+      sql: `UPDATE wc2026_matches SET home_team_id='${espn.home_abbr}', away_team_id='${espn.away_abbr}', home_score=${espn.home_score}, away_score=${espn.away_score} WHERE match_id='${f.match_id}';`,
       correct_home: espn.home_abbr,
       correct_away: espn.away_abbr,
       correct_home_score: espn.home_score,
@@ -304,7 +304,7 @@ for (const f of dbFixtures) {
       result.corrections.push({
         type: 'FIX_HOME_SCORE',
         match_id: f.match_id,
-        sql: `UPDATE wc2026_fixtures SET home_score=${espn.home_score} WHERE match_id='${f.match_id}';`,
+        sql: `UPDATE wc2026_matches SET home_score=${espn.home_score} WHERE match_id='${f.match_id}';`,
         correct_value: espn.home_score,
       });
       result.status = 'ERROR';
@@ -319,7 +319,7 @@ for (const f of dbFixtures) {
       result.corrections.push({
         type: 'FIX_AWAY_SCORE',
         match_id: f.match_id,
-        sql: `UPDATE wc2026_fixtures SET away_score=${espn.away_score} WHERE match_id='${f.match_id}';`,
+        sql: `UPDATE wc2026_matches SET away_score=${espn.away_score} WHERE match_id='${f.match_id}';`,
         correct_value: espn.away_score,
       });
       result.status = 'ERROR';

@@ -35,7 +35,7 @@ const ph = TARGET_IDS.map(() => '?').join(',');
 const [rows] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc,
          ht.name AS home_name, at.name AS away_name
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_id IN (${ph})
@@ -86,9 +86,9 @@ if (corrections.length === 0) {
   console.log(`[STEP]   Applying ${corrections.length} match_date correction(s)...\n`);
   
   for (const c of corrections) {
-    console.log(`[STEP]   UPDATE wc2026_fixtures SET match_date='${c.to}' WHERE match_id='${c.matchId}'`);
+    console.log(`[STEP]   UPDATE wc2026_matches SET match_date='${c.to}' WHERE match_id='${c.matchId}'`);
     const [res] = await conn.execute(
-      `UPDATE wc2026_fixtures SET match_date = ? WHERE match_id = ?`,
+      `UPDATE wc2026_matches SET match_date = ? WHERE match_id = ?`,
       [c.to, c.matchId]
     );
     const ok = res.affectedRows === 1;
@@ -100,7 +100,7 @@ if (corrections.length === 0) {
   const correctedIds = corrections.map(c => c.matchId);
   const verPh = correctedIds.map(() => '?').join(',');
   const [verRows] = await conn.execute(
-    `SELECT match_id, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_id IN (${verPh})`,
+    `SELECT match_id, match_date, kickoff_utc FROM wc2026_matches WHERE match_id IN (${verPh})`,
     correctedIds
   );
   
@@ -125,7 +125,7 @@ console.log('══════════════════════�
 const [final] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc,
          ht.name AS home_name, at.name AS away_name
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_id IN (${ph})

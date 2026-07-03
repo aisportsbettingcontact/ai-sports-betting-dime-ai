@@ -6,7 +6,7 @@ const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
 const [rows] = await conn.execute(
   `SELECT fixture_id, home_team_id, away_team_id, kickoff_utc 
-   FROM wc2026_fixtures 
+   FROM wc2026_matches 
    WHERE fixture_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036') 
    ORDER BY fixture_id`
 );

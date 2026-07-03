@@ -5,7 +5,7 @@
  */
 
 import { getDb } from "../db";
-import { wc2026ModelProjections, wc2026FrozenBookOdds, wc2026Fixtures } from "../../drizzle/wc2026.schema";
+import { wc2026ModelProjections, wc2026FrozenBookOdds, wc2026Matches } from "../../drizzle/wc2026.schema";
 import { eq, inArray } from "drizzle-orm";
 import fs from "fs";
 
@@ -196,8 +196,8 @@ async function main() {
 
   // ─── S1: Verify fixtures exist ────────────────────────────────────────────
   stepCount++;
-  log("STEP", `S${stepCount}`, "Verifying 3 June 29 fixtures exist in wc2026_fixtures");
-  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
+  log("STEP", `S${stepCount}`, "Verifying 3 June 29 fixtures exist in wc2026_matches");
+  const fixtures = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
   if (fixtures.length !== 3) {
     log("FAIL", `S${stepCount}`, `Expected 3 fixtures, got ${fixtures.length}`, "Cannot proceed — fixtures missing");
     failCount++;
@@ -323,7 +323,7 @@ async function main() {
   // ─── S10: Verify API endpoint returns all 3 with model+book populated ─────
   stepCount++;
   log("STEP", `S${stepCount}`, "Cross-verifying: wc2026.fixturesByDate API returns 3 fixtures with model+book populated");
-  const allFix = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
+  const allFix = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
   const mpMap: Record<string, any> = {};
   const boMap: Record<string, any> = {};
   mps.forEach((mp: any) => { mpMap[mp.matchId] = mp; });

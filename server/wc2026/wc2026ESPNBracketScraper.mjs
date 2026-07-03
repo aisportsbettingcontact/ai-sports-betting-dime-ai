@@ -7,7 +7,7 @@
  *   https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard
  *   ?limit=100&dates=20260628-20260720
  *
- * MATCH NUMBERS: Joined from wc2026_fixtures.display_order via espn_event_id
+ * MATCH NUMBERS: Joined from wc2026_matches.display_order via espn_event_id
  *   OR derived from match_id (e.g. "wc26-r32-080" → Match 80)
  *
  * COVERAGE: All 32 knockout matchups across all rounds:
@@ -130,14 +130,14 @@ const STATIC_MATCH_NUMBERS = {
   "760517": "Match 104", // Final: SF W1 vs SF W2
 };
 
-// ─── Load match number map from wc2026_fixtures ───────────────────────────────
+// ─── Load match number map from wc2026_matches ───────────────────────────────
 async function loadMatchNumberMap() {
   const mysql = require("mysql2/promise");
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   try {
     const [rows] = await conn.query(
       `SELECT espn_event_id, display_order, match_id, stage
-       FROM wc2026_fixtures
+       FROM wc2026_matches
        WHERE stage != 'GROUP'
        ORDER BY display_order`
     );
@@ -367,8 +367,8 @@ async function main() {
   const startTime = Date.now();
   log("START", `wc2026ESPNBracketScraper — DRY_RUN=${DRY_RUN} VERBOSE=${VERBOSE}`);
 
-  // ── STEP 1: Load match number map from wc2026_fixtures ────────────────────
-  log("STEP1", "Loading match number map from wc2026_fixtures");
+  // ── STEP 1: Load match number map from wc2026_matches ────────────────────
+  log("STEP1", "Loading match number map from wc2026_matches");
   const matchNumberMap = await loadMatchNumberMap();
 
   // ── STEP 2: Fetch ESPN scoreboard ─────────────────────────────────────────

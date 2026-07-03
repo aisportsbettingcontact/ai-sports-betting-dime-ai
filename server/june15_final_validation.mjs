@@ -97,7 +97,7 @@ const [fixtures] = await c.execute(`
          ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName,
          v.stadium, v.city
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id

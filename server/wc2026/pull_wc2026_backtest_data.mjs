@@ -16,7 +16,7 @@ console.log('[DB] Connected');
 const [fixtures] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY match_date, kickoff_utc
 `);
@@ -26,7 +26,7 @@ console.log(`[FIXTURES] ${fixtures.length} completed fixtures`);
 const [dkOdds] = await db.execute(`
   SELECT o.match_id, o.book_id, o.market, o.selection, o.american_odds, o.implied_prob, o.snapshot_ts
   FROM wc2026_odds_snapshots o
-  JOIN wc2026_fixtures f ON f.match_id = o.match_id
+  JOIN wc2026_matches f ON f.match_id = o.match_id
   WHERE f.match_date < '2026-06-25' AND f.status = 'FT'
   AND o.book_id = 15
   ORDER BY o.match_id, o.market, o.selection, o.snapshot_ts
@@ -37,7 +37,7 @@ console.log(`[DK_ODDS] ${dkOdds.length} DK odds rows`);
 const [allOdds] = await db.execute(`
   SELECT o.match_id, o.book_id, o.market, o.selection, o.american_odds, o.implied_prob, o.snapshot_ts
   FROM wc2026_odds_snapshots o
-  JOIN wc2026_fixtures f ON f.match_id = o.match_id
+  JOIN wc2026_matches f ON f.match_id = o.match_id
   WHERE f.match_date < '2026-06-25' AND f.status = 'FT'
   AND o.book_id != 0
   ORDER BY o.match_id, o.book_id, o.market, o.selection

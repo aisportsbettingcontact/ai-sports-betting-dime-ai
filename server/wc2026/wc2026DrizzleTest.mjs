@@ -29,7 +29,7 @@ async function main() {
   // Test 1: Direct string comparison (what Drizzle eq() with plain string does)
   console.log('══ TEST 1: Direct string comparison (match_date = ?) ══');
   const [t1] = await conn.execute(
-    `SELECT match_id, stage, match_date FROM wc2026_fixtures WHERE match_date = ? ORDER BY kickoff_utc`,
+    `SELECT match_id, stage, match_date FROM wc2026_matches WHERE match_date = ? ORDER BY kickoff_utc`,
     [testDate]
   );
   console.log(`Rows: ${t1.length}`);
@@ -38,7 +38,7 @@ async function main() {
   // Test 2: DATE() function comparison
   console.log('\n══ TEST 2: DATE() cast comparison ══');
   const [t2] = await conn.execute(
-    `SELECT match_id, stage, match_date FROM wc2026_fixtures WHERE DATE(match_date) = ? ORDER BY kickoff_utc`,
+    `SELECT match_id, stage, match_date FROM wc2026_matches WHERE DATE(match_date) = ? ORDER BY kickoff_utc`,
     [testDate]
   );
   console.log(`Rows: ${t2.length}`);
@@ -47,14 +47,14 @@ async function main() {
   // Test 3: CAST to DATE
   console.log('\n══ TEST 3: CAST(? AS DATE) comparison ══');
   const [t3] = await conn.execute(
-    `SELECT match_id, stage, match_date FROM wc2026_fixtures WHERE match_date = CAST(? AS DATE) ORDER BY kickoff_utc`,
+    `SELECT match_id, stage, match_date FROM wc2026_matches WHERE match_date = CAST(? AS DATE) ORDER BY kickoff_utc`,
     [testDate]
   );
   console.log(`Rows: ${t3.length}`);
   for (const r of t3) console.log(`  [${r.match_id}] match_date=${r.match_date}`);
 
   // Test 4: What does Drizzle's sql`` template actually produce?
-  // Simulate: eq(wc2026Fixtures.matchDate, sql`${'2026-07-01'}`)
+  // Simulate: eq(wc2026Matches.matchDate, sql`${'2026-07-01'}`)
   // In Drizzle, sql`${value}` with a string becomes a parameterized binding
   // But the issue might be that the date column returns a Date object from MySQL
   // and the comparison fails when the column value is a Date object vs string
@@ -62,7 +62,7 @@ async function main() {
   // Test 5: Check what match_date actually looks like when returned from MySQL
   console.log('\n══ TEST 5: Raw match_date value type from MySQL ══');
   const [t5] = await conn.execute(
-    `SELECT match_id, match_date, DATE_FORMAT(match_date, '%Y-%m-%d') as md_str FROM wc2026_fixtures WHERE match_id = 'wc26-r32-080' LIMIT 1`
+    `SELECT match_id, match_date, DATE_FORMAT(match_date, '%Y-%m-%d') as md_str FROM wc2026_matches WHERE match_id = 'wc26-r32-080' LIMIT 1`
   );
   if (t5.length > 0) {
     const row = t5[0];
@@ -86,7 +86,7 @@ async function main() {
   console.log('\n══ TEST 6: Date object parameter ══');
   const dateObj = new Date('2026-07-01T00:00:00.000Z');
   const [t6] = await conn.execute(
-    `SELECT match_id, stage, match_date FROM wc2026_fixtures WHERE match_date = ? ORDER BY kickoff_utc`,
+    `SELECT match_id, stage, match_date FROM wc2026_matches WHERE match_date = ? ORDER BY kickoff_utc`,
     [dateObj]
   );
   console.log(`Rows with Date object param: ${t6.length}`);
@@ -107,7 +107,7 @@ async function main() {
   // But the column is a DATE type — let's verify MySQL handles this correctly
   console.log('\n══ TEST 8: String literal in WHERE clause ══');
   const [t8] = await conn.execute(
-    `SELECT match_id, stage, match_date FROM wc2026_fixtures WHERE match_date = '2026-07-01' ORDER BY kickoff_utc`
+    `SELECT match_id, stage, match_date FROM wc2026_matches WHERE match_date = '2026-07-01' ORDER BY kickoff_utc`
   );
   console.log(`Rows with string literal '2026-07-01': ${t8.length}`);
   for (const r of t8) console.log(`  [${r.match_id}] match_date=${r.match_date}`);
@@ -116,7 +116,7 @@ async function main() {
   // by checking what the server logs show for the query
   console.log('\n══ TEST 9: Check wc26-r32-079 (midnight match Jul 1) ══');
   const [t9] = await conn.execute(
-    `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_id = 'wc26-r32-079'`
+    `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_matches WHERE match_id = 'wc26-r32-079'`
   );
   if (t9.length > 0) {
     const r = t9[0];

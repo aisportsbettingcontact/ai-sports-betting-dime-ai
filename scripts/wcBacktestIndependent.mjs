@@ -456,7 +456,7 @@ async function main() {
                  WHEN f.home_score < f.away_score THEN 'A'
                  ELSE 'D' END as result,
             (f.home_score + f.away_score) as total_goals
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      WHERE f.stage = 'GROUP' AND f.status = 'FT'
      ORDER BY f.kickoff_utc`
   );

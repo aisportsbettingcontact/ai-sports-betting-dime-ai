@@ -38,7 +38,7 @@ async function main() {
   // Step 1: Fetch all June 21 fixtures with their team orientations
   const [fixtures] = await conn.execute(
     `SELECT fixture_id, home_team_id, away_team_id, kickoff_utc, status, home_score, away_score
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE match_date = '2026-06-21'
      ORDER BY kickoff_utc`
   );
@@ -96,7 +96,7 @@ async function main() {
   console.log(`\n${TAG} [STEP] Applying ${updates.length} score updates...`);
   for (const u of updates) {
     const [res] = await conn.execute(
-      `UPDATE wc2026_fixtures SET home_score = ?, away_score = ?, status = 'FT' WHERE fixture_id = ?`,
+      `UPDATE wc2026_matches SET home_score = ?, away_score = ?, status = 'FT' WHERE fixture_id = ?`,
       [u.homeScore, u.awayScore, u.fixture_id]
     );
     if (res.affectedRows !== 1) {
@@ -112,7 +112,7 @@ async function main() {
   console.log(`\n${TAG} [VERIFY] Re-reading June 21 fixtures from DB after update...`);
   const [verify] = await conn.execute(
     `SELECT fixture_id, home_team_id, away_team_id, kickoff_utc, status, home_score, away_score
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE match_date = '2026-06-21'
      ORDER BY kickoff_utc`
   );

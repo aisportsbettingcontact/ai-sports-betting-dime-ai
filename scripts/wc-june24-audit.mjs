@@ -113,7 +113,7 @@ async function main() {
   console.log(`\n${TAG} ═══ STEP 1: HOME/AWAY ORIENTATION AUDIT ═══`);
   const fixtureIds = Object.keys(GROUND_TRUTH);
   const [fixtures] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
+    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
     fixtureIds
   );
   const [teams] = await conn.query(`SELECT team_id, name, fifa_code FROM wc2026_teams`);

@@ -4,7 +4,7 @@
  * Full backtest for June 19, 2026 WC matches.
  * 
  * Pipeline:
- *   1. Pull June 19 fixtures + final scores from wc2026_fixtures
+ *   1. Pull June 19 fixtures + final scores from wc2026_matches
  *   2. Pull pre-game model projections from wc2026_model_projections
  *   3. Pull pre-game book odds from wc2026_odds_snapshots (earliest snapshot)
  *   4. Ingest 4 matches into wc_bt_matches (2026)
@@ -73,12 +73,12 @@ console.log(`${TAG} WC JUNE 19, 2026 BACKTEST ENGINE`);
 console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
 console.log(`${TAG} ================================================================\n`);
 
-console.log(`${TAG} [STEP 1] Pulling June 19 fixtures from wc2026_fixtures...`);
+console.log(`${TAG} [STEP 1] Pulling June 19 fixtures from wc2026_matches...`);
 const [fixtures] = await conn.query(`
   SELECT f.fixture_id, ht.name as home_team, at.name as away_team,
          f.home_score, f.away_score, f.status, f.kickoff_utc,
          f.group_letter, f.matchday
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at ON at.team_id = f.away_team_id
   WHERE f.match_date = '2026-06-19'

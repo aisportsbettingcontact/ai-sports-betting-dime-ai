@@ -105,7 +105,7 @@ function impliedToAmerican(p) {
     SELECT o.match_id, o.book_id, o.market, o.selection, o.line, o.american_odds,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.match_id = o.match_id
+    JOIN wc2026_matches f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19'

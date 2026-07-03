@@ -16,7 +16,7 @@ console.log('[AUDIT] ===========================================================
 console.log('[AUDIT] [STEP 1] June 19 fixtures status...');
 const [june19] = await conn.query(`
   SELECT fixture_id, home_team, away_team, home_score, away_score, status, kickoff_utc
-  FROM wc2026_fixtures
+  FROM wc2026_matches
   WHERE match_date = '2026-06-19'
   ORDER BY kickoff_utc
 `);

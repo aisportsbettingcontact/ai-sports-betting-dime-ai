@@ -21,7 +21,7 @@ const [rows] = await conn.execute(`
          p.home_win_prob, p.away_win_prob, p.draw_prob,
          p.n_simulations, p.model_version,
          p.modeled_at, p.created_at, p.is_frozen
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_model_projections p ON p.match_id = f.match_id

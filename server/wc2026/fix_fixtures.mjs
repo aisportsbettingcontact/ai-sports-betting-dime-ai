@@ -23,7 +23,7 @@ async function main() {
     `SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
             ht.fifa_code AS home_code, ht.name AS home_name,
             at.fifa_code AS away_code, at.name AS away_name
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
      JOIN wc2026_teams at ON at.team_id = f.away_team_id
      WHERE f.match_date = '2026-06-11'
@@ -65,7 +65,7 @@ async function main() {
       console.error('[FixFixtures] [VERIFY] FAIL — MEX or RSA team_id not found');
     } else {
       const [result] = await conn.query(
-        'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
+        'UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?',
         [mexId, rsaId, 'wc26-g-001']
       );
       console.log(`[FixFixtures] [OUTPUT] Updated wc26-g-001: affectedRows=${result.affectedRows}`);
@@ -93,7 +93,7 @@ async function main() {
         console.error('[FixFixtures] [VERIFY] FAIL — KOR or CZE team_id not found');
       } else {
         const [result] = await conn.query(
-          'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
+          'UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?',
           [korId, czeId, korCzeFixture.match_id]
         );
         console.log(`[FixFixtures] [OUTPUT] Updated ${korCzeFixture.match_id}: affectedRows=${result.affectedRows}`);
@@ -104,7 +104,7 @@ async function main() {
     const [allKorCze] = await conn.query(
       `SELECT f.match_id, f.match_date, f.home_team_id, f.away_team_id,
               ht.fifa_code AS home_code, at.fifa_code AS away_code
-       FROM wc2026_fixtures f
+       FROM wc2026_matches f
        JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
        JOIN wc2026_teams at ON at.team_id = f.away_team_id
        WHERE (ht.fifa_code IN ('KOR','CZE') OR at.fifa_code IN ('KOR','CZE'))
@@ -124,7 +124,7 @@ async function main() {
           const czeId = teamMap['CZE']?.team_id;
           if (korId && czeId) {
             const [result] = await conn.query(
-              'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
+              'UPDATE wc2026_matches SET home_team_id=?, away_team_id=? WHERE match_id=?',
               [korId, czeId, f.match_id]
             );
             console.log(`[FixFixtures] [OUTPUT] Fixed ${f.match_id}: swapped to KOR=home, CZE=away. affectedRows=${result.affectedRows}`);
@@ -153,7 +153,7 @@ async function main() {
     `SELECT f.match_id, f.match_date,
             ht.fifa_code AS home_code, ht.name AS home_name,
             at.fifa_code AS away_code, at.name AS away_name
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
      JOIN wc2026_teams at ON at.team_id = f.away_team_id
      WHERE f.match_date IN ('2026-06-11', '2026-06-12')

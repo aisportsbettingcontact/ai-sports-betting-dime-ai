@@ -389,7 +389,7 @@ async function main() {
                 WHEN f.home_score < f.away_score THEN 'A' ELSE 'D' END as result,
            (f.home_score + f.away_score) as total_goals,
            f.kickoff_utc as match_date, f.kickoff_utc
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.status = 'FT' AND f.home_score IS NOT NULL AND f.away_score IS NOT NULL

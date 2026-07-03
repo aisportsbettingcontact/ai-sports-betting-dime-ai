@@ -16,13 +16,13 @@ async function main() {
     ORDER BY tournament_year, match_date, id
   `);
   
-  // Pull wc2026_fixtures
+  // Pull wc2026_matches
   const [f26Rows] = await conn.query(`
     SELECT f.match_id, f.match_date, f.stage, f.group_letter, f.matchday,
            f.status, f.home_score, f.away_score,
            ht.fifa_code as home_code, at.fifa_code as away_code,
            ht.name as home_name, at.name as away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.stage = 'GROUP'

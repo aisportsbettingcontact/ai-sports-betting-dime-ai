@@ -4,7 +4,7 @@
  * Fixes home/away orientation for all 4 June 15 WC2026 fixtures.
  *
  * ISSUE: All 4 June 15 fixtures have home_team_id and away_team_id swapped
- * in the wc2026_fixtures table relative to the official FIFA schedule.
+ * in the wc2026_matches table relative to the official FIFA schedule.
  *
  * Official FIFA WC2026 June 15 schedule:
  *   wc26-g-015: Spain (home) vs Cape Verde (away) — Atlanta, 12:00 PM ET
@@ -49,7 +49,7 @@ console.log('[STEP] Reading current state before fix');
 const [before] = await c.execute(`
   SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')
@@ -88,7 +88,7 @@ for (const f of before) {
   console.log(`[STEP] ${f.match_id}: swapping home=${f.homeCode}→${correct.homeCode} away=${f.awayCode}→${correct.awayCode}`);
   
   await c.execute(
-    `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
+    `UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
     [correct.home, correct.away, f.match_id]
   );
   
@@ -103,7 +103,7 @@ console.log('[STEP] Reading state after fix');
 const [after] = await c.execute(`
   SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
-  FROM wc2026_fixtures f
+  FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
   WHERE f.match_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')

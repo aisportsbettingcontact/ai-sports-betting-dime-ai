@@ -112,23 +112,23 @@ async function main() {
   log('PASS', 'DB connection established');
 
   // ─── PHASE 1: FIXTURE ROW AUDIT ──────────────────────────────────────────
-  section('PHASE 1: wc2026_fixtures — Row Existence + Field Values');
+  section('PHASE 1: wc2026_matches — Row Existence + Field Values');
 
   const [fixtureRows] = await conn.execute(
     `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status,
             espn_event_id
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
      ORDER BY match_id`,
     TARGET_FIXTURES
   );
 
-  log('DATA', `wc2026_fixtures rows returned: ${fixtureRows.length} / 12 expected`);
+  log('DATA', `wc2026_matches rows returned: ${fixtureRows.length} / 12 expected`);
 
   if (fixtureRows.length !== 12) {
     fail(`Expected 12 fixture rows, got ${fixtureRows.length}`);
   } else {
-    pass('All 12 fixture rows present in wc2026_fixtures');
+    pass('All 12 fixture rows present in wc2026_matches');
   }
 
   const fixtureMap = {};
@@ -193,7 +193,7 @@ async function main() {
   const [joinRows] = await conn.execute(
     `SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
             o.match_id AS odds_fid, o.book_away_ml
-     FROM wc2026_fixtures f
+     FROM wc2026_matches f
      LEFT JOIN wc2026_frozen_book_odds o ON f.match_id = o.match_id
      WHERE f.match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
      ORDER BY f.match_id`,
@@ -254,11 +254,11 @@ async function main() {
   }
 
   // ─── PHASE 6: FULL FIXTURE TABLE STAGE DISTRIBUTION ──────────────────────
-  section('PHASE 6: Full wc2026_fixtures Stage Distribution');
+  section('PHASE 6: Full wc2026_matches Stage Distribution');
 
   const [stageDistRows] = await conn.execute(
     `SELECT stage, COUNT(*) as cnt, MIN(match_date) as min_date, MAX(match_date) as max_date
-     FROM wc2026_fixtures
+     FROM wc2026_matches
      GROUP BY stage
      ORDER BY FIELD(stage,'GROUP','R32','R16','QF','SF','THIRD','FINAL')`
   );
@@ -346,7 +346,7 @@ async function main() {
       `SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
               t_h.team_name AS home_name, t_a.team_name AS away_name,
               o.book_away_ml
-       FROM wc2026_fixtures f
+       FROM wc2026_matches f
        LEFT JOIN wc2026_teams t_h ON f.home_team_id = t_h.team_id
        LEFT JOIN wc2026_teams t_a ON f.away_team_id = t_a.team_id
        LEFT JOIN wc2026_frozen_book_odds o ON f.match_id = o.match_id
@@ -368,7 +368,7 @@ async function main() {
   section('PHASE 11: Raw match_date dump for all 12 target fixtures');
 
   const [rawDates] = await conn.execute(
-    `SELECT match_id, match_date, kickoff_utc, stage FROM wc2026_fixtures
+    `SELECT match_id, match_date, kickoff_utc, stage FROM wc2026_matches
      WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
      ORDER BY match_id`,
     TARGET_FIXTURES
@@ -384,12 +384,12 @@ async function main() {
   }
 
   // ─── PHASE 12: SCHEMA COLUMN AUDIT ───────────────────────────────────────
-  section('PHASE 12: Schema Column Audit — wc2026_fixtures column list');
+  section('PHASE 12: Schema Column Audit — wc2026_matches column list');
 
   const [colRows] = await conn.execute(
-    `SHOW COLUMNS FROM wc2026_fixtures`
+    `SHOW COLUMNS FROM wc2026_matches`
   );
-  log('DATA', 'wc2026_fixtures columns:');
+  log('DATA', 'wc2026_matches columns:');
   for (const col of colRows) {
     log('DATA', `  ${col.Field} | type=${col.Type} | null=${col.Null} | default=${col.Default}`);
   }
@@ -412,7 +412,7 @@ async function main() {
   const serverFiles = findTsFiles(serverDir);
   for (const fpath of serverFiles) {
     const content = fs.readFileSync(fpath, 'utf8');
-    if (/wc2026.*feed|feed.*wc2026|projections.*wc|wc.*projections|frozen_book|wc2026Fixtures/i.test(content)) {
+    if (/wc2026.*feed|feed.*wc2026|projections.*wc|wc.*projections|frozen_book|wc2026Matches/i.test(content)) {
       const relPath = path.relative(projectRoot, fpath);
       const relevantLines = content.split('\n')
         .map((line, i) => ({ n: i + 1, line }))

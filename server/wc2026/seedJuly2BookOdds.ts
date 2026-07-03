@@ -43,7 +43,7 @@
 import { getDb } from '../db';
 import {
   wc2026FrozenBookOdds,
-  wc2026Fixtures,
+  wc2026Matches,
   wc2026Teams,
 } from '../../drizzle/wc2026.schema';
 import { eq, inArray } from 'drizzle-orm';
@@ -248,11 +248,11 @@ async function main() {
   log('SECTION', 'PHASE1', 'PRE-FLIGHT VALIDATION — verify fixtures exist in DB');
 
   const fixtureRows = await db.select({
-    matchId: wc2026Fixtures.matchId,
-    homeTeamId: wc2026Fixtures.homeTeamId,
-    awayTeamId: wc2026Fixtures.awayTeamId,
-    matchDate: wc2026Fixtures.matchDate,
-  }).from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
+    matchId: wc2026Matches.matchId,
+    homeTeamId: wc2026Matches.homeTeamId,
+    awayTeamId: wc2026Matches.awayTeamId,
+    matchDate: wc2026Matches.matchDate,
+  }).from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
 
   log('INPUT', 'PHASE1', `Found ${fixtureRows.length} fixtures in DB`);
   for (const f of fixtureRows) {

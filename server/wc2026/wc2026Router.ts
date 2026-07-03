@@ -21,7 +21,7 @@ import { scrapeEspnMatchPage } from "./espnPageScraper";
 import { scrapeAndIngest } from "./espnDbIngester";
 import { getDb } from "../db";
 import {
-  wc2026Fixtures,
+  wc2026Matches,
   wc2026Teams,
   wc2026Venues,
   wc2026OddsSnapshots,
@@ -33,7 +33,7 @@ import { wc2026MatchOdds, wc2026EspnMatches, type Wc2026MatchOddsRow } from "../
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
-type WcMatch = typeof wc2026Fixtures.$inferSelect;
+type WcMatch = typeof wc2026Matches.$inferSelect;
 type WcOddsRow = typeof wc2026OddsSnapshots.$inferSelect;
 
 export const wc2026Router = router({
@@ -61,20 +61,20 @@ export const wc2026Router = router({
       console.log(`[wc2026.matchesByDate] INPUT date='${input.date}'`);
       const matches = await db
         .select()
-        .from(wc2026Fixtures)
-        .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
+        .from(wc2026Matches)
+        .where(eq(wc2026Matches.matchDate, sql`${input.date}`))
         .orderBy(
-          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
-          asc(wc2026Fixtures.displayOrder),
-          asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.matchId)
+          sql`CASE WHEN ${wc2026Matches.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Matches.displayOrder),
+          asc(wc2026Matches.kickoffUtc),
+          asc(wc2026Matches.matchId)
         );
 
       console.log(`[wc2026.matchesByDate] RESULT date='${input.date}' matches=${matches.length} ids=[${matches.map((f: WcMatch) => f.matchId).join(',')}]`);
       if (matches.length === 0) {
         console.log(`[wc2026.matchesByDate] EMPTY — no matches found for date='${input.date}'. Checking raw matchDate values...`);
         // Diagnostic: dump first 5 rows to see what match_date looks like
-        const sample = await db.select({ matchId: wc2026Fixtures.matchId, matchDate: wc2026Fixtures.matchDate }).from(wc2026Fixtures).limit(5);
+        const sample = await db.select({ matchId: wc2026Matches.matchId, matchDate: wc2026Matches.matchDate }).from(wc2026Matches).limit(5);
         console.log(`[wc2026.matchesByDate] SAMPLE rows:`, JSON.stringify(sample));
         return [];
       }
@@ -259,9 +259,9 @@ export const wc2026Router = router({
       const db = await getDb();
       const matches = await db
         .select()
-        .from(wc2026Fixtures)
-        .where(eq(wc2026Fixtures.groupLetter, input.group.toUpperCase()))
-        .orderBy(wc2026Fixtures.matchday, wc2026Fixtures.kickoffUtc);
+        .from(wc2026Matches)
+        .where(eq(wc2026Matches.groupLetter, input.group.toUpperCase()))
+        .orderBy(wc2026Matches.matchday, wc2026Matches.kickoffUtc);
 
       const [teams, venues] = await Promise.all([
         db.select().from(wc2026Teams),
@@ -355,13 +355,13 @@ export const wc2026Router = router({
       // Get all matches for this date
       const matches = await db
         .select()
-        .from(wc2026Fixtures)
-        .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
+        .from(wc2026Matches)
+        .where(eq(wc2026Matches.matchDate, sql`${input.date}`))
         .orderBy(
-          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
-          asc(wc2026Fixtures.displayOrder),
-          asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.matchId)
+          sql`CASE WHEN ${wc2026Matches.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Matches.displayOrder),
+          asc(wc2026Matches.kickoffUtc),
+          asc(wc2026Matches.matchId)
         );
 
       if (matches.length === 0) return [];
@@ -428,13 +428,13 @@ export const wc2026Router = router({
 
     const matches = await db
       .select()
-      .from(wc2026Fixtures)
-      .where(eq(wc2026Fixtures.matchDate, sql`${today}`))
+      .from(wc2026Matches)
+      .where(eq(wc2026Matches.matchDate, sql`${today}`))
       .orderBy(
-          sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
-          asc(wc2026Fixtures.displayOrder),
-          asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.matchId)
+          sql`CASE WHEN ${wc2026Matches.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
+          asc(wc2026Matches.displayOrder),
+          asc(wc2026Matches.kickoffUtc),
+          asc(wc2026Matches.matchId)
         );
 
     if (matches.length === 0) return [];

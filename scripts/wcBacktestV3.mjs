@@ -471,7 +471,7 @@ async function main() {
     ORDER BY tournament_year, match_date, kickoff_utc
   `);
 
-  // wc2026_fixtures (all 40 completed 2026 games)
+  // wc2026_matches (all 40 completed 2026 games)
   const [wc26Rows] = await conn.execute(`
     SELECT f.fixture_id as id,
            2026 as tournament_year,
@@ -484,7 +484,7 @@ async function main() {
            (f.home_score + f.away_score) as total_goals,
            f.kickoff_utc as match_date,
            f.kickoff_utc
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.status = 'FT' AND f.home_score IS NOT NULL AND f.away_score IS NOT NULL
@@ -493,7 +493,7 @@ async function main() {
 
   await conn.end();
 
-  // Merge: use wc2026_fixtures as authoritative for 2026, deduplicate
+  // Merge: use wc2026_matches as authoritative for 2026, deduplicate
   const bt2018 = btRows.filter(r => r.tournament_year === 2018);
   const bt2022 = btRows.filter(r => r.tournament_year === 2022);
   // Use wc26 rows (40 games) instead of btRows 2026 (28 games)

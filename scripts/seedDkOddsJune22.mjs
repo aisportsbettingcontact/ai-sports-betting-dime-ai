@@ -7,7 +7,7 @@
  * AN API confirmed matching values for 3/4 games.
  * Senegal/Norway: AN API confirmed Norway +125, Senegal +220, Draw +255.
  *
- * DB FIXTURE ORIENTATIONS (from wc2026_fixtures table):
+ * DB FIXTURE ORIENTATIONS (from wc2026_matches table):
  *   wc26-g-043: Austria (home=aut) vs Argentina (away=arg)  ← DB home=Austria
  *   wc26-g-041: Iraq (home=irq) vs France (away=fra)        ← DB home=Iraq
  *   wc26-g-042: Norway (home=nor) vs Senegal (away=sen)     ← DB home=Norway
@@ -73,7 +73,7 @@ function probToAmerican(p) {
 }
 
 // ─── Fixture definitions ─────────────────────────────────────────────────────
-// All odds mapped to DB orientation (home_team_id / away_team_id in wc2026_fixtures)
+// All odds mapped to DB orientation (home_team_id / away_team_id in wc2026_matches)
 const FIXTURES = [
   {
     fixtureId: 'wc26-g-043',

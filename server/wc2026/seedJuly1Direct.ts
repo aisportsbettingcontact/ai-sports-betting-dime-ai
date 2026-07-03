@@ -68,7 +68,7 @@ import { getDb } from "../db";
 import {
   wc2026ModelProjections,
   wc2026FrozenBookOdds,
-  wc2026Fixtures,
+  wc2026Matches,
 } from "../../drizzle/wc2026.schema";
 import { eq, inArray } from "drizzle-orm";
 import fs from "fs";
@@ -657,13 +657,13 @@ async function main() {
   log("PASS", "MODEL-VAL", `All ${modelValPass} model validation checks PASS`);
 
   // ─── PHASE 2: VERIFY FIXTURES EXIST IN DB ────────────────────────────────
-  log("SECTION", "PHASE2", "VERIFYING FIXTURES EXIST IN wc2026_fixtures");
-  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
+  log("SECTION", "PHASE2", "VERIFYING FIXTURES EXIST IN wc2026_matches");
+  const fixtures = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
   if (fixtures.length !== 3) {
     log("FAIL", "FX-CHECK", `Expected 3 fixtures, got ${fixtures.length} — ABORT`);
     flushSeedLog(); process.exit(1);
   }
-  log("PASS", "FX-CHECK", `All 3 fixtures confirmed in wc2026_fixtures`);
+  log("PASS", "FX-CHECK", `All 3 fixtures confirmed in wc2026_matches`);
   for (const f of fixtures) {
     log("VERIFY", "FX-CHECK", `${(f as any).matchId}: home=${(f as any).homeTeamId} away=${(f as any).awayTeamId} | kickoff=${(f as any).kickoffUtc} | stage=${(f as any).stage}`);
     // Cross-check orientation
