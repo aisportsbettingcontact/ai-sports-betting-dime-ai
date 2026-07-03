@@ -97,8 +97,8 @@ const AN_TO_FIXTURE = {
 const correctedOdds = {};
 
 for (const game of anGames) {
-  const fixtureId = AN_TO_FIXTURE[game.id];
-  if (!fixtureId) continue;
+  const matchId = AN_TO_FIXTURE[game.id];
+  if (!matchId) continue;
   
   const dkMarkets = game.markets?.['68']?.event;
   if (!dkMarkets) {
@@ -125,7 +125,7 @@ for (const game of anGames) {
   // AN 'away'=KSA, AN 'home'=URU → FIFA home=KSA, FIFA away=URU ✓
   // So for g-016: AN 'away' = FIFA home (KSA), AN 'home' = FIFA away (URU) — SAME pattern!
   
-  correctedOdds[fixtureId] = {
+  correctedOdds[matchId] = {
     // FIFA home = AN 'away' selection
     home_ml: anAway?.odds ?? null,
     // FIFA away = AN 'home' selection
@@ -136,7 +136,7 @@ for (const game of anGames) {
     under_odds: under?.odds ?? null,
   };
   
-  console.log(`[STATE] Game ${game.id} → ${fixtureId}: FIFA_home_ML=${correctedOdds[fixtureId].home_ml} draw=${correctedOdds[fixtureId].draw_ml} FIFA_away_ML=${correctedOdds[fixtureId].away_ml} total=${correctedOdds[fixtureId].total_line} over=${correctedOdds[fixtureId].over_odds} under=${correctedOdds[fixtureId].under_odds}`);
+  console.log(`[STATE] Game ${game.id} → ${matchId}: FIFA_home_ML=${correctedOdds[matchId].home_ml} draw=${correctedOdds[matchId].draw_ml} FIFA_away_ML=${correctedOdds[matchId].away_ml} total=${correctedOdds[matchId].total_line} over=${correctedOdds[matchId].over_odds} under=${correctedOdds[matchId].under_odds}`);
 }
 
 // Fallback: use hardcoded values from earlier fetch if AN API didn't return all games
@@ -162,7 +162,7 @@ console.log('');
 console.log('[STEP] Deleting stale DK odds (book_id=68) for June 15 fixtures...');
 const ph = june15Ids.map(() => '?').join(',');
 const [delResult] = await c.execute(
-  `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${ph}) AND book_id = 68`,
+  `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 68`,
   june15Ids
 );
 console.log('[STATE] Deleted', delResult.affectedRows, 'rows');
@@ -195,7 +195,7 @@ for (const fid of june15Ids) {
 
 if (rows.length > 0) {
   await c.execute(
-    `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
+    `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
     rows.flat()
   );
   console.log('[STATE] Inserted', rows.length, 'rows');
@@ -205,33 +205,33 @@ if (rows.length > 0) {
 console.log('');
 console.log('[STEP] Verifying corrected odds...');
 const [verify] = await c.execute(`
-  SELECT fixture_id, market, selection, american_odds, line
+  SELECT match_id, market, selection, american_odds, line
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${ph}) AND book_id = 68
+  WHERE match_id IN (${ph}) AND book_id = 68
   AND snapshot_ts = (
     SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-    WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+    WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
   )
-  ORDER BY fixture_id, market, selection
+  ORDER BY match_id, market, selection
 `, june15Ids);
 
 // Get fixture names
 const [fixtures] = await c.execute(`
-  SELECT f.fixture_id, ht.fifa_code as homeCode, at.fifa_code as awayCode
+  SELECT f.match_id, ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE f.fixture_id IN (${ph})
+  WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
 `, june15Ids);
 
 const fxMap = {};
-for (const f of fixtures) fxMap[f.fixture_id] = f;
+for (const f of fixtures) fxMap[f.match_id] = f;
 
 const byFix = {};
 for (const o of verify) {
-  if (!byFix[o.fixture_id]) byFix[o.fixture_id] = {};
-  byFix[o.fixture_id][`${o.market}_${o.selection}`] = o.american_odds;
+  if (!byFix[o.match_id]) byFix[o.match_id] = {};
+  byFix[o.match_id][`${o.market}_${o.selection}`] = o.american_odds;
 }
 
 let allPass = true;

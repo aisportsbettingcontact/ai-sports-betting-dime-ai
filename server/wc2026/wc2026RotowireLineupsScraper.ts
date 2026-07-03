@@ -102,7 +102,7 @@ export async function scrapeWc2026Lineups(): Promise<{
 
     // ─── Find fixture ─────────────────────────────────────────────────────────
     const fixtures = await db
-      .select({ fixtureId: wc2026Fixtures.fixtureId })
+      .select({ matchId: wc2026Fixtures.matchId })
       .from(wc2026Fixtures)
       .where(
         and(
@@ -112,20 +112,20 @@ export async function scrapeWc2026Lineups(): Promise<{
       )
       .limit(1);
 
-    const fixtureId = fixtures[0]?.fixtureId;
-    if (!fixtureId) {
+    const matchId = fixtures[0]?.matchId;
+    if (!matchId) {
       const msg = `[WC2026Lineups] [VERIFY] FAIL — No fixture: home=${resolvedHome} away=${resolvedAway}`;
       console.error(msg);
       errors.push(msg);
       continue;
     }
 
-    console.log(`[WC2026Lineups] [STATE] Matched fixture_id=${fixtureId}`);
+    console.log(`[WC2026Lineups] [STATE] Matched match_id=${matchId}`);
 
     // ─── Delete stale lineup rows for this fixture ────────────────────────────
     await db
       .delete(wc2026Lineups)
-      .where(eq(wc2026Lineups.fixtureId, fixtureId));
+      .where(eq(wc2026Lineups.matchId, matchId));
 
     // ─── Extract players from both lineup__main sections ─────────────────────
     // Card has two div.lineup__main: [0]=home, [1]=visit (away)
@@ -175,7 +175,7 @@ export async function scrapeWc2026Lineups(): Promise<{
         );
 
         insertRows.push({
-          fixtureId,
+          matchId,
           teamId,
           scrapedAt,
           isConfirmed,

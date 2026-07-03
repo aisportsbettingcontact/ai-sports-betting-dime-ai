@@ -67,7 +67,7 @@ const FIXTURES = [
   // ── wc26-g-057: Ivory Coast (away=CIV) vs Curacao (home=CUW) ─────────────
   // DB orientation: home=cuw, away=civ ← MATCHES USER ✓
   {
-    fixtureId: 'wc26-g-057',
+    matchId: 'wc26-g-057',
     homeName: 'Curacao', homeId: 'cuw', homeFifa: 'CUW',
     awayName: 'Ivory Coast', awayId: 'civ', awayFifa: 'CIV',
     dbNeedsSwap: false,
@@ -100,7 +100,7 @@ const FIXTURES = [
   // ── wc26-g-058: Germany (away=GER) vs Ecuador (home=ECU) ─────────────────
   // DB orientation: home=ecu, away=ger ← MATCHES USER ✓
   {
-    fixtureId: 'wc26-g-058',
+    matchId: 'wc26-g-058',
     homeName: 'Ecuador', homeId: 'ecu', homeFifa: 'ECU',
     awayName: 'Germany', awayId: 'ger', awayFifa: 'GER',
     dbNeedsSwap: false,
@@ -134,7 +134,7 @@ const FIXTURES = [
   // DB orientation: home=swe, away=jpn ← INVERTED vs user → dbNeedsSwap=true
   // After swap: DB home=jpn, DB away=swe ← matches user
   {
-    fixtureId: 'wc26-g-059',
+    matchId: 'wc26-g-059',
     homeName: 'Japan', homeId: 'jpn', homeFifa: 'JPN',
     awayName: 'Sweden', awayId: 'swe', awayFifa: 'SWE',
     dbNeedsSwap: true,
@@ -168,7 +168,7 @@ const FIXTURES = [
   // DB orientation: home=ned, away=tun ← INVERTED vs user → dbNeedsSwap=true
   // After swap: DB home=tun, DB away=ned ← matches user
   {
-    fixtureId: 'wc26-g-060',
+    matchId: 'wc26-g-060',
     homeName: 'Tunisia', homeId: 'tun', homeFifa: 'TUN',
     awayName: 'Netherlands', awayId: 'ned', awayFifa: 'NED',
     dbNeedsSwap: true,
@@ -201,7 +201,7 @@ const FIXTURES = [
   // ── wc26-g-055: USA (away=USA) vs Turkey (home=TUR) ──────────────────────
   // DB orientation: home=tur, away=usa ← MATCHES USER ✓
   {
-    fixtureId: 'wc26-g-055',
+    matchId: 'wc26-g-055',
     homeName: 'Turkey', homeId: 'tur', homeFifa: 'TUR',
     awayName: 'United States', awayId: 'usa', awayFifa: 'USA',
     dbNeedsSwap: false,
@@ -234,7 +234,7 @@ const FIXTURES = [
   // ── wc26-g-056: Australia (away=AUS) vs Paraguay (home=PAR) ──────────────
   // DB orientation: home=par, away=aus ← MATCHES USER ✓
   {
-    fixtureId: 'wc26-g-056',
+    matchId: 'wc26-g-056',
     homeName: 'Paraguay', homeId: 'par', homeFifa: 'PAR',
     awayName: 'Australia', awayId: 'aus', awayFifa: 'AUS',
     dbNeedsSwap: false,
@@ -281,21 +281,21 @@ const FIXTURES = [
   const errors = [];
 
   for (const f of FIXTURES) {
-    console.log(`\n${TAG} ─── Fixture: ${f.fixtureId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+    console.log(`\n${TAG} ─── Fixture: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
     // ── STEP 0: Fix orientation if DB is inverted ─────────────────────────────
     if (f.dbNeedsSwap) {
-      console.log(`${TAG} [STEP 0] ORIENTATION SWAP REQUIRED for ${f.fixtureId}`);
+      console.log(`${TAG} [STEP 0] ORIENTATION SWAP REQUIRED for ${f.matchId}`);
       console.log(`${TAG} [STATE] DB was: home=${f.awayId}(wrong) away=${f.homeId}(wrong)`);
       console.log(`${TAG} [STATE] Swapping to: home=${f.homeId} away=${f.awayId}`);
 
       // Verify current DB state before swap
       const [pre] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ?`,
-        [f.fixtureId]
+        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        [f.matchId]
       );
       if (!pre.length) {
-        const msg = `FATAL: fixture_id=${f.fixtureId} not found in DB`;
+        const msg = `FATAL: match_id=${f.matchId} not found in DB`;
         console.error(`${TAG} [ERROR] ${msg}`);
         errors.push(msg);
         continue;
@@ -304,31 +304,31 @@ const FIXTURES = [
 
       // Perform swap using temp to avoid unique constraint issues
       await conn.query(
-        `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE fixture_id = ?`,
-        [f.homeId, f.awayId, f.fixtureId]
+        `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
+        [f.homeId, f.awayId, f.matchId]
       );
 
       // Verify post-swap
       const [post] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ?`,
-        [f.fixtureId]
+        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        [f.matchId]
       );
       const swapOk = post[0].home_team_id === f.homeId && post[0].away_team_id === f.awayId;
       console.log(`${TAG} [OUTPUT] Post-swap DB: home_team_id=${post[0].home_team_id} away_team_id=${post[0].away_team_id}`);
       console.log(`${TAG} [VERIFY] Orientation swap: ${swapOk ? 'PASS ✓' : 'FAIL ✗ — MISMATCH'}`);
       if (!swapOk) {
-        errors.push(`Orientation swap FAILED for ${f.fixtureId}`);
+        errors.push(`Orientation swap FAILED for ${f.matchId}`);
         continue;
       }
       totalSwaps++;
     } else {
       // Verify existing orientation is correct
       const [row] = await conn.query(
-        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ?`,
-        [f.fixtureId]
+        `SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?`,
+        [f.matchId]
       );
       if (!row.length) {
-        const msg = `FATAL: fixture_id=${f.fixtureId} not found in DB`;
+        const msg = `FATAL: match_id=${f.matchId} not found in DB`;
         console.error(`${TAG} [ERROR] ${msg}`);
         errors.push(msg);
         continue;
@@ -337,17 +337,17 @@ const FIXTURES = [
       console.log(`${TAG} [STEP 0] Orientation check: home_team_id=${row[0].home_team_id} away_team_id=${row[0].away_team_id}`);
       console.log(`${TAG} [VERIFY] Orientation: ${orientOk ? 'PASS ✓' : 'FAIL ✗ — EXPECTED home=' + f.homeId + ' away=' + f.awayId}`);
       if (!orientOk) {
-        errors.push(`Orientation mismatch for ${f.fixtureId}: DB home=${row[0].home_team_id} expected=${f.homeId}`);
+        errors.push(`Orientation mismatch for ${f.matchId}: DB home=${row[0].home_team_id} expected=${f.homeId}`);
       }
     }
 
     // ── STEP 1: Clear existing DK odds ────────────────────────────────────────
     const [del] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [f.fixtureId, DK_BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [f.matchId, DK_BOOK_ID]
     );
     totalDeleted += del.affectedRows;
-    console.log(`${TAG} [STEP 1] Cleared ${del.affectedRows} existing DK rows for ${f.fixtureId}`);
+    console.log(`${TAG} [STEP 1] Cleared ${del.affectedRows} existing DK rows for ${f.matchId}`);
 
     // ── STEP 2: Build DK odds rows ────────────────────────────────────────────
     // Every row: { market, selection, line, odds }
@@ -383,33 +383,33 @@ const FIXTURES = [
       const prob = impliedProb(row.odds);
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots
-           (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+           (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, prob]
+        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, prob]
       );
       insertedForFixture++;
-      console.log(`${TAG} [STEP 3] INSERT: fixture=${f.fixtureId} market=${row.market} sel=${row.selection} line=${row.line ?? 'null'} odds=${row.odds > 0 ? '+' + row.odds : row.odds} prob=${prob?.toFixed(4)}`);
+      console.log(`${TAG} [STEP 3] INSERT: fixture=${f.matchId} market=${row.market} sel=${row.selection} line=${row.line ?? 'null'} odds=${row.odds > 0 ? '+' + row.odds : row.odds} prob=${prob?.toFixed(4)}`);
     }
     totalInserted += insertedForFixture;
-    console.log(`${TAG} [OUTPUT] Inserted ${insertedForFixture} DK rows for ${f.fixtureId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${insertedForFixture} DK rows for ${f.matchId}`);
 
     // ── STEP 4: Verify inserted rows ──────────────────────────────────────────
     const [verify] = await conn.query(
       `SELECT market, selection, line, american_odds, implied_prob
        FROM wc2026_odds_snapshots
-       WHERE fixture_id = ? AND book_id = ?
+       WHERE match_id = ? AND book_id = ?
        ORDER BY market, selection`,
-      [f.fixtureId, DK_BOOK_ID]
+      [f.matchId, DK_BOOK_ID]
     );
-    console.log(`${TAG} [VERIFY] DB rows for ${f.fixtureId}: ${verify.length} (expected ${insertedForFixture})`);
+    console.log(`${TAG} [VERIFY] DB rows for ${f.matchId}: ${verify.length} (expected ${insertedForFixture})`);
     const verifyOk = verify.length === insertedForFixture;
     if (!verifyOk) {
-      errors.push(`Row count mismatch for ${f.fixtureId}: inserted=${insertedForFixture} DB=${verify.length}`);
+      errors.push(`Row count mismatch for ${f.matchId}: inserted=${insertedForFixture} DB=${verify.length}`);
     }
     for (const v of verify) {
       console.log(`${TAG} [VERIFY]   ${v.market}/${v.selection} line=${v.line ?? 'null'} odds=${v.american_odds > 0 ? '+' + v.american_odds : v.american_odds} prob=${parseFloat(v.implied_prob).toFixed(4)}`);
     }
-    console.log(`${TAG} [VERIFY] ${f.fixtureId}: ${verifyOk ? 'PASS ✓' : 'FAIL ✗'}`);
+    console.log(`${TAG} [VERIFY] ${f.matchId}: ${verifyOk ? 'PASS ✓' : 'FAIL ✗'}`);
   }
 
   // ── FINAL SUMMARY ─────────────────────────────────────────────────────────

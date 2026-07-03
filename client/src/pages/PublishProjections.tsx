@@ -1661,13 +1661,13 @@ export default function PublishProjections() {
   const wcUpdateMatchOddsMutation = trpc.wc2026.updateMatchOdds.useMutation({
     onMutate: (vars) => {
       console.log(
-        `[PublishProjections][WC2026][updateMatchOdds] ► START | fixtureId=${vars.fixtureId}` +
-        ` fields=${JSON.stringify(Object.keys(vars).filter(k => k !== 'fixtureId'))}`
+        `[PublishProjections][WC2026][updateMatchOdds] ► START | matchId=${vars.matchId}` +
+        ` fields=${JSON.stringify(Object.keys(vars).filter(k => k !== 'matchId'))}`
       );
     },
     onSuccess: (data) => {
       console.log(
-        `[PublishProjections][WC2026][updateMatchOdds] ✅ COMPLETE | fixtureId=${data.fixtureId}` +
+        `[PublishProjections][WC2026][updateMatchOdds] ✅ COMPLETE | matchId=${data.matchId}` +
         ` updated=${data.updated} elapsed=${data.elapsedMs}ms`
       );
       toast.success(`WC2026 odds saved — ${data.updated} row updated`);
@@ -1675,7 +1675,7 @@ export default function PublishProjections() {
     },
     onError: (err, vars) => {
       console.error(
-        `[PublishProjections][WC2026][updateMatchOdds] ❌ FAILED | fixtureId=${vars.fixtureId} error:`, err
+        `[PublishProjections][WC2026][updateMatchOdds] ❌ FAILED | matchId=${vars.matchId} error:`, err
       );
       toast.error(`WC2026 save failed: ${err.message}`);
     },
@@ -2335,7 +2335,7 @@ export default function PublishProjections() {
             isLoading={wcIsLoading}
             round={wcRound}
             onRoundChange={setWcRound}
-            onSave={(fixtureId, fields) => wcUpdateMatchOddsMutation.mutate({ fixtureId, ...fields })}
+            onSave={(matchId, fields) => wcUpdateMatchOddsMutation.mutate({ matchId, ...fields })}
             isSaving={wcUpdateMatchOddsMutation.isPending}
           />
         ) : isLoading ? (
@@ -2375,11 +2375,11 @@ export default function PublishProjections() {
 // ─── WC2026 Match Odds Panel ──────────────────────────────────────────────────
 // Owner-only panel for entering model odds for wc2026MatchOdds rows.
 // Queries ONLY wc2026MatchOdds (enriched with team names from wc2026_espn_matches).
-// 8 markets per fixture: TO ADV, ML (3-way), DRAW/NO DRAW, TOTAL, SPREAD, DBL CHC, BTTS.
+// 8 markets per match: TO ADV, ML (3-way), DRAW/NO DRAW, TOTAL, SPREAD, DBL CHC, BTTS.
 
 type WcMatchOddsRow = {
   id: number;
-  fixtureId: string;
+  matchId: string;
   espnMatchId: string | null;
   espnSlug: string | null;
   worldCupRound: string | null;
@@ -2488,7 +2488,7 @@ function WcOddsInput({
   );
 }
 
-// ─── WcMatchOddsCard — one fixture row ────────────────────────────────────────
+// ─── WcMatchOddsCard — one match row ────────────────────────────────────────
 
 function WcMatchOddsCard({
   row,
@@ -2496,7 +2496,7 @@ function WcMatchOddsCard({
   isSaving,
 }: {
   row: WcMatchOddsRow;
-  onSave: (fixtureId: string, fields: Record<string, number | null>) => void;
+  onSave: (matchId: string, fields: Record<string, number | null>) => void;
   isSaving: boolean;
 }) {
   const awayName = row.awayTeamName ?? row.awayTeamAbbrev ?? row.espnSlug?.split("-")[0]?.toUpperCase() ?? "AWAY";
@@ -2549,11 +2549,11 @@ function WcMatchOddsCard({
       modelBttsNo:                 wcParseOdds(mBttsNo),
     };
     console.log(
-      `[WcMatchOddsCard][handleSave] fixtureId=${row.fixtureId}` +
+      `[WcMatchOddsCard][handleSave] matchId=${row.matchId}` +
       ` | [INPUT] fields=${JSON.stringify(fields)}` +
       ` | [VERIFY] dirtyFields=${Object.entries(fields).filter(([,v]) => v !== null).map(([k]) => k).join(",")}`
     );
-    onSave(row.fixtureId, fields);
+    onSave(row.matchId, fields);
     setIsDirty(false);
   };
 
@@ -2600,11 +2600,11 @@ function WcMatchOddsCard({
         borderLeft: "3px solid #00A850",
       }}
     >
-      {/* Header row: fixture ID + team names + save button */}
+      {/* Header row: match ID + team names + save button */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {row.fixtureId}
+            {row.matchId}
           </span>
           <span className="font-bold text-sm text-white">
             {awayAbbr} vs {homeAbbr}
@@ -2837,7 +2837,7 @@ function WcMatchOddsPanel({
   isLoading: boolean;
   round: string;
   onRoundChange: (r: "r32" | "quarterfinals" | "semifinals" | "third_place" | "finals") => void;
-  onSave: (fixtureId: string, fields: Record<string, number | null>) => void;
+  onSave: (matchId: string, fields: Record<string, number | null>) => void;
   isSaving: boolean;
 }) {
   console.log(
@@ -2866,7 +2866,7 @@ function WcMatchOddsPanel({
           </button>
         ))}
         <span className="text-xs ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>
-          {rows.length} fixture{rows.length !== 1 ? "s" : ""}
+          {rows.length} match{rows.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -2890,13 +2890,13 @@ function WcMatchOddsPanel({
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-2">
           <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
-            No fixtures found for {WC_ROUND_LABELS[round] ?? round}
+            No matchs found for {WC_ROUND_LABELS[round] ?? round}
           </span>
         </div>
       ) : (
         rows.map((row) => {
           console.log(
-            `[WcMatchOddsPanel] Rendering card fixtureId=${row.fixtureId}` +
+            `[WcMatchOddsPanel] Rendering card matchId=${row.matchId}` +
             ` away=${row.awayTeamName ?? row.awayTeamAbbrev ?? "?"}` +
             ` home=${row.homeTeamName ?? row.homeTeamAbbrev ?? "?"}` +
             ` bookAwayMl=${row.bookAwayMl ?? "null"}` +
@@ -2906,7 +2906,7 @@ function WcMatchOddsPanel({
           );
           return (
             <WcMatchOddsCard
-              key={row.fixtureId}
+              key={row.matchId}
               row={row}
               onSave={onSave}
               isSaving={isSaving}

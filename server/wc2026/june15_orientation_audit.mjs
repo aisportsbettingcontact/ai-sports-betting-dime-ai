@@ -33,7 +33,7 @@ const OFFICIAL = {
 
 // Step 1: Get fixture orientation from DB
 const [fx] = await c.execute(`
-  SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.group_letter, f.matchday,
+  SELECT f.match_id, f.match_date, f.kickoff_utc, f.group_letter, f.matchday,
          f.away_team_id, f.home_team_id,
          t1.name as awayName, t1.fifa_code as awayCode,
          t2.name as homeName, t2.fifa_code as homeCode,
@@ -53,9 +53,9 @@ let orientationPasses = 0;
 let orientationFails = 0;
 
 for (const f of fx) {
-  const official = OFFICIAL[f.fixture_id];
+  const official = OFFICIAL[f.match_id];
   if (!official) {
-    console.log('[WARN] No official data for', f.fixture_id);
+    console.log('[WARN] No official data for', f.match_id);
     continue;
   }
   const homeMatch = f.homeCode === official.home;
@@ -64,7 +64,7 @@ for (const f of fx) {
   if (homeMatch && awayMatch) orientationPasses++;
   else orientationFails++;
   
-  console.log(`[VERIFY] ${status} ${f.fixture_id} | DB: away=${f.awayCode}(${f.awayName}) home=${f.homeCode}(${f.homeName}) | Official: away=${official.away}(${official.awayTeam}) home=${official.home}(${official.homeTeam})`);
+  console.log(`[VERIFY] ${status} ${f.match_id} | DB: away=${f.awayCode}(${f.awayName}) home=${f.homeCode}(${f.homeName}) | Official: away=${official.away}(${official.awayTeam}) home=${official.home}(${official.homeTeam})`);
   if (!homeMatch) console.log(`  [ERROR] HOME MISMATCH: DB=${f.homeCode} Official=${official.home}`);
   if (!awayMatch) console.log(`  [ERROR] AWAY MISMATCH: DB=${f.awayCode} Official=${official.away}`);
   console.log(`  Kickoff UTC: ${f.kickoff_utc} (${official.kickoffET}) | Venue: ${f.stadium}, ${f.city} | Group ${f.group_letter} MD${f.matchday}`);
@@ -76,30 +76,30 @@ console.log('');
 
 // Step 2: Validate DK odds (book_id=68) mapping per fixture
 console.log('[STEP] Validating DK odds (book_id=68) — home/away/draw assignment');
-const june15Ids = fx.map(f => f.fixture_id);
+const june15Ids = fx.map(f => f.match_id);
 const ph = june15Ids.map(() => '?').join(',');
 
 const [dkOdds] = await c.execute(
-  `SELECT fixture_id, market, selection, american_odds, line
+  `SELECT match_id, market, selection, american_odds, line
    FROM wc2026_odds_snapshots
-   WHERE fixture_id IN (${ph}) AND book_id = 68
+   WHERE match_id IN (${ph}) AND book_id = 68
    AND snapshot_ts = (
      SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-     WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+     WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
    )
-   ORDER BY fixture_id, market, selection`,
+   ORDER BY match_id, market, selection`,
   june15Ids
 );
 
 const [modelOdds] = await c.execute(
-  `SELECT fixture_id, market, selection, american_odds, line
+  `SELECT match_id, market, selection, american_odds, line
    FROM wc2026_odds_snapshots
-   WHERE fixture_id IN (${ph}) AND book_id = 0
+   WHERE match_id IN (${ph}) AND book_id = 0
    AND snapshot_ts = (
      SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-     WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 0
+     WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 0
    )
-   ORDER BY fixture_id, market, selection`,
+   ORDER BY match_id, market, selection`,
   june15Ids
 );
 
@@ -107,19 +107,19 @@ const [modelOdds] = await c.execute(
 const dkByFixture = {};
 const modelByFixture = {};
 for (const o of dkOdds) {
-  if (!dkByFixture[o.fixture_id]) dkByFixture[o.fixture_id] = {};
+  if (!dkByFixture[o.match_id]) dkByFixture[o.match_id] = {};
   const key = `${o.market}_${o.selection}`;
-  dkByFixture[o.fixture_id][key] = { odds: o.american_odds, line: o.line };
+  dkByFixture[o.match_id][key] = { odds: o.american_odds, line: o.line };
 }
 for (const o of modelOdds) {
-  if (!modelByFixture[o.fixture_id]) modelByFixture[o.fixture_id] = {};
+  if (!modelByFixture[o.match_id]) modelByFixture[o.match_id] = {};
   const key = `${o.market}_${o.selection}`;
-  modelByFixture[o.fixture_id][key] = { odds: o.american_odds, line: o.line };
+  modelByFixture[o.match_id][key] = { odds: o.american_odds, line: o.line };
 }
 
 // Build fixture map for display
 const fxMap = {};
-for (const f of fx) fxMap[f.fixture_id] = f;
+for (const f of fx) fxMap[f.match_id] = f;
 
 console.log('');
 console.log('[STATE] Full odds matrix for June 15 WC fixtures:');

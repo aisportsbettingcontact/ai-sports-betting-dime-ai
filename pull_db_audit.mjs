@@ -18,7 +18,7 @@ async function main() {
   
   // Pull wc2026_fixtures
   const [f26Rows] = await conn.query(`
-    SELECT f.fixture_id, f.match_date, f.stage, f.group_letter, f.matchday,
+    SELECT f.match_id, f.match_date, f.stage, f.group_letter, f.matchday,
            f.status, f.home_score, f.away_score,
            ht.fifa_code as home_code, at.fifa_code as away_code,
            ht.name as home_name, at.name as away_name
@@ -26,7 +26,7 @@ async function main() {
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.stage = 'GROUP'
-    ORDER BY f.match_date, f.fixture_id
+    ORDER BY f.match_date, f.match_id
   `);
   
   console.log(JSON.stringify({ bt: btRows, f26: f26Rows }));

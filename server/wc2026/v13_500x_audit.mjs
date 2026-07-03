@@ -108,7 +108,7 @@ async function main() {
   // A1: Verify xG data completeness for July 1 teams
   log('AUDIT', 'A1_XG', 'A1: Auditing xG completeness for all July 1 teams');
   const [jul1Fix] = await db.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, at.fifa_code AS away_code
+    SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
@@ -116,7 +116,7 @@ async function main() {
     ORDER BY f.kickoff_utc
   `);
   log('INPUT', 'A1_FIX', `July 1 fixtures: ${jul1Fix.length}`);
-  jul1Fix.forEach(f => log('STATE', 'A1_FIX', `  ${f.fixture_id}: ${f.home_code} vs ${f.away_code}`));
+  jul1Fix.forEach(f => log('STATE', 'A1_FIX', `  ${f.match_id}: ${f.home_code} vs ${f.away_code}`));
 
   const allTeams = [...new Set(jul1Fix.flatMap(f => [f.home_code, f.away_code]))];
   log('STATE', 'A1_TEAMS', `Teams to audit: ${allTeams.join(', ')}`);
@@ -477,9 +477,9 @@ async function main() {
   log('AUDIT', 'D2_VALS', 'D2: Verifying actual book odds values are populated for July 1 fixtures');
   const [bookOddsRows] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN (${jul1Fix.map(()=>'?').join(',')})
-    ORDER BY fixture_id
-  `, jul1Fix.map(f => f.fixture_id));
+    WHERE match_id IN (${jul1Fix.map(()=>'?').join(',')})
+    ORDER BY match_id
+  `, jul1Fix.map(f => f.match_id));
 
   log('REAL_DATA', 'D2_ROWS', `Book odds rows for July 1: ${bookOddsRows.length}`);
   if (bookOddsRows.length !== jul1Fix.length) {
@@ -492,11 +492,11 @@ async function main() {
 
   for (const row of bookOddsRows) {
     const nullFields = v13Fields.filter(f => row[f] === null || row[f] === undefined);
-    log('REAL_DATA', 'D2_ROW', `fixture_id=${row.fixture_id}: ${nullFields.length} null book fields: ${nullFields.join(', ') || 'none'}`);
+    log('REAL_DATA', 'D2_ROW', `match_id=${row.match_id}: ${nullFields.length} null book fields: ${nullFields.join(', ') || 'none'}`);
     if (nullFields.length > 0) {
-      log('WARN', 'D2_NULL', `fixture_id=${row.fixture_id}: ${nullFields.length} null book odds fields — displayed as N/A`);
+      log('WARN', 'D2_NULL', `match_id=${row.match_id}: ${nullFields.length} null book odds fields — displayed as N/A`);
     } else {
-      log('PASS', 'D2_ROW', `fixture_id=${row.fixture_id}: all book odds populated ✓`);
+      log('PASS', 'D2_ROW', `match_id=${row.match_id}: all book odds populated ✓`);
     }
   }
 

@@ -102,21 +102,21 @@ function impliedToAmerican(p) {
   console.log('\n[STEP] Comparing live AN odds with DB stored odds');
   const conn = await createConnection(process.env.DATABASE_URL);
   const [dbOdds] = await conn.query(`
-    SELECT o.fixture_id, o.book_id, o.market, o.selection, o.line, o.american_odds,
+    SELECT o.match_id, o.book_id, o.market, o.selection, o.line, o.american_odds,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.fixture_id = o.fixture_id
+    JOIN wc2026_fixtures f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19'
       AND o.book_id = 68
       AND o.market IN ('1X2','TOTAL')
-    ORDER BY o.fixture_id, o.market, o.selection
+    ORDER BY o.match_id, o.market, o.selection
   `);
 
   console.log('\n[STATE] DB stored DK odds for June 19:');
   for (const row of dbOdds) {
-    console.log(`  [${row.fixture_id}] ${row.home_name} vs ${row.away_name} | ${row.market} ${row.selection}${row.line ? ' line='+row.line : ''} => ${row.american_odds}`);
+    console.log(`  [${row.match_id}] ${row.home_name} vs ${row.away_name} | ${row.market} ${row.selection}${row.line ? ' line='+row.line : ''} => ${row.american_odds}`);
   }
 
   await conn.end();

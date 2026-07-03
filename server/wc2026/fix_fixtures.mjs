@@ -20,7 +20,7 @@ async function main() {
   
   // Show all June 11 fixtures
   const [fixtures] = await conn.query(
-    `SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
+    `SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
             ht.fifa_code AS home_code, ht.name AS home_name,
             at.fifa_code AS away_code, at.name AS away_name
      FROM wc2026_fixtures f
@@ -32,7 +32,7 @@ async function main() {
   
   console.log('[FixFixtures] [STATE] Current June 11 fixtures:');
   for (const f of fixtures) {
-    console.log(`  ${f.fixture_id}: home=${f.home_code}(${f.home_name}) away=${f.away_code}(${f.away_name}) kickoff=${f.kickoff_utc}`);
+    console.log(`  ${f.match_id}: home=${f.home_code}(${f.home_name}) away=${f.away_code}(${f.away_name}) kickoff=${f.kickoff_utc}`);
   }
   
   // Find team IDs for MEX, RSA, KOR, CZE
@@ -52,7 +52,7 @@ async function main() {
   }
   
   // Fix wc26-g-001: swap home/away (MEX should be home, RSA should be away)
-  const g001 = fixtures.find(f => f.fixture_id === 'wc26-g-001');
+  const g001 = fixtures.find(f => f.match_id === 'wc26-g-001');
   if (g001) {
     console.log(`\n[FixFixtures] [STEP] Fixing wc26-g-001: ${g001.home_code} -> ${g001.away_code} (swapping home/away)`);
     console.log(`  Before: home=${g001.home_code}, away=${g001.away_code}`);
@@ -65,7 +65,7 @@ async function main() {
       console.error('[FixFixtures] [VERIFY] FAIL — MEX or RSA team_id not found');
     } else {
       const [result] = await conn.query(
-        'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE fixture_id=?',
+        'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
         [mexId, rsaId, 'wc26-g-001']
       );
       console.log(`[FixFixtures] [OUTPUT] Updated wc26-g-001: affectedRows=${result.affectedRows}`);
@@ -79,7 +79,7 @@ async function main() {
   );
   
   if (korCzeFixture) {
-    console.log(`\n[FixFixtures] [STEP] Found KOR/CZE fixture: ${korCzeFixture.fixture_id}`);
+    console.log(`\n[FixFixtures] [STEP] Found KOR/CZE fixture: ${korCzeFixture.match_id}`);
     console.log(`  Before: home=${korCzeFixture.home_code}, away=${korCzeFixture.away_code}`);
     
     if (korCzeFixture.home_code === 'KOR' && korCzeFixture.away_code === 'CZE') {
@@ -93,16 +93,16 @@ async function main() {
         console.error('[FixFixtures] [VERIFY] FAIL — KOR or CZE team_id not found');
       } else {
         const [result] = await conn.query(
-          'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE fixture_id=?',
-          [korId, czeId, korCzeFixture.fixture_id]
+          'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
+          [korId, czeId, korCzeFixture.match_id]
         );
-        console.log(`[FixFixtures] [OUTPUT] Updated ${korCzeFixture.fixture_id}: affectedRows=${result.affectedRows}`);
+        console.log(`[FixFixtures] [OUTPUT] Updated ${korCzeFixture.match_id}: affectedRows=${result.affectedRows}`);
       }
     }
   } else {
     console.log('[FixFixtures] [STATE] KOR/CZE fixture not found on June 11 — checking all fixtures...');
     const [allKorCze] = await conn.query(
-      `SELECT f.fixture_id, f.match_date, f.home_team_id, f.away_team_id,
+      `SELECT f.match_id, f.match_date, f.home_team_id, f.away_team_id,
               ht.fifa_code AS home_code, at.fifa_code AS away_code
        FROM wc2026_fixtures f
        JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
@@ -112,7 +112,7 @@ async function main() {
     );
     console.log('[FixFixtures] [STATE] KOR/CZE fixtures found:');
     for (const f of allKorCze) {
-      console.log(`  ${f.fixture_id} (${f.match_date}): home=${f.home_code}, away=${f.away_code}`);
+      console.log(`  ${f.match_id} (${f.match_date}): home=${f.home_code}, away=${f.away_code}`);
     }
     
     // Fix the KOR/CZE fixture wherever it is
@@ -124,20 +124,20 @@ async function main() {
           const czeId = teamMap['CZE']?.team_id;
           if (korId && czeId) {
             const [result] = await conn.query(
-              'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE fixture_id=?',
-              [korId, czeId, f.fixture_id]
+              'UPDATE wc2026_fixtures SET home_team_id=?, away_team_id=? WHERE match_id=?',
+              [korId, czeId, f.match_id]
             );
-            console.log(`[FixFixtures] [OUTPUT] Fixed ${f.fixture_id}: swapped to KOR=home, CZE=away. affectedRows=${result.affectedRows}`);
+            console.log(`[FixFixtures] [OUTPUT] Fixed ${f.match_id}: swapped to KOR=home, CZE=away. affectedRows=${result.affectedRows}`);
           }
         } else if (f.home_code === 'KOR' && f.away_code === 'CZE') {
-          console.log(`[FixFixtures] [VERIFY] ${f.fixture_id} already correct (KOR=home, CZE=away)`);
+          console.log(`[FixFixtures] [VERIFY] ${f.match_id} already correct (KOR=home, CZE=away)`);
         }
       }
     }
   }
   
   // Verify wc26-g-002 (COL home, UZB away)
-  const g002 = fixtures.find(f => f.fixture_id === 'wc26-g-002');
+  const g002 = fixtures.find(f => f.match_id === 'wc26-g-002');
   if (g002) {
     console.log(`\n[FixFixtures] [STATE] wc26-g-002: home=${g002.home_code}, away=${g002.away_code}`);
     if (g002.home_code === 'COL' && g002.away_code === 'UZB') {
@@ -150,7 +150,7 @@ async function main() {
   // Show final state
   console.log('\n[FixFixtures] [STEP] Final fixture state after fixes:');
   const [finalFixtures] = await conn.query(
-    `SELECT f.fixture_id, f.match_date,
+    `SELECT f.match_id, f.match_date,
             ht.fifa_code AS home_code, ht.name AS home_name,
             at.fifa_code AS away_code, at.name AS away_name
      FROM wc2026_fixtures f
@@ -160,7 +160,7 @@ async function main() {
      ORDER BY f.match_date, f.kickoff_utc`
   );
   for (const f of finalFixtures) {
-    console.log(`  ${f.fixture_id} (${f.match_date}): home=${f.home_code}(${f.home_name}) away=${f.away_code}(${f.away_name})`);
+    console.log(`  ${f.match_id} (${f.match_date}): home=${f.home_code}(${f.home_name}) away=${f.away_code}(${f.away_name})`);
   }
   
   await conn.end();

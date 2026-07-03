@@ -185,9 +185,9 @@ try {
   // Will use embedded values below
 }
 
-function getProjection(fixtureId) {
+function getProjection(matchId) {
   if (reportData) {
-    const p = reportData.projections.find(x => x.fixtureId === fixtureId);
+    const p = reportData.projections.find(x => x.matchId === matchId);
     if (p) return p;
   }
   return null;

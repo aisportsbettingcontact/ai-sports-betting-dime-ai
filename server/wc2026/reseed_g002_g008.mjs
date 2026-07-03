@@ -66,13 +66,13 @@ const PARAMS = {
 
 const FIXTURES = [
   {
-    fixtureId: 'wc26-g-002',
+    matchId: 'wc26-g-002',
     homeId: 'kor',
     awayId: 'cze',
     neutral: true,
   },
   {
-    fixtureId: 'wc26-g-008',
+    matchId: 'wc26-g-008',
     homeId: 'aus',
     awayId: 'tur',
     neutral: true,
@@ -92,7 +92,7 @@ async function main() {
   const snapshotTs = new Date();
 
   for (const fix of FIXTURES) {
-    const { fixtureId, homeId, awayId, neutral } = fix;
+    const { matchId, homeId, awayId, neutral } = fix;
     const hp = PARAMS[homeId];
     const ap = PARAMS[awayId];
 
@@ -111,7 +111,7 @@ async function main() {
     const underOdds = toAmerican(probs.under25);
     const probSum = probs.home + probs.draw + probs.away;
 
-    console.log(`[STEP] ${fixtureId}: ${awayId} @ ${homeId}`);
+    console.log(`[STEP] ${matchId}: ${awayId} @ ${homeId}`);
     console.log(`  [STATE] λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
     console.log(`  [STATE] xG: ${homeId}=${lH.toFixed(3)} ${awayId}=${lA.toFixed(3)}`);
     console.log(`  [STATE] 1X2: home(${homeId})=${homeML > 0 ? '+' : ''}${homeML} draw=${drawML > 0 ? '+' : ''}${drawML} away(${awayId})=${awayML > 0 ? '+' : ''}${awayML}`);
@@ -120,17 +120,17 @@ async function main() {
     console.log('');
 
     rows.push(
-      [fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, homeML, probs.home, 0],
-      [fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, drawML, probs.draw, 0],
-      [fixtureId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, awayML, probs.away, 0],
-      [fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  2.5, overOdds,  probs.over25, 0],
-      [fixtureId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, underOdds, probs.under25, 0],
+      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, homeML, probs.home, 0],
+      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, drawML, probs.draw, 0],
+      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, awayML, probs.away, 0],
+      [matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  2.5, overOdds,  probs.over25, 0],
+      [matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, underOdds, probs.under25, 0],
     );
   }
 
   await conn.query(
     `INSERT INTO wc2026_odds_snapshots 
-     (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+     (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
      VALUES ?`,
     [rows]
   );
@@ -138,16 +138,16 @@ async function main() {
 
   // Verify
   const [verify] = await conn.execute(`
-    SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.home_team_id, f.away_team_id,
            MAX(CASE WHEN o.market='1X2' AND o.selection='home' THEN o.american_odds END) as home_ml,
            MAX(CASE WHEN o.market='1X2' AND o.selection='draw' THEN o.american_odds END) as draw_ml,
            MAX(CASE WHEN o.market='1X2' AND o.selection='away' THEN o.american_odds END) as away_ml,
            MAX(CASE WHEN o.market='TOTAL' AND o.selection='over' THEN o.american_odds END) as over_odds,
            MAX(CASE WHEN o.market='TOTAL' AND o.selection='under' THEN o.american_odds END) as under_odds
     FROM wc2026_fixtures f
-    JOIN wc2026_odds_snapshots o ON f.fixture_id = o.fixture_id AND o.book_id = 0
-    WHERE f.fixture_id IN ('wc26-g-002', 'wc26-g-008')
-    GROUP BY f.fixture_id, f.home_team_id, f.away_team_id
+    JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 0
+    WHERE f.match_id IN ('wc26-g-002', 'wc26-g-008')
+    GROUP BY f.match_id, f.home_team_id, f.away_team_id
   `);
 
   console.log('');
@@ -155,7 +155,7 @@ async function main() {
   for (const v of verify) {
     const fmt = (x) => x == null ? 'N/A' : (x > 0 ? `+${x}` : `${x}`);
     const allPresent = v.home_ml != null && v.draw_ml != null && v.away_ml != null && v.over_odds != null && v.under_odds != null;
-    console.log(`  [${allPresent ? 'PASS' : 'FAIL'}] ${v.fixture_id}: ${v.away_team_id} @ ${v.home_team_id}`);
+    console.log(`  [${allPresent ? 'PASS' : 'FAIL'}] ${v.match_id}: ${v.away_team_id} @ ${v.home_team_id}`);
     console.log(`    home=${fmt(v.home_ml)} draw=${fmt(v.draw_ml)} away=${fmt(v.away_ml)} | O=${fmt(v.over_odds)} U=${fmt(v.under_odds)}`);
   }
 

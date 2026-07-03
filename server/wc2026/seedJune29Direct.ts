@@ -38,7 +38,7 @@ const FIXTURE_IDS = ["wc26-r32-074", "wc26-r32-075", "wc26-r32-076"];
 // ─── v11.0-KO22 Model Projections (correct column names) ──────────────────────
 const MODEL_ROWS: Record<string, any> = {
   "wc26-r32-074": {
-    fixtureId: "wc26-r32-074",
+    matchId: "wc26-r32-074",
     modelVersion: "v11.0-KO22",
     homeTeam: "Brazil",
     awayTeam: "Japan",
@@ -65,7 +65,7 @@ const MODEL_ROWS: Record<string, any> = {
     isFrozen: 1,
   },
   "wc26-r32-075": {
-    fixtureId: "wc26-r32-075",
+    matchId: "wc26-r32-075",
     modelVersion: "v11.0-KO22",
     homeTeam: "Germany",
     awayTeam: "Paraguay",
@@ -92,7 +92,7 @@ const MODEL_ROWS: Record<string, any> = {
     isFrozen: 1,
   },
   "wc26-r32-076": {
-    fixtureId: "wc26-r32-076",
+    matchId: "wc26-r32-076",
     modelVersion: "v11.0-KO22",
     homeTeam: "Netherlands",
     awayTeam: "Morocco",
@@ -123,7 +123,7 @@ const MODEL_ROWS: Record<string, any> = {
 // ─── Frozen Book Odds (correct column names) ──────────────────────────────────
 const BOOK_ROWS: Record<string, any> = {
   "wc26-r32-074": {
-    fixtureId: "wc26-r32-074",
+    matchId: "wc26-r32-074",
     bookHomeMl: -140,
     bookDrawMl: 270,
     bookAwayMl: 425,
@@ -144,7 +144,7 @@ const BOOK_ROWS: Record<string, any> = {
     bookSource: "DraftKings",
   },
   "wc26-r32-075": {
-    fixtureId: "wc26-r32-075",
+    matchId: "wc26-r32-075",
     bookHomeMl: -275,
     bookDrawMl: 400,
     bookAwayMl: 800,
@@ -165,7 +165,7 @@ const BOOK_ROWS: Record<string, any> = {
     bookSource: "DraftKings",
   },
   "wc26-r32-076": {
-    fixtureId: "wc26-r32-076",
+    matchId: "wc26-r32-076",
     bookHomeMl: 130,
     bookDrawMl: 210,
     bookAwayMl: 250,
@@ -197,7 +197,7 @@ async function main() {
   // ─── S1: Verify fixtures exist ────────────────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying 3 June 29 fixtures exist in wc2026_fixtures");
-  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.fixtureId, FIXTURE_IDS));
+  const fixtures = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
   if (fixtures.length !== 3) {
     log("FAIL", `S${stepCount}`, `Expected 3 fixtures, got ${fixtures.length}`, "Cannot proceed — fixtures missing");
     failCount++;
@@ -205,7 +205,7 @@ async function main() {
     process.exit(1);
   }
   log("PASS", `S${stepCount}`, `All 3 fixtures confirmed in DB`);
-  fixtures.forEach((f: any) => log("INFO", "FX", `${f.fixtureId}: ${f.awayTeamId} vs ${f.homeTeamId} | ${f.kickoffUtc}`));
+  fixtures.forEach((f: any) => log("INFO", "FX", `${f.matchId}: ${f.awayTeamId} vs ${f.homeTeamId} | ${f.kickoffUtc}`));
   passCount++;
 
   // ─── S2-S4: Upsert model projections ─────────────────────────────────────
@@ -214,9 +214,9 @@ async function main() {
     log("STEP", `S${stepCount}`, `Upserting model projection for ${fid}`);
     const row = MODEL_ROWS[fid];
     try {
-      await db.delete(wc2026ModelProjections).where(eq(wc2026ModelProjections.fixtureId, fid));
+      await db.delete(wc2026ModelProjections).where(eq(wc2026ModelProjections.matchId, fid));
       await db.insert(wc2026ModelProjections).values({
-        fixtureId:          row.fixtureId,
+        matchId:          row.matchId,
         modelVersion:       row.modelVersion,
         homeTeam:           row.homeTeam,
         awayTeam:           row.awayTeam,
@@ -260,9 +260,9 @@ async function main() {
     log("STEP", `S${stepCount}`, `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
     try {
-      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.fixtureId, fid));
+      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.matchId, fid));
       await db.insert(wc2026FrozenBookOdds).values({
-        fixtureId:            row.fixtureId,
+        matchId:            row.matchId,
         bookHomeMl:           row.bookHomeMl,
         bookDrawMl:           row.bookDrawMl,
         bookAwayMl:           row.bookAwayMl,
@@ -293,12 +293,12 @@ async function main() {
   // ─── S8: Verify model projections read-back ───────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying model projections read-back from DB (isFrozen=1)");
-  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.fixtureId, FIXTURE_IDS));
+  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, FIXTURE_IDS));
   if (mps.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 model projections confirmed in DB`);
     passCount++;
     mps.forEach((mp: any) => {
-      log("VERIFY", "MP", `${mp.fixtureId}: toAdvHome=${mp.toAdvanceHomeOdds} | toAdvAway=${mp.toAdvanceAwayOdds} | noDrawHome=${mp.noDrawHomeOdds} | isFrozen=${mp.isFrozen}`);
+      log("VERIFY", "MP", `${mp.matchId}: toAdvHome=${mp.toAdvanceHomeOdds} | toAdvAway=${mp.toAdvanceAwayOdds} | noDrawHome=${mp.noDrawHomeOdds} | isFrozen=${mp.isFrozen}`);
     });
   } else {
     log("FAIL", `S${stepCount}`, `Expected 3 model projections, got ${mps.length}`);
@@ -308,12 +308,12 @@ async function main() {
   // ─── S9: Verify frozen book odds read-back ────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying frozen book odds read-back from DB");
-  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.fixtureId, FIXTURE_IDS));
+  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
   if (bos.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 frozen book odds confirmed in DB`);
     passCount++;
     bos.forEach((bo: any) => {
-      log("VERIFY", "BO", `${bo.fixtureId}: bookHomeMl=${bo.bookHomeMl} | toAdvHome=${bo.toAdvanceHomeOdds} | noDrawHome=${bo.bookNoDrawHomeOdds}`);
+      log("VERIFY", "BO", `${bo.matchId}: bookHomeMl=${bo.bookHomeMl} | toAdvHome=${bo.toAdvanceHomeOdds} | noDrawHome=${bo.bookNoDrawHomeOdds}`);
     });
   } else {
     log("FAIL", `S${stepCount}`, `Expected 3 frozen book odds, got ${bos.length}`);
@@ -323,11 +323,11 @@ async function main() {
   // ─── S10: Verify API endpoint returns all 3 with model+book populated ─────
   stepCount++;
   log("STEP", `S${stepCount}`, "Cross-verifying: wc2026.fixturesByDate API returns 3 fixtures with model+book populated");
-  const allFix = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.fixtureId, FIXTURE_IDS));
+  const allFix = await db.select().from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
   const mpMap: Record<string, any> = {};
   const boMap: Record<string, any> = {};
-  mps.forEach((mp: any) => { mpMap[mp.fixtureId] = mp; });
-  bos.forEach((bo: any) => { boMap[bo.fixtureId] = bo; });
+  mps.forEach((mp: any) => { mpMap[mp.matchId] = mp; });
+  bos.forEach((bo: any) => { boMap[bo.matchId] = bo; });
   let crossPass = 0;
   for (const fid of FIXTURE_IDS) {
     const hasMp = !!mpMap[fid];

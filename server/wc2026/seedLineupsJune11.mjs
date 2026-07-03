@@ -13,7 +13,7 @@ import mysql from 'mysql2/promise';
 
 const GAMES = [
   {
-    fixtureId: 'wc26-g-001',
+    matchId: 'wc26-g-001',
     awayAbbr: 'RSA',
     homeAbbr: 'MEX',
     awayPlayers: [
@@ -46,7 +46,7 @@ const GAMES = [
     ],
   },
   {
-    fixtureId: 'wc26-g-002',
+    matchId: 'wc26-g-002',
     awayAbbr: 'CZE',
     homeAbbr: 'KOR',
     awayPlayers: [
@@ -86,7 +86,7 @@ async function main() {
   let total = 0;
 
   for (const game of GAMES) {
-    console.log(`[LineupSeed] [STEP] Processing ${game.fixtureId}: away=${game.awayAbbr} home=${game.homeAbbr}`);
+    console.log(`[LineupSeed] [STEP] Processing ${game.matchId}: away=${game.awayAbbr} home=${game.homeAbbr}`);
 
     // Resolve team IDs
     const [[awayRow]] = await conn.query('SELECT team_id FROM wc2026_teams WHERE fifa_code=? LIMIT 1', [game.awayAbbr]);
@@ -101,23 +101,23 @@ async function main() {
     }
 
     // Delete existing lineups
-    const [del] = await conn.query('DELETE FROM wc2026_lineups WHERE fixture_id=?', [game.fixtureId]);
+    const [del] = await conn.query('DELETE FROM wc2026_lineups WHERE match_id=?', [game.matchId]);
     console.log(`[LineupSeed] [STEP] Deleted ${del.affectedRows} existing lineup rows`);
 
     const rows = [];
     for (const p of game.awayPlayers) {
-      rows.push([game.fixtureId, awayId, scrapedAt, false, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([game.matchId, awayId, scrapedAt, false, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
     for (const p of game.homePlayers) {
-      rows.push([game.fixtureId, homeId, scrapedAt, false, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([game.matchId, homeId, scrapedAt, false, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
 
     const [ins] = await conn.query(
-      'INSERT INTO wc2026_lineups (fixture_id, team_id, scraped_at, is_confirmed, player_name, position, is_starter, injury_status) VALUES ?',
+      'INSERT INTO wc2026_lineups (match_id, team_id, scraped_at, is_confirmed, player_name, position, is_starter, injury_status) VALUES ?',
       [rows]
     );
     total += ins.affectedRows;
-    console.log(`[LineupSeed] [OUTPUT] Inserted ${ins.affectedRows} lineup rows for ${game.fixtureId}`);
+    console.log(`[LineupSeed] [OUTPUT] Inserted ${ins.affectedRows} lineup rows for ${game.matchId}`);
   }
 
   await conn.end();

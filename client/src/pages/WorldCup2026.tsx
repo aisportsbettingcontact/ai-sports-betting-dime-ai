@@ -7,7 +7,7 @@
  *
  * PROJECTIONS tab:
  *   • Date selector (June 11–17)
- *   • Per-fixture cards: 3-way market layout
+ *   • Per-match cards: 3-way market layout
  *     - HOME ML (Book | Model)
  *     - DRAW    (Book | Model)
  *     - AWAY ML (Book | Model)
@@ -16,8 +16,8 @@
  *   • Primary book: DK NJ (book_id=68) from Action Network
  *
  * Data sources:
- *   trpc.wc2026.todayWithOdds     → today's fixtures + DK 1X2 + TOTAL odds
- *   trpc.wc2026.fixturesByDate    → fixtures for a specific date + DK odds
+ *   trpc.wc2026.todayWithOdds     → today's matchs + DK 1X2 + TOTAL odds
+ *   trpc.wc2026.matchesByDate    → matchs for a specific date + DK odds
  */
 
 import { trpc } from "@/lib/trpc";
@@ -152,8 +152,8 @@ type DkOdds = {
   underOdds?: number;
 } | null;
 
-type FixtureWithTeams = {
-  fixtureId: string;
+type MatchWithTeams = {
+  matchId: string;
   matchDate: string | Date;
   kickoffUtc: Date | string | null;
   groupLetter: string | null;
@@ -231,10 +231,10 @@ function OddsRow({
   );
 }
 
-// ─── Fixture Card ─────────────────────────────────────────────────────────────
+// ─── Match Card ─────────────────────────────────────────────────────────────
 
-function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
-  const { homeTeam, awayTeam, venue, dkOdds, modelOdds, status } = fixture;
+function MatchCard({ match }: { match: MatchWithTeams }) {
+  const { homeTeam, awayTeam, venue, dkOdds, modelOdds, status } = match;
   const isLive = status === "LIVE";
   const isFinal = status === "FT";
   const hasOdds =
@@ -256,9 +256,9 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
       {/* ── Card header: group + kickoff ── */}
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          {fixture.groupLetter && (
+          {match.groupLetter && (
             <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold border border-zinc-700 rounded px-1.5 py-0.5">
-              GROUP {fixture.groupLetter} · MD{fixture.matchday}
+              GROUP {match.groupLetter} · MD{match.matchday}
             </span>
           )}
           {isLive && (
@@ -274,7 +274,7 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
         </div>
         <div className="flex items-center gap-1 text-[10px] text-zinc-500">
           <Clock className="w-3 h-3" />
-          <span>{fmtKickoff(fixture.kickoffUtc)}</span>
+          <span>{fmtKickoff(match.kickoffUtc)}</span>
         </div>
       </div>
 
@@ -295,7 +295,7 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
           />
           <div className="min-w-0">
             <div className="text-xs font-bold text-zinc-100 truncate">
-              {awayTeam?.name ?? fixture.awayTeamId}
+              {awayTeam?.name ?? match.awayTeamId}
             </div>
             <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
               {awayTeam?.fifaCode ?? ""}
@@ -307,7 +307,7 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-10">
           {isFinal || isLive ? (
             <div className="text-sm font-bold text-zinc-100 tabular-nums">
-              {fixture.awayScore ?? 0} – {fixture.homeScore ?? 0}
+              {match.awayScore ?? 0} – {match.homeScore ?? 0}
             </div>
           ) : (
             <div className="text-xs text-zinc-600 font-bold">VS</div>
@@ -329,7 +329,7 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
           />
           <div className="min-w-0 text-right">
             <div className="text-xs font-bold text-zinc-100 truncate">
-              {homeTeam?.name ?? fixture.homeTeamId}
+              {homeTeam?.name ?? match.homeTeamId}
             </div>
             <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
               {homeTeam?.fifaCode ?? ""}
@@ -394,7 +394,7 @@ function FixtureCard({ fixture }: { fixture: FixtureWithTeams }) {
   );
 }
 
-function FixtureCardSkeleton() {
+function MatchCardSkeleton() {
   return (
     <div className="rounded-xl border border-white/8 bg-[#0f0f0f] p-4 space-y-3">
       <div className="flex justify-between">
@@ -423,10 +423,10 @@ function FixtureCardSkeleton() {
 // ─── Projections Date Feed ────────────────────────────────────────────────────
 
 function ProjectionsFeed({ date }: { date: string }) {
-  // [FIX 2026-06-24] Always use fixturesByDate(date) — never todayWithOdds.
+  // [FIX 2026-06-24] Always use matchesByDate(date) — never todayWithOdds.
   // todayWithOdds uses the server's real UTC clock which can disagree with
-  // MANUAL_WC_DATE_OVERRIDE, causing wrong fixtures to load.
-  const dateQuery = trpc.wc2026.fixturesByDate.useQuery(
+  // MANUAL_WC_DATE_OVERRIDE, causing wrong matchs to load.
+  const dateQuery = trpc.wc2026.matchesByDate.useQuery(
     { date },
     {
       enabled: !!date,
@@ -435,24 +435,24 @@ function ProjectionsFeed({ date }: { date: string }) {
     }
   );
 
-  const { data: fixtures, isLoading } = dateQuery;
+  const { data: matchs, isLoading } = dateQuery;
 
   if (isLoading) {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <FixtureCardSkeleton key={i} />
+          <MatchCardSkeleton key={i} />
         ))}
       </div>
     );
   }
 
-  if (!fixtures || fixtures.length === 0) {
+  if (!matchs || matchs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <CalendarDays className="w-8 h-8 text-zinc-600" />
         <div className="text-zinc-500 text-sm">
-          No World Cup fixtures on {WC_DATE_LABELS[date] ?? date}
+          No World Cup matchs on {WC_DATE_LABELS[date] ?? date}
         </div>
         <div className="text-zinc-600 text-xs">
           Group stage runs June 11 – July 2, 2026
@@ -463,8 +463,8 @@ function ProjectionsFeed({ date }: { date: string }) {
 
   return (
     <div className="space-y-3">
-      {(fixtures as FixtureWithTeams[]).map((f) => (
-        <FixtureCard key={f.fixtureId} fixture={f} />
+      {(matchs as MatchWithTeams[]).map((f) => (
+        <MatchCard key={f.matchId} match={f} />
       ))}
     </div>
   );
@@ -562,7 +562,7 @@ export default function WorldCup2026() {
               ))}
             </div>
 
-            {/* Fixture cards */}
+            {/* Match cards */}
             <ProjectionsFeed date={selectedDate} />
           </>
         )}

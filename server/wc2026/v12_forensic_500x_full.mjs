@@ -156,14 +156,14 @@ async function main() {
 
   // Pull fixtures
   const [fixtures] = await conn.query(`
-    SELECT f.fixture_id, f.espn_event_id, f.match_date, f.kickoff_utc,
+    SELECT f.match_id, f.espn_event_id, f.match_date, f.kickoff_utc,
            f.home_score, f.away_score, f.status, f.attendance,
            th.name as home_name, th.fifa_code as home_code,
            ta.name as away_name, ta.fifa_code as away_code
     FROM wc2026_fixtures f
     JOIN wc2026_teams th ON f.home_team_id = th.team_id
     JOIN wc2026_teams ta ON f.away_team_id = ta.team_id
-    WHERE f.fixture_id IN (?) ORDER BY f.match_date, f.kickoff_utc
+    WHERE f.match_id IN (?) ORDER BY f.match_date, f.kickoff_utc
   `, [FIDS]);
 
   const espnIds = fixtures.map(f => f.espn_event_id).filter(Boolean);
@@ -176,8 +176,8 @@ async function main() {
   const [espnShots] = await conn.query(`SELECT * FROM wc2026_espn_shot_map WHERE matchId IN (?)`, [espnIds]);
   const [espnOdds] = await conn.query(`SELECT * FROM wc2026_espn_match_odds WHERE matchId IN (?)`, [espnIds]);
   const [espnPlayers] = await conn.query(`SELECT * FROM wc2026_espn_player_stats WHERE matchId IN (?)`, [espnIds]);
-  const [modelRows] = await conn.query(`SELECT * FROM wc2026_model_projections WHERE fixture_id IN (?) ORDER BY fixture_id, modeled_at DESC`, [FIDS]);
-  const [bookRows] = await conn.query(`SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id IN (?)`, [FIDS]);
+  const [modelRows] = await conn.query(`SELECT * FROM wc2026_model_projections WHERE match_id IN (?) ORDER BY match_id, modeled_at DESC`, [FIDS]);
+  const [bookRows] = await conn.query(`SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (?)`, [FIDS]);
 
   await conn.end();
   log('STATE', `ESPN matches: ${espnMatches.length} | TeamStats: ${espnTeamStats.length} | xG: ${espnXG.length} | Shots: ${espnShots.length} | Odds: ${espnOdds.length} | Players: ${espnPlayers.length}`);
@@ -191,11 +191,11 @@ async function main() {
   const lambdaBiases = { home: [], away: [] };
 
   for (const fid of FIDS) {
-    const f = fixtures.find(x => x.fixture_id === fid);
+    const f = fixtures.find(x => x.match_id === fid);
     const actual = ACTUAL[fid];
     const lam = V11_LAMBDAS[fid];
-    const model = modelRows.find(r => r.fixture_id === fid);
-    const book = bookRows.find(r => r.fixture_id === fid);
+    const model = modelRows.find(r => r.match_id === fid);
+    const book = bookRows.find(r => r.match_id === fid);
     const eid = f?.espn_event_id;
     const em = espnMatches.find(r => r.matchId == eid);
     const ts = espnTeamStats.find(r => r.matchId == eid);

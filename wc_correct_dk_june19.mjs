@@ -52,7 +52,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
 // home/draw/away are relative to OUR DB fixture orientation (home_team_id / away_team_id)
 const DK_LINES = [
   {
-    fixtureId: 'wc26-g-029',
+    matchId: 'wc26-g-029',
     desc: 'USA(home) vs Australia(away)',
     // DK: USA=home=-165, Draw=+330, AUS=away=+425
     // DB: home=usa, away=aus → direct match
@@ -62,7 +62,7 @@ const DK_LINES = [
     spreadAway: 0.5, spreadAwayOdds: 135,
   },
   {
-    fixtureId: 'wc26-g-031',
+    matchId: 'wc26-g-031',
     desc: 'Scotland(home) vs Morocco(away)',
     // DK: SCO=home=+425, Draw=+260, MAR=away=-135
     // DB: home=sco, away=mar → direct match
@@ -72,7 +72,7 @@ const DK_LINES = [
     spreadAway: -0.5, spreadAwayOdds: -140,
   },
   {
-    fixtureId: 'wc26-g-032',
+    matchId: 'wc26-g-032',
     desc: 'Haiti(DB home) vs Brazil(DB away) — DK has Brazil as home',
     // DK screenshot: Brazil(top/home)=-900, Draw=+1000, Haiti(bottom/away)=+2200
     // DB orientation: home_team_id=hai, away_team_id=bra
@@ -84,7 +84,7 @@ const DK_LINES = [
     spreadAway: -2.5, spreadAwayOdds: -125,  // BRA -2.5
   },
   {
-    fixtureId: 'wc26-g-030',
+    matchId: 'wc26-g-030',
     desc: 'Turkey(home) vs Paraguay(away)',
     // DK screenshot: TUR=home=+105, Draw=+245, PAR=away=+285
     // DB: home=tur, away=par → direct match
@@ -106,7 +106,7 @@ const DK_LINES = [
   let totalErrors = 0;
 
   for (const fix of DK_LINES) {
-    console.log(`\n[STEP] Processing ${fix.fixtureId}: ${fix.desc}`);
+    console.log(`\n[STEP] Processing ${fix.matchId}: ${fix.desc}`);
 
     // Validate 3-way sum
     const { fairH, fairD, fairA, vig } = threeWayFairProbs(fix.home, fix.draw, fix.away);
@@ -122,10 +122,10 @@ const DK_LINES = [
 
     // Delete all existing DK rows for this fixture
     const [delResult] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 68`,
-      [fix.fixtureId]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 68`,
+      [fix.matchId]
     );
-    console.log(`[STEP] Deleted ${delResult.affectedRows} existing DK rows for ${fix.fixtureId}`);
+    console.log(`[STEP] Deleted ${delResult.affectedRows} existing DK rows for ${fix.matchId}`);
 
     // Build insert rows
     const rows = [
@@ -153,14 +153,14 @@ const DK_LINES = [
     for (const r of rows) {
       try {
         await conn.query(
-          `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+          `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
            VALUES (?, 68, ?, ?, ?, ?, ?, ?, 1)`,
-          [fix.fixtureId, r.market, r.selection, r.line, r.odds, r.prob.toFixed(6), snapshotTs]
+          [fix.matchId, r.market, r.selection, r.line, r.odds, r.prob.toFixed(6), snapshotTs]
         );
-        console.log(`[OUTPUT] ${fix.fixtureId} | DK | ${r.market} | ${r.selection} | line=${r.line ?? 'null'} | odds=${r.odds}`);
+        console.log(`[OUTPUT] ${fix.matchId} | DK | ${r.market} | ${r.selection} | line=${r.line ?? 'null'} | odds=${r.odds}`);
         totalInserted++;
       } catch (err) {
-        console.error(`[VERIFY] FAIL — Insert error for ${fix.fixtureId} ${r.market} ${r.selection}: ${err.message}`);
+        console.error(`[VERIFY] FAIL — Insert error for ${fix.matchId} ${r.market} ${r.selection}: ${err.message}`);
         totalErrors++;
       }
     }
@@ -168,25 +168,25 @@ const DK_LINES = [
 
   // ── Final verification ────────────────────────────────────────────────────────
   const [finalRows] = await conn.query(`
-    SELECT o.fixture_id, o.market, o.selection, o.line, o.american_odds, o.implied_prob,
+    SELECT o.match_id, o.market, o.selection, o.line, o.american_odds, o.implied_prob,
       ht.name AS home_name, at.name AS away_name
     FROM wc2026_odds_snapshots o
-    JOIN wc2026_fixtures f ON f.fixture_id = o.fixture_id
+    JOIN wc2026_fixtures f ON f.match_id = o.match_id
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date = '2026-06-19' AND o.book_id = 68
-    ORDER BY o.fixture_id, o.market, o.selection
+    ORDER BY o.match_id, o.market, o.selection
   `);
 
   console.log('\n[VERIFY] Final DK odds in DB for June 19:');
   for (const r of finalRows) {
     const lineStr = r.line ? ` line=${r.line}` : '';
     const implStr = ` (${(parseFloat(r.implied_prob)*100).toFixed(2)}%)`;
-    console.log(`  [${r.fixture_id}] ${r.home_name} vs ${r.away_name} | ${r.market.padEnd(15)} ${r.selection.padEnd(15)}${lineStr} => ${String(r.american_odds).padStart(6)}${implStr}`);
+    console.log(`  [${r.match_id}] ${r.home_name} vs ${r.away_name} | ${r.market.padEnd(15)} ${r.selection.padEnd(15)}${lineStr} => ${String(r.american_odds).padStart(6)}${implStr}`);
   }
 
   // Cross-check Haiti vs Brazil specifically
-  const haiBraRows = finalRows.filter(r => r.fixture_id === 'wc26-g-032' && r.market === '1X2');
+  const haiBraRows = finalRows.filter(r => r.match_id === 'wc26-g-032' && r.market === '1X2');
   const haiRow = haiBraRows.find(r => r.selection === 'home');
   const braRow = haiBraRows.find(r => r.selection === 'away');
   console.log('\n[VERIFY] Haiti vs Brazil cross-check:');

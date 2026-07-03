@@ -21,7 +21,7 @@ let totalFound = 0;
 
 for (const date of dates) {
   const [rows] = await conn.execute(`
-    SELECT f.fixture_id, f.stage, f.match_date,
+    SELECT f.match_id, f.stage, f.match_date,
            ht.name AS home_name, at.name AS away_name,
            b.book_home_ml, b.book_away_ml, b.book_draw_ml,
            b.book_total_line, b.book_spread_line,
@@ -30,16 +30,16 @@ for (const date of dates) {
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
-    LEFT JOIN wc2026_frozen_book_odds b ON b.fixture_id = f.fixture_id
+    LEFT JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id
     WHERE f.match_date = ?
-    ORDER BY f.kickoff_utc, f.fixture_id
+    ORDER BY f.kickoff_utc, f.match_id
   `, [date]);
 
   console.log(`📅 ${date} — ${rows.length} fixture(s)`);
   for (const r of rows) {
     const hasOdds = r.book_home_ml !== null;
     const oddsStatus = hasOdds ? '✅ ODDS SEEDED' : '❌ NO ODDS';
-    console.log(`  [${r.fixture_id}] ${r.away_name} @ ${r.home_name} | Stage=${r.stage} | ${oddsStatus}`);
+    console.log(`  [${r.match_id}] ${r.away_name} @ ${r.home_name} | Stage=${r.stage} | ${oddsStatus}`);
     if (hasOdds) {
       console.log(`    Home ML=${r.book_home_ml} | Away ML=${r.book_away_ml} | Draw=${r.book_draw_ml}`);
       console.log(`    Total=${r.book_total_line} | Spread=${r.book_spread_line} | BTTS Y=${r.book_btts_yes_odds}`);
@@ -59,11 +59,11 @@ const targetIds = [
 ];
 
 const [seedCheck] = await conn.execute(
-  `SELECT fixture_id FROM wc2026_frozen_book_odds WHERE fixture_id IN (${targetIds.map(() => '?').join(',')})`,
+  `SELECT match_id FROM wc2026_frozen_book_odds WHERE match_id IN (${targetIds.map(() => '?').join(',')})`,
   targetIds
 );
 
-const seededIds = new Set(seedCheck.map(r => r.fixture_id));
+const seededIds = new Set(seedCheck.map(r => r.match_id));
 console.log('══════════════════════════════════════════════════════');
 console.log(`  SEED VALIDATION: ${seededIds.size}/12 target fixtures have book odds`);
 for (const id of targetIds) {

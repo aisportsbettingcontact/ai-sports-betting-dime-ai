@@ -8,7 +8,7 @@
  *   ?limit=100&dates=20260628-20260720
  *
  * MATCH NUMBERS: Joined from wc2026_fixtures.display_order via espn_event_id
- *   OR derived from fixture_id (e.g. "wc26-r32-080" → Match 80)
+ *   OR derived from match_id (e.g. "wc26-r32-080" → Match 80)
  *
  * COVERAGE: All 32 knockout matchups across all rounds:
  *   R32  (roundId=1): 16 matches (Match 73–88)
@@ -136,20 +136,20 @@ async function loadMatchNumberMap() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   try {
     const [rows] = await conn.query(
-      `SELECT espn_event_id, display_order, fixture_id, stage
+      `SELECT espn_event_id, display_order, match_id, stage
        FROM wc2026_fixtures
        WHERE stage != 'GROUP'
        ORDER BY display_order`
     );
     // Build two maps:
     // 1. espnEventId → matchNumber (for rows with espn_event_id set)
-    // 2. fixture_id → matchNumber (fallback)
+    // 2. match_id → matchNumber (fallback)
     const byEventId = new Map();
     const byFixtureId = new Map();
     for (const row of rows) {
       const mn = row.display_order ? `Match ${row.display_order}` : null;
       if (row.espn_event_id) byEventId.set(String(row.espn_event_id), mn);
-      if (row.fixture_id) byFixtureId.set(row.fixture_id, mn);
+      if (row.match_id) byFixtureId.set(row.match_id, mn);
     }
     log("FIXTURES", `Loaded ${rows.length} knockout fixtures from DB`);
     log("FIXTURES", `  With espn_event_id: ${byEventId.size}`);

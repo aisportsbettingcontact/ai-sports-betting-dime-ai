@@ -1,14 +1,14 @@
 """
 wc_orientation_audit.py
 =======================
-Maximum-depth audit of WC2026 fixture orientations, column header mapping,
-and invalid fixture detection.
+Maximum-depth audit of WC2026 match orientations, column header mapping,
+and invalid match detection.
 
 Checks:
-1. Every fixture home/away team vs official FIFA WC2026 schedule
+1. Every match home/away team vs official FIFA WC2026 schedule
 2. Odds selection mapping: 'home' selection must map to home_team_id
 3. Frontend column header logic: what label does each column get?
-4. Invalid fixtures (teams not in WC2026, e.g. Qatar, Switzerland)
+4. Invalid matches (teams not in WC2026, e.g. Qatar, Switzerland)
 5. Brazil vs Morocco specific column swap investigation
 """
 import json, os, sys
@@ -37,24 +37,24 @@ print('=' * 80)
 
 cur.execute("""
     SELECT 
-        f.fixture_id, f.match_date, f.kickoff_utc, f.group_letter, f.matchday,
+        f.match_id, f.match_date, f.kickoff_utc, f.group_letter, f.matchday,
         f.home_team_id, f.away_team_id, f.venue_id, f.is_host_home,
         ht.name as home_name, ht.fifa_code as home_code,
         at.name as away_name, at.fifa_code as away_code,
         v.city as venue_city, v.stadium as venue_stadium
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     LEFT JOIN wc2026_venues v ON v.venue_id = f.venue_id
     ORDER BY f.kickoff_utc
 """)
-all_fixtures = cur.fetchall()
+all_matches = cur.fetchall()
 
-print(f'[INPUT] Total fixtures in DB: {len(all_fixtures)}')
+print(f'[INPUT] Total matches in DB: {len(all_matches)}')
 print()
 
 # Official FIFA WC2026 Group Stage schedule (June 11 - June 27)
-# Format: fixture_id -> (home_team_id, away_team_id, match_date)
+# Format: match_id -> (home_team_id, away_team_id, match_date)
 # Source: FIFA official schedule
 OFFICIAL_SCHEDULE = {
     # June 11
@@ -80,8 +80,8 @@ print('=' * 80)
 INVALID_TEAMS = {'qat', 'sui', 'qatar', 'switzerland'}  # common IDs
 INVALID_TEAMS_NAMES = {'qatar', 'switzerland', 'qat', 'sui'}
 
-invalid_fixtures = []
-for f in all_fixtures:
+invalid_matches = []
+for f in all_matches:
     home_id = f['home_team_id'].lower()
     away_id = f['away_team_id'].lower()
     home_name = f['home_name'].lower()
@@ -96,21 +96,21 @@ for f in all_fixtures:
     )
     
     if is_invalid:
-        invalid_fixtures.append(f)
-        print(f'[INVALID] {f["fixture_id"]} | {f["match_date"]} | {f["away_name"]} ({f["away_code"]}) @ {f["home_name"]} ({f["home_code"]})')
+        invalid_matches.append(f)
+        print(f'[INVALID] {f["match_id"]} | {f["match_date"]} | {f["away_name"]} ({f["away_code"]}) @ {f["home_name"]} ({f["home_code"]})')
         print(f'  home_team_id={f["home_team_id"]} away_team_id={f["away_team_id"]}')
 
-if not invalid_fixtures:
+if not invalid_matches:
     print('[OK] No invalid teams found by name/code')
 else:
-    print(f'[FAIL] Found {len(invalid_fixtures)} invalid fixtures')
+    print(f'[FAIL] Found {len(invalid_matches)} invalid matches')
 
 # Also check by looking at June 12 specifically
 print()
 print('[STEP 2b] ALL JUNE 12 FIXTURES:')
-for f in all_fixtures:
+for f in all_matches:
     if str(f['match_date']) == '2026-06-12' or (hasattr(f['match_date'], 'strftime') and f['match_date'].strftime('%Y-%m-%d') == '2026-06-12'):
-        print(f'  {f["fixture_id"]}: {f["away_name"]} ({f["away_code"]}) @ {f["home_name"]} ({f["home_code"]}) | {f["kickoff_utc"]} | {f["venue_city"]}')
+        print(f'  {f["match_id"]}: {f["away_name"]} ({f["away_code"]}) @ {f["home_name"]} ({f["home_code"]}) | {f["kickoff_utc"]} | {f["venue_city"]}')
 
 # ── STEP 3: Get all teams in DB ───────────────────────────────────────────
 print()
@@ -129,18 +129,18 @@ print('=' * 80)
 print('[STEP 4] BRAZIL vs MOROCCO (wc26-g-001) — FULL ODDS TRACE')
 print('=' * 80)
 
-# First get the fixture
+# First get the match
 cur.execute("""
     SELECT f.*, ht.name as home_name, ht.fifa_code as home_code,
            at.name as away_name, at.fifa_code as away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
-    WHERE f.fixture_id = 'wc26-g-001'
+    WHERE f.match_id = 'wc26-g-001'
 """)
 bra_mar = cur.fetchone()
 if bra_mar:
-    print(f'[DB] fixture_id: {bra_mar["fixture_id"]}')
+    print(f'[DB] match_id: {bra_mar["match_id"]}')
     print(f'[DB] home_team_id: {bra_mar["home_team_id"]} = {bra_mar["home_name"]} ({bra_mar["home_code"]})')
     print(f'[DB] away_team_id: {bra_mar["away_team_id"]} = {bra_mar["away_name"]} ({bra_mar["away_code"]})')
     print(f'[DB] match_date: {bra_mar["match_date"]}')
@@ -150,7 +150,7 @@ if bra_mar:
     cur.execute("""
         SELECT book_id, market, selection, line, american_odds, implied_prob
         FROM wc2026_odds_snapshots
-        WHERE fixture_id = 'wc26-g-001'
+        WHERE match_id = 'wc26-g-001'
         ORDER BY book_id, market, selection
     """)
     odds = cur.fetchall()
@@ -183,13 +183,13 @@ print('=' * 80)
 
 try:
     inp = json.dumps({'json': {'date': '2026-06-11'}})
-    url = f'http://localhost:3000/api/trpc/wc2026.fixturesByDate?input={urllib.parse.quote(inp)}'
+    url = f'http://localhost:3000/api/trpc/wc2026.matchesByDate?input={urllib.parse.quote(inp)}'
     with urllib.request.urlopen(url, timeout=15) as r:
         data = json.loads(r.read())
-    fixtures_api = data['result']['data']['json']
+    matches_api = data['result']['data']['json']
     
-    for f in fixtures_api:
-        fid = f['fixtureId']
+    for f in matches_api:
+        fid = f['matchId']
         home_team = f.get('homeTeam', {})
         away_team = f.get('awayTeam', {})
         dk = f.get('dkOdds') or {}
@@ -221,31 +221,31 @@ print('=' * 80)
 
 try:
     inp = json.dumps({'json': {'date': '2026-06-12'}})
-    url = f'http://localhost:3000/api/trpc/wc2026.fixturesByDate?input={urllib.parse.quote(inp)}'
+    url = f'http://localhost:3000/api/trpc/wc2026.matchesByDate?input={urllib.parse.quote(inp)}'
     with urllib.request.urlopen(url, timeout=15) as r:
         data = json.loads(r.read())
-    fixtures_api = data['result']['data']['json']
+    matches_api = data['result']['data']['json']
     
-    print(f'[API] June 12 fixture count: {len(fixtures_api)}')
-    for f in fixtures_api:
+    print(f'[API] June 12 match count: {len(matches_api)}')
+    for f in matches_api:
         home_team = f.get('homeTeam', {})
         away_team = f.get('awayTeam', {})
-        print(f'  {f["fixtureId"]}: {away_team.get("fifaCode","?")} ({away_team.get("name","?")}) @ {home_team.get("fifaCode","?")} ({home_team.get("name","?")})')
+        print(f'  {f["matchId"]}: {away_team.get("fifaCode","?")} ({away_team.get("name","?")}) @ {home_team.get("fifaCode","?")} ({home_team.get("name","?")})')
         
 except Exception as e:
     print(f'[ERROR] API call failed: {e}')
 
-# ── STEP 7: Full fixture list with official FIFA schedule comparison ───────
+# ── STEP 7: Full match list with official FIFA schedule comparison ───────
 print()
 print('=' * 80)
 print('[STEP 7] FULL FIXTURE LIST — ALL DATES')
 print('=' * 80)
 
-for f in all_fixtures:
+for f in all_matches:
     date_str = f['match_date']
     if hasattr(date_str, 'strftime'):
         date_str = date_str.strftime('%Y-%m-%d')
-    print(f'  {f["fixture_id"]} | {date_str} | {f["away_code"]:5s} ({f["away_name"]}) @ {f["home_code"]:5s} ({f["home_name"]}) | {f["venue_city"]}')
+    print(f'  {f["match_id"]} | {date_str} | {f["away_code"]:5s} ({f["away_name"]}) @ {f["home_code"]:5s} ({f["home_name"]}) | {f["venue_city"]}')
 
 conn.close()
 print()

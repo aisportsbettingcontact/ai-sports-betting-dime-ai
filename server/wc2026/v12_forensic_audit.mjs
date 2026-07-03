@@ -867,16 +867,16 @@ async function main() {
 
   // Check if July 1 book odds have DC/no-draw values
   const [dcCheck] = await conn.execute(`
-    SELECT fixture_id, book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds, book_no_draw_away_odds
+    SELECT match_id, book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds, book_no_draw_away_odds
     FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN ('wc26-r32-080','wc26-r32-081','wc26-r32-082')
-    ORDER BY fixture_id
+    WHERE match_id IN ('wc26-r32-080','wc26-r32-081','wc26-r32-082')
+    ORDER BY match_id
   `);
 
   L.data('L1', 'July 1 book DC/no-draw values in DB:');
   let dcMissing = 0;
   for (const r of dcCheck) {
-    L.data('L1', `  ${r.fixture_id}: DC_1X=${r.book_dc_1x_odds} DC_X2=${r.book_dc_x2_odds} NoDraw_H=${r.book_no_draw_home_odds} NoDraw_A=${r.book_no_draw_away_odds}`);
+    L.data('L1', `  ${r.match_id}: DC_1X=${r.book_dc_1x_odds} DC_X2=${r.book_dc_x2_odds} NoDraw_H=${r.book_no_draw_home_odds} NoDraw_A=${r.book_no_draw_away_odds}`);
     if (r.book_dc_1x_odds === null) dcMissing++;
   }
 

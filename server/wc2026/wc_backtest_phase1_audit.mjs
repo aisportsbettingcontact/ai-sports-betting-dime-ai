@@ -102,19 +102,19 @@ console.log(`[AUDIT] [VERIFY] Through June 17: expected=${expected_through_june1
 // ─── Step 4: List all completed 2026 matches ─────────────────────────────────
 console.log('\n[AUDIT] [STEP 4] Listing all completed 2026 matches...');
 const [completedMatches] = await conn.query(`
-  SELECT f.fixture_id, f.match_date, ht.name as home_team, at2.name as away_team,
+  SELECT f.match_id, f.match_date, ht.name as home_team, at2.name as away_team,
          f.home_score, f.away_score, f.status, f.group_letter, f.matchday,
          f.espn_event_id,
-         (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.fixture_id = f.fixture_id) as has_stats,
-         (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.fixture_id = f.fixture_id) as event_count,
-         (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.fixture_id = f.fixture_id AND l.is_confirmed = 1) as confirmed_lineups,
-         (SELECT COUNT(*) FROM wc2026_odds_snapshots os WHERE os.fixture_id = f.fixture_id AND os.book_id = 68 AND os.is_closing = 1) as dk_closing_odds,
-         (SELECT COUNT(*) FROM wc2026_odds_snapshots os2 WHERE os2.fixture_id = f.fixture_id AND os2.book_id = 0) as model_odds
+         (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.match_id = f.match_id) as has_stats,
+         (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.match_id = f.match_id) as event_count,
+         (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.match_id = f.match_id AND l.is_confirmed = 1) as confirmed_lineups,
+         (SELECT COUNT(*) FROM wc2026_odds_snapshots os WHERE os.match_id = f.match_id AND os.book_id = 68 AND os.is_closing = 1) as dk_closing_odds,
+         (SELECT COUNT(*) FROM wc2026_odds_snapshots os2 WHERE os2.match_id = f.match_id AND os2.book_id = 0) as model_odds
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
   WHERE f.status = 'FT'
-  ORDER BY f.match_date, f.fixture_id
+  ORDER BY f.match_date, f.match_id
 `);
 
 console.log(`[AUDIT] [STATE] All ${completedMatches.length} completed 2026 matches:`);
@@ -126,7 +126,7 @@ completedMatches.forEach(m => {
   const lineupsOk = m.confirmed_lineups >= 20 ? '✅' : '⚠️';
   const oddsOk = m.dk_closing_odds > 0 ? '✅' : '❌';
   const modelOk = m.model_odds > 0 ? '✅' : '❌';
-  console.log(`  M${String(matchNum).padStart(2,'0')} [${m.match_date}] ${m.fixture_id}: ${m.away_team} ${m.away_score}-${m.home_score} ${m.home_team} | Grp=${m.group_letter} | stats=${statsOk} events=${m.event_count}${eventsOk} lineups=${m.confirmed_lineups}${lineupsOk} DK=${m.dk_closing_odds}${oddsOk} model=${m.model_odds}${modelOk}`);
+  console.log(`  M${String(matchNum).padStart(2,'0')} [${m.match_date}] ${m.match_id}: ${m.away_team} ${m.away_score}-${m.home_score} ${m.home_team} | Grp=${m.group_letter} | stats=${statsOk} events=${m.event_count}${eventsOk} lineups=${m.confirmed_lineups}${lineupsOk} DK=${m.dk_closing_odds}${oddsOk} model=${m.model_odds}${modelOk}`);
 });
 
 // ─── Step 5: Check June 17 specific matches ───────────────────────────────────
@@ -134,7 +134,7 @@ console.log('\n[AUDIT] [STEP 5] Detailed audit of June 17 matches...');
 const june17Fixtures = ['wc26-g-021', 'wc26-g-022', 'wc26-g-023', 'wc26-g-024'];
 for (const fid of june17Fixtures) {
   const [rows] = await conn.query(`
-    SELECT f.fixture_id, ht.name as home_team, at2.name as away_team,
+    SELECT f.match_id, ht.name as home_team, at2.name as away_team,
            f.home_score, f.away_score, f.status, f.group_letter, f.matchday,
            f.kickoff_utc, f.espn_event_id, f.attendance,
            v.name as venue_name, v.city as venue_city
@@ -142,7 +142,7 @@ for (const fid of june17Fixtures) {
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
-    WHERE f.fixture_id = ?
+    WHERE f.match_id = ?
   `, [fid]);
 
   if (rows.length === 0) {
@@ -159,7 +159,7 @@ for (const fid of june17Fixtures) {
   console.log(`  ESPN ID: ${r.espn_event_id} | Attendance: ${r.attendance}`);
 
   // Check match stats
-  const [stats] = await conn.query(`SELECT * FROM wc2026_match_stats WHERE fixture_id = ?`, [fid]);
+  const [stats] = await conn.query(`SELECT * FROM wc2026_match_stats WHERE match_id = ?`, [fid]);
   if (stats.length > 0) {
     const s = stats[0];
     console.log(`  Stats: home_shots=${s.home_shots} away_shots=${s.away_shots} | home_poss=${s.home_possession_pct}% away_poss=${s.away_possession_pct}% | home_xg=${s.home_xg} away_xg=${s.away_xg}`);
@@ -173,7 +173,7 @@ for (const fid of june17Fixtures) {
   // Check events
   const [events] = await conn.query(`
     SELECT event_type, COUNT(*) as cnt FROM wc2026_match_events
-    WHERE fixture_id = ? GROUP BY event_type ORDER BY event_type
+    WHERE match_id = ? GROUP BY event_type ORDER BY event_type
   `, [fid]);
   const eventSummary = events.map(e => `${e.event_type}(${e.cnt})`).join(', ');
   console.log(`  Events: ${eventSummary || 'NONE'} ${events.length > 0 ? '✅' : '❌'}`);
@@ -181,7 +181,7 @@ for (const fid of june17Fixtures) {
   // Check lineups
   const [lineups] = await conn.query(`
     SELECT is_confirmed, COUNT(*) as cnt FROM wc2026_lineups
-    WHERE fixture_id = ? GROUP BY is_confirmed
+    WHERE match_id = ? GROUP BY is_confirmed
   `, [fid]);
   const confirmed = lineups.find(l => l.is_confirmed)?.cnt ?? 0;
   const unconfirmed = lineups.find(l => !l.is_confirmed)?.cnt ?? 0;
@@ -190,7 +190,7 @@ for (const fid of june17Fixtures) {
   // Check DK closing odds
   const [dkOdds] = await conn.query(`
     SELECT market, selection, american_odds FROM wc2026_odds_snapshots
-    WHERE fixture_id = ? AND book_id = 68 AND is_closing = 1
+    WHERE match_id = ? AND book_id = 68 AND is_closing = 1
     ORDER BY market, selection
   `, [fid]);
   if (dkOdds.length > 0) {
@@ -202,7 +202,7 @@ for (const fid of june17Fixtures) {
   // Check model odds
   const [modelOdds] = await conn.query(`
     SELECT market, selection, american_odds FROM wc2026_odds_snapshots
-    WHERE fixture_id = ? AND book_id = 0
+    WHERE match_id = ? AND book_id = 0
     ORDER BY market, selection
   `, [fid]);
   if (modelOdds.length > 0) {

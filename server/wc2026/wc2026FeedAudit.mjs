@@ -115,11 +115,11 @@ async function main() {
   section('PHASE 1: wc2026_fixtures — Row Existence + Field Values');
 
   const [fixtureRows] = await conn.execute(
-    `SELECT fixture_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status,
+    `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status,
             espn_event_id
      FROM wc2026_fixtures
-     WHERE fixture_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
+     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     ORDER BY match_id`,
     TARGET_FIXTURES
   );
 
@@ -133,8 +133,8 @@ async function main() {
 
   const fixtureMap = {};
   for (const row of fixtureRows) {
-    fixtureMap[row.fixture_id] = row;
-    const fid = row.fixture_id;
+    fixtureMap[row.match_id] = row;
+    const fid = row.match_id;
     log('DATA', `[${fid}] stage=${row.stage} | match_date=${row.match_date} | kickoff_utc=${row.kickoff_utc} | status=${row.status} | home=${row.home_team_id} | away=${row.away_team_id}`);
 
     // Check stage
@@ -159,12 +159,12 @@ async function main() {
   section('PHASE 2: wc2026_frozen_book_odds — Row Existence + Market Values');
 
   const [oddsRows] = await conn.execute(
-    `SELECT fixture_id, book_away_ml, book_home_ml, book_draw_ml, book_total_line,
+    `SELECT match_id, book_away_ml, book_home_ml, book_draw_ml, book_total_line,
             book_over_odds, book_under_odds, book_spread_line,
             to_advance_home_odds, to_advance_away_odds
      FROM wc2026_frozen_book_odds
-     WHERE fixture_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
+     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     ORDER BY match_id`,
     TARGET_FIXTURES
   );
 
@@ -177,8 +177,8 @@ async function main() {
   }
 
   for (const row of oddsRows) {
-    const fid = row.fixture_id;
-    const nullFields = Object.entries(row).filter(([k, v]) => v === null && k !== 'fixture_id').map(([k]) => k);
+    const fid = row.match_id;
+    const nullFields = Object.entries(row).filter(([k, v]) => v === null && k !== 'match_id').map(([k]) => k);
     if (nullFields.length > 0) {
       fail(`[${fid}] NULL market fields: ${nullFields.join(', ')}`);
     } else {
@@ -191,21 +191,21 @@ async function main() {
   section('PHASE 3: JOIN Integrity — fixtures LEFT JOIN frozen_book_odds');
 
   const [joinRows] = await conn.execute(
-    `SELECT f.fixture_id, f.stage, f.match_date, f.kickoff_utc,
-            o.fixture_id AS odds_fid, o.book_away_ml
+    `SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
+            o.match_id AS odds_fid, o.book_away_ml
      FROM wc2026_fixtures f
-     LEFT JOIN wc2026_frozen_book_odds o ON f.fixture_id = o.fixture_id
-     WHERE f.fixture_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
-     ORDER BY f.fixture_id`,
+     LEFT JOIN wc2026_frozen_book_odds o ON f.match_id = o.match_id
+     WHERE f.match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     ORDER BY f.match_id`,
     TARGET_FIXTURES
   );
 
   log('DATA', `JOIN result rows: ${joinRows.length}`);
   for (const row of joinRows) {
     if (!row.odds_fid) {
-      fail(`[${row.fixture_id}] JOIN MISS — no odds row matched`);
+      fail(`[${row.match_id}] JOIN MISS — no odds row matched`);
     } else {
-      pass(`[${row.fixture_id}] JOIN OK — odds_fid=${row.odds_fid} away_ml=${row.book_away_ml}`);
+      pass(`[${row.match_id}] JOIN OK — odds_fid=${row.odds_fid} away_ml=${row.book_away_ml}`);
     }
   }
 
@@ -271,10 +271,10 @@ async function main() {
   section('PHASE 7: wc2026_frozen_book_odds — Full Table Audit');
 
   const [allOddsRows] = await conn.execute(
-    `SELECT fixture_id FROM wc2026_frozen_book_odds ORDER BY fixture_id`
+    `SELECT match_id FROM wc2026_frozen_book_odds ORDER BY match_id`
   );
   log('DATA', `Total rows in wc2026_frozen_book_odds: ${allOddsRows.length}`);
-  log('DATA', `All fixture_ids: ${allOddsRows.map(r => r.fixture_id).join(', ')}`);
+  log('DATA', `All match_ids: ${allOddsRows.map(r => r.match_id).join(', ')}`);
 
   // ─── PHASE 8: READ SERVER-SIDE QUERY FILES ────────────────────────────────
   section('PHASE 8: Server-Side File Audit — db.ts + routers.ts');
@@ -343,13 +343,13 @@ async function main() {
   const testDates = ['2026-07-01','2026-07-02','2026-07-03','2026-07-04','2026-07-05','2026-07-06','2026-07-07'];
   for (const d of testDates) {
     const [rows] = await conn.execute(
-      `SELECT f.fixture_id, f.stage, f.match_date, f.kickoff_utc,
+      `SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
               t_h.team_name AS home_name, t_a.team_name AS away_name,
               o.book_away_ml
        FROM wc2026_fixtures f
        LEFT JOIN wc2026_teams t_h ON f.home_team_id = t_h.team_id
        LEFT JOIN wc2026_teams t_a ON f.away_team_id = t_a.team_id
-       LEFT JOIN wc2026_frozen_book_odds o ON f.fixture_id = o.fixture_id
+       LEFT JOIN wc2026_frozen_book_odds o ON f.match_id = o.match_id
        WHERE f.match_date = ?
        ORDER BY f.kickoff_utc`,
       [d]
@@ -357,7 +357,7 @@ async function main() {
     if (rows.length > 0) {
       pass(`Date ${d}: ${rows.length} fixture(s) found`);
       for (const r of rows) {
-        log('DATA', `  [${r.fixture_id}] ${r.away_name} @ ${r.home_name} | stage=${r.stage} | kickoff=${r.kickoff_utc} | away_ml=${r.book_away_ml}`);
+        log('DATA', `  [${r.match_id}] ${r.away_name} @ ${r.home_name} | stage=${r.stage} | kickoff=${r.kickoff_utc} | away_ml=${r.book_away_ml}`);
       }
     } else {
       fail(`Date ${d}: 0 fixtures returned — EMPTY`);
@@ -368,18 +368,18 @@ async function main() {
   section('PHASE 11: Raw match_date dump for all 12 target fixtures');
 
   const [rawDates] = await conn.execute(
-    `SELECT fixture_id, match_date, kickoff_utc, stage FROM wc2026_fixtures
-     WHERE fixture_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
+    `SELECT match_id, match_date, kickoff_utc, stage FROM wc2026_fixtures
+     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     ORDER BY match_id`,
     TARGET_FIXTURES
   );
   for (const r of rawDates) {
-    log('DATA', `[${r.fixture_id}] match_date=${JSON.stringify(r.match_date)} | kickoff_utc=${JSON.stringify(r.kickoff_utc)} | stage=${r.stage}`);
+    log('DATA', `[${r.match_id}] match_date=${JSON.stringify(r.match_date)} | kickoff_utc=${JSON.stringify(r.kickoff_utc)} | stage=${r.stage}`);
     if (!r.match_date) {
-      fail(`[${r.fixture_id}] match_date IS NULL — CRITICAL ROOT CAUSE`);
+      fail(`[${r.match_id}] match_date IS NULL — CRITICAL ROOT CAUSE`);
     }
     if (!r.kickoff_utc) {
-      warn(`[${r.fixture_id}] kickoff_utc IS NULL`);
+      warn(`[${r.match_id}] kickoff_utc IS NULL`);
     }
   }
 

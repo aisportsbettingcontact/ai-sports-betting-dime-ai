@@ -38,31 +38,31 @@ TAB_WAIT_MS      = 4000   # ms to wait after clicking tab for AJAX to load
 PAGE_TIMEOUT_MS  = 30000  # ms page navigation timeout
 
 # ─── WC2026 KO ROUND FIXTURE REGISTRY ─────────────────────────────────────────
-# All 25 Round of 32 + QF + SF + Final fixtures
+# All 25 Round of 32 + QF + SF + Final matches
 # event_id sourced from betexplorer.com match URLs
 FIXTURES = [
     # Round of 32
-    {"fixture_id": "wc26-r32-065", "event_id": "YMPJoJgN", "home": "MEX", "away": "ECU", "slug": "mexico-ecuador"},
-    {"fixture_id": "wc26-r32-066", "event_id": "nkoQVAgB", "home": "ENG", "away": "COD", "slug": "england-d-r-congo"},
-    {"fixture_id": "wc26-r32-067", "event_id": "vPsIXWOb", "home": "BEL", "away": "SEN", "slug": "belgium-senegal"},
-    {"fixture_id": "wc26-r32-068", "event_id": "tGVJCHAp", "home": "USA", "away": "BIH", "slug": "usa-bosnia-herzegovina"},
-    {"fixture_id": "wc26-r32-069", "event_id": "pQkXlNmR", "home": "ESP", "away": "AUT", "slug": "spain-austria"},
-    {"fixture_id": "wc26-r32-070", "event_id": "kLmNpQrS", "home": "ARG", "away": "CHI", "slug": "argentina-chile"},
-    {"fixture_id": "wc26-r32-071", "event_id": "rStUvWxY", "home": "FRA", "away": "MAR", "slug": "france-morocco"},
-    {"fixture_id": "wc26-r32-072", "event_id": "bCdEfGhI", "home": "BRA", "away": "ECU", "slug": "brazil-ecuador"},
-    {"fixture_id": "wc26-r32-073", "event_id": "jKlMnOpQ", "home": "GER", "away": "CMR", "slug": "germany-cameroon"},
-    {"fixture_id": "wc26-r32-074", "event_id": "sUvWxYzA", "home": "NED", "away": "VEN", "slug": "netherlands-venezuela"},
-    {"fixture_id": "wc26-r32-075", "event_id": "cDeFgHiJ", "home": "POR", "away": "URU", "slug": "portugal-uruguay"},
-    {"fixture_id": "wc26-r32-076", "event_id": "kLmNpQrT", "home": "JPN", "away": "CRO", "slug": "japan-croatia"},
-    {"fixture_id": "wc26-r32-077", "event_id": "uVwXyZaB", "home": "COL", "away": "PAR", "slug": "colombia-paraguay"},
-    {"fixture_id": "wc26-r32-078", "event_id": "dEfGhIjK", "home": "AUS", "away": "KOR", "slug": "australia-south-korea"},
-    {"fixture_id": "wc26-r32-079", "event_id": "lMnOpQrS", "home": "SUI", "away": "MEX", "slug": "switzerland-mexico"},
-    {"fixture_id": "wc26-r32-080", "event_id": "tUvWxYzB", "home": "ITA", "away": "CAN", "slug": "italy-canada"},
+    {"match_id": "wc26-r32-065", "event_id": "YMPJoJgN", "home": "MEX", "away": "ECU", "slug": "mexico-ecuador"},
+    {"match_id": "wc26-r32-066", "event_id": "nkoQVAgB", "home": "ENG", "away": "COD", "slug": "england-d-r-congo"},
+    {"match_id": "wc26-r32-067", "event_id": "vPsIXWOb", "home": "BEL", "away": "SEN", "slug": "belgium-senegal"},
+    {"match_id": "wc26-r32-068", "event_id": "tGVJCHAp", "home": "USA", "away": "BIH", "slug": "usa-bosnia-herzegovina"},
+    {"match_id": "wc26-r32-069", "event_id": "pQkXlNmR", "home": "ESP", "away": "AUT", "slug": "spain-austria"},
+    {"match_id": "wc26-r32-070", "event_id": "kLmNpQrS", "home": "ARG", "away": "CHI", "slug": "argentina-chile"},
+    {"match_id": "wc26-r32-071", "event_id": "rStUvWxY", "home": "FRA", "away": "MAR", "slug": "france-morocco"},
+    {"match_id": "wc26-r32-072", "event_id": "bCdEfGhI", "home": "BRA", "away": "ECU", "slug": "brazil-ecuador"},
+    {"match_id": "wc26-r32-073", "event_id": "jKlMnOpQ", "home": "GER", "away": "CMR", "slug": "germany-cameroon"},
+    {"match_id": "wc26-r32-074", "event_id": "sUvWxYzA", "home": "NED", "away": "VEN", "slug": "netherlands-venezuela"},
+    {"match_id": "wc26-r32-075", "event_id": "cDeFgHiJ", "home": "POR", "away": "URU", "slug": "portugal-uruguay"},
+    {"match_id": "wc26-r32-076", "event_id": "kLmNpQrT", "home": "JPN", "away": "CRO", "slug": "japan-croatia"},
+    {"match_id": "wc26-r32-077", "event_id": "uVwXyZaB", "home": "COL", "away": "PAR", "slug": "colombia-paraguay"},
+    {"match_id": "wc26-r32-078", "event_id": "dEfGhIjK", "home": "AUS", "away": "KOR", "slug": "australia-south-korea"},
+    {"match_id": "wc26-r32-079", "event_id": "lMnOpQrS", "home": "SUI", "away": "MEX", "slug": "switzerland-mexico"},
+    {"match_id": "wc26-r32-080", "event_id": "tUvWxYzB", "home": "ITA", "away": "CAN", "slug": "italy-canada"},
     # Quarterfinals (event_ids TBD — will be discovered from BetExplorer)
-    {"fixture_id": "wc26-qf-001", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-1"},
-    {"fixture_id": "wc26-qf-002", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-2"},
-    {"fixture_id": "wc26-qf-003", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-3"},
-    {"fixture_id": "wc26-qf-004", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-4"},
+    {"match_id": "wc26-qf-001", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-1"},
+    {"match_id": "wc26-qf-002", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-2"},
+    {"match_id": "wc26-qf-003", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-3"},
+    {"match_id": "wc26-qf-004", "event_id": "TBD", "home": "TBD", "away": "TBD", "slug": "qf-4"},
 ]
 
 # ─── LOGGING ENGINE ───────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ def vig_pct(vig: float) -> str:
     return f"{(vig - 1) * 100:.2f}%"
 
 # ─── HTML PARSER — EXTRACT bid=549 ODDS FROM RENDERED TABLE ──────────────────
-def parse_market_html(html: str, market: str, fixture_id: str) -> dict:
+def parse_market_html(html: str, market: str, match_id: str) -> dict:
     """
     Parse the rendered HTML table for a given market.
     Returns dict with extracted odds or raises on failure.
@@ -145,7 +145,7 @@ def parse_market_html(html: str, market: str, fixture_id: str) -> dict:
         all_rows = soup.find_all("tr", attrs={"data-bid": True})
         unique_bids = sorted(set(r.get("data-bid") for r in all_rows))
         log("FAIL", f"{market.upper():<6}", f"bid={BET365_BID} NOT FOUND | bids present: {unique_bids[:20]}")
-        raise ValueError(f"bid={BET365_BID} not found in {market} table for {fixture_id}")
+        raise ValueError(f"bid={BET365_BID} not found in {market} table for {match_id}")
     
     result = {}
     
@@ -261,28 +261,28 @@ def parse_market_html(html: str, market: str, fixture_id: str) -> dict:
             break
     
     if not result:
-        raise ValueError(f"No valid {market} odds extracted for {fixture_id}")
+        raise ValueError(f"No valid {market} odds extracted for {match_id}")
     
     return result
 
 # ─── PLAYWRIGHT SCRAPER — SINGLE FIXTURE ─────────────────────────────────────
-async def scrape_fixture(page, fixture: dict) -> dict:
+async def scrape_match(page, match: dict) -> dict:
     """
-    Scrape all 5 markets for a single fixture using Playwright.
+    Scrape all 5 markets for a single match using Playwright.
     Navigates to the match page, clicks each market tab, waits for AJAX,
     then extracts bet365.us odds from the rendered DOM.
     """
-    fixture_id = fixture["fixture_id"]
-    event_id   = fixture["event_id"]
-    home       = fixture["home"]
-    away       = fixture["away"]
-    slug       = fixture["slug"]
+    match_id = match["match_id"]
+    event_id   = match["event_id"]
+    home       = match["home"]
+    away       = match["away"]
+    slug       = match["slug"]
     
-    section(f"FIXTURE: {fixture_id} | {home} vs {away} | event_id={event_id}")
+    section(f"FIXTURE: {match_id} | {home} vs {away} | event_id={event_id}")
     
     if event_id == "TBD":
-        log("WARN", "FIXTURE", f"event_id=TBD — skipping {fixture_id}")
-        return {"fixture_id": fixture_id, "status": "SKIPPED_TBD", "odds": {}}
+        log("WARN", "FIXTURE", f"event_id=TBD — skipping {match_id}")
+        return {"match_id": match_id, "status": "SKIPPED_TBD", "odds": {}}
     
     url = f"{BETEXPLORER_BASE}/football/world/world-championship-2026/{slug}/{event_id}/"
     log("BROWSER", "NAV", f"Navigating to: {url}")
@@ -292,10 +292,10 @@ async def scrape_fixture(page, fixture: dict) -> dict:
         log("PASS", "BROWSER", f"Page loaded: {url}")
     except PWTimeout:
         log("FAIL", "BROWSER", f"Page load TIMEOUT after {PAGE_TIMEOUT_MS}ms: {url}")
-        return {"fixture_id": fixture_id, "status": "FAIL_PAGE_TIMEOUT", "odds": {}}
+        return {"match_id": match_id, "status": "FAIL_PAGE_TIMEOUT", "odds": {}}
     except Exception as e:
         log("FAIL", "BROWSER", f"Page load ERROR: {e}")
-        return {"fixture_id": fixture_id, "status": f"FAIL_PAGE_ERROR: {e}", "odds": {}}
+        return {"match_id": match_id, "status": f"FAIL_PAGE_ERROR: {e}", "odds": {}}
     
     # Wait for betting tabs to appear
     try:
@@ -304,7 +304,7 @@ async def scrape_fixture(page, fixture: dict) -> dict:
     except PWTimeout:
         log("WARN", "BROWSER", "#bettingTabs not found — page may not have odds (match not yet posted?)")
     
-    fixture_odds = {}
+    match_odds = {}
     market_results = {}
     
     for market in MARKETS:
@@ -342,8 +342,8 @@ async def scrape_fixture(page, fixture: dict) -> dict:
                 log("WARN", f"{market.upper():<6}", "Using full page HTML as fallback")
             
             # Parse the market odds
-            market_odds = parse_market_html(table_html, market, fixture_id)
-            fixture_odds.update(market_odds)
+            market_odds = parse_market_html(table_html, market, match_id)
+            match_odds.update(market_odds)
             market_results[market] = "PASS"
             log("PASS", f"{market.upper():<6}", f"Market {market} extracted successfully")
             
@@ -356,54 +356,54 @@ async def scrape_fixture(page, fixture: dict) -> dict:
     
     # Build DB record
     db_record = {
-        "fixture_id":            fixture_id,
-        "book_home_ml":          fixture_odds.get("book_home_ml"),
-        "book_draw_ml":          fixture_odds.get("book_draw_ml"),
-        "book_away_ml":          fixture_odds.get("book_away_ml"),
-        "book_total_line":       fixture_odds.get("book_total_line"),
-        "book_over_odds":        fixture_odds.get("book_over_odds"),
-        "book_under_odds":       fixture_odds.get("book_under_odds"),
-        "book_spread_line":      fixture_odds.get("book_spread_line"),
-        "book_home_spread_odds": fixture_odds.get("book_home_spread_odds"),
-        "book_away_spread_odds": fixture_odds.get("book_away_spread_odds"),
-        "book_dc_1x_odds":       fixture_odds.get("book_dc_1x_odds"),
-        "book_dc_12_odds":       fixture_odds.get("book_dc_12_odds"),
-        "book_dc_x2_odds":       fixture_odds.get("book_dc_x2_odds"),
-        "book_btts_yes_odds":    fixture_odds.get("book_btts_yes_odds"),
-        "book_btts_no_odds":     fixture_odds.get("book_btts_no_odds"),
+        "match_id":            match_id,
+        "book_home_ml":          match_odds.get("book_home_ml"),
+        "book_draw_ml":          match_odds.get("book_draw_ml"),
+        "book_away_ml":          match_odds.get("book_away_ml"),
+        "book_total_line":       match_odds.get("book_total_line"),
+        "book_over_odds":        match_odds.get("book_over_odds"),
+        "book_under_odds":       match_odds.get("book_under_odds"),
+        "book_spread_line":      match_odds.get("book_spread_line"),
+        "book_home_spread_odds": match_odds.get("book_home_spread_odds"),
+        "book_away_spread_odds": match_odds.get("book_away_spread_odds"),
+        "book_dc_1x_odds":       match_odds.get("book_dc_1x_odds"),
+        "book_dc_12_odds":       match_odds.get("book_dc_12_odds"),
+        "book_dc_x2_odds":       match_odds.get("book_dc_x2_odds"),
+        "book_btts_yes_odds":    match_odds.get("book_btts_yes_odds"),
+        "book_btts_no_odds":     match_odds.get("book_btts_no_odds"),
     }
     
     # Validation gate — count populated vs null
     populated = sum(1 for v in db_record.values() if v is not None and not isinstance(v, str))
     null_count = sum(1 for v in db_record.values() if v is None)
     
-    log("VERIFY", "DB_MAP", f"DB record for {fixture_id}: {populated} populated | {null_count} NULL")
+    log("VERIFY", "DB_MAP", f"DB record for {match_id}: {populated} populated | {null_count} NULL")
     for col, val in db_record.items():
-        if col == "fixture_id":
+        if col == "match_id":
             continue
         status = f"✓ {val}" if val is not None else "✗ NULL"
         log("DB", "COL_MAP", f"  {col:<30} = {status}")
     
     # Market summary
     pass_count = sum(1 for v in market_results.values() if v == "PASS")
-    log("OUTPUT", "SUMMARY", f"{fixture_id}: {pass_count}/{len(MARKETS)} markets PASS | {market_results}")
+    log("OUTPUT", "SUMMARY", f"{match_id}: {pass_count}/{len(MARKETS)} markets PASS | {market_results}")
     
     return {
-        "fixture_id":     fixture_id,
+        "match_id":     match_id,
         "home":           home,
         "away":           away,
         "event_id":       event_id,
         "status":         "PASS" if pass_count == len(MARKETS) else f"PARTIAL_{pass_count}of{len(MARKETS)}",
         "market_results": market_results,
         "db_record":      db_record,
-        "raw_odds":       fixture_odds,
+        "raw_odds":       match_odds,
     }
 
 # ─── MAIN ASYNC RUNNER ────────────────────────────────────────────────────────
-async def main(fixture_ids: list = None):
+async def main(match_ids: list = None):
     """
-    Main entry point. If fixture_ids is provided, only scrape those fixtures.
-    Otherwise scrape all fixtures in the registry.
+    Main entry point. If match_ids is provided, only scrape those matches.
+    Otherwise scrape all matches in the registry.
     """
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"\n{'='*80}\n[SESSION] {datetime.now(timezone.utc).isoformat()} | WC2026 Playwright Scraper v1.0\n{'='*80}\n")
@@ -413,17 +413,17 @@ async def main(fixture_ids: list = None):
     log("INPUT", "CONFIG", f"Markets: {MARKETS}")
     log("INPUT", "CONFIG", f"Excluded: ha (Draw No Bet)")
     
-    # Filter fixtures
-    fixtures_to_run = FIXTURES
-    if fixture_ids:
-        fixtures_to_run = [f for f in FIXTURES if f["fixture_id"] in fixture_ids]
-        log("INPUT", "FILTER", f"Running {len(fixtures_to_run)} fixtures: {fixture_ids}")
+    # Filter matches
+    matches_to_run = FIXTURES
+    if match_ids:
+        matches_to_run = [f for f in FIXTURES if f["match_id"] in match_ids]
+        log("INPUT", "FILTER", f"Running {len(matches_to_run)} matches: {match_ids}")
     else:
-        # Skip TBD fixtures
-        fixtures_to_run = [f for f in FIXTURES if f["event_id"] != "TBD"]
-        log("INPUT", "FILTER", f"Running {len(fixtures_to_run)} fixtures (skipping TBD)")
+        # Skip TBD matches
+        matches_to_run = [f for f in FIXTURES if f["event_id"] != "TBD"]
+        log("INPUT", "FILTER", f"Running {len(matches_to_run)} matches (skipping TBD)")
     
-    log("INPUT", "TOTAL", f"Total fixtures to scrape: {len(fixtures_to_run)}")
+    log("INPUT", "TOTAL", f"Total matches to scrape: {len(matches_to_run)}")
     
     all_results = []
     
@@ -448,15 +448,15 @@ async def main(fixture_ids: list = None):
         page = await context.new_page()
         log("PASS", "BROWSER", "Browser launched | context created | page ready")
         
-        for i, fixture in enumerate(fixtures_to_run):
-            log("STEP", "PROGRESS", f"[{i+1}/{len(fixtures_to_run)}] {fixture['fixture_id']} — {fixture['home']} vs {fixture['away']}")
+        for i, match in enumerate(matches_to_run):
+            log("STEP", "PROGRESS", f"[{i+1}/{len(matches_to_run)}] {match['match_id']} — {match['home']} vs {match['away']}")
             
-            result = await scrape_fixture(page, fixture)
+            result = await scrape_match(page, match)
             all_results.append(result)
             
-            # Rate limit: 2s between fixtures
-            if i < len(fixtures_to_run) - 1:
-                log("STATE", "RATE_LIMIT", "Waiting 2s between fixtures...")
+            # Rate limit: 2s between matches
+            if i < len(matches_to_run) - 1:
+                log("STATE", "RATE_LIMIT", "Waiting 2s between matches...")
                 await asyncio.sleep(2)
         
         await browser.close()
@@ -474,7 +474,7 @@ async def main(fixture_ids: list = None):
     for r in all_results:
         status = r.get("status", "?")
         color  = "\033[1;32m" if status == "PASS" else "\033[1;33m" if status.startswith("PARTIAL") else "\033[1;31m"
-        log("OUTPUT", "RESULT", f"  {color}{r['fixture_id']:<20} {r.get('home','?'):<5} vs {r.get('away','?'):<5} → {status}{RESET}")
+        log("OUTPUT", "RESULT", f"  {color}{r['match_id']:<20} {r.get('home','?'):<5} vs {r.get('away','?'):<5} → {status}{RESET}")
     
     # Save output
     output = {
@@ -502,6 +502,6 @@ async def main(fixture_ids: list = None):
 
 # ─── ENTRY POINT ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    # Accept optional fixture_id args: python3 wc2026_playwright_scraper.py wc26-r32-066
-    fixture_ids = sys.argv[1:] if len(sys.argv) > 1 else None
-    asyncio.run(main(fixture_ids))
+    # Accept optional match_id args: python3 wc2026_playwright_scraper.py wc26-r32-066
+    match_ids = sys.argv[1:] if len(sys.argv) > 1 else None
+    asyncio.run(main(match_ids))

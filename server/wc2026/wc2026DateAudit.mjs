@@ -32,17 +32,17 @@ async function main() {
   // 1. Raw match_date + kickoff_utc for all 12 target fixtures
   console.log('\n══ TARGET FIXTURE DATES ══');
   const [rows] = await conn.execute(
-    `SELECT fixture_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status
+    `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status
      FROM wc2026_fixtures
-     WHERE fixture_id IN (${TARGET.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
+     WHERE match_id IN (${TARGET.map(() => '?').join(',')})
+     ORDER BY match_id`,
     TARGET
   );
   console.log(`Rows returned: ${rows.length}`);
   for (const r of rows) {
     const md = r.match_date;
     const mdStr = md instanceof Date ? md.toISOString().split('T')[0] : String(md);
-    console.log(`[${r.fixture_id}] stage=${r.stage} | match_date=${mdStr} | kickoff_utc=${r.kickoff_utc} | home=${r.home_team_id} | away=${r.away_team_id}`);
+    console.log(`[${r.match_id}] stage=${r.stage} | match_date=${mdStr} | kickoff_utc=${r.kickoff_utc} | home=${r.home_team_id} | away=${r.away_team_id}`);
   }
 
   // 2. Simulate the exact query the router uses for each date Jul 1-7
@@ -50,37 +50,37 @@ async function main() {
   const testDates = ['2026-07-01','2026-07-02','2026-07-03','2026-07-04','2026-07-05','2026-07-06','2026-07-07'];
   for (const d of testDates) {
     const [res] = await conn.execute(
-      `SELECT fixture_id, stage, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_date = ? ORDER BY kickoff_utc`,
+      `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_fixtures WHERE match_date = ? ORDER BY kickoff_utc`,
       [d]
     );
-    console.log(`Date ${d}: ${res.length} fixture(s) → ${res.map(r => r.fixture_id).join(', ') || 'NONE'}`);
+    console.log(`Date ${d}: ${res.length} fixture(s) → ${res.map(r => r.match_id).join(', ') || 'NONE'}`);
   }
 
   // 3. Show ALL R32/R16 fixtures with their dates
   console.log('\n══ ALL R32/R16 FIXTURES IN DB ══');
   const [koRows] = await conn.execute(
-    `SELECT fixture_id, stage, match_date, kickoff_utc FROM wc2026_fixtures
+    `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_fixtures
      WHERE stage IN ('R32','R16','QF','SF','THIRD','FINAL')
-     ORDER BY match_date, kickoff_utc, fixture_id`
+     ORDER BY match_date, kickoff_utc, match_id`
   );
   console.log(`Total KO fixtures: ${koRows.length}`);
   for (const r of koRows) {
     const md = r.match_date;
     const mdStr = md instanceof Date ? md.toISOString().split('T')[0] : String(md);
-    console.log(`  [${r.fixture_id}] stage=${r.stage} | match_date=${mdStr} | kickoff_utc=${r.kickoff_utc}`);
+    console.log(`  [${r.match_id}] stage=${r.stage} | match_date=${mdStr} | kickoff_utc=${r.kickoff_utc}`);
   }
 
   // 4. Check if match_date is stored as a Date object or string
   console.log('\n══ match_date TYPE CHECK ══');
   const [typeCheck] = await conn.execute(
-    `SELECT fixture_id, match_date, TYPEOF(match_date) as md_type FROM wc2026_fixtures WHERE fixture_id = 'wc26-r32-080' LIMIT 1`
+    `SELECT match_id, match_date, TYPEOF(match_date) as md_type FROM wc2026_fixtures WHERE match_id = 'wc26-r32-080' LIMIT 1`
   );
   // TYPEOF is not MySQL — use CAST check instead
   const [castCheck] = await conn.execute(
-    `SELECT fixture_id, match_date, 
+    `SELECT match_id, match_date, 
             DATE_FORMAT(match_date, '%Y-%m-%d') as md_formatted,
             YEAR(match_date) as yr, MONTH(match_date) as mo, DAY(match_date) as dy
-     FROM wc2026_fixtures WHERE fixture_id = 'wc26-r32-080' LIMIT 1`
+     FROM wc2026_fixtures WHERE match_id = 'wc26-r32-080' LIMIT 1`
   );
   console.log('wc26-r32-080 match_date raw:', castCheck[0]);
 

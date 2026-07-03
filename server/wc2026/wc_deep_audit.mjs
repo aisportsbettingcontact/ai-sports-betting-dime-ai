@@ -15,14 +15,14 @@ async function main() {
   console.log(SEP);
 
   const [fixtures] = await conn.query(`
-    SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.stage, f.group_letter,
+    SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage, f.group_letter,
            f.home_team_id, ht.name AS home_name, ht.fifa_code AS home_code,
            f.away_team_id, at.name AS away_name, at.fifa_code AS away_code,
            f.status, f.venue_id, f.is_host_home
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
-    ORDER BY f.match_date, f.fixture_id
+    ORDER BY f.match_date, f.match_id
   `);
 
   console.log(`\n[INPUT] Total fixtures in DB: ${fixtures.length}`);
@@ -33,12 +33,12 @@ async function main() {
       : String(f.match_date).split('T')[0];
     if (!byDate[d]) byDate[d] = [];
     byDate[d].push(f);
-    console.log(`[FIX] ${f.fixture_id} | ${d} | ${f.home_code} (home) vs ${f.away_code} (away) | grp=${f.group_letter} | status=${f.status} | venue=${f.venue_id}`);
+    console.log(`[FIX] ${f.match_id} | ${d} | ${f.home_code} (home) vs ${f.away_code} (away) | grp=${f.group_letter} | status=${f.status} | venue=${f.venue_id}`);
   }
 
   console.log('\n[STATE] Fixtures grouped by date:');
   for (const [d, fxs] of Object.entries(byDate).sort()) {
-    console.log(`  ${d}: ${fxs.length} fixture(s) — ${fxs.map(x => x.fixture_id).join(', ')}`);
+    console.log(`  ${d}: ${fxs.length} fixture(s) — ${fxs.map(x => x.match_id).join(', ')}`);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -49,22 +49,22 @@ async function main() {
   console.log(SEP);
 
   const [odds] = await conn.query(`
-    SELECT o.fixture_id, o.book_id, o.market, o.selection, o.line,
+    SELECT o.match_id, o.book_id, o.market, o.selection, o.line,
            o.american_odds, o.implied_prob, o.snapshot_ts
     FROM wc2026_odds_snapshots o
-    ORDER BY o.fixture_id, o.book_id, o.market, o.selection
+    ORDER BY o.match_id, o.book_id, o.market, o.selection
   `);
 
   console.log(`\n[INPUT] Total odds rows: ${odds.length}`);
 
   const byFixture = {};
   for (const o of odds) {
-    if (!byFixture[o.fixture_id]) byFixture[o.fixture_id] = { book: [], model: [] };
-    if (Number(o.book_id) === 0) byFixture[o.fixture_id].model.push(o);
-    else byFixture[o.fixture_id].book.push(o);
+    if (!byFixture[o.match_id]) byFixture[o.match_id] = { book: [], model: [] };
+    if (Number(o.book_id) === 0) byFixture[o.match_id].model.push(o);
+    else byFixture[o.match_id].book.push(o);
   }
 
-  const allFixtureIds = fixtures.map(f => f.fixture_id);
+  const allFixtureIds = fixtures.map(f => f.match_id);
   const seededFixtures = new Set(Object.keys(byFixture));
 
   let totalIssues = 0;
@@ -75,7 +75,7 @@ async function main() {
     const d = f.match_date instanceof Date
       ? f.match_date.toISOString().split('T')[0]
       : String(f.match_date).split('T')[0];
-    const data = byFixture[f.fixture_id] || { book: [], model: [] };
+    const data = byFixture[f.match_id] || { book: [], model: [] };
 
     const modelMarkets = [...new Set(data.model.map(o => o.market))];
     const bookMarkets = [...new Set(data.book.map(o => o.market))];
@@ -141,10 +141,10 @@ async function main() {
     const verdict = flags.length === 0 ? '✓ OK' : `✗ ISSUES: ${flags.join(', ')}`;
     if (flags.length > 0) {
       totalIssues++;
-      issueLog.push({ fixture: f.fixture_id, date: d, home: f.home_code, away: f.away_code, flags });
+      issueLog.push({ fixture: f.match_id, date: d, home: f.home_code, away: f.away_code, flags });
     }
 
-    console.log(`\n  [${f.fixture_id}] ${d} | ${f.home_code} vs ${f.away_code} | ${verdict}`);
+    console.log(`\n  [${f.match_id}] ${d} | ${f.home_code} vs ${f.away_code} | ${verdict}`);
     console.log(`    MODEL: ${data.model.length} rows | ${modelDetail || 'NONE'}`);
     console.log(`    BOOK:  ${data.book.length} rows | ${bookDetail || 'NONE'}`);
   }
@@ -169,22 +169,22 @@ async function main() {
   console.log(SEP);
 
   const [lineups] = await conn.query(`
-    SELECT l.fixture_id, l.team_id, t.fifa_code, t.name AS team_name,
+    SELECT l.match_id, l.team_id, t.fifa_code, t.name AS team_name,
            COUNT(*) AS player_count,
            SUM(CASE WHEN l.is_starter = 1 THEN 1 ELSE 0 END) AS starters,
            SUM(CASE WHEN l.is_starter = 0 THEN 1 ELSE 0 END) AS bench
     FROM wc2026_lineups l
     JOIN wc2026_teams t ON l.team_id = t.team_id
-    GROUP BY l.fixture_id, l.team_id, t.fifa_code, t.name
-    ORDER BY l.fixture_id, l.team_id
+    GROUP BY l.match_id, l.team_id, t.fifa_code, t.name
+    ORDER BY l.match_id, l.team_id
   `);
 
   console.log(`\n[INPUT] Lineup team-fixture combos: ${lineups.length}`);
   const lineupByFixture = {};
   for (const l of lineups) {
-    if (!lineupByFixture[l.fixture_id]) lineupByFixture[l.fixture_id] = [];
-    lineupByFixture[l.fixture_id].push(l);
-    console.log(`[LINEUP] ${l.fixture_id} | ${l.fifa_code} | players=${l.player_count} (starters=${l.starters}, bench=${l.bench})`);
+    if (!lineupByFixture[l.match_id]) lineupByFixture[l.match_id] = [];
+    lineupByFixture[l.match_id].push(l);
+    console.log(`[LINEUP] ${l.match_id} | ${l.fifa_code} | players=${l.player_count} (starters=${l.starters}, bench=${l.bench})`);
   }
 
   const noLineups = allFixtureIds.filter(id => !lineupByFixture[id]);
