@@ -254,16 +254,16 @@ async function main() {
   if (failed.length > 0) {
     log("OUTPUT", "─── FAILED MATCHES ───");
     failed.forEach(r => {
-      const match = ALL_MATCHES.find(m => m.gameId === r.gameId);
-      log("ERROR", `  gameId=${r.gameId} | ${match?.stage} | ${match?.date} | ${match?.home} vs ${match?.away} | error=${r.error || r.exitCode}`);
+      const match = ALL_MATCHES.find(m => m.espnMatchId === r.espnMatchId);
+      log("ERROR", `  gameId=${r.espnMatchId} | ${match?.stage} | ${match?.date} | ${match?.home} vs ${match?.away} | error=${r.error || r.exitCode}`);
     });
   }
 
   if (partial.length > 0) {
     log("OUTPUT", "─── PARTIAL MATCHES ───");
     partial.forEach(r => {
-      const match = ALL_MATCHES.find(m => m.gameId === r.gameId);
-      log("WARN", `  gameId=${r.gameId} | ${match?.stage} | ${match?.date} | ${match?.home} vs ${match?.away} | tables_populated=${r.tablesPopulated} tables_missing=${r.tablesMissingCount}`);
+      const match = ALL_MATCHES.find(m => m.espnMatchId === r.espnMatchId);
+      log("WARN", `  gameId=${r.espnMatchId} | ${match?.stage} | ${match?.date} | ${match?.home} vs ${match?.away} | tables_populated=${r.tablesPopulated} tables_missing=${r.tablesMissingCount}`);
     });
   }
 

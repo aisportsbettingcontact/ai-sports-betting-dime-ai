@@ -65,7 +65,7 @@ console.log('\n[STEP] Seeding model odds (book_id=0) for both matchs...');
 
 const PREDICTIONS = [
   {
-    matchId: 'wc26-g-003',
+    espn_match_id: 'wc26-g-003',
     homeTeamName: 'Bosnia and Herzegovina',
     awayTeamName: 'Canada',
     homeAbbr: 'BIH',
@@ -82,7 +82,7 @@ const PREDICTIONS = [
     modelSpread: -0.484,  // BIH xG advantage: 1.7817 - 1.2982
   },
   {
-    matchId: 'wc26-g-005',
+    espn_match_id: 'wc26-g-005',
     homeTeamName: 'United States',
     awayTeamName: 'Paraguay',
     homeAbbr: 'USA',
@@ -104,7 +104,7 @@ for (const pred of PREDICTIONS) {
   // Delete existing model odds for this match
   await conn.execute(
     'DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?',
-    [pred.matchId, MODEL_BOOK_ID]
+    [pred.espn_match_id, MODEL_BOOK_ID]
   );
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -113,17 +113,17 @@ for (const pred of PREDICTIONS) {
       `INSERT INTO wc2026_odds_snapshots
          (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      [pred.matchId, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, now]
+      [pred.espn_match_id, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, now]
     );
   }
 
   // Mark match as SCHEDULED (status only — no xg/spread columns in this table)
   await conn.execute(
     `UPDATE wc2026_matches SET status = 'SCHEDULED' WHERE match_id = ?`,
-    [pred.matchId]
+    [pred.espn_match_id]
   );
 
-  console.log(`[OUTPUT] Seeded ${pred.markets.length} odds rows for ${pred.matchId} (${pred.homeAbbr} vs ${pred.awayAbbr})`);
+  console.log(`[OUTPUT] Seeded ${pred.markets.length} odds rows for ${pred.espn_match_id} (${pred.homeAbbr} vs ${pred.awayAbbr})`);
 }
 
 // ─── Step 4: Seed lineups ─────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ console.log('\n[STEP] Seeding starting lineups...');
 
 const LINEUPS = [
   {
-    matchId: 'wc26-g-003',
+    espn_match_id: 'wc26-g-003',
     homePlayers: [
       // Bosnia and Herzegovina starting XI + GK
       { name: 'Ibrahim Šehić',       position: 'GK', jerseyNumber: 1,  isStarter: true },
@@ -164,7 +164,7 @@ const LINEUPS = [
     ],
   },
   {
-    matchId: 'wc26-g-005',
+    espn_match_id: 'wc26-g-005',
     homePlayers: [
       // United States starting XI + GK
       { name: 'Matt Turner',         position: 'GK',  jerseyNumber: 1,  isStarter: true },
@@ -200,26 +200,26 @@ const LINEUPS = [
 
 for (const lineup of LINEUPS) {
   // Delete existing lineups for this match
-  await conn.execute('DELETE FROM wc2026_lineups WHERE match_id = ?', [lineup.matchId]);
+  await conn.execute('DELETE FROM wc2026_lineups WHERE match_id = ?', [lineup.espn_match_id]);
 
   for (const p of lineup.homePlayers) {
     await conn.execute(
       `INSERT INTO wc2026_lineups (match_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
        VALUES (?, 'home', ?, ?, ?, ?, ?, 1)`,
-      [lineup.matchId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
+      [lineup.espn_match_id, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
     );
   }
   for (const p of lineup.awayPlayers) {
     await conn.execute(
       `INSERT INTO wc2026_lineups (match_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
        VALUES (?, 'away', ?, ?, ?, ?, ?, 1)`,
-      [lineup.matchId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
+      [lineup.espn_match_id, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
     );
   }
 
   const homeCount = lineup.homePlayers.length;
   const awayCount = lineup.awayPlayers.length;
-  console.log(`[OUTPUT] Seeded ${homeCount} home + ${awayCount} away players for ${lineup.matchId}`);
+  console.log(`[OUTPUT] Seeded ${homeCount} home + ${awayCount} away players for ${lineup.espn_match_id}`);
 }
 
 // ─── Final verification ───────────────────────────────────────────────────────

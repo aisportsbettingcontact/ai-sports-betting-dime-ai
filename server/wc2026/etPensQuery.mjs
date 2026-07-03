@@ -18,7 +18,7 @@ cols.forEach(c => console.log(`  ${c.Field}  (${c.Type})`));
 
 // Step 2: Pull all data for the 7 ESPN IDs
 const [rows] = await db.query(
-  `SELECT * FROM wc2026_espn_matches WHERE espn_event_id IN (?) ORDER BY espn_event_id`,
+  `SELECT * FROM wc2026_espn_matches WHERE espn_match_id IN (?) ORDER BY espn_match_id`,
   [ESPN_IDS]
 );
 console.log(`\n=== MATCH DATA (${rows.length} rows) ===`);

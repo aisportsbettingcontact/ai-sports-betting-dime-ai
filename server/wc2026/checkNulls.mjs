@@ -13,7 +13,7 @@ const [glossaryCols] = await conn.execute('DESCRIBE wc2026_espn_glossary');
 console.log('GLOSSARY COLS:', glossaryCols.map(c => c.Field).join(', '));
 
 // Check glossary counts using correct column
-const matchIdCol = glossaryCols.find(c => c.Field.toLowerCase() === 'matchid')?.Field ?? 'matchId';
+const matchIdCol = glossaryCols.find(c => c.Field.toLowerCase() === 'matchid')?.Field ?? 'espn_match_id';
 console.log('Using column:', matchIdCol);
 for (const mid of MATCH_IDS) {
   const [[gl]] = await conn.execute(`SELECT COUNT(*) AS cnt FROM wc2026_espn_glossary WHERE \`${matchIdCol}\`=?`, [mid]);
@@ -23,7 +23,7 @@ for (const mid of MATCH_IDS) {
 // Match stats null check
 console.log('\n─── match_stats null fields ─────────────────────────────');
 for (const mid of MATCH_IDS) {
-  const [[ms]] = await conn.execute('SELECT * FROM wc2026_espn_match_stats WHERE matchId=?', [mid]);
+  const [[ms]] = await conn.execute('SELECT * FROM wc2026_espn_match_stats WHERE espn_match_id=?', [mid]);
   if (!ms) { console.log(`[${mid}] NO match_stats row!`); continue; }
   const nullFields = Object.entries(ms).filter(([k,v]) => v === null).map(([k]) => k);
   if (nullFields.length === 0) {
@@ -37,7 +37,7 @@ for (const mid of MATCH_IDS) {
 console.log('\n─── shot_map outcome breakdown ──────────────────────────');
 for (const mid of MATCH_IDS) {
   const [smRows] = await conn.execute(
-    `SELECT outcome, COUNT(*) AS cnt FROM wc2026_espn_shot_map WHERE matchId=? GROUP BY outcome`,
+    `SELECT outcome, COUNT(*) AS cnt FROM wc2026_espn_shot_map WHERE espn_match_id=? GROUP BY outcome`,
     [mid]
   );
   const breakdown = smRows.map(r => `${r.outcome}:${r.cnt}`).join(' | ');
@@ -47,7 +47,7 @@ for (const mid of MATCH_IDS) {
 // Player stats null check
 console.log('\n─── player_stats null fields (sample) ───────────────────');
 for (const mid of MATCH_IDS) {
-  const [psRows] = await conn.execute('SELECT * FROM wc2026_espn_player_stats WHERE matchId=? LIMIT 1', [mid]);
+  const [psRows] = await conn.execute('SELECT * FROM wc2026_espn_player_stats WHERE espn_match_id=? LIMIT 1', [mid]);
   if (!psRows.length) { console.log(`[${mid}] NO player_stats rows!`); continue; }
   const nullFields = Object.entries(psRows[0]).filter(([k,v]) => v === null).map(([k]) => k);
   console.log(`[${mid}] sample player null fields (${nullFields.length}): ${nullFields.slice(0,10).join(', ')}`);
@@ -56,31 +56,31 @@ for (const mid of MATCH_IDS) {
 // Team stats possession check
 console.log('\n─── team_stats possession sum check ─────────────────────');
 const [tsRows] = await conn.execute(
-  `SELECT matchId, homePossession, awayPossession FROM wc2026_espn_team_stats WHERE matchId IN (?,?,?,?)`,
+  `SELECT espn_match_id, homePossession, awayPossession FROM wc2026_espn_team_stats WHERE espn_match_id IN (?,?,?,?)`,
   MATCH_IDS
 );
 for (const r of tsRows) {
   const sum = parseFloat(r.homePossession ?? 0) + parseFloat(r.awayPossession ?? 0);
-  console.log(`[${r.matchId}] H=${r.homePossession}% A=${r.awayPossession}% sum=${sum.toFixed(1)} ${Math.abs(sum-100)<1?'✅':'⚠️'}`);
+  console.log(`[${r.espn_match_id}] H=${r.homePossession}% A=${r.awayPossession}% sum=${sum.toFixed(1)} ${Math.abs(sum-100)<1?'✅':'⚠️'}`);
 }
 
 // xG range check
 console.log('\n─── expected_goals range check ──────────────────────────');
 const [xgRows] = await conn.execute(
-  `SELECT matchId, homeXg, awayXg FROM wc2026_espn_expected_goals WHERE matchId IN (?,?,?,?)`,
+  `SELECT espn_match_id, homeXg, awayXg FROM wc2026_espn_expected_goals WHERE espn_match_id IN (?,?,?,?)`,
   MATCH_IDS
 );
 for (const r of xgRows) {
   const hxg = parseFloat(r.homeXg);
   const axg = parseFloat(r.awayXg);
   const ok = hxg >= 0 && hxg <= 5 && axg >= 0 && axg <= 5;
-  console.log(`[${r.matchId}] homeXg=${r.homeXg} awayXg=${r.awayXg} ${ok?'✅':'⚠️ OUT OF RANGE'}`);
+  console.log(`[${r.espn_match_id}] homeXg=${r.homeXg} awayXg=${r.awayXg} ${ok?'✅':'⚠️ OUT OF RANGE'}`);
 }
 
 // matchDateUtc vs ESPN HTML Game Information
 console.log('\n─── matchDateUtc vs ESPN Game Information HTML ──────────');
 const [mRows] = await conn.execute(
-  `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, matchDateUtc, venue, attendance, referee FROM wc2026_espn_matches WHERE matchId IN (?,?,?,?) ORDER BY matchDateUtc`,
+  `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, matchDateUtc, venue, attendance, referee FROM wc2026_espn_matches WHERE espn_match_id IN (?,?,?,?) ORDER BY matchDateUtc`,
   MATCH_IDS
 );
 // Ground truth from ESPN HTML (pasted_content_52.txt): "12:00 PM, June 28, 2026" for match 760487 (Japan vs Brazil)
@@ -99,11 +99,11 @@ for (const r of mRows) {
   const dt = new Date(Number(r.matchDateUtc));
   const etStr = dt.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
   const ptStr = dt.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-  const gt = groundTruth[r.matchId];
+  const gt = groundTruth[r.espn_match_id];
   const venueOk = r.venue === gt.venue ? '✅' : `⚠️ DB="${r.venue}" expected="${gt.venue}"`;
   const attOk = r.attendance === gt.attendance ? '✅' : `⚠️ DB=${r.attendance} expected=${gt.attendance}`;
   const refOk = r.referee === gt.referee ? '✅' : `⚠️ DB="${r.referee}" expected="${gt.referee}"`;
-  console.log(`[${r.matchId}] ${r.homeTeamAbbrev} vs ${r.awayTeamAbbrev}`);
+  console.log(`[${r.espn_match_id}] ${r.homeTeamAbbrev} vs ${r.awayTeamAbbrev}`);
   console.log(`  UTC: ${dt.toISOString()} | ET: ${etStr} | PT: ${ptStr}`);
   console.log(`  venue: ${venueOk}`);
   console.log(`  attendance: ${attOk}`);

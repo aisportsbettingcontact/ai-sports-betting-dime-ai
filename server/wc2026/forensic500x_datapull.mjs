@@ -2,7 +2,7 @@
  * forensic500x_datapull.mjs
  * ══════════════════════════════════════════════════════════════════════════════
  * 500x FORENSIC AUDIT — Full data pull for all 7 Jun 28-30 R32 knockout matches
- * ESPN tables join via f.espn_event_id = espn.matchId
+ * ESPN tables join via f.espn_match_id = espn.espn_match_id
  * ══════════════════════════════════════════════════════════════════════════════
  */
 import mysql from 'mysql2/promise';
@@ -33,7 +33,7 @@ console.log('\n[INPUT]  Pulling 500x forensic data for 7 matchs');
 // ── 1. Matchs ───────────────────────────────────────────────────────────────
 const [matchs] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
-         f.home_score, f.away_score, f.status, f.espn_event_id,
+         f.home_score, f.away_score, f.status, f.espn_match_id,
          f.attendance, f.advancing_team_id,
          ht.name AS home_name, ht.team_id AS home_id, ht.fifa_code AS home_code,
          at.name AS away_name, at.team_id AS away_id, at.fifa_code AS away_code,
@@ -89,8 +89,8 @@ const [bookOdds] = await conn.execute(`
 `, TARGET_MATCHS);
 console.log(`[STATE]  Book odds: ${bookOdds.length} rows`);
 
-// ── 4. ESPN data via espn_event_id ────────────────────────────────────────────
-const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
+// ── 4. ESPN data via espn_match_id ────────────────────────────────────────────
+const espnIds = matchs.map(f => f.espn_match_id).filter(Boolean);
 const espnPh = espnIds.map(() => '?').join(',');
 console.log(`[STATE]  ESPN event IDs: ${espnIds.join(', ')}`);
 
@@ -99,14 +99,14 @@ let espnMatches = [], espnMatchStats = [], espnXG = [], espnTeamStats = [];
 if (espnIds.length > 0) {
   try {
     const [em] = await conn.execute(
-      `SELECT * FROM wc2026_espn_matches WHERE matchId IN (${espnPh})`, espnIds);
+      `SELECT * FROM wc2026_espn_matches WHERE espn_match_id IN (${espnPh})`, espnIds);
     espnMatches = em;
     console.log(`[STATE]  ESPN matches: ${em.length} rows`);
   } catch(e) { console.log(`[WARN]   ESPN matches: ${e.message}`); }
 
   try {
     const [ems] = await conn.execute(
-      `SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+      `SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
               homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots,
               homeBigChancesCreated, awayBigChancesCreated,
               homeBigChancesMissed, awayBigChancesMissed,
@@ -119,25 +119,25 @@ if (espnIds.length > 0) {
               homeOffsides, awayOffsides,
               homeFoulYellowCards, awayFoulYellowCards,
               homeFoulRedCards, awayFoulRedCards
-       FROM wc2026_espn_match_stats WHERE matchId IN (${espnPh})`, espnIds);
+       FROM wc2026_espn_match_stats WHERE espn_match_id IN (${espnPh})`, espnIds);
     espnMatchStats = ems;
     console.log(`[STATE]  ESPN match stats: ${ems.length} rows`);
   } catch(e) { console.log(`[WARN]   ESPN match stats: ${e.message}`); }
 
   try {
     const [exg] = await conn.execute(
-      `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+      `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
               homeXG, awayXG, homeXGOpenPlay, awayXGOpenPlay,
               homeXGSetPlay, awayXGSetPlay, homeXGOT, awayXGOT,
               homeXA, awayXA
-       FROM wc2026_espn_expected_goals WHERE matchId IN (${espnPh})`, espnIds);
+       FROM wc2026_espn_expected_goals WHERE espn_match_id IN (${espnPh})`, espnIds);
     espnXG = exg;
     console.log(`[STATE]  ESPN xG: ${exg.length} rows`);
   } catch(e) { console.log(`[WARN]   ESPN xG: ${e.message}`); }
 
   try {
     const [ets] = await conn.execute(
-      `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+      `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
               possession, possessionAway,
               shotsOnGoal, shotsOnGoalAway,
               shotAttempts, shotAttemptsAway,
@@ -146,7 +146,7 @@ if (espnIds.length > 0) {
               yellowCards, yellowCardsAway,
               redCards, redCardsAway,
               saves, savesAway
-       FROM wc2026_espn_team_stats WHERE matchId IN (${espnPh})`, espnIds);
+       FROM wc2026_espn_team_stats WHERE espn_match_id IN (${espnPh})`, espnIds);
     espnTeamStats = ets;
     console.log(`[STATE]  ESPN team stats: ${ets.length} rows`);
   } catch(e) { console.log(`[WARN]   ESPN team stats: ${e.message}`); }
@@ -157,11 +157,11 @@ const masterData = TARGET_MATCHS.map(fid => {
   const fix = matchs.find(r => r.match_id === fid);
   const mod = models.find(r => r.match_id === fid);
   const book = bookOdds.find(r => r.match_id === fid);
-  const eid = fix?.espn_event_id;
-  const em = espnMatches.find(r => String(r.matchId) === String(eid));
-  const ems = espnMatchStats.find(r => String(r.matchId) === String(eid));
-  const exg = espnXG.find(r => String(r.matchId) === String(eid));
-  const ets = espnTeamStats.find(r => String(r.matchId) === String(eid));
+  const eid = fix?.espn_match_id;
+  const em = espnMatches.find(r => String(r.espn_match_id) === String(eid));
+  const ems = espnMatchStats.find(r => String(r.espn_match_id) === String(eid));
+  const exg = espnXG.find(r => String(r.espn_match_id) === String(eid));
+  const ets = espnTeamStats.find(r => String(r.espn_match_id) === String(eid));
   return { fid, espnId: eid, match: fix, model: mod, book, espnMatch: em, espnMatchStats: ems, espnXG: exg, espnTeamStats: ets };
 });
 

@@ -52,7 +52,7 @@ console.log('[STEP] Using correct FIFA orientation: home=ESP/BEL/KSA/IRN, away=C
 // All probabilities verified to sum to 1.000000
 const MODEL_ODDS = [
   {
-    matchId: 'wc26-g-015',
+    espn_match_id: 'wc26-g-015',
     // Spain (home) vs Cape Verde (away)
     // Spain: FIFA rank ~8, xG=3.82 | CPV: FIFA rank ~73, xG=0.42
     // Dixon-Coles: Spain dominant home favorite
@@ -67,7 +67,7 @@ const MODEL_ODDS = [
     overOdds: -217, underOdds: +217,
   },
   {
-    matchId: 'wc26-g-013',
+    espn_match_id: 'wc26-g-013',
     // Belgium (home) vs Egypt (away)
     // Belgium: FIFA rank ~3, xG=1.92 | Egypt: FIFA rank ~34, xG=0.91
     // Dixon-Coles: Belgium moderate home favorite
@@ -81,7 +81,7 @@ const MODEL_ODDS = [
     overOdds: -123, underOdds: +123,
   },
   {
-    matchId: 'wc26-g-016',
+    espn_match_id: 'wc26-g-016',
     // Saudi Arabia (home) vs Uruguay (away)
     // KSA: FIFA rank ~56, xG=0.91 | URU: FIFA rank ~17, xG=1.98
     // Dixon-Coles: Uruguay strong away favorite
@@ -95,7 +95,7 @@ const MODEL_ODDS = [
     overOdds: -105, underOdds: -105,
   },
   {
-    matchId: 'wc26-g-014',
+    espn_match_id: 'wc26-g-014',
     // Iran (home) vs New Zealand (away)
     // Iran: FIFA rank ~20, xG=1.42 | NZL: FIFA rank ~90, xG=1.28
     // Dixon-Coles: Iran slight home favorite
@@ -117,12 +117,12 @@ for (const m of MODEL_ODDS) {
   const sumTotal = m.overProb + m.underProb;
   const ok1X2 = Math.abs(sum1X2 - 1.0) < 0.0001;
   const okTotal = Math.abs(sumTotal - 1.0) < 0.0001;
-  console.log(`[VERIFY] ${m.matchId}: 1X2 sum=${sum1X2.toFixed(6)} ${ok1X2?'✓':'✗'} | Total sum=${sumTotal.toFixed(6)} ${okTotal?'✓':'✗'}`);
-  if (!ok1X2 || !okTotal) { console.error('[ERROR] Probability sum check failed for', m.matchId); process.exit(1); }
+  console.log(`[VERIFY] ${m.espn_match_id}: 1X2 sum=${sum1X2.toFixed(6)} ${ok1X2?'✓':'✗'} | Total sum=${sumTotal.toFixed(6)} ${okTotal?'✓':'✗'}`);
+  if (!ok1X2 || !okTotal) { console.error('[ERROR] Probability sum check failed for', m.espn_match_id); process.exit(1); }
 }
 
 // Delete existing model odds for June 15
-const june15Ids = MODEL_ODDS.map(m => m.matchId);
+const june15Ids = MODEL_ODDS.map(m => m.espn_match_id);
 const ph = june15Ids.map(() => '?').join(',');
 const [del] = await c.execute(
   `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 0`,
@@ -141,12 +141,12 @@ const rows = [];
 
 for (const m of MODEL_ODDS) {
   // 1X2
-  rows.push([m.matchId, snapshotTs, 0, '1X2', 'home', null, m.homeML, americanToImplied(m.homeML), false]);
-  rows.push([m.matchId, snapshotTs, 0, '1X2', 'draw', null, m.drawML, americanToImplied(m.drawML), false]);
-  rows.push([m.matchId, snapshotTs, 0, '1X2', 'away', null, m.awayML, americanToImplied(m.awayML), false]);
+  rows.push([m.espn_match_id, snapshotTs, 0, '1X2', 'home', null, m.homeML, americanToImplied(m.homeML), false]);
+  rows.push([m.espn_match_id, snapshotTs, 0, '1X2', 'draw', null, m.drawML, americanToImplied(m.drawML), false]);
+  rows.push([m.espn_match_id, snapshotTs, 0, '1X2', 'away', null, m.awayML, americanToImplied(m.awayML), false]);
   // TOTAL
-  rows.push([m.matchId, snapshotTs, 0, 'TOTAL', 'over', m.total, m.overOdds, americanToImplied(m.overOdds), false]);
-  rows.push([m.matchId, snapshotTs, 0, 'TOTAL', 'under', m.total, m.underOdds, americanToImplied(m.underOdds), false]);
+  rows.push([m.espn_match_id, snapshotTs, 0, 'TOTAL', 'over', m.total, m.overOdds, americanToImplied(m.overOdds), false]);
+  rows.push([m.espn_match_id, snapshotTs, 0, 'TOTAL', 'under', m.total, m.underOdds, americanToImplied(m.underOdds), false]);
 }
 
 await c.execute(

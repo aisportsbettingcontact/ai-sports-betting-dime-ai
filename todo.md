@@ -4396,3 +4396,14 @@
 - [ ] Run full bracket scraper after both Jul 3 matches ingested
 - [ ] Model R16 matches (Jul 4-7) using v17 engine methodology
 - [ ] Verify wc2026MatchOdds for R16 projections
+
+## Session: 2026-07-03 — ESPN gameId Column Unification to espn_match_id
+- [x] Exhaustive discovery scan of all ESPN gameId variants (matchId, game_id, espn_event_id) across codebase + DB
+- [x] Certify complete inventory with pass/fail validation before any execution
+- [x] Rename Drizzle schema columns: matchId → espnMatchId, game_id → espnMatchId, espn_event_id → espnMatchId
+- [x] Update all backend server code references (espnDbIngester, espnMatchScraper, espnPageScraper, wc2026LiveWatcher, wc2026BracketScraper, wc2026Router, espnLogger)
+- [x] Update all frontend code references (Wc2026 pages, components) — VERIFIED: no ESPN gameId in frontend
+- [x] Update all standalone scripts and test files (audit scripts, batch runners, forensic tools)
+- [x] Push DB migration (ALTER TABLE RENAME COLUMN x9) and verify live data integrity
+- [x] Full system validation (TypeScript 0 errors, data integrity verified, dev server running)
+- [ ] Save checkpoint with unified espn_match_id naming (IN PROGRESS)

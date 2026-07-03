@@ -53,17 +53,17 @@ async function main() {
   let modelOddsSwapped = 0;
   const errors = [];
 
-  for (const matchId of SWAPS) {
-    console.log(`[STEP] Processing ${matchId}...`);
+  for (const espn_match_id of SWAPS) {
+    console.log(`[STEP] Processing ${espn_match_id}...`);
 
     // Get current state
     const [rows] = await conn.execute(
       'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
-      [matchId]
+      [espn_match_id]
     );
     if (!rows.length) {
-      console.log(`  [WARN] Match ${matchId} not found in DB`);
-      errors.push(`${matchId}: not found`);
+      console.log(`  [WARN] Match ${espn_match_id} not found in DB`);
+      errors.push(`${espn_match_id}: not found`);
       continue;
     }
 
@@ -77,7 +77,7 @@ async function main() {
     // Step 1: Swap match home/away
     await conn.execute(
       'UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?',
-      [oldAway, oldHome, matchId]
+      [oldAway, oldHome, espn_match_id]
     );
     matchsFixed++;
     console.log(`  [STEP] Match teams swapped ✓`);
@@ -87,7 +87,7 @@ async function main() {
     const [r1X2] = await conn.execute(
       `SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots 
        WHERE match_id = ? AND market = '1X2' AND selection IN ('home','away')`,
-      [matchId]
+      [espn_match_id]
     );
     const count1X2 = r1X2[0].cnt;
 
@@ -96,17 +96,17 @@ async function main() {
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = '__temp_home__' 
          WHERE match_id = ? AND market = '1X2' AND selection = 'home'`,
-        [matchId]
+        [espn_match_id]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'home' 
          WHERE match_id = ? AND market = '1X2' AND selection = 'away'`,
-        [matchId]
+        [espn_match_id]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'away' 
          WHERE match_id = ? AND market = '1X2' AND selection = '__temp_home__'`,
-        [matchId]
+        [espn_match_id]
       );
       oddsRowsSwapped += count1X2;
       console.log(`  [STEP] 1X2 odds swapped (${count1X2} rows) ✓`);
@@ -118,7 +118,7 @@ async function main() {
     const [rAH] = await conn.execute(
       `SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots 
        WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection IN ('home','away')`,
-      [matchId]
+      [espn_match_id]
     );
     const countAH = rAH[0].cnt;
 
@@ -126,17 +126,17 @@ async function main() {
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = '__temp_home__' 
          WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'home'`,
-        [matchId]
+        [espn_match_id]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'home' 
          WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'away'`,
-        [matchId]
+        [espn_match_id]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'away' 
          WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = '__temp_home__'`,
-        [matchId]
+        [espn_match_id]
       );
       oddsRowsSwapped += countAH;
       console.log(`  [STEP] ASIAN_HANDICAP odds swapped (${countAH} rows) ✓`);
@@ -148,7 +148,7 @@ async function main() {
       const [rModel] = await conn.execute(
         `SELECT COUNT(*) as cnt FROM wc2026_model_odds 
          WHERE match_id = ? AND selection IN ('home','away')`,
-        [matchId]
+        [espn_match_id]
       );
       const countModel = rModel[0].cnt;
 
@@ -156,17 +156,17 @@ async function main() {
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = '__temp_home__' 
            WHERE match_id = ? AND selection = 'home'`,
-          [matchId]
+          [espn_match_id]
         );
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = 'home' 
            WHERE match_id = ? AND selection = 'away'`,
-          [matchId]
+          [espn_match_id]
         );
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = 'away' 
            WHERE match_id = ? AND selection = '__temp_home__'`,
-          [matchId]
+          [espn_match_id]
         );
         modelOddsSwapped += countModel;
         console.log(`  [STEP] Model odds swapped (${countModel} rows) ✓`);
@@ -180,12 +180,12 @@ async function main() {
     // Verify
     const [verify] = await conn.execute(
       'SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
-      [matchId]
+      [espn_match_id]
     );
     const v = verify[0];
     const pass = v.home_team_id === oldAway && v.away_team_id === oldHome;
     console.log(`  [VERIFY] ${pass ? 'PASS' : 'FAIL'} — home=${v.home_team_id} away=${v.away_team_id}`);
-    if (!pass) errors.push(`${matchId}: verify failed`);
+    if (!pass) errors.push(`${espn_match_id}: verify failed`);
     console.log('');
   }
 

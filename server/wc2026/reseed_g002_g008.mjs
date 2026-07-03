@@ -66,13 +66,13 @@ const PARAMS = {
 
 const MATCHES = [
   {
-    matchId: 'wc26-g-002',
+    espn_match_id: 'wc26-g-002',
     homeId: 'kor',
     awayId: 'cze',
     neutral: true,
   },
   {
-    matchId: 'wc26-g-008',
+    espn_match_id: 'wc26-g-008',
     homeId: 'aus',
     awayId: 'tur',
     neutral: true,
@@ -92,7 +92,7 @@ async function main() {
   const snapshotTs = new Date();
 
   for (const fix of MATCHES) {
-    const { matchId, homeId, awayId, neutral } = fix;
+    const { espn_match_id, homeId, awayId, neutral } = fix;
     const hp = PARAMS[homeId];
     const ap = PARAMS[awayId];
 
@@ -111,7 +111,7 @@ async function main() {
     const underOdds = toAmerican(probs.under25);
     const probSum = probs.home + probs.draw + probs.away;
 
-    console.log(`[STEP] ${matchId}: ${awayId} @ ${homeId}`);
+    console.log(`[STEP] ${espn_match_id}: ${awayId} @ ${homeId}`);
     console.log(`  [STATE] λH=${lH.toFixed(3)} λA=${lA.toFixed(3)}`);
     console.log(`  [STATE] xG: ${homeId}=${lH.toFixed(3)} ${awayId}=${lA.toFixed(3)}`);
     console.log(`  [STATE] 1X2: home(${homeId})=${homeML > 0 ? '+' : ''}${homeML} draw=${drawML > 0 ? '+' : ''}${drawML} away(${awayId})=${awayML > 0 ? '+' : ''}${awayML}`);
@@ -120,11 +120,11 @@ async function main() {
     console.log('');
 
     rows.push(
-      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, homeML, probs.home, 0],
-      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, drawML, probs.draw, 0],
-      [matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, awayML, probs.away, 0],
-      [matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  2.5, overOdds,  probs.over25, 0],
-      [matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, underOdds, probs.under25, 0],
+      [espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, homeML, probs.home, 0],
+      [espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, drawML, probs.draw, 0],
+      [espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, awayML, probs.away, 0],
+      [espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  2.5, overOdds,  probs.over25, 0],
+      [espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, underOdds, probs.under25, 0],
     );
   }
 

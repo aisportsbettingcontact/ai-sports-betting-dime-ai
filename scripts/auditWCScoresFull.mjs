@@ -178,7 +178,7 @@ async function auditTournament(label, dbRows, espnList, isWc2026) {
     const dateStr = row.match_date instanceof Date
       ? row.match_date.toISOString().substring(0, 10)
       : String(row.match_date).substring(0, 10);
-    const dbEspnId = row.espn_event_id;
+    const dbEspnId = row.espn_match_id;
 
     const result = findEspnMatch(homeId, awayId, dbEspnId, espnList);
 
@@ -221,7 +221,7 @@ async function main() {
 
   const [bt2018] = await conn.execute(
     `SELECT id, tournament_year, stage, group_letter, matchday, match_date,
-            home_team, away_team, home_score, away_score, result, espn_event_id
+            home_team, away_team, home_score, away_score, result, espn_match_id
      FROM wc_bt_matches
      WHERE tournament_year = 2018 AND stage = 'Group Stage'
      ORDER BY match_date, kickoff_utc`
@@ -230,7 +230,7 @@ async function main() {
 
   const [bt2022] = await conn.execute(
     `SELECT id, tournament_year, stage, group_letter, matchday, match_date,
-            home_team, away_team, home_score, away_score, result, espn_event_id
+            home_team, away_team, home_score, away_score, result, espn_match_id
      FROM wc_bt_matches
      WHERE tournament_year = 2022 AND stage = 'Group Stage'
      ORDER BY match_date, kickoff_utc`
@@ -239,7 +239,7 @@ async function main() {
 
   const [fx2026] = await conn.execute(
     `SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
-            home_score, away_score, status, espn_event_id
+            home_score, away_score, status, espn_match_id
      FROM wc2026_matches
      WHERE stage = 'GROUP' AND status = 'FT'
      ORDER BY kickoff_utc`

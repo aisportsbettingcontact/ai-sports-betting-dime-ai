@@ -445,29 +445,29 @@ async function main() {
   L.input('DB', `Pulling tournament data for: ${JUL1_TEAMS.join(', ')}`);
 
   const [allXG] = await conn.execute(
-    `SELECT e.matchId, m.homeTeamAbbrev, m.awayTeamAbbrev,
+    `SELECT e.espn_match_id, m.homeTeamAbbrev, m.awayTeamAbbrev,
             e.homeXG, e.awayXG, e.homeXGOT, e.awayXGOT,
             e.homeXGOpenPlay, e.awayXGOpenPlay,
             e.homeXGSetPlay, e.awayXGSetPlay,
             e.homeXA, e.awayXA
      FROM wc2026_espn_expected_goals e
-     JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
      WHERE (m.homeTeamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')})
         OR m.awayTeamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')}))
        AND e.homeXG IS NOT NULL
-     ORDER BY e.matchId`,
+     ORDER BY e.espn_match_id`,
     [...JUL1_TEAMS, ...JUL1_TEAMS]
   );
   L.pass('DB', `xG rows: ${allXG.length}`);
 
   const [allTS] = await conn.execute(
-    `SELECT ts.matchId, m.homeTeamAbbrev, m.awayTeamAbbrev,
+    `SELECT ts.espn_match_id, m.homeTeamAbbrev, m.awayTeamAbbrev,
             ts.possession, ts.possessionAway,
             ts.shotsOnGoal, ts.shotsOnGoalAway,
             ts.shotAttempts, ts.shotAttemptsAway,
             ts.saves, ts.savesAway
      FROM wc2026_espn_team_stats ts
-     JOIN wc2026_espn_matches m ON m.matchId = ts.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = ts.espn_match_id
      WHERE m.homeTeamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')})
         OR m.awayTeamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')})`,
     [...JUL1_TEAMS, ...JUL1_TEAMS]
@@ -475,25 +475,25 @@ async function main() {
   L.pass('DB', `Team stats rows: ${allTS.length}`);
 
   const [allPS] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as playerXG, SUM(xA) as playerXA,
             SUM(g) as goals, SUM(sog) as shotsOnGoal, SUM(shot) as shots
      FROM wc2026_espn_player_stats
      WHERE teamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')})
-     GROUP BY matchId, teamAbbrev`,
+     GROUP BY espn_match_id, teamAbbrev`,
     JUL1_TEAMS
   );
   L.pass('DB', `Player stats rows: ${allPS.length}`);
 
   const [allSM] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as shotXG, SUM(xGOT) as shotXGOT,
             COUNT(*) as shots,
             SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) as goals,
             SUM(CASE WHEN situation='Set Piece' OR situation='Penalty' THEN xG ELSE 0 END) as setXG
      FROM wc2026_espn_shot_map
      WHERE teamAbbrev IN (${JUL1_TEAMS.map(()=>'?').join(',')})
-     GROUP BY matchId, teamAbbrev`,
+     GROUP BY espn_match_id, teamAbbrev`,
     JUL1_TEAMS
   );
   L.pass('DB', `Shot map rows: ${allSM.length}`);
@@ -524,7 +524,7 @@ async function main() {
       teamStats[h].xASum    += parseFloat(row.homeXA    || 0);
       teamStats[h].setXGSum += parseFloat(row.homeXGSetPlay || 0);
       teamStats[h].matchCount++;
-      teamStats[h].matchIds.push(row.matchId);
+      teamStats[h].matchIds.push(row.espn_match_id);
     }
     if (JUL1_TEAMS.includes(a)) {
       initTeam(a);
@@ -533,7 +533,7 @@ async function main() {
       teamStats[a].xASum    += parseFloat(row.awayXA    || 0);
       teamStats[a].setXGSum += parseFloat(row.awayXGSetPlay || 0);
       teamStats[a].matchCount++;
-      teamStats[a].matchIds.push(row.matchId);
+      teamStats[a].matchIds.push(row.espn_match_id);
     }
   }
 

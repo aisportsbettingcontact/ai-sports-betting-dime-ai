@@ -392,14 +392,14 @@ try {
 
 // Pull ESPN match data
 const [espnMatches] = await conn.execute(
-  `SELECT m.matchId, m.homeTeamAbbrev, m.awayTeamAbbrev,
+  `SELECT m.espn_match_id, m.homeTeamAbbrev, m.awayTeamAbbrev,
           m.homeScore, m.awayScore,
           m.venue, m.city, m.attendance,
           m.homeFormation, m.awayFormation,
           m.matchKickoffEt,
-          f.match_id, f.espn_event_id
+          f.match_id, f.espn_match_id
    FROM wc2026_espn_matches m
-   JOIN wc2026_matches f ON f.espn_event_id = m.matchId
+   JOIN wc2026_matches f ON f.espn_match_id = m.espn_match_id
    WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
   MATCH_IDS_7
 );
@@ -407,7 +407,7 @@ log('STATE', `[PHASE A] ESPN matches pulled: ${espnMatches.length} rows`);
 
 // Pull ESPN team stats (wide format: home+away in same row)
 const [espnTeamStats] = await conn.execute(
-  `SELECT ts.matchId, ts.homeTeamAbbrev, ts.awayTeamAbbrev,
+  `SELECT ts.espn_match_id, ts.homeTeamAbbrev, ts.awayTeamAbbrev,
           ts.possession as homePoss, ts.possessionAway as awayPoss,
           ts.shotAttempts as homeShots, ts.shotAttemptsAway as awayShots,
           ts.shotsOnGoal as homeSoT, ts.shotsOnGoalAway as awaySoT,
@@ -418,7 +418,7 @@ const [espnTeamStats] = await conn.execute(
           ts.saves as homeSaves, ts.savesAway as awaySaves,
           f.match_id
    FROM wc2026_espn_team_stats ts
-   JOIN wc2026_matches f ON f.espn_event_id = ts.matchId
+   JOIN wc2026_matches f ON f.espn_match_id = ts.espn_match_id
    WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
   MATCH_IDS_7
 );
@@ -426,14 +426,14 @@ log('STATE', `[PHASE A] ESPN team stats pulled: ${espnTeamStats.length} rows`);
 
 // Pull ESPN expected goals
 const [espnXG] = await conn.execute(
-  `SELECT xg.matchId, xg.homeXG, xg.awayXG,
+  `SELECT xg.espn_match_id, xg.homeXG, xg.awayXG,
           xg.homeXGOT, xg.awayXGOT,
           xg.homeXGOpenPlay, xg.awayXGOpenPlay,
           xg.homeXGSetPlay, xg.awayXGSetPlay,
           xg.homeXA, xg.awayXA,
           f.match_id
    FROM wc2026_espn_expected_goals xg
-   JOIN wc2026_matches f ON f.espn_event_id = xg.matchId
+   JOIN wc2026_matches f ON f.espn_match_id = xg.espn_match_id
    WHERE f.match_id IN (${MATCH_IDS_7.map(() => '?').join(',')})`,
   MATCH_IDS_7
 );

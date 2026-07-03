@@ -224,17 +224,17 @@ function buildGSRows(teamCode, xgAll, tsAll, msAll) {
   const rows = xgAll.filter(r => r.homeTeamAbbrev===teamCode || r.awayTeamAbbrev===teamCode);
   return rows.map(r => {
     const side = r.homeTeamAbbrev===teamCode ? 'home' : 'away';
-    const tsRow = tsAll.find(t => t.matchId===r.matchId);
-    if (!tsRow) hardFail(`${teamCode} match ${r.matchId}: NO team stats row`);
+    const tsRow = tsAll.find(t => t.espn_match_id===r.espn_match_id);
+    if (!tsRow) hardFail(`${teamCode} match ${r.espn_match_id}: NO team stats row`);
     const possRaw = side==='home' ? tsRow.possession : tsRow.possessionAway;
     const poss = parseFloat(String(possRaw??'').replace('%',''));
-    if (isNaN(poss)) hardFail(`${teamCode} match ${r.matchId}: poss NaN (raw='${possRaw}')`);
-    const msRow = msAll.find(m => m.matchId===r.matchId);
-    if (!msRow) hardFail(`${teamCode} match ${r.matchId}: NO match stats row`);
+    if (isNaN(poss)) hardFail(`${teamCode} match ${r.espn_match_id}: poss NaN (raw='${possRaw}')`);
+    const msRow = msAll.find(m => m.espn_match_id===r.espn_match_id);
+    if (!msRow) hardFail(`${teamCode} match ${r.espn_match_id}: NO match stats row`);
     const sot = side==='home' ? msRow.homeShotsOnGoal : msRow.awayShotsOnGoal;
     const shots = side==='home' ? msRow.homeShots : msRow.awayShots;
     return {
-      matchId: r.matchId, side,
+      espn_match_id: r.espn_match_id, side,
       xG: parseFloat(side==='home'?r.homeXG:r.awayXG),
       xGOT: parseFloat(side==='home'?r.homeXGOT:r.awayXGOT),
       xA: parseFloat(side==='home'?r.homeXA:r.awayXA),
@@ -252,11 +252,11 @@ function computeLambda(teamCode, gsRows, psAll, smAll, v) {
   const avgSOT  = gsRows.reduce((s,r)=>s+r.sot,0)/gsRows.length;
   const avgShots= gsRows.reduce((s,r)=>s+r.shots,0)/gsRows.length;
   // Shot map component
-  const smRows = smAll.filter(r => gsRows.some(g=>g.matchId===r.matchId) && r.teamAbbrev===teamCode);
+  const smRows = smAll.filter(r => gsRows.some(g=>g.espn_match_id===r.espn_match_id) && r.teamAbbrev===teamCode);
   const avgSmXG = smRows.length>0 ? smRows.reduce((s,r)=>s+(parseFloat(r.shotXG)||0),0)/smRows.length : avgXG;
   const avgSmXGOT = smRows.length>0 ? smRows.reduce((s,r)=>s+(parseFloat(r.shotXGOT)||0),0)/smRows.length : avgXGOT;
   // Player stats component
-  const psRows = psAll.filter(r => gsRows.some(g=>g.matchId===r.matchId) && r.teamAbbrev===teamCode);
+  const psRows = psAll.filter(r => gsRows.some(g=>g.espn_match_id===r.espn_match_id) && r.teamAbbrev===teamCode);
   const avgPsXG = psRows.length>0 ? psRows.reduce((s,r)=>s+(parseFloat(r.pXG)||0),0)/psRows.length : avgXG;
   // Conversion rate
   const convRate = avgShots>0 ? avgSOT/avgShots : 0.35;
@@ -345,45 +345,45 @@ async function main() {
 
   // xG data (group stage only)
   const [xgAll] = await conn.query(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev, homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev, homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
     FROM wc2026_espn_expected_goals
     WHERE (homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}) OR awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
     AND matchRound = 'group-stage' AND homeXG IS NOT NULL
-    ORDER BY matchId ASC
+    ORDER BY espn_match_id ASC
   `, [...allTeams, ...allTeams]);
   log('PASS', `Loaded ${xgAll.length} xG rows`);
 
   // Team stats (possession)
-  const xgMatchIds = [...new Set(xgAll.map(r=>r.matchId))];
+  const xgMatchIds = [...new Set(xgAll.map(r=>r.espn_match_id))];
   const [tsAll] = await conn.query(`
-    SELECT matchId, possession, possessionAway FROM wc2026_espn_team_stats
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')}) ORDER BY matchId
+    SELECT espn_match_id, possession, possessionAway FROM wc2026_espn_team_stats
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')}) ORDER BY espn_match_id
   `, xgMatchIds);
   log('PASS', `Loaded ${tsAll.length} team stats rows`);
 
   // Match stats (shots)
   const [msAll] = await conn.query(`
-    SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
-    FROM wc2026_espn_match_stats WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')}) AND homeShots IS NOT NULL
-    ORDER BY matchId
+    SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
+    FROM wc2026_espn_match_stats WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')}) AND homeShots IS NOT NULL
+    ORDER BY espn_match_id
   `, xgMatchIds);
   log('PASS', `Loaded ${msAll.length} match stats rows`);
 
   // Player stats (aggregated)
   const [psAll] = await conn.query(`
-    SELECT matchId, teamAbbrev, SUM(xG) as pXG, SUM(xA) as pXA, SUM(sog) as pSOG, SUM(xGOTC) as pXGOT
+    SELECT espn_match_id, teamAbbrev, SUM(xG) as pXG, SUM(xA) as pXA, SUM(sog) as pSOG, SUM(xGOTC) as pXGOT
     FROM wc2026_espn_player_stats
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')}) AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    GROUP BY matchId, teamAbbrev ORDER BY matchId
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')}) AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
+    GROUP BY espn_match_id, teamAbbrev ORDER BY espn_match_id
   `, [...xgMatchIds, ...allTeams]);
   log('PASS', `Loaded ${psAll.length} player stats rows`);
 
   // Shot map (aggregated)
   const [smAll] = await conn.query(`
-    SELECT matchId, teamAbbrev, AVG(xg) as shotXG, AVG(xgot) as shotXGOT
+    SELECT espn_match_id, teamAbbrev, AVG(xg) as shotXG, AVG(xgot) as shotXGOT
     FROM wc2026_espn_shot_map
-    WHERE matchId IN (${xgMatchIds.map(()=>'?').join(',')}) AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    GROUP BY matchId, teamAbbrev ORDER BY matchId
+    WHERE espn_match_id IN (${xgMatchIds.map(()=>'?').join(',')}) AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
+    GROUP BY espn_match_id, teamAbbrev ORDER BY espn_match_id
   `, [...xgMatchIds, ...allTeams]);
   log('PASS', `Loaded ${smAll.length} shot map rows`);
 

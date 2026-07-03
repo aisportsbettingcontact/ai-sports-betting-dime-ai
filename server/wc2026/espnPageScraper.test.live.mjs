@@ -138,7 +138,7 @@ banner("VALIDATION — ALL 18 SECTIONS", C.magenta);
 section("1. GAME STRIP");
 const gs = result.gameStrip;
 check(!!gs, "gameStrip object present");
-check(!!gs?.gameId, "gameId present", gs?.gameId);
+check(!!gs?.espnMatchId, "gameId present", gs?.espnMatchId);
 check(!!gs?.homeTeam?.displayName, "homeTeam.displayName", gs?.homeTeam?.displayName);
 check(!!gs?.awayTeam?.displayName, "awayTeam.displayName", gs?.awayTeam?.displayName);
 check(typeof gs?.homeTeam?.score === "number", "homeTeam.score is number", String(gs?.homeTeam?.score));

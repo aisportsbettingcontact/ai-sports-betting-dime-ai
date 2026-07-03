@@ -54,7 +54,7 @@ function parseMatchGT(m) {
   const ptDateObj = new Date(ptMs);
   const ptDate = `${ptDateObj.getUTCFullYear()}-${String(ptDateObj.getUTCMonth()+1).padStart(2,'0')}-${String(ptDateObj.getUTCDate()).padStart(2,'0')}`;
   return {
-    gameId: m.gameId,
+    gameId: m.espnMatchId,
     homeTeam: m.homeTeam,
     awayTeam: m.awayTeam,
     homeScore: parseInt(m.homeScore, 10),
@@ -74,7 +74,7 @@ function parseMatchGT(m) {
 const gidsPath = path.resolve(__dirname, 'groupStageGameIds.json');
 const gidsData = JSON.parse(fs.readFileSync(gidsPath, 'utf8'));
 const GS_MATCHES = gidsData.matches.map(m => parseMatchGT({ ...m, matchRound: 'group-stage' }));
-const GS_IDS = GS_MATCHES.map(m => m.gameId);
+const GS_IDS = GS_MATCHES.map(m => m.espnMatchId);
 
 // ── R32 GROUND TRUTH (from ESPN API — verified Jun 28-30, 2026) ───────────────
 // All 7 completed R32 matches. Source: ESPN scoreboard API + summary API
@@ -90,12 +90,12 @@ const R32_RAW = [
   { gameId: '760492', homeTeam: 'FRA', awayTeam: 'SWE', homeScore: 3, awayScore: 0, name: 'France vs Sweden',          dateTime: '2026-06-30T21:00:00Z', status: 'post' },
 ];
 const R32_MATCHES = R32_RAW.map(m => parseMatchGT({ ...m, matchRound: 'round-of-32' }));
-const R32_IDS = R32_MATCHES.map(m => m.gameId);
+const R32_IDS = R32_MATCHES.map(m => m.espnMatchId);
 
 // ── ALL 79 MATCHES ────────────────────────────────────────────────────────────
 const ALL_MATCHES = [...GS_MATCHES, ...R32_MATCHES];
-const ALL_IDS = ALL_MATCHES.map(m => m.gameId);
-const GT_MAP = Object.fromEntries(ALL_MATCHES.map(m => [m.gameId, m]));
+const ALL_IDS = ALL_MATCHES.map(m => m.espnMatchId);
+const GT_MAP = Object.fromEntries(ALL_MATCHES.map(m => [m.espnMatchId, m]));
 
 // Midnight matches (GS only — no R32 midnight matches)
 const MIDNIGHT_MATCHES = ALL_MATCHES.filter(m => m.isMidnight);
@@ -176,8 +176,8 @@ function utcMsToEtTime(ms) {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function phase1_existenceCheck() {
   section('PHASE 1: EXISTENCE CHECK — All 79 Matches in DB (72 GS + 7 R32)');
-  const [rows] = await conn.execute(`SELECT matchId FROM wc2026_espn_matches ORDER BY matchId`);
-  const dbIds = new Set(rows.map(r => String(r.matchId)));
+  const [rows] = await conn.execute(`SELECT espn_match_id FROM wc2026_espn_matches ORDER BY espn_match_id`);
+  const dbIds = new Set(rows.map(r => String(r.espn_match_id)));
   const missing = ALL_IDS.filter(id => !dbIds.has(id));
   const extra = [...dbIds].filter(id => !ALL_IDS.includes(id));
 
@@ -218,13 +218,13 @@ async function phase1_existenceCheck() {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function phase2_midnightRuleValidation() {
   section(`PHASE 2: MIDNIGHT RULE VALIDATION — ${MIDNIGHT_MATCHES.length} Midnight-Edge Matches`);
-  log('INFO', 'PHASE2/MIDNIGHT_LIST', `Midnight matches: ${MIDNIGHT_MATCHES.map(m => `${m.gameId}(${m.ptDate})`).join(', ')}`);
+  log('INFO', 'PHASE2/MIDNIGHT_LIST', `Midnight matches: ${MIDNIGHT_MATCHES.map(m => `${m.espnMatchId}(${m.ptDate})`).join(', ')}`);
 
   let midnightPass = 0, midnightFail = 0;
   for (const gt of MIDNIGHT_MATCHES) {
-    const [[m]] = await conn.execute(`SELECT matchId, matchGameDate, matchKickoffEt, matchDateUtc FROM wc2026_espn_matches WHERE matchId=?`, [gt.gameId]);
+    const [[m]] = await conn.execute(`SELECT espn_match_id, matchGameDate, matchKickoffEt, matchDateUtc FROM wc2026_espn_matches WHERE espn_match_id=?`, [gt.espnMatchId]);
     if (!m) {
-      log('FAIL', `PHASE2/${gt.gameId}`, `❌ Match ${gt.gameId} NOT IN DB — cannot validate midnight rule`);
+      log('FAIL', `PHASE2/${gt.espnMatchId}`, `❌ Match ${gt.espnMatchId} NOT IN DB — cannot validate midnight rule`);
       midnightFail++;
       continue;
     }
@@ -234,10 +234,10 @@ async function phase2_midnightRuleValidation() {
     const etDateFromUtc = utcMsToEtDate(utcMs);
 
     if (etTimeOk && ptDateOk) {
-      log('PASS', `PHASE2/${gt.gameId}`, `✅ MIDNIGHT RULE PASS | ${gt.name} | matchGameDate=${m.matchGameDate}(PT) matchKickoffEt=${m.matchKickoffEt}(ET) | UTC=${gt.utcIso} | ET_date_from_UTC=${etDateFromUtc}`);
+      log('PASS', `PHASE2/${gt.espnMatchId}`, `✅ MIDNIGHT RULE PASS | ${gt.name} | matchGameDate=${m.matchGameDate}(PT) matchKickoffEt=${m.matchKickoffEt}(ET) | UTC=${gt.utcIso} | ET_date_from_UTC=${etDateFromUtc}`);
       midnightPass++;
     } else {
-      log('FAIL', `PHASE2/${gt.gameId}`, `❌ MIDNIGHT RULE FAIL | ${gt.name} | matchGameDate=${m.matchGameDate}(expected ${gt.ptDate}) matchKickoffEt=${m.matchKickoffEt}(expected 00:00)`,
+      log('FAIL', `PHASE2/${gt.espnMatchId}`, `❌ MIDNIGHT RULE FAIL | ${gt.name} | matchGameDate=${m.matchGameDate}(expected ${gt.ptDate}) matchKickoffEt=${m.matchKickoffEt}(expected 00:00)`,
         { ptDateOk, etTimeOk, stored_ptDate: m.matchGameDate, expected_ptDate: gt.ptDate, stored_etTime: m.matchKickoffEt });
       midnightFail++;
     }
@@ -255,7 +255,7 @@ async function phase3_perMatchAudit(dbIds) {
 
   for (let i = 0; i < ALL_MATCHES.length; i++) {
     const gt = ALL_MATCHES[i];
-    const mid = gt.gameId;
+    const mid = gt.espnMatchId;
     const mp = { pass: 0, fail: 0, warn: 0 };
     const roundLabel = gt.matchRound; // 'group-stage' or 'round-of-32'
 
@@ -282,7 +282,7 @@ async function phase3_perMatchAudit(dbIds) {
     }
 
     // ── A. wc2026_espn_matches ─────────────────────────────────────────────
-    const [[m]] = await conn.execute(`SELECT * FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[m]] = await conn.execute(`SELECT * FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     mc(!!m, 'MATCH_ROW', `Row exists`, `CRITICAL: Row MISSING`);
     if (!m) {
       matchResults[mid] = { ...gt, pass: mp.pass, fail: mp.fail, warn: mp.warn, pct: '0.0', verdict: '❌ MISSING', label: gt.name };
@@ -361,7 +361,7 @@ async function phase3_perMatchAudit(dbIds) {
     mc(!!m.createdAt, 'CREATED_AT', 'createdAt present ✓', 'createdAt MISSING');
 
     // ── B. wc2026_espn_match_odds ──────────────────────────────────────────
-    const [oddsRows] = await conn.execute(`SELECT * FROM wc2026_espn_match_odds WHERE matchId=?`, [mid]);
+    const [oddsRows] = await conn.execute(`SELECT * FROM wc2026_espn_match_odds WHERE espn_match_id=?`, [mid]);
     mc(oddsRows.length >= 1, 'ODDS_EXISTS', `${oddsRows.length} odds row(s) ✓`, 'CRITICAL: No odds rows');
     if (oddsRows.length > 0) {
       const o = oddsRows[0];
@@ -373,7 +373,7 @@ async function phase3_perMatchAudit(dbIds) {
     }
 
     // ── C. wc2026_espn_team_stats ──────────────────────────────────────────
-    const [[ts_row]] = await conn.execute(`SELECT * FROM wc2026_espn_team_stats WHERE matchId=?`, [mid]);
+    const [[ts_row]] = await conn.execute(`SELECT * FROM wc2026_espn_team_stats WHERE espn_match_id=?`, [mid]);
     mc(!!ts_row, 'TS_EXISTS', 'team_stats row exists ✓', 'CRITICAL: team_stats row MISSING');
     if (ts_row) {
       mc(ts_row.possession !== null, 'TS_HOME_POSS', `possession="${ts_row.possession}" ✓`, 'possession NULL');
@@ -385,7 +385,7 @@ async function phase3_perMatchAudit(dbIds) {
     }
 
     // ── D. wc2026_espn_match_stats ─────────────────────────────────────────
-    const [[ms_row]] = await conn.execute(`SELECT * FROM wc2026_espn_match_stats WHERE matchId=?`, [mid]);
+    const [[ms_row]] = await conn.execute(`SELECT * FROM wc2026_espn_match_stats WHERE espn_match_id=?`, [mid]);
     mc(!!ms_row, 'MS_EXISTS', 'match_stats row exists ✓', 'CRITICAL: match_stats row MISSING');
     if (ms_row) {
       const shotNulls = ['homeShotsOnGoal','homeShots','awayShotsOnGoal','awayShots'].filter(c => ms_row[c] === null);
@@ -397,7 +397,7 @@ async function phase3_perMatchAudit(dbIds) {
     }
 
     // ── E. wc2026_espn_expected_goals ─────────────────────────────────────
-    const [[xg]] = await conn.execute(`SELECT * FROM wc2026_espn_expected_goals WHERE matchId=?`, [mid]);
+    const [[xg]] = await conn.execute(`SELECT * FROM wc2026_espn_expected_goals WHERE espn_match_id=?`, [mid]);
     mc(!!xg, 'XG_EXISTS', 'expected_goals row exists ✓', 'CRITICAL: expected_goals row MISSING');
     if (xg) {
       mc(xg.homeXg !== null, 'XG_HOME', `homeXg=${xg.homeXg} ✓`, 'homeXg NULL');
@@ -405,18 +405,18 @@ async function phase3_perMatchAudit(dbIds) {
     }
 
     // ── F. wc2026_espn_shot_map ────────────────────────────────────────────
-    const [[shotMapCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map WHERE matchId=?`, [mid]);
+    const [[shotMapCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_shot_map WHERE espn_match_id=?`, [mid]);
     mc(Number(shotMapCount.cnt) > 0, 'SHOT_MAP_EXISTS', `${shotMapCount.cnt} shot map entries ✓`, 'CRITICAL: shot_map EMPTY');
 
     // ── G. wc2026_espn_player_stats ────────────────────────────────────────
-    const [[playerCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_player_stats WHERE matchId=?`, [mid]);
+    const [[playerCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_player_stats WHERE espn_match_id=?`, [mid]);
     mc(Number(playerCount.cnt) >= 22, 'PLAYER_STATS_COUNT', `${playerCount.cnt} player stat rows (≥22) ✓`, `player_stats count=${playerCount.cnt} < 22`);
 
     // ── H. wc2026_espn_lineups ─────────────────────────────────────────────
-    const [[lineupCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE matchId=?`, [mid]);
+    const [[lineupCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE espn_match_id=?`, [mid]);
     mc(Number(lineupCount.cnt) >= 22, 'LINEUPS_COUNT', `${lineupCount.cnt} lineup entries (≥22) ✓`, `lineups count=${lineupCount.cnt} < 22`);
 
-    const [[starterCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE matchId=? AND role='starter'`, [mid]);
+    const [[starterCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_lineups WHERE espn_match_id=? AND role='starter'`, [mid]);
     mc(Number(starterCount.cnt) === 22, 'STARTERS_22', `22 starters ✓`, `starters count=${starterCount.cnt} ≠ 22`);
 
     // ── I. wc2026_espn_glossary ────────────────────────────────────────────
@@ -469,10 +469,10 @@ async function phase4_schemaIntegrity() {
 
   // Check key indexes
   const indexChecks = [
-    { tbl: 'wc2026_espn_matches', col: 'matchId', query: `SELECT matchId FROM wc2026_espn_matches WHERE matchId='760414'` },
-    { tbl: 'wc2026_espn_player_stats', col: '(matchId, athleteId)', query: `SELECT matchId FROM wc2026_espn_player_stats WHERE matchId='760414' LIMIT 1` },
-    { tbl: 'wc2026_espn_lineups', col: '(matchId, athleteId)', query: `SELECT matchId FROM wc2026_espn_lineups WHERE matchId='760414' LIMIT 1` },
-    { tbl: 'wc2026_espn_shot_map', col: 'matchId', query: `SELECT matchId FROM wc2026_espn_shot_map WHERE matchId='760414' LIMIT 1` },
+    { tbl: 'wc2026_espn_matches', col: 'espn_match_id', query: `SELECT espn_match_id FROM wc2026_espn_matches WHERE espn_match_id='760414'` },
+    { tbl: 'wc2026_espn_player_stats', col: '(espn_match_id, athleteId)', query: `SELECT espn_match_id FROM wc2026_espn_player_stats WHERE espn_match_id='760414' LIMIT 1` },
+    { tbl: 'wc2026_espn_lineups', col: '(espn_match_id, athleteId)', query: `SELECT espn_match_id FROM wc2026_espn_lineups WHERE espn_match_id='760414' LIMIT 1` },
+    { tbl: 'wc2026_espn_shot_map', col: 'espn_match_id', query: `SELECT espn_match_id FROM wc2026_espn_shot_map WHERE espn_match_id='760414' LIMIT 1` },
   ];
 
   for (const ic of indexChecks) {
@@ -490,7 +490,7 @@ async function phase4_schemaIntegrity() {
 
   // Check matchRound index on matches table
   try {
-    const [[explain]] = await conn.execute(`EXPLAIN SELECT matchId FROM wc2026_espn_matches WHERE matchRound='group-stage' LIMIT 1`);
+    const [[explain]] = await conn.execute(`EXPLAIN SELECT espn_match_id FROM wc2026_espn_matches WHERE matchRound='group-stage' LIMIT 1`);
     const usesIndex = explain.key !== null;
     check(usesIndex, 'PHASE4/IDX_MATCH_ROUND',
       `matchRound index active (key=${explain.key}) ✓`,
@@ -552,9 +552,9 @@ async function phase5_aggregateValidation() {
     `wc2026_espn_match_odds: ${tableCounts['wc2026_espn_match_odds']} rows < 79`);
 
   // Midnight matches
-  const [midnightRows] = await conn.execute(`SELECT matchId, matchKickoffEt, matchGameDate FROM wc2026_espn_matches WHERE matchKickoffEt='00:00'`);
-  const expectedMidnightIds = new Set(MIDNIGHT_MATCHES.map(m => m.gameId));
-  const dbMidnightIds = new Set(midnightRows.map(r => String(r.matchId)));
+  const [midnightRows] = await conn.execute(`SELECT espn_match_id, matchKickoffEt, matchGameDate FROM wc2026_espn_matches WHERE matchKickoffEt='00:00'`);
+  const expectedMidnightIds = new Set(MIDNIGHT_MATCHES.map(m => m.espnMatchId));
+  const dbMidnightIds = new Set(midnightRows.map(r => String(r.espn_match_id)));
   log('INFO', 'AGG/MIDNIGHT_COUNT', `DB has ${midnightRows.length} matches with matchKickoffEt='00:00' | Expected: ${MIDNIGHT_MATCHES.length}`);
   check(midnightRows.length === MIDNIGHT_MATCHES.length, 'AGG/MIDNIGHT_RULE_COUNT',
     `Midnight match count = ${MIDNIGHT_MATCHES.length} ✓`,
@@ -566,25 +566,25 @@ async function phase5_aggregateValidation() {
   const r32IdList = R32_IDS.map(id => `'${id}'`).join(',');
   const allIdList = ALL_IDS.map(id => `'${id}'`).join(',');
 
-  const [[v500GS]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='500x' AND matchId IN (${gsIdList})`);
+  const [[v500GS]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='500x' AND espn_match_id IN (${gsIdList})`);
   check(Number(v500GS.cnt) === 72, 'AGG/SCRAPE_VERSION_500X_GS',
     `${v500GS.cnt}/72 Group Stage matches have scrapeVersion='500x' ✓`,
     `Only ${v500GS.cnt}/72 Group Stage matches have scrapeVersion='500x'`);
 
-  const [[v500R32]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='500x' AND matchId IN (${r32IdList})`);
+  const [[v500R32]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE scrapeVersion='500x' AND espn_match_id IN (${r32IdList})`);
   check(Number(v500R32.cnt) === 7, 'AGG/SCRAPE_VERSION_500X_R32',
     `${v500R32.cnt}/7 R32 matches have scrapeVersion='500x' ✓`,
     `Only ${v500R32.cnt}/7 R32 matches have scrapeVersion='500x'`);
 
   // matchRound='group-stage' for all 72 GS matches across all 9 tables
-  const [[gsRoundCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE matchRound='group-stage' AND matchId IN (${gsIdList})`);
+  const [[gsRoundCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE matchRound='group-stage' AND espn_match_id IN (${gsIdList})`);
   check(Number(gsRoundCount.cnt) === 72, 'AGG/MATCH_ROUND_GROUP_STAGE',
     `${gsRoundCount.cnt}/72 Group Stage matches have matchRound='group-stage' ✓`,
     `Only ${gsRoundCount.cnt}/72 Group Stage matches have matchRound='group-stage'`,
     { count: Number(gsRoundCount.cnt), expected: 72 });
 
   // matchRound='round-of-32' for all 7 R32 matches
-  const [[r32RoundCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE matchRound='round-of-32' AND matchId IN (${r32IdList})`);
+  const [[r32RoundCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE matchRound='round-of-32' AND espn_match_id IN (${r32IdList})`);
   check(Number(r32RoundCount.cnt) === 7, 'AGG/MATCH_ROUND_R32',
     `${r32RoundCount.cnt}/7 R32 matches have matchRound='round-of-32' ✓`,
     `Only ${r32RoundCount.cnt}/7 R32 matches have matchRound='round-of-32'`,
@@ -601,13 +601,13 @@ async function phase5_aggregateValidation() {
     { tbl: 'wc2026_espn_lineups', label: 'lineups' },
   ];
   for (const rt of roundTables) {
-    const [[rtGS]] = await conn.execute(`SELECT COUNT(DISTINCT matchId) as cnt FROM ${rt.tbl} WHERE matchRound='group-stage' AND matchId IN (${gsIdList})`);
+    const [[rtGS]] = await conn.execute(`SELECT COUNT(DISTINCT espn_match_id) as cnt FROM ${rt.tbl} WHERE matchRound='group-stage' AND espn_match_id IN (${gsIdList})`);
     check(Number(rtGS.cnt) === 72, `AGG/MATCH_ROUND_GS_${rt.label.toUpperCase()}`,
       `${rtGS.cnt}/72 GS matches have matchRound='group-stage' in ${rt.label} ✓`,
       `Only ${rtGS.cnt}/72 GS matches have matchRound='group-stage' in ${rt.label}`,
       { count: Number(rtGS.cnt), expected: 72 });
 
-    const [[rtR32]] = await conn.execute(`SELECT COUNT(DISTINCT matchId) as cnt FROM ${rt.tbl} WHERE matchRound='round-of-32' AND matchId IN (${r32IdList})`);
+    const [[rtR32]] = await conn.execute(`SELECT COUNT(DISTINCT espn_match_id) as cnt FROM ${rt.tbl} WHERE matchRound='round-of-32' AND espn_match_id IN (${r32IdList})`);
     check(Number(rtR32.cnt) === 7, `AGG/MATCH_ROUND_R32_${rt.label.toUpperCase()}`,
       `${rtR32.cnt}/7 R32 matches have matchRound='round-of-32' in ${rt.label} ✓`,
       `Only ${rtR32.cnt}/7 R32 matches have matchRound='round-of-32' in ${rt.label}`,
@@ -615,18 +615,18 @@ async function phase5_aggregateValidation() {
   }
 
   // Status: all 79 should be statusState='post'
-  const [[postCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE statusState='post' AND matchId IN (${allIdList})`);
+  const [[postCount]] = await conn.execute(`SELECT COUNT(*) as cnt FROM wc2026_espn_matches WHERE statusState='post' AND espn_match_id IN (${allIdList})`);
   check(Number(postCount.cnt) === 79, 'AGG/STATUS_POST',
     `${postCount.cnt}/79 matches have statusState='post' ✓`,
     `Only ${postCount.cnt}/79 matches have statusState='post'`);
 
   // Date ranges
-  const [[gsDateRange]] = await conn.execute(`SELECT MIN(matchGameDate) as minDate, MAX(matchGameDate) as maxDate FROM wc2026_espn_matches WHERE matchId IN (${gsIdList})`);
+  const [[gsDateRange]] = await conn.execute(`SELECT MIN(matchGameDate) as minDate, MAX(matchGameDate) as maxDate FROM wc2026_espn_matches WHERE espn_match_id IN (${gsIdList})`);
   log('INFO', 'AGG/GS_DATE_RANGE', `Group Stage matchGameDate range: ${gsDateRange.minDate} → ${gsDateRange.maxDate} (expected 2026-06-11 → 2026-06-27)`);
   check(gsDateRange.minDate >= '2026-06-11', 'AGG/GS_DATE_MIN', `GS min date ${gsDateRange.minDate} ≥ 2026-06-11 ✓`, `GS min date ${gsDateRange.minDate} < 2026-06-11`);
   check(gsDateRange.maxDate <= '2026-06-27', 'AGG/GS_DATE_MAX', `GS max date ${gsDateRange.maxDate} ≤ 2026-06-27 ✓`, `GS max date ${gsDateRange.maxDate} > 2026-06-27`);
 
-  const [[r32DateRange]] = await conn.execute(`SELECT MIN(matchGameDate) as minDate, MAX(matchGameDate) as maxDate FROM wc2026_espn_matches WHERE matchId IN (${r32IdList})`);
+  const [[r32DateRange]] = await conn.execute(`SELECT MIN(matchGameDate) as minDate, MAX(matchGameDate) as maxDate FROM wc2026_espn_matches WHERE espn_match_id IN (${r32IdList})`);
   log('INFO', 'AGG/R32_DATE_RANGE', `R32 matchGameDate range: ${r32DateRange.minDate} → ${r32DateRange.maxDate} (expected 2026-06-28 → 2026-06-30)`);
   check(r32DateRange.minDate >= '2026-06-28', 'AGG/R32_DATE_MIN', `R32 min date ${r32DateRange.minDate} ≥ 2026-06-28 ✓`, `R32 min date ${r32DateRange.minDate} < 2026-06-28`);
   check(r32DateRange.maxDate <= '2026-06-30', 'AGG/R32_DATE_MAX', `R32 max date ${r32DateRange.maxDate} ≤ 2026-06-30 ✓`, `R32 max date ${r32DateRange.maxDate} > 2026-06-30`);
@@ -642,8 +642,8 @@ function writeReport() {
   const overallPct = grandTotal > 0 ? ((passCount / grandTotal) * 100).toFixed(1) : '0.0';
   const finalVerdict = failCount === 0 ? '✅ ELITE — ZERO FAILURES' : failCount <= 5 ? '⚠️ MINOR ISSUES' : failCount <= 20 ? '⚠️ MODERATE ISSUES' : '❌ CRITICAL ISSUES';
 
-  const gsResults = Object.values(matchResults).filter(r => GS_IDS.includes(r.gameId));
-  const r32Results = Object.values(matchResults).filter(r => R32_IDS.includes(r.gameId));
+  const gsResults = Object.values(matchResults).filter(r => GS_IDS.includes(r.espnMatchId));
+  const r32Results = Object.values(matchResults).filter(r => R32_IDS.includes(r.espnMatchId));
 
   const lines = [
     '# WC2026 ESPN Scraper — 79-Match Forensic Audit Report v5.1',
@@ -667,17 +667,17 @@ function writeReport() {
     '## Midnight Rule Matches',
     '| gameId | Match | UTC | PT Date | ET Time | Rule |',
     '|--------|-------|-----|---------|---------|------|',
-    ...MIDNIGHT_MATCHES.map(m => `| ${m.gameId} | ${m.name} | ${m.utcIso} | ${m.ptDate} | ${m.etTime} | 🌙 MIDNIGHT |`),
+    ...MIDNIGHT_MATCHES.map(m => `| ${m.espnMatchId} | ${m.name} | ${m.utcIso} | ${m.ptDate} | ${m.etTime} | 🌙 MIDNIGHT |`),
     '',
     '## Group Stage Results (72 Matches)',
     '| # | gameId | Match | Round | PT Date | ET Time | PASS | FAIL | WARN | % | Verdict |',
     '|---|--------|-------|-------|---------|---------|------|------|------|---|---------|',
-    ...gsResults.map((r, i) => `| ${i+1} | ${r.gameId} | ${r.label} | group-stage | ${r.ptDate} | ${r.etTime}${r.isMidnight ? ' 🌙' : ''} | ${r.pass} | ${r.fail} | ${r.warn} | ${r.pct}% | ${r.verdict} |`),
+    ...gsResults.map((r, i) => `| ${i+1} | ${r.espnMatchId} | ${r.label} | group-stage | ${r.ptDate} | ${r.etTime}${r.isMidnight ? ' 🌙' : ''} | ${r.pass} | ${r.fail} | ${r.warn} | ${r.pct}% | ${r.verdict} |`),
     '',
     '## R32 Knockout Stage Results (7 Matches)',
     '| # | gameId | Match | Round | PT Date | ET Time | PASS | FAIL | WARN | % | Verdict |',
     '|---|--------|-------|-------|---------|---------|------|------|------|---|---------|',
-    ...r32Results.map((r, i) => `| ${i+1} | ${r.gameId} | ${r.label} | round-of-32 | ${r.ptDate} | ${r.etTime} | ${r.pass} | ${r.fail} | ${r.warn} | ${r.pct}% | ${r.verdict} |`),
+    ...r32Results.map((r, i) => `| ${i+1} | ${r.espnMatchId} | ${r.label} | round-of-32 | ${r.ptDate} | ${r.etTime} | ${r.pass} | ${r.fail} | ${r.warn} | ${r.pct}% | ${r.verdict} |`),
   ];
 
   fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -700,7 +700,7 @@ async function main() {
     '╚══════════════════════════════════════════════════════════════════════════════╝',
     `Started: ${new Date().toISOString()}`,
     `GS matches: ${GS_IDS.length} | R32 matches: ${R32_IDS.length} | Total: ${ALL_IDS.length}`,
-    `Midnight matches: ${MIDNIGHT_MATCHES.length} (${MIDNIGHT_MATCHES.map(m=>m.gameId).join(', ')})`,
+    `Midnight matches: ${MIDNIGHT_MATCHES.length} (${MIDNIGHT_MATCHES.map(m=>m.espnMatchId).join(', ')})`,
     `Log: ${LOG_FILE}`,
     `Terminal log: ${TERMINAL_LOG}`,
   ];

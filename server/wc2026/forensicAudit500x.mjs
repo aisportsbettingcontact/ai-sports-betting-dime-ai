@@ -198,27 +198,27 @@ const GT = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // INDIVIDUAL MATCH AUDIT
 // ═══════════════════════════════════════════════════════════════════════════════
-async function auditMatch(matchId) {
-  const gt = GT[matchId];
-  const isAnchor = matchId === TRUTH_ANCHOR;
+async function auditMatch(espn_match_id) {
+  const gt = GT[espn_match_id];
+  const isAnchor = espn_match_id === TRUTH_ANCHOR;
   const mp = { pass: 0, fail: 0, warn: 0 };
 
   function mc(condition, tag, passMsg, failMsg, data = null, isWarn = false) {
     const level = condition ? 'PASS' : (isWarn ? 'WARN' : 'FAIL');
-    log(level, `${matchId}/${tag}`, condition ? passMsg : failMsg, data);
+    log(level, `${espn_match_id}/${tag}`, condition ? passMsg : failMsg, data);
     if (level === 'PASS') mp.pass++;
     else if (level === 'FAIL') mp.fail++;
     else mp.warn++;
     return condition;
   }
 
-  section(`INDIVIDUAL AUDIT: ${matchId} — ${gt.label}${isAnchor ? ' ← TRUTH ANCHOR' : ''}`);
+  section(`INDIVIDUAL AUDIT: ${espn_match_id} — ${gt.label}${isAnchor ? ' ← TRUTH ANCHOR' : ''}`);
 
   // ── A. wc2026_espn_matches ─────────────────────────────────────────────────
   subsection('A. wc2026_espn_matches — Identity, Score, Venue, Time, Status');
-  const [[m]] = await conn.execute(`SELECT * FROM wc2026_espn_matches WHERE matchId=?`, [matchId]);
+  const [[m]] = await conn.execute(`SELECT * FROM wc2026_espn_matches WHERE espn_match_id=?`, [espn_match_id]);
   mc(!!m, 'MATCH_ROW', 'Row exists ✓', 'CRITICAL: Row MISSING');
-  if (!m) { matchResults[matchId] = mp; return; }
+  if (!m) { matchResults[espn_match_id] = mp; return; }
 
   // Identity
   mc(m.homeTeamAbbrev === gt.homeAbbrev, 'HOME_ABBREV', `homeTeamAbbrev="${m.homeTeamAbbrev}" ✓`, `homeTeamAbbrev MISMATCH: got "${m.homeTeamAbbrev}" expected "${gt.homeAbbrev}"`);
@@ -283,7 +283,7 @@ async function auditMatch(matchId) {
       `MIDNIGHT RULE: matchGameDate="${m.matchGameDate}" = PT date ${gt.ptDate} ✓ (NOT UTC date ${dbUtcIso.slice(0,10)})`,
       `MIDNIGHT RULE FAIL: matchGameDate="${m.matchGameDate}" should be PT date "${gt.ptDate}" not UTC date "${dbUtcIso.slice(0,10)}"`,
       { ptDate: m.matchGameDate, utcDate: dbUtcIso.slice(0,10), etDate: dbEtDate });
-    log('INFO', `${matchId}/MIDNIGHT_RULE`,
+    log('INFO', `${espn_match_id}/MIDNIGHT_RULE`,
       `9:00 PM PT Jun 20 = 12:00 AM ET Jun 21 | stored as PT date 2026-06-20 ET time 00:00 ✓`);
   }
 
@@ -294,7 +294,7 @@ async function auditMatch(matchId) {
     `Date assignment WRONG: got ${effectiveEtDate} expected ${gt.etDate}${gt.isMidnightRule ? ' (PT date, midnight rule)' : ''}`,
     { utcDate: dbUtcIso.slice(0,10), etDate: dbEtDate, matchGameDate: m.matchGameDate, effectiveDate: effectiveEtDate, expected: gt.etDate });
 
-  log('INFO', `${matchId}/TZ_SUMMARY`,
+  log('INFO', `${espn_match_id}/TZ_SUMMARY`,
     `UTC: ${dbUtcIso} | ET: ${dbEtStr} | PT_date: ${m.matchGameDate} | ET_time: ${m.matchKickoffEt} | Expected: ${gt.etDisplay}`);
 
   // Status
@@ -319,7 +319,7 @@ async function auditMatch(matchId) {
 
   // ── B. wc2026_espn_match_odds ──────────────────────────────────────────────
   subsection('B. wc2026_espn_match_odds — Moneylines, Spread, Total');
-  const [oddsRows] = await conn.execute(`SELECT * FROM wc2026_espn_match_odds WHERE matchId=?`, [matchId]);
+  const [oddsRows] = await conn.execute(`SELECT * FROM wc2026_espn_match_odds WHERE espn_match_id=?`, [espn_match_id]);
   mc(oddsRows.length >= 1, 'ODDS_ROW', `${oddsRows.length} odds row(s) ✓`, 'CRITICAL: No odds rows');
   if (oddsRows.length > 0) {
     const o = oddsRows[0];
@@ -333,7 +333,7 @@ async function auditMatch(matchId) {
 
   // ── C. wc2026_espn_team_stats ──────────────────────────────────────────────
   subsection('C. wc2026_espn_team_stats — Possession, Shots, Fouls, Cards, Corners, Saves');
-  const [[ts]] = await conn.execute(`SELECT * FROM wc2026_espn_team_stats WHERE matchId=?`, [matchId]);
+  const [[ts]] = await conn.execute(`SELECT * FROM wc2026_espn_team_stats WHERE espn_match_id=?`, [espn_match_id]);
   mc(!!ts, 'TS_ROW', 'Row exists ✓', 'CRITICAL: Row MISSING');
   if (ts) {
     mc(ts.homeTeamAbbrev === gt.homeAbbrev, 'TS_HOME_ABBREV', `homeTeamAbbrev="${ts.homeTeamAbbrev}" ✓`, `homeTeamAbbrev MISMATCH: "${ts.homeTeamAbbrev}"`);
@@ -358,13 +358,13 @@ async function auditMatch(matchId) {
     mc(ts.cornerKicksAway !== null, 'TS_AWAY_CK', `cornerKicksAway=${ts.cornerKicksAway} ✓`, 'cornerKicksAway NULL');
     mc(ts.saves !== null, 'TS_HOME_SAVES', `saves=${ts.saves} ✓`, 'saves NULL');
     mc(ts.savesAway !== null, 'TS_AWAY_SAVES', `savesAway=${ts.savesAway} ✓`, 'savesAway NULL');
-    log('INFO', `${matchId}/TS_SNAPSHOT`,
+    log('INFO', `${espn_match_id}/TS_SNAPSHOT`,
       `POSS: ${ts.possession}/${ts.possessionAway} | SHOTS: ${ts.shotAttempts}/${ts.shotAttemptsAway} | SOG: ${ts.shotsOnGoal}/${ts.shotsOnGoalAway} | FOULS: ${ts.fouls}/${ts.foulsAway} | YC: ${ts.yellowCards}/${ts.yellowCardsAway} | CK: ${ts.cornerKicks}/${ts.cornerKicksAway} | SAVES: ${ts.saves}/${ts.savesAway}`);
   }
 
   // ── D. wc2026_espn_match_stats — 8 Category Deep Audit ────────────────────
   subsection('D. wc2026_espn_match_stats — All 8 Stat Categories (500x Depth)');
-  const [[ms]] = await conn.execute(`SELECT * FROM wc2026_espn_match_stats WHERE matchId=?`, [matchId]);
+  const [[ms]] = await conn.execute(`SELECT * FROM wc2026_espn_match_stats WHERE espn_match_id=?`, [espn_match_id]);
   mc(!!ms, 'MS_ROW', 'Row exists ✓', 'CRITICAL: Row MISSING');
   if (ms) {
     // SHOTS (6 types × 2 teams = 12 cols)
@@ -372,48 +372,48 @@ async function auditMatch(matchId) {
                       'awayShotsOnGoal','awayShots','awayShotsBlocked','awayHitWoodwork','awayAttemptsInsideBox','awayAttemptsOutsideBox'];
     const shotNulls = shotCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(shotNulls.length === 0, 'MS_SHOTS', `SHOTS: all ${shotCols.length} fields populated ✓`, `SHOTS: ${shotNulls.length} null: ${shotNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_SHOTS_DATA`, `SOG: ${ms.homeShotsOnGoal}/${ms.awayShotsOnGoal} | Shots: ${ms.homeShots}/${ms.awayShots} | Blocked: ${ms.homeShotsBlocked}/${ms.awayShotsBlocked} | InsideBox: ${ms.homeAttemptsInsideBox}/${ms.awayAttemptsInsideBox} | OutsideBox: ${ms.homeAttemptsOutsideBox}/${ms.awayAttemptsOutsideBox}`);
+    log('INFO', `${espn_match_id}/MS_SHOTS_DATA`, `SOG: ${ms.homeShotsOnGoal}/${ms.awayShotsOnGoal} | Shots: ${ms.homeShots}/${ms.awayShots} | Blocked: ${ms.homeShotsBlocked}/${ms.awayShotsBlocked} | InsideBox: ${ms.homeAttemptsInsideBox}/${ms.awayAttemptsInsideBox} | OutsideBox: ${ms.homeAttemptsOutsideBox}/${ms.awayAttemptsOutsideBox}`);
 
     // PASSES (9 types × 2 teams = 18 cols — includes homePassTouchesInOppBox)
     const passCols = ['homeAccuratePasses','homePassAccuracyPct','homePasses','homeTotalBackZonePass','homeTotalForwardZonePass','homeAccurateLongBalls','homeAccurateCrosses','homeTotalThrows','homePassTouchesInOppBox',
                       'awayAccuratePasses','awayPassAccuracyPct','awayPasses','awayTotalBackZonePass','awayTotalForwardZonePass','awayAccurateLongBalls','awayAccurateCrosses','awayTotalThrows','awayPassTouchesInOppBox'];
     const passNulls = passCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(passNulls.length === 0, 'MS_PASSES', `PASSES: all ${passCols.length} fields populated ✓`, `PASSES: ${passNulls.length} null: ${passNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_PASSES_DATA`, `Passes: ${ms.homePasses}/${ms.awayPasses} | Acc: ${ms.homeAccuratePasses}/${ms.awayAccuratePasses} | Pct: ${ms.homePassAccuracyPct}/${ms.awayPassAccuracyPct} | LongBalls: ${ms.homeAccurateLongBalls}/${ms.awayAccurateLongBalls} | Crosses: ${ms.homeAccurateCrosses}/${ms.awayAccurateCrosses} | TouchesOppBox: ${ms.homePassTouchesInOppBox}/${ms.awayPassTouchesInOppBox}`);
+    log('INFO', `${espn_match_id}/MS_PASSES_DATA`, `Passes: ${ms.homePasses}/${ms.awayPasses} | Acc: ${ms.homeAccuratePasses}/${ms.awayAccuratePasses} | Pct: ${ms.homePassAccuracyPct}/${ms.awayPassAccuracyPct} | LongBalls: ${ms.homeAccurateLongBalls}/${ms.awayAccurateLongBalls} | Crosses: ${ms.homeAccurateCrosses}/${ms.awayAccurateCrosses} | TouchesOppBox: ${ms.homePassTouchesInOppBox}/${ms.awayPassTouchesInOppBox}`);
 
     // ATTACK (6 types × 2 teams = 12 cols — correct schema column names)
     const attkCols = ['homeBigChancesCreated','homeBigChancesMissed','homeThroughBalls','homeAttkTouchesInOppBox','homeFouledInFinalThird','homeCornersWon',
                       'awayBigChancesCreated','awayBigChancesMissed','awayThroughBalls','awayAttkTouchesInOppBox','awayFouledInFinalThird','awayCornersWon'];
     const attkNulls = attkCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(attkNulls.length === 0, 'MS_ATTACK', `ATTACK: all ${attkCols.length} fields populated ✓`, `ATTACK: ${attkNulls.length} null: ${attkNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_ATTACK_DATA`, `BigChancesCreated: ${ms.homeBigChancesCreated}/${ms.awayBigChancesCreated} | BigChancesMissed: ${ms.homeBigChancesMissed}/${ms.awayBigChancesMissed} | AttkTouchesOppBox: ${ms.homeAttkTouchesInOppBox}/${ms.awayAttkTouchesInOppBox} | Corners: ${ms.homeCornersWon}/${ms.awayCornersWon}`);
+    log('INFO', `${espn_match_id}/MS_ATTACK_DATA`, `BigChancesCreated: ${ms.homeBigChancesCreated}/${ms.awayBigChancesCreated} | BigChancesMissed: ${ms.homeBigChancesMissed}/${ms.awayBigChancesMissed} | AttkTouchesOppBox: ${ms.homeAttkTouchesInOppBox}/${ms.awayAttkTouchesInOppBox} | Corners: ${ms.homeCornersWon}/${ms.awayCornersWon}`);
 
     // GOALKEEPING (5 types × 2 teams = 10 cols)
     const gkCols = ['homeGkSaves','homeGoalKicks','homeShotsFaced','homeTotalHighClaims','homePenaltyKicksSaved',
                     'awayGkSaves','awayGoalKicks','awayShotsFaced','awayTotalHighClaims','awayPenaltyKicksSaved'];
     const gkNulls = gkCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(gkNulls.length === 0, 'MS_GK', `GOALKEEPING: all ${gkCols.length} fields populated ✓`, `GOALKEEPING: ${gkNulls.length} null: ${gkNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_GK_DATA`, `GkSaves: ${ms.homeGkSaves}/${ms.awayGkSaves} | GoalKicks: ${ms.homeGoalKicks}/${ms.awayGoalKicks} | ShotsFaced: ${ms.homeShotsFaced}/${ms.awayShotsFaced} | HighClaims: ${ms.homeTotalHighClaims}/${ms.awayTotalHighClaims} | PKSaved: ${ms.homePenaltyKicksSaved}/${ms.awayPenaltyKicksSaved}`);
+    log('INFO', `${espn_match_id}/MS_GK_DATA`, `GkSaves: ${ms.homeGkSaves}/${ms.awayGkSaves} | GoalKicks: ${ms.homeGoalKicks}/${ms.awayGoalKicks} | ShotsFaced: ${ms.homeShotsFaced}/${ms.awayShotsFaced} | HighClaims: ${ms.homeTotalHighClaims}/${ms.awayTotalHighClaims} | PKSaved: ${ms.homePenaltyKicksSaved}/${ms.awayPenaltyKicksSaved}`);
 
     // DEFENSE (4 types × 2 teams = 8 cols)
     const defCols = ['homeTackles','homeInterceptions','homeClearances','homeRecoveries',
                      'awayTackles','awayInterceptions','awayClearances','awayRecoveries'];
     const defNulls = defCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(defNulls.length === 0, 'MS_DEFENSE', `DEFENSE: all ${defCols.length} fields populated ✓`, `DEFENSE: ${defNulls.length} null: ${defNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_DEFENSE_DATA`, `Tackles: ${ms.homeTackles}/${ms.awayTackles} | Interceptions: ${ms.homeInterceptions}/${ms.awayInterceptions} | Clearances: ${ms.homeClearances}/${ms.awayClearances} | Recoveries: ${ms.homeRecoveries}/${ms.awayRecoveries}`);
+    log('INFO', `${espn_match_id}/MS_DEFENSE_DATA`, `Tackles: ${ms.homeTackles}/${ms.awayTackles} | Interceptions: ${ms.homeInterceptions}/${ms.awayInterceptions} | Clearances: ${ms.homeClearances}/${ms.awayClearances} | Recoveries: ${ms.homeRecoveries}/${ms.awayRecoveries}`);
 
     // DUELS (3 types × 2 teams = 6 cols)
     const duelCols = ['homeDuelsWon','homeDuels','homeAerialsWon','awayDuelsWon','awayDuels','awayAerialsWon'];
     const duelNulls = duelCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(duelNulls.length === 0, 'MS_DUELS', `DUELS: all ${duelCols.length} fields populated ✓`, `DUELS: ${duelNulls.length} null: ${duelNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_DUELS_DATA`, `DuelsWon: ${ms.homeDuelsWon}/${ms.awayDuelsWon} | Duels: ${ms.homeDuels}/${ms.awayDuels} | AerialsWon: ${ms.homeAerialsWon}/${ms.awayAerialsWon}`);
+    log('INFO', `${espn_match_id}/MS_DUELS_DATA`, `DuelsWon: ${ms.homeDuelsWon}/${ms.awayDuelsWon} | Duels: ${ms.homeDuels}/${ms.awayDuels} | AerialsWon: ${ms.homeAerialsWon}/${ms.awayAerialsWon}`);
 
     // FOULS & DISCIPLINE (4 types × 2 teams = 8 cols)
     const foulCols = ['homeFoulsCommitted','homeOffsides','homeFoulYellowCards','homeFoulRedCards',
                       'awayFoulsCommitted','awayOffsides','awayFoulYellowCards','awayFoulRedCards'];
     const foulNulls = foulCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(foulNulls.length === 0, 'MS_FOULS', `FOULS: all ${foulCols.length} fields populated ✓`, `FOULS: ${foulNulls.length} null: ${foulNulls.join(', ')}`);
-    log('INFO', `${matchId}/MS_FOULS_DATA`, `Fouls: ${ms.homeFoulsCommitted}/${ms.awayFoulsCommitted} | Offsides: ${ms.homeOffsides}/${ms.awayOffsides} | YC: ${ms.homeFoulYellowCards}/${ms.awayFoulYellowCards} | RC: ${ms.homeFoulRedCards}/${ms.awayFoulRedCards}`);
+    log('INFO', `${espn_match_id}/MS_FOULS_DATA`, `Fouls: ${ms.homeFoulsCommitted}/${ms.awayFoulsCommitted} | Offsides: ${ms.homeOffsides}/${ms.awayOffsides} | YC: ${ms.homeFoulYellowCards}/${ms.awayFoulYellowCards} | RC: ${ms.homeFoulRedCards}/${ms.awayFoulRedCards}`);
 
     // xG EXTENDED (4 types × 2 teams = 8 cols from match_stats — correct schema names)
     const xgExtCols = ['homeXG','awayXG','homeXGOpenPlay','awayXGOpenPlay','homeXGSetPlay','awayXGSetPlay','homeXGOT','awayXGOT'];
@@ -431,7 +431,7 @@ async function auditMatch(matchId) {
     }
 
     // Total null count across all stat columns
-    const allStatCols = Object.keys(ms).filter(k => !['id','matchId','homeTeamAbbrev','awayTeamAbbrev','createdAt','updatedAt'].includes(k));
+    const allStatCols = Object.keys(ms).filter(k => !['id','espn_match_id','homeTeamAbbrev','awayTeamAbbrev','createdAt','updatedAt'].includes(k));
     const totalNulls = allStatCols.filter(c => ms[c] === null || ms[c] === undefined);
     mc(totalNulls.length === 0, 'MS_ZERO_NULLS',
       `match_stats: 0 null fields across all ${allStatCols.length} stat columns ✓`,
@@ -441,7 +441,7 @@ async function auditMatch(matchId) {
 
   // ── E. wc2026_espn_expected_goals ─────────────────────────────────────────
   subsection('E. wc2026_espn_expected_goals — xG Full Breakdown (Open Play, Set Play, OT, Per-Player)');
-  const [[xg]] = await conn.execute(`SELECT * FROM wc2026_espn_expected_goals WHERE matchId=?`, [matchId]);
+  const [[xg]] = await conn.execute(`SELECT * FROM wc2026_espn_expected_goals WHERE espn_match_id=?`, [espn_match_id]);
   mc(!!xg, 'XG_ROW', 'Row exists ✓', 'CRITICAL: Row MISSING');
   if (xg) {
     const hxg = parseFloat(xg.homeXG ?? 0);
@@ -464,7 +464,7 @@ async function auditMatch(matchId) {
         mc(valid, 'XG_PER_PLAYER_SCHEMA', 'perPlayerJson entries have name/team/xG ✓', 'perPlayerJson entries missing name/team/xG', null, true);
       } catch(e) { mc(false, 'XG_PER_PLAYER_PARSE', '', `perPlayerJson JSON parse error: ${e.message}`); }
     }
-    log('INFO', `${matchId}/XG_SNAPSHOT`, `homeXG=${xg.homeXG} awayXG=${xg.awayXG} | OP: ${xg.homeXGOpenPlay}/${xg.awayXGOpenPlay} | SP: ${xg.homeXGSetPlay}/${xg.awayXGSetPlay} | OT: ${xg.homeXGOT}/${xg.awayXGOT}`);
+    log('INFO', `${espn_match_id}/XG_SNAPSHOT`, `homeXG=${xg.homeXG} awayXG=${xg.awayXG} | OP: ${xg.homeXGOpenPlay}/${xg.awayXGOpenPlay} | SP: ${xg.homeXGSetPlay}/${xg.awayXGSetPlay} | OT: ${xg.homeXGOT}/${xg.awayXGOT}`);
   }
 
   // ── F. wc2026_espn_shot_map ────────────────────────────────────────────────
@@ -484,7 +484,7 @@ async function auditMatch(matchId) {
             SUM(CASE WHEN period IS NULL THEN 1 ELSE 0 END) AS nullPeriod,
             SUM(CASE WHEN shotType IS NULL THEN 1 ELSE 0 END) AS nullShotType,
             SUM(CASE WHEN situation IS NULL THEN 1 ELSE 0 END) AS nullSituation
-     FROM wc2026_espn_shot_map WHERE matchId=?`, [matchId]
+     FROM wc2026_espn_shot_map WHERE espn_match_id=?`, [espn_match_id]
   );
   mc(Number(sm.total) > 0, 'SM_EXISTS', `${sm.total} shots ✓`, 'CRITICAL: shot_map EMPTY');
   mc(Number(sm.nullCoords) === 0, 'SM_COORDS', `0 null coordinates (${sm.total} shots) ✓`, `${sm.nullCoords} null coords`);
@@ -498,7 +498,7 @@ async function auditMatch(matchId) {
   mc(goalDiff >= 0, 'SM_GOALS_VS_SCORE',
     `shot_map goals=${sm.goals} ≥ match score ${totalGoals} ✓ (diff=${goalDiff} may include PKs)`,
     `shot_map goals=${sm.goals} < match score ${totalGoals} — MISSING GOALS`);
-  log('INFO', `${matchId}/SM_BREAKDOWN`,
+  log('INFO', `${espn_match_id}/SM_BREAKDOWN`,
     `total=${sm.total} | goals=${sm.goals} saves=${sm.saves} blocked=${sm.blocked} offTarget=${sm.offTarget} | home=${sm.homeShots} away=${sm.awayShots} | nullXg=${sm.nullXg} nullShotType=${sm.nullShotType}`);
 
   // ── G. wc2026_espn_player_stats ────────────────────────────────────────────
@@ -514,7 +514,7 @@ async function auditMatch(matchId) {
             SUM(CASE WHEN positionGroup IS NULL OR positionGroup='' THEN 1 ELSE 0 END) AS nullPosGroup,
             SUM(CASE WHEN tch IS NULL AND isGoalkeeper=0 THEN 1 ELSE 0 END) AS nullTouches,
             SUM(CASE WHEN sv IS NULL AND isGoalkeeper=1 THEN 1 ELSE 0 END) AS nullGkSaves
-     FROM wc2026_espn_player_stats WHERE matchId=?`, [matchId]
+     FROM wc2026_espn_player_stats WHERE espn_match_id=?`, [espn_match_id]
   );
   mc(Number(ps.total) >= 20, 'PS_COUNT', `${ps.total} player records ✓`, `Only ${ps.total} records — expected ≥20`);
   mc(Number(ps.homePlayers) >= 10, 'PS_HOME', `${ps.homePlayers} home players ✓`, `Only ${ps.homePlayers} home players`);
@@ -529,10 +529,10 @@ async function auditMatch(matchId) {
 
   // Duplicate check
   const [[dup]] = await conn.execute(
-    `SELECT COUNT(*) AS dups FROM (SELECT athleteId, COUNT(*) AS c FROM wc2026_espn_player_stats WHERE matchId=? GROUP BY athleteId HAVING c>1) t`, [matchId]
+    `SELECT COUNT(*) AS dups FROM (SELECT athleteId, COUNT(*) AS c FROM wc2026_espn_player_stats WHERE espn_match_id=? GROUP BY athleteId HAVING c>1) t`, [espn_match_id]
   );
   mc(Number(dup.dups) === 0, 'PS_NO_DUPS', `0 duplicate athlete records ✓`, `${dup.dups} duplicate athlete-match records`);
-  log('INFO', `${matchId}/PS_SNAPSHOT`, `total=${ps.total} | home=${ps.homePlayers} away=${ps.awayPlayers} | GKs=${ps.gks} | nullJersey=${ps.nullJersey} nullPosGroup=${ps.nullPosGroup}`);
+  log('INFO', `${espn_match_id}/PS_SNAPSHOT`, `total=${ps.total} | home=${ps.homePlayers} away=${ps.awayPlayers} | GKs=${ps.gks} | nullJersey=${ps.nullJersey} nullPosGroup=${ps.nullPosGroup}`);
 
   // ── H. wc2026_espn_lineups ─────────────────────────────────────────────────
   subsection('H. wc2026_espn_lineups — Formation, Starters (22), Subs, Unused');
@@ -546,7 +546,7 @@ async function auditMatch(matchId) {
             SUM(CASE WHEN name IS NULL OR name='' THEN 1 ELSE 0 END) AS nullNames,
             SUM(CASE WHEN athleteId IS NULL OR athleteId='' THEN 1 ELSE 0 END) AS nullAthleteId,
             SUM(CASE WHEN formation IS NULL AND role='starter' THEN 1 ELSE 0 END) AS nullFormation
-     FROM wc2026_espn_lineups WHERE matchId=?`, [matchId]
+     FROM wc2026_espn_lineups WHERE espn_match_id=?`, [espn_match_id]
   );
   mc(Number(lu.total) >= 40, 'LU_COUNT', `${lu.total} lineup rows ✓`, `Only ${lu.total} rows — expected ≥40`);
   mc(Number(lu.starters) === 22, 'LU_STARTERS', `${lu.starters}/22 starters ✓`, `${lu.starters} starters ≠ 22`);
@@ -559,10 +559,10 @@ async function auditMatch(matchId) {
 
   const [[fpCheck]] = await conn.execute(
     `SELECT SUM(CASE WHEN formationPlace IS NULL OR formationPlace='' THEN 1 ELSE 0 END) AS nullFP
-     FROM wc2026_espn_lineups WHERE matchId=? AND role='starter'`, [matchId]
+     FROM wc2026_espn_lineups WHERE espn_match_id=? AND role='starter'`, [espn_match_id]
   );
   mc(Number(fpCheck.nullFP) === 0, 'LU_FORMATION_PLACE', `0 starters with null formationPlace ✓`, `${fpCheck.nullFP} starters with null formationPlace`, null, true);
-  log('INFO', `${matchId}/LU_SNAPSHOT`, `total=${lu.total} | starters=${lu.starters} subs=${lu.subs} unused=${lu.unused} | home=${lu.homePlayers} away=${lu.awayPlayers}`);
+  log('INFO', `${espn_match_id}/LU_SNAPSHOT`, `total=${lu.total} | starters=${lu.starters} subs=${lu.subs} unused=${lu.unused} | home=${lu.homePlayers} away=${lu.awayPlayers}`);
 
   // ── I. wc2026_espn_glossary (Global) ──────────────────────────────────────
   subsection('I. wc2026_espn_glossary — Global Stat Definitions (20 terms)');
@@ -579,7 +579,7 @@ async function auditMatch(matchId) {
   mc(Number(glNulls.nullDesc) === 0, 'GL_DESC', `0 null descriptions ✓`, `${glNulls.nullDesc} null descriptions`, null, true);
 
   // ── J. Schema & Index Audit ────────────────────────────────────────────────
-  subsection('J. Schema & Index Audit — All 9 Tables (PK + matchId index)');
+  subsection('J. Schema & Index Audit — All 9 Tables (PK + espn_match_id index)');
   const tables = [
     'wc2026_espn_matches', 'wc2026_espn_match_odds', 'wc2026_espn_team_stats',
     'wc2026_espn_match_stats', 'wc2026_espn_expected_goals', 'wc2026_espn_shot_map',
@@ -588,11 +588,11 @@ async function auditMatch(matchId) {
   for (const tbl of tables) {
     const [indexes] = await conn.execute(`SHOW INDEX FROM ${tbl}`);
     const hasPrimary = indexes.some(i => i.Key_name === 'PRIMARY');
-    const hasMatchId = indexes.some(i => i.Column_name === 'matchId');
+    const hasMatchId = indexes.some(i => i.Column_name === 'espn_match_id');
     const shortName = tbl.replace('wc2026_espn_','').toUpperCase();
     mc(hasPrimary, `IDX_${shortName}_PK`, `${tbl}: PRIMARY KEY ✓`, `${tbl}: NO PRIMARY KEY`);
     if (tbl !== 'wc2026_espn_glossary') {
-      mc(hasMatchId, `IDX_${shortName}_MATCHID`, `${tbl}: matchId indexed ✓`, `${tbl}: matchId NOT indexed`);
+      mc(hasMatchId, `IDX_${shortName}_MATCHID`, `${tbl}: espn_match_id indexed ✓`, `${tbl}: espn_match_id NOT indexed`);
     }
   }
 
@@ -600,8 +600,8 @@ async function auditMatch(matchId) {
   const total = mp.pass + mp.fail + mp.warn;
   const pct = total > 0 ? ((mp.pass / total) * 100).toFixed(1) : '0.0';
   const verdict = mp.fail === 0 ? '✅ ELITE' : mp.fail <= 2 ? '⚠️ MINOR ISSUES' : '❌ CRITICAL ISSUES';
-  log('INFO', `${matchId}/MATCH_SUMMARY`, `${verdict} | PASS=${mp.pass} FAIL=${mp.fail} WARN=${mp.warn} | ${pct}% | ${gt.label}`);
-  matchResults[matchId] = { ...mp, total, pct, verdict, label: gt.label };
+  log('INFO', `${espn_match_id}/MATCH_SUMMARY`, `${verdict} | PASS=${mp.pass} FAIL=${mp.fail} WARN=${mp.warn} | ${pct}% | ${gt.label}`);
+  matchResults[espn_match_id] = { ...mp, total, pct, verdict, label: gt.label };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -618,7 +618,7 @@ async function quadAudit() {
   for (const tbl of tables) {
     const counts = {};
     for (const mid of MATCH_IDS) {
-      const [[r]] = await conn.execute(`SELECT COUNT(*) AS cnt FROM ${tbl} WHERE matchId=?`, [mid]);
+      const [[r]] = await conn.execute(`SELECT COUNT(*) AS cnt FROM ${tbl} WHERE espn_match_id=?`, [mid]);
       counts[mid] = Number(r.cnt);
     }
     const allOk = MATCH_IDS.every(id => counts[id] > 0);
@@ -631,7 +631,7 @@ async function quadAudit() {
   subsection('2. Score Consistency vs Ground Truth');
   for (const mid of MATCH_IDS) {
     const gt = GT[mid];
-    const [[mRow]] = await conn.execute(`SELECT homeScore, awayScore, homeTeamAbbrev, awayTeamAbbrev FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[mRow]] = await conn.execute(`SELECT homeScore, awayScore, homeTeamAbbrev, awayTeamAbbrev FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     check(Number(mRow.homeScore) === gt.homeScore, `QUAD/GT_HOME_${mid}`,
       `[${mid}] ${mRow.homeTeamAbbrev} homeScore=${mRow.homeScore} = GT ${gt.homeScore} ✓`,
       `[${mid}] homeScore MISMATCH: DB=${mRow.homeScore} GT=${gt.homeScore}`);
@@ -645,7 +645,7 @@ async function quadAudit() {
   log('INFO', 'QUAD/TZ_POLICY', 'Policy: matchDateUtc = UTC epoch ms | ET derivable via America/New_York | games stored under ET date');
   for (const mid of MATCH_IDS) {
     const gt = GT[mid];
-    const [[dtRow]] = await conn.execute(`SELECT matchDateUtc, matchGameDate, matchKickoffEt FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[dtRow]] = await conn.execute(`SELECT matchDateUtc, matchGameDate, matchKickoffEt FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     const dbMs = Number(dtRow.matchDateUtc);
     const dbIso = new Date(dbMs).toISOString();
     const dbEtDate = utcMsToEtDate(dbMs);
@@ -664,7 +664,7 @@ async function quadAudit() {
   }
 
   // Special case: 760488 (NED vs MAR) — 01:00 UTC = 21:00 ET Jun 29 (not Jun 30)
-  const [[ned]] = await conn.execute(`SELECT matchDateUtc FROM wc2026_espn_matches WHERE matchId='760488'`);
+  const [[ned]] = await conn.execute(`SELECT matchDateUtc FROM wc2026_espn_matches WHERE espn_match_id='760488'`);
   const nedEtDate = utcMsToEtDate(Number(ned.matchDateUtc));
   check(nedEtDate === '2026-06-29', 'QUAD/ET_MIDNIGHT_RULE',
     `[760488] NED vs MAR: 01:00 UTC = 21:00 ET → ET date=2026-06-29 (not UTC date 2026-06-30) ✓`,
@@ -674,7 +674,7 @@ async function quadAudit() {
   // 4. xG Validation
   subsection('4. xG Validation (all 4 matches)');
   for (const mid of MATCH_IDS) {
-    const [[xgRow]] = await conn.execute(`SELECT homeXG, awayXG FROM wc2026_espn_expected_goals WHERE matchId=?`, [mid]);
+    const [[xgRow]] = await conn.execute(`SELECT homeXG, awayXG FROM wc2026_espn_expected_goals WHERE espn_match_id=?`, [mid]);
     const hxg = parseFloat(xgRow.homeXG ?? 0);
     const axg = parseFloat(xgRow.awayXG ?? 0);
     check(hxg >= 0 && hxg <= 5, `QUAD/XG_HOME_${mid}`, `[${mid}] homeXG=${hxg.toFixed(3)} in [0,5] ✓`, `[${mid}] homeXG=${hxg} OUT OF RANGE`);
@@ -685,7 +685,7 @@ async function quadAudit() {
   // 5. Possession Sum
   subsection('5. Possession Sum Validation (≈100% per match)');
   for (const mid of MATCH_IDS) {
-    const [[ts]] = await conn.execute(`SELECT possession, possessionAway FROM wc2026_espn_team_stats WHERE matchId=?`, [mid]);
+    const [[ts]] = await conn.execute(`SELECT possession, possessionAway FROM wc2026_espn_team_stats WHERE espn_match_id=?`, [mid]);
     const pHome = parseFloat(String(ts.possession ?? '0').replace('%',''));
     const pAway = parseFloat(String(ts.possessionAway ?? '0').replace('%',''));
     check(Math.abs(pHome + pAway - 100) < 2, `QUAD/POSS_${mid}`,
@@ -697,7 +697,7 @@ async function quadAudit() {
   // 6. Lineup Starters = 22 per match
   subsection('6. Lineup Starters (22 per match)');
   for (const mid of MATCH_IDS) {
-    const [[lu]] = await conn.execute(`SELECT SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) AS starters FROM wc2026_espn_lineups WHERE matchId=?`, [mid]);
+    const [[lu]] = await conn.execute(`SELECT SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) AS starters FROM wc2026_espn_lineups WHERE espn_match_id=?`, [mid]);
     check(Number(lu.starters) === 22, `QUAD/STARTERS_${mid}`, `[${mid}] starters=${lu.starters}/22 ✓`, `[${mid}] starters=${lu.starters} ≠ 22`);
   }
 
@@ -705,7 +705,7 @@ async function quadAudit() {
   subsection('7. No Duplicate Player Records');
   for (const mid of MATCH_IDS) {
     const [[dup]] = await conn.execute(
-      `SELECT COUNT(*) AS dups FROM (SELECT athleteId, COUNT(*) AS c FROM wc2026_espn_player_stats WHERE matchId=? GROUP BY athleteId HAVING c>1) t`, [mid]
+      `SELECT COUNT(*) AS dups FROM (SELECT athleteId, COUNT(*) AS c FROM wc2026_espn_player_stats WHERE espn_match_id=? GROUP BY athleteId HAVING c>1) t`, [mid]
     );
     check(Number(dup.dups) === 0, `QUAD/NO_DUPS_${mid}`, `[${mid}] 0 duplicate player records ✓`, `[${mid}] ${dup.dups} duplicates`);
   }
@@ -717,7 +717,7 @@ async function quadAudit() {
       `SELECT COUNT(*) AS total,
               SUM(CASE WHEN fieldStartX IS NULL OR fieldStartY IS NULL THEN 1 ELSE 0 END) AS nullCoords,
               SUM(CASE WHEN fieldStartX < 0 OR fieldStartX > 100 OR fieldStartY < 0 OR fieldStartY > 100 THEN 1 ELSE 0 END) AS outOfRange
-       FROM wc2026_espn_shot_map WHERE matchId=?`, [mid]
+       FROM wc2026_espn_shot_map WHERE espn_match_id=?`, [mid]
     );
     check(Number(sm.nullCoords) === 0, `QUAD/SM_COORDS_${mid}`, `[${mid}] 0 null coords (${sm.total} shots) ✓`, `[${mid}] ${sm.nullCoords} null coords`);
     check(Number(sm.outOfRange) === 0, `QUAD/SM_RANGE_${mid}`, `[${mid}] 0 out-of-range coords ✓`, `[${mid}] ${sm.outOfRange} out-of-range coords`);
@@ -727,7 +727,7 @@ async function quadAudit() {
   // NOTE: Using individual queries per match to avoid TiDB malform packet on IN (?,?,?,?)
   subsection('9. Scrape Version Consistency (250x)');
   for (const mid of MATCH_IDS) {
-    const [[vr]] = await conn.execute(`SELECT matchId, scrapeVersion FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[vr]] = await conn.execute(`SELECT espn_match_id, scrapeVersion FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     if (vr) check(vr.scrapeVersion === '250x', `QUAD/VERSION_${mid}`, `[${mid}] scrapeVersion="250x" ✓`, `[${mid}] scrapeVersion="${vr.scrapeVersion}" ≠ "250x"`);
     else check(false, `QUAD/VERSION_${mid}`, '', `[${mid}] match row missing`);
   }
@@ -735,7 +735,7 @@ async function quadAudit() {
   // 10. Venue, Attendance & Referee
   subsection('10. Venue, Attendance & Referee Ground Truth');
   for (const mid of MATCH_IDS) {
-    const [[vr2]] = await conn.execute(`SELECT matchId, venue, city, attendance, referee FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[vr2]] = await conn.execute(`SELECT espn_match_id, venue, city, attendance, referee FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     if (!vr2) { check(false, `QUAD/VENUE_${mid}`, '', `[${mid}] match row missing`); continue; }
     const gt = GT[mid];
     if (gt.venue) check(vr2.venue === gt.venue, `QUAD/VENUE_${mid}`, `[${mid}] venue="${vr2.venue}" ✓`, `[${mid}] venue MISMATCH: got "${vr2.venue}" expected "${gt.venue}"`);
@@ -755,23 +755,23 @@ async function quadAudit() {
       `SELECT COUNT(*) AS total, SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) AS goals,
               SUM(CASE WHEN iconType='save' THEN 1 ELSE 0 END) AS saves,
               SUM(CASE WHEN iconType='blocked' THEN 1 ELSE 0 END) AS blocked
-       FROM wc2026_espn_shot_map WHERE matchId=?`, [mid]);
+       FROM wc2026_espn_shot_map WHERE espn_match_id=?`, [mid]);
     aggShots.total += Number(sm.total); aggShots.goals += Number(sm.goals);
     aggShots.saves += Number(sm.saves); aggShots.blocked += Number(sm.blocked);
     const [[pl]] = await conn.execute(
-      `SELECT COUNT(*) AS total, SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) AS gks FROM wc2026_espn_player_stats WHERE matchId=?`, [mid]);
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN isGoalkeeper=1 THEN 1 ELSE 0 END) AS gks FROM wc2026_espn_player_stats WHERE espn_match_id=?`, [mid]);
     aggPlayers.total += Number(pl.total); aggPlayers.gks += Number(pl.gks);
     const [[lu]] = await conn.execute(
       `SELECT COUNT(*) AS total, SUM(CASE WHEN role='starter' THEN 1 ELSE 0 END) AS starters,
               SUM(CASE WHEN role='substitute' THEN 1 ELSE 0 END) AS subs,
               SUM(CASE WHEN role='unused' THEN 1 ELSE 0 END) AS unused
-       FROM wc2026_espn_lineups WHERE matchId=?`, [mid]);
+       FROM wc2026_espn_lineups WHERE espn_match_id=?`, [mid]);
     aggLineups.total += Number(lu.total); aggLineups.starters += Number(lu.starters);
     aggLineups.subs += Number(lu.subs); aggLineups.unused += Number(lu.unused);
     const [[xg]] = await conn.execute(
-      `SELECT homeXG, awayXG FROM wc2026_espn_expected_goals WHERE matchId=?`, [mid]);
+      `SELECT homeXG, awayXG FROM wc2026_espn_expected_goals WHERE espn_match_id=?`, [mid]);
     if (xg) { aggXgSum.h += Number(xg.homeXG); aggXgSum.a += Number(xg.awayXG); aggXgSum.count++; }
-    const [[att]] = await conn.execute(`SELECT attendance FROM wc2026_espn_matches WHERE matchId=?`, [mid]);
+    const [[att]] = await conn.execute(`SELECT attendance FROM wc2026_espn_matches WHERE espn_match_id=?`, [mid]);
     if (att && att.attendance) {
       const a = Number(att.attendance);
       aggAtt.sum += a;
@@ -802,9 +802,9 @@ async function quadAudit() {
   subsection('12. ESPN HTML Game Information — Time Extraction Method Audit');
   log('INFO', 'QUAD/TIME_METHOD', 'Source: gmStrp["dt"] from __espnfitt__ JSON → ISO UTC string → stored as bigint ms');
   log('INFO', 'QUAD/TIME_METHOD', 'HTML "12:00 PM, June 28, 2026" = local venue time (PT for SoFi Stadium) — NOT used for DB storage');
-  log('INFO', 'QUAD/TIME_METHOD', 'ET conversion: 12:00 PM PT = 15:00 ET = 19:00 UTC = 1782673200000ms (matchId 760486)');
+  log('INFO', 'QUAD/TIME_METHOD', 'ET conversion: 12:00 PM PT = 15:00 ET = 19:00 UTC = 1782673200000ms (espn_match_id 760486)');
   log('INFO', 'QUAD/TIME_METHOD', 'ET date rule: games at 01:00 UTC = 21:00 ET prev day → stored under ET date (Jun 29, not Jun 30)');
-  const [[tc]] = await conn.execute(`SELECT matchDateUtc FROM wc2026_espn_matches WHERE matchId='760486'`);
+  const [[tc]] = await conn.execute(`SELECT matchDateUtc FROM wc2026_espn_matches WHERE espn_match_id='760486'`);
   check(Number(tc.matchDateUtc) === 1782673200000, 'QUAD/TIME_760486_HTML',
     '760486 matchDateUtc=1782673200000 (12:00 PM PT / 3:00 PM ET / 19:00 UTC) ✓',
     `760486 matchDateUtc=${tc.matchDateUtc} ≠ 1782673200000`);
@@ -818,7 +818,7 @@ async function quadAudit() {
     const [[def]] = await conn.execute(
       `SELECT homeTackles, awayTackles, homeInterceptions, awayInterceptions,
               homeClearances, awayClearances, homeRecoveries, awayRecoveries
-       FROM wc2026_espn_match_stats WHERE matchId=?`, [mid]
+       FROM wc2026_espn_match_stats WHERE espn_match_id=?`, [mid]
     );
     const defNulls = Object.entries(def).filter(([k,v]) => v === null || v === undefined);
     check(defNulls.length === 0, `QUAD/DEFENSE_${mid}`,
@@ -861,7 +861,7 @@ function writeReport() {
     '- Example: 760486 RSA vs CAN — 19:00 UTC Jun 28 = 15:00 ET Jun 28 (12:00 PM PT) → ET date = 2026-06-28',
     '',
     '## Ground Truth Verification',
-    '| matchId | Match | UTC | ET | ET Date | Venue | Attendance | Referee |',
+    '| espn_match_id | Match | UTC | ET | ET Date | Venue | Attendance | Referee |',
     '|---------|-------|-----|-----|---------|-------|-----------|---------|',
     ...Object.entries(GT).map(([mid, gt]) =>
       `| ${mid} | ${gt.label} | ${gt.utcIso} | ${gt.etDisplay} | ${gt.etDate} | ${gt.venue} | ${gt.attendance != null ? Number(gt.attendance).toLocaleString() : 'N/A'} | ${gt.referee || 'N/A'} |`

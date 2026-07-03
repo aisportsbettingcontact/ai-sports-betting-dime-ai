@@ -253,7 +253,7 @@ async function audit2018and2022(espnEvents, tournamentYear, label) {
         dbAwayScore: row.away_score,
         espnHomeScore: expectedHomeScore,
         espnAwayScore: expectedAwayScore,
-        espnEventId: s.eventId,
+        espnMatchId: s.eventId,
       });
       console.error(`  [❌] id=${row.id} | ${row.home_team} vs ${row.away_team} | DB: ${row.home_score}-${row.away_score} | ESPN: ${expectedHomeScore}-${expectedAwayScore}`);
     }
@@ -327,7 +327,7 @@ async function audit2026(espnEvents) {
         dbAwayScore: row.away_score,
         espnHomeScore: expectedHomeScore,
         espnAwayScore: expectedAwayScore,
-        espnEventId: s.eventId,
+        espnMatchId: s.eventId,
       });
       console.error(`  [❌] ${row.match_id} | ${row.home_name} vs ${row.away_name} | DB: ${row.home_score}-${row.away_score} | ESPN: ${expectedHomeScore}-${expectedAwayScore}`);
     }

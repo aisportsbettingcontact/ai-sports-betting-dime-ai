@@ -361,8 +361,8 @@ const mockScraper = {
     this.calls.push({ gameId, matchRound, ts: new Date().toISOString() });
     log('MOCK', `MOCK_SCRAPER/${gameId}`, `🔧 MOCK TRIGGER | gameId=${gameId} matchRound=${matchRound}`);
   },
-  wasCalled(gameId) { return this.calls.some(c => c.gameId === gameId); },
-  callCount(gameId) { return this.calls.filter(c => c.gameId === gameId).length; },
+  wasCalled(gameId) { return this.calls.some(c => c.espnMatchId === gameId); },
+  callCount(gameId) { return this.calls.filter(c => c.espnMatchId === gameId).length; },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -432,11 +432,11 @@ const runTier1 = async () => {
     assert(!g.isCanceled, 'isCanceled=false');
     // Simulate WATCHING event
     const watchingSet = new Set();
-    if (g.isInProgress && !watchingSet.has(g.gameId)) {
-      watchingSet.add(g.gameId);
-      log('WATCH', `T02/WATCH/${g.gameId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate}`);
+    if (g.isInProgress && !watchingSet.has(g.espnMatchId)) {
+      watchingSet.add(g.espnMatchId);
+      log('WATCH', `T02/WATCH/${g.espnMatchId}`, `👁️  WATCHING — STATUS_IN_PROGRESS | ${g.name} | typeId=2 | kickoff=${g.eventDate}`);
     }
-    assert(watchingSet.has(g.gameId), 'watchingSet contains gameId after id=2 detection');
+    assert(watchingSet.has(g.espnMatchId), 'watchingSet contains gameId after id=2 detection');
     log('VERIFY', 'T02/VERIFY', `[VERIFY] PASS | id=2 correctly classified as live | WATCHING event fired | no trigger`);
   });
 
@@ -491,12 +491,12 @@ const runTier1 = async () => {
     // Simulate ET_ACTIVE detection
     const etActiveMap = new Map();
     let tightenPoll = false;
-    if (g.isExtraTime && !etActiveMap.has(g.gameId)) {
-      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'ET' });
+    if (g.isExtraTime && !etActiveMap.has(g.espnMatchId)) {
+      etActiveMap.set(g.espnMatchId, { firstSeenMs: Date.now(), type: 'ET' });
       tightenPoll = true;
-      log('ET_ACT', `T05/ET_ACT/${g.gameId}`, `⚡ ET_ACTIVE | ${g.name} | typeId=17 | ${g.displayClock} | POLL TIGHTENED`);
+      log('ET_ACT', `T05/ET_ACT/${g.espnMatchId}`, `⚡ ET_ACTIVE | ${g.name} | typeId=17 | ${g.displayClock} | POLL TIGHTENED`);
     }
-    assert(etActiveMap.has(g.gameId), 'etActiveMap contains gameId');
+    assert(etActiveMap.has(g.espnMatchId), 'etActiveMap contains gameId');
     assert(tightenPoll, 'tightenPoll=true when ET active');
     log('VERIFY', 'T05/VERIFY', `[VERIFY] PASS | id=17 ET_ACTIVE detected | poll tightened | no trigger`);
   });
@@ -514,12 +514,12 @@ const runTier1 = async () => {
     assert(!g.isExtraTime, 'isExtraTime=false');
     const etActiveMap = new Map();
     let tightenPoll = false;
-    if (g.isShootout && !etActiveMap.has(g.gameId)) {
-      etActiveMap.set(g.gameId, { firstSeenMs: Date.now(), type: 'PENS' });
+    if (g.isShootout && !etActiveMap.has(g.espnMatchId)) {
+      etActiveMap.set(g.espnMatchId, { firstSeenMs: Date.now(), type: 'PENS' });
       tightenPoll = true;
-      log('PENS_AC', `T06/PENS_AC/${g.gameId}`, `🥅 PENS_ACTIVE | ${g.name} | typeId=24 | ${g.displayClock} | POLL TIGHTENED`);
+      log('PENS_AC', `T06/PENS_AC/${g.espnMatchId}`, `🥅 PENS_ACTIVE | ${g.name} | typeId=24 | ${g.displayClock} | POLL TIGHTENED`);
     }
-    assert(etActiveMap.has(g.gameId), 'etActiveMap contains gameId');
+    assert(etActiveMap.has(g.espnMatchId), 'etActiveMap contains gameId');
     assert(tightenPoll, 'tightenPoll=true when PENS active');
     log('VERIFY', 'T06/VERIFY', `[VERIFY] PASS | id=24 PENS_ACTIVE detected | poll tightened | no trigger`);
   });
@@ -552,8 +552,8 @@ const runTier1 = async () => {
     const prevState = 'in';
     const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
     assert(isNewlyFinal, 'isNewlyFinal=true (transition from in → post)');
-    mockScraper.trigger(g.gameId, g.matchRound);
-    assert(mockScraper.wasCalled(g.gameId), 'scraper triggered for id=28 FT');
+    mockScraper.trigger(g.espnMatchId, g.matchRound);
+    assert(mockScraper.wasCalled(g.espnMatchId), 'scraper triggered for id=28 FT');
     log('VERIFY', 'T07/VERIFY', `[VERIFY] PASS | id=28 FT confirmed | isFinal=true | isNewlyFinal=true | scraper triggered | 760491 signature verified`);
   });
 
@@ -578,8 +578,8 @@ const runTier1 = async () => {
     const prevState = 'in';
     const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
     assert(isNewlyFinal, 'isNewlyFinal=true');
-    mockScraper.trigger(g.gameId, g.matchRound);
-    assert(mockScraper.wasCalled(g.gameId), 'scraper triggered for id=23 alt FT');
+    mockScraper.trigger(g.espnMatchId, g.matchRound);
+    assert(mockScraper.wasCalled(g.espnMatchId), 'scraper triggered for id=23 alt FT');
     log('VERIFY', 'T08/VERIFY', `[VERIFY] PASS | id=23 alt FT correctly triggers scraper`);
   });
 
@@ -599,8 +599,8 @@ const runTier1 = async () => {
     assert(g.isFinal, 'isFinal=true');
     assert(g.isFinalByTypeId, 'isFinalByTypeId=true (id=3 in FINAL_TYPE_IDS)');
     assert(!g.isCanceled, 'isCanceled=false');
-    mockScraper.trigger(g.gameId, g.matchRound);
-    assert(mockScraper.wasCalled(g.gameId), 'scraper triggered for id=3 legacy FT');
+    mockScraper.trigger(g.espnMatchId, g.matchRound);
+    assert(mockScraper.wasCalled(g.espnMatchId), 'scraper triggered for id=3 legacy FT');
     log('VERIFY', 'T09/VERIFY', `[VERIFY] PASS | id=3 legacy FT correctly triggers scraper`);
   });
 
@@ -621,15 +621,15 @@ const runTier1 = async () => {
     // Simulate postponed handling
     const postponedSet = new Set();
     const engine = createWatchWindowEngine(['20260705', '20260706', '20260707', '20260708']);
-    if (g.isPostponed && !postponedSet.has(g.gameId)) {
-      postponedSet.add(g.gameId);
+    if (g.isPostponed && !postponedSet.has(g.espnMatchId)) {
+      postponedSet.add(g.espnMatchId);
       engine.addPostponedExtension('20260705', 7);
-      log('POSTPON', `T10/POSTPON/${g.gameId}`, `⏸️  STATUS_POSTPONED | ${g.name} | window extended +7d`);
+      log('POSTPON', `T10/POSTPON/${g.espnMatchId}`, `⏸️  STATUS_POSTPONED | ${g.name} | window extended +7d`);
     }
-    assert(postponedSet.has(g.gameId), 'postponedSet contains gameId');
+    assert(postponedSet.has(g.espnMatchId), 'postponedSet contains gameId');
     const window = engine.getWindow();
     assertContains(window, '20260712', 'window contains +7 day extension (20260712)');
-    assert(!mockScraper.wasCalled(g.gameId), 'scraper NOT triggered for postponed game');
+    assert(!mockScraper.wasCalled(g.espnMatchId), 'scraper NOT triggered for postponed game');
     log('VERIFY', 'T10/VERIFY', `[VERIFY] PASS | id=6 POSTPONED | no trigger | window extended | window=${JSON.stringify(window)}`);
   });
 
@@ -649,14 +649,14 @@ const runTier1 = async () => {
     // Simulate delayed handling
     const delayedSet = new Set();
     const delayedDates = new Set();
-    if (g.isDelayed && !delayedSet.has(g.gameId)) {
-      delayedSet.add(g.gameId);
+    if (g.isDelayed && !delayedSet.has(g.espnMatchId)) {
+      delayedSet.add(g.espnMatchId);
       delayedDates.add('20260702');
-      log('DELAYED', `T11/DELAYED/${g.gameId}`, `⏳ STATUS_DELAYED | ${g.name} | date=20260702 | keeping in window`);
+      log('DELAYED', `T11/DELAYED/${g.espnMatchId}`, `⏳ STATUS_DELAYED | ${g.name} | date=20260702 | keeping in window`);
     }
-    assert(delayedSet.has(g.gameId), 'delayedSet contains gameId');
+    assert(delayedSet.has(g.espnMatchId), 'delayedSet contains gameId');
     assert(delayedDates.has('20260702'), 'delayedDates contains date');
-    assert(!mockScraper.wasCalled(g.gameId), 'scraper NOT triggered for delayed game');
+    assert(!mockScraper.wasCalled(g.espnMatchId), 'scraper NOT triggered for delayed game');
     log('VERIFY', 'T11/VERIFY', `[VERIFY] PASS | id=9 DELAYED | no trigger | date kept in window`);
   });
 
@@ -677,12 +677,12 @@ const runTier1 = async () => {
     // Simulate cancel guard
     const canceledSet = new Set();
     if (g.isCanceled) {
-      canceledSet.add(g.gameId);
-      log('CANCEL', `T12/CANCEL/${g.gameId}`, `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | SCRAPER WILL NEVER TRIGGER`);
+      canceledSet.add(g.espnMatchId);
+      log('CANCEL', `T12/CANCEL/${g.espnMatchId}`, `🚫 STATUS_CANCELED | ${g.name} | typeId=7 | SCRAPER WILL NEVER TRIGGER`);
     }
-    assert(canceledSet.has(g.gameId), 'canceledSet contains gameId');
+    assert(canceledSet.has(g.espnMatchId), 'canceledSet contains gameId');
     // Verify scraper is NOT triggered
-    assert(!mockScraper.wasCalled(g.gameId), 'scraper NOT triggered for canceled game');
+    assert(!mockScraper.wasCalled(g.espnMatchId), 'scraper NOT triggered for canceled game');
     log('VERIFY', 'T12/VERIFY', `[VERIFY] PASS | id=7 CANCELED | cancel guard active | scraper BLOCKED`);
   });
 };
@@ -794,9 +794,9 @@ const runTier2 = async () => {
     const g = parseEspnEvent(event);
     // Simulate trigger logic with guard
     let triggered = false;
-    if (g.isFinal && !scrapedSet.has(g.gameId) && !scrapingSet.has(g.gameId)) {
+    if (g.isFinal && !scrapedSet.has(g.espnMatchId) && !scrapingSet.has(g.espnMatchId)) {
       triggered = true;
-      mockScraper.trigger(g.gameId, g.matchRound);
+      mockScraper.trigger(g.espnMatchId, g.matchRound);
     }
     assert(!triggered, 'trigger NOT fired (gameId in scrapedSet)');
     assert(!mockScraper.wasCalled(gameId), 'scraper NOT triggered (duplicate guard)');
@@ -816,8 +816,8 @@ const runTier2 = async () => {
     assert(!isNewlyFinal, 'isNewlyFinal=false (was already post in prev poll)');
     // DB check returns not in DB
     const dbCheck = { inDb: false };
-    if (!scrapedSet.has(g.gameId) && !scrapingSet.has(g.gameId) && !dbCheck.inDb) {
-      mockScraper.trigger(g.gameId, g.matchRound);
+    if (!scrapedSet.has(g.espnMatchId) && !scrapingSet.has(g.espnMatchId) && !dbCheck.inDb) {
+      mockScraper.trigger(g.espnMatchId, g.matchRound);
     }
     assert(mockScraper.wasCalled(gameId), 'scraper triggered for DB miss recovery');
     log('VERIFY', 'T19/VERIFY', `[VERIFY] PASS | DB miss recovery: scraper triggered for final game not in DB`);
@@ -961,10 +961,10 @@ const runTier4 = async () => {
     const event = buildMockEvent({ gameId, statusId: 1 });
     const g = parseEspnEvent(event);
     let rescheduled = false;
-    if (canceledSet.has(g.gameId) && g.isScheduled) {
-      canceledSet.delete(g.gameId);
+    if (canceledSet.has(g.espnMatchId) && g.isScheduled) {
+      canceledSet.delete(g.espnMatchId);
       rescheduled = true;
-      log('INFO', `T27/CANCEL/${g.gameId}`, `♻️  RESCHEDULED — was canceled, now pre/scheduled`);
+      log('INFO', `T27/CANCEL/${g.espnMatchId}`, `♻️  RESCHEDULED — was canceled, now pre/scheduled`);
     }
     assert(rescheduled, 'RESCHEDULED event fired');
     assert(!canceledSet.has(gameId), 'gameId removed from canceledSet');
@@ -978,9 +978,9 @@ const runTier4 = async () => {
     const postponedSet = new Set([gameId]);
     const event = buildMockEvent({ gameId, statusId: 1 });
     const g = parseEspnEvent(event);
-    if (postponedSet.has(g.gameId) && g.isScheduled) {
-      postponedSet.delete(g.gameId);
-      log('INFO', `T28/POSTPON/${g.gameId}`, `♻️  RESCHEDULED — was postponed, now pre/scheduled`);
+    if (postponedSet.has(g.espnMatchId) && g.isScheduled) {
+      postponedSet.delete(g.espnMatchId);
+      log('INFO', `T28/POSTPON/${g.espnMatchId}`, `♻️  RESCHEDULED — was postponed, now pre/scheduled`);
     }
     assert(!postponedSet.has(gameId), 'gameId removed from postponedSet');
     log('VERIFY', 'T28/VERIFY', `[VERIFY] PASS | postponed-then-rescheduled handled correctly`);
@@ -994,12 +994,12 @@ const runTier4 = async () => {
     const event = buildMockEvent({ gameId, statusId: 17, displayClock: '105\'' });
     const g = parseEspnEvent(event);
     let warnFired = false;
-    if (etActiveMap.has(g.gameId)) {
-      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
-      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
-        etActiveMap.get(g.gameId).warnedExtended = true;
+    if (etActiveMap.has(g.espnMatchId)) {
+      const elapsed = Date.now() - etActiveMap.get(g.espnMatchId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.espnMatchId).warnedExtended) {
+        etActiveMap.get(g.espnMatchId).warnedExtended = true;
         warnFired = true;
-        log('WARN', `T29/ET_ACT/${g.gameId}`, `⚠️  ET_EXTENDED — Extra time active for ${Math.round(elapsed / 60000)} min`);
+        log('WARN', `T29/ET_ACT/${g.espnMatchId}`, `⚠️  ET_EXTENDED — Extra time active for ${Math.round(elapsed / 60000)} min`);
       }
     }
     assert(warnFired, 'ET_EXTENDED warning fired after >30 min');
@@ -1015,12 +1015,12 @@ const runTier4 = async () => {
     const event = buildMockEvent({ gameId, statusId: 24, displayClock: '120\'' });
     const g = parseEspnEvent(event);
     let warnFired = false;
-    if (etActiveMap.has(g.gameId)) {
-      const elapsed = Date.now() - etActiveMap.get(g.gameId).firstSeenMs;
-      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.gameId).warnedExtended) {
-        etActiveMap.get(g.gameId).warnedExtended = true;
+    if (etActiveMap.has(g.espnMatchId)) {
+      const elapsed = Date.now() - etActiveMap.get(g.espnMatchId).firstSeenMs;
+      if (elapsed > ET_EXTENDED_WARN_MS && !etActiveMap.get(g.espnMatchId).warnedExtended) {
+        etActiveMap.get(g.espnMatchId).warnedExtended = true;
         warnFired = true;
-        log('WARN', `T30/PENS_AC/${g.gameId}`, `⚠️  PENS_EXTENDED — Shootout active for ${Math.round(elapsed / 60000)} min`);
+        log('WARN', `T30/PENS_AC/${g.espnMatchId}`, `⚠️  PENS_EXTENDED — Shootout active for ${Math.round(elapsed / 60000)} min`);
       }
     }
     assert(warnFired, 'PENS_EXTENDED warning fired after >30 min');
@@ -1033,11 +1033,11 @@ const runTier4 = async () => {
     const etActiveMap = new Map([[gameId, { firstSeenMs: Date.now() - 1800000, type: 'ET' }]]);
     const event = buildMockEvent({ gameId, statusId: 28, displayClock: '120\'+3\'', period: 2 });
     const g = parseEspnEvent(event);
-    if (etActiveMap.has(g.gameId) && g.isFinal) {
-      const etInfo = etActiveMap.get(g.gameId);
+    if (etActiveMap.has(g.espnMatchId) && g.isFinal) {
+      const etInfo = etActiveMap.get(g.espnMatchId);
       const elapsed = ((Date.now() - etInfo.firstSeenMs) / 1000).toFixed(0);
-      log('INFO', `T31/ET_ACT/${g.gameId}`, `✅ ET_RESOLVED — game went final after ET | duration=${elapsed}s`);
-      etActiveMap.delete(g.gameId);
+      log('INFO', `T31/ET_ACT/${g.espnMatchId}`, `✅ ET_RESOLVED — game went final after ET | duration=${elapsed}s`);
+      etActiveMap.delete(g.espnMatchId);
     }
     assert(!etActiveMap.has(gameId), 'etActiveMap cleared after ET resolved');
     assert(g.isFinal, 'isFinal=true');
@@ -1050,9 +1050,9 @@ const runTier4 = async () => {
     const etActiveMap = new Map([[gameId, { firstSeenMs: Date.now() - 900000, type: 'PENS' }]]);
     const event = buildMockEvent({ gameId, statusId: 28, displayClock: '120\'', period: 2 });
     const g = parseEspnEvent(event);
-    if (etActiveMap.has(g.gameId) && g.isFinal) {
-      etActiveMap.delete(g.gameId);
-      log('INFO', `T32/PENS_AC/${g.gameId}`, `✅ PENS_RESOLVED — game went final after shootout`);
+    if (etActiveMap.has(g.espnMatchId) && g.isFinal) {
+      etActiveMap.delete(g.espnMatchId);
+      log('INFO', `T32/PENS_AC/${g.espnMatchId}`, `✅ PENS_RESOLVED — game went final after shootout`);
     }
     assert(!etActiveMap.has(gameId), 'etActiveMap cleared after pens resolved');
     assert(g.isFinal, 'isFinal=true');
@@ -1083,9 +1083,9 @@ const runTier4 = async () => {
     let triggered = 0;
     for (const event of events) {
       const g = parseEspnEvent(event);
-      if (g.isFinal && !scrapedSet.has(g.gameId)) {
+      if (g.isFinal && !scrapedSet.has(g.espnMatchId)) {
         triggered++;
-        mockScraper.trigger(g.gameId, g.matchRound);
+        mockScraper.trigger(g.espnMatchId, g.matchRound);
       }
     }
     assertEqual(triggered, 0, 'zero triggers on startup (all in scrapedSet)');
@@ -1132,11 +1132,11 @@ const runTier4 = async () => {
     const isNewlyFinal = prevState !== 'post' && g.statusState === 'post' && g.statusCompleted === true;
     assert(isNewlyFinal, 'isNewlyFinal=true');
     if (DRY_RUN) {
-      log('INFO', `T37/TRIGGER/${g.gameId}`, `[DRY-RUN] Would trigger scrape — skipping`);
+      log('INFO', `T37/TRIGGER/${g.espnMatchId}`, `[DRY-RUN] Would trigger scrape — skipping`);
     } else {
-      mockScraper.trigger(g.gameId, g.matchRound);
+      mockScraper.trigger(g.espnMatchId, g.matchRound);
     }
-    assert(!mockScraper.wasCalled(g.gameId), 'scraper NOT triggered in DRY_RUN mode');
+    assert(!mockScraper.wasCalled(g.espnMatchId), 'scraper NOT triggered in DRY_RUN mode');
     log('VERIFY', 'T37/VERIFY', `[VERIFY] PASS | DRY_RUN mode correctly suppresses scraper trigger`);
   });
 
@@ -1151,9 +1151,9 @@ const runTier4 = async () => {
     assert(!g.isFinal, 'isFinal=false (cancel guard)');
     // Simulate trigger logic
     if (g.isFinal && !g.isCanceled) {
-      mockScraper.trigger(g.gameId, g.matchRound);
+      mockScraper.trigger(g.espnMatchId, g.matchRound);
     }
-    assert(!mockScraper.wasCalled(g.gameId), 'scraper NOT triggered for canceled game');
+    assert(!mockScraper.wasCalled(g.espnMatchId), 'scraper NOT triggered for canceled game');
     log('VERIFY', 'T38/VERIFY', `[VERIFY] PASS | id=7 CANCELED: state=post/completed=true does NOT trigger scraper`);
   });
 };
@@ -1178,7 +1178,7 @@ const runTier5 = async () => {
     });
     const g = parseEspnEvent(event);
     // Verify all 12 ESPN status fields from HTML snapshot
-    assertEqual(g.gameId, '760491', 'gameId=760491');
+    assertEqual(g.espnMatchId, '760491', 'gameId=760491');
     assertEqual(g.statusTypeId, 26, 'statusTypeId=26 (STATUS_SECOND_HALF)');
     assertEqual(g.statusTypeName, 'STATUS_SECOND_HALF', 'statusTypeName');
     assertEqual(g.statusState, 'in', 'statusState=in');
@@ -1208,7 +1208,7 @@ const runTier5 = async () => {
       detail: 'FT', shortDetail: 'FT', description: 'Full Time',
     });
     const g = parseEspnEvent(event);
-    assertEqual(g.gameId, '760491', 'gameId=760491');
+    assertEqual(g.espnMatchId, '760491', 'gameId=760491');
     assertEqual(g.statusTypeId, 28, 'statusTypeId=28 (STATUS_FULL_TIME)');
     assertEqual(g.statusTypeName, 'STATUS_FULL_TIME', 'statusTypeName');
     assertEqual(g.statusState, 'post', 'statusState=post');

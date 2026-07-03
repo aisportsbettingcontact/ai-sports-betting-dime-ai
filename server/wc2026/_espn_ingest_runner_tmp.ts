@@ -31,26 +31,26 @@ async function run() {
     const isGlossary = table === "wc2026_espn_glossary";
     const query = isGlossary
       ? sql.raw(`SELECT COUNT(*) as cnt FROM ${table}`)
-      : sql.raw(`SELECT COUNT(*) as cnt FROM ${table} WHERE matchId = '760487'`);
+      : sql.raw(`SELECT COUNT(*) as cnt FROM ${table} WHERE espn_match_id = '760487'`);
     const [rows] = await db.execute(query);
     rowCounts[table] = (rows as any)[0]?.cnt ?? 0;
   }
 
   // Spot checks
   const [matchData] = await db.execute(sql.raw(
-    `SELECT homeTeamName, awayTeamName, homeScore, awayScore, venue FROM wc2026_espn_matches WHERE matchId = '760487' LIMIT 1`
+    `SELECT homeTeamName, awayTeamName, homeScore, awayScore, venue FROM wc2026_espn_matches WHERE espn_match_id = '760487' LIMIT 1`
   ));
   const [shotData] = await db.execute(sql.raw(
-    `SELECT shotType, fieldStartX, fieldStartY, goalPositionY, playerName FROM wc2026_espn_shot_map WHERE matchId = '760487' LIMIT 1`
+    `SELECT shotType, fieldStartX, fieldStartY, goalPositionY, playerName FROM wc2026_espn_shot_map WHERE espn_match_id = '760487' LIMIT 1`
   ));
   const [defData] = await db.execute(sql.raw(
-    `SELECT homeTackles, awayTackles, homeInterceptions, awayInterceptions, homeClearances, awayClearances FROM wc2026_espn_match_stats WHERE matchId = '760487' LIMIT 1`
+    `SELECT homeTackles, awayTackles, homeInterceptions, awayInterceptions, homeClearances, awayClearances FROM wc2026_espn_match_stats WHERE espn_match_id = '760487' LIMIT 1`
   ));
   const [xgData] = await db.execute(sql.raw(
-    `SELECT homeXG, awayXG, homeXGOpenPlay, awayXGOpenPlay, homeXGOT, awayXGOT, perPlayerJson FROM wc2026_espn_expected_goals WHERE matchId = '760487' LIMIT 1`
+    `SELECT homeXG, awayXG, homeXGOpenPlay, awayXGOpenPlay, homeXGOT, awayXGOT, perPlayerJson FROM wc2026_espn_expected_goals WHERE espn_match_id = '760487' LIMIT 1`
   ));
   const [oddsData] = await db.execute(sql.raw(
-    `SELECT provider, homeMoneylineCurrent, awayMoneylineCurrent, drawMoneylineCurrent, homeSpreadLine, homeTotalSide FROM wc2026_espn_match_odds WHERE matchId = '760487' LIMIT 1`
+    `SELECT provider, homeMoneylineCurrent, awayMoneylineCurrent, drawMoneylineCurrent, homeSpreadLine, homeTotalSide FROM wc2026_espn_match_odds WHERE espn_match_id = '760487' LIMIT 1`
   ));
 
   const output = {

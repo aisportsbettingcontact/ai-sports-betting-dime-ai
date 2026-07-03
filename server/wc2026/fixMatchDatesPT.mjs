@@ -73,7 +73,7 @@ for (const r of rows) {
   console.log(`  match_date (PT):  ${expectedDate}  ${status}`);
   
   if (needsFix) {
-    corrections.push({ matchId: r.match_id, from: storedDate, to: expectedDate, matchup: `${r.away_name} @ ${r.home_name}` });
+    corrections.push({ espn_match_id: r.match_id, from: storedDate, to: expectedDate, matchup: `${r.away_name} @ ${r.home_name}` });
     console.log(`  → WILL CORRECT: ${storedDate} → ${expectedDate}`);
   }
   console.log();
@@ -86,18 +86,18 @@ if (corrections.length === 0) {
   console.log(`[STEP]   Applying ${corrections.length} match_date correction(s)...\n`);
   
   for (const c of corrections) {
-    console.log(`[STEP]   UPDATE wc2026_matches SET match_date='${c.to}' WHERE match_id='${c.matchId}'`);
+    console.log(`[STEP]   UPDATE wc2026_matches SET match_date='${c.to}' WHERE match_id='${c.espn_match_id}'`);
     const [res] = await conn.execute(
       `UPDATE wc2026_matches SET match_date = ? WHERE match_id = ?`,
-      [c.to, c.matchId]
+      [c.to, c.espn_match_id]
     );
     const ok = res.affectedRows === 1;
-    console.log(`[${ok ? 'OUTPUT' : 'ERROR '}]  ${ok ? '✅' : '❌'} match_id=${c.matchId} | ${c.matchup} | ${c.from} → ${c.to} | rows_affected=${res.affectedRows}`);
+    console.log(`[${ok ? 'OUTPUT' : 'ERROR '}]  ${ok ? '✅' : '❌'} match_id=${c.espn_match_id} | ${c.matchup} | ${c.from} → ${c.to} | rows_affected=${res.affectedRows}`);
   }
   
   // Verify all corrections
   console.log('\n[VERIFY] Re-querying all corrected matchs...');
-  const correctedIds = corrections.map(c => c.matchId);
+  const correctedIds = corrections.map(c => c.espn_match_id);
   const verPh = correctedIds.map(() => '?').join(',');
   const [verRows] = await conn.execute(
     `SELECT match_id, match_date, kickoff_utc FROM wc2026_matches WHERE match_id IN (${verPh})`,
@@ -106,13 +106,13 @@ if (corrections.length === 0) {
   
   let allPass = true;
   for (const c of corrections) {
-    const row = verRows.find(r => r.match_id === c.matchId);
+    const row = verRows.find(r => r.match_id === c.espn_match_id);
     const actual = row?.match_date instanceof Date
       ? row.match_date.toISOString().split('T')[0]
       : String(row?.match_date).split('T')[0];
     const pass = actual === c.to;
     if (!pass) allPass = false;
-    console.log(`[VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} ${c.matchId}: expected=${c.to} actual=${actual}`);
+    console.log(`[VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} ${c.espn_match_id}: expected=${c.to} actual=${actual}`);
   }
   
   console.log(`\n[RESULT] ${allPass ? '✅ ALL CORRECTIONS VERIFIED' : '❌ SOME CORRECTIONS FAILED'}`);

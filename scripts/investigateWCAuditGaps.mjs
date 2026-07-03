@@ -60,12 +60,12 @@ async function main() {
   console.log(`\n${TAG} [GAP 2] wc26-g-001 and wc26-g-002 DB state:`);
   const [gap2] = await conn.execute(
     `SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
-            home_score, away_score, status, espn_event_id
+            home_score, away_score, status, espn_match_id
      FROM wc2026_matches
      WHERE match_id IN ('wc26-g-001', 'wc26-g-002')`
   );
   gap2.forEach(r => {
-    console.log(`${TAG}   ${r.match_id}: ${r.home_team_id} vs ${r.away_team_id} | date=${r.match_date} | score=${r.home_score}-${r.away_score} | status=${r.status} | espn_event_id=${r.espn_event_id}`);
+    console.log(`${TAG}   ${r.match_id}: ${r.home_team_id} vs ${r.away_team_id} | date=${r.match_date} | score=${r.home_score}-${r.away_score} | status=${r.status} | espn_match_id=${r.espn_match_id}`);
   });
 
   // ── GAP 2b: Try ESPN for Jun 11, 2026 ────────────────────────────────────
@@ -88,10 +88,10 @@ async function main() {
 
   // ── GAP 2c: Try ESPN by specific event IDs from DB ───────────────────────
   for (const row of gap2) {
-    if (row.espn_event_id) {
-      console.log(`\n${TAG} [GAP 2c] Fetching ESPN event ${row.espn_event_id} for ${row.match_id}...`);
+    if (row.espn_match_id) {
+      console.log(`\n${TAG} [GAP 2c] Fetching ESPN event ${row.espn_match_id} for ${row.match_id}...`);
       try {
-        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${row.espn_event_id}`;
+        const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${row.espn_match_id}`;
         const data = await httpsGet(url);
         const header = data.header;
         if (header) {
@@ -112,7 +112,7 @@ async function main() {
         console.warn(`${TAG}   [WARN] ESPN summary fetch failed: ${e.message}`);
       }
     } else {
-      console.log(`${TAG}   ${row.match_id}: no espn_event_id in DB — cannot fetch by ID`);
+      console.log(`${TAG}   ${row.match_id}: no espn_match_id in DB — cannot fetch by ID`);
     }
   }
 

@@ -104,7 +104,7 @@ console.log('\n[AUDIT] [STEP 4] Listing all completed 2026 matches...');
 const [completedMatches] = await conn.query(`
   SELECT f.match_id, f.match_date, ht.name as home_team, at2.name as away_team,
          f.home_score, f.away_score, f.status, f.group_letter, f.matchday,
-         f.espn_event_id,
+         f.espn_match_id,
          (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.match_id = f.match_id) as has_stats,
          (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.match_id = f.match_id) as event_count,
          (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.match_id = f.match_id AND l.is_confirmed = 1) as confirmed_lineups,
@@ -136,7 +136,7 @@ for (const fid of june17Matchs) {
   const [rows] = await conn.query(`
     SELECT f.match_id, ht.name as home_team, at2.name as away_team,
            f.home_score, f.away_score, f.status, f.group_letter, f.matchday,
-           f.kickoff_utc, f.espn_event_id, f.attendance,
+           f.kickoff_utc, f.espn_match_id, f.attendance,
            v.name as venue_name, v.city as venue_city
     FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -156,7 +156,7 @@ for (const fid of june17Matchs) {
   console.log(`  Group: ${r.group_letter} | Matchday: ${r.matchday}`);
   console.log(`  Kickoff: ${r.kickoff_utc?.toISOString()}`);
   console.log(`  Venue: ${r.venue_name}, ${r.venue_city}`);
-  console.log(`  ESPN ID: ${r.espn_event_id} | Attendance: ${r.attendance}`);
+  console.log(`  ESPN ID: ${r.espn_match_id} | Attendance: ${r.attendance}`);
 
   // Check match stats
   const [stats] = await conn.query(`SELECT * FROM wc2026_match_stats WHERE match_id = ?`, [fid]);

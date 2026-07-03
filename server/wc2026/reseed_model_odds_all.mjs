@@ -152,7 +152,7 @@ const MEX_HOME_MATCHS = new Set(['wc26-g-001', 'wc26-g-005']);
 // USA gets home advantage at their venues
 const USA_HOME_MATCHS = new Set(['wc26-g-005']); // PAR vs USA — USA is "away" but at US venue
 
-function getLambdas(homeId, awayId, matchId) {
+function getLambdas(homeId, awayId, espn_match_id) {
   const hp = TEAM_PARAMS[homeId] ?? [1.30, 0.88];
   const ap = TEAM_PARAMS[awayId] ?? [1.30, 0.88];
 
@@ -161,10 +161,10 @@ function getLambdas(homeId, awayId, matchId) {
   let lambdaA = ap[0] * hp[1]; // away attack × home defense
 
   // Apply home advantage
-  if (MEX_HOME_MATCHS.has(matchId) && homeId === 'mex') {
+  if (MEX_HOME_MATCHS.has(espn_match_id) && homeId === 'mex') {
     lambdaH *= HOME_ADV;
     lambdaA /= HOME_ADV;
-  } else if (MEX_HOME_MATCHS.has(matchId) && awayId === 'mex') {
+  } else if (MEX_HOME_MATCHS.has(espn_match_id) && awayId === 'mex') {
     // Mexico is away but at Azteca — give them home advantage
     lambdaA *= HOME_ADV;
     lambdaH /= HOME_ADV;

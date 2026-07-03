@@ -46,7 +46,7 @@ console.log(`  errors: ${result.errors.length}`);
 if (result.matchSummaries.length > 0) {
   console.log("[SEED] [OUTPUT] Match summaries:");
   for (const s of result.matchSummaries) {
-    console.log(`  ${s.matchId}: ${s.homeTeam} ${s.score} ${s.awayTeam} — status=${s.status}`);
+    console.log(`  ${s.espn_match_id}: ${s.homeTeam} ${s.score} ${s.awayTeam} — status=${s.status}`);
   }
 }
 

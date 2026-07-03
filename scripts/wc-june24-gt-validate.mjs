@@ -15,7 +15,7 @@ dotenv.config();
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 
 // ─── GROUND TRUTH ─────────────────────────────────────────────────────────────
-// Format: { matchId, awayCode, homeCode, kickoffET, bookOdds }
+// Format: { espn_match_id, awayCode, homeCode, kickoffET, bookOdds }
 // kickoffET: local Eastern Time (e.g. "3:00 PM ET")
 // bookOdds: all 12 DK book odds values
 const GT = [

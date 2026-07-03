@@ -70,12 +70,12 @@ let errors = 0;
 let warnings = 0;
 let checks = 0;
 
-function check(label, actual, expected, matchId) {
+function check(label, actual, expected, espn_match_id) {
   checks++;
   if (actual === expected) {
-    PASS(`[${matchId}] ${label}: ${actual} ✓`);
+    PASS(`[${espn_match_id}] ${label}: ${actual} ✓`);
   } else {
-    FAIL(`[${matchId}] ${label}: DB=${actual} | EXPECTED=${expected}`);
+    FAIL(`[${espn_match_id}] ${label}: DB=${actual} | EXPECTED=${expected}`);
     errors++;
   }
 }

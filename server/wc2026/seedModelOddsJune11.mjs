@@ -113,22 +113,22 @@ async function main() {
       console.error(`[ModelSeed] [VERIFY] FAIL — No match found for ${match.homeTeamName} vs ${match.awayTeamName}`);
       continue;
     }
-    const matchId = match.match_id;
-    console.log(`[ModelSeed] [STATE] match_id=${matchId}`);
+    const espn_match_id = match.match_id;
+    console.log(`[ModelSeed] [STATE] match_id=${espn_match_id}`);
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
-      [matchId, MODEL_BOOK_ID]
+      [espn_match_id, MODEL_BOOK_ID]
     );
     console.log(`[ModelSeed] [STEP] Deleted ${del.affectedRows} existing model rows`);
     const rows = match.markets.map(m => [
-      matchId, snapshotTs, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, 0,
+      espn_match_id, snapshotTs, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, 0,
     ]);
     const [ins] = await conn.query(
       'INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ?',
       [rows]
     );
     totalInserted += ins.affectedRows;
-    console.log(`[ModelSeed] [OUTPUT] Inserted ${ins.affectedRows} model odds rows for match_id=${matchId}`);
+    console.log(`[ModelSeed] [OUTPUT] Inserted ${ins.affectedRows} model odds rows for match_id=${espn_match_id}`);
     const oneX2 = match.markets.filter(m => m.market === '1X2');
     const probSum = oneX2.reduce((s, m) => s + m.impliedProb, 0);
     console.log(`[ModelSeed] [VERIFY] 1X2 prob sum=${probSum.toFixed(4)} → ${Math.abs(probSum - 1.0) < 0.001 ? 'PASS' : 'FAIL'}`);

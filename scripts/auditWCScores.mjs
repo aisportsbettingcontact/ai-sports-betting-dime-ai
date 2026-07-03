@@ -17,7 +17,7 @@
  * Strategy:
  *   1. Pull all DB records for each tournament
  *   2. Pull ESPN API results for each tournament
- *   3. Match by ESPN event ID (espn_event_id) where available, fall back to team name matching
+ *   3. Match by ESPN event ID (espn_match_id) where available, fall back to team name matching
  *   4. Compare home_score, away_score, home_team, away_team
  *   5. Report all discrepancies with full context
  */
@@ -170,7 +170,7 @@ async function main() {
 
   const [bt2018] = await conn.execute(
     `SELECT id, tournament_year, stage, group_letter, matchday, match_date,
-            home_team, away_team, home_score, away_score, result, espn_event_id
+            home_team, away_team, home_score, away_score, result, espn_match_id
      FROM wc_bt_matches
      WHERE tournament_year = 2018 AND stage = 'GROUP'
      ORDER BY match_date, kickoff_utc`
@@ -179,7 +179,7 @@ async function main() {
 
   const [bt2022] = await conn.execute(
     `SELECT id, tournament_year, stage, group_letter, matchday, match_date,
-            home_team, away_team, home_score, away_score, result, espn_event_id
+            home_team, away_team, home_score, away_score, result, espn_match_id
      FROM wc_bt_matches
      WHERE tournament_year = 2022 AND stage = 'GROUP'
      ORDER BY match_date, kickoff_utc`
@@ -188,7 +188,7 @@ async function main() {
 
   const [fx2026] = await conn.execute(
     `SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
-            home_score, away_score, status, espn_event_id
+            home_score, away_score, status, espn_match_id
      FROM wc2026_matches
      WHERE stage = 'GROUP' AND status = 'FT'
      ORDER BY kickoff_utc`
@@ -222,8 +222,8 @@ async function main() {
     const awayId = isWc2026 ? dbRow.away_team_id : normalizeTeamName(dbRow.away_team);
 
     // Try ESPN event ID first
-    if (dbRow.espn_event_id) {
-      const byId = espnList.find(e => e.espnId === String(dbRow.espn_event_id));
+    if (dbRow.espn_match_id) {
+      const byId = espnList.find(e => e.espnId === String(dbRow.espn_match_id));
       if (byId) return { match: byId, method: 'espn_id' };
     }
 
@@ -311,7 +311,7 @@ async function main() {
           dbAwayScore: dbAway,
           espnHomeScore,
           espnAwayScore,
-          espnEventId: ev.espnId,
+          espnMatchId: ev.espnId,
           method,
           isWc2026,
         };

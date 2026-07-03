@@ -508,7 +508,7 @@ function applyDrawFloor(homeWin, draw, awayWin) {
 // NO book ML dependency for lambda computation
 const MATCHES = [
   {
-    matchId: 'wc26-g-057',
+    espn_match_id: 'wc26-g-057',
     homeCode: 'CUW', awayCode: 'CIV',
     homeName: 'Curaçao', awayName: 'Ivory Coast',
     // DK spread line (home perspective): CUW +2.5 means spreadLine = +2.5
@@ -516,35 +516,35 @@ const MATCHES = [
     dkSpreadLine: 2.5,
   },
   {
-    matchId: 'wc26-g-058',
+    espn_match_id: 'wc26-g-058',
     homeCode: 'ECU', awayCode: 'GER',
     homeName: 'Ecuador', awayName: 'Germany',
     // ECU +1.5 means spreadLine = +1.5
     dkSpreadLine: 1.5,
   },
   {
-    matchId: 'wc26-g-059',
+    espn_match_id: 'wc26-g-059',
     homeCode: 'JPN', awayCode: 'SWE',
     homeName: 'Japan', awayName: 'Sweden',
     // JPN -1.5 means spreadLine = -1.5
     dkSpreadLine: -1.5,
   },
   {
-    matchId: 'wc26-g-060',
+    espn_match_id: 'wc26-g-060',
     homeCode: 'TUN', awayCode: 'NED',
     homeName: 'Tunisia', awayName: 'Netherlands',
     // TUN +2.5 means spreadLine = +2.5
     dkSpreadLine: 2.5,
   },
   {
-    matchId: 'wc26-g-055',
+    espn_match_id: 'wc26-g-055',
     homeCode: 'TUR', awayCode: 'USA',
     homeName: 'Turkey', awayName: 'United States',
     // TUR +1.5 means spreadLine = +1.5
     dkSpreadLine: 1.5,
   },
   {
-    matchId: 'wc26-g-056',
+    espn_match_id: 'wc26-g-056',
     homeCode: 'PAR', awayCode: 'AUS',
     homeName: 'Paraguay', awayName: 'Australia',
     // PAR -1.5 means spreadLine = -1.5
@@ -563,12 +563,12 @@ console.log(`${TAG} ${'═'.repeat(60)}\n`);
 let totalOddsRows = 0, totalProjRows = 0, totalErrors = 0;
 
 for (const f of MATCHES) {
-  console.log(`${TAG} ─── ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+  console.log(`${TAG} ─── ${f.espn_match_id} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
   // Step 1: Clear existing model rows
   const [del] = await conn.query(
     `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-    [f.matchId, MODEL_BOOK_ID]
+    [f.espn_match_id, MODEL_BOOK_ID]
   );
   console.log(`${TAG} [STEP 1] Cleared ${del.affectedRows} existing model rows`);
 
@@ -643,12 +643,12 @@ for (const f of MATCHES) {
   const nvDcX2Prob = adj.a + adj.d;
   const nvNoDrawHomeProb = adj.h / (adj.h + adj.a);
   const nvNoDrawAwayProb = adj.a / (adj.h + adj.a);
-  const dc1xOdds = clampSmallint(probToAmerican(nvDc1xProb), `dc1x_${f.matchId}`);
-  const dcX2Odds = clampSmallint(probToAmerican(nvDcX2Prob), `dcX2_${f.matchId}`);
-  const noDrawHomeOdds = clampSmallint(probToAmerican(nvNoDrawHomeProb), `noDrawHome_${f.matchId}`);
-  const noDrawAwayOdds = clampSmallint(probToAmerican(nvNoDrawAwayProb), `noDrawAway_${f.matchId}`);
-  const bttsYesOdds = clampSmallint(probToAmerican(sim.btts), `bttsYes_${f.matchId}`);
-  const bttsNoOdds = clampSmallint(probToAmerican(1 - sim.btts), `bttsNo_${f.matchId}`);
+  const dc1xOdds = clampSmallint(probToAmerican(nvDc1xProb), `dc1x_${f.espn_match_id}`);
+  const dcX2Odds = clampSmallint(probToAmerican(nvDcX2Prob), `dcX2_${f.espn_match_id}`);
+  const noDrawHomeOdds = clampSmallint(probToAmerican(nvNoDrawHomeProb), `noDrawHome_${f.espn_match_id}`);
+  const noDrawAwayOdds = clampSmallint(probToAmerican(nvNoDrawAwayProb), `noDrawAway_${f.espn_match_id}`);
+  const bttsYesOdds = clampSmallint(probToAmerican(sim.btts), `bttsYes_${f.espn_match_id}`);
+  const bttsNoOdds = clampSmallint(probToAmerican(1 - sim.btts), `bttsNo_${f.espn_match_id}`);
 
   console.log(`${TAG} [STEP 5] Model 1X2: home=${modelHomeML} draw=${modelDrawML} away=${modelAwayML}`);
   console.log(`${TAG} [STEP 5] Model TOTAL (line=${modelTotal}): over=${modelOverOdds}(p=${overProb.toFixed(4)}) under=${modelUnderOdds}(p=${underProb.toFixed(4)})`);
@@ -684,7 +684,7 @@ for (const f of MATCHES) {
   let rowsInserted = 0;
   for (const row of oddsRows) {
     if (row.odds === null) {
-      console.error(`${TAG} [ERROR] NULL odds for ${f.matchId} ${row.market}/${row.side} prob=${row.prob}`);
+      console.error(`${TAG} [ERROR] NULL odds for ${f.espn_match_id} ${row.market}/${row.side} prob=${row.prob}`);
       totalErrors++;
       continue;
     }
@@ -692,13 +692,13 @@ for (const f of MATCHES) {
       `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts)
        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
        ON DUPLICATE KEY UPDATE american_odds=VALUES(american_odds), implied_prob=VALUES(implied_prob), snapshot_ts=NOW()`,
-      [f.matchId, MODEL_BOOK_ID, row.market, row.side, row.line, row.odds, parseFloat(row.prob.toFixed(6))]
+      [f.espn_match_id, MODEL_BOOK_ID, row.market, row.side, row.line, row.odds, parseFloat(row.prob.toFixed(6))]
     );
     console.log(    `${TAG} [STEP 7] INSERT: ${row.market}/${row.side} line=${row.line} american_odds=${row.odds > 0 ? '+' : ''}${row.odds} prob=${row.prob.toFixed(4)}`);
     rowsInserted++;
   }
   totalOddsRows += rowsInserted;
-  console.log(`${TAG} [OUTPUT] Inserted ${rowsInserted}/12 model rows for ${f.matchId}`);
+  console.log(`${TAG} [OUTPUT] Inserted ${rowsInserted}/12 model rows for ${f.espn_match_id}`);
 
   // Step 8: Upsert projection row
   await conn.query(`
@@ -746,7 +746,7 @@ for (const f of MATCHES) {
       btts_yes_odds=VALUES(btts_yes_odds), btts_no_odds=VALUES(btts_no_odds),
       modeled_at=NOW()
   `, [
-    f.matchId, MODEL_VERSION, N_SIMULATIONS,
+    f.espn_match_id, MODEL_VERSION, N_SIMULATIONS,
     f.homeName, f.awayName,
     lambdaH, lambdaA,
     adj.h, adj.d, adj.a,
@@ -765,7 +765,7 @@ for (const f of MATCHES) {
     bttsYesOdds, bttsNoOdds,
   ]);
   totalProjRows++;
-  console.log(`${TAG} [OUTPUT] Upserted projection: ${f.matchId} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
+  console.log(`${TAG} [OUTPUT] Upserted projection: ${f.espn_match_id} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
   console.log('');
 }
 
@@ -778,11 +778,11 @@ let allPass = true;
 for (const f of MATCHES) {
   const [oddsRows] = await conn.query(
     `SELECT market, selection, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ? ORDER BY market, selection`,
-    [f.matchId, MODEL_BOOK_ID]
+    [f.espn_match_id, MODEL_BOOK_ID]
   );
   const [projRows] = await conn.query(
     `SELECT proj_home_score, proj_away_score, proj_total, proj_spread, model_home_ml, model_draw_ml, model_away_ml, home_spread_odds, away_spread_odds, btts_prob FROM wc2026_model_projections WHERE match_id = ? ORDER BY modeled_at DESC LIMIT 1`,
-    [f.matchId]
+    [f.espn_match_id]
   );
 
   const oddsCount = oddsRows.length;
@@ -802,7 +802,7 @@ for (const f of MATCHES) {
   const pass = oddsCount === 12 && projCount === 1 && nullOdds === 0 && probSumOk && spreadSumOk;
   if (!pass) allPass = false;
 
-  console.log(`${TAG}   ${f.matchId}: odds=${oddsCount}/12 ${pass ? 'PASS ✓' : 'FAIL ✗'} | proj=${projCount === 1 ? 'PASS ✓' : 'FAIL ✗'} | ${f.homeName}(h) vs ${f.awayName}(a)`);
+  console.log(`${TAG}   ${f.espn_match_id}: odds=${oddsCount}/12 ${pass ? 'PASS ✓' : 'FAIL ✗'} | proj=${projCount === 1 ? 'PASS ✓' : 'FAIL ✗'} | ${f.homeName}(h) vs ${f.awayName}(a)`);
   if (proj) {
     console.log(`${TAG}     proj=${proj.proj_home_score}-${proj.proj_away_score} total=${proj.proj_total} spread=${proj.proj_spread}`);
     console.log(`${TAG}     ML: home=${proj.model_home_ml} draw=${proj.model_draw_ml} away=${proj.model_away_ml}`);

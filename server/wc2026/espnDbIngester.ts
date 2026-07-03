@@ -25,8 +25,8 @@
  *
  * UPSERT STRATEGY:
  *   - All tables use INSERT ... ON DUPLICATE KEY UPDATE
- *   - matchId is the natural key for all match-scoped tables
- *   - (matchId, athleteId) is the key for player_stats and lineups
+ *   - espnMatchId is the natural key for all match-scoped ESPN tables
+ *   - (espnMatchId, athleteId) is the key for player_stats and lineups
  *   - abbreviation is the key for glossary
  *   - Shot map: DELETE + re-INSERT on each ingest (shots can change mid-match)
  *
@@ -111,11 +111,11 @@ export async function ingestEspnMatchData(
 ): Promise<EspnIngestResult> {
   const startMs = now();
   const db = await getDb();
-  const matchId = data.gameId;
+  const espnMatchId = data.gameId;
   const { dryRun = false } = opts;
 
   const result: EspnIngestResult = {
-    matchId,
+    matchId: espnMatchId,
     success: false,
     phases: [],
     totalRowsWritten: 0,
@@ -124,7 +124,7 @@ export async function ingestEspnMatchData(
   };
 
   console.log(`\n${TAG} ${"▓".repeat(70)}`);
-  console.log(`${TAG} ESPN DB INGEST — matchId=${matchId} dryRun=${dryRun}`);
+  console.log(`${TAG} ESPN DB INGEST — espnMatchId=${espnMatchId} dryRun=${dryRun}`);
   console.log(`${TAG} scrapedAt=${data.scrapedAt} scrapeDurationMs=${data.scrapeDurationMs}`);
   console.log(`${TAG} ${"▓".repeat(70)}\n`);
 
@@ -157,7 +157,7 @@ export async function ingestEspnMatchData(
     logState(`homeFormation=${data.lineups.home.formation} awayFormation=${data.lineups.away.formation}`);
 
     const row = {
-      matchId,
+      espnMatchId,
       uid: gs.uid ?? null,
       competition: gs.competition ?? null,
       round: gs.competition?.split(",")[1]?.trim() ?? null,
@@ -199,7 +199,7 @@ export async function ingestEspnMatchData(
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_matches matchId=${matchId} matchRound=${row.matchRound}`);
+    logStep(`Upserting wc2026_espn_matches espnMatchId=${espnMatchId} matchRound=${row.matchRound}`);
     if (!dryRun) {
       await db.insert(wc2026EspnMatches).values(row).onDuplicateKeyUpdate({
         set: { ...row, updatedAt: now() },
@@ -247,7 +247,7 @@ export async function ingestEspnMatchData(
     logState(`corners: ${corners.home} / ${corners.away} | saves: ${saves.home} / ${saves.away}`);
 
     const row = {
-      matchId,
+      espnMatchId,
       matchRound: data.seasonSlug || null,
       homeTeamAbbrev: ts.homeAbbrev,
       awayTeamAbbrev: ts.awayAbbrev,
@@ -271,7 +271,7 @@ export async function ingestEspnMatchData(
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_team_stats matchId=${matchId}`);
+    logStep(`Upserting wc2026_espn_team_stats espnMatchId=${espnMatchId}`);
     if (!dryRun) {
       await db.insert(wc2026EspnTeamStats).values(row).onDuplicateKeyUpdate({
         set: { ...row, updatedAt: now() },
@@ -317,7 +317,7 @@ export async function ingestEspnMatchData(
     logState(`fouls: committed=${f.homeFoulsCommitted}/${f.awayFoulsCommitted} offsides=${f.homeOffsides}/${f.awayOffsides}`);
 
     const row = {
-      matchId,
+      espnMatchId,
       matchRound: data.seasonSlug || null,
       homeTeamAbbrev: data.gameStrip.homeTeam.abbrev,
       awayTeamAbbrev: data.gameStrip.awayTeam.abbrev,
@@ -424,7 +424,7 @@ export async function ingestEspnMatchData(
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_match_stats matchId=${matchId}`);
+    logStep(`Upserting wc2026_espn_match_stats espnMatchId=${espnMatchId}`);
     if (!dryRun) {
       await db.insert(wc2026EspnMatchStats).values(row).onDuplicateKeyUpdate({
         set: { ...row, updatedAt: now() },
@@ -463,7 +463,7 @@ export async function ingestEspnMatchData(
     logState(`homeXA=${eg.homeTeamXA} awayXA=${eg.awayTeamXA}`);
 
     const row = {
-      matchId,
+      espnMatchId,
       matchRound: data.seasonSlug || null,
       homeTeamAbbrev: data.gameStrip.homeTeam.abbrev,
       awayTeamAbbrev: data.gameStrip.awayTeam.abbrev,
@@ -482,7 +482,7 @@ export async function ingestEspnMatchData(
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_expected_goals matchId=${matchId}`);
+    logStep(`Upserting wc2026_espn_expected_goals espnMatchId=${espnMatchId}`);
     if (!dryRun) {
       await db.insert(wc2026EspnExpectedGoals).values(row).onDuplicateKeyUpdate({
         set: { ...row, updatedAt: now() },
@@ -513,15 +513,15 @@ export async function ingestEspnMatchData(
       result.phases.push({ phase: 6, table: "wc2026_espn_shot_map", rowsWritten: 0, pass: true });
     } else {
       // DELETE existing shots for this match then re-INSERT (shots can change mid-match)
-      logStep(`Deleting existing shots for matchId=${matchId}`);
+      logStep(`Deleting existing shots for espnMatchId=${espnMatchId}`);
       if (!dryRun) {
-        await db.execute(sql`DELETE FROM wc2026_espn_shot_map WHERE matchId = ${matchId}`);
+        await db.execute(sql`DELETE FROM wc2026_espn_shot_map WHERE espn_match_id = ${espnMatchId}`);
       }
 
       const rows = shots.map((shot, idx) => ({
-        matchId,
+        espnMatchId,
         matchRound: data.seasonSlug || null,
-        shotId: shot.shotId || `${matchId}-${idx}`,
+        shotId: shot.shotId || `${espnMatchId}-${idx}`,
         sequence: shot.sequence ?? idx,
         playerId: shot.playerId || null,
         playerName: shot.playerName || null,
@@ -647,7 +647,7 @@ export async function ingestEspnMatchData(
       if (tch !== null || g !== null || sog !== null) statNonNullCount++;
 
       const row = {
-        matchId,
+        espnMatchId,
         matchRound: data.seasonSlug || null,
         athleteId: p.athleteId,
         name: p.name,
@@ -727,7 +727,7 @@ export async function ingestEspnMatchData(
       if (sv !== null || ga !== null) statNonNullCount++;
 
       const row = {
-        matchId,
+        espnMatchId,
         matchRound: data.seasonSlug || null,
         athleteId: gkData.athleteId,
         name: gkData.name,
@@ -822,7 +822,7 @@ export async function ingestEspnMatchData(
     for (const entry of allEntries) {
       const p = entry.player;
       const row = {
-        matchId,
+        espnMatchId,
         matchRound: data.seasonSlug || null,
         teamId: entry.lineup.teamId ?? null,
         teamAbbrev: entry.lineup.teamAbbrev,
@@ -923,7 +923,7 @@ export async function ingestEspnMatchData(
   result.success = passCount === 9 && result.errors.length === 0;
 
   console.log(`\n${TAG} ${"▓".repeat(70)}`);
-  console.log(`${TAG} INGEST COMPLETE — matchId=${matchId}`);
+  console.log(`${TAG} INGEST COMPLETE — espnMatchId=${espnMatchId}`);
   console.log(`${TAG} ${"─".repeat(70)}`);
   for (const phase of result.phases) {
     const status = phase.pass ? "✓ PASS" : "✗ FAIL";
@@ -947,7 +947,7 @@ export async function scrapeAndIngest(
   opts: { dryRun?: boolean } = {}
 ): Promise<EspnIngestResult> {
   const { scrapeEspnMatchPage } = await import("./espnPageScraper");
-  console.log(`${TAG} [SCRAPE] Starting scrape for gameId=${gameId}`);
+  console.log(`${TAG} [SCRAPE] Starting scrape for espnMatchId=${gameId}`);
   const data = await scrapeEspnMatchPage(gameId);
   console.log(`${TAG} [SCRAPE] Complete — ${data.scrapeDurationMs}ms | pages=${data.pagesLoaded.join(",")} | seasonSlug=${data.seasonSlug} | seasonName=${data.seasonName}`);
   return ingestEspnMatchData(data, opts);

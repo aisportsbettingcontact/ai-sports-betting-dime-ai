@@ -208,13 +208,13 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, matchStats
 
     // C1: HARD_FAIL on NULL in primary lambda fields
     if (xg === null || xg === undefined) {
-      hardFail('C1_NULL_XG', `${teamCode} match ${row.matchId}: homeXG/awayXG is NULL — real data required`);
+      hardFail('C1_NULL_XG', `${teamCode} match ${row.espn_match_id}: homeXG/awayXG is NULL — real data required`);
     }
     if (xgot === null || xgot === undefined) {
-      hardFail('C1_NULL_XGOT', `${teamCode} match ${row.matchId}: homeXGOT/awayXGOT is NULL — real data required`);
+      hardFail('C1_NULL_XGOT', `${teamCode} match ${row.espn_match_id}: homeXGOT/awayXGOT is NULL — real data required`);
     }
 
-    log('REAL_DATA', 'FORM_ROW', `  ${teamCode} ${row.matchId} [${row.side}] xG=${fmt(xg)} xGOT=${fmt(xgot)} xA=${fmt(xa)} SOT=${sot} shots=${shots} poss=${poss} goals=${goals}`);
+    log('REAL_DATA', 'FORM_ROW', `  ${teamCode} ${row.espn_match_id} [${row.side}] xG=${fmt(xg)} xGOT=${fmt(xgot)} xA=${fmt(xa)} SOT=${sot} shots=${shots} poss=${poss} goals=${goals}`);
 
     totalXG += Number(xg);
     totalXGOT += Number(xgot);
@@ -252,14 +252,14 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, matchStats
   const teamPlayerRows = playerRows.filter(r => r.teamAbbrev === teamCode);
   const totalPlayerXG = teamPlayerRows.reduce((s, r) => s + Number(r.xG ?? 0), 0);
   const totalPlayerGoals = teamPlayerRows.reduce((s, r) => s + Number(r.g ?? 0), 0);
-  const playerMatchIds = [...new Set(teamPlayerRows.map(r => r.matchId))];
+  const playerMatchIds = [...new Set(teamPlayerRows.map(r => r.espn_match_id))];
   const psSignal = playerMatchIds.length > 0 ? totalPlayerXG / playerMatchIds.length : avgXG;
 
   // C4: Player goal assertion — compare player goals vs official score
   for (const mId of playerMatchIds) {
-    const matchPlayerRows = teamPlayerRows.filter(r => r.matchId === mId);
+    const matchPlayerRows = teamPlayerRows.filter(r => r.espn_match_id === mId);
     const playerGoalSum = matchPlayerRows.reduce((s, r) => s + Number(r.g ?? 0), 0);
-    const gsRow = gsRows.find(r => r.matchId === mId);
+    const gsRow = gsRows.find(r => r.espn_match_id === mId);
     if (gsRow) {
       const officialGoals = gsRow.side === 'home' ? gsRow.homeScore : gsRow.awayScore;
       const diff = Math.abs(playerGoalSum - officialGoals);
@@ -274,7 +274,7 @@ function aggregateTeamForm(teamCode, gsRows, playerRows, shotMapRows, matchStats
   // Shot map signal (sm)
   const teamShotRows = shotMapRows.filter(r => r.teamAbbrev === teamCode);
   const totalShotXG = teamShotRows.reduce((s, r) => s + Number(r.xG ?? 0), 0);
-  const shotMatchIds = [...new Set(teamShotRows.map(r => r.matchId))];
+  const shotMatchIds = [...new Set(teamShotRows.map(r => r.espn_match_id))];
   const smSignal = shotMatchIds.length > 0 ? totalShotXG / shotMatchIds.length : avgXG;
 
   // xA signal
@@ -331,32 +331,32 @@ function backtestVariation(v, completedMatches, db_xg, db_ms, db_ts, db_ps, db_s
     // Build GS rows for each team (exclude this match)
     const homeGS = db_xg.filter(r =>
       (r.homeTeamAbbrev === homeCode || r.awayTeamAbbrev === homeCode) &&
-      r.matchId !== m.matchId && r.matchRound === 'group-stage'
+      r.espn_match_id !== m.espn_match_id && r.matchRound === 'group-stage'
     ).map(r => ({
       ...r,
       side: r.homeTeamAbbrev === homeCode ? 'home' : 'away',
       homeScore: r.homeScore ?? 0, awayScore: r.awayScore ?? 0,
-      possession: db_ts.find(t => t.matchId === r.matchId)?.possession ?? 50,
-      possessionAway: db_ts.find(t => t.matchId === r.matchId)?.possessionAway ?? 50,
-      homeShotsOnGoal: db_ms.find(t => t.matchId === r.matchId)?.homeShotsOnGoal ?? 0,
-      awayShotsOnGoal: db_ms.find(t => t.matchId === r.matchId)?.awayShotsOnGoal ?? 0,
-      homeShots: db_ms.find(t => t.matchId === r.matchId)?.homeShots ?? 0,
-      awayShots: db_ms.find(t => t.matchId === r.matchId)?.awayShots ?? 0,
+      possession: db_ts.find(t => t.espn_match_id === r.espn_match_id)?.possession ?? 50,
+      possessionAway: db_ts.find(t => t.espn_match_id === r.espn_match_id)?.possessionAway ?? 50,
+      homeShotsOnGoal: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.homeShotsOnGoal ?? 0,
+      awayShotsOnGoal: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.awayShotsOnGoal ?? 0,
+      homeShots: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.homeShots ?? 0,
+      awayShots: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.awayShots ?? 0,
     }));
 
     const awayGS = db_xg.filter(r =>
       (r.homeTeamAbbrev === awayCode || r.awayTeamAbbrev === awayCode) &&
-      r.matchId !== m.matchId && r.matchRound === 'group-stage'
+      r.espn_match_id !== m.espn_match_id && r.matchRound === 'group-stage'
     ).map(r => ({
       ...r,
       side: r.homeTeamAbbrev === awayCode ? 'home' : 'away',
       homeScore: r.homeScore ?? 0, awayScore: r.awayScore ?? 0,
-      possession: db_ts.find(t => t.matchId === r.matchId)?.possession ?? 50,
-      possessionAway: db_ts.find(t => t.matchId === r.matchId)?.possessionAway ?? 50,
-      homeShotsOnGoal: db_ms.find(t => t.matchId === r.matchId)?.homeShotsOnGoal ?? 0,
-      awayShotsOnGoal: db_ms.find(t => t.matchId === r.matchId)?.awayShotsOnGoal ?? 0,
-      homeShots: db_ms.find(t => t.matchId === r.matchId)?.homeShots ?? 0,
-      awayShots: db_ms.find(t => t.matchId === r.matchId)?.awayShots ?? 0,
+      possession: db_ts.find(t => t.espn_match_id === r.espn_match_id)?.possession ?? 50,
+      possessionAway: db_ts.find(t => t.espn_match_id === r.espn_match_id)?.possessionAway ?? 50,
+      homeShotsOnGoal: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.homeShotsOnGoal ?? 0,
+      awayShotsOnGoal: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.awayShotsOnGoal ?? 0,
+      homeShots: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.homeShots ?? 0,
+      awayShots: db_ms.find(t => t.espn_match_id === r.espn_match_id)?.awayShots ?? 0,
     }));
 
     if (homeGS.length === 0 || awayGS.length === 0) continue;
@@ -412,72 +412,72 @@ async function main() {
 
   // A1: xG data (wc2026_espn_expected_goals)
   const [xgAll] = await db.execute(`
-    SELECT eg.matchId, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
+    SELECT eg.espn_match_id, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
            eg.homeXG, eg.awayXG, eg.homeXGOT, eg.awayXGOT, eg.homeXA, eg.awayXA,
            em.homeScore, em.awayScore
     FROM wc2026_espn_expected_goals eg
-    LEFT JOIN wc2026_espn_matches em ON eg.matchId = em.matchId
-    ORDER BY eg.matchRound, eg.matchId
+    LEFT JOIN wc2026_espn_matches em ON eg.espn_match_id = em.espn_match_id
+    ORDER BY eg.matchRound, eg.espn_match_id
   `);
   log('INPUT', 'A1_XG', `wc2026_espn_expected_goals: ${xgAll.length} rows`);
 
   // A2: Match stats (wc2026_espn_match_stats)
   const [msAll] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots,
            homeXG, awayXG, homeXGOT, awayXGOT,
            homeBigChancesCreated, awayBigChancesCreated,
            homeBigChancesMissed, awayBigChancesMissed
     FROM wc2026_espn_match_stats
-    ORDER BY matchRound, matchId
+    ORDER BY matchRound, espn_match_id
   `);
   log('INPUT', 'A2_MS', `wc2026_espn_match_stats: ${msAll.length} rows`);
 
   // A3: Team stats (wc2026_espn_team_stats) — possession
   const [tsAll] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            possession, possessionAway, shotsOnGoal, shotsOnGoalAway,
            shotAttempts, shotAttemptsAway
     FROM wc2026_espn_team_stats
-    ORDER BY matchRound, matchId
+    ORDER BY matchRound, espn_match_id
   `);
   log('INPUT', 'A3_TS', `wc2026_espn_team_stats: ${tsAll.length} rows`);
 
   // A4: Player stats (wc2026_espn_player_stats)
   const [psAll] = await db.execute(`
-    SELECT matchId, matchRound, athleteId, name, teamAbbrev, isHome,
+    SELECT espn_match_id, matchRound, athleteId, name, teamAbbrev, isHome,
            g, xG, xA, sog, shot, a
     FROM wc2026_espn_player_stats
-    ORDER BY matchRound, matchId, teamAbbrev
+    ORDER BY matchRound, espn_match_id, teamAbbrev
   `);
   log('INPUT', 'A4_PS', `wc2026_espn_player_stats: ${psAll.length} rows`);
 
   // A5: Shot map (wc2026_espn_shot_map)
   const [smAll] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, xG, xGOT, distance, shotType, situation
+    SELECT espn_match_id, matchRound, teamAbbrev, xG, xGOT, distance, shotType, situation
     FROM wc2026_espn_shot_map
-    ORDER BY matchRound, matchId
+    ORDER BY matchRound, espn_match_id
   `);
   log('INPUT', 'A5_SM', `wc2026_espn_shot_map: ${smAll.length} rows`);
 
   // A6: Completed KO matches for backtest
   const [koMatches] = await db.execute(`
-    SELECT em.matchId, em.matchRound, em.homeTeamAbbrev, em.awayTeamAbbrev,
+    SELECT em.espn_match_id, em.matchRound, em.homeTeamAbbrev, em.awayTeamAbbrev,
            em.homeScore, em.awayScore
     FROM wc2026_espn_matches em
     WHERE em.matchRound = 'round-of-32'
       AND em.homeScore IS NOT NULL AND em.awayScore IS NOT NULL
       AND em.statusState = 'post'
-    ORDER BY em.matchId
+    ORDER BY em.espn_match_id
   `);
   log('INPUT', 'A6_KO', `Completed KO matches for backtest: ${koMatches.length}`);
   koMatches.forEach(m => {
-    log('STATE', 'KO_MATCH', `  ${m.matchId} ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
+    log('STATE', 'KO_MATCH', `  ${m.espn_match_id} ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
   });
 
   // A7: July 1 matchs
   const [jul1Fix] = await db.execute(`
-    SELECT f.match_id, f.espn_event_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.espn_match_id, f.home_team_id, f.away_team_id,
            f.match_date, f.kickoff_utc,
            ht.fifa_code AS home_code, ht.name AS home_name,
            at.fifa_code AS away_code, at.name AS away_name
@@ -489,7 +489,7 @@ async function main() {
   `);
   log('INPUT', 'A7_FIX', `July 1 matchs: ${jul1Fix.length}`);
   jul1Fix.forEach(f => {
-    log('STATE', 'MATCH', `  ${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
+    log('STATE', 'MATCH', `  ${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_match_id}`);
   });
 
   // C7: Compute empirical xGOT/xG ratio from real GS data
@@ -574,10 +574,10 @@ async function main() {
         r.homeXG !== null && r.awayXG !== null
       ).map(r => {
         const side = r.homeTeamAbbrev === code ? 'home' : 'away';
-        const ts = tsAll.find(t => t.matchId === r.matchId);
-        const ms = msAll.find(t => t.matchId === r.matchId);
+        const ts = tsAll.find(t => t.espn_match_id === r.espn_match_id);
+        const ms = msAll.find(t => t.espn_match_id === r.espn_match_id);
         return {
-          matchId: r.matchId,
+          espn_match_id: r.espn_match_id,
           side,
           homeXG: r.homeXG, awayXG: r.awayXG,
           homeXGOT: r.homeXGOT, awayXGOT: r.awayXGOT,
@@ -690,7 +690,7 @@ async function main() {
     log('PASS', 'PROB_SUM', `${fix.match_id}: pH+pD+pA=${probSum.toFixed(6)} ✓`);
 
     projections.push({
-      matchId: fix.match_id,
+      espn_match_id: fix.match_id,
       homeCode, awayCode,
       lambdaH: hForm.lambda, lambdaA: aForm.lambda,
       projScoreH: hForm.lambda, projScoreA: aForm.lambda,
@@ -710,33 +710,33 @@ async function main() {
   for (const proj of projections) {
     // Verify lambda > 0
     if (proj.lambdaH <= 0 || proj.lambdaA <= 0) {
-      log('FAIL', 'XREF', `${proj.matchId}: lambda <= 0 — FAIL`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.matchId}: lambdas positive ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.espn_match_id}: lambda <= 0 — FAIL`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.espn_match_id}: lambdas positive ✓`); xrefPass++; }
 
     // Verify prob sum
     const s = proj.sim.pH + proj.sim.pD + proj.sim.pA;
     if (Math.abs(s - 1.0) > 0.001) {
-      log('FAIL', 'XREF', `${proj.matchId}: prob sum=${s.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.matchId}: prob sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.espn_match_id}: prob sum=${s.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.espn_match_id}: prob sum ✓`); xrefPass++; }
 
     // Verify ET probs sum to 1
     const etSum = proj.et.pETH + proj.et.pETA;
     if (Math.abs(etSum - 1.0) > 0.001) {
-      log('FAIL', 'XREF', `${proj.matchId}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.matchId}: ET probs sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.espn_match_id}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.espn_match_id}: ET probs sum ✓`); xrefPass++; }
 
     // Verify advance probs sum to 1
     const advSum = proj.pAdvH + proj.pAdvA;
     if (Math.abs(advSum - 1.0) > 0.01) {
-      log('FAIL', 'XREF', `${proj.matchId}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.matchId}: advance probs sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.espn_match_id}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.espn_match_id}: advance probs sum ✓`); xrefPass++; }
 
     // Verify model ML signs are valid (no +74 type errors)
     for (const [market, , model] of proj.markets) {
       if (model !== null && (model === 0 || (model > 0 && model < 100) || (model < 0 && model > -100))) {
-        log('FAIL', 'XREF', `${proj.matchId} [${market}]: model ML=${model} is in invalid range`); xrefFail++;
+        log('FAIL', 'XREF', `${proj.espn_match_id} [${market}]: model ML=${model} is in invalid range`); xrefFail++;
       } else if (model !== null) {
-        log('PASS', 'XREF', `${proj.matchId} [${market}]: model ML=${model} valid ✓`); xrefPass++;
+        log('PASS', 'XREF', `${proj.espn_match_id} [${market}]: model ML=${model} valid ✓`); xrefPass++;
       }
     }
   }
@@ -753,7 +753,7 @@ async function main() {
     winner: { id: winner.id, ...winner },
     variations: results,
     projections: projections.map(p => ({
-      matchId: p.matchId,
+      espn_match_id: p.espn_match_id,
       homeCode: p.homeCode, awayCode: p.awayCode,
       lambdaH: p.lambdaH, lambdaA: p.lambdaA,
       projScoreH: p.projScoreH, projScoreA: p.projScoreA,

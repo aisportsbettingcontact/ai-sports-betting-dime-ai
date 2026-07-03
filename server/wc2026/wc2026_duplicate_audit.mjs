@@ -188,7 +188,7 @@ const [matchCounts] = await conn.query(`
     SUM(CASE WHEN status = 'FT' THEN 1 ELSE 0 END) as completed,
     SUM(CASE WHEN status = 'SCHEDULED' THEN 1 ELSE 0 END) as scheduled,
     SUM(CASE WHEN status = 'LIVE' THEN 1 ELSE 0 END) as live,
-    SUM(CASE WHEN espn_event_id IS NOT NULL THEN 1 ELSE 0 END) as has_espn_id
+    SUM(CASE WHEN espn_match_id IS NOT NULL THEN 1 ELSE 0 END) as has_espn_id
   FROM wc2026_matches
 `);
 const fc = matchCounts[0];
@@ -198,7 +198,7 @@ console.log(`[WC2026_AUDIT] [STATE] Matchs: total=${fc.total_matchs} completed=$
 const [june17] = await conn.query(`
   SELECT f.match_id, ht.name as home, at2.name as away,
          f.home_score, f.away_score, f.status, f.match_date,
-         f.espn_event_id, f.attendance,
+         f.espn_match_id, f.attendance,
          (SELECT COUNT(*) FROM wc2026_match_stats ms WHERE ms.match_id = f.match_id) as has_stats,
          (SELECT COUNT(*) FROM wc2026_match_events me WHERE me.match_id = f.match_id) as event_count,
          (SELECT COUNT(*) FROM wc2026_lineups l WHERE l.match_id = f.match_id AND l.is_confirmed = 1) as confirmed_lineup_count
@@ -210,7 +210,7 @@ const [june17] = await conn.query(`
 `);
 console.log(`\n[WC2026_AUDIT] [STATE] June 17 matchs (${june17.length} total):`);
 june17.forEach(r => {
-  console.log(`  ${r.match_id}: ${r.away} ${r.away_score ?? '?'}-${r.home_score ?? '?'} ${r.home} | status=${r.status} | espnId=${r.espn_event_id} | att=${r.attendance} | stats=${r.has_stats} | events=${r.event_count} | confirmed_lineups=${r.confirmed_lineup_count}`);
+  console.log(`  ${r.match_id}: ${r.away} ${r.away_score ?? '?'}-${r.home_score ?? '?'} ${r.home} | status=${r.status} | espnId=${r.espn_match_id} | att=${r.attendance} | stats=${r.has_stats} | events=${r.event_count} | confirmed_lineups=${r.confirmed_lineup_count}`);
 });
 
 // ─── Final summary ────────────────────────────────────────────────────────────

@@ -146,7 +146,7 @@ async function main() {
       if (!isCorrect) {
         console.log(`  [${status}] ${dbFix.match_id}: DB has home=${dbFix.home_team_id}/away=${dbFix.away_team_id} but AN says home=${anHomeId}/away=${anAwayId}`);
         mismatches.push({
-          matchId: dbFix.match_id,
+          espn_match_id: dbFix.match_id,
           dbHome: dbFix.home_team_id,
           dbAway: dbFix.away_team_id,
           anHome: anHomeId,
@@ -160,7 +160,7 @@ async function main() {
         matched.push(dbFix.match_id);
       }
 
-      anGamesAll.push({ dateStr, anAwayId, anHomeId, matchId: dbFix.match_id });
+      anGamesAll.push({ dateStr, anAwayId, anHomeId, espn_match_id: dbFix.match_id });
     }
     console.log('');
   }
@@ -176,7 +176,7 @@ async function main() {
   if (mismatches.length > 0) {
     console.log('MISMATCHES TO FIX:');
     for (const m of mismatches) {
-      console.log(`  ${m.matchId}: DB home=${m.dbHome}/away=${m.dbAway} → should be home=${m.anHome}/away=${m.anAway}`);
+      console.log(`  ${m.espn_match_id}: DB home=${m.dbHome}/away=${m.dbAway} → should be home=${m.anHome}/away=${m.anAway}`);
     }
   } else {
     console.log('ALL ORIENTATIONS CORRECT ✓');

@@ -185,9 +185,9 @@ try {
   // Will use embedded values below
 }
 
-function getProjection(matchId) {
+function getProjection(espn_match_id) {
   if (reportData) {
-    const p = reportData.projections.find(x => x.matchId === matchId);
+    const p = reportData.projections.find(x => x.espn_match_id === espn_match_id);
     if (p) return p;
   }
   return null;

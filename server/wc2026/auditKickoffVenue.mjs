@@ -103,7 +103,7 @@ for (const r of rows) {
   if (dateMismatch) {
     console.log(`│  match_date EXP: ${expectedMatchDate}  ← SHOULD BE THIS`);
     issues.push({
-      matchId: r.match_id,
+      espn_match_id: r.match_id,
       type: 'DATE_MISMATCH',
       actual: actualMatchDate,
       expected: expectedMatchDate,
@@ -114,7 +114,7 @@ for (const r of rows) {
   console.log(`│  venue:          ${venueDisplay}`);
   if (!r.venue_name) {
     issues.push({
-      matchId: r.match_id,
+      espn_match_id: r.match_id,
       type: 'MISSING_VENUE',
       matchup: `${r.away_name} @ ${r.home_name}`
     });
@@ -130,7 +130,7 @@ if (missingFromDB.length > 0) {
   console.log(`[ERROR] ${missingFromDB.length} match(s) NOT FOUND in DB:`);
   missingFromDB.forEach(id => {
     console.log(`  ❌ ${id}`);
-    issues.push({ matchId: id, type: 'MISSING_FROM_DB' });
+    issues.push({ espn_match_id: id, type: 'MISSING_FROM_DB' });
   });
   console.log();
 }
@@ -152,12 +152,12 @@ if (issues.length === 0) {
 } else {
   for (const iss of issues) {
     if (iss.type === 'DATE_MISMATCH') {
-      console.log(`  ❌ DATE_MISMATCH  [${iss.matchId}] ${iss.matchup}`);
+      console.log(`  ❌ DATE_MISMATCH  [${iss.espn_match_id}] ${iss.matchup}`);
       console.log(`     DB has: ${iss.actual} | Should be: ${iss.expected} | Kickoff ET: ${iss.kickoffET}`);
     } else if (iss.type === 'MISSING_VENUE') {
-      console.log(`  ❌ MISSING_VENUE  [${iss.matchId}] ${iss.matchup}`);
+      console.log(`  ❌ MISSING_VENUE  [${iss.espn_match_id}] ${iss.matchup}`);
     } else if (iss.type === 'MISSING_FROM_DB') {
-      console.log(`  ❌ MISSING_FROM_DB [${iss.matchId}]`);
+      console.log(`  ❌ MISSING_FROM_DB [${iss.espn_match_id}]`);
     }
   }
 }

@@ -243,7 +243,7 @@ const TOURNAMENT_MEAN_XG = 1.15; // WC2026 group stage mean xG per team per matc
  * safeXG — C1 FIX: explicit NULL detection with tournament mean substitution
  * Returns { value, wasNull, source }
  */
-function safeXG(raw, fieldName, matchId, teamAbbrev) {
+function safeXG(raw, fieldName, espn_match_id, teamAbbrev) {
   const v = parseFloat(raw);
   if (raw === null || raw === undefined || isNaN(v)) {
     return { value: TOURNAMENT_MEAN_XG, wasNull: true, source: `TOURNAMENT_MEAN(${TOURNAMENT_MEAN_XG})` };
@@ -260,13 +260,13 @@ function deriveLambdaSingleMatch(role, xgRow, tsRow, smData, psData, W, xGOTDisc
   const isHome = role === 'home';
 
   // C1 FIX: explicit NULL detection
-  const xGResult   = safeXG(isHome ? xgRow.homeXG    : xgRow.awayXG,    'xG',    xgRow.matchId, role);
-  const xGOTResult = safeXG(isHome ? xgRow.homeXGOT  : xgRow.awayXGOT,  'xGOT',  xgRow.matchId, role);
-  const xAResult   = safeXG(isHome ? xgRow.homeXA    : xgRow.awayXA,    'xA',    xgRow.matchId, role);
-  const spResult   = safeXG(isHome ? xgRow.homeXGSetPlay : xgRow.awayXGSetPlay, 'spXG', xgRow.matchId, role);
+  const xGResult   = safeXG(isHome ? xgRow.homeXG    : xgRow.awayXG,    'xG',    xgRow.espn_match_id, role);
+  const xGOTResult = safeXG(isHome ? xgRow.homeXGOT  : xgRow.awayXGOT,  'xGOT',  xgRow.espn_match_id, role);
+  const xAResult   = safeXG(isHome ? xgRow.homeXA    : xgRow.awayXA,    'xA',    xgRow.espn_match_id, role);
+  const spResult   = safeXG(isHome ? xgRow.homeXGSetPlay : xgRow.awayXGSetPlay, 'spXG', xgRow.espn_match_id, role);
 
-  if (xGResult.wasNull)   nullLog.push({ field:'xG',   matchId:xgRow.matchId, role, sub: TOURNAMENT_MEAN_XG });
-  if (xGOTResult.wasNull) nullLog.push({ field:'xGOT', matchId:xgRow.matchId, role, sub: TOURNAMENT_MEAN_XG });
+  if (xGResult.wasNull)   nullLog.push({ field:'xG',   espn_match_id:xgRow.espn_match_id, role, sub: TOURNAMENT_MEAN_XG });
+  if (xGOTResult.wasNull) nullLog.push({ field:'xGOT', espn_match_id:xgRow.espn_match_id, role, sub: TOURNAMENT_MEAN_XG });
 
   const xGBase    = xGResult.value;
   // C7 FIX: empirical xGOT discount passed in (not hardcoded 0.85)
@@ -395,18 +395,18 @@ async function main() {
   // Pull all completed KO matches
   L.step('DB', 'Pulling all completed KO matches from wc2026_espn_matches...');
   const [koMatches] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             homeScore, awayScore, homeLinescores, awayLinescores,
             statusDetail, statusDisplay, round
      FROM wc2026_espn_matches
      WHERE round = 'Round of 32'
        AND (statusDetail = 'FT' OR statusDetail = 'FT-Pens' OR statusDetail LIKE 'Final%')
        AND homeScore IS NOT NULL
-     ORDER BY matchId`
+     ORDER BY espn_match_id`
   );
   L.pass('DB', `Completed KO matches found: ${koMatches.length}`);
   for (const m of koMatches) {
-    L.input('DB', `  matchId=${m.matchId} | ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} | ${m.statusDetail}`);
+    L.input('DB', `  espn_match_id=${m.espn_match_id} | ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} | ${m.statusDetail}`);
   }
 
   if (koMatches.length === 0) {
@@ -414,22 +414,22 @@ async function main() {
     await conn.end(); process.exit(1);
   }
 
-  const koIds = koMatches.map(m => m.matchId);
+  const koIds = koMatches.map(m => m.espn_match_id);
   const ph = koIds.map(()=>'?').join(',');
 
   L.step('DB', `Pulling all 5 ESPN tables for ${koIds.length} matches: [${koIds.join(', ')}]`);
 
   const [xgRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             homeXG, awayXG, homeXGOT, awayXGOT,
             homeXGOpenPlay, awayXGOpenPlay,
             homeXGSetPlay, awayXGSetPlay,
             homeXA, awayXA
-     FROM wc2026_espn_expected_goals WHERE matchId IN (${ph})`, koIds);
+     FROM wc2026_espn_expected_goals WHERE espn_match_id IN (${ph})`, koIds);
   L.pass('DB', `A1 wc2026_espn_expected_goals: ${xgRows.length} rows`);
 
   const [tsRows] = await conn.execute(
-    `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
             possession, possessionAway,
             shotsOnGoal, shotsOnGoalAway,
             shotAttempts, shotAttemptsAway,
@@ -437,26 +437,26 @@ async function main() {
             cornerKicks, cornerKicksAway,
             fouls, foulsAway,
             yellowCards, yellowCardsAway
-     FROM wc2026_espn_team_stats WHERE matchId IN (${ph})`, koIds);
+     FROM wc2026_espn_team_stats WHERE espn_match_id IN (${ph})`, koIds);
   L.pass('DB', `A2 wc2026_espn_team_stats: ${tsRows.length} rows`);
 
   const [smRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as shotXG, SUM(xGOT) as shotXGOT,
             COUNT(*) as shots,
             SUM(CASE WHEN iconType='goal' THEN 1 ELSE 0 END) as goals,
             SUM(CASE WHEN situation='Set Piece' OR situation='Penalty' THEN xG ELSE 0 END) as setXG
-     FROM wc2026_espn_shot_map WHERE matchId IN (${ph})
-     GROUP BY matchId, teamAbbrev`, koIds);
+     FROM wc2026_espn_shot_map WHERE espn_match_id IN (${ph})
+     GROUP BY espn_match_id, teamAbbrev`, koIds);
   L.pass('DB', `A3 wc2026_espn_shot_map: ${smRows.length} team-aggregates`);
 
   const [psRows] = await conn.execute(
-    `SELECT matchId, teamAbbrev,
+    `SELECT espn_match_id, teamAbbrev,
             SUM(xG) as playerXG, SUM(xA) as playerXA,
             SUM(g) as goals, SUM(sog) as shotsOnGoal, SUM(shot) as shots,
             SUM(sv) as saves, SUM(xGC) as xgc, SUM(xGOTC) as xgotc
-     FROM wc2026_espn_player_stats WHERE matchId IN (${ph})
-     GROUP BY matchId, teamAbbrev`, koIds);
+     FROM wc2026_espn_player_stats WHERE espn_match_id IN (${ph})
+     GROUP BY espn_match_id, teamAbbrev`, koIds);
   L.pass('DB', `A4 wc2026_espn_player_stats: ${psRows.length} team-aggregates`);
 
   const [bookRows] = await conn.execute(
@@ -465,10 +465,10 @@ async function main() {
             fbo.book_total_line, fbo.book_over_odds, fbo.book_under_odds,
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
             fbo.to_advance_home_odds, fbo.to_advance_away_odds,
-            f.espn_event_id, f.home_team_id, f.away_team_id
+            f.espn_match_id, f.home_team_id, f.away_team_id
      FROM wc2026_frozen_book_odds fbo
      JOIN wc2026_matches f ON f.match_id = fbo.match_id
-     WHERE f.espn_event_id IN (${ph})`, koIds);
+     WHERE f.espn_match_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
   // Pull Jul 1 match book odds (C10: includes book_spread_line per match)
@@ -480,7 +480,7 @@ async function main() {
             fbo.book_btts_yes_odds, fbo.book_btts_no_odds,
             fbo.to_advance_home_odds, fbo.to_advance_away_odds,
             fbo.book_dc_1x_odds, fbo.book_dc_x2_odds, fbo.book_no_draw_home_odds,
-            f.espn_event_id, f.home_team_id, f.away_team_id,
+            f.espn_match_id, f.home_team_id, f.away_team_id,
             f.match_date,
             ht.fifa_code as homeAbbrev, at2.fifa_code as awayAbbrev,
             ht.name as homeName, at2.name as awayName
@@ -503,25 +503,25 @@ async function main() {
   const phT = jul1Teams.map(()=>'?').join(',');
 
   const [gsXG] = await conn.execute(
-    `SELECT e.matchId, m.homeTeamAbbrev, m.awayTeamAbbrev,
+    `SELECT e.espn_match_id, m.homeTeamAbbrev, m.awayTeamAbbrev,
             e.homeXG, e.awayXG, e.homeXGOT, e.awayXGOT,
             e.homeXGSetPlay, e.awayXGSetPlay, e.homeXA, e.awayXA
      FROM wc2026_espn_expected_goals e
-     JOIN wc2026_espn_matches m ON m.matchId = e.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = e.espn_match_id
      WHERE (m.homeTeamAbbrev IN (${phT}) OR m.awayTeamAbbrev IN (${phT}))
        AND e.homeXG IS NOT NULL
        AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
-     ORDER BY e.matchId`,
+     ORDER BY e.espn_match_id`,
     [...jul1Teams, ...jul1Teams]
   );
   L.pass('DB', `Group stage xG rows for Jul 1 teams: ${gsXG.length}`);
 
   const [gsTS] = await conn.execute(
-    `SELECT ts.matchId, m.homeTeamAbbrev, m.awayTeamAbbrev,
+    `SELECT ts.espn_match_id, m.homeTeamAbbrev, m.awayTeamAbbrev,
             ts.possession, ts.possessionAway,
             ts.shotAttempts, ts.shotAttemptsAway
      FROM wc2026_espn_team_stats ts
-     JOIN wc2026_espn_matches m ON m.matchId = ts.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = ts.espn_match_id
      WHERE (m.homeTeamAbbrev IN (${phT}) OR m.awayTeamAbbrev IN (${phT}))
        AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))`,
     [...jul1Teams, ...jul1Teams]
@@ -529,25 +529,25 @@ async function main() {
   L.pass('DB', `Group stage team stats rows: ${gsTS.length}`);
 
   const [gsPS] = await conn.execute(
-    `SELECT ps.matchId, ps.teamAbbrev, SUM(ps.xG) as playerXG, SUM(ps.xA) as playerXA
+    `SELECT ps.espn_match_id, ps.teamAbbrev, SUM(ps.xG) as playerXG, SUM(ps.xA) as playerXA
      FROM wc2026_espn_player_stats ps
-     JOIN wc2026_espn_matches m ON m.matchId = ps.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = ps.espn_match_id
      WHERE ps.teamAbbrev IN (${phT})
        AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
-     GROUP BY ps.matchId, ps.teamAbbrev`,
+     GROUP BY ps.espn_match_id, ps.teamAbbrev`,
     jul1Teams
   );
   L.pass('DB', `Group stage player stats rows: ${gsPS.length}`);
 
   const [gsSM] = await conn.execute(
-    `SELECT sm.matchId, sm.teamAbbrev,
+    `SELECT sm.espn_match_id, sm.teamAbbrev,
             SUM(sm.xG) as shotXG, SUM(sm.xGOT) as shotXGOT,
             SUM(CASE WHEN sm.situation='Set Piece' OR sm.situation='Penalty' THEN sm.xG ELSE 0 END) as setXG
      FROM wc2026_espn_shot_map sm
-     JOIN wc2026_espn_matches m ON m.matchId = sm.matchId
+     JOIN wc2026_espn_matches m ON m.espn_match_id = sm.espn_match_id
      WHERE sm.teamAbbrev IN (${phT})
        AND (m.round = 'Group Stage' OR m.round IS NULL OR m.round NOT IN ('Round of 32','Round of 16','Quarterfinals','Semifinals','Final'))
-     GROUP BY sm.matchId, sm.teamAbbrev`,
+     GROUP BY sm.espn_match_id, sm.teamAbbrev`,
     jul1Teams
   );
   L.pass('DB', `Group stage shot map rows: ${gsSM.length}`);
@@ -611,26 +611,26 @@ async function main() {
   // ── BUILD LOOKUP MAPS ───────────────────────────────────────────────────────
   L.section('PHASE_A', 'PHASE A — BUILDING LOOKUP MAPS');
 
-  const xgMap  = Object.fromEntries(xgRows.map(r => [r.matchId, r]));
-  const tsMap  = Object.fromEntries(tsRows.map(r => [r.matchId, r]));
-  const bookMap = Object.fromEntries(bookRows.map(r => [r.espn_event_id, r]));
+  const xgMap  = Object.fromEntries(xgRows.map(r => [r.espn_match_id, r]));
+  const tsMap  = Object.fromEntries(tsRows.map(r => [r.espn_match_id, r]));
+  const bookMap = Object.fromEntries(bookRows.map(r => [r.espn_match_id, r]));
 
   const smMap = {};
   for (const r of smRows) {
-    if (!smMap[r.matchId]) smMap[r.matchId] = {};
-    smMap[r.matchId][r.teamAbbrev] = r;
+    if (!smMap[r.espn_match_id]) smMap[r.espn_match_id] = {};
+    smMap[r.espn_match_id][r.teamAbbrev] = r;
   }
 
   const psMap = {};
   for (const r of psRows) {
-    if (!psMap[r.matchId]) psMap[r.matchId] = {};
-    psMap[r.matchId][r.teamAbbrev] = r;
+    if (!psMap[r.espn_match_id]) psMap[r.espn_match_id] = {};
+    psMap[r.espn_match_id][r.teamAbbrev] = r;
   }
 
   // Inject goals from player stats into tsMap
   for (const [mid, teams] of Object.entries(psMap)) {
     if (!tsMap[mid]) continue;
-    const match = koMatches.find(m => m.matchId === mid);
+    const match = koMatches.find(m => m.espn_match_id === mid);
     if (!match) continue;
     if (teams[match.homeTeamAbbrev]) tsMap[mid].homeGoals = parseInt(teams[match.homeTeamAbbrev].goals||0);
     if (teams[match.awayTeamAbbrev]) tsMap[mid].awayGoals = parseInt(teams[match.awayTeamAbbrev].goals||0);
@@ -640,19 +640,19 @@ async function main() {
   L.thick();
   L.section('C5_PREFLIGHT', 'FIX C5 — HOME/AWAY ROLE INVERSION PRE-FLIGHT VALIDATION');
   L.blueprint('C5', 'Issue: No check that xgRow.homeTeamAbbrev === matchRow.homeTeamAbbrev');
-  L.blueprint('C5', 'Fix: Assert role consistency for every (matchId, xgRow) pair before backtest');
+  L.blueprint('C5', 'Fix: Assert role consistency for every (espn_match_id, xgRow) pair before backtest');
 
   let c5Pass = 0, c5Fail = 0;
   for (const m of koMatches) {
-    const xg = xgMap[m.matchId];
+    const xg = xgMap[m.espn_match_id];
     if (!xg) continue;
     const homeMatch = xg.homeTeamAbbrev === m.homeTeamAbbrev;
     const awayMatch = xg.awayTeamAbbrev === m.awayTeamAbbrev;
     if (!homeMatch || !awayMatch) {
-      L.critical('C5', `ROLE INVERSION DETECTED: matchId=${m.matchId} | match: ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev} | xgRow: ${xg.homeTeamAbbrev} vs ${xg.awayTeamAbbrev}`);
+      L.critical('C5', `ROLE INVERSION DETECTED: espn_match_id=${m.espn_match_id} | match: ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev} | xgRow: ${xg.homeTeamAbbrev} vs ${xg.awayTeamAbbrev}`);
       c5Fail++;
     } else {
-      L.pass('C5', `matchId=${m.matchId}: ${m.homeTeamAbbrev}(H) vs ${m.awayTeamAbbrev}(A) — role consistent ✓`);
+      L.pass('C5', `espn_match_id=${m.espn_match_id}: ${m.homeTeamAbbrev}(H) vs ${m.awayTeamAbbrev}(A) — role consistent ✓`);
       c5Pass++;
     }
   }
@@ -666,13 +666,13 @@ async function main() {
   // ── FIX C4: PLAYER GOAL ASSERTION ──────────────────────────────────────────
   L.thick();
   L.section('C4_ASSERT', 'FIX C4 — PLAYER GOAL AGGREGATION vs OFFICIAL MATCH SCORE ASSERTION');
-  L.blueprint('C4', 'Issue: No runtime check that SUM(ps.g) === official match score per (matchId, team)');
+  L.blueprint('C4', 'Issue: No runtime check that SUM(ps.g) === official match score per (espn_match_id, team)');
   L.blueprint('C4', 'Fix: Assert player goal sum matches official score for every team-match pair');
 
   let c4Pass = 0, c4Fail = 0, c4Warn = 0;
   for (const m of koMatches) {
-    const ps = psMap[m.matchId];
-    if (!ps) { L.warn('C4', `matchId=${m.matchId}: No player stats — skipping assertion`); c4Warn++; continue; }
+    const ps = psMap[m.espn_match_id];
+    if (!ps) { L.warn('C4', `espn_match_id=${m.espn_match_id}: No player stats — skipping assertion`); c4Warn++; continue; }
 
     const homePS = ps[m.homeTeamAbbrev];
     const awayPS = ps[m.awayTeamAbbrev];
@@ -681,20 +681,20 @@ async function main() {
     if (homePS) {
       const psGoals = parseInt(homePS.goals||0);
       if (psGoals !== officialH) {
-        L.warn('C4', `matchId=${m.matchId} ${m.homeTeamAbbrev}(H): ps.goals=${psGoals} ≠ official=${officialH} | diff=${Math.abs(psGoals-officialH)} (may include own goals)`);
+        L.warn('C4', `espn_match_id=${m.espn_match_id} ${m.homeTeamAbbrev}(H): ps.goals=${psGoals} ≠ official=${officialH} | diff=${Math.abs(psGoals-officialH)} (may include own goals)`);
         c4Warn++;
       } else {
-        L.pass('C4', `matchId=${m.matchId} ${m.homeTeamAbbrev}(H): ps.goals=${psGoals} === official=${officialH} ✓`);
+        L.pass('C4', `espn_match_id=${m.espn_match_id} ${m.homeTeamAbbrev}(H): ps.goals=${psGoals} === official=${officialH} ✓`);
         c4Pass++;
       }
     }
     if (awayPS) {
       const psGoals = parseInt(awayPS.goals||0);
       if (psGoals !== officialA) {
-        L.warn('C4', `matchId=${m.matchId} ${m.awayTeamAbbrev}(A): ps.goals=${psGoals} ≠ official=${officialA} | diff=${Math.abs(psGoals-officialA)} (may include own goals)`);
+        L.warn('C4', `espn_match_id=${m.espn_match_id} ${m.awayTeamAbbrev}(A): ps.goals=${psGoals} ≠ official=${officialA} | diff=${Math.abs(psGoals-officialA)} (may include own goals)`);
         c4Warn++;
       } else {
-        L.pass('C4', `matchId=${m.matchId} ${m.awayTeamAbbrev}(A): ps.goals=${psGoals} === official=${officialA} ✓`);
+        L.pass('C4', `espn_match_id=${m.espn_match_id} ${m.awayTeamAbbrev}(A): ps.goals=${psGoals} === official=${officialA} ✓`);
         c4Pass++;
       }
     }
@@ -714,7 +714,7 @@ async function main() {
       totalFields++;
       if (row[field] === null || row[field] === undefined) {
         nullCount++;
-        L.warn('C1', `matchId=${row.matchId} field=${field} is NULL → substituting TOURNAMENT_MEAN=${TOURNAMENT_MEAN_XG}`);
+        L.warn('C1', `espn_match_id=${row.espn_match_id} field=${field} is NULL → substituting TOURNAMENT_MEAN=${TOURNAMENT_MEAN_XG}`);
       }
     }
   }
@@ -729,17 +729,17 @@ async function main() {
   L.step('VALIDATE', 'Validating data completeness for all KO matches...');
   const validMatches = [];
   for (const m of koMatches) {
-    const hasXG = !!xgMap[m.matchId];
-    const hasTS = !!tsMap[m.matchId];
-    const hasSM = !!smMap[m.matchId];
-    const hasPS = !!psMap[m.matchId];
-    const hasBook = !!bookMap[m.matchId];
+    const hasXG = !!xgMap[m.espn_match_id];
+    const hasTS = !!tsMap[m.espn_match_id];
+    const hasSM = !!smMap[m.espn_match_id];
+    const hasPS = !!psMap[m.espn_match_id];
+    const hasBook = !!bookMap[m.espn_match_id];
     const allOk = hasXG && hasTS;
     if (allOk) {
       validMatches.push(m);
-      L.pass('VALIDATE', `${m.matchId} ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev}: xG=${hasXG} TS=${hasTS} SM=${hasSM} PS=${hasPS} Book=${hasBook}`);
+      L.pass('VALIDATE', `${m.espn_match_id} ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev}: xG=${hasXG} TS=${hasTS} SM=${hasSM} PS=${hasPS} Book=${hasBook}`);
     } else {
-      L.warn('VALIDATE', `${m.matchId}: INCOMPLETE — xG=${hasXG} TS=${hasTS} — excluding from backtest`);
+      L.warn('VALIDATE', `${m.espn_match_id}: INCOMPLETE — xG=${hasXG} TS=${hasTS} — excluding from backtest`);
     }
   }
   L.pass('VALIDATE', `Valid matches for backtest: ${validMatches.length}/${koMatches.length}`);
@@ -762,11 +762,11 @@ async function main() {
     const nullLog = [];
 
     for (const m of validMatches) {
-      const xg   = xgMap[m.matchId];
-      const ts   = tsMap[m.matchId];
-      const sm   = smMap[m.matchId] || {};
-      const ps   = psMap[m.matchId] || {};
-      const book = bookMap[m.matchId];
+      const xg   = xgMap[m.espn_match_id];
+      const ts   = tsMap[m.espn_match_id];
+      const sm   = smMap[m.espn_match_id] || {};
+      const ps   = psMap[m.espn_match_id] || {};
+      const book = bookMap[m.espn_match_id];
 
       // C7: use empirical xGOT discount
       const lH = deriveLambdaSingleMatch('home', xg, ts, sm[m.homeTeamAbbrev], ps[m.homeTeamAbbrev], V, empiricalXGOTDiscount, nullLog);
@@ -780,7 +780,7 @@ async function main() {
       const bookSpreadLine = book ? parseFloat(book.book_spread_line || -1.5) : -1.5;
 
       // Run DC sim with C10 parameterized spread
-      const sim = dcSim(lH, lA, V.rho, etH, bookSpreadLine, `${V.id} ${m.matchId}`);
+      const sim = dcSim(lH, lA, V.rho, etH, bookSpreadLine, `${V.id} ${m.espn_match_id}`);
 
       const actualH = parseInt(m.homeScore), actualA = parseInt(m.awayScore);
       const actualWinner = actualH > actualA ? 'home' : actualH < actualA ? 'away' : 'draw';
@@ -810,7 +810,7 @@ async function main() {
       if (spreadOk) vSpread++;
 
       matchGrades.push({
-        matchId: m.matchId, home: m.homeTeamAbbrev, away: m.awayTeamAbbrev,
+        espn_match_id: m.espn_match_id, home: m.homeTeamAbbrev, away: m.awayTeamAbbrev,
         actualH, actualA, wentToET: m.statusDetail === 'FT-Pens',
         lH, lA, etH, etCI: etResult.ci,
         projH: sim.projH, projA: sim.projA,
@@ -822,7 +822,7 @@ async function main() {
         scoreErr, totalErr,
       });
 
-      L.atomic('BT', `    ${m.matchId} ${m.homeTeamAbbrev} ${actualH}-${actualA} ${m.awayTeamAbbrev} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)} | etH=${(etH*100).toFixed(1)}%±${(etResult.ci*100).toFixed(0)}% | Proj:${sim.projH.toFixed(2)}-${sim.projA.toFixed(2)} | Dir:${dirOk?'✅':'❌'} Total:${totalOk?'✅':'❌'} BTTS:${bttsOk?'✅':'❌'} Spread:${spreadOk?'✅':'❌'} | Composite:${composite.toFixed(1)}`);
+      L.atomic('BT', `    ${m.espn_match_id} ${m.homeTeamAbbrev} ${actualH}-${actualA} ${m.awayTeamAbbrev} | λH=${lH.toFixed(3)} λA=${lA.toFixed(3)} | etH=${(etH*100).toFixed(1)}%±${(etResult.ci*100).toFixed(0)}% | Proj:${sim.projH.toFixed(2)}-${sim.projA.toFixed(2)} | Dir:${dirOk?'✅':'❌'} Total:${totalOk?'✅':'❌'} BTTS:${bttsOk?'✅':'❌'} Spread:${spreadOk?'✅':'❌'} | Composite:${composite.toFixed(1)}`);
     }
 
     if (nullLog.length > 0) {
@@ -888,25 +888,25 @@ async function main() {
     const h = row.homeTeamAbbrev, a = row.awayTeamAbbrev;
     if (jul1Teams.includes(h)) {
       initTeam(h);
-      const xGR = safeXG(row.homeXG, 'homeXG', row.matchId, h);
-      if (xGR.wasNull) teamStats[h].nullSubs.push({ field:'homeXG', matchId:row.matchId });
+      const xGR = safeXG(row.homeXG, 'homeXG', row.espn_match_id, h);
+      if (xGR.wasNull) teamStats[h].nullSubs.push({ field:'homeXG', espn_match_id:row.espn_match_id });
       teamStats[h].xGSum    += xGR.value;
-      teamStats[h].xGOTSum  += safeXG(row.homeXGOT, 'homeXGOT', row.matchId, h).value;
-      teamStats[h].xASum    += safeXG(row.homeXA, 'homeXA', row.matchId, h).value;
-      teamStats[h].setXGSum += safeXG(row.homeXGSetPlay, 'homeXGSetPlay', row.matchId, h).value;
+      teamStats[h].xGOTSum  += safeXG(row.homeXGOT, 'homeXGOT', row.espn_match_id, h).value;
+      teamStats[h].xASum    += safeXG(row.homeXA, 'homeXA', row.espn_match_id, h).value;
+      teamStats[h].setXGSum += safeXG(row.homeXGSetPlay, 'homeXGSetPlay', row.espn_match_id, h).value;
       teamStats[h].n++;
-      teamStats[h].matchIds.push(row.matchId);
+      teamStats[h].matchIds.push(row.espn_match_id);
     }
     if (jul1Teams.includes(a)) {
       initTeam(a);
-      const xGR = safeXG(row.awayXG, 'awayXG', row.matchId, a);
-      if (xGR.wasNull) teamStats[a].nullSubs.push({ field:'awayXG', matchId:row.matchId });
+      const xGR = safeXG(row.awayXG, 'awayXG', row.espn_match_id, a);
+      if (xGR.wasNull) teamStats[a].nullSubs.push({ field:'awayXG', espn_match_id:row.espn_match_id });
       teamStats[a].xGSum    += xGR.value;
-      teamStats[a].xGOTSum  += safeXG(row.awayXGOT, 'awayXGOT', row.matchId, a).value;
-      teamStats[a].xASum    += safeXG(row.awayXA, 'awayXA', row.matchId, a).value;
-      teamStats[a].setXGSum += safeXG(row.awayXGSetPlay, 'awayXGSetPlay', row.matchId, a).value;
+      teamStats[a].xGOTSum  += safeXG(row.awayXGOT, 'awayXGOT', row.espn_match_id, a).value;
+      teamStats[a].xASum    += safeXG(row.awayXA, 'awayXA', row.espn_match_id, a).value;
+      teamStats[a].setXGSum += safeXG(row.awayXGSetPlay, 'awayXGSetPlay', row.espn_match_id, a).value;
       teamStats[a].n++;
-      teamStats[a].matchIds.push(row.matchId);
+      teamStats[a].matchIds.push(row.espn_match_id);
     }
   }
 
@@ -1121,7 +1121,7 @@ async function main() {
     }
 
     projResults.push({
-      matchId: f.match_id,
+      espn_match_id: f.match_id,
       home: f.homeAbbrev, away: f.awayAbbrev,
       lH, lA, etH: etResult.point, etCI: etResult.ci, etN: etResult.n,
       projH: sim.projH, projA: sim.projA, projTotal: sim.projTotal,
@@ -1155,34 +1155,34 @@ async function main() {
   for (const p of projResults) {
     // 1X2 sum
     const s1 = p.sim.pH + p.sim.pD + p.sim.pA;
-    if (Math.abs(s1-1) > 0.0001) { L.fail('XREF', `${p.matchId}: 1X2 sum=${s1.toFixed(8)}`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: 1X2 sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s1-1) > 0.0001) { L.fail('XREF', `${p.espn_match_id}: 1X2 sum=${s1.toFixed(8)}`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: 1X2 sum=1.0 ✓`); xrefPass++; }
 
     // Advance sum
     const s2 = p.sim.pAdvH + p.sim.pAdvA;
-    if (Math.abs(s2-1) > 0.001) { L.warn('XREF', `${p.matchId}: Advance sum=${s2.toFixed(8)}`); }
-    else { L.pass('XREF', `${p.matchId}: Advance sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s2-1) > 0.001) { L.warn('XREF', `${p.espn_match_id}: Advance sum=${s2.toFixed(8)}`); }
+    else { L.pass('XREF', `${p.espn_match_id}: Advance sum=1.0 ✓`); xrefPass++; }
 
     // Spread sum
     const s3 = p.sim.homeSpreadCov + p.sim.awaySpreadCov;
-    if (Math.abs(s3-1) > 0.0001) { L.fail('XREF', `${p.matchId}: Spread sum=${s3.toFixed(8)}`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: Spread sum=1.0 ✓`); xrefPass++; }
+    if (Math.abs(s3-1) > 0.0001) { L.fail('XREF', `${p.espn_match_id}: Spread sum=${s3.toFixed(8)}`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: Spread sum=1.0 ✓`); xrefPass++; }
 
     // DC identity: p1X = pH + pD
     const dc1 = Math.abs(p.sim.p1X - (p.sim.pH + p.sim.pD));
-    if (dc1 > 0.0001) { L.fail('XREF', `${p.matchId}: p1X identity FAIL`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: p1X identity ✓`); xrefPass++; }
+    if (dc1 > 0.0001) { L.fail('XREF', `${p.espn_match_id}: p1X identity FAIL`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: p1X identity ✓`); xrefPass++; }
 
     // DC identity: pX2 = pA + pD
     const dc2 = Math.abs(p.sim.pX2 - (p.sim.pA + p.sim.pD));
-    if (dc2 > 0.0001) { L.fail('XREF', `${p.matchId}: pX2 identity FAIL`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: pX2 identity ✓`); xrefPass++; }
+    if (dc2 > 0.0001) { L.fail('XREF', `${p.espn_match_id}: pX2 identity FAIL`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: pX2 identity ✓`); xrefPass++; }
 
     // Lambda sanity
-    if (p.lH < 0.20 || p.lH > 5.0) { L.fail('XREF', `${p.matchId}: λH=${p.lH.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: λH=${p.lH.toFixed(4)} in range ✓`); xrefPass++; }
-    if (p.lA < 0.20 || p.lA > 5.0) { L.fail('XREF', `${p.matchId}: λA=${p.lA.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
-    else { L.pass('XREF', `${p.matchId}: λA=${p.lA.toFixed(4)} in range ✓`); xrefPass++; }
+    if (p.lH < 0.20 || p.lH > 5.0) { L.fail('XREF', `${p.espn_match_id}: λH=${p.lH.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: λH=${p.lH.toFixed(4)} in range ✓`); xrefPass++; }
+    if (p.lA < 0.20 || p.lA > 5.0) { L.fail('XREF', `${p.espn_match_id}: λA=${p.lA.toFixed(4)} out of range [0.20, 5.0]`); xrefFail++; }
+    else { L.pass('XREF', `${p.espn_match_id}: λA=${p.lA.toFixed(4)} in range ✓`); xrefPass++; }
 
     // ML sign check
     for (const [k, v] of Object.entries(p.model)) {
@@ -1194,7 +1194,7 @@ async function main() {
       const expectedSign = prob >= 0.5 ? 'negative' : 'positive';
       const actualSign = v < 0 ? 'negative' : 'positive';
       if (expectedSign !== actualSign) {
-        L.fail('XREF', `${p.matchId}: ${k} ML sign mismatch — prob=${(prob*100).toFixed(1)}% but ML=${v}`);
+        L.fail('XREF', `${p.espn_match_id}: ${k} ML sign mismatch — prob=${(prob*100).toFixed(1)}% but ML=${v}`);
         xrefFail++;
       } else {
         xrefPass++;

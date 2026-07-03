@@ -123,15 +123,15 @@ async function main() {
 
   // Pull all GS xG rows for these teams
   const [gsXgRows] = await db.execute(`
-    SELECT eg.matchId, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
+    SELECT eg.espn_match_id, eg.matchRound, eg.homeTeamAbbrev, eg.awayTeamAbbrev,
            eg.homeXG, eg.awayXG, eg.homeXGOT, eg.awayXGOT, eg.homeXA, eg.awayXA,
            em.homeScore, em.awayScore
     FROM wc2026_espn_expected_goals eg
-    LEFT JOIN wc2026_espn_matches em ON eg.matchId = em.matchId
+    LEFT JOIN wc2026_espn_matches em ON eg.espn_match_id = em.espn_match_id
     WHERE eg.matchRound = 'group-stage'
       AND (eg.homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR eg.awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
-    ORDER BY eg.matchId
+    ORDER BY eg.espn_match_id
   `, [...allTeams, ...allTeams]);
 
   log('INPUT', 'A1_GS_XG', `GS xG rows for July 1 teams: ${gsXgRows.length}`);
@@ -165,12 +165,12 @@ async function main() {
   // A2: Audit possession data — v13 uses `?? 50` fallback in buildGSRows (SOFT GATE)
   log('AUDIT', 'A2_POSS', 'A2: Auditing possession data — checking for ?? 50 soft fallback in v13');
   const [tsRows] = await db.execute(`
-    SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
+    SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
     FROM wc2026_espn_team_stats
     WHERE matchRound = 'group-stage'
       AND (homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
-    ORDER BY matchId
+    ORDER BY espn_match_id
   `, [...allTeams, ...allTeams]);
 
   log('INPUT', 'A2_TS', `Team stats rows for July 1 teams: ${tsRows.length}`);
@@ -178,9 +178,9 @@ async function main() {
   // Check: does every GS xG row have a matching team stats row?
   let missingTS = 0;
   for (const xgRow of gsXgRows) {
-    const tsRow = tsRows.find(t => t.matchId === xgRow.matchId);
+    const tsRow = tsRows.find(t => t.espn_match_id === xgRow.espn_match_id);
     if (!tsRow) {
-      log('WARN', 'A2_MISS', `matchId ${xgRow.matchId}: NO team stats row — v13 falls back to possession=50 (SOFT GATE)`);
+      log('WARN', 'A2_MISS', `espn_match_id ${xgRow.espn_match_id}: NO team stats row — v13 falls back to possession=50 (SOFT GATE)`);
       missingTS++;
     }
   }
@@ -197,22 +197,22 @@ async function main() {
   // A3: Audit shot stats — v13 uses ?? 0 fallback for shots/SOT (SOFT GATE)
   log('AUDIT', 'A3_SHOTS', 'A3: Auditing shot stats — checking for ?? 0 soft fallback in v13');
   const [msRows] = await db.execute(`
-    SELECT matchId, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev,
            homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots
     FROM wc2026_espn_match_stats
     WHERE matchRound = 'group-stage'
       AND (homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
-    ORDER BY matchId
+    ORDER BY espn_match_id
   `, [...allTeams, ...allTeams]);
 
   log('INPUT', 'A3_MS', `Match stats rows for July 1 teams: ${msRows.length}`);
 
   let missingMS = 0;
   for (const xgRow of gsXgRows) {
-    const msRow = msRows.find(m => m.matchId === xgRow.matchId);
+    const msRow = msRows.find(m => m.espn_match_id === xgRow.espn_match_id);
     if (!msRow) {
-      log('WARN', 'A3_MISS', `matchId ${xgRow.matchId}: NO match stats row — v13 falls back to shots=0, SOT=0 (SOFT GATE)`);
+      log('WARN', 'A3_MISS', `espn_match_id ${xgRow.espn_match_id}: NO match stats row — v13 falls back to shots=0, SOT=0 (SOFT GATE)`);
       missingMS++;
     }
   }
@@ -229,18 +229,18 @@ async function main() {
   // A4: Audit player stats — v13 falls back to avgXG if no player rows (SOFT GATE)
   log('AUDIT', 'A4_PS', 'A4: Auditing player stats — checking psSignal fallback to avgXG');
   const [psRows] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, name, xG, g
+    SELECT espn_match_id, matchRound, teamAbbrev, name, xG, g
     FROM wc2026_espn_player_stats
     WHERE matchRound = 'group-stage'
       AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    ORDER BY matchId, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev
   `, allTeams);
 
   log('INPUT', 'A4_PS', `Player stats rows for July 1 teams: ${psRows.length}`);
 
   for (const team of allTeams) {
     const teamPS = psRows.filter(r => r.teamAbbrev === team);
-    const matchIds = [...new Set(teamPS.map(r => r.matchId))];
+    const matchIds = [...new Set(teamPS.map(r => r.espn_match_id))];
     log('REAL_DATA', 'A4_TEAM', `${team}: ${teamPS.length} player rows across ${matchIds.length} matches`);
     if (teamPS.length === 0) {
       recordIssue('N3', 'CRITICAL', 'DATA_PULL',
@@ -261,18 +261,18 @@ async function main() {
   // A5: Audit shot map — v13 falls back to avgXG if no shot map rows (SOFT GATE)
   log('AUDIT', 'A5_SM', 'A5: Auditing shot map — checking smSignal fallback to avgXG');
   const [smRows] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, xG, xGOT
+    SELECT espn_match_id, matchRound, teamAbbrev, xG, xGOT
     FROM wc2026_espn_shot_map
     WHERE matchRound = 'group-stage'
       AND teamAbbrev IN (${allTeams.map(()=>'?').join(',')})
-    ORDER BY matchId, teamAbbrev
+    ORDER BY espn_match_id, teamAbbrev
   `, allTeams);
 
   log('INPUT', 'A5_SM', `Shot map rows for July 1 teams: ${smRows.length}`);
 
   for (const team of allTeams) {
     const teamSM = smRows.filter(r => r.teamAbbrev === team);
-    const matchIds = [...new Set(teamSM.map(r => r.matchId))];
+    const matchIds = [...new Set(teamSM.map(r => r.espn_match_id))];
     log('REAL_DATA', 'A5_TEAM', `${team}: ${teamSM.length} shot map rows across ${matchIds.length} matches`);
     if (teamSM.length === 0) {
       recordIssue('N4', 'CRITICAL', 'DATA_PULL',
@@ -363,7 +363,7 @@ async function main() {
     SELECT eg.homeTeamAbbrev, eg.awayTeamAbbrev, eg.homeXG, eg.awayXG,
            em.homeScore, em.awayScore
     FROM wc2026_espn_expected_goals eg
-    JOIN wc2026_espn_matches em ON eg.matchId = em.matchId
+    JOIN wc2026_espn_matches em ON eg.espn_match_id = em.espn_match_id
     WHERE eg.matchRound = 'group-stage'
       AND (eg.homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR eg.awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
@@ -398,11 +398,11 @@ async function main() {
   // But: if possession string is malformed (e.g., "68.6% / 31.4%"), parseFloat gives 68.6 — OK
   // Check: what if possession is stored as "100%" or "0%"?
   const [possEdge] = await db.execute(`
-    SELECT matchId, possession, possessionAway FROM wc2026_espn_team_stats
+    SELECT espn_match_id, possession, possessionAway FROM wc2026_espn_team_stats
     WHERE matchRound = 'group-stage'
       AND (homeTeamAbbrev IN (${allTeams.map(()=>'?').join(',')})
         OR awayTeamAbbrev IN (${allTeams.map(()=>'?').join(',')}))
-    ORDER BY matchId
+    ORDER BY espn_match_id
   `, [...allTeams, ...allTeams]);
 
   let possFormatIssues = 0;
@@ -410,12 +410,12 @@ async function main() {
     const p = parseFloat(String(row.possession).replace('%',''));
     const pa = parseFloat(String(row.possessionAway).replace('%',''));
     if (isNaN(p) || isNaN(pa)) {
-      log('FAIL', 'C3_POSS', `matchId ${row.matchId}: possession='${row.possession}' → NaN after parse`);
+      log('FAIL', 'C3_POSS', `espn_match_id ${row.espn_match_id}: possession='${row.possession}' → NaN after parse`);
       possFormatIssues++;
     } else if (Math.abs((p + pa) - 100) > 2) {
-      log('WARN', 'C3_POSS', `matchId ${row.matchId}: possession ${p}+${pa}=${p+pa} ≠ 100 (expected sum)`);
+      log('WARN', 'C3_POSS', `espn_match_id ${row.espn_match_id}: possession ${p}+${pa}=${p+pa} ≠ 100 (expected sum)`);
     } else {
-      log('PASS', 'C3_POSS', `matchId ${row.matchId}: possession ${p}% / ${pa}% sum=${p+pa} ✓`);
+      log('PASS', 'C3_POSS', `espn_match_id ${row.espn_match_id}: possession ${p}% / ${pa}% sum=${p+pa} ✓`);
     }
   }
   if (possFormatIssues > 0) {

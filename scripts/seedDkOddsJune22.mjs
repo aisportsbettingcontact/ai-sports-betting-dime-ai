@@ -76,7 +76,7 @@ function probToAmerican(p) {
 // All odds mapped to DB orientation (home_team_id / away_team_id in wc2026_matches)
 const MATCHES = [
   {
-    matchId: 'wc26-g-043',
+    espn_match_id: 'wc26-g-043',
     label: 'Austria (DB home) vs Argentina (DB away)',
     homeTeamId: 'aut',
     awayTeamId: 'arg',
@@ -93,7 +93,7 @@ const MATCHES = [
     dcComputed: true,
   },
   {
-    matchId: 'wc26-g-041',
+    espn_match_id: 'wc26-g-041',
     label: 'Iraq (DB home) vs France (DB away)',
     homeTeamId: 'irq',
     awayTeamId: 'fra',
@@ -108,7 +108,7 @@ const MATCHES = [
     dcComputed: true,
   },
   {
-    matchId: 'wc26-g-042',
+    espn_match_id: 'wc26-g-042',
     label: 'Norway (DB home) vs Senegal (DB away)',
     homeTeamId: 'nor',
     awayTeamId: 'sen',
@@ -123,7 +123,7 @@ const MATCHES = [
     dcComputed: true,
   },
   {
-    matchId: 'wc26-g-044',
+    espn_match_id: 'wc26-g-044',
     label: 'Algeria (DB home) vs Jordan (DB away)',
     homeTeamId: 'alg',
     awayTeamId: 'jor',
@@ -148,7 +148,7 @@ async function main() {
   console.log(`${TAG} ${'='.repeat(72)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  const matchIds = MATCHES.map(f => f.matchId);
+  const matchIds = MATCHES.map(f => f.espn_match_id);
   const placeholders = matchIds.map(() => '?').join(',');
 
   // ── Delete existing DK rows for June 22 to avoid duplicates ──────────────
@@ -162,7 +162,7 @@ async function main() {
   let totalErrors = 0;
 
   for (const fx of MATCHES) {
-    console.log(`\n${TAG} ── ${fx.matchId}: ${fx.label} ──`);
+    console.log(`\n${TAG} ── ${fx.espn_match_id}: ${fx.label} ──`);
     console.log(`${TAG} [INPUT] home(${fx.homeTeamId})=${fx.homeML > 0 ? '+' : ''}${fx.homeML} draw=${fx.drawML > 0 ? '+' : ''}${fx.drawML} away(${fx.awayTeamId})=${fx.awayML > 0 ? '+' : ''}${fx.awayML}`);
     console.log(`${TAG} [INPUT] total=${fx.totalLine} over=${fx.overML > 0 ? '+' : ''}${fx.overML} under=${fx.underML > 0 ? '+' : ''}${fx.underML}`);
 
@@ -198,14 +198,14 @@ async function main() {
           `INSERT INTO wc2026_odds_snapshots
              (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [fx.matchId, SNAPSHOT_TS, BOOK_ID_DK, row.market, row.selection,
+          [fx.espn_match_id, SNAPSHOT_TS, BOOK_ID_DK, row.market, row.selection,
            row.line, row.odds, impliedProb, false]
         );
         totalInserted++;
-        console.log(`${TAG} [STEP] Inserted: ${fx.matchId} | ${row.market} | ${row.selection} | ${row.odds > 0 ? '+' : ''}${row.odds}${row.line !== null ? ` line=${row.line}` : ''}`);
+        console.log(`${TAG} [STEP] Inserted: ${fx.espn_match_id} | ${row.market} | ${row.selection} | ${row.odds > 0 ? '+' : ''}${row.odds}${row.line !== null ? ` line=${row.line}` : ''}`);
       } catch (err) {
         totalErrors++;
-        console.error(`${TAG} [ERROR] ${fx.matchId} ${row.market} ${row.selection}: ${err.message}`);
+        console.error(`${TAG} [ERROR] ${fx.espn_match_id} ${row.market} ${row.selection}: ${err.message}`);
       }
     }
   }

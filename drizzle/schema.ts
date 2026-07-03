@@ -2493,7 +2493,7 @@ export const wc2026EspnMatches = mysqlTable("wc2026_espn_matches", {
   id:             int("id").autoincrement().primaryKey(),
 
   // ESPN identifiers
-  matchId:        varchar("matchId", { length: 32 }).notNull().unique(), // ESPN gameId (e.g. "760487")
+  espnMatchId:    varchar("espn_match_id", { length: 32 }).notNull().unique(), // ESPN match ID (e.g. "760487")
   uid:            varchar("uid", { length: 64 }),                        // ESPN uid (e.g. "s:600~l:2014~e:760487")
 
   // Competition
@@ -2551,7 +2551,7 @@ export const wc2026EspnMatches = mysqlTable("wc2026_espn_matches", {
   createdAt:      bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt:      bigint("updatedAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchId:     uniqueIndex("idx_wc2026_espn_matches_matchId").on(t.matchId),
+  idxMatchId:     uniqueIndex("idx_wc2026_espn_matches_espnMatchId").on(t.espnMatchId),
   idxHomeTeam:    index("idx_wc2026_espn_matches_homeTeam").on(t.homeTeamAbbrev),
   idxAwayTeam:    index("idx_wc2026_espn_matches_awayTeam").on(t.awayTeamAbbrev),
   idxMatchDate:   index("idx_wc2026_espn_matches_date").on(t.matchDateUtc),
@@ -2570,7 +2570,7 @@ export type InsertWc2026EspnMatch = typeof wc2026EspnMatches.$inferInsert;
 
 export const wc2026EspnTeamStats = mysqlTable("wc2026_espn_team_stats", {
   id:             int("id").autoincrement().primaryKey(),
-  matchId:        varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:    varchar("espn_match_id", { length: 32 }).notNull(),
 
   homeTeamAbbrev: varchar("homeTeamAbbrev", { length: 8 }).notNull(),
   awayTeamAbbrev: varchar("awayTeamAbbrev", { length: 8 }).notNull(),
@@ -2597,7 +2597,7 @@ export const wc2026EspnTeamStats = mysqlTable("wc2026_espn_team_stats", {
   createdAt:      bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt:      bigint("updatedAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchId:     uniqueIndex("idx_wc2026_espn_team_stats_matchId").on(t.matchId),
+  idxMatchId:     uniqueIndex("idx_wc2026_espn_team_stats_espnMatchId").on(t.espnMatchId),
   idxHomeTeam:    index("idx_wc2026_espn_team_stats_homeTeam").on(t.homeTeamAbbrev),
   idxAwayTeam:    index("idx_wc2026_espn_team_stats_awayTeam").on(t.awayTeamAbbrev),
   idxMatchRound:  index("idx_wc2026_espn_team_stats_matchRound").on(t.matchRound),
@@ -2613,7 +2613,7 @@ export type InsertWc2026EspnTeamStats = typeof wc2026EspnTeamStats.$inferInsert;
 
 export const wc2026EspnMatchStats = mysqlTable("wc2026_espn_match_stats", {
   id:                       int("id").autoincrement().primaryKey(),
-  matchId:                  varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:              varchar("espn_match_id", { length: 32 }).notNull(),
   homeTeamAbbrev:           varchar("homeTeamAbbrev", { length: 8 }).notNull(),
   awayTeamAbbrev:           varchar("awayTeamAbbrev", { length: 8 }).notNull(),
 
@@ -2719,7 +2719,7 @@ export const wc2026EspnMatchStats = mysqlTable("wc2026_espn_match_stats", {
   createdAt:                bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt:                bigint("updatedAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchId:               uniqueIndex("idx_wc2026_match_stats_matchId").on(t.matchId),
+  idxMatchId:               uniqueIndex("idx_wc2026_match_stats_espnMatchId").on(t.espnMatchId),
   idxHomeTeam:              index("idx_wc2026_match_stats_homeTeam").on(t.homeTeamAbbrev),
   idxAwayTeam:              index("idx_wc2026_match_stats_awayTeam").on(t.awayTeamAbbrev),
   idxMatchRound:            index("idx_wc2026_match_stats_matchRound").on(t.matchRound),
@@ -2733,7 +2733,7 @@ export type InsertWc2026EspnMatchStats = typeof wc2026EspnMatchStats.$inferInser
 
 export const wc2026EspnExpectedGoals = mysqlTable("wc2026_espn_expected_goals", {
   id:                  int("id").autoincrement().primaryKey(),
-  matchId:             varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:         varchar("espn_match_id", { length: 32 }).notNull(),
 
   // Team totals
   homeTeamAbbrev:      varchar("homeTeamAbbrev", { length: 8 }).notNull(),
@@ -2756,7 +2756,7 @@ export const wc2026EspnExpectedGoals = mysqlTable("wc2026_espn_expected_goals", 
   createdAt:           bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt:           bigint("updatedAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchId:          uniqueIndex("idx_wc2026_espn_xg_matchId").on(t.matchId),
+  idxMatchId:          uniqueIndex("idx_wc2026_espn_xg_espnMatchId").on(t.espnMatchId),
   idxHomeTeam:         index("idx_wc2026_espn_xg_homeTeam").on(t.homeTeamAbbrev),
   idxAwayTeam:         index("idx_wc2026_espn_xg_awayTeam").on(t.awayTeamAbbrev),
   idxMatchRound:       index("idx_wc2026_espn_xg_matchRound").on(t.matchRound),
@@ -2770,7 +2770,7 @@ export type InsertWc2026EspnExpectedGoals = typeof wc2026EspnExpectedGoals.$infe
 
 export const wc2026EspnShotMap = mysqlTable("wc2026_espn_shot_map", {
   id:              int("id").autoincrement().primaryKey(),
-  matchId:         varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:     varchar("espn_match_id", { length: 32 }).notNull(),
 
   // Shot identity
   shotId:          varchar("shotId", { length: 32 }),
@@ -2817,7 +2817,7 @@ export const wc2026EspnShotMap = mysqlTable("wc2026_espn_shot_map", {
   matchRound:      varchar("matchRound", { length: 32 }),                  // ESPN native slug: "group-stage"|"round-of-32"|etc.
   createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchId:      index("idx_wc2026_espn_shots_matchId").on(t.matchId),
+  idxMatchId:      index("idx_wc2026_espn_shots_espnMatchId").on(t.espnMatchId),
   idxPlayer:       index("idx_wc2026_espn_shots_player").on(t.playerId),
   idxTeam:         index("idx_wc2026_espn_shots_team").on(t.teamAbbrev),
   idxIconType:     index("idx_wc2026_espn_shots_iconType").on(t.iconType),
@@ -2841,7 +2841,7 @@ export type InsertWc2026EspnShotMap = typeof wc2026EspnShotMap.$inferInsert;
 
 export const wc2026EspnPlayerStats = mysqlTable("wc2026_espn_player_stats", {
   id:              int("id").autoincrement().primaryKey(),
-  matchId:         varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:     varchar("espn_match_id", { length: 32 }).notNull(),
 
   // Player identity
   athleteId:       varchar("athleteId", { length: 32 }).notNull(),
@@ -2893,8 +2893,8 @@ export const wc2026EspnPlayerStats = mysqlTable("wc2026_espn_player_stats", {
   createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
   updatedAt:       bigint("updatedAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_player_stats_match_player").on(t.matchId, t.athleteId),
-  idxMatchId:      index("idx_wc2026_espn_player_stats_matchId").on(t.matchId),
+  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_player_stats_match_player").on(t.espnMatchId, t.athleteId),
+  idxMatchId:      index("idx_wc2026_espn_player_stats_espnMatchId").on(t.espnMatchId),
   idxAthleteId:    index("idx_wc2026_espn_player_stats_athleteId").on(t.athleteId),
   idxTeam:         index("idx_wc2026_espn_player_stats_team").on(t.teamAbbrev),
   idxPosition:     index("idx_wc2026_espn_player_stats_position").on(t.positionGroup),
@@ -2910,7 +2910,7 @@ export type InsertWc2026EspnPlayerStats = typeof wc2026EspnPlayerStats.$inferIns
 
 export const wc2026EspnLineups = mysqlTable("wc2026_espn_lineups", {
   id:              int("id").autoincrement().primaryKey(),
-  matchId:         varchar("matchId", { length: 32 }).notNull(),
+  espnMatchId:     varchar("espn_match_id", { length: 32 }).notNull(),
 
   // Team
   teamId:          varchar("teamId", { length: 16 }),
@@ -2932,8 +2932,8 @@ export const wc2026EspnLineups = mysqlTable("wc2026_espn_lineups", {
   matchRound:      varchar("matchRound", { length: 32 }),                  // ESPN native slug: "group-stage"|"round-of-32"|etc.
   createdAt:       bigint("createdAt", { mode: "number" }).notNull(),
 }, (t) => ({
-  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_lineups_match_player").on(t.matchId, t.athleteId),
-  idxMatchId:      index("idx_wc2026_espn_lineups_matchId").on(t.matchId),
+  idxMatchPlayer:  uniqueIndex("idx_wc2026_espn_lineups_match_player").on(t.espnMatchId, t.athleteId),
+  idxMatchId:      index("idx_wc2026_espn_lineups_espnMatchId").on(t.espnMatchId),
   idxAthleteId:    index("idx_wc2026_espn_lineups_athleteId").on(t.athleteId),
   idxTeam:         index("idx_wc2026_espn_lineups_team").on(t.teamAbbrev),
   idxRole:         index("idx_wc2026_espn_lineups_role").on(t.role),

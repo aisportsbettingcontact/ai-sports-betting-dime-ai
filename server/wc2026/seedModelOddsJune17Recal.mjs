@@ -68,7 +68,7 @@ const MODEL_BOOK_ID = 0;
  */
 const MODEL_DATA = [
   {
-    matchId: 'wc26-g-021',
+    espn_match_id: 'wc26-g-021',
     homeId: 'cod',   // DR Congo — DB home
     awayId: 'por',   // Portugal — DB away
     // SWAPPED from model output (model ran Portugal as home)
@@ -105,7 +105,7 @@ const MODEL_DATA = [
     formAway: 0.80, // POR form
   },
   {
-    matchId: 'wc26-g-023',
+    espn_match_id: 'wc26-g-023',
     homeId: 'eng',   // England — DB home (matches model orientation)
     awayId: 'cro',   // Croatia — DB away
     homeWin:  0.4422,
@@ -131,7 +131,7 @@ const MODEL_DATA = [
     formAway: 0.55,
   },
   {
-    matchId: 'wc26-g-024',
+    espn_match_id: 'wc26-g-024',
     homeId: 'gha',   // Ghana — DB home (matches model orientation)
     awayId: 'pan',   // Panama — DB away
     homeWin:  0.3593,
@@ -157,7 +157,7 @@ const MODEL_DATA = [
     formAway: 0.45,
   },
   {
-    matchId: 'wc26-g-022',
+    espn_match_id: 'wc26-g-022',
     homeId: 'uzb',   // Uzbekistan — DB home (matches model orientation)
     awayId: 'col',   // Colombia — DB away
     homeWin:  0.1524,
@@ -211,10 +211,10 @@ async function main() {
     const passXG   = m.xgHome > 0 && m.xgAway > 0;
 
     if (!pass1x2 || !passTotal || !passML || !passOU || !passXG) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.matchId}: 1X2_sum=${sum1x2.toFixed(6)} total_sum=${sumTotal.toFixed(6)} ML=${passML} OU=${passOU} xG=${passXG}`);
+      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.espn_match_id}: 1X2_sum=${sum1x2.toFixed(6)} total_sum=${sumTotal.toFixed(6)} ML=${passML} OU=${passOU} xG=${passXG}`);
       totalErrors++;
     } else {
-      console.log(`[ModelSeed] [VERIFY] PASS — ${m.matchId} (${m.homeId}@${m.awayId}): 1X2_sum=${sum1x2.toFixed(6)} total_sum=${sumTotal.toFixed(6)}`);
+      console.log(`[ModelSeed] [VERIFY] PASS — ${m.espn_match_id} (${m.homeId}@${m.awayId}): 1X2_sum=${sum1x2.toFixed(6)} total_sum=${sumTotal.toFixed(6)}`);
       console.log(`[ModelSeed]          probs: home=${m.homeWin.toFixed(4)} draw=${m.draw.toFixed(4)} away=${m.awayWin.toFixed(4)}`);
       console.log(`[ModelSeed]          ML:    home=${m.homeML} draw=${m.drawML} away=${m.awayML}`);
       console.log(`[ModelSeed]          O/U:   over=${m.overOdds} under=${m.underOdds} line=${m.total} | p_over=${m.overProb.toFixed(4)} p_under=${m.underProb.toFixed(4)}`);
@@ -234,10 +234,10 @@ async function main() {
   for (const m of MODEL_DATA) {
     const [matchs] = await conn.query(
       'SELECT match_id, home_team_id, away_team_id, kickoff_utc FROM wc2026_matches WHERE match_id = ? LIMIT 1',
-      [m.matchId]
+      [m.espn_match_id]
     );
     if (!matchs[0]) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — match ${m.matchId} not found in DB`);
+      console.error(`[ModelSeed] [VERIFY] FAIL — match ${m.espn_match_id} not found in DB`);
       totalErrors++;
       continue;
     }
@@ -245,12 +245,12 @@ async function main() {
     const homeMatch = f.home_team_id === m.homeId;
     const awayMatch = f.away_team_id === m.awayId;
     if (!homeMatch || !awayMatch) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.matchId} orientation mismatch!`);
+      console.error(`[ModelSeed] [VERIFY] FAIL — ${m.espn_match_id} orientation mismatch!`);
       console.error(`[ModelSeed]          DB: home=${f.home_team_id} away=${f.away_team_id}`);
       console.error(`[ModelSeed]          Seed: home=${m.homeId} away=${m.awayId}`);
       totalErrors++;
     } else {
-      console.log(`[ModelSeed] [VERIFY] PASS — ${m.matchId}: DB home=${f.home_team_id} away=${f.away_team_id} matches seed ✓`);
+      console.log(`[ModelSeed] [VERIFY] PASS — ${m.espn_match_id}: DB home=${f.home_team_id} away=${f.away_team_id} matches seed ✓`);
       console.log(`[ModelSeed]          kickoff_utc=${f.kickoff_utc}`);
     }
   }
@@ -264,24 +264,24 @@ async function main() {
   // ── PHASE 3: Seed model odds ───────────────────────────────────────────────
   console.log('\n[ModelSeed] [PHASE 3] Seeding recalibrated model odds...');
   for (const m of MODEL_DATA) {
-    console.log(`\n[ModelSeed] [STEP] Processing ${m.matchId} (${m.homeId} vs ${m.awayId})...`);
+    console.log(`\n[ModelSeed] [STEP] Processing ${m.espn_match_id} (${m.homeId} vs ${m.awayId})...`);
 
     // Delete existing model odds for this match
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
-      [m.matchId, MODEL_BOOK_ID]
+      [m.espn_match_id, MODEL_BOOK_ID]
     );
     console.log(`[ModelSeed] [STATE] Deleted ${del.affectedRows} existing model rows`);
 
     // Build insert rows
     const rows = [
       // 1X2 market
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',   'home',  null,    m.homeML,   m.homeWin,  0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',   'draw',  null,    m.drawML,   m.draw,     0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',   'away',  null,    m.awayML,   m.awayWin,  0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',   'home',  null,    m.homeML,   m.homeWin,  0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',   'draw',  null,    m.drawML,   m.draw,     0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',   'away',  null,    m.awayML,   m.awayWin,  0],
       // TOTAL market
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  m.total, m.overOdds, m.overProb, 0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', m.total, m.underOdds,m.underProb,0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over',  m.total, m.overOdds, m.overProb, 0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', m.total, m.underOdds,m.underProb,0],
     ];
 
     const [ins] = await conn.query(
@@ -302,7 +302,7 @@ async function main() {
   for (const m of MODEL_DATA) {
     const [rows] = await conn.query(
       'SELECT market, selection, american_odds, implied_prob, line FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=? ORDER BY market, selection',
-      [m.matchId, MODEL_BOOK_ID]
+      [m.espn_match_id, MODEL_BOOK_ID]
     );
 
     const expected = {
@@ -321,13 +321,13 @@ async function main() {
       const oddsMatch = row.american_odds === exp.odds;
       const probDiff  = Math.abs(row.implied_prob - exp.prob);
       if (!oddsMatch || probDiff > 0.001) {
-        console.error(`[ModelSeed] [VERIFY] FAIL — ${m.matchId} ${key}: odds=${row.american_odds} (exp=${exp.odds}) prob=${row.implied_prob} (exp=${exp.prob})`);
+        console.error(`[ModelSeed] [VERIFY] FAIL — ${m.espn_match_id} ${key}: odds=${row.american_odds} (exp=${exp.odds}) prob=${row.implied_prob} (exp=${exp.prob})`);
         verifyErrors++;
         matchOk = false;
       }
     }
     if (matchOk) {
-      console.log(`[ModelSeed] [VERIFY] PASS — ${m.matchId}: all ${rows.length} rows verified ✓`);
+      console.log(`[ModelSeed] [VERIFY] PASS — ${m.espn_match_id}: all ${rows.length} rows verified ✓`);
     }
   }
 

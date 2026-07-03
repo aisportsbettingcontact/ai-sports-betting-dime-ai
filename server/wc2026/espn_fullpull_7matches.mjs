@@ -32,7 +32,7 @@ async function main() {
   // ── Step 1: Get match metadata + ESPN IDs ──────────────────────────────
   log('STEP1', 'Fetching match metadata...');
   const [matchs] = await conn.query(`
-    SELECT f.match_id, f.espn_event_id, f.match_date, f.kickoff_utc,
+    SELECT f.match_id, f.espn_match_id, f.match_date, f.kickoff_utc,
            f.home_score, f.away_score, f.status, f.attendance,
            th.name as home_name, th.fifa_code as home_code,
            ta.name as away_name, ta.fifa_code as away_code
@@ -45,16 +45,16 @@ async function main() {
 
   log('STATE', `Found ${matchs.length} matchs`);
   matchs.forEach(f => {
-    log('INPUT', `${f.match_id} | ${f.home_name} ${f.home_score ?? '?'}-${f.away_score ?? '?'} ${f.away_name} | ESPN: ${f.espn_event_id} | Status: ${f.status}`);
+    log('INPUT', `${f.match_id} | ${f.home_name} ${f.home_score ?? '?'}-${f.away_score ?? '?'} ${f.away_name} | ESPN: ${f.espn_match_id} | Status: ${f.status}`);
   });
 
-  const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
+  const espnIds = matchs.map(f => f.espn_match_id).filter(Boolean);
   const fidToEspn = {};
   const espnToFid = {};
   matchs.forEach(f => {
-    if (f.espn_event_id) {
-      fidToEspn[f.match_id] = f.espn_event_id;
-      espnToFid[f.espn_event_id] = f.match_id;
+    if (f.espn_match_id) {
+      fidToEspn[f.match_id] = f.espn_match_id;
+      espnToFid[f.espn_match_id] = f.match_id;
     }
   });
   log('STATE', `ESPN IDs: ${espnIds.join(', ')}`);
@@ -80,17 +80,17 @@ async function main() {
   log('STEP4', 'Fetching ESPN match data...');
   let espnMatches = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_matches WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_matches WHERE espn_match_id IN (?)`, [espnIds]);
     espnMatches = rows;
     log('STATE', `ESPN match rows: ${rows.length}`);
-    rows.forEach(r => log('OUTPUT', `ESPN Match ${r.matchId}: ${r.homeTeam} ${r.homeScore}-${r.awayScore} ${r.awayTeam} | Status: ${r.status} | Venue: ${r.venue} | Attendance: ${r.attendance}`));
+    rows.forEach(r => log('OUTPUT', `ESPN Match ${r.espn_match_id}: ${r.homeTeam} ${r.homeScore}-${r.awayScore} ${r.awayTeam} | Status: ${r.status} | Venue: ${r.venue} | Attendance: ${r.attendance}`));
   }
 
   // ── Step 5: Pull ESPN team stats ─────────────────────────────────────────
   log('STEP5', 'Fetching ESPN team stats...');
   let espnTeamStats = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_team_stats WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_team_stats WHERE espn_match_id IN (?)`, [espnIds]);
     espnTeamStats = rows;
     log('STATE', `ESPN team stat rows: ${rows.length}`);
   }
@@ -99,17 +99,17 @@ async function main() {
   log('STEP6', 'Fetching ESPN expected goals...');
   let espnXG = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_expected_goals WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_expected_goals WHERE espn_match_id IN (?)`, [espnIds]);
     espnXG = rows;
     log('STATE', `ESPN xG rows: ${rows.length}`);
-    rows.forEach(r => log('OUTPUT', `xG ${r.matchId}: ${r.homeTeam} xG=${r.homeXG} | ${r.awayTeam} xG=${r.awayXG}`));
+    rows.forEach(r => log('OUTPUT', `xG ${r.espn_match_id}: ${r.homeTeam} xG=${r.homeXG} | ${r.awayTeam} xG=${r.awayXG}`));
   }
 
   // ── Step 7: Pull ESPN shot map ────────────────────────────────────────────
   log('STEP7', 'Fetching ESPN shot map...');
   let espnShots = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_shot_map WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_shot_map WHERE espn_match_id IN (?)`, [espnIds]);
     espnShots = rows;
     log('STATE', `ESPN shot map rows: ${rows.length}`);
   }
@@ -118,7 +118,7 @@ async function main() {
   log('STEP8', 'Fetching ESPN match odds...');
   let espnOdds = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_match_odds WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_match_odds WHERE espn_match_id IN (?)`, [espnIds]);
     espnOdds = rows;
     log('STATE', `ESPN odds rows: ${rows.length}`);
   }
@@ -127,7 +127,7 @@ async function main() {
   log('STEP9', 'Fetching ESPN player stats...');
   let espnPlayers = [];
   if (espnIds.length > 0) {
-    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_player_stats WHERE matchId IN (?)`, [espnIds]);
+    const [rows] = await conn.query(`SELECT * FROM wc2026_espn_player_stats WHERE espn_match_id IN (?)`, [espnIds]);
     espnPlayers = rows;
     log('STATE', `ESPN player stat rows: ${rows.length}`);
   }
@@ -141,16 +141,16 @@ async function main() {
 
   for (const f of matchs) {
     const fid = f.match_id;
-    const eid = f.espn_event_id;
+    const eid = f.espn_match_id;
 
     const model = modelRows.filter(r => r.match_id === fid);
     const book = bookRows.find(r => r.match_id === fid);
-    const espnMatch = espnMatches.find(r => r.matchId == eid);
-    const teamStats = espnTeamStats.filter(r => r.matchId == eid);
-    const xg = espnXG.find(r => r.matchId == eid);
-    const shots = espnShots.filter(r => r.matchId == eid);
-    const odds = espnOdds.filter(r => r.matchId == eid);
-    const players = espnPlayers.filter(r => r.matchId == eid);
+    const espnMatch = espnMatches.find(r => r.espn_match_id == eid);
+    const teamStats = espnTeamStats.filter(r => r.espn_match_id == eid);
+    const xg = espnXG.find(r => r.espn_match_id == eid);
+    const shots = espnShots.filter(r => r.espn_match_id == eid);
+    const odds = espnOdds.filter(r => r.espn_match_id == eid);
+    const players = espnPlayers.filter(r => r.espn_match_id == eid);
 
     output[fid] = {
       match: f,

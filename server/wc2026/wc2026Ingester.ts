@@ -12,7 +12,7 @@
  *   2. For each FT event: fetch full summary → box score stats, lineups, key events
  *   3. Match ESPN teams to wc2026_matches via wc2026_team_aliases
  *   4. Upsert:
- *      - wc2026_matches: home_score, away_score, status=FT, espn_event_id, attendance, kickoff_utc
+ *      - wc2026_matches: home_score, away_score, status=FT, espn_match_id, attendance, kickoff_utc
  *      - wc2026_match_stats: 28 box score stat columns + computed xG
  *      - wc2026_match_events: goals, cards, subs with minute
  *      - wc2026_lineups: confirmed post-match lineups (isConfirmed=true)
@@ -435,7 +435,7 @@ export async function ingestWc2026EspnResults(options: {
       const kickoffUtc = kickoffStr ? new Date(kickoffStr) : null;
       console.log(
         `[WC2026ESPN] [STATE] LIVE upsert match ${matchId}:` +
-        ` dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore} status=LIVE espnEventId=${eventId}` +
+        ` dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore} status=LIVE espnMatchId=${eventId}` +
         ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
       );
       await db
@@ -444,7 +444,7 @@ export async function ingestWc2026EspnResults(options: {
           homeScore: dbHomeScore,
           awayScore: dbAwayScore,
           status: "LIVE",
-          espnEventId: eventId,
+          espnMatchId: eventId,
           ...(kickoffUtc ? { kickoffUtc } : {}),
         })
         .where(eq(wc2026Matches.matchId, matchId));
@@ -508,12 +508,12 @@ export async function ingestWc2026EspnResults(options: {
     const kickoffStr = (event.competitions?.[0] as any)?.date ?? null;
     const kickoffUtc = kickoffStr ? new Date(kickoffStr) : null;
 
-    // Step 5: Upsert wc2026_matches (score, status, espn_event_id, attendance)
+    // Step 5: Upsert wc2026_matches (score, status, espn_match_id, attendance)
     // [FIX] matchStatus is always 'FT' at this point (LIVE was handled above via continue)
     // [FIX] Uses dbHomeScore/dbAwayScore (swap-corrected) NOT raw homeScore/awayScore
     console.log(
       `[WC2026ESPN] [STATE] Upserting match ${matchId}: dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore}` +
-      ` status=${matchStatus} espnEventId=${eventId}` +
+      ` status=${matchStatus} espnMatchId=${eventId}` +
       ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
     );
     await db
@@ -522,7 +522,7 @@ export async function ingestWc2026EspnResults(options: {
         homeScore: dbHomeScore,
         awayScore: dbAwayScore,
         status: matchStatus as "FT" | "LIVE",
-        espnEventId: eventId,
+        espnMatchId: eventId,
         attendance,
         ...(kickoffUtc ? { kickoffUtc } : {}),
       })

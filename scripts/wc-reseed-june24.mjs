@@ -125,7 +125,7 @@ function deriveLambdas(bookHomeML, bookAwayML, bookDrawML, totalLine) {
 // ─── June 24 Matchs with exact ground truth ────────────────────────────────
 const MATCHES = [
   {
-    matchId: 'wc26-g-049',
+    espn_match_id: 'wc26-g-049',
     // DB currently has home=CAN, away=SUI — NEEDS SWAP
     correctHomeId: 'sui', correctAwayId: 'can',
     homeName: 'Switzerland', awayName: 'Canada',
@@ -141,7 +141,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-050',
+    espn_match_id: 'wc26-g-050',
     // DB currently has home=QAT, away=BIH — NEEDS SWAP
     correctHomeId: 'bih', correctAwayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
@@ -156,7 +156,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-051',
+    espn_match_id: 'wc26-g-051',
     // DB currently has home=MEX, away=CZE — NEEDS SWAP (this is BRA@SCO)
     correctHomeId: 'sco', correctAwayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
@@ -172,7 +172,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-052',
+    espn_match_id: 'wc26-g-052',
     // DB currently has home=KOR, away=RSA — NEEDS SWAP (this is HAI@MAR)
     correctHomeId: 'mar', correctAwayId: 'hai',
     homeName: 'Morocco', awayName: 'Haiti',
@@ -188,7 +188,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-053',
+    espn_match_id: 'wc26-g-053',
     // DB currently has home=HAI, away=MAR — NEEDS SWAP (this is MEX@CZE)
     correctHomeId: 'cze', correctAwayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
@@ -204,7 +204,7 @@ const MATCHES = [
     }
   },
   {
-    matchId: 'wc26-g-054',
+    espn_match_id: 'wc26-g-054',
     // DB currently has home=BRA, away=SCO — NEEDS SWAP (this is KOR@RSA)
     correctHomeId: 'rsa', correctAwayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
@@ -228,7 +228,7 @@ async function main() {
 
   // Verify current DB home/away orientation
   console.log(`\n${TAG} [STEP] Verifying current DB match orientation...`);
-  const matchIds = MATCHES.map(f => f.matchId);
+  const matchIds = MATCHES.map(f => f.espn_match_id);
   const [dbMatches] = await conn.query(
     `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
     matchIds
@@ -237,17 +237,17 @@ async function main() {
   // Fix home/away orientation in matches table
   console.log(`\n${TAG} [STEP] Fixing home/away orientation in wc2026_matches...`);
   for (const f of MATCHES) {
-    const dbF = dbMatches.find(r => r.match_id === f.matchId);
+    const dbF = dbMatches.find(r => r.match_id === f.espn_match_id);
     const homeCorrect = dbF?.home_team_id === f.correctHomeId;
     const awayCorrect = dbF?.away_team_id === f.correctAwayId;
     if (!homeCorrect || !awayCorrect) {
       await conn.query(
         `UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
-        [f.correctHomeId, f.correctAwayId, f.matchId]
+        [f.correctHomeId, f.correctAwayId, f.espn_match_id]
       );
-      console.log(`${TAG} [STATE] SWAPPED ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId} (was home=${dbF?.home_team_id} away=${dbF?.away_team_id})`);
+      console.log(`${TAG} [STATE] SWAPPED ${f.espn_match_id}: home=${f.correctHomeId} away=${f.correctAwayId} (was home=${dbF?.home_team_id} away=${dbF?.away_team_id})`);
     } else {
-      console.log(`${TAG} [STATE] OK ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      console.log(`${TAG} [STATE] OK ${f.espn_match_id}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     }
   }
 
@@ -263,7 +263,7 @@ async function main() {
 
   for (const f of MATCHES) {
     const b = f.book;
-    console.log(`\n${TAG} [STEP] Processing ${f.matchId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
+    console.log(`\n${TAG} [STEP] Processing ${f.espn_match_id} | ${f.awayName}(away) @ ${f.homeName}(home)`);
 
     // ── Derive lambdas from book odds ──
     // Home team = home in DB (e.g., SUI for wc26-g-049)
@@ -329,7 +329,7 @@ async function main() {
     for (const row of bookRows) {
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalBookRows++;
     }
@@ -354,7 +354,7 @@ async function main() {
       if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null: ${row.market}:${row.selection}`); continue; }
       await conn.query(
         `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.espn_match_id, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalModelRows++;
     }
@@ -390,7 +390,7 @@ async function main() {
         model_lean=VALUES(model_lean), lean_prob=VALUES(lean_prob),
         top_scorelines=VALUES(top_scorelines), modeled_at=NOW()
     `, [
-      f.matchId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
+      f.espn_match_id, MODEL_VERSION, 1000000, f.homeName, f.awayName,
       lambdaH, lambdaA, finalHome, finalDraw, finalAway,
       projHomeScore, projAwayScore, projTotal, projSpread,
       sim.over25, sim.under25, sim.over35, sim.btts,
@@ -402,7 +402,7 @@ async function main() {
       finalHome > finalAway ? 'home' : 'away', Math.max(finalHome, finalAway), sim.top,
     ]);
 
-    console.log(`${TAG} [OUTPUT] ${f.matchId}: bookRows=12 modelRows=12 projTotal=${projTotal} (raw, not rounded)`);
+    console.log(`${TAG} [OUTPUT] ${f.espn_match_id}: bookRows=12 modelRows=12 projTotal=${projTotal} (raw, not rounded)`);
   }
 
   // ── Final verification ──
@@ -422,7 +422,7 @@ async function main() {
 
   let allOk = true;
   for (const fid of matchIds) {
-    const f = MATCHES.find(x => x.matchId === fid);
+    const f = MATCHES.find(x => x.espn_match_id === fid);
     const bookRows = verify.find(r => r.match_id === fid && r.book_id === DK_BOOK_ID);
     const modelRows = verify.find(r => r.match_id === fid && r.book_id === MODEL_BOOK_ID);
     const proj = verifyProj.find(r => r.match_id === fid);

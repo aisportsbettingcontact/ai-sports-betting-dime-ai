@@ -65,7 +65,7 @@ const MODEL_BOOK_ID = 0;
 
 const MODEL_DATA = [
   {
-    matchId: 'wc26-g-021',
+    espn_match_id: 'wc26-g-021',
     // DB home=cod, DB away=por
     homeWin:  0.0775,  // cod wins
     draw:     0.3512,
@@ -82,7 +82,7 @@ const MODEL_DATA = [
     xgAway:   1.13,    // por expected goals
   },
   {
-    matchId: 'wc26-g-023',
+    espn_match_id: 'wc26-g-023',
     homeWin:  0.4764,
     draw:     0.3871,
     awayWin:  0.1365,
@@ -98,7 +98,7 @@ const MODEL_DATA = [
     xgAway:   0.41,
   },
   {
-    matchId: 'wc26-g-024',
+    espn_match_id: 'wc26-g-024',
     homeWin:  0.3844,
     draw:     0.4190,
     awayWin:  0.1965,
@@ -114,7 +114,7 @@ const MODEL_DATA = [
     xgAway:   0.51,
   },
   {
-    matchId: 'wc26-g-022',
+    espn_match_id: 'wc26-g-022',
     homeWin:  0.1123,
     draw:     0.3964,
     awayWin:  0.4913,
@@ -142,7 +142,7 @@ async function seedModelOdds() {
   let totalErrors   = 0;
 
   for (const m of MODEL_DATA) {
-    console.log(`\n[ModelSeed v4.1] [MATCH] ${m.matchId}`);
+    console.log(`\n[ModelSeed v4.1] [MATCH] ${m.espn_match_id}`);
     console.log(`[ModelSeed v4.1] [INPUT] home_win=${m.homeWin} draw=${m.draw} away_win=${m.awayWin}`);
     console.log(`[ModelSeed v4.1] [INPUT] homeML=${m.homeML} drawML=${m.drawML} awayML=${m.awayML}`);
     console.log(`[ModelSeed v4.1] [INPUT] total=${m.total} over=${m.overOdds} under=${m.underOdds}`);
@@ -160,17 +160,17 @@ async function seedModelOdds() {
     // Delete existing model rows for this match
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
-      [m.matchId, MODEL_BOOK_ID]
+      [m.espn_match_id, MODEL_BOOK_ID]
     );
     console.log(`[ModelSeed v4.1] [STEP] Deleted ${del.affectedRows} existing model rows`);
 
     // Build rows — schema: (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
     const rows = [
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',  'home',  null,    m.homeML,   m.homeWin,  0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',  'draw',  null,    m.drawML,   m.draw,     0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, '1X2',  'away',  null,    m.awayML,   m.awayWin,  0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL','over',  m.total, m.overOdds, m.overProb, 0],
-      [m.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL','under', m.total, m.underOdds,m.underProb,0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',  'home',  null,    m.homeML,   m.homeWin,  0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',  'draw',  null,    m.drawML,   m.draw,     0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, '1X2',  'away',  null,    m.awayML,   m.awayWin,  0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL','over',  m.total, m.overOdds, m.overProb, 0],
+      [m.espn_match_id, snapshotTs, MODEL_BOOK_ID, 'TOTAL','under', m.total, m.underOdds,m.underProb,0],
     ];
 
     try {
@@ -194,11 +194,11 @@ async function seedModelOdds() {
   for (const m of MODEL_DATA) {
     const [rows] = await conn.query(
       'SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
-      [m.matchId, MODEL_BOOK_ID]
+      [m.espn_match_id, MODEL_BOOK_ID]
     );
     const cnt = rows[0].cnt;
     const pass = cnt === 5;
-    console.log(`[ModelSeed v4.1] [VERIFY] ${m.matchId}: ${cnt}/5 rows — ${pass ? '✓ PASS' : '✗ FAIL'}`);
+    console.log(`[ModelSeed v4.1] [VERIFY] ${m.espn_match_id}: ${cnt}/5 rows — ${pass ? '✓ PASS' : '✗ FAIL'}`);
     if (!pass) verifyErrors++;
   }
 

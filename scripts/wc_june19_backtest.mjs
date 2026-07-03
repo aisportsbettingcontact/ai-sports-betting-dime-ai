@@ -178,7 +178,7 @@ for (const f of matches) {
     await conn.query(`
       INSERT INTO wc_bt_matches 
         (id, tournament_year, stage, group_letter, matchday, match_date, kickoff_utc,
-         home_team, away_team, home_score, away_score, source, espn_event_id)
+         home_team, away_team, home_score, away_score, source, espn_match_id)
       VALUES (?, 2026, 'Group Stage', ?, ?, '2026-06-19', ?,
               ?, ?, ?, ?, 'espn', NULL)
     `, [f.match_id, f.group_letter || 'X', f.matchday || 1, f.kickoff_utc,

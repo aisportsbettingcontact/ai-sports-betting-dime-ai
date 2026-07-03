@@ -13,7 +13,7 @@ console.log('  MIDNIGHT RULE VERIFICATION — wc2026_espn_matches');
 console.log('══════════════════════════════════════════════════════════\n');
 
 const [rows] = await conn.execute(
-  `SELECT matchId, homeTeamAbbrev, awayTeamAbbrev, matchDateUtc, matchGameDate, matchKickoffEt
+  `SELECT espn_match_id, homeTeamAbbrev, awayTeamAbbrev, matchDateUtc, matchGameDate, matchKickoffEt
    FROM wc2026_espn_matches
    ORDER BY matchDateUtc ASC`
 );
@@ -29,10 +29,10 @@ const EXPECTED = {
 let pass = 0, fail = 0;
 
 for (const row of rows) {
-  const exp = EXPECTED[row.matchId];
+  const exp = EXPECTED[row.espn_match_id];
   const utcStr = new Date(Number(row.matchDateUtc)).toISOString();
   
-  console.log(`Match: ${row.matchId} | ${row.homeTeamAbbrev} vs ${row.awayTeamAbbrev}`);
+  console.log(`Match: ${row.espn_match_id} | ${row.homeTeamAbbrev} vs ${row.awayTeamAbbrev}`);
   console.log(`  UTC:            ${utcStr}`);
   console.log(`  matchGameDate:  ${row.matchGameDate}  (expected: ${exp?.gameDate ?? 'N/A'})`);
   console.log(`  matchKickoffEt: ${row.matchKickoffEt}  (expected: ${exp?.kickoffEt ?? 'N/A'})`);
@@ -47,7 +47,7 @@ for (const row of rows) {
     if (!dateOk) console.log(`  ⚠ DATE MISMATCH: got "${row.matchGameDate}" expected "${exp.gameDate}"`);
     if (!timeOk) console.log(`  ⚠ TIME MISMATCH: got "${row.matchKickoffEt}" expected "${exp.kickoffEt}"`);
   } else {
-    console.log(`  Status:         ℹ No GT defined for this matchId`);
+    console.log(`  Status:         ℹ No GT defined for this espn_match_id`);
   }
   console.log();
 }

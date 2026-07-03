@@ -9,15 +9,15 @@ dotenv.config();
 
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 
-// Ground truth: { matchId, awayDc, homeDc }
+// Ground truth: { espn_match_id, awayDc, homeDc }
 // awayDc = AWAY OR DRAW (away team + draw), homeDc = HOME OR DRAW
 const GT_DC = [
-  { matchId: 'wc26-g-049', awayDc: -170, homeDc: -310 },  // CAN or Draw, SUI or Draw
-  { matchId: 'wc26-g-050', awayDc: +185, homeDc: -1000 }, // QAT or Draw, BIH or Draw
-  { matchId: 'wc26-g-051', awayDc: -1100, homeDc: +200 }, // BRA or Draw, SCO or Draw
-  { matchId: 'wc26-g-052', awayDc: +340, homeDc: -3500 }, // HAI or Draw, MAR or Draw
-  { matchId: 'wc26-g-053', awayDc: -350, homeDc: -120 },  // MEX or Draw, CZE or Draw
-  { matchId: 'wc26-g-054', awayDc: -600, homeDc: +115 },  // KOR or Draw, RSA or Draw
+  { espn_match_id: 'wc26-g-049', awayDc: -170, homeDc: -310 },  // CAN or Draw, SUI or Draw
+  { espn_match_id: 'wc26-g-050', awayDc: +185, homeDc: -1000 }, // QAT or Draw, BIH or Draw
+  { espn_match_id: 'wc26-g-051', awayDc: -1100, homeDc: +200 }, // BRA or Draw, SCO or Draw
+  { espn_match_id: 'wc26-g-052', awayDc: +340, homeDc: -3500 }, // HAI or Draw, MAR or Draw
+  { espn_match_id: 'wc26-g-053', awayDc: -350, homeDc: -120 },  // MEX or Draw, CZE or Draw
+  { espn_match_id: 'wc26-g-054', awayDc: -600, homeDc: +115 },  // KOR or Draw, RSA or Draw
 ];
 
 const BOOK_ID = 68;
@@ -26,7 +26,7 @@ const now = new Date();
 let inserted = 0;
 let errors = 0;
 
-for (const { matchId, awayDc, homeDc } of GT_DC) {
+for (const { espn_match_id, awayDc, homeDc } of GT_DC) {
   const rows = [
     { selection: 'away', americanOdds: awayDc },
     { selection: 'home', americanOdds: homeDc },
@@ -47,12 +47,12 @@ for (const { matchId, awayDc, homeDc } of GT_DC) {
           american_odds = VALUES(american_odds),
           implied_prob = VALUES(implied_prob),
           snapshot_ts = VALUES(snapshot_ts)
-      `, [matchId, BOOK_ID, selection, americanOdds, impliedProb.toFixed(5), now]);
+      `, [espn_match_id, BOOK_ID, selection, americanOdds, impliedProb.toFixed(5), now]);
 
-      console.log(`[OUTPUT] ✅ ${matchId} | DOUBLE_CHANCE:${selection} | ${americanOdds > 0 ? '+' : ''}${americanOdds} | impliedProb=${impliedProb.toFixed(4)}`);
+      console.log(`[OUTPUT] ✅ ${espn_match_id} | DOUBLE_CHANCE:${selection} | ${americanOdds > 0 ? '+' : ''}${americanOdds} | impliedProb=${impliedProb.toFixed(4)}`);
       inserted++;
     } catch (err) {
-      console.log(`[OUTPUT] ❌ ${matchId} | DOUBLE_CHANCE:${selection} | ERROR: ${err.message}`);
+      console.log(`[OUTPUT] ❌ ${espn_match_id} | DOUBLE_CHANCE:${selection} | ERROR: ${err.message}`);
       errors++;
     }
   }

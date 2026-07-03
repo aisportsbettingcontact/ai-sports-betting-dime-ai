@@ -156,7 +156,7 @@ async function main() {
 
   // Pull matchs
   const [matchs] = await conn.query(`
-    SELECT f.match_id, f.espn_event_id, f.match_date, f.kickoff_utc,
+    SELECT f.match_id, f.espn_match_id, f.match_date, f.kickoff_utc,
            f.home_score, f.away_score, f.status, f.attendance,
            th.name as home_name, th.fifa_code as home_code,
            ta.name as away_name, ta.fifa_code as away_code
@@ -166,16 +166,16 @@ async function main() {
     WHERE f.match_id IN (?) ORDER BY f.match_date, f.kickoff_utc
   `, [FIDS]);
 
-  const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
+  const espnIds = matchs.map(f => f.espn_match_id).filter(Boolean);
   log('INPUT', `Matchs: ${matchs.length} | ESPN IDs: ${espnIds.join(',')}`);
 
   // Pull all ESPN tables
-  const [espnMatches] = await conn.query(`SELECT * FROM wc2026_espn_matches WHERE matchId IN (?)`, [espnIds]);
-  const [espnTeamStats] = await conn.query(`SELECT * FROM wc2026_espn_team_stats WHERE matchId IN (?)`, [espnIds]);
-  const [espnXG] = await conn.query(`SELECT * FROM wc2026_espn_expected_goals WHERE matchId IN (?)`, [espnIds]);
-  const [espnShots] = await conn.query(`SELECT * FROM wc2026_espn_shot_map WHERE matchId IN (?)`, [espnIds]);
-  const [espnOdds] = await conn.query(`SELECT * FROM wc2026_espn_match_odds WHERE matchId IN (?)`, [espnIds]);
-  const [espnPlayers] = await conn.query(`SELECT * FROM wc2026_espn_player_stats WHERE matchId IN (?)`, [espnIds]);
+  const [espnMatches] = await conn.query(`SELECT * FROM wc2026_espn_matches WHERE espn_match_id IN (?)`, [espnIds]);
+  const [espnTeamStats] = await conn.query(`SELECT * FROM wc2026_espn_team_stats WHERE espn_match_id IN (?)`, [espnIds]);
+  const [espnXG] = await conn.query(`SELECT * FROM wc2026_espn_expected_goals WHERE espn_match_id IN (?)`, [espnIds]);
+  const [espnShots] = await conn.query(`SELECT * FROM wc2026_espn_shot_map WHERE espn_match_id IN (?)`, [espnIds]);
+  const [espnOdds] = await conn.query(`SELECT * FROM wc2026_espn_match_odds WHERE espn_match_id IN (?)`, [espnIds]);
+  const [espnPlayers] = await conn.query(`SELECT * FROM wc2026_espn_player_stats WHERE espn_match_id IN (?)`, [espnIds]);
   const [modelRows] = await conn.query(`SELECT * FROM wc2026_model_projections WHERE match_id IN (?) ORDER BY match_id, modeled_at DESC`, [FIDS]);
   const [bookRows] = await conn.query(`SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (?)`, [FIDS]);
 
@@ -196,12 +196,12 @@ async function main() {
     const lam = V11_LAMBDAS[fid];
     const model = modelRows.find(r => r.match_id === fid);
     const book = bookRows.find(r => r.match_id === fid);
-    const eid = f?.espn_event_id;
-    const em = espnMatches.find(r => r.matchId == eid);
-    const ts = espnTeamStats.find(r => r.matchId == eid);
-    const xg = espnXG.find(r => r.matchId == eid);
-    const shots = espnShots.filter(r => r.matchId == eid);
-    const players = espnPlayers.filter(r => r.matchId == eid);
+    const eid = f?.espn_match_id;
+    const em = espnMatches.find(r => r.espn_match_id == eid);
+    const ts = espnTeamStats.find(r => r.espn_match_id == eid);
+    const xg = espnXG.find(r => r.espn_match_id == eid);
+    const shots = espnShots.filter(r => r.espn_match_id == eid);
+    const players = espnPlayers.filter(r => r.espn_match_id == eid);
 
     log('STEP', `\n${'─'.repeat(80)}`);
     log('STEP', `GRADING: ${fid} | ${lam.home} vs ${lam.away} | ${lam.version}`);

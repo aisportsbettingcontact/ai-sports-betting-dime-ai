@@ -136,8 +136,8 @@ const V14_QUERIES = {
   A1_XG: {
     table: 'wc2026_espn_expected_goals',
     alias: 'eg',
-    join: 'wc2026_espn_matches em ON eg.matchId = em.matchId',
-    columns: ['eg.matchId','eg.matchRound','eg.homeTeamAbbrev','eg.awayTeamAbbrev',
+    join: 'wc2026_espn_matches em ON eg.espn_match_id = em.espn_match_id',
+    columns: ['eg.espn_match_id','eg.matchRound','eg.homeTeamAbbrev','eg.awayTeamAbbrev',
                'eg.homeXG','eg.awayXG','eg.homeXGOT','eg.awayXGOT','eg.homeXA','eg.awayXA',
                'em.homeScore','em.awayScore'],
     filter: 'none',
@@ -145,33 +145,33 @@ const V14_QUERIES = {
   },
   A2_TS: {
     table: 'wc2026_espn_team_stats',
-    columns: ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','possession','possessionAway'],
+    columns: ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','possession','possessionAway'],
     filter: 'none',
     purpose: 'Possession % for possAdj multiplicative adjustment',
   },
   A3_MS: {
     table: 'wc2026_espn_match_stats',
-    columns: ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev',
+    columns: ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev',
                'homeShotsOnGoal','awayShotsOnGoal','homeShots','awayShots'],
     filter: 'none',
     purpose: 'Shot data for spSignal (SOT/shots ratio)',
   },
   A4_PS: {
     table: 'wc2026_espn_player_stats',
-    columns: ['matchId','matchRound','teamAbbrev','name','xG','g'],
+    columns: ['espn_match_id','matchRound','teamAbbrev','name','xG','g'],
     filter: "matchRound = 'group-stage'",
     purpose: 'Player xG for psSignal (per-match player xG average)',
   },
   A5_SM: {
     table: 'wc2026_espn_shot_map',
-    columns: ['matchId','matchRound','teamAbbrev','xG','xGOT'],
+    columns: ['espn_match_id','matchRound','teamAbbrev','xG','xGOT'],
     filter: "matchRound = 'group-stage'",
     purpose: 'Shot-level xG for smSignal (per-match shot map xG average)',
   },
   B1_KO: {
     table: 'wc2026_espn_matches',
     alias: 'em',
-    columns: ['em.matchId','em.matchRound','em.homeTeamAbbrev','em.awayTeamAbbrev',
+    columns: ['em.espn_match_id','em.matchRound','em.homeTeamAbbrev','em.awayTeamAbbrev',
                'em.homeScore','em.awayScore'],
     filter: "matchRound='round-of-32' AND homeScore IS NOT NULL AND awayScore IS NOT NULL AND statusState='post'",
     purpose: 'Completed KO matches for backtest',
@@ -348,9 +348,9 @@ async function main() {
   log('SECTION', 'S3A_XG', '3A — wc2026_espn_expected_goals: full data map');
 
   const [xgFull] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
-    FROM wc2026_espn_expected_goals ORDER BY matchRound, matchId
+    FROM wc2026_espn_expected_goals ORDER BY matchRound, espn_match_id
   `);
 
   const xgByRound = {};
@@ -367,7 +367,7 @@ async function main() {
     const nullXA = rows.filter(r => r.homeXA === null || r.awayXA === null);
     if (nullXG.length > 0) {
       log('WARN', 'S3A_XG', `    NULL homeXG/awayXG: ${nullXG.length} rows (${round})`);
-      nullXG.forEach(r => log('NULL_FOUND', 'S3A_XG', `      matchId=${r.matchId} home=${r.homeTeamAbbrev} away=${r.awayTeamAbbrev} homeXG=${r.homeXG} awayXG=${r.awayXG}`));
+      nullXG.forEach(r => log('NULL_FOUND', 'S3A_XG', `      espn_match_id=${r.espn_match_id} home=${r.homeTeamAbbrev} away=${r.awayTeamAbbrev} homeXG=${r.homeXG} awayXG=${r.awayXG}`));
     } else {
       log('PASS', 'S3A_XG', `    homeXG/awayXG: 0 NULLs in ${round} ✓`);
     }
@@ -387,8 +387,8 @@ async function main() {
   log('SECTION', 'S3B_TS', '3B — wc2026_espn_team_stats: possession data map');
 
   const [tsFull] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
-    FROM wc2026_espn_team_stats ORDER BY matchRound, matchId
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
+    FROM wc2026_espn_team_stats ORDER BY matchRound, espn_match_id
   `);
 
   // Check possession format
@@ -414,7 +414,7 @@ async function main() {
   });
   if (badPoss.length > 0) {
     log('WARN', 'S3B_TS', `  Non-numeric/out-of-range possession: ${badPoss.length} rows`);
-    badPoss.forEach(r => log('NULL_FOUND', 'S3B_TS', `    matchId=${r.matchId} possession='${r.possession}'`));
+    badPoss.forEach(r => log('NULL_FOUND', 'S3B_TS', `    espn_match_id=${r.espn_match_id} possession='${r.possession}'`));
   } else {
     log('PASS', 'S3B_TS', `  All possession values parse to valid [0,100] floats ✓`);
   }
@@ -423,9 +423,9 @@ async function main() {
   log('SECTION', 'S3C_MS', '3C — wc2026_espn_match_stats: shot data map');
 
   const [msFull] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots
-    FROM wc2026_espn_match_stats ORDER BY matchRound, matchId
+    FROM wc2026_espn_match_stats ORDER BY matchRound, espn_match_id
   `);
 
   const nullShots = msFull.filter(r =>
@@ -434,7 +434,7 @@ async function main() {
   );
   if (nullShots.length > 0) {
     log('WARN', 'S3C_MS', `  NULL shot data rows: ${nullShots.length}`);
-    nullShots.forEach(r => log('NULL_FOUND', 'S3C_MS', `    matchId=${r.matchId} round=${r.matchRound} homeSOT=${r.homeShotsOnGoal} awaySOT=${r.awayShotsOnGoal} homeShots=${r.homeShots} awayShots=${r.awayShots}`));
+    nullShots.forEach(r => log('NULL_FOUND', 'S3C_MS', `    espn_match_id=${r.espn_match_id} round=${r.matchRound} homeSOT=${r.homeShotsOnGoal} awaySOT=${r.awayShotsOnGoal} homeShots=${r.homeShots} awayShots=${r.awayShots}`));
     addIssue('DB-02', 'HIGH', 'S3C_MS',
       'NULL shot data in wc2026_espn_match_stats',
       `${nullShots.length} rows with NULL SOT or shots`,
@@ -448,9 +448,9 @@ async function main() {
   log('SECTION', 'S3D_PS', '3D — wc2026_espn_player_stats: player xG map');
 
   const [psFull] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, name, xG, g,
+    SELECT espn_match_id, matchRound, teamAbbrev, name, xG, g,
            a, sog, shot, appearances, positionGroup
-    FROM wc2026_espn_player_stats ORDER BY matchRound, matchId, teamAbbrev
+    FROM wc2026_espn_player_stats ORDER BY matchRound, espn_match_id, teamAbbrev
   `);
 
   const psGS = psFull.filter(r => r.matchRound === 'group-stage');
@@ -475,17 +475,17 @@ async function main() {
   // Check teams with zero player rows per GS match
   const psTeamMatchCounts = {};
   for (const r of psGSFiltered) {
-    const key = `${r.matchId}:${r.teamAbbrev}`;
+    const key = `${r.espn_match_id}:${r.teamAbbrev}`;
     psTeamMatchCounts[key] = (psTeamMatchCounts[key] || 0) + 1;
   }
-  log('STATE', 'S3D_PS', `  Unique (matchId, teamAbbrev) combos in GS: ${Object.keys(psTeamMatchCounts).length}`);
+  log('STATE', 'S3D_PS', `  Unique (espn_match_id, teamAbbrev) combos in GS: ${Object.keys(psTeamMatchCounts).length}`);
 
   // 3E: wc2026_espn_shot_map — smSignal source
   log('SECTION', 'S3E_SM', '3E — wc2026_espn_shot_map: shot map xG data');
 
   const [smFull] = await db.execute(`
-    SELECT matchId, matchRound, teamAbbrev, xG, xGOT, period, clock, fieldStartX, fieldStartY, shotType, iconType
-    FROM wc2026_espn_shot_map ORDER BY matchRound, matchId, teamAbbrev
+    SELECT espn_match_id, matchRound, teamAbbrev, xG, xGOT, period, clock, fieldStartX, fieldStartY, shotType, iconType
+    FROM wc2026_espn_shot_map ORDER BY matchRound, espn_match_id, teamAbbrev
   `);
 
   const smGS = smFull.filter(r => r.matchRound === 'group-stage');
@@ -503,9 +503,9 @@ async function main() {
   log('SECTION', 'S3F_EM', '3F — wc2026_espn_matches: match scores and status');
 
   const [emFull] = await db.execute(`
-    SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+    SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
            homeScore, awayScore, statusState, statusDetail
-    FROM wc2026_espn_matches ORDER BY matchRound, matchId
+    FROM wc2026_espn_matches ORDER BY matchRound, espn_match_id
   `);
 
   const emGS = emFull.filter(r => r.matchRound === 'group-stage');
@@ -518,10 +518,10 @@ async function main() {
   log('STATE', 'S3F_EM', `  KO pending: ${emKOPending.length}`);
 
   for (const m of emKOCompleted) {
-    log('REAL_DATA', 'S3F_EM', `  COMPLETED: ${m.matchId} ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} [${m.statusDetail}]`);
+    log('REAL_DATA', 'S3F_EM', `  COMPLETED: ${m.espn_match_id} ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev} [${m.statusDetail}]`);
   }
   for (const m of emKOPending) {
-    log('STATE', 'S3F_EM', `  PENDING: ${m.matchId} ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev} [${m.statusState}]`);
+    log('STATE', 'S3F_EM', `  PENDING: ${m.espn_match_id} ${m.homeTeamAbbrev} vs ${m.awayTeamAbbrev} [${m.statusState}]`);
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -670,9 +670,9 @@ async function main() {
   log('SECTION', 'S5B_XREF', '5B — Validate buildGSRows field access against actual column names');
 
   const buildGSRowsFields = {
-    'wc2026_espn_expected_goals': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeXG','awayXG','homeXGOT','awayXGOT','homeXA','awayXA'],
-    'wc2026_espn_team_stats': ['matchId','possession','possessionAway'],
-    'wc2026_espn_match_stats': ['matchId','homeShotsOnGoal','awayShotsOnGoal','homeShots','awayShots'],
+    'wc2026_espn_expected_goals': ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeXG','awayXG','homeXGOT','awayXGOT','homeXA','awayXA'],
+    'wc2026_espn_team_stats': ['espn_match_id','possession','possessionAway'],
+    'wc2026_espn_match_stats': ['espn_match_id','homeShotsOnGoal','awayShotsOnGoal','homeShots','awayShots'],
   };
 
   for (const [tbl, fields] of Object.entries(buildGSRowsFields)) {
@@ -695,12 +695,12 @@ async function main() {
   log('SECTION', 'S5C_UNUSED', '5C — Unused available data: columns in ESPN tables NOT queried by v14');
 
   const v14QueriedCols = {
-    'wc2026_espn_expected_goals': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeXG','awayXG','homeXGOT','awayXGOT','homeXA','awayXA'],
-    'wc2026_espn_team_stats': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','possession','possessionAway'],
-    'wc2026_espn_match_stats': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeShotsOnGoal','awayShotsOnGoal','homeShots','awayShots'],
-    'wc2026_espn_player_stats': ['matchId','matchRound','teamAbbrev','name','xG','g','a','sog','shot'],
-    'wc2026_espn_shot_map': ['matchId','matchRound','teamAbbrev','xG','xGOT'],
-    'wc2026_espn_matches': ['matchId','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeScore','awayScore','statusState'],
+    'wc2026_espn_expected_goals': ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeXG','awayXG','homeXGOT','awayXGOT','homeXA','awayXA'],
+    'wc2026_espn_team_stats': ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','possession','possessionAway'],
+    'wc2026_espn_match_stats': ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeShotsOnGoal','awayShotsOnGoal','homeShots','awayShots'],
+    'wc2026_espn_player_stats': ['espn_match_id','matchRound','teamAbbrev','name','xG','g','a','sog','shot'],
+    'wc2026_espn_shot_map': ['espn_match_id','matchRound','teamAbbrev','xG','xGOT'],
+    'wc2026_espn_matches': ['espn_match_id','matchRound','homeTeamAbbrev','awayTeamAbbrev','homeScore','awayScore','statusState'],
     'wc2026_frozen_book_odds': ['match_id','book_home_ml','book_draw_ml','book_away_ml','book_spread_line','book_home_spread_odds','book_away_spread_odds','book_total_line','book_over_odds','book_under_odds','book_btts_yes_odds','book_btts_no_odds','book_dc_1x_odds','book_dc_x2_odds','book_no_draw_home_odds','to_advance_home_odds','to_advance_away_odds'],
   };
 
@@ -726,12 +726,12 @@ async function main() {
 
     // GS xG rows
     const [xgRows] = await db.execute(`
-      SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+      SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
              homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
       FROM wc2026_espn_expected_goals
       WHERE matchRound = 'group-stage'
         AND (homeTeamAbbrev = ? OR awayTeamAbbrev = ?)
-      ORDER BY matchId
+      ORDER BY espn_match_id
     `, [team, team]);
 
     log('STATE', 'S6_TEAM', `  ${team}: ${xgRows.length} GS xG rows`);
@@ -742,10 +742,10 @@ async function main() {
       const xa = side === 'home' ? r.homeXA : r.awayXA;
       const xgNull = xg === null ? ' ← NULL!' : '';
       const xgotNull = xgot === null ? ' ← NULL!' : '';
-      log('REAL_DATA', 'S6_TEAM', `  ${r.matchId} [${side}] xG=${xg}${xgNull} xGOT=${xgot}${xgotNull} xA=${xa}`);
+      log('REAL_DATA', 'S6_TEAM', `  ${r.espn_match_id} [${side}] xG=${xg}${xgNull} xGOT=${xgot}${xgotNull} xA=${xa}`);
       if (xg === null) {
-        addIssue(`TEAM-${team}-${r.matchId}-XG`, 'CRITICAL', 'S6_TEAM',
-          `${team} match ${r.matchId}: xG is NULL in GS data`,
+        addIssue(`TEAM-${team}-${r.espn_match_id}-XG`, 'CRITICAL', 'S6_TEAM',
+          `${team} match ${r.espn_match_id}: xG is NULL in GS data`,
           `homeXG=${r.homeXG} awayXG=${r.awayXG} side=${side}`,
           'Re-scrape ESPN data for this match or flag as data gap'
         );
@@ -754,28 +754,28 @@ async function main() {
 
     // GS team stats (possession)
     const [tsRows] = await db.execute(`
-      SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
+      SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev, possession, possessionAway
       FROM wc2026_espn_team_stats
       WHERE matchRound = 'group-stage'
         AND (homeTeamAbbrev = ? OR awayTeamAbbrev = ?)
-      ORDER BY matchId
+      ORDER BY espn_match_id
     `, [team, team]);
 
     log('STATE', 'S6_TEAM', `  ${team}: ${tsRows.length} GS team stats rows`);
     for (const r of tsRows) {
       const side = r.homeTeamAbbrev === team ? 'home' : 'away';
       const poss = side === 'home' ? r.possession : r.possessionAway;
-      log('REAL_DATA', 'S6_TEAM', `  ${r.matchId} [${side}] possession=${poss}`);
+      log('REAL_DATA', 'S6_TEAM', `  ${r.espn_match_id} [${side}] possession=${poss}`);
     }
 
     // GS match stats (shots)
     const [msRows] = await db.execute(`
-      SELECT matchId, matchRound, homeTeamAbbrev, awayTeamAbbrev,
+      SELECT espn_match_id, matchRound, homeTeamAbbrev, awayTeamAbbrev,
              homeShotsOnGoal, awayShotsOnGoal, homeShots, awayShots
       FROM wc2026_espn_match_stats
       WHERE matchRound = 'group-stage'
         AND (homeTeamAbbrev = ? OR awayTeamAbbrev = ?)
-      ORDER BY matchId
+      ORDER BY espn_match_id
     `, [team, team]);
 
     log('STATE', 'S6_TEAM', `  ${team}: ${msRows.length} GS match stats rows`);
@@ -783,35 +783,35 @@ async function main() {
       const side = r.homeTeamAbbrev === team ? 'home' : 'away';
       const sot = side === 'home' ? r.homeShotsOnGoal : r.awayShotsOnGoal;
       const shots = side === 'home' ? r.homeShots : r.awayShots;
-      log('REAL_DATA', 'S6_TEAM', `  ${r.matchId} [${side}] SOT=${sot} shots=${shots}`);
+      log('REAL_DATA', 'S6_TEAM', `  ${r.espn_match_id} [${side}] SOT=${sot} shots=${shots}`);
     }
 
     // Player stats
     const [psRows] = await db.execute(`
-      SELECT matchId, teamAbbrev, COUNT(*) AS playerCount, SUM(xG) AS totalXG, SUM(g) AS totalGoals
+      SELECT espn_match_id, teamAbbrev, COUNT(*) AS playerCount, SUM(xG) AS totalXG, SUM(g) AS totalGoals
       FROM wc2026_espn_player_stats
       WHERE (matchRound = 'group-stage' OR matchRound IS NULL) AND teamAbbrev = ?
-      GROUP BY matchId, teamAbbrev
-      ORDER BY matchId
+      GROUP BY espn_match_id, teamAbbrev
+      ORDER BY espn_match_id
     `, [team]);
 
     log('STATE', 'S6_TEAM', `  ${team}: ${psRows.length} GS match-level player stat groups`);
     for (const r of psRows) {
-      log('REAL_DATA', 'S6_TEAM', `  ${r.matchId}: ${r.playerCount} players, totalXG=${r.totalXG}, totalGoals=${r.totalGoals}`);
+      log('REAL_DATA', 'S6_TEAM', `  ${r.espn_match_id}: ${r.playerCount} players, totalXG=${r.totalXG}, totalGoals=${r.totalGoals}`);
     }
 
     // Shot map
     const [smRows] = await db.execute(`
-      SELECT matchId, teamAbbrev, COUNT(*) AS shotCount, SUM(xG) AS totalXG
+      SELECT espn_match_id, teamAbbrev, COUNT(*) AS shotCount, SUM(xG) AS totalXG
       FROM wc2026_espn_shot_map
       WHERE matchRound = 'group-stage' AND teamAbbrev = ?
-      GROUP BY matchId, teamAbbrev
-      ORDER BY matchId
+      GROUP BY espn_match_id, teamAbbrev
+      ORDER BY espn_match_id
     `, [team]);
 
     log('STATE', 'S6_TEAM', `  ${team}: ${smRows.length} GS match-level shot map groups`);
     for (const r of smRows) {
-      log('REAL_DATA', 'S6_TEAM', `  ${r.matchId}: ${r.shotCount} shots, totalXG=${r.totalXG}`);
+      log('REAL_DATA', 'S6_TEAM', `  ${r.espn_match_id}: ${r.shotCount} shots, totalXG=${r.totalXG}`);
     }
 
     // Completeness check
@@ -909,19 +909,19 @@ async function main() {
   sectionHeader('SECTION 8 — BACKTEST COVERAGE: COMPLETED KO MATCHES vs AVAILABLE DATA');
 
   const [koCompleted] = await db.execute(`
-    SELECT em.matchId, em.homeTeamAbbrev, em.awayTeamAbbrev, em.homeScore, em.awayScore, em.statusState
+    SELECT em.espn_match_id, em.homeTeamAbbrev, em.awayTeamAbbrev, em.homeScore, em.awayScore, em.statusState
     FROM wc2026_espn_matches em
     WHERE em.matchRound = 'round-of-32'
       AND em.homeScore IS NOT NULL
       AND em.awayScore IS NOT NULL
       AND em.statusState = 'post'
-    ORDER BY em.matchId
+    ORDER BY em.espn_match_id
   `);
 
   log('STATE', 'S8_BT', `  Completed KO matches available for backtest: ${koCompleted.length}`);
 
   for (const m of koCompleted) {
-    log('REAL_DATA', 'S8_BT', `  ${m.matchId}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
+    log('REAL_DATA', 'S8_BT', `  ${m.espn_match_id}: ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
 
     // Check each team has GS data
     for (const [team, role] of [[m.homeTeamAbbrev,'home'],[m.awayTeamAbbrev,'away']]) {
@@ -933,9 +933,9 @@ async function main() {
       const cnt = gsCount[0].cnt;
       if (cnt === 0) {
         log('FAIL', 'S8_BT', `    ${team} (${role}): ZERO GS xG rows — will be SKIPPED in backtest`);
-        addIssue(`BT-${m.matchId}-${team}`, 'HIGH', 'S8_BT',
-          `Backtest match ${m.matchId}: ${team} has zero GS xG rows`,
-          `matchId=${m.matchId} team=${team} role=${role}`,
+        addIssue(`BT-${m.espn_match_id}-${team}`, 'HIGH', 'S8_BT',
+          `Backtest match ${m.espn_match_id}: ${team} has zero GS xG rows`,
+          `espn_match_id=${m.espn_match_id} team=${team} role=${role}`,
           'Re-scrape ESPN GS data for this team'
         );
       } else {

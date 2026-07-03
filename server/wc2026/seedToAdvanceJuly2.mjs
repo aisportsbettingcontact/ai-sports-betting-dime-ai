@@ -68,7 +68,7 @@ function flushLog() {
 // Source: DraftKings "To Qualify" screenshot, 2026-07-02
 const SEED = [
   {
-    matchId: 'wc26-r32-083',
+    espn_match_id: 'wc26-r32-083',
     homeTeam: 'Spain (ESP)',
     awayTeam: 'Austria (AUT)',
     homeTeamId: 'esp',
@@ -77,7 +77,7 @@ const SEED = [
     bookAwayToAdvance: 600,
   },
   {
-    matchId: 'wc26-r32-084',
+    espn_match_id: 'wc26-r32-084',
     homeTeam: 'Portugal (POR)',
     awayTeam: 'Croatia (CRO)',
     homeTeamId: 'por',
@@ -86,7 +86,7 @@ const SEED = [
     bookAwayToAdvance: 255,
   },
   {
-    matchId: 'wc26-r32-085',
+    espn_match_id: 'wc26-r32-085',
     homeTeam: 'Switzerland (SUI)',
     awayTeam: 'Algeria (ALG)',
     homeTeamId: 'sui',
@@ -107,7 +107,7 @@ async function main() {
   log('██ [SECTION]', 'INPUT', 'SECTION 1: INPUT VALIDATION');
   log('◀◀ [INPUT]', 'INPUT', `Matchs to seed: ${SEED.length}`);
   for (const s of SEED) {
-    log('◀◀ [INPUT]', 'INPUT', `  ${s.matchId}: ${s.homeTeam} (home) vs ${s.awayTeam} (away)`);
+    log('◀◀ [INPUT]', 'INPUT', `  ${s.espn_match_id}: ${s.homeTeam} (home) vs ${s.awayTeam} (away)`);
     log('   [ATOMIC]', 'INPUT', `    book_home_to_advance = ${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} (${s.homeTeam})`);
     log('   [ATOMIC]', 'INPUT', `    book_away_to_advance = ${s.bookAwayToAdvance > 0 ? '+' : ''}${s.bookAwayToAdvance} (${s.awayTeam})`);
   }
@@ -132,13 +132,13 @@ async function main() {
   let preflightFail = 0;
 
   for (const s of SEED) {
-    log('▶▶ [STEP]', 'PRE', `Verifying orientation for ${s.matchId}`);
+    log('▶▶ [STEP]', 'PRE', `Verifying orientation for ${s.espn_match_id}`);
     const [rows] = await conn.execute(
       'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ?',
-      [s.matchId]
+      [s.espn_match_id]
     );
     if (!rows.length) {
-      log('✗✗ [FAIL]', 'PRE', `  ${s.matchId}: NOT FOUND in wc2026_matches — ABORT`);
+      log('✗✗ [FAIL]', 'PRE', `  ${s.espn_match_id}: NOT FOUND in wc2026_matches — ABORT`);
       preflightFail++;
       continue;
     }
@@ -148,10 +148,10 @@ async function main() {
     log('   [ATOMIC]', 'PRE', `  DB home_team_id=${row.home_team_id} | expected=${s.homeTeamId} | ${homeOk ? 'MATCH ✓' : 'MISMATCH ✗'}`);
     log('   [ATOMIC]', 'PRE', `  DB away_team_id=${row.away_team_id} | expected=${s.awayTeamId} | ${awayOk ? 'MATCH ✓' : 'MISMATCH ✗'}`);
     if (homeOk && awayOk) {
-      log('✅ [PASS]', 'PRE', `  ${s.matchId}: Orientation VERIFIED — home=${s.homeTeamId} away=${s.awayTeamId}`);
+      log('✅ [PASS]', 'PRE', `  ${s.espn_match_id}: Orientation VERIFIED — home=${s.homeTeamId} away=${s.awayTeamId}`);
       preflightPass++;
     } else {
-      log('✗✗ [FAIL]', 'PRE', `  ${s.matchId}: Orientation MISMATCH — ABORT`);
+      log('✗✗ [FAIL]', 'PRE', `  ${s.espn_match_id}: Orientation MISMATCH — ABORT`);
       preflightFail++;
     }
   }
@@ -170,13 +170,13 @@ async function main() {
   for (const s of SEED) {
     const [rows] = await conn.execute(
       'SELECT match_id, book_home_to_advance, book_away_to_advance FROM wc2026MatchOdds WHERE match_id = ?',
-      [s.matchId]
+      [s.espn_match_id]
     );
     if (!rows.length) {
-      log('⚠️ [WARN]', 'SNAP', `  ${s.matchId}: NOT FOUND in wc2026MatchOdds — will INSERT`);
+      log('⚠️ [WARN]', 'SNAP', `  ${s.espn_match_id}: NOT FOUND in wc2026MatchOdds — will INSERT`);
     } else {
       const r = rows[0];
-      log('·· [STATE]', 'SNAP', `  ${s.matchId}: current book_home_to_advance=${r.book_home_to_advance ?? 'NULL'} book_away_to_advance=${r.book_away_to_advance ?? 'NULL'}`);
+      log('·· [STATE]', 'SNAP', `  ${s.espn_match_id}: current book_home_to_advance=${r.book_home_to_advance ?? 'NULL'} book_away_to_advance=${r.book_away_to_advance ?? 'NULL'}`);
     }
   }
 
@@ -187,7 +187,7 @@ async function main() {
   let updateFail = 0;
 
   for (const s of SEED) {
-    log('▶▶ [STEP]', 'UPD', `Updating ${s.matchId}: home=${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} away=+${s.bookAwayToAdvance}`);
+    log('▶▶ [STEP]', 'UPD', `Updating ${s.espn_match_id}: home=${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} away=+${s.bookAwayToAdvance}`);
     try {
       const [result] = await conn.execute(
         `UPDATE wc2026MatchOdds
@@ -200,18 +200,18 @@ async function main() {
           s.bookHomeToAdvance,
           s.bookAwayToAdvance,
           'seedToAdvanceJuly2.mjs',
-          s.matchId,
+          s.espn_match_id,
         ]
       );
       if (result.affectedRows === 1) {
-        log('✅ [PASS]', 'UPD', `  ${s.matchId}: UPDATE OK — affectedRows=1`);
+        log('✅ [PASS]', 'UPD', `  ${s.espn_match_id}: UPDATE OK — affectedRows=1`);
         updatePass++;
       } else {
-        log('✗✗ [FAIL]', 'UPD', `  ${s.matchId}: UPDATE FAILED — affectedRows=${result.affectedRows}`);
+        log('✗✗ [FAIL]', 'UPD', `  ${s.espn_match_id}: UPDATE FAILED — affectedRows=${result.affectedRows}`);
         updateFail++;
       }
     } catch (err) {
-      log('✗✗ [FAIL]', 'UPD', `  ${s.matchId}: EXCEPTION — ${err.message}`);
+      log('✗✗ [FAIL]', 'UPD', `  ${s.espn_match_id}: EXCEPTION — ${err.message}`);
       updateFail++;
     }
   }
@@ -225,23 +225,23 @@ async function main() {
   for (const s of SEED) {
     const [rows] = await conn.execute(
       'SELECT match_id, book_home_to_advance, book_away_to_advance FROM wc2026MatchOdds WHERE match_id = ?',
-      [s.matchId]
+      [s.espn_match_id]
     );
     if (!rows.length) {
-      log('✗✗ [FAIL]', 'VFY', `  ${s.matchId}: NOT FOUND after update`);
+      log('✗✗ [FAIL]', 'VFY', `  ${s.espn_match_id}: NOT FOUND after update`);
       vfyFail++;
       continue;
     }
     const r = rows[0];
     const homeOk = Number(r.book_home_to_advance) === s.bookHomeToAdvance;
     const awayOk = Number(r.book_away_to_advance) === s.bookAwayToAdvance;
-    log('   [ATOMIC]', 'VFY', `  ${s.matchId}: book_home_to_advance=${r.book_home_to_advance} | expected=${s.bookHomeToAdvance} | ${homeOk ? 'PASS ✓' : 'FAIL ✗'}`);
-    log('   [ATOMIC]', 'VFY', `  ${s.matchId}: book_away_to_advance=${r.book_away_to_advance} | expected=${s.bookAwayToAdvance} | ${awayOk ? 'PASS ✓' : 'FAIL ✗'}`);
+    log('   [ATOMIC]', 'VFY', `  ${s.espn_match_id}: book_home_to_advance=${r.book_home_to_advance} | expected=${s.bookHomeToAdvance} | ${homeOk ? 'PASS ✓' : 'FAIL ✗'}`);
+    log('   [ATOMIC]', 'VFY', `  ${s.espn_match_id}: book_away_to_advance=${r.book_away_to_advance} | expected=${s.bookAwayToAdvance} | ${awayOk ? 'PASS ✓' : 'FAIL ✗'}`);
     if (homeOk && awayOk) {
-      log('✅ [PASS]', 'VFY', `  ${s.matchId}: VERIFIED — ${s.homeTeam} home=${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} | ${s.awayTeam} away=+${s.bookAwayToAdvance}`);
+      log('✅ [PASS]', 'VFY', `  ${s.espn_match_id}: VERIFIED — ${s.homeTeam} home=${s.bookHomeToAdvance > 0 ? '+' : ''}${s.bookHomeToAdvance} | ${s.awayTeam} away=+${s.bookAwayToAdvance}`);
       vfyPass++;
     } else {
-      log('✗✗ [FAIL]', 'VFY', `  ${s.matchId}: MISMATCH after update`);
+      log('✗✗ [FAIL]', 'VFY', `  ${s.espn_match_id}: MISMATCH after update`);
       vfyFail++;
     }
   }
