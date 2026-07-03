@@ -187,16 +187,15 @@ const BRACKET_SEEDING_GRAPH = {
   "760487": { nextGameId: "760504", slot: "home" },  // M76 W (BRA) → M91 home ✅ ESPN confirmed
   "760490": { nextGameId: "760504", slot: "away" },  // M78 W (NOR) → M91 away ✅ ESPN confirmed
   "760491": { nextGameId: "760505", slot: "home" },  // M79 W (MEX) → M92 home ✅ ESPN confirmed
-  "760493": { nextGameId: "760505", slot: "away" },  // M82 W (BEL/SEN) → M92 away ✅ bracketLoc 8 confirmed
-  // ── R32 → R16 (TBD — will be populated by Phase C when ESPN confirms teams) ─
-  // M80 (760495) → M93 (760506): PENDING — ESPN shows RD32 placeholder
-  // M81 (760494) → unknown R16: PENDING — bracketLoc 7, target R16 unresolved
-  // M83 (760496) → unknown R16: PENDING — bracketLoc 5, target R16 unresolved
-  // M84 (760497) → unknown R16: PENDING — bracketLoc 6, target R16 unresolved
-  // M85 (760498) → M95/M96: PENDING
-  // M86 (760500) → M95/M96: PENDING
-  // M87 (760501) → M95/M96: PENDING
-  // M88 (760499) → M95/M96: PENDING
+  "760495": { nextGameId: "760505", slot: "away" },  // M80 W (ENG) → M92 away ✅ ESPN bracketLoc 12→R16 bracketLoc 6
+  "760496": { nextGameId: "760506", slot: "home" },  // M83 W (POR) → M93 home ✅ ESPN bracketLoc 5→R16 bracketLoc 3
+  "760497": { nextGameId: "760506", slot: "away" },  // M84 W (ESP) → M93 away ✅ ESPN bracketLoc 6→R16 bracketLoc 3
+  "760494": { nextGameId: "760507", slot: "home" },  // M81 W (USA) → M94 home ✅ ESPN bracketLoc 7→R16 bracketLoc 4
+  "760493": { nextGameId: "760507", slot: "away" },  // M82 W (BEL) → M94 away ✅ ESPN bracketLoc 8→R16 bracketLoc 4
+  "760501": { nextGameId: "760509", slot: "home" },  // M87 W (COL/GHA) → M95 home ✅ ESPN bracketLoc 16→R16 bracketLoc 7
+  "760499": { nextGameId: "760509", slot: "away" },  // M88 W (AUS/EGY) → M95 away ✅ ESPN bracketLoc 14→R16 bracketLoc 7
+  "760498": { nextGameId: "760508", slot: "home" },  // M85 W (SUI) → M96 home ✅ ESPN bracketLoc 15→R16 bracketLoc 8
+  "760500": { nextGameId: "760508", slot: "away" },  // M86 W (ARG/CPV) → M96 away ✅ ESPN bracketLoc 13→R16 bracketLoc 8
   // ── R16 → QF (ESPN bracket HTML verified — bracketLoc order) ─────────────
   "760503": { nextGameId: "760510", slot: "home" },  // M89 W → M97 home (RD16 W1)
   "760502": { nextGameId: "760510", slot: "away" },  // M90 W → M97 away (RD16 W2)
@@ -805,14 +804,27 @@ async function seedCalendar(conn, rows, matchMap) {
   return { seeded, skipped, errors };
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-async function main() {
+// ─── Exported function for heartbeat integration ─────────────────────────────
+// Returns a structured result object instead of calling process.exit()
+export async function runBracketSync(options = {}) {
+  const dryRun  = options.dryRun  ?? DRY_RUN;
+  const verbose = options.verbose ?? VERBOSE;
   const startTime = Date.now();
-  log("INPUT", `wc2026BracketScraper — DRY_RUN=${DRY_RUN} VERBOSE=${VERBOSE}`);
+  log("INPUT", `wc2026BracketScraper — dryRun=${dryRun} verbose=${verbose} mode=${options.mode ?? 'full'}`);
   log("INPUT", `Phases: A=BracketSnapshot | B=AdvancementResolution | C=OpponentMapping | D=CalendarSeeding`);
 
   const conn = await getConn();
-  let exitCode = 0;
+  const result = {
+    ok: true,
+    phaseA: null,
+    phaseB: null,
+    phaseC: null,
+    phaseD: null,
+    bracketRows: 0,
+    validationWarnings: 0,
+    elapsed: 0,
+    errors: [],
+  };
 
   try {
     // ── STEP 1: Load match map ──────────────────────────────────────────────
@@ -870,6 +882,8 @@ async function main() {
       rows.push(row);
     }
     log("STATE", `Transformed ${rows.length} rows (${validationErrors.length} validation warnings)`);
+    result.bracketRows = rows.length;
+    result.validationWarnings = validationErrors.length;
 
     // ── STEP 5: Print bracket summary ─────────────────────────────────────────
     log("STEP", "=== BRACKET SUMMARY ===");
@@ -890,41 +904,41 @@ async function main() {
       }
     }
 
-    if (DRY_RUN) {
-      log("STEP", "DRY RUN — skipping all DB writes");
-      // Still run phases in dry-run mode for validation output
-    }
-
     // ── PHASE A: Bracket Snapshot ─────────────────────────────────────────────
     const phaseA = await upsertBracketSnapshot(conn, rows);
+    result.phaseA = { upserted: phaseA.inserted, errors: phaseA.errors };
     if (phaseA.errors > 0) {
-      exitCode = 2;
+      result.ok = false;
       log("WARN", `[PHASE-A] ${phaseA.errors} DB errors — continuing to Phase B`);
     }
 
     // ── PHASE B: Advancement Resolution ──────────────────────────────────────
     const phaseB = await resolveAdvancement(conn, rows, matchMap);
+    result.phaseB = { resolved: phaseB.resolved, skipped: phaseB.skipped, errors: phaseB.errors.length };
     if (phaseB.errors.length > 0) {
-      exitCode = 2;
+      result.ok = false;
       for (const e of phaseB.errors) log("WARN", e);
     }
 
     // ── PHASE C: Opponent Mapping ─────────────────────────────────────────────
     const phaseC = await resolveOpponentMapping(conn, rows, matchMap);
+    result.phaseC = { seeded: phaseC.seeded, skipped: phaseC.skipped, errors: phaseC.errors.length };
     if (phaseC.errors.length > 0) {
-      exitCode = 2;
+      result.ok = false;
       for (const e of phaseC.errors) log("WARN", e);
     }
 
     // ── PHASE D: Calendar Seeding ─────────────────────────────────────────────
     const phaseD = await seedCalendar(conn, rows, matchMap);
+    result.phaseD = { seeded: phaseD.seeded, skipped: phaseD.skipped, errors: phaseD.errors.length };
     if (phaseD.errors.length > 0) {
-      exitCode = 2;
+      result.ok = false;
       for (const e of phaseD.errors) log("WARN", e);
     }
 
     // ── FINAL SUMMARY ─────────────────────────────────────────────────────────
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    result.elapsed = parseFloat(elapsed);
     log("OUTPUT", `=== wc2026BracketScraper COMPLETE in ${elapsed}s ===`);
     log("OUTPUT", `  Phase A (Bracket Snapshot):    upserted=${phaseA.inserted}  errors=${phaseA.errors}`);
     log("OUTPUT", `  Phase B (Advancement):         resolved=${phaseB.resolved}  skipped=${phaseB.skipped}  errors=${phaseB.errors.length}`);
@@ -932,23 +946,35 @@ async function main() {
     log("OUTPUT", `  Phase D (Calendar Seeding):    seeded=${phaseD.seeded}      skipped=${phaseD.skipped}  errors=${phaseD.errors.length}`);
     log("OUTPUT", `  Validation warnings: ${validationErrors.length}`);
 
-    if (validationErrors.length > 0 || rows.length < 16) exitCode = 2;
+    if (validationErrors.length > 0 || rows.length < 16) result.ok = false;
 
-    log("VERIFY", exitCode === 0 ? "✅ PASS — all phases clean" : `⚠️  PARTIAL — exit code ${exitCode}`);
+    log("VERIFY", result.ok ? "✅ PASS — all phases clean" : `⚠️  PARTIAL — some warnings/errors`);
 
   } catch (err) {
     log("FAIL", `FATAL: ${err.message}`);
-    console.error(err);
-    exitCode = 1;
+    result.ok = false;
+    result.errors.push(err.message);
   } finally {
     await conn.end();
   }
 
-  process.exit(exitCode);
+  return result;
 }
 
-main().catch(err => {
-  log("FATAL", err.message);
-  console.error(err);
-  process.exit(1);
-});
+// ─── CLI entry point (only runs when executed directly, not when imported) ────
+const isMainModule = process.argv[1] && (
+  process.argv[1].endsWith("wc2026BracketScraper.mjs") ||
+  process.argv[1].includes("wc2026BracketScraper")
+);
+
+if (isMainModule) {
+  runBracketSync({ dryRun: DRY_RUN, verbose: VERBOSE })
+    .then(result => {
+      process.exit(result.ok ? 0 : 2);
+    })
+    .catch(err => {
+      log("FATAL", err.message);
+      console.error(err);
+      process.exit(1);
+    });
+}
