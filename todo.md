@@ -4406,4 +4406,12 @@
 - [x] Update all standalone scripts and test files (audit scripts, batch runners, forensic tools)
 - [x] Push DB migration (ALTER TABLE RENAME COLUMN x9) and verify live data integrity
 - [x] Full system validation (TypeScript 0 errors, data integrity verified, dev server running)
-- [ ] Save checkpoint with unified espn_match_id naming (IN PROGRESS)
+- [x] Save checkpoint with unified espn_match_id naming (c64b71f7)
+
+## Session: 2026-07-03 — WC2026 Feed Date Display Bug Fix
+- [x] Forensic audit: trace date storage/filtering from DB → Router → Frontend
+- [x] Identify root cause: why ALG/SUI (July 2) appears on July 3 feed
+- [x] Fix date filtering to use kickoff_date_pt (Pacific Time) for date grouping
+- [x] Fix kickoff_time_et rendering on feed cards (already correct — displays in ET)
+- [x] Verify correct matches appear on correct dates (Jul 2 vs Jul 3) — ALL PASS
+- [ ] Save checkpoint with permanent fix (IN PROGRESS)

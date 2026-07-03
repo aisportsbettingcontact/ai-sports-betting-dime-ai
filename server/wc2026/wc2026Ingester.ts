@@ -438,6 +438,11 @@ export async function ingestWc2026EspnResults(options: {
         ` dbHomeScore=${dbHomeScore} dbAwayScore=${dbAwayScore} status=LIVE espnMatchId=${eventId}` +
         ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
       );
+      // Compute match_date from kickoff in Pacific Time (PT) for correct feed grouping
+      const matchDatePtStr = kickoffUtc
+        ? kickoffUtc.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+        : undefined;
+      const matchDatePt = matchDatePtStr ? new Date(matchDatePtStr + 'T00:00:00') : undefined;
       await db
         .update(wc2026Matches)
         .set({
@@ -446,6 +451,7 @@ export async function ingestWc2026EspnResults(options: {
           status: "LIVE",
           espnMatchId: eventId,
           ...(kickoffUtc ? { kickoffUtc } : {}),
+          ...(matchDatePt ? { matchDate: matchDatePt } : {}),
         })
         .where(eq(wc2026Matches.matchId, matchId));
       result.matchesUpdated++;
@@ -516,6 +522,11 @@ export async function ingestWc2026EspnResults(options: {
       ` status=${matchStatus} espnMatchId=${eventId}` +
       ` | [VERIFY] isSwapped=${isSwapped} ESPN homeScore=${homeScore} awayScore=${awayScore}`
     );
+    // Compute match_date from kickoff in Pacific Time (PT) for correct feed grouping
+    const matchDatePtStr = kickoffUtc
+      ? kickoffUtc.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+      : undefined;
+    const matchDatePt = matchDatePtStr ? new Date(matchDatePtStr + 'T00:00:00') : undefined;
     await db
       .update(wc2026Matches)
       .set({
@@ -525,6 +536,7 @@ export async function ingestWc2026EspnResults(options: {
         espnMatchId: eventId,
         attendance,
         ...(kickoffUtc ? { kickoffUtc } : {}),
+        ...(matchDatePt ? { matchDate: matchDatePt } : {}),
       })
       .where(eq(wc2026Matches.matchId, matchId));
     result.matchesUpdated++;
