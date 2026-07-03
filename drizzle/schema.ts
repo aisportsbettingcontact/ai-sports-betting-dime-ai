@@ -2468,9 +2468,8 @@ export type InsertWaitlist = typeof waitlist.$inferInsert;
 //
 // TERMINOLOGY RULE: All WC fixtures are referred to as "matches" — never "games".
 //
-// TABLE MAP (9 tables — ALL ESPN-sourced, ALL prefixed wc2026_espn_):
+// TABLE MAP (8 tables — ALL ESPN-sourced, ALL prefixed wc2026_espn_):
 //   wc2026_espn_matches         — master match record (game strip + competition info)
-//   wc2026_espn_match_odds      — DraftKings moneyline / spread / total per match
 //   wc2026_espn_team_stats      — 8-row tmStatsGrph summary per match per team
 //   wc2026_espn_match_stats     — 40-row full deferred stats (shots/passes/attack/defense/duels/fouls/xG/GK)
 //   wc2026_espn_expected_goals  — xG / xGOT / xA team totals + per-player breakdown
@@ -2562,52 +2561,7 @@ export const wc2026EspnMatches = mysqlTable("wc2026_espn_matches", {
 export type Wc2026EspnMatch       = typeof wc2026EspnMatches.$inferSelect;
 export type InsertWc2026EspnMatch = typeof wc2026EspnMatches.$inferInsert;
 
-// ─── 2. wc2026_espn_match_odds ───────────────────────────────────────────────
-// DraftKings opening + current odds for each match.
-// Source: gameOdds from matchstats page __espnfitt__
-
-export const wc2026EspnMatchOdds = mysqlTable("wc2026_espn_match_odds", {
-  id:                  int("id").autoincrement().primaryKey(),
-  matchId:             varchar("matchId", { length: 32 }).notNull(),     // FK → wc2026_matches.matchId
-
-  provider:            varchar("provider", { length: 32 }),              // "draftkings"
-  headerText:          varchar("headerText", { length: 64 }),
-
-  // Home team odds
-  homeTeamAbbrev:      varchar("homeTeamAbbrev", { length: 8 }),
-  homeTeamName:        varchar("homeTeamName", { length: 64 }),
-  homeMoneylineOpen:   varchar("homeMoneylineOpen", { length: 16 }),     // "-120"
-  homeMoneylineCurrent:varchar("homeMoneylineCurrent", { length: 16 }),  // "-135"
-  homeTotalSide:       varchar("homeTotalSide", { length: 16 }),         // "o2.5"
-  homeTotalOdds:       varchar("homeTotalOdds", { length: 16 }),         // "+120"
-  homeSpreadLine:      varchar("homeSpreadLine", { length: 16 }),        // "-0.5"
-  homeSpreadOdds:      varchar("homeSpreadOdds", { length: 16 }),        // "-140"
-
-  // Away team odds
-  awayTeamAbbrev:      varchar("awayTeamAbbrev", { length: 8 }),
-  awayTeamName:        varchar("awayTeamName", { length: 64 }),
-  awayMoneylineOpen:   varchar("awayMoneylineOpen", { length: 16 }),
-  awayMoneylineCurrent:varchar("awayMoneylineCurrent", { length: 16 }),
-  awayTotalSide:       varchar("awayTotalSide", { length: 16 }),
-  awayTotalOdds:       varchar("awayTotalOdds", { length: 16 }),
-  awaySpreadLine:      varchar("awaySpreadLine", { length: 16 }),
-  awaySpreadOdds:      varchar("awaySpreadOdds", { length: 16 }),
-
-  // Draw
-  drawMoneylineOpen:   varchar("drawMoneylineOpen", { length: 16 }),
-  drawMoneylineCurrent:varchar("drawMoneylineCurrent", { length: 16 }),
-
-  matchRound:          varchar("matchRound", { length: 32 }),              // ESPN native slug: "group-stage"|"round-of-32"|etc.
-  createdAt:           bigint("createdAt", { mode: "number" }).notNull(),
-  updatedAt:           bigint("updatedAt", { mode: "number" }).notNull(),
-}, (t) => ({
-  idxMatchId:          index("idx_wc2026_espn_odds_matchId").on(t.matchId),
-  idxHomeTeam:         index("idx_wc2026_espn_odds_homeTeam").on(t.homeTeamAbbrev),
-  idxAwayTeam:         index("idx_wc2026_espn_odds_awayTeam").on(t.awayTeamAbbrev),
-  idxMatchRound:       index("idx_wc2026_espn_odds_matchRound").on(t.matchRound),
-}));
-export type Wc2026EspnMatchOdds       = typeof wc2026EspnMatchOdds.$inferSelect;
-export type InsertWc2026EspnMatchOdds = typeof wc2026EspnMatchOdds.$inferInsert;
+// ─── 2. wc2026_espn_match_odds ── REMOVED (table deprecated & dropped 2026-07-03) ──
 
 // ─── 3. wc2026_espn_team_stats ───────────────────────────────────────────────
 // 8-row tmStatsGrph summary (Possession, SoG, Shot Attempts, Fouls, YC, RC, Corners, Saves).

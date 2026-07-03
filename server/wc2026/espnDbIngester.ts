@@ -1,19 +1,18 @@
 /**
  * espnDbIngester.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Ingests the output of espnPageScraper.ts (EspnMatchPageData) into the 9
+ * Ingests the output of espnPageScraper.ts (EspnMatchPageData) into the 8
  * wc2026_espn_* database tables.
  *
  * TABLES WRITTEN:
  *   1. wc2026_espn_matches         — master match record (game strip)
- *   2. wc2026_espn_match_odds      — DraftKings moneyline / spread / total
- *   3. wc2026_espn_team_stats      — 8-row tmStatsGrph summary
- *   4. wc2026_espn_match_stats     — 40-col deferred stats (shots/passes/attack/defense/duels/fouls/xG/GK)
- *   5. wc2026_espn_expected_goals  — team xG totals + per-player breakdown
- *   6. wc2026_espn_shot_map        — every shot with coords + attributes
- *   7. wc2026_espn_player_stats    — per-player boxscore (outfield + GK)
- *   8. wc2026_espn_lineups         — ESPN formation + starter/sub/unused
- *   9. wc2026_espn_glossary        — stat abbreviation → display name
+ *   2. wc2026_espn_team_stats      — 8-row tmStatsGrph summary
+ *   3. wc2026_espn_match_stats     — 40-col deferred stats (shots/passes/attack/defense/duels/fouls/xG/GK)
+ *   4. wc2026_espn_expected_goals  — team xG totals + per-player breakdown
+ *   5. wc2026_espn_shot_map        — every shot with coords + attributes
+ *   6. wc2026_espn_player_stats    — per-player boxscore (outfield + GK)
+ *   7. wc2026_espn_lineups         — ESPN formation + starter/sub/unused
+ *   8. wc2026_espn_glossary        — stat abbreviation → display name
  *
  * LOGGING FORMAT (noise-free, structured):
  *   [INGEST] [PHASE n/9] <table>   — section banner
@@ -38,7 +37,6 @@ import { getDb } from "../db";
 import { sql } from "drizzle-orm";
 import {
   wc2026EspnMatches,
-  wc2026EspnMatchOdds,
   wc2026EspnTeamStats,
   wc2026EspnMatchStats,
   wc2026EspnExpectedGoals,
@@ -220,66 +218,7 @@ export async function ingestEspnMatchData(
     result.errors.push(msg);
   }
 
-  // ─── PHASE 2: wc2026_espn_match_odds ──────────────────────────────────────
-  logPhase(2, 9, "wc2026_espn_match_odds");
-  try {
-    const odds = data.gameOdds;
-    if (!odds) {
-      logStep("No gameOdds data — skipping");
-      logVerify(true, "gameOdds=null (pre-match or no odds available) — skip is valid");
-      result.phases.push({ phase: 2, table: "wc2026_espn_match_odds", rowsWritten: 0, pass: true });
-    } else {
-      logInput(`provider="${odds.provider}" headerText="${odds.headerText}"`);
-      logState(`home: ML=${odds.homeTeam.moneylineCurrent} spread=${odds.homeTeam.spreadLine} total=${odds.homeTeam.totalSide}`);
-      logState(`away: ML=${odds.awayTeam.moneylineCurrent} spread=${odds.awayTeam.spreadLine} total=${odds.awayTeam.totalSide}`);
-      logState(`draw: ML=${odds.drawMoneyline}`);
-
-      const row = {
-        matchId,
-        matchRound: data.seasonSlug || null,
-        provider: odds.provider ?? null,
-        headerText: odds.headerText ?? null,
-        homeTeamAbbrev: odds.homeTeam.teamAbbrev ?? data.gameStrip.homeTeam.abbrev,
-        awayTeamAbbrev: odds.awayTeam.teamAbbrev ?? data.gameStrip.awayTeam.abbrev,
-        homeMoneylineOpen: odds.homeTeam.moneylineOpen ?? null,
-        homeMoneylineCurrent: odds.homeTeam.moneylineCurrent ?? null,
-        awayMoneylineOpen: odds.awayTeam.moneylineOpen ?? null,
-        awayMoneylineCurrent: odds.awayTeam.moneylineCurrent ?? null,
-        homeSpreadLine: odds.homeTeam.spreadLine ?? null,
-        homeSpreadOdds: odds.homeTeam.spreadOdds ?? null,
-        awaySpreadLine: odds.awayTeam.spreadLine ?? null,
-        awaySpreadOdds: odds.awayTeam.spreadOdds ?? null,
-        homeTotalSide: odds.homeTeam.totalSide ?? null,
-        homeTotalOdds: odds.homeTeam.totalOdds ?? null,
-        awayTotalSide: odds.awayTeam.totalSide ?? null,
-        awayTotalOdds: odds.awayTeam.totalOdds ?? null,
-        drawMoneylineOpen: odds.drawMoneylineOpen ?? null,
-        drawMoneylineCurrent: odds.drawMoneyline ?? null,
-        createdAt: now(),
-        updatedAt: now(),
-      };
-
-      logStep(`Upserting wc2026_espn_match_odds matchId=${matchId}`);
-      if (!dryRun) {
-        await db.insert(wc2026EspnMatchOdds).values(row).onDuplicateKeyUpdate({
-          set: { ...row, updatedAt: now() },
-        });
-      }
-
-      const pass = !!row.homeMoneylineCurrent || !!row.awayMoneylineCurrent;
-      logOutput(`1 row upserted — ${odds.provider}`);
-      logVerify(pass, `homeML=${row.homeMoneylineCurrent} awayML=${row.awayMoneylineCurrent} draw=${row.drawMoneylineCurrent}`);
-      result.phases.push({ phase: 2, table: "wc2026_espn_match_odds", rowsWritten: 1, pass });
-      result.totalRowsWritten += 1;
-    }
-  } catch (err) {
-    const msg = `Phase 2 failed: ${err instanceof Error ? err.message : String(err)}`;
-    logError(msg, err);
-    result.phases.push({ phase: 2, table: "wc2026_espn_match_odds", rowsWritten: 0, pass: false, error: msg });
-    result.errors.push(msg);
-  }
-
-  // ─── PHASE 3: wc2026_espn_team_stats ──────────────────────────────────────
+  // ─── PHASE 2 (formerly 3): wc2026_espn_team_stats ──────────────────────────
   logPhase(3, 9, "wc2026_espn_team_stats");
   try {
     const ts = data.teamStats;
