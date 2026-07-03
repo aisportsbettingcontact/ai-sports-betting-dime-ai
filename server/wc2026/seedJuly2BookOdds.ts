@@ -372,7 +372,7 @@ async function main() {
 
   let rbPass = 0, rbFail = 0;
   for (const fid of MATCH_IDS) {
-    const dbRow = readBackRows.find(r => r.matchId === fid);
+    const dbRow = readBackRows.find((r: typeof readBackRows[number]) => r.matchId === fid);
     const exp = EXPECTED_XREF[fid];
     if (!dbRow) {
       log('FAIL', 'READBACK', `${fid}: Row not found in DB after insert`);
