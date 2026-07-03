@@ -1,6 +1,6 @@
 /**
  * runESPNBatch.mjs
- * Runs wc2026ESPNScraper.mjs sequentially for all 12 new R32/R16 fixtures.
+ * Runs wc2026ESPNScraper.mjs sequentially for all 12 new R32/R16 matchs.
  * ESPN gameIds: 760493–760504 (mapped from espn_event_id in DB)
  * 
  * Also fixes Ecuador vs Mexico (wc26-r32-079) match_date from 2026-07-01 → 2026-06-30
@@ -14,8 +14,8 @@ import 'dotenv/config';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '../..');
 
-// The 12 new fixtures and their ESPN game IDs
-const FIXTURES = [
+// The 12 new matchs and their ESPN game IDs
+const MATCHS = [
   { matchId: 'wc26-r32-080', espnId: '760495', matchup: 'DR Congo @ England' },
   { matchId: 'wc26-r32-081', espnId: '760493', matchup: 'Senegal @ Belgium' },
   { matchId: 'wc26-r32-082', espnId: '760494', matchup: 'Bosnia @ USA' },
@@ -34,13 +34,13 @@ const scraperPath = join(projectRoot, 'server/wc2026/wc2026ESPNScraper.mjs');
 const tsxBin = join(projectRoot, 'node_modules/.bin/tsx');
 
 console.log('\n════════════════════════════════════════════════════════════════════');
-console.log('  WC2026 ESPN BATCH SCRAPER — 12 New R32/R16 Fixtures');
+console.log('  WC2026 ESPN BATCH SCRAPER — 12 New R32/R16 Matchs');
 console.log('════════════════════════════════════════════════════════════════════\n');
 
 const results = [];
 
-for (let i = 0; i < FIXTURES.length; i++) {
-  const { matchId, espnId, matchup } = FIXTURES[i];
+for (let i = 0; i < MATCHS.length; i++) {
+  const { matchId, espnId, matchup } = MATCHS[i];
   console.log(`\n[${i+1}/12] [INPUT]  match_id=${matchId} | espn_event_id=${espnId} | ${matchup}`);
   console.log(`[${i+1}/12] [STEP]   Running wc2026ESPNScraper.mjs gameId=${espnId}`);
   

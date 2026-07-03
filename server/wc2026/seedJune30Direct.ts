@@ -1,7 +1,7 @@
 /**
  * seedJune30Direct.ts — v11.0-KO23 June 30 WC2026 Seed
  * ─────────────────────────────────────────────────────────────────────────────
- * Fixtures:
+ * Matches:
  *   wc26-r32-077  Ivory Coast (H) vs Norway (A)   — 1pm ET  / 17:00 UTC
  *   wc26-r32-078  France (H) vs Sweden (A)         — 5pm ET  / 21:00 UTC (actually 23:00 UTC per DB)
  *   wc26-r32-079  Mexico (H) vs Ecuador (A)        — 9pm ET  / 01:00 UTC+1 (23:00 UTC per DB)
@@ -57,7 +57,7 @@ function flushLog() {
 const HEADER = `
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
 ║  WC2026 JUNE 30 DIRECT SEED — v11.0-KO23                                          ║
-║  Fixtures:                                                                         ║
+║  Matches:                                                                         ║
 ║    wc26-r32-077  Ivory Coast (H) vs Norway (A)   — 1pm ET                         ║
 ║    wc26-r32-078  France (H) vs Sweden (A)         — 5pm ET                         ║
 ║    wc26-r32-079  Mexico (H) vs Ecuador (A)        — 9pm ET                         ║
@@ -67,7 +67,7 @@ const HEADER = `
 console.log(HEADER);
 logLines.push(HEADER);
 
-const FIXTURE_IDS = ["wc26-r32-077", "wc26-r32-078", "wc26-r32-079"];
+const MATCH_IDS = ["wc26-r32-077", "wc26-r32-078", "wc26-r32-079"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FROZEN BOOK ODDS — Mapped precisely from user-provided lines
@@ -365,31 +365,31 @@ async function main() {
 
   // ─── S1: Log all input data ───────────────────────────────────────────────
   stepCount++;
-  log("INPUT", `S${stepCount}`, "June 30 WC2026 book odds input — 3 fixtures, all markets");
-  for (const fid of FIXTURE_IDS) {
+  log("INPUT", `S${stepCount}`, "June 30 WC2026 book odds input — 3 matches, all markets");
+  for (const fid of MATCH_IDS) {
     const b = BOOK_ROWS[fid];
     log("INPUT", "BOOK", `${fid}: ML H=${b.bookHomeMl} D=${b.bookDrawMl} A=${b.bookAwayMl}`,
       `Spread=${b.bookSpreadLine} (H${b.bookHomeSpreadOdds}/A${b.bookAwaySpreadOdds}) | Total=${b.bookTotalLine} (O${b.bookOverOdds}/U${b.bookUnderOdds}) | BTTS Y${b.bookBttsYesOdds}/N${b.bookBttsNoOdds} | DC 1X${b.bookDc1XOdds}/X2${b.bookDcX2Odds} | NoDraw H${b.bookNoDrawHomeOdds}/A${b.bookNoDrawAwayOdds} | ToAdv H${b.toAdvanceHomeOdds}/A${b.toAdvanceAwayOdds}`);
   }
 
-  // ─── S2: Verify fixtures exist in DB ─────────────────────────────────────
+  // ─── S2: Verify matches exist in DB ─────────────────────────────────────
   stepCount++;
-  log("STEP", `S${stepCount}`, "Verifying 3 June 30 fixtures exist in wc2026_matches");
-  const fixtures = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
-  if (fixtures.length !== 3) {
-    log("FAIL", `S${stepCount}`, `Expected 3 fixtures, got ${fixtures.length}`, "Cannot proceed — fixtures missing from wc2026_matches");
+  log("STEP", `S${stepCount}`, "Verifying 3 June 30 matches exist in wc2026_matches");
+  const matches = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, MATCH_IDS));
+  if (matches.length !== 3) {
+    log("FAIL", `S${stepCount}`, `Expected 3 matches, got ${matches.length}`, "Cannot proceed — matches missing from wc2026_matches");
     failCount++;
     flushLog();
     process.exit(1);
   }
-  log("PASS", `S${stepCount}`, `All 3 fixtures confirmed in DB`);
+  log("PASS", `S${stepCount}`, `All 3 matches confirmed in DB`);
   passCount++;
-  fixtures.forEach((f: any) => {
+  matches.forEach((f: any) => {
     log("VERIFY", "FX", `${f.matchId}: home=${f.homeTeamId} away=${f.awayTeamId} | kickoff=${f.kickoffUtc} | stage=${f.stage}`);
   });
 
   // ─── S3-S5: Upsert frozen book odds ──────────────────────────────────────
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     stepCount++;
     log("STEP", `S${stepCount}`, `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
@@ -430,7 +430,7 @@ async function main() {
   }
 
   // ─── S6-S8: Upsert model projections ─────────────────────────────────────
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     stepCount++;
     log("STEP", `S${stepCount}`, `Upserting model projection for ${fid}`);
     const row = MODEL_ROWS[fid];
@@ -482,7 +482,7 @@ async function main() {
   // ─── S9: Verify frozen book odds read-back ────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying frozen book odds read-back from DB");
-  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
+  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, MATCH_IDS));
   if (bos.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 frozen book odds confirmed in DB`);
     passCount++;
@@ -498,7 +498,7 @@ async function main() {
   // ─── S10: Verify model projections read-back ─────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying model projections read-back from DB (isFrozen=1)");
-  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, FIXTURE_IDS));
+  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, MATCH_IDS));
   if (mps.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 model projections confirmed in DB`);
     passCount++;
@@ -511,9 +511,9 @@ async function main() {
     failCount++;
   }
 
-  // ─── S11: Cross-validate — all 9 markets per fixture ─────────────────────
+  // ─── S11: Cross-validate — all 9 markets per match ─────────────────────
   stepCount++;
-  log("STEP", `S${stepCount}`, "Cross-validating: all 9 market fields populated per fixture");
+  log("STEP", `S${stepCount}`, "Cross-validating: all 9 market fields populated per match");
   const boMap: Record<string, any> = {};
   bos.forEach((bo: any) => { boMap[bo.matchId] = bo; });
   let marketPass = 0;
@@ -539,7 +539,7 @@ async function main() {
     { key: "toAdvanceAwayOdds",  label: "To Advance Away" },
   ];
 
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const bo = boMap[fid];
     if (!bo) { log("FAIL", "MKTV", `${fid}: no frozen book odds row found`); marketFail++; continue; }
     for (const { key, label } of MARKET_CHECKS) {
@@ -555,7 +555,7 @@ async function main() {
   }
 
   if (marketFail === 0) {
-    log("PASS", `S${stepCount}`, `All ${marketPass} market field checks pass (${FIXTURE_IDS.length} fixtures × ${MARKET_CHECKS.length} markets)`);
+    log("PASS", `S${stepCount}`, `All ${marketPass} market field checks pass (${MATCH_IDS.length} matches × ${MARKET_CHECKS.length} markets)`);
     passCount++;
   } else {
     log("FAIL", `S${stepCount}`, `${marketFail} market fields are NULL`, "Check DB insert above");
@@ -564,12 +564,12 @@ async function main() {
 
   // ─── S12: State dump — final values in DB ────────────────────────────────
   stepCount++;
-  log("STATE", `S${stepCount}`, "Final state dump — all 3 fixtures with frozen book odds + model projections");
-  for (const fid of FIXTURE_IDS) {
+  log("STATE", `S${stepCount}`, "Final state dump — all 3 matches with frozen book odds + model projections");
+  for (const fid of MATCH_IDS) {
     const bo = boMap[fid];
     const mp = mps.find((m: any) => m.matchId === fid);
-    const fixture = fixtures.find((f: any) => f.matchId === fid);
-    log("STATE", "DUMP", `━━━ ${fid}: ${fixture?.homeTeamId?.toUpperCase()} vs ${fixture?.awayTeamId?.toUpperCase()} ━━━`);
+    const match = matches.find((f: any) => f.matchId === fid);
+    log("STATE", "DUMP", `━━━ ${fid}: ${match?.homeTeamId?.toUpperCase()} vs ${match?.awayTeamId?.toUpperCase()} ━━━`);
     log("STATE", "DUMP", `  [BOOK ODDS]`);
     log("STATE", "DUMP", `    1X2 ML:    Home=${bo?.bookHomeMl}  Draw=${bo?.bookDrawMl}  Away=${bo?.bookAwayMl}`);
     log("STATE", "DUMP", `    Spread:    Line=${bo?.bookSpreadLine}  H=${bo?.bookHomeSpreadOdds}  A=${bo?.bookAwaySpreadOdds}`);
@@ -590,7 +590,7 @@ async function main() {
 ╔══════════════════════════════════════════════════════════════════════════════════════╗
 ║  SEED COMPLETE — v11.0-KO23 June 30 WC2026 Direct Seed                            ║
 ║  Steps: ${stepCount.toString().padEnd(3)} | PASS: ${passCount.toString().padEnd(3)} | FAIL: ${failCount.toString().padEnd(3)} | ${verdict.padEnd(22)}          ║
-║  Markets seeded per fixture: 17 fields (ML×3, Spread×3, Total×3, BTTS×2,         ║
+║  Markets seeded per match: 17 fields (ML×3, Spread×3, Total×3, BTTS×2,         ║
 ║    DC×2, NoDraw×2, ToAdvance×2)                                                    ║
 ╚══════════════════════════════════════════════════════════════════════════════════════╝`;
   console.log(summary);

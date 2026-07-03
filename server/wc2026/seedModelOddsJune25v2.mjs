@@ -31,7 +31,7 @@
  *   rank scaling: rank<=10: +0.12, rank<=20: +0.07, rank<=40: +0.03, else 0
  *   form scaling: (form - 0.55) * 0.35 lambda units
  *
- * JUNE 25 FIXTURES (DB verified):
+ * JUNE 25 MATCHES (DB verified):
  *   wc26-g-057: CUW(home) vs CIV(away) — Group E, Philadelphia
  *   wc26-g-058: ECU(home) vs GER(away) — Group E, East Rutherford
  *   wc26-g-059: JPN(home) vs SWE(away) — Group F, Arlington
@@ -177,7 +177,7 @@ function runSimulation(lambdaH, lambdaA, spreadLine, totalLine) {
   };
 }
 
-// ─── June 25 Fixtures ─────────────────────────────────────────────────────────
+// ─── June 25 Matches ─────────────────────────────────────────────────────────
 // Team ratings: FIFA rank (June 2026), ELO, WC2026 group stage form
 // Form = (W*3 + D*1) / (games*3) from group stage results
 //
@@ -194,7 +194,7 @@ function runSimulation(lambdaH, lambdaA, spreadLine, totalLine) {
 // PAR: rank=58, ELO=1680, form=0.00 (0W 0D 2L: 0-2 vs TUR, 1-2 vs USA)
 // AUS: rank=23, ELO=1800, form=1.00 (2W: 2-1 vs USA, 1-0 vs TUR)
 
-const FIXTURES = [
+const MATCHES = [
   {
     matchId: 'wc26-g-057',
     homeId: 'cuw', awayId: 'civ',
@@ -287,7 +287,7 @@ const FIXTURES = [
 async function main() {
   console.log(`\n${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] WC2026 June 25 Model Seed v2 — SPREAD BUG FIXED`);
-  console.log(`${TAG} [INPUT] Fixtures: ${FIXTURES.length} | Simulations: ${N_SIMULATIONS.toLocaleString()}`);
+  console.log(`${TAG} [INPUT] Matches: ${MATCHES.length} | Simulations: ${N_SIMULATIONS.toLocaleString()}`);
   console.log(`${TAG} [INPUT] Model version: ${MODEL_VERSION}`);
   console.log(`${TAG} [INPUT] Lambdas: ZERO book dependency — pure ELO/rank/form`);
   console.log(`${TAG} [INPUT] Spread: simulation-derived cover probs at DK line`);
@@ -301,7 +301,7 @@ async function main() {
   let totalProjRows = 0;
   const errors = [];
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHES) {
     console.log(`${TAG} ─── ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
     // ── Step 1: Clear existing MODEL odds ─────────────────────────────────────
@@ -491,23 +491,23 @@ async function main() {
   }
 
   // ── Final verification ─────────────────────────────────────────────────────
-  const FIXTURE_IDS = FIXTURES.map(f => f.matchId);
-  const idList = FIXTURE_IDS.map(() => '?').join(',');
+  const MATCH_IDS = MATCHES.map(f => f.matchId);
+  const idList = MATCH_IDS.map(() => '?').join(',');
 
   const [verifyModel] = await conn.query(
     `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
   const [verifyProj] = await conn.query(
     `SELECT match_id, home_team, away_team, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_spread, home_spread_odds, away_spread_odds, model_lean FROM wc2026_model_projections WHERE match_id IN (${idList}) AND model_version = ?`,
-    [...FIXTURE_IDS, MODEL_VERSION]
+    [...MATCH_IDS, MODEL_VERSION]
   );
 
   console.log(`${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} FINAL VERIFICATION`);
   console.log(`${TAG} ═══════════════════════════════════════════════════════`);
   let verifyErrors = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const mr = verifyModel.find(r => r.match_id === fid);
     const pr = verifyProj.find(r => r.match_id === fid);
     const rowOk = mr && mr.cnt === 12;

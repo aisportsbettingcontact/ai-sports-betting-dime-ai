@@ -142,9 +142,9 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
   try {
     const db = await getDb();
 
-    // Load all fixtures that have a fifaMatchId
-    log('STEP', S(), 'Loading tracked fixtures from DB');
-    const allFixtures = await db.select({
+    // Load all matches that have a fifaMatchId
+    log('STEP', S(), 'Loading tracked matches from DB');
+    const allMatches = await db.select({
       matchId: wc2026Matches.matchId,
       fifaMatchId: wc2026Matches.fifaMatchId,
       status: wc2026Matches.status,
@@ -156,16 +156,16 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
       advancingTeamId: wc2026Matches.advancingTeamId,
     }).from(wc2026Matches).where(isNotNull(wc2026Matches.fifaMatchId));
 
-    log('STATE', S(), `Tracking ${allFixtures.length} fixtures with fifaMatchId`);
-    if (allFixtures.length === 0) {
-      log('WARN', S(), 'No fixtures have fifaMatchId — nothing to update');
+    log('STATE', S(), `Tracking ${allMatches.length} matches with fifaMatchId`);
+    if (allMatches.length === 0) {
+      log('WARN', S(), 'No matches have fifaMatchId — nothing to update');
       res.json({updated:0, skipped:0, errors:0});
       return;
     }
 
-    type DbFixture = (typeof allFixtures)[0];
-    const fifaToFixture = new Map<string, DbFixture>(allFixtures.map((f: DbFixture) => [f.fifaMatchId!, f] as [string, DbFixture]));
-    const trackedIds = new Set(fifaToFixture.keys());
+    type DbMatch = (typeof allMatches)[0];
+    const fifaToMatch = new Map<string, DbMatch>(allMatches.map((f: DbMatch) => [f.fifaMatchId!, f] as [string, DbMatch]));
+    const trackedIds = new Set(fifaToMatch.keys());
     log('AUDIT', S(), `Tracked FIFA IDs: ${Array.from(trackedIds).join(', ')}`);
 
     // Fetch live data from FIFA API
@@ -179,67 +179,67 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
       return;
     }
 
-    // Filter to our tracked fixtures
+    // Filter to our tracked matches
     const relevant = liveMatches.filter(m => trackedIds.has(m.fifaMatchId));
-    log('STATE', S(), `${relevant.length}/${liveMatches.length} live matches match our tracked fixtures`);
+    log('STATE', S(), `${relevant.length}/${liveMatches.length} live matches match our tracked matches`);
     for (const m of relevant) {
       log('AUDIT', S(), `fifaId=${m.fifaMatchId} rawStatus=${m.rawMatchStatus} period=${m.rawPeriod} → dbStatus=${m.status} minute=${m.minute??'null'} score=${m.homeScore??'?'}-${m.awayScore??'?'}`);
     }
 
     // Apply patches
     for (const liveMatch of relevant) {
-      const fixture = fifaToFixture.get(liveMatch.fifaMatchId);
-      if (!fixture) { skippedCount++; continue; }
+      const match = fifaToMatch.get(liveMatch.fifaMatchId);
+      if (!match) { skippedCount++; continue; }
 
       const patch: Partial<typeof wc2026Matches.$inferInsert> = {};
-      if (liveMatch.status !== fixture.status) patch.status = liveMatch.status;
-      if (liveMatch.homeScore !== null && liveMatch.homeScore !== fixture.homeScore) patch.homeScore = liveMatch.homeScore;
-      if (liveMatch.awayScore !== null && liveMatch.awayScore !== fixture.awayScore) patch.awayScore = liveMatch.awayScore;
-      if (liveMatch.minute !== fixture.matchMinute) patch.matchMinute = liveMatch.minute;
+      if (liveMatch.status !== match.status) patch.status = liveMatch.status;
+      if (liveMatch.homeScore !== null && liveMatch.homeScore !== match.homeScore) patch.homeScore = liveMatch.homeScore;
+      if (liveMatch.awayScore !== null && liveMatch.awayScore !== match.awayScore) patch.awayScore = liveMatch.awayScore;
+      if (liveMatch.minute !== match.matchMinute) patch.matchMinute = liveMatch.minute;
 
       // Auto-set advancingTeamId when FT
-      if (liveMatch.status === 'FT' && !fixture.advancingTeamId) {
+      if (liveMatch.status === 'FT' && !match.advancingTeamId) {
         // Case 1: Clear winner from regular/ET score
         if (liveMatch.homeScore !== null && liveMatch.awayScore !== null &&
             liveMatch.homeScore !== liveMatch.awayScore) {
           patch.advancingTeamId = liveMatch.homeScore > liveMatch.awayScore
-            ? fixture.homeTeamId : fixture.awayTeamId;
-          log('DB', S(), `FT winner (score): ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId}`);
+            ? match.homeTeamId : match.awayTeamId;
+          log('DB', S(), `FT winner (score): ${match.matchId} → advancingTeamId=${patch.advancingTeamId}`);
         }
         // Case 2: Penalty shootout winner via FIFA Winner field
         else if (liveMatch.fifaWinnerId) {
           if (liveMatch.fifaWinnerId === liveMatch.homeTeamFifaId) {
-            patch.advancingTeamId = fixture.homeTeamId;
+            patch.advancingTeamId = match.homeTeamId;
           } else if (liveMatch.fifaWinnerId === liveMatch.awayTeamFifaId) {
-            patch.advancingTeamId = fixture.awayTeamId;
+            patch.advancingTeamId = match.awayTeamId;
           }
           const penStr = liveMatch.homePenScore !== null
             ? `(${liveMatch.homePenScore}-${liveMatch.awayPenScore} pens)` : '';
-          log('DB', S(), `FT winner (pens) ${penStr}: ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
+          log('DB', S(), `FT winner (pens) ${penStr}: ${match.matchId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
         }
         // Case 3: Penalty shootout winner via penalty scores
         else if (liveMatch.homePenScore !== null && liveMatch.awayPenScore !== null &&
                  liveMatch.homePenScore !== liveMatch.awayPenScore) {
           patch.advancingTeamId = liveMatch.homePenScore > liveMatch.awayPenScore
-            ? fixture.homeTeamId : fixture.awayTeamId;
-          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${fixture.matchId} → advancingTeamId=${patch.advancingTeamId}`);
+            ? match.homeTeamId : match.awayTeamId;
+          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${match.matchId} → advancingTeamId=${patch.advancingTeamId}`);
         }
       }
 
       if (Object.keys(patch).length === 0) {
-        log('SKIP', S(), `${fixture.matchId} — no changes`);
+        log('SKIP', S(), `${match.matchId} — no changes`);
         skippedCount++;
         continue;
       }
 
-      log('DB', S(), `UPDATE ${fixture.matchId}`, JSON.stringify(patch));
+      log('DB', S(), `UPDATE ${match.matchId}`, JSON.stringify(patch));
       try {
-        await db.update(wc2026Matches).set(patch).where(eq(wc2026Matches.matchId, fixture.matchId));
-        log('PASS', S(), `✅ ${fixture.matchId} updated`);
+        await db.update(wc2026Matches).set(patch).where(eq(wc2026Matches.matchId, match.matchId));
+        log('PASS', S(), `✅ ${match.matchId} updated`);
         updatedCount++;
       } catch (err) {
         const msg = err instanceof Error ? err.message.slice(0,200) : String(err);
-        log('FAIL', S(), `❌ UPDATE failed for ${fixture.matchId}: ${msg}`);
+        log('FAIL', S(), `❌ UPDATE failed for ${match.matchId}: ${msg}`);
         failCount++;
       }
     }

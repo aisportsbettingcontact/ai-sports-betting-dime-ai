@@ -1,7 +1,7 @@
 /**
  * wc_fix_model_dc.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Recomputes model DOUBLE_CHANCE odds for all June 19 fixtures using
+ * Recomputes model DOUBLE_CHANCE odds for all June 19 matchs using
  * correct no-vig fair probabilities derived from model 1X2 odds.
  * Also validates 3-way probability sums for model 1X2 rows.
  */
@@ -37,17 +37,17 @@ function impliedToAmerican(p) {
     ORDER BY o.match_id, o.selection
   `);
 
-  // Group by fixture
-  const byFixture = {};
+  // Group by match
+  const byMatch = {};
   for (const row of model1X2) {
-    if (!byFixture[row.match_id]) byFixture[row.match_id] = { home: null, draw: null, away: null, homeName: row.home_name, awayName: row.away_name };
-    byFixture[row.match_id][row.selection] = row;
+    if (!byMatch[row.match_id]) byMatch[row.match_id] = { home: null, draw: null, away: null, homeName: row.home_name, awayName: row.away_name };
+    byMatch[row.match_id][row.selection] = row;
   }
 
-  console.log('[INPUT] Model 1X2 odds for June 19 fixtures:');
+  console.log('[INPUT] Model 1X2 odds for June 19 matchs:');
   let totalErrors = 0;
 
-  for (const [fid, data] of Object.entries(byFixture)) {
+  for (const [fid, data] of Object.entries(byMatch)) {
     const { home, draw, away } = data;
     if (!home || !draw || !away) {
       console.error(`[VERIFY] FAIL — ${fid}: Missing 1X2 rows (home=${!!home} draw=${!!draw} away=${!!away})`);
@@ -87,7 +87,7 @@ function impliedToAmerican(p) {
     console.log(`  Fair probs: H=${(fairH*100).toFixed(3)}% D=${(fairD*100).toFixed(3)}% A=${(fairA*100).toFixed(3)}%`);
     console.log(`  DC: 1X(home_draw)=${dc1XOdds} (${(dc1X*100).toFixed(3)}%) | X2(away_draw)=${dcX2Odds} (${(dcX2*100).toFixed(3)}%)`);
 
-    // Delete existing model DC rows for this fixture
+    // Delete existing model DC rows for this match
     const [delResult] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0 AND market = 'DOUBLE_CHANCE'`,
       [fid]

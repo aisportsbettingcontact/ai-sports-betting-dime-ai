@@ -6,7 +6,7 @@
  *   ss=1.2 (strength scale), rho=-0.10 (Dixon-Coles low-score correction)
  *   bttsThresh=0.48, ou25Thresh=0.48, eloTieThresh=100
  *
- * FIXTURES (June 24, 2026):
+ * MATCHES (June 24, 2026):
  *   wc26-g-049: SUI (home) vs CAN (away) | 3:00 PM ET | Vancouver
  *   wc26-g-050: BIH (home) vs QAT (away) | 3:00 PM ET | Guadalupe
  *   wc26-g-051: SCO (home) vs BRA (away) | 6:00 PM ET | Mexico City
@@ -93,8 +93,8 @@ const HOST_VENUES = {
   CAN: ['vancouver', 'toronto', 'bc place', 'bmo field'],
 };
 
-// ── Fixtures with confirmed book lines ───────────────────────────────────────
-const FIXTURES = [
+// ── Matchs with confirmed book lines ───────────────────────────────────────
+const MATCHES = [
   { id: 'wc26-g-049', homeId: 'sui', awayId: 'can', homeCode: 'SUI', awayCode: 'CAN',
     homeName: 'Switzerland', awayName: 'Canada',
     city: 'Vancouver', stadium: 'BC Place',
@@ -399,9 +399,9 @@ async function main() {
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const results = [];
-  const simResults = {}; // Store sim+lines for each fixture for the publish step
+  const simResults = {}; // Store sim+lines for each match for the publish step
 
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     console.log(`${TAG} ─────────────────────────────────────────────────────────`);
     console.log(`${TAG} [INPUT] ${fix.id}: ${fix.homeCode} (${fix.homeName}) vs ${fix.awayCode} (${fix.awayName})`);
     console.log(`${TAG} [INPUT] City=${fix.city} | Group=${fix.group} | BookTotal=${fix.bookTotal} | BookSpread=±${fix.bookSpread}`);
@@ -483,7 +483,7 @@ async function main() {
     const modelSpread = homeIsFav ? -1.5 : 1.5; // from home team perspective
 
     const [existing] = await conn.execute(
-      `SELECT id FROM wc2026_model_projections WHERE fixture_id = ?`,
+      `SELECT id FROM wc2026_model_projections WHERE match_id = ?`,
       [fix.id]
     );
 
@@ -516,7 +516,7 @@ async function main() {
     };
 
     const data = {
-      fixture_id: fix.id,
+      match_id: fix.id,
       model_version: 'v10e-june24-v2',
       n_simulations: N_SIM,
       home_team: fix.homeName,
@@ -597,15 +597,15 @@ async function main() {
     if (existing.length > 0) {
       // UPDATE existing record — split JSON vs scalar columns
       const setClauses = Object.keys(data)
-        .filter(k => k !== 'fixture_id')
+        .filter(k => k !== 'match_id')
         .map(k => JSON_COLS.has(k) ? `\`${k}\` = CAST(? AS JSON)` : `\`${k}\` = ?`)
         .join(', ');
       const values = Object.keys(data)
-        .filter(k => k !== 'fixture_id')
+        .filter(k => k !== 'match_id')
         .map(k => JSON_COLS.has(k) ? JSON.stringify(data[k]) : data[k]);
       values.push(fix.id);
       await conn.query(
-        `UPDATE wc2026_model_projections SET ${setClauses} WHERE fixture_id = ?`,
+        `UPDATE wc2026_model_projections SET ${setClauses} WHERE match_id = ?`,
         values
       );
       console.log(`${TAG} [OUTPUT] UPDATED ${fix.id} (${fix.homeCode} vs ${fix.awayCode}) ✅`);
@@ -627,15 +627,15 @@ async function main() {
 
   // ── Publish model odds to wc2026_odds_snapshots (book_id=0) ──────────────
   // The frontend reads modelOdds from wc2026_odds_snapshots (book_id=0).
-  // We must upsert all 12 market rows per fixture so the feed displays the new v10e lines.
+  // We must upsert all 12 market rows per match so the feed displays the new v10e lines.
   console.log(`\n${TAG} [PUBLISH] Writing model odds to wc2026_odds_snapshots (book_id=0)...`);
   const snapshotTs = new Date();
   let oddsWritten = 0;
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     const sim = simResults[fix.id];
     const lines = sim.lines;
-    // Delete old model odds for this fixture (book_id=0)
-    await conn.query(`DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 0`, [fix.id]);
+    // Delete old model odds for this match (book_id=0)
+    await conn.query(`DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0`, [fix.id]);
     // Build all 12 market rows
     const marketRows = [
       // 1X2
@@ -658,7 +658,7 @@ async function main() {
     ];
     for (const row of marketRows) {
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+        `INSERT INTO wc2026_odds_snapshots (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
          VALUES (?, 0, ?, ?, ?, ?, ?, ?, 0)`,
         [fix.id, row.market, row.selection, row.line, row.american_odds, row.implied_prob, snapshotTs]
       );
@@ -671,7 +671,7 @@ async function main() {
   // ── Final verification read-back ─────────────────────────────────────────
   console.log(`\n${TAG} [VERIFY] Reading back from DB to confirm all 6 records written correctly...`);
   const [verify] = await conn.execute(`
-    SELECT p.fixture_id, f.home_team_id, f.away_team_id,
+    SELECT p.match_id, f.home_team_id, f.away_team_id,
            p.model_version, p.home_lambda, p.away_lambda,
            p.home_win_prob, p.draw_prob, p.away_win_prob,
            p.proj_home_score, p.proj_away_score, p.proj_total, p.proj_spread,
@@ -686,7 +686,7 @@ async function main() {
            p.dc_1x_odds, p.dc_x2_odds, p.no_draw_home_odds, p.no_draw_away_odds,
            p.model_lean, p.lean_prob, p.top_scorelines
     FROM wc2026_model_projections p
-    JOIN wc2026_matches f ON p.fixture_id = f.fixture_id
+    JOIN wc2026_matches f ON p.match_id = f.match_id
     WHERE f.match_date = '2026-06-24' AND p.model_version = 'v10e-june24-v2'
     ORDER BY f.kickoff_utc
   `);
@@ -698,7 +698,7 @@ async function main() {
   for (const r of verify) {
     const hCode = r.home_team_id.toUpperCase();
     const aCode = r.away_team_id.toUpperCase();
-    console.log(`\n${TAG} ${r.fixture_id}: ${hCode} vs ${aCode} (${r.model_version})`);
+    console.log(`\n${TAG} ${r.match_id}: ${hCode} vs ${aCode} (${r.model_version})`);
     console.log(`${TAG}   Lambdas:     λH=${Number(r.home_lambda).toFixed(4)} λA=${Number(r.away_lambda).toFixed(4)}`);
     console.log(`${TAG}   Probs:       H=${(r.home_win_prob*100).toFixed(2)}% D=${(r.draw_prob*100).toFixed(2)}% A=${(r.away_win_prob*100).toFixed(2)}%`);
     console.log(`${TAG}   Proj Score:  ${hCode} ${Number(r.proj_home_score).toFixed(2)} – ${Number(r.proj_away_score).toFixed(2)} ${aCode}`);

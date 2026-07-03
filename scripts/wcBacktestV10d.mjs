@@ -544,16 +544,16 @@ async function main() {
     `SELECT id, home_team, away_team, home_score, away_score, city FROM wc_bt_matches WHERE tournament_year=2022 AND home_score IS NOT NULL ORDER BY match_date, id`
   );
   const [r2026] = await conn.execute(
-    `SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score, v.city
+    `SELECT f.match_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score, v.city
      FROM wc2026_matches f LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
      WHERE f.match_date < '2026-06-24' AND f.home_score IS NOT NULL
-     ORDER BY f.match_date, f.fixture_id`
+     ORDER BY f.match_date, f.match_id`
   );
   await conn.end();
 
   const m18 = r2018.map(r => ({ id: r.id, year: 2018, homeTeam: r.home_team, awayTeam: r.away_team, homeScore: r.home_score, awayScore: r.away_score, city: r.city || '' }));
   const m22 = r2022.map(r => ({ id: r.id, year: 2022, homeTeam: r.home_team, awayTeam: r.away_team, homeScore: r.home_score, awayScore: r.away_score, city: r.city || '' }));
-  const m26 = r2026.map(r => ({ id: r.fixture_id, year: 2026, homeTeam: r.home_team_id, awayTeam: r.away_team_id, homeScore: r.home_score, awayScore: r.away_score, city: r.city || '' }));
+  const m26 = r2026.map(r => ({ id: r.match_id, year: 2026, homeTeam: r.home_team_id, awayTeam: r.away_team_id, homeScore: r.home_score, awayScore: r.away_score, city: r.city || '' }));
   const all = [...m18, ...m22, ...m26];
   const n = all.length;
 

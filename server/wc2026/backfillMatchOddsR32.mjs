@@ -1,13 +1,13 @@
 /**
  * backfillMatchOddsR32.mjs
  * ═══════════════════════════════════════════════════════════════════════════════
- * 500x FORENSIC BACKFILL — wc2026MatchOdds — R32 Fixtures 073-082
+ * 500x FORENSIC BACKFILL — wc2026MatchOdds — R32 Matchs 073-082
  * ═══════════════════════════════════════════════════════════════════════════════
  *
  * SOURCE OF TRUTH: wc2026_model_projections (is_frozen=1 rows only)
  * TARGET TABLE:    wc2026MatchOdds
  *
- * FIELDS BACKFILLED PER FIXTURE:
+ * FIELDS BACKFILLED PER MATCH:
  *   lamba_away                    ← away_lambda
  *   lamba_home                    ← home_lambda
  *   model_projected_away_goals    ← proj_away_score
@@ -26,7 +26,7 @@
  *   model_btts_yes                ← btts_yes_odds
  *   model_btts_no                 ← btts_no_odds
  *
- * ORIENTATION INVARIANT (verified per fixture before every write):
+ * ORIENTATION INVARIANT (verified per match before every write):
  *   wc2026MatchOdds.home_team = ESPN team ID of HOME team
  *   wc2026MatchOdds.away_team = ESPN team ID of AWAY team
  *   wc2026_model_projections.home_team = HOME team abbreviation
@@ -39,7 +39,7 @@
  *   3. ORIENTATION CHECK: cross-reference home/away team alignment
  *   4. WRITE: UPDATE each row with explicit field mapping
  *   5. READ-BACK: SELECT every written field and compare to source
- *   6. AUDIT REPORT: pass/fail per fixture per field
+ *   6. AUDIT REPORT: pass/fail per match per field
  *
  * Run: node server/wc2026/backfillMatchOddsR32.mjs
  */
@@ -84,12 +84,12 @@ function flushLog() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FIXTURE MANIFEST — 10 R32 MATCHES
+// MATCH MANIFEST — 10 R32 MATCHES
 // ═══════════════════════════════════════════════════════════════════════════════
 // Columns: matchId, homeTeamAbbrev, awayTeamAbbrev
 // These are the HOME/AWAY designations from wc2026_model_projections
 // Used to verify orientation before writing
-const FIXTURE_MANIFEST = [
+const MATCH_MANIFEST = [
   { matchId: "wc26-r32-073", homeAbbrev: "RSA", awayAbbrev: "CAN"         },
   { matchId: "wc26-r32-074", homeAbbrev: "Brazil", awayAbbrev: "Japan"     },
   { matchId: "wc26-r32-075", homeAbbrev: "Germany", awayAbbrev: "Paraguay" },
@@ -102,7 +102,7 @@ const FIXTURE_MANIFEST = [
   { matchId: "wc26-r32-082", homeAbbrev: "USA", awayAbbrev: "Bosnia-Herz" },
 ];
 
-const FIXTURE_IDS = FIXTURE_MANIFEST.map(f => f.matchId);
+const MATCH_IDS = MATCH_MANIFEST.map(f => f.matchId);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FIELD MAPPING: source column → target column
@@ -133,9 +133,9 @@ const FIELD_MAP = [
 // ═══════════════════════════════════════════════════════════════════════════════
 async function main() {
   log("BANNER", "INIT", "═══ 500x FORENSIC BACKFILL — wc2026MatchOdds R32 ═══");
-  log("INPUT", "CONFIG", `Fixtures: ${FIXTURE_IDS.join(", ")}`);
-  log("INPUT", "CONFIG", `Fields per fixture: ${FIELD_MAP.length}`);
-  log("INPUT", "CONFIG", `Total writes planned: ${FIXTURE_IDS.length * FIELD_MAP.length}`);
+  log("INPUT", "CONFIG", `Matchs: ${MATCH_IDS.join(", ")}`);
+  log("INPUT", "CONFIG", `Fields per match: ${FIELD_MAP.length}`);
+  log("INPUT", "CONFIG", `Total writes planned: ${MATCH_IDS.length * FIELD_MAP.length}`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   log("PASS", "DB", "Database connection established");
@@ -143,17 +143,17 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────
   // PHASE 1: PRE-FLIGHT — verify all 10 wc2026MatchOdds rows exist
   // ─────────────────────────────────────────────────────────────────────────────
-  log("SECTION", "PHASE1", "PRE-FLIGHT: Verifying wc2026MatchOdds rows exist for all 10 fixtures");
+  log("SECTION", "PHASE1", "PRE-FLIGHT: Verifying wc2026MatchOdds rows exist for all 10 matchs");
 
-  const placeholders = FIXTURE_IDS.map(() => "?").join(",");
+  const placeholders = MATCH_IDS.map(() => "?").join(",");
   const [existingRows] = await conn.execute(
     `SELECT match_id, home_team, away_team FROM wc2026MatchOdds WHERE match_id IN (${placeholders})`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
   const existingMap = Object.fromEntries(existingRows.map(r => [r.match_id, r]));
 
   let preflight_pass = true;
-  for (const { matchId } of FIXTURE_MANIFEST) {
+  for (const { matchId } of MATCH_MANIFEST) {
     if (existingMap[matchId]) {
       log("PASS", "PREFLIGHT", `${matchId} EXISTS in wc2026MatchOdds`,
         `home_team_id=${existingMap[matchId].home_team} away_team_id=${existingMap[matchId].away_team}`);
@@ -168,7 +168,7 @@ async function main() {
     flushLog();
     process.exit(1);
   }
-  log("PASS", "PREFLIGHT", `All ${FIXTURE_IDS.length} target rows confirmed in wc2026MatchOdds`);
+  log("PASS", "PREFLIGHT", `All ${MATCH_IDS.length} target rows confirmed in wc2026MatchOdds`);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PHASE 2: SOURCE PULL — read all 10 frozen model projection rows
@@ -189,7 +189,7 @@ async function main() {
      FROM wc2026_model_projections
      WHERE match_id IN (${placeholders}) AND is_frozen = 1
      ORDER BY match_id`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
 
   const srcMap = Object.fromEntries(srcRows.map(r => [r.match_id, r]));
@@ -197,7 +197,7 @@ async function main() {
   log("STATE", "SOURCE", `Rows returned from wc2026_model_projections: ${srcRows.length}`);
 
   let source_pass = true;
-  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     if (!src) {
       log("FAIL", "SOURCE", `${matchId} — NO frozen model projection row found`);
@@ -228,9 +228,9 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────
   // PHASE 3: ORIENTATION CHECK — verify home/away alignment
   // ─────────────────────────────────────────────────────────────────────────────
-  log("SECTION", "PHASE3", "ORIENTATION CHECK: Verifying home/away team alignment per fixture");
+  log("SECTION", "PHASE3", "ORIENTATION CHECK: Verifying home/away team alignment per match");
 
-  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     if (!src) continue;
 
@@ -250,11 +250,11 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────────────────
   // PHASE 4: WRITE — UPDATE each row with explicit field mapping
   // ─────────────────────────────────────────────────────────────────────────────
-  log("SECTION", "PHASE4", "WRITE PHASE: Executing UPDATE statements per fixture");
+  log("SECTION", "PHASE4", "WRITE PHASE: Executing UPDATE statements per match");
 
   const writeResults = {};
 
-  for (const { matchId } of FIXTURE_MANIFEST) {
+  for (const { matchId } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     if (!src) {
       log("FAIL", "WRITE", `${matchId} — skipping (no source row)`);
@@ -325,7 +325,7 @@ async function main() {
      FROM wc2026MatchOdds
      WHERE match_id IN (${placeholders})
      ORDER BY match_id`,
-    FIXTURE_IDS
+    MATCH_IDS
   );
 
   const verifyMap = Object.fromEntries(verifyRows.map(r => [r.match_id, r]));
@@ -357,7 +357,7 @@ async function main() {
   let totalFieldFail = 0;
   let totalFieldNull = 0;
 
-  for (const { matchId } of FIXTURE_MANIFEST) {
+  for (const { matchId } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     const tgt = verifyMap[matchId];
     auditResults[matchId] = { pass: 0, fail: 0, null_src: 0, fields: {} };
@@ -412,8 +412,8 @@ async function main() {
       }
     }
 
-    const fixtureOk = auditResults[matchId].fail === 0;
-    log(fixtureOk ? "PASS" : "FAIL", "FIXTURE",
+    const matchOk = auditResults[matchId].fail === 0;
+    log(matchOk ? "PASS" : "FAIL", "MATCH",
       `${matchId} — ${auditResults[matchId].pass}/${Object.keys(compareMap).length} fields PASS, ${auditResults[matchId].fail} FAIL`
     );
   }
@@ -422,24 +422,24 @@ async function main() {
   // PHASE 6: FINAL AUDIT REPORT
   // ─────────────────────────────────────────────────────────────────────────────
   log("SECTION", "REPORT", "═══ FINAL 500x FORENSIC AUDIT REPORT ═══");
-  log("OUTPUT", "SUMMARY", `Total fixtures processed: ${FIXTURE_IDS.length}`);
+  log("OUTPUT", "SUMMARY", `Total matchs processed: ${MATCH_IDS.length}`);
   log("OUTPUT", "SUMMARY", `Total field checks: ${totalFieldChecks}`);
   log("OUTPUT", "SUMMARY", `PASS: ${totalFieldPass} | FAIL: ${totalFieldFail} | NULL_OK: ${totalFieldNull}`);
   log("OUTPUT", "SUMMARY", `Overall PASS rate: ${((totalFieldPass / totalFieldChecks) * 100).toFixed(2)}%`);
 
-  log("SECTION", "REPORT", "Per-Fixture Summary:");
-  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+  log("SECTION", "REPORT", "Per-Match Summary:");
+  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     const ar = auditResults[matchId];
     const status = ar && ar.fail === 0 ? "✅ PASS" : "❌ FAIL";
     const version = src ? src.model_version : "N/A";
-    log("OUTPUT", "FIXTURE",
+    log("OUTPUT", "MATCH",
       `${status} | ${matchId} | ${homeAbbrev} (H) vs ${awayAbbrev} (A) | model=${version} | fields=${ar ? ar.pass : 0}/${Object.keys(compareMap).length}`
     );
   }
 
-  log("SECTION", "REPORT", "Per-Fixture Data Snapshot (source → stored):");
-  for (const { matchId, homeAbbrev, awayAbbrev } of FIXTURE_MANIFEST) {
+  log("SECTION", "REPORT", "Per-Match Data Snapshot (source → stored):");
+  for (const { matchId, homeAbbrev, awayAbbrev } of MATCH_MANIFEST) {
     const src = srcMap[matchId];
     const tgt = verifyMap[matchId];
     if (!src || !tgt) continue;

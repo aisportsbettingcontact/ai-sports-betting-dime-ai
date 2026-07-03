@@ -2,9 +2,9 @@
  * runModelJune30v11.mjs
  * ══════════════════════════════════════════════════════════════════════════════
  * WC2026 v11.0-KO23 — Full Dixon-Coles Bivariate Poisson + 1,000,000 Monte
- * Carlo simulations for all 3 June 30 R32 knockout fixtures.
+ * Carlo simulations for all 3 June 30 R32 knockout matchs.
  *
- * Fixtures:
+ * Matchs:
  *   wc26-r32-077  Ivory Coast (H) vs Norway (A)   — 1pm ET
  *   wc26-r32-078  France (H) vs Sweden (A)         — 5pm ET
  *   wc26-r32-079  Mexico (H) vs Ecuador (A)        — 9pm ET
@@ -338,7 +338,7 @@ function runSimulation(lambdaH, lambdaA, nSims, rho = -0.13) {
 //
 // ══════════════════════════════════════════════════════════════════════════════
 
-const FIXTURES = [
+const MATCHS = [
   {
     fid: 'wc26-r32-077',
     label: 'Ivory Coast (H) vs Norway (A) — 1pm ET',
@@ -396,13 +396,13 @@ const MODEL_VERSION = 'v11.0-KO23';
 // ══════════════════════════════════════════════════════════════════════════════
 
 banner(`WC2026 ${MODEL_VERSION} SIMULATION ENGINE — June 30, 2026 R32 Matches`);
-log('INPUT', `Fixtures: ${FIXTURES.map(f => f.fid).join(', ')}`);
+log('INPUT', `Matchs: ${MATCHS.map(f => f.fid).join(', ')}`);
 log('INPUT', `Engine: Dixon-Coles Bivariate Poisson | Sims: ${N_SIMS.toLocaleString()}/match | seed=42 | No HFA`);
 log('INPUT', `Model version: ${MODEL_VERSION} | KO pressure factor: 0.94 applied to all lambdas`);
 
 const results = [];
 
-for (const fx of FIXTURES) {
+for (const fx of MATCHS) {
   stepCount++;
   banner(`[${fx.fid}] ${fx.label}`);
   log('INPUT', `λH=${fx.lambdaH} λA=${fx.lambdaA}`, stepCount);

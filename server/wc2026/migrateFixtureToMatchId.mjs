@@ -1,5 +1,5 @@
 /**
- * migrateFixtureToMatchId.mjs
+ * migrateMatchToMatchId.mjs
  * ═══════════════════════════════════════════════════════════════════════════════
  * PHASE 1: RENAME match_id → match_id IN ALL 8 WC2026 TABLES
  * 

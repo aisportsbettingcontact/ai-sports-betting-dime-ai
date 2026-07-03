@@ -1,6 +1,6 @@
 /**
  * updateJune22ScoresV2.mjs
- * Updates June 22, 2026 WC2026 final scores using confirmed fixture IDs.
+ * Updates June 22, 2026 WC2026 final scores using confirmed match IDs.
  * Note: wc2026_matches has no 'result' column — result is derived from scores.
  *
  * Confirmed DB orientations:
@@ -18,37 +18,37 @@ const db = await mysql.createConnection(process.env.DATABASE_URL);
 
 console.log('══════════════════════════════════════════════════════════════════════');
 console.log('[STEP] updateJune22ScoresV2.mjs — START');
-console.log('[INPUT] 4 fixtures: wc26-g-043, wc26-g-041, wc26-g-042, wc26-g-044');
+console.log('[INPUT] 4 matches: wc26-g-043, wc26-g-041, wc26-g-042, wc26-g-044');
 console.log('══════════════════════════════════════════════════════════════════════');
 
 const UPDATES = [
-  { fixture_id: 'wc26-g-043', home_name: 'Austria',  away_name: 'Argentina', home_score: 0, away_score: 2, description: 'Argentina 2-0 Austria' },
-  { fixture_id: 'wc26-g-041', home_name: 'Iraq',     away_name: 'France',    home_score: 0, away_score: 3, description: 'France 3-0 Iraq' },
-  { fixture_id: 'wc26-g-042', home_name: 'Norway',   away_name: 'Senegal',   home_score: 3, away_score: 2, description: 'Norway 3-2 Senegal' },
-  { fixture_id: 'wc26-g-044', home_name: 'Algeria',  away_name: 'Jordan',    home_score: 2, away_score: 1, description: 'Algeria 2-1 Jordan' },
+  { match_id: 'wc26-g-043', home_name: 'Austria',  away_name: 'Argentina', home_score: 0, away_score: 2, description: 'Argentina 2-0 Austria' },
+  { match_id: 'wc26-g-041', home_name: 'Iraq',     away_name: 'France',    home_score: 0, away_score: 3, description: 'France 3-0 Iraq' },
+  { match_id: 'wc26-g-042', home_name: 'Norway',   away_name: 'Senegal',   home_score: 3, away_score: 2, description: 'Norway 3-2 Senegal' },
+  { match_id: 'wc26-g-044', home_name: 'Algeria',  away_name: 'Jordan',    home_score: 2, away_score: 1, description: 'Algeria 2-1 Jordan' },
 ];
 
-const ids = UPDATES.map(u => u.fixture_id);
+const ids = UPDATES.map(u => u.match_id);
 const placeholders = ids.map(() => '?').join(',');
 
 // Step 1: Pre-update orientation verification
 console.log('\n[STEP 1] Pre-update orientation verification...');
 const [preRows] = await db.execute(
-  `SELECT f.fixture_id, ht.name AS home_name, at.name AS away_name,
+  `SELECT f.match_id, ht.name AS home_name, at.name AS away_name,
           f.home_score, f.away_score, f.status
    FROM wc2026_matches f
    JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
    JOIN wc2026_teams at ON f.away_team_id = at.team_id
-   WHERE f.fixture_id IN (${placeholders})
+   WHERE f.match_id IN (${placeholders})
    ORDER BY f.kickoff_utc ASC`,
   ids
 );
 
 let orientationOk = true;
 for (const u of UPDATES) {
-  const row = preRows.find(r => r.fixture_id === u.fixture_id);
+  const row = preRows.find(r => r.match_id === u.match_id);
   if (!row) {
-    console.error(`  [ERROR] ${u.fixture_id} not found in DB — aborting ❌`);
+    console.error(`  [ERROR] ${u.match_id} not found in DB — aborting ❌`);
     orientationOk = false;
     continue;
   }
@@ -56,7 +56,7 @@ for (const u of UPDATES) {
   const awayMatch = row.away_name.toLowerCase() === u.away_name.toLowerCase();
   const ok = homeMatch && awayMatch;
   const label = ok ? '✅ ORIENTATION CORRECT' : '❌ ORIENTATION MISMATCH';
-  console.log(`  [VERIFY] ${u.fixture_id}: DB home=${row.home_name}, DB away=${row.away_name} | expected home=${u.home_name}, away=${u.away_name} → ${label}`);
+  console.log(`  [VERIFY] ${u.match_id}: DB home=${row.home_name}, DB away=${row.away_name} | expected home=${u.home_name}, away=${u.away_name} → ${label}`);
   if (!ok) orientationOk = false;
 }
 
@@ -71,12 +71,12 @@ console.log('[VERIFY] All 4 orientations confirmed correct ✅');
 console.log('\n[STEP 2] Applying score updates...');
 let updateCount = 0;
 for (const u of UPDATES) {
-  console.log(`\n  [STEP] Updating ${u.fixture_id} — ${u.description}`);
+  console.log(`\n  [STEP] Updating ${u.match_id} — ${u.description}`);
   console.log(`  [INPUT] home_score=${u.home_score}, away_score=${u.away_score}, status=FT`);
 
   const [res] = await db.execute(
-    `UPDATE wc2026_matches SET home_score=?, away_score=?, status='FT' WHERE fixture_id=?`,
-    [u.home_score, u.away_score, u.fixture_id]
+    `UPDATE wc2026_matches SET home_score=?, away_score=?, status='FT' WHERE match_id=?`,
+    [u.home_score, u.away_score, u.match_id]
   );
 
   if (res.affectedRows !== 1) {
@@ -84,31 +84,31 @@ for (const u of UPDATES) {
     await db.end();
     process.exit(1);
   }
-  console.log(`  [OUTPUT] ${u.fixture_id} updated — affectedRows=1 ✅`);
+  console.log(`  [OUTPUT] ${u.match_id} updated — affectedRows=1 ✅`);
   updateCount++;
 }
 
 // Step 3: Read-back verification
 console.log('\n[STEP 3] Read-back verification...');
 const [postRows] = await db.execute(
-  `SELECT f.fixture_id, ht.name AS home_name, at.name AS away_name,
+  `SELECT f.match_id, ht.name AS home_name, at.name AS away_name,
           f.home_score, f.away_score, f.status
    FROM wc2026_matches f
    JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
    JOIN wc2026_teams at ON f.away_team_id = at.team_id
-   WHERE f.fixture_id IN (${placeholders})
+   WHERE f.match_id IN (${placeholders})
    ORDER BY f.kickoff_utc ASC`,
   ids
 );
 
 let allPass = true;
 for (const u of UPDATES) {
-  const row = postRows.find(r => r.fixture_id === u.fixture_id);
+  const row = postRows.find(r => r.match_id === u.match_id);
   const scoreOk = row.home_score === u.home_score && row.away_score === u.away_score;
   const statusOk = row.status === 'FT';
   const pass = scoreOk && statusOk;
   const passLabel = pass ? '✅ PASS' : '❌ FAIL';
-  console.log(`  [VERIFY] ${row.fixture_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name} | status=${row.status} → ${passLabel}`);
+  console.log(`  [VERIFY] ${row.match_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name} | status=${row.status} → ${passLabel}`);
   if (!pass) {
     console.error(`    [DETAIL] Expected: home=${u.home_score}, away=${u.away_score}, status=FT`);
     console.error(`    [DETAIL] Got:      home=${row.home_score}, away=${row.away_score}, status=${row.status}`);

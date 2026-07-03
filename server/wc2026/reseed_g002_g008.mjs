@@ -5,7 +5,7 @@
  *   wc26-g-008: AUS (home) vs TUR (away) — June 13
  *
  * These were the 2 remaining orientation mismatches after the bulk fix.
- * Fixture orientations are now corrected in DB. Model odds deleted. Re-seeding fresh.
+ * Match orientations are now corrected in DB. Model odds deleted. Re-seeding fresh.
  *
  * Run: node server/wc2026/reseed_g002_g008.mjs
  */
@@ -64,7 +64,7 @@ const PARAMS = {
   tur: [1.50, 0.80],  // Turkey/Turkiye
 };
 
-const FIXTURES = [
+const MATCHES = [
   {
     matchId: 'wc26-g-002',
     homeId: 'kor',
@@ -91,7 +91,7 @@ async function main() {
   const rows = [];
   const snapshotTs = new Date();
 
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     const { matchId, homeId, awayId, neutral } = fix;
     const hp = PARAMS[homeId];
     const ap = PARAMS[awayId];

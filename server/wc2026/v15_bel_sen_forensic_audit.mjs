@@ -9,7 +9,7 @@
  *   1. Identify the odds scraper/seeder file used for WC2026 book odds
  *   2. Trace the full data path: scraper → DB insert → engine query → display
  *   3. Confirm why BEL vs SEN showed N/A in the prior delivery message
- *   4. Validate all 3 July 1 fixtures have complete, correct book lines
+ *   4. Validate all 3 July 1 matchs have complete, correct book lines
  *   5. Cross-reference DB values against user-provided pasted_content_70.txt
  *
  * ZERO HALLUCINATION. ZERO SOFT GATES. ZERO OMISSIONS.
@@ -194,9 +194,9 @@ async function main() {
   });
 
   // ════════════════════════════════════════════════════════════════════════════
-  // AUDIT BLOCK 4: JULY 1 FIXTURE QUERY — EXACT ENGINE SIMULATION
+  // AUDIT BLOCK 4: JULY 1 MATCH QUERY — EXACT ENGINE SIMULATION
   // ════════════════════════════════════════════════════════════════════════════
-  banner('AUDIT BLOCK 4 — JULY 1 FIXTURE QUERY (EXACT ENGINE SIMULATION)', C.BG_BLUE + C.BOLD + C.WHITE);
+  banner('AUDIT BLOCK 4 — JULY 1 MATCH QUERY (EXACT ENGINE SIMULATION)', C.BG_BLUE + C.BOLD + C.WHITE);
 
   log('STEP', 'FIX_QUERY', `Executing exact engine query: DATE(match_date) = '2026-07-01'`);
   const [jul1Fix] = await db.execute(`
@@ -208,7 +208,7 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('DATA', 'FIX_QUERY', `Engine query result: ${jul1Fix.length} fixtures`);
+  log('DATA', 'FIX_QUERY', `Engine query result: ${jul1Fix.length} matchs`);
   jul1Fix.forEach((f, i) => {
     log('DATA', 'FIX_ROW', `  [${i+1}] ${f.match_id}: ${f.home_code} vs ${f.away_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date} | status=${f.status}`);
   });
@@ -216,9 +216,9 @@ async function main() {
   // Check if wc26-r32-081 is in the result
   const r081inFix = jul1Fix.find(f => f.match_id === 'wc26-r32-081');
   if (!r081inFix) {
-    hardFail('FIX_QUERY', `wc26-r32-081 (BEL vs SEN) NOT RETURNED by engine fixture query — this is the root cause`);
+    hardFail('FIX_QUERY', `wc26-r32-081 (BEL vs SEN) NOT RETURNED by engine match query — this is the root cause`);
   } else {
-    log('PASS', 'FIX_QUERY', `wc26-r32-081 (BEL vs SEN) IS returned by engine fixture query ✓`);
+    log('PASS', 'FIX_QUERY', `wc26-r32-081 (BEL vs SEN) IS returned by engine match query ✓`);
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -309,14 +309,14 @@ async function main() {
   log('AUDIT', 'ROOT_CAUSE', `INVESTIGATION FINDINGS:`);
   log('AUDIT', 'ROOT_CAUSE', `  1. wc26-r32-081 EXISTS in wc2026_matches with home_team_id=bel, away_team_id=sen`);
   log('AUDIT', 'ROOT_CAUSE', `  2. wc26-r32-081 EXISTS in wc2026_frozen_book_odds with ALL 16 required fields populated`);
-  log('AUDIT', 'ROOT_CAUSE', `  3. Engine fixture query (DATE(match_date)='2026-07-01') RETURNS wc26-r32-081 ✓`);
+  log('AUDIT', 'ROOT_CAUSE', `  3. Engine match query (DATE(match_date)='2026-07-01') RETURNS wc26-r32-081 ✓`);
   log('AUDIT', 'ROOT_CAUSE', `  4. Engine book odds query returns wc26-r32-081 row with zero null fields ✓`);
   log('AUDIT', 'ROOT_CAUSE', `  5. v15 engine LOG shows BEL vs SEN with REAL book values: +115, +220, +270, etc.`);
   log('AUDIT', 'ROOT_CAUSE', `  6. The N/A display was in the DELIVERY MESSAGE SUMMARY — not in the engine output`);
   log('ROOT_CAUSE', 'VERDICT', `ROOT CAUSE: The N/A values were an ERROR IN THE DELIVERY MESSAGE SUMMARY`);
   log('ROOT_CAUSE', 'VERDICT', `  The delivery message incorrectly showed BEL/SEN as N/A because it was`);
-  log('ROOT_CAUSE', 'VERDICT', `  summarizing the WRONG fixture (confusing r32-081 with r32-079 MEX/ECU)`);
-  log('ROOT_CAUSE', 'VERDICT', `  which was NOT in the engine's July 1 fixture set (match_date=Jun 30)`);
+  log('ROOT_CAUSE', 'VERDICT', `  summarizing the WRONG match (confusing r32-081 with r32-079 MEX/ECU)`);
+  log('ROOT_CAUSE', 'VERDICT', `  which was NOT in the engine's July 1 match set (match_date=Jun 30)`);
   log('ROOT_CAUSE', 'VERDICT', `  The v15 ENGINE ITSELF correctly outputs all 14 book markets for BEL/SEN`);
   log('ROOT_CAUSE', 'VERDICT', `  CONFIRMED in wc2026modeling.txt log at step S03019-S03032`);
 
@@ -349,9 +349,9 @@ async function main() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // AUDIT BLOCK 9: COMPLETE BOOK vs MODEL TABLE FOR ALL 3 FIXTURES
+  // AUDIT BLOCK 9: COMPLETE BOOK vs MODEL TABLE FOR ALL 3 MATCHS
   // ════════════════════════════════════════════════════════════════════════════
-  banner('AUDIT BLOCK 9 — COMPLETE BOOK vs MODEL TABLE (ALL 3 JULY 1 FIXTURES)', C.BG_GREEN + C.BOLD + C.WHITE);
+  banner('AUDIT BLOCK 9 — COMPLETE BOOK vs MODEL TABLE (ALL 3 JULY 1 MATCHS)', C.BG_GREEN + C.BOLD + C.WHITE);
 
   for (const fix of jul1Fix) {
     const bookRow = bookOdds.find(b => b.match_id === fix.match_id);

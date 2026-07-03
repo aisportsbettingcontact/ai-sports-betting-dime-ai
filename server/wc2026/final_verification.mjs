@@ -2,9 +2,9 @@
  * final_verification.mjs
  * ─────────────────────────────────────────────────────────────────────────────
  * Final full verification:
- * 1. For each AN game: verify DB fixture has correct home/away orientation
- * 2. For each June 11-17 fixture: verify DK book odds exist (1X2 + TOTAL)
- * 3. For each June 11-17 fixture: verify model odds exist (1X2 + TOTAL)
+ * 1. For each AN game: verify DB match has correct home/away orientation
+ * 2. For each June 11-17 match: verify DK book odds exist (1X2 + TOTAL)
+ * 3. For each June 11-17 match: verify model odds exist (1X2 + TOTAL)
  * 4. Verify model home ML is for the correct team (home team should have lower
  *    odds if they're the stronger team, or higher if they're the underdog)
  * 5. Output a clean pass/fail table
@@ -83,8 +83,8 @@ async function main() {
     ssl: { rejectUnauthorized: false }
   });
 
-  // Load all DB fixtures
-  const [dbFixtures] = await conn.execute(
+  // Load all DB matchs
+  const [dbMatchs] = await conn.execute(
     'SELECT match_id, home_team_id, away_team_id, match_date FROM wc2026_matches ORDER BY match_date, match_id'
   );
 
@@ -130,13 +130,13 @@ async function main() {
         continue;
       }
 
-      const dbFix = dbFixtures.find(f =>
+      const dbFix = dbMatchs.find(f =>
         (f.away_team_id === anAwayId && f.home_team_id === anHomeId) ||
         (f.away_team_id === anHomeId && f.home_team_id === anAwayId)
       );
 
       if (!dbFix) {
-        console.log(`  [WARN] No DB fixture: ${anAwayId} @ ${anHomeId}`);
+        console.log(`  [WARN] No DB match: ${anAwayId} @ ${anHomeId}`);
         orientationUnmatched++;
         continue;
       }
@@ -157,20 +157,20 @@ async function main() {
   console.log('PHASE 2: ODDS COMPLETENESS (June 11-17)');
   console.log('═'.repeat(90));
 
-  const june1117Fixtures = dbFixtures.filter(f => {
+  const june1117Matchs = dbMatchs.filter(f => {
     const d = f.match_date.toISOString().slice(0, 10);
     return d >= '2026-06-11' && d <= '2026-06-17';
   });
 
-  console.log(`\nChecking ${june1117Fixtures.length} fixtures for June 11-17...\n`);
+  console.log(`\nChecking ${june1117Matchs.length} matchs for June 11-17...\n`);
 
   const DK_BOOK_ID = 68;
   const MODEL_BOOK_ID = 0;
 
   let oddsPass = 0, oddsFail = 0;
-  const failedFixtures = [];
+  const failedMatchs = [];
 
-  for (const fix of june1117Fixtures) {
+  for (const fix of june1117Matchs) {
     const { match_id, home_team_id, away_team_id } = fix;
     const matchDate = fix.match_date.toISOString().slice(0, 10);
     const fixOdds = oddsMap[match_id] ?? {};
@@ -221,7 +221,7 @@ async function main() {
       console.log(`[FAIL] ${match_id} (${matchDate}): ${away_team_id} @ ${home_team_id}`);
       for (const issue of issues) console.log(`       ✗ ${issue}`);
       oddsFail++;
-      failedFixtures.push({ match_id, issues });
+      failedMatchs.push({ match_id, issues });
     }
     console.log('');
   }
@@ -242,8 +242,8 @@ async function main() {
     console.log('❌ ISSUES REMAIN:');
     if (orientationFail > 0) console.log(`  - ${orientationFail} orientation mismatches`);
     if (oddsFail > 0) {
-      console.log(`  - ${oddsFail} fixtures with incomplete odds:`);
-      for (const f of failedFixtures) {
+      console.log(`  - ${oddsFail} matchs with incomplete odds:`);
+      for (const f of failedMatchs) {
         console.log(`    ${f.match_id}: ${f.issues.join('; ')}`);
       }
     }

@@ -30,7 +30,7 @@ const [rows] = await conn.execute(`
   ORDER BY f.kickoff_utc, f.match_id
 `, TARGET_IDS);
 
-console.log('\n[FIXTURE DATA — 13 TARGET MATCHES]');
+console.log('\n[MATCH DATA — 13 TARGET MATCHES]');
 console.log('match_id          | match_date | kickoff_utc (UTC)    | espn_event_id | venue_id | stadium                    | city          | away @ home');
 console.log('─'.repeat(160));
 for (const r of rows) {

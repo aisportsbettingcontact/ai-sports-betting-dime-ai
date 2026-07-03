@@ -218,8 +218,8 @@ const MATCHES = [
   },
 ];
 
-// ── Jul 1 fixtures to project ─────────────────────────────────────────────────
-const JUL1_FIXTURES = [
+// ── Jul 1 matchs to project ─────────────────────────────────────────────────
+const JUL1_MATCHS = [
   {
     matchId: 'wc26-r32-080', home: 'ENG', away: 'COD',
     kickoff: '12:00 PM ET', venue: 'Atlanta',
@@ -659,7 +659,7 @@ async function main() {
   const v12Params = winner.params;
   const projResults = [];
 
-  for (const f of JUL1_FIXTURES) {
+  for (const f of JUL1_MATCHS) {
     L.section(`v12 PROJECTION: ${f.matchId} — ${f.away} (Away) vs ${f.home} (Home) — ${f.kickoff} | ${f.venue}`);
 
     const lH = f.lambdaH * v12Params.homeMult * (1 - v12Params.paceD);

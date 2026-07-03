@@ -1,7 +1,7 @@
 /**
  * seedModelOddsJune17Recal.mjs
  * ============================
- * Seeds recalibrated model odds (book_id=0) for 4 WC2026 fixtures on June 17:
+ * Seeds recalibrated model odds (book_id=0) for 4 WC2026 matchs on June 17:
  *   wc26-g-021: DR Congo (home) vs Portugal (away)  — NRG Stadium, Houston
  *   wc26-g-023: England (home) vs Croatia (away)    — AT&T Stadium, Arlington
  *   wc26-g-024: Ghana (home) vs Panama (away)       — BMO Field, Toronto
@@ -192,7 +192,7 @@ async function main() {
   console.log('[ModelSeed] [INPUT] Parameters: w_xg=0.60 w_elo=0.20 w_form=0.20 draw_bias=0.00 xg_reg=0.20');
   console.log('[ModelSeed] [INPUT] home_advantage=0.00 (ZERO — all neutral WC venues)');
   console.log('[ModelSeed] [INPUT] Backtest: 20 games | Brier=0.168151 | ECE=0.042397 | DirAcc=60.0%');
-  console.log(`[ModelSeed] [INPUT] ${MODEL_DATA.length} fixtures to seed, book_id=${MODEL_BOOK_ID}`);
+  console.log(`[ModelSeed] [INPUT] ${MODEL_DATA.length} matchs to seed, book_id=${MODEL_BOOK_ID}`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date();
@@ -227,21 +227,21 @@ async function main() {
     await conn.end();
     process.exit(1);
   }
-  console.log(`\n[ModelSeed] [VERIFY] All ${MODEL_DATA.length} fixtures passed pre-flight validation ✓`);
+  console.log(`\n[ModelSeed] [VERIFY] All ${MODEL_DATA.length} matchs passed pre-flight validation ✓`);
 
-  // ── PHASE 2: DB fixture verification ──────────────────────────────────────
-  console.log('\n[ModelSeed] [PHASE 2] DB fixture orientation verification...');
+  // ── PHASE 2: DB match verification ──────────────────────────────────────
+  console.log('\n[ModelSeed] [PHASE 2] DB match orientation verification...');
   for (const m of MODEL_DATA) {
-    const [fixtures] = await conn.query(
+    const [matchs] = await conn.query(
       'SELECT match_id, home_team_id, away_team_id, kickoff_utc FROM wc2026_matches WHERE match_id = ? LIMIT 1',
       [m.matchId]
     );
-    if (!fixtures[0]) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — fixture ${m.matchId} not found in DB`);
+    if (!matchs[0]) {
+      console.error(`[ModelSeed] [VERIFY] FAIL — match ${m.matchId} not found in DB`);
       totalErrors++;
       continue;
     }
-    const f = fixtures[0];
+    const f = matchs[0];
     const homeMatch = f.home_team_id === m.homeId;
     const awayMatch = f.away_team_id === m.awayId;
     if (!homeMatch || !awayMatch) {
@@ -266,7 +266,7 @@ async function main() {
   for (const m of MODEL_DATA) {
     console.log(`\n[ModelSeed] [STEP] Processing ${m.matchId} (${m.homeId} vs ${m.awayId})...`);
 
-    // Delete existing model odds for this fixture
+    // Delete existing model odds for this match
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
       [m.matchId, MODEL_BOOK_ID]
@@ -313,7 +313,7 @@ async function main() {
       'TOTAL_under':{ odds: m.underOdds, prob: m.underProb},
     };
 
-    let fixtureOk = true;
+    let matchOk = true;
     for (const row of rows) {
       const key = `${row.market}_${row.selection}`;
       const exp = expected[key];
@@ -323,10 +323,10 @@ async function main() {
       if (!oddsMatch || probDiff > 0.001) {
         console.error(`[ModelSeed] [VERIFY] FAIL — ${m.matchId} ${key}: odds=${row.american_odds} (exp=${exp.odds}) prob=${row.implied_prob} (exp=${exp.prob})`);
         verifyErrors++;
-        fixtureOk = false;
+        matchOk = false;
       }
     }
-    if (fixtureOk) {
+    if (matchOk) {
       console.log(`[ModelSeed] [VERIFY] PASS — ${m.matchId}: all ${rows.length} rows verified ✓`);
     }
   }
@@ -334,7 +334,7 @@ async function main() {
   // ── Summary ────────────────────────────────────────────────────────────────
   console.log('\n' + '='.repeat(72));
   console.log('[ModelSeed] [SUMMARY]');
-  console.log(`[ModelSeed]   Fixtures seeded:  ${MODEL_DATA.length}`);
+  console.log(`[ModelSeed]   Matchs seeded:  ${MODEL_DATA.length}`);
   console.log(`[ModelSeed]   Rows inserted:    ${totalInserted}`);
   console.log(`[ModelSeed]   Seed errors:      ${totalErrors}`);
   console.log(`[ModelSeed]   Verify errors:    ${verifyErrors}`);

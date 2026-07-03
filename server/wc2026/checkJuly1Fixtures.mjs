@@ -4,7 +4,7 @@ import { sql, inArray } from "drizzle-orm";
 
 const db = await getDb();
 
-// Check match_date for July 1 fixtures
+// Check match_date for July 1 matchs
 const fxRows = await db.select({
   matchId: wc2026Matches.matchId,
   matchDate: wc2026Matches.matchDate,
@@ -14,7 +14,7 @@ const fxRows = await db.select({
 }).from(wc2026Matches).where(
   sql`match_date LIKE '2026-07-01%' OR match_id IN ('wc26-r32-080','wc26-r32-081','wc26-r32-082')`
 );
-console.log("\n[FIXTURES]", JSON.stringify(fxRows, null, 2));
+console.log("\n[MATCHS]", JSON.stringify(fxRows, null, 2));
 
 // Check model projections
 const mpRows = await db.select().from(wc2026ModelProjections).where(

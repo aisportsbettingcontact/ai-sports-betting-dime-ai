@@ -176,13 +176,13 @@ async function main() {
 
   // ── SECTION 3: Pull corresponding rows from wc2026MatchOdds ───────────────
   section(3, 'EXTRACT CORRESPONDING ROWS FROM wc2026MatchOdds');
-  const frozenFixtureIds = frozenRows.map(r => r.match_id);
-  if (frozenFixtureIds.length === 0) {
+  const frozenMatchIds = frozenRows.map(r => r.match_id);
+  if (frozenMatchIds.length === 0) {
     warn('MATCH', 'No rows in wc2026_frozen_book_odds — nothing to validate');
     await conn.end(); flushLog(); process.exit(0);
   }
 
-  const placeholders = frozenFixtureIds.map(() => '?').join(',');
+  const placeholders = frozenMatchIds.map(() => '?').join(',');
   const [matchRows] = await conn.execute(`
     SELECT match_id,
            book_home_ml, book_draw, book_away_ml,
@@ -195,13 +195,13 @@ async function main() {
     FROM wc2026MatchOdds
     WHERE match_id IN (${placeholders})
     ORDER BY match_id
-  `, frozenFixtureIds);
-  input('MATCH', `wc2026MatchOdds rows found for frozen match_ids: ${matchRows.length} / ${frozenFixtureIds.length}`);
+  `, frozenMatchIds);
+  input('MATCH', `wc2026MatchOdds rows found for frozen match_ids: ${matchRows.length} / ${frozenMatchIds.length}`);
 
   const matchMap = Object.fromEntries(matchRows.map(r => [r.match_id, r]));
 
   // ── SECTION 4: FIELD-BY-FIELD TRIPLE VERIFICATION ─────────────────────────
-  section(4, 'FIELD-BY-FIELD TRIPLE VERIFICATION — ALL 37 FIXTURES × 16 FIELDS');
+  section(4, 'FIELD-BY-FIELD TRIPLE VERIFICATION — ALL 37 MATCHS × 16 FIELDS');
 
   let totalChecks = 0;
   let totalPass = 0;
@@ -210,19 +210,19 @@ async function main() {
   let totalNullMismatch = 0;
   let missingInMatch = 0;
 
-  const fixtureResults = [];
+  const matchResults = [];
 
   for (const frozen of frozenRows) {
     const fid = frozen.match_id;
     const match = matchMap[fid];
 
     process.stdout.write(`\n${DIVIDER2}\n`);
-    step('XREF', `FIXTURE: ${fid}`);
+    step('XREF', `MATCH: ${fid}`);
 
     if (!match) {
       fail('XREF', `  ${fid}: NOT FOUND in wc2026MatchOdds — DATA LOSS DETECTED`);
       missingInMatch++;
-      fixtureResults.push({ fid, status: 'MISSING', checks: 0, pass: 0, fail: 0 });
+      matchResults.push({ fid, status: 'MISSING', checks: 0, pass: 0, fail: 0 });
       continue;
     }
 
@@ -272,7 +272,7 @@ async function main() {
 
     const fxStatus = fxFail === 0 ? 'PASS' : 'FAIL';
     calc('XREF', `  ${fid}: ${fxChecks} checks │ ${fxPass} PASS │ ${fxFail} FAIL │ ${fxNullBoth} both-null │ ${fxNullMismatch} null-mismatch │ STATUS=${fxStatus}`);
-    fixtureResults.push({ fid, status: fxStatus, checks: fxChecks, pass: fxPass, fail: fxFail });
+    matchResults.push({ fid, status: fxStatus, checks: fxChecks, pass: fxPass, fail: fxFail });
   }
 
   // ── SECTION 5: TRIPLE VERIFICATION PASS 2 — Re-query and re-verify ────────
@@ -292,7 +292,7 @@ async function main() {
            book_btts_yes, book_btts_no,
            book_home_to_advance, book_away_to_advance
     FROM wc2026MatchOdds WHERE match_id IN (${placeholders}) ORDER BY match_id
-  `, frozenFixtureIds);
+  `, frozenMatchIds);
 
   const matchMap2 = Object.fromEntries(matchRows2.map(r => [r.match_id, r]));
   let pass2Checks = 0, pass2Pass = 0, pass2Fail = 0;
@@ -343,7 +343,7 @@ async function main() {
       SUM(ABS(COALESCE(book_away_to_advance,0)))          as sum_toadv_away
     FROM wc2026_frozen_book_odds
     WHERE match_id IN (${placeholders})
-  `, frozenFixtureIds);
+  `, frozenMatchIds);
 
   const [matchAgg] = await conn.execute(`
     SELECT
@@ -359,7 +359,7 @@ async function main() {
       SUM(ABS(COALESCE(book_away_to_advance,0)))     as sum_toadv_away
     FROM wc2026MatchOdds
     WHERE match_id IN (${placeholders})
-  `, frozenFixtureIds);
+  `, frozenMatchIds);
 
   const fa = frozenAgg[0], ma = matchAgg[0];
   const AGG_FIELDS = [
@@ -402,14 +402,14 @@ async function main() {
     'server/wc2026/audit_bookmodel_pipeline.mjs',
     'server/wc2026/audit_column_mapping.mjs',
     'server/wc2026/audit_orientation_500x.mjs',
-    'server/wc2026/checkJuly1Fixtures.mjs',
+    'server/wc2026/checkJuly1Matchs.mjs',
     'server/wc2026/check_seeded_odds.mjs',
     'server/wc2026/espn_fullpull_7matches.mjs',
     'server/wc2026/fix_orientation_and_odds.mjs',
     'server/wc2026/fix_seeded_odds.mjs',
     'server/wc2026/fix_seeded_odds_v2.mjs',
     'server/wc2026/forensic500x_datapull.mjs',
-    'server/wc2026/lookupJune30Fixtures.mjs',
+    'server/wc2026/lookupJune30Matchs.mjs',
     'server/wc2026/seedJune28CAN_RSA.mjs',
     'server/wc2026/seedModelJune30v11.mjs',
     'server/wc2026/seedModelOddsJune29v11.mjs',
@@ -427,7 +427,7 @@ async function main() {
     'server/wc2026/v15_engine.mjs',
     'server/wc2026/verifyFeed.mjs',
     'server/wc2026/wc2026FeedAudit.mjs',
-    'get_june27_fixtures.mjs',
+    'get_june27_matchs.mjs',
     'scripts/june29_jpn_bra_step1_schema_seed.mjs',
     'scripts/june29_mar_ned_db_seed.mjs',
     'scripts/june29_mar_ned_simulate.mjs',
@@ -436,7 +436,7 @@ async function main() {
   ];
 
   warn('CODEBASE', `wc2026Router.ts STILL HAS ACTIVE REFERENCES to wc2026FrozenBookOdds`);
-  warn('CODEBASE', `  Lines: 29 (import), 146, 155-156, 166-170, 226, 245 (fixturesByDate)`);
+  warn('CODEBASE', `  Lines: 29 (import), 146, 155-156, 166-170, 226, 245 (matchsByDate)`);
   warn('CODEBASE', `  Lines: 496, 505-506, 515-519, 572, 579 (todayWithOdds)`);
   warn('CODEBASE', `  These are LIVE query paths — the router still queries frozen_book_odds as fallback`);
   warn('CODEBASE', `  STATUS: REQUIRES CLEANUP — router must be updated to remove all frozen references`);
@@ -477,11 +477,11 @@ async function main() {
   state('SUMMARY', `GRAND TOTAL                : ${grandTotalChecks} checks │ ${grandTotalPass} PASS │ ${grandTotalFail} FAIL`);
   state('SUMMARY', '');
 
-  // Per-fixture results table
-  state('SUMMARY', 'PER-FIXTURE RESULTS:');
-  state('SUMMARY', `${'FIXTURE'.padEnd(22)} ${'STATUS'.padEnd(8)} ${'CHECKS'.padStart(7)} ${'PASS'.padStart(6)} ${'FAIL'.padStart(6)}`);
+  // Per-match results table
+  state('SUMMARY', 'PER-MATCH RESULTS:');
+  state('SUMMARY', `${'MATCH'.padEnd(22)} ${'STATUS'.padEnd(8)} ${'CHECKS'.padStart(7)} ${'PASS'.padStart(6)} ${'FAIL'.padStart(6)}`);
   state('SUMMARY', `${'-'.repeat(22)} ${'-'.repeat(8)} ${'-'.repeat(7)} ${'-'.repeat(6)} ${'-'.repeat(6)}`);
-  for (const r of fixtureResults) {
+  for (const r of matchResults) {
     const icon = r.status === 'PASS' ? '✅' : r.status === 'MISSING' ? '❌' : '⚠️ ';
     state('SUMMARY', `${icon} ${r.fid.padEnd(20)} ${r.status.padEnd(8)} ${String(r.checks).padStart(7)} ${String(r.pass).padStart(6)} ${String(r.fail).padStart(6)}`);
   }
@@ -496,7 +496,7 @@ async function main() {
     warn('VERDICT', 'ACTION REQUIRED: wc2026Router.ts still queries wc2026FrozenBookOdds — must be cleaned');
     warn('VERDICT', 'ACTION REQUIRED: seedJuly2BookOdds.ts, seedJuly1Direct.ts, seedJune29/30Direct.ts reference frozen — historical only');
   } else {
-    fail('VERDICT', `DATA TRANSFER INCOMPLETE — ${grandTotalFail} field mismatches, ${missingInMatch} missing fixtures`);
+    fail('VERDICT', `DATA TRANSFER INCOMPLETE — ${grandTotalFail} field mismatches, ${missingInMatch} missing matchs`);
     fail('VERDICT', 'DO NOT DEPRECATE until all failures are resolved');
   }
 

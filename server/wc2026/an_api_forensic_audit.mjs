@@ -116,8 +116,8 @@ async function main() {
   const [[countRow]] = await conn.execute('SELECT COUNT(*) as cnt FROM wc2026_frozen_book_odds');
   log('STATE', 'DB_COUNT', `Total rows in wc2026_frozen_book_odds: ${countRow.cnt}`);
 
-  // Get all July 1 fixtures
-  const [july1Fixtures] = await conn.execute(`
+  // Get all July 1 matchs
+  const [july1Matchs] = await conn.execute(`
     SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
            ht.name as home_name, ht.fifa_code as home_code,
            at.name as away_name, at.fifa_code as away_code
@@ -127,15 +127,15 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('STATE', 'FIXTURES', `July 1 fixtures found: ${july1Fixtures.length}`);
-  july1Fixtures.forEach(f => {
-    log('STATE', 'FIXTURE', `  ${f.match_id}: ${f.away_code} @ ${f.home_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date}`);
+  log('STATE', 'MATCHS', `July 1 matchs found: ${july1Matchs.length}`);
+  july1Matchs.forEach(f => {
+    log('STATE', 'MATCH', `  ${f.match_id}: ${f.away_code} @ ${f.home_code} | kickoff=${f.kickoff_utc} | match_date=${f.match_date}`);
   });
 
   // Get frozen book odds for July 1
-  const matchIds = july1Fixtures.map(f => f.match_id);
+  const matchIds = july1Matchs.map(f => f.match_id);
   if (matchIds.length === 0) {
-    log('HARD_FAIL', 'DB', 'No July 1 fixtures found — cannot proceed');
+    log('HARD_FAIL', 'DB', 'No July 1 matchs found — cannot proceed');
     flushLog();
     await conn.end();
     process.exit(1);
@@ -149,7 +149,7 @@ async function main() {
   log('STATE', 'FROZEN_ODDS', `Frozen book odds rows for July 1: ${frozenRows.length}`);
   
   for (const row of frozenRows) {
-    const fix = july1Fixtures.find(f => f.match_id === row.match_id);
+    const fix = july1Matchs.find(f => f.match_id === row.match_id);
     const matchup = fix ? `${fix.away_code} @ ${fix.home_code}` : row.match_id;
     log('STATE', 'FROZEN_ROW', `  ${matchup} (${row.match_id}):`, {
       book_home_ml: row.book_home_ml,
@@ -182,10 +182,10 @@ async function main() {
     }
   }
 
-  // Check which fixtures are MISSING from frozen_book_odds
-  const frozenFixtureIds = new Set(frozenRows.map(r => r.match_id));
-  for (const f of july1Fixtures) {
-    if (!frozenFixtureIds.has(f.match_id)) {
+  // Check which matchs are MISSING from frozen_book_odds
+  const frozenMatchIds = new Set(frozenRows.map(r => r.match_id));
+  for (const f of july1Matchs) {
+    if (!frozenMatchIds.has(f.match_id)) {
       log('FAIL', 'MISSING_FROZEN', `  ${f.match_id} (${f.away_code} @ ${f.home_code}) — NO ROW in wc2026_frozen_book_odds`);
     }
   }
@@ -281,7 +281,7 @@ async function main() {
   }
 
   // ─── PHASE 6: CROSS-REFERENCE AN vs DB ────────────────────────────────────
-  logSeparator('PHASE 6: CROSS-REFERENCE AN GAMES vs DB FIXTURES');
+  logSeparator('PHASE 6: CROSS-REFERENCE AN GAMES vs DB MATCHS');
   
   // Team name alias map for matching
   const TEAM_ALIAS = {
@@ -311,21 +311,21 @@ async function main() {
     const awayCode = resolveTeam(ag.awayFullName);
     log('STEP', 'TEAM_RESOLVE', `AN: ${ag.awayFullName} @ ${ag.homeFullName} → ${awayCode} @ ${homeCode}`);
     
-    // Find matching DB fixture
-    const dbFix = july1Fixtures.find(f => 
+    // Find matching DB match
+    const dbFix = july1Matchs.find(f => 
       (f.home_code?.toLowerCase() === homeCode && f.away_code?.toLowerCase() === awayCode) ||
       (f.home_code?.toLowerCase() === awayCode && f.away_code?.toLowerCase() === homeCode)
     );
     
     if (!dbFix) {
-      log('FAIL', 'NO_DB_MATCH', `  ${awayCode} @ ${homeCode} — NO MATCHING DB FIXTURE`);
+      log('FAIL', 'NO_DB_MATCH', `  ${awayCode} @ ${homeCode} — NO MATCHING DB MATCH`);
       continue;
     }
     
     const isSwapped = dbFix.home_code?.toLowerCase() === awayCode;
-    log('STATE', 'DB_MATCH', `  Matched to fixture ${dbFix.match_id} (${dbFix.away_code} @ ${dbFix.home_code})${isSwapped ? ' [SWAPPED]' : ''}`);
+    log('STATE', 'DB_MATCH', `  Matched to match ${dbFix.match_id} (${dbFix.away_code} @ ${dbFix.home_code})${isSwapped ? ' [SWAPPED]' : ''}`);
     
-    // Check if frozen odds exist for this fixture
+    // Check if frozen odds exist for this match
     const frozenRow = frozenRows.find(r => r.match_id === dbFix.match_id);
     if (!frozenRow) {
       log('FAIL', 'NO_FROZEN_ODDS', `  ${dbFix.match_id} — NO ROW in wc2026_frozen_book_odds`);
@@ -352,15 +352,15 @@ async function main() {
   // ─── PHASE 7: BEL vs SEN SPECIFIC INVESTIGATION ───────────────────────────
   logSeparator('PHASE 7: BEL vs SEN — ROOT CAUSE INVESTIGATION');
   
-  const belSenFix = july1Fixtures.find(f => 
+  const belSenFix = july1Matchs.find(f => 
     (f.home_code === 'bel' || f.away_code === 'bel') &&
     (f.home_code === 'sen' || f.away_code === 'sen')
   );
   
   if (!belSenFix) {
-    log('FAIL', 'BEL_SEN', 'BEL vs SEN fixture NOT FOUND in July 1 fixtures');
+    log('FAIL', 'BEL_SEN', 'BEL vs SEN match NOT FOUND in July 1 matchs');
   } else {
-    log('PASS', 'BEL_SEN_FIXTURE', `Found: ${belSenFix.match_id} — ${belSenFix.away_code} @ ${belSenFix.home_code}`, {
+    log('PASS', 'BEL_SEN_MATCH', `Found: ${belSenFix.match_id} — ${belSenFix.away_code} @ ${belSenFix.home_code}`, {
       match_date: belSenFix.match_date,
       kickoff_utc: belSenFix.kickoff_utc,
     });
@@ -412,7 +412,7 @@ async function main() {
   log('OUTPUT', 'SCRAPER_1', '  → Calls AN API: https://api.actionnetwork.com/web/v2/scoreboard/soccer');
   log('OUTPUT', 'SCRAPER_1', '  → Writes to: wc2026_odds_snapshots (book_id=68 for DK)');
   log('OUTPUT', 'SCRAPER_2', 'FREEZE LAYER: server/wc2026/seedJuly1Direct.ts');
-  log('OUTPUT', 'SCRAPER_2', '  → Manual seeder for July 1 KO Round fixtures');
+  log('OUTPUT', 'SCRAPER_2', '  → Manual seeder for July 1 KO Round matchs');
   log('OUTPUT', 'SCRAPER_2', '  → Writes to: wc2026_frozen_book_odds');
   log('OUTPUT', 'SCRAPER_3', 'LIVE ROUTE: /api/scheduled/wc2026-odds');
   log('OUTPUT', 'SCRAPER_3', '  → COMMENT ONLY in index.ts — NOT REGISTERED as Express route');

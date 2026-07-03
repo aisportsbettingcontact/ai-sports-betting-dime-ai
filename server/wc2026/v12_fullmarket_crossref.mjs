@@ -2,7 +2,7 @@
  * v12_fullmarket_crossref.mjs
  * ══════════════════════════════════════════════════════════════════════════════
  * WC2026 v12.0-KO24 — 500x Full-Market Book vs Model Cross-Reference
- * All 12 R32/R16 Fixtures | All 18 Markets per Game
+ * All 12 R32/R16 Matches | All 18 Markets per Game
  *
  * MARKETS COVERED:
  *   1.  Away ML
@@ -216,10 +216,10 @@ const V12_RHO = 0.065;
 const ET_FACTOR = 0.50;
 
 // ══════════════════════════════════════════════════════════════════════════════
-// RUN ALL 12 FIXTURES
+// RUN ALL 12 MATCHES
 // ══════════════════════════════════════════════════════════════════════════════
 banner('v12.0-KO24 — 500x Full-Market Book vs Model Cross-Reference');
-log('INPUT', `Fixtures: ${Object.keys(BOOK).length} | Markets per game: 18 | rho: ${V12_RHO} | ET factor: ${ET_FACTOR}`);
+log('INPUT', `Matches: ${Object.keys(BOOK).length} | Markets per game: 18 | rho: ${V12_RHO} | ET factor: ${ET_FACTOR}`);
 
 const results = [];
 
@@ -374,7 +374,7 @@ for (const [fid, bk] of Object.entries(BOOK)) {
 // ══════════════════════════════════════════════════════════════════════════════
 // EDGE MASTER TABLE
 // ══════════════════════════════════════════════════════════════════════════════
-banner('EDGE MASTER TABLE — All 12 Fixtures');
+banner('EDGE MASTER TABLE — All 12 Matches');
 const allEdges = [];
 for (const r of results) {
   for (const e of r.edges) {

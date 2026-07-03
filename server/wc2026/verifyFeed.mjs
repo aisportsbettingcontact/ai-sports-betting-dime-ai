@@ -14,7 +14,7 @@ const conn = await mysql.createConnection({
 const dates = ['2026-07-01', '2026-07-02', '2026-07-03', '2026-07-04', '2026-07-05'];
 
 console.log('\n══════════════════════════════════════════════════════');
-console.log('  WC2026 FEED VERIFICATION — All 12 New Fixtures');
+console.log('  WC2026 FEED VERIFICATION — All 12 New Matchs');
 console.log('══════════════════════════════════════════════════════\n');
 
 let totalFound = 0;
@@ -35,7 +35,7 @@ for (const date of dates) {
     ORDER BY f.kickoff_utc, f.match_id
   `, [date]);
 
-  console.log(`📅 ${date} — ${rows.length} fixture(s)`);
+  console.log(`📅 ${date} — ${rows.length} match(s)`);
   for (const r of rows) {
     const hasOdds = r.book_home_ml !== null;
     const oddsStatus = hasOdds ? '✅ ODDS SEEDED' : '❌ NO ODDS';
@@ -51,7 +51,7 @@ for (const date of dates) {
   console.log();
 }
 
-// Verify all 12 target fixtures specifically
+// Verify all 12 target matchs specifically
 const targetIds = [
   'wc26-r32-080','wc26-r32-081','wc26-r32-082','wc26-r32-083','wc26-r32-084',
   'wc26-r32-085','wc26-r32-086','wc26-r32-087','wc26-r32-088',
@@ -65,7 +65,7 @@ const [seedCheck] = await conn.execute(
 
 const seededIds = new Set(seedCheck.map(r => r.match_id));
 console.log('══════════════════════════════════════════════════════');
-console.log(`  SEED VALIDATION: ${seededIds.size}/12 target fixtures have book odds`);
+console.log(`  SEED VALIDATION: ${seededIds.size}/12 target matchs have book odds`);
 for (const id of targetIds) {
   const status = seededIds.has(id) ? '✅' : '❌ MISSING';
   console.log(`  ${status} ${id}`);

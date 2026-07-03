@@ -9,7 +9,7 @@
  *   rank_diff_discount = 0.04 when rank_diff > 40 (upset correction)
  *   n_simulations = 1,000,000
  *
- * JUNE 20 FIXTURES:
+ * JUNE 20 MATCHS:
  *   wc26-g-035: Netherlands (NED) vs Sweden (SWE) — Group F, Houston, 1:00 PM EDT
  *   wc26-g-033: Ivory Coast (CIV) vs Germany (GER) — Group E, Toronto, 4:00 PM EDT
  *   wc26-g-034: Curaçao (CUW) vs Ecuador (ECU) — Group E, Kansas City, 11:00 PM EDT
@@ -184,8 +184,8 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
   };
 }
 
-// ─── Core: Compute model projection for a fixture ────────────────────────────
-function computeModelProjection(fixture) {
+// ─── Core: Compute model projection for a match ────────────────────────────
+function computeModelProjection(match) {
   const {
     matchId, homeName, homeCode, awayName, awayCode,
     // Elo ratings (from FIFA/Elo World Rankings June 2026)
@@ -199,7 +199,7 @@ function computeModelProjection(fixture) {
     // Book odds for calibration
     bookHomeML, bookDrawML, bookAwayML,
     bookOverML, bookUnderML, bookTotalLine,
-  } = fixture;
+  } = match;
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
@@ -375,7 +375,7 @@ function computeModelProjection(fixture) {
 }
 
 // ─── Match data ───────────────────────────────────────────────────────────────
-const FIXTURES = [
+const MATCHS = [
   {
     matchId: 'wc26-g-035',
     homeName: 'Netherlands', homeCode: 'ned',
@@ -454,24 +454,24 @@ async function main() {
   let totalErrors = 0;
   const results = [];
 
-  for (const fixture of FIXTURES) {
+  for (const match of MATCHS) {
     try {
-      const proj = computeModelProjection(fixture);
-      results.push({ fixture, proj });
+      const proj = computeModelProjection(match);
+      results.push({ match, proj });
 
       // ── Insert into wc2026_odds_snapshots (book_id=0 = AI Model) ──────────
       // Markets: 1X2, TOTAL, DOUBLE_CHANCE
       const rows = [
         // 1X2
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
         // TOTAL (O/U 2.5)
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', 2.5, proj.modelOverML, proj.mc.over25, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, proj.modelUnderML, 1 - proj.mc.over25, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', 2.5, proj.modelOverML, proj.mc.over25, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', 2.5, proj.modelUnderML, 1 - proj.mc.over25, 0],
         // DOUBLE_CHANCE
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
       ];
 
       for (const row of rows) {
@@ -555,8 +555,8 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        fixture.matchId, MODEL_VERSION, N_SIMULATIONS,
-        fixture.homeCode, fixture.awayCode,
+        match.matchId, MODEL_VERSION, N_SIMULATIONS,
+        match.homeCode, match.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
         proj.lambdaH, proj.lambdaA, proj.mc.avgGoals,
@@ -572,26 +572,26 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Total=${proj.modelTotalLine} O=${proj.modelOverML} U=${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Total=${proj.modelTotalLine} O=${proj.modelOverML} U=${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${fixture.matchId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${match.matchId}: ${err.message}`);
     }
   }
 
   // ── Final summary ──────────────────────────────────────────────────────────
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} JUNE 20 MODEL SEED COMPLETE`);
-  console.log(`${TAG} Fixtures processed: ${FIXTURES.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
+  console.log(`${TAG} Matchs processed: ${MATCHS.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
   console.log(`\n${TAG} PROJECTIONS SUMMARY:`);
-  for (const { fixture, proj } of results) {
-    const lean = proj.modelLean === 'H' ? fixture.homeName : proj.modelLean === 'A' ? fixture.awayName : 'DRAW';
-    console.log(`${TAG}   ${fixture.homeName} vs ${fixture.awayName}:`);
-    console.log(`${TAG}     ML: ${fixture.homeName}=${proj.modelHomeML} / DRAW=${proj.modelDrawML} / ${fixture.awayName}=${proj.modelAwayML}`);
+  for (const { match, proj } of results) {
+    const lean = proj.modelLean === 'H' ? match.homeName : proj.modelLean === 'A' ? match.awayName : 'DRAW';
+    console.log(`${TAG}   ${match.homeName} vs ${match.awayName}:`);
+    console.log(`${TAG}     ML: ${match.homeName}=${proj.modelHomeML} / DRAW=${proj.modelDrawML} / ${match.awayName}=${proj.modelAwayML}`);
     console.log(`${TAG}     Total: ${proj.modelTotalLine} (O=${proj.modelOverML} U=${proj.modelUnderML})`);
     console.log(`${TAG}     Lean: ${lean} (${(proj.leanProb*100).toFixed(1)}%)`);
     console.log(`${TAG}     Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);

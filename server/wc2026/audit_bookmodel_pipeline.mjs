@@ -4,7 +4,7 @@
  * 500x FORENSIC AUDIT — Book/Model Line Population Pipeline
  *
  * LAYER 1: DB — actual scores, frozen_book_odds columns, model_projections columns
- * LAYER 2: SERVER — wc2026Router.ts fixturesByDate query, column aliases, JOIN
+ * LAYER 2: SERVER — wc2026Router.ts matchsByDate query, column aliases, JOIN
  * LAYER 3: FRONTEND — how the feed card reads and renders book/model lines
  *
  * ZERO HALLUCINATION. Every value traced to its source.
@@ -87,7 +87,7 @@ async function main() {
     ORDER BY f.match_date, f.kickoff_utc
   `, [ALL_FIDS]);
 
-  log('INPUT', `DB returned ${dbScores.length} fixture rows`);
+  log('INPUT', `DB returned ${dbScores.length} match rows`);
   let scoreErrors = 0;
   for (const row of dbScores) {
     const expected = CORRECT_RESULTS[row.match_id];
@@ -107,7 +107,7 @@ async function main() {
   }
   log('OUTPUT', `Score validation: ${scoreErrors === 0 ? 'ALL PASS' : scoreErrors + ' ERRORS'}`);
 
-  // ── Check frozen_book_odds for all 7 historical + 3 Jul 1 fixtures ────────
+  // ── Check frozen_book_odds for all 7 historical + 3 Jul 1 matchs ────────
   banner('LAYER 1B — DB: frozen_book_odds Column Completeness');
 
   const checkFids = [...ALL_FIDS, ...JUL1_FIDS];
@@ -115,7 +115,7 @@ async function main() {
     SELECT * FROM wc2026_frozen_book_odds WHERE match_id IN (?)
   `, [checkFids]);
 
-  log('INPUT', `frozen_book_odds rows: ${bookRows.length} for ${checkFids.length} fixtures`);
+  log('INPUT', `frozen_book_odds rows: ${bookRows.length} for ${checkFids.length} matchs`);
 
   let bookErrors = 0;
   for (const fid of checkFids) {
@@ -147,7 +147,7 @@ async function main() {
   }
   log('OUTPUT', `Book odds validation: ${bookErrors === 0 ? 'ALL PASS' : bookErrors + ' ERRORS'}`);
 
-  // ── Check model_projections for all 7 historical + 3 Jul 1 fixtures ───────
+  // ── Check model_projections for all 7 historical + 3 Jul 1 matchs ───────
   banner('LAYER 1C — DB: model_projections Column Completeness');
 
   const [modelRows] = await conn.query(`
@@ -156,7 +156,7 @@ async function main() {
     ORDER BY match_id, modeled_at DESC
   `, [checkFids]);
 
-  log('INPUT', `model_projections rows: ${modelRows.length} for ${checkFids.length} fixtures`);
+  log('INPUT', `model_projections rows: ${modelRows.length} for ${checkFids.length} matchs`);
 
   let modelErrors = 0;
   const seenFids = new Set();
@@ -179,7 +179,7 @@ async function main() {
     });
   }
 
-  // Check which fixtures have NO model rows at all
+  // Check which matchs have NO model rows at all
   for (const fid of checkFids) {
     if (!seenFids.has(fid)) {
       fail(`NO MODEL ROW: ${fid}`);
@@ -192,12 +192,12 @@ async function main() {
   banner('LAYER 1D — DB: ESPN Match Scores vs Actual Results');
 
   const espnIds = dbScores.map(r => r.espn_event_id ?? null).filter(Boolean);
-  // Get ESPN IDs from fixtures
-  const [fixtureEspn] = await conn.query(`
+  // Get ESPN IDs from matchs
+  const [matchEspn] = await conn.query(`
     SELECT match_id, espn_event_id FROM wc2026_matches WHERE match_id IN (?)
   `, [ALL_FIDS]);
 
-  const espnIdList = fixtureEspn.map(r => r.espn_event_id).filter(Boolean);
+  const espnIdList = matchEspn.map(r => r.espn_event_id).filter(Boolean);
   log('INPUT', `ESPN IDs for 7 matches: ${espnIdList.join(', ')}`);
 
   if (espnIdList.length > 0) {
@@ -208,7 +208,7 @@ async function main() {
 
     log('STATE', `ESPN match rows: ${espnMatches.length}`);
     const fidByEspn = {};
-    fixtureEspn.forEach(r => { fidByEspn[r.espn_event_id] = r.match_id; });
+    matchEspn.forEach(r => { fidByEspn[r.espn_event_id] = r.match_id; });
 
     for (const em of espnMatches) {
       const fid = fidByEspn[em.matchId];
@@ -242,12 +242,12 @@ async function main() {
     pass('Router file found: ' + routerPath);
     log('STATE', `Router file size: ${routerContent.length} chars`);
 
-    // Find fixturesByDate procedure
-    const fidxByDateIdx = routerContent.indexOf('fixturesByDate');
+    // Find matchsByDate procedure
+    const fidxByDateIdx = routerContent.indexOf('matchsByDate');
     if (fidxByDateIdx === -1) {
-      fail('fixturesByDate procedure NOT FOUND in router');
+      fail('matchsByDate procedure NOT FOUND in router');
     } else {
-      pass('fixturesByDate procedure found at char ' + fidxByDateIdx);
+      pass('matchsByDate procedure found at char ' + fidxByDateIdx);
     }
 
     // Check how book odds are queried

@@ -1,5 +1,5 @@
 /**
- * JUNE 14, 2026 — WC2026 FIXTURE AUDIT (confirmed column names)
+ * JUNE 14, 2026 — WC2026 MATCH AUDIT (confirmed column names)
  * wc2026_matches: match_id, match_date, kickoff_utc, group_letter, home_team_id, away_team_id
  * wc2026_teams: team_id, name, fifa_code, group_letter, flag_code, flag_url, slug
  * wc2026_odds_snapshots: id, match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
@@ -22,10 +22,10 @@ function parseDbUrl(url) {
 const conn = await mysql.createConnection(parseDbUrl(DB_URL));
 
 console.log('\n' + '='.repeat(80));
-console.log('[WC2026] JUNE 14, 2026 — WC2026 FIXTURE AUDIT');
+console.log('[WC2026] JUNE 14, 2026 — WC2026 MATCH AUDIT');
 console.log('='.repeat(80));
 
-const [wcFixtures] = await conn.execute(`
+const [wcMatchs] = await conn.execute(`
   SELECT 
     f.match_id AS id, 
     f.match_date AS matchDate, 
@@ -44,12 +44,12 @@ const [wcFixtures] = await conn.execute(`
   ORDER BY f.kickoff_utc ASC
 `);
 
-console.log(`[WC2026] Found ${wcFixtures.length} fixtures for June 14\n`);
+console.log(`[WC2026] Found ${wcMatchs.length} matchs for June 14\n`);
 
 const wcIssues = [];
 let wcClean = 0;
 
-for (const f of wcFixtures) {
+for (const f of wcMatchs) {
   // Get DK odds (book_id=68) — latest snapshot per market+selection
   const [dkOdds] = await conn.execute(`
     SELECT market, selection, american_odds AS price, snapshot_ts AS snapshotTs
@@ -128,7 +128,7 @@ for (const f of wcFixtures) {
   }
 }
 
-console.log(`[WC2026] SUMMARY: ${wcFixtures.length} fixtures | ${wcClean} CLEAN | ${wcIssues.length} WITH ISSUES`);
+console.log(`[WC2026] SUMMARY: ${wcMatchs.length} matchs | ${wcClean} CLEAN | ${wcIssues.length} WITH ISSUES`);
 if (wcIssues.length > 0) {
   console.log('[WC2026] ISSUES:');
   for (const i of wcIssues) {

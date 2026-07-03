@@ -168,7 +168,7 @@ banner('PHASE B — 500x Forensic Grading (7 Matches)');
 const grades = [];
 
 for (const d of forensicData) {
-  const f = d.fixture;
+  const f = d.match;
   const m = d.model;
   const b = d.book;
   const exg = d.espnXG;
@@ -176,7 +176,7 @@ for (const d of forensicData) {
   const ems = d.espnMatchStats;
 
   if (!f || !m) {
-    warn(`[${d.fid}] Missing fixture or model data — skipping`);
+    warn(`[${d.fid}] Missing match or model data — skipping`);
     continue;
   }
 
@@ -407,7 +407,7 @@ const dcRhoBase = 0.08;
 const dcRhoAdj = Math.max(0.02, Math.min(0.15, dcRhoBase - avgBttsBias * 0.05));
 
 // ET/Pens factor: based on actual advancement outcomes
-const actualAdvancers = forensicData.filter(d => d.fixture?.advancing_team_id);
+const actualAdvancers = forensicData.filter(d => d.match?.advancing_team_id);
 // Compute actual ET/pen rate from draws
 const actualDraws = grades.filter(g => g.actual.winner === 'DRAW');
 // In KO, all draws go to ET/pens — use 50% base for ET/pens winner
@@ -445,7 +445,7 @@ for (const v of VARIATIONS) {
   const matchResults = [];
 
   for (const d of forensicData) {
-    const f = d.fixture;
+    const f = d.match;
     const m = d.model;
     if (!f || !m || f.home_score === null) continue;
 
@@ -557,12 +557,12 @@ banner('PHASE G — v12.0-KO24 Projections: Jul 1 R32 Matches');
 //     USA: -250 (implied 71.4%), BIH: +600 (14.3%), Draw +400 (20%)
 //     Base: λUSA=1.78, λBIH=0.72
 
-// Fixture orientation:
+// Match orientation:
 //   wc26-r32-080: HOME=ENG, AWAY=COD
 //   wc26-r32-081: HOME=BEL, AWAY=SEN
 //   wc26-r32-082: HOME=USA, AWAY=BIH
 
-const JUL1_FIXTURES = [
+const JUL1_MATCHS = [
   {
     fid: 'wc26-r32-080',
     label: 'DR Congo (COD) AWAY @ England (ENG) HOME | 12:00 PM ET | Atlanta',
@@ -605,7 +605,7 @@ const JUL1_FIXTURES = [
 
 const v12Projections = [];
 
-for (const fix of JUL1_FIXTURES) {
+for (const fix of JUL1_MATCHS) {
   log('STEP', `Running v12 for ${fix.fid}: ${fix.label}`);
 
   // Apply v12 corrections

@@ -1,7 +1,7 @@
 /**
  * checkScores.ts
  * ═══════════════════════════════════════════════════════════════════════════════
- * FORENSIC DB QUERY — Verify homeScore/awayScore for R32 fixtures 073-076
+ * FORENSIC DB QUERY — Verify homeScore/awayScore for R32 matches 073-076
  * Run: npx tsx server/wc2026/checkScores.ts
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -22,7 +22,7 @@ const BANNER = (title: string) => {
 };
 
 async function main() {
-  BANNER('FORENSIC DB QUERY — R32 Fixture Scores');
+  BANNER('FORENSIC DB QUERY — R32 Match Scores');
 
   LOG('INIT', 'Connecting to MySQL via DATABASE_URL...');
   const conn = await mysql.createConnection(process.env.DATABASE_URL!);
@@ -58,7 +58,7 @@ async function main() {
     const scoreVerify = homeScore != null && awayScore != null ? '✅ SCORES POPULATED' : '❌ SCORES NULL';
 
     LOG('ROW', [
-      `fixture=${r.matchId}`,
+      `match=${r.matchId}`,
       `teams=${r.homeTeamId} vs ${r.awayTeamId}`,
       `status=${r.status}`,
       `score=${scoreStr} ${scoreVerify}`,
@@ -76,10 +76,10 @@ async function main() {
   LOG('SUMMARY', `Total rows: ${rows.length} | With scores: ${withScores.length} | Missing scores: ${withoutScores.length}`);
 
   if (withoutScores.length > 0) {
-    LOG('WARN', `Fixtures missing scores: ${withoutScores.map(r => r.matchId).join(', ')}`);
-    LOG('ACTION', 'These fixtures need homeScore/awayScore seeded from FIFA HTML data');
+    LOG('WARN', `Matches missing scores: ${withoutScores.map(r => r.matchId).join(', ')}`);
+    LOG('ACTION', 'These matches need homeScore/awayScore seeded from FIFA HTML data');
   } else {
-    LOG('VERIFY', 'PASS — All queried fixtures have homeScore and awayScore populated');
+    LOG('VERIFY', 'PASS — All queried matches have homeScore and awayScore populated');
   }
 
   await conn.end();

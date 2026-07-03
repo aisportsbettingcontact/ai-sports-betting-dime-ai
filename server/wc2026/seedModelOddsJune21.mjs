@@ -6,7 +6,7 @@
  * AUDIT FINDINGS (June 21, 2026 — post-132-match backtest):
  *   BUG 1 FIXED: lambda_mult=1.20 was applied to book total line, which already
  *     reflects 2026 tournament pace. This double-counted the pace adjustment and
- *     inflated over probability by +12-15pp per fixture. REMOVED.
+ *     inflated over probability by +12-15pp per match. REMOVED.
  *   BUG 2 FIXED: w_book=0.40 anchored model too tightly to book no-vig (<3pp
  *     divergence). Reduced to w_book=0.25, w_elo increased to 0.40 for more
  *     independent signal.
@@ -18,7 +18,7 @@
  *   blend weights: w_book=0.25, w_elo=0.40, w_rank=0.15, w_form=0.20
  *   n_simulations = 1,000,000
  *
- * JUNE 21 FIXTURES (DB verified):
+ * JUNE 21 MATCHS (DB verified):
  *   wc26-g-039: Spain (ESP) vs Saudi Arabia (KSA) — Group H, 16:00 UTC
  *   wc26-g-037: Iran (IRN) vs Belgium (BEL) — Group G, 19:00 UTC
  *   wc26-g-040: Cape Verde (CPV) vs Uruguay (URU) — Group H, 22:00 UTC
@@ -183,8 +183,8 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
   };
 }
 
-// ─── Core: Compute model projection for a fixture ────────────────────────────
-function computeModelProjection(fixture) {
+// ─── Core: Compute model projection for a match ────────────────────────────
+function computeModelProjection(match) {
   const {
     matchId, homeName, homeCode, awayName, awayCode,
     eloHome, eloAway,
@@ -193,7 +193,7 @@ function computeModelProjection(fixture) {
     altitudeM,
     bookHomeML, bookDrawML, bookAwayML,
     bookOverML, bookUnderML, bookTotalLine,
-  } = fixture;
+  } = match;
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
@@ -287,7 +287,7 @@ function computeModelProjection(fixture) {
   // ── Step 8: Derive Poisson lambdas from recalibrated probs ────────────────
   // v4.2 AUDIT FIX: REMOVED lambda_mult=1.20 — book total line already reflects 2026 pace.
   // Applying 1.20× to book total line double-counted the pace adjustment and inflated
-  // over probability by +12-15pp per fixture. Use book total line directly.
+  // over probability by +12-15pp per match. Use book total line directly.
   const altitudeFactor = Math.exp(-altitudeM / 8000);
   const expectedTotalGoals = bookTotalLine * altitudeFactor; // NO lambda_mult
 
@@ -324,7 +324,7 @@ function computeModelProjection(fixture) {
 
   // ── Step 12: Total line and O/U odds ─────────────────────────────────────
   const modelTotalLine = parseFloat(mc.avgGoals.toFixed(1));
-  // Use the book total line for O/U prob calculation (2.5 or 3.5 depending on fixture)
+  // Use the book total line for O/U prob calculation (2.5 or 3.5 depending on match)
   const overLineProb = bookTotalLine === 3.5 ? mc.over35 : mc.over25;
   const underLineProb = 1 - overLineProb;
   const modelOverML = probToAmerican(overLineProb);
@@ -382,7 +382,7 @@ function computeModelProjection(fixture) {
 // FIFA rankings: June 2026 official
 // Form: last 5 competitive matches (0=loss, 0.5=draw, 1=win, avg)
 // Venues: all WC 2026 group stage venues are neutral (no home advantage)
-const FIXTURES = [
+const MATCHS = [
   {
     matchId: 'wc26-g-039',
     // DB: home=esp, away=ksa | AN: home_id=1961=Spain ✅
@@ -475,34 +475,34 @@ async function main() {
   let totalErrors = 0;
   const results = [];
 
-  for (const fixture of FIXTURES) {
+  for (const match of MATCHS) {
     try {
-      const proj = computeModelProjection(fixture);
-      results.push({ fixture, proj });
+      const proj = computeModelProjection(match);
+      results.push({ match, proj });
 
-      // ── Delete existing model odds for this fixture (clean reseed) ─────────
+      // ── Delete existing model odds for this match (clean reseed) ─────────
       await conn.query(`
         DELETE FROM wc2026_odds_snapshots
         WHERE match_id = ? AND book_id = ?
-      `, [fixture.matchId, MODEL_BOOK_ID]);
-      console.log(`${TAG} [STEP] Deleted existing model odds for ${fixture.matchId}`);
+      `, [match.matchId, MODEL_BOOK_ID]);
+      console.log(`${TAG} [STEP] Deleted existing model odds for ${match.matchId}`);
 
       // ── Insert into wc2026_odds_snapshots (book_id=0 = AI Model) ──────────
-      const totalLine = fixture.bookTotalLine;
+      const totalLine = match.bookTotalLine;
       const overProb = totalLine === 3.5 ? proj.mc.over35 : proj.mc.over25;
       const underProb = 1 - overProb;
 
       const rows = [
         // 1X2
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'home', null, proj.modelHomeML, proj.finalH, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'draw', null, proj.modelDrawML, proj.finalD, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, '1X2', 'away', null, proj.modelAwayML, proj.finalA, 0],
         // TOTAL (use book total line)
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', totalLine, proj.modelOverML, overProb, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', totalLine, proj.modelUnderML, underProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'over', totalLine, proj.modelOverML, overProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'TOTAL', 'under', totalLine, proj.modelUnderML, underProb, 0],
         // DOUBLE_CHANCE
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
-        [fixture.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'home_draw', null, proj.modelHomeDrawML, proj.homeDrawProb, 0],
+        [match.matchId, snapshotTs, MODEL_BOOK_ID, 'DOUBLE_CHANCE', 'away_draw', null, proj.modelAwayDrawML, proj.awayDrawProb, 0],
       ];
 
       for (const row of rows) {
@@ -586,8 +586,8 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        fixture.matchId, MODEL_VERSION, N_SIMULATIONS,
-        fixture.homeCode, fixture.awayCode,
+        match.matchId, MODEL_VERSION, N_SIMULATIONS,
+        match.homeCode, match.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
         proj.lambdaH, proj.lambdaA, proj.mc.avgGoals,
@@ -603,36 +603,36 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Total=${proj.modelTotalLine} O${fixture.bookTotalLine}=${proj.modelOverML} U${fixture.bookTotalLine}=${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: ML home=${proj.modelHomeML} draw=${proj.modelDrawML} away=${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: DC 1X=${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${fixture.matchId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${match.matchId}: ${err.message}`);
     }
   }
 
   // ── Final summary ──────────────────────────────────────────────────────────
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} JUNE 21 MODEL SEED COMPLETE (v4.2 Corrected)`);
-  console.log(`${TAG} Fixtures processed: ${FIXTURES.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
+  console.log(`${TAG} Matchs processed: ${MATCHS.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
   console.log(`\n${TAG} PROJECTIONS SUMMARY:`);
-  for (const { fixture, proj } of results) {
+  for (const { match, proj } of results) {
     const lean = proj.leanName;
     const overEdge = (proj.overLineProb - proj.bookOverNV) * 100;
     const underEdge = (proj.underLineProb - proj.bookUnderNV) * 100;
-    const bestTotalEdge = overEdge > underEdge ? `O${fixture.bookTotalLine} +${overEdge.toFixed(2)}pp` : `U${fixture.bookTotalLine} +${underEdge.toFixed(2)}pp`;
-    console.log(`${TAG}   ${fixture.homeName} vs ${fixture.awayName}: lean=${lean} | ML H=${proj.modelHomeML} D=${proj.modelDrawML} A=${proj.modelAwayML} | ${bestTotalEdge}`);
+    const bestTotalEdge = overEdge > underEdge ? `O${match.bookTotalLine} +${overEdge.toFixed(2)}pp` : `U${match.bookTotalLine} +${underEdge.toFixed(2)}pp`;
+    console.log(`${TAG}   ${match.homeName} vs ${match.awayName}: lean=${lean} | ML H=${proj.modelHomeML} D=${proj.modelDrawML} A=${proj.modelAwayML} | ${bestTotalEdge}`);
   }
 
   // ── Systematic bias check ─────────────────────────────────────────────────
-  const allFavsAgree = results.every(({ fixture, proj }) => {
-    const bookFav = fixture.bookHomeML < fixture.bookAwayML ? 'H' : 'A';
+  const allFavsAgree = results.every(({ match, proj }) => {
+    const bookFav = match.bookHomeML < match.bookAwayML ? 'H' : 'A';
     return proj.modelLean === bookFav;
   });
-  const allOversEdge = results.every(({ fixture, proj }) => {
+  const allOversEdge = results.every(({ match, proj }) => {
     const overEdge = (proj.overLineProb - proj.bookOverNV) * 100;
     return overEdge > 1.5;
   });

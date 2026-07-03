@@ -1,7 +1,7 @@
 /**
- * auditFixtureToMatchesRename.mjs
+ * auditMatchToMatchesRename.mjs
  * ═══════════════════════════════════════════════════════════════════════════════
- * 500X FORENSIC AUDIT: fixture → matches rename
+ * 500X FORENSIC AUDIT: match → matches rename
  * 
  * PURPOSE: Enumerate every match_id column across all 20 WC2026 tables,
  * count rows, identify primary keys vs foreign keys, and build the exact
@@ -18,11 +18,11 @@ dotenv.config();
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
 console.log("═══════════════════════════════════════════════════════════════════════════════");
-console.log("[AUDIT] 500X FORENSIC FIXTURE→MATCHES RENAME — DATABASE COLUMN AUDIT");
+console.log("[AUDIT] 500X FORENSIC MATCH→MATCHES RENAME — DATABASE COLUMN AUDIT");
 console.log("═══════════════════════════════════════════════════════════════════════════════");
 console.log(`[INPUT] Timestamp: ${new Date().toISOString()}`);
 console.log(`[INPUT] Target: All 20 WC2026 tables`);
-console.log(`[INPUT] Objective: Identify every column containing 'fixture' in name`);
+console.log(`[INPUT] Objective: Identify every column containing 'match' in name`);
 console.log("");
 
 // ─── PHASE 1: Get all WC2026 tables ─────────────────────────────────────────
@@ -33,19 +33,19 @@ console.log(`[STATE] Found ${tableNames.length} WC2026 tables`);
 tableNames.forEach((t, i) => console.log(`  ${String(i+1).padStart(2)}. ${t}`));
 console.log("");
 
-// ─── PHASE 2: For each table, find columns with 'fixture' in name ───────────
-console.log("─── PHASE 2: FIXTURE COLUMN DISCOVERY ────────────────────────────────────");
+// ─── PHASE 2: For each table, find columns with 'match' in name ───────────
+console.log("─── PHASE 2: MATCH COLUMN DISCOVERY ────────────────────────────────────");
 const results = [];
 
 for (const tableName of tableNames) {
   const [cols] = await conn.query(`SHOW COLUMNS FROM \`${tableName}\``);
-  const fixtureCols = cols.filter(c => c.Field.toLowerCase().includes('fixture'));
+  const matchCols = cols.filter(c => c.Field.toLowerCase().includes('match'));
   const [countResult] = await conn.query(`SELECT COUNT(*) as cnt FROM \`${tableName}\``);
   const rowCount = countResult[0].cnt;
   
-  if (fixtureCols.length > 0) {
-    console.log(`[FOUND] ${tableName} — ${fixtureCols.length} fixture column(s), ${rowCount} rows`);
-    for (const col of fixtureCols) {
+  if (matchCols.length > 0) {
+    console.log(`[FOUND] ${tableName} — ${matchCols.length} match column(s), ${rowCount} rows`);
+    for (const col of matchCols) {
       const isPK = col.Key === 'PRI';
       const isUNI = col.Key === 'UNI';
       const isMUL = col.Key === 'MUL';
@@ -71,14 +71,14 @@ for (const tableName of tableNames) {
       });
     }
   } else {
-    console.log(`[SKIP] ${tableName} — 0 fixture columns, ${rowCount} rows`);
+    console.log(`[SKIP] ${tableName} — 0 match columns, ${rowCount} rows`);
   }
 }
 
 console.log("");
 console.log("─── PHASE 3: SUMMARY ─────────────────────────────────────────────────────");
-console.log(`[STATE] Total tables with fixture columns: ${new Set(results.map(r => r.table)).size}`);
-console.log(`[STATE] Total fixture columns found: ${results.length}`);
+console.log(`[STATE] Total tables with match columns: ${new Set(results.map(r => r.table)).size}`);
+console.log(`[STATE] Total match columns found: ${results.length}`);
 console.log("");
 
 // Classify by key type
@@ -103,7 +103,7 @@ console.log("[PLAN] Phase 1 Migration Steps (backward-compatible alias addition)
 console.log("");
 
 for (const r of results) {
-  const newColName = r.column.replace(/fixture/gi, 'match');
+  const newColName = r.column.replace(/match/gi, 'match');
   console.log(`  ALTER TABLE \`${r.table}\``);
   console.log(`    ADD COLUMN \`${newColName}\` ${r.type} GENERATED ALWAYS AS (\`${r.column}\`) STORED;`);
   console.log(`    -- ${r.rowCount} rows auto-populated, ${r.keyType}`);

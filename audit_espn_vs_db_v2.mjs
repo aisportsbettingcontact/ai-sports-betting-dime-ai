@@ -3,9 +3,9 @@
  * =========================================
  * Uses CORRECT DB schema:
  * - wc2026_matches: match_id, home_team_id, away_team_id, home_score, away_score, etc.
- * - wc2026_match_stats: match_id, home_*, away_* (fixture-level, not team-level)
+ * - wc2026_match_stats: match_id, home_*, away_* (match-level, not team-level)
  *
- * Cross-validates every fixture against live ESPN API:
+ * Cross-validates every match against live ESPN API:
  * - Home team identity (correct team in home slot)
  * - Away team identity (correct team in away slot)
  * - Home score (exact goals)
@@ -23,17 +23,17 @@ dotenv.config();
 const db = await mysql2.createConnection(process.env.DATABASE_URL);
 console.log('[DB] Connected');
 
-// ─── STEP 1: Pull all completed fixtures ─────────────────────────────────────
-const [dbFixtures] = await db.execute(`
+// ─── STEP 1: Pull all completed matches ─────────────────────────────────────
+const [dbMatches] = await db.execute(`
   SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
   FROM wc2026_matches
   WHERE match_date < '2026-06-25' AND status = 'FT'
   ORDER BY kickoff_utc ASC
 `);
-console.log(`[DB] ${dbFixtures.length} completed fixtures loaded`);
+console.log(`[DB] ${dbMatches.length} completed matches loaded`);
 
-// ─── STEP 2: Pull match stats (fixture-level schema) ─────────────────────────
+// ─── STEP 2: Pull match stats (match-level schema) ─────────────────────────
 const [dbStats] = await db.execute(`
   SELECT match_id, 
          home_shots_on_target, away_shots_on_target,
@@ -46,8 +46,8 @@ const [dbStats] = await db.execute(`
 `);
 console.log(`[DB] ${dbStats.length} match stat rows loaded`);
 
-const statsByFixture = {};
-for (const s of dbStats) statsByFixture[s.match_id] = s;
+const statsByMatch = {};
+for (const s of dbStats) statsByMatch[s.match_id] = s;
 
 // ─── STEP 3: Pull team table to get ESPN IDs and abbreviations ────────────────
 const [dbTeams] = await db.execute(`
@@ -59,7 +59,7 @@ console.log(`[DB] ${dbTeams.length} teams loaded`);
 const teamById = {};
 for (const t of dbTeams) teamById[t.team_id] = t;
 
-// ─── STEP 4: Fetch ESPN API for all fixtures ──────────────────────────────────
+// ─── STEP 4: Fetch ESPN API for all matches ──────────────────────────────────
 // ESPN Soccer API: https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event={id}
 // We need ESPN event IDs. Two sources:
 // 1. espn_event_id column in wc2026_matches (if populated)
@@ -84,29 +84,29 @@ for (const row of statJson) {
   jsonGameIdToTeams[gid].add(row.team_abbr.toLowerCase());
 }
 
-// Match fixture to game_id by team set
-const fixtureToEspnId = {};
-for (const f of dbFixtures) {
+// Match each match to game_id by team set
+const matchToEspnId = {};
+for (const f of dbMatches) {
   // First check espn_event_id column
   if (f.espn_event_id) {
-    fixtureToEspnId[f.match_id] = f.espn_event_id;
+    matchToEspnId[f.match_id] = f.espn_event_id;
     continue;
   }
   // Fall back to JSON matching
   const fTeams = new Set([f.home_team_id, f.away_team_id]);
   for (const [gid, gTeams] of Object.entries(jsonGameIdToTeams)) {
     if (fTeams.size === gTeams.size && [...fTeams].every(t => gTeams.has(t))) {
-      fixtureToEspnId[f.match_id] = parseInt(gid);
+      matchToEspnId[f.match_id] = parseInt(gid);
       break;
     }
   }
 }
 
-const matchedCount = Object.keys(fixtureToEspnId).length;
-console.log(`[STEP 4] Matched ${matchedCount}/${dbFixtures.length} fixtures to ESPN game_ids`);
+const matchedCount = Object.keys(matchToEspnId).length;
+console.log(`[STEP 4] Matched ${matchedCount}/${dbMatches.length} matches to ESPN game_ids`);
 
 // ─── STEP 5: Fetch ESPN API data ──────────────────────────────────────────────
-console.log('\n[STEP 5] Fetching ESPN API data for all fixtures...');
+console.log('\n[STEP 5] Fetching ESPN API data for all matches...');
 
 // ESPN team abbreviation → our DB team_id normalization
 const ESPN_TO_DB = {
@@ -145,8 +145,8 @@ function normalizeEspnAbbr(abbr) {
 const espnData = {};
 const espnFetchErrors = [];
 
-for (const f of dbFixtures) {
-  const espnId = fixtureToEspnId[f.match_id];
+for (const f of dbMatches) {
+  const espnId = matchToEspnId[f.match_id];
   if (!espnId) {
     espnFetchErrors.push({ match_id: f.match_id, error: 'No ESPN game_id found' });
     console.log(`  [SKIP] ${f.match_id}: No ESPN game_id`);
@@ -209,7 +209,7 @@ for (const f of dbFixtures) {
   await new Promise(r => setTimeout(r, 150));
 }
 
-console.log(`\n[STEP 5] Fetched ${Object.keys(espnData).length}/${dbFixtures.length} fixtures from ESPN API`);
+console.log(`\n[STEP 5] Fetched ${Object.keys(espnData).length}/${dbMatches.length} matches from ESPN API`);
 
 // ─── STEP 6: FULL CROSS-AUDIT ─────────────────────────────────────────────────
 console.log('\n[STEP 6] Cross-auditing all fields...');
@@ -217,13 +217,13 @@ console.log('\n[STEP 6] Cross-auditing all fields...');
 const auditResults = [];
 const allCorrections = [];
 
-for (const f of dbFixtures) {
+for (const f of dbMatches) {
   const espn = espnData[f.match_id];
-  const stats = statsByFixture[f.match_id];
+  const stats = statsByMatch[f.match_id];
   
   const result = {
     match_id: f.match_id,
-    espn_id: fixtureToEspnId[f.match_id] || null,
+    espn_id: matchToEspnId[f.match_id] || null,
     db: {
       home_team: f.home_team_id,
       away_team: f.away_team_id,
@@ -347,7 +347,7 @@ for (const f of dbFixtures) {
 
 // ─── STEP 7: PRINT FULL AUDIT REPORT ─────────────────────────────────────────
 console.log('\n' + '='.repeat(80));
-console.log('  WC2026 FIXTURE AUDIT REPORT — ESPN API vs DB');
+console.log('  WC2026 MATCH AUDIT REPORT — ESPN API vs DB');
 console.log('='.repeat(80));
 
 const errors = auditResults.filter(r => r.status === 'ERROR');

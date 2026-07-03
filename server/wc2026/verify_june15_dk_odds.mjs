@@ -85,7 +85,7 @@ const c = await mysql.createConnection({
 const june15Ids = ['wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014'];
 const ph = june15Ids.map(() => '?').join(',');
 
-const [fixtures] = await c.execute(`
+const [matchs] = await c.execute(`
   SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName
@@ -126,11 +126,11 @@ const EXPECTED_DK = {
 };
 
 let allMatch = true;
-for (const f of fixtures) {
+for (const f of matchs) {
   const db = dkByFix[f.match_id] || {};
   const expected = EXPECTED_DK[f.match_id];
   
-  console.log(`[FIXTURE] ${f.match_id} | ${f.awayCode}(away) @ ${f.homeCode}(home)`);
+  console.log(`[MATCH] ${f.match_id} | ${f.awayCode}(away) @ ${f.homeCode}(home)`);
   
   const checks = [
     ['1X2_home', expected.home, `HOME(${f.homeCode}) ML`],

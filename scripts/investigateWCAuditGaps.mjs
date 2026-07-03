@@ -59,13 +59,13 @@ async function main() {
   // ── GAP 2: wc26-g-001 and wc26-g-002 in DB ───────────────────────────────
   console.log(`\n${TAG} [GAP 2] wc26-g-001 and wc26-g-002 DB state:`);
   const [gap2] = await conn.execute(
-    `SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
+    `SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
             home_score, away_score, status, espn_event_id
      FROM wc2026_matches
-     WHERE fixture_id IN ('wc26-g-001', 'wc26-g-002')`
+     WHERE match_id IN ('wc26-g-001', 'wc26-g-002')`
   );
   gap2.forEach(r => {
-    console.log(`${TAG}   ${r.fixture_id}: ${r.home_team_id} vs ${r.away_team_id} | date=${r.match_date} | score=${r.home_score}-${r.away_score} | status=${r.status} | espn_event_id=${r.espn_event_id}`);
+    console.log(`${TAG}   ${r.match_id}: ${r.home_team_id} vs ${r.away_team_id} | date=${r.match_date} | score=${r.home_score}-${r.away_score} | status=${r.status} | espn_event_id=${r.espn_event_id}`);
   });
 
   // ── GAP 2b: Try ESPN for Jun 11, 2026 ────────────────────────────────────
@@ -89,7 +89,7 @@ async function main() {
   // ── GAP 2c: Try ESPN by specific event IDs from DB ───────────────────────
   for (const row of gap2) {
     if (row.espn_event_id) {
-      console.log(`\n${TAG} [GAP 2c] Fetching ESPN event ${row.espn_event_id} for ${row.fixture_id}...`);
+      console.log(`\n${TAG} [GAP 2c] Fetching ESPN event ${row.espn_event_id} for ${row.match_id}...`);
       try {
         const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${row.espn_event_id}`;
         const data = await httpsGet(url);
@@ -98,7 +98,7 @@ async function main() {
           const comps = header.competitions?.[0];
           const home = comps?.competitors?.find(c => c.homeAway === 'home');
           const away = comps?.competitors?.find(c => c.homeAway === 'away');
-          console.log(`${TAG}   ${row.fixture_id}: ${home?.team?.displayName} ${home?.score}-${away?.score} ${away?.team?.displayName}`);
+          console.log(`${TAG}   ${row.match_id}: ${home?.team?.displayName} ${home?.score}-${away?.score} ${away?.team?.displayName}`);
           console.log(`${TAG}   DB: ${row.home_team_id} ${row.home_score}-${row.away_score} ${row.away_team_id}`);
           const espnHomeScore = parseInt(home?.score ?? '-1', 10);
           const espnAwayScore = parseInt(away?.score ?? '-1', 10);
@@ -112,7 +112,7 @@ async function main() {
         console.warn(`${TAG}   [WARN] ESPN summary fetch failed: ${e.message}`);
       }
     } else {
-      console.log(`${TAG}   ${row.fixture_id}: no espn_event_id in DB — cannot fetch by ID`);
+      console.log(`${TAG}   ${row.match_id}: no espn_event_id in DB — cannot fetch by ID`);
     }
   }
 

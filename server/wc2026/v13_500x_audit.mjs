@@ -115,7 +115,7 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'A1_FIX', `July 1 fixtures: ${jul1Fix.length}`);
+  log('INPUT', 'A1_FIX', `July 1 matchs: ${jul1Fix.length}`);
   jul1Fix.forEach(f => log('STATE', 'A1_FIX', `  ${f.match_id}: ${f.home_code} vs ${f.away_code}`));
 
   const allTeams = [...new Set(jul1Fix.flatMap(f => [f.home_code, f.away_code]))];
@@ -473,8 +473,8 @@ async function main() {
     log('PASS', 'D1_BOOK', `All 15 v13 book field names match actual DB columns ✓`);
   }
 
-  // D2: Check actual book odds values for July 1 fixtures
-  log('AUDIT', 'D2_VALS', 'D2: Verifying actual book odds values are populated for July 1 fixtures');
+  // D2: Check actual book odds values for July 1 matchs
+  log('AUDIT', 'D2_VALS', 'D2: Verifying actual book odds values are populated for July 1 matchs');
   const [bookOddsRows] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
     WHERE match_id IN (${jul1Fix.map(()=>'?').join(',')})
@@ -485,8 +485,8 @@ async function main() {
   if (bookOddsRows.length !== jul1Fix.length) {
     recordIssue('D2_MISSING', 'CRITICAL', 'MARKET',
       `Expected ${jul1Fix.length} book odds rows but found ${bookOddsRows.length}`,
-      `Some July 1 fixtures have no book odds row. v13 uses \`bookRow?.field ?? null\` which silently produces null for all markets.`,
-      'HARD_FAIL if any fixture has no book odds row. Book odds are required for all market computations.'
+      `Some July 1 matchs have no book odds row. v13 uses \`bookRow?.field ?? null\` which silently produces null for all markets.`,
+      'HARD_FAIL if any match has no book odds row. Book odds are required for all market computations.'
     );
   }
 

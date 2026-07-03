@@ -9,21 +9,21 @@
  *   No book odds available for June 25+ — pure ELO/rank/form model run
  *   n_simulations = 1,000,000
  *
- * JUNE 25 FIXTURES (6):
+ * JUNE 25 MATCHS (6):
  *   wc26-g-055: TUR(home) vs USA(away) — 02:00 UTC
  *   wc26-g-056: PAR(home) vs AUS(away) — 02:00 UTC
  *   wc26-g-057: CUW(home) vs CIV(away) — 20:00 UTC
  *   wc26-g-058: ECU(home) vs GER(away) — 20:00 UTC
  *   wc26-g-059: SWE(home) vs JPN(away) — 23:00 UTC
  *   wc26-g-060: NED(home) vs TUN(away) — 23:00 UTC
- * JUNE 26 FIXTURES (6):
+ * JUNE 26 MATCHS (6):
  *   wc26-g-061: CPV(home) vs KSA(away) — 00:00 UTC
  *   wc26-g-062: IRN(home) vs EGY(away) — 03:00 UTC
  *   wc26-g-063: NZL(home) vs BEL(away) — 03:00 UTC
  *   wc26-g-064: NOR(home) vs FRA(away) — 19:00 UTC
  *   wc26-g-065: IRQ(home) vs SEN(away) — 19:00 UTC
  *   wc26-g-066: URU(home) vs ESP(away) — 00:00 UTC
- * JUNE 27 FIXTURES (6):
+ * JUNE 27 MATCHS (6):
  *   wc26-g-067: COD(home) vs UZB(away) — 23:30 UTC
  *   wc26-g-068: PAN(home) vs ENG(away) — 21:00 UTC
  *   wc26-g-069: ALG(home) vs AUT(away) — TBD
@@ -117,8 +117,8 @@ function computeLambdas(homeElo, awayElo, homeRank, awayRank, homeForm, awayForm
   return { lambdaH, lambdaA };
 }
 
-// ─── June 25–27 Fixtures ─────────────────────────────────────────────────────
-const FIXTURES = [
+// ─── June 25–27 Matchs ─────────────────────────────────────────────────────
+const MATCHS = [
   // JUNE 25
   { matchId: 'wc26-g-055', matchDate: '2026-06-25', homeId: 'tur', awayId: 'usa', homeName: 'Turkey', awayName: 'United States', homeElo: 1780, homeRank: 28, homeForm: 0.65, awayElo: 1760, awayRank: 13, awayForm: 0.62 },
   { matchId: 'wc26-g-056', matchDate: '2026-06-25', homeId: 'par', awayId: 'aus', homeName: 'Paraguay', awayName: 'Australia', homeElo: 1680, homeRank: 58, homeForm: 0.48, awayElo: 1700, awayRank: 24, awayForm: 0.52 },
@@ -143,12 +143,12 @@ const FIXTURES = [
 ];
 
 async function main() {
-  console.log(`${TAG} [INPUT] Starting June 25-27 MODEL-ONLY seed — ${FIXTURES.length} fixtures`);
+  console.log(`${TAG} [INPUT] Starting June 25-27 MODEL-ONLY seed — ${MATCHS.length} matchs`);
   console.log(`${TAG} [INPUT] Model book_id=${MODEL_BOOK_ID} | version=${MODEL_VERSION} | NO DK rows`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
-  const matchIds = FIXTURES.map(f => f.matchId);
+  const matchIds = MATCHS.map(f => f.matchId);
 
   // Clear existing model + enforce no DK rows
   const [delModel] = await conn.query(
@@ -164,7 +164,7 @@ async function main() {
   let totalModelRows = 0;
   let totalProjRows = 0;
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     console.log(`\n${TAG} [STEP] ${f.matchId} (${f.matchDate}) | ${f.homeName} vs ${f.awayName}`);
 
     const { lambdaH, lambdaA } = computeLambdas(f.homeElo, f.awayElo, f.homeRank, f.awayRank, f.homeForm, f.awayForm);
@@ -284,7 +284,7 @@ async function main() {
     matchIds
   );
 
-  console.log(`\n${TAG} [VERIFY] Model odds per fixture (expected 12 each):`);
+  console.log(`\n${TAG} [VERIFY] Model odds per match (expected 12 each):`);
   let allGood = true;
   for (const r of verifyModel) {
     const cnt = Number(r.cnt);
@@ -295,11 +295,11 @@ async function main() {
   const dkCnt = Number(verifyDk[0].cnt);
   const projCnt = Number(verifyProj[0].cnt);
   if (dkCnt > 0) allGood = false;
-  if (projCnt !== FIXTURES.length) allGood = false;
+  if (projCnt !== MATCHS.length) allGood = false;
   console.log(`${TAG} [VERIFY] DK rows (must be 0): ${dkCnt} ${dkCnt === 0 ? '✅' : '❌'}`);
-  console.log(`${TAG} [VERIFY] Projections: ${projCnt}/${FIXTURES.length} ${projCnt === FIXTURES.length ? '✅' : '❌'}`);
-  const pass = allGood && verifyModel.length === FIXTURES.length;
-  console.log(`\n${TAG} [VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} — Model=${verifyModel.length}/${FIXTURES.length} DK=${dkCnt} Proj=${projCnt}/${FIXTURES.length}`);
+  console.log(`${TAG} [VERIFY] Projections: ${projCnt}/${MATCHS.length} ${projCnt === MATCHS.length ? '✅' : '❌'}`);
+  const pass = allGood && verifyModel.length === MATCHS.length;
+  console.log(`\n${TAG} [VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} — Model=${verifyModel.length}/${MATCHS.length} DK=${dkCnt} Proj=${projCnt}/${MATCHS.length}`);
   console.log(`${TAG} [OUTPUT] Total model rows=${totalModelRows} Proj rows=${totalProjRows}`);
 
   await conn.end();

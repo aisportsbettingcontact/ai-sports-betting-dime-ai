@@ -67,7 +67,7 @@ missingBacktestTables.forEach(t => console.log(`  ❌ ${t}`));
 
 // ─── Step 3: Audit wc2026_matches — 2026 match counts ───────────────────────
 console.log('\n[AUDIT] [STEP 3] Auditing wc2026_matches for 2026 match counts...');
-const [fixtureSummary] = await conn.query(`
+const [matchSummary] = await conn.query(`
   SELECT
     COUNT(*) as total,
     SUM(CASE WHEN status = 'FT' THEN 1 ELSE 0 END) as completed,
@@ -77,9 +77,9 @@ const [fixtureSummary] = await conn.query(`
     SUM(CASE WHEN match_date <= '2026-06-17' AND status = 'FT' THEN 1 ELSE 0 END) as completed_through_june17
   FROM wc2026_matches
 `);
-const fs = fixtureSummary[0];
+const fs = matchSummary[0];
 console.log(`[AUDIT] [STATE] wc2026_matches:`);
-console.log(`  Total fixtures: ${fs.total}`);
+console.log(`  Total matchs: ${fs.total}`);
 console.log(`  Completed (FT): ${fs.completed}`);
 console.log(`  Scheduled: ${fs.scheduled}`);
 console.log(`  Completed through June 16: ${fs.completed_through_june16}`);
@@ -131,8 +131,8 @@ completedMatches.forEach(m => {
 
 // ─── Step 5: Check June 17 specific matches ───────────────────────────────────
 console.log('\n[AUDIT] [STEP 5] Detailed audit of June 17 matches...');
-const june17Fixtures = ['wc26-g-021', 'wc26-g-022', 'wc26-g-023', 'wc26-g-024'];
-for (const fid of june17Fixtures) {
+const june17Matchs = ['wc26-g-021', 'wc26-g-022', 'wc26-g-023', 'wc26-g-024'];
+for (const fid of june17Matchs) {
   const [rows] = await conn.query(`
     SELECT f.match_id, ht.name as home_team, at2.name as away_team,
            f.home_score, f.away_score, f.status, f.group_letter, f.matchday,

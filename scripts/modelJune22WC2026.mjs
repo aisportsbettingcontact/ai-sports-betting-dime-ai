@@ -7,7 +7,7 @@
  *   2026 accuracy: ML=55.0% Draw=45.0% DC=90.0% Total=65.0%
  *   params: eloK=0.70, rankK=0.30, homeAdv=1.08, rho=-0.13, baseGoals=2.65, drawFloor=0.22
  *
- * Fixtures (June 22, 2026 PST):
+ * Matchs (June 22, 2026 PST):
  *   wc26-g-043: Austria (H) vs Argentina (A)  — 10:00 AM PST
  *   wc26-g-041: Iraq (H) vs France (A)        — 2:00 PM PST
  *   wc26-g-042: Norway (H) vs Senegal (A)     — 5:00 PM PST
@@ -56,8 +56,8 @@ const FIFA_RANK = {
   alg: 34, jor: 75,
 };
 
-// ── June 22 Fixtures ──────────────────────────────────────────────────────
-const FIXTURES = [
+// ── June 22 Matchs ──────────────────────────────────────────────────────
+const MATCHES = [
   { id: 'wc26-g-043', home: 'aut', away: 'arg', homeName: 'Austria', awayName: 'Argentina', kickoffPST: '10:00 AM PST' },
   { id: 'wc26-g-041', home: 'irq', away: 'fra', homeName: 'Iraq', awayName: 'France', kickoffPST: '2:00 PM PST' },
   { id: 'wc26-g-042', home: 'nor', away: 'sen', homeName: 'Norway', awayName: 'Senegal', kickoffPST: '5:00 PM PST' },
@@ -155,38 +155,38 @@ function computeLambdas(homeId, awayId) {
 async function main() {
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} June 22, 2026 WC2026 Model — v3 Champion (eloK=0.70 rankK=0.30 homeAdv=1.08 rho=-0.13 bg=2.65)`);
-  console.log(`${TAG} N=${N_SIM.toLocaleString()} Monte Carlo | 4 fixtures | 9 markets each`);
+  console.log(`${TAG} N=${N_SIM.toLocaleString()} Monte Carlo | 4 matches | 9 markets each`);
   console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
   console.log(`${TAG} ${'='.repeat(72)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-  // Verify fixtures exist and are SCHEDULED
-  const [fixtureCheck] = await conn.execute(`
-    SELECT fixture_id, status FROM wc2026_matches
-    WHERE fixture_id IN ('wc26-g-043','wc26-g-041','wc26-g-042','wc26-g-044')
+  // Verify matches exist and are SCHEDULED
+  const [matchCheck] = await conn.execute(`
+    SELECT match_id, status FROM wc2026_matches
+    WHERE match_id IN ('wc26-g-043','wc26-g-041','wc26-g-042','wc26-g-044')
     ORDER BY kickoff_utc
   `);
-  console.log(`${TAG} [VERIFY] DB fixtures: ${fixtureCheck.map(r => `${r.fixture_id}(${r.status})`).join(', ')}`);
+  console.log(`${TAG} [VERIFY] DB matches: ${matchCheck.map(r => `${r.match_id}(${r.status})`).join(', ')}`);
 
   // Load existing DK odds for edge comparison
   const [dkOdds] = await conn.execute(`
-    SELECT fixture_id, market, selection, american_odds, over_under_line
+    SELECT match_id, market, selection, american_odds, over_under_line
     FROM wc2026_odds_snapshots
-    WHERE fixture_id IN ('wc26-g-043','wc26-g-041','wc26-g-042','wc26-g-044')
+    WHERE match_id IN ('wc26-g-043','wc26-g-041','wc26-g-042','wc26-g-044')
     AND book_id = 68
-    ORDER BY fixture_id, market, selection
+    ORDER BY match_id, market, selection
   `);
   const dkMap = {};
   for (const row of dkOdds) {
-    const key = `${row.fixture_id}:${row.market}:${row.selection}`;
+    const key = `${row.match_id}:${row.market}:${row.selection}`;
     dkMap[key] = row.american_odds;
   }
   console.log(`${TAG} [INPUT] DK odds loaded: ${dkOdds.length} rows`);
 
   const projections = [];
 
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     console.log(`\n${TAG} ${'─'.repeat(60)}`);
     console.log(`${TAG} [STEP] ${fix.homeName} vs ${fix.awayName} (${fix.id}) — ${fix.kickoffPST}`);
 
@@ -264,7 +264,7 @@ async function main() {
     });
 
     projections.push({
-      fixture_id: fix.id,
+      match_id: fix.id,
       home: fix.home, away: fix.away,
       homeName: fix.homeName, awayName: fix.awayName,
       kickoffPST: fix.kickoffPST,
@@ -296,7 +296,7 @@ async function main() {
     try {
       await conn.execute(`
         INSERT INTO wc2026_model_projections
-          (fixture_id, model_version, prob_home, prob_draw, prob_away,
+          (match_id, model_version, prob_home, prob_draw, prob_away,
            prob_1x, prob_x2,
            prob_over_05, prob_over_15, prob_over_25, prob_over_35,
            prob_under_05, prob_under_15, prob_under_25, prob_under_35,
@@ -322,7 +322,7 @@ async function main() {
           top_score=VALUES(top_score), lambda_home=VALUES(lambda_home), lambda_away=VALUES(lambda_away),
           created_at=NOW()
       `, [
-        p.fixture_id, 'v3-champion-2026',
+        p.match_id, 'v3-champion-2026',
         p.pH, p.pD, p.pA, p.p1X, p.pX2,
         p.pO05, p.pO15, p.pO25, p.pO35,
         p.pU05, p.pU15, p.pU25, p.pU35,
@@ -332,14 +332,14 @@ async function main() {
         p.topScore, p.lambdaH, p.lambdaA,
       ]);
       upserted++;
-      console.log(`${TAG} [STATE] Upserted ${p.fixture_id} (${p.homeName} vs ${p.awayName}) ✅`);
+      console.log(`${TAG} [STATE] Upserted ${p.match_id} (${p.homeName} vs ${p.awayName}) ✅`);
     } catch (err) {
-      console.error(`${TAG} [ERROR] Failed to upsert ${p.fixture_id}: ${err.message}`);
+      console.error(`${TAG} [ERROR] Failed to upsert ${p.match_id}: ${err.message}`);
       // Try with fewer columns if schema mismatch
       try {
         await conn.execute(`
           INSERT INTO wc2026_model_projections
-            (fixture_id, model_version, prob_home, prob_draw, prob_away,
+            (match_id, model_version, prob_home, prob_draw, prob_away,
              prob_1x, prob_x2, prob_over_25, prob_under_25,
              ml_home, ml_draw, ml_away, dc_1x, dc_x2,
              ou25_over, ou25_under, top_score, lambda_home, lambda_away, created_at)
@@ -355,15 +355,15 @@ async function main() {
             top_score=VALUES(top_score), lambda_home=VALUES(lambda_home), lambda_away=VALUES(lambda_away),
             created_at=NOW()
         `, [
-          p.fixture_id, 'v3-champion-2026',
+          p.match_id, 'v3-champion-2026',
           p.pH, p.pD, p.pA, p.p1X, p.pX2, p.pO25, p.pU25,
           p.mlH, p.mlD, p.mlA, p.dc1X, p.dcX2,
           p.ou25Over, p.ou25Under, p.topScore, p.lambdaH, p.lambdaA,
         ]);
         upserted++;
-        console.log(`${TAG} [STATE] Upserted ${p.fixture_id} (minimal schema) ✅`);
+        console.log(`${TAG} [STATE] Upserted ${p.match_id} (minimal schema) ✅`);
       } catch (err2) {
-        console.error(`${TAG} [ERROR] Minimal upsert also failed for ${p.fixture_id}: ${err2.message}`);
+        console.error(`${TAG} [ERROR] Minimal upsert also failed for ${p.match_id}: ${err2.message}`);
       }
     }
   }

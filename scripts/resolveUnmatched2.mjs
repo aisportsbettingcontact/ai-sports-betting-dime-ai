@@ -56,7 +56,7 @@ function matchesTarget(espnName, variants) {
 }
 
 console.log('══════════════════════════════════════════════════════════════════════');
-console.log('[STEP] resolveUnmatched2.mjs — Searching ±2 days for 2 unresolved fixtures');
+console.log('[STEP] resolveUnmatched2.mjs — Searching ±2 days for 2 unresolved matches');
 console.log('══════════════════════════════════════════════════════════════════════');
 
 for (const target of TARGETS) {

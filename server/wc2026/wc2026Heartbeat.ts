@@ -74,7 +74,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
     const result = await ingestWc2026EspnResults({ dateStr, forceReingest });
 
     console.log(
-      `[WC2026HB] [OUTPUT] espn-results: fixturesUpdated=${result.fixturesUpdated} statsWritten=${result.statsWritten} eventsWritten=${result.eventsWritten} lineupsWritten=${result.lineupsWritten} errors=${result.errors.length}`
+      `[WC2026HB] [OUTPUT] espn-results: matchesUpdated=${result.matchesUpdated} statsWritten=${result.statsWritten} eventsWritten=${result.eventsWritten} lineupsWritten=${result.lineupsWritten} errors=${result.errors.length}`
     );
 
     const pass = result.errors.length === 0;
@@ -83,7 +83,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
     res.json({
       ok: pass,
       date: dateStr,
-      fixturesUpdated: result.fixturesUpdated,
+      matchesUpdated: result.matchesUpdated,
       statsWritten: result.statsWritten,
       eventsWritten: result.eventsWritten,
       lineupsWritten: result.lineupsWritten,
@@ -128,7 +128,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
         ingestWc2026EspnResults({
           dateStr,
           onlyFinalMatches: false, // process both LIVE and FT events
-          forceReingest: false,    // skip fixtures already marked FT in DB
+          forceReingest: false,    // skip matches already marked FT in DB
         })
       )
     );
@@ -136,18 +136,18 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
     // Merge results across all dates
     const merged = results.reduce(
       (acc, r) => ({
-        fixturesUpdated: acc.fixturesUpdated + r.fixturesUpdated,
+        matchesUpdated: acc.matchesUpdated + r.matchesUpdated,
         errors: [...acc.errors, ...r.errors],
         matchSummaries: [...acc.matchSummaries, ...r.matchSummaries],
       }),
-      { fixturesUpdated: 0, errors: [] as string[], matchSummaries: [] as typeof results[0]["matchSummaries"] }
+      { matchesUpdated: 0, errors: [] as string[], matchSummaries: [] as typeof results[0]["matchSummaries"] }
     );
 
     const liveCount = merged.matchSummaries.filter(s => s.status.toLowerCase().includes("in progress")).length;
     const ftCount   = merged.matchSummaries.filter(s => !s.status.toLowerCase().includes("in progress")).length;
 
     console.log(
-      `[WC2026HB] [OUTPUT] live-scores: fixturesUpdated=${merged.fixturesUpdated}` +
+      `[WC2026HB] [OUTPUT] live-scores: matchesUpdated=${merged.matchesUpdated}` +
       ` live=${liveCount} ft=${ftCount} errors=${merged.errors.length}` +
       ` | dates=${datesToQuery.join(",")}`
     );
@@ -157,7 +157,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
     res.json({
       ok: pass,
       dates: datesToQuery,
-      fixturesUpdated: merged.fixturesUpdated,
+      matchesUpdated: merged.matchesUpdated,
       liveCount,
       ftCount,
       matchSummaries: merged.matchSummaries,

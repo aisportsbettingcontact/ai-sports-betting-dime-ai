@@ -45,7 +45,7 @@ function flushLog() {
 }
 
 // ── MATCH CONSTANTS ───────────────────────────────────────────────────────────
-const FIXTURE_ID     = 'wc26-r32-076';
+const MATCH_ID     = 'wc26-r32-076';
 const HOME_TEAM_ID   = 'ned';
 const AWAY_TEAM_ID   = 'mar';
 const HOME_NAME      = 'Netherlands';
@@ -127,7 +127,7 @@ function computeEdge(bookML, modelML) {
 
 // ── STEP 1: ELO-ADJUSTED LAMBDA COMPUTATION ───────────────────────────────────
 logSep('STEP 1 — ELO-ADJUSTED LAMBDA COMPUTATION');
-log('INPUT', 'MATCH', `${HOME_NAME} vs ${AWAY_NAME} | ${FIXTURE_ID} | 9:00 PM ET`);
+log('INPUT', 'MATCH', `${HOME_NAME} vs ${AWAY_NAME} | ${MATCH_ID} | 9:00 PM ET`);
 log('INPUT', 'ELO', `Home=${HOME_NAME} ELO=${ELO_HOME} | Away=${AWAY_NAME} ELO=${ELO_AWAY} | Diff=${ELO_DIFF}`);
 
 const ELO_FACTOR = 0.0025;
@@ -421,8 +421,8 @@ for (const [name, pass, detail] of invariants) {
 }
 log(allPass ? 'VERIFY' : 'ERROR', 'INVARIANTS_SUMMARY', `${allPass ? 'ALL PASS' : 'FAILURES DETECTED'} | ${invariants.length} checks`);
 
-// ── STEP 9: SEED FIXTURE + BOOK ODDS TO DB ────────────────────────────────────
-logSep('STEP 9 — SEED FIXTURE + FROZEN BOOK ODDS TO DB');
+// ── STEP 9: SEED MATCH + BOOK ODDS TO DB ────────────────────────────────────
+logSep('STEP 9 — SEED MATCH + FROZEN BOOK ODDS TO DB');
 
 let conn;
 try {
@@ -431,17 +431,17 @@ try {
 
   await conn.execute(`
     INSERT INTO wc2026_matches
-      (fixture_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, status, display_order)
+      (match_id, match_date, kickoff_utc, stage, home_team_id, away_team_id, venue_id, status, display_order)
     VALUES (?, ?, ?, 'R32', ?, ?, ?, 'scheduled', 76)
     ON DUPLICATE KEY UPDATE
       match_date=VALUES(match_date), kickoff_utc=VALUES(kickoff_utc),
       home_team_id=VALUES(home_team_id), away_team_id=VALUES(away_team_id)
-  `, [FIXTURE_ID, MATCH_DATE, KICKOFF_UTC, HOME_TEAM_ID, AWAY_TEAM_ID, VENUE_ID]);
-  log('VERIFY', 'DB_FIXTURE_UPSERT', `PASS | fixture_id=${FIXTURE_ID} home=${HOME_TEAM_ID} away=${AWAY_TEAM_ID}`);
+  `, [MATCH_ID, MATCH_DATE, KICKOFF_UTC, HOME_TEAM_ID, AWAY_TEAM_ID, VENUE_ID]);
+  log('VERIFY', 'DB_MATCH_UPSERT', `PASS | match_id=${MATCH_ID} home=${HOME_TEAM_ID} away=${AWAY_TEAM_ID}`);
 
   await conn.execute(`
     INSERT INTO wc2026_frozen_book_odds
-      (fixture_id, book_home_ml, book_draw_ml, book_away_ml,
+      (match_id, book_home_ml, book_draw_ml, book_away_ml,
        book_spread_line, book_home_spread_odds, book_away_spread_odds,
        book_total_line, book_over_odds, book_under_odds,
        book_btts_yes_odds, book_btts_no_odds,
@@ -461,7 +461,7 @@ try {
       to_advance_home_odds=VALUES(to_advance_home_odds), to_advance_away_odds=VALUES(to_advance_away_odds),
       frozen_at=NOW()
   `, [
-    FIXTURE_ID,
+    MATCH_ID,
     BOOK.homeML, BOOK.drawML, BOOK.awayML,
     BOOK.homeSpreadLine, BOOK.homeSpreadOdds, BOOK.awaySpreadOdds,
     BOOK.totalLine, BOOK.overOdds, BOOK.underOdds,
@@ -470,11 +470,11 @@ try {
     BOOK.noDrawAway,
     BOOK.toAdvanceHome, BOOK.toAdvanceAway,
   ]);
-  log('VERIFY', 'DB_BOOK_ODDS_UPSERT', `PASS | fixture_id=${FIXTURE_ID} | homeML=${BOOK.homeML} drawML=${BOOK.drawML} awayML=${BOOK.awayML}`);
+  log('VERIFY', 'DB_BOOK_ODDS_UPSERT', `PASS | match_id=${MATCH_ID} | homeML=${BOOK.homeML} drawML=${BOOK.drawML} awayML=${BOOK.awayML}`);
 
   const [verRows] = await conn.execute(
-    'SELECT fixture_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds FROM wc2026_frozen_book_odds WHERE fixture_id=?',
-    [FIXTURE_ID]
+    'SELECT match_id, book_home_ml, book_draw_ml, book_away_ml, book_no_draw_away_odds, to_advance_home_odds, to_advance_away_odds FROM wc2026_frozen_book_odds WHERE match_id=?',
+    [MATCH_ID]
   );
   if (verRows.length === 1) {
     log('VERIFY', 'DB_BOOK_ODDS_READ', `PASS | ${JSON.stringify(verRows[0])}`);
@@ -493,7 +493,7 @@ try {
 logSep('STEP 10 — WRITE RESULTS JSON');
 
 const results = {
-  fixture_id: FIXTURE_ID,
+  match_id: MATCH_ID,
   home: HOME_NAME, away: AWAY_NAME,
   kickoff_et: '9:00 PM ET', kickoff_utc: KICKOFF_UTC,
   n_sims: N_SIMS,
@@ -554,5 +554,5 @@ if (sigEdges.length > 0) {
   log('OUTPUT', 'SIGNIFICANT_EDGES', 'None above 4pp threshold');
 }
 
-log('VERIFY', 'PIPELINE_COMPLETE', `ALL STEPS COMPLETE | fixture=${FIXTURE_ID} | allInvariantsPass=${allPass}`);
+log('VERIFY', 'PIPELINE_COMPLETE', `ALL STEPS COMPLETE | match=${MATCH_ID} | allInvariantsPass=${allPass}`);
 flushLog();

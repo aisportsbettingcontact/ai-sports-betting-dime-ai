@@ -27,13 +27,13 @@ function flushLog() {
 const HEADER = `
 ╔══════════════════════════════════════════════════════════════════════════════════╗
 ║  WC2026 JUNE 29 DIRECT SEED — v11.0-KO22 (CORRECTED SCHEMA)                  ║
-║  Fixtures: wc26-r32-074 (JPN/BRA) | -075 (PAR/GER) | -076 (MAR/NED)         ║
+║  Matches: wc26-r32-074 (JPN/BRA) | -075 (PAR/GER) | -076 (MAR/NED)         ║
 ║  Markets: ML | Draw | NoDraw | Spread±1.5 | O/U2.5 | BTTS | DC | ToAdvance  ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝`;
 console.log(HEADER);
 logLines.push(HEADER);
 
-const FIXTURE_IDS = ["wc26-r32-074", "wc26-r32-075", "wc26-r32-076"];
+const MATCH_IDS = ["wc26-r32-074", "wc26-r32-075", "wc26-r32-076"];
 
 // ─── v11.0-KO22 Model Projections (correct column names) ──────────────────────
 const MODEL_ROWS: Record<string, any> = {
@@ -194,22 +194,22 @@ async function main() {
 
   const db = await getDb();
 
-  // ─── S1: Verify fixtures exist ────────────────────────────────────────────
+  // ─── S1: Verify matches exist ────────────────────────────────────────────
   stepCount++;
-  log("STEP", `S${stepCount}`, "Verifying 3 June 29 fixtures exist in wc2026_matches");
-  const fixtures = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
-  if (fixtures.length !== 3) {
-    log("FAIL", `S${stepCount}`, `Expected 3 fixtures, got ${fixtures.length}`, "Cannot proceed — fixtures missing");
+  log("STEP", `S${stepCount}`, "Verifying 3 June 29 matches exist in wc2026_matches");
+  const matches = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, MATCH_IDS));
+  if (matches.length !== 3) {
+    log("FAIL", `S${stepCount}`, `Expected 3 matches, got ${matches.length}`, "Cannot proceed — matches missing");
     failCount++;
     flushLog();
     process.exit(1);
   }
-  log("PASS", `S${stepCount}`, `All 3 fixtures confirmed in DB`);
-  fixtures.forEach((f: any) => log("INFO", "FX", `${f.matchId}: ${f.awayTeamId} vs ${f.homeTeamId} | ${f.kickoffUtc}`));
+  log("PASS", `S${stepCount}`, `All 3 matches confirmed in DB`);
+  matches.forEach((f: any) => log("INFO", "FX", `${f.matchId}: ${f.awayTeamId} vs ${f.homeTeamId} | ${f.kickoffUtc}`));
   passCount++;
 
   // ─── S2-S4: Upsert model projections ─────────────────────────────────────
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     stepCount++;
     log("STEP", `S${stepCount}`, `Upserting model projection for ${fid}`);
     const row = MODEL_ROWS[fid];
@@ -255,7 +255,7 @@ async function main() {
   }
 
   // ─── S5-S7: Upsert frozen book odds ──────────────────────────────────────
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     stepCount++;
     log("STEP", `S${stepCount}`, `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
@@ -293,7 +293,7 @@ async function main() {
   // ─── S8: Verify model projections read-back ───────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying model projections read-back from DB (isFrozen=1)");
-  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, FIXTURE_IDS));
+  const mps = await db.select().from(wc2026ModelProjections).where(inArray(wc2026ModelProjections.matchId, MATCH_IDS));
   if (mps.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 model projections confirmed in DB`);
     passCount++;
@@ -308,7 +308,7 @@ async function main() {
   // ─── S9: Verify frozen book odds read-back ────────────────────────────────
   stepCount++;
   log("STEP", `S${stepCount}`, "Verifying frozen book odds read-back from DB");
-  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
+  const bos = await db.select().from(wc2026FrozenBookOdds).where(inArray(wc2026FrozenBookOdds.matchId, MATCH_IDS));
   if (bos.length === 3) {
     log("PASS", `S${stepCount}`, `All 3 frozen book odds confirmed in DB`);
     passCount++;
@@ -322,14 +322,14 @@ async function main() {
 
   // ─── S10: Verify API endpoint returns all 3 with model+book populated ─────
   stepCount++;
-  log("STEP", `S${stepCount}`, "Cross-verifying: wc2026.fixturesByDate API returns 3 fixtures with model+book populated");
-  const allFix = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
+  log("STEP", `S${stepCount}`, "Cross-verifying: wc2026.matchesByDate API returns 3 matches with model+book populated");
+  const allFix = await db.select().from(wc2026Matches).where(inArray(wc2026Matches.matchId, MATCH_IDS));
   const mpMap: Record<string, any> = {};
   const boMap: Record<string, any> = {};
   mps.forEach((mp: any) => { mpMap[mp.matchId] = mp; });
   bos.forEach((bo: any) => { boMap[bo.matchId] = bo; });
   let crossPass = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const hasMp = !!mpMap[fid];
     const hasBo = !!boMap[fid];
     const mpToAdv = mpMap[fid]?.toAdvanceHomeOdds;

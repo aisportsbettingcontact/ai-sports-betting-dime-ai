@@ -1,6 +1,6 @@
 /**
  * WC2026 June 20 DB Audit Script
- * - Verifies all 4 June 20 fixtures are ingested with correct scores
+ * - Verifies all 4 June 20 matches are ingested with correct scores
  * - Runs 36-match gate check (2026 completed count must = 36)
  * - Verifies home/away orientations against ESPN ground truth
  * - Checks wc_bt_matches for June 20 entries
@@ -13,10 +13,10 @@ dotenv.config();
 const DB_URL = process.env.DATABASE_URL;
 
 // ESPN Ground Truth for June 20 matches (verified directly from ESPN API)
-// Format: { fixtureId, espnHome, espnAway, espnHomeScore, espnAwayScore, result }
+// Format: { matchId, espnHome, espnAway, espnHomeScore, espnAwayScore, result }
 const JUNE20_GROUND_TRUTH = [
   {
-    fixtureId: 'wc26-g-035',
+    matchId: 'wc26-g-035',
     espnHome: 'Netherlands',
     espnAway: 'Sweden',
     espnHomeScore: 5,
@@ -25,7 +25,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'D'
   },
   {
-    fixtureId: 'wc26-g-033',
+    matchId: 'wc26-g-033',
     espnHome: 'Germany',
     espnAway: 'Ivory Coast',
     espnHomeScore: 2,
@@ -34,7 +34,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'C'
   },
   {
-    fixtureId: 'wc26-g-034',
+    matchId: 'wc26-g-034',
     espnHome: 'Ecuador',
     espnAway: 'Curaçao',
     espnHomeScore: 0,
@@ -43,7 +43,7 @@ const JUNE20_GROUND_TRUTH = [
     group: 'C'
   },
   {
-    fixtureId: 'wc26-g-036',
+    matchId: 'wc26-g-036',
     espnHome: 'Tunisia',
     espnAway: 'Japan',
     espnHomeScore: 0,
@@ -64,24 +64,24 @@ async function main() {
 
   const conn = await mysql.createConnection(DB_URL);
   
-  // ─── STEP 1: Verify June 20 fixtures ─────────────────────────────────────────
-  console.log('\n[STEP] === STEP 1: June 20 Fixture Verification ===');
+  // ─── STEP 1: Verify June 20 matches ─────────────────────────────────────────
+  console.log('\n[STEP] === STEP 1: June 20 Match Verification ===');
   
   let allPass = true;
   
   for (const gt of JUNE20_GROUND_TRUTH) {
     const [rows] = await conn.execute(`
-      SELECT f.fixture_id, ht.name as home_name, at2.name as away_name,
+      SELECT f.match_id, ht.name as home_name, at2.name as away_name,
              f.home_score, f.away_score, f.status,
              DATE_FORMAT(f.kickoff_utc, '%Y-%m-%d %H:%i UTC') as kickoff
       FROM wc2026_matches f
       JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
       JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
-      WHERE f.fixture_id = ?
-    `, [gt.fixtureId]);
+      WHERE f.match_id = ?
+    `, [gt.matchId]);
     
     if (rows.length === 0) {
-      console.error(`[VERIFY] FAIL — ${gt.fixtureId} NOT FOUND in DB`);
+      console.error(`[VERIFY] FAIL — ${gt.matchId} NOT FOUND in DB`);
       allPass = false;
       continue;
     }
@@ -94,7 +94,7 @@ async function main() {
     const pass = homeScoreOk && awayScoreOk && statusOk;
     if (!pass) allPass = false;
     
-    console.log(`[STATE] ${gt.fixtureId}: DB home=${row.home_name} ${row.home_score}-${row.away_score} away=${row.away_name} status=${row.status}`);
+    console.log(`[STATE] ${gt.matchId}: DB home=${row.home_name} ${row.home_score}-${row.away_score} away=${row.away_name} status=${row.status}`);
     console.log(`[STATE]   ESPN GT: ${gt.espnHome} ${gt.espnHomeScore}-${gt.espnAwayScore} ${gt.espnAway}`);
     console.log(`[VERIFY] ${pass ? 'PASS' : 'FAIL'} — score=${homeScoreOk && awayScoreOk ? 'OK' : 'MISMATCH'} status=${statusOk ? 'OK' : 'NOT_FT'}`);
     console.log(`[OUTPUT] ${gt.result}`);
@@ -109,11 +109,11 @@ async function main() {
       COUNT(*) as total_2026,
       SUM(CASE WHEN status IN ('FT', 'Full Time') THEN 1 ELSE 0 END) as completed_2026,
       SUM(CASE WHEN status NOT IN ('FT', 'Full Time') THEN 1 ELSE 0 END) as upcoming_2026
-    FROM wc2026_matches WHERE fixture_id LIKE 'wc26-%'
+    FROM wc2026_matches WHERE match_id LIKE 'wc26-%'
   `);
   
   const cnt = cntRows[0];
-  console.log(`[STATE] Total 2026 fixtures in DB: ${cnt.total_2026}`);
+  console.log(`[STATE] Total 2026 matches in DB: ${cnt.total_2026}`);
   console.log(`[STATE] Completed (FT): ${cnt.completed_2026}`);
   console.log(`[STATE] Upcoming: ${cnt.upcoming_2026}`);
   
@@ -125,23 +125,23 @@ async function main() {
     allPass = false;
   }
   
-  // ─── STEP 3: List all completed 2026 fixtures ─────────────────────────────────
-  console.log('\n[STEP] === STEP 3: All Completed 2026 Fixtures ===');
+  // ─── STEP 3: List all completed 2026 matches ─────────────────────────────────
+  console.log('\n[STEP] === STEP 3: All Completed 2026 Matchs ===');
   
   const [allRows] = await conn.execute(`
-    SELECT f.fixture_id, ht.name as home_name, at2.name as away_name,
+    SELECT f.match_id, ht.name as home_name, at2.name as away_name,
            f.home_score, f.away_score, f.status,
            DATE_FORMAT(f.kickoff_utc, '%Y-%m-%d') as match_date
     FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
-    WHERE f.fixture_id LIKE 'wc26-%' AND f.status IN ('FT', 'Full Time')
+    WHERE f.match_id LIKE 'wc26-%' AND f.status IN ('FT', 'Full Time')
     ORDER BY f.kickoff_utc
   `);
   
-  console.log(`[STATE] Completed 2026 fixtures (${allRows.length} total):`);
+  console.log(`[STATE] Completed 2026 matches (${allRows.length} total):`);
   allRows.forEach((r, i) => {
-    console.log(`  ${String(i+1).padStart(2,'0')}. ${r.fixture_id} ${r.match_date} ${r.home_name} ${r.home_score}-${r.away_score} ${r.away_name}`);
+    console.log(`  ${String(i+1).padStart(2,'0')}. ${r.match_id} ${r.match_date} ${r.home_name} ${r.home_score}-${r.away_score} ${r.away_name}`);
   });
   
   // ─── STEP 4: Check wc_bt_matches for June 20 entries ─────────────────────────

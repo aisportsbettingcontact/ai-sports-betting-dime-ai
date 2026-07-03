@@ -16,7 +16,7 @@
  *   C7: xGOT empirical discount — dynamic xGOT/xG ratio from WC2026 GS data, not hardcoded 0.85
  *   C8: Weight sum assertion — startup assert all 10 variations sum to 1.0 ± 0.001
  *   C9: ET regression CI — confidence interval ±0.15 logged, sample size warning for n<5
- *   C10: Parameterized spread line — reads book_spread_line from DB per fixture, not hardcoded -1.5
+ *   C10: Parameterized spread line — reads book_spread_line from DB per match, not hardcoded -1.5
  *
  * PIPELINE:
  *   Phase A  — DB pull + NULL audit + data validation
@@ -168,7 +168,7 @@ function etProb(lH, lA, regression=0.70, etSampleN=2) {
 
 /**
  * dcSim — fully corrected Dixon-Coles simulation
- * C10 FIX: spreadLine parameter (default -1.5) read from DB per fixture
+ * C10 FIX: spreadLine parameter (default -1.5) read from DB per match
  */
 function dcSim(lH, lA, rho, etH, spreadLine=-1.5, label='') {
   const MAX = 8;
@@ -471,8 +471,8 @@ async function main() {
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
-  // Pull Jul 1 fixture book odds (C10: includes book_spread_line per fixture)
-  L.step('DB', 'Pulling Jul 1 fixture book odds (C10: parameterized spread line per fixture)...');
+  // Pull Jul 1 match book odds (C10: includes book_spread_line per match)
+  L.step('DB', 'Pulling Jul 1 match book odds (C10: parameterized spread line per match)...');
   const [jul1BookRows] = await conn.execute(
     `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
@@ -491,7 +491,7 @@ async function main() {
      WHERE f.match_date = '2026-07-01'
      ORDER BY fbo.match_id`
   );
-  L.pass('DB', `Jul 1 fixtures from DB: ${jul1BookRows.length} rows`);
+  L.pass('DB', `Jul 1 matchs from DB: ${jul1BookRows.length} rows`);
   for (const r of jul1BookRows) {
     L.input('C10', `  ${r.match_id}: spreadLine=${r.book_spread_line} (from DB — not hardcoded)`);
     L.input('DB',  `  ${r.match_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml}`);
@@ -1225,7 +1225,7 @@ async function main() {
   L.output('FIXES', `  C7: xGOT empirical discount → FIXED (empirical=${empiricalXGOTDiscount.toFixed(4)}, was 0.85)`);
   L.output('FIXES', '  C8: Weight sum assertion → FIXED (startup assert for all 10 variations)');
   L.output('FIXES', '  C9: ET regression CI → FIXED (±0.15 CI logged, sample size warning)');
-  L.output('FIXES', '  C10: Parameterized spread line → FIXED (reads book_spread_line from DB per fixture)');
+  L.output('FIXES', '  C10: Parameterized spread line → FIXED (reads book_spread_line from DB per match)');
 
   const finalSummary = {
     session: SESSION_ID,

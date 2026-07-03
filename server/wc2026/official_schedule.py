@@ -12,7 +12,7 @@ NOTE: "home" = team listed first in official schedule (left side / top of matchu
 All times in UTC.
 """
 
-OFFICIAL_FIXTURES = [
+OFFICIAL_MATCHES = [
     # ── JUNE 11 ──────────────────────────────────────────────────────────────
     # Match 1: Mexico vs South Africa — Mexico City, 19:00 UTC
     ('2026-06-11', '2026-06-11 19:00:00', 'mex', 'rsa', 'Mexico City', 'A'),
@@ -195,7 +195,7 @@ OFFICIAL_FIXTURES = [
 ]
 
 if __name__ == '__main__':
-    print(f'Total official matches: {len(OFFICIAL_FIXTURES)}')
-    for i, f in enumerate(OFFICIAL_FIXTURES, 1):
+    print(f'Total official matches: {len(OFFICIAL_MATCHES)}')
+    for i, f in enumerate(OFFICIAL_MATCHES, 1):
         date, kickoff, home, away, city, grp = f
         print(f'  Match {i:2d}: {date} | {home:5s} vs {away:5s} | {city} | Group {grp}')

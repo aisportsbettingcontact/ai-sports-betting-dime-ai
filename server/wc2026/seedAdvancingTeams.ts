@@ -2,7 +2,7 @@
  * seedAdvancingTeams.ts — WC2026 Automated Advancing Team Seeder
  * ─────────────────────────────────────────────────────────────────────────────
  * PURPOSE:
- *   Parse FIFA scores/fixtures HTML → identify R32 winners → map to wc2026_teams
+ *   Parse FIFA scores/matches HTML → identify R32 winners → map to wc2026_teams
  *   → update wc2026_matches.advancing_team_id for completed KO matches
  *   → update wc2026_matches scores and status for completed KO matches
  *
@@ -79,10 +79,10 @@ function flushLog() {
 
 // ─── KNOWN R32 RESULTS (from FIFA HTML + DB cross-reference) ─────────────────
 //
-// Source: FIFA scores/fixtures HTML (pasted_content_29.txt) parsed 2026-06-30
+// Source: FIFA scores/matches HTML (pasted_content_29.txt) parsed 2026-06-30
 // Cross-referenced: wc2026_matches DB (wc26-r32-073/074/075 already show FT + scores)
 //
-// FIXTURE MAP:
+// MATCH MAP:
 //   wc26-r32-073: RSA (home) vs CAN (away) → CAN advances (0-1 FT)
 //   wc26-r32-074: BRA (home) vs JPN (away) → BRA advances (2-1 FT)
 //   wc26-r32-075: GER (home) vs PAR (away) → PAR advances (1-1 FT, PAR on pens)
@@ -158,7 +158,7 @@ async function main() {
   const header = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  WC2026 ADVANCING TEAMS SEEDER — AUTOMATED PIPELINE                        ║
-║  Source: FIFA scores/fixtures HTML (pasted_content_29.txt)                 ║
+║  Source: FIFA scores/matches HTML (pasted_content_29.txt)                 ║
 ║  Target: wc2026_matches.advancing_team_id                                 ║
 ║  Run: ${new Date().toISOString()}                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝`;
@@ -207,24 +207,24 @@ async function main() {
   log("STATE", `P2-S${stepCount}`, `FIFA code map built: ${fifaCodeToTeamId.size} entries`);
   log("DB", `P2-S${stepCount}`, `Sample mappings: BRA→${fifaCodeToTeamId.get("BRA")} | CAN→${fifaCodeToTeamId.get("CAN")} | PAR→${fifaCodeToTeamId.get("PAR")} | GER→${fifaCodeToTeamId.get("GER")}`);
 
-  // ─── PHASE 3: FIXTURE VERIFICATION ─────────────────────────────────────────
-  logSection("PHASE 3: FIXTURE EXISTENCE VERIFICATION");
-  const allFixtureIds = R32_RESULTS.map(r => r.matchId);
+  // ─── PHASE 3: MATCH VERIFICATION ─────────────────────────────────────────
+  logSection("PHASE 3: MATCH EXISTENCE VERIFICATION");
+  const allMatchIds = R32_RESULTS.map(r => r.matchId);
   stepCount++;
-  log("STEP", `P3-S${stepCount}`, `Fetching ${allFixtureIds.length} R32 fixtures from DB`);
-  const dbFixtures = await db
+  log("STEP", `P3-S${stepCount}`, `Fetching ${allMatchIds.length} R32 matches from DB`);
+  const dbMatches = await db
     .select()
     .from(wc2026Matches)
-    .where(inArray(wc2026Matches.matchId, allFixtureIds));
+    .where(inArray(wc2026Matches.matchId, allMatchIds));
 
-  log("STATE", `P3-S${stepCount}`, `DB returned ${dbFixtures.length} fixtures`);
-  type DbFixture = typeof dbFixtures[0];
-  const dbFixtureMap = new Map(dbFixtures.map((f: DbFixture) => [f.matchId, f]));
+  log("STATE", `P3-S${stepCount}`, `DB returned ${dbMatches.length} matches`);
+  type DbMatch = typeof dbMatches[0];
+  const dbMatchMap = new Map(dbMatches.map((f: DbMatch) => [f.matchId, f]));
 
-  for (const fid of allFixtureIds) {
-    const dbFix = dbFixtureMap.get(fid);
+  for (const fid of allMatchIds) {
+    const dbFix = dbMatchMap.get(fid);
     if (!dbFix) {
-      log("FAIL", `P3-S${stepCount}`, `FIXTURE NOT FOUND IN DB: ${fid}`, "Cannot proceed with this fixture");
+      log("FAIL", `P3-S${stepCount}`, `MATCH NOT FOUND IN DB: ${fid}`, "Cannot proceed with this match");
       failCount++;
     } else {
       const dbFixAny = dbFix as any;
@@ -329,17 +329,17 @@ async function main() {
   // ─── PHASE 6: VERIFICATION READ-BACK ───────────────────────────────────────
   logSection("PHASE 6: VERIFICATION READ-BACK — CONFIRM ALL WRITES");
   stepCount++;
-  log("STEP", `P6-S${stepCount}`, "Reading back all R32 fixtures to verify advancing_team_id populated");
+  log("STEP", `P6-S${stepCount}`, "Reading back all R32 matches to verify advancing_team_id populated");
 
-  const verifyFixtures = await db
+  const verifyMatches = await db
     .select()
     .from(wc2026Matches)
-    .where(inArray(wc2026Matches.matchId, allFixtureIds));
+    .where(inArray(wc2026Matches.matchId, allMatchIds));
 
   let verifyPass = 0;
   let verifyFail = 0;
 
-  for (const f of verifyFixtures) {
+  for (const f of verifyMatches) {
     const result = R32_RESULTS.find(r => r.matchId === f.matchId)!;
     const advId = (f as any).advancingTeamId;
 
@@ -371,8 +371,8 @@ async function main() {
 
   // ─── PHASE 7: FULL R32 STATE AUDIT ─────────────────────────────────────────
   logSection("PHASE 7: FULL R32 STATE AUDIT — FINAL SNAPSHOT");
-  log("AUDIT", "P7", "Final state of all R32 fixtures in wc2026_matches:");
-  for (const f of verifyFixtures) {
+  log("AUDIT", "P7", "Final state of all R32 matches in wc2026_matches:");
+  for (const f of verifyMatches) {
     const advId = (f as any).advancingTeamId;
     const advTeam = allTeams.find((t: typeof allTeams[0]) => t.teamId === advId);
     log("AUDIT", "P7",

@@ -10,7 +10,7 @@
  *   → blank screen rendered (no skeleton, no games)
  *
  * Fix: Added keepPreviousData + isFetching guard to all 3 feed components.
- * Also optimized fixturesByDate + todayWithOdds backend to filter odds by
+ * Also optimized matchesByDate + todayWithOdds backend to filter odds by
  * match_id IN (...) instead of full table scan.
  *
  * Tests validate the shouldShowSkeleton / shouldShowEmptyState logic for all
@@ -28,7 +28,7 @@ function shouldShowSkeleton(isLoading: boolean, isFetching: boolean, dataLength:
 }
 
 function shouldShowEmptyState(isLoading: boolean, isFetching: boolean, dataLength: number): boolean {
-  // Only show "No fixtures" when query has fully settled with 0 results.
+  // Only show "No matches" when query has fully settled with 0 results.
   if (shouldShowSkeleton(isLoading, isFetching, dataLength)) return false;
   return dataLength === 0;
 }
@@ -62,7 +62,7 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
 
   it("[VERIFY] Date transition (PROJECTIONS): isFetching=true, dataLength=0 → skeleton, NOT blank", () => {
     // This is the exact bug scenario: user taps June 27, placeholderData from June 24
-    // is filtered out (wrong date) → fixtures=[] while isFetching=true → was blank.
+    // is filtered out (wrong date) → matches=[] while isFetching=true → was blank.
     const isLoading = false, isFetching = true, len = 0;
     console.log("[INPUT] Date transition: isLoading=false isFetching=true dataLength=0");
     const skeleton = shouldShowSkeleton(isLoading, isFetching, len);
@@ -95,7 +95,7 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
     console.log("[VERIFY] PASS — Splits date transition shows skeleton, not blank");
   });
 
-  it("[VERIFY] Fixtures loaded: isFetching=false, dataLength=6 → show fixtures", () => {
+  it("[VERIFY] Matches loaded: isFetching=false, dataLength=6 → show matches", () => {
     const isLoading = false, isFetching = false, len = 6;
     console.log("[INPUT] Loaded: isLoading=false isFetching=false dataLength=6");
     const skeleton = shouldShowSkeleton(isLoading, isFetching, len);
@@ -103,11 +103,11 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
     console.log(`[STATE] shouldShowSkeleton=${skeleton} shouldShowEmptyState=${empty}`);
     expect(skeleton).toBe(false);
     expect(empty).toBe(false);
-    console.log("[VERIFY] PASS — Loaded fixtures render game cards");
+    console.log("[VERIFY] PASS — Loaded matches render game cards");
   });
 
   it("[VERIFY] Genuine empty day: isFetching=false, dataLength=0 → show empty state", () => {
-    // A day with no WC fixtures (e.g. July 4 rest day) should show empty state.
+    // A day with no WC matches (e.g. July 4 rest day) should show empty state.
     const isLoading = false, isFetching = false, len = 0;
     console.log("[INPUT] Genuine empty: isLoading=false isFetching=false dataLength=0");
     const skeleton = shouldShowSkeleton(isLoading, isFetching, len);
@@ -115,11 +115,11 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
     console.log(`[STATE] shouldShowSkeleton=${skeleton} shouldShowEmptyState=${empty}`);
     expect(skeleton).toBe(false);
     expect(empty).toBe(true);
-    console.log("[VERIFY] PASS — Genuine empty day shows 'No World Cup fixtures'");
+    console.log("[VERIFY] PASS — Genuine empty day shows 'No World Cup matches'");
   });
 
-  it("[VERIFY] Background refetch with fixtures: isFetching=true, dataLength=6 → show fixtures (no flicker)", () => {
-    // When polling refreshes data (e.g. live odds update), existing fixtures stay visible.
+  it("[VERIFY] Background refetch with matches: isFetching=true, dataLength=6 → show matches (no flicker)", () => {
+    // When polling refreshes data (e.g. live odds update), existing matches stay visible.
     const isLoading = false, isFetching = true, len = 6;
     console.log("[INPUT] Background refetch: isLoading=false isFetching=true dataLength=6");
     const skeleton = shouldShowSkeleton(isLoading, isFetching, len);
@@ -127,7 +127,7 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
     console.log(`[STATE] shouldShowSkeleton=${skeleton} shouldShowEmptyState=${empty}`);
     expect(skeleton).toBe(false);
     expect(empty).toBe(false);
-    console.log("[VERIFY] PASS — Background refetch with existing fixtures does not trigger skeleton");
+    console.log("[VERIFY] PASS — Background refetch with existing matches does not trigger skeleton");
   });
 
   it("[VERIFY] Regression proof: pre-fix logic showed blank on date transition", () => {
@@ -179,9 +179,9 @@ describe("[FIX 2026-06-24] WC backend query optimization — match_id IN filter"
     console.log("[VERIFY] PASS — Backend query optimization confirmed: O(N) → O(1) per date");
   });
 
-  it("[VERIFY] Empty match_ids guard: no fixtures on date → short-circuit with 1=0", () => {
+  it("[VERIFY] Empty match_ids guard: no matches on date → short-circuit with 1=0", () => {
     const matchIds: string[] = [];
-    console.log("[INPUT] Empty match_ids (no fixtures on date)");
+    console.log("[INPUT] Empty match_ids (no matches on date)");
     const optimized = buildOptimizedOddsWhereClause(68, matchIds);
     console.log(`[STATE] WHERE clause: ${optimized}`);
     expect(optimized).toContain("1=0"); // short-circuit, no rows fetched

@@ -32,7 +32,7 @@ conn = mysql.connector.connect(
 cur = conn.cursor(dictionary=True)
 
 print('=' * 80)
-print('[STEP 1] FETCHING ALL WC2026 FIXTURES WITH FULL TEAM DATA')
+print('[STEP 1] FETCHING ALL WC2026 MATCHES WITH FULL TEAM DATA')
 print('=' * 80)
 
 cur.execute("""
@@ -72,7 +72,7 @@ OFFICIAL_SCHEDULE = {
 
 # ── STEP 2: Check for invalid teams (Qatar not in WC2026) ─────────────────
 print('=' * 80)
-print('[STEP 2] CHECKING FOR INVALID TEAMS IN FIXTURES')
+print('[STEP 2] CHECKING FOR INVALID TEAMS IN MATCHES')
 print('=' * 80)
 
 # Qatar did NOT qualify for WC2026 (they were hosts of WC2022 but didn't qualify for 2026)
@@ -107,7 +107,7 @@ else:
 
 # Also check by looking at June 12 specifically
 print()
-print('[STEP 2b] ALL JUNE 12 FIXTURES:')
+print('[STEP 2b] ALL JUNE 12 MATCHES:')
 for f in all_matches:
     if str(f['match_date']) == '2026-06-12' or (hasattr(f['match_date'], 'strftime') and f['match_date'].strftime('%Y-%m-%d') == '2026-06-12'):
         print(f'  {f["match_id"]}: {f["away_name"]} ({f["away_code"]}) @ {f["home_name"]} ({f["home_code"]}) | {f["kickoff_utc"]} | {f["venue_city"]}')
@@ -238,7 +238,7 @@ except Exception as e:
 # ── STEP 7: Full match list with official FIFA schedule comparison ───────
 print()
 print('=' * 80)
-print('[STEP 7] FULL FIXTURE LIST — ALL DATES')
+print('[STEP 7] FULL MATCH LIST — ALL DATES')
 print('=' * 80)
 
 for f in all_matches:

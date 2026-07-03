@@ -30,9 +30,9 @@ conn = mysql.connector.connect(
 )
 cur = conn.cursor(dictionary=True)
 
-# Fixtures where home/away are swapped:
+# Matchs where home/away are swapped:
 # (match_id, correct_home, correct_away, match_date, kickoff_utc, group_letter)
-SWAPPED_FIXTURES = [
+SWAPPED_MATCHES = [
     # DB: bih vs can → Official: can vs bih
     ('wc26-g-003', 'can', 'bih', '2026-06-12', '2026-06-12 19:00:00', 'B'),
     # DB: sui vs qat → Official: qat vs sui
@@ -55,7 +55,7 @@ print('=' * 80)
 print('[STEP 1] FIXING HOME/AWAY SWAPS IN wc2026_matches')
 print('=' * 80)
 
-for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURES:
+for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_MATCHES:
     # First verify current state
     cur.execute("SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = %s", (fid,))
     row = cur.fetchone()
@@ -123,10 +123,10 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
 conn.commit()
 
 print('=' * 80)
-print('[STEP 2] VERIFICATION — CHECK CORRECTED FIXTURES')
+print('[STEP 2] VERIFICATION — CHECK CORRECTED MATCHES')
 print('=' * 80)
 
-for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURES:
+for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_MATCHES:
     cur.execute("""
         SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
                ht.fifa_code as home_code, at.fifa_code as away_code
@@ -163,7 +163,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
 
 print()
 print('=' * 80)
-print('[STEP 3] FINAL JUNE 11-17 FIXTURE LIST (CORRECTED)')
+print('[STEP 3] FINAL JUNE 11-17 MATCH LIST (CORRECTED)')
 print('=' * 80)
 
 cur.execute("""
@@ -178,7 +178,7 @@ cur.execute("""
 """)
 june_matches = cur.fetchall()
 
-print(f'{"Fixture ID":<14} {"Date":<12} {"Kickoff UTC":<22} {"Grp":<5} {"Home":<8} {"Away":<8} {"Matchup"}')
+print(f'{"Match ID":<14} {"Date":<12} {"Kickoff UTC":<22} {"Grp":<5} {"Home":<8} {"Away":<8} {"Matchup"}')
 print('-' * 90)
 for f in june_matches:
     date_str = f['match_date']

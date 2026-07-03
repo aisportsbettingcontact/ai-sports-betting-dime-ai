@@ -1,7 +1,7 @@
 /**
  * wc-june24-gt-validate.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Ground truth validation for all 6 June 24, 2026 WC fixtures.
+ * Ground truth validation for all 6 June 24, 2026 WC matches.
  * Checks: home/away orientation, kickoff times, game order, all 6 market odds.
  * 
  * [INPUT] Ground truth from user-provided data (June 24, 2026)
@@ -15,7 +15,7 @@ dotenv.config();
 const db = await mysql.createConnection(process.env.DATABASE_URL);
 
 // ─── GROUND TRUTH ─────────────────────────────────────────────────────────────
-// Format: { fixtureId, awayCode, homeCode, kickoffET, bookOdds }
+// Format: { matchId, awayCode, homeCode, kickoffET, bookOdds }
 // kickoffET: local Eastern Time (e.g. "3:00 PM ET")
 // bookOdds: all 12 DK book odds values
 const GT = [
@@ -94,10 +94,10 @@ const GT = [
 ];
 
 // ─── QUERY DB ─────────────────────────────────────────────────────────────────
-console.log('\n[INPUT] Loading June 24 fixtures from DB...\n');
+console.log('\n[INPUT] Loading June 24 matches from DB...\n');
 
-const [fixtures] = await db.execute(`
-  SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.kickoff_utc, f.group_letter,
+const [matches] = await db.execute(`
+  SELECT f.match_id, f.home_team_id, f.away_team_id, f.kickoff_utc, f.group_letter,
          ht.fifa_code AS home_code, at.fifa_code AS away_code,
          v.city AS venue_city
   FROM wc2026_matches f
@@ -108,13 +108,13 @@ const [fixtures] = await db.execute(`
   ORDER BY f.kickoff_utc ASC
 `);
 
-console.log(`[STATE] Found ${fixtures.length} fixtures in DB for June 24\n`);
+console.log(`[STATE] Found ${matches.length} matches in DB for June 24\n`);
 
-// ─── VALIDATE EACH FIXTURE ────────────────────────────────────────────────────
+// ─── VALIDATE EACH MATCH ────────────────────────────────────────────────────
 let allPass = true;
-const fixtureIdMap = {};
+const matchIdMap = {};
 
-for (const fix of fixtures) {
+for (const fix of matches) {
   const kickoffET = new Date(fix.kickoff_utc).toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York'
   }) + ' ET';
@@ -123,42 +123,42 @@ for (const fix of fixtures) {
   const gt = GT.find(g => g.awayCode === fix.away_code && g.homeCode === fix.home_code);
   
   if (!gt) {
-    console.log(`[VERIFY] FAIL: No GT match for ${fix.away_code}@${fix.home_code} (fixture_id=${fix.fixture_id})`);
+    console.log(`[VERIFY] FAIL: No GT match for ${fix.away_code}@${fix.home_code} (match_id=${fix.match_id})`);
     // Check if home/away are swapped
     const gtSwapped = GT.find(g => g.awayCode === fix.home_code && g.homeCode === fix.away_code);
     if (gtSwapped) {
       console.log(`  → HOME/AWAY SWAPPED: DB has home=${fix.home_code} away=${fix.away_code}, GT expects home=${gtSwapped.homeCode} away=${gtSwapped.awayCode}`);
-      console.log(`  → FIXTURE: ${fix.fixture_id} needs home_team_id/away_team_id swapped`);
+      console.log(`  → MATCH: ${fix.match_id} needs home_team_id/away_team_id swapped`);
     }
     allPass = false;
     continue;
   }
 
-  fixtureIdMap[gt.match] = fix.fixture_id;
+  matchIdMap[gt.match] = fix.match_id;
 
   // Check kickoff time
   const kickoffOk = kickoffET === gt.kickoffET;
-  console.log(`[STEP] Fixture: ${fix.fixture_id} | ${fix.away_code}@${fix.home_code}`);
+  console.log(`[STEP] Match: ${fix.match_id} | ${fix.away_code}@${fix.home_code}`);
   console.log(`  Kickoff: DB=${kickoffET} GT=${gt.kickoffET} → ${kickoffOk ? '✅' : '❌ MISMATCH'}`);
   if (!kickoffOk) allPass = false;
 }
 
 // ─── VALIDATE BOOK ODDS ────────────────────────────────────────────────────────
-console.log('\n[STEP] Validating book odds (book_id=68) for each fixture...\n');
+console.log('\n[STEP] Validating book odds (book_id=68) for each match...\n');
 
 for (const gt of GT) {
-  const fix = fixtures.find(f => f.away_code === gt.awayCode && f.home_code === gt.homeCode);
+  const fix = matches.find(f => f.away_code === gt.awayCode && f.home_code === gt.homeCode);
   if (!fix) {
-    console.log(`[VERIFY] SKIP: ${gt.match} — fixture not found in DB (home/away may be swapped)`);
+    console.log(`[VERIFY] SKIP: ${gt.match} — match not found in DB (home/away may be swapped)`);
     continue;
   }
 
   const [rows] = await db.execute(`
     SELECT market, selection, american_odds, line
     FROM wc2026_odds_snapshots
-    WHERE fixture_id = ? AND book_id = 68
+    WHERE match_id = ? AND book_id = 68
     ORDER BY market, selection
-  `, [fix.fixture_id]);
+  `, [fix.match_id]);
 
   const oddsMap = {};
   for (const r of rows) {

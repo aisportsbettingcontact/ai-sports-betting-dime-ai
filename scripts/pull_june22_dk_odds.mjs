@@ -2,7 +2,7 @@
  * pull_june22_dk_odds.mjs  v2
  * ============================================================
  * Pulls DraftKings (book_id=68) odds for all 4 June 22, 2026
- * WC2026 fixtures from the Action Network API.
+ * WC2026 matches from the Action Network API.
  *
  * Confirmed AN API structure (from inspection):
  *   game.markets["68"].event = {
@@ -17,7 +17,7 @@
  *   - Uses team_id on each outcome for per-outcome resolution
  *   - Flags any AN vs user-provided home/away discrepancy
  *
- * User-provided fixture orientations (Away vs Home):
+ * User-provided match orientations (Away vs Home):
  *   1. Austria (away) vs Argentina (home)  — Argentina favorite
  *   2. Iraq (away) vs France (home)        — France favorite
  *   3. Senegal (away) vs Norway (home)     — Norway favorite
@@ -42,8 +42,8 @@ const AN_HEADERS = {
   "Connection": "keep-alive",
 };
 
-// User-provided fixture orientations
-const USER_FIXTURES = [
+// User-provided match orientations
+const USER_MATCHES = [
   { awayTeam: "Austria",  homeTeam: "Argentina", awayId: 2214, homeId: 1934, favorite: "Argentina" },
   { awayTeam: "Iraq",     homeTeam: "France",    awayId: 6181, homeId: 1944, favorite: "France"    },
   { awayTeam: "Senegal",  homeTeam: "Norway",    awayId: 1959, homeId: 6134, favorite: "Norway"    },
@@ -118,9 +118,9 @@ async function main() {
 
   const results = [];
 
-  for (const fix of USER_FIXTURES) {
+  for (const fix of USER_MATCHES) {
     console.log("\n════════════════════════════════════════════════════════");
-    console.log(`[FIXTURE] ${fix.awayTeam} (away, id=${fix.awayId}) @ ${fix.homeTeam} (home, id=${fix.homeId}) | Favorite: ${fix.favorite}`);
+    console.log(`[MATCH] ${fix.awayTeam} (away, id=${fix.awayId}) @ ${fix.homeTeam} (home, id=${fix.homeId}) | Favorite: ${fix.favorite}`);
     console.log("════════════════════════════════════════════════════════");
 
     // ── Step 2: Find matching AN game ─────────────────────────
@@ -345,7 +345,7 @@ async function main() {
 
   // ── Final summary ─────────────────────────────────────────
   console.log("\n════════════════════════════════════════════════════════");
-  console.log("[JUNE22_ODDS] ═══ COMPLETE SUMMARY — ALL 4 FIXTURES ═══");
+  console.log("[JUNE22_ODDS] ═══ COMPLETE SUMMARY — ALL 4 MATCHES ═══");
   console.log("════════════════════════════════════════════════════════");
 
   for (const r of results) {

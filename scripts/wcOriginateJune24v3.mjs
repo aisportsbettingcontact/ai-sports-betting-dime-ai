@@ -29,7 +29,7 @@
  *   GUARD 4: Assert awaySpreadOdds > awayML (covering -1.5 harder than winning)
  *   GUARD 5: Assert homeSpreadOdds + awaySpreadOdds implied probs = ~100%
  *   GUARD 6: Assert BTTS YES prob in [0.40, 0.65] range
- *   GUARD 7: Assert all 12 market rows written per fixture
+ *   GUARD 7: Assert all 12 market rows written per match
  *
  * CHAMPION PARAMETERS (v10e P26):
  *   ss=0.70, rho=-0.10, baseH=1.350, baseA=1.300
@@ -75,8 +75,8 @@ const HOST_VENUES = {
   CAN: ['vancouver', 'toronto', 'bc place', 'bmo field'],
 };
 
-// ── Fixtures (June 24, 2026) ──────────────────────────────────────────────────
-const FIXTURES = [
+// ── Matchs (June 24, 2026) ──────────────────────────────────────────────────
+const MATCHES = [
   { id: 'wc26-g-049', homeId: 'sui', awayId: 'can', homeCode: 'SUI', awayCode: 'CAN',
     homeName: 'Switzerland', awayName: 'Canada',
     city: 'Vancouver', stadium: 'BC Place',
@@ -392,7 +392,7 @@ async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const results = [];
 
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     console.log(`\n${TAG} ─── ${fix.id}: ${fix.homeName} (H) vs ${fix.awayName} (A) ───`);
     console.log(`${TAG} [INPUT] City=${fix.city} | bookTotal=${fix.bookTotal} | bookSpread=±${fix.bookSpread}`);
 
@@ -439,17 +439,17 @@ async function main() {
   // ── Phase 2: Publish to DB ────────────────────────────────────────────────
   console.log(`\n${TAG} ═══ PUBLISHING TO DATABASE ═══`);
 
-  const fixtureIds = FIXTURES.map(f => f.id);
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  const matchIds = MATCHES.map(f => f.id);
+  const placeholders = matchIds.map(() => '?').join(',');
   const [delSnap] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND fixture_id IN (${placeholders})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND match_id IN (${placeholders})`,
+    matchIds
   );
   console.log(`${TAG} [STEP] Deleted ${delSnap.affectedRows} existing model odds rows`);
 
   let totalInserted = 0;
   for (const { fix, sim, lines, lH, lA, eH, eA } of results) {
-    // ── 12 odds rows per fixture ──────────────────────────────────────────
+    // ── 12 odds rows per match ──────────────────────────────────────────
     const oddsRows = [
       // 1X2
       { market: '1X2', selection: 'home',    line: null,          odds: lines.homeML,       prob: sim.pH },
@@ -480,7 +480,7 @@ async function main() {
     for (const row of oddsRows) {
       await conn.execute(
         `INSERT INTO wc2026_odds_snapshots
-           (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+           (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
          VALUES (?, 0, ?, ?, ?, ?, ?, NOW(), 0)`,
         [fix.id, row.market, row.selection, row.line, row.odds, row.prob]
       );
@@ -494,7 +494,7 @@ async function main() {
 
     await conn.execute(
       `INSERT INTO wc2026_model_projections
-         (fixture_id, model_version, n_simulations,
+         (match_id, model_version, n_simulations,
           home_team, away_team, home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total, proj_spread,
@@ -565,22 +565,22 @@ async function main() {
   // ── Phase 3: Final cross-match validation ────────────────────────────────
   console.log(`\n${TAG} ═══ FINAL CROSS-MATCH VALIDATION ═══`);
   const [dbRows] = await conn.execute(
-    `SELECT o.fixture_id, o.market, o.selection, o.american_odds, o.line, o.implied_prob
+    `SELECT o.match_id, o.market, o.selection, o.american_odds, o.line, o.implied_prob
      FROM wc2026_odds_snapshots o
-     WHERE o.book_id = 0 AND o.fixture_id IN (${placeholders})
-     ORDER BY o.fixture_id, o.market, o.selection`,
-    fixtureIds
+     WHERE o.book_id = 0 AND o.match_id IN (${placeholders})
+     ORDER BY o.match_id, o.market, o.selection`,
+    matchIds
   );
 
-  const byFixture = {};
+  const byMatch = {};
   for (const row of dbRows) {
-    if (!byFixture[row.fixture_id]) byFixture[row.fixture_id] = [];
-    byFixture[row.fixture_id].push(row);
+    if (!byMatch[row.match_id]) byMatch[row.match_id] = [];
+    byMatch[row.match_id].push(row);
   }
 
   let allValid = true;
-  for (const [fid, rows] of Object.entries(byFixture)) {
-    const fix = FIXTURES.find(f => f.id === fid);
+  for (const [fid, rows] of Object.entries(byMatch)) {
+    const fix = MATCHES.find(f => f.id === fid);
     const get = (market, sel) => rows.find(r => r.market === market && r.selection === sel);
     const homeML = get('1X2', 'home');
     const awayML = get('1X2', 'away');
@@ -628,7 +628,7 @@ async function main() {
   }
 
   if (allValid) {
-    console.log(`\n${TAG} ✅✅✅ ALL 6 FIXTURES VALIDATED — LINES ARE CORRECT AND PUBLISHED`);
+    console.log(`\n${TAG} ✅✅✅ ALL 6 MATCHES VALIDATED — LINES ARE CORRECT AND PUBLISHED`);
   } else {
     console.error(`\n${TAG} ❌❌❌ VALIDATION FAILURES — REVIEW ABOVE`);
     process.exit(1);

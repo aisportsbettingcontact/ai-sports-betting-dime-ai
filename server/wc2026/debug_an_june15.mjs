@@ -2,7 +2,7 @@
  * debug_an_june15.mjs
  * ===================
  * Fetches raw AN API response for June 15 and dumps full team/odds structure
- * to determine correct home/away mapping for each fixture.
+ * to determine correct home/away mapping for each match.
  */
 import { config } from 'dotenv';
 config();

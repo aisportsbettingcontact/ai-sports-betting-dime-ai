@@ -1,6 +1,6 @@
 /**
  * seedDoubleChanceJune21.mjs
- * Seeds DK Double Chance (1X / X2) odds for all 4 June 21 WC2026 fixtures.
+ * Seeds DK Double Chance (1X / X2) odds for all 4 June 21 WC2026 matches.
  *
  * Double Chance market:
  *   home_draw (1X) = Home Win OR Draw
@@ -25,7 +25,7 @@
  *   Egypt or Draw (X2):        -700
  *
  * Logging format:
- *   [INPUT]  → fixture, odds provided
+ *   [INPUT]  → match, odds provided
  *   [STEP]   → insert operation
  *   [STATE]  → row details
  *   [OUTPUT] → rows written
@@ -41,9 +41,9 @@ const snapshotTs = new Date();
 
 // User-provided DK Double Chance odds
 // home_draw = 1X (Home Win OR Draw), away_draw = X2 (Away Win OR Draw)
-const FIXTURES = [
+const MATCHES = [
   {
-    fixtureId: 'wc26-g-039',
+    matchId: 'wc26-g-039',
     label: 'Spain vs Saudi Arabia',
     homeTeamId: 'esp',
     awayTeamId: 'ksa',
@@ -51,7 +51,7 @@ const FIXTURES = [
     away_draw: 500,     // Saudi Arabia or Draw (X2)
   },
   {
-    fixtureId: 'wc26-g-037',
+    matchId: 'wc26-g-037',
     label: 'Iran vs Belgium',
     homeTeamId: 'irn',
     awayTeamId: 'bel',
@@ -59,7 +59,7 @@ const FIXTURES = [
     away_draw: -1000,   // Belgium or Draw (X2)
   },
   {
-    fixtureId: 'wc26-g-040',
+    matchId: 'wc26-g-040',
     label: 'Cape Verde vs Uruguay',
     homeTeamId: 'cpv',
     awayTeamId: 'uru',
@@ -67,7 +67,7 @@ const FIXTURES = [
     away_draw: -1100,   // Uruguay or Draw (X2)
   },
   {
-    fixtureId: 'wc26-g-038',
+    matchId: 'wc26-g-038',
     label: 'New Zealand vs Egypt',
     homeTeamId: 'nzl',
     awayTeamId: 'egy',
@@ -82,34 +82,34 @@ function americanToImplied(odds) {
 }
 
 async function main() {
-  console.log('[INPUT] Seeding DK Double Chance odds for 4 June 21 WC2026 fixtures');
+  console.log('[INPUT] Seeding DK Double Chance odds for 4 June 21 WC2026 matches');
   console.log(`[INPUT] snapshotTs=${snapshotTs.toISOString()} bookId=${BOOK_ID_DK} market=${MARKET}`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-  // Delete existing DK double chance rows for these fixtures to avoid duplicates
-  const fixtureIds = FIXTURES.map(f => f.fixtureId);
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  // Delete existing DK double chance rows for these matches to avoid duplicates
+  const matchIds = MATCHES.map(f => f.matchId);
+  const placeholders = matchIds.map(() => '?').join(',');
   const [deleteResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${placeholders}) AND book_id = ? AND market = ?`,
-    [...fixtureIds, BOOK_ID_DK, MARKET]
+    `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${placeholders}) AND book_id = ? AND market = ?`,
+    [...matchIds, BOOK_ID_DK, MARKET]
   );
   console.log(`[STEP] Deleted ${deleteResult.affectedRows} existing DK double chance rows`);
 
   const rows = [];
-  for (const f of FIXTURES) {
-    console.log(`\n[STATE] ${f.fixtureId} — ${f.label}`);
+  for (const f of MATCHES) {
+    console.log(`\n[STATE] ${f.matchId} — ${f.label}`);
     console.log(`  [STATE] home(${f.homeTeamId}) 1X (home_draw): ${f.home_draw > 0 ? '+' : ''}${f.home_draw} → implied=${(americanToImplied(f.home_draw) * 100).toFixed(3)}%`);
     console.log(`  [STATE] away(${f.awayTeamId}) X2 (away_draw): ${f.away_draw > 0 ? '+' : ''}${f.away_draw} → implied=${(americanToImplied(f.away_draw) * 100).toFixed(3)}%`);
 
     rows.push({
-      fixtureId: f.fixtureId,
+      matchId: f.matchId,
       selection: 'home_draw',
       americanOdds: f.home_draw,
       impliedProb: americanToImplied(f.home_draw),
     });
     rows.push({
-      fixtureId: f.fixtureId,
+      matchId: f.matchId,
       selection: 'away_draw',
       americanOdds: f.away_draw,
       impliedProb: americanToImplied(f.away_draw),
@@ -120,28 +120,28 @@ async function main() {
   let inserted = 0;
   for (const row of rows) {
     await conn.execute(
-      `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, american_odds, implied_prob, is_closing)
+      `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, american_odds, implied_prob, is_closing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [row.fixtureId, snapshotTs, BOOK_ID_DK, MARKET, row.selection, row.americanOdds, row.impliedProb, false]
+      [row.matchId, snapshotTs, BOOK_ID_DK, MARKET, row.selection, row.americanOdds, row.impliedProb, false]
     );
     inserted++;
-    console.log(`[STEP] Inserted: fixture=${row.fixtureId} selection=${row.selection} odds=${row.americanOdds > 0 ? '+' : ''}${row.americanOdds}`);
+    console.log(`[STEP] Inserted: match=${row.matchId} selection=${row.selection} odds=${row.americanOdds > 0 ? '+' : ''}${row.americanOdds}`);
   }
 
   // Verify
   const [verifyRows] = await conn.execute(
-    `SELECT fixture_id, selection, american_odds FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${placeholders}) AND book_id = ? AND market = ?
-     ORDER BY fixture_id, selection`,
-    [...fixtureIds, BOOK_ID_DK, MARKET]
+    `SELECT match_id, selection, american_odds FROM wc2026_odds_snapshots
+     WHERE match_id IN (${placeholders}) AND book_id = ? AND market = ?
+     ORDER BY match_id, selection`,
+    [...matchIds, BOOK_ID_DK, MARKET]
   );
 
   console.log(`\n[VERIFY] DB state after insert:`);
   for (const r of verifyRows) {
-    console.log(`  ${r.fixture_id} | ${r.selection} | ${r.american_odds > 0 ? '+' : ''}${r.american_odds}`);
+    console.log(`  ${r.match_id} | ${r.selection} | ${r.american_odds > 0 ? '+' : ''}${r.american_odds}`);
   }
 
-  const expectedCount = FIXTURES.length * 2; // 2 rows per fixture (home_draw + away_draw)
+  const expectedCount = MATCHES.length * 2; // 2 rows per match (home_draw + away_draw)
   const pass = verifyRows.length === expectedCount && inserted === expectedCount;
   console.log(`\n[OUTPUT] Inserted ${inserted} rows`);
   console.log(`[VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} — expected=${expectedCount} actual=${verifyRows.length}`);

@@ -624,8 +624,8 @@ async function main() {
   if (!winner) hardFail('WINNER', `Cannot find VARIATIONS entry for winner id=${winnerResult.id}`);
   log('WINNER', 'SELECTED', `WINNER: ${winner.id} | composite=${fmt(winnerResult.composite,4)} | brier=${fmt(winnerResult.brier,6)} | n=${winnerResult.n} | xGW=${winner.xGW} xGOTW=${winner.xGOTW} smW=${winner.smW} psW=${winner.psW} xAW=${winner.xAW} spW=${winner.spW} possW=${winner.possW} convW=${winner.convW} rho=${winner.rho} pace=${winner.pace}`);
 
-  // ── Phase C: Jul 1 fixtures ───────────────────────────────────────────────
-  log('SECTION', 'PHASE_C', 'PHASE C — Project July 1 fixtures');
+  // ── Phase C: Jul 1 matchs ───────────────────────────────────────────────
+  log('SECTION', 'PHASE_C', 'PHASE C — Project July 1 matchs');
 
   const [jul1Fix] = await db.execute(`
     SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
@@ -636,7 +636,7 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'C1_FIX', `July 1 fixtures: ${jul1Fix.length}`);
+  log('INPUT', 'C1_FIX', `July 1 matchs: ${jul1Fix.length}`);
 
   const [bookOdds] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
@@ -672,7 +672,7 @@ async function main() {
     const homeCode = fix.home_code;
     const awayCode = fix.away_code;
 
-    log('SECTION', 'FIXTURE', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
+    log('SECTION', 'MATCH', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
 
     // C5: Role inversion pre-flight
     const espnRows = xgAll.filter(r =>
@@ -682,9 +682,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but match home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches match ✓`);
       }
     }
 

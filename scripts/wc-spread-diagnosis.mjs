@@ -2,7 +2,7 @@
  * wc-spread-diagnosis.mjs
  * ─────────────────────────────────────────────────────────────────────────────
  * DEEP DIAGNOSTIC: Trace the exact spread probability computation for all
- * June 24 fixtures to find the root cause of impossible spread odds.
+ * June 24 matches to find the root cause of impossible spread odds.
  *
  * KNOWN ANOMALY: SUI +136 ML but SUI -1.5 = -812 (impossible)
  * Expected: SUI at ~42% win prob → SUI -1.5 should be around +150 to +400
@@ -121,10 +121,10 @@ console.log(`${TAG} [OUTPUT] CORRECT awayProb (CAN +1.5) = ${correctAwayProb.toF
 console.log(`${TAG} [VERIFY] ${correctHomeProb < 0.5 ? 'PASS' : 'FAIL'}: SUI -1.5 should be underdog (prob < 0.5) since SUI ML is only +136`);
 console.log(`${TAG} [VERIFY] ${correctAwayProb > 0.5 ? 'PASS' : 'FAIL'}: CAN +1.5 should be favorite (prob > 0.5) since CAN is the spread favorite`);
 
-console.log(`\n${TAG} ═══ STEP 3: VERIFY ALL JUNE 24 FIXTURES ═══`);
+console.log(`\n${TAG} ═══ STEP 3: VERIFY ALL JUNE 24 MATCHES ═══`);
 
-// June 24 fixtures with correct lambdas (from reseed script output)
-const fixtures = [
+// June 24 matches with correct lambdas (from reseed script output)
+const matches = [
   { id: 'wc26-g-049', home: 'SUI', away: 'CAN', lH: 1.3689, lA: 1.0537, homeML: 136, awayML: 267, homeSpreadLine: -1.5, awaySpreadLine: 1.5, bookHomeSpread: 400, bookAwaySpread: -575 },
   { id: 'wc26-g-050', home: 'BIH', away: 'QAT', lH: 1.8972, lA: 0.5551, homeML: -217, awayML: 1033, homeSpreadLine: -1.5, awaySpreadLine: 1.5, bookHomeSpread: 110, bookAwaySpread: -140 },
   { id: 'wc26-g-051', home: 'SCO', away: 'BRA', lH: 0.5058, lA: 1.9485, homeML: 1225, awayML: -243, homeSpreadLine: 1.5, awaySpreadLine: -1.5, bookHomeSpread: -130, bookAwaySpread: 100 },
@@ -133,7 +133,7 @@ const fixtures = [
   { id: 'wc26-g-054', home: 'RSA', away: 'KOR', lH: 0.7292, lA: 1.7102, homeML: 605, awayML: -147, homeSpreadLine: 1.5, awaySpreadLine: -1.5, bookHomeSpread: -250, bookAwaySpread: 195 },
 ];
 
-for (const f of fixtures) {
+for (const f of matches) {
   const buggyH = computeAsianHandicapProb_BUGGY(f.lH, f.lA, f.homeSpreadLine, 'home');
   const buggyA = computeAsianHandicapProb_BUGGY(f.lH, f.lA, f.homeSpreadLine, 'away');
   const correctH = computeAsianHandicapProb_CORRECT(f.lH, f.lA, f.homeSpreadLine, 'home');

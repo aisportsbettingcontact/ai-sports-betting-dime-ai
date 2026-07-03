@@ -205,7 +205,7 @@ function main() {
     `  WC2026 v12.0-KO24 — BOOK vs MODEL DISPLAY ENGINE`,
     `  Session: ${SESSION_ID}`,
     `  Date: ${ts()}`,
-    `  Matches: Jul 1, 2026 — All 3 Round of 32 Fixtures`,
+    `  Matches: Jul 1, 2026 — All 3 Round of 32 Matchs`,
     `  Column schema: Match | Away | Home | Away to Advance | Home to Advance | Away ML | Draw | Home ML |`,
     `                 Away or Draw | Home or Draw | No Draw | Total | Over | Under |`,
     `                 Away Spread | Away Spread Odds | Home Spread | Home Spread Odds | BTTS Yes | BTTS No`,
@@ -221,7 +221,7 @@ function main() {
   L.banner('ENGINE', `Session: ${SESSION_ID}`);
   L.thick();
 
-  const FIXTURES = [
+  const MATCHS = [
     { id: 'wc26-r32-080', kickoff: '12:00 PM ET', venue: 'Atlanta' },
     { id: 'wc26-r32-081', kickoff: '4:00 PM ET',  venue: 'Philadelphia' },
     { id: 'wc26-r32-082', kickoff: '8:00 PM ET',  venue: 'Kansas City' },
@@ -243,10 +243,10 @@ function main() {
     L.warn('MODEL', 'JSON report not found — using embedded model values');
   }
 
-  // Validate all 3 fixtures have both book and model data
-  L.step('VALIDATE', 'Cross-validating book and model data completeness for all 3 fixtures');
+  // Validate all 3 matchs have both book and model data
+  L.step('VALIDATE', 'Cross-validating book and model data completeness for all 3 matchs');
   let allOk = true;
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const hasBook  = !!BOOK[f.id];
     const hasModel = !!getProjection(f.id);
     if (hasBook && hasModel) {
@@ -256,15 +256,15 @@ function main() {
       allOk = false;
     }
   }
-  if (allOk) L.pass('VALIDATE', 'All 3 fixtures have complete Book + Model data');
-  else L.warn('VALIDATE', 'Some fixtures missing data — will show available data only');
+  if (allOk) L.pass('VALIDATE', 'All 3 matchs have complete Book + Model data');
+  else L.warn('VALIDATE', 'Some matchs missing data — will show available data only');
 
   // ── SECTION 2: COMPUTE DERIVED MODEL MARKETS ───────────────────────────────
   L.section('DERIVE', 'SECTION 2 — DERIVING ALL MODEL MARKET ODDS FROM SIMULATION PROBABILITIES');
 
   const modelMarkets = {};
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const p = getProjection(f.id);
     const b = BOOK[f.id];
     if (!p || !b) continue;
@@ -397,14 +397,14 @@ function main() {
   const headerLine = COLUMNS.map(c => pad(c, COL_W[c])).join('│');
   const sepLine    = COLUMNS.map(c => '─'.repeat(COL_W[c])).join('┼');
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     const p = getProjection(f.id);
     if (!b || !m || !p) continue;
 
     L.thick();
-    L.output('TABLE', `FIXTURE: ${f.id} | ${b.Away} (Away) @ ${b.Home} (Home) | ${f.kickoff} | ${f.venue}`);
+    L.output('TABLE', `MATCH: ${f.id} | ${b.Away} (Away) @ ${b.Home} (Home) | ${f.kickoff} | ${f.venue}`);
     L.output('TABLE', `λH=${p.lambdaH.toFixed(4)} λA=${p.lambdaA.toFixed(4)} | Proj: ${p.projH.toFixed(3)}-${p.projA.toFixed(3)} | Total: ${p.projTotal.toFixed(3)} | Raw Spread: ${(p.projH-p.projA).toFixed(3)}`);
     L.output('TABLE', `ET/Pens: ${b.Home} ${(p.etH*100).toFixed(2)}% | ${b.Away} ${(p.etA*100).toFixed(2)}% | Winner: V5 — Player xG Dominant`);
     L.hr();
@@ -555,7 +555,7 @@ function main() {
   console.log(`${A.dim}${COLUMNS.map(c => '─'.repeat(COL_W[c])).join('┼')}${A.R}`);
   flog(COLUMNS.map(c => '─'.repeat(COL_W[c])).join('┼'));
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     if (!b || !m) continue;
@@ -599,7 +599,7 @@ function main() {
   L.thick();
   L.section('EDGES', 'SECTION 5 — EDGE SUMMARY: ALL MARKETS WHERE |MODEL - BOOK| ≥ 3pp');
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const m = modelMarkets[f.id];
     if (!b || !m) continue;
@@ -654,8 +654,8 @@ function main() {
   L.output('SUMMARY', 'Bugs fixed: #1 homeSpreadCov | #2 awaySpreadCov | #3 ET/Pens | #4 GROUND_TRUTH');
   L.output('SUMMARY', 'All probability sums validated: 1X2=1.0000 | Spread=1.0000 | Total=1.0000 | BTTS=1.0000');
   L.output('SUMMARY', '');
-  L.output('SUMMARY', 'FIXTURES PROCESSED:');
-  for (const f of FIXTURES) {
+  L.output('SUMMARY', 'MATCHS PROCESSED:');
+  for (const f of MATCHS) {
     const b = BOOK[f.id];
     const p = getProjection(f.id);
     if (b && p) L.output('SUMMARY', `  ${f.id}: ${b.Away} @ ${b.Home} | λH=${p.lambdaH.toFixed(4)} λA=${p.lambdaA.toFixed(4)} | Proj ${p.projH.toFixed(3)}-${p.projA.toFixed(3)}`);

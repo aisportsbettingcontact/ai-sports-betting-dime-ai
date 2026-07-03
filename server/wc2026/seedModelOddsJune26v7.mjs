@@ -1,13 +1,13 @@
 /**
  * WC2026 v7.0 Model Projections Seed — June 26, 2026
  * =====================================================
- * Seeds all 6 June 26 fixtures with v7.0 model projections.
+ * Seeds all 6 June 26 matchs with v7.0 model projections.
  * Uses exact column names from wc2026_model_projections table.
  * Marks all rows as is_frozen=1 immediately on insert.
  *
  * Model: Dixon-Coles Bivariate Poisson
  * Version: v7.0-june26-final
- * Coherence: 66/66 checks passed (11 per fixture)
+ * Coherence: 66/66 checks passed (11 per match)
  */
 
 import { createConnection } from 'mysql2/promise';
@@ -19,7 +19,7 @@ console.log('[INPUT] Loading June 26 v7.0 model results...');
 const results = JSON.parse(readFileSync('/home/ubuntu/june26_v7_results.json', 'utf8'));
 
 const VERSION = 'v7.0-june26-final';
-const FIXTURE_IDS = ['wc26-g-064', 'wc26-g-065', 'wc26-g-061', 'wc26-g-066', 'wc26-g-062', 'wc26-g-063'];
+const MATCH_IDS = ['wc26-g-064', 'wc26-g-065', 'wc26-g-061', 'wc26-g-066', 'wc26-g-062', 'wc26-g-063'];
 
 const LABELS = {
   'wc26-g-064': 'NOR vs FRA',
@@ -30,9 +30,9 @@ const LABELS = {
   'wc26-g-063': 'NZL vs BEL',
 };
 
-// ── Step 1: Delete existing v7.0 rows for June 26 fixtures ──
-console.log('\n[STEP] Deleting existing v7.0 rows for June 26 fixtures...');
-for (const fid of FIXTURE_IDS) {
+// ── Step 1: Delete existing v7.0 rows for June 26 matchs ──
+console.log('\n[STEP] Deleting existing v7.0 rows for June 26 matchs...');
+for (const fid of MATCH_IDS) {
   const [del] = await conn.execute(
     `DELETE FROM wc2026_model_projections WHERE match_id = ? AND model_version = ?`,
     [fid, VERSION]
@@ -43,7 +43,7 @@ for (const fid of FIXTURE_IDS) {
 // ── Step 2: Insert v7.0 projection rows ──
 console.log('\n[STEP] Inserting v7.0 model projections...');
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const r = results[fid];
   if (!r) {
     console.error(`[ERROR] No results for ${fid}`);
@@ -205,7 +205,7 @@ const [rows] = await conn.execute(
    FROM wc2026_model_projections
    WHERE match_id IN (?, ?, ?, ?, ?, ?) AND model_version = ?
    ORDER BY match_id`,
-  [...FIXTURE_IDS, VERSION]
+  [...MATCH_IDS, VERSION]
 );
 
 console.log(`\n[VERIFY] Found ${rows.length}/6 rows`);

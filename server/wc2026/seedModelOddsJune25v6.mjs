@@ -11,7 +11,7 @@
  * - NEW: Bayesian shrinkage (30%) toward tournament mean per team (1.491)
  *   lambda_final = 0.7 * lambda_raw + 0.3 * 1.491
  *   This reduces over-projection and pulls extreme lambdas toward the tournament center
- * - 1,000,000 Monte Carlo simulations per fixture
+ * - 1,000,000 Monte Carlo simulations per match
  * - Spread cover probabilities: simulation-derived (not heuristic)
  * - All American odds: Math.round() applied — zero float precision errors
  * - Lambda cap: 4.0 per team (V04 optimal)
@@ -305,11 +305,11 @@ function modelLean(pHome, pDraw, pAway, homeAbbr, awayAbbr) {
   return 'DRAW';
 }
 
-// ─── FIXTURES ────────────────────────────────────────────────────────────────
+// ─── MATCHS ────────────────────────────────────────────────────────────────
 // Orientation: home_team_id / away_team_id as stored in DB after orientation fixes
 // wc26-g-059: JPN=home, SWE=away (fixed from original SWE=home)
 // wc26-g-060: TUN=home, NED=away (fixed from original NED=home)
-const FIXTURES = [
+const MATCHS = [
   { id: 'wc26-g-057', homeAbbr: 'CUW', awayAbbr: 'CIV', spreadLine: -2.5 },
   { id: 'wc26-g-058', homeAbbr: 'ECU', awayAbbr: 'GER', spreadLine:  1.5 },
   { id: 'wc26-g-059', homeAbbr: 'JPN', awayAbbr: 'SWE', spreadLine: -1.5 },
@@ -333,9 +333,9 @@ console.log('');
 
 const results = [];
 
-for (const fix of FIXTURES) {
+for (const fix of MATCHS) {
   console.log(`\n${'─'.repeat(65)}`);
-  console.log(`[FIXTURE] ${fix.id}: ${fix.homeAbbr} (home) vs ${fix.awayAbbr} (away)`);
+  console.log(`[MATCH] ${fix.id}: ${fix.homeAbbr} (home) vs ${fix.awayAbbr} (away)`);
   console.log(`[INPUT]   spreadLine=${fix.spreadLine} (home perspective)`);
 
   // Step 1: Compute lambdas (with tournament discount + Bayesian shrinkage)
@@ -438,7 +438,7 @@ console.log('══════════════════════�
 console.log('  DATABASE INSERTION');
 console.log('═══════════════════════════════════════════════════════════════════');
 
-// Delete ALL existing rows for these fixtures (v5, v4, v3, etc.) to ensure clean state
+// Delete ALL existing rows for these matchs (v5, v4, v3, etc.) to ensure clean state
 for (const r of results) {
   const [delResult] = await db.execute(
     `DELETE FROM wc2026_model_projections WHERE match_id = ?`,
@@ -530,7 +530,7 @@ for (const r of results) {
 for (const r of results) {
   const { fix, sim } = r;
 
-  // Delete old model rows for this fixture
+  // Delete old model rows for this match
   const [delSnap] = await db.execute(
     `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 0`,
     [fix.id]
@@ -578,23 +578,23 @@ const [projRows] = await db.execute(
           btts_prob,
           model_lean, model_version, modeled_at
    FROM wc2026_model_projections
-   WHERE match_id IN (${FIXTURES.map(() => '?').join(',')})
+   WHERE match_id IN (${MATCHS.map(() => '?').join(',')})
    ORDER BY modeled_at DESC`,
-  FIXTURES.map(f => f.id)
+  MATCHS.map(f => f.id)
 );
 
-// Get latest row per fixture
-const latestByFixture = {};
+// Get latest row per match
+const latestByMatch = {};
 for (const row of projRows) {
-  if (!latestByFixture[row.match_id]) {
-    latestByFixture[row.match_id] = row;
+  if (!latestByMatch[row.match_id]) {
+    latestByMatch[row.match_id] = row;
   }
 }
 
 console.log('\n[LAYER 1] Projection row count and version:');
 let allVerifyPass = true;
-for (const fix of FIXTURES) {
-  const row = latestByFixture[fix.id];
+for (const fix of MATCHS) {
+  const row = latestByMatch[fix.id];
   if (!row) {
     console.error(`  [FAIL] ${fix.id}: NO ROW FOUND`);
     allVerifyPass = false;
@@ -605,18 +605,18 @@ for (const fix of FIXTURES) {
   if (!versionOk) allVerifyPass = false;
 }
 
-// Layer 2: Market completeness (12 snapshot rows per fixture)
-console.log('\n[LAYER 2] Odds snapshot row count (12 per fixture):');
+// Layer 2: Market completeness (12 snapshot rows per match)
+console.log('\n[LAYER 2] Odds snapshot row count (12 per match):');
 const [snapRows] = await db.execute(
   `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots
-   WHERE match_id IN (${FIXTURES.map(() => '?').join(',')}) AND book_id = 0
+   WHERE match_id IN (${MATCHS.map(() => '?').join(',')}) AND book_id = 0
    GROUP BY match_id`,
-  FIXTURES.map(f => f.id)
+  MATCHS.map(f => f.id)
 );
-const snapByFixture = {};
-for (const row of snapRows) snapByFixture[row.match_id] = row.cnt;
-for (const fix of FIXTURES) {
-  const cnt = snapByFixture[fix.id] || 0;
+const snapByMatch = {};
+for (const row of snapRows) snapByMatch[row.match_id] = row.cnt;
+for (const fix of MATCHS) {
+  const cnt = snapByMatch[fix.id] || 0;
   const pass = cnt === 12;
   console.log(`  [${pass ? 'PASS' : 'FAIL'}] ${fix.id}: ${cnt}/12 model snapshot rows`);
   if (!pass) allVerifyPass = false;
@@ -624,8 +624,8 @@ for (const fix of FIXTURES) {
 
 // Layer 3: Probability integrity
 console.log('\n[LAYER 3] Probability integrity (1X2 sum, draw floor):');
-for (const fix of FIXTURES) {
-  const row = latestByFixture[fix.id];
+for (const fix of MATCHS) {
+  const row = latestByMatch[fix.id];
   if (!row) continue;
   const probSum = parseFloat(row.home_win_prob) + parseFloat(row.draw_prob) + parseFloat(row.away_win_prob);
   const drawFloorOk = parseFloat(row.draw_prob) >= DRAW_FLOOR - 0.001;
@@ -637,8 +637,8 @@ for (const fix of FIXTURES) {
 
 // Layer 4: Projection validity
 console.log('\n[LAYER 4] Projection validity (ML, spread, total, lean):');
-for (const fix of FIXTURES) {
-  const row = latestByFixture[fix.id];
+for (const fix of MATCHS) {
+  const row = latestByMatch[fix.id];
   if (!row) continue;
   const probSum = parseFloat(row.home_win_prob) + parseFloat(row.draw_prob) + parseFloat(row.away_win_prob);
   const drawFloorOk = parseFloat(row.draw_prob) >= DRAW_FLOOR - 0.001;

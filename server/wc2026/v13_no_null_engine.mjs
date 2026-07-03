@@ -13,7 +13,7 @@
  *   C2 — Bayesian shrinkage: only if n<3 GS matches, using REAL per-match xG
  *   C3 — Fallback lambda: HARD_FAIL — no confederation mean, no hardcoded 0.80
  *   C4 — Player goal assertion: post-aggregation assert vs official score
- *   C5 — Role inversion pre-flight: assert homeTeamAbbrev matches fixture
+ *   C5 — Role inversion pre-flight: assert homeTeamAbbrev matches match
  *   C6 — possW/convW: multiplicative adjustments, not additive
  *   C7 — xGOT discount: empirical ratio from real WC2026 GS data
  *   C8 — Weight sum assertion: core 6 weights must sum to 1.0 ±0.001
@@ -475,7 +475,7 @@ async function main() {
     log('STATE', 'KO_MATCH', `  ${m.matchId} ${m.homeTeamAbbrev} ${m.homeScore}-${m.awayScore} ${m.awayTeamAbbrev}`);
   });
 
-  // A7: July 1 fixtures
+  // A7: July 1 matchs
   const [jul1Fix] = await db.execute(`
     SELECT f.match_id, f.espn_event_id, f.home_team_id, f.away_team_id,
            f.match_date, f.kickoff_utc,
@@ -487,9 +487,9 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'A7_FIX', `July 1 fixtures: ${jul1Fix.length}`);
+  log('INPUT', 'A7_FIX', `July 1 matchs: ${jul1Fix.length}`);
   jul1Fix.forEach(f => {
-    log('STATE', 'FIXTURE', `  ${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
+    log('STATE', 'MATCH', `  ${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
   });
 
   // C7: Compute empirical xGOT/xG ratio from real GS data
@@ -549,10 +549,10 @@ async function main() {
     const homeCode = fix.home_code;
     const awayCode = fix.away_code;
 
-    log('SECTION', 'FIXTURE', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
+    log('SECTION', 'MATCH', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
 
     // C5: Role inversion pre-flight
-    // Verify ESPN xG rows have correct home/away orientation for this fixture
+    // Verify ESPN xG rows have correct home/away orientation for this match
     const espnRows = xgAll.filter(r =>
       r.matchRound === 'round-of-32' &&
       ((r.homeTeamAbbrev === homeCode && r.awayTeamAbbrev === awayCode) ||
@@ -560,9 +560,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but match home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches match ✓`);
       }
     }
 

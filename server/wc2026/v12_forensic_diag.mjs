@@ -740,7 +740,7 @@ async function main() {
   L.bug('RCA', `  Impact:   For BEL(λ=${lH_BEL.toFixed(3)}) vs SEN(λ=${lA_SEN.toFixed(3)}), ET prob should be ~${(lH_BEL/(lH_BEL+lA_SEN)*100).toFixed(1)}% BEL not 50%`);
   L.bug('RCA', `  Fix:      Strength-weighted ET with 70% regression to mean`);
 
-  L.bug('RCA', 'BUG #4: GROUND_TRUTH in v12 engine has WRONG fixture mapping');
+  L.bug('RCA', 'BUG #4: GROUND_TRUTH in v12 engine has WRONG match mapping');
   L.bug('RCA', `  Location: v12_pure_data_engine.mjs lines 124-125`);
   L.bug('RCA', `  Current:  760488 = GER vs PAR, 760489 = NED vs MAR`);
   L.bug('RCA', `  Actual:   760488 = NED vs MAR (1-1, MAR wins pens), 760489 = GER vs PAR (1-1, PAR wins pens)`);
@@ -791,7 +791,7 @@ async function main() {
   L.thick();
   L.section('PROJ', 'SECTION 8: ALL 3 JUL 1 MATCHES — CORRECT PROJECTIONS (BUGS FIXED)');
 
-  const JUL1_FIXTURES = [
+  const JUL1_MATCHS = [
     { fid:'wc26-r32-080', home:'ENG', away:'COD', kickoff:'12:00 PM ET', venue:'Atlanta',
       homeMl:-345, drawMl:400, awayMl:1100,
       spread:-1.5, homeSpreadOdds:-111, awaySpreadOdds:-105,
@@ -811,7 +811,7 @@ async function main() {
 
   const finalResults = [];
 
-  for (const f of JUL1_FIXTURES) {
+  for (const f of JUL1_MATCHS) {
     L.divider();
     L.state('PROJ', `Processing ${f.fid}: ${f.away} (Away) @ ${f.home} (Home) | ${f.kickoff} | ${f.venue}`);
 
@@ -968,7 +968,7 @@ async function main() {
   L.output('SUMMARY', '  BUG #1: homeSpreadCov condition inverted (h-a>spread where spread=-1.5 → computes P(home doesn\'t lose by 2+) instead of P(home wins by 2+))');
   L.output('SUMMARY', '  BUG #2: awaySpreadCov condition wrong (a-h>1.5 → P(away wins by 2+) instead of 1-homeSpreadCov)');
   L.output('SUMMARY', '  BUG #3: ET/Pens 50/50 placeholder ignores team strength');
-  L.output('SUMMARY', '  BUG #4: GROUND_TRUTH fixture mapping wrong (760488/760489 swapped)');
+  L.output('SUMMARY', '  BUG #4: GROUND_TRUTH match mapping wrong (760488/760489 swapped)');
   L.output('SUMMARY', '');
   L.output('SUMMARY', 'QUANTIFIED IMPACT ON BEL vs SEN:');
   L.output('SUMMARY', `  Home Spread -1.5: BUGGY=${prob2ml(sim_BEL.homeSpreadCov_CURRENT)} vs CORRECT=${prob2ml(sim_BEL.homeSpreadCov_CORRECT)} (book=-435)`);

@@ -1,6 +1,6 @@
 /**
  * seedDkOddsJune23.mjs
- * Seeds DraftKings (book_id=68) odds for all 4 June 23, 2026 WC Group Stage fixtures.
+ * Seeds DraftKings (book_id=68) odds for all 4 June 23, 2026 WC Group Stage matches.
  *
  * ORIENTATION AUDIT (critical — confirmed from DB query):
  *   wc26-g-045: Uzbekistan (HOME) vs Portugal (AWAY)   — user input: Uzbekistan ML +1800 / Portugal ML -650 ✅ HOME=UZB, AWAY=POR
@@ -9,7 +9,7 @@
  *                                                          → home_ml = +550 (Panama), away_ml = -205 (Croatia)
  *   wc26-g-046: DR Congo (HOME) vs Colombia (AWAY)      — user input: DR Congo ML +550 / Colombia ML -180 ✅ HOME=COD, AWAY=COL
  *
- * MARKETS SEEDED PER FIXTURE:
+ * MARKETS SEEDED PER MATCH:
  *   1X2 market:
  *     - selection='home'  → home team ML
  *     - selection='draw'  → draw odds
@@ -21,7 +21,7 @@
  *     - selection='over'  → over line + over odds
  *     - selection='under' → under odds (line same as over)
  *
- * Total rows: 4 fixtures × 7 rows = 28 rows
+ * Total rows: 4 matches × 7 rows = 28 rows
  */
 
 import mysql from 'mysql2/promise';
@@ -31,11 +31,11 @@ dotenv.config();
 const BOOK_ID = 68; // DraftKings
 const NOW_TS = new Date().toISOString().slice(0, 19).replace('T', ' '); // MySQL DATETIME format
 
-// ─── FIXTURE DEFINITIONS ──────────────────────────────────────────────────────
-// Each fixture: { id, homeTeam, awayTeam, markets }
+// ─── MATCH DEFINITIONS ──────────────────────────────────────────────────────
+// Each match: { id, homeTeam, awayTeam, markets }
 // All odds/lines sourced directly from user-provided DK screenshot values.
 // Orientation verified against DB: home_team_id = first team listed in DB.
-const FIXTURES = [
+const MATCHES = [
   {
     id: 'wc26-g-045',
     homeTeam: 'Uzbekistan',
@@ -90,30 +90,30 @@ function impliedProb(americanOdds) {
   if (americanOdds < 0) return parseFloat((Math.abs(americanOdds) / (Math.abs(americanOdds) + 100)).toFixed(5));
   return parseFloat((100 / (americanOdds + 100)).toFixed(5));
 }
-function buildRows(fixture) {
-  const { id, homeTeam, awayTeam, markets } = fixture;
+function buildRows(match) {
+  const { id, homeTeam, awayTeam, markets } = match;
   const rows = [];
 
   // 1X2 — 3 rows
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: '1X2', selection: 'home',  american_odds: markets['1X2'].home, line: null, implied_prob: impliedProb(markets['1X2'].home), snapshot_ts: NOW_TS, is_closing: 0 });
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: '1X2', selection: 'draw',  american_odds: markets['1X2'].draw, line: null, implied_prob: impliedProb(markets['1X2'].draw), snapshot_ts: NOW_TS, is_closing: 0 });
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: '1X2', selection: 'away',  american_odds: markets['1X2'].away, line: null, implied_prob: impliedProb(markets['1X2'].away), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: '1X2', selection: 'home',  american_odds: markets['1X2'].home, line: null, implied_prob: impliedProb(markets['1X2'].home), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: '1X2', selection: 'draw',  american_odds: markets['1X2'].draw, line: null, implied_prob: impliedProb(markets['1X2'].draw), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: '1X2', selection: 'away',  american_odds: markets['1X2'].away, line: null, implied_prob: impliedProb(markets['1X2'].away), snapshot_ts: NOW_TS, is_closing: 0 });
 
   // DOUBLE_CHANCE — 2 rows
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: 'DOUBLE_CHANCE', selection: 'home_draw', american_odds: markets.DOUBLE_CHANCE.home_draw, line: null, implied_prob: impliedProb(markets.DOUBLE_CHANCE.home_draw), snapshot_ts: NOW_TS, is_closing: 0 });
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: 'DOUBLE_CHANCE', selection: 'away_draw', american_odds: markets.DOUBLE_CHANCE.away_draw, line: null, implied_prob: impliedProb(markets.DOUBLE_CHANCE.away_draw), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: 'DOUBLE_CHANCE', selection: 'home_draw', american_odds: markets.DOUBLE_CHANCE.home_draw, line: null, implied_prob: impliedProb(markets.DOUBLE_CHANCE.home_draw), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: 'DOUBLE_CHANCE', selection: 'away_draw', american_odds: markets.DOUBLE_CHANCE.away_draw, line: null, implied_prob: impliedProb(markets.DOUBLE_CHANCE.away_draw), snapshot_ts: NOW_TS, is_closing: 0 });
 
   // TOTAL — 2 rows
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: 'TOTAL', selection: 'over',  american_odds: markets.TOTAL.over,  line: markets.TOTAL.line, implied_prob: impliedProb(markets.TOTAL.over), snapshot_ts: NOW_TS, is_closing: 0 });
-  rows.push({ fixture_id: id, book_id: BOOK_ID, market: 'TOTAL', selection: 'under', american_odds: markets.TOTAL.under, line: markets.TOTAL.line, implied_prob: impliedProb(markets.TOTAL.under), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: 'TOTAL', selection: 'over',  american_odds: markets.TOTAL.over,  line: markets.TOTAL.line, implied_prob: impliedProb(markets.TOTAL.over), snapshot_ts: NOW_TS, is_closing: 0 });
+  rows.push({ match_id: id, book_id: BOOK_ID, market: 'TOTAL', selection: 'under', american_odds: markets.TOTAL.under, line: markets.TOTAL.line, implied_prob: impliedProb(markets.TOTAL.under), snapshot_ts: NOW_TS, is_closing: 0 });
 
   return rows;
 }
 
 // ─── VALIDATION ───────────────────────────────────────────────────────────────
-function validateRows(fixture, rows) {
+function validateRows(match, rows) {
   const errors = [];
-  const { id, homeTeam, awayTeam, markets } = fixture;
+  const { id, homeTeam, awayTeam, markets } = match;
 
   // Check row count
   if (rows.length !== 7) errors.push(`Expected 7 rows, got ${rows.length}`);
@@ -152,71 +152,71 @@ async function main() {
   let totalInserted = 0;
   let totalErrors = 0;
 
-  for (const fixture of FIXTURES) {
+  for (const match of MATCHES) {
     console.log(`\n${'─'.repeat(70)}`);
-    console.log(`[STEP] Processing fixture: ${fixture.id}`);
-    console.log(`[INPUT] Home: ${fixture.homeTeam} | Away: ${fixture.awayTeam}`);
-    console.log(`[INPUT] 1X2: home=${fixture.markets['1X2'].home} / draw=${fixture.markets['1X2'].draw} / away=${fixture.markets['1X2'].away}`);
-    console.log(`[INPUT] DC: home_draw=${fixture.markets.DOUBLE_CHANCE.home_draw} / away_draw=${fixture.markets.DOUBLE_CHANCE.away_draw}`);
-    console.log(`[INPUT] TOTAL: line=${fixture.markets.TOTAL.line} | over=${fixture.markets.TOTAL.over} / under=${fixture.markets.TOTAL.under}`);
+    console.log(`[STEP] Processing match: ${match.id}`);
+    console.log(`[INPUT] Home: ${match.homeTeam} | Away: ${match.awayTeam}`);
+    console.log(`[INPUT] 1X2: home=${match.markets['1X2'].home} / draw=${match.markets['1X2'].draw} / away=${match.markets['1X2'].away}`);
+    console.log(`[INPUT] DC: home_draw=${match.markets.DOUBLE_CHANCE.home_draw} / away_draw=${match.markets.DOUBLE_CHANCE.away_draw}`);
+    console.log(`[INPUT] TOTAL: line=${match.markets.TOTAL.line} | over=${match.markets.TOTAL.over} / under=${match.markets.TOTAL.under}`);
 
     // Build rows
-    const rows = buildRows(fixture);
+    const rows = buildRows(match);
     console.log(`[STATE] Built ${rows.length} rows for insertion`);
 
     // Pre-insert validation
-    const validationErrors = validateRows(fixture, rows);
+    const validationErrors = validateRows(match, rows);
     if (validationErrors.length > 0) {
-      console.error(`[ERROR] Pre-insert validation FAILED for ${fixture.id}:`);
+      console.error(`[ERROR] Pre-insert validation FAILED for ${match.id}:`);
       validationErrors.forEach(e => console.error(`  ✗ ${e}`));
       totalErrors += validationErrors.length;
       continue;
     }
     console.log(`[VERIFY] Pre-insert validation PASSED — all ${rows.length} rows structurally correct`);
 
-    // Delete existing rows for this fixture+book to avoid duplicates
+    // Delete existing rows for this match+book to avoid duplicates
     const [delResult] = await conn.execute(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [fixture.id, BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [match.id, BOOK_ID]
     );
-    console.log(`[STEP] Cleared ${delResult.affectedRows} existing rows for ${fixture.id} book_id=${BOOK_ID}`);
+    console.log(`[STEP] Cleared ${delResult.affectedRows} existing rows for ${match.id} book_id=${BOOK_ID}`);
 
     // Insert all 7 rows
     for (const row of rows) {
       const [result] = await conn.execute(
         `INSERT INTO wc2026_odds_snapshots 
-          (fixture_id, book_id, market, selection, american_odds, line, implied_prob, snapshot_ts, is_closing)
+          (match_id, book_id, market, selection, american_odds, line, implied_prob, snapshot_ts, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [row.fixture_id, row.book_id, row.market, row.selection, row.american_odds, row.line, row.implied_prob, row.snapshot_ts, row.is_closing]
+        [row.match_id, row.book_id, row.market, row.selection, row.american_odds, row.line, row.implied_prob, row.snapshot_ts, row.is_closing]
       );
-      console.log(`[OUTPUT] Inserted: ${row.fixture_id} | ${row.market} | ${row.selection} | odds=${row.american_odds} | line=${row.line ?? 'N/A'} → insertId=${result.insertId}`);
+      console.log(`[OUTPUT] Inserted: ${row.match_id} | ${row.market} | ${row.selection} | odds=${row.american_odds} | line=${row.line ?? 'N/A'} → insertId=${result.insertId}`);
       totalInserted++;
     }
-    console.log(`[VERIFY] ${fixture.id} — all 7 rows inserted ✅`);
+    console.log(`[VERIFY] ${match.id} — all 7 rows inserted ✅`);
   }
 
   // ─── POST-INSERT AUDIT ───────────────────────────────────────────────────────
   console.log(`\n${'═'.repeat(70)}`);
   console.log('[STEP] Running post-insert audit — reading back all seeded rows...');
 
-  for (const fixture of FIXTURES) {
+  for (const match of MATCHES) {
     const [rows] = await conn.execute(
       `SELECT market, selection, american_odds, line 
        FROM wc2026_odds_snapshots 
-       WHERE fixture_id = ? AND book_id = ?
+       WHERE match_id = ? AND book_id = ?
        ORDER BY market, selection`,
-      [fixture.id, BOOK_ID]
+      [match.id, BOOK_ID]
     );
 
-    console.log(`\n[AUDIT] ${fixture.id} | ${fixture.homeTeam} (H) vs ${fixture.awayTeam} (A) — ${rows.length} rows in DB`);
+    console.log(`\n[AUDIT] ${match.id} | ${match.homeTeam} (H) vs ${match.awayTeam} (A) — ${rows.length} rows in DB`);
     let auditPass = true;
 
     for (const row of rows) {
       let expected = null;
-      if (row.market === '1X2') expected = fixture.markets['1X2'][row.selection];
-      else if (row.market === 'DOUBLE_CHANCE') expected = fixture.markets.DOUBLE_CHANCE[row.selection];
-      else if (row.market === 'TOTAL' && row.selection === 'over') expected = fixture.markets.TOTAL.over;
-      else if (row.market === 'TOTAL' && row.selection === 'under') expected = fixture.markets.TOTAL.under;
+      if (row.market === '1X2') expected = match.markets['1X2'][row.selection];
+      else if (row.market === 'DOUBLE_CHANCE') expected = match.markets.DOUBLE_CHANCE[row.selection];
+      else if (row.market === 'TOTAL' && row.selection === 'over') expected = match.markets.TOTAL.over;
+      else if (row.market === 'TOTAL' && row.selection === 'under') expected = match.markets.TOTAL.under;
 
       const match = expected !== null && row.american_odds === expected;
       const lineCheck = row.market === 'TOTAL' ? ` | line=${row.line}` : '';
@@ -226,9 +226,9 @@ async function main() {
     }
 
     if (auditPass && rows.length === 7) {
-      console.log(`[VERIFY] ${fixture.id} AUDIT PASSED — 7/7 rows correct ✅`);
+      console.log(`[VERIFY] ${match.id} AUDIT PASSED — 7/7 rows correct ✅`);
     } else {
-      console.error(`[ERROR] ${fixture.id} AUDIT FAILED — ${rows.length} rows, mismatches detected ❌`);
+      console.error(`[ERROR] ${match.id} AUDIT FAILED — ${rows.length} rows, mismatches detected ❌`);
       totalErrors++;
     }
   }

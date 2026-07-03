@@ -409,7 +409,7 @@ async function main() {
      ORDER BY match_date, kickoff_utc`
   );
   const [bt2026raw] = await conn.execute(
-    `SELECT f.fixture_id as id, 2026 as tournament_year,
+    `SELECT f.match_id as id, 2026 as tournament_year,
             f.match_date, f.home_team_id as home_team, f.away_team_id as away_team,
             f.home_score, f.away_score,
             CASE WHEN f.home_score > f.away_score THEN 'H'

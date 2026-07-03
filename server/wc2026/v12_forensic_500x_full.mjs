@@ -154,8 +154,8 @@ async function main() {
 
   const FIDS = Object.keys(ACTUAL);
 
-  // Pull fixtures
-  const [fixtures] = await conn.query(`
+  // Pull matchs
+  const [matchs] = await conn.query(`
     SELECT f.match_id, f.espn_event_id, f.match_date, f.kickoff_utc,
            f.home_score, f.away_score, f.status, f.attendance,
            th.name as home_name, th.fifa_code as home_code,
@@ -166,8 +166,8 @@ async function main() {
     WHERE f.match_id IN (?) ORDER BY f.match_date, f.kickoff_utc
   `, [FIDS]);
 
-  const espnIds = fixtures.map(f => f.espn_event_id).filter(Boolean);
-  log('INPUT', `Fixtures: ${fixtures.length} | ESPN IDs: ${espnIds.join(',')}`);
+  const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
+  log('INPUT', `Matchs: ${matchs.length} | ESPN IDs: ${espnIds.join(',')}`);
 
   // Pull all ESPN tables
   const [espnMatches] = await conn.query(`SELECT * FROM wc2026_espn_matches WHERE matchId IN (?)`, [espnIds]);
@@ -191,7 +191,7 @@ async function main() {
   const lambdaBiases = { home: [], away: [] };
 
   for (const fid of FIDS) {
-    const f = fixtures.find(x => x.match_id === fid);
+    const f = matchs.find(x => x.match_id === fid);
     const actual = ACTUAL[fid];
     const lam = V11_LAMBDAS[fid];
     const model = modelRows.find(r => r.match_id === fid);

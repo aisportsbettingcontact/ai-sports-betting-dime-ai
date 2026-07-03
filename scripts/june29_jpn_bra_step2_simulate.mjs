@@ -3,7 +3,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * STEP 2 OF 2 — 1M BAYESIAN POISSON + FIFA ELO PRIOR SIMULATION ENGINE
  * Match: Japan (Away) vs Brazil (Home) — Round of 32
- * Fixture ID: wc26-r32-074
+ * Match ID: wc26-r32-074
  * Date: June 29, 2026 | Kickoff: 1:00 PM ET = 17:00 UTC
  * Model Version: v7.2-R32
  *
@@ -138,8 +138,8 @@ const ELO = {
   JPN: 1870,
 };
 
-// Fixture definition
-const FIXTURE = {
+// Match definition
+const MATCH_DATA = {
   id: 'wc26-r32-074',
   homeCode: 'BRA', homeName: 'Brazil',
   awayCode: 'JPN', awayName: 'Japan',
@@ -235,7 +235,7 @@ log('INIT', `Node version: ${process.version} | PID: ${process.pid}`);
 banner('PHASE A — BOOK-IMPLIED PROBABILITY ANALYSIS (DraftKings)');
 logPhase('Decompose all DK book lines into no-vig implied probabilities');
 
-const b = FIXTURE.book;
+const b = MATCH_DATA.book;
 
 logStep('Compute 1X2 no-vig probabilities');
 const rawH_ml = americanToImplied(b.homeML);
@@ -294,8 +294,8 @@ logState(`Raw no-draw implied: ${pct(rawNoDraw)} (this is the 2-way no-draw mark
 banner('PHASE B — ELO PRIOR + LAMBDA COMPUTATION');
 logPhase('Compute Bayesian Poisson lambdas from FIFA Elo ratings');
 
-const eH = ELO[FIXTURE.homeCode];
-const eA = ELO[FIXTURE.awayCode];
+const eH = ELO[MATCH_DATA.homeCode];
+const eA = ELO[MATCH_DATA.awayCode];
 const eloDiff = (eH - eA) / 400;
 const lH_raw = PARAMS.baseH * Math.exp(eloDiff * PARAMS.ss);
 const lA_raw = PARAMS.baseA * Math.exp(-eloDiff * PARAMS.ss);
@@ -303,14 +303,14 @@ const lH = Math.max(PARAMS.lambdaMin, Math.min(PARAMS.lambdaMax, lH_raw));
 const lA = Math.max(PARAMS.lambdaMin, Math.min(PARAMS.lambdaMax, lA_raw));
 
 logStep('ELO difference and lambda derivation');
-logInput(`ELO: ${FIXTURE.homeCode}=${eH} | ${FIXTURE.awayCode}=${eA}`);
+logInput(`ELO: ${MATCH_DATA.homeCode}=${eH} | ${MATCH_DATA.awayCode}=${eA}`);
 logState(`eloDiff = (${eH} - ${eA}) / 400 = ${eloDiff.toFixed(6)}`);
 logState(`lH_raw = ${PARAMS.baseH} × exp(${eloDiff.toFixed(6)} × ${PARAMS.ss}) = ${lH_raw.toFixed(6)}`);
 logState(`lA_raw = ${PARAMS.baseA} × exp(-${eloDiff.toFixed(6)} × ${PARAMS.ss}) = ${lA_raw.toFixed(6)}`);
 logState(`lH (clamped [${PARAMS.lambdaMin}, ${PARAMS.lambdaMax}]) = ${lH.toFixed(6)}`);
 logState(`lA (clamped [${PARAMS.lambdaMin}, ${PARAMS.lambdaMax}]) = ${lA.toFixed(6)}`);
 logState(`λTotal = ${(lH + lA).toFixed(6)} | λRatio H/A = ${(lH/lA).toFixed(4)}`);
-logState(`spreadFavTeam = ${FIXTURE.spreadFavTeam} → Brazil (HOME) is -1.5 favorite`);
+logState(`spreadFavTeam = ${MATCH_DATA.spreadFavTeam} → Brazil (HOME) is -1.5 favorite`);
 
 // Sanity check: Brazil should have higher lambda (home + ELO advantage)
 if (lH > lA) {
@@ -349,7 +349,7 @@ logState(`Sum of grid (should ≈ 1.0): ${(analyticH+analyticD+analyticA).toFixe
 
 subBanner('TOP 10 SCORELINES BY PROBABILITY (ANALYTICAL)');
 for (const s of topScoresAnalytic) {
-  log('SCORE', `  ${FIXTURE.homeCode} ${s.h}-${s.a} ${FIXTURE.awayCode}  →  ${pct(s.p, 4)}`);
+  log('SCORE', `  ${MATCH_DATA.homeCode} ${s.h}-${s.a} ${MATCH_DATA.awayCode}  →  ${pct(s.p, 4)}`);
 }
 
 // ── PHASE D: 1M MONTE CARLO SIMULATION ───────────────────────────────────────
@@ -467,7 +467,7 @@ logOutput(`projH (Brazil expected goals) = ${projH.toFixed(6)} ± ${sdH.toFixed(
 logOutput(`projA (Japan expected goals)  = ${projA.toFixed(6)} ± ${sdA.toFixed(4)}`);
 logOutput(`projTotal                     = ${projTotal.toFixed(6)}`);
 logOutput(`projSpread (H-A)              = ${projSpread.toFixed(6)}`);
-logOutput(`Mode scoreline                = ${FIXTURE.homeCode} ${modeScore} ${FIXTURE.awayCode}`);
+logOutput(`Mode scoreline                = ${MATCH_DATA.homeCode} ${modeScore} ${MATCH_DATA.awayCode}`);
 
 logStep('Output win-margin distributions');
 logOutput(`Brazil wins by 1: ${pct(pHBy1)} | by 2: ${pct(pHBy2)} | by 3+: ${pct(pHBy3plus)}`);
@@ -483,7 +483,7 @@ logOutput(`BTTS YES:  ${pct(pBTTSY)} | BTTS NO: ${pct(1 - pBTTSY)}`);
 
 subBanner('TOP 10 SCORELINES BY SIMULATION FREQUENCY');
 for (const s of topScorelines) {
-  log('SCORE', `  ${FIXTURE.homeCode} ${s.score} ${FIXTURE.awayCode}  →  ${s.pct.toFixed(3)}%  (${s.count.toLocaleString()} sims)`);
+  log('SCORE', `  ${MATCH_DATA.homeCode} ${s.score} ${MATCH_DATA.awayCode}  →  ${s.pct.toFixed(3)}%  (${s.count.toLocaleString()} sims)`);
 }
 
 // ── PHASE F: LINE COMPUTATION ─────────────────────────────────────────────────
@@ -743,12 +743,12 @@ banner('PHASE K — RESULTS JSON OUTPUT');
 logPhase(`Writing full results to ${RESULTS_FILE}`);
 
 const results = {
-  fixture_id: FIXTURE.id,
+  match_id: MATCH_DATA.id,
   model_version: MODEL_VERSION,
   n_sims: N_SIM,
   sim_elapsed_sec: parseFloat(simElapsed),
-  home_code: FIXTURE.homeCode,
-  away_code: FIXTURE.awayCode,
+  home_code: MATCH_DATA.homeCode,
+  away_code: MATCH_DATA.awayCode,
   elo_home: eH,
   elo_away: eA,
   elo_diff: eloDiff,
@@ -845,7 +845,7 @@ const results = {
     japan_advance: edgeJpnAdv,
   },
   // Book reference
-  book: FIXTURE.book,
+  book: MATCH_DATA.book,
   // Metadata
   computed_at: new Date().toISOString(),
   invariants_passed: 10,
@@ -877,7 +877,7 @@ banner('MODEL RESULTS SUMMARY — JAPAN vs BRAZIL (wc26-r32-074)', '★');
 log('RESULT', `Match: Japan (Away) vs Brazil (Home) | R32 | June 29, 2026 1:00 PM ET`);
 log('RESULT', `Model: ${MODEL_VERSION} | N=${N_SIM.toLocaleString()} | λH=${lH.toFixed(4)} λA=${lA.toFixed(4)}`);
 log('RESULT', `Proj Score: Brazil ${projH.toFixed(2)} - ${projA.toFixed(2)} Japan | Total: ${projTotal.toFixed(2)}`);
-log('RESULT', `Mode Score: ${FIXTURE.homeCode} ${modeScore} ${FIXTURE.awayCode}`);
+log('RESULT', `Mode Score: ${MATCH_DATA.homeCode} ${modeScore} ${MATCH_DATA.awayCode}`);
 log('RESULT', `1X2: BRA ${fmt(homeML)} | Draw ${fmt(drawML)} | JPN ${fmt(awayML)}`);
 log('RESULT', `Spread: BRA -1.5 ${fmt(homeSpreadOdds)} | JPN +1.5 ${fmt(awaySpreadOdds)}`);
 log('RESULT', `Total 2.5: Over ${fmt(overOdds)} | Under ${fmt(underOdds)}`);

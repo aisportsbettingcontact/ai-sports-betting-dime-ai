@@ -1,14 +1,14 @@
 /**
  * reseed_june15_model_odds.mjs
  * ============================
- * Re-seeds model odds (book_id=0) for June 15 WC fixtures with correct
- * home/away orientation after the fixture swap fix.
+ * Re-seeds model odds (book_id=0) for June 15 WC matchs with correct
+ * home/away orientation after the match swap fix.
  *
  * The original seedModelOddsJune14to17.mjs used the correct FIFA orientation
- * (homeId: 'esp', awayId: 'cpv', etc.) but the DB had the fixtures swapped,
+ * (homeId: 'esp', awayId: 'cpv', etc.) but the DB had the matchs swapped,
  * so the `home` selection ended up pointing to the wrong team.
  *
- * After the fixture fix:
+ * After the match fix:
  *   wc26-g-015: home=ESP, away=CPV
  *   wc26-g-013: home=BEL, away=EGY
  *   wc26-g-016: home=KSA, away=URU
@@ -185,7 +185,7 @@ const KICKOFF_ET = {
   'wc26-g-014': '9:00 PM ET',
 };
 
-// Group by fixture
+// Group by match
 const byFix = {};
 for (const o of verify) {
   if (!byFix[o.match_id]) byFix[o.match_id] = { homeCode: o.homeCode, awayCode: o.awayCode };
@@ -202,7 +202,7 @@ for (const fid of june15Ids) {
   const ok = homeOk && drawOk && awayOk;
   if (!ok) allPass = false;
   
-  console.log(`[FIXTURE] ${fid} | ${db.awayCode ?? exp.awayTeam}(away) @ ${db.homeCode ?? exp.homeTeam}(home) | ${KICKOFF_ET[fid]}`);
+  console.log(`[MATCH] ${fid} | ${db.awayCode ?? exp.awayTeam}(away) @ ${db.homeCode ?? exp.homeTeam}(home) | ${KICKOFF_ET[fid]}`);
   console.log(`  HOME (${db.homeCode ?? exp.homeTeam}): Model ML = ${db.home ?? 'MISSING'} ${homeOk ? '✓' : '✗ exp='+exp.home}`);
   console.log(`  DRAW:                          Model ML = ${db.draw ?? 'MISSING'} ${drawOk ? '✓' : '✗ exp='+exp.draw}`);
   console.log(`  AWAY (${db.awayCode ?? exp.awayTeam}): Model ML = ${db.away ?? 'MISSING'} ${awayOk ? '✓' : '✗ exp='+exp.away}`);

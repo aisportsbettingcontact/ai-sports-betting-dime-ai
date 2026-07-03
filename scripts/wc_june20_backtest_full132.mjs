@@ -27,9 +27,9 @@ console.log(`${TAG} ============================================================
 // ─── PHASE 1: Populate wc_bt_matches for June 20 ─────────────────────────────
 console.log(`${TAG} [STEP 1] Populating wc_bt_matches for June 20 matches...`);
 
-// Pull June 20 fixtures from wc2026_matches
-const [june20Fixtures] = await conn.query(`
-  SELECT f.fixture_id, f.home_score, f.away_score, f.status,
+// Pull June 20 matches from wc2026_matches
+const [june20Matchs] = await conn.query(`
+  SELECT f.match_id, f.home_score, f.away_score, f.status,
          f.kickoff_utc, f.attendance,
          ht.name as home_name, ht.fifa_code as home_code,
          at2.name as away_name, at2.fifa_code as away_code,
@@ -37,19 +37,19 @@ const [june20Fixtures] = await conn.query(`
   FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
-  WHERE f.fixture_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')
+  WHERE f.match_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')
   ORDER BY f.kickoff_utc
 `);
 
-console.log(`${TAG} [INPUT] June 20 fixtures: ${june20Fixtures.length}`);
+console.log(`${TAG} [INPUT] June 20 matches: ${june20Matchs.length}`);
 
-for (const f of june20Fixtures) {
+for (const f of june20Matchs) {
   const result = f.home_score > f.away_score ? 'H' : f.home_score < f.away_score ? 'A' : 'D';
   const totalGoals = (f.home_score || 0) + (f.away_score || 0);
   // Use match_date from DB (stored as June 20 per business rule for late kickoffs)
   const matchDate = f.match_date ? new Date(f.match_date).toISOString().slice(0, 10) : '2026-06-20';
   
-  console.log(`${TAG} [STATE] Upserting ${f.fixture_id}: ${f.home_name} ${f.home_score}-${f.away_score} ${f.away_name} result=${result}`);
+  console.log(`${TAG} [STATE] Upserting ${f.match_id}: ${f.home_name} ${f.home_score}-${f.away_score} ${f.away_name} result=${result}`);
   
   await conn.query(`
     INSERT INTO wc_bt_matches (
@@ -67,7 +67,7 @@ for (const f of june20Fixtures) {
       attendance = VALUES(attendance),
       updated_at = NOW()
   `, [
-    f.fixture_id,
+    f.match_id,
     f.group_letter || null,
     f.matchday || null,
     matchDate,
@@ -82,10 +82,10 @@ for (const f of june20Fixtures) {
     null,  // city
     null,  // country
     f.attendance || null,
-    f.fixture_id
+    f.match_id
   ]);
   
-  console.log(`${TAG} [OUTPUT] wc_bt_matches upserted: ${f.fixture_id} ✅`);
+  console.log(`${TAG} [OUTPUT] wc_bt_matches upserted: ${f.match_id} ✅`);
 }
 
 // Verify wc_bt_matches 2026 count
@@ -103,10 +103,10 @@ const [june20Proj] = await conn.query(`
          ht.name as home_team_name, ht.fifa_code as home_code,
          at2.name as away_team_name, at2.fifa_code as away_code
   FROM wc2026_model_projections p
-  JOIN wc2026_matches f ON f.fixture_id = p.fixture_id
+  JOIN wc2026_matches f ON f.match_id = p.match_id
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at2 ON at2.team_id = f.away_team_id
-  WHERE p.fixture_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')
+  WHERE p.match_id IN ('wc26-g-033','wc26-g-034','wc26-g-035','wc26-g-036')
   ORDER BY f.kickoff_utc
 `);
 
@@ -119,7 +119,7 @@ for (const p of june20Proj) {
   const awayScore = p.away_score;
   
   if (homeScore === null || awayScore === null) {
-    console.log(`${TAG} [WARN] ${p.fixture_id}: No score — skipping`);
+    console.log(`${TAG} [WARN] ${p.match_id}: No score — skipping`);
     continue;
   }
   
@@ -160,7 +160,7 @@ for (const p of june20Proj) {
   console.log(`${TAG}   Probs: H=${(homeWinProb*100).toFixed(1)}% D=${(drawProb*100).toFixed(1)}% A=${(awayWinProb*100).toFixed(1)}%`);
   
   june20Results.push({
-    fixtureId: p.fixture_id,
+    matchId: p.match_id,
     homeTeam: p.home_team_name,
     awayTeam: p.away_team_name,
     homeScore, awayScore,
@@ -189,13 +189,13 @@ for (const p of june20Proj) {
       model_version = VALUES(model_version),
       created_at = NOW()
   `, [
-    p.fixture_id, modelLean, actualResult,
+    p.match_id, modelLean, actualResult,
     actualTotalGoals, mlCorrect ? 1 : 0, totalCorrect ? 1 : 0,
     homeWinProb, drawProb, awayWinProb,
     bookTotal, modelTotalLean
   ]);
   
-  console.log(`${TAG} [OUTPUT] wc_bt_projections upserted: ${p.fixture_id} ✅`);
+  console.log(`${TAG} [OUTPUT] wc_bt_projections upserted: ${p.match_id} ✅`);
 }
 
 // June 20 summary

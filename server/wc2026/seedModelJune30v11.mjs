@@ -1,7 +1,7 @@
 /**
  * seedModelJune30v11.mjs
  * ══════════════════════════════════════════════════════════════════════════════
- * Seeds WC2026 v11.0-KO23 model projections for all 3 June 30 R32 fixtures.
+ * Seeds WC2026 v11.0-KO23 model projections for all 3 June 30 R32 matchs.
  * Reads from /home/ubuntu/wc2026_june30_model_results.json (output of runModelJune30v11.mjs)
  * Writes to wc2026_model_projections table (is_frozen=1).
  * Does NOT overwrite frozen book odds (those are already correct from seedJune30Direct.ts).
@@ -53,10 +53,10 @@ function cap(v) {
   return Math.max(SMALLINT_MIN, Math.min(SMALLINT_MAX, Math.round(v)));
 }
 
-const FIXTURE_IDS = ['wc26-r32-077', 'wc26-r32-078', 'wc26-r32-079'];
+const MATCH_IDS = ['wc26-r32-077', 'wc26-r32-078', 'wc26-r32-079'];
 
 banner('WC2026 v11.0-KO23 SEED + AUDIT — June 30, 2026 R32 Model Projections');
-log('INPUT', `Fixtures: ${FIXTURE_IDS.join(', ')}`);
+log('INPUT', `Matchs: ${MATCH_IDS.join(', ')}`);
 log('INPUT', `Results source: ${RESULTS_PATH}`);
 log('INPUT', `Log path: ${LOG_PATH}`);
 
@@ -79,7 +79,7 @@ for (const r of results) {
 stepCount++;
 log('STEP', 'Pre-flight: validating all model data structures', stepCount);
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const m = MODEL[fid];
   if (!m) fail(`Missing model data for ${fid}`);
 
@@ -126,27 +126,27 @@ const conn = await mysql.createConnection(process.env.DATABASE_URL);
 log('STATE', 'DB connected');
 pass('DB connection established');
 
-// ── STEP 4: Verify fixtures exist ─────────────────────────────────────────────
+// ── STEP 4: Verify matchs exist ─────────────────────────────────────────────
 stepCount++;
-log('STEP', 'Verifying June 30 fixtures exist in wc2026_matches', stepCount);
+log('STEP', 'Verifying June 30 matchs exist in wc2026_matches', stepCount);
 const [fixRows] = await conn.execute(
   `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_matches WHERE match_id IN (?,?,?)`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
-log('STATE', `Found ${fixRows.length} fixture rows`);
-if (fixRows.length !== 3) fail(`Expected 3 fixtures, found ${fixRows.length}`);
+log('STATE', `Found ${fixRows.length} match rows`);
+if (fixRows.length !== 3) fail(`Expected 3 matchs, found ${fixRows.length}`);
 for (const row of fixRows) {
   log('STATE', `  ${row.match_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
-  pass(`[${row.match_id}] fixture verified in DB`);
+  pass(`[${row.match_id}] match verified in DB`);
 }
 
 // ── STEP 5: Verify frozen book odds exist ─────────────────────────────────────
 stepCount++;
-log('STEP', 'Verifying frozen book odds exist for all 3 fixtures', stepCount);
+log('STEP', 'Verifying frozen book odds exist for all 3 matchs', stepCount);
 const [bookRows] = await conn.execute(
   `SELECT match_id, book_home_ml, book_draw_ml, book_away_ml, to_advance_home_odds, to_advance_away_odds
    FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?)`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (bookRows.length !== 3) fail(`Expected 3 book odds rows, found ${bookRows.length}`);
 for (const row of bookRows) {
@@ -156,20 +156,20 @@ for (const row of bookRows) {
 
 // ── STEP 6: Delete any existing model projections ─────────────────────────────
 stepCount++;
-log('STEP', 'Deleting any existing model projections for June 30 fixtures', stepCount);
+log('STEP', 'Deleting any existing model projections for June 30 matchs', stepCount);
 const [delRes] = await conn.execute(
   `DELETE FROM wc2026_model_projections WHERE match_id IN (?,?,?)`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 log('STATE', `Deleted ${delRes.affectedRows} existing projection rows`);
 pass(`Deleted ${delRes.affectedRows} stale projection rows`);
 
 // ── STEP 7: Insert v11.0-KO23 model projections ───────────────────────────────
 stepCount++;
-log('STEP', 'Inserting v11.0-KO23 model projections for all 3 fixtures', stepCount);
+log('STEP', 'Inserting v11.0-KO23 model projections for all 3 matchs', stepCount);
 let modelSeedCount = 0;
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const m = MODEL[fid];
   log('STATE', `  [${fid}] Inserting: λH=${m.home_lam} λA=${m.away_lam} | proj: ${m.proj_home_score}-${m.proj_away_score}`);
   log('STATE', `  [${fid}] ML: H=${m.model_home_ml} D=${m.model_draw_ml} A=${m.model_away_ml}`);
@@ -273,7 +273,7 @@ const [modelVerRows] = await conn.execute(
           is_frozen, frozen_at
    FROM wc2026_model_projections
    WHERE match_id IN (?,?,?) ORDER BY match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (modelVerRows.length !== 3) fail(`Model verify: expected 3 rows, got ${modelVerRows.length}`);
 
@@ -308,7 +308,7 @@ for (const row of modelVerRows) {
 
 // ── STEP 9: Final cross-table audit ───────────────────────────────────────────
 stepCount++;
-log('STEP', 'Final cross-table audit: book + model both present for all 3 fixtures', stepCount);
+log('STEP', 'Final cross-table audit: book + model both present for all 3 matchs', stepCount);
 const [crossRows] = await conn.execute(
   `SELECT f.match_id,
           b.book_home_ml, b.book_draw_ml, b.book_away_ml,
@@ -321,7 +321,7 @@ const [crossRows] = await conn.execute(
    JOIN wc2026_model_projections mp ON mp.match_id = f.match_id
    WHERE f.match_id IN (?,?,?)
    ORDER BY f.match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (crossRows.length !== 3) fail(`Cross-table audit: expected 3 rows, got ${crossRows.length}`);
 for (const row of crossRows) {
@@ -335,10 +335,10 @@ for (const row of crossRows) {
 await conn.end();
 banner('SEED COMPLETE — June 30, 2026 WC2026 Model Projections Published');
 log('OUTPUT', `Total steps: ${stepCount} | PASS: ${passCount} | FAIL: ${failCount} | WARN: ${warnCount}`);
-log('OUTPUT', `Status: ${failCount === 0 ? 'ALL SYSTEMS GO ✅ — All 3 June 30 fixtures published to feed' : 'FAILURES DETECTED ❌'}`);
+log('OUTPUT', `Status: ${failCount === 0 ? 'ALL SYSTEMS GO ✅ — All 3 June 30 matchs published to feed' : 'FAILURES DETECTED ❌'}`);
 log('OUTPUT', '');
-log('OUTPUT', 'PUBLISHED FIXTURES:');
-for (const fid of FIXTURE_IDS) {
+log('OUTPUT', 'PUBLISHED MATCHS:');
+for (const fid of MATCH_IDS) {
   const m = MODEL[fid];
   log('OUTPUT', `  ${fid}: ${m.label}`);
   log('OUTPUT', `    Proj: ${m.proj_home_score}-${m.proj_away_score} | Total: ${m.proj_total} | Lean: ${m.lean}`);

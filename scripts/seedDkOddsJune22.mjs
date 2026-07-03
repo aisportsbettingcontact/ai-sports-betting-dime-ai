@@ -1,13 +1,13 @@
 /**
  * seedDkOddsJune22.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Seeds DraftKings (book_id=68) odds for all 4 June 22, 2026 WC2026 fixtures.
+ * Seeds DraftKings (book_id=68) odds for all 4 June 22, 2026 WC2026 matches.
  *
  * AUTHORITATIVE SOURCE: DK screenshot (user-provided, June 22 2026)
  * AN API confirmed matching values for 3/4 games.
  * Senegal/Norway: AN API confirmed Norway +125, Senegal +220, Draw +255.
  *
- * DB FIXTURE ORIENTATIONS (from wc2026_matches table):
+ * DB MATCH ORIENTATIONS (from wc2026_matches table):
  *   wc26-g-043: Austria (home=aut) vs Argentina (away=arg)  ← DB home=Austria
  *   wc26-g-041: Iraq (home=irq) vs France (away=fra)        ← DB home=Iraq
  *   wc26-g-042: Norway (home=nor) vs Senegal (away=sen)     ← DB home=Norway
@@ -72,11 +72,11 @@ function probToAmerican(p) {
   return p >= 0.5 ? Math.round(-p / (1 - p) * 100) : Math.round((1 - p) / p * 100);
 }
 
-// ─── Fixture definitions ─────────────────────────────────────────────────────
+// ─── Match definitions ─────────────────────────────────────────────────────
 // All odds mapped to DB orientation (home_team_id / away_team_id in wc2026_matches)
-const FIXTURES = [
+const MATCHES = [
   {
-    fixtureId: 'wc26-g-043',
+    matchId: 'wc26-g-043',
     label: 'Austria (DB home) vs Argentina (DB away)',
     homeTeamId: 'aut',
     awayTeamId: 'arg',
@@ -93,7 +93,7 @@ const FIXTURES = [
     dcComputed: true,
   },
   {
-    fixtureId: 'wc26-g-041',
+    matchId: 'wc26-g-041',
     label: 'Iraq (DB home) vs France (DB away)',
     homeTeamId: 'irq',
     awayTeamId: 'fra',
@@ -108,7 +108,7 @@ const FIXTURES = [
     dcComputed: true,
   },
   {
-    fixtureId: 'wc26-g-042',
+    matchId: 'wc26-g-042',
     label: 'Norway (DB home) vs Senegal (DB away)',
     homeTeamId: 'nor',
     awayTeamId: 'sen',
@@ -123,7 +123,7 @@ const FIXTURES = [
     dcComputed: true,
   },
   {
-    fixtureId: 'wc26-g-044',
+    matchId: 'wc26-g-044',
     label: 'Algeria (DB home) vs Jordan (DB away)',
     homeTeamId: 'alg',
     awayTeamId: 'jor',
@@ -148,21 +148,21 @@ async function main() {
   console.log(`${TAG} ${'='.repeat(72)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  const fixtureIds = FIXTURES.map(f => f.fixtureId);
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  const matchIds = MATCHES.map(f => f.matchId);
+  const placeholders = matchIds.map(() => '?').join(',');
 
   // ── Delete existing DK rows for June 22 to avoid duplicates ──────────────
   const [deleteResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${placeholders}) AND book_id = ?`,
-    [...fixtureIds, BOOK_ID_DK]
+    `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${placeholders}) AND book_id = ?`,
+    [...matchIds, BOOK_ID_DK]
   );
   console.log(`${TAG} [STEP] Deleted ${deleteResult.affectedRows} existing DK rows for June 22`);
 
   let totalInserted = 0;
   let totalErrors = 0;
 
-  for (const fx of FIXTURES) {
-    console.log(`\n${TAG} ── ${fx.fixtureId}: ${fx.label} ──`);
+  for (const fx of MATCHES) {
+    console.log(`\n${TAG} ── ${fx.matchId}: ${fx.label} ──`);
     console.log(`${TAG} [INPUT] home(${fx.homeTeamId})=${fx.homeML > 0 ? '+' : ''}${fx.homeML} draw=${fx.drawML > 0 ? '+' : ''}${fx.drawML} away(${fx.awayTeamId})=${fx.awayML > 0 ? '+' : ''}${fx.awayML}`);
     console.log(`${TAG} [INPUT] total=${fx.totalLine} over=${fx.overML > 0 ? '+' : ''}${fx.overML} under=${fx.underML > 0 ? '+' : ''}${fx.underML}`);
 
@@ -196,16 +196,16 @@ async function main() {
         const impliedProb = americanToImplied(row.odds);
         await conn.execute(
           `INSERT INTO wc2026_odds_snapshots
-             (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+             (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [fx.fixtureId, SNAPSHOT_TS, BOOK_ID_DK, row.market, row.selection,
+          [fx.matchId, SNAPSHOT_TS, BOOK_ID_DK, row.market, row.selection,
            row.line, row.odds, impliedProb, false]
         );
         totalInserted++;
-        console.log(`${TAG} [STEP] Inserted: ${fx.fixtureId} | ${row.market} | ${row.selection} | ${row.odds > 0 ? '+' : ''}${row.odds}${row.line !== null ? ` line=${row.line}` : ''}`);
+        console.log(`${TAG} [STEP] Inserted: ${fx.matchId} | ${row.market} | ${row.selection} | ${row.odds > 0 ? '+' : ''}${row.odds}${row.line !== null ? ` line=${row.line}` : ''}`);
       } catch (err) {
         totalErrors++;
-        console.error(`${TAG} [ERROR] ${fx.fixtureId} ${row.market} ${row.selection}: ${err.message}`);
+        console.error(`${TAG} [ERROR] ${fx.matchId} ${row.market} ${row.selection}: ${err.message}`);
       }
     }
   }
@@ -214,19 +214,19 @@ async function main() {
   console.log(`\n${TAG} ${'─'.repeat(60)}`);
   console.log(`${TAG} [VERIFY] DB state after insert:`);
   const [verifyRows] = await conn.execute(
-    `SELECT fixture_id, market, selection, american_odds, line
+    `SELECT match_id, market, selection, american_odds, line
      FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${placeholders}) AND book_id = ?
-     ORDER BY fixture_id, market, selection`,
-    [...fixtureIds, BOOK_ID_DK]
+     WHERE match_id IN (${placeholders}) AND book_id = ?
+     ORDER BY match_id, market, selection`,
+    [...matchIds, BOOK_ID_DK]
   );
   for (const r of verifyRows) {
     const odds = r.american_odds > 0 ? `+${r.american_odds}` : `${r.american_odds}`;
     const line = r.line !== null ? ` line=${r.line}` : '';
-    console.log(`${TAG} [VERIFY]   ${r.fixture_id} | ${r.market.padEnd(14)} | ${r.selection.padEnd(10)} | ${odds}${line}`);
+    console.log(`${TAG} [VERIFY]   ${r.match_id} | ${r.market.padEnd(14)} | ${r.selection.padEnd(10)} | ${odds}${line}`);
   }
 
-  const expectedRows = FIXTURES.length * 7; // 3 ML + 2 total + 2 DC per fixture
+  const expectedRows = MATCHES.length * 7; // 3 ML + 2 total + 2 DC per match
   const pass = verifyRows.length === expectedRows && totalErrors === 0;
   console.log(`\n${TAG} [OUTPUT] Inserted: ${totalInserted} | Errors: ${totalErrors}`);
   console.log(`${TAG} [VERIFY] ${pass ? '✅ PASS' : '❌ FAIL'} — expected=${expectedRows} actual=${verifyRows.length}`);

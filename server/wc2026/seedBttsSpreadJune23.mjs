@@ -1,9 +1,9 @@
 /**
  * seedBttsSpreadJune23.mjs
- * Seeds BTTS + ASIAN_HANDICAP (spread) markets for June 23 WC2026 fixtures.
+ * Seeds BTTS + ASIAN_HANDICAP (spread) markets for June 23 WC2026 matchs.
  * These markets were missing from the original June 23 seed.
  *
- * Fixtures:
+ * Matchs:
  *   wc26-g-045: UZB (home) vs POR (away)  — UZB +2.5
  *   wc26-g-046: COD (home) vs COL (away)  — COD +1.5  [FT: COL 1-0]
  *   wc26-g-047: GHA (home) vs ENG (away)  — GHA +1.5
@@ -20,7 +20,7 @@ const BOOK_DK = 68;
 const BOOK_MODEL = 0;
 const NOW = new Date().toISOString().replace("T", " ").slice(0, 19);
 
-const FIXTURES = [
+const MATCHS = [
   {
     matchId: "wc26-g-045",
     homeSpread: 2.5, awaySpread: -2.5,
@@ -57,13 +57,13 @@ const FIXTURES = [
 
 async function main() {
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  console.log("[INPUT] Connected to DB. Seeding BTTS + SPREAD for June 23 fixtures.");
+  console.log("[INPUT] Connected to DB. Seeding BTTS + SPREAD for June 23 matchs.");
 
   let inserted = 0;
   let errors = 0;
 
-  for (const f of FIXTURES) {
-    console.log(`\n[STEP] Processing fixture ${f.matchId}`);
+  for (const f of MATCHS) {
+    console.log(`\n[STEP] Processing match ${f.matchId}`);
 
     const rows = [
       { bookId: BOOK_DK,    market: "BTTS",           selection: "yes",  line: null,        americanOdds: f.dkBttsYes },

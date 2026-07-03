@@ -9,7 +9,7 @@ const conn = await mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
-// Get all knockout fixtures Jun 28-30 with model projections
+// Get all knockout matchs Jun 28-30 with model projections
 const [rows] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
          ht.name AS home_name, at.name AS away_name,
@@ -31,9 +31,9 @@ const [rows] = await conn.execute(`
 `);
 
 console.log('\n════════════════════════════════════════════════════════════════');
-console.log('  KNOCKOUT STAGE — Jun 28-30 — MODELED FIXTURES');
+console.log('  KNOCKOUT STAGE — Jun 28-30 — MODELED MATCHS');
 console.log('════════════════════════════════════════════════════════════════\n');
-console.log(`Found ${rows.length} fixture(s)\n`);
+console.log(`Found ${rows.length} match(s)\n`);
 
 let modeledCount = 0;
 for (const r of rows) {
@@ -57,6 +57,6 @@ for (const r of rows) {
   console.log();
 }
 
-console.log(`Summary: ${modeledCount}/${rows.length} fixtures modeled`);
+console.log(`Summary: ${modeledCount}/${rows.length} matchs modeled`);
 
 await conn.end();

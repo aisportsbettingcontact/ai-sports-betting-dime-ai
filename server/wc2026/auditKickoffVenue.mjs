@@ -1,6 +1,6 @@
 /**
  * WC2026 FORENSIC AUDIT — Kickoff UTC, Match Date, Venue, ET Times
- * Audits fixtures wc26-r32-079 through wc26-r16-091 (13 total)
+ * Audits matchs wc26-r32-079 through wc26-r16-091 (13 total)
  * Validates: match_date alignment with kickoff_utc, venue assignment, ET display
  */
 import mysql from 'mysql2/promise';
@@ -25,10 +25,10 @@ const TARGET_IDS = [
 
 console.log('\n════════════════════════════════════════════════════════════════');
 console.log('  WC2026 FORENSIC AUDIT — Kickoff / Match Date / Venue / ET');
-console.log('  Fixtures: wc26-r32-079 through wc26-r16-091 (13 total)');
+console.log('  Matchs: wc26-r32-079 through wc26-r16-091 (13 total)');
 console.log('════════════════════════════════════════════════════════════════\n');
 
-// ── 1. Pull raw fixture data ──────────────────────────────────────────────────
+// ── 1. Pull raw match data ──────────────────────────────────────────────────
 const placeholders = TARGET_IDS.map(() => '?').join(',');
 const [rows] = await conn.execute(`
   SELECT
@@ -53,10 +53,10 @@ const [rows] = await conn.execute(`
   ORDER BY f.kickoff_utc, f.match_id
 `, TARGET_IDS);
 
-console.log(`[INPUT]  Queried ${TARGET_IDS.length} target fixture IDs`);
+console.log(`[INPUT]  Queried ${TARGET_IDS.length} target match IDs`);
 console.log(`[RESULT] Found ${rows.length} rows in DB\n`);
 
-// ── 2. Per-fixture deep inspection ───────────────────────────────────────────
+// ── 2. Per-match deep inspection ───────────────────────────────────────────
 const issues = [];
 
 for (const r of rows) {
@@ -64,7 +64,7 @@ for (const r of rows) {
   const matchDateRaw = r.match_date; // Date object from Drizzle/mysql2
 
   // Derive expected match_date from kickoff_utc
-  // The feed uses match_date to bucket fixtures per day
+  // The feed uses match_date to bucket matchs per day
   // match_date should equal the LOCAL DATE of kickoff in ET
   // ET = UTC-4 (EDT, currently in effect Jul 2026)
   const ET_OFFSET_MS = -4 * 60 * 60 * 1000;
@@ -123,11 +123,11 @@ for (const r of rows) {
   console.log(`└──────────────────────────────────────────────────────────────\n`);
 }
 
-// ── 3. Check for fixtures in TARGET_IDS not found in DB ──────────────────────
+// ── 3. Check for matchs in TARGET_IDS not found in DB ──────────────────────
 const foundIds = new Set(rows.map(r => r.match_id));
 const missingFromDB = TARGET_IDS.filter(id => !foundIds.has(id));
 if (missingFromDB.length > 0) {
-  console.log(`[ERROR] ${missingFromDB.length} fixture(s) NOT FOUND in DB:`);
+  console.log(`[ERROR] ${missingFromDB.length} match(s) NOT FOUND in DB:`);
   missingFromDB.forEach(id => {
     console.log(`  ❌ ${id}`);
     issues.push({ matchId: id, type: 'MISSING_FROM_DB' });
@@ -148,7 +148,7 @@ console.log('══════════════════════�
 console.log(`  AUDIT SUMMARY: ${issues.length} issue(s) found`);
 console.log('════════════════════════════════════════════════════════════════');
 if (issues.length === 0) {
-  console.log('  ✅ All 13 fixtures have correct match_date and venue assignments.');
+  console.log('  ✅ All 13 matchs have correct match_date and venue assignments.');
 } else {
   for (const iss of issues) {
     if (iss.type === 'DATE_MISMATCH') {

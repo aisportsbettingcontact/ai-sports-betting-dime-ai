@@ -1,6 +1,6 @@
 /**
  * june15_orientation_audit.mjs
- * Verifies June 15 WC fixture home/away orientation against official FIFA schedule
+ * Verifies June 15 WC match home/away orientation against official FIFA schedule
  * and validates all DK + Model odds are correctly mapped to home/away teams
  */
 import mysql from 'mysql2/promise';
@@ -17,7 +17,7 @@ const c = await mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
-console.log('[INPUT] June 15 WC Fixture Orientation + Odds Audit');
+console.log('[INPUT] June 15 WC Match Orientation + Odds Audit');
 console.log('[STEP] Verifying DB orientation vs Official FIFA WC2026 Schedule');
 console.log('');
 
@@ -31,7 +31,7 @@ const OFFICIAL = {
   'wc26-g-014': { home: 'IRN', away: 'NZL', homeTeam: 'Iran', awayTeam: 'New Zealand', kickoffET: '9:00 PM ET', venue: 'Inglewood' },
 };
 
-// Step 1: Get fixture orientation from DB
+// Step 1: Get match orientation from DB
 const [fx] = await c.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc, f.group_letter, f.matchday,
          f.away_team_id, f.home_team_id,
@@ -46,7 +46,7 @@ const [fx] = await c.execute(`
   ORDER BY f.kickoff_utc
 `);
 
-console.log('[STATE] Fixtures found in DB for June 15:', fx.length);
+console.log('[STATE] Matchs found in DB for June 15:', fx.length);
 console.log('');
 
 let orientationPasses = 0;
@@ -74,7 +74,7 @@ for (const f of fx) {
 console.log(`[OUTPUT] Orientation: ${orientationPasses} PASS, ${orientationFails} FAIL`);
 console.log('');
 
-// Step 2: Validate DK odds (book_id=68) mapping per fixture
+// Step 2: Validate DK odds (book_id=68) mapping per match
 console.log('[STEP] Validating DK odds (book_id=68) — home/away/draw assignment');
 const june15Ids = fx.map(f => f.match_id);
 const ph = june15Ids.map(() => '?').join(',');
@@ -103,36 +103,36 @@ const [modelOdds] = await c.execute(
   june15Ids
 );
 
-// Group by fixture
-const dkByFixture = {};
-const modelByFixture = {};
+// Group by match
+const dkByMatch = {};
+const modelByMatch = {};
 for (const o of dkOdds) {
-  if (!dkByFixture[o.match_id]) dkByFixture[o.match_id] = {};
+  if (!dkByMatch[o.match_id]) dkByMatch[o.match_id] = {};
   const key = `${o.market}_${o.selection}`;
-  dkByFixture[o.match_id][key] = { odds: o.american_odds, line: o.line };
+  dkByMatch[o.match_id][key] = { odds: o.american_odds, line: o.line };
 }
 for (const o of modelOdds) {
-  if (!modelByFixture[o.match_id]) modelByFixture[o.match_id] = {};
+  if (!modelByMatch[o.match_id]) modelByMatch[o.match_id] = {};
   const key = `${o.market}_${o.selection}`;
-  modelByFixture[o.match_id][key] = { odds: o.american_odds, line: o.line };
+  modelByMatch[o.match_id][key] = { odds: o.american_odds, line: o.line };
 }
 
-// Build fixture map for display
+// Build match map for display
 const fxMap = {};
 for (const f of fx) fxMap[f.match_id] = f;
 
 console.log('');
-console.log('[STATE] Full odds matrix for June 15 WC fixtures:');
+console.log('[STATE] Full odds matrix for June 15 WC matchs:');
 console.log('');
 
 let oddsIssues = 0;
 for (const fid of june15Ids) {
   const f = fxMap[fid];
-  const dk = dkByFixture[fid] || {};
-  const model = modelByFixture[fid] || {};
+  const dk = dkByMatch[fid] || {};
+  const model = modelByMatch[fid] || {};
   const official = OFFICIAL[fid];
   
-  console.log(`[FIXTURE] ${fid} | ${f.awayCode} @ ${f.homeCode} | ${official.kickoffET}`);
+  console.log(`[MATCH] ${fid} | ${f.awayCode} @ ${f.homeCode} | ${official.kickoffET}`);
   
   // 1X2 odds — home = designated home team, away = designated away team
   const dkHome1X2 = dk['1X2_home']?.odds;
@@ -184,8 +184,8 @@ for (const fid of june15Ids) {
   console.log('');
 }
 
-console.log(`[OUTPUT] Odds completeness: ${june15Ids.length - oddsIssues}/${june15Ids.length} fixtures fully populated`);
-if (oddsIssues > 0) console.log(`[VERIFY] FAIL — ${oddsIssues} fixtures have missing odds`);
-else console.log('[VERIFY] PASS — all June 15 WC fixtures have complete DK + Model odds');
+console.log(`[OUTPUT] Odds completeness: ${june15Ids.length - oddsIssues}/${june15Ids.length} matchs fully populated`);
+if (oddsIssues > 0) console.log(`[VERIFY] FAIL — ${oddsIssues} matchs have missing odds`);
+else console.log('[VERIFY] PASS — all June 15 WC matchs have complete DK + Model odds');
 
 await c.end();

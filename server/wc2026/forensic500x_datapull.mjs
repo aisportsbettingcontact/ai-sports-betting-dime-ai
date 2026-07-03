@@ -9,7 +9,7 @@ import mysql from 'mysql2/promise';
 import fs from 'fs';
 import 'dotenv/config';
 
-const TARGET_FIXTURES = [
+const TARGET_MATCHS = [
   'wc26-r32-073', // Canada @ South Africa — Jun 28
   'wc26-r32-074', // Japan @ Brazil        — Jun 29
   'wc26-r32-075', // Paraguay @ Germany    — Jun 29
@@ -27,11 +27,11 @@ const conn = await mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
-const ph = TARGET_FIXTURES.map(() => '?').join(',');
-console.log('\n[INPUT]  Pulling 500x forensic data for 7 fixtures');
+const ph = TARGET_MATCHS.map(() => '?').join(',');
+console.log('\n[INPUT]  Pulling 500x forensic data for 7 matchs');
 
-// ── 1. Fixtures ───────────────────────────────────────────────────────────────
-const [fixtures] = await conn.execute(`
+// ── 1. Matchs ───────────────────────────────────────────────────────────────
+const [matchs] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
          f.home_score, f.away_score, f.status, f.espn_event_id,
          f.attendance, f.advancing_team_id,
@@ -44,8 +44,8 @@ const [fixtures] = await conn.execute(`
   LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
   WHERE f.match_id IN (${ph})
   ORDER BY f.kickoff_utc
-`, TARGET_FIXTURES);
-console.log(`[STATE]  Fixtures: ${fixtures.length} rows`);
+`, TARGET_MATCHS);
+console.log(`[STATE]  Matchs: ${matchs.length} rows`);
 
 // ── 2. Model Projections ──────────────────────────────────────────────────────
 const [models] = await conn.execute(`
@@ -71,7 +71,7 @@ const [models] = await conn.execute(`
          modeled_at
   FROM wc2026_model_projections
   WHERE match_id IN (${ph})
-`, TARGET_FIXTURES);
+`, TARGET_MATCHS);
 console.log(`[STATE]  Model projections: ${models.length} rows`);
 
 // ── 3. Frozen Book Odds ───────────────────────────────────────────────────────
@@ -86,11 +86,11 @@ const [bookOdds] = await conn.execute(`
          to_advance_home_odds, to_advance_away_odds
   FROM wc2026_frozen_book_odds
   WHERE match_id IN (${ph})
-`, TARGET_FIXTURES);
+`, TARGET_MATCHS);
 console.log(`[STATE]  Book odds: ${bookOdds.length} rows`);
 
 // ── 4. ESPN data via espn_event_id ────────────────────────────────────────────
-const espnIds = fixtures.map(f => f.espn_event_id).filter(Boolean);
+const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
 const espnPh = espnIds.map(() => '?').join(',');
 console.log(`[STATE]  ESPN event IDs: ${espnIds.join(', ')}`);
 
@@ -153,8 +153,8 @@ if (espnIds.length > 0) {
 }
 
 // ── 5. Assemble master dataset ────────────────────────────────────────────────
-const masterData = TARGET_FIXTURES.map(fid => {
-  const fix = fixtures.find(r => r.match_id === fid);
+const masterData = TARGET_MATCHS.map(fid => {
+  const fix = matchs.find(r => r.match_id === fid);
   const mod = models.find(r => r.match_id === fid);
   const book = bookOdds.find(r => r.match_id === fid);
   const eid = fix?.espn_event_id;
@@ -162,7 +162,7 @@ const masterData = TARGET_FIXTURES.map(fid => {
   const ems = espnMatchStats.find(r => String(r.matchId) === String(eid));
   const exg = espnXG.find(r => String(r.matchId) === String(eid));
   const ets = espnTeamStats.find(r => String(r.matchId) === String(eid));
-  return { fid, espnId: eid, fixture: fix, model: mod, book, espnMatch: em, espnMatchStats: ems, espnXG: exg, espnTeamStats: ets };
+  return { fid, espnId: eid, match: fix, model: mod, book, espnMatch: em, espnMatchStats: ems, espnXG: exg, espnTeamStats: ets };
 });
 
 // ── 6. Console 500x summary ───────────────────────────────────────────────────
@@ -171,14 +171,14 @@ console.log('  500x FORENSIC AUDIT — 7 Matches | Jun 28-30 R32 Knockout');
 console.log('════════════════════════════════════════════════════════════════════\n');
 
 for (const d of masterData) {
-  const f = d.fixture;
+  const f = d.match;
   const m = d.model;
   const b = d.book;
   const ems = d.espnMatchStats;
   const exg = d.espnXG;
   const ets = d.espnTeamStats;
   const em = d.espnMatch;
-  if (!f) { console.log(`[${d.fid}] ❌ NO FIXTURE DATA\n`); continue; }
+  if (!f) { console.log(`[${d.fid}] ❌ NO MATCH DATA\n`); continue; }
 
   const md = f.match_date instanceof Date ? f.match_date.toISOString().split('T')[0] : String(f.match_date).split('T')[0];
   const ku = f.kickoff_utc instanceof Date ? f.kickoff_utc : new Date(f.kickoff_utc);

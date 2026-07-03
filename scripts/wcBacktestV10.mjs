@@ -767,12 +767,12 @@ async function main() {
   // ── Step 2: Load 2026 matches from wc2026_matches (all through Jun 23) ───
   console.log(`\n${TAG} [STEP 2] Loading 2026 matches from wc2026_matches (through Jun 23)...`);
   const [wc26Rows] = await conn.execute(
-    `SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
+    `SELECT f.match_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
             f.match_date, v.city
      FROM wc2026_matches f
      LEFT JOIN wc2026_venues v ON f.venue_id = v.venue_id
      WHERE f.match_date <= '2026-06-23' AND f.home_score IS NOT NULL
-     ORDER BY f.match_date, f.fixture_id`
+     ORDER BY f.match_date, f.match_id`
   );
   console.log(`${TAG} [STATE] 2026: ${wc26Rows.length} matches loaded`);
   console.log(`${TAG} [VERIFY] 2026=${wc26Rows.length === 44 ? '✅ 44' : `⚠️ ${wc26Rows.length} (expected 44)`}`);
@@ -797,7 +797,7 @@ async function main() {
   }));
 
   const matches2026 = wc26Rows.map(r => ({
-    id: r.fixture_id, year: 2026,
+    id: r.match_id, year: 2026,
     homeTeam: r.home_team_id, awayTeam: r.away_team_id,
     homeScore: r.home_score, awayScore: r.away_score,
     city: r.city || '', venue: '',

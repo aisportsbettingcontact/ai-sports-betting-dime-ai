@@ -183,7 +183,7 @@ const V14_QUERIES = {
            'wc2026_teams at ON f.away_team_id = at.team_id'],
     columns: ['f.match_id','ht.fifa_code AS home_code','at.fifa_code AS away_code','f.kickoff_utc'],
     filter: "DATE(f.match_date) = '2026-07-01'",
-    purpose: 'July 1 fixture IDs and team codes',
+    purpose: 'July 1 match IDs and team codes',
   },
   C1_BOOK: {
     table: 'wc2026_frozen_book_odds',
@@ -197,7 +197,7 @@ const V14_QUERIES = {
       'book_dc_1x_odds','book_dc_x2_odds','book_no_draw_home_odds',
       'to_advance_home_odds','to_advance_away_odds'
     ],
-    purpose: 'Book odds for all 14 markets per fixture',
+    purpose: 'Book odds for all 14 markets per match',
   },
 };
 
@@ -525,9 +525,9 @@ async function main() {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // SECTION 4: FIXTURES AND BOOK ODDS TABLES
+  // SECTION 4: MATCHS AND BOOK ODDS TABLES
   // ════════════════════════════════════════════════════════════════════════════
-  sectionHeader('SECTION 4 — FIXTURES AND BOOK ODDS: FULL SCHEMA AND DATA VALIDATION');
+  sectionHeader('SECTION 4 — MATCHS AND BOOK ODDS: FULL SCHEMA AND DATA VALIDATION');
 
   // 4A: wc2026_matches
   log('SECTION', 'S4A_FIX', '4A — wc2026_matches: all rows and columns');
@@ -543,7 +543,7 @@ async function main() {
     ORDER BY f.kickoff_utc
   `);
 
-  log('STATE', 'S4A_FIX', `  Total fixtures: ${fixAll.length}`);
+  log('STATE', 'S4A_FIX', `  Total matchs: ${fixAll.length}`);
   const fixByDate = {};
   for (const f of fixAll) {
     const d = String(f.match_date).slice(0, 10);
@@ -551,7 +551,7 @@ async function main() {
     fixByDate[d].push(f);
   }
   for (const [date, rows] of Object.entries(fixByDate).sort()) {
-    log('STATE', 'S4A_FIX', `  ${date}: ${rows.length} fixtures`);
+    log('STATE', 'S4A_FIX', `  ${date}: ${rows.length} matchs`);
     for (const r of rows) {
       log('REAL_DATA', 'S4A_FIX', `    ${r.match_id} | ${r.home_code} (${r.home_name}) vs ${r.away_code} (${r.away_name}) | ${r.kickoff_utc} | ${r.status}`);
     }
@@ -579,7 +579,7 @@ async function main() {
       addIssue('DB-04', 'HIGH', 'S4B_BOOK',
         `Book odds row for ${row.match_id} has NULL required fields`,
         `NULL fields: ${nullFields.join(', ')}`,
-        'Seed the missing book odds fields before running the engine for this fixture'
+        'Seed the missing book odds fields before running the engine for this match'
       );
     } else {
       log('PASS', 'S4B_BOOK', `  ${row.match_id}: all 16 required book fields populated ✓`);

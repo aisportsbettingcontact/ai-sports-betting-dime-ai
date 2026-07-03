@@ -1,6 +1,6 @@
 /**
  * validateFeedJune22.mjs
- * Full feed validation for June 22 WC2026 fixtures.
+ * Full feed validation for June 22 WC2026 matches.
  * Compares DK book odds (book_id=68) vs model v4.2 (book_id=0) for all cells.
  */
 import mysql from 'mysql2/promise';
@@ -9,8 +9,8 @@ config();
 
 const TAG = '[FEED_VALIDATE_JUNE22]';
 
-const FIXTURE_IDS = ['wc26-g-043', 'wc26-g-041', 'wc26-g-042', 'wc26-g-044'];
-const FIXTURE_NAMES = {
+const MATCH_IDS = ['wc26-g-043', 'wc26-g-041', 'wc26-g-042', 'wc26-g-044'];
+const MATCH_NAMES = {
   'wc26-g-043': 'Austria (DB-H) vs Argentina (DB-A)',
   'wc26-g-041': 'Iraq (DB-H) vs France (DB-A)',
   'wc26-g-042': 'Norway (DB-H) vs Senegal (DB-A)',
@@ -33,22 +33,22 @@ async function main() {
   console.log(`${TAG} ${'='.repeat(80)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  const ph = FIXTURE_IDS.map(() => '?').join(',');
+  const ph = MATCH_IDS.map(() => '?').join(',');
 
   const [rows] = await conn.execute(
-    `SELECT fixture_id, book_id, market, selection, american_odds, line
+    `SELECT match_id, book_id, market, selection, american_odds, line
      FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${ph}) AND book_id IN (0, 68)
-     ORDER BY fixture_id, book_id, market, selection`,
-    FIXTURE_IDS
+     WHERE match_id IN (${ph}) AND book_id IN (0, 68)
+     ORDER BY match_id, book_id, market, selection`,
+    MATCH_IDS
   );
 
   console.log(`${TAG} [STATE] Total rows fetched from DB: ${rows.length}`);
 
-  // Index by fixture_id + book_id + market + selection
+  // Index by match_id + book_id + market + selection
   const idx = {};
   for (const r of rows) {
-    const k = `${r.fixture_id}|${r.book_id}|${r.market}|${r.selection}`;
+    const k = `${r.match_id}|${r.book_id}|${r.market}|${r.selection}`;
     idx[k] = r;
   }
 
@@ -56,8 +56,8 @@ async function main() {
   let passedCells = 0;
   const failedCells = [];
 
-  for (const fid of FIXTURE_IDS) {
-    console.log(`\n${TAG} ── ${FIXTURE_NAMES[fid]} (${fid}) ──`);
+  for (const fid of MATCH_IDS) {
+    console.log(`\n${TAG} ── ${MATCH_NAMES[fid]} (${fid}) ──`);
     console.log(`${TAG} ${'Market/Selection'.padEnd(30)} ${'DK Book'.padEnd(14)} ${'Model v4.2'.padEnd(14)} Status`);
     console.log(`${TAG} ${'-'.repeat(70)}`);
 
@@ -93,16 +93,16 @@ async function main() {
   console.log(`${TAG} MODEL PROJECTION SUMMARY (v4.2 Corrected, 1M Monte Carlo):`);
 
   const [projRows] = await conn.execute(
-    `SELECT fixture_id, home_team, away_team, home_win_prob, draw_prob, away_win_prob,
+    `SELECT match_id, home_team, away_team, home_win_prob, draw_prob, away_win_prob,
             model_home_ml, model_draw_ml, model_away_ml,
             model_total, over_odds, under_odds,
             home_edge, draw_edge, away_edge,
             model_lean, lean_prob, proj_total,
             over_2_5, btts_prob
      FROM wc2026_model_projections
-     WHERE fixture_id IN (${ph}) AND model_version = 'v4.2-corrected-june22'
-     ORDER BY fixture_id`,
-    FIXTURE_IDS
+     WHERE match_id IN (${ph}) AND model_version = 'v4.2-corrected-june22'
+     ORDER BY match_id`,
+    MATCH_IDS
   );
 
   for (const p of projRows) {
@@ -111,7 +111,7 @@ async function main() {
     const aml = p.model_away_ml > 0 ? `+${p.model_away_ml}` : `${p.model_away_ml}`;
     const oml = p.over_odds > 0 ? `+${p.over_odds}` : `${p.over_odds}`;
     const uml = p.under_odds > 0 ? `+${p.under_odds}` : `${p.under_odds}`;
-    console.log(`${TAG}   ${p.fixture_id}: ${p.home_team.toUpperCase()} vs ${p.away_team.toUpperCase()}`);
+    console.log(`${TAG}   ${p.match_id}: ${p.home_team.toUpperCase()} vs ${p.away_team.toUpperCase()}`);
     console.log(`${TAG}     ML: H=${hml} D=${dml} A=${aml}`);
     console.log(`${TAG}     Total: ${p.model_total} | O=${oml} U=${uml}`);
     console.log(`${TAG}     Probs: H=${(p.home_win_prob*100).toFixed(2)}% D=${(p.draw_prob*100).toFixed(2)}% A=${(p.away_win_prob*100).toFixed(2)}%`);

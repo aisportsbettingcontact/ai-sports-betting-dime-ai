@@ -10,7 +10,7 @@
  *   blend weights: w_book=0.25, w_elo=0.40, w_rank=0.15, w_form=0.20
  *   n_simulations = 1,000,000
  *
- * JUNE 22 FIXTURES (DB verified):
+ * JUNE 22 MATCHS (DB verified):
  *   wc26-g-043: Austria (aut, DB home) vs Argentina (arg, DB away) — Group F, 17:00 UTC
  *   wc26-g-041: Iraq (irq, DB home) vs France (fra, DB away) — Group E, 21:00 UTC
  *   wc26-g-042: Norway (nor, DB home) vs Senegal (sen, DB away) — Group A, 00:00 UTC Jun 23
@@ -162,8 +162,8 @@ function runMonteCarlo(lambdaH, lambdaA, nSims = N_SIMULATIONS) {
   };
 }
 
-// ─── Core: Compute model projection for a fixture ────────────────────────────
-function computeModelProjection(fixture) {
+// ─── Core: Compute model projection for a match ────────────────────────────
+function computeModelProjection(match) {
   const {
     matchId, homeName, homeCode, awayName, awayCode,
     eloHome, eloAway,
@@ -172,7 +172,7 @@ function computeModelProjection(fixture) {
     altitudeM,
     bookHomeML, bookDrawML, bookAwayML,
     bookOverML, bookUnderML, bookTotalLine,
-  } = fixture;
+  } = match;
 
   console.log(`\n${TAG} ════════════════════════════════════════════════════════`);
   console.log(`${TAG} [INPUT] ${homeName} (${homeCode}) vs ${awayName} (${awayCode})`);
@@ -341,8 +341,8 @@ function computeModelProjection(fixture) {
   };
 }
 
-// ─── Fixture definitions ─────────────────────────────────────────────────────
-const FIXTURES = [
+// ─── Match definitions ─────────────────────────────────────────────────────
+const MATCHS = [
   {
     matchId: 'wc26-g-043',
     // DB: home=aut, away=arg | DK display: Argentina on top (DK home) but DB has Austria as home
@@ -442,15 +442,15 @@ async function main() {
   let totalErrors = 0;
   const results = [];
 
-  for (const fixture of FIXTURES) {
+  for (const match of MATCHS) {
     try {
-      const proj = computeModelProjection(fixture);
-      results.push({ fixture, proj });
+      const proj = computeModelProjection(match);
+      results.push({ match, proj });
 
-      // ── Delete existing model rows for this fixture ──────────────────────
+      // ── Delete existing model rows for this match ──────────────────────
       await conn.execute(
         `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
-        [fixture.matchId, MODEL_BOOK_ID]
+        [match.matchId, MODEL_BOOK_ID]
       );
 
       // ── Insert model odds rows ────────────────────────────────────────────
@@ -458,8 +458,8 @@ async function main() {
         { market: '1X2', selection: 'home', odds: proj.modelHomeML, line: null },
         { market: '1X2', selection: 'draw', odds: proj.modelDrawML, line: null },
         { market: '1X2', selection: 'away', odds: proj.modelAwayML, line: null },
-        { market: 'TOTAL', selection: 'over',  odds: proj.modelOverML,  line: fixture.bookTotalLine },
-        { market: 'TOTAL', selection: 'under', odds: proj.modelUnderML, line: fixture.bookTotalLine },
+        { market: 'TOTAL', selection: 'over',  odds: proj.modelOverML,  line: match.bookTotalLine },
+        { market: 'TOTAL', selection: 'under', odds: proj.modelUnderML, line: match.bookTotalLine },
         { market: 'DOUBLE_CHANCE', selection: 'home_draw', odds: proj.modelHomeDrawML, line: null },
         { market: 'DOUBLE_CHANCE', selection: 'away_draw', odds: proj.modelAwayDrawML, line: null },
       ];
@@ -470,7 +470,7 @@ async function main() {
           `INSERT INTO wc2026_odds_snapshots
              (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [fixture.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection,
+          [match.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection,
            row.line, row.odds, impliedProb, false]
         );
         totalInserted++;
@@ -527,8 +527,8 @@ async function main() {
           away_goal_dist = VALUES(away_goal_dist),
           modeled_at = NOW()
       `, [
-        fixture.matchId, MODEL_VERSION, N_SIMULATIONS,
-        fixture.homeCode, fixture.awayCode,
+        match.matchId, MODEL_VERSION, N_SIMULATIONS,
+        match.homeCode, match.awayCode,
         proj.lambdaH, proj.lambdaA,
         proj.finalH, proj.finalD, proj.finalA,
         proj.lambdaH, proj.lambdaA, proj.mc.avgGoals,
@@ -544,14 +544,14 @@ async function main() {
         JSON.stringify(proj.mc.awayGoalDist),
       ]);
 
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: ML home=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} draw=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} away=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Total=${proj.modelTotalLine} O${fixture.bookTotalLine}=${proj.modelOverML > 0 ? '+' : ''}${proj.modelOverML} U${fixture.bookTotalLine}=${proj.modelUnderML > 0 ? '+' : ''}${proj.modelUnderML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: DC 1X=${proj.modelHomeDrawML > 0 ? '+' : ''}${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML > 0 ? '+' : ''}${proj.modelAwayDrawML}`);
-      console.log(`${TAG} [OUTPUT] ${fixture.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: ML home=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} draw=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} away=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Total=${proj.modelTotalLine} O${match.bookTotalLine}=${proj.modelOverML > 0 ? '+' : ''}${proj.modelOverML} U${match.bookTotalLine}=${proj.modelUnderML > 0 ? '+' : ''}${proj.modelUnderML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: DC 1X=${proj.modelHomeDrawML > 0 ? '+' : ''}${proj.modelHomeDrawML} X2=${proj.modelAwayDrawML > 0 ? '+' : ''}${proj.modelAwayDrawML}`);
+      console.log(`${TAG} [OUTPUT] ${match.matchId}: Lean=${proj.modelLean}(${(proj.leanProb*100).toFixed(1)}%) Edges: H=${(proj.homeEdge*100).toFixed(2)}pp D=${(proj.drawEdge*100).toFixed(2)}pp A=${(proj.awayEdge*100).toFixed(2)}pp`);
 
     } catch (err) {
       totalErrors++;
-      console.error(`${TAG} [ERROR] ${fixture.matchId}: ${err.message}`);
+      console.error(`${TAG} [ERROR] ${match.matchId}: ${err.message}`);
       console.error(err.stack);
     }
   }
@@ -559,17 +559,17 @@ async function main() {
   // ── Final summary ──────────────────────────────────────────────────────────
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} JUNE 22 MODEL SEED COMPLETE (v4.2 Corrected)`);
-  console.log(`${TAG} Fixtures processed: ${FIXTURES.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
+  console.log(`${TAG} Matchs processed: ${MATCHS.length} | Rows inserted: ${totalInserted} | Errors: ${totalErrors}`);
   console.log(`\n${TAG} PROJECTIONS SUMMARY:`);
-  for (const { fixture, proj } of results) {
+  for (const { match, proj } of results) {
     const overEdge = (proj.overLineProb - proj.bookOverNV) * 100;
     const underEdge = (proj.underLineProb - proj.bookUnderNV) * 100;
-    const bestTotalEdge = overEdge > underEdge ? `O${fixture.bookTotalLine} +${overEdge.toFixed(2)}pp` : `U${fixture.bookTotalLine} +${underEdge.toFixed(2)}pp`;
-    console.log(`${TAG}   ${fixture.homeName} vs ${fixture.awayName}: lean=${proj.leanName} | ML H=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} D=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} A=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML} | ${bestTotalEdge}`);
+    const bestTotalEdge = overEdge > underEdge ? `O${match.bookTotalLine} +${overEdge.toFixed(2)}pp` : `U${match.bookTotalLine} +${underEdge.toFixed(2)}pp`;
+    console.log(`${TAG}   ${match.homeName} vs ${match.awayName}: lean=${proj.leanName} | ML H=${proj.modelHomeML > 0 ? '+' : ''}${proj.modelHomeML} D=${proj.modelDrawML > 0 ? '+' : ''}${proj.modelDrawML} A=${proj.modelAwayML > 0 ? '+' : ''}${proj.modelAwayML} | ${bestTotalEdge}`);
   }
 
   // ── Verify DB state ────────────────────────────────────────────────────────
-  const matchIds = FIXTURES.map(f => f.matchId);
+  const matchIds = MATCHS.map(f => f.matchId);
   const ph = matchIds.map(() => '?').join(',');
   const [verifyRows] = await conn.execute(
     `SELECT match_id, book_id, market, selection, american_odds FROM wc2026_odds_snapshots
@@ -580,8 +580,8 @@ async function main() {
   const modelRows = verifyRows.filter(r => r.book_id === 0);
   const dkRows = verifyRows.filter(r => r.book_id === 68);
   console.log(`\n${TAG} [VERIFY] DB state: model rows=${modelRows.length} DK rows=${dkRows.length}`);
-  const expectedModelRows = FIXTURES.length * 7;
-  const expectedDkRows = FIXTURES.length * 7;
+  const expectedModelRows = MATCHS.length * 7;
+  const expectedDkRows = MATCHS.length * 7;
   const modelPass = modelRows.length === expectedModelRows;
   const dkPass = dkRows.length === expectedDkRows;
   console.log(`${TAG} [VERIFY] Model rows: ${modelPass ? '✅' : '❌'} expected=${expectedModelRows} actual=${modelRows.length}`);

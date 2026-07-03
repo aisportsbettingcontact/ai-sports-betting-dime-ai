@@ -1,7 +1,7 @@
 /**
  * WC2026 FEED FORENSIC AUDIT — 500x ELITE
  * =========================================
- * Full-pipeline audit: DB fixtures → frozen_book_odds → tRPC query logic → date filtering
+ * Full-pipeline audit: DB matchs → frozen_book_odds → tRPC query logic → date filtering
  * Pinpoints exactly why 12 R32/R16 matches do not appear on the Projections Feed.
  *
  * Run: node server/wc2026/wc2026FeedAudit.mjs
@@ -84,7 +84,7 @@ function parseDbUrl(url) {
   };
 }
 
-const TARGET_FIXTURES = [
+const TARGET_MATCHS = [
   'wc26-r32-080','wc26-r32-081','wc26-r32-082','wc26-r32-083','wc26-r32-084',
   'wc26-r32-085','wc26-r32-086','wc26-r32-087','wc26-r32-088',
   'wc26-r16-089','wc26-r16-090','wc26-r16-091'
@@ -99,7 +99,7 @@ function warn(msg, data) { WARN++; log('WARN', msg, data); }
 async function main() {
   section('WC2026 PROJECTIONS FEED — 500x FORENSIC AUDIT');
   log('INFO', `Timestamp: ${new Date().toISOString()}`);
-  log('INFO', `Target fixtures: ${TARGET_FIXTURES.join(', ')}`);
+  log('INFO', `Target matchs: ${TARGET_MATCHS.join(', ')}`);
 
   const dbConfig = parseDbUrl(DB_URL);
   log('INFO', `Connecting to DB: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
@@ -111,29 +111,29 @@ async function main() {
   });
   log('PASS', 'DB connection established');
 
-  // ─── PHASE 1: FIXTURE ROW AUDIT ──────────────────────────────────────────
+  // ─── PHASE 1: MATCH ROW AUDIT ──────────────────────────────────────────
   section('PHASE 1: wc2026_matches — Row Existence + Field Values');
 
-  const [fixtureRows] = await conn.execute(
+  const [matchRows] = await conn.execute(
     `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status,
             espn_event_id
      FROM wc2026_matches
-     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     WHERE match_id IN (${TARGET_MATCHS.map(() => '?').join(',')})
      ORDER BY match_id`,
-    TARGET_FIXTURES
+    TARGET_MATCHS
   );
 
-  log('DATA', `wc2026_matches rows returned: ${fixtureRows.length} / 12 expected`);
+  log('DATA', `wc2026_matches rows returned: ${matchRows.length} / 12 expected`);
 
-  if (fixtureRows.length !== 12) {
-    fail(`Expected 12 fixture rows, got ${fixtureRows.length}`);
+  if (matchRows.length !== 12) {
+    fail(`Expected 12 match rows, got ${matchRows.length}`);
   } else {
-    pass('All 12 fixture rows present in wc2026_matches');
+    pass('All 12 match rows present in wc2026_matches');
   }
 
-  const fixtureMap = {};
-  for (const row of fixtureRows) {
-    fixtureMap[row.match_id] = row;
+  const matchMap = {};
+  for (const row of matchRows) {
+    matchMap[row.match_id] = row;
     const fid = row.match_id;
     log('DATA', `[${fid}] stage=${row.stage} | match_date=${row.match_date} | kickoff_utc=${row.kickoff_utc} | status=${row.status} | home=${row.home_team_id} | away=${row.away_team_id}`);
 
@@ -163,9 +163,9 @@ async function main() {
             book_over_odds, book_under_odds, book_spread_line,
             to_advance_home_odds, to_advance_away_odds
      FROM wc2026_frozen_book_odds
-     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     WHERE match_id IN (${TARGET_MATCHS.map(() => '?').join(',')})
      ORDER BY match_id`,
-    TARGET_FIXTURES
+    TARGET_MATCHS
   );
 
   log('DATA', `wc2026_frozen_book_odds rows returned: ${oddsRows.length} / 12 expected`);
@@ -188,16 +188,16 @@ async function main() {
   }
 
   // ─── PHASE 3: JOIN AUDIT ─────────────────────────────────────────────────
-  section('PHASE 3: JOIN Integrity — fixtures LEFT JOIN frozen_book_odds');
+  section('PHASE 3: JOIN Integrity — matchs LEFT JOIN frozen_book_odds');
 
   const [joinRows] = await conn.execute(
     `SELECT f.match_id, f.stage, f.match_date, f.kickoff_utc,
             o.match_id AS odds_fid, o.book_away_ml
      FROM wc2026_matches f
      LEFT JOIN wc2026_frozen_book_odds o ON f.match_id = o.match_id
-     WHERE f.match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     WHERE f.match_id IN (${TARGET_MATCHS.map(() => '?').join(',')})
      ORDER BY f.match_id`,
-    TARGET_FIXTURES
+    TARGET_MATCHS
   );
 
   log('DATA', `JOIN result rows: ${joinRows.length}`);
@@ -212,14 +212,14 @@ async function main() {
   // ─── PHASE 4: TEAM RESOLUTION AUDIT ──────────────────────────────────────
   section('PHASE 4: Team Resolution — home_team_id + away_team_id → wc2026_teams');
 
-  // Get all team IDs used by target fixtures
+  // Get all team IDs used by target matchs
   const allTeamIds = new Set();
-  for (const row of fixtureRows) {
+  for (const row of matchRows) {
     if (row.home_team_id) allTeamIds.add(row.home_team_id);
     if (row.away_team_id) allTeamIds.add(row.away_team_id);
   }
   const teamIdList = [...allTeamIds];
-  log('DATA', `Unique team IDs in target fixtures: ${teamIdList.join(', ')}`);
+  log('DATA', `Unique team IDs in target matchs: ${teamIdList.join(', ')}`);
 
   if (teamIdList.length > 0) {
     const [teamRows] = await conn.execute(
@@ -238,13 +238,13 @@ async function main() {
       else pass(`team_id='${tid}' → '${teamMap[tid].team_name}'`);
     }
   } else {
-    fail('No team IDs found in fixture rows — home_team_id/away_team_id are all NULL');
+    fail('No team IDs found in match rows — home_team_id/away_team_id are all NULL');
   }
 
   // ─── PHASE 5: DATE RANGE AUDIT ────────────────────────────────────────────
-  section('PHASE 5: Date Range — What dates do these fixtures fall on?');
+  section('PHASE 5: Date Range — What dates do these matchs fall on?');
 
-  const matchDates = [...new Set(fixtureRows.map(r => r.match_date).filter(Boolean))].sort();
+  const matchDates = [...new Set(matchRows.map(r => r.match_date).filter(Boolean))].sort();
   log('DATA', `Distinct match_date values: ${JSON.stringify(matchDates)}`);
 
   if (matchDates.length === 0) {
@@ -253,7 +253,7 @@ async function main() {
     pass(`match_date values present: ${matchDates.join(', ')}`);
   }
 
-  // ─── PHASE 6: FULL FIXTURE TABLE STAGE DISTRIBUTION ──────────────────────
+  // ─── PHASE 6: FULL MATCH TABLE STAGE DISTRIBUTION ──────────────────────
   section('PHASE 6: Full wc2026_matches Stage Distribution');
 
   const [stageDistRows] = await conn.execute(
@@ -339,7 +339,7 @@ async function main() {
   // ─── PHASE 10: SIMULATE THE FEED QUERY ───────────────────────────────────
   section('PHASE 10: Simulate Feed Query — What does the DB return for Jul 1–7?');
 
-  // Simulate the most likely query pattern: fixtures for a given date with odds
+  // Simulate the most likely query pattern: matchs for a given date with odds
   const testDates = ['2026-07-01','2026-07-02','2026-07-03','2026-07-04','2026-07-05','2026-07-06','2026-07-07'];
   for (const d of testDates) {
     const [rows] = await conn.execute(
@@ -355,23 +355,23 @@ async function main() {
       [d]
     );
     if (rows.length > 0) {
-      pass(`Date ${d}: ${rows.length} fixture(s) found`);
+      pass(`Date ${d}: ${rows.length} match(s) found`);
       for (const r of rows) {
         log('DATA', `  [${r.match_id}] ${r.away_name} @ ${r.home_name} | stage=${r.stage} | kickoff=${r.kickoff_utc} | away_ml=${r.book_away_ml}`);
       }
     } else {
-      fail(`Date ${d}: 0 fixtures returned — EMPTY`);
+      fail(`Date ${d}: 0 matchs returned — EMPTY`);
     }
   }
 
-  // ─── PHASE 11: CHECK ACTUAL match_date VALUES FOR TARGET FIXTURES ─────────
-  section('PHASE 11: Raw match_date dump for all 12 target fixtures');
+  // ─── PHASE 11: CHECK ACTUAL match_date VALUES FOR TARGET MATCHS ─────────
+  section('PHASE 11: Raw match_date dump for all 12 target matchs');
 
   const [rawDates] = await conn.execute(
     `SELECT match_id, match_date, kickoff_utc, stage FROM wc2026_matches
-     WHERE match_id IN (${TARGET_FIXTURES.map(() => '?').join(',')})
+     WHERE match_id IN (${TARGET_MATCHS.map(() => '?').join(',')})
      ORDER BY match_id`,
-    TARGET_FIXTURES
+    TARGET_MATCHS
   );
   for (const r of rawDates) {
     log('DATA', `[${r.match_id}] match_date=${JSON.stringify(r.match_date)} | kickoff_utc=${JSON.stringify(r.kickoff_utc)} | stage=${r.stage}`);

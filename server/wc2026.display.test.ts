@@ -26,14 +26,14 @@ interface OddsSnapshot {
   american_odds: number;
 }
 
-interface FixtureOdds {
+interface MatchOdds {
   home_team_id: string;
   away_team_id: string;
   dk: { home: number; away: number; draw: number };
 }
 
 // ── Ground truth from DK screenshot ──────────────────────────────────────────
-const DK_GROUND_TRUTH: Record<string, FixtureOdds> = {
+const DK_GROUND_TRUTH: Record<string, MatchOdds> = {
   'wc26-g-025': { home_team_id: 'cze', away_team_id: 'rsa', dk: { home: -120, away: 380, draw: 260 } },
   'wc26-g-027': { home_team_id: 'sui', away_team_id: 'bih', dk: { home: -180, away: 500, draw: 310 } },
   'wc26-g-028': { home_team_id: 'can', away_team_id: 'qat', dk: { home: -350, away: 1000, draw: 475 } },
@@ -174,7 +174,7 @@ describe('WC2026 Feed — June 18 Display Orientation & Odds Mapping', () => {
       expect(fairHome).toBeGreaterThan(fairAway);
     });
 
-    it('No fixture has home_team_id === away_team_id (no self-match)', () => {
+    it('No match has home_team_id === away_team_id (no self-play)', () => {
       for (const [, gt] of Object.entries(DK_GROUND_TRUTH)) {
         expect(gt.home_team_id).not.toBe(gt.away_team_id);
       }

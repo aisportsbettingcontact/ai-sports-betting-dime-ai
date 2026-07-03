@@ -3,7 +3,7 @@
  * 
  * RULE: match_date = PT (Pacific Daylight Time = UTC-7) date of kickoff_utc
  * 
- * Audits and corrects match_date for all 13 target fixtures.
+ * Audits and corrects match_date for all 13 target matchs.
  * Logs every step with full transparency.
  */
 import mysql from 'mysql2/promise';
@@ -42,7 +42,7 @@ const [rows] = await conn.execute(`
   ORDER BY f.kickoff_utc, f.match_id
 `, TARGET_IDS);
 
-console.log(`[INPUT]  ${rows.length} fixtures loaded from DB\n`);
+console.log(`[INPUT]  ${rows.length} matchs loaded from DB\n`);
 
 const corrections = [];
 
@@ -96,7 +96,7 @@ if (corrections.length === 0) {
   }
   
   // Verify all corrections
-  console.log('\n[VERIFY] Re-querying all corrected fixtures...');
+  console.log('\n[VERIFY] Re-querying all corrected matchs...');
   const correctedIds = corrections.map(c => c.matchId);
   const verPh = correctedIds.map(() => '?').join(',');
   const [verRows] = await conn.execute(
@@ -120,7 +120,7 @@ if (corrections.length === 0) {
 
 // Final state dump
 console.log('\n════════════════════════════════════════════════════════════════════');
-console.log('  FINAL STATE — All 13 Fixtures');
+console.log('  FINAL STATE — All 13 Matchs');
 console.log('════════════════════════════════════════════════════════════════════');
 const [final] = await conn.execute(`
   SELECT f.match_id, f.match_date, f.kickoff_utc,

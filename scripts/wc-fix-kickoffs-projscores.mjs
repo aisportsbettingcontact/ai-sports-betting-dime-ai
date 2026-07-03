@@ -35,7 +35,7 @@ const kickoffFixes = [
 
 for (const fix of kickoffFixes) {
   const [result] = await conn.query(
-    'UPDATE wc2026_matches SET kickoff_utc = ? WHERE fixture_id = ?',
+    'UPDATE wc2026_matches SET kickoff_utc = ? WHERE match_id = ?',
     [fix.utc, fix.id]
   );
   const ok = result.affectedRows === 1;
@@ -44,8 +44,8 @@ for (const fix of kickoffFixes) {
 
 // ── STEP 2: Verify kickoff times ──────────────────────────────────────────
 console.log('\n[FIX] === STEP 2: VERIFYING KICKOFF TIMES ===');
-const [fixtures] = await conn.query(`
-  SELECT f.fixture_id, f.kickoff_utc,
+const [matches] = await conn.query(`
+  SELECT f.match_id, f.kickoff_utc,
     ht.fifa_code AS home_code, at.fifa_code AS away_code
   FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -63,12 +63,12 @@ const expectedOrder = [
   { id: 'wc26-g-054', edtHour: 21 },
 ];
 
-for (const f of fixtures) {
+for (const f of matches) {
   const kickoffUTC = new Date(f.kickoff_utc);
   const edtHour = (kickoffUTC.getUTCHours() - 4 + 24) % 24;
   const edtMin = kickoffUTC.getUTCMinutes();
   const edtStr = `${String(edtHour).padStart(2,'0')}:${String(edtMin).padStart(2,'0')}EDT`;
-  console.log(`[FIX] ${f.fixture_id}: ${f.away_code}@${f.home_code} kickoff=${edtStr}`);
+  console.log(`[FIX] ${f.match_id}: ${f.away_code}@${f.home_code} kickoff=${edtStr}`);
 }
 
 // ── STEP 3: Fix projected scores ──────────────────────────────────────────
@@ -185,7 +185,7 @@ function simulateMeanScores(lambdaH, lambdaA, N = 100000, seed = 42) {
 }
 
 // Ground truth book odds for lambda derivation
-const fixtures24 = [
+const matches24 = [
   { id: 'wc26-g-049', away: 'CAN', home: 'SUI', mlAway: 240, mlHome: 135, mlDraw: 210, totalLine: 2.5 },
   { id: 'wc26-g-050', away: 'QAT', home: 'BIH', mlAway: 600, mlHome: -240, mlDraw: 400, totalLine: 2.5 },
   { id: 'wc26-g-051', away: 'BRA', home: 'SCO', mlAway: -265, mlHome: 700, mlDraw: 425, totalLine: 2.5 },
@@ -194,10 +194,10 @@ const fixtures24 = [
   { id: 'wc26-g-054', away: 'KOR', home: 'RSA', mlAway: -150, mlHome: 425, mlDraw: 295, totalLine: 2.5 },
 ];
 
-for (const f of fixtures24) {
+for (const f of matches24) {
   // Step A: Remove vig from 3-way market
   // NOTE: mlHome/mlAway in DB are stored as home=SUI, away=CAN
-  // The fixture home_team is SUI (home), away_team is CAN (away)
+  // The match home_team is SUI (home), away_team is CAN (away)
   const { nvHome, nvDraw, nvAway } = removeVig3Way(f.mlHome, f.mlDraw, f.mlAway);
   
   console.log(`[FIX] ${f.id} (${f.away}@${f.home}):`);
@@ -214,7 +214,7 @@ for (const f of fixtures24) {
   console.log(`  [VERIFY] lambdaH calibration: ${pHOk ? '✅ PASS' : '❌ FAIL'} (diff=${Math.abs(pH-nvHome).toFixed(5)})`);
   
   // Step D: Run 100K simulations to get mean scores
-  const { meanH, meanA } = simulateMeanScores(lambdaH, lambdaA, 100000, 42 + fixtures24.indexOf(f));
+  const { meanH, meanA } = simulateMeanScores(lambdaH, lambdaA, 100000, 42 + matches24.indexOf(f));
   const projTotal = meanH + meanA;
   
   console.log(`  [STATE] Monte Carlo 100K: meanH=${meanH.toFixed(4)} meanA=${meanA.toFixed(4)} projTotal=${projTotal.toFixed(4)}`);
@@ -227,7 +227,7 @@ for (const f of fixtures24) {
   const [result] = await conn.query(`
     UPDATE wc2026_model_projections 
     SET proj_home_score = ?, proj_away_score = ?, proj_total = ?
-    WHERE fixture_id = ?
+    WHERE match_id = ?
     ORDER BY modeled_at DESC
     LIMIT 1
   `, [

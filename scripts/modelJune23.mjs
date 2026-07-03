@@ -6,7 +6,7 @@
  *   2026 accuracy: ML=55.0% Draw=45.0% DC=90.0% Total=65.0%
  *   params: eloK=0.70, rankK=0.30, homeAdv=1.08, rho=-0.13, baseGoals=2.65, drawFloor=0.22
  *
- * Fixtures (June 23, 2026 EST):
+ * Matchs (June 23, 2026 EST):
  *   wc26-g-045: Uzbekistan (H) vs Portugal (A)  — 1:00 PM EST
  *   wc26-g-047: Ghana (H) vs England (A)         — 4:00 PM EST
  *   wc26-g-048: Panama (H) vs Croatia (A)        — 7:00 PM EST
@@ -50,8 +50,8 @@ const RANK = {
   col: 9,    // Colombia
 };
 
-// ── June 23 Fixtures ──────────────────────────────────────────────────────
-const FIXTURES = [
+// ── June 23 Matchs ──────────────────────────────────────────────────────
+const MATCHES = [
   { id: 'wc26-g-045', home: 'uzb', away: 'por', homeName: 'Uzbekistan', awayName: 'Portugal',  kickoffEST: '1:00 PM EST' },
   { id: 'wc26-g-047', home: 'gha', away: 'eng', homeName: 'Ghana',      awayName: 'England',   kickoffEST: '4:00 PM EST' },
   { id: 'wc26-g-048', home: 'pan', away: 'cro', homeName: 'Panama',     awayName: 'Croatia',   kickoffEST: '7:00 PM EST' },
@@ -156,42 +156,42 @@ async function main() {
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} June 23, 2026 WC2026 Model — v3 Champion`);
   console.log(`${TAG} params: eloK=${P.eloK} rankK=${P.rankK} homeAdv=${P.homeAdv} rho=${P.rho} bg=${P.baseGoals} drawFloor=${P.drawFloor}`);
-  console.log(`${TAG} N=${N_SIM.toLocaleString()} Monte Carlo | 4 fixtures | 9 markets`);
+  console.log(`${TAG} N=${N_SIM.toLocaleString()} Monte Carlo | 4 matches | 9 markets`);
   console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
   console.log(`${TAG} ${'='.repeat(72)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-  // Verify fixtures exist in DB
-  const fixtureIds = FIXTURES.map(f => f.id);
-  const [fixtureCheck] = await conn.execute(
-    `SELECT fixture_id, status FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
-    fixtureIds
+  // Verify matches exist in DB
+  const matchIds = MATCHES.map(f => f.id);
+  const [matchCheck] = await conn.execute(
+    `SELECT match_id, status FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
+    matchIds
   );
-  console.log(`${TAG} [VERIFY] DB fixtures: ${fixtureCheck.map(r => `${r.fixture_id}(${r.status})`).join(', ')}`);
-  if (fixtureCheck.length !== 4) {
-    console.error(`${TAG} [FATAL] Expected 4 fixtures, got ${fixtureCheck.length}`);
+  console.log(`${TAG} [VERIFY] DB matches: ${matchCheck.map(r => `${r.match_id}(${r.status})`).join(', ')}`);
+  if (matchCheck.length !== 4) {
+    console.error(`${TAG} [FATAL] Expected 4 matches, got ${matchCheck.length}`);
     process.exit(1);
   }
 
   // Load DK odds (book_id=68) for edge calculation
   const [dkOdds] = await conn.execute(
-    `SELECT fixture_id, market, selection, american_odds, line
+    `SELECT match_id, market, selection, american_odds, line
      FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) AND book_id = 68
-     ORDER BY fixture_id, market, selection`,
-    fixtureIds
+     WHERE match_id IN (${matchIds.map(() => '?').join(',')}) AND book_id = 68
+     ORDER BY match_id, market, selection`,
+    matchIds
   );
   const dkMap = {};
   for (const row of dkOdds) {
-    const key = `${row.fixture_id}:${row.market}:${row.selection}`;
+    const key = `${row.match_id}:${row.market}:${row.selection}`;
     dkMap[key] = { odds: row.american_odds, line: row.line };
   }
   console.log(`${TAG} [INPUT] DK odds loaded: ${dkOdds.length} rows`);
 
   const projections = [];
 
-  for (const fix of FIXTURES) {
+  for (const fix of MATCHES) {
     console.log(`\n${TAG} ${'─'.repeat(60)}`);
     console.log(`${TAG} [STEP] ${fix.homeName} (H) vs ${fix.awayName} (A) — ${fix.id} — ${fix.kickoffEST}`);
 
@@ -292,7 +292,7 @@ async function main() {
     try {
       await conn.execute(`
         INSERT INTO wc2026_model_projections (
-          fixture_id, model_version, n_simulations,
+          match_id, model_version, n_simulations,
           home_team, away_team,
           home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
@@ -349,10 +349,10 @@ async function main() {
   console.log(`\n${TAG} ${'─'.repeat(60)}`);
   console.log(`${TAG} [STEP] Seeding model lines → wc2026_odds_snapshots (book_id=0)`);
 
-  // Delete existing book_id=0 rows for these fixtures
+  // Delete existing book_id=0 rows for these matches
   const [delResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND fixture_id IN (${fixtureIds.map(() => '?').join(',')})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND match_id IN (${matchIds.map(() => '?').join(',')})`,
+    matchIds
   );
   console.log(`${TAG} [STATE] Deleted ${delResult.affectedRows} existing book_id=0 rows`);
 
@@ -388,7 +388,7 @@ async function main() {
       try {
         await conn.execute(
           `INSERT INTO wc2026_odds_snapshots
-            (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+            (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
            VALUES (?, 0, ?, ?, ?, ?, ?, ?, 1)`,
           [fix.id, mkt.market, mkt.selection, mkt.line, mkt.americanOdds, mkt.impliedProb, now]
         );
@@ -405,11 +405,11 @@ async function main() {
 
   // ── Verify all 28 rows in DB ──────────────────────────────────────────────
   const [verifyRows] = await conn.execute(
-    `SELECT fixture_id, market, selection, american_odds, line, is_closing
+    `SELECT match_id, market, selection, american_odds, line, is_closing
      FROM wc2026_odds_snapshots
-     WHERE book_id = 0 AND fixture_id IN (${fixtureIds.map(() => '?').join(',')})
-     ORDER BY fixture_id, market, selection`,
-    fixtureIds
+     WHERE book_id = 0 AND match_id IN (${matchIds.map(() => '?').join(',')})
+     ORDER BY match_id, market, selection`,
+    matchIds
   );
 
   await conn.end();

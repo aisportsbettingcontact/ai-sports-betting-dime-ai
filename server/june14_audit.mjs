@@ -104,9 +104,9 @@ if (mlbIssues.length > 0) {
 
 // ─── WC2026 SECTION ────────────────────────────────────────────────────────────
 console.log('\n' + '='.repeat(80));
-console.log('[WC2026] Fetching all June 14 WC2026 fixtures...');
+console.log('[WC2026] Fetching all June 14 WC2026 matchs...');
 
-const [wcFixtures] = await conn.execute(`
+const [wcMatchs] = await conn.execute(`
   SELECT 
     f.id, f.matchDate, f.kickoffUtc, f.groupCode,
     ht.name AS homeName, ht.abbreviation AS homeAbbr,
@@ -119,12 +119,12 @@ const [wcFixtures] = await conn.execute(`
   ORDER BY f.kickoffUtc ASC
 `);
 
-console.log(`[WC2026] Found ${wcFixtures.length} fixtures for June 14\n`);
+console.log(`[WC2026] Found ${wcMatchs.length} matchs for June 14\n`);
 
 const wcIssues = [];
 let wcClean = 0;
 
-for (const f of wcFixtures) {
+for (const f of wcMatchs) {
   // Get DK odds (bookId=68) — deduplicated by latest snapshot
   const [dkOdds] = await conn.execute(`
     SELECT market, selection, price, snapshotTs
@@ -194,7 +194,7 @@ for (const f of wcFixtures) {
   }
 }
 
-console.log(`[WC2026] SUMMARY: ${wcFixtures.length} fixtures | ${wcClean} CLEAN | ${wcIssues.length} WITH ISSUES`);
+console.log(`[WC2026] SUMMARY: ${wcMatchs.length} matchs | ${wcClean} CLEAN | ${wcIssues.length} WITH ISSUES`);
 if (wcIssues.length > 0) {
   console.log('[WC2026] ISSUES LIST:');
   for (const i of wcIssues) {

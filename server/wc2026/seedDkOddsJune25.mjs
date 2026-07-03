@@ -12,11 +12,11 @@
  *   wc26-g-056: PAR(home) vs AUS(away)  ← DB matches user ✓
  *
  * STEP 0: Fix orientation for wc26-g-059 and wc26-g-060 by swapping home_team_id ↔ away_team_id
- * STEP 1: Clear existing DK odds for all 6 fixtures
- * STEP 2: Insert all DK odds rows for all 6 fixtures
+ * STEP 1: Clear existing DK odds for all 6 matchs
+ * STEP 2: Insert all DK odds rows for all 6 matchs
  * STEP 3: Full audit — verify every row stored correctly
  *
- * MARKETS STORED (per fixture):
+ * MARKETS STORED (per match):
  *   1X2: home / draw / away
  *   TOTAL: over / under (with line)
  *   ASIAN_HANDICAP: home_spread / away_spread (with line)
@@ -52,7 +52,7 @@ function impliedProb(americanOdds) {
     : 100 / (americanOdds + 100);
 }
 
-// ─── June 25 Fixtures — USER-PROVIDED GROUND TRUTH ───────────────────────────
+// ─── June 25 Matchs — USER-PROVIDED GROUND TRUTH ───────────────────────────
 // All home/away labels are from the user. These are the authoritative orientations.
 // DB orientation is corrected to match before odds insertion.
 //
@@ -63,7 +63,7 @@ function impliedProb(americanOdds) {
 //   market='DOUBLE_CHANCE'  selection='home_draw'|'away_draw'          line=null
 //   market='BTTS'           selection='yes'|'no'                       line=null
 
-const FIXTURES = [
+const MATCHS = [
   // ── wc26-g-057: Ivory Coast (away=CIV) vs Curacao (home=CUW) ─────────────
   // DB orientation: home=cuw, away=civ ← MATCHES USER ✓
   {
@@ -269,7 +269,7 @@ const FIXTURES = [
 (async () => {
   console.log(`\n${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} WC 2026 JUNE 25 — DK ODDS SEED + ORIENTATION FIX`);
-  console.log(`${TAG} Fixtures: ${FIXTURES.length} | DK book_id: ${DK_BOOK_ID}`);
+  console.log(`${TAG} Matchs: ${MATCHS.length} | DK book_id: ${DK_BOOK_ID}`);
   console.log(`${TAG} ═══════════════════════════════════════════════════════\n`);
 
   const conn = await mysql.createConnection(parseDbUrl(process.env.DATABASE_URL));
@@ -280,8 +280,8 @@ const FIXTURES = [
   let totalInserted = 0;
   const errors = [];
 
-  for (const f of FIXTURES) {
-    console.log(`\n${TAG} ─── Fixture: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+  for (const f of MATCHS) {
+    console.log(`\n${TAG} ─── Match: ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
     // ── STEP 0: Fix orientation if DB is inverted ─────────────────────────────
     if (f.dbNeedsSwap) {
@@ -374,7 +374,7 @@ const FIXTURES = [
     ];
 
     // ── STEP 3: Insert DK odds rows ───────────────────────────────────────────
-    let insertedForFixture = 0;
+    let insertedForMatch = 0;
     for (const row of dkRows) {
       if (row.odds == null) {
         console.log(`${TAG} [STEP 3] SKIP null odds: market=${row.market} selection=${row.selection}`);
@@ -387,11 +387,11 @@ const FIXTURES = [
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, prob]
       );
-      insertedForFixture++;
-      console.log(`${TAG} [STEP 3] INSERT: fixture=${f.matchId} market=${row.market} sel=${row.selection} line=${row.line ?? 'null'} odds=${row.odds > 0 ? '+' + row.odds : row.odds} prob=${prob?.toFixed(4)}`);
+      insertedForMatch++;
+      console.log(`${TAG} [STEP 3] INSERT: match=${f.matchId} market=${row.market} sel=${row.selection} line=${row.line ?? 'null'} odds=${row.odds > 0 ? '+' + row.odds : row.odds} prob=${prob?.toFixed(4)}`);
     }
-    totalInserted += insertedForFixture;
-    console.log(`${TAG} [OUTPUT] Inserted ${insertedForFixture} DK rows for ${f.matchId}`);
+    totalInserted += insertedForMatch;
+    console.log(`${TAG} [OUTPUT] Inserted ${insertedForMatch} DK rows for ${f.matchId}`);
 
     // ── STEP 4: Verify inserted rows ──────────────────────────────────────────
     const [verify] = await conn.query(
@@ -401,10 +401,10 @@ const FIXTURES = [
        ORDER BY market, selection`,
       [f.matchId, DK_BOOK_ID]
     );
-    console.log(`${TAG} [VERIFY] DB rows for ${f.matchId}: ${verify.length} (expected ${insertedForFixture})`);
-    const verifyOk = verify.length === insertedForFixture;
+    console.log(`${TAG} [VERIFY] DB rows for ${f.matchId}: ${verify.length} (expected ${insertedForMatch})`);
+    const verifyOk = verify.length === insertedForMatch;
     if (!verifyOk) {
-      errors.push(`Row count mismatch for ${f.matchId}: inserted=${insertedForFixture} DB=${verify.length}`);
+      errors.push(`Row count mismatch for ${f.matchId}: inserted=${insertedForMatch} DB=${verify.length}`);
     }
     for (const v of verify) {
       console.log(`${TAG} [VERIFY]   ${v.market}/${v.selection} line=${v.line ?? 'null'} odds=${v.american_odds > 0 ? '+' + v.american_odds : v.american_odds} prob=${parseFloat(v.implied_prob).toFixed(4)}`);
@@ -415,7 +415,7 @@ const FIXTURES = [
   // ── FINAL SUMMARY ─────────────────────────────────────────────────────────
   console.log(`\n${TAG} ═══════════════════════════════════════════════════════`);
   console.log(`${TAG} FINAL SUMMARY`);
-  console.log(`${TAG}   Fixtures processed: ${FIXTURES.length}`);
+  console.log(`${TAG}   Matchs processed: ${MATCHS.length}`);
   console.log(`${TAG}   Orientation swaps:  ${totalSwaps}`);
   console.log(`${TAG}   DK rows deleted:    ${totalDeleted}`);
   console.log(`${TAG}   DK rows inserted:   ${totalInserted}`);
@@ -423,7 +423,7 @@ const FIXTURES = [
   if (errors.length > 0) {
     errors.forEach(e => console.error(`${TAG}   [ERROR] ${e}`));
   } else {
-    console.log(`${TAG}   [VERIFY] ALL FIXTURES SEEDED SUCCESSFULLY ✓`);
+    console.log(`${TAG}   [VERIFY] ALL MATCHS SEEDED SUCCESSFULLY ✓`);
   }
   console.log(`${TAG} ═══════════════════════════════════════════════════════\n`);
 

@@ -122,7 +122,7 @@ for (const o of current) {
   console.log(`  ${o.match_id} ${o.market} ${o.selection}=${o.american_odds}${o.line ? ' line='+o.line : ''}`);
 }
 
-// Step 2: Delete all DK odds for these fixtures
+// Step 2: Delete all DK odds for these matchs
 const [del] = await c.execute(
   `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 68`,
   june15Ids
@@ -176,8 +176,8 @@ for (const o of verify) {
   byFix[o.match_id][`${o.market}_${o.selection}`] = { odds: o.american_odds, line: o.line };
 }
 
-// Get fixture names
-const [fixtures] = await c.execute(`
+// Get match names
+const [matchs] = await c.execute(`
   SELECT f.match_id, ht.fifa_code as homeCode, ht.name as homeName,
          at.fifa_code as awayCode, at.name as awayName,
          f.kickoff_utc
@@ -189,7 +189,7 @@ const [fixtures] = await c.execute(`
 `, june15Ids);
 
 const fxMap = {};
-for (const f of fixtures) fxMap[f.match_id] = f;
+for (const f of matchs) fxMap[f.match_id] = f;
 
 const KICKOFF_ET = {
   'wc26-g-015': '12:00 PM ET',
@@ -216,7 +216,7 @@ for (const fid of june15Ids) {
   const ok = homeOk && drawOk && awayOk && overOk && underOk;
   if (!ok) allPass = false;
   
-  console.log(`[FIXTURE] ${fid} | ${f?.awayCode}(away) @ ${f?.homeCode}(home) | ${KICKOFF_ET[fid]}`);
+  console.log(`[MATCH] ${fid} | ${f?.awayCode}(away) @ ${f?.homeCode}(home) | ${KICKOFF_ET[fid]}`);
   console.log(`  HOME (${f?.homeCode}/${f?.homeName}): DK ML = ${db['1X2_home']?.odds ?? 'MISSING'} ${homeOk ? '✓' : '✗ exp='+exp.home_ml}`);
   console.log(`  DRAW:                         DK ML = ${db['1X2_draw']?.odds ?? 'MISSING'} ${drawOk ? '✓' : '✗ exp='+exp.draw_ml}`);
   console.log(`  AWAY (${f?.awayCode}/${f?.awayName}): DK ML = ${db['1X2_away']?.odds ?? 'MISSING'} ${awayOk ? '✓' : '✗ exp='+exp.away_ml}`);

@@ -8,7 +8,7 @@
  *   - Croatia 1-0 Panama (FT)
  *
  * [INPUT]  dateStr=20260623 onlyFinalMatches=false forceReingest=true
- * [OUTPUT] DB updated: homeScore, awayScore, status=FT for all 3 fixtures
+ * [OUTPUT] DB updated: homeScore, awayScore, status=FT for all 3 matches
  */
 import { createRequire } from "module";
 import { pathToFileURL } from "url";
@@ -37,7 +37,7 @@ const result = await ingestWc2026EspnResults({
 });
 
 console.log("[SEED] [OUTPUT] Ingestion complete:");
-console.log(`  fixturesUpdated: ${result.fixturesUpdated}`);
+console.log(`  matchesUpdated: ${result.matchesUpdated}`);
 console.log(`  statsWritten: ${result.statsWritten}`);
 console.log(`  eventsWritten: ${result.eventsWritten}`);
 console.log(`  lineupsWritten: ${result.lineupsWritten}`);
@@ -46,7 +46,7 @@ console.log(`  errors: ${result.errors.length}`);
 if (result.matchSummaries.length > 0) {
   console.log("[SEED] [OUTPUT] Match summaries:");
   for (const s of result.matchSummaries) {
-    console.log(`  ${s.fixtureId}: ${s.homeTeam} ${s.score} ${s.awayTeam} — status=${s.status}`);
+    console.log(`  ${s.matchId}: ${s.homeTeam} ${s.score} ${s.awayTeam} — status=${s.status}`);
   }
 }
 

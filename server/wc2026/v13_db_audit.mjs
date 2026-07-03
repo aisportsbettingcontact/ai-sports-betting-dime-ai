@@ -64,9 +64,9 @@ async function runAudit() {
 
   const db = await getDb();
 
-  // ── Step 1: Get July 1 fixtures and team IDs ─────────────────────────────
-  log('SECTION', 'STEP_1', 'STEP 1 — Pull July 1 fixture and team metadata');
-  const [fixtures] = await db.execute(`
+  // ── Step 1: Get July 1 matchs and team IDs ─────────────────────────────
+  log('SECTION', 'STEP_1', 'STEP 1 — Pull July 1 match and team metadata');
+  const [matchs] = await db.execute(`
     SELECT f.match_id, f.espn_event_id, f.home_team_id, f.away_team_id,
            f.match_date, f.kickoff_utc,
            ht.fifa_code AS home_code, ht.name AS home_name,
@@ -77,15 +77,15 @@ async function runAudit() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'FIXTURES', `Found ${fixtures.length} July 1 fixtures`);
-  fixtures.forEach(f => {
-    log('STATE', 'FIXTURE', `${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
+  log('INPUT', 'MATCHS', `Found ${matchs.length} July 1 matchs`);
+  matchs.forEach(f => {
+    log('STATE', 'MATCH', `${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
   });
 
   const teamIds = [];
   const teamCodes = [];
   const teamMap = {};
-  for (const f of fixtures) {
+  for (const f of matchs) {
     if (!teamIds.includes(f.home_team_id)) { teamIds.push(f.home_team_id); teamCodes.push(f.home_code); teamMap[f.home_team_id] = f.home_code; }
     if (!teamIds.includes(f.away_team_id)) { teamIds.push(f.away_team_id); teamCodes.push(f.away_code); teamMap[f.away_team_id] = f.away_code; }
   }

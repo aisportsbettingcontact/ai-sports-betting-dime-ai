@@ -128,34 +128,34 @@ async function scrapeDate(dateStr) {
       continue;
     }
 
-    // Find fixture — try both orientations (AN home/away may differ from DB)
-    let [fixtures] = await conn.query(
+    // Find match — try both orientations (AN home/away may differ from DB)
+    let [matchs] = await conn.query(
       'SELECT match_id, kickoff_utc FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
-    if (!fixtures[0]) {
-      [fixtures] = await conn.query(
+    if (!matchs[0]) {
+      [matchs] = await conn.query(
         'SELECT match_id, kickoff_utc FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
-    const fixture = fixtures[0];
-    if (!fixture) {
-      const msg = `No fixture: away=${awayId} home=${homeId} (tried both orientations)`;
+    const match = matchs[0];
+    if (!match) {
+      const msg = `No match: away=${awayId} home=${homeId} (tried both orientations)`;
       console.error(`[SEED] [VERIFY] FAIL — ${msg}`);
       errors.push(msg);
       continue;
     }
 
-    console.log(`[SEED] [STATE] Matched match_id=${fixture.match_id}`);
+    console.log(`[SEED] [STATE] Matched match_id=${match.match_id}`);
 
     // Update kickoff_utc if not set
-    if (!fixture.kickoff_utc && game.start_time) {
+    if (!match.kickoff_utc && game.start_time) {
       await conn.query(
         'UPDATE wc2026_matches SET kickoff_utc=? WHERE match_id=?',
-        [new Date(game.start_time), fixture.match_id]
+        [new Date(game.start_time), match.match_id]
       );
-      console.log(`[SEED] [STEP] Set kickoff_utc=${game.start_time} for ${fixture.match_id}`);
+      console.log(`[SEED] [STEP] Set kickoff_utc=${game.start_time} for ${match.match_id}`);
     }
 
     // Extract odds per book
@@ -177,7 +177,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['home', mlHome], ['away', mlAway], ['draw', mlDraw]]) {
         if (outcome) {
           rows.push([
-            fixture.match_id, snapshotTs, bookId, '1X2', sel,
+            match.match_id, snapshotTs, bookId, '1X2', sel,
             null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -193,7 +193,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['over', over], ['under', under]]) {
         if (outcome) {
           rows.push([
-            fixture.match_id, snapshotTs, bookId, 'TOTAL', sel,
+            match.match_id, snapshotTs, bookId, 'TOTAL', sel,
             outcome.value ?? null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -209,7 +209,7 @@ async function scrapeDate(dateStr) {
       for (const [sel, outcome] of [['home', spreadHome], ['away', spreadAway]]) {
         if (outcome) {
           rows.push([
-            fixture.match_id, snapshotTs, bookId, 'ASIAN_HANDICAP', sel,
+            match.match_id, snapshotTs, bookId, 'ASIAN_HANDICAP', sel,
             outcome.value ?? null, outcome.odds, americanToImplied(outcome.odds), false
           ]);
         }
@@ -274,7 +274,7 @@ async function scrapeLineups() {
   const errors = [];
 
   for (const game of games) {
-    // Find fixture
+    // Find match
     const awayId = resolveTeam(game.awayAbbr) ?? resolveTeam(game.awayName);
     const homeId = resolveTeam(game.homeAbbr) ?? resolveTeam(game.homeName);
 
@@ -284,37 +284,37 @@ async function scrapeLineups() {
       continue;
     }
 
-    let [fixtures] = await conn.query(
+    let [matchs] = await conn.query(
       'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
       [awayId, homeId]
     );
-    if (!fixtures[0]) {
+    if (!matchs[0]) {
       // Try reversed orientation
-      [fixtures] = await conn.query(
+      [matchs] = await conn.query(
         'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
-    const fixture = fixtures[0];
-    if (!fixture) {
-      console.error(`[SEED] [VERIFY] FAIL — No fixture for lineup: ${awayId} vs ${homeId} (tried both orientations)`);
-      errors.push(`No fixture: ${awayId} vs ${homeId}`);
+    const match = matchs[0];
+    if (!match) {
+      console.error(`[SEED] [VERIFY] FAIL — No match for lineup: ${awayId} vs ${homeId} (tried both orientations)`);
+      errors.push(`No match: ${awayId} vs ${homeId}`);
       continue;
     }
 
-    // Delete existing lineups for this fixture
-    await conn.query('DELETE FROM wc2026_lineups WHERE match_id=?', [fixture.match_id]);
+    // Delete existing lineups for this match
+    await conn.query('DELETE FROM wc2026_lineups WHERE match_id=?', [match.match_id]);
 
     const scrapedAt = new Date();
     const rows = [];
 
     // Insert away players
     for (const p of game.awayPlayers) {
-      rows.push([fixture.match_id, awayId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([match.match_id, awayId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
     // Insert home players
     for (const p of game.homePlayers) {
-      rows.push([fixture.match_id, homeId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
+      rows.push([match.match_id, homeId, scrapedAt, game.isConfirmed, p.name, p.position, p.isStarter, p.injuryStatus ?? null]);
     }
 
     if (rows.length > 0) {

@@ -2,7 +2,7 @@
  * validateFeedJuly2.mjs — v2
  * v16.0-KO25 — Feed Rendering Validation for July 2, 2026
  * Uses EXACT wc2026MatchOdds column names confirmed from SHOW COLUMNS
- * Validates all 3 fixtures: wc26-r32-083/084/085
+ * Validates all 3 matchs: wc26-r32-083/084/085
  * Appends full log to wc2026modeling.txt
  */
 
@@ -49,7 +49,7 @@ header(`FEED VALIDATION v2 — ${ENGINE} — Session: ${SESSION_ID}`);
 log('INIT', 'SESSION', `Engine: ${ENGINE}`);
 log('INIT', 'SESSION', `Session: ${SESSION_ID}`);
 log('INIT', 'SESSION', `Target date: 2026-07-02`);
-log('INIT', 'SESSION', `Fixtures: wc26-r32-083 (ESP/AUT), wc26-r32-084 (POR/CRO), wc26-r32-085 (SUI/ALG)`);
+log('INIT', 'SESSION', `Matchs: wc26-r32-083 (ESP/AUT), wc26-r32-084 (POR/CRO), wc26-r32-085 (SUI/ALG)`);
 log('INIT', 'SESSION', `Column schema: exact names from SHOW COLUMNS wc2026MatchOdds`);
 
 // Expected values from v16.0 engine — ground truth
@@ -138,9 +138,9 @@ if (rows.length !== 3) {
   process.exit(1);
 }
 
-// ─── PHASE 2: PER-FIXTURE VALIDATION ─────────────────────────────────────────
+// ─── PHASE 2: PER-MATCH VALIDATION ─────────────────────────────────────────
 divider();
-log('P2', 'PHASE', 'PHASE 2 — Per-fixture field validation (21 model fields + orientation + book non-null)');
+log('P2', 'PHASE', 'PHASE 2 — Per-match field validation (21 model fields + orientation + book non-null)');
 divider();
 
 const auditResults = {};
@@ -150,29 +150,29 @@ for (const row of rows) {
   const fid = row.match_id;
   const exp = EXPECTED[fid];
   divider('─');
-  log('P2', 'FIXTURE', `▶ ${fid}: ${row.away_team} (Away) @ ${row.home_team} (Home) | Round: ${row.world_cup_round}`);
+  log('P2', 'MATCH', `▶ ${fid}: ${row.away_team} (Away) @ ${row.home_team} (Home) | Round: ${row.world_cup_round}`);
 
-  let fixturePass = 0, fixtureFail = 0;
+  let matchPass = 0, matchFail = 0;
 
   function check(label, actual, expected, tolerance = 0.01) {
     const actualNum = actual === null || actual === undefined ? NaN : parseFloat(actual);
     const expNum = parseFloat(expected);
     if (isNaN(actualNum)) {
       log('P2', 'CHECK', `  ${label}: DB=NULL EXP=${expNum} ✗ — NULL in DB`, 'FAIL');
-      fixtureFail++;
+      matchFail++;
       return false;
     }
     const diff = Math.abs(actualNum - expNum);
     const pass = diff <= tolerance;
     log('P2', 'CHECK', `  ${label}: DB=${actualNum} EXP=${expNum} diff=${diff.toFixed(4)} ${pass ? '✓' : '✗'}`, pass ? 'PASS' : 'FAIL');
-    if (pass) fixturePass++; else fixtureFail++;
+    if (pass) matchPass++; else matchFail++;
     return pass;
   }
 
   function checkNonNull(label, actual) {
     const pass = actual !== null && actual !== undefined;
     log('P2', 'CHECK', `  ${label}: ${pass ? actual + ' ✓' : 'NULL ✗'}`, pass ? 'PASS' : 'FAIL');
-    if (pass) fixturePass++; else fixtureFail++;
+    if (pass) matchPass++; else matchFail++;
     return pass;
   }
 
@@ -181,8 +181,8 @@ for (const row of rows) {
   const awayOk = row.away_team === exp.away_team;
   log('P2', 'ORIENT', `  home_team: DB=${row.home_team} EXP=${exp.home_team} ${homeOk ? '✓' : '✗'}`, homeOk ? 'PASS' : 'FAIL');
   log('P2', 'ORIENT', `  away_team: DB=${row.away_team} EXP=${exp.away_team} ${awayOk ? '✓' : '✗'}`, awayOk ? 'PASS' : 'FAIL');
-  if (homeOk) fixturePass++; else fixtureFail++;
-  if (awayOk) fixturePass++; else fixtureFail++;
+  if (homeOk) matchPass++; else matchFail++;
+  if (awayOk) matchPass++; else matchFail++;
 
   // Lambda
   check('λH (lamba_home)', row.lamba_home, exp.lamba_home, 0.001);
@@ -227,11 +227,11 @@ for (const row of rows) {
   // No Draw
   check('Model No Draw', row.model_no_draw, exp.model_no_draw, 1);
 
-  const status = fixtureFail === 0 ? 'PASS' : 'FAIL';
-  auditResults[fid] = { pass: fixturePass, fail: fixtureFail, status, row };
-  log('P2', 'FIXTURE_SUMMARY', `${fid}: ${fixturePass}/${fixturePass + fixtureFail} checks | ${fixtureFail} failures | STATUS: ${status}`, status);
-  totalPass += fixturePass;
-  totalFail += fixtureFail;
+  const status = matchFail === 0 ? 'PASS' : 'FAIL';
+  auditResults[fid] = { pass: matchPass, fail: matchFail, status, row };
+  log('P2', 'MATCH_SUMMARY', `${fid}: ${matchPass}/${matchPass + matchFail} checks | ${matchFail} failures | STATUS: ${status}`, status);
+  totalPass += matchPass;
+  totalFail += matchFail;
 }
 
 // ─── PHASE 3: FEED QUERY SIMULATION ──────────────────────────────────────────
@@ -277,7 +277,7 @@ divider('═');
 log('P4', 'FINAL_REPORT', `Engine: ${ENGINE}`);
 log('P4', 'FINAL_REPORT', `Session: ${SESSION_ID}`);
 log('P4', 'FINAL_REPORT', `Total checks: ${totalPass + totalFail} | PASS: ${totalPass} | FAIL: ${totalFail}`);
-log('P4', 'FINAL_REPORT', `Per-fixture: ${JSON.stringify(Object.fromEntries(Object.entries(auditResults).map(([k,v]) => [k, v.status])))}`);
+log('P4', 'FINAL_REPORT', `Per-match: ${JSON.stringify(Object.fromEntries(Object.entries(auditResults).map(([k,v]) => [k, v.status])))}`);
 
 for (const [fid, res] of Object.entries(auditResults)) {
   const r = res.row;

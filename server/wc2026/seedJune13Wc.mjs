@@ -1,9 +1,9 @@
 /**
  * seedJune13Wc.mjs
- * Seeds all 4 June 13, 2026 WC2026 fixtures with correct home/away orientations,
+ * Seeds all 4 June 13, 2026 WC2026 matchs with correct home/away orientations,
  * model odds, and lineups.
  *
- * Fixtures:
+ * Matchs:
  *   wc26-g-004: SUI (home) vs QAT (away)  — INSERT (missing from DB)
  *   wc26-g-006: MAR (home) vs BRA (away)  — FIX (currently BRA=home, MAR=away)
  *   wc26-g-007: SCO (home) vs HAI (away)  — FIX (currently HAI=home, SCO=away)
@@ -197,8 +197,8 @@ async function run() {
   try {
     console.log('[STEP] Starting June 13 WC2026 seed...');
 
-    // ── STEP 1: Fix fixture orientations ─────────────────────────────────────
-    console.log('\n[STEP] Fixing fixture home/away orientations...');
+    // ── STEP 1: Fix match orientations ─────────────────────────────────────
+    console.log('\n[STEP] Fixing match home/away orientations...');
 
     // wc26-g-004: INSERT (missing)
     const [existing004] = await conn.query('SELECT match_id FROM wc2026_matches WHERE match_id = "wc26-g-004"');
@@ -225,7 +225,7 @@ async function run() {
     await conn.query('UPDATE wc2026_matches SET home_team_id="tur", away_team_id="aus" WHERE match_id="wc26-g-008"');
     console.log('[STATE] wc26-g-008: FIXED to TUR (home) vs AUS (away)');
 
-    // ── STEP 2: Delete stale odds for all 4 fixtures ──────────────────────────
+    // ── STEP 2: Delete stale odds for all 4 matchs ──────────────────────────
     console.log('\n[STEP] Deleting stale odds snapshots...');
     const matchIds = ['wc26-g-004', 'wc26-g-006', 'wc26-g-007', 'wc26-g-008'];
     for (const fid of matchIds) {

@@ -3,14 +3,14 @@
  * ══════════════════════════════════════════════════════════════════════════════
  * Seeds WC2026 v11.0-KO22 (Bayesian Poisson + ELO + FIFA + SOS + 8 Opta Metrics
  * + 5 KO22 Trend Enhancements) model projections AND frozen book odds for all 3
- * June 29 R32 fixtures into wc2026_model_projections and wc2026_frozen_book_odds.
+ * June 29 R32 matchs into wc2026_model_projections and wc2026_frozen_book_odds.
  *
  * AUDIT FRAMEWORK: Industry-leading structured logging at every step.
  * Log format: [TIMESTAMP] [LEVEL] [STEP] message
  * Levels: INPUT / STEP / STATE / OUTPUT / VERIFY / PASS / FAIL / WARN / BANNER
  *
  * ZERO TOLERANCE: Every operation is validated. Any FAIL halts execution.
- * All 14 markets seeded per fixture including TO ADVANCE and NO DRAW.
+ * All 14 markets seeded per match including TO ADVANCE and NO DRAW.
  * ══════════════════════════════════════════════════════════════════════════════
  */
 
@@ -302,14 +302,14 @@ const MODEL = {
   },
 };
 
-const FIXTURE_IDS = ['wc26-r32-074', 'wc26-r32-075', 'wc26-r32-076'];
+const MATCH_IDS = ['wc26-r32-074', 'wc26-r32-075', 'wc26-r32-076'];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN EXECUTION
 // ══════════════════════════════════════════════════════════════════════════════
 
 banner('WC2026 v11.0-KO22 SEED + AUDIT — June 29, 2026 R32 Matches');
-log('INPUT', `Fixtures to seed: ${FIXTURE_IDS.join(', ')}`);
+log('INPUT', `Matchs to seed: ${MATCH_IDS.join(', ')}`);
 log('INPUT', `Model version: v11.0-KO22 | Sims: 1,000,000/match | No HFA | No book dependency`);
 log('INPUT', `Markets: ML, Draw, No Draw, Spread ±1.5, Total 2.5, BTTS, DC, TO ADVANCE`);
 log('INPUT', `Log path: ${LOG_PATH}`);
@@ -318,7 +318,7 @@ log('INPUT', `Log path: ${LOG_PATH}`);
 stepCount++;
 log('STEP', 'Pre-flight: validating all MODEL and BOOK data structures', stepCount);
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const m = MODEL[fid];
   const b = BOOK[fid];
 
@@ -390,27 +390,27 @@ const conn = await mysql.createConnection(process.env.DATABASE_URL);
 log('STATE', 'DB connected');
 pass('DB connection established');
 
-// ── STEP 3: Verify fixtures exist ─────────────────────────────────────────────
+// ── STEP 3: Verify matchs exist ─────────────────────────────────────────────
 stepCount++;
-log('STEP', 'Verifying June 29 fixtures exist in wc2026_matches', stepCount);
+log('STEP', 'Verifying June 29 matchs exist in wc2026_matches', stepCount);
 const [fixRows] = await conn.execute(
   `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_matches WHERE match_id IN (?,?,?)`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
-log('STATE', `Found ${fixRows.length} fixture rows`);
-if (fixRows.length !== 3) fail(`Expected 3 fixtures, found ${fixRows.length}`);
+log('STATE', `Found ${fixRows.length} match rows`);
+if (fixRows.length !== 3) fail(`Expected 3 matchs, found ${fixRows.length}`);
 for (const row of fixRows) {
   log('STATE', `  ${row.match_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
   if (row.stage !== 'R32') warn(`[${row.match_id}] stage=${row.stage} (expected R32)`);
-  pass(`[${row.match_id}] fixture verified in DB`);
+  pass(`[${row.match_id}] match verified in DB`);
 }
 
 // ── STEP 4: Seed frozen book odds ─────────────────────────────────────────────
 stepCount++;
-log('STEP', 'Seeding frozen book odds (UPSERT) for all 3 fixtures', stepCount);
+log('STEP', 'Seeding frozen book odds (UPSERT) for all 3 matchs', stepCount);
 let bookSeedCount = 0;
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const b = BOOK[fid];
   log('STATE', `  [${fid}] Seeding book odds: H=${b.book_home_ml} D=${b.book_draw_ml} A=${b.book_away_ml} | ADV H=${b.to_advance_home_odds} A=${b.to_advance_away_odds} | NO DRAW=${b.book_no_draw_away_odds}`);
 
@@ -461,7 +461,7 @@ const [bookVerRows] = await conn.execute(
           book_btts_yes_odds, book_btts_no_odds, book_dc_1x_odds, book_dc_x2_odds,
           book_over_odds, book_under_odds, book_home_spread_odds, book_away_spread_odds
    FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?) ORDER BY match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (bookVerRows.length !== 3) fail(`Book odds verify: expected 3 rows, got ${bookVerRows.length}`);
 for (const row of bookVerRows) {
@@ -493,20 +493,20 @@ for (const row of bookVerRows) {
 
 // ── STEP 6: Delete existing model projections ─────────────────────────────────
 stepCount++;
-log('STEP', 'Deleting existing model projections for June 29 fixtures', stepCount);
+log('STEP', 'Deleting existing model projections for June 29 matchs', stepCount);
 const [delRes] = await conn.execute(
   `DELETE FROM wc2026_model_projections WHERE match_id IN (?,?,?)`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 log('STATE', `Deleted ${delRes.affectedRows} existing projection rows`);
 pass(`Deleted ${delRes.affectedRows} stale projection rows`);
 
 // ── STEP 7: Insert v11.0-KO22 model projections ───────────────────────────────
 stepCount++;
-log('STEP', 'Inserting v11.0-KO22 model projections for all 3 fixtures', stepCount);
+log('STEP', 'Inserting v11.0-KO22 model projections for all 3 matchs', stepCount);
 let modelSeedCount = 0;
 
-for (const fid of FIXTURE_IDS) {
+for (const fid of MATCH_IDS) {
   const m = MODEL[fid];
   const b = BOOK[fid];
   log('STATE', `  [${fid}] Inserting: λH=${m.home_lam} λA=${m.away_lam} | proj: ${m.proj_home_score}-${m.proj_away_score}`);
@@ -610,7 +610,7 @@ const [modelVerRows] = await conn.execute(
           is_frozen, frozen_at
    FROM wc2026_model_projections
    WHERE match_id IN (?,?,?) ORDER BY match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (modelVerRows.length !== 3) fail(`Model verify: expected 3 rows, got ${modelVerRows.length}`);
 for (const row of modelVerRows) {
@@ -645,7 +645,7 @@ for (const row of modelVerRows) {
 
 // ── STEP 9: Cross-table join audit ────────────────────────────────────────────
 stepCount++;
-log('STEP', 'Cross-table join audit: book + model + fixture alignment', stepCount);
+log('STEP', 'Cross-table join audit: book + model + match alignment', stepCount);
 const [joinRows] = await conn.execute(
   `SELECT 
     f.match_id, f.home_team_id, f.away_team_id, f.stage,
@@ -660,7 +660,7 @@ const [joinRows] = await conn.execute(
    JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id
    JOIN wc2026_model_projections p ON p.match_id = f.match_id
    WHERE f.match_id IN (?,?,?) ORDER BY f.match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (joinRows.length !== 3) fail(`Join audit: expected 3 rows, got ${joinRows.length}`);
 for (const row of joinRows) {
@@ -679,11 +679,11 @@ for (const row of joinRows) {
   log('STATE', `  [${row.match_id}] JOIN: book NO DRAW=${row.book_no_draw_away_odds} | model NO DRAW=${row.model_no_draw}`);
   log('STATE', `  [${row.match_id}] JOIN: version=${row.model_version} frozen=${row.is_frozen}`);
 }
-pass('Cross-table join audit: all 3 fixtures fully populated ✓');
+pass('Cross-table join audit: all 3 matchs fully populated ✓');
 
 // ── STEP 10: Market completeness audit ────────────────────────────────────────
 stepCount++;
-log('STEP', 'Market completeness audit: all 14 markets per fixture', stepCount);
+log('STEP', 'Market completeness audit: all 14 markets per match', stepCount);
 const REQUIRED_BOOK_FIELDS = [
   'book_home_ml','book_draw_ml','book_away_ml',
   'book_home_spread_odds','book_away_spread_odds',
@@ -705,11 +705,11 @@ const REQUIRED_MODEL_FIELDS = [
 
 const [fullBookRows] = await conn.execute(
   `SELECT match_id, ${REQUIRED_BOOK_FIELDS.join(',')} FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?) ORDER BY match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 const [fullModelRows] = await conn.execute(
   `SELECT match_id, ${REQUIRED_MODEL_FIELDS.join(',')} FROM wc2026_model_projections WHERE match_id IN (?,?,?) ORDER BY match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 
 for (const row of fullBookRows) {
@@ -735,7 +735,7 @@ const [frozenCheckRows] = await conn.execute(
    FROM wc2026_model_projections p
    JOIN wc2026_frozen_book_odds b ON b.match_id = p.match_id
    WHERE p.match_id IN (?,?,?) ORDER BY p.match_id`,
-  FIXTURE_IDS
+  MATCH_IDS
 );
 if (frozenCheckRows.length !== 3) fail(`Final check: expected 3 rows, got ${frozenCheckRows.length}`);
 for (const row of frozenCheckRows) {
@@ -760,11 +760,11 @@ log('STATE', 'DB disconnected');
 banner('FINAL AUDIT SUMMARY — v11.0-KO22 June 29 Seed');
 log('SUMMARY', `Steps completed: ${stepCount}`);
 log('SUMMARY', `Audit checks: ${passCount + failCount + warnCount} | PASS: ${passCount} | FAIL: ${failCount} | WARN: ${warnCount}`);
-log('SUMMARY', `Fixtures seeded: 3/3 | Markets per fixture: 14 | Total market rows: 42`);
+log('SUMMARY', `Matchs seeded: 3/3 | Markets per match: 14 | Total market rows: 42`);
 log('SUMMARY', `TO ADVANCE: seeded in both book and model tables ✓`);
 log('SUMMARY', `NO DRAW: seeded in both book and model tables ✓`);
 log('SUMMARY', `is_frozen=1: all 3 model projection rows ✓`);
-log('SUMMARY', `model_approved=1: all 3 fixtures ✓`);
+log('SUMMARY', `model_approved=1: all 3 matchs ✓`);
 
 if (failCount > 0) {
   log('FAIL', `❌ SEED FAILED — ${failCount} failures detected`);
