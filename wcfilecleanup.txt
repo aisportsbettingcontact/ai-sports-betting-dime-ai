@@ -1252,3 +1252,79 @@ NAMING INCONSISTENCY FLAG:
  DOWNTIME: ZERO
  TypeScript ERRORS: ZERO
 ════════════════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════════════════════════
+ 500X FORENSIC AUDIT: WC2026 FEED DATE DISPLAY BUG
+════════════════════════════════════════════════════════════════════════════════
+[2026-07-03T23:05:00Z] INITIATED
+
+SYMPTOM: Algeria vs Switzerland (July 2 match) incorrectly displayed on July 3 feed
+EXPECTED: Only July 3 matches (EGY/AUS, ARG/CPV, COL/GHA) should appear on Jul 3
+USER REQUIREMENT: Use kickoff_date_pt (Pacific Time) for date grouping, kickoff_time_et for display
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 1: DATABASE INSPECTION — What dates are stored for R32 matches?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[PHASE 1 RESULT] DATABASE INSPECTION COMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[FINDING] 35 matches have kickoff_utc between 00:00-07:00 UTC
+[FINDING] 9 of these have MISMATCHED match_date (UTC date stored instead of PT date):
+  1. wc26-g-008:    DB=2026-06-14 | PT=2026-06-13 | ET=12:00 AM (midnight game)
+  2. wc26-g-019:    DB=2026-06-17 | PT=2026-06-16 | ET=12:00 AM (midnight game)
+  3. wc26-g-036:    DB=2026-06-21 | PT=2026-06-20 | ET=12:00 AM (midnight game)
+  4. wc26-r32-076:  DB=2026-06-30 | PT=2026-06-29 | ET=09:00 PM
+  5. wc26-r32-079:  DB=2026-07-01 | PT=2026-06-30 | ET=10:00 PM
+  6. wc26-r32-082:  DB=2026-07-02 | PT=2026-07-01 | ET=08:00 PM
+  7. wc26-r32-085:  DB=2026-07-03 | PT=2026-07-02 | ET=11:00 PM (ALG/SUI ← USER BUG)
+  8. wc26-r32-088:  DB=2026-07-04 | PT=2026-07-03 | ET=09:30 PM (COL/GHA)
+  9. wc26-r16-092:  DB=2026-07-06 | PT=2026-07-05 | ET=08:00 PM
+  10. wc26-r16-094: DB=2026-07-07 | PT=2026-07-06 | ET=08:00 PM
+
+[ROOT CAUSE] match_date was seeded with UTC date for late-night games.
+             The router filters by match_date, so games with kickoff after midnight UTC
+             but before midnight PT appear on the WRONG day.
+
+[FIX PLAN]
+  1. UPDATE all 10 mismatched rows: SET match_date = PT_date (computed from kickoff_utc)
+  2. Fix the ingester to always compute match_date from PT timezone
+  3. Verify the frontend date picker and display use correct PT dates
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 4: VERIFICATION — ALL CHECKS PASSED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[EXECUTION] DB UPDATE — 10 rows corrected (match_date set to PT date)
+[EXECUTION] CODE FIX — wc2026Ingester.ts now computes matchDate from kickoffUtc in PT timezone
+[EXECUTION] TypeScript — 0 errors after fix
+
+[VERIFICATION RESULTS]
+  JULY 2 FEED:
+    ✅ wc26-r32-083: ESP vs AUT | kickoff 3:00 PM ET
+    ✅ wc26-r32-084: POR vs CRO | kickoff 7:00 PM ET
+    ✅ wc26-r32-085: SUI vs ALG | kickoff 11:00 PM ET ← FIXED (was incorrectly on Jul 3)
+
+  JULY 3 FEED:
+    ✅ wc26-r32-086: AUS vs EGY | kickoff 2:00 PM ET
+    ✅ wc26-r32-087: ARG vs CPV | kickoff 6:00 PM ET
+    ✅ wc26-r32-088: COL vs GHA | kickoff 9:30 PM ET
+
+[PASS/FAIL]
+  ✅ ALG/SUI on Jul 2: PASS
+  ✅ EGY/AUS on Jul 3: PASS
+  ✅ ARG/CPV on Jul 3: PASS
+  ✅ COL/GHA on Jul 3: PASS
+  ✅ ALG/SUI NOT on Jul 3: PASS
+
+[FRONTEND ALIGNMENT]
+  - CalendarPicker.todayUTC() uses FEED_CUTOFF_UTC_HOUR = 7 (= midnight PDT)
+  - This aligns with PT date grouping: the feed rolls to the next day at midnight PT
+  - fmtKickoff() displays time in ET (America/New_York) ← correct per user requirement
+  - Date grouping uses match_date (now PT-based) ← correct per user requirement
+
+[PERMANENT FIX SUMMARY]
+  1. DB: 10 match_date values corrected from UTC date → PT date
+  2. Ingester: wc2026Ingester.ts now auto-computes matchDate from kickoffUtc in PT
+     on every LIVE and FT upsert, preventing future mismatches
+  3. Frontend: Already correct — displays kickoff in ET, groups by match_date (PT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
