@@ -1,6 +1,6 @@
 CREATE TABLE `wc2026_frozen_book_odds` (
 	`id` bigint unsigned AUTO_INCREMENT NOT NULL,
-	`fixture_id` varchar(16) NOT NULL,
+	`match_id` varchar(16) NOT NULL,
 	`frozen_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`frozen_by` varchar(64) NOT NULL DEFAULT 'system',
 	`book_home_ml` smallint,
@@ -20,10 +20,10 @@ CREATE TABLE `wc2026_frozen_book_odds` (
 	`book_no_draw_away_odds` smallint,
 	`book_source` varchar(32) NOT NULL DEFAULT 'DraftKings',
 	CONSTRAINT `wc2026_frozen_book_odds_id` PRIMARY KEY(`id`),
-	CONSTRAINT `uq_frozen_book_fixture` UNIQUE(`fixture_id`)
+	CONSTRAINT `uq_frozen_book_match` UNIQUE(`match_id`)
 );
 --> statement-breakpoint
 ALTER TABLE `wc2026_model_projections` ADD `is_frozen` boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE `wc2026_model_projections` ADD `frozen_at` timestamp;--> statement-breakpoint
-ALTER TABLE `wc2026_frozen_book_odds` ADD CONSTRAINT `wc2026_frozen_book_odds_fixture_id_wc2026_fixtures_fixture_id_fk` FOREIGN KEY (`fixture_id`) REFERENCES `wc2026_fixtures`(`fixture_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX `idx_frozen_book_fixture` ON `wc2026_frozen_book_odds` (`fixture_id`);
+ALTER TABLE `wc2026_frozen_book_odds` ADD CONSTRAINT `wc2026_frozen_book_odds_match_id_wc2026_matches_match_id_fk` FOREIGN KEY (`match_id`) REFERENCES `wc2026_matches`(`match_id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX `idx_frozen_book_match` ON `wc2026_frozen_book_odds` (`match_id`);

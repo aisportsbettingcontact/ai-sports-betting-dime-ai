@@ -2,7 +2,7 @@
 /**
  * WC2026 June 18 — TOTAL Market Fix
  * ─────────────────────────────────
- * 1. Clears all stale TOTAL snapshots for June 18 fixtures
+ * 1. Clears all stale TOTAL snapshots for June 18 matches
  * 2. Inserts correct BOOK totals from user-provided ground truth
  * 3. Re-derives model O/U probabilities at the EXACT book line
  *    using the Poisson goal distributions stored in wc2026_model_projections
@@ -30,12 +30,12 @@ const MARKET        = 'TOTAL';
 const NOW           = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
 
 // ─── User-provided ground truth ───────────────────────────────────────────────
-// Format: { fixtureId, bookLine, overOdds, underOdds }
+// Format: { matchId, bookLine, overOdds, underOdds }
 const BOOK_TOTALS = [
-  { fixtureId: 'wc26-g-025', bookLine: 2.5, overOdds:  100, underOdds: -130 },
-  { fixtureId: 'wc26-g-027', bookLine: 2.5, overOdds: -110, underOdds: -120 },
-  { fixtureId: 'wc26-g-028', bookLine: 2.5, overOdds: -130, underOdds:  100 },
-  { fixtureId: 'wc26-g-026', bookLine: 2.0, overOdds: -150, underOdds:  120 },
+  { matchId: 'wc26-g-025', bookLine: 2.5, overOdds:  100, underOdds: -130 },
+  { matchId: 'wc26-g-027', bookLine: 2.5, overOdds: -110, underOdds: -120 },
+  { matchId: 'wc26-g-028', bookLine: 2.5, overOdds: -130, underOdds:  100 },
+  { matchId: 'wc26-g-026', bookLine: 2.0, overOdds: -150, underOdds:  120 },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ function computeOverUnderAtLine(homeDist, awayDist, line) {
 async function main() {
   console.log('======================================================================');
   console.log('[INPUT] WC2026 June 18 — TOTAL Market Fix');
-  console.log('[INPUT] Fixtures: 4 | Book: DK | Model: v6.1 Poisson distributions');
+  console.log('[INPUT] Matches: 4 | Book: DK | Model: v6.1 Poisson distributions');
   console.log('[INPUT] Ground truth source: User-provided (June 18, 2026)');
   console.log('======================================================================');
 
@@ -98,20 +98,20 @@ async function main() {
   });
   console.log(`[INPUT] Connected to ${m[3]}:${m[4] || 3306}`);
 
-  const fixtureIds = BOOK_TOTALS.map(t => t.fixtureId);
+  const matchIds = BOOK_TOTALS.map(t => t.matchId);
 
   // ── Step 1: Pull model projections (goal distributions) ──────────────────
   console.log('');
   console.log('[STEP] Pulling model projections + goal distributions');
   const [projRows] = await conn.execute(
-    `SELECT fixture_id, home_team, away_team,
+    `SELECT match_id, home_team, away_team,
             proj_home_score, proj_away_score, proj_total,
             model_total, model_total_raw,
             home_goal_dist, away_goal_dist
      FROM wc2026_model_projections
-     WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
-    fixtureIds
+     WHERE match_id IN (${matchIds.map(() => '?').join(',')})
+     ORDER BY match_id`,
+    matchIds
   );
 
   if (projRows.length !== 4) {
@@ -123,15 +123,15 @@ async function main() {
   // Build lookup map
   const projMap = {};
   for (const p of projRows) {
-    projMap[p.fixture_id] = {
+    projMap[p.match_id] = {
       ...p,
       homeDist: typeof p.home_goal_dist === 'string' ? JSON.parse(p.home_goal_dist) : (p.home_goal_dist || {}),
       awayDist: typeof p.away_goal_dist === 'string' ? JSON.parse(p.away_goal_dist) : (p.away_goal_dist || {}),
     };
-    console.log(`[STATE] ${p.fixture_id}: ${p.home_team} vs ${p.away_team}`);
+    console.log(`[STATE] ${p.match_id}: ${p.home_team} vs ${p.away_team}`);
     console.log(`  proj: H=${parseFloat(p.proj_home_score).toFixed(3)} A=${parseFloat(p.proj_away_score).toFixed(3)} total=${parseFloat(p.proj_total).toFixed(3)}`);
     console.log(`  model_total=${p.model_total} (raw=${parseFloat(p.model_total_raw).toFixed(3)})`);
-    const keys = Object.keys(projMap[p.fixture_id].homeDist);
+    const keys = Object.keys(projMap[p.match_id].homeDist);
     console.log(`  home_goal_dist: ${keys.length} buckets (0..${keys[keys.length-1]})`);
   }
 
@@ -140,9 +140,9 @@ async function main() {
   console.log('[STEP] Clearing stale TOTAL snapshots');
   const [delResult] = await conn.execute(
     `DELETE FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})
+     WHERE match_id IN (${matchIds.map(() => '?').join(',')})
        AND market = ?`,
-    [...fixtureIds, MARKET]
+    [...matchIds, MARKET]
   );
   console.log(`[STATE] Deleted ${delResult.affectedRows} stale TOTAL rows`);
 
@@ -154,9 +154,9 @@ async function main() {
   const results = [];
 
   for (const gt of BOOK_TOTALS) {
-    const proj = projMap[gt.fixtureId];
+    const proj = projMap[gt.matchId];
     if (!proj) {
-      console.error(`[ERROR] No projection found for ${gt.fixtureId}`);
+      console.error(`[ERROR] No projection found for ${gt.matchId}`);
       process.exit(1);
     }
 
@@ -165,7 +165,7 @@ async function main() {
     const bookUnderImpl = americanToImplied(gt.underOdds);
     const bookVig       = bookOverImpl + bookUnderImpl - 1;
 
-    console.log(`[STATE] ${gt.fixtureId}: book line=${gt.bookLine} | over=${gt.overOdds} under=${gt.underOdds}`);
+    console.log(`[STATE] ${gt.matchId}: book line=${gt.bookLine} | over=${gt.overOdds} under=${gt.underOdds}`);
     console.log(`  book implied: over=${bookOverImpl.toFixed(6)} under=${bookUnderImpl.toFixed(6)} vig=${bookVig.toFixed(6)}`);
 
     // ── Model O/U at exact book line ──
@@ -186,7 +186,7 @@ async function main() {
     console.log(`  [VERIFY] pOver+pUnder=${(pOver+pUnder).toFixed(8)} → ${Math.abs(pOver+pUnder-1) < 1e-9 ? 'PASS ✓' : 'FAIL ✗'}`);
 
     results.push({
-      fixtureId: gt.fixtureId,
+      matchId: gt.matchId,
       home: proj.home_team,
       away: proj.away_team,
       bookLine: gt.bookLine,
@@ -202,22 +202,22 @@ async function main() {
     // ── Build snapshot rows ──
     // DK book: over
     insertRows.push([
-      gt.fixtureId, BOOK_ID_DK, MARKET, 'over',
+      gt.matchId, BOOK_ID_DK, MARKET, 'over',
       gt.bookLine, gt.overOdds, bookOverImpl, NOW
     ]);
     // DK book: under
     insertRows.push([
-      gt.fixtureId, BOOK_ID_DK, MARKET, 'under',
+      gt.matchId, BOOK_ID_DK, MARKET, 'under',
       gt.bookLine, gt.underOdds, bookUnderImpl, NOW
     ]);
     // Model: over (at book line)
     insertRows.push([
-      gt.fixtureId, BOOK_ID_MODEL, MARKET, 'over',
+      gt.matchId, BOOK_ID_MODEL, MARKET, 'over',
       gt.bookLine, Math.round(modelOverOdds * 100) / 100, pOver, NOW
     ]);
     // Model: under (at book line)
     insertRows.push([
-      gt.fixtureId, BOOK_ID_MODEL, MARKET, 'under',
+      gt.matchId, BOOK_ID_MODEL, MARKET, 'under',
       gt.bookLine, Math.round(modelUnderOdds * 100) / 100, pUnder, NOW
     ]);
   }
@@ -229,7 +229,7 @@ async function main() {
   for (const row of insertRows) {
     await conn.execute(
       `INSERT INTO wc2026_odds_snapshots
-         (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts)
+         (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       row
     );
@@ -237,23 +237,23 @@ async function main() {
     const bookName = row[1] === 0 ? 'MODEL' : 'DK';
     console.log(`  [INSERT] ${row[0]} | ${bookName} | ${row[3]} | line=${row[4]} | odds=${row[5]?.toFixed(2)} | impl=${row[6]?.toFixed(6)}`);
   }
-  console.log(`[STATE] Inserted ${inserted} TOTAL rows (${inserted/4} per fixture)`);
+  console.log(`[STATE] Inserted ${inserted} TOTAL rows (${inserted/4} per match)`);
 
   // ── Step 5: Verify ────────────────────────────────────────────────────────
   console.log('');
   console.log('[STEP] Running final verification');
   const [verRows] = await conn.execute(
-    `SELECT fixture_id, book_id, selection, line, american_odds, implied_prob
+    `SELECT match_id, book_id, selection, line, american_odds, implied_prob
      FROM wc2026_odds_snapshots
-     WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})
+     WHERE match_id IN (${matchIds.map(() => '?').join(',')})
        AND market = ?
-     ORDER BY fixture_id, book_id, selection`,
-    [...fixtureIds, MARKET]
+     ORDER BY match_id, book_id, selection`,
+    [...matchIds, MARKET]
   );
 
   const verMap = {};
   for (const r of verRows) {
-    const key = `${r.fixture_id}|${r.book_id}|${r.selection}`;
+    const key = `${r.match_id}|${r.book_id}|${r.selection}`;
     verMap[key] = r;
   }
 
@@ -261,10 +261,10 @@ async function main() {
   console.log('[VERIFY] ── FINAL CROSS-REFERENCE ──');
   let allPass = true;
   for (const res of results) {
-    const dkOver  = verMap[`${res.fixtureId}|${BOOK_ID_DK}|over`];
-    const dkUnder = verMap[`${res.fixtureId}|${BOOK_ID_DK}|under`];
-    const mdOver  = verMap[`${res.fixtureId}|${BOOK_ID_MODEL}|over`];
-    const mdUnder = verMap[`${res.fixtureId}|${BOOK_ID_MODEL}|under`];
+    const dkOver  = verMap[`${res.matchId}|${BOOK_ID_DK}|over`];
+    const dkUnder = verMap[`${res.matchId}|${BOOK_ID_DK}|under`];
+    const mdOver  = verMap[`${res.matchId}|${BOOK_ID_MODEL}|over`];
+    const mdUnder = verMap[`${res.matchId}|${BOOK_ID_MODEL}|under`];
 
     const pass = dkOver && dkUnder && mdOver && mdUnder
       && Math.abs(dkOver.line - res.bookLine) < 0.001
@@ -277,7 +277,7 @@ async function main() {
     if (!pass) allPass = false;
 
     const status = pass ? 'PASS ✓' : 'FAIL ✗';
-    console.log(`  [${status}] ${res.fixtureId}: ${res.home} vs ${res.away}`);
+    console.log(`  [${status}] ${res.matchId}: ${res.home} vs ${res.away}`);
     console.log(`    BOOK  O/U ${res.bookLine}: Over ${res.bookOverOdds > 0 ? '+' : ''}${res.bookOverOdds} / Under ${res.bookUnderOdds > 0 ? '+' : ''}${res.bookUnderOdds}`);
     console.log(`    MODEL O/U ${res.bookLine}: Over ${res.modelOverOdds?.toFixed(2)} (p=${res.pOver.toFixed(6)}) / Under ${res.modelUnderOdds?.toFixed(2)} (p=${res.pUnder.toFixed(6)})`);
     console.log(`    NV fair:  Over=${res.nvOver.toFixed(6)} Under=${res.nvUnder.toFixed(6)}`);

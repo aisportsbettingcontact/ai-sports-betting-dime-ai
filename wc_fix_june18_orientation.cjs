@@ -3,8 +3,8 @@
  * 
  * Fixes:
  * 1. wc26-g-025 (RSA vs CZE): INVERTED — DB has CZE as home, AN has RSA as home
- *    Fix: swap home_team_id/away_team_id in fixture + swap home/away in all odds snapshots
- * 2. Refresh stale DK odds for all 4 June 18 fixtures from live AN API
+ *    Fix: swap home_team_id/away_team_id in match + swap home/away in all odds snapshots
+ * 2. Refresh stale DK odds for all 4 June 18 matches from live AN API
  * 
  * Run from: /home/ubuntu/ai-sports-betting
  * Logging: [INPUT] [STEP] [STATE] [OUTPUT] [VERIFY]
@@ -20,13 +20,13 @@ async function main() {
   // ─── STEP 1: Audit and fix wc26-g-025 orientation ──────────────────────────
   console.log('\n[STEP 1] Auditing wc26-g-025 (RSA vs CZE)...');
   const [g025rows] = await conn.execute(`
-    SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.home_team_id, f.away_team_id,
            ht.name AS home_name, ht.fifa_code AS home_code,
            at2.name AS away_name, at2.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
-    WHERE f.fixture_id = 'wc26-g-025'
+    WHERE f.match_id = 'wc26-g-025'
   `);
   const g025 = g025rows[0];
   console.log(`[STATE] DB: home=${g025.home_name}(${g025.home_code}) away=${g025.away_name}(${g025.away_code})`);
@@ -37,11 +37,11 @@ async function main() {
   if (g025NeedsSwap) {
     console.log('\n[STEP 1a] Swapping home_team_id/away_team_id for wc26-g-025...');
     await conn.execute(`
-      UPDATE wc2026_fixtures
+      UPDATE wc2026_matches
       SET home_team_id = away_team_id, away_team_id = home_team_id
-      WHERE fixture_id = 'wc26-g-025'
+      WHERE match_id = 'wc26-g-025'
     `);
-    console.log('[VERIFY] Fixture orientation swapped');
+    console.log('[VERIFY] Match orientation swapped');
 
     console.log('[STEP 1b] Swapping 1X2 home/away selections in odds snapshots...');
     await conn.execute(`
@@ -51,18 +51,18 @@ async function main() {
         WHEN selection = 'away' THEN 'home'
         ELSE selection
       END
-      WHERE fixture_id = 'wc26-g-025' AND market = '1X2' AND selection IN ('home','away')
+      WHERE match_id = 'wc26-g-025' AND market = '1X2' AND selection IN ('home','away')
     `);
     await conn.execute(`
       UPDATE wc2026_odds_snapshots SET selection = 'away'
-      WHERE fixture_id = 'wc26-g-025' AND market = '1X2' AND selection = '_tmp'
+      WHERE match_id = 'wc26-g-025' AND market = '1X2' AND selection = '_tmp'
     `);
     console.log('[VERIFY] 1X2 selections swapped');
 
     console.log('[STEP 1c] Swapping ASIAN_HANDICAP selections for wc26-g-025...');
     const [ahRows] = await conn.execute(`
       SELECT id, selection, line FROM wc2026_odds_snapshots
-      WHERE fixture_id = 'wc26-g-025' AND market = 'ASIAN_HANDICAP'
+      WHERE match_id = 'wc26-g-025' AND market = 'ASIAN_HANDICAP'
     `);
     for (const row of ahRows) {
       let newSel = row.selection;
@@ -110,18 +110,18 @@ async function main() {
   const games = anData.games ?? [];
   console.log(`[STATE] AN returned ${games.length} games`);
 
-  // Get current DB fixture orientations (AFTER the swap above)
-  const [dbFixtures] = await conn.execute(`
-    SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+  // Get current DB match orientations (AFTER the swap above)
+  const [dbMatches] = await conn.execute(`
+    SELECT f.match_id, f.home_team_id, f.away_team_id,
            ht.fifa_code AS home_code, at2.fifa_code AS away_code
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.match_date = '2026-06-18'
   `);
 
-  console.log('[STATE] DB fixtures (post-fix orientation):');
-  dbFixtures.forEach(f => console.log(`  ${f.fixture_id}: home=${f.home_code} away=${f.away_code}`));
+  console.log('[STATE] DB matches (post-fix orientation):');
+  dbMatches.forEach(f => console.log(`  ${f.match_id}: home=${f.home_code} away=${f.away_code}`));
 
   let totalInserted = 0;
 
@@ -129,7 +129,7 @@ async function main() {
     const anAwayAbbr = (game.teams[0]?.abbr ?? '').toUpperCase();
     const anHomeAbbr = (game.teams[1]?.abbr ?? '').toUpperCase();
 
-    const dbFix = dbFixtures.find(f =>
+    const dbFix = dbMatches.find(f =>
       f.home_code.toUpperCase() === anHomeAbbr && f.away_code.toUpperCase() === anAwayAbbr
     );
 
@@ -138,10 +138,10 @@ async function main() {
       continue;
     }
 
-    console.log(`\n[STEP] Processing ${dbFix.fixture_id}: home=${anHomeAbbr} away=${anAwayAbbr}`);
+    console.log(`\n[STEP] Processing ${dbFix.match_id}: home=${anHomeAbbr} away=${anAwayAbbr}`);
     const dk = game.markets?.["68"]?.event;
     if (!dk) {
-      console.log(`[STATE] No DK data for ${dbFix.fixture_id}`);
+      console.log(`[STATE] No DK data for ${dbFix.match_id}`);
       continue;
     }
 
@@ -152,28 +152,28 @@ async function main() {
     const ml = dk.moneyline ?? [];
     for (const outcome of ml) {
       if (!['home','away','draw'].includes(outcome.side)) continue;
-      rows.push([dbFix.fixture_id, snapshotTs, 68, '1X2', outcome.side, null, outcome.odds, null, 0]);
+      rows.push([dbFix.match_id, snapshotTs, 68, '1X2', outcome.side, null, outcome.odds, null, 0]);
     }
 
     // TOTAL
     const tot = dk.total ?? [];
     for (const outcome of tot) {
       if (!['over','under'].includes(outcome.side)) continue;
-      rows.push([dbFix.fixture_id, snapshotTs, 68, 'TOTAL', outcome.side, outcome.value ?? null, outcome.odds, null, 0]);
+      rows.push([dbFix.match_id, snapshotTs, 68, 'TOTAL', outcome.side, outcome.value ?? null, outcome.odds, null, 0]);
     }
 
     // ASIAN_HANDICAP
     const sp = dk.spread ?? [];
     for (const outcome of sp) {
       if (!['home','away'].includes(outcome.side)) continue;
-      rows.push([dbFix.fixture_id, snapshotTs, 68, 'ASIAN_HANDICAP', outcome.side, outcome.value ?? null, outcome.odds, null, 0]);
+      rows.push([dbFix.match_id, snapshotTs, 68, 'ASIAN_HANDICAP', outcome.side, outcome.value ?? null, outcome.odds, null, 0]);
     }
 
-    console.log(`[STATE] Inserting ${rows.length} fresh DK rows for ${dbFix.fixture_id}`);
+    console.log(`[STATE] Inserting ${rows.length} fresh DK rows for ${dbFix.match_id}`);
     for (const row of rows) {
       await conn.execute(`
         INSERT INTO wc2026_odds_snapshots
-          (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+          (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, row);
     }
@@ -188,28 +188,28 @@ async function main() {
   console.log(`\n[OUTPUT] Total DK rows inserted: ${totalInserted}`);
 
   // ─── STEP 3: Final verification ──────────────────────────────────────────────
-  console.log('\n[STEP 3] Final verification — latest DK 1X2 odds per fixture...');
-  const [finalFixtures] = await conn.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, ht.name AS home_name,
+  console.log('\n[STEP 3] Final verification — latest DK 1X2 odds per match...');
+  const [finalMatches] = await conn.execute(`
+    SELECT f.match_id, ht.fifa_code AS home_code, ht.name AS home_name,
            at2.fifa_code AS away_code, at2.name AS away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at2 ON f.away_team_id = at2.team_id
     WHERE f.match_date = '2026-06-18'
     ORDER BY f.kickoff_utc
   `);
 
-  for (const f of finalFixtures) {
+  for (const f of finalMatches) {
     const [latestTs] = await conn.execute(`
       SELECT MAX(snapshot_ts) AS maxTs FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 68
-    `, [f.fixture_id]);
+      WHERE match_id = ? AND book_id = 68
+    `, [f.match_id]);
     const maxTs = latestTs[0]?.maxTs;
 
     const [odds] = await conn.execute(`
       SELECT selection, american_odds FROM wc2026_odds_snapshots
-      WHERE fixture_id = ? AND book_id = 68 AND market = '1X2' AND snapshot_ts = ?
-    `, [f.fixture_id, maxTs]);
+      WHERE match_id = ? AND book_id = 68 AND market = '1X2' AND snapshot_ts = ?
+    `, [f.match_id, maxTs]);
 
     const homeOdds = odds.find(o => o.selection === 'home')?.american_odds;
     const awayOdds = odds.find(o => o.selection === 'away')?.american_odds;
@@ -219,7 +219,7 @@ async function main() {
       ? (homeOdds < awayOdds ? `${f.home_name}(HOME)` : `${f.away_name}(AWAY)`)
       : 'UNKNOWN';
 
-    console.log(`[VERIFY] ${f.fixture_id}: home(${f.home_code})=${homeOdds} away(${f.away_code})=${awayOdds} draw=${drawOdds} | FAVORITE=${favTeam}`);
+    console.log(`[VERIFY] ${f.match_id}: home(${f.home_code})=${homeOdds} away(${f.away_code})=${awayOdds} draw=${drawOdds} | FAVORITE=${favTeam}`);
   }
 
   await conn.end();

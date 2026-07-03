@@ -4271,8 +4271,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -4377,8 +4377,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -4576,8 +4576,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -4682,8 +4682,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -4881,8 +4881,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -4987,8 +4987,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -5187,8 +5187,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -5293,8 +5293,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -5492,8 +5492,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -5598,8 +5598,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -6100,8 +6100,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/580/scotland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/580/scotland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6131,8 +6131,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2654/haiti",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2654/haiti",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6162,8 +6162,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2869/morocco",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2869/morocco",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6193,8 +6193,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2620/egypt",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2620/egypt",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6224,8 +6224,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2659/panama",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2659/panama",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6250,8 +6250,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/205/brazil",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/205/brazil",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "BRA"
@@ -6278,8 +6278,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/466/sweden",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/466/sweden",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6309,8 +6309,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/659/tunisia",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/659/tunisia",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6340,8 +6340,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/449/netherlands",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/449/netherlands",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6371,8 +6371,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/470/iceland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/470/iceland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6402,8 +6402,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/448/england",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/448/england",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -6428,8 +6428,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/627/japan",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/627/japan",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "JPN"
@@ -9840,8 +9840,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -9946,8 +9946,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10145,8 +10145,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10251,8 +10251,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10450,8 +10450,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10556,8 +10556,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10756,8 +10756,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -10862,8 +10862,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -11061,8 +11061,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -11167,8 +11167,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -11669,8 +11669,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/580/scotland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/580/scotland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11700,8 +11700,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2654/haiti",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2654/haiti",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11731,8 +11731,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2869/morocco",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2869/morocco",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11762,8 +11762,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2620/egypt",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2620/egypt",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11793,8 +11793,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2659/panama",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2659/panama",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11819,8 +11819,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/205/brazil",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/205/brazil",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "BRA"
@@ -11847,8 +11847,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/466/sweden",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/466/sweden",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11878,8 +11878,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/659/tunisia",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/659/tunisia",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11909,8 +11909,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/449/netherlands",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/449/netherlands",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11940,8 +11940,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/470/iceland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/470/iceland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11971,8 +11971,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/448/england",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/448/england",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -11997,8 +11997,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/627/japan",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/627/japan",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "JPN"
@@ -32126,8 +32126,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -32232,8 +32232,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -32431,8 +32431,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -32537,8 +32537,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -32736,8 +32736,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -32842,8 +32842,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -33042,8 +33042,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -33148,8 +33148,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -33347,8 +33347,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/205/brazil",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/205/brazil",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -33453,8 +33453,8 @@
                         "text": "Clubhouse"
                       },
                       {
-                        "href": "https://www.espn.com/soccer/team/fixtures/_/id/627/japan",
-                        "text": "Fixtures"
+                        "href": "https://www.espn.com/soccer/team/matchs/_/id/627/japan",
+                        "text": "Matchs"
                       }
                     ],
                     "logos": [
@@ -33955,8 +33955,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/580/scotland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/580/scotland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -33986,8 +33986,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2654/haiti",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2654/haiti",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34017,8 +34017,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2869/morocco",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2869/morocco",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34048,8 +34048,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2620/egypt",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2620/egypt",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34079,8 +34079,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/2659/panama",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/2659/panama",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34105,8 +34105,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/205/brazil",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/205/brazil",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "BRA"
@@ -34133,8 +34133,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/466/sweden",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/466/sweden",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34164,8 +34164,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/659/tunisia",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/659/tunisia",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34195,8 +34195,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/449/netherlands",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/449/netherlands",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34226,8 +34226,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/470/iceland",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/470/iceland",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34257,8 +34257,8 @@
                     "text": "Clubhouse"
                   },
                   {
-                    "href": "/soccer/team/fixtures/_/id/448/england",
-                    "text": "Fixtures"
+                    "href": "/soccer/team/matchs/_/id/448/england",
+                    "text": "Matchs"
                   }
                 ]
               },
@@ -34283,8 +34283,8 @@
                 "text": "Clubhouse"
               },
               {
-                "href": "/soccer/team/fixtures/_/id/627/japan",
-                "text": "Fixtures"
+                "href": "/soccer/team/matchs/_/id/627/japan",
+                "text": "Matchs"
               }
             ],
             "shrtNm": "JPN"

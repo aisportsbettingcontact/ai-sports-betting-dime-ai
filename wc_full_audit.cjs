@@ -73,29 +73,29 @@ async function main() {
   console.log('[AUDIT] WC2026 JUNE 18 FULL CROSS-REFERENCE AUDIT');
   console.log('[AUDIT] ============================================================\n');
 
-  // ─── 1. Fixtures ground truth ─────────────────────────────────────────────
-  const [fixtures] = await conn.execute(`
+  // ─── 1. Matches ground truth ─────────────────────────────────────────────
+  const [matches] = await conn.execute(`
     SELECT 
-      f.fixture_id, f.match_date, f.kickoff_utc,
+      f.match_id, f.match_date, f.kickoff_utc,
       f.home_team_id, f.away_team_id,
       ht.name as home_name, ht.fifa_code as home_code, ht.flag_url as home_flag,
       at.name as away_name, at.fifa_code as away_code, at.flag_url as away_flag,
       f.group_letter as group_name, f.matchday, f.status,
       f.home_score, f.away_score, f.venue_id
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
     WHERE f.match_date = '2026-06-18'
     ORDER BY f.kickoff_utc ASC
   `);
 
-  console.log(`[INPUT] Found ${fixtures.length} June 18 fixtures\n`);
+  console.log(`[INPUT] Found ${matches.length} June 18 matches\n`);
 
   const THRESHOLD_PP = 1.5;
   const issues = [];
 
-  for (const fix of fixtures) {
-    console.log(`[FIXTURE] ${fix.fixture_id}`);
+  for (const fix of matches) {
+    console.log(`[MATCH] ${fix.match_id}`);
     console.log(`  [STATE] HOME: ${fix.home_name} (${fix.home_code}) | AWAY: ${fix.away_name} (${fix.away_code})`);
     console.log(`  [STATE] kickoff_utc=${fix.kickoff_utc} | group=${fix.group_name} | matchday=${fix.matchday}`);
 
@@ -103,9 +103,9 @@ async function main() {
     const [odds] = await conn.execute(`
       SELECT book_id, market, selection, american_odds, \`line\`
       FROM wc2026_odds_snapshots
-      WHERE fixture_id = ?
+      WHERE match_id = ?
       ORDER BY book_id, market, selection
-    `, [fix.fixture_id]);
+    `, [fix.match_id]);
 
     console.log(`  [STATE] Total odds rows in DB: ${odds.length}`);
 
@@ -137,10 +137,10 @@ async function main() {
 
     if (!dkHome?.odds || !dkDraw?.odds || !dkAway?.odds) {
       console.log(`    [FAIL] Missing DK ML odds — cannot compute ROI`);
-      issues.push(`${fix.fixture_id}: Missing DK ML odds`);
+      issues.push(`${fix.match_id}: Missing DK ML odds`);
     } else if (!mHome?.odds || !mDraw?.odds || !mAway?.odds) {
       console.log(`    [FAIL] Missing Model ML odds — cannot compute ROI`);
-      issues.push(`${fix.fixture_id}: Missing Model ML odds`);
+      issues.push(`${fix.match_id}: Missing Model ML odds`);
     } else {
       const r = calc3Way(dkHome.odds, dkDraw.odds, dkAway.odds, mHome.odds, mDraw.odds, mAway.odds);
       console.log(`    [STATE] Book implied sum: ${r.bookSum.toFixed(2)}% (vig=${(r.bookSum-100).toFixed(2)}%)`);
@@ -205,7 +205,7 @@ async function main() {
       console.log(`    [VERIFY] DRAW cell = single row (no home/away split) ✅`);
     } else {
       console.log(`    [FAIL] Missing DRAW odds`);
-      issues.push(`${fix.fixture_id}: Missing DRAW odds`);
+      issues.push(`${fix.match_id}: Missing DRAW odds`);
     }
 
     console.log('\n  ─────────────────────────────────────────────────────────────');
