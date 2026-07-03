@@ -815,7 +815,7 @@ async function main() {
   banner('PHASE C — PROJECT JULY 1 FIXTURES', C.BG_BLUE + C.BOLD + C.WHITE);
 
   const [jul1Fix] = await db.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
+    SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -824,14 +824,14 @@ async function main() {
     ORDER BY f.kickoff_utc
   `);
   log('INPUT', 'C1_FIX', `July 1 fixtures: ${jul1Fix.length}`);
-  jul1Fix.forEach((f, i) => log('REAL_DATA', 'C1_FIX', `  [${i+1}] ${f.fixture_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
+  jul1Fix.forEach((f, i) => log('REAL_DATA', 'C1_FIX', `  [${i+1}] ${f.match_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
 
   if (jul1Fix.length === 0) hardFail('C1_FIX', 'Zero July 1 fixtures found');
 
   const [bookOdds] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN (${jul1Fix.map(()=>'?').join(',')})
-  `, jul1Fix.map(f => f.fixture_id));
+    WHERE match_id IN (${jul1Fix.map(()=>'?').join(',')})
+  `, jul1Fix.map(f => f.match_id));
   log('INPUT', 'C1_BOOK', `Book odds rows: ${bookOdds.length}`);
 
   const REQUIRED_BOOK_FIELDS = [
@@ -844,15 +844,15 @@ async function main() {
   ];
 
   for (const fix of jul1Fix) {
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     if (!bookRow) {
-      hardFail('C1_BOOK', `${fix.fixture_id}: NO book odds row — cannot compute edges`);
+      hardFail('C1_BOOK', `${fix.match_id}: NO book odds row — cannot compute edges`);
     }
     const nullFields = REQUIRED_BOOK_FIELDS.filter(f => bookRow[f] === null || bookRow[f] === undefined);
     if (nullFields.length > 0) {
-      log('WARN', 'C1_BOOK', `${fix.fixture_id}: ${nullFields.length} null book fields: ${nullFields.join(', ')}`);
+      log('WARN', 'C1_BOOK', `${fix.match_id}: ${nullFields.length} null book fields: ${nullFields.join(', ')}`);
     } else {
-      log('PASS', 'C1_BOOK', `${fix.fixture_id}: all ${REQUIRED_BOOK_FIELDS.length} book fields populated ✓`);
+      log('PASS', 'C1_BOOK', `${fix.match_id}: all ${REQUIRED_BOOK_FIELDS.length} book fields populated ✓`);
     }
   }
 
@@ -863,8 +863,8 @@ async function main() {
     const homeCode = fix.home_code;
     const awayCode = fix.away_code;
 
-    progressBar(fi, jul1Fix.length, `Projecting ${fix.fixture_id}...`);
-    banner(`FIXTURE ${fi+1}/${jul1Fix.length}: ${fix.fixture_id} | ${homeCode} vs ${awayCode}`, C.BG_MAGENTA + C.BOLD + C.WHITE);
+    progressBar(fi, jul1Fix.length, `Projecting ${fix.match_id}...`);
+    banner(`FIXTURE ${fi+1}/${jul1Fix.length}: ${fix.match_id} | ${homeCode} vs ${awayCode}`, C.BG_MAGENTA + C.BOLD + C.WHITE);
 
     // C5: Role inversion pre-flight
     const espnRows = xgAll.filter(r =>
@@ -874,9 +874,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.fixture_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.fixture_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
       }
     }
 
@@ -899,14 +899,14 @@ async function main() {
 
     // C10: Spread line from DB — DB stores as signed (e.g. -1.5 for home favorite)
     // The simulation condition is h - a > threshold, so we always use the absolute value
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     const spreadLineRaw = bookRow?.book_spread_line ?? 1.5;
     const spreadLine = Math.abs(Number(spreadLineRaw));
-    log('STATE', 'C10_SPREAD', `${fix.fixture_id}: spread line raw=${spreadLineRaw} → abs=${spreadLine} (from DB)`);
+    log('STATE', 'C10_SPREAD', `${fix.match_id}: spread line raw=${spreadLineRaw} → abs=${spreadLine} (from DB)`);
 
     // Run DC simulation
     const sim = runDCSim(hForm.lambda, aForm.lambda, winner.rho, 100000, spreadLine);
-    log('STATE', 'SIM_PROBS', `${fix.fixture_id}: pH=${fmt(sim.pH)} pD=${fmt(sim.pD)} pA=${fmt(sim.pA)} pOver=${fmt(sim.pOver)} pUnder=${fmt(sim.pUnder)} pBTTS=${fmt(sim.pBTTS)}`);
+    log('STATE', 'SIM_PROBS', `${fix.match_id}: pH=${fmt(sim.pH)} pD=${fmt(sim.pD)} pA=${fmt(sim.pA)} pOver=${fmt(sim.pOver)} pUnder=${fmt(sim.pUnder)} pBTTS=${fmt(sim.pBTTS)}`);
 
     // C9: ET/Pens
     const et = etPensProbs(sim.pH, sim.pA, 0.70);
@@ -941,7 +941,7 @@ async function main() {
     }
 
     // ── BOOK vs MODEL TABLE ─────────────────────────────────────────────────
-    banner(`BOOK vs MODEL — ${homeCode} vs ${awayCode} (${fix.fixture_id})`, C.BG_GREEN + C.BOLD + C.WHITE);
+    banner(`BOOK vs MODEL — ${homeCode} vs ${awayCode} (${fix.match_id})`, C.BG_GREEN + C.BOLD + C.WHITE);
     const markets = [
       ['Home ML',                      bookRow?.book_home_ml,           modelOdds.homeML],
       ['Draw ML',                      bookRow?.book_draw_ml,           modelOdds.drawML],
@@ -975,48 +975,48 @@ async function main() {
     }
 
     // ── XREF VALIDATION (N10 hardened) ─────────────────────────────────────
-    subBanner(`XREF VALIDATION — ${fix.fixture_id}`);
+    subBanner(`XREF VALIDATION — ${fix.match_id}`);
 
     // Prob sum
     const probSum = sim.pH + sim.pD + sim.pA;
     if (Math.abs(probSum - 1.0) > 0.001) {
-      hardFail('XREF_PROB', `${fix.fixture_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
+      hardFail('XREF_PROB', `${fix.match_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: prob sum=${probSum.toFixed(6)} ✓`); XREF_PASS++;
+    log('PASS', 'XREF', `${fix.match_id}: prob sum=${probSum.toFixed(6)} ✓`); XREF_PASS++;
 
     // ET prob sum
     const etSum = et.pETH + et.pETA;
     if (Math.abs(etSum - 1.0) > 0.001) {
-      hardFail('XREF_ET', `${fix.fixture_id}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`);
+      hardFail('XREF_ET', `${fix.match_id}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: ET prob sum=${etSum.toFixed(6)} ✓`); XREF_PASS++;
+    log('PASS', 'XREF', `${fix.match_id}: ET prob sum=${etSum.toFixed(6)} ✓`); XREF_PASS++;
 
     // N10: Advance prob sum — tightened to 0.001
     const advSum = pAdvH + pAdvA;
     if (Math.abs(advSum - 1.0) > 0.001) {
-      hardFail('XREF_ADV', `${fix.fixture_id}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0 (tolerance 0.001)`);
+      hardFail('XREF_ADV', `${fix.match_id}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0 (tolerance 0.001)`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: advance prob sum=${advSum.toFixed(6)} ✓`); XREF_PASS++;
+    log('PASS', 'XREF', `${fix.match_id}: advance prob sum=${advSum.toFixed(6)} ✓`); XREF_PASS++;
 
     // N10: DC market consistency: DC1X + DC X2 = 1 + pD
     const dcCheck = pDC1X + pDCX2;
     const dcExpected = 1 + sim.pD;
     if (Math.abs(dcCheck - dcExpected) > 0.001) {
-      hardFail('XREF_DC', `${fix.fixture_id}: DC1X+DC X2=${dcCheck.toFixed(6)} ≠ 1+pD=${dcExpected.toFixed(6)}`);
+      hardFail('XREF_DC', `${fix.match_id}: DC1X+DC X2=${dcCheck.toFixed(6)} ≠ 1+pD=${dcExpected.toFixed(6)}`);
     }
-    log('PASS', 'XREF', `${fix.fixture_id}: DC market consistency DC1X+DCX2=${dcCheck.toFixed(6)} = 1+pD=${dcExpected.toFixed(6)} ✓`); XREF_PASS++;
+    log('PASS', 'XREF', `${fix.match_id}: DC market consistency DC1X+DCX2=${dcCheck.toFixed(6)} = 1+pD=${dcExpected.toFixed(6)} ✓`); XREF_PASS++;
 
     // N10: Extreme ML check
     for (const [market, , model_] of markets) {
       if (model_ !== null && Math.abs(model_) >= 9999) {
-        log('WARN', 'XREF_ML', `${fix.fixture_id} [${market}]: extreme ML=${model_} (p near 0 or 1) — flag for review`);
+        log('WARN', 'XREF_ML', `${fix.match_id} [${market}]: extreme ML=${model_} (p near 0 or 1) — flag for review`);
       }
     }
 
-    log('PASS', 'XREF', `${fix.fixture_id}: ALL XREF CHECKS PASSED ✓`);
+    log('PASS', 'XREF', `${fix.match_id}: ALL XREF CHECKS PASSED ✓`);
 
     projections.push({
-      fixtureId: fix.fixture_id,
+      matchId: fix.match_id,
       homeCode, awayCode,
       lambdaH: hForm.lambda, lambdaA: aForm.lambda,
       projScoreH: hForm.lambda, projScoreA: aForm.lambda,
@@ -1060,7 +1060,7 @@ async function main() {
     },
     variations: results,
     projections: projections.map(p => ({
-      fixtureId: p.fixtureId,
+      matchId: p.matchId,
       homeCode: p.homeCode, awayCode: p.awayCode,
       lambdaH: p.lambdaH, lambdaA: p.lambdaA,
       projScoreH: p.projScoreH, projScoreA: p.projScoreA,

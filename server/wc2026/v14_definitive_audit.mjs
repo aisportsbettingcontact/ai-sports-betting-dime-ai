@@ -215,13 +215,13 @@ async function main() {
       'matchId', 'matchRound', 'teamAbbrev', 'xG', 'xGOT'
     ],
     'wc2026_fixtures': [
-      'fixture_id', 'home_team_id', 'away_team_id', 'match_date', 'kickoff_utc'
+      'match_id', 'home_team_id', 'away_team_id', 'match_date', 'kickoff_utc'
     ],
     'wc2026_teams': [
       'team_id', 'fifa_code'
     ],
     'wc2026_frozen_book_odds': [
-      'fixture_id',
+      'match_id',
       'book_home_ml', 'book_draw_ml', 'book_away_ml',
       'book_spread_line', 'book_home_spread_odds', 'book_away_spread_odds',
       'book_total_line', 'book_over_odds', 'book_under_odds',
@@ -334,18 +334,18 @@ async function main() {
   banner('S7 — SPREAD SIGN VALIDATION');
 
   const [spreadRows] = await db.execute(`
-    SELECT fixture_id, book_spread_line FROM wc2026_frozen_book_odds
+    SELECT match_id, book_spread_line FROM wc2026_frozen_book_odds
     WHERE book_spread_line IS NOT NULL
-    ORDER BY fixture_id
+    ORDER BY match_id
   `);
   log('INPUT', 'S7_SPREAD', `${spreadRows.length} rows with non-null book_spread_line`);
   for (const row of spreadRows) {
     const raw = Number(row.book_spread_line);
     const abs = Math.abs(raw);
-    log('REAL_DATA', 'S7_SPREAD', `  ${row.fixture_id}: book_spread_line=${raw} → abs=${abs} (v14 uses abs value ✓)`);
+    log('REAL_DATA', 'S7_SPREAD', `  ${row.match_id}: book_spread_line=${raw} → abs=${abs} (v14 uses abs value ✓)`);
     if (raw > 0) {
-      addIssue('MEDIUM', `SPREAD-SIGN-${row.fixture_id}`, 'S7_SPREAD',
-        `${row.fixture_id}: book_spread_line=${raw} is positive — convention is negative for home favorite`,
+      addIssue('MEDIUM', `SPREAD-SIGN-${row.match_id}`, 'S7_SPREAD',
+        `${row.match_id}: book_spread_line=${raw} is positive — convention is negative for home favorite`,
         `DB value=${raw}`,
         `Verify seeding convention — should be -1.5 for home favorite, +1.5 for away favorite`
       );
@@ -359,7 +359,7 @@ async function main() {
   banner('S8 — BOOK ODDS COMPLETENESS FOR JULY 1 FIXTURES');
 
   const [jul1Fixtures] = await db.execute(`
-    SELECT f.fixture_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
+    SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc, f.match_date
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -368,7 +368,7 @@ async function main() {
     ORDER BY f.kickoff_utc
   `);
   log('INPUT', 'S8_FIX', `July 1 fixtures: ${jul1Fixtures.length}`);
-  jul1Fixtures.forEach(f => log('REAL_DATA', 'S8_FIX', `  ${f.fixture_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
+  jul1Fixtures.forEach(f => log('REAL_DATA', 'S8_FIX', `  ${f.match_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
 
   const REQUIRED_BOOK_FIELDS = [
     'book_home_ml','book_draw_ml','book_away_ml',
@@ -381,13 +381,13 @@ async function main() {
 
   for (const fix of jul1Fixtures) {
     const [bookRows] = await db.execute(
-      `SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id = ?`,
-      [fix.fixture_id]
+      `SELECT * FROM wc2026_frozen_book_odds WHERE match_id = ?`,
+      [fix.match_id]
     );
     if (bookRows.length === 0) {
-      addIssue('CRITICAL', `BOOK-MISSING-${fix.fixture_id}`, 'S8_BOOK',
-        `No book odds row for ${fix.fixture_id} (${fix.home_code} vs ${fix.away_code})`,
-        `SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id='${fix.fixture_id}' returned 0 rows`,
+      addIssue('CRITICAL', `BOOK-MISSING-${fix.match_id}`, 'S8_BOOK',
+        `No book odds row for ${fix.match_id} (${fix.home_code} vs ${fix.away_code})`,
+        `SELECT * FROM wc2026_frozen_book_odds WHERE match_id='${fix.match_id}' returned 0 rows`,
         `Run seedJuly1Direct.ts to seed book odds for this fixture`
       );
       continue;
@@ -395,20 +395,20 @@ async function main() {
     const bookRow = bookRows[0];
     const nullFields = REQUIRED_BOOK_FIELDS.filter(f => bookRow[f] === null || bookRow[f] === undefined);
     if (nullFields.length > 0) {
-      addIssue('HIGH', `BOOK-NULL-${fix.fixture_id}`, 'S8_BOOK',
-        `${fix.fixture_id}: ${nullFields.length} required book fields are NULL: ${nullFields.join(', ')}`,
-        `SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id='${fix.fixture_id}'`,
+      addIssue('HIGH', `BOOK-NULL-${fix.match_id}`, 'S8_BOOK',
+        `${fix.match_id}: ${nullFields.length} required book fields are NULL: ${nullFields.join(', ')}`,
+        `SELECT * FROM wc2026_frozen_book_odds WHERE match_id='${fix.match_id}'`,
         `Update seed script to populate all required fields`
       );
-      log('WARN', 'S8_BOOK', `  ${fix.fixture_id}: NULL fields: ${nullFields.join(', ')}`);
+      log('WARN', 'S8_BOOK', `  ${fix.match_id}: NULL fields: ${nullFields.join(', ')}`);
     } else {
-      log('PASS', 'S8_BOOK', `  ${fix.fixture_id}: all ${REQUIRED_BOOK_FIELDS.length} book fields populated ✓`);
+      log('PASS', 'S8_BOOK', `  ${fix.match_id}: all ${REQUIRED_BOOK_FIELDS.length} book fields populated ✓`);
     }
     // Log all book values
     for (const field of REQUIRED_BOOK_FIELDS) {
       const val = bookRow[field];
       const display = val != null ? (Number(val) > 0 ? `+${val}` : `${val}`) : 'NULL';
-      log('REAL_DATA', 'S8_BOOK', `    ${fix.fixture_id}.${field} = ${display}`);
+      log('REAL_DATA', 'S8_BOOK', `    ${fix.match_id}.${field} = ${display}`);
     }
   }
 

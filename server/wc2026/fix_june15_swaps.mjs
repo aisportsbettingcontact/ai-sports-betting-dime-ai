@@ -47,18 +47,18 @@ console.log('[STEP] Reading current state before fix');
 
 // Read current state
 const [before] = await c.execute(`
-  SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+  SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE f.fixture_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')
-  ORDER BY f.fixture_id
+  WHERE f.match_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')
+  ORDER BY f.match_id
 `);
 
 console.log('[STATE] Before fix:');
 for (const f of before) {
-  console.log(`  ${f.fixture_id}: home=${f.homeCode}(${f.home_team_id}) away=${f.awayCode}(${f.away_team_id})`);
+  console.log(`  ${f.match_id}: home=${f.homeCode}(${f.home_team_id}) away=${f.awayCode}(${f.away_team_id})`);
 }
 
 // Official correct orientation
@@ -76,23 +76,23 @@ let fixed = 0;
 let skipped = 0;
 
 for (const f of before) {
-  const correct = CORRECT[f.fixture_id];
+  const correct = CORRECT[f.match_id];
   if (!correct) continue;
   
   if (f.home_team_id === correct.home && f.away_team_id === correct.away) {
-    console.log(`[STATE] ${f.fixture_id}: already correct (home=${f.homeCode} away=${f.awayCode}) — SKIP`);
+    console.log(`[STATE] ${f.match_id}: already correct (home=${f.homeCode} away=${f.awayCode}) — SKIP`);
     skipped++;
     continue;
   }
   
-  console.log(`[STEP] ${f.fixture_id}: swapping home=${f.homeCode}→${correct.homeCode} away=${f.awayCode}→${correct.awayCode}`);
+  console.log(`[STEP] ${f.match_id}: swapping home=${f.homeCode}→${correct.homeCode} away=${f.awayCode}→${correct.awayCode}`);
   
   await c.execute(
-    `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE fixture_id = ?`,
-    [correct.home, correct.away, f.fixture_id]
+    `UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
+    [correct.home, correct.away, f.match_id]
   );
   
-  console.log(`[STATE] ${f.fixture_id}: updated`);
+  console.log(`[STATE] ${f.match_id}: updated`);
   fixed++;
 }
 
@@ -101,22 +101,22 @@ console.log('[STEP] Reading state after fix');
 
 // Verify after fix
 const [after] = await c.execute(`
-  SELECT f.fixture_id, f.home_team_id, f.away_team_id,
+  SELECT f.match_id, f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_fixtures f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE f.fixture_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')
-  ORDER BY f.fixture_id
+  WHERE f.match_id IN ('wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014')
+  ORDER BY f.match_id
 `);
 
 console.log('[STATE] After fix:');
 let allCorrect = true;
 for (const f of after) {
-  const correct = CORRECT[f.fixture_id];
+  const correct = CORRECT[f.match_id];
   const ok = f.home_team_id === correct.home && f.away_team_id === correct.away;
   if (!ok) allCorrect = false;
-  console.log(`  ${f.fixture_id}: home=${f.homeCode}(${f.home_team_id}) away=${f.awayCode}(${f.away_team_id}) ${ok ? '✓' : '✗ STILL WRONG'}`);
+  console.log(`  ${f.match_id}: home=${f.homeCode}(${f.home_team_id}) away=${f.awayCode}(${f.away_team_id}) ${ok ? '✓' : '✗ STILL WRONG'}`);
 }
 
 console.log('');
@@ -131,26 +131,26 @@ const june15Ids = ['wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014'];
 const ph = june15Ids.map(() => '?').join(',');
 
 const [dkOdds] = await c.execute(
-  `SELECT fixture_id, market, selection, american_odds, line
+  `SELECT match_id, market, selection, american_odds, line
    FROM wc2026_odds_snapshots
-   WHERE fixture_id IN (${ph}) AND book_id = 68
+   WHERE match_id IN (${ph}) AND book_id = 68
    AND snapshot_ts = (
      SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-     WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 68
+     WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 68
    )
-   ORDER BY fixture_id, market, selection`,
+   ORDER BY match_id, market, selection`,
   june15Ids
 );
 
 const [modelOdds] = await c.execute(
-  `SELECT fixture_id, market, selection, american_odds, line
+  `SELECT match_id, market, selection, american_odds, line
    FROM wc2026_odds_snapshots
-   WHERE fixture_id IN (${ph}) AND book_id = 0
+   WHERE match_id IN (${ph}) AND book_id = 0
    AND snapshot_ts = (
      SELECT MAX(s2.snapshot_ts) FROM wc2026_odds_snapshots s2
-     WHERE s2.fixture_id = wc2026_odds_snapshots.fixture_id AND s2.book_id = 0
+     WHERE s2.match_id = wc2026_odds_snapshots.match_id AND s2.book_id = 0
    )
-   ORDER BY fixture_id, market, selection`,
+   ORDER BY match_id, market, selection`,
   june15Ids
 );
 
@@ -158,17 +158,17 @@ const [modelOdds] = await c.execute(
 const dkByFix = {};
 const modelByFix = {};
 for (const o of dkOdds) {
-  if (!dkByFix[o.fixture_id]) dkByFix[o.fixture_id] = {};
-  dkByFix[o.fixture_id][`${o.market}_${o.selection}`] = o.american_odds;
+  if (!dkByFix[o.match_id]) dkByFix[o.match_id] = {};
+  dkByFix[o.match_id][`${o.market}_${o.selection}`] = o.american_odds;
 }
 for (const o of modelOdds) {
-  if (!modelByFix[o.fixture_id]) modelByFix[o.fixture_id] = {};
-  modelByFix[o.fixture_id][`${o.market}_${o.selection}`] = o.american_odds;
+  if (!modelByFix[o.match_id]) modelByFix[o.match_id] = {};
+  modelByFix[o.match_id][`${o.market}_${o.selection}`] = o.american_odds;
 }
 
 // Build fixture map
 const fxMap = {};
-for (const f of after) fxMap[f.fixture_id] = f;
+for (const f of after) fxMap[f.match_id] = f;
 
 const OFFICIAL_DISPLAY = {
   'wc26-g-015': { kickoffET: '12:00 PM ET' },

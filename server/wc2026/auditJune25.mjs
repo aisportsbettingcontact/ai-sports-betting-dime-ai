@@ -22,7 +22,7 @@ function parseDbUrl(url) {
   // 1. Fixture orientation audit
   const [fixtures] = await conn.query(`
     SELECT 
-      f.fixture_id, f.kickoff_utc, f.group_letter,
+      f.match_id, f.kickoff_utc, f.group_letter,
       ht.team_id AS home_id, ht.fifa_code AS home_fifa, ht.name AS home_name,
       at.team_id AS away_id, at.fifa_code AS away_fifa, at.name AS away_name,
       v.city AS venue_city
@@ -47,11 +47,11 @@ function parseDbUrl(url) {
   console.log(`${TAG} [STEP 1] ORIENTATION AUDIT:`);
   let orientErrors = 0;
   for (const f of fixtures) {
-    const exp = EXPECTED[f.fixture_id];
-    if (!exp) { console.log(`${TAG}   UNKNOWN fixture: ${f.fixture_id}`); continue; }
+    const exp = EXPECTED[f.match_id];
+    if (!exp) { console.log(`${TAG}   UNKNOWN fixture: ${f.match_id}`); continue; }
     const ok = f.home_id === exp.home && f.away_id === exp.away;
     const status = ok ? 'PASS ✓' : 'FAIL ✗';
-    console.log(`${TAG}   ${f.fixture_id} | ${f.home_fifa}(home) vs ${f.away_fifa}(away) | ${status}`);
+    console.log(`${TAG}   ${f.match_id} | ${f.home_fifa}(home) vs ${f.away_fifa}(away) | ${status}`);
     if (!ok) {
       console.log(`${TAG}     EXPECTED: home=${exp.home} away=${exp.away}`);
       console.log(`${TAG}     ACTUAL:   home=${f.home_id} away=${f.away_id}`);
@@ -63,7 +63,7 @@ function parseDbUrl(url) {
   // 2. DK odds coverage audit
   const [coverage] = await conn.query(`
     SELECT 
-      f.fixture_id,
+      f.match_id,
       ht.fifa_code AS home_fifa,
       at.fifa_code AS away_fifa,
       COUNT(o.id) AS dk_rows,
@@ -82,9 +82,9 @@ function parseDbUrl(url) {
     FROM wc2026_fixtures f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
     JOIN wc2026_teams at ON f.away_team_id = at.team_id
-    LEFT JOIN wc2026_odds_snapshots o ON f.fixture_id = o.fixture_id AND o.book_id = 68
+    LEFT JOIN wc2026_odds_snapshots o ON f.match_id = o.match_id AND o.book_id = 68
     WHERE f.match_date = '2026-06-25'
-    GROUP BY f.fixture_id, ht.fifa_code, at.fifa_code
+    GROUP BY f.match_id, ht.fifa_code, at.fifa_code
     ORDER BY f.kickoff_utc
   `);
 
@@ -97,7 +97,7 @@ function parseDbUrl(url) {
                   r.dc_home == 1 && r.dc_away == 1 &&
                   r.btts_yes == 1 && r.btts_no == 1;
     const status = allOk ? 'ALL 12 MARKETS ✓' : 'MISSING MARKETS ✗';
-    console.log(`${TAG}   ${r.fixture_id} | ${r.home_fifa}(home) vs ${r.away_fifa}(away) | dk_rows=${r.dk_rows} | ${status}`);
+    console.log(`${TAG}   ${r.match_id} | ${r.home_fifa}(home) vs ${r.away_fifa}(away) | dk_rows=${r.dk_rows} | ${status}`);
     if (!allOk) {
       console.log(`${TAG}     home_ml=${r.home_ml} draw=${r.draw_ml} away_ml=${r.away_ml} no_draw=${r.no_draw}`);
       console.log(`${TAG}     total_over=${r.total_over} total_under=${r.total_under}`);
@@ -124,7 +124,7 @@ function parseDbUrl(url) {
   for (const fid of Object.keys(EXPECTED_ODDS)) {
     const exp = EXPECTED_ODDS[fid];
     const [rows] = await conn.query(
-      `SELECT market, selection, line, american_odds FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = 68`,
+      `SELECT market, selection, line, american_odds FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 68`,
       [fid]
     );
     const get = (market, selection) => {

@@ -218,7 +218,7 @@ const BRACKET_SEEDING_GRAPH = {
   "760515_loser": { nextGameId: "760516", slot: "away" }, // M102 L → M103 away
 };
 
-// ESPN game ID → fixture_id in wc2026_fixtures
+// ESPN game ID → match_id in wc2026_fixtures
 // Populated dynamically from DB; this static map is the fallback for R16+
 const STATIC_GAME_ID_TO_FIXTURE_ID = {
   // R32 — dynamically resolved via espn_event_id in wc2026_fixtures
@@ -282,13 +282,13 @@ async function getConn() {
 
 // ─── Load fixture map from wc2026_fixtures ────────────────────────────────────
 // Returns:
-//   byEspnId:   Map<espn_event_id → { fixtureId, homeTeamId, awayTeamId, advancingTeamId, matchDate, kickoffUtc, status }>
-//   byFixtureId: Map<fixture_id → same>
+//   byEspnId:   Map<espn_event_id → { matchId, homeTeamId, awayTeamId, advancingTeamId, matchDate, kickoffUtc, status }>
+//   byFixtureId: Map<match_id → same>
 async function loadFixtureMap(conn) {
   log("INPUT", "Loading wc2026_fixtures knockout rows");
   const [rows] = await conn.query(`
     SELECT
-      fixture_id, espn_event_id, stage, display_order,
+      match_id, espn_event_id, stage, display_order,
       home_team_id, away_team_id, advancing_team_id,
       match_date, kickoff_utc, status
     FROM wc2026_fixtures
@@ -299,7 +299,7 @@ async function loadFixtureMap(conn) {
   const byFixtureId = new Map();
   for (const r of rows) {
     if (r.espn_event_id) byEspnId.set(String(r.espn_event_id), r);
-    byFixtureId.set(r.fixture_id, r);
+    byFixtureId.set(r.match_id, r);
   }
   log("INPUT", `Loaded ${rows.length} knockout fixtures | with espn_event_id: ${byEspnId.size}`);
   return { byEspnId, byFixtureId, rows };
@@ -539,7 +539,7 @@ async function resolveAdvancement(conn, rows, fixtureMap) {
 
     // Skip if already set (but 'tbd' is not a real value — re-resolve)
     if (fixture.advancing_team_id && fixture.advancing_team_id !== 'tbd') {
-      logV("STATE", `[PHASE-B] ${fixture.fixture_id}: advancing_team_id already set to '${fixture.advancing_team_id}' — skipping`);
+      logV("STATE", `[PHASE-B] ${fixture.match_id}: advancing_team_id already set to '${fixture.advancing_team_id}' — skipping`);
       skipped++;
       continue;
     }
@@ -583,31 +583,31 @@ async function resolveAdvancement(conn, rows, fixtureMap) {
     }
 
     if (!teamId) {
-      const msg = `[PHASE-B] CANNOT RESOLVE winner team "${winnerTeamName}" (${winnerTeamAbbr}) to wc2026_teams.team_id — fixture=${fixture.fixture_id}`;
+      const msg = `[PHASE-B] CANNOT RESOLVE winner team "${winnerTeamName}" (${winnerTeamAbbr}) to wc2026_teams.team_id — fixture=${fixture.match_id}`;
       log("FAIL", msg);
       errors.push(msg);
       continue;
     }
 
     // Write advancing_team_id to wc2026_fixtures
-    log("DB", `[PHASE-B] UPDATE wc2026_fixtures SET advancing_team_id='${teamId}' WHERE fixture_id='${fixture.fixture_id}'`);
+    log("DB", `[PHASE-B] UPDATE wc2026_fixtures SET advancing_team_id='${teamId}' WHERE match_id='${fixture.match_id}'`);
     if (!DRY_RUN) {
       try {
         await conn.execute(
-          `UPDATE wc2026_fixtures SET advancing_team_id = ? WHERE fixture_id = ?`,
-          [teamId, fixture.fixture_id]
+          `UPDATE wc2026_fixtures SET advancing_team_id = ? WHERE match_id = ?`,
+          [teamId, fixture.match_id]
         );
-        log("VERIFY", `[PHASE-B] PASS — ${fixture.fixture_id}: advancing_team_id='${teamId}' (${winnerTeamName})`);
+        log("VERIFY", `[PHASE-B] PASS — ${fixture.match_id}: advancing_team_id='${teamId}' (${winnerTeamName})`);
         // Update local cache so Phase C sees the fresh value
         fixture.advancing_team_id = teamId;
         resolved++;
       } catch (err) {
-        const msg = `[PHASE-B] DB UPDATE failed for ${fixture.fixture_id}: ${err.message}`;
+        const msg = `[PHASE-B] DB UPDATE failed for ${fixture.match_id}: ${err.message}`;
         log("FAIL", msg);
         errors.push(msg);
       }
     } else {
-      log("VERIFY", `[PHASE-B] DRY RUN — would set ${fixture.fixture_id} advancing_team_id='${teamId}' (${winnerTeamName})`);
+      log("VERIFY", `[PHASE-B] DRY RUN — would set ${fixture.match_id} advancing_team_id='${teamId}' (${winnerTeamName})`);
       fixture.advancing_team_id = teamId; // update cache for dry-run Phase C simulation
       resolved++;
     }
@@ -669,7 +669,7 @@ async function resolveOpponentMapping(conn, rows, fixtureMap) {
       continue;
     }
 
-    const targetFixtureId2 = targetFixture.fixture_id;
+    const targetFixtureId2 = targetFixture.match_id;
     const currentSlotValue = slot === "home" ? targetFixture.home_team_id : targetFixture.away_team_id;
 
     // Skip if slot already has the correct team
@@ -689,12 +689,12 @@ async function resolveOpponentMapping(conn, rows, fixtureMap) {
 
     // Write the advancing team to the target slot
     const col = slot === "home" ? "home_team_id" : "away_team_id";
-    log("DB", `[PHASE-C] UPDATE wc2026_fixtures SET ${col}='${advancingTeamId}' WHERE fixture_id='${targetFixtureId2}'`);
+    log("DB", `[PHASE-C] UPDATE wc2026_fixtures SET ${col}='${advancingTeamId}' WHERE match_id='${targetFixtureId2}'`);
 
     if (!DRY_RUN) {
       try {
         await conn.execute(
-          `UPDATE wc2026_fixtures SET ${col} = ? WHERE fixture_id = ?`,
+          `UPDATE wc2026_fixtures SET ${col} = ? WHERE match_id = ?`,
           [advancingTeamId, targetFixtureId2]
         );
         log("VERIFY", `[PHASE-C] PASS — ${targetFixtureId2}: ${col}='${advancingTeamId}' (from ${row.match_number ?? gameId})`);
@@ -771,30 +771,30 @@ async function seedCalendar(conn, rows, fixtureMap) {
     const kickoffChanged = currentKickoff !== espnKickoffStr;
 
     if (!dateChanged && !kickoffChanged) {
-      logV("STATE", `[PHASE-D] ${fixture.fixture_id}: match_date and kickoff_utc already correct — no change`);
+      logV("STATE", `[PHASE-D] ${fixture.match_id}: match_date and kickoff_utc already correct — no change`);
       skipped++;
       continue;
     }
 
-    log("DB", `[PHASE-D] UPDATE wc2026_fixtures SET match_date='${espnDateStr}', kickoff_utc='${espnKickoffStr}' WHERE fixture_id='${fixture.fixture_id}'`);
+    log("DB", `[PHASE-D] UPDATE wc2026_fixtures SET match_date='${espnDateStr}', kickoff_utc='${espnKickoffStr}' WHERE match_id='${fixture.match_id}'`);
 
     if (!DRY_RUN) {
       try {
         await conn.execute(
-          `UPDATE wc2026_fixtures SET match_date = ?, kickoff_utc = ? WHERE fixture_id = ?`,
-          [espnDateStr, espnKickoffStr, fixture.fixture_id]
+          `UPDATE wc2026_fixtures SET match_date = ?, kickoff_utc = ? WHERE match_id = ?`,
+          [espnDateStr, espnKickoffStr, fixture.match_id]
         );
-        log("VERIFY", `[PHASE-D] PASS — ${fixture.fixture_id}: match_date='${espnDateStr}' kickoff_utc='${espnKickoffStr}'`);
+        log("VERIFY", `[PHASE-D] PASS — ${fixture.match_id}: match_date='${espnDateStr}' kickoff_utc='${espnKickoffStr}'`);
         fixture.match_date  = espnDateStr;
         fixture.kickoff_utc = espnKickoffStr;
         seeded++;
       } catch (err) {
-        const msg = `[PHASE-D] DB UPDATE failed for ${fixture.fixture_id}: ${err.message}`;
+        const msg = `[PHASE-D] DB UPDATE failed for ${fixture.match_id}: ${err.message}`;
         log("FAIL", msg);
         errors.push(msg);
       }
     } else {
-      log("VERIFY", `[PHASE-D] DRY RUN — would set ${fixture.fixture_id} match_date='${espnDateStr}' kickoff_utc='${espnKickoffStr}'`);
+      log("VERIFY", `[PHASE-D] DRY RUN — would set ${fixture.match_id} match_date='${espnDateStr}' kickoff_utc='${espnKickoffStr}'`);
       fixture.match_date  = espnDateStr;
       fixture.kickoff_utc = espnKickoffStr;
       seeded++;
@@ -826,7 +826,7 @@ async function main() {
     for (const r of fixtureMap.rows) {
       const mn = r.display_order ? `Match ${r.display_order}` : null;
       if (r.espn_event_id) matchNumberMap.byEventId.set(String(r.espn_event_id), mn);
-      matchNumberMap.byFixtureId.set(r.fixture_id, mn);
+      matchNumberMap.byFixtureId.set(r.match_id, mn);
     }
 
     // ── STEP 2: Fetch ESPN scoreboard ─────────────────────────────────────────

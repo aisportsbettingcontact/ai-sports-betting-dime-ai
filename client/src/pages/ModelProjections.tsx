@@ -1600,7 +1600,7 @@ export default function ModelProjections() {
               )
             ) : isWcSelected ? (
               /* ── WORLD CUP INLINE FEED ── */
-              /* WC bypasses all games.* procedures and renders its own fixture cards */
+              /* WC bypasses all games.* procedures and renders its own match cards */
               /* Date is owned here (ModelProjections) so CalendarPicker stays in header row */
               <WcFeedInline
                 selectedDate={wcDate}

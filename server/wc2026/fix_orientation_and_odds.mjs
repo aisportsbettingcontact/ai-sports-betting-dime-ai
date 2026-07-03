@@ -20,7 +20,7 @@
  *    - book_no_draw_away_odds
  *
  * GROUND TRUTH from user's book lines table (Away listed first):
- * fixture_id   | Away         | Home        | awayML | homeML | draw | total | awaySpread | awaySpreadOdds | homeSpreadOdds | over | under | bttsY | bttsN | awayAdv | homeAdv
+ * match_id   | Away         | Home        | awayML | homeML | draw | total | awaySpread | awaySpreadOdds | homeSpreadOdds | over | under | bttsY | bttsN | awayAdv | homeAdv
  */
 
 import mysql from 'mysql2/promise';
@@ -178,7 +178,7 @@ async function main() {
 
   // 089 should be Morocco (Away) @ Canada (Home)
   const [r089] = await conn.execute(
-    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE fixture_id='wc26-r16-089'`,
+    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-089'`,
     [teamMap['MAR'], teamMap['CAN']]
   );
   STATE(`089 update: affectedRows=${r089.affectedRows}`);
@@ -187,7 +187,7 @@ async function main() {
 
   // 090 should be France (Away) @ Paraguay (Home)
   const [r090] = await conn.execute(
-    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE fixture_id='wc26-r16-090'`,
+    `UPDATE wc2026_fixtures SET away_team_id=?, home_team_id=? WHERE match_id='wc26-r16-090'`,
     [teamMap['FRA'], teamMap['PAR']]
   );
   STATE(`090 update: affectedRows=${r090.affectedRows}`);
@@ -224,7 +224,7 @@ async function main() {
         book_no_draw_away_odds = ?,
         to_advance_home_odds = ?,
         to_advance_away_odds = ?
-      WHERE fixture_id = ?`,
+      WHERE match_id = ?`,
       [
         f.homeML, f.draw, f.awayML,
         f.awaySpread,           // spread_line = away team's spread
@@ -257,7 +257,7 @@ async function main() {
   STEP('VERIFICATION — Reading back all 12 rows for full validation...');
 
   const [verRows] = await conn.execute(
-    `SELECT o.fixture_id,
+    `SELECT o.match_id,
             ta.fifa_code AS away_code, th.fifa_code AS home_code,
             o.book_away_ml, o.book_home_ml, o.book_draw_ml,
             o.book_spread_line, o.book_away_spread_odds, o.book_home_spread_odds,
@@ -267,18 +267,18 @@ async function main() {
             o.book_no_draw_home_odds,
             o.to_advance_home_odds, o.to_advance_away_odds
      FROM wc2026_frozen_book_odds o
-     JOIN wc2026_fixtures f ON f.fixture_id = o.fixture_id
+     JOIN wc2026_fixtures f ON f.match_id = o.match_id
      JOIN wc2026_teams ta ON ta.team_id = f.away_team_id
      JOIN wc2026_teams th ON th.team_id = f.home_team_id
-     WHERE o.fixture_id IN (${FIXTURES.map(() => '?').join(',')})
-     ORDER BY o.fixture_id`,
+     WHERE o.match_id IN (${FIXTURES.map(() => '?').join(',')})
+     ORDER BY o.match_id`,
     FIXTURES.map(f => f.id)
   );
 
   let verErrors = 0;
   for (const row of verRows) {
-    const gt = FIXTURES.find(f => f.id === row.fixture_id);
-    const fid = row.fixture_id;
+    const gt = FIXTURES.find(f => f.id === row.match_id);
+    const fid = row.match_id;
 
     INFO(`[${fid}] Away=${row.away_code} Home=${row.home_code}`);
 

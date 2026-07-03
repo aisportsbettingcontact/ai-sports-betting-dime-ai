@@ -78,7 +78,7 @@ const FIXTURE_IDS = ['wc26-r32-083', 'wc26-r32-084', 'wc26-r32-085'];
 // pasted_content_69.txt row 7: Algeria vs Switzerland | Away=ALG Home=SUI
 
 const BOOK_ROWS: Record<string, {
-  fixtureId: string;
+  matchId: string;
   bookHomeMl: number;
   bookDrawMl: number;
   bookAwayMl: number;
@@ -108,7 +108,7 @@ const BOOK_ROWS: Record<string, {
   //   AwaySpread=1.5 ASpreadOdds=-120 HomeSpread=-1.5 HSpreadOdds=103
   //   BTTS Yes=120 BTTS No=-161
   'wc26-r32-083': {
-    fixtureId:          'wc26-r32-083',
+    matchId:          'wc26-r32-083',
     bookHomeMl:         -303,   // Spain ML (Home)
     bookDrawMl:          425,   // Draw
     bookAwayMl:          750,   // Austria ML (Away)
@@ -139,7 +139,7 @@ const BOOK_ROWS: Record<string, {
   //   AwaySpread=1.5 ASpreadOdds=-286 HomeSpread=-1.5 HSpreadOdds=210
   //   BTTS Yes=-105 BTTS No=-125
   'wc26-r32-084': {
-    fixtureId:          'wc26-r32-084',
+    matchId:          'wc26-r32-084',
     bookHomeMl:         -133,   // Portugal ML (Home)
     bookDrawMl:          250,   // Draw
     bookAwayMl:          400,   // Croatia ML (Away)
@@ -170,7 +170,7 @@ const BOOK_ROWS: Record<string, {
   //   AwaySpread=1.5 ASpreadOdds=-385 HomeSpread=-1.5 HSpreadOdds=270
   //   BTTS Yes=-110 BTTS No=-110
   'wc26-r32-085': {
-    fixtureId:          'wc26-r32-085',
+    matchId:          'wc26-r32-085',
     bookHomeMl:          100,   // Switzerland ML (Home)
     bookDrawMl:          220,   // Draw
     bookAwayMl:          320,   // Algeria ML (Away)
@@ -248,15 +248,15 @@ async function main() {
   log('SECTION', 'PHASE1', 'PRE-FLIGHT VALIDATION — verify fixtures exist in DB');
 
   const fixtureRows = await db.select({
-    fixtureId: wc2026Fixtures.fixtureId,
+    matchId: wc2026Fixtures.matchId,
     homeTeamId: wc2026Fixtures.homeTeamId,
     awayTeamId: wc2026Fixtures.awayTeamId,
     matchDate: wc2026Fixtures.matchDate,
-  }).from(wc2026Fixtures).where(inArray(wc2026Fixtures.fixtureId, FIXTURE_IDS));
+  }).from(wc2026Fixtures).where(inArray(wc2026Fixtures.matchId, FIXTURE_IDS));
 
   log('INPUT', 'PHASE1', `Found ${fixtureRows.length} fixtures in DB`);
   for (const f of fixtureRows) {
-    log('INPUT', 'PHASE1', `  ${f.fixtureId}: homeTeamId=${f.homeTeamId} awayTeamId=${f.awayTeamId} matchDate=${f.matchDate}`);
+    log('INPUT', 'PHASE1', `  ${f.matchId}: homeTeamId=${f.homeTeamId} awayTeamId=${f.awayTeamId} matchDate=${f.matchDate}`);
   }
 
   if (fixtureRows.length !== 3) {
@@ -273,13 +273,13 @@ async function main() {
 
   let orientationOk = true;
   for (const f of fixtureRows) {
-    const exp = EXPECTED_ORIENTATION[f.fixtureId];
-    if (!exp) { log('FAIL', 'PHASE1', `${f.fixtureId}: no expected orientation defined`); orientationOk = false; continue; }
+    const exp = EXPECTED_ORIENTATION[f.matchId];
+    if (!exp) { log('FAIL', 'PHASE1', `${f.matchId}: no expected orientation defined`); orientationOk = false; continue; }
     if (f.homeTeamId !== exp.home || f.awayTeamId !== exp.away) {
-      log('FAIL', 'PHASE1', `${f.fixtureId}: ORIENTATION MISMATCH — DB home=${f.homeTeamId} away=${f.awayTeamId} vs expected home=${exp.home} away=${exp.away}`);
+      log('FAIL', 'PHASE1', `${f.matchId}: ORIENTATION MISMATCH — DB home=${f.homeTeamId} away=${f.awayTeamId} vs expected home=${exp.home} away=${exp.away}`);
       orientationOk = false;
     } else {
-      log('PASS', 'PHASE1', `${f.fixtureId}: Orientation confirmed — home=${f.homeTeamId} away=${f.awayTeamId} ✓`);
+      log('PASS', 'PHASE1', `${f.matchId}: Orientation confirmed — home=${f.homeTeamId} away=${f.awayTeamId} ✓`);
     }
   }
 
@@ -322,11 +322,11 @@ async function main() {
     log('STEP', 'BOOK-INS', `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
     try {
-      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.fixtureId, fid));
+      await db.delete(wc2026FrozenBookOdds).where(eq(wc2026FrozenBookOdds.matchId, fid));
       log('STATE', 'BOOK-INS', `${fid}: deleted existing frozen book odds row (idempotent)`);
 
       await db.insert(wc2026FrozenBookOdds).values({
-        fixtureId:            row.fixtureId,
+        matchId:            row.matchId,
         bookHomeMl:           row.bookHomeMl,
         bookDrawMl:           row.bookDrawMl,
         bookAwayMl:           row.bookAwayMl,
@@ -368,11 +368,11 @@ async function main() {
   log('SECTION', 'PHASE4', 'READ-BACK VERIFICATION — confirm DB values match source');
 
   const readBackRows = await db.select().from(wc2026FrozenBookOdds)
-    .where(inArray(wc2026FrozenBookOdds.fixtureId, FIXTURE_IDS));
+    .where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
 
   let rbPass = 0, rbFail = 0;
   for (const fid of FIXTURE_IDS) {
-    const dbRow = readBackRows.find(r => r.fixtureId === fid);
+    const dbRow = readBackRows.find(r => r.matchId === fid);
     const exp = EXPECTED_XREF[fid];
     if (!dbRow) {
       log('FAIL', 'READBACK', `${fid}: Row not found in DB after insert`);

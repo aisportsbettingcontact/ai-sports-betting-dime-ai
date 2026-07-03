@@ -477,7 +477,7 @@ async function main() {
 
   // A7: July 1 fixtures
   const [jul1Fix] = await db.execute(`
-    SELECT f.fixture_id, f.espn_event_id, f.home_team_id, f.away_team_id,
+    SELECT f.match_id, f.espn_event_id, f.home_team_id, f.away_team_id,
            f.match_date, f.kickoff_utc,
            ht.fifa_code AS home_code, ht.name AS home_name,
            at.fifa_code AS away_code, at.name AS away_name
@@ -489,7 +489,7 @@ async function main() {
   `);
   log('INPUT', 'A7_FIX', `July 1 fixtures: ${jul1Fix.length}`);
   jul1Fix.forEach(f => {
-    log('STATE', 'FIXTURE', `  ${f.fixture_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
+    log('STATE', 'FIXTURE', `  ${f.match_id} | ${f.home_code} vs ${f.away_code} | ESPN=${f.espn_event_id}`);
   });
 
   // C7: Compute empirical xGOT/xG ratio from real GS data
@@ -538,9 +538,9 @@ async function main() {
   // Book odds from DB
   const [bookOdds] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
-    WHERE fixture_id IN (${jul1Fix.map(()=>'?').join(',')})
-    ORDER BY fixture_id
-  `, jul1Fix.map(f => f.fixture_id));
+    WHERE match_id IN (${jul1Fix.map(()=>'?').join(',')})
+    ORDER BY match_id
+  `, jul1Fix.map(f => f.match_id));
   log('INPUT', 'BOOK_ODDS', `Book odds rows: ${bookOdds.length}`);
 
   const projections = [];
@@ -549,7 +549,7 @@ async function main() {
     const homeCode = fix.home_code;
     const awayCode = fix.away_code;
 
-    log('SECTION', 'FIXTURE', `━━━ ${fix.fixture_id} | ${homeCode} vs ${awayCode} ━━━`);
+    log('SECTION', 'FIXTURE', `━━━ ${fix.match_id} | ${homeCode} vs ${awayCode} ━━━`);
 
     // C5: Role inversion pre-flight
     // Verify ESPN xG rows have correct home/away orientation for this fixture
@@ -560,9 +560,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.fixture_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.fixture_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
       }
     }
 
@@ -607,9 +607,9 @@ async function main() {
     log('STATE', 'LAMBDAS', `${homeCode} λ=${fmt(hForm.lambda)} | ${awayCode} λ=${fmt(aForm.lambda)}`);
 
     // C10: Parameterized spread line (from book odds)
-    const bookRow = bookOdds.find(b => b.fixture_id === fix.fixture_id);
+    const bookRow = bookOdds.find(b => b.match_id === fix.match_id);
     const spreadLine = bookRow?.home_spread_line ?? 1.5;
-    log('STATE', 'C10_SPREAD', `${fix.fixture_id}: spread line = ${spreadLine} (from DB, not hardcoded)`);
+    log('STATE', 'C10_SPREAD', `${fix.match_id}: spread line = ${spreadLine} (from DB, not hardcoded)`);
 
     const sim = runDCSim(hForm.lambda, aForm.lambda, winV.rho, 100000, spreadLine);
 
@@ -685,12 +685,12 @@ async function main() {
     // Validation: prob sums
     const probSum = sim.pH + sim.pD + sim.pA;
     if (Math.abs(probSum - 1.0) > 0.001) {
-      hardFail('PROB_SUM', `${fix.fixture_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
+      hardFail('PROB_SUM', `${fix.match_id}: pH+pD+pA=${probSum.toFixed(6)} ≠ 1.0`);
     }
-    log('PASS', 'PROB_SUM', `${fix.fixture_id}: pH+pD+pA=${probSum.toFixed(6)} ✓`);
+    log('PASS', 'PROB_SUM', `${fix.match_id}: pH+pD+pA=${probSum.toFixed(6)} ✓`);
 
     projections.push({
-      fixtureId: fix.fixture_id,
+      matchId: fix.match_id,
       homeCode, awayCode,
       lambdaH: hForm.lambda, lambdaA: aForm.lambda,
       projScoreH: hForm.lambda, projScoreA: aForm.lambda,
@@ -710,33 +710,33 @@ async function main() {
   for (const proj of projections) {
     // Verify lambda > 0
     if (proj.lambdaH <= 0 || proj.lambdaA <= 0) {
-      log('FAIL', 'XREF', `${proj.fixtureId}: lambda <= 0 — FAIL`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.fixtureId}: lambdas positive ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.matchId}: lambda <= 0 — FAIL`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.matchId}: lambdas positive ✓`); xrefPass++; }
 
     // Verify prob sum
     const s = proj.sim.pH + proj.sim.pD + proj.sim.pA;
     if (Math.abs(s - 1.0) > 0.001) {
-      log('FAIL', 'XREF', `${proj.fixtureId}: prob sum=${s.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.fixtureId}: prob sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.matchId}: prob sum=${s.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.matchId}: prob sum ✓`); xrefPass++; }
 
     // Verify ET probs sum to 1
     const etSum = proj.et.pETH + proj.et.pETA;
     if (Math.abs(etSum - 1.0) > 0.001) {
-      log('FAIL', 'XREF', `${proj.fixtureId}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.fixtureId}: ET probs sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.matchId}: ET probs sum=${etSum.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.matchId}: ET probs sum ✓`); xrefPass++; }
 
     // Verify advance probs sum to 1
     const advSum = proj.pAdvH + proj.pAdvA;
     if (Math.abs(advSum - 1.0) > 0.01) {
-      log('FAIL', 'XREF', `${proj.fixtureId}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0`); xrefFail++;
-    } else { log('PASS', 'XREF', `${proj.fixtureId}: advance probs sum ✓`); xrefPass++; }
+      log('FAIL', 'XREF', `${proj.matchId}: advance probs sum=${advSum.toFixed(6)} ≠ 1.0`); xrefFail++;
+    } else { log('PASS', 'XREF', `${proj.matchId}: advance probs sum ✓`); xrefPass++; }
 
     // Verify model ML signs are valid (no +74 type errors)
     for (const [market, , model] of proj.markets) {
       if (model !== null && (model === 0 || (model > 0 && model < 100) || (model < 0 && model > -100))) {
-        log('FAIL', 'XREF', `${proj.fixtureId} [${market}]: model ML=${model} is in invalid range`); xrefFail++;
+        log('FAIL', 'XREF', `${proj.matchId} [${market}]: model ML=${model} is in invalid range`); xrefFail++;
       } else if (model !== null) {
-        log('PASS', 'XREF', `${proj.fixtureId} [${market}]: model ML=${model} valid ✓`); xrefPass++;
+        log('PASS', 'XREF', `${proj.matchId} [${market}]: model ML=${model} valid ✓`); xrefPass++;
       }
     }
   }
@@ -753,7 +753,7 @@ async function main() {
     winner: { id: winner.id, ...winner },
     variations: results,
     projections: projections.map(p => ({
-      fixtureId: p.fixtureId,
+      matchId: p.matchId,
       homeCode: p.homeCode, awayCode: p.awayCode,
       lambdaH: p.lambdaH, lambdaA: p.lambdaA,
       projScoreH: p.projScoreH, projScoreA: p.projScoreA,

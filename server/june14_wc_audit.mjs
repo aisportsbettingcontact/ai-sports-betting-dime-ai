@@ -1,8 +1,8 @@
 /**
  * JUNE 14, 2026 — WC2026 FIXTURE AUDIT (confirmed column names)
- * wc2026_fixtures: fixture_id, match_date, kickoff_utc, group_letter, home_team_id, away_team_id
+ * wc2026_fixtures: match_id, match_date, kickoff_utc, group_letter, home_team_id, away_team_id
  * wc2026_teams: team_id, name, fifa_code, group_letter, flag_code, flag_url, slug
- * wc2026_odds_snapshots: id, fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
+ * wc2026_odds_snapshots: id, match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
  */
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
@@ -27,7 +27,7 @@ console.log('='.repeat(80));
 
 const [wcFixtures] = await conn.execute(`
   SELECT 
-    f.fixture_id AS id, 
+    f.match_id AS id, 
     f.match_date AS matchDate, 
     f.kickoff_utc AS kickoffUtc, 
     f.group_letter AS groupLetter,
@@ -54,7 +54,7 @@ for (const f of wcFixtures) {
   const [dkOdds] = await conn.execute(`
     SELECT market, selection, american_odds AS price, snapshot_ts AS snapshotTs
     FROM wc2026_odds_snapshots
-    WHERE fixture_id = ? AND book_id = 68
+    WHERE match_id = ? AND book_id = 68
     ORDER BY snapshot_ts DESC
     LIMIT 30
   `, [f.id]);
@@ -63,7 +63,7 @@ for (const f of wcFixtures) {
   const [modelOdds] = await conn.execute(`
     SELECT market, selection, american_odds AS price, snapshot_ts AS snapshotTs
     FROM wc2026_odds_snapshots
-    WHERE fixture_id = ? AND book_id = 0
+    WHERE match_id = ? AND book_id = 0
     ORDER BY snapshot_ts DESC
     LIMIT 30
   `, [f.id]);

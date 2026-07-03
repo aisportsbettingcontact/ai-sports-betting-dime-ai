@@ -53,17 +53,17 @@ async function main() {
   let modelOddsSwapped = 0;
   const errors = [];
 
-  for (const fixtureId of SWAPS) {
-    console.log(`[STEP] Processing ${fixtureId}...`);
+  for (const matchId of SWAPS) {
+    console.log(`[STEP] Processing ${matchId}...`);
 
     // Get current state
     const [rows] = await conn.execute(
-      'SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ?',
-      [fixtureId]
+      'SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?',
+      [matchId]
     );
     if (!rows.length) {
-      console.log(`  [WARN] Fixture ${fixtureId} not found in DB`);
-      errors.push(`${fixtureId}: not found`);
+      console.log(`  [WARN] Fixture ${matchId} not found in DB`);
+      errors.push(`${matchId}: not found`);
       continue;
     }
 
@@ -76,8 +76,8 @@ async function main() {
 
     // Step 1: Swap fixture home/away
     await conn.execute(
-      'UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE fixture_id = ?',
-      [oldAway, oldHome, fixtureId]
+      'UPDATE wc2026_fixtures SET home_team_id = ?, away_team_id = ? WHERE match_id = ?',
+      [oldAway, oldHome, matchId]
     );
     fixturesFixed++;
     console.log(`  [STEP] Fixture teams swapped ✓`);
@@ -86,8 +86,8 @@ async function main() {
     // Use a temp value to avoid collision
     const [r1X2] = await conn.execute(
       `SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots 
-       WHERE fixture_id = ? AND market = '1X2' AND selection IN ('home','away')`,
-      [fixtureId]
+       WHERE match_id = ? AND market = '1X2' AND selection IN ('home','away')`,
+      [matchId]
     );
     const count1X2 = r1X2[0].cnt;
 
@@ -95,18 +95,18 @@ async function main() {
       // home → __temp_home__, away → home, __temp_home__ → away
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = '__temp_home__' 
-         WHERE fixture_id = ? AND market = '1X2' AND selection = 'home'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = '1X2' AND selection = 'home'`,
+        [matchId]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'home' 
-         WHERE fixture_id = ? AND market = '1X2' AND selection = 'away'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = '1X2' AND selection = 'away'`,
+        [matchId]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'away' 
-         WHERE fixture_id = ? AND market = '1X2' AND selection = '__temp_home__'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = '1X2' AND selection = '__temp_home__'`,
+        [matchId]
       );
       oddsRowsSwapped += count1X2;
       console.log(`  [STEP] 1X2 odds swapped (${count1X2} rows) ✓`);
@@ -117,26 +117,26 @@ async function main() {
     // Step 3: Swap home/away in ASIAN_HANDICAP market
     const [rAH] = await conn.execute(
       `SELECT COUNT(*) as cnt FROM wc2026_odds_snapshots 
-       WHERE fixture_id = ? AND market = 'ASIAN_HANDICAP' AND selection IN ('home','away')`,
-      [fixtureId]
+       WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection IN ('home','away')`,
+      [matchId]
     );
     const countAH = rAH[0].cnt;
 
     if (countAH > 0) {
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = '__temp_home__' 
-         WHERE fixture_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'home'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'home'`,
+        [matchId]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'home' 
-         WHERE fixture_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'away'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = 'away'`,
+        [matchId]
       );
       await conn.execute(
         `UPDATE wc2026_odds_snapshots SET selection = 'away' 
-         WHERE fixture_id = ? AND market = 'ASIAN_HANDICAP' AND selection = '__temp_home__'`,
-        [fixtureId]
+         WHERE match_id = ? AND market = 'ASIAN_HANDICAP' AND selection = '__temp_home__'`,
+        [matchId]
       );
       oddsRowsSwapped += countAH;
       console.log(`  [STEP] ASIAN_HANDICAP odds swapped (${countAH} rows) ✓`);
@@ -147,26 +147,26 @@ async function main() {
     try {
       const [rModel] = await conn.execute(
         `SELECT COUNT(*) as cnt FROM wc2026_model_odds 
-         WHERE fixture_id = ? AND selection IN ('home','away')`,
-        [fixtureId]
+         WHERE match_id = ? AND selection IN ('home','away')`,
+        [matchId]
       );
       const countModel = rModel[0].cnt;
 
       if (countModel > 0) {
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = '__temp_home__' 
-           WHERE fixture_id = ? AND selection = 'home'`,
-          [fixtureId]
+           WHERE match_id = ? AND selection = 'home'`,
+          [matchId]
         );
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = 'home' 
-           WHERE fixture_id = ? AND selection = 'away'`,
-          [fixtureId]
+           WHERE match_id = ? AND selection = 'away'`,
+          [matchId]
         );
         await conn.execute(
           `UPDATE wc2026_model_odds SET selection = 'away' 
-           WHERE fixture_id = ? AND selection = '__temp_home__'`,
-          [fixtureId]
+           WHERE match_id = ? AND selection = '__temp_home__'`,
+          [matchId]
         );
         modelOddsSwapped += countModel;
         console.log(`  [STEP] Model odds swapped (${countModel} rows) ✓`);
@@ -179,13 +179,13 @@ async function main() {
 
     // Verify
     const [verify] = await conn.execute(
-      'SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = ?',
-      [fixtureId]
+      'SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = ?',
+      [matchId]
     );
     const v = verify[0];
     const pass = v.home_team_id === oldAway && v.away_team_id === oldHome;
     console.log(`  [VERIFY] ${pass ? 'PASS' : 'FAIL'} — home=${v.home_team_id} away=${v.away_team_id}`);
-    if (!pass) errors.push(`${fixtureId}: verify failed`);
+    if (!pass) errors.push(`${matchId}: verify failed`);
     console.log('');
   }
 

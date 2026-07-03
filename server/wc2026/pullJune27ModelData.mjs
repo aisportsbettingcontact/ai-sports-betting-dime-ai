@@ -14,7 +14,7 @@ console.log('[DB] Connected');
 
 // Pull all completed fixtures (all of WC2026 so far through June 26)
 const [completedFixtures] = await db.execute(`
-  SELECT fixture_id, home_team_id, away_team_id, home_score, away_score,
+  SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status
   FROM wc2026_fixtures
   WHERE home_score IS NOT NULL AND away_score IS NOT NULL
@@ -24,13 +24,13 @@ console.log(`[COMPLETED] ${completedFixtures.length} completed fixtures`);
 
 // Pull match stats for all completed fixtures
 const [matchStats] = await db.execute(`
-  SELECT ms.fixture_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
+  SELECT ms.match_id, f.home_team_id, f.away_team_id, f.home_score, f.away_score,
          ms.home_shots_on_target, ms.away_shots_on_target,
          ms.home_total_shots, ms.away_total_shots,
          ms.home_saves, ms.away_saves,
          ms.home_xg, ms.away_xg
   FROM wc2026_match_stats ms
-  JOIN wc2026_fixtures f ON ms.fixture_id = f.fixture_id
+  JOIN wc2026_fixtures f ON ms.match_id = f.match_id
   WHERE f.home_score IS NOT NULL AND f.away_score IS NOT NULL
   ORDER BY f.kickoff_utc
 `);
@@ -38,7 +38,7 @@ console.log(`[STATS] ${matchStats.length} match stats rows`);
 
 // Pull June 27 fixtures
 const [fixtures27] = await db.execute(`
-  SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc,
+  SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc,
          group_letter, matchday, status
   FROM wc2026_fixtures
   WHERE match_date = '2026-06-27'
@@ -56,7 +56,7 @@ console.log(`[TEAMS] ${teams.length} teams`);
 const nullSotRows = matchStats.filter(r => r.home_shots_on_target === null || r.away_shots_on_target === null);
 if (nullSotRows.length > 0) {
   console.log(`[WARN] ${nullSotRows.length} rows with NULL SOT values:`);
-  nullSotRows.forEach(r => console.log(`  ${r.fixture_id}: home_sot=${r.home_shots_on_target} away_sot=${r.away_shots_on_target}`));
+  nullSotRows.forEach(r => console.log(`  ${r.match_id}: home_sot=${r.home_shots_on_target} away_sot=${r.away_shots_on_target}`));
 }
 
 const output = {

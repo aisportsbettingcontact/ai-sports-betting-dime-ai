@@ -11,7 +11,7 @@
  *
  * Fix: Added keepPreviousData + isFetching guard to all 3 feed components.
  * Also optimized fixturesByDate + todayWithOdds backend to filter odds by
- * fixture_id IN (...) instead of full table scan.
+ * match_id IN (...) instead of full table scan.
  *
  * Tests validate the shouldShowSkeleton / shouldShowEmptyState logic for all
  * 3 WC feed tabs (PROJECTIONS, LINEUPS, SPLITS).
@@ -34,15 +34,15 @@ function shouldShowEmptyState(isLoading: boolean, isFetching: boolean, dataLengt
 }
 
 // ─── Backend query optimization helper (pure logic test) ─────────────────────
-function buildOptimizedOddsWhereClause(bookId: number, fixtureIds: string[]): string {
-  // [FIX] Post-fix: filters by fixture_id IN (...) instead of full table scan
-  if (fixtureIds.length === 0) return `book_id = ${bookId} AND 1=0`;
-  const ids = fixtureIds.map(id => `'${id}'`).join(', ');
-  return `book_id = ${bookId} AND fixture_id IN (${ids})`;
+function buildOptimizedOddsWhereClause(bookId: number, matchIds: string[]): string {
+  // [FIX] Post-fix: filters by match_id IN (...) instead of full table scan
+  if (matchIds.length === 0) return `book_id = ${bookId} AND 1=0`;
+  const ids = matchIds.map(id => `'${id}'`).join(', ');
+  return `book_id = ${bookId} AND match_id IN (${ids})`;
 }
 
 function buildLegacyOddsWhereClause(bookId: number): string {
-  // Pre-fix: full table scan, no fixture_id filter
+  // Pre-fix: full table scan, no match_id filter
   return `book_id = ${bookId}`;
 }
 
@@ -154,38 +154,38 @@ describe("[FIX 2026-06-24] WC date-transition guard — shouldShowSkeleton / sho
 
 });
 
-describe("[FIX 2026-06-24] WC backend query optimization — fixture_id IN filter", () => {
+describe("[FIX 2026-06-24] WC backend query optimization — match_id IN filter", () => {
 
-  it("[VERIFY] Optimized query filters by fixture_id IN (...) — not full table scan", () => {
-    const fixtureIds = ["wc26-g-049", "wc26-g-050", "wc26-g-051", "wc26-g-052", "wc26-g-053", "wc26-g-054"];
-    console.log("[INPUT] June 24 fixture_ids:", fixtureIds);
+  it("[VERIFY] Optimized query filters by match_id IN (...) — not full table scan", () => {
+    const matchIds = ["wc26-g-049", "wc26-g-050", "wc26-g-051", "wc26-g-052", "wc26-g-053", "wc26-g-054"];
+    console.log("[INPUT] June 24 match_ids:", matchIds);
 
     const legacy = buildLegacyOddsWhereClause(68);
-    const optimized = buildOptimizedOddsWhereClause(68, fixtureIds);
+    const optimized = buildOptimizedOddsWhereClause(68, matchIds);
     console.log(`[STATE] Legacy WHERE: ${legacy}`);
     console.log(`[STATE] Optimized WHERE: ${optimized}`);
 
     // Legacy fetches ALL rows for book_id=68 (full table scan)
     expect(legacy).toBe("book_id = 68");
-    expect(legacy).not.toContain("fixture_id");
+    expect(legacy).not.toContain("match_id");
 
-    // Optimized filters by fixture_id IN (...)
+    // Optimized filters by match_id IN (...)
     expect(optimized).toContain("book_id = 68");
-    expect(optimized).toContain("fixture_id IN");
+    expect(optimized).toContain("match_id IN");
     expect(optimized).toContain("wc26-g-049");
     expect(optimized).toContain("wc26-g-054");
 
-    console.log("[OUTPUT] Optimized query targets 6 fixture_ids instead of 3,724+ rows");
+    console.log("[OUTPUT] Optimized query targets 6 match_ids instead of 3,724+ rows");
     console.log("[VERIFY] PASS — Backend query optimization confirmed: O(N) → O(1) per date");
   });
 
-  it("[VERIFY] Empty fixture_ids guard: no fixtures on date → short-circuit with 1=0", () => {
-    const fixtureIds: string[] = [];
-    console.log("[INPUT] Empty fixture_ids (no fixtures on date)");
-    const optimized = buildOptimizedOddsWhereClause(68, fixtureIds);
+  it("[VERIFY] Empty match_ids guard: no fixtures on date → short-circuit with 1=0", () => {
+    const matchIds: string[] = [];
+    console.log("[INPUT] Empty match_ids (no fixtures on date)");
+    const optimized = buildOptimizedOddsWhereClause(68, matchIds);
     console.log(`[STATE] WHERE clause: ${optimized}`);
     expect(optimized).toContain("1=0"); // short-circuit, no rows fetched
-    console.log("[VERIFY] PASS — Empty fixture_ids produces short-circuit WHERE clause");
+    console.log("[VERIFY] PASS — Empty match_ids produces short-circuit WHERE clause");
   });
 
 });

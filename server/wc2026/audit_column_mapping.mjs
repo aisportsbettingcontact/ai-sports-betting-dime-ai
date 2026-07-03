@@ -18,7 +18,7 @@ console.log('\n══ MODEL_PROJECTIONS ACTUAL COLUMNS ══');
 modelCols.forEach(c => console.log(`  ${c.Field.padEnd(40)} ${c.Type.padEnd(20)} NULL=${c.Null} DEFAULT=${c.Default}`));
 
 // ── 2. Get actual seeded data for wc26-r32-080 (DR Congo @ England) ──────────
-const [bookRow] = await conn.query('SELECT * FROM wc2026_frozen_book_odds WHERE fixture_id = ?', ['wc26-r32-080']);
+const [bookRow] = await conn.query('SELECT * FROM wc2026_frozen_book_odds WHERE match_id = ?', ['wc26-r32-080']);
 console.log('\n══ BOOK ODDS ROW: wc26-r32-080 ══');
 if (bookRow.length > 0) {
   Object.entries(bookRow[0]).forEach(([k, v]) => {

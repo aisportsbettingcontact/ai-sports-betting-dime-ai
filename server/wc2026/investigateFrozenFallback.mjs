@@ -35,13 +35,13 @@ async function main() {
   console.log('SECTION 1: FROZEN FIXTURE DATES AND ROUNDS');
   console.log('══════════════════════════════════════════════════════════');
   const [dates] = await conn.execute(
-    'SELECT fixture_id, match_date, stage FROM wc2026_fixtures WHERE fixture_id IN (' + ph + ') ORDER BY match_date',
+    'SELECT match_id, match_date, stage FROM wc2026_fixtures WHERE match_id IN (' + ph + ') ORDER BY match_date',
     FROZEN_IDS
   );
   const dateMap = {};
   dates.forEach(r => {
-    dateMap[r.fixture_id] = r;
-    console.log(`  ${r.fixture_id.padEnd(20)} | ${String(r.match_date).substring(0,10)} | ${r.stage}`);
+    dateMap[r.match_id] = r;
+    console.log(`  ${r.match_id.padEnd(20)} | ${String(r.match_date).substring(0,10)} | ${r.stage}`);
   });
 
   // ── 2. wc2026MatchOdds coverage ───────────────────────────────────────────
@@ -49,22 +49,22 @@ async function main() {
   console.log('SECTION 2: wc2026MatchOdds COVERAGE FOR ALL 37 FROZEN IDs');
   console.log('══════════════════════════════════════════════════════════');
   const [mo] = await conn.execute(
-    'SELECT fixture_id, book_home_ml, book_draw, book_away_ml, book_primary_spread, book_total, book_btts_yes, book_home_to_advance, book_away_to_advance FROM wc2026MatchOdds WHERE fixture_id IN (' + ph + ') ORDER BY fixture_id',
+    'SELECT match_id, book_home_ml, book_draw, book_away_ml, book_primary_spread, book_total, book_btts_yes, book_home_to_advance, book_away_to_advance FROM wc2026MatchOdds WHERE match_id IN (' + ph + ') ORDER BY match_id',
     FROZEN_IDS
   );
-  const moMap = Object.fromEntries(mo.map(r => [r.fixture_id, r]));
+  const moMap = Object.fromEntries(mo.map(r => [r.match_id, r]));
   const missingInMatch = FROZEN_IDS.filter(id => !moMap[id]);
   console.log(`  wc2026MatchOdds rows found: ${mo.length} / ${FROZEN_IDS.length}`);
   if (missingInMatch.length > 0) {
     console.log(`  ❌ MISSING in wc2026MatchOdds: ${missingInMatch.join(', ')}`);
   } else {
-    console.log(`  ✅ ALL 37 frozen fixture_ids exist in wc2026MatchOdds`);
+    console.log(`  ✅ ALL 37 frozen match_ids exist in wc2026MatchOdds`);
   }
 
   // Check which ones have NULL book_home_ml (no odds populated)
   const nullOdds = mo.filter(r => r.book_home_ml === null);
   console.log(`  wc2026MatchOdds rows with NULL book_home_ml: ${nullOdds.length}`);
-  nullOdds.forEach(r => console.log(`    ${r.fixture_id} — no odds in wc2026MatchOdds`));
+  nullOdds.forEach(r => console.log(`    ${r.match_id} — no odds in wc2026MatchOdds`));
 
   const hasOdds = mo.filter(r => r.book_home_ml !== null);
   console.log(`  wc2026MatchOdds rows WITH book odds: ${hasOdds.length}`);
@@ -74,10 +74,10 @@ async function main() {
   console.log('SECTION 3: DK ODDS_SNAPSHOTS (book_id=68) COVERAGE');
   console.log('══════════════════════════════════════════════════════════');
   const [snaps] = await conn.execute(
-    'SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE book_id = 68 AND fixture_id IN (' + ph + ') GROUP BY fixture_id ORDER BY fixture_id',
+    'SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE book_id = 68 AND match_id IN (' + ph + ') GROUP BY match_id ORDER BY match_id',
     FROZEN_IDS
   );
-  const snapMap = Object.fromEntries(snaps.map(r => [r.fixture_id, r.cnt]));
+  const snapMap = Object.fromEntries(snaps.map(r => [r.match_id, r.cnt]));
   const noSnap = FROZEN_IDS.filter(id => !snapMap[id]);
   console.log(`  Fixtures WITH DK snapshots: ${snaps.length} / ${FROZEN_IDS.length}`);
   if (noSnap.length > 0) {
@@ -93,16 +93,16 @@ async function main() {
   console.log('SECTION 4: FROZEN vs wc2026MatchOdds — ODDS COMPARISON');
   console.log('══════════════════════════════════════════════════════════');
   const [frozenOdds] = await conn.execute(
-    'SELECT fixture_id, book_home_ml, book_draw, book_away_ml, book_primary_spread, book_total, book_btts_yes, book_home_to_advance, book_away_to_advance FROM wc2026_frozen_book_odds ORDER BY fixture_id',
+    'SELECT match_id, book_home_ml, book_draw, book_away_ml, book_primary_spread, book_total, book_btts_yes, book_home_to_advance, book_away_to_advance FROM wc2026_frozen_book_odds ORDER BY match_id',
     []
   );
   let exactMatch = 0, mismatch = 0, matchHasNoOdds = 0;
   for (const fr of frozenOdds) {
-    const mr = moMap[fr.fixture_id];
-    if (!mr) { console.log(`  ❌ ${fr.fixture_id} — NOT IN wc2026MatchOdds`); continue; }
+    const mr = moMap[fr.match_id];
+    if (!mr) { console.log(`  ❌ ${fr.match_id} — NOT IN wc2026MatchOdds`); continue; }
     if (mr.book_home_ml === null) {
       matchHasNoOdds++;
-      console.log(`  ⚠️  ${fr.fixture_id} — wc2026MatchOdds has NULL odds (frozen has: ${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml})`);
+      console.log(`  ⚠️  ${fr.match_id} — wc2026MatchOdds has NULL odds (frozen has: ${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml})`);
       continue;
     }
     const same = (
@@ -114,10 +114,10 @@ async function main() {
     );
     if (same) {
       exactMatch++;
-      console.log(`  ✅ ${fr.fixture_id} — IDENTICAL in both tables (ML=${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml})`);
+      console.log(`  ✅ ${fr.match_id} — IDENTICAL in both tables (ML=${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml})`);
     } else {
       mismatch++;
-      console.log(`  ⚠️  ${fr.fixture_id} — DIFFERS: frozen ML=${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml} | match ML=${mr.book_home_ml}/${mr.book_draw}/${mr.book_away_ml}`);
+      console.log(`  ⚠️  ${fr.match_id} — DIFFERS: frozen ML=${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml} | match ML=${mr.book_home_ml}/${mr.book_draw}/${mr.book_away_ml}`);
     }
   }
   console.log(`\n  SUMMARY: exactMatch=${exactMatch} | mismatch=${mismatch} | matchHasNoOdds=${matchHasNoOdds}`);
@@ -126,10 +126,10 @@ async function main() {
   console.log('\n══════════════════════════════════════════════════════════');
   console.log('SECTION 5: ROUTER FALLBACK LOGIC ANALYSIS');
   console.log('══════════════════════════════════════════════════════════');
-  console.log('  Router line 245: dkOdds = frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.fixtureId] ?? null)');
-  console.log('  frozenBook = frozenBookMap[f.fixtureId] ?? null');
+  console.log('  Router line 245: dkOdds = frozenBook ? frozenBookToOdds(frozenBook) : (dkMap[f.matchId] ?? null)');
+  console.log('  frozenBook = frozenBookMap[f.matchId] ?? null');
   console.log('');
-  console.log('  LOGIC: If a fixture_id exists in wc2026_frozen_book_odds → use frozen odds');
+  console.log('  LOGIC: If a match_id exists in wc2026_frozen_book_odds → use frozen odds');
   console.log('         If NOT in wc2026_frozen_book_odds → fall back to wc2026_odds_snapshots (DK book_id=68)');
   console.log('');
   console.log('  QUESTION: Has the frozen path ever been the ONLY source of odds?');
@@ -139,11 +139,11 @@ async function main() {
   // Find fixtures where frozen has odds but DK snapshot has zero rows
   let frozenOnlyCount = 0;
   for (const fr of frozenOdds) {
-    const hasDkSnap = !!snapMap[fr.fixture_id];
-    const matchHasOdds = moMap[fr.fixture_id] && moMap[fr.fixture_id].book_home_ml !== null;
+    const hasDkSnap = !!snapMap[fr.match_id];
+    const matchHasOdds = moMap[fr.match_id] && moMap[fr.match_id].book_home_ml !== null;
     if (!hasDkSnap) {
       frozenOnlyCount++;
-      console.log(`  🔴 ${fr.fixture_id} — frozen has odds (${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml}) but NO DK snapshot exists`);
+      console.log(`  🔴 ${fr.match_id} — frozen has odds (${fr.book_home_ml}/${fr.book_draw}/${fr.book_away_ml}) but NO DK snapshot exists`);
       console.log(`       wc2026MatchOdds has odds: ${matchHasOdds ? 'YES' : 'NO'}`);
     }
   }

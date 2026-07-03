@@ -160,7 +160,7 @@ async function main() {
   for (const fid of FIXTURE_IDS) {
     subBanner(`AUDIT: ${fid} (${EXPECTED[fid].fixture})`);
     const [rows] = await conn.query(`
-      SELECT fixture_id, model_version, is_frozen,
+      SELECT match_id, model_version, is_frozen,
         home_lambda, away_lambda,
         proj_home_score, proj_away_score, proj_total,
         model_home_ml, model_draw_ml, model_away_ml,
@@ -173,7 +173,7 @@ async function main() {
         home_win_prob, draw_prob, away_win_prob,
         modeled_at
       FROM wc2026_model_projections
-      WHERE fixture_id = ?
+      WHERE match_id = ?
     `, [fid]);
 
     if (rows.length === 0) {
@@ -254,7 +254,7 @@ async function main() {
     subBanner(`FREEZE: ${fid}`);
     log('STEP', 'FREEZE', `${fid}: setting is_frozen=1 and frozen_at=NOW()`);
     const [result] = await conn.query(
-      `UPDATE wc2026_model_projections SET is_frozen=1, frozen_at=NOW() WHERE fixture_id=?`,
+      `UPDATE wc2026_model_projections SET is_frozen=1, frozen_at=NOW() WHERE match_id=?`,
       [fid]
     );
     if (result.affectedRows === 1) {
@@ -265,7 +265,7 @@ async function main() {
 
     // Read-back freeze confirmation
     const [freezeCheck] = await conn.query(
-      `SELECT is_frozen, frozen_at FROM wc2026_model_projections WHERE fixture_id=?`,
+      `SELECT is_frozen, frozen_at FROM wc2026_model_projections WHERE match_id=?`,
       [fid]
     );
     if (freezeCheck.length > 0 && freezeCheck[0].is_frozen === 1) {
@@ -280,14 +280,14 @@ async function main() {
   log('STEP', 'FEED', 'Simulating the exact todayWithOdds procedure query for 2026-07-02');
 
   const [fixtureRows] = await conn.query(`
-    SELECT fixture_id, home_team_id, away_team_id, match_date, kickoff_utc
+    SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc
     FROM wc2026_fixtures
     WHERE match_date = '2026-07-02'
-    ORDER BY kickoff_utc, fixture_id
+    ORDER BY kickoff_utc, match_id
   `);
   log('FEED', 'FEED', `wc2026_fixtures for 2026-07-02: ${fixtureRows.length} rows found`);
   fixtureRows.forEach(f => {
-    log('FEED', 'FEED', `  ${f.fixture_id} | home_team_id=${f.home_team_id} away_team_id=${f.away_team_id} | kickoff=${f.kickoff_utc}`);
+    log('FEED', 'FEED', `  ${f.match_id} | home_team_id=${f.home_team_id} away_team_id=${f.away_team_id} | kickoff=${f.kickoff_utc}`);
   });
 
   if (fixtureRows.length !== 3) {
@@ -296,12 +296,12 @@ async function main() {
     log('PASS', 'FEED', '3 fixtures confirmed for 2026-07-02 ✓');
   }
 
-  const feedFixtureIds = fixtureRows.map(f => f.fixture_id);
+  const feedFixtureIds = fixtureRows.map(f => f.match_id);
   const placeholders = feedFixtureIds.map(() => '?').join(',');
 
   // Simulate the projRowsT query
   const [projRows] = await conn.query(`
-    SELECT fixture_id, model_version, is_frozen, frozen_at,
+    SELECT match_id, model_version, is_frozen, frozen_at,
       home_lambda, away_lambda,
       model_home_ml, model_draw_ml, model_away_ml,
       model_spread, home_spread_odds, away_spread_odds,
@@ -314,13 +314,13 @@ async function main() {
       home_win_prob, draw_prob, away_win_prob,
       home_edge, draw_edge, away_edge
     FROM wc2026_model_projections
-    WHERE fixture_id IN (${placeholders})
+    WHERE match_id IN (${placeholders})
   `, feedFixtureIds);
 
   log('FEED', 'FEED', `wc2026_model_projections returned ${projRows.length} rows for feed query`);
 
   for (const fid of FIXTURE_IDS) {
-    const proj = projRows.find(p => p.fixture_id === fid);
+    const proj = projRows.find(p => p.match_id === fid);
     if (!proj) {
       log('FAIL', 'FEED', `${fid}: NOT returned by feed query — will show no model odds on feed`);
       continue;
@@ -364,7 +364,7 @@ async function main() {
   banner('PHASE 4 — CROSS-CHECK: wc2026MatchOdds vs wc2026_model_projections');
 
   const [moRows] = await conn.query(`
-    SELECT fixture_id,
+    SELECT match_id,
       lamba_home, lamba_away,
       model_projected_home_goals, model_projected_away_goals,
       model_home_ml, model_draw, model_away_ml,
@@ -375,16 +375,16 @@ async function main() {
       model_home_wd, model_away_wd,
       model_no_draw
     FROM wc2026MatchOdds
-    WHERE fixture_id IN (${placeholders})
-    ORDER BY fixture_id
+    WHERE match_id IN (${placeholders})
+    ORDER BY match_id
   `, feedFixtureIds);
 
   log('XREF', 'XREF', `wc2026MatchOdds returned ${moRows.length} rows`);
 
   for (const fid of FIXTURE_IDS) {
     subBanner(`XREF: ${fid}`);
-    const mo = moRows.find(r => r.fixture_id === fid);
-    const mp = projRows.find(r => r.fixture_id === fid);
+    const mo = moRows.find(r => r.match_id === fid);
+    const mp = projRows.find(r => r.match_id === fid);
     if (!mo) { log('FAIL', 'XREF', `${fid}: NOT found in wc2026MatchOdds`); continue; }
     if (!mp) { log('FAIL', 'XREF', `${fid}: NOT found in wc2026_model_projections`); continue; }
 

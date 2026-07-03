@@ -4,7 +4,7 @@ const conn = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: 
 
 // Check all 12 seeded fixtures
 const [rows] = await conn.query(`
-  SELECT fixture_id, 
+  SELECT match_id, 
     book_home_ml, book_draw_ml, book_away_ml,
     book_spread_line, book_home_spread_odds, book_away_spread_odds,
     book_total_line, book_over_odds, book_under_odds,
@@ -13,8 +13,8 @@ const [rows] = await conn.query(`
     book_no_draw_home_odds, book_no_draw_away_odds,
     to_advance_home_odds, to_advance_away_odds
   FROM wc2026_frozen_book_odds 
-  WHERE fixture_id IN (?)
-  ORDER BY fixture_id
+  WHERE match_id IN (?)
+  ORDER BY match_id
 `, [['wc26-r32-080','wc26-r32-081','wc26-r32-082','wc26-r32-083','wc26-r32-084','wc26-r32-085','wc26-r32-086','wc26-r32-087','wc26-r32-088','wc26-r16-089','wc26-r16-090','wc26-r16-091']]);
 
 // Expected values from user's table
@@ -35,7 +35,7 @@ const EXPECTED = {
 
 let totalErrors = 0;
 for (const row of rows) {
-  const fid = row.fixture_id;
+  const fid = row.match_id;
   const exp = EXPECTED[fid];
   if (!exp) { console.log(`⚠️  No expected data for ${fid}`); continue; }
   

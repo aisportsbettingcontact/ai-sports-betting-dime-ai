@@ -30,7 +30,7 @@ LOG_FILE   = "/home/ubuntu/wc2026oddslog.txt"
 BASE_URL   = "https://www.betexplorer.com"
 
 FIXTURE = {
-    "fixture_id": "wc26-r32-080",
+    "match_id": "wc26-r32-080",
     "event_id":   "nkoQVAgB",
     "slug":       "england-d-r-congo",
     "home":       "England",
@@ -536,7 +536,7 @@ def main():
     
     # Save JSON
     out = {
-        "fixture": FIXTURE,
+        "match": FIXTURE,
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "markets_ok": ok_markets,
         "markets_fail": fail_markets,

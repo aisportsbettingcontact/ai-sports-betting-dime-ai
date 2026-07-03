@@ -196,7 +196,7 @@ function runSimulation(lambdaH, lambdaA, spreadLine, totalLine) {
 
 const FIXTURES = [
   {
-    fixtureId: 'wc26-g-057',
+    matchId: 'wc26-g-057',
     homeId: 'cuw', awayId: 'civ',
     homeName: 'Curaçao', awayName: 'Ivory Coast',
     homeElo: 1580, homeRank: 90, homeForm: 0.33,
@@ -212,7 +212,7 @@ const FIXTURES = [
     dkNoDraw: -1400,
   },
   {
-    fixtureId: 'wc26-g-058',
+    matchId: 'wc26-g-058',
     homeId: 'ecu', awayId: 'ger',
     homeName: 'Ecuador', awayName: 'Germany',
     homeElo: 1710, homeRank: 44, homeForm: 0.33,
@@ -226,7 +226,7 @@ const FIXTURES = [
     dkNoDraw: -550,
   },
   {
-    fixtureId: 'wc26-g-059',
+    matchId: 'wc26-g-059',
     homeId: 'jpn', awayId: 'swe',
     homeName: 'Japan', awayName: 'Sweden',
     homeElo: 1840, homeRank: 17, homeForm: 1.00,
@@ -240,7 +240,7 @@ const FIXTURES = [
     dkNoDraw: -330,
   },
   {
-    fixtureId: 'wc26-g-060',
+    matchId: 'wc26-g-060',
     homeId: 'tun', awayId: 'ned',
     homeName: 'Tunisia', awayName: 'Netherlands',
     homeElo: 1740, homeRank: 32, homeForm: 0.17,
@@ -254,7 +254,7 @@ const FIXTURES = [
     dkNoDraw: -2500,
   },
   {
-    fixtureId: 'wc26-g-055',
+    matchId: 'wc26-g-055',
     homeId: 'tur', awayId: 'usa',
     homeName: 'Turkey', awayName: 'United States',
     homeElo: 1760, homeRank: 29, homeForm: 0.67,
@@ -268,7 +268,7 @@ const FIXTURES = [
     dkNoDraw: -400,
   },
   {
-    fixtureId: 'wc26-g-056',
+    matchId: 'wc26-g-056',
     homeId: 'par', awayId: 'aus',
     homeName: 'Paraguay', awayName: 'Australia',
     homeElo: 1680, homeRank: 58, homeForm: 0.00,
@@ -302,12 +302,12 @@ async function main() {
   const errors = [];
 
   for (const f of FIXTURES) {
-    console.log(`${TAG} ─── ${f.fixtureId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
+    console.log(`${TAG} ─── ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
     // ── Step 1: Clear existing MODEL odds ─────────────────────────────────────
     const [delModel] = await conn.query(
-      `DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?`,
-      [f.fixtureId, MODEL_BOOK_ID]
+      `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?`,
+      [f.matchId, MODEL_BOOK_ID]
     );
     console.log(`${TAG} [STEP 1] Cleared ${delModel.affectedRows} existing model rows`);
 
@@ -411,20 +411,20 @@ async function main() {
     let insertedRows = 0;
     for (const row of modelRows) {
       if (row.odds == null) {
-        errors.push(`${f.fixtureId} ${row.market}/${row.selection}: null odds`);
+        errors.push(`${f.matchId} ${row.market}/${row.selection}: null odds`);
         console.log(`${TAG} [STEP 9] WARN null odds: ${row.market}/${row.selection} prob=${row.prob.toFixed(4)}`);
         continue;
       }
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       console.log(`${TAG} [STEP 9] INSERT: ${row.market}/${row.selection} line=${row.line??'null'} odds=${row.odds>0?'+':''}${row.odds} prob=${row.prob.toFixed(4)}`);
       insertedRows++;
       totalModelRows++;
     }
-    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows}/12 model rows for ${f.fixtureId}`);
+    console.log(`${TAG} [OUTPUT] Inserted ${insertedRows}/12 model rows for ${f.matchId}`);
 
     // ── Step 10: Upsert projection ─────────────────────────────────────────────
     const nvDc1x = (finalHome + finalDraw);
@@ -434,7 +434,7 @@ async function main() {
 
     await conn.query(`
       INSERT INTO wc2026_model_projections (
-        fixture_id, model_version, n_simulations,
+        match_id, model_version, n_simulations,
         home_team, away_team,
         home_lambda, away_lambda,
         home_win_prob, draw_prob, away_win_prob,
@@ -469,7 +469,7 @@ async function main() {
         top_scorelines=VALUES(top_scorelines),
         modeled_at=NOW()
     `, [
-      f.fixtureId, MODEL_VERSION, N_SIMULATIONS,
+      f.matchId, MODEL_VERSION, N_SIMULATIONS,
       f.homeName, f.awayName,
       rawLambdaH, rawLambdaA,
       finalHome, finalDraw, finalAway,
@@ -486,20 +486,20 @@ async function main() {
       sim.top,
     ]);
     totalProjRows++;
-    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.fixtureId} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
+    console.log(`${TAG} [OUTPUT] Upserted projection: ${f.matchId} proj=${projHomeScore}-${projAwayScore} total=${projTotal} spread=${projSpread}`);
     console.log('');
   }
 
   // ── Final verification ─────────────────────────────────────────────────────
-  const FIXTURE_IDS = FIXTURES.map(f => f.fixtureId);
+  const FIXTURE_IDS = FIXTURES.map(f => f.matchId);
   const idList = FIXTURE_IDS.map(() => '?').join(',');
 
   const [verifyModel] = await conn.query(
-    `SELECT fixture_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY fixture_id`,
+    `SELECT match_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${idList}) AND book_id = ${MODEL_BOOK_ID} GROUP BY match_id`,
     FIXTURE_IDS
   );
   const [verifyProj] = await conn.query(
-    `SELECT fixture_id, home_team, away_team, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_spread, home_spread_odds, away_spread_odds, model_lean FROM wc2026_model_projections WHERE fixture_id IN (${idList}) AND model_version = ?`,
+    `SELECT match_id, home_team, away_team, proj_home_score, proj_away_score, proj_total, model_home_ml, model_draw_ml, model_away_ml, model_spread, home_spread_odds, away_spread_odds, model_lean FROM wc2026_model_projections WHERE match_id IN (${idList}) AND model_version = ?`,
     [...FIXTURE_IDS, MODEL_VERSION]
   );
 
@@ -508,8 +508,8 @@ async function main() {
   console.log(`${TAG} ═══════════════════════════════════════════════════════`);
   let verifyErrors = 0;
   for (const fid of FIXTURE_IDS) {
-    const mr = verifyModel.find(r => r.fixture_id === fid);
-    const pr = verifyProj.find(r => r.fixture_id === fid);
+    const mr = verifyModel.find(r => r.match_id === fid);
+    const pr = verifyProj.find(r => r.match_id === fid);
     const rowOk = mr && mr.cnt === 12;
     const projOk = !!pr;
     if (!rowOk) verifyErrors++;

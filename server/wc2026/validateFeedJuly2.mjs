@@ -108,7 +108,7 @@ divider();
 
 const [rows] = await conn.query(`
   SELECT 
-    fixture_id, world_cup_round, world_cup_stage,
+    match_id, world_cup_round, world_cup_stage,
     home_team, away_team,
     lamba_home, lamba_away,
     model_projected_home_goals, model_projected_away_goals,
@@ -126,8 +126,8 @@ const [rows] = await conn.query(`
     model_home_to_advance, model_away_to_advance,
     book_no_draw, model_no_draw
   FROM wc2026MatchOdds
-  WHERE fixture_id IN ('wc26-r32-083','wc26-r32-084','wc26-r32-085')
-  ORDER BY fixture_id ASC
+  WHERE match_id IN ('wc26-r32-083','wc26-r32-084','wc26-r32-085')
+  ORDER BY match_id ASC
 `);
 
 log('P1', 'DB_READ', `wc2026MatchOdds returned ${rows.length}/3 rows`, rows.length === 3 ? 'PASS' : 'FAIL');
@@ -147,7 +147,7 @@ const auditResults = {};
 let totalPass = 0, totalFail = 0;
 
 for (const row of rows) {
-  const fid = row.fixture_id;
+  const fid = row.match_id;
   const exp = EXPECTED[fid];
   divider('─');
   log('P2', 'FIXTURE', `▶ ${fid}: ${row.away_team} (Away) @ ${row.home_team} (Home) | Round: ${row.world_cup_round}`);
@@ -240,7 +240,7 @@ log('P3', 'PHASE', 'PHASE 3 — Feed query simulation (wc2026_model_projections 
 divider();
 
 const [projRows] = await conn.query(`
-  SELECT fixture_id, model_version, is_frozen, frozen_at,
+  SELECT match_id, model_version, is_frozen, frozen_at,
     home_lambda, away_lambda,
     model_home_ml, model_draw_ml, model_away_ml,
     model_spread, home_spread_odds, away_spread_odds,
@@ -252,8 +252,8 @@ const [projRows] = await conn.query(`
     proj_home_score, proj_away_score, proj_total,
     home_win_prob, draw_prob, away_win_prob
   FROM wc2026_model_projections
-  WHERE fixture_id IN ('wc26-r32-083','wc26-r32-084','wc26-r32-085')
-  ORDER BY fixture_id ASC
+  WHERE match_id IN ('wc26-r32-083','wc26-r32-084','wc26-r32-085')
+  ORDER BY match_id ASC
 `);
 
 log('P3', 'FEED_QUERY', `wc2026_model_projections returned ${projRows.length}/3 rows`, projRows.length === 3 ? 'PASS' : 'FAIL');
@@ -261,7 +261,7 @@ if (projRows.length === 3) totalPass++; else totalFail++;
 
 for (const p of projRows) {
   const frozenOk = p.is_frozen === 1;
-  log('P3', 'FEED_ROW', `${p.fixture_id} | version=${p.model_version} | is_frozen=${p.is_frozen} | frozen_at=${p.frozen_at}`, frozenOk ? 'PASS' : 'WARN');
+  log('P3', 'FEED_ROW', `${p.match_id} | version=${p.model_version} | is_frozen=${p.is_frozen} | frozen_at=${p.frozen_at}`, frozenOk ? 'PASS' : 'WARN');
   log('P3', 'FEED_ROW', `  λH=${p.home_lambda} λA=${p.away_lambda} | Proj: ${p.proj_home_score}-${p.proj_away_score} | Total=${p.proj_total}`);
   log('P3', 'FEED_ROW', `  pH=${p.home_win_prob} pD=${p.draw_prob} pA=${p.away_win_prob}`);
   log('P3', 'FEED_ROW', `  ML: H=${p.model_home_ml} D=${p.model_draw_ml} A=${p.model_away_ml}`);

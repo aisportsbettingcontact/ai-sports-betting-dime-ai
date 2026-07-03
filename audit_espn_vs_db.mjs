@@ -25,7 +25,7 @@ console.log('[DB] Connected');
 
 // ─── STEP 1: Pull all completed fixtures from DB ──────────────────────────────
 const [dbFixtures] = await db.execute(`
-  SELECT fixture_id, home_team_id, away_team_id, home_score, away_score,
+  SELECT match_id, home_team_id, away_team_id, home_score, away_score,
          match_date, kickoff_utc, group_letter, matchday, status, espn_event_id
   FROM wc2026_fixtures
   WHERE match_date < '2026-06-25' AND status = 'FT'
@@ -142,8 +142,8 @@ if (espnErrors.length > 0) {
   for (const e of espnErrors) console.log(`  game_id=${e.game_id}: ${e.error}`);
 }
 
-// ─── STEP 4: Build fixture_id → game_id mapping ───────────────────────────────
-console.log('\n[STEP 4] Building fixture_id → game_id mapping...');
+// ─── STEP 4: Build match_id → game_id mapping ───────────────────────────────
+console.log('\n[STEP 4] Building match_id → game_id mapping...');
 
 // Build game_id → team set from DB stats
 const gameIdToTeams = {};
@@ -160,14 +160,14 @@ for (const f of dbFixtures) {
   let matched = false;
   for (const [gid, gTeams] of Object.entries(gameIdToTeams)) {
     if (fTeams.size === gTeams.size && [...fTeams].every(t => gTeams.has(t))) {
-      fixtureToGameId[f.fixture_id] = parseInt(gid);
+      fixtureToGameId[f.match_id] = parseInt(gid);
       matched = true;
       break;
     }
   }
   if (!matched) {
-    unmatchedFixtures.push(f.fixture_id);
-    console.log(`  [WARN] No game_id match for fixture ${f.fixture_id} (${f.home_team_id} vs ${f.away_team_id})`);
+    unmatchedFixtures.push(f.match_id);
+    console.log(`  [WARN] No game_id match for fixture ${f.match_id} (${f.home_team_id} vs ${f.away_team_id})`);
   }
 }
 
@@ -246,12 +246,12 @@ function normalizeAbbr(abbr) {
 }
 
 for (const f of dbFixtures) {
-  const gid = fixtureToGameId[f.fixture_id];
+  const gid = fixtureToGameId[f.match_id];
   const espn = gid ? espnResults[gid] : null;
   const dbStats_game = gid ? gameData[gid] : null;
   
   const audit = {
-    fixture_id: f.fixture_id,
+    match_id: f.match_id,
     game_id: gid || null,
     db: {
       home_team: f.home_team_id,
@@ -300,7 +300,7 @@ for (const f of dbFixtures) {
         });
         audit.corrections.push({
           type: 'swap_home_away',
-          fixture_id: f.fixture_id,
+          match_id: f.match_id,
           correct_home: espnHomeAbbr,
           correct_away: espnAwayAbbr,
           correct_home_score: espnHomeScore,
@@ -324,7 +324,7 @@ for (const f of dbFixtures) {
         });
         audit.corrections.push({
           type: 'fix_score',
-          fixture_id: f.fixture_id,
+          match_id: f.match_id,
           field: 'home_score',
           correct_value: espnHomeScore,
           reason: `ESPN API: ${espnHomeScore}, DB: ${f.home_score}`,
@@ -337,7 +337,7 @@ for (const f of dbFixtures) {
         });
         audit.corrections.push({
           type: 'fix_score',
-          fixture_id: f.fixture_id,
+          match_id: f.match_id,
           field: 'away_score',
           correct_value: espnAwayScore,
           reason: `ESPN API: ${espnAwayScore}, DB: ${f.away_score}`,
@@ -398,9 +398,9 @@ for (const f of dbFixtures) {
   auditResults.push(audit);
   
   if (audit.has_errors) {
-    console.log(`  [ERROR] ${f.fixture_id} (${f.home_team_id} vs ${f.away_team_id}): ${audit.errors.map(e => e.field).join(', ')}`);
+    console.log(`  [ERROR] ${f.match_id} (${f.home_team_id} vs ${f.away_team_id}): ${audit.errors.map(e => e.field).join(', ')}`);
   } else {
-    console.log(`  [OK] ${f.fixture_id} (${f.home_team_id} ${f.home_score}-${f.away_score} ${f.away_team_id})`);
+    console.log(`  [OK] ${f.match_id} (${f.home_team_id} ${f.home_score}-${f.away_score} ${f.away_team_id})`);
   }
 }
 
@@ -419,7 +419,7 @@ console.log('='.repeat(80));
 if (errorCount > 0) {
   console.log('\n[ERRORS REQUIRING CORRECTION]:');
   for (const a of auditResults.filter(r => r.has_errors)) {
-    console.log(`\n  ${a.fixture_id} (game_id=${a.game_id}):`);
+    console.log(`\n  ${a.match_id} (game_id=${a.game_id}):`);
     for (const e of a.errors) {
       console.log(`    ERROR: ${JSON.stringify(e)}`);
     }

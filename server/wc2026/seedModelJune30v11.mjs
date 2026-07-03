@@ -68,7 +68,7 @@ const results = JSON.parse(fs.readFileSync(RESULTS_PATH, 'utf8'));
 if (!Array.isArray(results) || results.length !== 3) fail(`Expected 3 results, got ${results.length}`);
 pass(`Loaded ${results.length} simulation results from JSON`);
 
-// Index by fixture_id
+// Index by match_id
 const MODEL = {};
 for (const r of results) {
   MODEL[r.fid] = r;
@@ -130,35 +130,35 @@ pass('DB connection established');
 stepCount++;
 log('STEP', 'Verifying June 30 fixtures exist in wc2026_fixtures', stepCount);
 const [fixRows] = await conn.execute(
-  `SELECT fixture_id, home_team_id, away_team_id, stage, status FROM wc2026_fixtures WHERE fixture_id IN (?,?,?)`,
+  `SELECT match_id, home_team_id, away_team_id, stage, status FROM wc2026_fixtures WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 log('STATE', `Found ${fixRows.length} fixture rows`);
 if (fixRows.length !== 3) fail(`Expected 3 fixtures, found ${fixRows.length}`);
 for (const row of fixRows) {
-  log('STATE', `  ${row.fixture_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
-  pass(`[${row.fixture_id}] fixture verified in DB`);
+  log('STATE', `  ${row.match_id}: H=${row.home_team_id} A=${row.away_team_id} stage=${row.stage} status=${row.status}`);
+  pass(`[${row.match_id}] fixture verified in DB`);
 }
 
 // ── STEP 5: Verify frozen book odds exist ─────────────────────────────────────
 stepCount++;
 log('STEP', 'Verifying frozen book odds exist for all 3 fixtures', stepCount);
 const [bookRows] = await conn.execute(
-  `SELECT fixture_id, book_home_ml, book_draw_ml, book_away_ml, to_advance_home_odds, to_advance_away_odds
-   FROM wc2026_frozen_book_odds WHERE fixture_id IN (?,?,?)`,
+  `SELECT match_id, book_home_ml, book_draw_ml, book_away_ml, to_advance_home_odds, to_advance_away_odds
+   FROM wc2026_frozen_book_odds WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 if (bookRows.length !== 3) fail(`Expected 3 book odds rows, found ${bookRows.length}`);
 for (const row of bookRows) {
-  log('STATE', `  [${row.fixture_id}] Book: H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds}`);
-  pass(`[${row.fixture_id}] Book odds verified in DB`);
+  log('STATE', `  [${row.match_id}] Book: H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds}`);
+  pass(`[${row.match_id}] Book odds verified in DB`);
 }
 
 // ── STEP 6: Delete any existing model projections ─────────────────────────────
 stepCount++;
 log('STEP', 'Deleting any existing model projections for June 30 fixtures', stepCount);
 const [delRes] = await conn.execute(
-  `DELETE FROM wc2026_model_projections WHERE fixture_id IN (?,?,?)`,
+  `DELETE FROM wc2026_model_projections WHERE match_id IN (?,?,?)`,
   FIXTURE_IDS
 );
 log('STATE', `Deleted ${delRes.affectedRows} existing projection rows`);
@@ -177,7 +177,7 @@ for (const fid of FIXTURE_IDS) {
 
   const [ins] = await conn.execute(
     `INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -256,7 +256,7 @@ log('OUTPUT', `Model projections seeded: ${modelSeedCount}/3`);
 stepCount++;
 log('STEP', 'Verifying model projections in DB — all 14 markets', stepCount);
 const [modelVerRows] = await conn.execute(
-  `SELECT fixture_id, model_version, n_simulations,
+  `SELECT match_id, model_version, n_simulations,
           home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total,
@@ -272,13 +272,13 @@ const [modelVerRows] = await conn.execute(
           home_edge, draw_edge, away_edge,
           is_frozen, frozen_at
    FROM wc2026_model_projections
-   WHERE fixture_id IN (?,?,?) ORDER BY fixture_id`,
+   WHERE match_id IN (?,?,?) ORDER BY match_id`,
   FIXTURE_IDS
 );
 if (modelVerRows.length !== 3) fail(`Model verify: expected 3 rows, got ${modelVerRows.length}`);
 
 for (const row of modelVerRows) {
-  const m = MODEL[row.fixture_id];
+  const m = MODEL[row.match_id];
   const mChecks = [
     ['model_home_ml',      row.model_home_ml,      cap(m.model_home_ml)],
     ['model_draw_ml',      row.model_draw_ml,      cap(m.model_draw_ml)],
@@ -295,40 +295,40 @@ for (const row of modelVerRows) {
     ['dc_x2_odds',         row.dc_x2_odds,         cap(m.model_dc_x2_ml)],
   ];
   for (const [field, actual, expected] of mChecks) {
-    if (actual !== expected) fail(`[${row.fixture_id}] ${field}: DB=${actual} ≠ expected=${expected}`);
-    pass(`[${row.fixture_id}] ${field}: ${actual} ✓`);
+    if (actual !== expected) fail(`[${row.match_id}] ${field}: DB=${actual} ≠ expected=${expected}`);
+    pass(`[${row.match_id}] ${field}: ${actual} ✓`);
   }
   // Critical non-null checks
-  if (row.to_advance_home_odds == null) fail(`[${row.fixture_id}] to_advance_home_odds NULL`);
-  if (row.to_advance_away_odds == null) fail(`[${row.fixture_id}] to_advance_away_odds NULL`);
-  if (row.is_frozen !== 1) fail(`[${row.fixture_id}] is_frozen=${row.is_frozen} (expected 1)`);
-  pass(`[${row.fixture_id}] is_frozen=1, TO ADVANCE non-null ✓`);
-  log('STATE', `  [${row.fixture_id}] VERIFIED: ML H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} | lean=${row.model_lean}(${row.lean_prob})`);
+  if (row.to_advance_home_odds == null) fail(`[${row.match_id}] to_advance_home_odds NULL`);
+  if (row.to_advance_away_odds == null) fail(`[${row.match_id}] to_advance_away_odds NULL`);
+  if (row.is_frozen !== 1) fail(`[${row.match_id}] is_frozen=${row.is_frozen} (expected 1)`);
+  pass(`[${row.match_id}] is_frozen=1, TO ADVANCE non-null ✓`);
+  log('STATE', `  [${row.match_id}] VERIFIED: ML H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | ADV H=${row.to_advance_home_odds} A=${row.to_advance_away_odds} | lean=${row.model_lean}(${row.lean_prob})`);
 }
 
 // ── STEP 9: Final cross-table audit ───────────────────────────────────────────
 stepCount++;
 log('STEP', 'Final cross-table audit: book + model both present for all 3 fixtures', stepCount);
 const [crossRows] = await conn.execute(
-  `SELECT f.fixture_id,
+  `SELECT f.match_id,
           b.book_home_ml, b.book_draw_ml, b.book_away_ml,
           b.to_advance_home_odds AS book_adv_h, b.to_advance_away_odds AS book_adv_a,
           mp.model_home_ml, mp.model_draw_ml, mp.model_away_ml,
           mp.to_advance_home_odds AS model_adv_h, mp.to_advance_away_odds AS model_adv_a,
           mp.model_lean, mp.lean_prob, mp.is_frozen
    FROM wc2026_fixtures f
-   JOIN wc2026_frozen_book_odds b ON b.fixture_id = f.fixture_id
-   JOIN wc2026_model_projections mp ON mp.fixture_id = f.fixture_id
-   WHERE f.fixture_id IN (?,?,?)
-   ORDER BY f.fixture_id`,
+   JOIN wc2026_frozen_book_odds b ON b.match_id = f.match_id
+   JOIN wc2026_model_projections mp ON mp.match_id = f.match_id
+   WHERE f.match_id IN (?,?,?)
+   ORDER BY f.match_id`,
   FIXTURE_IDS
 );
 if (crossRows.length !== 3) fail(`Cross-table audit: expected 3 rows, got ${crossRows.length}`);
 for (const row of crossRows) {
-  if (row.book_home_ml == null) fail(`[${row.fixture_id}] book_home_ml NULL in cross-audit`);
-  if (row.model_home_ml == null) fail(`[${row.fixture_id}] model_home_ml NULL in cross-audit`);
-  if (row.is_frozen !== 1) fail(`[${row.fixture_id}] is_frozen=${row.is_frozen}`);
-  pass(`[${row.fixture_id}] Cross-table: Book H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | Model H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | Lean=${row.model_lean}(${row.lean_prob}) | frozen=✅`);
+  if (row.book_home_ml == null) fail(`[${row.match_id}] book_home_ml NULL in cross-audit`);
+  if (row.model_home_ml == null) fail(`[${row.match_id}] model_home_ml NULL in cross-audit`);
+  if (row.is_frozen !== 1) fail(`[${row.match_id}] is_frozen=${row.is_frozen}`);
+  pass(`[${row.match_id}] Cross-table: Book H=${row.book_home_ml} D=${row.book_draw_ml} A=${row.book_away_ml} | Model H=${row.model_home_ml} D=${row.model_draw_ml} A=${row.model_away_ml} | Lean=${row.model_lean}(${row.lean_prob}) | frozen=✅`);
 }
 
 // ── STEP 10: Final summary ────────────────────────────────────────────────────

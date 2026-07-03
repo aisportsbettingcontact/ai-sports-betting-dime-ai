@@ -93,7 +93,7 @@ function flushLog() {
 //       advancingTeamId = 'par' (Paraguay won on penalties).
 
 interface R32Result {
-  fixtureId: string;
+  matchId: string;
   homeFifaCode: string;
   awayFifaCode: string;
   homeScore: number | null;
@@ -106,7 +106,7 @@ interface R32Result {
 
 const R32_RESULTS: R32Result[] = [
   {
-    fixtureId: "wc26-r32-073",
+    matchId: "wc26-r32-073",
     homeFifaCode: "RSA",
     awayFifaCode: "CAN",
     homeScore: 0,
@@ -117,7 +117,7 @@ const R32_RESULTS: R32Result[] = [
     source: "FIFA_HTML_2026-06-30 + DB_CONFIRMED",
   },
   {
-    fixtureId: "wc26-r32-074",
+    matchId: "wc26-r32-074",
     homeFifaCode: "BRA",
     awayFifaCode: "JPN",
     homeScore: 2,
@@ -128,7 +128,7 @@ const R32_RESULTS: R32Result[] = [
     source: "FIFA_HTML_2026-06-30 + DB_CONFIRMED",
   },
   {
-    fixtureId: "wc26-r32-075",
+    matchId: "wc26-r32-075",
     homeFifaCode: "GER",
     awayFifaCode: "PAR",
     homeScore: 1,
@@ -139,7 +139,7 @@ const R32_RESULTS: R32Result[] = [
     source: "FIFA_HTML_2026-06-30 (PAR scoreWinner class) + DB_CONFIRMED",
   },
   {
-    fixtureId: "wc26-r32-076",
+    matchId: "wc26-r32-076",
     homeFifaCode: "NED",
     awayFifaCode: "MAR",
     homeScore: null,
@@ -170,7 +170,7 @@ async function main() {
   for (const r of R32_RESULTS) {
     log(
       "INPUT", "P1-S1",
-      `${r.fixtureId}: ${r.homeFifaCode} ${r.homeScore ?? "?"}-${r.awayScore ?? "?"} ${r.awayFifaCode}`,
+      `${r.matchId}: ${r.homeFifaCode} ${r.homeScore ?? "?"}-${r.awayScore ?? "?"} ${r.awayFifaCode}`,
       `status=${r.status} | advancing=${r.advancingFifaCode ?? "TBD"} | method=${r.advancingMethod} | source=${r.source}`
     );
   }
@@ -179,7 +179,7 @@ async function main() {
   const pendingResults = R32_RESULTS.filter(r => r.advancingFifaCode === null);
   log("STATE", "P1-S1", `Completed results: ${completedResults.length} | Pending (not yet played): ${pendingResults.length}`);
   for (const p of pendingResults) {
-    log("WARN", "P1-S1", `SKIPPING ${p.fixtureId} — match not yet played (status=${p.status})`, `${p.homeFifaCode} vs ${p.awayFifaCode}`);
+    log("WARN", "P1-S1", `SKIPPING ${p.matchId} — match not yet played (status=${p.status})`, `${p.homeFifaCode} vs ${p.awayFifaCode}`);
     warnCount++;
   }
 
@@ -209,17 +209,17 @@ async function main() {
 
   // ─── PHASE 3: FIXTURE VERIFICATION ─────────────────────────────────────────
   logSection("PHASE 3: FIXTURE EXISTENCE VERIFICATION");
-  const allFixtureIds = R32_RESULTS.map(r => r.fixtureId);
+  const allFixtureIds = R32_RESULTS.map(r => r.matchId);
   stepCount++;
   log("STEP", `P3-S${stepCount}`, `Fetching ${allFixtureIds.length} R32 fixtures from DB`);
   const dbFixtures = await db
     .select()
     .from(wc2026Fixtures)
-    .where(inArray(wc2026Fixtures.fixtureId, allFixtureIds));
+    .where(inArray(wc2026Fixtures.matchId, allFixtureIds));
 
   log("STATE", `P3-S${stepCount}`, `DB returned ${dbFixtures.length} fixtures`);
   type DbFixture = typeof dbFixtures[0];
-  const dbFixtureMap = new Map(dbFixtures.map((f: DbFixture) => [f.fixtureId, f]));
+  const dbFixtureMap = new Map(dbFixtures.map((f: DbFixture) => [f.matchId, f]));
 
   for (const fid of allFixtureIds) {
     const dbFix = dbFixtureMap.get(fid);
@@ -238,7 +238,7 @@ async function main() {
   // ─── PHASE 4: FIFA CODE → TEAM_ID RESOLUTION ───────────────────────────────
   logSection("PHASE 4: FIFA CODE → TEAM_ID RESOLUTION (BULLETPROOF MAPPING)");
   const resolvedAdvancers: Array<{
-    fixtureId: string;
+    matchId: string;
     advancingFifaCode: string;
     advancingTeamId: string;
     homeScore: number | null;
@@ -248,7 +248,7 @@ async function main() {
 
   for (const result of completedResults) {
     stepCount++;
-    log("STEP", `P4-S${stepCount}`, `Resolving advancing team for ${result.fixtureId}`,
+    log("STEP", `P4-S${stepCount}`, `Resolving advancing team for ${result.matchId}`,
       `advancingFifaCode=${result.advancingFifaCode} | method=${result.advancingMethod}`
     );
 
@@ -263,13 +263,13 @@ async function main() {
       continue;
     }
 
-    log("PASS", `P4-S${stepCount}`, `${result.fixtureId}: ${fifaCode} → team_id='${teamId}'`,
+    log("PASS", `P4-S${stepCount}`, `${result.matchId}: ${fifaCode} → team_id='${teamId}'`,
       `score=${result.homeScore ?? "?"}-${result.awayScore ?? "?"} | method=${result.advancingMethod}`
     );
     passCount++;
 
     resolvedAdvancers.push({
-      fixtureId: result.fixtureId,
+      matchId: result.matchId,
       advancingFifaCode: fifaCode,
       advancingTeamId: teamId,
       homeScore: result.homeScore,
@@ -292,7 +292,7 @@ async function main() {
 
   for (const adv of resolvedAdvancers) {
     stepCount++;
-    log("STEP", `P5-S${stepCount}`, `Updating ${adv.fixtureId}`,
+    log("STEP", `P5-S${stepCount}`, `Updating ${adv.matchId}`,
       `SET advancing_team_id='${adv.advancingTeamId}' | home_score=${adv.homeScore} | away_score=${adv.awayScore} | status='FT'`
     );
 
@@ -306,21 +306,21 @@ async function main() {
       if (adv.awayScore !== null) (updatePayload as any).awayScore = adv.awayScore;
 
       log("DB", `P5-S${stepCount}`, `Executing UPDATE wc2026_fixtures SET ...`,
-        `fixtureId=${adv.fixtureId} | payload=${JSON.stringify(updatePayload)}`
+        `matchId=${adv.matchId} | payload=${JSON.stringify(updatePayload)}`
       );
 
       await db
         .update(wc2026Fixtures)
         .set(updatePayload)
-        .where(eq(wc2026Fixtures.fixtureId, adv.fixtureId));
+        .where(eq(wc2026Fixtures.matchId, adv.matchId));
 
-      log("PASS", `P5-S${stepCount}`, `${adv.fixtureId} updated successfully`,
+      log("PASS", `P5-S${stepCount}`, `${adv.matchId} updated successfully`,
         `advancing_team_id='${adv.advancingTeamId}' (${adv.advancingFifaCode}) | method=${adv.advancingMethod}`
       );
       passCount++;
     } catch (e: any) {
       const errDetail = `${e.message ?? "unknown"} | code=${e.code ?? "?"} | sql=${e.sql ?? "?"}`;
-      log("FAIL", `P5-S${stepCount}`, `UPDATE FAILED for ${adv.fixtureId}`, errDetail.slice(0, 400));
+      log("FAIL", `P5-S${stepCount}`, `UPDATE FAILED for ${adv.matchId}`, errDetail.slice(0, 400));
       console.error("[FULL ERROR]", e);
       failCount++;
     }
@@ -334,31 +334,31 @@ async function main() {
   const verifyFixtures = await db
     .select()
     .from(wc2026Fixtures)
-    .where(inArray(wc2026Fixtures.fixtureId, allFixtureIds));
+    .where(inArray(wc2026Fixtures.matchId, allFixtureIds));
 
   let verifyPass = 0;
   let verifyFail = 0;
 
   for (const f of verifyFixtures) {
-    const result = R32_RESULTS.find(r => r.fixtureId === f.fixtureId)!;
+    const result = R32_RESULTS.find(r => r.matchId === f.matchId)!;
     const advId = (f as any).advancingTeamId;
 
     if (result.advancingFifaCode === null) {
       // Expected: no advancing team yet
-      log("VERIFY", `P6-S${stepCount}`, `${f.fixtureId}: SKIP (not yet played)`,
+      log("VERIFY", `P6-S${stepCount}`, `${f.matchId}: SKIP (not yet played)`,
         `status=${f.status} | advancingTeamId=${advId ?? "null"} ✓ (expected null)`
       );
       verifyPass++;
     } else {
       const expectedTeamId = fifaCodeToTeamId.get(result.advancingFifaCode.toUpperCase());
       if (advId === expectedTeamId) {
-        log("PASS", `P6-S${stepCount}`, `${f.fixtureId}: advancing_team_id VERIFIED`,
+        log("PASS", `P6-S${stepCount}`, `${f.matchId}: advancing_team_id VERIFIED`,
           `advancingTeamId='${advId}' (${result.advancingFifaCode}) | status=${f.status} | score=${f.homeScore}-${f.awayScore}`
         );
         verifyPass++;
         passCount++;
       } else {
-        log("FAIL", `P6-S${stepCount}`, `${f.fixtureId}: advancing_team_id MISMATCH`,
+        log("FAIL", `P6-S${stepCount}`, `${f.matchId}: advancing_team_id MISMATCH`,
           `expected='${expectedTeamId}' | actual='${advId}'`
         );
         verifyFail++;
@@ -376,7 +376,7 @@ async function main() {
     const advId = (f as any).advancingTeamId;
     const advTeam = allTeams.find((t: typeof allTeams[0]) => t.teamId === advId);
     log("AUDIT", "P7",
-      `${f.fixtureId}: ${f.homeTeamId.toUpperCase()} ${f.homeScore ?? "?"}-${f.awayScore ?? "?"} ${f.awayTeamId.toUpperCase()}`,
+      `${f.matchId}: ${f.homeTeamId.toUpperCase()} ${f.homeScore ?? "?"}-${f.awayScore ?? "?"} ${f.awayTeamId.toUpperCase()}`,
       `status=${f.status} | advancing_team_id=${advId ?? "null"} (${advTeam?.fifaCode ?? "—"}) | displayOrder=${f.displayOrder}`
     );
   }

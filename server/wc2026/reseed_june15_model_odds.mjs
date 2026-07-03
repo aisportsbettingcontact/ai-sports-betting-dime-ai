@@ -52,7 +52,7 @@ console.log('[STEP] Using correct FIFA orientation: home=ESP/BEL/KSA/IRN, away=C
 // All probabilities verified to sum to 1.000000
 const MODEL_ODDS = [
   {
-    fixtureId: 'wc26-g-015',
+    matchId: 'wc26-g-015',
     // Spain (home) vs Cape Verde (away)
     // Spain: FIFA rank ~8, xG=3.82 | CPV: FIFA rank ~73, xG=0.42
     // Dixon-Coles: Spain dominant home favorite
@@ -67,7 +67,7 @@ const MODEL_ODDS = [
     overOdds: -217, underOdds: +217,
   },
   {
-    fixtureId: 'wc26-g-013',
+    matchId: 'wc26-g-013',
     // Belgium (home) vs Egypt (away)
     // Belgium: FIFA rank ~3, xG=1.92 | Egypt: FIFA rank ~34, xG=0.91
     // Dixon-Coles: Belgium moderate home favorite
@@ -81,7 +81,7 @@ const MODEL_ODDS = [
     overOdds: -123, underOdds: +123,
   },
   {
-    fixtureId: 'wc26-g-016',
+    matchId: 'wc26-g-016',
     // Saudi Arabia (home) vs Uruguay (away)
     // KSA: FIFA rank ~56, xG=0.91 | URU: FIFA rank ~17, xG=1.98
     // Dixon-Coles: Uruguay strong away favorite
@@ -95,7 +95,7 @@ const MODEL_ODDS = [
     overOdds: -105, underOdds: -105,
   },
   {
-    fixtureId: 'wc26-g-014',
+    matchId: 'wc26-g-014',
     // Iran (home) vs New Zealand (away)
     // Iran: FIFA rank ~20, xG=1.42 | NZL: FIFA rank ~90, xG=1.28
     // Dixon-Coles: Iran slight home favorite
@@ -117,15 +117,15 @@ for (const m of MODEL_ODDS) {
   const sumTotal = m.overProb + m.underProb;
   const ok1X2 = Math.abs(sum1X2 - 1.0) < 0.0001;
   const okTotal = Math.abs(sumTotal - 1.0) < 0.0001;
-  console.log(`[VERIFY] ${m.fixtureId}: 1X2 sum=${sum1X2.toFixed(6)} ${ok1X2?'✓':'✗'} | Total sum=${sumTotal.toFixed(6)} ${okTotal?'✓':'✗'}`);
-  if (!ok1X2 || !okTotal) { console.error('[ERROR] Probability sum check failed for', m.fixtureId); process.exit(1); }
+  console.log(`[VERIFY] ${m.matchId}: 1X2 sum=${sum1X2.toFixed(6)} ${ok1X2?'✓':'✗'} | Total sum=${sumTotal.toFixed(6)} ${okTotal?'✓':'✗'}`);
+  if (!ok1X2 || !okTotal) { console.error('[ERROR] Probability sum check failed for', m.matchId); process.exit(1); }
 }
 
 // Delete existing model odds for June 15
-const june15Ids = MODEL_ODDS.map(m => m.fixtureId);
+const june15Ids = MODEL_ODDS.map(m => m.matchId);
 const ph = june15Ids.map(() => '?').join(',');
 const [del] = await c.execute(
-  `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${ph}) AND book_id = 0`,
+  `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 0`,
   june15Ids
 );
 console.log('[STATE] Deleted', del.affectedRows, 'existing model odds rows');
@@ -141,31 +141,31 @@ const rows = [];
 
 for (const m of MODEL_ODDS) {
   // 1X2
-  rows.push([m.fixtureId, snapshotTs, 0, '1X2', 'home', null, m.homeML, americanToImplied(m.homeML), false]);
-  rows.push([m.fixtureId, snapshotTs, 0, '1X2', 'draw', null, m.drawML, americanToImplied(m.drawML), false]);
-  rows.push([m.fixtureId, snapshotTs, 0, '1X2', 'away', null, m.awayML, americanToImplied(m.awayML), false]);
+  rows.push([m.matchId, snapshotTs, 0, '1X2', 'home', null, m.homeML, americanToImplied(m.homeML), false]);
+  rows.push([m.matchId, snapshotTs, 0, '1X2', 'draw', null, m.drawML, americanToImplied(m.drawML), false]);
+  rows.push([m.matchId, snapshotTs, 0, '1X2', 'away', null, m.awayML, americanToImplied(m.awayML), false]);
   // TOTAL
-  rows.push([m.fixtureId, snapshotTs, 0, 'TOTAL', 'over', m.total, m.overOdds, americanToImplied(m.overOdds), false]);
-  rows.push([m.fixtureId, snapshotTs, 0, 'TOTAL', 'under', m.total, m.underOdds, americanToImplied(m.underOdds), false]);
+  rows.push([m.matchId, snapshotTs, 0, 'TOTAL', 'over', m.total, m.overOdds, americanToImplied(m.overOdds), false]);
+  rows.push([m.matchId, snapshotTs, 0, 'TOTAL', 'under', m.total, m.underOdds, americanToImplied(m.underOdds), false]);
 }
 
 await c.execute(
-  `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
+  `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES ${rows.map(() => '(?,?,?,?,?,?,?,?,?)').join(',')}`,
   rows.flat()
 );
 console.log('[STATE] Inserted', rows.length, 'model odds rows');
 
 // Verify
 const [verify] = await c.execute(`
-  SELECT o.fixture_id, o.market, o.selection, o.american_odds,
+  SELECT o.match_id, o.market, o.selection, o.american_odds,
          ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_odds_snapshots o
-  JOIN wc2026_fixtures f ON o.fixture_id = f.fixture_id
+  JOIN wc2026_fixtures f ON o.match_id = f.match_id
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  WHERE o.fixture_id IN (${ph}) AND o.book_id = 0
+  WHERE o.match_id IN (${ph}) AND o.book_id = 0
   AND o.market = '1X2'
-  ORDER BY o.fixture_id, o.selection
+  ORDER BY o.match_id, o.selection
 `, june15Ids);
 
 console.log('');
@@ -188,8 +188,8 @@ const KICKOFF_ET = {
 // Group by fixture
 const byFix = {};
 for (const o of verify) {
-  if (!byFix[o.fixture_id]) byFix[o.fixture_id] = { homeCode: o.homeCode, awayCode: o.awayCode };
-  byFix[o.fixture_id][o.selection] = o.american_odds;
+  if (!byFix[o.match_id]) byFix[o.match_id] = { homeCode: o.homeCode, awayCode: o.awayCode };
+  byFix[o.match_id][o.selection] = o.american_odds;
 }
 
 let allPass = true;

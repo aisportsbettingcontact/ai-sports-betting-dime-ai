@@ -41,7 +41,7 @@ let inserted = 0;
 const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
 for (const r of results) {
-  const fid = r.fixture_id;
+  const fid = r.match_id;
   const home = r.home_team.toUpperCase();
   const away = r.away_team.toUpperCase();
   
@@ -107,7 +107,7 @@ for (const r of results) {
   
   const [ins] = await conn.execute(`
     INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -179,7 +179,7 @@ for (const r of results) {
 // ── VERIFICATION ────────────────────────────────────────────────────────────
 console.log('\n[VERIFY] Checking seeded rows...');
 const [verify] = await conn.execute(
-  `SELECT fixture_id, model_version, home_team, away_team, 
+  `SELECT match_id, model_version, home_team, away_team, 
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total,
           model_home_ml, model_draw_ml, model_away_ml,
@@ -189,13 +189,13 @@ const [verify] = await conn.execute(
           home_edge, draw_edge, away_edge
    FROM wc2026_model_projections 
    WHERE model_version = 'v7.0-june25-final'
-   ORDER BY fixture_id`
+   ORDER BY match_id`
 );
 
 console.log(`[VERIFY] ${verify.length}/6 rows confirmed in DB`);
 for (const row of verify) {
   const sum = (row.home_win_prob + row.draw_prob + row.away_win_prob).toFixed(4);
-  console.log(`  ${row.fixture_id} | ${row.home_team} vs ${row.away_team}`);
+  console.log(`  ${row.match_id} | ${row.home_team} vs ${row.away_team}`);
   console.log(`    Proj: ${row.proj_home_score.toFixed(2)}-${row.proj_away_score.toFixed(2)} | Total=${row.proj_total.toFixed(2)}`);
   console.log(`    1X2: ${row.home_team}=${row.home_win_prob.toFixed(4)} D=${row.draw_prob.toFixed(4)} ${row.away_team}=${row.away_win_prob.toFixed(4)} SUM=${sum}`);
   console.log(`    ML: ${row.home_team}=${row.model_home_ml} D=${row.model_draw_ml} ${row.away_team}=${row.model_away_ml}`);

@@ -32,7 +32,7 @@ console.log('══════════════════════�
 const placeholders = TARGET_IDS.map(() => '?').join(',');
 const [rows] = await conn.execute(`
   SELECT
-    f.fixture_id,
+    f.match_id,
     f.stage,
     f.match_date,
     f.kickoff_utc,
@@ -49,8 +49,8 @@ const [rows] = await conn.execute(`
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
   LEFT JOIN wc2026_venues v  ON f.venue_id    = v.venue_id
-  WHERE f.fixture_id IN (${placeholders})
-  ORDER BY f.kickoff_utc, f.fixture_id
+  WHERE f.match_id IN (${placeholders})
+  ORDER BY f.kickoff_utc, f.match_id
 `, TARGET_IDS);
 
 console.log(`[INPUT]  Queried ${TARGET_IDS.length} target fixture IDs`);
@@ -95,7 +95,7 @@ for (const r of rows) {
   // Date mismatch check
   const dateMismatch = expectedMatchDate && expectedMatchDate !== actualMatchDate;
 
-  console.log(`┌─ [${r.fixture_id}] ${r.away_name} @ ${r.home_name}`);
+  console.log(`┌─ [${r.match_id}] ${r.away_name} @ ${r.home_name}`);
   console.log(`│  Stage:          ${r.stage}`);
   console.log(`│  kickoff_utc:    ${kickoffUTCStr}`);
   console.log(`│  kickoff_ET:     ${kickoffETStr}`);
@@ -103,7 +103,7 @@ for (const r of rows) {
   if (dateMismatch) {
     console.log(`│  match_date EXP: ${expectedMatchDate}  ← SHOULD BE THIS`);
     issues.push({
-      fixtureId: r.fixture_id,
+      matchId: r.match_id,
       type: 'DATE_MISMATCH',
       actual: actualMatchDate,
       expected: expectedMatchDate,
@@ -114,7 +114,7 @@ for (const r of rows) {
   console.log(`│  venue:          ${venueDisplay}`);
   if (!r.venue_name) {
     issues.push({
-      fixtureId: r.fixture_id,
+      matchId: r.match_id,
       type: 'MISSING_VENUE',
       matchup: `${r.away_name} @ ${r.home_name}`
     });
@@ -124,13 +124,13 @@ for (const r of rows) {
 }
 
 // ── 3. Check for fixtures in TARGET_IDS not found in DB ──────────────────────
-const foundIds = new Set(rows.map(r => r.fixture_id));
+const foundIds = new Set(rows.map(r => r.match_id));
 const missingFromDB = TARGET_IDS.filter(id => !foundIds.has(id));
 if (missingFromDB.length > 0) {
   console.log(`[ERROR] ${missingFromDB.length} fixture(s) NOT FOUND in DB:`);
   missingFromDB.forEach(id => {
     console.log(`  ❌ ${id}`);
-    issues.push({ fixtureId: id, type: 'MISSING_FROM_DB' });
+    issues.push({ matchId: id, type: 'MISSING_FROM_DB' });
   });
   console.log();
 }
@@ -152,12 +152,12 @@ if (issues.length === 0) {
 } else {
   for (const iss of issues) {
     if (iss.type === 'DATE_MISMATCH') {
-      console.log(`  ❌ DATE_MISMATCH  [${iss.fixtureId}] ${iss.matchup}`);
+      console.log(`  ❌ DATE_MISMATCH  [${iss.matchId}] ${iss.matchup}`);
       console.log(`     DB has: ${iss.actual} | Should be: ${iss.expected} | Kickoff ET: ${iss.kickoffET}`);
     } else if (iss.type === 'MISSING_VENUE') {
-      console.log(`  ❌ MISSING_VENUE  [${iss.fixtureId}] ${iss.matchup}`);
+      console.log(`  ❌ MISSING_VENUE  [${iss.matchId}] ${iss.matchup}`);
     } else if (iss.type === 'MISSING_FROM_DB') {
-      console.log(`  ❌ MISSING_FROM_DB [${iss.fixtureId}]`);
+      console.log(`  ❌ MISSING_FROM_DB [${iss.matchId}]`);
     }
   }
 }

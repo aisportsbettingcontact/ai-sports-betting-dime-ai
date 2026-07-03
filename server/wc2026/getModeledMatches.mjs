@@ -11,7 +11,7 @@ const conn = await mysql.createConnection({
 
 // Get all knockout fixtures Jun 28-30 with model projections
 const [rows] = await conn.execute(`
-  SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.stage,
+  SELECT f.match_id, f.match_date, f.kickoff_utc, f.stage,
          ht.name AS home_name, at.name AS away_name,
          p.proj_home_score, p.proj_away_score,
          p.model_home_ml, p.model_away_ml, p.model_draw_ml,
@@ -24,10 +24,10 @@ const [rows] = await conn.execute(`
   FROM wc2026_fixtures f
   LEFT JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
   LEFT JOIN wc2026_teams at ON f.away_team_id = at.team_id
-  LEFT JOIN wc2026_model_projections p ON p.fixture_id = f.fixture_id
+  LEFT JOIN wc2026_model_projections p ON p.match_id = f.match_id
   WHERE f.stage IN ('R32','R16','QF','SF','F')
     AND f.match_date BETWEEN '2026-06-28' AND '2026-06-30'
-  ORDER BY f.kickoff_utc, f.fixture_id
+  ORDER BY f.kickoff_utc, f.match_id
 `);
 
 console.log('\n════════════════════════════════════════════════════════════════');
@@ -43,7 +43,7 @@ for (const r of rows) {
   const hasModel = r.model_home_ml !== null;
   if (hasModel) modeledCount++;
   
-  console.log(`[${r.fixture_id}] ${md} ${etStr} | ${r.stage} | ${r.away_name} @ ${r.home_name}`);
+  console.log(`[${r.match_id}] ${md} ${etStr} | ${r.stage} | ${r.away_name} @ ${r.home_name}`);
   if (hasModel) {
     console.log(`  ✅ MODELED | v${r.model_version} | ${r.n_simulations?.toLocaleString()} sims | frozen=${r.is_frozen}`);
     console.log(`  Proj Score: ${r.proj_away_score} - ${r.proj_home_score} | Total: ${r.model_total} | Spread: ${r.model_spread}`);

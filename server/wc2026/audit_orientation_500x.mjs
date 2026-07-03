@@ -49,7 +49,7 @@ const GROUND_TRUTH = {
   'wc26-r16-091': { away: 'Norway',      home: 'Brazil',      awayCode: 'NOR', homeCode: 'BRA' },
 };
 
-// GROUND TRUTH book odds — keyed by fixture_id
+// GROUND TRUTH book odds — keyed by match_id
 // Format: { awayML, homeML, awayAdv, homeAdv, awaySpread, awaySpreadOdds, homeSpread, homeSpreadOdds, ... }
 const BOOK_ODDS_TRUTH = {
   'wc26-r32-080': { awayML: 1100, homeML: -345, awayAdv: 600, homeAdv: -1100, awaySpread: 1.5, awaySpreadOdds: -111, homeSpread: -1.5, homeSpreadOdds: -105, over: 103, under: -120, bttsY: 163, bttsN: -227, draw: 400 },
@@ -70,12 +70,12 @@ let errors = 0;
 let warnings = 0;
 let checks = 0;
 
-function check(label, actual, expected, fixtureId) {
+function check(label, actual, expected, matchId) {
   checks++;
   if (actual === expected) {
-    PASS(`[${fixtureId}] ${label}: ${actual} ✓`);
+    PASS(`[${matchId}] ${label}: ${actual} ✓`);
   } else {
-    FAIL(`[${fixtureId}] ${label}: DB=${actual} | EXPECTED=${expected}`);
+    FAIL(`[${matchId}] ${label}: DB=${actual} | EXPECTED=${expected}`);
     errors++;
   }
 }
@@ -98,27 +98,27 @@ async function main() {
   INFO('PHASE A: wc2026_fixtures — away_team_id / home_team_id');
   INFO('─'.repeat(60));
 
-  const fixtureIds = Object.keys(GROUND_TRUTH);
+  const matchIds = Object.keys(GROUND_TRUTH);
   const [fixtures] = await conn.execute(
-    `SELECT f.fixture_id, f.away_team_id, f.home_team_id,
+    `SELECT f.match_id, f.away_team_id, f.home_team_id,
             ta.name AS away_name, ta.fifa_code AS away_code,
             th.name AS home_name, th.fifa_code AS home_code
      FROM wc2026_fixtures f
      LEFT JOIN wc2026_teams ta ON ta.team_id = f.away_team_id
      LEFT JOIN wc2026_teams th ON th.team_id = f.home_team_id
-     WHERE f.fixture_id IN (${fixtureIds.map(() => '?').join(',')})
-     ORDER BY f.fixture_id`,
-    fixtureIds
+     WHERE f.match_id IN (${matchIds.map(() => '?').join(',')})
+     ORDER BY f.match_id`,
+    matchIds
   );
 
   const fixtureMap = {};
   for (const row of fixtures) {
-    fixtureMap[row.fixture_id] = row;
-    const gt = GROUND_TRUTH[row.fixture_id];
-    STATE(`[${row.fixture_id}] DB: Away=${row.away_code}(${row.away_name}) | Home=${row.home_code}(${row.home_name})`);
-    STATE(`[${row.fixture_id}] GT: Away=${gt.awayCode}(${gt.away}) | Home=${gt.homeCode}(${gt.home})`);
-    check('Away team code', row.away_code, gt.awayCode, row.fixture_id);
-    check('Home team code', row.home_code, gt.homeCode, row.fixture_id);
+    fixtureMap[row.match_id] = row;
+    const gt = GROUND_TRUTH[row.match_id];
+    STATE(`[${row.match_id}] DB: Away=${row.away_code}(${row.away_name}) | Home=${row.home_code}(${row.home_name})`);
+    STATE(`[${row.match_id}] GT: Away=${gt.awayCode}(${gt.away}) | Home=${gt.homeCode}(${gt.home})`);
+    check('Away team code', row.away_code, gt.awayCode, row.match_id);
+    check('Home team code', row.home_code, gt.homeCode, row.match_id);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ async function main() {
   INFO('─'.repeat(60));
 
   const [odds] = await conn.execute(
-    `SELECT fixture_id,
+    `SELECT match_id,
             book_away_ml, book_home_ml,
             book_to_adv_away, book_to_adv_home,
             book_away_spread, book_away_spread_odds,
@@ -138,16 +138,16 @@ async function main() {
             book_btts_yes, book_btts_no,
             book_draw_ml
      FROM wc2026_frozen_book_odds
-     WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})
-     ORDER BY fixture_id`,
-    fixtureIds
+     WHERE match_id IN (${matchIds.map(() => '?').join(',')})
+     ORDER BY match_id`,
+    matchIds
   );
 
   const oddsMap = {};
   for (const row of odds) {
-    oddsMap[row.fixture_id] = row;
-    const gt = BOOK_ODDS_TRUTH[row.fixture_id];
-    const fid = row.fixture_id;
+    oddsMap[row.match_id] = row;
+    const gt = BOOK_ODDS_TRUTH[row.match_id];
+    const fid = row.match_id;
 
     INFO(`[${fid}] ─── Book Odds Orientation Check ───`);
     STATE(`[${fid}] DB  Away ML=${row.book_away_ml} | Home ML=${row.book_home_ml} | Draw=${row.book_draw_ml}`);

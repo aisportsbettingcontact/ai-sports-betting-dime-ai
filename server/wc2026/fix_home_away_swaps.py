@@ -1,7 +1,7 @@
 """
 fix_home_away_swaps.py
 ======================
-Fix the 8 fixtures where home_team_id and away_team_id are swapped
+Fix the 8 matches where home_team_id and away_team_id are swapped
 relative to the official FIFA WC2026 schedule.
 
 Also fixes the associated odds_snapshots rows — the 'home' and 'away'
@@ -31,7 +31,7 @@ conn = mysql.connector.connect(
 cur = conn.cursor(dictionary=True)
 
 # Fixtures where home/away are swapped:
-# (fixture_id, correct_home, correct_away, match_date, kickoff_utc, group_letter)
+# (match_id, correct_home, correct_away, match_date, kickoff_utc, group_letter)
 SWAPPED_FIXTURES = [
     # DB: bih vs can → Official: can vs bih
     ('wc26-g-003', 'can', 'bih', '2026-06-12', '2026-06-12 19:00:00', 'B'),
@@ -52,12 +52,12 @@ SWAPPED_FIXTURES = [
 ]
 
 print('=' * 80)
-print('[STEP 1] FIXING HOME/AWAY SWAPS IN wc2026_fixtures')
+print('[STEP 1] FIXING HOME/AWAY SWAPS IN wc2026_matches')
 print('=' * 80)
 
 for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURES:
     # First verify current state
-    cur.execute("SELECT home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = %s", (fid,))
+    cur.execute("SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = %s", (fid,))
     row = cur.fetchone()
     if not row:
         print(f'[ERROR] {fid} not found in DB')
@@ -69,15 +69,15 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
     print(f'[INPUT] {fid}: current home={current_home} away={current_away}')
     print(f'[STEP]  Correcting to: home={correct_home} away={correct_away}')
     
-    # Update the fixture
+    # Update the match
     cur.execute("""
-        UPDATE wc2026_fixtures
+        UPDATE wc2026_matches
         SET home_team_id = %s, away_team_id = %s,
             match_date = %s, kickoff_utc = %s, group_letter = %s
-        WHERE fixture_id = %s
+        WHERE match_id = %s
     """, (correct_home, correct_away, match_date, kickoff, grp, fid))
     rows = cur.rowcount
-    print(f'[OUTPUT] fixture rows updated: {rows}')
+    print(f'[OUTPUT] match rows updated: {rows}')
     
     # Now fix the odds_snapshots: swap 'home' and 'away' selections
     # because the odds were seeded with the wrong orientation
@@ -85,7 +85,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
     cur.execute("""
         UPDATE wc2026_odds_snapshots
         SET selection = 'temp_home'
-        WHERE fixture_id = %s AND selection = 'home'
+        WHERE match_id = %s AND selection = 'home'
     """, (fid,))
     temp_count = cur.rowcount
     
@@ -93,7 +93,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
     cur.execute("""
         UPDATE wc2026_odds_snapshots
         SET selection = 'home'
-        WHERE fixture_id = %s AND selection = 'away'
+        WHERE match_id = %s AND selection = 'away'
     """, (fid,))
     away_to_home = cur.rowcount
     
@@ -101,7 +101,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
     cur.execute("""
         UPDATE wc2026_odds_snapshots
         SET selection = 'away'
-        WHERE fixture_id = %s AND selection = 'temp_home'
+        WHERE match_id = %s AND selection = 'temp_home'
     """, (fid,))
     home_to_away = cur.rowcount
     
@@ -113,7 +113,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
             WHEN line = 1.5 THEN -1.5
             ELSE line
         END
-        WHERE fixture_id = %s AND market = 'ASIAN_HANDICAP'
+        WHERE match_id = %s AND market = 'ASIAN_HANDICAP'
     """, (fid,))
     ah_fixed = cur.rowcount
     
@@ -128,12 +128,12 @@ print('=' * 80)
 
 for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURES:
     cur.execute("""
-        SELECT f.fixture_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
+        SELECT f.match_id, f.home_team_id, f.away_team_id, f.match_date, f.kickoff_utc,
                ht.fifa_code as home_code, at.fifa_code as away_code
-        FROM wc2026_fixtures f
+        FROM wc2026_matches f
         JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
         JOIN wc2026_teams at ON at.team_id = f.away_team_id
-        WHERE f.fixture_id = %s
+        WHERE f.match_id = %s
     """, (fid,))
     row = cur.fetchone()
     if not row:
@@ -155,7 +155,7 @@ for fid, correct_home, correct_away, match_date, kickoff, grp in SWAPPED_FIXTURE
     cur.execute("""
         SELECT selection, COUNT(*) as cnt
         FROM wc2026_odds_snapshots
-        WHERE fixture_id = %s AND market = '1X2'
+        WHERE match_id = %s AND market = '1X2'
         GROUP BY selection
     """, (fid,))
     sel_counts = {r['selection']: r['cnt'] for r in cur.fetchall()}
@@ -167,25 +167,25 @@ print('[STEP 3] FINAL JUNE 11-17 FIXTURE LIST (CORRECTED)')
 print('=' * 80)
 
 cur.execute("""
-    SELECT f.fixture_id, f.match_date, f.kickoff_utc, f.group_letter,
+    SELECT f.match_id, f.match_date, f.kickoff_utc, f.group_letter,
            ht.fifa_code as home_code, ht.name as home_name,
            at.fifa_code as away_code, at.name as away_name
-    FROM wc2026_fixtures f
+    FROM wc2026_matches f
     JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
     JOIN wc2026_teams at ON at.team_id = f.away_team_id
     WHERE f.match_date BETWEEN '2026-06-11' AND '2026-06-17'
     ORDER BY f.kickoff_utc
 """)
-june_fixtures = cur.fetchall()
+june_matches = cur.fetchall()
 
 print(f'{"Fixture ID":<14} {"Date":<12} {"Kickoff UTC":<22} {"Grp":<5} {"Home":<8} {"Away":<8} {"Matchup"}')
 print('-' * 90)
-for f in june_fixtures:
+for f in june_matches:
     date_str = f['match_date']
     if hasattr(date_str, 'strftime'):
         date_str = date_str.strftime('%Y-%m-%d')
     kickoff_str = str(f['kickoff_utc'])
-    print(f'{f["fixture_id"]:<14} {date_str:<12} {kickoff_str:<22} {f["group_letter"]:<5} {f["home_code"]:<8} {f["away_code"]:<8} {f["home_name"]} vs {f["away_name"]}')
+    print(f'{f["match_id"]:<14} {date_str:<12} {kickoff_str:<22} {f["group_letter"]:<5} {f["home_code"]:<8} {f["away_code"]:<8} {f["home_name"]} vs {f["away_name"]}')
 
 conn.close()
 print()

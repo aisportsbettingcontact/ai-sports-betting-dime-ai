@@ -5,12 +5,12 @@
  *
  * Procedures:
  *   wc2026.allGroups        → all 48 teams grouped by group letter
- *   wc2026.fixturesByDate   → fixtures for a given date with team + venue info
- *   wc2026.fixturesByGroup  → all fixtures for a given group letter
- *   wc2026.latestOdds       → most recent odds snapshot per fixture × book × market
- *   wc2026.closingOdds      → is_closing=true snapshots per fixture
- *   wc2026.latestLineups    → most recent lineup rows per fixture
- *   wc2026.todayWithOdds    → today's fixtures with DraftKings 1X2 odds
+ *   wc2026.matchesByDate   → matches for a given date with team + venue info
+ *   wc2026.matchesByGroup  → all matches for a given group letter
+ *   wc2026.latestOdds       → most recent odds snapshot per match × book × market
+ *   wc2026.closingOdds      → is_closing=true snapshots per match
+ *   wc2026.latestLineups    → most recent lineup rows per match
+ *   wc2026.todayWithOdds    → today's matches with DraftKings 1X2 odds
  */
 
 import { z } from "zod";
@@ -33,7 +33,7 @@ import { wc2026MatchOdds, wc2026EspnMatches, type Wc2026MatchOddsRow } from "../
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
-type WcFixture = typeof wc2026Fixtures.$inferSelect;
+type WcMatch = typeof wc2026Fixtures.$inferSelect;
 type WcOddsRow = typeof wc2026OddsSnapshots.$inferSelect;
 
 export const wc2026Router = router({
@@ -53,13 +53,13 @@ export const wc2026Router = router({
     return grouped;
   }),
 
-  // ─── Fixtures by date ─────────────────────────────────────────────────────
-  fixturesByDate: publicProcedure
+  // ─── Matches by date ─────────────────────────────────────────────────────
+  matchesByDate: publicProcedure
     .input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
     .query(async ({ input }) => {
       const db = await getDb();
-      console.log(`[wc2026.fixturesByDate] INPUT date='${input.date}'`);
-      const fixtures = await db
+      console.log(`[wc2026.matchesByDate] INPUT date='${input.date}'`);
+      const matches = await db
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
@@ -67,15 +67,15 @@ export const wc2026Router = router({
           sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
           asc(wc2026Fixtures.displayOrder),
           asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.fixtureId)
+          asc(wc2026Fixtures.matchId)
         );
 
-      console.log(`[wc2026.fixturesByDate] RESULT date='${input.date}' fixtures=${fixtures.length} ids=[${fixtures.map((f: WcFixture) => f.fixtureId).join(',')}]`);
-      if (fixtures.length === 0) {
-        console.log(`[wc2026.fixturesByDate] EMPTY — no fixtures found for date='${input.date}'. Checking raw matchDate values...`);
+      console.log(`[wc2026.matchesByDate] RESULT date='${input.date}' matches=${matches.length} ids=[${matches.map((f: WcMatch) => f.matchId).join(',')}]`);
+      if (matches.length === 0) {
+        console.log(`[wc2026.matchesByDate] EMPTY — no matches found for date='${input.date}'. Checking raw matchDate values...`);
         // Diagnostic: dump first 5 rows to see what match_date looks like
-        const sample = await db.select({ fixtureId: wc2026Fixtures.fixtureId, matchDate: wc2026Fixtures.matchDate }).from(wc2026Fixtures).limit(5);
-        console.log(`[wc2026.fixturesByDate] SAMPLE rows:`, JSON.stringify(sample));
+        const sample = await db.select({ matchId: wc2026Fixtures.matchId, matchDate: wc2026Fixtures.matchDate }).from(wc2026Fixtures).limit(5);
+        console.log(`[wc2026.matchesByDate] SAMPLE rows:`, JSON.stringify(sample));
         return [];
       }
 
@@ -86,7 +86,7 @@ export const wc2026Router = router({
 
       const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
-      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+      const matchIds = matches.map((f: WcMatch) => f.matchId);
 
       // Fetch latest DraftKings (book_id=68) AND AI Model (book_id=0) 1X2 + TOTAL + DOUBLE_CHANCE odds
       // [LOG] buildOddsMap: maps all 6 markets:
@@ -109,12 +109,12 @@ export const wc2026Router = router({
         const map: Record<string, OddsShape> = {};
         const seen = new Set<string>();
         for (const row of rows) {
-          if (!ids.includes(row.fixtureId)) continue;
-          if (!map[row.fixtureId]) map[row.fixtureId] = {};
-          const key = `${row.fixtureId}:${row.market}:${row.selection}`;
+          if (!ids.includes(row.matchId)) continue;
+          if (!map[row.matchId]) map[row.matchId] = {};
+          const key = `${row.matchId}:${row.market}:${row.selection}`;
           if (!seen.has(key)) {
             seen.add(key);
-            const o = map[row.fixtureId] as Record<string, number | undefined>;
+            const o = map[row.matchId] as Record<string, number | undefined>;
             if (row.market === "1X2") {
               if (row.selection === "home") o["home"] = row.americanOdds;
               else if (row.selection === "draw") o["draw"] = row.americanOdds;
@@ -138,36 +138,36 @@ export const wc2026Router = router({
         return map;
       };
 
-      // [FIX 2026-06-24] PERFORMANCE: Filter odds by fixture_id IN (...) instead of full table scan.
+      // [FIX 2026-06-24] PERFORMANCE: Filter odds by match_id IN (...) instead of full table scan.
       // Pre-fix: fetched ALL odds rows (3,724+) then filtered in-memory → O(N) per request.
-      // Post-fix: fetches only rows for the 4-8 fixtures on this date → O(1) per request.
+      // Post-fix: fetches only rows for the 4-8 matches on this date → O(1) per request.
       // This eliminates the primary server-side latency cause for the blank WC feed on date change.
       // [v8.0 2026-07-02] Book odds now sourced from wc2026MatchOdds (replaces wc2026FrozenBookOdds).
       // wc2026FrozenBookOdds had mismatched column names vs DB schema causing 500 errors.
       // wc2026MatchOdds is the authoritative source for all book + model odds.
       const [dkOddsRows, modelOddsRows, projRows, matchOddsRows] = await Promise.all([
         db.select().from(wc2026OddsSnapshots)
-          .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
+          .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.matchId, matchIds)))
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
         db.select().from(wc2026OddsSnapshots)
-          .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
+          .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.matchId, matchIds)))
           .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
         db.select().from(wc2026ModelProjections)
-          .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
+          .where(inArray(wc2026ModelProjections.matchId, matchIds)),
         db.select().from(wc2026MatchOdds)
-          .where(inArray(wc2026MatchOdds.fixtureId, fixtureIds)),
+          .where(inArray(wc2026MatchOdds.matchId, matchIds)),
       ]);
 
-      const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], fixtureIds);
-      const modelMap = buildOddsMap(modelOddsRows as WcOddsRow[], fixtureIds);
+      const dkMap = buildOddsMap(dkOddsRows as WcOddsRow[], matchIds);
+      const modelMap = buildOddsMap(modelOddsRows as WcOddsRow[], matchIds);
       const projMap = Object.fromEntries(
-        (projRows as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
+        (projRows as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.matchId, p])
       );
-      // [v8.0 2026-07-02] wc2026MatchOdds book odds map — keyed by fixture_id.
+      // [v8.0 2026-07-02] wc2026MatchOdds book odds map — keyed by match_id.
       // Field mapping: wc2026MatchOdds Drizzle camelCase → OddsShape keys.
       type MatchOddsRow = typeof wc2026MatchOdds.$inferSelect;
       const matchOddsMap = Object.fromEntries(
-        (matchOddsRows as MatchOddsRow[]).map((r) => [r.fixtureId, r])
+        (matchOddsRows as MatchOddsRow[]).map((r) => [r.matchId, r])
       );
       const matchOddsToBookOdds = (r: MatchOddsRow): Record<string, number | undefined> => ({
         home:           r.bookHomeMl ?? undefined,
@@ -221,15 +221,15 @@ export const wc2026Router = router({
         projAwayScore: p.projAwayScore ?? undefined,
         projTotal: p.projTotal ?? undefined,
       });
-      return fixtures.map((f: WcFixture) => {
-        const proj = projMap[f.fixtureId] ?? null;
+      return matches.map((f: WcMatch) => {
+        const proj = projMap[f.matchId] ?? null;
         return {
           ...f,
           homeTeam: teamMap[f.homeTeamId] ?? null,
           awayTeam: teamMap[f.awayTeamId] ?? null,
           venue: venueMap[f.venueId] ?? null,
           // [FIX 2026-06-30] advancingTeamId: team_id of the team that advanced past this KO match.
-          // Populated by seedAdvancingTeams.ts after each completed knockout fixture.
+          // Populated by seedAdvancingTeams.ts after each completed knockout match.
           // Null for group stage matches and unplayed knockout matches.
           // [SCHEMA v2 2026-06-30] Now a proper Drizzle column — no (f as any) cast needed.
           advancingTeamId: f.advancingTeamId ?? null,
@@ -241,9 +241,9 @@ export const wc2026Router = router({
           // [SCHEMA v2 2026-06-30] Now a proper Drizzle column — no (f as any) cast needed.
           fifaMatchId: f.fifaMatchId ?? null,
           // [v8.0] Use wc2026MatchOdds book odds when available, otherwise fall back to live DK snapshot
-          dkOdds: matchOddsMap[f.fixtureId] ? matchOddsToBookOdds(matchOddsMap[f.fixtureId]!) : (dkMap[f.fixtureId] ?? null),
+          dkOdds: matchOddsMap[f.matchId] ? matchOddsToBookOdds(matchOddsMap[f.matchId]!) : (dkMap[f.matchId] ?? null),
           // [v8.0] Use wc2026_model_projections when available, otherwise fall back to book_id=0 snapshot
-          modelOdds: proj ? projToModelOdds(proj) : (modelMap[f.fixtureId] ?? null),
+          modelOdds: proj ? projToModelOdds(proj) : (modelMap[f.matchId] ?? null),
           projection: proj,
           modelVersion: proj?.modelVersion ?? null,
           isFrozen: proj?.isFrozen ?? false,
@@ -252,12 +252,12 @@ export const wc2026Router = router({
       });
     }),
 
-  // ─── Fixtures by group ────────────────────────────────────────────────────
-  fixturesByGroup: publicProcedure
+  // ─── Matches by group ────────────────────────────────────────────────────
+  matchesByGroup: publicProcedure
     .input(z.object({ group: z.string().length(1) }))
     .query(async ({ input }) => {
       const db = await getDb();
-      const fixtures = await db
+      const matches = await db
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.groupLetter, input.group.toUpperCase()))
@@ -271,7 +271,7 @@ export const wc2026Router = router({
       const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
 
-      return fixtures.map((f: WcFixture) => ({
+      return matches.map((f: WcMatch) => ({
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
@@ -279,15 +279,15 @@ export const wc2026Router = router({
       }));
     }),
 
-  // ─── Latest odds per fixture ──────────────────────────────────────────────
+  // ─── Latest odds per match ──────────────────────────────────────────────
   latestOdds: publicProcedure
-    .input(z.object({ fixtureId: z.string() }))
+    .input(z.object({ matchId: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
       const latest = await db
         .select({ maxTs: sql<Date>`MAX(snapshot_ts)` })
         .from(wc2026OddsSnapshots)
-        .where(eq(wc2026OddsSnapshots.fixtureId, input.fixtureId));
+        .where(eq(wc2026OddsSnapshots.matchId, input.matchId));
 
       const maxTs = latest[0]?.maxTs;
       if (!maxTs) return [];
@@ -297,16 +297,16 @@ export const wc2026Router = router({
         .from(wc2026OddsSnapshots)
         .where(
           and(
-            eq(wc2026OddsSnapshots.fixtureId, input.fixtureId),
+            eq(wc2026OddsSnapshots.matchId, input.matchId),
             eq(wc2026OddsSnapshots.snapshotTs, maxTs)
           )
         )
         .orderBy(wc2026OddsSnapshots.bookId, wc2026OddsSnapshots.market);
     }),
 
-  // ─── Closing odds per fixture ─────────────────────────────────────────────
+  // ─── Closing odds per match ─────────────────────────────────────────────
   closingOdds: publicProcedure
-    .input(z.object({ fixtureId: z.string() }))
+    .input(z.object({ matchId: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
       return db
@@ -314,7 +314,7 @@ export const wc2026Router = router({
         .from(wc2026OddsSnapshots)
         .where(
           and(
-            eq(wc2026OddsSnapshots.fixtureId, input.fixtureId),
+            eq(wc2026OddsSnapshots.matchId, input.matchId),
             eq(wc2026OddsSnapshots.isClosing, true)
           )
         )
@@ -322,15 +322,15 @@ export const wc2026Router = router({
     }),
 
 
-  // ─── Latest lineups per fixture ───────────────────────────────────────────
+  // ─── Latest lineups per match ───────────────────────────────────────────
   latestLineups: publicProcedure
-    .input(z.object({ fixtureId: z.string() }))
+    .input(z.object({ matchId: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
       const latest = await db
         .select({ maxTs: sql<Date>`MAX(scraped_at)` })
         .from(wc2026Lineups)
-        .where(eq(wc2026Lineups.fixtureId, input.fixtureId));
+        .where(eq(wc2026Lineups.matchId, input.matchId));
 
       const maxTs = latest[0]?.maxTs;
       if (!maxTs) return [];
@@ -340,7 +340,7 @@ export const wc2026Router = router({
         .from(wc2026Lineups)
         .where(
           and(
-            eq(wc2026Lineups.fixtureId, input.fixtureId),
+            eq(wc2026Lineups.matchId, input.matchId),
             eq(wc2026Lineups.scrapedAt, maxTs)
           )
         )
@@ -352,8 +352,8 @@ export const wc2026Router = router({
     .input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
     .query(async ({ input }) => {
       const db = await getDb();
-      // Get all fixtures for this date
-      const fixtures = await db
+      // Get all matches for this date
+      const matches = await db
         .select()
         .from(wc2026Fixtures)
         .where(eq(wc2026Fixtures.matchDate, sql`${input.date}`))
@@ -361,10 +361,10 @@ export const wc2026Router = router({
           sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
           asc(wc2026Fixtures.displayOrder),
           asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.fixtureId)
+          asc(wc2026Fixtures.matchId)
         );
 
-      if (fixtures.length === 0) return [];
+      if (matches.length === 0) return [];
 
       const [teams, venues] = await Promise.all([
         db.select().from(wc2026Teams),
@@ -373,34 +373,34 @@ export const wc2026Router = router({
 
       const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
       const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
-      const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+      const matchIds = matches.map((f: WcMatch) => f.matchId);
 
-      // Get all lineups for these fixtures in one query
-      const allLineups = fixtureIds.length > 0
+      // Get all lineups for these matches in one query
+      const allLineups = matchIds.length > 0
         ? await db
             .select()
             .from(wc2026Lineups)
-            .where(inArray(wc2026Lineups.fixtureId, fixtureIds))
-            .orderBy(wc2026Lineups.fixtureId, wc2026Lineups.teamId, wc2026Lineups.isStarter, wc2026Lineups.position)
+            .where(inArray(wc2026Lineups.matchId, matchIds))
+            .orderBy(wc2026Lineups.matchId, wc2026Lineups.teamId, wc2026Lineups.isStarter, wc2026Lineups.position)
         : [];
 
-      // Group lineups by fixtureId
+      // Group lineups by matchId
       const lineupMap: Record<string, typeof allLineups> = {};
       for (const row of allLineups) {
-        if (!lineupMap[row.fixtureId]) lineupMap[row.fixtureId] = [];
-        lineupMap[row.fixtureId].push(row);
+        if (!lineupMap[row.matchId]) lineupMap[row.matchId] = [];
+        lineupMap[row.matchId].push(row);
       }
 
-      return fixtures.map((f: WcFixture) => ({
+      return matches.map((f: WcMatch) => ({
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
         venue: venueMap[f.venueId] ?? null,
-        lineups: lineupMap[f.fixtureId] ?? [],
+        lineups: lineupMap[f.matchId] ?? [],
       }));
     }),
 
-  // ─── Today's fixtures with DK 1X2 odds (main page feed) ──────────────────
+  // ─── Today's matches with DK 1X2 odds (main page feed) ──────────────────
   todayWithOdds: publicProcedure.query(async () => {
     const db = await getDb();
     // [FIX] Use the same 11:00 UTC cutoff gate as CalendarPicker.todayUTC().
@@ -426,7 +426,7 @@ export const wc2026Router = router({
     }
     console.log(`[wc2026.todayWithOdds] utcHour=${nowUtc.getUTCHours()} isBeforeCutoff=${isBeforeCutoff} effectiveDate=${today}`);
 
-    const fixtures = await db
+    const matches = await db
       .select()
       .from(wc2026Fixtures)
       .where(eq(wc2026Fixtures.matchDate, sql`${today}`))
@@ -434,10 +434,10 @@ export const wc2026Router = router({
           sql`CASE WHEN ${wc2026Fixtures.displayOrder} IS NOT NULL THEN 0 ELSE 1 END`,
           asc(wc2026Fixtures.displayOrder),
           asc(wc2026Fixtures.kickoffUtc),
-          asc(wc2026Fixtures.fixtureId)
+          asc(wc2026Fixtures.matchId)
         );
 
-    if (fixtures.length === 0) return [];
+    if (matches.length === 0) return [];
 
     const [teams, venues] = await Promise.all([
       db.select().from(wc2026Teams),
@@ -446,7 +446,7 @@ export const wc2026Router = router({
 
     const teamMap = Object.fromEntries(teams.map((t: WcTeam) => [t.teamId, t]));
     const venueMap = Object.fromEntries(venues.map((v: WcVenue) => [v.venueId, v]));
-    const fixtureIds = fixtures.map((f: WcFixture) => f.fixtureId);
+    const matchIds = matches.map((f: WcMatch) => f.matchId);
 
     // [LOG] buildOddsMapT: maps all 6 markets (1X2/TOTAL/ASIAN_HANDICAP/DOUBLE_CHANCE/BTTS/NO_DRAW)
     type OddsShapeT = {
@@ -461,12 +461,12 @@ export const wc2026Router = router({
       const map: Record<string, OddsShapeT> = {};
       const seen = new Set<string>();
       for (const row of rows) {
-        if (!ids.includes(row.fixtureId)) continue;
-        if (!map[row.fixtureId]) map[row.fixtureId] = {};
-        const key = `${row.fixtureId}:${row.market}:${row.selection}`;
+        if (!ids.includes(row.matchId)) continue;
+        if (!map[row.matchId]) map[row.matchId] = {};
+        const key = `${row.matchId}:${row.market}:${row.selection}`;
         if (!seen.has(key)) {
           seen.add(key);
-          const o = map[row.fixtureId] as Record<string, number | undefined>;
+          const o = map[row.matchId] as Record<string, number | undefined>;
           if (row.market === "1X2") {
             if (row.selection === "home") o["home"] = row.americanOdds;
             else if (row.selection === "draw") o["draw"] = row.americanOdds;
@@ -490,30 +490,30 @@ export const wc2026Router = router({
       return map;
     };
 
-    // [FIX 2026-06-24] PERFORMANCE: Same fixture_id IN filter as fixturesByDate.
+    // [FIX 2026-06-24] PERFORMANCE: Same match_id IN filter as matchesByDate.
     // [v8.0 2026-07-02] Book odds now sourced from wc2026MatchOdds (replaces wc2026FrozenBookOdds).
     const [dkOddsRowsT, modelOddsRowsT, projRowsT, matchOddsRowsT] = await Promise.all([
       db.select().from(wc2026OddsSnapshots)
-        .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
+        .where(and(eq(wc2026OddsSnapshots.bookId, 68), inArray(wc2026OddsSnapshots.matchId, matchIds)))
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
       db.select().from(wc2026OddsSnapshots)
-        .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.fixtureId, fixtureIds)))
+        .where(and(eq(wc2026OddsSnapshots.bookId, 0), inArray(wc2026OddsSnapshots.matchId, matchIds)))
         .orderBy(desc(wc2026OddsSnapshots.snapshotTs)),
       db.select().from(wc2026ModelProjections)
-        .where(inArray(wc2026ModelProjections.fixtureId, fixtureIds)),
+        .where(inArray(wc2026ModelProjections.matchId, matchIds)),
       db.select().from(wc2026MatchOdds)
-        .where(inArray(wc2026MatchOdds.fixtureId, fixtureIds)),
+        .where(inArray(wc2026MatchOdds.matchId, matchIds)),
     ]);
 
-    const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], fixtureIds);
-    const modelMapT = buildOddsMapT(modelOddsRowsT as WcOddsRow[], fixtureIds);
+    const dkMapT = buildOddsMapT(dkOddsRowsT as WcOddsRow[], matchIds);
+    const modelMapT = buildOddsMapT(modelOddsRowsT as WcOddsRow[], matchIds);
     const projMapT = Object.fromEntries(
-      (projRowsT as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.fixtureId, p])
+      (projRowsT as (typeof wc2026ModelProjections.$inferSelect)[]).map((p) => [p.matchId, p])
     );
     // [v8.0 2026-07-02] wc2026MatchOdds book odds map for todayWithOdds procedure
     type MatchOddsRowT = typeof wc2026MatchOdds.$inferSelect;
     const matchOddsMapT = Object.fromEntries(
-      (matchOddsRowsT as MatchOddsRowT[]).map((r) => [r.fixtureId, r])
+      (matchOddsRowsT as MatchOddsRowT[]).map((r) => [r.matchId, r])
     );
     const matchOddsToBookOddsT = (r: MatchOddsRowT): Record<string, number | undefined> => ({
       home:           r.bookHomeMl ?? undefined,
@@ -534,7 +534,7 @@ export const wc2026Router = router({
       toAdvanceHome:  r.bookHomeToAdvance ?? undefined,
       toAdvanceAway:  r.bookAwayToAdvance ?? undefined,
     });
-        // [FIX v7.1-NODRAW] Same projection-first modelOdds logic as fixturesByDate
+        // [FIX v7.1-NODRAW] Same projection-first modelOdds logic as matchesByDate
       type ProjRowT = typeof wc2026ModelProjections.$inferSelect;
       const projToModelOddsT = (p: ProjRowT): Record<string, number | undefined> => ({
       home: p.modelHomeML ?? undefined,
@@ -565,17 +565,17 @@ export const wc2026Router = router({
       projAwayScore: p.projAwayScore ?? undefined,
       projTotal: p.projTotal ?? undefined,
     });
-    return fixtures.map((f: WcFixture) => {
-      const proj = projMapT[f.fixtureId] ?? null;
+    return matches.map((f: WcMatch) => {
+      const proj = projMapT[f.matchId] ?? null;
         return {
         ...f,
         homeTeam: teamMap[f.homeTeamId] ?? null,
         awayTeam: teamMap[f.awayTeamId] ?? null,
         venue: venueMap[f.venueId] ?? null,
         // [v8.0] Use wc2026MatchOdds book odds when available, otherwise fall back to live DK snapshot
-        dkOdds: matchOddsMapT[f.fixtureId] ? matchOddsToBookOddsT(matchOddsMapT[f.fixtureId]!) : (dkMapT[f.fixtureId] ?? null),
+        dkOdds: matchOddsMapT[f.matchId] ? matchOddsToBookOddsT(matchOddsMapT[f.matchId]!) : (dkMapT[f.matchId] ?? null),
         // [v8.0] Use wc2026_model_projections when available, otherwise fall back to book_id=0 snapshot
-        modelOdds: proj ? projToModelOddsT(proj) : (modelMapT[f.fixtureId] ?? null),
+        modelOdds: proj ? projToModelOddsT(proj) : (modelMapT[f.matchId] ?? null),
         projection: proj,
         modelVersion: proj?.modelVersion ?? null,
         isFrozen: proj?.isFrozen ?? false,
@@ -769,7 +769,7 @@ export const wc2026Router = router({
         .select()
         .from(wc2026MatchOdds)
         .where(eq(wc2026MatchOdds.worldCupRound, round))
-        .orderBy(asc(wc2026MatchOdds.fixtureId));
+        .orderBy(asc(wc2026MatchOdds.matchId));
 
       // Enrich with team names from wc2026_espn_matches (join on espn_match_id)
       // This is a secondary query to avoid a complex Drizzle join — wc2026MatchOdds
@@ -801,10 +801,10 @@ export const wc2026Router = router({
         ` rows=${rows.length} elapsed=${elapsed}ms`
       );
 
-      // Integrity check: flag any rows missing fixture_id
-      const invalid = rows.filter((r: Wc2026MatchOddsRow) => !r.fixtureId);
+      // Integrity check: flag any rows missing match_id
+      const invalid = rows.filter((r: Wc2026MatchOddsRow) => !r.matchId);
       if (invalid.length > 0) {
-        console.error(`[WC2026_MATCH_ODDS] listMatchOdds INTEGRITY_WARN | ${invalid.length} rows missing fixture_id`);
+        console.error(`[WC2026_MATCH_ODDS] listMatchOdds INTEGRITY_WARN | ${invalid.length} rows missing match_id`);
       }
 
       // Audit: count rows with all core book_ columns populated
@@ -817,7 +817,7 @@ export const wc2026Router = router({
         `[WC2026_MATCH_ODDS] listMatchOdds AUDIT | total=${rows.length}` +
         ` fully_populated=${fullyPopulated.length}` +
         ` partial=${rows.length - fullyPopulated.length}` +
-        ` invalid_fixture_id=${invalid.length}`
+        ` invalid_match_id=${invalid.length}`
       );
 
       // Attach team names to each row
@@ -835,11 +835,11 @@ export const wc2026Router = router({
     }),
 
   // ─── wc2026MatchOdds: updateMatchOdds ───────────────────────────────────────
-  // Owner-only. Updates model_* columns for a single fixture in wc2026MatchOdds.
+  // Owner-only. Updates model_* columns for a single match in wc2026MatchOdds.
   // Writes ONLY to wc2026MatchOdds — no other tables touched.
   updateMatchOdds: ownerProcedure
     .input(z.object({
-      fixtureId:                   z.string().min(1).max(16),
+      matchId:                   z.string().min(1).max(16),
       // To Advance
       modelAwayToAdvance:          z.number().int().nullable().optional(),
       modelHomeToAdvance:          z.number().int().nullable().optional(),
@@ -868,19 +868,19 @@ export const wc2026Router = router({
       const t0 = Date.now();
       const userId = ctx.appUser.id;
       const username = ctx.appUser.username;
-      const { fixtureId, ...fields } = input;
+      const { matchId, ...fields } = input;
 
       const definedKeys = Object.keys(fields).filter(
         k => (fields as Record<string, unknown>)[k] !== undefined
       );
       console.log(
         `[WC2026_MATCH_ODDS] updateMatchOdds START | userId=${userId} username=${username}` +
-        ` fixtureId=${fixtureId} fields=[${definedKeys.join(",")}]`
+        ` matchId=${matchId} fields=[${definedKeys.join(",")}]`
       );
 
       const db = await getDb();
       if (!db) {
-        console.error(`[WC2026_MATCH_ODDS] updateMatchOdds FATAL | DB unavailable | userId=${userId} fixtureId=${fixtureId}`);
+        console.error(`[WC2026_MATCH_ODDS] updateMatchOdds FATAL | DB unavailable | userId=${userId} matchId=${matchId}`);
         throw new Error("[WC2026_MATCH_ODDS] Database connection unavailable");
       }
 
@@ -922,32 +922,32 @@ export const wc2026Router = router({
       if (fields.modelBttsNo                !== undefined) payload.modelBttsNo                = fields.modelBttsNo;
 
       if (Object.keys(payload).length === 0) {
-        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds NOOP | fixtureId=${fixtureId} — no fields to update`);
-        return { success: true, fixtureId, updated: 0, elapsedMs: 0 };
+        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds NOOP | matchId=${matchId} — no fields to update`);
+        return { success: true, matchId, updated: 0, elapsedMs: 0 };
       }
 
       console.log(
-        `[WC2026_MATCH_ODDS] updateMatchOdds EXECUTING | fixtureId=${fixtureId}` +
+        `[WC2026_MATCH_ODDS] updateMatchOdds EXECUTING | matchId=${matchId}` +
         ` payload=${JSON.stringify(payload)}`
       );
 
       const result = await db
         .update(wc2026MatchOdds)
         .set(payload)
-        .where(eq(wc2026MatchOdds.fixtureId, fixtureId));
+        .where(eq(wc2026MatchOdds.matchId, matchId));
 
       const elapsed = Date.now() - t0;
       // result[0] is the OkPacket from mysql2
       const affectedRows = (result as unknown as [{ affectedRows: number }])[0]?.affectedRows ?? -1;
       console.log(
-        `[WC2026_MATCH_ODDS] updateMatchOdds COMPLETE | fixtureId=${fixtureId}` +
+        `[WC2026_MATCH_ODDS] updateMatchOdds COMPLETE | matchId=${matchId}` +
         ` affectedRows=${affectedRows} elapsed=${elapsed}ms userId=${userId}`
       );
 
       if (affectedRows === 0) {
-        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds WARN | fixtureId=${fixtureId} — 0 rows affected (fixture may not exist)`);
+        console.warn(`[WC2026_MATCH_ODDS] updateMatchOdds WARN | matchId=${matchId} — 0 rows affected (match may not exist)`);
       }
 
-      return { success: true, fixtureId, updated: affectedRows, elapsedMs: elapsed };
+      return { success: true, matchId, updated: affectedRows, elapsedMs: elapsed };
     }),
 });

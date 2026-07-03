@@ -34,7 +34,7 @@ const LABELS = {
 console.log('\n[STEP] Deleting existing v7.0 rows for June 26 fixtures...');
 for (const fid of FIXTURE_IDS) {
   const [del] = await conn.execute(
-    `DELETE FROM wc2026_model_projections WHERE fixture_id = ? AND model_version = ?`,
+    `DELETE FROM wc2026_model_projections WHERE match_id = ? AND model_version = ?`,
     [fid, VERSION]
   );
   console.log(`  [STATE] ${fid}: deleted ${del.affectedRows} rows`);
@@ -119,7 +119,7 @@ for (const fid of FIXTURE_IDS) {
 
   await conn.execute(
     `INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -194,7 +194,7 @@ for (const fid of FIXTURE_IDS) {
 // ── Step 3: Verify all 6 rows ──
 console.log('\n[STEP] Verifying all 6 June 26 v7.0 rows...');
 const [rows] = await conn.execute(
-  `SELECT fixture_id, model_version,
+  `SELECT match_id, model_version,
           model_home_ml, model_draw_ml, model_away_ml,
           model_total, over_odds, under_odds,
           model_spread, home_spread_odds, away_spread_odds,
@@ -203,20 +203,20 @@ const [rows] = await conn.execute(
           proj_home_score, proj_away_score, proj_total,
           is_frozen, model_lean, home_edge, draw_edge, away_edge
    FROM wc2026_model_projections
-   WHERE fixture_id IN (?, ?, ?, ?, ?, ?) AND model_version = ?
-   ORDER BY fixture_id`,
+   WHERE match_id IN (?, ?, ?, ?, ?, ?) AND model_version = ?
+   ORDER BY match_id`,
   [...FIXTURE_IDS, VERSION]
 );
 
 console.log(`\n[VERIFY] Found ${rows.length}/6 rows`);
 let allPass = true;
 for (const row of rows) {
-  const label = LABELS[row.fixture_id] || row.fixture_id;
+  const label = LABELS[row.match_id] || row.match_id;
   const frozen = row.is_frozen ? 'FROZEN' : 'NOT_FROZEN';
   const valid = row.model_home_ml !== null && row.model_draw_ml !== null && row.model_away_ml !== null;
   if (!valid) allPass = false;
 
-  console.log(`[${valid ? 'PASS' : 'FAIL'}] ${row.fixture_id} ${label} [${frozen}]`);
+  console.log(`[${valid ? 'PASS' : 'FAIL'}] ${row.match_id} ${label} [${frozen}]`);
   console.log(`  ML: H${row.model_home_ml}/D${row.model_draw_ml}/A${row.model_away_ml}`);
   console.log(`  Total ${row.model_total}: O${row.over_odds}/U${row.under_odds}`);
   console.log(`  Spread ${row.model_spread}: H${row.home_spread_odds}/A${row.away_spread_odds}`);

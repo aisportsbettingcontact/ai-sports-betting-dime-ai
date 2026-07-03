@@ -33,17 +33,17 @@ const SMALLINT_MAX = 32767;
 const SMALLINT_MIN = -32768;
 const capSmallInt = (v) => Math.max(SMALLINT_MIN, Math.min(SMALLINT_MAX, Math.round(v)));
 
-// Build lookup by fixture_id
+// Build lookup by match_id
 const resultsByFid = {};
 for (const r of results) {
-  resultsByFid[r.fixture_id] = r;
+  resultsByFid[r.match_id] = r;
 }
 
 // ── Step 1: Delete existing v7.0 rows for June 27 fixtures ──
 console.log('\n[STEP] Deleting existing v7.0 rows for June 27 fixtures...');
 for (const fid of FIXTURE_IDS) {
   const [del] = await conn.execute(
-    `DELETE FROM wc2026_model_projections WHERE fixture_id = ? AND model_version = ?`,
+    `DELETE FROM wc2026_model_projections WHERE match_id = ? AND model_version = ?`,
     [fid, VERSION]
   );
   console.log(`  [STATE] ${fid}: deleted ${del.affectedRows} rows`);
@@ -147,7 +147,7 @@ for (const fid of FIXTURE_IDS) {
 
   await conn.execute(
     `INSERT INTO wc2026_model_projections (
-      fixture_id, model_version, n_simulations,
+      match_id, model_version, n_simulations,
       home_team, away_team,
       home_lambda, away_lambda,
       home_win_prob, draw_prob, away_win_prob,
@@ -221,7 +221,7 @@ for (const fid of FIXTURE_IDS) {
 // ── Step 3: Verify all 6 rows ──
 console.log('\n[STEP] Verifying all 6 June 27 v7.0 rows...');
 const [rows] = await conn.execute(
-  `SELECT fixture_id, model_version,
+  `SELECT match_id, model_version,
           model_home_ml, model_draw_ml, model_away_ml,
           model_total, over_odds, under_odds,
           model_spread, home_spread_odds, away_spread_odds,
@@ -231,9 +231,9 @@ const [rows] = await conn.execute(
           home_win_prob, draw_prob, away_win_prob,
           is_frozen, frozen_at
    FROM wc2026_model_projections
-   WHERE fixture_id IN ('wc26-g-069','wc26-g-070','wc26-g-068','wc26-g-072','wc26-g-067','wc26-g-071')
+   WHERE match_id IN ('wc26-g-069','wc26-g-070','wc26-g-068','wc26-g-072','wc26-g-067','wc26-g-071')
    AND model_version = ?
-   ORDER BY fixture_id`,
+   ORDER BY match_id`,
   [VERSION]
 );
 
@@ -248,7 +248,7 @@ for (const row of rows) {
     && row.dc_1x_odds !== null && row.dc_x2_odds !== null;
   const status = hasAllOdds ? 'PASS' : 'FAIL';
   if (status === 'FAIL') allPass = false;
-  console.log(`  [${status}][${frozen}] ${row.fixture_id}: H${row.model_home_ml}/D${row.model_draw_ml}/A${row.model_away_ml} | O${row.over_odds}/U${row.under_odds} | Proj:${row.proj_home_score}-${row.proj_away_score}`);
+  console.log(`  [${status}][${frozen}] ${row.match_id}: H${row.model_home_ml}/D${row.model_draw_ml}/A${row.model_away_ml} | O${row.over_odds}/U${row.under_odds} | Proj:${row.proj_home_score}-${row.proj_away_score}`);
 }
 
 console.log(`\n[VERIFY] Overall: ${allPass ? 'ALL PASS' : 'SOME FAILURES'}`);

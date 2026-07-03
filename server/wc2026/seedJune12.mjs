@@ -39,23 +39,23 @@ console.log('[STEP] Connected to DB');
 // ─── Step 1: Fix wc26-g-003 orientation ──────────────────────────────────────
 console.log('\n[STEP] Fixing wc26-g-003: swapping home=BIH, away=CAN');
 const [before003] = await conn.execute(
-  "SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = 'wc26-g-003'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-003'"
 );
 console.log('[INPUT] Before:', JSON.stringify(before003[0]));
 
 await conn.execute(
-  "UPDATE wc2026_fixtures SET home_team_id = 'bih', away_team_id = 'can' WHERE fixture_id = 'wc26-g-003'"
+  "UPDATE wc2026_fixtures SET home_team_id = 'bih', away_team_id = 'can' WHERE match_id = 'wc26-g-003'"
 );
 
 const [after003] = await conn.execute(
-  "SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = 'wc26-g-003'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-003'"
 );
 console.log('[OUTPUT] After:', JSON.stringify(after003[0]));
 console.log('[VERIFY] wc26-g-003 home=bih, away=can:', after003[0].home_team_id === 'bih' && after003[0].away_team_id === 'can' ? 'PASS' : 'FAIL');
 
 // ─── Step 2: Verify wc26-g-005 ────────────────────────────────────────────────
 const [row005] = await conn.execute(
-  "SELECT fixture_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE fixture_id = 'wc26-g-005'"
+  "SELECT match_id, home_team_id, away_team_id FROM wc2026_fixtures WHERE match_id = 'wc26-g-005'"
 );
 console.log('\n[VERIFY] wc26-g-005:', JSON.stringify(row005[0]));
 console.log('[VERIFY] wc26-g-005 home=usa, away=par:', row005[0].home_team_id === 'usa' && row005[0].away_team_id === 'par' ? 'PASS' : 'FAIL');
@@ -65,7 +65,7 @@ console.log('\n[STEP] Seeding model odds (book_id=0) for both fixtures...');
 
 const PREDICTIONS = [
   {
-    fixtureId: 'wc26-g-003',
+    matchId: 'wc26-g-003',
     homeTeamName: 'Bosnia and Herzegovina',
     awayTeamName: 'Canada',
     homeAbbr: 'BIH',
@@ -82,7 +82,7 @@ const PREDICTIONS = [
     modelSpread: -0.484,  // BIH xG advantage: 1.7817 - 1.2982
   },
   {
-    fixtureId: 'wc26-g-005',
+    matchId: 'wc26-g-005',
     homeTeamName: 'United States',
     awayTeamName: 'Paraguay',
     homeAbbr: 'USA',
@@ -103,27 +103,27 @@ const PREDICTIONS = [
 for (const pred of PREDICTIONS) {
   // Delete existing model odds for this fixture
   await conn.execute(
-    'DELETE FROM wc2026_odds_snapshots WHERE fixture_id = ? AND book_id = ?',
-    [pred.fixtureId, MODEL_BOOK_ID]
+    'DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?',
+    [pred.matchId, MODEL_BOOK_ID]
   );
 
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
   for (const m of pred.markets) {
     await conn.execute(
       `INSERT INTO wc2026_odds_snapshots
-         (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+         (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      [pred.fixtureId, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, now]
+      [pred.matchId, MODEL_BOOK_ID, m.market, m.selection, m.line, m.americanOdds, m.impliedProb, now]
     );
   }
 
   // Mark fixture as SCHEDULED (status only — no xg/spread columns in this table)
   await conn.execute(
-    `UPDATE wc2026_fixtures SET status = 'SCHEDULED' WHERE fixture_id = ?`,
-    [pred.fixtureId]
+    `UPDATE wc2026_fixtures SET status = 'SCHEDULED' WHERE match_id = ?`,
+    [pred.matchId]
   );
 
-  console.log(`[OUTPUT] Seeded ${pred.markets.length} odds rows for ${pred.fixtureId} (${pred.homeAbbr} vs ${pred.awayAbbr})`);
+  console.log(`[OUTPUT] Seeded ${pred.markets.length} odds rows for ${pred.matchId} (${pred.homeAbbr} vs ${pred.awayAbbr})`);
 }
 
 // ─── Step 4: Seed lineups ─────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ console.log('\n[STEP] Seeding starting lineups...');
 
 const LINEUPS = [
   {
-    fixtureId: 'wc26-g-003',
+    matchId: 'wc26-g-003',
     homePlayers: [
       // Bosnia and Herzegovina starting XI + GK
       { name: 'Ibrahim Šehić',       position: 'GK', jerseyNumber: 1,  isStarter: true },
@@ -164,7 +164,7 @@ const LINEUPS = [
     ],
   },
   {
-    fixtureId: 'wc26-g-005',
+    matchId: 'wc26-g-005',
     homePlayers: [
       // United States starting XI + GK
       { name: 'Matt Turner',         position: 'GK',  jerseyNumber: 1,  isStarter: true },
@@ -200,51 +200,51 @@ const LINEUPS = [
 
 for (const lineup of LINEUPS) {
   // Delete existing lineups for this fixture
-  await conn.execute('DELETE FROM wc2026_lineups WHERE fixture_id = ?', [lineup.fixtureId]);
+  await conn.execute('DELETE FROM wc2026_lineups WHERE match_id = ?', [lineup.matchId]);
 
   for (const p of lineup.homePlayers) {
     await conn.execute(
-      `INSERT INTO wc2026_lineups (fixture_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
+      `INSERT INTO wc2026_lineups (match_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
        VALUES (?, 'home', ?, ?, ?, ?, ?, 1)`,
-      [lineup.fixtureId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
+      [lineup.matchId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
     );
   }
   for (const p of lineup.awayPlayers) {
     await conn.execute(
-      `INSERT INTO wc2026_lineups (fixture_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
+      `INSERT INTO wc2026_lineups (match_id, team_id, player_name, position, jersey_number, is_starter, scraped_at, is_confirmed)
        VALUES (?, 'away', ?, ?, ?, ?, ?, 1)`,
-      [lineup.fixtureId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
+      [lineup.matchId, p.name, p.position, p.jerseyNumber, p.isStarter ? 1 : 0, new Date().toISOString().slice(0,19).replace('T',' ')]
     );
   }
 
   const homeCount = lineup.homePlayers.length;
   const awayCount = lineup.awayPlayers.length;
-  console.log(`[OUTPUT] Seeded ${homeCount} home + ${awayCount} away players for ${lineup.fixtureId}`);
+  console.log(`[OUTPUT] Seeded ${homeCount} home + ${awayCount} away players for ${lineup.matchId}`);
 }
 
 // ─── Final verification ───────────────────────────────────────────────────────
 console.log('\n[STEP] Final verification...');
   const [fixtures] = await conn.execute(
-  "SELECT fixture_id, home_team_id, away_team_id, status FROM wc2026_fixtures WHERE fixture_id IN ('wc26-g-003', 'wc26-g-005') ORDER BY fixture_id"
+  "SELECT match_id, home_team_id, away_team_id, status FROM wc2026_fixtures WHERE match_id IN ('wc26-g-003', 'wc26-g-005') ORDER BY match_id"
 );
 for (const f of fixtures) {
-  console.log(`[VERIFY] ${f.fixture_id}: home=${f.home_team_id} away=${f.away_team_id} status=${f.status}`);
+  console.log(`[VERIFY] ${f.match_id}: home=${f.home_team_id} away=${f.away_team_id} status=${f.status}`);
 }
 
 const [odds] = await conn.execute(
-  "SELECT fixture_id, market, selection, american_odds FROM wc2026_odds_snapshots WHERE fixture_id IN ('wc26-g-003', 'wc26-g-005') AND book_id = 0 ORDER BY fixture_id, market, selection"
+  "SELECT match_id, market, selection, american_odds FROM wc2026_odds_snapshots WHERE match_id IN ('wc26-g-003', 'wc26-g-005') AND book_id = 0 ORDER BY match_id, market, selection"
 );
 console.log(`[VERIFY] Odds rows seeded: ${odds.length} (expected 10)`);
 for (const o of odds) {
-  console.log(`  ${o.fixture_id} ${o.market} ${o.selection}: ${o.american_odds > 0 ? '+' : ''}${o.american_odds}`);
+  console.log(`  ${o.match_id} ${o.market} ${o.selection}: ${o.american_odds > 0 ? '+' : ''}${o.american_odds}`);
 }
 
 const [lineupRows] = await conn.execute(
-  "SELECT fixture_id, team_id, COUNT(*) as cnt FROM wc2026_lineups WHERE fixture_id IN ('wc26-g-003', 'wc26-g-005') GROUP BY fixture_id, team_id ORDER BY fixture_id, team_id"
+  "SELECT match_id, team_id, COUNT(*) as cnt FROM wc2026_lineups WHERE match_id IN ('wc26-g-003', 'wc26-g-005') GROUP BY match_id, team_id ORDER BY match_id, team_id"
 );
 console.log(`[VERIFY] Lineup rows: ${lineupRows.length} groups`);
 for (const r of lineupRows) {
-  console.log(`  ${r.fixture_id} ${r.team_id}: ${r.cnt} players`);
+  console.log(`  ${r.match_id} ${r.team_id}: ${r.cnt} players`);
 }
 
 await conn.end();

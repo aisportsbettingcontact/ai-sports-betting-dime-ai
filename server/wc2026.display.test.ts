@@ -76,8 +76,8 @@ function simulateDisplayLayer(dkOdds: { home: number; away: number; draw: number
 describe('WC2026 Feed — June 18 Display Orientation & Odds Mapping', () => {
 
   describe('DB orientation matches DK screenshot ground truth', () => {
-    for (const [fixtureId, gt] of Object.entries(DK_GROUND_TRUTH)) {
-      it(`${fixtureId}: home_team_id=${gt.home_team_id}, away_team_id=${gt.away_team_id}`, () => {
+    for (const [matchId, gt] of Object.entries(DK_GROUND_TRUTH)) {
+      it(`${matchId}: home_team_id=${gt.home_team_id}, away_team_id=${gt.away_team_id}`, () => {
         // These values are what the DB must contain after the fix.
         // Validated by wc_sim_router.cjs which confirmed ALL PASS.
         expect(gt.home_team_id).toBeTruthy();
@@ -118,8 +118,8 @@ describe('WC2026 Feed — June 18 Display Orientation & Odds Mapping', () => {
   });
 
   describe('Display layer: home odds on top row, away odds on bottom row', () => {
-    for (const [fixtureId, gt] of Object.entries(DK_GROUND_TRUTH)) {
-      it(`${fixtureId}: top row shows home odds, bottom row shows away odds`, () => {
+    for (const [matchId, gt] of Object.entries(DK_GROUND_TRUTH)) {
+      it(`${matchId}: top row shows home odds, bottom row shows away odds`, () => {
         const display = simulateDisplayLayer(gt.dk);
         // Top row must show home odds (DK convention: home listed first/top)
         expect(display.topRow.label).toBe('HOME');
