@@ -4,7 +4,7 @@
  * Full backtest for June 19, 2026 WC matches.
  * 
  * Pipeline:
- *   1. Pull June 19 fixtures + final scores from wc2026_matches
+ *   1. Pull June 19 matches + final scores from wc2026_matches
  *   2. Pull pre-game model projections from wc2026_model_projections
  *   3. Pull pre-game book odds from wc2026_odds_snapshots (earliest snapshot)
  *   4. Ingest 4 matches into wc_bt_matches (2026)
@@ -67,15 +67,15 @@ function roi(wins, losses, pushes, vig = 110) {
   return (profit / wagered * 100).toFixed(2);
 }
 
-// ─── Step 1: Pull June 19 fixtures ───────────────────────────────────────────
+// ─── Step 1: Pull June 19 matches ───────────────────────────────────────────
 console.log(`\n${TAG} ================================================================`);
 console.log(`${TAG} WC JUNE 19, 2026 BACKTEST ENGINE`);
 console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
 console.log(`${TAG} ================================================================\n`);
 
-console.log(`${TAG} [STEP 1] Pulling June 19 fixtures from wc2026_matches...`);
-const [fixtures] = await conn.query(`
-  SELECT f.fixture_id, ht.name as home_team, at.name as away_team,
+console.log(`${TAG} [STEP 1] Pulling June 19 matches from wc2026_matches...`);
+const [matches] = await conn.query(`
+  SELECT f.match_id, ht.name as home_team, at.name as away_team,
          f.home_score, f.away_score, f.status, f.kickoff_utc,
          f.group_letter, f.matchday
   FROM wc2026_matches f
@@ -85,95 +85,95 @@ const [fixtures] = await conn.query(`
   ORDER BY f.kickoff_utc
 `);
 
-console.log(`${TAG} [INPUT] June 19 fixtures: ${fixtures.length}`);
-for (const f of fixtures) {
+console.log(`${TAG} [INPUT] June 19 matches: ${matches.length}`);
+for (const f of matches) {
   const result = f.home_score > f.away_score ? 'H' : f.home_score < f.away_score ? 'A' : 'D';
-  console.log(`${TAG} [INPUT]   ${f.fixture_id}: ${f.home_team} ${f.home_score}-${f.away_score} ${f.away_team} | result=${result} | status=${f.status}`);
+  console.log(`${TAG} [INPUT]   ${f.match_id}: ${f.home_team} ${f.home_score}-${f.away_score} ${f.away_team} | result=${result} | status=${f.status}`);
 }
 
-const june19Ids = fixtures.map(f => f.fixture_id);
-if (fixtures.length !== 4) {
-  console.error(`${TAG} [VERIFY] FAIL — Expected 4 June 19 fixtures, got ${fixtures.length}`);
+const june19Ids = matches.map(f => f.match_id);
+if (matches.length !== 4) {
+  console.error(`${TAG} [VERIFY] FAIL — Expected 4 June 19 matches, got ${matches.length}`);
   process.exit(1);
 }
-const allFT = fixtures.every(f => f.status === 'FT');
-console.log(`${TAG} [VERIFY] ${allFT ? 'PASS' : 'FAIL'} — All June 19 fixtures FT: ${allFT}`);
+const allFT = matches.every(f => f.status === 'FT');
+console.log(`${TAG} [VERIFY] ${allFT ? 'PASS' : 'FAIL'} — All June 19 matches FT: ${allFT}`);
 
 // ─── Step 2: Pull pre-game model projections ──────────────────────────────────
 console.log(`\n${TAG} [STEP 2] Pulling pre-game model projections from wc2026_model_projections...`);
 const [projections] = await conn.query(`
   SELECT p.*
   FROM wc2026_model_projections p
-  WHERE p.fixture_id IN (${june19Ids.map(() => '?').join(',')})
-  ORDER BY p.fixture_id
+  WHERE p.match_id IN (${june19Ids.map(() => '?').join(',')})
+  ORDER BY p.match_id
 `, june19Ids);
 
 console.log(`${TAG} [INPUT] Model projections found: ${projections.length}/4`);
 if (projections.length !== 4) {
-  console.error(`${TAG} [VERIFY] FAIL — Missing model projections for some June 19 fixtures`);
+  console.error(`${TAG} [VERIFY] FAIL — Missing model projections for some June 19 matches`);
   process.exit(1);
 }
 
 const projMap = {};
 for (const p of projections) {
-  projMap[p.fixture_id] = p;
-  console.log(`${TAG} [STATE]   ${p.fixture_id}: homeWin=${(p.home_win_prob*100).toFixed(1)}% draw=${(p.draw_prob*100).toFixed(1)}% awayWin=${(p.away_win_prob*100).toFixed(1)}% total=${p.proj_total?.toFixed(2)} lean=${p.model_lean}`);
+  projMap[p.match_id] = p;
+  console.log(`${TAG} [STATE]   ${p.match_id}: homeWin=${(p.home_win_prob*100).toFixed(1)}% draw=${(p.draw_prob*100).toFixed(1)}% awayWin=${(p.away_win_prob*100).toFixed(1)}% total=${p.proj_total?.toFixed(2)} lean=${p.model_lean}`);
 }
 
 // ─── Step 3: Pull pre-game book odds ─────────────────────────────────────────
-// wc2026_odds_snapshots: id, fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
+// wc2026_odds_snapshots: id, match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing
 console.log(`\n${TAG} [STEP 3] Pulling pre-game book odds from wc2026_odds_snapshots...`);
 const [oddsRaw] = await conn.query(`
-  SELECT fixture_id, market, selection, american_odds, line, snapshot_ts
+  SELECT match_id, market, selection, american_odds, line, snapshot_ts
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (${june19Ids.map(() => '?').join(',')})
-  ORDER BY fixture_id, snapshot_ts ASC
+  WHERE match_id IN (${june19Ids.map(() => '?').join(',')})
+  ORDER BY match_id, snapshot_ts ASC
 `, june19Ids);
 
 console.log(`${TAG} [INPUT] Book odds snapshot rows found: ${oddsRaw.length}`);
-// Build per-fixture odds map from individual market rows (one row per selection)
+// Build per-match odds map from individual market rows (one row per selection)
 const oddsMap = {};
 for (const o of oddsRaw) {
-  if (!oddsMap[o.fixture_id]) oddsMap[o.fixture_id] = { fixture_id: o.fixture_id };
+  if (!oddsMap[o.match_id]) oddsMap[o.match_id] = { match_id: o.match_id };
   const sel = String(o.selection || '').toLowerCase();
   const mkt = String(o.market || '').toLowerCase();
   if (mkt.includes('moneyline') || mkt.includes('1x2') || mkt === 'h2h' || mkt.includes('match result')) {
-    if (sel.includes('home') || sel === '1') oddsMap[o.fixture_id].home_ml = o.american_odds;
-    else if (sel.includes('draw') || sel === 'x') oddsMap[o.fixture_id].draw_ml = o.american_odds;
-    else if (sel.includes('away') || sel === '2') oddsMap[o.fixture_id].away_ml = o.american_odds;
+    if (sel.includes('home') || sel === '1') oddsMap[o.match_id].home_ml = o.american_odds;
+    else if (sel.includes('draw') || sel === 'x') oddsMap[o.match_id].draw_ml = o.american_odds;
+    else if (sel.includes('away') || sel === '2') oddsMap[o.match_id].away_ml = o.american_odds;
   } else if (mkt.includes('total') || mkt.includes('over/under')) {
-    if (!oddsMap[o.fixture_id].total_line && o.line) oddsMap[o.fixture_id].total_line = o.line;
+    if (!oddsMap[o.match_id].total_line && o.line) oddsMap[o.match_id].total_line = o.line;
   }
 }
 // Fall back to model odds for any missing book odds
 for (const fid of june19Ids) {
   const proj = projMap[fid];
-  if (!oddsMap[fid]) oddsMap[fid] = { fixture_id: fid };
+  if (!oddsMap[fid]) oddsMap[fid] = { match_id: fid };
   const o = oddsMap[fid];
   if (!o.home_ml && proj?.model_home_ml) o.home_ml = proj.model_home_ml;
   if (!o.draw_ml && proj?.model_draw_ml) o.draw_ml = proj.model_draw_ml;
   if (!o.away_ml && proj?.model_away_ml) o.away_ml = proj.model_away_ml;
   if (!o.total_line && proj?.model_total) o.total_line = proj.model_total;
-  const src = oddsRaw.some(r => r.fixture_id === fid) ? 'DK' : 'MODEL_FALLBACK';
+  const src = oddsRaw.some(r => r.match_id === fid) ? 'DK' : 'MODEL_FALLBACK';
   console.log(`${TAG} [STATE]   ${fid} [${src}]: homeML=${o.home_ml} drawML=${o.draw_ml} awayML=${o.away_ml} total=${o.total_line}`);
 }
 
 // ─── Step 4: Ingest June 19 matches into wc_bt_matches ───────────────────────
 console.log(`\n${TAG} [STEP 4] Ingesting June 19 matches into wc_bt_matches...`);
 let ingested = 0;
-for (const f of fixtures) {
+for (const f of matches) {
   const result = f.home_score > f.away_score ? 'H' : f.home_score < f.away_score ? 'A' : 'D';
   const totalGoals = f.home_score + f.away_score;
   
   // Check if already exists
-  const [existing] = await conn.query(`SELECT id FROM wc_bt_matches WHERE id = ?`, [f.fixture_id]);
+  const [existing] = await conn.query(`SELECT id FROM wc_bt_matches WHERE id = ?`, [f.match_id]);
   if (existing.length > 0) {
     // Update scores
     await conn.query(`
       UPDATE wc_bt_matches SET home_score=?, away_score=?, updated_at=NOW()
       WHERE id = ?
-    `, [f.home_score, f.away_score, f.fixture_id]);
-    console.log(`${TAG} [STATE]   ${f.fixture_id}: UPDATED (already existed)`);
+    `, [f.home_score, f.away_score, f.match_id]);
+    console.log(`${TAG} [STATE]   ${f.match_id}: UPDATED (already existed)`);
   } else {
     await conn.query(`
       INSERT INTO wc_bt_matches 
@@ -181,9 +181,9 @@ for (const f of fixtures) {
          home_team, away_team, home_score, away_score, source, espn_event_id)
       VALUES (?, 2026, 'Group Stage', ?, ?, '2026-06-19', ?,
               ?, ?, ?, ?, 'espn', NULL)
-    `, [f.fixture_id, f.group_letter || 'X', f.matchday || 1, f.kickoff_utc,
+    `, [f.match_id, f.group_letter || 'X', f.matchday || 1, f.kickoff_utc,
         f.home_team, f.away_team, f.home_score, f.away_score]);
-    console.log(`${TAG} [STATE]   ${f.fixture_id}: INSERTED — ${f.home_team} ${f.home_score}-${f.away_score} ${f.away_team} result=${result}`);
+    console.log(`${TAG} [STATE]   ${f.match_id}: INSERTED — ${f.home_team} ${f.home_score}-${f.away_score} ${f.away_team} result=${result}`);
     ingested++;
   }
 }
@@ -195,9 +195,9 @@ console.log(`\n${TAG} [STEP 5] Grading all markets for June 19 matches...`);
 
 const backtestResults = [];
 
-for (const f of fixtures) {
-  const proj = projMap[f.fixture_id];
-  const odds = oddsMap[f.fixture_id];
+for (const f of matches) {
+  const proj = projMap[f.match_id];
+  const odds = oddsMap[f.match_id];
   
   const actualResult = f.home_score > f.away_score ? 'H' : f.home_score < f.away_score ? 'A' : 'D';
   const actualTotal = f.home_score + f.away_score;
@@ -248,7 +248,7 @@ for (const f of fixtures) {
     else errorType = 'WRONG_WINNER';
   }
   
-  console.log(`\n${TAG} [STATE] ─── ${f.fixture_id}: ${f.home_team} vs ${f.away_team} ───`);
+  console.log(`\n${TAG} [STATE] ─── ${f.match_id}: ${f.home_team} vs ${f.away_team} ───`);
   console.log(`${TAG} [STATE]   Actual: ${f.home_score}-${f.away_score} (${actualResult}) | Total: ${actualTotal} | Over${totalLine}: ${actualOver ? 'YES' : 'NO'}`);
   console.log(`${TAG} [STATE]   Model: lean=${modelLean} homeWin=${(mHomeWin*100).toFixed(1)}% draw=${(mDraw*100).toFixed(1)}% awayWin=${(mAwayWin*100).toFixed(1)}%`);
   console.log(`${TAG} [STATE]   Model total: ${proj?.model_total?.toFixed(2)} | over2.5prob=${(modelOverProb*100).toFixed(1)}%`);
@@ -259,7 +259,7 @@ for (const f of fixtures) {
   if (errorType) console.log(`${TAG} [STATE]   Error type: ${errorType}`);
   
   backtestResults.push({
-    fixture_id: f.fixture_id,
+    match_id: f.match_id,
     home_team: f.home_team,
     away_team: f.away_team,
     home_score: f.home_score,
@@ -288,7 +288,7 @@ for (const f of fixtures) {
   });
   
   // Upsert into wc_bt_projections
-  const [existingProj] = await conn.query(`SELECT id FROM wc_bt_projections WHERE match_id = ? AND tournament_year = 2026`, [f.fixture_id]);
+  const [existingProj] = await conn.query(`SELECT id FROM wc_bt_projections WHERE match_id = ? AND tournament_year = 2026`, [f.match_id]);
   if (existingProj.length > 0) {
     await conn.query(`
       UPDATE wc_bt_projections SET
@@ -296,7 +296,7 @@ for (const f of fixtures) {
         model_correct_result=?, model_correct_total=?,
         model_error_type=?
       WHERE match_id = ? AND tournament_year = 2026
-    `, [actualResult, actualTotal, modelCorrectResult ? 1 : 0, modelCorrectTotal ? 1 : 0, errorType, f.fixture_id]);
+    `, [actualResult, actualTotal, modelCorrectResult ? 1 : 0, modelCorrectTotal ? 1 : 0, errorType, f.match_id]);
     console.log(`${TAG} [STATE]   wc_bt_projections: UPDATED`);
   } else {
     await conn.query(`
@@ -318,7 +318,7 @@ for (const f of fixtures) {
               ?, ?,
               ?, ?, ?)
     `, [
-      f.fixture_id, proj?.model_version ?? 'v7.0',
+      f.match_id, proj?.model_version ?? 'v7.0',
       mHomeWin, mDraw, mAwayWin,
       proj?.home_lambda ?? null, proj?.away_lambda ?? null, proj?.proj_total ?? null,
       modelLean, modelLean === 'H' ? mHomeWin : modelLean === 'D' ? mDraw : mAwayWin,

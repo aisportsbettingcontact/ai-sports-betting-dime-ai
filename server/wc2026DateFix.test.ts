@@ -57,7 +57,7 @@ describe("WC2026 Date Scheduling Fix", () => {
     // [FIX] effective date should be June 18 (match_date in DB)
     expect(effective).toBe("2026-06-18");
     
-    // [BUG] raw UTC date would be June 19 — causing the fixture to be missed
+    // [BUG] raw UTC date would be June 19 — causing the match to be missed
     expect(raw).toBe("2026-06-19");
     
     // Confirm the fix resolves the mismatch
@@ -75,7 +75,7 @@ describe("WC2026 Date Scheduling Fix", () => {
     // [FIX] effective date should be June 11 (match_date in DB)
     expect(effective).toBe("2026-06-11");
     
-    // [BUG] raw UTC date would be June 12 — causing the fixture to be missed
+    // [BUG] raw UTC date would be June 12 — causing the match to be missed
     expect(raw).toBe("2026-06-12");
   });
 
@@ -99,7 +99,7 @@ describe("WC2026 Date Scheduling Fix", () => {
     expect(effective).toBe("2026-06-13");
   });
 
-  // ── Verify all 4 June 18 fixtures are accessible at various times ───────────
+  // ── Verify all 4 June 18 matches are accessible at various times ───────────
   const june18MatchDates = ["2026-06-18", "2026-06-18", "2026-06-18", "2026-06-18"];
   const testTimes = [
     { label: "16:00 UTC (noon EDT)", ts: Date.UTC(2026, 5, 18, 16, 0, 0) },
@@ -110,9 +110,9 @@ describe("WC2026 Date Scheduling Fix", () => {
   ];
 
   for (const { label, ts } of testTimes) {
-    it(`June 18 fixtures accessible at ${label}`, () => {
+    it(`June 18 matches accessible at ${label}`, () => {
       const effective = getEffectiveFeedDate(ts);
-      // All 4 June 18 fixtures should be accessible at any of these times
+      // All 4 June 18 matches should be accessible at any of these times
       expect(effective).toBe("2026-06-18");
     });
   }

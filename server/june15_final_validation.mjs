@@ -3,11 +3,11 @@
  * ===========================
  * Final comprehensive validation for all June 15 games:
  * - 10 MLB games: pitcher resolution, model odds, DK odds, published status
- * - 4 WC fixtures: orientation, DK odds, model odds, completeness
+ * - 4 WC matchs: orientation, DK odds, model odds, completeness
  *
  * Pass criteria:
  * - All 10 MLB games: publishedToFeed=1, publishedModel=1, model+DK ML present
- * - All 4 WC fixtures: correct home/away orientation, DK+model odds present
+ * - All 4 WC matchs: correct home/away orientation, DK+model odds present
  * - No missing odds, no team mismatches
  */
 import mysql from 'mysql2/promise';
@@ -85,13 +85,13 @@ console.log(`[OUTPUT] MLB: ${mlb.length - mlbIssues}/${mlb.length} PASS, ${mlbIs
 // ─── WC VALIDATION ─────────────────────────────────────────────────────────
 console.log('');
 console.log('─'.repeat(70));
-console.log('WORLD CUP FIXTURES (4 total)');
+console.log('WORLD CUP MATCHS (4 total)');
 console.log('─'.repeat(70));
 
 const june15Ids = ['wc26-g-015', 'wc26-g-013', 'wc26-g-016', 'wc26-g-014'];
 const ph = june15Ids.map(() => '?').join(',');
 
-const [fixtures] = await c.execute(`
+const [matchs] = await c.execute(`
   SELECT f.match_id, f.kickoff_utc, f.group_letter, f.matchday,
          f.home_team_id, f.away_team_id,
          ht.fifa_code as homeCode, ht.name as homeName,
@@ -150,7 +150,7 @@ for (const o of modelOdds) {
 }
 
 let wcIssues = 0;
-for (const f of fixtures) {
+for (const f of matchs) {
   const official = OFFICIAL[f.match_id];
   const dk = dkByFix[f.match_id] || {};
   const model = modelByFix[f.match_id] || {};
@@ -203,7 +203,7 @@ console.log('='.repeat(70));
 console.log('FINAL SUMMARY');
 console.log('='.repeat(70));
 console.log(`MLB: ${mlb.length}/10 games found, ${mlb.length - mlbIssues}/10 PASS`);
-console.log(`WC:  ${fixtures.length}/4 fixtures found, ${fixtures.length - wcIssues}/4 PASS`);
+console.log(`WC:  ${matchs.length}/4 matchs found, ${matchs.length - wcIssues}/4 PASS`);
 console.log(`Total issues: ${totalIssues}`);
 console.log('');
 if (totalIssues === 0) {

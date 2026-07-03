@@ -82,9 +82,9 @@ let totalErrors = 0;
 
 console.log('\n[AUDIT] ===== WC2026 JUNE 24 GROUND TRUTH AUDIT v2 =====\n');
 
-// ── Step 1: Fixture orientation + kickoff ──────────────────────────────────
-const [fixtures] = await conn.query(`
-  SELECT f.fixture_id, f.kickoff_utc,
+// ── Step 1: Match orientation + kickoff ──────────────────────────────────
+const [matches] = await conn.query(`
+  SELECT f.match_id, f.kickoff_utc,
     ht.fifa_code AS home_code, at.fifa_code AS away_code
   FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -93,38 +93,38 @@ const [fixtures] = await conn.query(`
   ORDER BY f.kickoff_utc
 `);
 
-console.log('[AUDIT] === STEP 1: FIXTURE ORIENTATION + KICKOFF ===');
-for (const f of fixtures) {
-  const gt = GT[f.fixture_id];
-  if (!gt) { console.log(`[AUDIT] ❓ Unknown: ${f.fixture_id}`); continue; }
+console.log('[AUDIT] === STEP 1: MATCH ORIENTATION + KICKOFF ===');
+for (const f of matches) {
+  const gt = GT[f.match_id];
+  if (!gt) { console.log(`[AUDIT] ❓ Unknown: ${f.match_id}`); continue; }
   const awayOk = f.away_code === gt.away;
   const homeOk = f.home_code === gt.home;
   // Convert kickoff_utc to EDT (UTC-4)
   const kickoffUTC = f.kickoff_utc ? new Date(f.kickoff_utc) : null;
   const kickoffEDT = kickoffUTC ? `${String((kickoffUTC.getUTCHours() - 4 + 24) % 24).padStart(2,'0')}:${String(kickoffUTC.getUTCMinutes()).padStart(2,'0')}` : 'NULL';
   const timeOk = kickoffEDT === gt.kickoffEDT;
-  if (!awayOk) { console.log(`  ❌ ${f.fixture_id} AWAY: DB=${f.away_code} GT=${gt.away}`); totalErrors++; }
-  if (!homeOk) { console.log(`  ❌ ${f.fixture_id} HOME: DB=${f.home_code} GT=${gt.home}`); totalErrors++; }
-  if (!timeOk) { console.log(`  ❌ ${f.fixture_id} KICKOFF: DB=${kickoffEDT}EDT GT=${gt.kickoffEDT}EDT`); totalErrors++; }
+  if (!awayOk) { console.log(`  ❌ ${f.match_id} AWAY: DB=${f.away_code} GT=${gt.away}`); totalErrors++; }
+  if (!homeOk) { console.log(`  ❌ ${f.match_id} HOME: DB=${f.home_code} GT=${gt.home}`); totalErrors++; }
+  if (!timeOk) { console.log(`  ❌ ${f.match_id} KICKOFF: DB=${kickoffEDT}EDT GT=${gt.kickoffEDT}EDT`); totalErrors++; }
   if (awayOk && homeOk && timeOk) {
-    console.log(`  ✅ ${f.fixture_id}: ${f.away_code}@${f.home_code} ${kickoffEDT}EDT`);
+    console.log(`  ✅ ${f.match_id}: ${f.away_code}@${f.home_code} ${kickoffEDT}EDT`);
   }
 }
 
 // ── Step 2: Book odds accuracy ─────────────────────────────────────────────
 console.log('\n[AUDIT] === STEP 2: BOOK ODDS ACCURACY (book_id=68) ===');
-const fixtureIds = Object.keys(GT);
+const matchIds = Object.keys(GT);
 const [bookOdds] = await conn.query(`
-  SELECT fixture_id, market, selection, line, american_odds
+  SELECT match_id, market, selection, line, american_odds
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (?) AND book_id = 68
-  ORDER BY fixture_id, market, selection
-`, [fixtureIds]);
+  WHERE match_id IN (?) AND book_id = 68
+  ORDER BY match_id, market, selection
+`, [matchIds]);
 
 const bookMap = {};
 for (const r of bookOdds) {
-  if (!bookMap[r.fixture_id]) bookMap[r.fixture_id] = {};
-  bookMap[r.fixture_id][`${r.market}|${r.selection}`] = {
+  if (!bookMap[r.match_id]) bookMap[r.match_id] = {};
+  bookMap[r.match_id][`${r.market}|${r.selection}`] = {
     line: parseFloat(r.line), odds: r.american_odds
   };
 }
@@ -145,13 +145,13 @@ for (const [fid, gt] of Object.entries(GT)) {
     ['BTTS|yes', b['BTTS|yes'], null],
     ['BTTS|no', b['BTTS|no'], null],
   ];
-  let fixtureErrors = 0;
+  let matchErrors = 0;
   const lines = [];
   for (const [key, expOdds, expLine] of markets) {
     const row = rows[key];
     if (!row) {
       lines.push(`  ❌ MISSING ${fid} ${key}`);
-      fixtureErrors++; totalErrors++;
+      matchErrors++; totalErrors++;
       continue;
     }
     const oddsOk = row.odds === expOdds;
@@ -161,12 +161,12 @@ for (const [fid, gt] of Object.entries(GT)) {
       if (!oddsOk) msg.push(`odds DB=${row.odds} GT=${expOdds}`);
       if (!lineOk) msg.push(`line DB=${row.line} GT=${expLine}`);
       lines.push(`  ❌ ${fid} ${key}: ${msg.join(' | ')}`);
-      fixtureErrors++; totalErrors++;
+      matchErrors++; totalErrors++;
     } else {
       lines.push(`  ✅ ${fid} ${key}: odds=${row.odds}${expLine!==null?' line='+row.line:''}`);
     }
   }
-  if (fixtureErrors > 0) {
+  if (matchErrors > 0) {
     lines.forEach(l => console.log(l));
   } else {
     console.log(`  ✅ ${fid} (${gt.away}@${gt.home}): ALL 11 BOOK ODDS CORRECT`);
@@ -176,16 +176,16 @@ for (const [fid, gt] of Object.entries(GT)) {
 // ── Step 3: Model odds independence ───────────────────────────────────────
 console.log('\n[AUDIT] === STEP 3: MODEL ODDS INDEPENDENCE (book_id=0) ===');
 const [modelOdds] = await conn.query(`
-  SELECT fixture_id, market, selection, line, american_odds
+  SELECT match_id, market, selection, line, american_odds
   FROM wc2026_odds_snapshots
-  WHERE fixture_id IN (?) AND book_id = 0
-  ORDER BY fixture_id, market, selection
-`, [fixtureIds]);
+  WHERE match_id IN (?) AND book_id = 0
+  ORDER BY match_id, market, selection
+`, [matchIds]);
 
 const modelMap = {};
 for (const r of modelOdds) {
-  if (!modelMap[r.fixture_id]) modelMap[r.fixture_id] = {};
-  modelMap[r.fixture_id][`${r.market}|${r.selection}`] = {
+  if (!modelMap[r.match_id]) modelMap[r.match_id] = {};
+  modelMap[r.match_id][`${r.market}|${r.selection}`] = {
     line: parseFloat(r.line), odds: r.american_odds
   };
 }
@@ -211,15 +211,15 @@ for (const [fid, gt] of Object.entries(GT)) {
 // ── Step 4: Projected scores ───────────────────────────────────────────────
 console.log('\n[AUDIT] === STEP 4: PROJECTED SCORES ===');
 const [projRows] = await conn.query(`
-  SELECT p.fixture_id, p.proj_home_score, p.proj_away_score, p.proj_total
+  SELECT p.match_id, p.proj_home_score, p.proj_away_score, p.proj_total
   FROM wc2026_model_projections p
-  WHERE p.fixture_id IN (?)
-  ORDER BY p.fixture_id, p.modeled_at DESC
-`, [fixtureIds]);
+  WHERE p.match_id IN (?)
+  ORDER BY p.match_id, p.modeled_at DESC
+`, [matchIds]);
 
 const latestProj = {};
 for (const r of projRows) {
-  if (!latestProj[r.fixture_id]) latestProj[r.fixture_id] = r;
+  if (!latestProj[r.match_id]) latestProj[r.match_id] = r;
 }
 
 for (const [fid] of Object.entries(GT)) {

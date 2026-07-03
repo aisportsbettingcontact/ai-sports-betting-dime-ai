@@ -2466,7 +2466,7 @@ export type InsertWaitlist = typeof waitlist.$inferInsert;
 // WC2026 — ESPN WORLD CUP 2026 MATCH DATA
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// TERMINOLOGY RULE: All WC fixtures are referred to as "matches" — never "games".
+// TERMINOLOGY RULE: All WC matches use "matches" terminology — never "games".
 //
 // TABLE MAP (8 tables — ALL ESPN-sourced, ALL prefixed wc2026_espn_):
 //   wc2026_espn_matches         — master match record (game strip + competition info)
@@ -2987,7 +2987,7 @@ export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInse
 
 
 // ─── wc2026MatchOdds ─────────────────────────────────────────────────────────
-// Primary odds table for WC2026 knockout stage fixtures.
+// Primary odds table for WC2026 knockout stage matches.
 // book_* = BetExplorer/bet365 market odds (American format, integers).
 // model_* = owner-entered model projections (editable via Publish Projections).
 export const wc2026MatchOdds = mysqlTable("wc2026MatchOdds", {

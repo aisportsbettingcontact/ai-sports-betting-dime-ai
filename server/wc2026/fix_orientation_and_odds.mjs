@@ -2,11 +2,11 @@
  * 500x FORENSIC FIX — Away/Home Orientation + Column Name Corrections
  *
  * Fixes:
- * 1. Swap wc26-r16-089 and wc26-r16-090 fixture team assignments
+ * 1. Swap wc26-r16-089 and wc26-r16-090 match team assignments
  *    - 089 should be Morocco (Away) @ Canada (Home)
  *    - 090 should be France (Away) @ Paraguay (Home)
  *
- * 2. Re-seed all 12 fixtures in wc2026_frozen_book_odds using CORRECT column names:
+ * 2. Re-seed all 12 matchs in wc2026_frozen_book_odds using CORRECT column names:
  *    - book_spread_line (single value, away team's spread)
  *    - book_home_spread_odds
  *    - book_away_spread_odds
@@ -34,12 +34,12 @@ const INFO = (msg) => log('INFO   ', msg);
 const STATE = (msg) => log('STATE  ', msg);
 const STEP = (msg) => log('STEP   ', msg);
 
-// COMPLETE GROUND TRUTH — all 12 fixtures
+// COMPLETE GROUND TRUTH — all 12 matchs
 // awaySpread = the away team's spread line (e.g. +1.5 means away gets +1.5)
 // homeSpread = -awaySpread (always opposite)
 // dc_1x = Away or Draw (Away team covers DC)
 // dc_x2 = Home or Draw (Home team covers DC)
-const FIXTURES = [
+const MATCHS = [
   {
     id: 'wc26-r32-080', away: 'COD', home: 'ENG',
     awayML: 1100, homeML: -345, draw: 400,
@@ -172,7 +172,7 @@ async function main() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // STEP 2: Swap R16-089 and R16-090 fixture team assignments
+  // STEP 2: Swap R16-089 and R16-090 match team assignments
   // ─────────────────────────────────────────────────────────────────────────
   STEP('Swapping R16-089 (→ MAR@CAN) and R16-090 (→ FRA@PAR) team assignments...');
 
@@ -202,7 +202,7 @@ async function main() {
   let seedPass = 0;
   let seedFail = 0;
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHS) {
     const homeSpread = -(f.awaySpread); // home spread is always opposite of away spread
 
     const [res] = await conn.execute(
@@ -270,14 +270,14 @@ async function main() {
      JOIN wc2026_matches f ON f.match_id = o.match_id
      JOIN wc2026_teams ta ON ta.team_id = f.away_team_id
      JOIN wc2026_teams th ON th.team_id = f.home_team_id
-     WHERE o.match_id IN (${FIXTURES.map(() => '?').join(',')})
+     WHERE o.match_id IN (${MATCHS.map(() => '?').join(',')})
      ORDER BY o.match_id`,
-    FIXTURES.map(f => f.id)
+    MATCHS.map(f => f.id)
   );
 
   let verErrors = 0;
   for (const row of verRows) {
-    const gt = FIXTURES.find(f => f.id === row.match_id);
+    const gt = MATCHS.find(f => f.id === row.match_id);
     const fid = row.match_id;
 
     INFO(`[${fid}] Away=${row.away_code} Home=${row.home_code}`);
@@ -324,7 +324,7 @@ async function main() {
   INFO('');
   INFO('═'.repeat(80));
   INFO('500x ORIENTATION FIX — FINAL SUMMARY');
-  INFO(`Fixture team swaps: 2 (R16-089, R16-090)`);
+  INFO(`Match team swaps: 2 (R16-089, R16-090)`);
   INFO(`Seed updates: ${seedPass} PASS / ${seedFail} FAIL`);
   INFO(`Verification errors: ${verErrors}`);
   if (verErrors === 0 && seedFail === 0) {

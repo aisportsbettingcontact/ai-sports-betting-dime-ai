@@ -1,7 +1,7 @@
 /**
  * fix_seeded_odds.mjs
  * ══════════════════════════════════════════════════════════════════════════════
- * Corrects all 52 data errors in wc2026_frozen_book_odds for 12 fixtures.
+ * Corrects all 52 data errors in wc2026_frozen_book_odds for 12 matchs.
  *
  * Bugs fixed:
  * 1. book_home_spread_odds / book_away_spread_odds were seeded with ML values
@@ -118,7 +118,7 @@ const CORRECTIONS = [
   ['wc26-r16-091', -111, 240,  320, 1.5,   230, -303, 2.5, -108, -108, -133,  133, -110, -455,  -333, -215, 170  ],
 ];
 
-console.log('[INPUT] Applying corrections to 12 fixtures...\n');
+console.log('[INPUT] Applying corrections to 12 matchs...\n');
 
 let totalUpdated = 0;
 for (const row of CORRECTIONS) {

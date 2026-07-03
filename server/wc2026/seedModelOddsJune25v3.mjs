@@ -2,7 +2,7 @@
  * seedModelOddsJune25v3.mjs
  * ─────────────────────────────────────────────────────────────────────────────
  * WC2026 Dixon-Coles Model v5.0 — xG-Anchored Multi-Factor Engine
- * June 25, 2026 — 6 Fixtures
+ * June 25, 2026 — 6 Matches
  *
  * ARCHITECTURE CHANGE FROM v4.x:
  *   - ELIMINATED: Book ML dependency for lambda computation
@@ -502,11 +502,11 @@ function applyDrawFloor(homeWin, draw, awayWin) {
   return { h: Math.max(0, newH), d: DRAW_FLOOR, a: Math.max(0, newA) };
 }
 
-// ─── June 25 Fixtures ─────────────────────────────────────────────────────────
+// ─── June 25 Matches ─────────────────────────────────────────────────────────
 // DB orientation: home_team_id / away_team_id (verified in seedDkOddsJune25.mjs)
 // DK spread lines: used ONLY for spread cover probability computation
 // NO book ML dependency for lambda computation
-const FIXTURES = [
+const MATCHES = [
   {
     matchId: 'wc26-g-057',
     homeCode: 'CUW', awayCode: 'CIV',
@@ -556,13 +556,13 @@ const FIXTURES = [
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 console.log(`\n${TAG} ${'═'.repeat(60)}`);
 console.log(`${TAG} WC2026 MODEL v5.0 — xG-ANCHORED MULTI-FACTOR ENGINE`);
-console.log(`${TAG} Date: June 25, 2026 | Fixtures: ${FIXTURES.length} | Sims: ${N_SIMULATIONS.toLocaleString()}`);
+console.log(`${TAG} Date: June 25, 2026 | Matches: ${MATCHES.length} | Sims: ${N_SIMULATIONS.toLocaleString()}`);
 console.log(`${TAG} Engine: ZERO book dependency | xG-anchored lambdas`);
 console.log(`${TAG} ${'═'.repeat(60)}\n`);
 
 let totalOddsRows = 0, totalProjRows = 0, totalErrors = 0;
 
-for (const f of FIXTURES) {
+for (const f of MATCHES) {
   console.log(`${TAG} ─── ${f.matchId} | ${f.homeName}(home) vs ${f.awayName}(away) ───`);
 
   // Step 1: Clear existing model rows
@@ -775,7 +775,7 @@ console.log(`${TAG} FINAL VERIFICATION`);
 console.log(`${TAG} ${'═'.repeat(60)}`);
 
 let allPass = true;
-for (const f of FIXTURES) {
+for (const f of MATCHES) {
   const [oddsRows] = await conn.query(
     `SELECT market, selection, american_odds, implied_prob FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ? ORDER BY market, selection`,
     [f.matchId, MODEL_BOOK_ID]

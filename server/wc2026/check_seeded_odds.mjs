@@ -2,7 +2,7 @@ import mysql from 'mysql2/promise';
 
 const conn = await mysql.createConnection({ uri: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
-// Check all 12 seeded fixtures
+// Check all 12 seeded matchs
 const [rows] = await conn.query(`
   SELECT match_id, 
     book_home_ml, book_draw_ml, book_away_ml,

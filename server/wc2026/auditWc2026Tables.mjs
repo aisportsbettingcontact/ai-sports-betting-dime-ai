@@ -145,8 +145,8 @@ async function main() {
     }
 
     // Distinct match_id count (if column exists)
-    const hasFixtureId = cols.some(c => c.Field === 'match_id');
-    if (hasFixtureId && rowCount > 0) {
+    const hasMatchId = cols.some(c => c.Field === 'match_id');
+    if (hasMatchId && rowCount > 0) {
       const [[distFix]] = await conn.execute(
         `SELECT COUNT(DISTINCT match_id) as cnt FROM \`${tableName}\``
       );

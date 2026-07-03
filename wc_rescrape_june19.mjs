@@ -1,8 +1,8 @@
 /**
  * wc_rescrape_june19.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Re-scrapes DraftKings odds for June 19 WC2026 fixtures from AN API,
- * resolves correct home/away orientation by matching against DB fixture records,
+ * Re-scrapes DraftKings odds for June 19 WC2026 matchs from AN API,
+ * resolves correct home/away orientation by matching against DB match records,
  * recomputes Double Chance odds from no-vig fair probs,
  * and updates wc2026_odds_snapshots with current live lines.
  *
@@ -69,9 +69,9 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
   const games = anData.games ?? [];
   console.log(`[STEP] AN returned ${games.length} games for June 19`);
 
-  // ── 2. Load DB fixtures for June 19 ─────────────────────────────────────────
+  // ── 2. Load DB matchs for June 19 ─────────────────────────────────────────
   const conn = await createConnection(process.env.DATABASE_URL);
-  const [dbFixtures] = await conn.query(`
+  const [dbMatchs] = await conn.query(`
     SELECT f.match_id, f.home_team_id, f.away_team_id,
       ht.name AS home_name, at.name AS away_name,
       ht.fifa_code AS home_code, at.fifa_code AS away_code
@@ -82,20 +82,20 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     ORDER BY f.kickoff_utc
   `);
 
-  console.log(`[STEP] DB has ${dbFixtures.length} fixtures for June 19`);
-  for (const f of dbFixtures) {
+  console.log(`[STEP] DB has ${dbMatchs.length} matchs for June 19`);
+  for (const f of dbMatchs) {
     console.log(`  [STATE] ${f.match_id}: home=${f.home_name}(${f.home_code}) away=${f.away_name}(${f.away_code})`);
   }
 
   // ── 3. Build name→matchId lookup (bidirectional) ──────────────────────────
   // Key: normalized team name → { matchId, role: 'home'|'away' }
   const teamLookup = new Map();
-  for (const f of dbFixtures) {
+  for (const f of dbMatchs) {
     const normalize = (s) => s.toLowerCase().replace(/[^a-z]/g, '');
-    teamLookup.set(normalize(f.home_name), { matchId: f.match_id, role: 'home', fixture: f });
-    teamLookup.set(normalize(f.away_name), { matchId: f.match_id, role: 'away', fixture: f });
-    teamLookup.set(normalize(f.home_code), { matchId: f.match_id, role: 'home', fixture: f });
-    teamLookup.set(normalize(f.away_code), { matchId: f.match_id, role: 'away', fixture: f });
+    teamLookup.set(normalize(f.home_name), { matchId: f.match_id, role: 'home', match: f });
+    teamLookup.set(normalize(f.away_name), { matchId: f.match_id, role: 'away', match: f });
+    teamLookup.set(normalize(f.home_code), { matchId: f.match_id, role: 'home', match: f });
+    teamLookup.set(normalize(f.away_code), { matchId: f.match_id, role: 'away', match: f });
     // Common AN aliases
     const homeAliases = {
       'usa': 'usa', 'unitedstates': 'usa', 'unitedstatesofamerica': 'usa',
@@ -117,7 +117,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
 
     console.log(`\n[STEP] Game ${game.id}: teams[0]="${t0?.full_name}" teams[1]="${t1?.full_name}"`);
 
-    // Resolve both teams to DB fixture
+    // Resolve both teams to DB match
     const res0 = teamLookup.get(name0);
     const res1 = teamLookup.get(name1);
 
@@ -149,11 +149,11 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
       };
       matchId = manualMap[name0] ?? manualMap[name1] ?? null;
       if (!matchId) {
-        console.log(`[VERIFY] FAIL — Cannot resolve fixture for game ${game.id}: "${t0?.full_name}" vs "${t1?.full_name}"`);
+        console.log(`[VERIFY] FAIL — Cannot resolve match for game ${game.id}: "${t0?.full_name}" vs "${t1?.full_name}"`);
         continue;
       }
-      // Check DB orientation for this fixture
-      const dbF = dbFixtures.find(f => f.match_id === matchId);
+      // Check DB orientation for this match
+      const dbF = dbMatchs.find(f => f.match_id === matchId);
       const dbHomeName = dbF?.home_name?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
       const dbAwayName = dbF?.away_name?.toLowerCase().replace(/[^a-z]/g, '') ?? '';
       if (name0 === dbHomeName || name0.includes(dbHomeName) || dbHomeName.includes(name0)) {
@@ -188,7 +188,7 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
     const mlDbAway = anHomeIsTeams1 ? mlAnAway : mlAnHome;
     const mlDbDraw = mlAnDraw;
 
-    const dbF = dbFixtures.find(f => f.match_id === matchId);
+    const dbF = dbMatchs.find(f => f.match_id === matchId);
     console.log(`[STATE] ${matchId} (${dbF?.home_name} vs ${dbF?.away_name}):`);
     console.log(`  AN raw: home=${mlAnHome?.odds ?? 'N/A'} draw=${mlAnDraw?.odds ?? 'N/A'} away=${mlAnAway?.odds ?? 'N/A'}`);
     console.log(`  DB mapped: home(${dbF?.home_name})=${mlDbHome?.odds ?? 'N/A'} draw=${mlDbDraw?.odds ?? 'N/A'} away(${dbF?.away_name})=${mlDbAway?.odds ?? 'N/A'}`);
@@ -241,9 +241,9 @@ function threeWayFairProbs(homeOdds, drawOdds, awayOdds) {
 
   // ── 5. Update DB: delete old DK rows for June 19, insert fresh ───────────────
   const matchIds = [...new Set(updates.map(u => u.matchId))];
-  console.log(`[STEP] Updating DB for fixtures: ${matchIds.join(', ')}`);
+  console.log(`[STEP] Updating DB for matchs: ${matchIds.join(', ')}`);
 
-  // Delete existing DK rows for these fixtures
+  // Delete existing DK rows for these matchs
   for (const fid of matchIds) {
     const [delResult] = await conn.query(
       `DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = 68`,

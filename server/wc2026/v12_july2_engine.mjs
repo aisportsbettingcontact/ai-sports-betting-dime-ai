@@ -7,7 +7,7 @@
  * ║  Full persistent logging → /home/ubuntu/wc2026modeling.txt                    ║
  * ╚══════════════════════════════════════════════════════════════════════════════════╝
  *
- * JULY 2 FIXTURES (from DB — zero hardcoding of team orientation):
+ * JULY 2 MATCHS (from DB — zero hardcoding of team orientation):
  *   wc26-r32-083  Spain (H) vs Austria (A)       — 3:00 PM ET / 19:00 UTC
  *   wc26-r32-084  Portugal (H) vs Croatia (A)    — 7:00 PM ET / 23:00 UTC
  *   wc26-r32-085  Switzerland (H) vs Algeria (A) — 11:00 PM ET / 03:00 UTC+1
@@ -33,7 +33,7 @@
  *   BUG #1: homeSpreadCov condition was h-a>spread → FIX: h-a > 1.5
  *   BUG #2: awaySpreadCov was wrong → FIX: 1 - homeSpreadCov
  *   BUG #3: ET/Pens was flat 50/50 → FIX: strength-weighted with 70% regression
- *   BUG #4: GROUND_TRUTH fixture mapping → FIX: pulled directly from DB
+ *   BUG #4: GROUND_TRUTH match mapping → FIX: pulled directly from DB
  */
 
 import mysql from 'mysql2/promise';
@@ -364,8 +364,8 @@ async function main() {
      WHERE f.espn_event_id IN (${ph})`, koIds);
   L.pass('DB', `A5 wc2026_frozen_book_odds: ${bookRows.length} rows`);
 
-  // ── PULL JULY 2 FIXTURES FROM DB (ZERO HARDCODING) ─────────────────────────
-  L.step('DB', 'Pulling July 2 fixture book odds from wc2026_frozen_book_odds...');
+  // ── PULL JULY 2 MATCHS FROM DB (ZERO HARDCODING) ─────────────────────────
+  L.step('DB', 'Pulling July 2 match book odds from wc2026_frozen_book_odds...');
   const [jul2BookRows] = await conn.execute(
     `SELECT fbo.match_id, fbo.book_home_ml, fbo.book_away_ml, fbo.book_draw_ml,
             fbo.book_spread_line, fbo.book_home_spread_odds, fbo.book_away_spread_odds,
@@ -384,13 +384,13 @@ async function main() {
      WHERE f.match_date = '2026-07-02'
      ORDER BY fbo.match_id`
   );
-  L.pass('DB', `July 2 fixtures from DB: ${jul2BookRows.length} rows`);
+  L.pass('DB', `July 2 matchs from DB: ${jul2BookRows.length} rows`);
   for (const r of jul2BookRows) {
     L.input('DB', `  ${r.match_id}: ${r.awayAbbrev} @ ${r.homeAbbrev} | ML H=${r.book_home_ml} D=${r.book_draw_ml} A=${r.book_away_ml} | Spread=${r.book_spread_line} (H${r.book_home_spread_odds}/A${r.book_away_spread_odds}) | Total=${r.book_total_line} (O${r.book_over_odds}/U${r.book_under_odds})`);
   }
 
   if (jul2BookRows.length === 0) {
-    L.fail('DB', 'FATAL: No July 2 fixtures found in wc2026_frozen_book_odds. Cannot proceed.');
+    L.fail('DB', 'FATAL: No July 2 matchs found in wc2026_frozen_book_odds. Cannot proceed.');
     L.fail('DB', 'July 2 book odds must be seeded before running this engine.');
     await conn.end();
     process.exit(1);

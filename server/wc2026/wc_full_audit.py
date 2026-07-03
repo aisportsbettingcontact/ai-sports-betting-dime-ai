@@ -10,7 +10,7 @@ Validates:
 5. All moneyline values are whole integers
 6. Total line is present and valid (2.5 or similar)
 7. Over/under odds are present for both book and model
-8. Fixture dates match expected dates
+8. Match dates match expected dates
 9. Kickoff times are valid UTC datetimes
 """
 
@@ -132,7 +132,7 @@ for date in DATES:
     total_matches += count
     
     count_status = "✓" if count == expected else "✗"
-    print(f"  [FIXTURES] count={count} expected={expected} {count_status}")
+    print(f"  [MATCHES] count={count} expected={expected} {count_status}")
     
     if count != expected:
         errors.append(f"[COUNT_MISMATCH] {date}: got {count}, expected {expected}")
@@ -208,12 +208,12 @@ print(f"\n{'='*80}")
 print("AUDIT SUMMARY")
 print(f"{'='*80}")
 print(f"Total matches audited: {total_matches}")
-print(f"Fixtures with DK odds:  {total_with_dk_odds}/{total_matches}")
-print(f"Fixtures with Model odds: {total_with_model_odds}/{total_matches}")
-print(f"Fixtures with DK 1X2 (home+draw+away): {total_with_full_1x2_book}/{total_matches}")
-print(f"Fixtures with Model 1X2: {total_with_full_1x2_model}/{total_matches}")
-print(f"Fixtures with DK Total (over+under): {total_with_totals_book}/{total_matches}")
-print(f"Fixtures with Model Total: {total_with_totals_model}/{total_matches}")
+print(f"Matchs with DK odds:  {total_with_dk_odds}/{total_matches}")
+print(f"Matchs with Model odds: {total_with_model_odds}/{total_matches}")
+print(f"Matchs with DK 1X2 (home+draw+away): {total_with_full_1x2_book}/{total_matches}")
+print(f"Matchs with Model 1X2: {total_with_full_1x2_model}/{total_matches}")
+print(f"Matchs with DK Total (over+under): {total_with_totals_book}/{total_matches}")
+print(f"Matchs with Model Total: {total_with_totals_model}/{total_matches}")
 
 if errors:
     print(f"\n[ERRORS] {len(errors)} errors found:")

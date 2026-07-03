@@ -270,7 +270,7 @@ async function audit2026(espnEvents) {
   console.log(`${'═'.repeat(70)}`);
 
   const [dbRows] = await db.execute(`
-    SELECT f.fixture_id, f.kickoff_utc, f.home_score, f.away_score, f.status,
+    SELECT f.match_id, f.kickoff_utc, f.home_score, f.away_score, f.status,
            ht.name AS home_name, at.name AS away_name
     FROM wc2026_matches f
     JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -279,7 +279,7 @@ async function audit2026(espnEvents) {
     ORDER BY f.kickoff_utc ASC
   `);
 
-  console.log(`[STATE] DB completed 2026 fixtures: ${dbRows.length}`);
+  console.log(`[STATE] DB completed 2026 matches: ${dbRows.length}`);
 
   let matched = 0;
   const discrepancies = [];
@@ -300,8 +300,8 @@ async function audit2026(espnEvents) {
     });
 
     if (!espnMatch) {
-      unmatched.push({ fixture_id: row.fixture_id, home: row.home_name, away: row.away_name, kickoff: row.kickoff_utc });
-      console.log(`  [UNMATCHED] ${row.fixture_id} | ${row.home_name} vs ${row.away_name} | ${row.kickoff_utc}`);
+      unmatched.push({ match_id: row.match_id, home: row.home_name, away: row.away_name, kickoff: row.kickoff_utc });
+      console.log(`  [UNMATCHED] ${row.match_id} | ${row.home_name} vs ${row.away_name} | ${row.kickoff_utc}`);
       continue;
     }
 
@@ -317,10 +317,10 @@ async function audit2026(espnEvents) {
 
     if (pass) {
       matched++;
-      console.log(`  [✅] ${row.fixture_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name}`);
+      console.log(`  [✅] ${row.match_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name}`);
     } else {
       discrepancies.push({
-        fixture_id: row.fixture_id,
+        match_id: row.match_id,
         home: row.home_name,
         away: row.away_name,
         dbHomeScore: row.home_score,
@@ -329,7 +329,7 @@ async function audit2026(espnEvents) {
         espnAwayScore: expectedAwayScore,
         espnEventId: s.eventId,
       });
-      console.error(`  [❌] ${row.fixture_id} | ${row.home_name} vs ${row.away_name} | DB: ${row.home_score}-${row.away_score} | ESPN: ${expectedHomeScore}-${expectedAwayScore}`);
+      console.error(`  [❌] ${row.match_id} | ${row.home_name} vs ${row.away_name} | DB: ${row.home_score}-${row.away_score} | ESPN: ${expectedHomeScore}-${expectedAwayScore}`);
     }
   }
 
@@ -377,7 +377,7 @@ console.log(`  TOTAL: ${totalMatched}/${totalDb} ✅ | ${totalDiscrepancies.leng
 if (totalDiscrepancies.length > 0) {
   console.log('\n[DISCREPANCIES TO FIX]:');
   for (const d of totalDiscrepancies) {
-    const id = d.fixture_id || d.id;
+    const id = d.match_id || d.id;
     console.log(`  ❌ ${id} | ${d.home} vs ${d.away} | DB: ${d.dbHomeScore}-${d.dbAwayScore} | ESPN: ${d.espnHomeScore}-${d.espnAwayScore}`);
   }
 }
@@ -385,7 +385,7 @@ if (totalDiscrepancies.length > 0) {
 if (totalUnmatched.length > 0) {
   console.log('\n[UNMATCHED (no ESPN event found)]:');
   for (const u of totalUnmatched) {
-    const id = u.fixture_id || u.id;
+    const id = u.match_id || u.id;
     console.log(`  ⚠️  ${id} | ${u.home} vs ${u.away}`);
   }
 }

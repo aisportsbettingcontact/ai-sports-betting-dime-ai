@@ -16,7 +16,7 @@ function log(tag, msg) {
   console.log(line); logLines.push(line);
 }
 
-const FIXTURE_IDS = [
+const MATCH_IDS = [
   'wc26-r32-073','wc26-r32-074','wc26-r32-075',
   'wc26-r32-076','wc26-r32-077','wc26-r32-078','wc26-r32-079'
 ];
@@ -29,9 +29,9 @@ async function main() {
   });
   log('INIT', 'Connected.');
 
-  // ── Step 1: Get fixture metadata + ESPN IDs ──────────────────────────────
-  log('STEP1', 'Fetching fixture metadata...');
-  const [fixtures] = await conn.query(`
+  // ── Step 1: Get match metadata + ESPN IDs ──────────────────────────────
+  log('STEP1', 'Fetching match metadata...');
+  const [matchs] = await conn.query(`
     SELECT f.match_id, f.espn_event_id, f.match_date, f.kickoff_utc,
            f.home_score, f.away_score, f.status, f.attendance,
            th.name as home_name, th.fifa_code as home_code,
@@ -41,17 +41,17 @@ async function main() {
     JOIN wc2026_teams ta ON f.away_team_id = ta.team_id
     WHERE f.match_id IN (?)
     ORDER BY f.match_date, f.kickoff_utc
-  `, [FIXTURE_IDS]);
+  `, [MATCH_IDS]);
 
-  log('STATE', `Found ${fixtures.length} fixtures`);
-  fixtures.forEach(f => {
+  log('STATE', `Found ${matchs.length} matchs`);
+  matchs.forEach(f => {
     log('INPUT', `${f.match_id} | ${f.home_name} ${f.home_score ?? '?'}-${f.away_score ?? '?'} ${f.away_name} | ESPN: ${f.espn_event_id} | Status: ${f.status}`);
   });
 
-  const espnIds = fixtures.map(f => f.espn_event_id).filter(Boolean);
+  const espnIds = matchs.map(f => f.espn_event_id).filter(Boolean);
   const fidToEspn = {};
   const espnToFid = {};
-  fixtures.forEach(f => {
+  matchs.forEach(f => {
     if (f.espn_event_id) {
       fidToEspn[f.match_id] = f.espn_event_id;
       espnToFid[f.espn_event_id] = f.match_id;
@@ -65,7 +65,7 @@ async function main() {
     SELECT * FROM wc2026_model_projections
     WHERE match_id IN (?)
     ORDER BY match_id, model_version
-  `, [FIXTURE_IDS]);
+  `, [MATCH_IDS]);
   log('STATE', `Model projection rows: ${modelRows.length}`);
 
   // ── Step 3: Pull frozen book odds ────────────────────────────────────────
@@ -73,7 +73,7 @@ async function main() {
   const [bookRows] = await conn.query(`
     SELECT * FROM wc2026_frozen_book_odds
     WHERE match_id IN (?)
-  `, [FIXTURE_IDS]);
+  `, [MATCH_IDS]);
   log('STATE', `Book odds rows: ${bookRows.length}`);
 
   // ── Step 4: Pull ESPN match data ─────────────────────────────────────────
@@ -135,11 +135,11 @@ async function main() {
   await conn.end();
   log('INIT', 'DB connection closed.');
 
-  // ── Step 10: Build per-fixture composite data ────────────────────────────
-  log('STEP10', 'Building per-fixture composite data...');
+  // ── Step 10: Build per-match composite data ────────────────────────────
+  log('STEP10', 'Building per-match composite data...');
   const output = {};
 
-  for (const f of fixtures) {
+  for (const f of matchs) {
     const fid = f.match_id;
     const eid = f.espn_event_id;
 
@@ -153,7 +153,7 @@ async function main() {
     const players = espnPlayers.filter(r => r.matchId == eid);
 
     output[fid] = {
-      fixture: f,
+      match: f,
       model,
       book,
       espnMatch,
@@ -164,9 +164,9 @@ async function main() {
       players,
     };
 
-    // Per-fixture summary log
+    // Per-match summary log
     log('OUTPUT', `\n${'─'.repeat(80)}`);
-    log('OUTPUT', `FIXTURE: ${fid} | ${f.home_name} ${f.home_score ?? '?'}-${f.away_score ?? '?'} ${f.away_name}`);
+    log('OUTPUT', `MATCH: ${fid} | ${f.home_name} ${f.home_score ?? '?'}-${f.away_score ?? '?'} ${f.away_name}`);
     log('OUTPUT', `ESPN ID: ${eid} | Date: ${f.match_date} | Kickoff: ${f.kickoff_utc}`);
 
     // Model projections

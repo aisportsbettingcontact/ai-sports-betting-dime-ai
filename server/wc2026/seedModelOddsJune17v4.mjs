@@ -1,7 +1,7 @@
 /**
  * seedModelOddsJune17v4.mjs
  * =========================
- * Seeds MODEL v4.1 recalibrated odds (book_id=0) for 4 WC2026 June 17 fixtures.
+ * Seeds MODEL v4.1 recalibrated odds (book_id=0) for 4 WC2026 June 17 matchs.
  *
  * Model: Dixon-Coles Poisson + Elo + Form | 250,000 Monte Carlo Simulations
  * Version: v4.1 — Neutral Site, Recalibrated on 116-game corpus
@@ -142,7 +142,7 @@ async function seedModelOdds() {
   let totalErrors   = 0;
 
   for (const m of MODEL_DATA) {
-    console.log(`\n[ModelSeed v4.1] [FIXTURE] ${m.matchId}`);
+    console.log(`\n[ModelSeed v4.1] [MATCH] ${m.matchId}`);
     console.log(`[ModelSeed v4.1] [INPUT] home_win=${m.homeWin} draw=${m.draw} away_win=${m.awayWin}`);
     console.log(`[ModelSeed v4.1] [INPUT] homeML=${m.homeML} drawML=${m.drawML} awayML=${m.awayML}`);
     console.log(`[ModelSeed v4.1] [INPUT] total=${m.total} over=${m.overOdds} under=${m.underOdds}`);
@@ -157,7 +157,7 @@ async function seedModelOdds() {
     }
     console.log(`[ModelSeed v4.1] [VERIFY] Probability sum=${pSum.toFixed(6)} ✓ PASS`);
 
-    // Delete existing model rows for this fixture
+    // Delete existing model rows for this match
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
       [m.matchId, MODEL_BOOK_ID]
@@ -205,13 +205,13 @@ async function seedModelOdds() {
   await conn.end();
 
   console.log(`\n[ModelSeed v4.1] [SUMMARY] inserted=${totalInserted} errors=${totalErrors} verifyErrors=${verifyErrors}`);
-  console.log(`[ModelSeed v4.1] [VERIFY] Expected 20 rows (4 fixtures × 5 markets). Got ${totalInserted}.`);
+  console.log(`[ModelSeed v4.1] [VERIFY] Expected 20 rows (4 matchs × 5 markets). Got ${totalInserted}.`);
 
   if (totalErrors > 0 || verifyErrors > 0) {
     console.error('[ModelSeed v4.1] [VERIFY] FAIL — errors detected');
     process.exit(1);
   }
-  console.log('[ModelSeed v4.1] [VERIFY] ALL PASS — 4/4 fixtures, 20/20 rows seeded correctly');
+  console.log('[ModelSeed v4.1] [VERIFY] ALL PASS — 4/4 matchs, 20/20 rows seeded correctly');
 }
 
 seedModelOdds().catch(e => { console.error('[ModelSeed v4.1] [FATAL]', e); process.exit(1); });

@@ -27,7 +27,7 @@ const [projRows] = await conn.query(`
          ht.name as home_team_name, ht.fifa_code as home_code,
          at.name as away_team_name, at.fifa_code as away_code
   FROM wc2026_model_projections p
-  JOIN wc2026_matches f ON f.fixture_id = p.fixture_id
+  JOIN wc2026_matches f ON f.match_id = p.match_id
   JOIN wc2026_teams ht ON ht.team_id = f.home_team_id
   JOIN wc2026_teams at ON at.team_id = f.away_team_id
   WHERE f.match_date = '2026-06-19'
@@ -59,7 +59,7 @@ for (const p of projRows) {
   const awayScore = p.away_score;
   
   if (homeScore === null || awayScore === null) {
-    console.log(`${TAG} [WARN] ${p.fixture_id}: No score — skipping`);
+    console.log(`${TAG} [WARN] ${p.match_id}: No score — skipping`);
     continue;
   }
   
@@ -116,7 +116,7 @@ for (const p of projRows) {
   const hasEdge = modelHomeProb && bookHomeProb && Math.abs(modelHomeProb - bookHomeProb) > 0.03;
   
   const result = {
-    fixtureId: p.fixture_id,
+    matchId: p.match_id,
     homeTeam: p.home_team_name,
     awayTeam: p.away_team_name,
     homeCode: p.home_code,
@@ -196,7 +196,7 @@ console.log(`${TAG} [STATE] June 19 in wc_bt_projections: ${june19BtIds.size}`);
 
 // Upsert June 19 results into wc_bt_projections
 for (const r of june19Results) {
-  const matchId = r.fixtureId; // wc26-g-029 etc
+  const matchId = r.matchId; // wc26-g-029 etc
   const modelTotalLean = r.modelTotalLean;
   const actualTotalResult = r.actualTotalResult === 'PUSH' ? 'PUSH' : r.actualTotalResult;
   const totalCorrect = r.totalCorrect ? 1 : 0;

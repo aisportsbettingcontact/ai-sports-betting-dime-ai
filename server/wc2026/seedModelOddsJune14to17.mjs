@@ -1,7 +1,7 @@
 /**
  * seedModelOddsJune14to17.mjs
  * ===========================
- * Seeds model odds (book_id=0) for all 15 WC2026 fixtures from June 14-17
+ * Seeds model odds (book_id=0) for all 15 WC2026 matchs from June 14-17
  * that are currently missing model projections.
  *
  * Also fixes wc26-g-012 (JPN @ NED) missing DK home moneyline.
@@ -9,7 +9,7 @@
  * Model: Dixon-Coles Poisson, 122-match WC dataset, decay_xi=1.5
  * All prob sums verified = 1.000000
  *
- * Fixtures covered:
+ * Matchs covered:
  *   June 14: wc26-g-010 (CUW@GER), wc26-g-012 (JPN@NED), wc26-g-009 (ECU@CIV), wc26-g-011 (TUN@SWE)
  *   June 15: wc26-g-015 (CPV@ESP), wc26-g-013 (EGY@BEL), wc26-g-016 (URU@KSA), wc26-g-014 (NZL@IRN)
  *   June 16: wc26-g-018 (SEN@FRA), wc26-g-017 (NOR@IRQ), wc26-g-020 (ALG@ARG), wc26-g-019 (JOR@AUT)
@@ -26,7 +26,7 @@ const MODEL_BOOK_ID = 0;
  * All probabilities verified to sum to 1.000000
  * American odds derived from no-vig implied probabilities
  *
- * Format per fixture:
+ * Format per match:
  *   matchId, homeId, awayId
  *   homeWin, draw, awayWin (must sum to 1.0)
  *   overProb, underProb (must sum to 1.0)
@@ -204,7 +204,7 @@ const DK_FIXES = [
 
 async function main() {
   console.log('[ModelSeed] [STEP] Starting June 14-17 WC2026 model odds seed');
-  console.log(`[ModelSeed] [INPUT] ${MODEL_DATA.length} fixtures to seed, book_id=${MODEL_BOOK_ID}`);
+  console.log(`[ModelSeed] [INPUT] ${MODEL_DATA.length} matchs to seed, book_id=${MODEL_BOOK_ID}`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date();
@@ -235,17 +235,17 @@ async function main() {
   // ── Seed model odds ────────────────────────────────────────────────────
   console.log('\n[ModelSeed] [STEP] Seeding model odds...');
   for (const m of MODEL_DATA) {
-    // Verify fixture exists
-    const [fixtures] = await conn.query(
+    // Verify match exists
+    const [matchs] = await conn.query(
       'SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id = ? LIMIT 1',
       [m.matchId]
     );
-    if (!fixtures[0]) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — fixture ${m.matchId} not found in DB`);
+    if (!matchs[0]) {
+      console.error(`[ModelSeed] [VERIFY] FAIL — match ${m.matchId} not found in DB`);
       totalErrors++;
       continue;
     }
-    const f = fixtures[0];
+    const f = matchs[0];
     console.log(`\n[ModelSeed] [STATE] ${m.matchId}: home=${f.home_team_id} away=${f.away_team_id}`);
 
     // Delete existing model odds

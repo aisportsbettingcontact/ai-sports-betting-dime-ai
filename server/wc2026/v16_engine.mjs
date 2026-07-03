@@ -26,10 +26,10 @@
  * ║     wc2026_espn_player_stats:   g, a, xG, xA, sog, shot, tch, duelw        ║
  * ║     wc2026_espn_shot_map:       xg, xgot, isGoal, distanceYards            ║
  * ║     wc2026_matches:            home_score, away_score, status              ║
- * ║     wc2026_frozen_book_odds:    all markets for backtest fixtures            ║
+ * ║     wc2026_frozen_book_odds:    all markets for backtest matchs            ║
  * ║                                                                              ║
  * ║   DB TABLES WRITTEN:                                                         ║
- * ║     wc2026_model_projections: all 3 July 2 fixtures                         ║
+ * ║     wc2026_model_projections: all 3 July 2 matchs                         ║
  * ║     wc2026MatchOdds: model_* + lambda + proj_goals columns                  ║
  * ║                                                                              ║
  * ║   LOG: /home/ubuntu/wc2026modeling.txt (APPEND-ONLY — nothing omitted)      ║
@@ -49,7 +49,7 @@ const START_TS   = Date.now();
 const ENGINE_VERSION = 'v16.0-KO25-RECALIBRATED-10MATCH';
 
 // 10 completed KO R32 matches with verified actual results
-const BACKTEST_FIXTURES = [
+const BACKTEST_MATCHS = [
   { fid:'wc26-r32-073', espnId:'760486', home:'RSA', away:'CAN', homeScore:0, awayScore:1, round:'round-of-32' },
   { fid:'wc26-r32-074', espnId:'760487', home:'BRA', away:'JPN', homeScore:2, awayScore:1, round:'round-of-32' },
   { fid:'wc26-r32-075', espnId:'760489', home:'GER', away:'PAR', homeScore:1, awayScore:1, round:'round-of-32', pens:true, penWinner:'GER' },
@@ -62,8 +62,8 @@ const BACKTEST_FIXTURES = [
   { fid:'wc26-r32-082', espnId:'760494', home:'USA', away:'BIH', homeScore:2, awayScore:0, round:'round-of-32' },
 ];
 
-// July 2 fixtures to project
-const PROJECTION_FIXTURES = [
+// July 2 matchs to project
+const PROJECTION_MATCHS = [
   { fid:'wc26-r32-083', espnId:'760497', home:'ESP', away:'AUT', round:'round-of-32' },
   { fid:'wc26-r32-084', espnId:'760496', home:'POR', away:'CRO', round:'round-of-32' },
   { fid:'wc26-r32-085', espnId:'760498', home:'SUI', away:'ALG', round:'round-of-32' },
@@ -440,8 +440,8 @@ function gradeVariation(v, btResults) {
   let brierSum=0;
   const perMatch = [];
   for (const bt of btResults) {
-    const { fixture, lambdaH, lambdaA, markets } = bt;
-    const { homeScore, awayScore, pens, penWinner } = fixture;
+    const { match, lambdaH, lambdaA, markets } = bt;
+    const { homeScore, awayScore, pens, penWinner } = match;
     // Direction: who won (or draw in regulation)
     const actualDir = homeScore > awayScore ? 'H' : homeScore < awayScore ? 'A' : 'D';
     const modelDir  = markets.pH > markets.pD && markets.pH > markets.pA ? 'H' :
@@ -471,7 +471,7 @@ function gradeVariation(v, btResults) {
     if (bttsOk)   bttsCorrect++;
     brierSum += brier;
     perMatch.push({
-      fid: fixture.fid, home: fixture.home, away: fixture.away,
+      fid: match.fid, home: match.home, away: match.away,
       score: `${homeScore}-${awayScore}`,
       actualDir, modelDir, dirOk,
       actualTotal, totalOver, modelOver, totalOk,
@@ -526,8 +526,8 @@ function xrefValidate(fid, markets) {
 async function main() {
   banner(`${ENGINE_VERSION} — SESSION: ${SESSION_ID}`);
   log('SECTION', 'ENGINE_INIT', `WC2026 v16.0 Engine starting — ${new Date().toISOString()}`);
-  log('INPUT',   'ENGINE_INIT', `Backtest fixtures: ${BACKTEST_FIXTURES.length}`);
-  log('INPUT',   'ENGINE_INIT', `Projection fixtures: ${PROJECTION_FIXTURES.length}`);
+  log('INPUT',   'ENGINE_INIT', `Backtest matchs: ${BACKTEST_MATCHS.length}`);
+  log('INPUT',   'ENGINE_INIT', `Projection matchs: ${PROJECTION_MATCHS.length}`);
   log('INPUT',   'ENGINE_INIT', `Variations: ${VARIATIONS.length}`);
   log('INPUT',   'ENGINE_INIT', `Log file: ${LOG_FILE} (APPEND-ONLY)`);
   log('INPUT',   'ENGINE_INIT', `Report file: ${REPORT_PATH}`);
@@ -546,8 +546,8 @@ async function main() {
   banner('PHASE 2 — ESPN DATA INGESTION');
   const allTeams = [
     ...new Set([
-      ...BACKTEST_FIXTURES.flatMap(f => [f.home, f.away]),
-      ...PROJECTION_FIXTURES.flatMap(f => [f.home, f.away]),
+      ...BACKTEST_MATCHS.flatMap(f => [f.home, f.away]),
+      ...PROJECTION_MATCHS.flatMap(f => [f.home, f.away]),
     ])
   ];
   log('INPUT', 'ESPN_PULL', `Teams to pull: ${allTeams.join(', ')}`);
@@ -623,7 +623,7 @@ async function main() {
 
   // ── PHASE 3: BACKTEST — 25 VARIATIONS × 10 MATCHES ──────────────────────
   banner('PHASE 3 — 10-MATCH BACKTEST: 25 VARIATIONS');
-  log('BACKTEST', 'BT_INIT', `Running ${VARIATIONS.length} variations × ${BACKTEST_FIXTURES.length} matches`);
+  log('BACKTEST', 'BT_INIT', `Running ${VARIATIONS.length} variations × ${BACKTEST_MATCHS.length} matches`);
 
   const btResultsByVariation = {};
 
@@ -631,24 +631,24 @@ async function main() {
     subBanner(`VARIATION ${v.id} — xGW=${v.xGW} xGOTW=${v.xGOTW} smW=${v.smW} psW=${v.psW} xAW=${v.xAW} spW=${v.spW} rho=${v.rho} pace=${v.pace}`);
     const btResults = [];
 
-    for (const fixture of BACKTEST_FIXTURES) {
-      log('BACKTEST', `BT_${v.id}`, `  Processing ${fixture.fid}: ${fixture.home} vs ${fixture.away}`);
+    for (const match of BACKTEST_MATCHS) {
+      log('BACKTEST', `BT_${v.id}`, `  Processing ${match.fid}: ${match.home} vs ${match.away}`);
 
       // Build GS rows for home and away
       let gsH, gsA, lambdaDataH, lambdaDataA;
       try {
-        gsH = buildGSRows(fixture.home, xgAll, tsAll, msAll);
-        gsA = buildGSRows(fixture.away, xgAll, tsAll, msAll);
-        lambdaDataH = computeLambda(fixture.home, gsH, psAll, smAll, v);
-        lambdaDataA = computeLambda(fixture.away, gsA, psAll, smAll, v);
+        gsH = buildGSRows(match.home, xgAll, tsAll, msAll);
+        gsA = buildGSRows(match.away, xgAll, tsAll, msAll);
+        lambdaDataH = computeLambda(match.home, gsH, psAll, smAll, v);
+        lambdaDataA = computeLambda(match.away, gsA, psAll, smAll, v);
       } catch (e) {
-        log('WARN', `BT_${v.id}`, `  ${fixture.fid}: lambda computation failed — ${e.message} — SKIPPING`);
+        log('WARN', `BT_${v.id}`, `  ${match.fid}: lambda computation failed — ${e.message} — SKIPPING`);
         continue;
       }
 
-      const markets = deriveMarkets(fixture.fid, fixture.home, fixture.away, lambdaDataH.lambda, lambdaDataA.lambda, v);
-      btResults.push({ fixture, lambdaH: lambdaDataH.lambda, lambdaA: lambdaDataA.lambda, markets });
-      log('BACKTEST', `BT_${v.id}`, `  ${fixture.fid}: λH=${fmt(lambdaDataH.lambda)} λA=${fmt(lambdaDataA.lambda)} pH=${pct(markets.pH)} pD=${pct(markets.pD)} pA=${pct(markets.pA)} pOver=${pct(markets.pOver)}`);
+      const markets = deriveMarkets(match.fid, match.home, match.away, lambdaDataH.lambda, lambdaDataA.lambda, v);
+      btResults.push({ match, lambdaH: lambdaDataH.lambda, lambdaA: lambdaDataA.lambda, markets });
+      log('BACKTEST', `BT_${v.id}`, `  ${match.fid}: λH=${fmt(lambdaDataH.lambda)} λA=${fmt(lambdaDataA.lambda)} pH=${pct(markets.pH)} pD=${pct(markets.pD)} pA=${pct(markets.pA)} pOver=${pct(markets.pOver)}`);
     }
 
     const grade = gradeVariation(v, btResults);
@@ -698,7 +698,7 @@ async function main() {
   log('RECAL', 'WINNER_V16', `v16 winner ${winner.v.id} on 10 matches: composite=${winner.grade.composite.toFixed(2)}`);
 
   // Identify what changed between 7-match and 10-match
-  const new3 = BACKTEST_FIXTURES.slice(7);
+  const new3 = BACKTEST_MATCHS.slice(7);
   log('RECAL', 'NEW_3_RESULTS', `New 3 matches added to backtest:`);
   for (const f of new3) {
     log('RECAL', 'NEW_3_RESULTS', `  ${f.fid} ${f.home} ${f.homeScore}-${f.awayScore} ${f.away}`);
@@ -714,54 +714,54 @@ async function main() {
   banner('PHASE 6 — JULY 2 PROJECTIONS (ESP/AUT · POR/CRO · SUI/ALG)');
   const projections = {};
 
-  for (const fixture of PROJECTION_FIXTURES) {
-    subBanner(`PROJECTING ${fixture.fid}: ${fixture.home} vs ${fixture.away}`);
-    log('INPUT', 'PROJ_INIT', `${fixture.fid}: ${fixture.home} (home) vs ${fixture.away} (away) | ESPN: ${fixture.espnId}`);
+  for (const match of PROJECTION_MATCHS) {
+    subBanner(`PROJECTING ${match.fid}: ${match.home} vs ${match.away}`);
+    log('INPUT', 'PROJ_INIT', `${match.fid}: ${match.home} (home) vs ${match.away} (away) | ESPN: ${match.espnId}`);
 
     // Build GS rows
-    const gsH = buildGSRows(fixture.home, xgAll, tsAll, msAll);
-    const gsA = buildGSRows(fixture.away, xgAll, tsAll, msAll);
-    log('STATE', 'GS_ROWS', `  ${fixture.home}: ${gsH.length} GS rows | ${fixture.away}: ${gsA.length} GS rows`);
+    const gsH = buildGSRows(match.home, xgAll, tsAll, msAll);
+    const gsA = buildGSRows(match.away, xgAll, tsAll, msAll);
+    log('STATE', 'GS_ROWS', `  ${match.home}: ${gsH.length} GS rows | ${match.away}: ${gsA.length} GS rows`);
 
     // Compute lambdas with winner variation
-    const ldH = computeLambda(fixture.home, gsH, psAll, smAll, winner.v);
-    const ldA = computeLambda(fixture.away, gsA, psAll, smAll, winner.v);
+    const ldH = computeLambda(match.home, gsH, psAll, smAll, winner.v);
+    const ldA = computeLambda(match.away, gsA, psAll, smAll, winner.v);
     const lambdaH = ldH.lambda;
     const lambdaA = ldA.lambda;
 
-    log('LAMBDA', 'FINAL_LAMBDA', `  ${fixture.home}: λ=${fmt(lambdaH)} (xG=${fmt(ldH.avgXG)} xGOT=${fmt(ldH.avgXGOT)} xA=${fmt(ldH.avgXA)} poss=${fmt(ldH.avgPoss,1)}%)`);
-    log('LAMBDA', 'FINAL_LAMBDA', `  ${fixture.away}: λ=${fmt(lambdaA)} (xG=${fmt(ldA.avgXG)} xGOT=${fmt(ldA.avgXGOT)} xA=${fmt(ldA.avgXA)} poss=${fmt(ldA.avgPoss,1)}%)`);
+    log('LAMBDA', 'FINAL_LAMBDA', `  ${match.home}: λ=${fmt(lambdaH)} (xG=${fmt(ldH.avgXG)} xGOT=${fmt(ldH.avgXGOT)} xA=${fmt(ldH.avgXA)} poss=${fmt(ldH.avgPoss,1)}%)`);
+    log('LAMBDA', 'FINAL_LAMBDA', `  ${match.away}: λ=${fmt(lambdaA)} (xG=${fmt(ldA.avgXG)} xGOT=${fmt(ldA.avgXGOT)} xA=${fmt(ldA.avgXA)} poss=${fmt(ldA.avgPoss,1)}%)`);
 
     // Derive markets
-    const markets = deriveMarkets(fixture.fid, fixture.home, fixture.away, lambdaH, lambdaA, winner.v);
+    const markets = deriveMarkets(match.fid, match.home, match.away, lambdaH, lambdaA, winner.v);
 
     // XREF validation
-    subBanner(`XREF VALIDATION: ${fixture.fid}`);
-    const xrefChecks = xrefValidate(fixture.fid, markets);
+    subBanner(`XREF VALIDATION: ${match.fid}`);
+    const xrefChecks = xrefValidate(match.fid, markets);
 
     // Log all markets
-    subBanner(`MARKET OUTPUT: ${fixture.fid} ${fixture.home} vs ${fixture.away}`);
+    subBanner(`MARKET OUTPUT: ${match.fid} ${match.home} vs ${match.away}`);
     log('OUTPUT', 'PROJ_LAMBDA', `  λH=${fmt(lambdaH,4)} · λA=${fmt(lambdaA,4)} · Proj: ${fmt(markets.projH,2)}–${fmt(markets.projA,2)} · Total=${fmt(markets.projTotal,2)}`);
     log('OUTPUT', 'PROJ_PROBS',  `  pH=${pct(markets.pH)} pD=${pct(markets.pD)} pA=${pct(markets.pA)} pOver=${pct(markets.pOver)} pBTTS=${pct(markets.pBTTS)}`);
-    log('MARKET', 'ML',          `  ML: ${fixture.home}=${ml(markets.mlHome)} Draw=${ml(markets.mlDraw)} ${fixture.away}=${ml(markets.mlAway)}`);
-    log('MARKET', 'SPREAD',      `  Spread: ${fixture.home} -1.5 ${ml(markets.mlHomeSpread)} / ${fixture.away} +1.5 ${ml(markets.mlAwaySpread)}`);
+    log('MARKET', 'ML',          `  ML: ${match.home}=${ml(markets.mlHome)} Draw=${ml(markets.mlDraw)} ${match.away}=${ml(markets.mlAway)}`);
+    log('MARKET', 'SPREAD',      `  Spread: ${match.home} -1.5 ${ml(markets.mlHomeSpread)} / ${match.away} +1.5 ${ml(markets.mlAwaySpread)}`);
     log('MARKET', 'TOTAL',       `  Total: O2.5 ${ml(markets.mlOver)} / U2.5 ${ml(markets.mlUnder)}`);
     log('MARKET', 'BTTS',        `  BTTS: Yes ${ml(markets.mlBTTSY)} / No ${ml(markets.mlBTTSN)}`);
-    log('MARKET', 'DBL_CHC',     `  Double Chance: ${fixture.home}/Draw ${ml(markets.mlHD)} / ${fixture.away}/Draw ${ml(markets.mlAD)}`);
-    log('MARKET', 'NO_DRAW',     `  No Draw: ${fixture.home} ${ml(markets.mlNDH)} / ${fixture.away} ${ml(markets.mlNDA)}`);
-    log('MARKET', 'TO_ADV',      `  To Advance: ${fixture.home} ${ml(markets.mlAdvH)} / ${fixture.away} ${ml(markets.mlAdvA)}`);
+    log('MARKET', 'DBL_CHC',     `  Double Chance: ${match.home}/Draw ${ml(markets.mlHD)} / ${match.away}/Draw ${ml(markets.mlAD)}`);
+    log('MARKET', 'NO_DRAW',     `  No Draw: ${match.home} ${ml(markets.mlNDH)} / ${match.away} ${ml(markets.mlNDA)}`);
+    log('MARKET', 'TO_ADV',      `  To Advance: ${match.home} ${ml(markets.mlAdvH)} / ${match.away} ${ml(markets.mlAdvA)}`);
 
-    projections[fixture.fid] = { fixture, lambdaH, lambdaA, ldH, ldA, markets, xrefChecks };
+    projections[match.fid] = { match, lambdaH, lambdaA, ldH, ldA, markets, xrefChecks };
   }
 
   // ── PHASE 7: DB WRITES ───────────────────────────────────────────────────
   banner('PHASE 7 — DATABASE WRITES');
 
   for (const [fid, proj] of Object.entries(projections)) {
-    const { fixture, lambdaH, lambdaA, ldH, ldA, markets } = proj;
+    const { match, lambdaH, lambdaA, ldH, ldA, markets } = proj;
     subBanner(`DB WRITE: ${fid} → wc2026_model_projections`);
 
-    // Check if fixture exists in wc2026_matches
+    // Check if match exists in wc2026_matches
     const [fidRows] = await conn.query(`SELECT match_id FROM wc2026_matches WHERE match_id = ?`, [fid]);
     if (fidRows.length === 0) {
       log('WARN', 'DB_WRITE', `${fid}: NOT found in wc2026_matches — SKIPPING DB write`);
@@ -774,8 +774,8 @@ async function main() {
       match_id: fid,
       model_version: ENGINE_VERSION,
       is_frozen: 0,
-      home_team: fixture.home,
-      away_team: fixture.away,
+      home_team: match.home,
+      away_team: match.away,
       home_lambda: lambdaH,
       away_lambda: lambdaA,
       proj_home_score: markets.projH,
@@ -951,10 +951,10 @@ async function main() {
 
   const projSummary = {};
   for (const [fid, proj] of Object.entries(projections)) {
-    const { fixture, lambdaH, lambdaA, markets } = proj;
+    const { match, lambdaH, lambdaA, markets } = proj;
     projSummary[fid] = {
-      fixture: `${fixture.home} vs ${fixture.away}`,
-      espnId: fixture.espnId,
+      match: `${match.home} vs ${match.away}`,
+      espnId: match.espnId,
       lambdaH: parseFloat(lambdaH.toFixed(4)),
       lambdaA: parseFloat(lambdaA.toFixed(4)),
       projH: parseFloat(markets.projH.toFixed(2)),
@@ -1010,7 +1010,7 @@ async function main() {
     },
     allVariationGrades,
     projections: projSummary,
-    backtestFixtures: BACKTEST_FIXTURES.map(f => ({ fid:f.fid, home:f.home, away:f.away, score:`${f.homeScore}-${f.awayScore}` })),
+    backtestMatchs: BACKTEST_MATCHS.map(f => ({ fid:f.fid, home:f.home, away:f.away, score:`${f.homeScore}-${f.awayScore}` })),
   };
 
   fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));

@@ -87,7 +87,7 @@ export const wc2026Matches = mysqlTable(
     // Examples: "18", "45+2", "90+3", "ETHT" (extra time half time), null when not live
     matchMinute: varchar("match_minute", { length: 16 }),
     // [LIVE 2026-06-30] FIFA official match ID for live scraping correlation
-    // Used by fifaLiveScraper.ts to map FIFA match IDs to DB fixture IDs
+    // Used by fifaLiveScraper.ts to map FIFA match IDs to DB match IDs
     fifaMatchId: varchar("fifa_match_id", { length: 32 }),
   },
   (t) => [
@@ -118,7 +118,7 @@ export const wc2026OddsSnapshots = mysqlTable(
     isClosing: boolean("is_closing").notNull().default(false),
   },
   (t) => [
-    index("idx_snap_fixture").on(t.matchId),
+    index("idx_snap_match").on(t.matchId),
     index("idx_snap_ts").on(t.snapshotTs),
     index("idx_snap_closing").on(t.matchId, t.isClosing),
   ],
@@ -127,7 +127,7 @@ export const wc2026OddsSnapshots = mysqlTable(
 export type InsertWc2026OddsSnapshot = typeof wc2026OddsSnapshots.$inferInsert;
 
 // ─── Lineups ─────────────────────────────────────────────────────────────────
-// Rotowire predicted/confirmed lineups. One row per player per fixture.
+// Rotowire predicted/confirmed lineups. One row per player per match.
 export const wc2026Lineups = mysqlTable(
   "wc2026_lineups",
   {
@@ -147,7 +147,7 @@ export const wc2026Lineups = mysqlTable(
     jerseyNumber: tinyint("jersey_number"),
   },
   (t) => [
-    index("idx_lineup_fixture").on(t.matchId),
+    index("idx_lineup_match").on(t.matchId),
     index("idx_lineup_team").on(t.teamId),
   ],
 );
@@ -155,7 +155,7 @@ export const wc2026Lineups = mysqlTable(
 export type InsertWc2026Lineup = typeof wc2026Lineups.$inferInsert;
 
 // ─── Match Stats ─────────────────────────────────────────────────────────────
-// Post-match box score stats from ESPN API. One row per fixture (upserted after FT).
+// Post-match box score stats from ESPN API. One row per match (upserted after FT).
 export const wc2026MatchStats = mysqlTable(
   "wc2026_match_stats",
   {
@@ -209,14 +209,14 @@ export const wc2026MatchStats = mysqlTable(
     awayBlockedShots: tinyint("away_blocked_shots"),
   },
   (t) => [
-    index("idx_ms_fixture").on(t.matchId),
+    index("idx_ms_match").on(t.matchId),
   ],
 );
 
 export type InsertWc2026MatchStats = typeof wc2026MatchStats.$inferInsert;
 
 // ─── Match Events ─────────────────────────────────────────────────────────────
-// Goal scorers, cards, substitutions from ESPN API. One row per event per fixture.
+// Goal scorers, cards, substitutions from ESPN API. One row per event per match.
 export const wc2026MatchEvents = mysqlTable(
   "wc2026_match_events",
   {
@@ -235,7 +235,7 @@ export const wc2026MatchEvents = mysqlTable(
     isFirstHalf: boolean("is_first_half").notNull().default(true),
   },
   (t) => [
-    index("idx_me_fixture").on(t.matchId),
+    index("idx_me_match").on(t.matchId),
     index("idx_me_type").on(t.eventType),
   ],
 );
@@ -243,7 +243,7 @@ export const wc2026MatchEvents = mysqlTable(
 export type InsertWc2026MatchEvent = typeof wc2026MatchEvents.$inferInsert;
 
 // ─── Model Projections ───────────────────────────────────────────────────────
-// Dixon-Coles Poisson v4.2 model outputs. One row per fixture (upserted by seed scripts).
+// Dixon-Coles Poisson v4.2 model outputs. One row per match (upserted by seed scripts).
 export const wc2026ModelProjections = mysqlTable(
   "wc2026_model_projections",
   {
@@ -316,8 +316,8 @@ export const wc2026ModelProjections = mysqlTable(
     createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (t) => [
-    uniqueIndex("uq_mp_fixture").on(t.matchId),
-    index("idx_mp_fixture").on(t.matchId),
+    uniqueIndex("uq_mp_match").on(t.matchId),
+    index("idx_mp_match").on(t.matchId),
   ],
 );
 
@@ -386,8 +386,8 @@ export const wc2026FrozenBookOdds = mysqlTable(
     bookSource: varchar("book_source", { length: 32 }).notNull().default("bet365"),
   },
   (t) => [
-    uniqueIndex("uq_frozen_book_fixture").on(t.matchId),
-    index("idx_frozen_book_fixture").on(t.matchId),
+    uniqueIndex("uq_frozen_book_match").on(t.matchId),
+    index("idx_frozen_book_match").on(t.matchId),
   ],
 );
 
@@ -617,8 +617,8 @@ export const wc2026MatchOdds = mysqlTable(
     modelBttsNo:  smallint("model_btts_no"),
   },
   (t) => [
-    uniqueIndex("uq_wc2026_match_odds_fixture").on(t.matchId),
-    index("idx_wc2026_match_odds_fixture").on(t.matchId),
+    uniqueIndex("uq_wc2026_match_odds_match").on(t.matchId),
+    index("idx_wc2026_match_odds_match").on(t.matchId),
   ],
 );
 

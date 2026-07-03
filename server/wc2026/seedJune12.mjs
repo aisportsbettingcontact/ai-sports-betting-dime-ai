@@ -1,12 +1,12 @@
 /**
  * seedJune12.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Seeds June 12, 2026 WC fixtures into the DB:
+ * Seeds June 12, 2026 WC matchs into the DB:
  *
  * 1. Fixes wc26-g-003 orientation: home=BIH, away=CAN (was home=CAN, away=BIH)
  * 2. wc26-g-005 is already correct: home=USA, away=PAR
- * 3. Seeds model odds (book_id=0) for both fixtures
- * 4. Seeds starting lineups for both fixtures
+ * 3. Seeds model odds (book_id=0) for both matchs
+ * 4. Seeds starting lineups for both matchs
  *
  * Model: Dixon-Coles Poisson (decay_xi=1.5, home_gamma=0.10, L2=0.01)
  * Run date: 2026-06-12
@@ -61,7 +61,7 @@ console.log('\n[VERIFY] wc26-g-005:', JSON.stringify(row005[0]));
 console.log('[VERIFY] wc26-g-005 home=usa, away=par:', row005[0].home_team_id === 'usa' && row005[0].away_team_id === 'par' ? 'PASS' : 'FAIL');
 
 // ─── Step 3: Seed model odds ──────────────────────────────────────────────────
-console.log('\n[STEP] Seeding model odds (book_id=0) for both fixtures...');
+console.log('\n[STEP] Seeding model odds (book_id=0) for both matchs...');
 
 const PREDICTIONS = [
   {
@@ -101,7 +101,7 @@ const PREDICTIONS = [
 ];
 
 for (const pred of PREDICTIONS) {
-  // Delete existing model odds for this fixture
+  // Delete existing model odds for this match
   await conn.execute(
     'DELETE FROM wc2026_odds_snapshots WHERE match_id = ? AND book_id = ?',
     [pred.matchId, MODEL_BOOK_ID]
@@ -117,7 +117,7 @@ for (const pred of PREDICTIONS) {
     );
   }
 
-  // Mark fixture as SCHEDULED (status only — no xg/spread columns in this table)
+  // Mark match as SCHEDULED (status only — no xg/spread columns in this table)
   await conn.execute(
     `UPDATE wc2026_matches SET status = 'SCHEDULED' WHERE match_id = ?`,
     [pred.matchId]
@@ -199,7 +199,7 @@ const LINEUPS = [
 ];
 
 for (const lineup of LINEUPS) {
-  // Delete existing lineups for this fixture
+  // Delete existing lineups for this match
   await conn.execute('DELETE FROM wc2026_lineups WHERE match_id = ?', [lineup.matchId]);
 
   for (const p of lineup.homePlayers) {
@@ -224,10 +224,10 @@ for (const lineup of LINEUPS) {
 
 // ─── Final verification ───────────────────────────────────────────────────────
 console.log('\n[STEP] Final verification...');
-  const [fixtures] = await conn.execute(
+  const [matchs] = await conn.execute(
   "SELECT match_id, home_team_id, away_team_id, status FROM wc2026_matches WHERE match_id IN ('wc26-g-003', 'wc26-g-005') ORDER BY match_id"
 );
-for (const f of fixtures) {
+for (const f of matchs) {
   console.log(`[VERIFY] ${f.match_id}: home=${f.home_team_id} away=${f.away_team_id} status=${f.status}`);
 }
 
@@ -248,4 +248,4 @@ for (const r of lineupRows) {
 }
 
 await conn.end();
-console.log('\n[OUTPUT] seedJune12.mjs complete — all June 12 fixtures seeded and verified');
+console.log('\n[OUTPUT] seedJune12.mjs complete — all June 12 matchs seeded and verified');

@@ -2,7 +2,7 @@
  * fix_all_34_swaps.mjs
  * ─────────────────────────────────────────────────────────────────────────────
  * Fixes all 34 home/away orientation mismatches identified by the full audit.
- * For each swapped fixture:
+ * For each swapped match:
  *   1. Swap home_team_id ↔ away_team_id in wc2026_matches
  *   2. Swap home ↔ away selection labels in wc2026_odds_snapshots (1X2 market)
  *   3. Swap home ↔ away selection labels in wc2026_odds_snapshots (ASIAN_HANDICAP)
@@ -48,7 +48,7 @@ async function main() {
   console.log(`[INPUT] Fixing ${SWAPS.length} home/away swaps`);
   console.log('');
 
-  let fixturesFixed = 0;
+  let matchsFixed = 0;
   let oddsRowsSwapped = 0;
   let modelOddsSwapped = 0;
   const errors = [];
@@ -62,7 +62,7 @@ async function main() {
       [matchId]
     );
     if (!rows.length) {
-      console.log(`  [WARN] Fixture ${matchId} not found in DB`);
+      console.log(`  [WARN] Match ${matchId} not found in DB`);
       errors.push(`${matchId}: not found`);
       continue;
     }
@@ -74,13 +74,13 @@ async function main() {
     console.log(`  [STATE] Current: home=${oldHome} away=${oldAway}`);
     console.log(`  [STATE] Target:  home=${oldAway} away=${oldHome}`);
 
-    // Step 1: Swap fixture home/away
+    // Step 1: Swap match home/away
     await conn.execute(
       'UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?',
       [oldAway, oldHome, matchId]
     );
-    fixturesFixed++;
-    console.log(`  [STEP] Fixture teams swapped ✓`);
+    matchsFixed++;
+    console.log(`  [STEP] Match teams swapped ✓`);
 
     // Step 2: Swap home/away in odds snapshots (1X2 market)
     // Use a temp value to avoid collision
@@ -212,7 +212,7 @@ async function main() {
   console.log('');
   console.log('═'.repeat(70));
   console.log('FINAL SUMMARY:');
-  console.log(`  Fixtures fixed:      ${fixturesFixed} / ${SWAPS.length}`);
+  console.log(`  Matchs fixed:      ${matchsFixed} / ${SWAPS.length}`);
   console.log(`  Odds rows swapped:   ${oddsRowsSwapped}`);
   console.log(`  Model odds swapped:  ${modelOddsSwapped}`);
   console.log(`  Errors:              ${errors.length}`);

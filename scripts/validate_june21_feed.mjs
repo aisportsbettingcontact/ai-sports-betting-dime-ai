@@ -27,7 +27,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const FIXTURES = ['wc26-g-039', 'wc26-g-037', 'wc26-g-040', 'wc26-g-038'];
+const MATCHES = ['wc26-g-039', 'wc26-g-037', 'wc26-g-040', 'wc26-g-038'];
 
 // Expected DK book odds (ground truth from user-verified DK lines)
 const EXPECTED_DK = {
@@ -38,7 +38,7 @@ const EXPECTED_DK = {
 };
 
 // DB home/away team IDs
-const FIXTURE_TEAMS = {
+const MATCH_TEAMS = {
   'wc26-g-039': { home: 'esp', away: 'ksa', homeName: 'Spain', awayName: 'Saudi Arabia' },
   'wc26-g-037': { home: 'irn', away: 'bel', homeName: 'Iran', awayName: 'Belgium' },
   'wc26-g-040': { home: 'cpv', away: 'uru', homeName: 'Cape Verde', awayName: 'Uruguay' },
@@ -109,21 +109,21 @@ async function main() {
   let failed = 0;
   const failures = [];
 
-  console.log('[INPUT] Validating June 21 WC2026 feed — 4 fixtures × all cells');
+  console.log('[INPUT] Validating June 21 WC2026 feed — 4 matches × all cells');
   console.log('='.repeat(80));
 
-  for (const fixtureId of FIXTURES) {
-    const teams = FIXTURE_TEAMS[fixtureId];
-    const expected = EXPECTED_DK[fixtureId];
-    console.log(`\n[FIXTURE] ${fixtureId} | home=${teams.homeName}(${teams.home}) away=${teams.awayName}(${teams.away})`);
+  for (const matchId of MATCHES) {
+    const teams = MATCH_TEAMS[matchId];
+    const expected = EXPECTED_DK[matchId];
+    console.log(`\n[MATCH] ${matchId} | home=${teams.homeName}(${teams.home}) away=${teams.awayName}(${teams.away})`);
 
     // ── Fetch latest DK rows ──────────────────────────────────────────────────
     const [dkRows] = await conn.execute(
       `SELECT market, selection, american_odds, line 
        FROM wc2026_odds_snapshots 
-       WHERE fixture_id=? AND book_id=68 
+       WHERE match_id=? AND book_id=68 
        ORDER BY snapshot_ts DESC`,
-      [fixtureId]
+      [matchId]
     );
 
     // Build DK odds map (first-seen per market+selection)
@@ -148,9 +148,9 @@ async function main() {
     const [modelRows] = await conn.execute(
       `SELECT market, selection, american_odds, line 
        FROM wc2026_odds_snapshots 
-       WHERE fixture_id=? AND book_id=0 
+       WHERE match_id=? AND book_id=0 
        ORDER BY snapshot_ts DESC`,
-      [fixtureId]
+      [matchId]
     );
 
     const model = {};
@@ -177,7 +177,7 @@ async function main() {
       const status = ok ? '✅' : '❌';
       console.log(`  ${status} [${label}] actual=${actual ?? 'NULL'} expected=${expectedVal}`);
       if (ok) passed++;
-      else { failed++; failures.push(`${fixtureId} ${label}: actual=${actual} expected=${expectedVal}`); }
+      else { failed++; failures.push(`${matchId} ${label}: actual=${actual} expected=${expectedVal}`); }
     }
 
     function checkExists(label, actual) {
@@ -186,7 +186,7 @@ async function main() {
       const status = ok ? '✅' : '❌';
       console.log(`  ${status} [${label}] actual=${actual ?? 'NULL'} (exists check)`);
       if (ok) passed++;
-      else { failed++; failures.push(`${fixtureId} ${label}: NULL/missing`); }
+      else { failed++; failures.push(`${matchId} ${label}: NULL/missing`); }
     }
 
     // ── 1. Book DK 1X2 orientation ────────────────────────────────────────────
@@ -240,8 +240,8 @@ async function main() {
       const aOk = awayDrawDelta < 2;
       console.log(`  ${hOk ? '✅' : '❌'} [Model homeDraw consistency] expected≈${(expectedHomeDrawProb*100).toFixed(2)}% actual=${(actualHomeDrawProb*100).toFixed(2)}% delta=${homeDrawDelta.toFixed(2)}pp`);
       console.log(`  ${aOk ? '✅' : '❌'} [Model awayDraw consistency] expected≈${(expectedAwayDrawProb*100).toFixed(2)}% actual=${(actualAwayDrawProb*100).toFixed(2)}% delta=${awayDrawDelta.toFixed(2)}pp`);
-      if (hOk) passed++; else { failed++; failures.push(`${fixtureId} Model homeDraw consistency: delta=${homeDrawDelta.toFixed(2)}pp`); }
-      if (aOk) passed++; else { failed++; failures.push(`${fixtureId} Model awayDraw consistency: delta=${awayDrawDelta.toFixed(2)}pp`); }
+      if (hOk) passed++; else { failed++; failures.push(`${matchId} Model homeDraw consistency: delta=${homeDrawDelta.toFixed(2)}pp`); }
+      if (aOk) passed++; else { failed++; failures.push(`${matchId} Model awayDraw consistency: delta=${awayDrawDelta.toFixed(2)}pp`); }
     }
 
     // ── 8. Edge detection ─────────────────────────────────────────────────────

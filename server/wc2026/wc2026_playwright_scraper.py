@@ -37,10 +37,10 @@ MARKET_LABELS    = {
 TAB_WAIT_MS      = 4000   # ms to wait after clicking tab for AJAX to load
 PAGE_TIMEOUT_MS  = 30000  # ms page navigation timeout
 
-# ─── WC2026 KO ROUND FIXTURE REGISTRY ─────────────────────────────────────────
+# ─── WC2026 KO ROUND MATCH REGISTRY ─────────────────────────────────────────
 # All 25 Round of 32 + QF + SF + Final matches
 # event_id sourced from betexplorer.com match URLs
-FIXTURES = [
+MATCHES = [
     # Round of 32
     {"match_id": "wc26-r32-065", "event_id": "YMPJoJgN", "home": "MEX", "away": "ECU", "slug": "mexico-ecuador"},
     {"match_id": "wc26-r32-066", "event_id": "nkoQVAgB", "home": "ENG", "away": "COD", "slug": "england-d-r-congo"},
@@ -265,7 +265,7 @@ def parse_market_html(html: str, market: str, match_id: str) -> dict:
     
     return result
 
-# ─── PLAYWRIGHT SCRAPER — SINGLE FIXTURE ─────────────────────────────────────
+# ─── PLAYWRIGHT SCRAPER — SINGLE MATCH ─────────────────────────────────────
 async def scrape_match(page, match: dict) -> dict:
     """
     Scrape all 5 markets for a single match using Playwright.
@@ -278,10 +278,10 @@ async def scrape_match(page, match: dict) -> dict:
     away       = match["away"]
     slug       = match["slug"]
     
-    section(f"FIXTURE: {match_id} | {home} vs {away} | event_id={event_id}")
+    section(f"MATCH: {match_id} | {home} vs {away} | event_id={event_id}")
     
     if event_id == "TBD":
-        log("WARN", "FIXTURE", f"event_id=TBD — skipping {match_id}")
+        log("WARN", "MATCH", f"event_id=TBD — skipping {match_id}")
         return {"match_id": match_id, "status": "SKIPPED_TBD", "odds": {}}
     
     url = f"{BETEXPLORER_BASE}/football/world/world-championship-2026/{slug}/{event_id}/"
@@ -414,13 +414,13 @@ async def main(match_ids: list = None):
     log("INPUT", "CONFIG", f"Excluded: ha (Draw No Bet)")
     
     # Filter matches
-    matches_to_run = FIXTURES
+    matches_to_run = MATCHES
     if match_ids:
-        matches_to_run = [f for f in FIXTURES if f["match_id"] in match_ids]
+        matches_to_run = [f for f in MATCHES if f["match_id"] in match_ids]
         log("INPUT", "FILTER", f"Running {len(matches_to_run)} matches: {match_ids}")
     else:
         # Skip TBD matches
-        matches_to_run = [f for f in FIXTURES if f["event_id"] != "TBD"]
+        matches_to_run = [f for f in MATCHES if f["event_id"] != "TBD"]
         log("INPUT", "FILTER", f"Running {len(matches_to_run)} matches (skipping TBD)")
     
     log("INPUT", "TOTAL", f"Total matches to scrape: {len(matches_to_run)}")
@@ -463,7 +463,7 @@ async def main(match_ids: list = None):
         log("PASS", "BROWSER", "Browser closed cleanly")
     
     # Final summary
-    section("FINAL SUMMARY — ALL FIXTURES")
+    section("FINAL SUMMARY — ALL MATCHES")
     pass_count  = sum(1 for r in all_results if r.get("status") == "PASS")
     partial     = sum(1 for r in all_results if r.get("status", "").startswith("PARTIAL"))
     fail_count  = sum(1 for r in all_results if r.get("status", "").startswith("FAIL"))

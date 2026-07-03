@@ -3,7 +3,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * Source: pasted_content_69.txt (user-provided book odds)
  *
- * JULY 2 FIXTURES (from DB — verified):
+ * JULY 2 MATCHES (from DB — verified):
  *   wc26-r32-083  Spain (H) vs Austria (A)       — 3:00 PM ET / 19:00 UTC
  *   wc26-r32-084  Portugal (H) vs Croatia (A)    — 7:00 PM ET / 23:00 UTC
  *   wc26-r32-085  Switzerland (H) vs Algeria (A) — 11:00 PM ET / 03:00 UTC+1
@@ -66,7 +66,7 @@ function log(lvl: string, tag: string, msg: string, detail?: string) {
 // ZERO HALLUCINATION: every value traced to exact cell in attachment
 // ══════════════════════════════════════════════════════════════════════════════
 
-const FIXTURE_IDS = ['wc26-r32-083', 'wc26-r32-084', 'wc26-r32-085'];
+const MATCH_IDS = ['wc26-r32-083', 'wc26-r32-084', 'wc26-r32-085'];
 
 // DB orientation (verified from DB query):
 //   wc26-r32-083: homeTeamId=esp (Spain), awayTeamId=aut (Austria)
@@ -233,7 +233,7 @@ async function main() {
     '',
     '═'.repeat(110),
     `  WC2026 JULY 2 BOOK ODDS SEED — ${ts()}`,
-    `  Fixtures: wc26-r32-083 (ESP vs AUT) | wc26-r32-084 (POR vs CRO) | wc26-r32-085 (SUI vs ALG)`,
+    `  Matches: wc26-r32-083 (ESP vs AUT) | wc26-r32-084 (POR vs CRO) | wc26-r32-085 (SUI vs ALG)`,
     `  Source: pasted_content_69.txt | Zero hallucination | 500x cross-reference validation`,
     '═'.repeat(110),
     '',
@@ -245,22 +245,22 @@ async function main() {
   log('SECTION', 'INIT', 'DB connected. Starting July 2 book odds seed.');
 
   // ── PHASE 1: PRE-FLIGHT VALIDATION ─────────────────────────────────────────
-  log('SECTION', 'PHASE1', 'PRE-FLIGHT VALIDATION — verify fixtures exist in DB');
+  log('SECTION', 'PHASE1', 'PRE-FLIGHT VALIDATION — verify matches exist in DB');
 
-  const fixtureRows = await db.select({
+  const matchRows = await db.select({
     matchId: wc2026Matches.matchId,
     homeTeamId: wc2026Matches.homeTeamId,
     awayTeamId: wc2026Matches.awayTeamId,
     matchDate: wc2026Matches.matchDate,
-  }).from(wc2026Matches).where(inArray(wc2026Matches.matchId, FIXTURE_IDS));
+  }).from(wc2026Matches).where(inArray(wc2026Matches.matchId, MATCH_IDS));
 
-  log('INPUT', 'PHASE1', `Found ${fixtureRows.length} fixtures in DB`);
-  for (const f of fixtureRows) {
+  log('INPUT', 'PHASE1', `Found ${matchRows.length} matches in DB`);
+  for (const f of matchRows) {
     log('INPUT', 'PHASE1', `  ${f.matchId}: homeTeamId=${f.homeTeamId} awayTeamId=${f.awayTeamId} matchDate=${f.matchDate}`);
   }
 
-  if (fixtureRows.length !== 3) {
-    log('FAIL', 'PHASE1', `Expected 3 fixtures, found ${fixtureRows.length}. Aborting.`);
+  if (matchRows.length !== 3) {
+    log('FAIL', 'PHASE1', `Expected 3 matches, found ${matchRows.length}. Aborting.`);
     process.exit(1);
   }
 
@@ -272,7 +272,7 @@ async function main() {
   };
 
   let orientationOk = true;
-  for (const f of fixtureRows) {
+  for (const f of matchRows) {
     const exp = EXPECTED_ORIENTATION[f.matchId];
     if (!exp) { log('FAIL', 'PHASE1', `${f.matchId}: no expected orientation defined`); orientationOk = false; continue; }
     if (f.homeTeamId !== exp.home || f.awayTeamId !== exp.away) {
@@ -292,7 +292,7 @@ async function main() {
   log('SECTION', 'PHASE2', '500x CROSS-REFERENCE VALIDATION — BOOK_ROWS vs EXPECTED_XREF');
 
   let xrefPass = 0, xrefFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const row = BOOK_ROWS[fid];
     const exp = EXPECTED_XREF[fid];
     log('STEP', 'XREF', `Validating ${fid}...`);
@@ -318,7 +318,7 @@ async function main() {
   log('SECTION', 'PHASE3', 'UPSERTING FROZEN BOOK ODDS — wc2026_frozen_book_odds');
   let bookInsertPass = 0, bookInsertFail = 0;
 
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     log('STEP', 'BOOK-INS', `Upserting frozen book odds for ${fid}`);
     const row = BOOK_ROWS[fid];
     try {
@@ -368,10 +368,10 @@ async function main() {
   log('SECTION', 'PHASE4', 'READ-BACK VERIFICATION — confirm DB values match source');
 
   const readBackRows = await db.select().from(wc2026FrozenBookOdds)
-    .where(inArray(wc2026FrozenBookOdds.matchId, FIXTURE_IDS));
+    .where(inArray(wc2026FrozenBookOdds.matchId, MATCH_IDS));
 
   let rbPass = 0, rbFail = 0;
-  for (const fid of FIXTURE_IDS) {
+  for (const fid of MATCH_IDS) {
     const dbRow = readBackRows.find(r => r.matchId === fid);
     const exp = EXPECTED_XREF[fid];
     if (!dbRow) {
@@ -405,7 +405,7 @@ async function main() {
     '═'.repeat(110),
     `JULY 2 BOOK ODDS SEED COMPLETE: ${ts()}`,
     `XREF: PASS=${xrefPass} FAIL=${xrefFail} | READBACK: PASS=${rbPass} FAIL=${rbFail}`,
-    `Fixtures seeded: ${bookInsertPass} | Failures: ${bookInsertFail}`,
+    `Matches seeded: ${bookInsertPass} | Failures: ${bookInsertFail}`,
     `*** JULY 2 BOOK ODDS ARE NOW IN DB — ENGINE CAN RUN ***`,
     '═'.repeat(110),
     '',

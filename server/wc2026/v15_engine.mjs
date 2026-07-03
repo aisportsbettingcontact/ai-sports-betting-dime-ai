@@ -810,9 +810,9 @@ async function main() {
   log('WINNER', 'WEIGHTS', `  xGW=${winner.xGW} xGOTW=${winner.xGOTW} smW=${winner.smW} psW=${winner.psW} xAW=${winner.xAW} spW=${winner.spW} possW=${winner.possW} convW=${winner.convW} rho=${winner.rho} pace=${winner.pace}`);
 
   // ══════════════════════════════════════════════════════════════════════════
-  // PHASE C: Project July 1 fixtures
+  // PHASE C: Project July 1 matchs
   // ══════════════════════════════════════════════════════════════════════════
-  banner('PHASE C — PROJECT JULY 1 FIXTURES', C.BG_BLUE + C.BOLD + C.WHITE);
+  banner('PHASE C — PROJECT JULY 1 MATCHS', C.BG_BLUE + C.BOLD + C.WHITE);
 
   const [jul1Fix] = await db.execute(`
     SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
@@ -823,10 +823,10 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'C1_FIX', `July 1 fixtures: ${jul1Fix.length}`);
+  log('INPUT', 'C1_FIX', `July 1 matchs: ${jul1Fix.length}`);
   jul1Fix.forEach((f, i) => log('REAL_DATA', 'C1_FIX', `  [${i+1}] ${f.match_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
 
-  if (jul1Fix.length === 0) hardFail('C1_FIX', 'Zero July 1 fixtures found');
+  if (jul1Fix.length === 0) hardFail('C1_FIX', 'Zero July 1 matchs found');
 
   const [bookOdds] = await db.execute(`
     SELECT * FROM wc2026_frozen_book_odds
@@ -864,7 +864,7 @@ async function main() {
     const awayCode = fix.away_code;
 
     progressBar(fi, jul1Fix.length, `Projecting ${fix.match_id}...`);
-    banner(`FIXTURE ${fi+1}/${jul1Fix.length}: ${fix.match_id} | ${homeCode} vs ${awayCode}`, C.BG_MAGENTA + C.BOLD + C.WHITE);
+    banner(`MATCH ${fi+1}/${jul1Fix.length}: ${fix.match_id} | ${homeCode} vs ${awayCode}`, C.BG_MAGENTA + C.BOLD + C.WHITE);
 
     // C5: Role inversion pre-flight
     const espnRows = xgAll.filter(r =>
@@ -874,9 +874,9 @@ async function main() {
     );
     for (const er of espnRows) {
       if (er.homeTeamAbbrev !== homeCode) {
-        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but fixture home=${homeCode} — role inversion detected`);
+        log('WARN', 'C5_INVERT', `${fix.match_id}: ESPN row has home=${er.homeTeamAbbrev} but match home=${homeCode} — role inversion detected`);
       } else {
-        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches fixture ✓`);
+        log('PASS', 'C5_INVERT', `${fix.match_id}: ESPN orientation matches match ✓`);
       }
     }
 
@@ -1028,7 +1028,7 @@ async function main() {
       markets,
     });
   }
-  progressBar(jul1Fix.length, jul1Fix.length, 'All fixtures projected');
+  progressBar(jul1Fix.length, jul1Fix.length, 'All matchs projected');
 
   // ══════════════════════════════════════════════════════════════════════════
   // PHASE D: Save report
@@ -1083,7 +1083,7 @@ async function main() {
   log('OUTPUT', 'SUMMARY', `PASS=${PASS} FAIL=${FAIL} WARN=${WARN} HARD_FAIL_COUNT=${HARD_FAIL_COUNT} STEP=${STEP}`);
   log('OUTPUT', 'SUMMARY', `XREF: PASS=${XREF_PASS} FAIL=${XREF_FAIL}`);
   log('OUTPUT', 'SUMMARY', `Winner: ${winner.id} | composite=${fmt(winnerResult.composite,4)} | n=${winnerResult.n} | skipped=${winnerResult.skipped}`);
-  log('OUTPUT', 'SUMMARY', `Projections: ${projections.length} fixtures`);
+  log('OUTPUT', 'SUMMARY', `Projections: ${projections.length} matchs`);
   log('OUTPUT', 'SUMMARY', `Elapsed: ${report.elapsed}s`);
   log('OUTPUT', 'SUMMARY', `Report: ${REPORT_PATH}`);
   log('OUTPUT', 'SUMMARY', `Log: ${LOG_FILE}`);

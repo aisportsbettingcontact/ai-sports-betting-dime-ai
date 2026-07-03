@@ -473,7 +473,7 @@ async function main() {
 
   // wc2026_matches (all 40 completed 2026 games)
   const [wc26Rows] = await conn.execute(`
-    SELECT f.fixture_id as id,
+    SELECT f.match_id as id,
            2026 as tournament_year,
            ht.team_id as home_team,
            at.team_id as away_team,

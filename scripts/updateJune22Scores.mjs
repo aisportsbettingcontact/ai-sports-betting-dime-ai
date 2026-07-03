@@ -21,12 +21,12 @@ console.log('[STEP] updateJune22Scores.mjs — START');
 console.log('[INPUT] 4 matches to update: ARG/AUT, FRA/IRQ, NOR/SEN, ALG/JOR');
 console.log('══════════════════════════════════════════════════════════════════════');
 
-// ─── Step 1: Fetch June 22 fixtures with team orientations ───────────────────
-console.log('\n[STEP 1] Fetching June 22 fixture orientations from DB...');
+// ─── Step 1: Fetch June 22 matches with team orientations ───────────────────
+console.log('\n[STEP 1] Fetching June 22 match orientations from DB...');
 
 const [rows] = await db.execute(`
   SELECT
-    f.fixture_id,
+    f.match_id,
     f.kickoff_utc,
     f.home_team_id,
     f.away_team_id,
@@ -42,13 +42,13 @@ const [rows] = await db.execute(`
   ORDER BY f.kickoff_utc ASC
 `);
 
-console.log(`[STATE] Found ${rows.length} June 22 fixtures in DB:`);
+console.log(`[STATE] Found ${rows.length} June 22 matches in DB:`);
 for (const r of rows) {
-  console.log(`  [FIXTURE] ${r.fixture_id} | ${r.home_name} (H) vs ${r.away_name} (A) | kickoff=${r.kickoff_utc} | current: ${r.home_score}-${r.away_score} status=${r.status}`);
+  console.log(`  [MATCH] ${r.match_id} | ${r.home_name} (H) vs ${r.away_name} (A) | kickoff=${r.kickoff_utc} | current: ${r.home_score}-${r.away_score} status=${r.status}`);
 }
 
 if (rows.length !== 4) {
-  console.error(`[ERROR] Expected 4 June 22 fixtures, found ${rows.length}. Aborting.`);
+  console.error(`[ERROR] Expected 4 June 22 matches, found ${rows.length}. Aborting.`);
   await db.end();
   process.exit(1);
 }
@@ -60,7 +60,7 @@ if (rows.length !== 4) {
 
 const RESULTS = [
   {
-    fixture_id: null, // will be matched by team names
+    match_id: null, // will be matched by team names
     homeTeamExpected: 'Austria',
     awayTeamExpected: 'Argentina',
     // Argentina beat Austria 2-0 → Argentina scored 2, Austria scored 0
@@ -71,7 +71,7 @@ const RESULTS = [
     description: 'Argentina 2-0 Austria (DB: Austria H=0, Argentina A=2)',
   },
   {
-    fixture_id: null,
+    match_id: null,
     homeTeamExpected: 'Iraq',
     awayTeamExpected: 'France',
     // France beat Iraq 3-0 → France scored 3, Iraq scored 0
@@ -82,7 +82,7 @@ const RESULTS = [
     description: 'France 3-0 Iraq (DB: Iraq H=0, France A=3)',
   },
   {
-    fixture_id: null,
+    match_id: null,
     homeTeamExpected: 'Norway',
     awayTeamExpected: 'Senegal',
     // Norway beat Senegal 3-2 → Norway scored 3, Senegal scored 2
@@ -93,7 +93,7 @@ const RESULTS = [
     description: 'Norway 3-2 Senegal (DB: Norway H=3, Senegal A=2)',
   },
   {
-    fixture_id: null,
+    match_id: null,
     homeTeamExpected: 'Algeria',
     awayTeamExpected: 'Jordan',
     // Algeria beat Jordan 2-1 → Algeria scored 2, Jordan scored 1
@@ -105,8 +105,8 @@ const RESULTS = [
   },
 ];
 
-// ─── Step 3: Match fixtures to results by team names ─────────────────────────
-console.log('\n[STEP 2] Matching DB fixtures to expected results by team names...');
+// ─── Step 3: Match matches to results by team names ─────────────────────────
+console.log('\n[STEP 2] Matching DB matches to expected results by team names...');
 
 for (const expected of RESULTS) {
   const match = rows.find(
@@ -115,38 +115,38 @@ for (const expected of RESULTS) {
       r.away_name.toLowerCase() === expected.awayTeamExpected.toLowerCase()
   );
   if (!match) {
-    console.error(`[ERROR] No DB fixture found for ${expected.homeTeamExpected} (H) vs ${expected.awayTeamExpected} (A). Aborting.`);
+    console.error(`[ERROR] No DB match found for ${expected.homeTeamExpected} (H) vs ${expected.awayTeamExpected} (A). Aborting.`);
     await db.end();
     process.exit(1);
   }
-  expected.fixture_id = match.fixture_id;
-  console.log(`  [MATCH] ${expected.fixture_id} → ${expected.description}`);
+  expected.match_id = match.match_id;
+  console.log(`  [MATCH] ${expected.match_id} → ${expected.description}`);
 }
 
-console.log('[VERIFY] All 4 fixtures matched ✅');
+console.log('[VERIFY] All 4 matches matched ✅');
 
 // ─── Step 4: Update scores ────────────────────────────────────────────────────
 console.log('\n[STEP 3] Updating scores in wc2026_matches...');
 
 let updateCount = 0;
 for (const expected of RESULTS) {
-  console.log(`\n  [STEP] Updating ${expected.fixture_id}...`);
+  console.log(`\n  [STEP] Updating ${expected.match_id}...`);
   console.log(`  [INPUT] home_score=${expected.home_score}, away_score=${expected.away_score}, status=FT, result=${expected.result}`);
 
   const [updateResult] = await db.execute(
     `UPDATE wc2026_matches
      SET home_score = ?, away_score = ?, status = 'FT', result = ?
-     WHERE fixture_id = ?`,
-    [expected.home_score, expected.away_score, expected.result, expected.fixture_id]
+     WHERE match_id = ?`,
+    [expected.home_score, expected.away_score, expected.result, expected.match_id]
   );
 
   if (updateResult.affectedRows !== 1) {
-    console.error(`  [ERROR] Expected 1 row updated for ${expected.fixture_id}, got ${updateResult.affectedRows}. Aborting.`);
+    console.error(`  [ERROR] Expected 1 row updated for ${expected.match_id}, got ${updateResult.affectedRows}. Aborting.`);
     await db.end();
     process.exit(1);
   }
 
-  console.log(`  [OUTPUT] ${expected.fixture_id} updated — affectedRows=1 ✅`);
+  console.log(`  [OUTPUT] ${expected.match_id} updated — affectedRows=1 ✅`);
   updateCount++;
 }
 
@@ -155,7 +155,7 @@ console.log('\n[STEP 4] Read-back verification — confirming all 4 rows in DB..
 
 const [verifyRows] = await db.execute(`
   SELECT
-    f.fixture_id,
+    f.match_id,
     ht.name AS home_name,
     at.name AS away_name,
     f.home_score,
@@ -171,9 +171,9 @@ const [verifyRows] = await db.execute(`
 
 let allPass = true;
 for (const expected of RESULTS) {
-  const row = verifyRows.find(r => r.fixture_id === expected.fixture_id);
+  const row = verifyRows.find(r => r.match_id === expected.match_id);
   if (!row) {
-    console.error(`  [FAIL] ${expected.fixture_id} not found in read-back ❌`);
+    console.error(`  [FAIL] ${expected.match_id} not found in read-back ❌`);
     allPass = false;
     continue;
   }
@@ -183,7 +183,7 @@ for (const expected of RESULTS) {
   const resultOk = row.result === expected.result;
   const pass = scoreOk && statusOk && resultOk;
 
-  console.log(`  [VERIFY] ${row.fixture_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name} | status=${row.status} result=${row.result} → ${pass ? '✅ PASS' : '❌ FAIL'}`);
+  console.log(`  [VERIFY] ${row.match_id} | ${row.home_name} ${row.home_score}-${row.away_score} ${row.away_name} | status=${row.status} result=${row.result} → ${pass ? '✅ PASS' : '❌ FAIL'}`);
   if (!pass) {
     console.error(`    [DETAIL] Expected: home=${expected.home_score}, away=${expected.away_score}, status=FT, result=${expected.result}`);
     console.error(`    [DETAIL] Got:      home=${row.home_score}, away=${row.away_score}, status=${row.status}, result=${row.result}`);

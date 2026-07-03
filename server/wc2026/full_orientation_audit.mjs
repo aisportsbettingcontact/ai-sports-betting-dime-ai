@@ -1,7 +1,7 @@
 /**
  * full_orientation_audit.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Fetches all WC2026 group stage fixtures from Action Network (the live source
+ * Fetches all WC2026 group stage matchs from Action Network (the live source
  * of truth) for every date from June 11 to July 2, compares home/away
  * orientation against the DB, and outputs a full mismatch report.
  *
@@ -96,12 +96,12 @@ async function main() {
     ssl: { rejectUnauthorized: false }
   });
 
-  // Load all DB fixtures
-  const [dbFixtures] = await conn.execute(
+  // Load all DB matchs
+  const [dbMatchs] = await conn.execute(
     'SELECT match_id, home_team_id, away_team_id, match_date, kickoff_utc FROM wc2026_matches ORDER BY match_date, kickoff_utc'
   );
 
-  console.log(`[INPUT] DB has ${dbFixtures.length} total fixtures`);
+  console.log(`[INPUT] DB has ${dbMatchs.length} total matchs`);
   console.log('');
 
   const mismatches = [];
@@ -128,14 +128,14 @@ async function main() {
         continue;
       }
 
-      // Find matching DB fixture
-      const dbFix = dbFixtures.find(f =>
+      // Find matching DB match
+      const dbFix = dbMatchs.find(f =>
         (f.away_team_id === anAwayId && f.home_team_id === anHomeId) ||
         (f.away_team_id === anHomeId && f.home_team_id === anAwayId)
       );
 
       if (!dbFix) {
-        console.log(`  [WARN] No DB fixture for AN: away=${anAwayId} home=${anHomeId}`);
+        console.log(`  [WARN] No DB match for AN: away=${anAwayId} home=${anHomeId}`);
         unmatched.push({ dateStr, anAwayId, anHomeId, anAwayRaw, anHomeRaw });
         continue;
       }

@@ -269,7 +269,7 @@ function diagSpreadAssignment(fix, sim) {
 }
 
 // ── Main diagnostic ───────────────────────────────────────────────────────────
-const FIXTURES = [
+const MATCHES = [
   { id: 'wc26-g-049', homeCode: 'SUI', awayCode: 'CAN', bookTotal: 2.5 },
   { id: 'wc26-g-050', homeCode: 'BIH', awayCode: 'QAT', bookTotal: 2.5 },
   { id: 'wc26-g-051', homeCode: 'SCO', awayCode: 'BRA', bookTotal: 2.5 },
@@ -287,7 +287,7 @@ const HOST_VENUES = {
   CAN: ['vancouver', 'toronto', 'bc place', 'bmo field'],
 };
 
-const FIXTURE_CITIES = {
+const MATCH_CITIES = {
   'wc26-g-049': { city: 'Vancouver', stadium: 'BC Place' },
   'wc26-g-050': { city: 'Guadalupe', stadium: 'Estadio BBVA' },
   'wc26-g-051': { city: 'Mexico City', stadium: 'Estadio Azteca' },
@@ -314,11 +314,11 @@ console.log(`${TAG}   Model total λ=2.940 vs actual 2.70 → OVERCOUNTING by 0.
 console.log(`${TAG}   This directly causes BTTS YES overcounting`);
 console.log(`${TAG}   FIX: baseH=1.350, baseA=1.300 → total λ=2.650 (closer to actual)`);
 
-// ── SECTION 2: Per-fixture lambda and probability analysis ───────────────────
-console.log(`\n${TAG} ═══ SECTION 2: PER-FIXTURE LAMBDA AND PROBABILITY ANALYSIS ═══`);
+// ── SECTION 2: Per-match lambda and probability analysis ───────────────────
+console.log(`\n${TAG} ═══ SECTION 2: PER-MATCH LAMBDA AND PROBABILITY ANALYSIS ═══`);
 
 const allResults = [];
-for (const fix of FIXTURES) {
+for (const fix of MATCHES) {
   const eH = ELO_2026[fix.homeCode];
   const eA = ELO_2026[fix.awayCode];
   const eloDiff = (eH - eA) / 400;
@@ -337,7 +337,7 @@ for (const fix of FIXTURES) {
 
   // Apply host advantage for MEX (g-053: CZE vs MEX in Atlanta — MEX is away, not home, no boost)
   // Check: is the HOME team a host nation playing in their own country?
-  const loc = FIXTURE_CITIES[fix.id];
+  const loc = MATCH_CITIES[fix.id];
   const homeUpper = fix.homeCode.toUpperCase();
   if (HOST_VENUES[homeUpper]) {
     const cityLow = (loc.city || '').toLowerCase();

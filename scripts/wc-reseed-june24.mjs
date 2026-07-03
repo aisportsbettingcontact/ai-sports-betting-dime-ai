@@ -2,7 +2,7 @@
  * wc-reseed-june24.mjs
  * ─────────────────────────────────────────────────────────────────────────────
  * WC 2026 June 24 — Full reseed with:
- * 1. Correct home/away fixture orientation (swap DB if needed)
+ * 1. Correct home/away match orientation (swap DB if needed)
  * 2. Exact book odds from ground truth (DK lines)
  * 3. Model odds recalculated at BOOK spread line (not model's own line)
  * 4. Correct total lines (HAI@MAR=3.5, MEX@CZE=2.5)
@@ -122,10 +122,10 @@ function deriveLambdas(bookHomeML, bookAwayML, bookDrawML, totalLine) {
   return { lambdaH, lambdaA, nvHome, nvDraw, nvAway };
 }
 
-// ─── June 24 Fixtures with exact ground truth ────────────────────────────────
-const FIXTURES = [
+// ─── June 24 Matchs with exact ground truth ────────────────────────────────
+const MATCHES = [
   {
-    fixtureId: 'wc26-g-049',
+    matchId: 'wc26-g-049',
     // DB currently has home=CAN, away=SUI — NEEDS SWAP
     correctHomeId: 'sui', correctAwayId: 'can',
     homeName: 'Switzerland', awayName: 'Canada',
@@ -141,7 +141,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-050',
+    matchId: 'wc26-g-050',
     // DB currently has home=QAT, away=BIH — NEEDS SWAP
     correctHomeId: 'bih', correctAwayId: 'qat',
     homeName: 'Bosnia', awayName: 'Qatar',
@@ -156,7 +156,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-051',
+    matchId: 'wc26-g-051',
     // DB currently has home=MEX, away=CZE — NEEDS SWAP (this is BRA@SCO)
     correctHomeId: 'sco', correctAwayId: 'bra',
     homeName: 'Scotland', awayName: 'Brazil',
@@ -172,7 +172,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-052',
+    matchId: 'wc26-g-052',
     // DB currently has home=KOR, away=RSA — NEEDS SWAP (this is HAI@MAR)
     correctHomeId: 'mar', correctAwayId: 'hai',
     homeName: 'Morocco', awayName: 'Haiti',
@@ -188,7 +188,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-053',
+    matchId: 'wc26-g-053',
     // DB currently has home=HAI, away=MAR — NEEDS SWAP (this is MEX@CZE)
     correctHomeId: 'cze', correctAwayId: 'mex',
     homeName: 'Czech Republic', awayName: 'Mexico',
@@ -204,7 +204,7 @@ const FIXTURES = [
     }
   },
   {
-    fixtureId: 'wc26-g-054',
+    matchId: 'wc26-g-054',
     // DB currently has home=BRA, away=SCO — NEEDS SWAP (this is KOR@RSA)
     correctHomeId: 'rsa', correctAwayId: 'kor',
     homeName: 'South Africa', awayName: 'South Korea',
@@ -222,48 +222,48 @@ const FIXTURES = [
 ];
 
 async function main() {
-  console.log(`${TAG} [INPUT] Starting June 24 full reseed — ${FIXTURES.length} fixtures`);
+  console.log(`${TAG} [INPUT] Starting June 24 full reseed — ${MATCHES.length} matches`);
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   const snapshotTs = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
 
   // Verify current DB home/away orientation
-  console.log(`\n${TAG} [STEP] Verifying current DB fixture orientation...`);
-  const fixtureIds = FIXTURES.map(f => f.fixtureId);
-  const [dbFixtures] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+  console.log(`\n${TAG} [STEP] Verifying current DB match orientation...`);
+  const matchIds = MATCHES.map(f => f.matchId);
+  const [dbMatches] = await conn.query(
+    `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
 
-  // Fix home/away orientation in fixtures table
+  // Fix home/away orientation in matches table
   console.log(`\n${TAG} [STEP] Fixing home/away orientation in wc2026_matches...`);
-  for (const f of FIXTURES) {
-    const dbF = dbFixtures.find(r => r.fixture_id === f.fixtureId);
+  for (const f of MATCHES) {
+    const dbF = dbMatches.find(r => r.match_id === f.matchId);
     const homeCorrect = dbF?.home_team_id === f.correctHomeId;
     const awayCorrect = dbF?.away_team_id === f.correctAwayId;
     if (!homeCorrect || !awayCorrect) {
       await conn.query(
-        `UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE fixture_id = ?`,
-        [f.correctHomeId, f.correctAwayId, f.fixtureId]
+        `UPDATE wc2026_matches SET home_team_id = ?, away_team_id = ? WHERE match_id = ?`,
+        [f.correctHomeId, f.correctAwayId, f.matchId]
       );
-      console.log(`${TAG} [STATE] SWAPPED ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId} (was home=${dbF?.home_team_id} away=${dbF?.away_team_id})`);
+      console.log(`${TAG} [STATE] SWAPPED ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId} (was home=${dbF?.home_team_id} away=${dbF?.away_team_id})`);
     } else {
-      console.log(`${TAG} [STATE] OK ${f.fixtureId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
+      console.log(`${TAG} [STATE] OK ${f.matchId}: home=${f.correctHomeId} away=${f.correctAwayId}`);
     }
   }
 
-  // Delete all existing odds for June 24 fixtures
-  console.log(`\n${TAG} [STEP] Clearing all odds for June 24 fixtures...`);
+  // Delete all existing odds for June 24 matches
+  console.log(`\n${TAG} [STEP] Clearing all odds for June 24 matches...`);
   const [del] = await conn.query(
-    `DELETE FROM wc2026_odds_snapshots WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${matchIds.map(() => '?').join(',')})`,
+    matchIds
   );
   console.log(`${TAG} [STATE] Deleted ${del.affectedRows} rows`);
 
   let totalBookRows = 0, totalModelRows = 0;
 
-  for (const f of FIXTURES) {
+  for (const f of MATCHES) {
     const b = f.book;
-    console.log(`\n${TAG} [STEP] Processing ${f.fixtureId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
+    console.log(`\n${TAG} [STEP] Processing ${f.matchId} | ${f.awayName}(away) @ ${f.homeName}(home)`);
 
     // ── Derive lambdas from book odds ──
     // Home team = home in DB (e.g., SUI for wc26-g-049)
@@ -328,8 +328,8 @@ async function main() {
 
     for (const row of bookRows) {
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [f.fixtureId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [f.matchId, snapshotTs, DK_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalBookRows++;
     }
@@ -353,8 +353,8 @@ async function main() {
     for (const row of modelRows) {
       if (row.odds == null) { console.log(`${TAG} [VERIFY] SKIP null: ${row.market}:${row.selection}`); continue; }
       await conn.query(
-        `INSERT INTO wc2026_odds_snapshots (fixture_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-        [f.fixtureId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
+        `INSERT INTO wc2026_odds_snapshots (match_id, snapshot_ts, book_id, market, selection, line, american_odds, implied_prob, is_closing) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+        [f.matchId, snapshotTs, MODEL_BOOK_ID, row.market, row.selection, row.line ?? null, row.odds, row.prob]
       );
       totalModelRows++;
     }
@@ -367,7 +367,7 @@ async function main() {
 
     await conn.query(`
       INSERT INTO wc2026_model_projections (
-        fixture_id, model_version, n_simulations, home_team, away_team,
+        match_id, model_version, n_simulations, home_team, away_team,
         home_lambda, away_lambda, home_win_prob, draw_prob, away_win_prob,
         proj_home_score, proj_away_score, proj_total, proj_spread,
         over_2_5, under_2_5, over_3_5, btts_prob,
@@ -390,7 +390,7 @@ async function main() {
         model_lean=VALUES(model_lean), lean_prob=VALUES(lean_prob),
         top_scorelines=VALUES(top_scorelines), modeled_at=NOW()
     `, [
-      f.fixtureId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
+      f.matchId, MODEL_VERSION, 1000000, f.homeName, f.awayName,
       lambdaH, lambdaA, finalHome, finalDraw, finalAway,
       projHomeScore, projAwayScore, projTotal, projSpread,
       sim.over25, sim.under25, sim.over35, sim.btts,
@@ -402,31 +402,31 @@ async function main() {
       finalHome > finalAway ? 'home' : 'away', Math.max(finalHome, finalAway), sim.top,
     ]);
 
-    console.log(`${TAG} [OUTPUT] ${f.fixtureId}: bookRows=12 modelRows=12 projTotal=${projTotal} (raw, not rounded)`);
+    console.log(`${TAG} [OUTPUT] ${f.matchId}: bookRows=12 modelRows=12 projTotal=${projTotal} (raw, not rounded)`);
   }
 
   // ── Final verification ──
   console.log(`\n${TAG} [VERIFY] Final verification...`);
   const [verify] = await conn.query(
-    `SELECT fixture_id, book_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) GROUP BY fixture_id, book_id ORDER BY fixture_id, book_id`,
-    fixtureIds
+    `SELECT match_id, book_id, COUNT(*) as cnt FROM wc2026_odds_snapshots WHERE match_id IN (${matchIds.map(() => '?').join(',')}) GROUP BY match_id, book_id ORDER BY match_id, book_id`,
+    matchIds
   );
   const [verifyProj] = await conn.query(
-    `SELECT fixture_id, proj_home_score, proj_away_score, proj_total FROM wc2026_model_projections WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+    `SELECT match_id, proj_home_score, proj_away_score, proj_total FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
   const [verifyFix] = await conn.query(
-    `SELECT fixture_id, home_team_id, away_team_id FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY fixture_id`,
-    fixtureIds
+    `SELECT match_id, home_team_id, away_team_id FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY match_id`,
+    matchIds
   );
 
   let allOk = true;
-  for (const fid of fixtureIds) {
-    const f = FIXTURES.find(x => x.fixtureId === fid);
-    const bookRows = verify.find(r => r.fixture_id === fid && r.book_id === DK_BOOK_ID);
-    const modelRows = verify.find(r => r.fixture_id === fid && r.book_id === MODEL_BOOK_ID);
-    const proj = verifyProj.find(r => r.fixture_id === fid);
-    const fix = verifyFix.find(r => r.fixture_id === fid);
+  for (const fid of matchIds) {
+    const f = MATCHES.find(x => x.matchId === fid);
+    const bookRows = verify.find(r => r.match_id === fid && r.book_id === DK_BOOK_ID);
+    const modelRows = verify.find(r => r.match_id === fid && r.book_id === MODEL_BOOK_ID);
+    const proj = verifyProj.find(r => r.match_id === fid);
+    const fix = verifyFix.find(r => r.match_id === fid);
     const bookCnt = Number(bookRows?.cnt ?? 0);
     const modelCnt = Number(modelRows?.cnt ?? 0);
     const homeOk = fix?.home_team_id === f.correctHomeId;

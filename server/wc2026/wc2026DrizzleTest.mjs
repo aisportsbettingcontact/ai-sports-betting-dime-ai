@@ -100,7 +100,7 @@ async function main() {
   const [tzRows] = await conn.execute(`SELECT @@global.time_zone, @@session.time_zone, NOW(), UTC_TIMESTAMP()`);
   console.log('Timezone info:', tzRows[0]);
 
-  // Test 8: Check the exact SQL that Drizzle generates for the fixturesByDate query
+  // Test 8: Check the exact SQL that Drizzle generates for the matchsByDate query
   // by looking at what eq(matchDate, sql`${'2026-07-01'}`) produces
   // In Drizzle ORM, sql`${value}` where value is a string creates a parameterized query
   // The actual SQL would be: WHERE match_date = '2026-07-01'

@@ -1,9 +1,9 @@
 /**
  * fix_june15_swaps.mjs
  * ====================
- * Fixes home/away orientation for all 4 June 15 WC2026 fixtures.
+ * Fixes home/away orientation for all 4 June 15 WC2026 matchs.
  *
- * ISSUE: All 4 June 15 fixtures have home_team_id and away_team_id swapped
+ * ISSUE: All 4 June 15 matchs have home_team_id and away_team_id swapped
  * in the wc2026_matches table relative to the official FIFA schedule.
  *
  * Official FIFA WC2026 June 15 schedule:
@@ -12,10 +12,10 @@
  *   wc26-g-016: Saudi Arabia (home) vs Uruguay (away) — Miami, 6:00 PM ET
  *   wc26-g-014: Iran (home) vs New Zealand (away) — Inglewood, 9:00 PM ET
  *
- * Fix: Swap home_team_id <-> away_team_id for each fixture.
+ * Fix: Swap home_team_id <-> away_team_id for each match.
  *
  * NOTE: The odds snapshots use 'home'/'away' selections which are relative
- * to the fixture orientation. After swapping the fixture, the odds selections
+ * to the match orientation. After swapping the match, the odds selections
  * will correctly map: 'home' = Spain/Belgium/KSA/Iran, 'away' = CPV/EGY/URU/NZL.
  *
  * The model odds (book_id=0) were seeded with the CORRECT orientation
@@ -42,7 +42,7 @@ const c = await mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
-console.log('[INPUT] fix_june15_swaps.mjs — fixing home/away orientation for 4 June 15 WC fixtures');
+console.log('[INPUT] fix_june15_swaps.mjs — fixing home/away orientation for 4 June 15 WC matchs');
 console.log('[STEP] Reading current state before fix');
 
 // Read current state
@@ -154,7 +154,7 @@ const [modelOdds] = await c.execute(
   june15Ids
 );
 
-// Group odds by fixture
+// Group odds by match
 const dkByFix = {};
 const modelByFix = {};
 for (const o of dkOdds) {
@@ -166,7 +166,7 @@ for (const o of modelOdds) {
   modelByFix[o.match_id][`${o.market}_${o.selection}`] = o.american_odds;
 }
 
-// Build fixture map
+// Build match map
 const fxMap = {};
 for (const f of after) fxMap[f.match_id] = f;
 
@@ -187,7 +187,7 @@ for (const fid of june15Ids) {
   const model = modelByFix[fid] || {};
   const disp = OFFICIAL_DISPLAY[fid];
   
-  console.log(`[FIXTURE] ${fid} | ${f.awayCode} @ ${f.homeCode} | ${disp.kickoffET}`);
+  console.log(`[MATCH] ${fid} | ${f.awayCode} @ ${f.homeCode} | ${disp.kickoffET}`);
   console.log(`  HOME (${f.homeCode}): DK=${dk['1X2_home'] ?? 'MISSING'} | Model=${model['1X2_home'] ?? 'MISSING'}`);
   console.log(`  DRAW:          DK=${dk['1X2_draw'] ?? 'MISSING'} | Model=${model['1X2_draw'] ?? 'MISSING'}`);
   console.log(`  AWAY (${f.awayCode}): DK=${dk['1X2_away'] ?? 'MISSING'} | Model=${model['1X2_away'] ?? 'MISSING'}`);
@@ -195,5 +195,5 @@ for (const fid of june15Ids) {
   console.log('');
 }
 
-console.log('[VERIFY] PASS — June 15 WC fixture orientation fixed and odds verified');
+console.log('[VERIFY] PASS — June 15 WC match orientation fixed and odds verified');
 await c.end();

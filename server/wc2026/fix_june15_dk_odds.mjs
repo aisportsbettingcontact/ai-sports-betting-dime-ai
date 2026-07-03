@@ -1,10 +1,10 @@
 /**
  * fix_june15_dk_odds.mjs
  * ======================
- * Fixes DK odds orientation for June 15 WC fixtures.
+ * Fixes DK odds orientation for June 15 WC matchs.
  *
  * ROOT CAUSE:
- * The AN API returns teams[0]=away, teams[1]=home but for these WC fixtures,
+ * The AN API returns teams[0]=away, teams[1]=home but for these WC matchs,
  * AN has the teams in the OPPOSITE order from FIFA official:
  *   AN: Spain=away, Cape Verde=home  (WRONG per FIFA)
  *   FIFA: Spain=home, Cape Verde=away (CORRECT)
@@ -12,8 +12,8 @@
  * The scraper wrote DK odds with 'home' selection = Cape Verde (wrong)
  * and 'away' selection = Spain (wrong).
  *
- * After the fixture orientation fix, we need to:
- * 1. Delete the stale DK odds snapshots for June 15 fixtures
+ * After the match orientation fix, we need to:
+ * 1. Delete the stale DK odds snapshots for June 15 matchs
  * 2. Insert fresh DK odds with correct home/away mapping
  *
  * Live DK odds from AN API (fetched 2026-06-15):
@@ -39,7 +39,7 @@
  *     Correct mapping: home(IRN)=-125 draw=250 away(NZL)=400 total=2.5 over=140 under=-170
  *
  * Strategy:
- * - Delete all existing DK (book_id=68) odds for these 4 fixtures
+ * - Delete all existing DK (book_id=68) odds for these 4 matchs
  * - Insert fresh rows with correct home/away mapping and latest AN odds
  */
 import mysql from 'mysql2/promise';
@@ -56,7 +56,7 @@ const c = await mysql.createConnection({
   ssl: { rejectUnauthorized: false }
 });
 
-console.log('[INPUT] fix_june15_dk_odds.mjs — fixing DK odds orientation for June 15 WC fixtures');
+console.log('[INPUT] fix_june15_dk_odds.mjs — fixing DK odds orientation for June 15 WC matchs');
 
 // Step 1: Fetch latest DK odds from AN API
 const AN_URL = 'https://api.actionnetwork.com/web/v2/scoreboard/soccer?bookIds=68&date=20260615&periods=event';
@@ -79,11 +79,11 @@ try {
   console.error('[WARN] AN API fetch failed:', err.message, '— using hardcoded values from earlier fetch');
 }
 
-// AN game ID → fixture mapping (from earlier fetch)
+// AN game ID → match mapping (from earlier fetch)
 // AN teams[0]=away, teams[1]=home (per AN convention)
-// But for these fixtures, AN has teams SWAPPED vs FIFA
+// But for these matchs, AN has teams SWAPPED vs FIFA
 // So: AN teams[0] = FIFA home team, AN teams[1] = FIFA away team
-const AN_TO_FIXTURE = {
+const AN_TO_MATCH = {
   284359: 'wc26-g-015', // AN: away=Spain, home=CapeVerde → FIFA: home=Spain, away=CapeVerde
   284360: 'wc26-g-013', // AN: away=Belgium, home=Egypt → FIFA: home=Belgium, away=Egypt
   284361: 'wc26-g-016', // AN: away=SaudiArabia, home=Uruguay → FIFA: home=KSA, away=Uruguay
@@ -97,7 +97,7 @@ const AN_TO_FIXTURE = {
 const correctedOdds = {};
 
 for (const game of anGames) {
-  const matchId = AN_TO_FIXTURE[game.id];
+  const matchId = AN_TO_MATCH[game.id];
   if (!matchId) continue;
   
   const dkMarkets = game.markets?.['68']?.event;
@@ -157,9 +157,9 @@ for (const fid of june15Ids) {
   }
 }
 
-// Step 2: Delete existing DK odds for these fixtures
+// Step 2: Delete existing DK odds for these matchs
 console.log('');
-console.log('[STEP] Deleting stale DK odds (book_id=68) for June 15 fixtures...');
+console.log('[STEP] Deleting stale DK odds (book_id=68) for June 15 matchs...');
 const ph = june15Ids.map(() => '?').join(',');
 const [delResult] = await c.execute(
   `DELETE FROM wc2026_odds_snapshots WHERE match_id IN (${ph}) AND book_id = 68`,
@@ -215,8 +215,8 @@ const [verify] = await c.execute(`
   ORDER BY match_id, market, selection
 `, june15Ids);
 
-// Get fixture names
-const [fixtures] = await c.execute(`
+// Get match names
+const [matchs] = await c.execute(`
   SELECT f.match_id, ht.fifa_code as homeCode, at.fifa_code as awayCode
   FROM wc2026_matches f
   JOIN wc2026_teams ht ON f.home_team_id = ht.team_id
@@ -226,7 +226,7 @@ const [fixtures] = await c.execute(`
 `, june15Ids);
 
 const fxMap = {};
-for (const f of fixtures) fxMap[f.match_id] = f;
+for (const f of matchs) fxMap[f.match_id] = f;
 
 const byFix = {};
 for (const o of verify) {

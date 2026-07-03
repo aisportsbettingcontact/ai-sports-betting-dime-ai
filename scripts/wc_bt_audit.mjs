@@ -1,6 +1,6 @@
 /**
  * wc_bt_audit.mjs
- * Audits the WC backtest DB state: June 19 fixtures, backtest match counts,
+ * Audits the WC backtest DB state: June 19 matches, backtest match counts,
  * backtest projections, and prior recalibration logs.
  */
 import mysql from 'mysql2/promise';
@@ -12,17 +12,17 @@ console.log('\n[AUDIT] =========================================================
 console.log('[AUDIT] WC BACKTEST STATE AUDIT — June 20, 2026');
 console.log('[AUDIT] ================================================================\n');
 
-// ── June 19 fixtures ──────────────────────────────────────────────────────────
-console.log('[AUDIT] [STEP 1] June 19 fixtures status...');
+// ── June 19 matches ──────────────────────────────────────────────────────────
+console.log('[AUDIT] [STEP 1] June 19 matches status...');
 const [june19] = await conn.query(`
-  SELECT fixture_id, home_team, away_team, home_score, away_score, status, kickoff_utc
+  SELECT match_id, home_team, away_team, home_score, away_score, status, kickoff_utc
   FROM wc2026_matches
   WHERE match_date = '2026-06-19'
   ORDER BY kickoff_utc
 `);
-console.log(`[AUDIT] [STATE] June 19 fixtures (${june19.length}):`);
+console.log(`[AUDIT] [STATE] June 19 matches (${june19.length}):`);
 for (const f of june19) {
-  console.log(`  ${f.home_team} vs ${f.away_team} | score=${f.home_score}-${f.away_score} | status=${f.status} | id=${f.fixture_id}`);
+  console.log(`  ${f.home_team} vs ${f.away_team} | score=${f.home_score}-${f.away_score} | status=${f.status} | id=${f.match_id}`);
 }
 
 // ── Backtest match counts ─────────────────────────────────────────────────────

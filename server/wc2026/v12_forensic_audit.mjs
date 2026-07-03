@@ -624,7 +624,7 @@ async function main() {
 
   addFinding('strengths', 'S6', 'Dixon-Coles tau correction is mathematically valid for all July 1 matchups',
     'HIGH', 'Domain E — DC Simulation',
-    'All tau values are positive and the simulation total (tot) is within 0.001 of 1.0 for all three July 1 fixtures. The DC correction properly adjusts low-score probabilities without introducing negative probability mass.',
+    'All tau values are positive and the simulation total (tot) is within 0.001 of 1.0 for all three July 1 matchs. The DC correction properly adjusts low-score probabilities without introducing negative probability mass.',
     'Add a runtime assertion: assert(tot > 0.99 && tot < 1.01) after each dcSim call to catch any edge cases with extreme lambda values.'
   );
 
@@ -688,7 +688,7 @@ async function main() {
   L.math('G1', 'awaySpreadCov = 1 - homeSpreadCov — exact inverse (no push on .5 lines)');
   L.math('G1', 'This is mathematically correct for a -1.5/+1.5 line with no push possibility');
 
-  // G2: Verify spread coverage for July 1 fixtures
+  // G2: Verify spread coverage for July 1 matchs
   for (const p of testPairs) {
     let hCov = 0;
     for (let h = 0; h <= 8; h++) {
@@ -717,7 +717,7 @@ async function main() {
   addFinding('critical', 'C10', 'Spread coverage only supports -1.5/+1.5 line — hardcoded for all matches',
     'HIGH', 'Domain G — Spread Coverage',
     'The spread coverage computation always uses h-a > 1.5 regardless of the actual book spread line. If the book offers -2.5 (e.g., for ENG vs COD in later rounds), the model would still compute coverage for -1.5, producing a completely wrong spread probability.',
-    'Parameterize the spread coverage: homeSpreadCov = P(h - a > |bookSpreadLine|). Read bookSpreadLine from the DB for each fixture and use it dynamically. For .5 lines: no push. For integer lines: add push probability P(h-a = line) and split it 50/50 between home and away.'
+    'Parameterize the spread coverage: homeSpreadCov = P(h - a > |bookSpreadLine|). Read bookSpreadLine from the DB for each match and use it dynamically. For .5 lines: no push. For integer lines: add push probability P(h-a = line) and split it 50/50 between home and away.'
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -824,8 +824,8 @@ async function main() {
 
   addFinding('critical', 'C12', 'Phase G validation missing DC identity check and ML sign consistency for all 14 markets',
     'HIGH', 'Domain J — Cross-Reference Validation',
-    'Phase G validates 7 checks per fixture but misses: (1) p1X = pH+pD identity, (2) pX2 = pA+pD identity, (3) ML sign check for all 14 model markets (only checks home ML), (4) BTTS sum check (pBTTS + (1-pBTTS) = 1.0), (5) book DC/no-draw field propagation (always null in July 1 engine). The +74 bug (pX2 scope error) would have been caught by check #2.',
-    'Add to Phase G: (1) assert |p1X - (pH+pD)| < 0.0001 for each fixture, (2) assert |pX2 - (pA+pD)| < 0.0001, (3) sign check for all 14 model ML values, (4) BTTS sum check, (5) assert book DC/no-draw fields are populated when available in DB.'
+    'Phase G validates 7 checks per match but misses: (1) p1X = pH+pD identity, (2) pX2 = pA+pD identity, (3) ML sign check for all 14 model markets (only checks home ML), (4) BTTS sum check (pBTTS + (1-pBTTS) = 1.0), (5) book DC/no-draw field propagation (always null in July 1 engine). The +74 bug (pX2 scope error) would have been caught by check #2.',
+    'Add to Phase G: (1) assert |p1X - (pH+pD)| < 0.0001 for each match, (2) assert |pX2 - (pA+pD)| < 0.0001, (3) sign check for all 14 model ML values, (4) BTTS sum check, (5) assert book DC/no-draw fields are populated when available in DB.'
   );
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -883,14 +883,14 @@ async function main() {
   if (dcMissing > 0) {
     addFinding('critical', 'C13', 'July 1 book DC/no-draw odds are NULL in DB — market rows show book=null',
       'HIGH', 'Domain L — Market Output',
-      `${dcMissing} of 3 July 1 fixtures have NULL book_dc_1x_odds in wc2026_frozen_book_odds. The engine correctly sets book=null for these markets, but the root cause is that the July 1 seed script (seedJuly1Direct.ts) did not populate DC/no-draw book odds.`,
+      `${dcMissing} of 3 July 1 matchs have NULL book_dc_1x_odds in wc2026_frozen_book_odds. The engine correctly sets book=null for these markets, but the root cause is that the July 1 seed script (seedJuly1Direct.ts) did not populate DC/no-draw book odds.`,
       'Update seedJuly1Direct.ts to populate book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds from the DraftKings lines. Then update the engine to read these fields from the DB instead of hardcoding null.'
     );
   } else {
     addFinding('optimizations', 'O8', 'Book DC/no-draw odds are in DB but not read by July 1 engine',
       'HIGH', 'Domain L — Market Output',
       'The wc2026_frozen_book_odds table has book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds columns. The July 1 engine does not read these columns in its SQL query, so book values for DC/no-draw markets are always null.',
-      'Add book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds to the Jul 1 fixture query in Phase A. Then use these values in the market table instead of null. This is already implemented correctly in v12_july2_engine.mjs.'
+      'Add book_dc_1x_odds, book_dc_x2_odds, book_no_draw_home_odds to the Jul 1 match query in Phase A. Then use these values in the market table instead of null. This is already implemented correctly in v12_july2_engine.mjs.'
     );
   }
 

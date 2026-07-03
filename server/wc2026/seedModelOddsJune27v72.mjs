@@ -1,7 +1,7 @@
 /**
  * seedModelOddsJune27v72.mjs
  * Seeds WC2026 v7.2 (Bayesian Poisson + FIFA Elo Prior) model projections
- * for all 6 June 27 fixtures into wc2026_model_projections.
+ * for all 6 June 27 matchs into wc2026_model_projections.
  * is_frozen=1 — these values are locked and will not be overwritten by live queries.
  *
  * [LOG] All operations logged with [INPUT] [STEP] [STATE] [OUTPUT] [VERIFY] format.
@@ -21,7 +21,7 @@ const RESULTS_PATH = "/home/ubuntu/june27_v72_results.json";
 console.log(`[INPUT] Loading v7.2 results from: ${RESULTS_PATH}`);
 const results = JSON.parse(fs.readFileSync(RESULTS_PATH, "utf8"));
 const matchIds = Object.keys(results);
-console.log(`[INPUT] ${matchIds.length} fixtures to seed: ${matchIds.join(", ")}`);
+console.log(`[INPUT] ${matchIds.length} matchs to seed: ${matchIds.join(", ")}`);
 
 // ── SMALLINT cap helper ───────────────────────────────────────────────────────
 const SMALLINT_MAX = 32767;
@@ -36,8 +36,8 @@ console.log("[STEP] Connecting to database...");
 const conn = await mysql.createConnection(process.env.DATABASE_URL);
 console.log("[STATE] DB connected");
 
-// ── Delete existing projections for these fixtures ────────────────────────────
-console.log("[STEP] Deleting existing projections for June 27 fixtures...");
+// ── Delete existing projections for these matchs ────────────────────────────
+console.log("[STEP] Deleting existing projections for June 27 matchs...");
 const [delResult] = await conn.execute(
   `DELETE FROM wc2026_model_projections WHERE match_id IN (${matchIds.map(() => "?").join(",")})`,
   matchIds

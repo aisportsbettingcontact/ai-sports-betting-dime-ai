@@ -1,5 +1,5 @@
 /**
- * WC2026 DATE AUDIT — Pinpoint match_date values for 12 target fixtures
+ * WC2026 DATE AUDIT — Pinpoint match_date values for 12 target matchs
  * Run: node server/wc2026/wc2026DateAudit.mjs
  */
 import mysql from 'mysql2/promise';
@@ -29,8 +29,8 @@ async function main() {
   const conn = await mysql.createConnection({ ...cfg, ssl: { rejectUnauthorized: false } });
   console.log('[CONNECT] DB connected');
 
-  // 1. Raw match_date + kickoff_utc for all 12 target fixtures
-  console.log('\n══ TARGET FIXTURE DATES ══');
+  // 1. Raw match_date + kickoff_utc for all 12 target matchs
+  console.log('\n══ TARGET MATCH DATES ══');
   const [rows] = await conn.execute(
     `SELECT match_id, stage, match_date, kickoff_utc, home_team_id, away_team_id, status
      FROM wc2026_matches
@@ -46,24 +46,24 @@ async function main() {
   }
 
   // 2. Simulate the exact query the router uses for each date Jul 1-7
-  console.log('\n══ SIMULATE fixturesByDate QUERY FOR JUL 1-7 ══');
+  console.log('\n══ SIMULATE matchsByDate QUERY FOR JUL 1-7 ══');
   const testDates = ['2026-07-01','2026-07-02','2026-07-03','2026-07-04','2026-07-05','2026-07-06','2026-07-07'];
   for (const d of testDates) {
     const [res] = await conn.execute(
       `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_matches WHERE match_date = ? ORDER BY kickoff_utc`,
       [d]
     );
-    console.log(`Date ${d}: ${res.length} fixture(s) → ${res.map(r => r.match_id).join(', ') || 'NONE'}`);
+    console.log(`Date ${d}: ${res.length} match(s) → ${res.map(r => r.match_id).join(', ') || 'NONE'}`);
   }
 
-  // 3. Show ALL R32/R16 fixtures with their dates
-  console.log('\n══ ALL R32/R16 FIXTURES IN DB ══');
+  // 3. Show ALL R32/R16 matchs with their dates
+  console.log('\n══ ALL R32/R16 MATCHS IN DB ══');
   const [koRows] = await conn.execute(
     `SELECT match_id, stage, match_date, kickoff_utc FROM wc2026_matches
      WHERE stage IN ('R32','R16','QF','SF','THIRD','FINAL')
      ORDER BY match_date, kickoff_utc, match_id`
   );
-  console.log(`Total KO fixtures: ${koRows.length}`);
+  console.log(`Total KO matchs: ${koRows.length}`);
   for (const r of koRows) {
     const md = r.match_date;
     const mdStr = md instanceof Date ? md.toISOString().split('T')[0] : String(md);
@@ -93,7 +93,7 @@ async function main() {
      ORDER BY md, stage`
   );
   for (const r of distRows) {
-    console.log(`  ${r.md} | ${r.stage} | ${r.cnt} fixture(s)`);
+    console.log(`  ${r.md} | ${r.stage} | ${r.cnt} match(s)`);
   }
 
   await conn.end();

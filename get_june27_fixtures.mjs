@@ -16,12 +16,12 @@ const [rows] = await db.execute(`
   ORDER BY f.kickoff_utc
 `);
 
-console.log(`\n[FIXTURES] June 27-28 WC Fixtures: ${rows.length}`);
+console.log(`\n[MATCHS] June 27-28 WC Matchs: ${rows.length}`);
 for (const r of rows) {
-  console.log(`[FIXTURE] ${r.match_id} | HOME: ${r.home_code} (${r.home_name}) | AWAY: ${r.away_code} (${r.away_name}) | DATE: ${r.match_date}`);
+  console.log(`[MATCH] ${r.match_id} | HOME: ${r.home_code} (${r.home_name}) | AWAY: ${r.away_code} (${r.away_name}) | DATE: ${r.match_date}`);
 }
 
-// Also check frozen_book_odds for these fixtures
+// Also check frozen_book_odds for these matchs
 const ids = rows.map(r => `'${r.match_id}'`).join(',');
 const [frozen] = await db.execute(`SELECT match_id FROM wc2026_frozen_book_odds WHERE match_id IN (${ids})`);
 console.log(`\n[FROZEN] Already have frozen odds for: ${frozen.map(r => r.match_id).join(', ')}`);

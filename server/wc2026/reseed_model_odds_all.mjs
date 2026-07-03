@@ -1,10 +1,10 @@
 /**
  * reseed_model_odds_all.mjs
  * ─────────────────────────────────────────────────────────────────────────────
- * Deletes all existing model odds (book_id=0) for June 11-17 fixtures and
+ * Deletes all existing model odds (book_id=0) for June 11-17 matchs and
  * re-seeds them with the CORRECT home/away orientation per the now-fixed DB.
  *
- * Ground truth fixture orientations (post-fix, verified against Action Network):
+ * Ground truth match orientations (post-fix, verified against Action Network):
  *
  * June 11:
  *   wc26-g-001: RSA (home) vs MEX (away)  → home=RSA is underdog, away=MEX is fav
@@ -137,20 +137,20 @@ const TEAM_PARAMS = {
 // Home advantage multiplier (neutral venues get 1.0)
 const HOME_ADV = 1.15;
 
-// Neutral venue fixtures (played at US/Canada/Mexico stadiums, not home country)
-const NEUTRAL_FIXTURES = new Set([
+// Neutral venue matchs (played at US/Canada/Mexico stadiums, not home country)
+const NEUTRAL_MATCHS = new Set([
   'wc26-g-001', 'wc26-g-002', 'wc26-g-003', 'wc26-g-004', 'wc26-g-005',
   'wc26-g-006', 'wc26-g-007', 'wc26-g-008', 'wc26-g-009', 'wc26-g-010',
   'wc26-g-011', 'wc26-g-012', 'wc26-g-013', 'wc26-g-014', 'wc26-g-015',
   'wc26-g-016', 'wc26-g-017', 'wc26-g-018', 'wc26-g-019', 'wc26-g-020',
   'wc26-g-021', 'wc26-g-022', 'wc26-g-023', 'wc26-g-024',
-  // Mexico fixtures get partial home advantage
+  // Mexico matchs get partial home advantage
 ]);
 
 // Mexico gets home advantage at Azteca
-const MEX_HOME_FIXTURES = new Set(['wc26-g-001', 'wc26-g-005']);
+const MEX_HOME_MATCHS = new Set(['wc26-g-001', 'wc26-g-005']);
 // USA gets home advantage at their venues
-const USA_HOME_FIXTURES = new Set(['wc26-g-005']); // PAR vs USA — USA is "away" but at US venue
+const USA_HOME_MATCHS = new Set(['wc26-g-005']); // PAR vs USA — USA is "away" but at US venue
 
 function getLambdas(homeId, awayId, matchId) {
   const hp = TEAM_PARAMS[homeId] ?? [1.30, 0.88];
@@ -161,15 +161,15 @@ function getLambdas(homeId, awayId, matchId) {
   let lambdaA = ap[0] * hp[1]; // away attack × home defense
 
   // Apply home advantage
-  if (MEX_HOME_FIXTURES.has(matchId) && homeId === 'mex') {
+  if (MEX_HOME_MATCHS.has(matchId) && homeId === 'mex') {
     lambdaH *= HOME_ADV;
     lambdaA /= HOME_ADV;
-  } else if (MEX_HOME_FIXTURES.has(matchId) && awayId === 'mex') {
+  } else if (MEX_HOME_MATCHS.has(matchId) && awayId === 'mex') {
     // Mexico is away but at Azteca — give them home advantage
     lambdaA *= HOME_ADV;
     lambdaH /= HOME_ADV;
   }
-  // All other WC fixtures are neutral venues
+  // All other WC matchs are neutral venues
 
   return { lambdaH, lambdaA };
 }
@@ -180,19 +180,19 @@ async function main() {
     ssl: { rejectUnauthorized: false }
   });
 
-  // Get all June 11-17 fixtures with current (corrected) home/away
-  const [fixtures] = await conn.execute(`
+  // Get all June 11-17 matchs with current (corrected) home/away
+  const [matchs] = await conn.execute(`
     SELECT match_id, home_team_id, away_team_id, match_date
     FROM wc2026_matches
     WHERE match_date BETWEEN '2026-06-11' AND '2026-06-17'
     ORDER BY match_date, match_id
   `);
 
-  console.log(`[INPUT] Found ${fixtures.length} fixtures for June 11-17`);
+  console.log(`[INPUT] Found ${matchs.length} matchs for June 11-17`);
   console.log('');
 
-  // Delete all existing model odds for these fixtures
-  const matchIds = fixtures.map(f => f.match_id);
+  // Delete all existing model odds for these matchs
+  const matchIds = matchs.map(f => f.match_id);
   const placeholders = matchIds.map(() => '?').join(',');
   const [delResult] = await conn.execute(
     `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND match_id IN (${placeholders})`,
@@ -206,7 +206,7 @@ async function main() {
   let seeded = 0;
   const errors = [];
 
-  for (const fix of fixtures) {
+  for (const fix of matchs) {
     const { match_id, home_team_id, away_team_id } = fix;
     const matchDate = fix.match_date.toISOString().slice(0, 10);
 
@@ -269,7 +269,7 @@ async function main() {
       );
       inserted += chunk.length;
     }
-    console.log(`[OUTPUT] Inserted ${inserted} model odds rows for ${seeded} fixtures`);
+    console.log(`[OUTPUT] Inserted ${inserted} model odds rows for ${seeded} matchs`);
   }
 
   // Final verification
@@ -302,7 +302,7 @@ async function main() {
   console.log('');
   console.log('═'.repeat(70));
   console.log('FINAL SUMMARY:');
-  console.log(`  Fixtures seeded:  ${seeded} / ${fixtures.length}`);
+  console.log(`  Matchs seeded:  ${seeded} / ${matchs.length}`);
   console.log(`  Rows inserted:    ${rows.length}`);
   console.log(`  Errors:           ${errors.length}`);
   console.log(`  Verification:     ${allPass ? 'ALL PASS ✓' : 'SOME FAILED ✗'}`);

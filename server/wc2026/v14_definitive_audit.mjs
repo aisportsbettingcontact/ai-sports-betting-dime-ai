@@ -18,7 +18,7 @@
  *   S6  — Column name validation (every column v14 references)
  *   S7  — NULL audit for lambda-critical fields
  *   S8  — Spread sign validation
- *   S9  — Book odds completeness for July 1 fixtures
+ *   S9  — Book odds completeness for July 1 matchs
  *   S10 — Full issue registry with severity, domain, evidence, fix blueprint
  */
 
@@ -354,11 +354,11 @@ async function main() {
   log('PASS', 'S7_SPREAD', `v14 uses Math.abs(spreadLineRaw) — sign inversion bug is FIXED ✓`);
 
   // ════════════════════════════════════════════════════════════════════════════
-  // S8 — Book odds completeness for July 1 fixtures
+  // S8 — Book odds completeness for July 1 matchs
   // ════════════════════════════════════════════════════════════════════════════
-  banner('S8 — BOOK ODDS COMPLETENESS FOR JULY 1 FIXTURES');
+  banner('S8 — BOOK ODDS COMPLETENESS FOR JULY 1 MATCHS');
 
-  const [jul1Fixtures] = await db.execute(`
+  const [jul1Matchs] = await db.execute(`
     SELECT f.match_id, ht.fifa_code AS home_code, at.fifa_code AS away_code,
            f.kickoff_utc, f.match_date
     FROM wc2026_matches f
@@ -367,8 +367,8 @@ async function main() {
     WHERE DATE(f.match_date) = '2026-07-01'
     ORDER BY f.kickoff_utc
   `);
-  log('INPUT', 'S8_FIX', `July 1 fixtures: ${jul1Fixtures.length}`);
-  jul1Fixtures.forEach(f => log('REAL_DATA', 'S8_FIX', `  ${f.match_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
+  log('INPUT', 'S8_FIX', `July 1 matchs: ${jul1Matchs.length}`);
+  jul1Matchs.forEach(f => log('REAL_DATA', 'S8_FIX', `  ${f.match_id}: ${f.home_code} vs ${f.away_code} @ ${f.kickoff_utc}`));
 
   const REQUIRED_BOOK_FIELDS = [
     'book_home_ml','book_draw_ml','book_away_ml',
@@ -379,7 +379,7 @@ async function main() {
     'to_advance_home_odds','to_advance_away_odds'
   ];
 
-  for (const fix of jul1Fixtures) {
+  for (const fix of jul1Matchs) {
     const [bookRows] = await db.execute(
       `SELECT * FROM wc2026_frozen_book_odds WHERE match_id = ?`,
       [fix.match_id]
@@ -388,7 +388,7 @@ async function main() {
       addIssue('CRITICAL', `BOOK-MISSING-${fix.match_id}`, 'S8_BOOK',
         `No book odds row for ${fix.match_id} (${fix.home_code} vs ${fix.away_code})`,
         `SELECT * FROM wc2026_frozen_book_odds WHERE match_id='${fix.match_id}' returned 0 rows`,
-        `Run seedJuly1Direct.ts to seed book odds for this fixture`
+        `Run seedJuly1Direct.ts to seed book odds for this match`
       );
       continue;
     }

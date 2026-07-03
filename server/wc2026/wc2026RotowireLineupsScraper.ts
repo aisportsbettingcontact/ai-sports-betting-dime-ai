@@ -100,8 +100,8 @@ export async function scrapeWc2026Lineups(): Promise<{
       continue;
     }
 
-    // ─── Find fixture ─────────────────────────────────────────────────────────
-    const fixtures = await db
+    // ─── Find match ─────────────────────────────────────────────────────────
+    const matches = await db
       .select({ matchId: wc2026Matches.matchId })
       .from(wc2026Matches)
       .where(
@@ -112,9 +112,9 @@ export async function scrapeWc2026Lineups(): Promise<{
       )
       .limit(1);
 
-    const matchId = fixtures[0]?.matchId;
+    const matchId = matches[0]?.matchId;
     if (!matchId) {
-      const msg = `[WC2026Lineups] [VERIFY] FAIL — No fixture: home=${resolvedHome} away=${resolvedAway}`;
+      const msg = `[WC2026Lineups] [VERIFY] FAIL — No match: home=${resolvedHome} away=${resolvedAway}`;
       console.error(msg);
       errors.push(msg);
       continue;
@@ -122,7 +122,7 @@ export async function scrapeWc2026Lineups(): Promise<{
 
     console.log(`[WC2026Lineups] [STATE] Matched match_id=${matchId}`);
 
-    // ─── Delete stale lineup rows for this fixture ────────────────────────────
+    // ─── Delete stale lineup rows for this match ────────────────────────────
     await db
       .delete(wc2026Lineups)
       .where(eq(wc2026Lineups.matchId, matchId));

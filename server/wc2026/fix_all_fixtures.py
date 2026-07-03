@@ -122,7 +122,7 @@ OFFICIAL = [
 ]
 
 print('=' * 80)
-print('[STEP 1] LOADING DB FIXTURES')
+print('[STEP 1] LOADING DB MATCHES')
 print('=' * 80)
 
 cur.execute("""
@@ -202,7 +202,7 @@ for o in OFFICIAL:
 
 # Check for DB matches not in official schedule
 print()
-print('[STEP 2b] DB FIXTURES NOT IN OFFICIAL SCHEDULE:')
+print('[STEP 2b] DB MATCHES NOT IN OFFICIAL SCHEDULE:')
 extra_count = 0
 for key, db in db_by_teams.items():
     if key not in official_by_teams:
@@ -289,7 +289,7 @@ print(f'\n[VERIFY] PASS: {verify_pass}/{len(OFFICIAL)} | FAIL: {verify_fail}/{le
 
 print()
 print('=' * 80)
-print('[STEP 5] PRINT CORRECTED JUNE 11-17 FIXTURES')
+print('[STEP 5] PRINT CORRECTED JUNE 11-17 MATCHES')
 print('=' * 80)
 for f in post_matches:
     db_date = f['match_date']

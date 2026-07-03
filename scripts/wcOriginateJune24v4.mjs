@@ -8,14 +8,14 @@
  *
  * FIX 1 — DYNAMIC SPREAD DIRECTION (ROOT CAUSE OF ALL SPREAD BUGS)
  *   Prior versions hardcoded: home team always gets -1.5, away team always gets +1.5
- *   This is WRONG. The spread favorite varies by fixture:
+ *   This is WRONG. The spread favorite varies by match:
  *     - Brazil (AWAY) is -1.5 favorite → model must price P(BRA wins by 2+)
  *     - Mexico (AWAY) is -1.5 favorite → model must price P(MEX wins by 2+)
  *     - South Korea (AWAY) is -1.5 favorite → model must price P(KOR wins by 2+)
  *     - Switzerland (HOME) is -1.5 favorite → model must price P(SUI wins by 2+)
  *     - Bosnia (HOME) is -1.5 favorite → model must price P(BIH wins by 2+)
  *     - Morocco (HOME) is -1.5 favorite → model must price P(MAR wins by 2+)
- *   Each fixture has a `spreadFavTeam` field ('home' or 'away') that drives all spread logic.
+ *   Each match has a `spreadFavTeam` field ('home' or 'away') that drives all spread logic.
  *
  * FIX 2 — BTTS CALIBRATION (baseH=1.300, baseA=1.250)
  *   Prior v1/v2: baseH=1.500, baseA=1.440 → avg BTTS=57.2% → all 6 BTTS YES favored (-130 to -146)
@@ -80,7 +80,7 @@ const ELO = {
   KOR: 1746,  // South Korea
 };
 
-// ── FIXTURES: June 24, 2026 ──────────────────────────────────────────────────
+// ── MATCHES: June 24, 2026 ──────────────────────────────────────────────────
 // spreadFavTeam: 'home' or 'away' — WHICH TEAM IS THE -1.5 SPREAD FAVORITE
 // Derived from book lines provided:
 //   SUI vs CAN: SUI (home) is -1.5 favorite (book: SUI -1.5 +400, CAN +1.5 -575)
@@ -89,7 +89,7 @@ const ELO = {
 //   MAR vs HAI: MAR (home) is -1.5 favorite (book: MAR -1.5 -170, HAI +1.5 +135)
 //   CZE vs MEX: MEX (away) is -1.5 favorite (book: MEX -1.5 +260, CZE +1.5 -350)
 //   RSA vs KOR: KOR (away) is -1.5 favorite (book: KOR -1.5 +195, RSA +1.5 -250)
-const FIXTURES = [
+const MATCHES = [
   {
     id: 'wc26-g-049',
     homeCode: 'SUI', homeName: 'Switzerland',
@@ -195,7 +195,7 @@ console.log(`${TAG} SECTION A: BOOK-IMPLIED PROBABILITY ANALYSIS`);
 console.log(`${TAG} ═══════════════════════════════════════════════════════════`);
 console.log(`${TAG} [PURPOSE] Validate book lines, compute no-vig probs, confirm spread direction`);
 
-for (const fix of FIXTURES) {
+for (const fix of MATCHES) {
   const b = fix.book;
   const rawH = americanToImplied(b.homeML);
   const rawD = americanToImplied(b.draw);
@@ -438,7 +438,7 @@ function validateInvariants(sim, lines, fix) {
 // ── MAIN EXECUTION ───────────────────────────────────────────────────────────
 const results = [];
 
-for (const fix of FIXTURES) {
+for (const fix of MATCHES) {
   const eH = ELO[fix.homeCode], eA = ELO[fix.awayCode];
   const eloDiff = (eH - eA) / 400;
   const lH = Math.max(0.25, Math.min(3.5, PARAMS.baseH * Math.exp(eloDiff * PARAMS.ss)));
@@ -506,12 +506,12 @@ const conn = await mysql.createConnection(process.env.DATABASE_URL);
 let totalInserted = 0;
 
 try {
-  // Delete existing model odds for all 6 fixtures
-  const fixtureIds = FIXTURES.map(f => f.id);
-  const placeholders = fixtureIds.map(() => '?').join(',');
+  // Delete existing model odds for all 6 matches
+  const matchIds = MATCHES.map(f => f.id);
+  const placeholders = matchIds.map(() => '?').join(',');
   const [delResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE book_id=0 AND fixture_id IN (${placeholders})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE book_id=0 AND match_id IN (${placeholders})`,
+    matchIds
   );
   console.log(`${TAG} [STEP] Deleted ${delResult.affectedRows} existing model odds rows`);
 
@@ -547,7 +547,7 @@ try {
     for (const row of oddsRows) {
       await conn.execute(
         `INSERT INTO wc2026_odds_snapshots
-           (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+           (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
          VALUES (?, 0, ?, ?, ?, ?, ?, NOW(), 0)`,
         [fix.id, row.market, row.selection, row.line, row.odds, row.prob]
       );
@@ -561,7 +561,7 @@ try {
 
     await conn.execute(
       `INSERT INTO wc2026_model_projections
-         (fixture_id, model_version, n_simulations,
+         (match_id, model_version, n_simulations,
           home_team, away_team, home_lambda, away_lambda,
           home_win_prob, draw_prob, away_win_prob,
           proj_home_score, proj_away_score, proj_total, proj_spread,

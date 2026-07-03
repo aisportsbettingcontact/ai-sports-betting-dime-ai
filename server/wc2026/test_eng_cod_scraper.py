@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║  WC2026 BETEXPLORER SCRAPER — SINGLE FIXTURE TEST                              ║
+║  WC2026 BETEXPLORER SCRAPER — SINGLE MATCH TEST                              ║
 ║  Target: England vs DR Congo | event_id=nkoQVAgB                               ║
 ║  Validates: bid=549 parsing for all 5 markets from live BetExplorer HTML       ║
 ║  Logs: wc2026oddslog.txt (append-only)                                         ║
@@ -29,7 +29,7 @@ BET365_BID = 549
 LOG_FILE   = "/home/ubuntu/wc2026oddslog.txt"
 BASE_URL   = "https://www.betexplorer.com"
 
-FIXTURE = {
+MATCH_DATA = {
     "match_id": "wc26-r32-080",
     "event_id":   "nkoQVAgB",
     "slug":       "england-d-r-congo",
@@ -373,10 +373,10 @@ def parse_btts(soup: BeautifulSoup) -> Optional[Dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     with open(LOG_FILE, "a") as f:
-        f.write(f"\n{'='*80}\n[SESSION] {datetime.now(timezone.utc).isoformat()} | ENG vs COD Single Fixture Test\n{'='*80}\n")
+        f.write(f"\n{'='*80}\n[SESSION] {datetime.now(timezone.utc).isoformat()} | ENG vs COD Single Match Test\n{'='*80}\n")
     
-    section("WC2026 BETEXPLORER SCRAPER — SINGLE FIXTURE TEST: ENG vs COD")
-    log("INIT", "CONFIG", f"BET365_BID={BET365_BID} | event_id={FIXTURE['event_id']} | Markets={MARKETS}")
+    section("WC2026 BETEXPLORER SCRAPER — SINGLE MATCH TEST: ENG vs COD")
+    log("INIT", "CONFIG", f"BET365_BID={BET365_BID} | event_id={MATCH_DATA['event_id']} | Markets={MARKETS}")
     
     # ── Phase 1: Conversion engine validation ─────────────────────────────
     section("PHASE 1: CONVERSION ENGINE VALIDATION")
@@ -396,7 +396,7 @@ def main():
     
     # ── Phase 2: Fetch full page ──────────────────────────────────────────
     section("PHASE 2: FETCH FULL MATCH PAGE HTML")
-    url = f"{BASE_URL}/football/world/world-championship-2026/{FIXTURE['slug']}/{FIXTURE['event_id']}/"
+    url = f"{BASE_URL}/football/world/world-championship-2026/{MATCH_DATA['slug']}/{MATCH_DATA['event_id']}/"
     log("INPUT", "URL", f"Target URL: {url}")
     
     html = fetch(url)
@@ -422,7 +422,7 @@ def main():
     market_soups = {}
     
     for market in MARKETS:
-        ajax_url = f"{BASE_URL}/match-odds/{FIXTURE['event_id']}/{market}/"
+        ajax_url = f"{BASE_URL}/match-odds/{MATCH_DATA['event_id']}/{market}/"
         log("HTTP", "AJAX", f"Trying AJAX: {ajax_url}")
         ajax_html = fetch(ajax_url, extra_headers={
             "X-Requested-With": "XMLHttpRequest",
@@ -536,7 +536,7 @@ def main():
     
     # Save JSON
     out = {
-        "match": FIXTURE,
+        "match": MATCH_DATA,
         "scraped_at": datetime.now(timezone.utc).isoformat(),
         "markets_ok": ok_markets,
         "markets_fail": fail_markets,

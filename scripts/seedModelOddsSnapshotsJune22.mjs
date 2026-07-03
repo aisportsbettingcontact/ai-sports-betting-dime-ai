@@ -2,12 +2,12 @@
  * seedModelOddsSnapshotsJune22.mjs
  *
  * Seeds v3-champion model lines into wc2026_odds_snapshots (book_id=0)
- * for all 4 June 22, 2026 WC2026 fixtures.
+ * for all 4 June 22, 2026 WC2026 matches.
  *
  * These are HARDCODED final values from the v3-champion 1M Monte Carlo model.
  * is_closing=1 marks them as final — they will not be overwritten by future runs.
  *
- * FIXTURES (June 22, 2026 PST):
+ * MATCHES (June 22, 2026 PST):
  *   wc26-g-043: Austria (H) vs Argentina (A)  — 10:00 AM PST
  *   wc26-g-041: Iraq (H) vs France (A)        — 2:00 PM PST  [TOTAL LINE = 3.5]
  *   wc26-g-042: Norway (H) vs Senegal (A)     — 5:00 PM PST
@@ -31,7 +31,7 @@ const TAG = '[SEED_MODEL_J22]';
 // Iraq/France total line = 3.5 (per user specification)
 const MODEL_ODDS = [
   {
-    fixtureId: 'wc26-g-043',
+    matchId: 'wc26-g-043',
     label: 'Austria (H) vs Argentina (A)',
     markets: [
       // 1X2
@@ -47,7 +47,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    fixtureId: 'wc26-g-041',
+    matchId: 'wc26-g-041',
     label: 'Iraq (H) vs France (A)',
     markets: [
       // 1X2
@@ -63,7 +63,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    fixtureId: 'wc26-g-042',
+    matchId: 'wc26-g-042',
     label: 'Norway (H) vs Senegal (A)',
     markets: [
       // 1X2
@@ -79,7 +79,7 @@ const MODEL_ODDS = [
     ],
   },
   {
-    fixtureId: 'wc26-g-044',
+    matchId: 'wc26-g-044',
     label: 'Algeria (H) vs Jordan (A)',
     markets: [
       // 1X2
@@ -99,48 +99,48 @@ const MODEL_ODDS = [
 async function main() {
   console.log(`\n${TAG} ${'='.repeat(72)}`);
   console.log(`${TAG} Seeding v3-champion model lines → wc2026_odds_snapshots (book_id=0)`);
-  console.log(`${TAG} 4 fixtures × 7 markets = 28 rows | is_closing=1 (hardcoded final)`);
+  console.log(`${TAG} 4 matches × 7 markets = 28 rows | is_closing=1 (hardcoded final)`);
   console.log(`${TAG} Timestamp: ${new Date().toISOString()}`);
   console.log(`${TAG} ${'='.repeat(72)}\n`);
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
 
-  // Step 1: Verify all 4 fixture IDs exist in DB
-  const fixtureIds = MODEL_ODDS.map(f => f.fixtureId);
-  const [fixtureCheck] = await conn.execute(
-    `SELECT fixture_id, status FROM wc2026_matches WHERE fixture_id IN (${fixtureIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
-    fixtureIds
+  // Step 1: Verify all 4 match IDs exist in DB
+  const matchIds = MODEL_ODDS.map(f => f.matchId);
+  const [matchCheck] = await conn.execute(
+    `SELECT match_id, status FROM wc2026_matches WHERE match_id IN (${matchIds.map(() => '?').join(',')}) ORDER BY kickoff_utc`,
+    matchIds
   );
-  console.log(`${TAG} [VERIFY] DB fixtures found: ${fixtureCheck.length}/4`);
-  for (const row of fixtureCheck) {
-    console.log(`${TAG}   ✓ ${row.fixture_id} (${row.status})`);
+  console.log(`${TAG} [VERIFY] DB matches found: ${matchCheck.length}/4`);
+  for (const row of matchCheck) {
+    console.log(`${TAG}   ✓ ${row.match_id} (${row.status})`);
   }
-  if (fixtureCheck.length !== 4) {
-    console.error(`${TAG} [FATAL] Expected 4 fixtures, got ${fixtureCheck.length}. Aborting.`);
+  if (matchCheck.length !== 4) {
+    console.error(`${TAG} [FATAL] Expected 4 matches, got ${matchCheck.length}. Aborting.`);
     process.exit(1);
   }
 
-  // Step 2: Delete existing book_id=0 rows for these fixtures (clean slate)
+  // Step 2: Delete existing book_id=0 rows for these matches (clean slate)
   const [delResult] = await conn.execute(
-    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND fixture_id IN (${fixtureIds.map(() => '?').join(',')})`,
-    fixtureIds
+    `DELETE FROM wc2026_odds_snapshots WHERE book_id = 0 AND match_id IN (${matchIds.map(() => '?').join(',')})`,
+    matchIds
   );
-  console.log(`\n${TAG} [STEP] Deleted ${delResult.affectedRows} existing book_id=0 rows for June 22 fixtures`);
+  console.log(`\n${TAG} [STEP] Deleted ${delResult.affectedRows} existing book_id=0 rows for June 22 matches`);
 
   // Step 3: Insert all 28 rows
   let inserted = 0;
   let errors = 0;
   const now = new Date();
 
-  for (const fixture of MODEL_ODDS) {
-    console.log(`\n${TAG} [STEP] Inserting ${fixture.markets.length} rows for ${fixture.fixtureId} (${fixture.label})`);
-    for (const mkt of fixture.markets) {
+  for (const match of MODEL_ODDS) {
+    console.log(`\n${TAG} [STEP] Inserting ${match.markets.length} rows for ${match.matchId} (${match.label})`);
+    for (const mkt of match.markets) {
       try {
         await conn.execute(
           `INSERT INTO wc2026_odds_snapshots
-            (fixture_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
+            (match_id, book_id, market, selection, line, american_odds, implied_prob, snapshot_ts, is_closing)
            VALUES (?, 0, ?, ?, ?, ?, ?, ?, 1)`,
-          [fixture.fixtureId, mkt.market, mkt.selection, mkt.line, mkt.americanOdds, mkt.impliedProb, now]
+          [match.matchId, mkt.market, mkt.selection, mkt.line, mkt.americanOdds, mkt.impliedProb, now]
         );
         inserted++;
         const lineStr = mkt.line !== null ? ` line=${mkt.line}` : '';
@@ -148,18 +148,18 @@ async function main() {
         console.log(`${TAG}   [STATE] ✅ ${mkt.market}:${mkt.selection}${lineStr} → ${oddsStr} (${(mkt.impliedProb*100).toFixed(1)}%)`);
       } catch (err) {
         errors++;
-        console.error(`${TAG}   [ERROR] ❌ ${fixture.fixtureId}:${mkt.market}:${mkt.selection} → ${err.message}`);
+        console.error(`${TAG}   [ERROR] ❌ ${match.matchId}:${mkt.market}:${mkt.selection} → ${err.message}`);
       }
     }
   }
 
   // Step 4: Verify all 28 rows are in DB
   const [verifyRows] = await conn.execute(
-    `SELECT fixture_id, market, selection, american_odds, line, is_closing
+    `SELECT match_id, market, selection, american_odds, line, is_closing
      FROM wc2026_odds_snapshots
-     WHERE book_id = 0 AND fixture_id IN (${fixtureIds.map(() => '?').join(',')})
-     ORDER BY fixture_id, market, selection`,
-    fixtureIds
+     WHERE book_id = 0 AND match_id IN (${matchIds.map(() => '?').join(',')})
+     ORDER BY match_id, market, selection`,
+    matchIds
   );
   const verifyCount = verifyRows.length;
 
@@ -167,11 +167,11 @@ async function main() {
   console.log(`${TAG} [VERIFY] Inserted: ${inserted}/28 | Errors: ${errors} | DB rows confirmed: ${verifyCount}/28`);
   console.log(`${TAG} [VERIFY] ${verifyCount === 28 && errors === 0 ? '✅ PASS — all 28 rows clean' : '❌ FAIL — check errors above'}`);
 
-  // Step 5: Print final summary per fixture
+  // Step 5: Print final summary per match
   console.log(`\n${TAG} ── Final DB state ──────────────────────────────────────────`);
-  for (const fixture of MODEL_ODDS) {
-    const rows = verifyRows.filter(r => r.fixture_id === fixture.fixtureId);
-    console.log(`${TAG} ${fixture.fixtureId} (${fixture.label}) — ${rows.length} rows:`);
+  for (const match of MODEL_ODDS) {
+    const rows = verifyRows.filter(r => r.match_id === match.matchId);
+    console.log(`${TAG} ${match.matchId} (${match.label}) — ${rows.length} rows:`);
     for (const row of rows) {
       const odds = row.american_odds > 0 ? `+${row.american_odds}` : `${row.american_odds}`;
       const lineStr = row.line !== null ? ` [line=${row.line}]` : '';

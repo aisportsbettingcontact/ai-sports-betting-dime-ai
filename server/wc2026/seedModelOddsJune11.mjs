@@ -4,11 +4,11 @@
  * Seeds 2026WCAIModel.py predictions for both June 11, 2026 WC matches into
  * wc2026_odds_snapshots using book_id=0 (reserved for AI model).
  *
- * CORRECTED FIXTURE ORIENTATIONS (per user + FIFA schedule):
+ * CORRECTED MATCH ORIENTATIONS (per user + FIFA schedule):
  *   wc26-g-001: Mexico (HOME, Estadio Azteca) vs South Africa (AWAY)
  *   wc26-g-002: South Korea (HOME, SoFi Stadium neutral) vs Czech Republic (AWAY)
  *
- * DB fixture table (post-fix):
+ * DB match table (post-fix):
  *   wc26-g-001: home_team_id=MEX, away_team_id=RSA
  *   wc26-g-002: home_team_id=KOR, away_team_id=CZE
  *
@@ -98,22 +98,22 @@ async function main() {
       console.error(`[ModelSeed] [VERIFY] FAIL — Could not resolve team IDs`);
       continue;
     }
-    let [fixtures] = await conn.query(
+    let [matchs] = await conn.query(
       'SELECT match_id FROM wc2026_matches WHERE home_team_id=? AND away_team_id=? LIMIT 1',
       [homeId, awayId]
     );
-    if (!fixtures[0]) {
-      [fixtures] = await conn.query(
+    if (!matchs[0]) {
+      [matchs] = await conn.query(
         'SELECT match_id FROM wc2026_matches WHERE away_team_id=? AND home_team_id=? LIMIT 1',
         [homeId, awayId]
       );
     }
-    const fixture = fixtures[0];
-    if (!fixture) {
-      console.error(`[ModelSeed] [VERIFY] FAIL — No fixture found for ${match.homeTeamName} vs ${match.awayTeamName}`);
+    const match = matchs[0];
+    if (!match) {
+      console.error(`[ModelSeed] [VERIFY] FAIL — No match found for ${match.homeTeamName} vs ${match.awayTeamName}`);
       continue;
     }
-    const matchId = fixture.match_id;
+    const matchId = match.match_id;
     console.log(`[ModelSeed] [STATE] match_id=${matchId}`);
     const [del] = await conn.query(
       'DELETE FROM wc2026_odds_snapshots WHERE match_id=? AND book_id=?',
