@@ -4414,4 +4414,4 @@
 - [x] Fix date filtering to use kickoff_date_pt (Pacific Time) for date grouping
 - [x] Fix kickoff_time_et rendering on feed cards (already correct — displays in ET)
 - [x] Verify correct matches appear on correct dates (Jul 2 vs Jul 3) — ALL PASS
-- [ ] Save checkpoint with permanent fix (IN PROGRESS)
+- [x] Save checkpoint with permanent fix (6c63f9c8)
