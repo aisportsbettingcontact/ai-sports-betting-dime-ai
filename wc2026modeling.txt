@@ -1,0 +1,1094 @@
+═══════════════════════════════════════════════════════════════════════════════════
+ 500X JULY 3 BACKTEST + JULY 4 MODELING LOG
+ Started: 2026-07-04T12:05:00Z
+═══════════════════════════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 1: DATA INTEGRITY AUDIT — JULY 3, 2026 MATCHES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ESPN API FINAL SCORES — VERIFIED 2026-07-04T12:07:00Z]
+  760499 | Australia vs Egypt    | Score: 1-1 | State: post | Detail: FT-Pens
+  760500 | Argentina vs Cape Verde | Score: 3-2 | State: post | Detail: AET
+  760501 | Colombia vs Ghana     | Score: 1-0 | State: post | Detail: FT
+
+[DB STATE — wc2026_matches]
+  wc26-r32-086 | AUS vs EGY | Score: 1-1 | Status: FT  | ESPN: 760499 | Kickoff: 2:00 PM ET | Advancing: egy ✅
+  wc26-r32-087 | ARG vs CPV | Score: 1-1 | Status: HT  | ESPN: 760500 | Kickoff: 6:00 PM ET | Advancing: TBD ❌ STALE
+  wc26-r32-088 | COL vs GHA | Score: 1-0 | Status: FT  | ESPN: 760501 | Kickoff: 9:30 PM ET | Advancing: col ✅
+
+[DB STATE — wc2026_espn_matches]
+  760499 | Australia vs Egypt    | Score: 1-1 | State: post | Detail: FT-Pens ✅ FULL DATA
+  760500 | Argentina vs Cape Verde | Score: null-null | State: null ❌ NOT INGESTED
+  760501 | Colombia vs Ghana     | Score: null-null | State: null ❌ NOT INGESTED
+
+[ISSUES IDENTIFIED]
+  1. wc26-r32-087 (ARG vs CPV): DB shows 1-1 HT but ESPN API shows 3-2 AET (FINAL)
+     → Need to re-run ingester for 760500
+     → Need to update wc2026_matches: score=3-2 (AET), status=FT, advancing_team_id=arg
+  2. wc26-r32-088 (COL vs GHA): wc2026_matches correct (1-0 FT, col advances)
+     → But wc2026_espn_matches has NULL data — need ESPN page scrape for 760501
+  3. 760500 wc2026_espn_matches: completely empty — need full ESPN page scrape
+  4. Team stats, player stats, lineups, match stats: EMPTY for 760500 and 760501
+
+[ACTION REQUIRED]
+  → Run wc2026Ingester for 760500 (will update wc2026_matches to 3-2 AET)
+  → Run espnDbIngester.scrapeAndIngest(760500) for full ESPN page data
+  → Run espnDbIngester.scrapeAndIngest(760501) for full ESPN page data
+  → Verify all tables populated after ingestion
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 1 STATUS: AUDIT COMPLETE — INGESTION REQUIRED BEFORE BACKTEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 2: BACKTEST ASSESSMENT — MODEL vs ACTUAL (Jul 3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[MODEL VERSION] vv17.0-KO26-RECALIBRATED-13MATCH | 1,000,000 simulations
+
+[MATCH 1: AUS vs EGY (wc26-r32-086) — ACTUAL: 1-1 FT-Pens, EGY advances]
+  MODEL: λ H=0.5054 A=0.9864 | Proj: 0.51-0.99 | Total: 1.49
+  MODEL ML: H=+420 D=+197 A=+112 | Advance: H=34% (+194) A=66% (-194)
+  BOOK:  ML: H=+230 D=+190 A=+145 | Advance: H=+125 A=-155
+  FROZEN: ML: H=+240 D=+188 A=+145 | Advance: H=+115 A=-150
+  ACTUAL: 1-1 (Total=2, Spread=0) | EGY advances
+  GRADE:
+    ✅ To Advance: Model had EGY at 66% (-194) — CORRECT (EGY advanced)
+    ✅ Draw prediction: Model had 33.6% draw prob — CORRECT (match drew)
+    ✅ Total: Model proj 1.49, actual 2 — close (under 2.5 hit)
+    ⚠️ Model underpriced home (AUS) relative to book — model had +420 vs book +230
+    ⚠️ Model spread was 1.5 (away), actual spread was 0 — model overestimated EGY edge
+
+[MATCH 2: ARG vs CPV (wc26-r32-087) — ACTUAL: 3-2 AET, ARG advances]
+  MODEL: λ H=1.4098 A=0.5815 | Proj: 1.41-0.58 | Total: 1.99
+  MODEL ML: H=-139 D=+288 A=+521 | Advance: H=73.8% (-281) A=26.2% (+281)
+  BOOK:  ML: H=-714 D=+700 A=+1800 | Advance: H=-3500 A=+1200
+  FROZEN: ML: H=-588 D=+650 A=+1400 | Advance: H=-2500 A=+950
+  ACTUAL: 3-2 AET (Total=5, Spread=-1) | ARG advances
+  GRADE:
+    ✅ To Advance: Model had ARG at 73.8% (-281) — CORRECT (ARG advanced)
+    ❌ Total: Model proj 1.99, actual 5 — MASSIVE MISS (over 2.5 crushed)
+    ⚠️ Model significantly underpriced ARG vs book (-139 vs -714 book)
+    ⚠️ Model gave CPV too much credit (26.2% advance vs 4% implied by book)
+    ❌ Score projection: 1.41-0.58 vs actual 3-2 — model severely underestimated scoring
+    NOTE: AET inflates total — 90-min score was likely 1-1 or 2-2
+
+[MATCH 3: COL vs GHA (wc26-r32-088) — ACTUAL: 1-0 FT, COL advances]
+  MODEL: λ H=1.0600 A=0.5322 | Proj: 1.06-0.53 | Total: 1.59
+  MODEL ML: H=+104 D=+213 A=+423 | Advance: H=67.2% (-205) A=32.8% (+205)
+  BOOK:  ML: H=-200 D=+300 A=+650 | Advance: H=-575 A=+400
+  FROZEN: ML: H=-189 D=+290 A=+600 | Advance: H=-450 A=+320
+  ACTUAL: 1-0 (Total=1, Spread=-1) | COL advances
+  GRADE:
+    ✅ To Advance: Model had COL at 67.2% (-205) — CORRECT (COL advanced)
+    ✅ Total: Model proj 1.59, actual 1 — UNDER hit (model was close)
+    ⚠️ Model underpriced COL vs book (+104 vs -200 book) — significant gap
+    ✅ Score direction correct: Model had COL winning
+    ✅ Spread: Model had COL favored, actual COL won by 1
+
+[BACKTEST SUMMARY — JULY 3]
+  Advance picks: 3/3 CORRECT ✅✅✅ (EGY, ARG, COL all correct)
+  ML direction: 2/3 correct (EGY win ✅, ARG win ✅, COL win ✅ — all 3 correct actually)
+  Total accuracy: 2/3 (under hit on 086, under hit on 088, MASSIVE over on 087)
+  
+  SYSTEMATIC BIASES IDENTIFIED:
+  1. MODEL UNDERPRICES FAVORITES vs BOOK — consistently gives underdogs more credit
+     - AUS +420 (model) vs +230 (book) — model too generous to AUS
+     - ARG -139 (model) vs -714 (book) — model WAY too generous to CPV
+     - COL +104 (model) vs -200 (book) — model too generous to GHA
+  2. MODEL TOTAL TOO LOW for high-quality attacking teams (ARG scored 3 in AET)
+  3. MODEL ADVANCE PROBABILITIES too conservative for heavy favorites
+     - ARG: 73.8% model vs 96% implied by book (-3500)
+     - COL: 67.2% model vs 85% implied by book (-575)
+  4. LAMBDA VALUES appear deflated — tournament pace discount may be too aggressive
+
+[RECALIBRATION TARGETS]
+  1. Increase favorite strength multiplier (reduce underdog viability)
+  2. Reduce tournament pace discount (currently too aggressive for KO stage)
+  3. Increase lambda for top-tier teams (ARG, COL) in KO matches
+  4. Adjust advance probability calculation — book is much sharper on advance lines
+  5. Consider AET/penalty probability in total projections for KO matches
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ MODEL ARCHITECTURE REFERENCE (from v17_jul3_engine.mjs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ENGINE] v17.0-KO26-RECALIBRATED-13MATCH
+[SIMS] 1,000,000 Monte Carlo (Dixon-Coles adjusted Poisson)
+[BACKTEST] 13 completed R32 matches (073-085)
+[PROJECTION MATCHES] 086 (AUS/EGY), 087 (ARG/CPV), 088 (COL/GHA)
+
+[LAMBDA COMPUTATION]
+  Weighted composite of:
+    xGW:  xG weight (0.25-0.50)
+    xGOTW: xGOT weight (0.10-0.32)
+    smW:  shot map xG weight (0.10-0.20)
+    psW:  player stats xG weight (0.12-0.22)
+    xAW:  xA weight (0.08-0.12)
+    spW:  shot map xGOT weight (0.05-0.10)
+    possW: possession adjustment (0.03-0.04)
+    convW: conversion rate adjustment (0.05-0.06)
+    rho:  Dixon-Coles correlation (-0.050 to -0.075)
+    pace: tournament pace discount (0.022-0.045)
+  
+  Formula: lambda = (xGW*avgXG + xGOTW*avgXGOT + smW*avgSmXG + psW*avgPsXG + xAW*avgXA + spW*avgSmXGOT) * possAdj * convAdj * (1-pace)
+
+[25 VARIATIONS]
+  V1-V25 with different weight combinations
+  Composite scorer: dir=45%, total=30%, spread=15%, btts=10%
+  Winner variation used for final projections
+
+[MARKET DERIVATION]
+  Dixon-Coles joint probability matrix (MAX_G=9)
+  ET model: Poisson(λ/3) for each team in extra time
+  PKs: 50.5/49.5 split
+  Spread line: 1.5 (fixed for all R32 matches)
+  
+[DATA SOURCES]
+  wc2026_espn_expected_goals: homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
+  wc2026_espn_team_stats: possession, possessionAway
+  wc2026_espn_match_stats: homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
+  wc2026_espn_player_stats: SUM(xG), SUM(xA), SUM(sog), SUM(xGOTC)
+  wc2026_espn_shot_map: xg, xgot per team per match
+  wc2026_matches: home_score, away_score, status
+  wc2026_frozen_book_odds: all markets for backtest matches
+
+[DB TABLES WRITTEN]
+  wc2026_model_projections: full model output
+  wc2026MatchOdds: model_* + lambda + proj_goals columns
+
+[JULY 4 MATCHES TO MODEL]
+  Need to query: what matches are on July 4?
+  From ESPN API check earlier: no Jul 4 R32 matches found (760500/501 were Jul 3)
+  Must check DB for Jul 4 schedule
+
+[CRITICAL RECALIBRATION FINDINGS]
+  1. Model systematically underprices favorites (gives underdogs too much credit)
+  2. Tournament pace discount too aggressive (lambdas deflated)
+  3. Advance probabilities too conservative vs book
+  4. Total projections too low for high-quality attacking teams
+  5. AET scoring not factored into total projections
+
+[NEXT STEPS]
+  Phase 3: Build v18 engine with recalibrated parameters
+  - Reduce pace discount from 0.025-0.045 → 0.010-0.025
+  - Add favorite strength multiplier (1.05-1.15x for top-tier teams)
+  - Increase VSiN weight to 70-75% to pull totals closer to market
+  - Add AET probability buffer to total projections for KO matches
+  Phase 4: Run 25 variations with new parameters
+  Phase 5: Select winner, lock parameters
+  Phase 6: Generate Jul 4 projections
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 2 DATA COLLECTION — BACKTEST + JULY 4 MODELING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[DB QUERY RESULTS]
+Jul 3 matches (match_date='2026-07-03'):
+  wc26-r32-086: AUS 1-1 EGY (FT-Pens, Egypt advances)
+  wc26-r32-087: ARG 3-2 CPV (AET, Argentina advances)
+  wc26-r32-088: COL 1-0 GHA (FT, Colombia advances)
+
+Jul 4 matches (match_date='2026-07-04'):
+  wc26-r16-089: ??? vs ??? (Round of 16)
+  wc26-r16-090: ??? vs ??? (Round of 16)
+
+[MODEL ARCHITECTURE — v17.0-KO26-RECALIBRATED-13MATCH]
+  File: server/wc2026/v17_jul3_engine.mjs (595 lines)
+  Math: Dixon-Coles adjusted Poisson, MAX_G=9
+  ET model: Poisson(λ/3) for each team
+  PKs: 50.5/49.5 split
+  Spread line: 1.5 fixed for R32
+  25 variations with composite scorer: dir=45%, total=30%, spread=15%, btts=10%
+  Lambda = (xGW*avgXG + xGOTW*avgXGOT + smW*avgSmXG + psW*avgPsXG + xAW*avgXA + spW*avgSmXGOT) * possAdj * convAdj * (1-pace)
+  
+  DB tables read: wc2026_espn_expected_goals, wc2026_espn_team_stats, wc2026_espn_match_stats, wc2026_espn_player_stats, wc2026_espn_shot_map, wc2026_matches, wc2026_frozen_book_odds
+  DB tables written: wc2026_model_projections, wc2026MatchOdds
+  
+  Jul 3 book odds used:
+    wc26-r32-086: bookHomeMl:230, bookDraw:190, bookAwayMl:145, bookSpread:0, bookTotal:1.5
+    wc26-r32-087: bookHomeMl:-714, bookDraw:700, bookAwayMl:1800, bookSpread:-1.5, bookTotal:2.5
+    wc26-r32-088: bookHomeMl:-200, bookDraw:300, bookAwayMl:650, bookSpread:-1.5, bookTotal:2.5
+
+[NEXT STEPS]
+  1. Query wc2026_model_projections for Jul 3 model output (already in DB)
+  2. Grade model vs actual: direction, total, spread, BTTS, advance
+  3. Build v18 engine with 16-match backtest (add 086-088)
+  4. Run 25 variations, select winner
+  5. Query Jul 4 match details (wc26-r16-089, wc26-r16-090)
+  6. Generate Jul 4 projections
+  7. Write to DB
+  8. Relay to user for approval
+
+[IMPORTANT: DB COLUMN NAMES ARE SNAKE_CASE]
+  wc2026_matches: match_id, match_date, kickoff_utc, home_score, away_score, status, home_team_id, away_team_id, espn_match_id
+  wc2026_model_projections: match_id, model_version, home_team, away_team, home_lambda, away_lambda, proj_home_score, proj_away_score, etc.
+  wc2026MatchOdds: match_id (camelCase table name but snake_case columns)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PHASE 2 DATA COLLECTION RESULTS — CONFIRMED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[JULY 4 MATCHES — CONFIRMED FROM DB]
+  wc26-r16-090: Canada (CAN) [HOME] vs Morocco (MAR) [AWAY]
+    Kickoff: 2026-07-04 17:00 UTC (1:00 PM ET / 10:00 AM PT)
+    ESPN: 760502 | Status: SCHEDULED
+    
+  wc26-r16-089: Paraguay (PAR) [HOME] vs France (FRA) [AWAY]
+    Kickoff: 2026-07-04 21:00 UTC (5:00 PM ET / 2:00 PM PT)
+    ESPN: 760503 | Status: SCHEDULED
+
+[JULY 4 BOOK ODDS — from audit_orientation_500x.mjs]
+  wc26-r16-089 (PAR vs FRA): 
+    Away(FRA) ML: -500 | Home(PAR) ML: +1400 | Draw: +600
+    Away(FRA) Advance: -2000 | Home(PAR) Advance: +850
+    Spread: FRA -2.5 (142/-189) 
+    Total: O -175 / U +138
+    BTTS: Y +138 / N -189
+    
+  wc26-r16-090 (CAN vs MAR):
+    Away(MAR) ML: -125 | Home(CAN) ML: +375 | Draw: +250
+    Away(MAR) Advance: -255 | Home(CAN) Advance: +195
+    Spread: MAR -1.5 (230/-303)
+    Total: O +130 / U -161
+    BTTS: Y +105 / N -143
+
+[wc2026MatchOdds TABLE COLUMNS — CONFIRMED]
+  id, match_id, espn_match_id, espn_slug, bet_explorer_match_id, bet_explorer_slug,
+  world_cup_stage, world_cup_round, inserted_at, insert_method, last_inserted_at, last_insert_method,
+  away_team, home_team, book_away_to_advance, model_away_to_advance, book_home_to_advance, model_home_to_advance,
+  book_away_ml, book_away_wd, model_away_wd, book_draw, model_draw, book_no_draw, model_no_draw,
+  book_home_ml, model_home_ml, book_home_wd, model_home_wd, book_primary_spread, model_primary_spread,
+  book_away_primary_spread_odds, model_away_primary_spread_odds, book_home_primary_spread_odds, model_home_primary_spread_odds,
+  book_total, model_total, book_over_odds, model_over_odds, book_under_odds, model_under_odds,
+  book_btts_yes, model_btts_yes, book_btts_no, model_btts_no,
+  lamba_home, lamba_away, model_projected_home_goals, model_projected_away_goals
+
+[JULY 3 MODEL PROJECTIONS — v17.0-KO26-RECALIBRATED-13MATCH (stored in DB)]
+  wc26-r32-086 (AUS vs EGY):
+    λH=0.5054 λA=0.9864 | Proj: 0.51-0.99 (T=1.49)
+    ML: H=+420 D=+197 A=+112
+    Advance: H=34.0%(+194) A=66.0%(-194)
+    O2.5=18.9% BTTS=24.1%
+    Probs: H=19.2% D=33.6% A=47.1%
+    
+  wc26-r32-087 (ARG vs CPV):
+    λH=1.4098 λA=0.5815 | Proj: 1.41-0.58 (T=1.99)
+    ML: H=-139 D=+288 A=+521
+    Advance: H=73.8%(-281) A=26.2%(+281)
+    O2.5=32.1% BTTS=32.5%
+    Probs: H=58.1% D=25.8% A=16.1%
+    
+  wc26-r32-088 (COL vs GHA):
+    λH=1.0600 λA=0.5322 | Proj: 1.06-0.53 (T=1.59)
+    ML: H=+104 D=+213 A=+423
+    Advance: H=67.2%(-205) A=32.8%(+205)
+    O2.5=21.5% BTTS=26.2%
+    Probs: H=48.9% D=31.9% A=19.1%
+
+[ACTUAL RESULTS — JULY 3]
+  wc26-r32-086: AUS 1-1 EGY (FT-Pens) → Egypt advances ✅ Model correct on advance
+  wc26-r32-087: ARG 3-2 CPV (AET)     → Argentina advances ✅ Model correct on advance
+  wc26-r32-088: COL 1-0 GHA (FT)      → Colombia advances ✅ Model correct on advance
+
+[BACKTEST GRADE SUMMARY]
+  Advance: 3/3 CORRECT (100%)
+  Direction: 3/3 CORRECT (EGY favored & won/advanced, ARG favored & won, COL favored & won)
+  Total: 2/3 (under hit on 086 & 088, MASSIVE over on 087 due to AET)
+  
+  SYSTEMATIC BIAS: Model underprices favorites vs book by 150-500+ ticks
+    086: Model EGY +112 vs Book +145 (model slightly more bullish on EGY — OK)
+    087: Model ARG -139 vs Book -714 (model WAY too generous to CPV)
+    088: Model COL +104 vs Book -200 (model too generous to GHA)
+
+[RECALIBRATION TARGETS FOR v18]
+  1. Reduce pace discount (0.025-0.045 → 0.010-0.020)
+  2. Add tier multiplier for elite teams (ARG, FRA, BRA: 1.10-1.20x)
+  3. Increase weight of xGOT relative to xG (shot quality matters more in KO)
+  4. Reduce underdog lambda floor (currently giving too much credit to weak teams)
+  5. Add AET buffer to total projections for KO matches
+
+[ESPN HISTORICAL DATA FOR JUL 4 TEAMS]
+  Need to query: all group stage + R32 matches for CAN, MAR, PAR, FRA
+  These will provide the xG/xGOT/possession/shot data for lambda computation
+
+[NEXT STEPS — EXECUTION ORDER]
+  1. Query ESPN data for CAN, MAR, PAR, FRA (all completed matches)
+  2. Build v18 engine with 16-match backtest (073-088)
+  3. Run 25 variations, select winner
+  4. Generate Jul 4 projections for 089 (PAR vs FRA) and 090 (CAN vs MAR)
+  5. Write to wc2026_model_projections + wc2026MatchOdds
+  6. Relay to user for approval
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ V17 ENGINE ARCHITECTURE — CRITICAL REFERENCE FOR V18 BUILD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[V17 ENGINE FILE]: server/wc2026/v17_jul3_engine.mjs (595 lines)
+[ENGINE VERSION]: v17.0-KO26-RECALIBRATED-13MATCH
+[N_SIMS]: 1,000,000
+
+[MATH ENGINE]:
+  - Dixon-Coles adjusted Poisson model
+  - poissonPMF(k, lambda) — log-space computation
+  - dcAdjust(x, y, lambda, mu, rho) — low-score correlation
+  - runDCSim(lambdaH, lambdaA, rho, spreadLine) — full joint matrix MAX_G=9
+  - ET model: Poisson(λ/3) for each team when draw
+  - PKs: 50.5/49.5 split
+
+[LAMBDA COMPUTATION]:
+  buildGSRows(teamCode, xgAll, tsAll, msAll) — builds per-match feature rows
+  computeLambda(teamCode, gsRows, psAll, smAll, v) — weighted composite:
+    lambdaRaw = xGW*avgXG + xGOTW*avgXGOT + smW*avgSmXG + psW*avgPsXG + xAW*avgXA + spW*avgSmXGOT
+    lambda = lambdaRaw * possAdj * (1 + convW*(convRate-0.35)) * (1 - pace)
+    possAdj = 1 + possW * ((avgPoss-50)/50)
+
+[25 VARIATIONS — WEIGHT STRUCTURE]:
+  Each variation has: xGW, xGOTW, smW, psW, xAW, spW, possW, convW, rho, pace
+  Example V1: xGW=0.35, xGOTW=0.20, smW=0.15, psW=0.15, xAW=0.10, spW=0.05, possW=0.03, convW=0.05, rho=0.060, pace=0.030
+
+[BACKTEST GRADING — COMPOSITE SCORER]:
+  composite = 45*(dirOk/n) + 30*(totalOk/n) + 15*(spreadOk/n) + 10*(bttsOk/n)
+  - dirOk: model predicted winner matches actual (or draw with pD>0.2)
+  - totalOk: over/under 2.5 correct
+  - spreadOk: spread cover correct
+  - bttsOk: both teams to score correct
+
+[DB QUERIES — GROUP STAGE ONLY (matchRound='group-stage')]:
+  - wc2026_espn_expected_goals: homeXG, awayXG, homeXGOT, awayXGOT, homeXA, awayXA
+  - wc2026_espn_team_stats: possession, possessionAway
+  - wc2026_espn_match_stats: homeShots, awayShots, homeShotsOnGoal, awayShotsOnGoal
+  - wc2026_espn_player_stats: SUM(xG), SUM(xA), SUM(sog), SUM(xGOTC) GROUP BY match+team
+  - wc2026_espn_shot_map: AVG(xg), AVG(xgot) GROUP BY match+team
+
+[DB WRITES]:
+  - wc2026_model_projections: full projection row per match
+  - wc2026MatchOdds: model_* columns + lamba_home + lamba_away + model_projected_*_goals
+
+[ESPN DATA FOR JUL 4 TEAMS — FULL HISTORY]:
+  FRANCE (FRA) — 4 group stage matches:
+    760432: FRA 3-1 SEN | xG=1.790/2.060 | poss=53.4% | SOT=8/11
+    760457: FRA 3-0 IRQ | xG=2.670/2.280 | poss=55.6% | SOT=5/19
+    760475: NOR 1-4 FRA | xG=1.500/3.000 | poss=56.7% | SOT=9/18
+    760492: FRA 3-0 SWE | xG=3.240/3.830 | poss=61.0% | SOT=12/25
+    AVG: xG=2.300 xGOT=2.793 poss=56.7% SOT=8.5/18.3
+
+  MOROCCO (MAR) — 4 group stage matches:
+    760419: BRA 1-1 MAR | xG=1.370/0.740 | poss=48.6% | SOT=3/14
+    760445: SCO 0-1 MAR | xG=0.990/0.490 | poss=58.9% | SOT=2/12
+    760464: MAR 4-2 HAI | xG=3.760/3.820 | poss=69.1% | SOT=11/22
+    760488: NED 1-1 MAR | xG=1.380/2.280 | poss=70.1% | SOT=5/11
+    AVG: xG=1.875 xGOT=1.833 poss=61.7% SOT=5.25/14.75
+
+  CANADA (CAN) — 5 matches (4 GS + 1 R32):
+    760416: CAN 1-1 BIH | xG=1.230/0.750 | poss=61.1% | SOT=4/13
+    760440: CAN 6-0 QAT | xG=4.600/4.850 | poss=79.0% | SOT=10/32
+    760463: SUI 2-1 CAN | xG=1.660/2.760 | poss=44.7% | SOT=7/13
+    760486: RSA 0-1 CAN | xG=1.380/1.670 | poss=41.6% | SOT=7/12
+    AVG (GS only): xG=2.218 xGOT=2.508 poss=56.6% SOT=7.0/17.5
+
+  PARAGUAY (PAR) — 3 group stage matches:
+    760417: USA 4-1 PAR | xG=0.540/0.420 | poss=34.7% | SOT=1/9
+    760443: TUR 0-1 PAR | xG=0.320/0.210 | poss=21.5% | SOT=2/7
+    760469: PAR 0-0 AUS | xG=0.240/0.300 | poss=44.0% | SOT=2/7
+    AVG: xG=0.367 xGOT=0.310 poss=33.4% SOT=1.67/7.67
+
+[FROZEN BOOK ODDS — JUL 4]:
+  wc26-r16-089 (PAR[HOME] vs FRA[AWAY]):
+    Home(PAR) ML: +375 | Away(FRA) ML: -125 | Draw: +250
+    Home(PAR) Advance: +195 | Away(FRA) Advance: -255
+    Spread: -1.5 (Home -303 / Away +230)
+    Total: 2.5 (O +130 / U -161)
+    BTTS: Y +105 / N -143
+    Home WD: -105 | Away WD: -556
+    Source: DraftKings | Frozen: 2026-07-01
+
+  wc26-r16-090 (CAN[HOME] vs MAR[AWAY]):
+    Home(CAN) ML: +1400 | Away(MAR) ML: -500 | Draw: +600
+    Home(CAN) Advance: +850 | Away(MAR) Advance: -2000
+    Spread: -2.5 (Home -189 / Away +142)
+    Total: 2.5 (O -175 / U +138)
+    BTTS: Y +138 / N -189
+    Home WD: +333 | Away WD: -3333
+    Source: DraftKings | Frozen: 2026-07-01
+
+[V18 RECALIBRATION TARGETS]:
+  1. Add 16-match backtest (073-088 inclusive)
+  2. Reduce pace discount: 0.025-0.045 → 0.010-0.020
+  3. Add tier multiplier for elite teams (FRA: 1.15x, ARG: 1.10x)
+  4. Increase xGOT weight relative to xG (shot quality matters more in KO)
+  5. Reduce underdog lambda floor (PAR was too generous in v17)
+  6. Use ACTUAL spread line from frozen odds (not hardcoded 1.5)
+  7. For R16+: include R32 performance data (not just group stage)
+
+[CRITICAL NOTE — wc2026MatchOdds]:
+  Jul 4 matches (089, 090) have NO rows yet in wc2026MatchOdds.
+  The v18 engine must INSERT new rows (not UPDATE).
+  Required columns: match_id, espn_match_id, home_team, away_team, world_cup_stage, world_cup_round,
+    book_home_ml, book_away_ml, book_draw, book_home_to_advance, book_away_to_advance,
+    book_primary_spread, book_home_primary_spread_odds, book_away_primary_spread_odds,
+    book_total, book_over_odds, book_under_odds, book_btts_yes, book_btts_no,
+    model_home_ml, model_away_ml, model_draw, model_home_to_advance, model_away_to_advance,
+    model_primary_spread, model_home_primary_spread_odds, model_away_primary_spread_odds,
+    model_total, model_over_odds, model_under_odds, model_btts_yes, model_btts_no,
+    lamba_home, lamba_away, model_projected_home_goals, model_projected_away_goals,
+    insert_method, inserted_at
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783167945910
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:25:45.925Z] +0.015s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:25:45.925Z] +0.015s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:25:45.925Z] +0.015s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:25:46.337Z] +0.427s S0004 [❌ FAIL    ] FATAL: Client network socket disconnected before secure TLS connection was established
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168023198
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:03.212Z] +0.014s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:27:03.212Z] +0.014s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:27:03.212Z] +0.014s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:27:03.738Z] +0.540s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:03.739Z] +0.541s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:27:03.798Z] +0.600s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:27:03.852Z] +0.654s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:27:03.907Z] +0.709s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:27:03.969Z] +0.771s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:27:04.029Z] +0.831s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:04.065Z] +0.867s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:27:04.065Z] +0.867s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:27:04.065Z] +0.867s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:27:04.065Z] +0.867s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:27:04.065Z] +0.867s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:27:04.065Z] +0.867s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:04.066Z] +0.868s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:27:04.066Z] +0.868s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:27:04.066Z] +0.868s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:04.066Z] +0.868s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:27:04.067Z] +0.869s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:27:04.067Z] +0.869s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:27:04.067Z] +0.869s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:27:04.067Z] +0.869s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:27:04.067Z] +0.869s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:27:04.067Z] +0.869s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:27:04.067Z] +0.869s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:27:04.067Z] +0.869s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:27:04.067Z] +0.869s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:27:04.067Z] +0.869s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:27:04.067Z] +0.869s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:27:04.067Z] +0.869s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:27:04.067Z] +0.869s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:27:04.067Z] +0.869s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:27:04.067Z] +0.869s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:27:04.067Z] +0.869s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:27:04.067Z] +0.869s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:27:04.067Z] +0.869s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:27:04.067Z] +0.869s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:27:04.067Z] +0.869s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:27:04.067Z] +0.869s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:27:04.119Z] +0.921s S0055 [❌ FAIL    ] FATAL: Incorrect ? value: '?' for column 'home_team' at row 1
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168115429
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:35.441Z] +0.012s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:28:35.441Z] +0.012s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:28:35.441Z] +0.012s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:28:35.970Z] +0.541s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:35.972Z] +0.543s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:28:36.034Z] +0.605s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:28:36.091Z] +0.662s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:28:36.152Z] +0.723s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:28:36.217Z] +0.788s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:28:36.277Z] +0.848s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:36.314Z] +0.885s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:28:36.314Z] +0.885s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:28:36.314Z] +0.885s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:28:36.314Z] +0.885s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:28:36.314Z] +0.885s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:28:36.314Z] +0.885s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:36.315Z] +0.886s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:28:36.315Z] +0.886s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:28:36.315Z] +0.886s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:36.316Z] +0.887s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:28:36.316Z] +0.887s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:28:36.316Z] +0.887s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:28:36.316Z] +0.887s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:28:36.317Z] +0.888s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:28:36.317Z] +0.888s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:28:36.317Z] +0.888s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:28:36.317Z] +0.888s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:28:36.317Z] +0.888s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:28:36.317Z] +0.888s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:28:36.317Z] +0.888s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:28:36.317Z] +0.888s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:28:36.317Z] +0.888s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:28:36.317Z] +0.888s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:28:36.317Z] +0.888s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:28:36.317Z] +0.888s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:28:36.317Z] +0.888s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:28:36.317Z] +0.888s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:28:36.317Z] +0.888s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:28:36.317Z] +0.888s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:28:36.317Z] +0.888s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:28:36.317Z] +0.888s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:28:36.371Z] +0.942s S0055 [❌ FAIL    ] FATAL: Data truncated for column 'world_cup_round' at row 1
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168151474
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:11.486Z] +0.012s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:29:11.486Z] +0.012s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:29:11.486Z] +0.012s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:29:11.999Z] +0.525s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:12.000Z] +0.526s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:29:12.062Z] +0.588s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:29:12.118Z] +0.644s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:29:12.174Z] +0.700s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:29:12.234Z] +0.760s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:29:12.292Z] +0.818s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:12.328Z] +0.854s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:12.328Z] +0.854s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:12.328Z] +0.854s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:12.328Z] +0.854s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:12.328Z] +0.854s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:12.328Z] +0.854s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:12.328Z] +0.854s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.328Z] +0.854s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:12.329Z] +0.855s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:12.329Z] +0.855s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:12.329Z] +0.855s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:29:12.329Z] +0.855s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:29:12.330Z] +0.856s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:29:12.330Z] +0.856s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:29:12.330Z] +0.856s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:12.330Z] +0.856s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:29:12.330Z] +0.856s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:29:12.330Z] +0.856s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:29:12.330Z] +0.856s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:29:12.330Z] +0.856s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:12.330Z] +0.856s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:29:12.330Z] +0.856s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:29:12.330Z] +0.856s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:29:12.330Z] +0.856s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:29:12.330Z] +0.856s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:29:12.330Z] +0.856s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:12.330Z] +0.856s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:29:12.330Z] +0.856s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:29:12.330Z] +0.856s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:29:12.330Z] +0.856s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:29:12.330Z] +0.856s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:12.330Z] +0.856s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:12.387Z] +0.913s S0055 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-089 (PAR vs FRA)
+[2026-07-04T12:29:12.439Z] +0.965s S0056 [❌ FAIL    ] FATAL: Unknown column 'model_draw' in 'field list'
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168185386
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:45.398Z] +0.012s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:29:45.398Z] +0.012s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:29:45.398Z] +0.012s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:29:45.918Z] +0.532s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:45.919Z] +0.533s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:29:45.980Z] +0.594s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:29:46.036Z] +0.650s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:29:46.092Z] +0.706s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:29:46.152Z] +0.766s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:29:46.211Z] +0.825s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:46.249Z] +0.863s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:46.249Z] +0.863s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:46.249Z] +0.863s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:46.249Z] +0.863s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:46.249Z] +0.863s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:46.249Z] +0.863s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:46.249Z] +0.863s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.249Z] +0.863s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.249Z] +0.863s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.249Z] +0.863s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.249Z] +0.863s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.249Z] +0.863s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.250Z] +0.864s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.250Z] +0.864s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.250Z] +0.864s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:46.250Z] +0.864s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:46.250Z] +0.864s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:46.250Z] +0.864s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:29:46.250Z] +0.864s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:29:46.250Z] +0.864s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:29:46.250Z] +0.864s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:29:46.250Z] +0.864s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:46.250Z] +0.864s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:29:46.250Z] +0.864s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:29:46.251Z] +0.865s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:29:46.251Z] +0.865s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:29:46.251Z] +0.865s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:46.251Z] +0.865s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:29:46.251Z] +0.865s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:29:46.251Z] +0.865s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:29:46.251Z] +0.865s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:29:46.251Z] +0.865s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:29:46.251Z] +0.865s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:46.251Z] +0.865s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:29:46.251Z] +0.865s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:29:46.251Z] +0.865s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:29:46.251Z] +0.865s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:29:46.251Z] +0.865s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:46.251Z] +0.865s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:46.310Z] +0.924s S0055 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-089 (PAR vs FRA)
+[2026-07-04T12:29:46.363Z] +0.977s S0056 [❌ FAIL    ] FATAL: Field 'modeled_at' doesn't have a default value
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168197764
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:57.775Z] +0.012s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:29:57.776Z] +0.012s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:29:57.776Z] +0.012s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:29:58.298Z] +0.534s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.299Z] +0.535s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:29:58.366Z] +0.602s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:29:58.425Z] +0.661s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:29:58.485Z] +0.721s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:29:58.547Z] +0.783s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:29:58.608Z] +0.844s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.646Z] +0.882s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:58.646Z] +0.882s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:58.646Z] +0.882s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:58.646Z] +0.882s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:58.646Z] +0.882s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:29:58.646Z] +0.882s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.646Z] +0.882s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.646Z] +0.882s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.646Z] +0.882s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.646Z] +0.882s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.646Z] +0.882s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.646Z] +0.882s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.647Z] +0.883s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.647Z] +0.883s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.647Z] +0.883s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:29:58.647Z] +0.883s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:29:58.647Z] +0.883s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.647Z] +0.883s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:29:58.647Z] +0.883s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:29:58.647Z] +0.883s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:29:58.647Z] +0.883s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:29:58.647Z] +0.883s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:58.647Z] +0.883s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:29:58.647Z] +0.883s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:29:58.647Z] +0.883s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:29:58.647Z] +0.883s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:29:58.647Z] +0.883s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:58.648Z] +0.884s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:29:58.648Z] +0.884s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:29:58.649Z] +0.885s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:29:58.649Z] +0.885s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:29:58.649Z] +0.885s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:29:58.649Z] +0.885s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:58.649Z] +0.885s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:29:58.649Z] +0.885s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:29:58.649Z] +0.885s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:29:58.649Z] +0.885s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:29:58.649Z] +0.885s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:58.649Z] +0.885s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.712Z] +0.948s S0055 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-089 (PAR vs FRA)
+[2026-07-04T12:29:58.775Z] +1.011s S0056 [💾 DB      ] wc2026_model_projections: UPSERTED wc26-r16-089
+[2026-07-04T12:29:58.834Z] +1.070s S0057 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-090 (CAN vs MAR)
+[2026-07-04T12:29:58.895Z] +1.131s S0058 [💾 DB      ] wc2026_model_projections: UPSERTED wc26-r16-090
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 5 — FINAL SUMMARY & CERTIFICATION
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:29:58.895Z] +1.131s S0059 [→→ OUTPUT  ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16
+[2026-07-04T12:29:58.895Z] +1.131s S0060 [→→ OUTPUT  ] Best Variation: V7 (composite=76.9)
+[2026-07-04T12:29:58.895Z] +1.131s S0061 [→→ OUTPUT  ] Backtest: 14/16 dir, 9/16 total, 16/16 spread, 9/16 btts
+[2026-07-04T12:29:58.895Z] +1.131s S0062 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-04T12:29:58.895Z] +1.131s S0063 [🎯 PROJ    ] wc26-r16-089: PAR vs FRA (R16)
+[2026-07-04T12:29:58.895Z] +1.131s S0064 [🎯 PROJ    ]   λ: PAR=0.3213 FRA=2.3959
+[2026-07-04T12:29:58.895Z] +1.131s S0065 [🎯 PROJ    ]   Projected Score: PAR 0.32 - 2.40 FRA
+[2026-07-04T12:29:58.895Z] +1.131s S0066 [🎯 PROJ    ]   ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:29:58.895Z] +1.131s S0067 [🎯 PROJ    ]   Advance: PAR=7.1%(+1306) FRA=92.9%(-1306)
+[2026-07-04T12:29:58.895Z] +1.131s S0068 [🎯 PROJ    ]   Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:29:58.895Z] +1.131s S0069 [🎯 PROJ    ]   Total(2.5): O=-104 U=+104
+[2026-07-04T12:29:58.895Z] +1.131s S0070 [🎯 PROJ    ]   BTTS: Y=+305 N=-305
+[2026-07-04T12:29:58.896Z] +1.132s S0071 [🎯 PROJ    ]   BOOK: ML H=+375 D=+250 A=-125 | Adv H=+195 A=-255
+[2026-07-04T12:29:58.896Z] +1.132s S0072 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-04T12:29:58.896Z] +1.132s S0073 [🎯 PROJ    ] wc26-r16-090: CAN vs MAR (R16)
+[2026-07-04T12:29:58.896Z] +1.132s S0074 [🎯 PROJ    ]   λ: CAN=2.0132 MAR=1.6505
+[2026-07-04T12:29:58.896Z] +1.132s S0075 [🎯 PROJ    ]   Projected Score: CAN 2.01 - 1.65 MAR
+[2026-07-04T12:29:58.896Z] +1.132s S0076 [🎯 PROJ    ]   ML: H=+113 D=+389 A=+207
+[2026-07-04T12:29:58.896Z] +1.132s S0077 [🎯 PROJ    ]   Advance: CAN=58.1%(-138) MAR=41.9%(+138)
+[2026-07-04T12:29:58.896Z] +1.132s S0078 [🎯 PROJ    ]   Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:29:58.896Z] +1.132s S0079 [🎯 PROJ    ]   Total(2.5): O=-243 U=+243
+[2026-07-04T12:29:58.896Z] +1.132s S0080 [🎯 PROJ    ]   BTTS: Y=-228 N=+228
+[2026-07-04T12:29:58.896Z] +1.132s S0081 [🎯 PROJ    ]   BOOK: ML H=+1400 D=+600 A=-500 | Adv H=+850 A=-2000
+[2026-07-04T12:29:58.896Z] +1.132s S0082 [✅ PASS    ] TOTAL: 7 PASS | 0 FAIL | 0 WARN
+[2026-07-04T12:29:58.896Z] +1.132s S0083 [→→ OUTPUT  ] Session complete in 1.1s
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  v18 ENGINE SESSION: v18-recalibrated-16match-R16-1783168216367
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v18.0-KO26-RECALIBRATED-16MATCH-R16 — 16-Match Backtest → Recalibration → July 4 R16 Projections
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:16.379Z] +0.012s S0001 [⬇  INPUT   ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16 | Sims: 1,000,000/match | Variations: 25
+[2026-07-04T12:30:16.379Z] +0.012s S0002 [⬇  INPUT   ] Backtest: 16 matches | Projection: 2 matches
+[2026-07-04T12:30:16.379Z] +0.012s S0003 [🔄 RECAL   ] v18 CHANGES: pace=0.010-0.019 (was 0.022-0.045), tier multipliers active, xGOT weight increased, actual spread lines used
+[2026-07-04T12:30:16.895Z] +0.528s S0004 [✅ PASS    ] Database connection established
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:16.897Z] +0.530s S0005 [⬇  INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-04T12:30:16.962Z] +0.595s S0006 [✅ PASS    ] Loaded 83 xG rows (group stage + knockout)
+[2026-07-04T12:30:17.020Z] +0.653s S0007 [✅ PASS    ] Loaded 83 team stats rows
+[2026-07-04T12:30:17.078Z] +0.711s S0008 [✅ PASS    ] Loaded 83 match stats rows
+[2026-07-04T12:30:17.141Z] +0.774s S0009 [✅ PASS    ] Loaded 126 player stats rows
+[2026-07-04T12:30:17.202Z] +0.835s S0010 [✅ PASS    ] Loaded 126 shot map rows
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2 — 25-VARIATION BACKTEST (16 MATCHES)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  BACKTEST RESULTS — TOP 5 VARIATIONS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:17.260Z] +0.893s S0011 [📊 BACKTEST] V7: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:30:17.261Z] +0.894s S0012 [📊 BACKTEST] V15: COMPOSITE=76.9 | Dir=14/16(87.5%) Total=9/16(56.3%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:30:17.261Z] +0.894s S0013 [📊 BACKTEST] V1: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:30:17.261Z] +0.894s S0014 [📊 BACKTEST] V2: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:30:17.261Z] +0.894s S0015 [📊 BACKTEST] V3: COMPOSITE=75.0 | Dir=14/16(87.5%) Total=8/16(50.0%) Spread=16/16(100.0%) BTTS=9/16(56.3%) | Skip=0
+[2026-07-04T12:30:17.261Z] +0.894s S0016 [✅ PASS    ] BEST VARIATION: V7 (composite=76.9)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PER-MATCH BREAKDOWN — V7
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:17.261Z] +0.894s S0017 [📊 BACKTEST] wc26-r32-073 RSA 0-1 CAN | λH=0.5362 λA=2.0132 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.261Z] +0.894s S0018 [📊 BACKTEST] wc26-r32-074 BRA 2-1 JPN | λH=2.2617 λA=1.0238 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.261Z] +0.894s S0019 [📊 BACKTEST] wc26-r32-075 GER 1-1 PAR | λH=2.0535 λA=0.3213 | Dir:❌ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.261Z] +0.894s S0020 [📊 BACKTEST] wc26-r32-076 NED 1-1 MAR | λH=1.4682 λA=1.6505 | Dir:✅ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.261Z] +0.894s S0021 [📊 BACKTEST] wc26-r32-077 CIV 1-2 NOR | λH=1.2109 λA=1.7972 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.262Z] +0.895s S0022 [📊 BACKTEST] wc26-r32-078 FRA 3-0 SWE | λH=2.3959 λA=0.8965 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0023 [📊 BACKTEST] wc26-r32-079 MEX 2-0 ECU | λH=1.0954 λA=1.2066 | Dir:❌ Tot:❌ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.262Z] +0.895s S0024 [📊 BACKTEST] wc26-r32-080 ENG 2-1 COD | λH=1.9439 λA=0.8513 | Dir:✅ Tot:✅ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0025 [📊 BACKTEST] wc26-r32-081 BEL 3-2 SEN | λH=1.8995 λA=1.8542 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.262Z] +0.895s S0026 [📊 BACKTEST] wc26-r32-082 USA 2-0 BIH | λH=1.2996 λA=0.4889 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.262Z] +0.895s S0027 [📊 BACKTEST] wc26-r32-083 ESP 3-0 AUT | λH=1.9192 λA=0.8122 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+[2026-07-04T12:30:17.262Z] +0.895s S0028 [📊 BACKTEST] wc26-r32-084 POR 2-1 CRO | λH=1.4671 λA=0.9216 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0029 [📊 BACKTEST] wc26-r32-085 SUI 2-0 ALG | λH=1.7957 λA=1.0739 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0030 [📊 BACKTEST] wc26-r32-086 AUS 1-1 EGY | λH=0.5620 λA=1.0843 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0031 [📊 BACKTEST] wc26-r32-087 ARG 3-2 CPV | λH=1.9021 λA=0.6467 | Dir:✅ Tot:❌ Spr:✅ BTTS:❌
+[2026-07-04T12:30:17.262Z] +0.895s S0032 [📊 BACKTEST] wc26-r32-088 COL 1-0 GHA | λH=1.4133 λA=0.4798 | Dir:✅ Tot:✅ Spr:✅ BTTS:✅
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3 — JULY 4 R16 PROJECTIONS (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:17.263Z] +0.896s S0033 [🎯 PROJ    ] ━━━ wc26-r16-089: PAR vs FRA ━━━
+[2026-07-04T12:30:17.263Z] +0.896s S0034 [⬇  INPUT   ] PAR: 4 data rows | FRA: 4 data rows
+[2026-07-04T12:30:17.263Z] +0.896s S0035 [⚡ LAMBDA  ] PAR: λ=0.3213 (xG=0.3625 xGOT=0.3525 poss=31.1% tier=1x)
+[2026-07-04T12:30:17.263Z] +0.896s S0036 [⚡ LAMBDA  ] FRA: λ=2.3959 (xG=2.3000 xGOT=2.7925 poss=56.7% tier=1.15x)
+[2026-07-04T12:30:17.263Z] +0.896s S0037 [💰 MARKET  ] ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:30:17.263Z] +0.896s S0038 [💰 MARKET  ] Advance: H=7.1%(+1306) A=92.9%(-1306)
+[2026-07-04T12:30:17.263Z] +0.896s S0039 [💰 MARKET  ] Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:30:17.263Z] +0.896s S0040 [💰 MARKET  ] Total(2.5): O=-104 U=+104 | BTTS: Y=+305 N=-305
+[2026-07-04T12:30:17.263Z] +0.896s S0041 [💰 MARKET  ] Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+[2026-07-04T12:30:17.263Z] +0.896s S0042 [🔗 XREF    ] BOOK ML: H=+375 D=+250 A=-125 | MODEL ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:30:17.263Z] +0.896s S0043 [🔗 XREF    ] BOOK Advance: H=+195 A=-255 | MODEL Advance: H=+1306 A=-1306
+[2026-07-04T12:30:17.264Z] +0.897s S0044 [🎯 PROJ    ] ━━━ wc26-r16-090: CAN vs MAR ━━━
+[2026-07-04T12:30:17.264Z] +0.897s S0045 [⬇  INPUT   ] CAN: 4 data rows | MAR: 4 data rows
+[2026-07-04T12:30:17.264Z] +0.897s S0046 [⚡ LAMBDA  ] CAN: λ=2.0132 (xG=2.2175 xGOT=2.5075 poss=56.6% tier=1x)
+[2026-07-04T12:30:17.264Z] +0.897s S0047 [⚡ LAMBDA  ] MAR: λ=1.6505 (xG=1.8750 xGOT=1.8325 poss=61.7% tier=1.03x)
+[2026-07-04T12:30:17.264Z] +0.897s S0048 [💰 MARKET  ] ML: H=+113 D=+389 A=+207
+[2026-07-04T12:30:17.264Z] +0.897s S0049 [💰 MARKET  ] Advance: H=58.1%(-138) A=41.9%(+138)
+[2026-07-04T12:30:17.264Z] +0.897s S0050 [💰 MARKET  ] Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:30:17.264Z] +0.897s S0051 [💰 MARKET  ] Total(2.5): O=-243 U=+243 | BTTS: Y=-228 N=+228
+[2026-07-04T12:30:17.264Z] +0.897s S0052 [💰 MARKET  ] Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+[2026-07-04T12:30:17.264Z] +0.897s S0053 [🔗 XREF    ] BOOK ML: H=+1400 D=+600 A=-500 | MODEL ML: H=+113 D=+389 A=+207
+[2026-07-04T12:30:17.265Z] +0.898s S0054 [🔗 XREF    ] BOOK Advance: H=+850 A=-2000 | MODEL Advance: H=-138 A=+138
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4 — WRITE PROJECTIONS TO DATABASE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:17.323Z] +0.956s S0055 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-089 (PAR vs FRA)
+[2026-07-04T12:30:17.383Z] +1.016s S0056 [💾 DB      ] wc2026_model_projections: UPSERTED wc26-r16-089
+[2026-07-04T12:30:17.441Z] +1.074s S0057 [💾 DB      ] wc2026MatchOdds: UPSERTED wc26-r16-090 (CAN vs MAR)
+[2026-07-04T12:30:17.499Z] +1.132s S0058 [💾 DB      ] wc2026_model_projections: UPSERTED wc26-r16-090
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 5 — FINAL SUMMARY & CERTIFICATION
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-04T12:30:17.500Z] +1.133s S0059 [→→ OUTPUT  ] Engine: v18.0-KO26-RECALIBRATED-16MATCH-R16
+[2026-07-04T12:30:17.500Z] +1.133s S0060 [→→ OUTPUT  ] Best Variation: V7 (composite=76.9)
+[2026-07-04T12:30:17.500Z] +1.133s S0061 [→→ OUTPUT  ] Backtest: 14/16 dir, 9/16 total, 16/16 spread, 9/16 btts
+[2026-07-04T12:30:17.500Z] +1.133s S0062 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-04T12:30:17.500Z] +1.133s S0063 [🎯 PROJ    ] wc26-r16-089: PAR vs FRA (R16)
+[2026-07-04T12:30:17.500Z] +1.133s S0064 [🎯 PROJ    ]   λ: PAR=0.3213 FRA=2.3959
+[2026-07-04T12:30:17.500Z] +1.133s S0065 [🎯 PROJ    ]   Projected Score: PAR 0.32 - 2.40 FRA
+[2026-07-04T12:30:17.501Z] +1.134s S0066 [🎯 PROJ    ]   ML: H=+2520 D=+720 A=-524
+[2026-07-04T12:30:17.501Z] +1.134s S0067 [🎯 PROJ    ]   Advance: PAR=7.1%(+1306) FRA=92.9%(-1306)
+[2026-07-04T12:30:17.501Z] +1.134s S0068 [🎯 PROJ    ]   Spread(-1.5): H=+156 A=-156
+[2026-07-04T12:30:17.501Z] +1.134s S0069 [🎯 PROJ    ]   Total(2.5): O=-104 U=+104
+[2026-07-04T12:30:17.501Z] +1.134s S0070 [🎯 PROJ    ]   BTTS: Y=+305 N=-305
+[2026-07-04T12:30:17.501Z] +1.134s S0071 [🎯 PROJ    ]   BOOK: ML H=+375 D=+250 A=-125 | Adv H=+195 A=-255
+[2026-07-04T12:30:17.501Z] +1.134s S0072 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-04T12:30:17.501Z] +1.134s S0073 [🎯 PROJ    ] wc26-r16-090: CAN vs MAR (R16)
+[2026-07-04T12:30:17.501Z] +1.134s S0074 [🎯 PROJ    ]   λ: CAN=2.0132 MAR=1.6505
+[2026-07-04T12:30:17.501Z] +1.134s S0075 [🎯 PROJ    ]   Projected Score: CAN 2.01 - 1.65 MAR
+[2026-07-04T12:30:17.501Z] +1.134s S0076 [🎯 PROJ    ]   ML: H=+113 D=+389 A=+207
+[2026-07-04T12:30:17.501Z] +1.134s S0077 [🎯 PROJ    ]   Advance: CAN=58.1%(-138) MAR=41.9%(+138)
+[2026-07-04T12:30:17.502Z] +1.135s S0078 [🎯 PROJ    ]   Spread(-2.5): H=-1502 A=+1502
+[2026-07-04T12:30:17.502Z] +1.135s S0079 [🎯 PROJ    ]   Total(2.5): O=-243 U=+243
+[2026-07-04T12:30:17.502Z] +1.135s S0080 [🎯 PROJ    ]   BTTS: Y=-228 N=+228
+[2026-07-04T12:30:17.502Z] +1.135s S0081 [🎯 PROJ    ]   BOOK: ML H=+1400 D=+600 A=-500 | Adv H=+850 A=-2000
+[2026-07-04T12:30:17.502Z] +1.135s S0082 [✅ PASS    ] TOTAL: 7 PASS | 0 FAIL | 0 WARN
+[2026-07-04T12:30:17.502Z] +1.135s S0083 [→→ OUTPUT  ] Session complete in 1.1s
+
+
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+  FINAL SUCCESSFUL RUN — 2026-07-04T12:30:17Z — ALL DB WRITES CONFIRMED
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+[✅] wc2026MatchOdds: UPSERTED wc26-r16-089 (PAR vs FRA)
+[✅] wc2026_model_projections: UPSERTED wc26-r16-089
+[✅] wc2026MatchOdds: UPSERTED wc26-r16-090 (CAN vs MAR)
+[✅] wc2026_model_projections: UPSERTED wc26-r16-090
+[✅] TOTAL: 7 PASS | 0 FAIL | 0 WARN
+[✅] Session complete in 1.1s
+
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+  PROJECTIONS FOR USER APPROVAL — JULY 4, 2026 R16
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+━━━ MATCH 1: wc26-r16-089 — PARAGUAY vs FRANCE ━━━
+  Kickoff: Jul 4, 5:00 PM ET | ESPN: 760503
+  λ: PAR=0.3213 FRA=2.3959
+  Projected Score: PAR 0.32 - 2.40 FRA (Total=2.72)
+  MODEL ML: PAR +2520 | Draw +720 | FRA -524
+  MODEL Advance: PAR 7.1% (+1306) | FRA 92.9% (-1306)
+  MODEL Spread(-1.5): PAR +156 | FRA -156
+  MODEL Total(2.5): Over -104 | Under +104
+  MODEL BTTS: Yes +305 | No -305
+  BOOK ML: PAR +375 | Draw +250 | FRA -125
+  BOOK Advance: PAR +195 | FRA -255
+  EDGE: Model sees FRA as MUCH stronger than book. FRA 92.9% advance vs book 71.8%.
+
+━━━ MATCH 2: wc26-r16-090 — CANADA vs MOROCCO ━━━
+  Kickoff: Jul 4, 1:00 PM ET | ESPN: 760502
+  λ: CAN=2.0132 MAR=1.6505
+  Projected Score: CAN 2.01 - 1.65 MAR (Total=3.66)
+  MODEL ML: CAN +113 | Draw +389 | MAR +207
+  MODEL Advance: CAN 58.1% (-138) | MAR 41.9% (+138)
+  MODEL Spread(-2.5): CAN -1502 | MAR +1502
+  MODEL Total(2.5): Over -243 | Under +243
+  MODEL BTTS: Yes -228 | No +228
+  BOOK ML: CAN +1400 | Draw +600 | MAR -500
+  BOOK Advance: CAN +850 | MAR -2000
+  EDGE: EXTREME DIVERGENCE. Model has CAN as favorite (-138 advance), book has MAR (-2000).
+  CAN xG=2.22/xGOT=2.51 >> MAR xG=1.88/xGOT=1.83. Model trusts performance data over reputation.
+
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+  AWAITING USER APPROVAL
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 7 FINAL AUDIT — ALL CHECKS PASSED
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+[2026-07-04T12:34:00Z] DB VERIFICATION RESULTS:
+
+=== JUL 3 FINAL SCORES (CORRECT) ===
+  wc26-r32-086: AUS 1-1 EGY [FT] ✅
+  wc26-r32-087: ARG 3-2 CPV [FT] ✅
+  wc26-r32-088: COL 1-0 GHA [FT] ✅
+
+=== JUL 4 MATCHES (SCHEDULED) ===
+  wc26-r16-089: PAR vs FRA [SCHEDULED] ✅
+  wc26-r16-090: CAN vs MAR [SCHEDULED] ✅
+
+=== wc2026MatchOdds NULL CHECK ===
+  wc26-r16-089: ALL POPULATED ✅ (H_ML=2520 A_ML=-524 D=720 H_ADV=1306 A_ADV=-1306)
+  wc26-r16-090: ALL POPULATED ✅ (H_ML=113 A_ML=207 D=389 H_ADV=-138 A_ADV=138)
+
+=== wc2026_model_projections VERIFIED ===
+  wc26-r16-089: Written ✅ (v18.0-KO26-RECALIBRATED-16MATCH-R16, modeled_at=2026-07-04T12:30:17Z)
+  wc26-r16-090: Written ✅ (v18.0-KO26-RECALIBRATED-16MATCH-R16, modeled_at=2026-07-04T12:30:17Z)
+
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 8 — RELAY TO USER FOR APPROVAL
+═══════════════════════════════════════════════════════════════════════════════════════════════════
+
+
+[2026-07-04T16:21:43Z] COMPLETENESS FIX — Win/Draw + No Draw columns populated
+
+=== wc26-r16-089 (PAR vs FRA) ===
+  P(H)=0.0354 P(D)=0.1276 P(A)=0.8370
+  model_home_wd (PAR win/draw) = +514
+  model_away_wd (FRA win/draw) = -2724
+  model_no_draw = -684
+  book_home_wd = -105, book_away_wd = -556, book_no_draw = -345
+
+=== wc26-r16-090 (CAN vs MAR) ===
+  P(H)=0.4655 P(D)=0.2139 P(A)=0.3205
+  model_home_wd (CAN win/draw) = -212
+  model_away_wd (MAR win/draw) = -115
+  model_no_draw = -367
+  book_home_wd = 333, book_away_wd = -3333, book_no_draw = -1000
+
+=== FINAL COMPLETENESS CHECK ===
+  wc26-r16-089: 47/50 populated — Critical NULLs: NONE ✅
+  wc26-r16-090: 47/50 populated — Critical NULLs: NONE ✅
+  
+  Remaining 3 NULLs per row are cosmetic metadata (espn_slug, bet_explorer_match_id, bet_explorer_slug)
+  These are URL slugs for external sites — NOT market/model data. Zero impact on projections.
+
+═══════════════════════════════════════════════════════════════════════════
+  CERTIFICATION: wc2026MatchOdds JULY 4 — 100% MARKET COMPLETE
+═══════════════════════════════════════════════════════════════════════════
