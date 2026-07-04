@@ -1328,3 +1328,36 @@ USER REQUIREMENT: Use kickoff_date_pt (Pacific Time) for date grouping, kickoff_
      on every LIVE and FT upsert, preventing future mismatches
   3. Frontend: Already correct — displays kickoff in ET, groups by match_date (PT)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+═══════════════════════════════════════════════════════════════════════════════
+SESSION: 2026-07-04T16:42 UTC — BetExplorer Scraper R16 Upgrade + DB Completion
+═══════════════════════════════════════════════════════════════════════════════
+
+[FILE CHANGES]
+  server/wc2026/betexplorer_scraper.py:
+    1. Added 2 R16 entries to MATCHES list (lines 147-153):
+       wc26-r16-089: event_id=M5YPKKbB, slug=paraguay-france, espn=760503, away=478(FRA), home=210(PAR)
+       wc26-r16-090: event_id=pUYfr7u3, slug=canada-morocco, espn=760502, away=2869(MAR), home=206(CAN)
+    2. Replaced hardcoded world_cup_stage/round (line 2355-2356) with dynamic detection:
+       if "-r16-" → knockout/r16
+       elif "-r32-" → knockout/r32
+       elif "-qf-" → knockout/qf
+       elif "-sf-" → knockout/sf
+       elif "-f-" → knockout/final
+       else → knockout/r32
+
+[DB CHANGES]
+  Table: wc2026MatchOdds
+  wc26-r16-089: book_home_to_advance 195→800, book_away_to_advance -255→-1600,
+                espn_slug NULL→'fra-par', bet_explorer_match_id NULL→'M5YPKKbB',
+                bet_explorer_slug NULL→'paraguay-france'
+  wc26-r16-090: book_home_to_advance 850→210, book_away_to_advance -2000→-265,
+                book_home_ml 1400→410, book_draw 600→228, book_away_ml -500→-120,
+                book_over_odds -175→124, book_under_odds 138→-156,
+                espn_slug NULL→'mar-can', bet_explorer_match_id NULL→'pUYfr7u3',
+                bet_explorer_slug NULL→'canada-morocco'
+
+[VALIDATION]
+  Full NULL audit: 43/43 critical columns populated for BOTH rows
+  Zero NULLs remaining in Jul 4 wc2026MatchOdds
+  ✅ 100% DATA COMPLETENESS ACHIEVED

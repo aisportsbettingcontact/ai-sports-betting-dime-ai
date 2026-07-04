@@ -144,6 +144,13 @@ MATCHES = [
     {"id": "wc26-r32-088", "event_id": "IF40Fk9U", "espn_match_id": "760501",
      "be_name": "Colombia - Ghana",               "slug": "colombia-ghana",
      "espn_slug": "gha-col",   "espn_away_team_id": 4469,  "espn_home_team_id": 208},
+    # R16 — Scheduled (Jul 4)
+    {"id": "wc26-r16-089", "event_id": "M5YPKKbB", "espn_match_id": "760503",
+     "be_name": "Paraguay - France",              "slug": "paraguay-france",
+     "espn_slug": "fra-par",   "espn_away_team_id": 478,   "espn_home_team_id": 210},
+    {"id": "wc26-r16-090", "event_id": "pUYfr7u3", "espn_match_id": "760502",
+     "be_name": "Canada - Morocco",               "slug": "canada-morocco",
+     "espn_slug": "mar-can",   "espn_away_team_id": 2869,  "espn_home_team_id": 206},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
@@ -2352,8 +2359,25 @@ def upsert_to_mysql(dataset: dict, logger: ForensicLogger) -> dict:
                 # ── BetExplorer identity for this match ──────────────────────────
                 bet_explorer_match_id = m.get("event_id")   # 8-char BetExplorer event ID
                 bet_explorer_slug     = m.get("slug")        # BetExplorer match slug
-                world_cup_stage       = "knockout"           # R32 = knockout stage
-                world_cup_round       = "r32"                # R32 round
+                # Dynamically detect round from match_id
+                if "-r16-" in match_id:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "r16"
+                elif "-r32-" in match_id:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "r32"
+                elif "-qf-" in match_id:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "qf"
+                elif "-sf-" in match_id:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "sf"
+                elif "-f-" in match_id:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "final"
+                else:
+                    world_cup_stage = "knockout"
+                    world_cup_round = "r32"
 
                 params = (
                     match_id, espn_match_id, espn_slug,
