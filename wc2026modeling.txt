@@ -1092,3 +1092,81 @@ Jul 4 matches (match_date='2026-07-04'):
 ═══════════════════════════════════════════════════════════════════════════
   CERTIFICATION: wc2026MatchOdds JULY 4 — 100% MARKET COMPLETE
 ═══════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════
+SESSION: 2026-07-04T16:42 UTC — BetExplorer Odds + Metadata Completion for Jul 4 R16
+═══════════════════════════════════════════════════════════════════════════════
+
+[STEP 1] BetExplorer Scraper Update
+  - Added R16 matches to MATCHES list in betexplorer_scraper.py:
+    wc26-r16-089: event_id=M5YPKKbB, slug=paraguay-france, espn=760503
+    wc26-r16-090: event_id=pUYfr7u3, slug=canada-morocco, espn=760502
+  - Fixed hardcoded world_cup_round="r32" → dynamic detection from match_id
+  - Scraper run attempted but BetExplorer AJAX endpoints timing out from sandbox
+    (ReadTimeout on /match-odds/{id}/0/{market}/bestOdds/ after 25s x3 retries)
+
+[STEP 2] Browser Scrape Results (BetExplorer)
+  Source: https://www.betexplorer.com/football/world/world-championship-2026/
+  
+  CAN vs MAR (pUYfr7u3):
+    1X2 (bet365 avg): CAN 5.10 (+410) | Draw 3.28 (+228) | MAR 1.83 (-120)
+    O/U 2.5 (avg): Over 2.24 (+124) | Under 1.64 (-156)
+  
+  PAR vs FRA (M5YPKKbB):
+    1X2: Page loaded but odds table empty (pre-match odds not yet populated)
+    → Kept existing DK frozen odds: PAR +375 | Draw +250 | FRA -125
+
+  User-provided BetExplorer Advance Odds:
+    PAR vs FRA: Paraguay +800, France -1600
+    CAN vs MAR: Canada +210, Morocco -265
+
+[STEP 3] SQL Updates Applied
+  UPDATE wc2026MatchOdds SET
+    book_home_to_advance = 800,
+    book_away_to_advance = -1600,
+    espn_slug = 'fra-par',
+    bet_explorer_match_id = 'M5YPKKbB',
+    bet_explorer_slug = 'paraguay-france'
+  WHERE match_id = 'wc26-r16-089';
+  → PASS (648ms)
+
+  UPDATE wc2026MatchOdds SET
+    book_home_to_advance = 210,
+    book_away_to_advance = -265,
+    book_home_ml = 410,
+    book_draw = 228,
+    book_away_ml = -120,
+    book_over_odds = 124,
+    book_under_odds = -156,
+    espn_slug = 'mar-can',
+    bet_explorer_match_id = 'pUYfr7u3',
+    bet_explorer_slug = 'canada-morocco'
+  WHERE match_id = 'wc26-r16-090';
+  → PASS (623ms)
+
+[STEP 4] Full NULL Audit — 43 Critical Columns per Row
+  wc26-r16-089: 43/43 POPULATED ✅ ZERO NULLS
+  wc26-r16-090: 43/43 POPULATED ✅ ZERO NULLS
+  TOTAL NULL CRITICAL COLUMNS: 0
+  ✅ 100% DATA COMPLETENESS ACHIEVED
+
+[FINAL STATE]
+  wc26-r16-089 (PAR vs FRA):
+    espn_slug=fra-par | be_id=M5YPKKbB | be_slug=paraguay-france
+    away=478(FRA) home=210(PAR)
+    book_home_adv=+800 book_away_adv=-1600
+    book_ML: PAR=+375 Draw=+250 FRA=-125
+    book_OU: total=2.5 over=+130 under=-161
+    book_spread=-1.5 H=+375 A=-125
+    book_WD: H=-105 A=-556 ND=-345
+    book_BTTS: Y=+105 N=-143
+
+  wc26-r16-090 (CAN vs MAR):
+    espn_slug=mar-can | be_id=pUYfr7u3 | be_slug=canada-morocco
+    away=2869(MAR) home=206(CAN)
+    book_home_adv=+210 book_away_adv=-265
+    book_ML: CAN=+410 Draw=+228 MAR=-120
+    book_OU: total=2.5 over=+124 under=-156
+    book_spread=-2.5 H=+1400 A=-500
+    book_WD: H=+333 A=-3333 ND=-1000
+    book_BTTS: Y=+138 N=-189
