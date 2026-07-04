@@ -1,0 +1,74 @@
+{
+  "wc26-r16-089": {
+    "match": {
+      "id": "wc26-r16-089",
+      "event_id": "M5YPKKbB",
+      "slug": "paraguay-france",
+      "be_name": "Paraguay - France",
+      "home": "PAR",
+      "away": "FRA"
+    },
+    "markets": {
+      "1x2": {
+        "home_ml": 1600,
+        "draw": 600,
+        "away_ml": -588,
+        "home_dec": "17.00",
+        "draw_dec": "7.00",
+        "away_dec": "1.17"
+      },
+      "ou": {},
+      "ah": {},
+      "dc": {
+        "home_or_draw": 400,
+        "no_draw": -1000,
+        "away_or_draw": -5000,
+        "hod_dec": "5.00",
+        "nd_dec": "1.10",
+        "aod_dec": "1.02"
+      },
+      "bts": {
+        "btts_yes": 138,
+        "btts_no": -189,
+        "yes_dec": "2.38",
+        "no_dec": "1.53"
+      }
+    }
+  },
+  "wc26-r16-090": {
+    "match": {
+      "id": "wc26-r16-090",
+      "event_id": "pUYfr7u3",
+      "slug": "canada-morocco",
+      "be_name": "Canada - Morocco",
+      "home": "CAN",
+      "away": "MAR"
+    },
+    "markets": {
+      "1x2": {
+        "home_ml": 400,
+        "draw": 225,
+        "away_ml": -120,
+        "home_dec": "5.00",
+        "draw_dec": "3.25",
+        "away_dec": "1.83"
+      },
+      "ou": {},
+      "ah": {},
+      "dc": {
+        "home_or_draw": -110,
+        "no_draw": -303,
+        "away_or_draw": -588,
+        "hod_dec": "1.91",
+        "nd_dec": "1.33",
+        "aod_dec": "1.17"
+      },
+      "bts": {
+        "btts_yes": 105,
+        "btts_no": -143,
+        "yes_dec": "2.05",
+        "no_dec": "1.70"
+      }
+    }
+  }
+}

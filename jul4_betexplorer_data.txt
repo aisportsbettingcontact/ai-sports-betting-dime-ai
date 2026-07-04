@@ -1,0 +1,31 @@
+═══════════════════════════════════════════════════════════════════════════════
+BetExplorer Data Capture — Jul 4, 2026 R16 Matches
+Captured: 2026-07-04T16:48 UTC
+═══════════════════════════════════════════════════════════════════════════════
+
+=== wc26-r16-089: Paraguay vs France (M5YPKKbB) ===
+Match Date: 04.07.2026 - 22:00 (local)
+
+1X2 ODDS (just loaded on page):
+  bet365:   PAR 17.00 | Draw 7.00 | FRA 1.17
+  1xBet:    PAR 15.50 | Draw 7.65 | FRA 1.22
+  888sport: PAR 15.00 | Draw 6.50 | FRA 1.18
+  Betfair:  PAR 20.00 | Draw 7.00 | FRA 1.18
+  BetInAsia: PAR 19.50 | Draw 7.45 | FRA 1.20
+  Betsson:  PAR 16.00 | Draw 7.00 | FRA 1.21
+  Betway:   PAR 13.00 | Draw 7.00 | FRA 1.18
+  bwin:     PAR 13.00 | Draw 6.75 | FRA 1.21
+  Cloudbet:  PAR 19.00 | Draw 7.35 | FRA 1.17
+  Duelbits:  PAR 20.00 | Draw 7.20 | FRA 1.19
+
+AVERAGE (approx): PAR ~16.50 (+1550) | Draw ~7.00 (+600) | FRA ~1.19 (-526)
+
+NOTE: These odds are MUCH more extreme than the DK frozen odds in DB:
+  DB currently: PAR +375 | Draw +250 | FRA -125
+  BetExplorer:  PAR +1550 | Draw +600 | FRA -526
+
+THIS IS A MAJOR DISCREPANCY — the DB book_home_ml/book_draw/book_away_ml for 089 are WRONG.
+The DK frozen odds were from an earlier pre-match market that has since moved dramatically.
+The BetExplorer odds show France as a MASSIVE favorite (1.19 decimal = -526 American).
+
+NEED TO CHECK: AH (Asian Handicap) tab for spread odds

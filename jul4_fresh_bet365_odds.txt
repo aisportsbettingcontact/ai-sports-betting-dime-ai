@@ -1,0 +1,126 @@
+═══════════════════════════════════════════════════════════════════════════
+  FRESH BET365 ODDS FROM BETEXPLORER — Jul 4, 2026 (scraped 16:57 UTC)
+  Source: BetExplorer AJAX API (bid=16, bestOdds endpoint)
+═══════════════════════════════════════════════════════════════════════════
+
+=== wc26-r16-089: Paraguay vs France (event_id=M5YPKKbB) ===
+
+1X2 (Moneyline 3-way):
+  Home (PAR) = +1600 (dec 17.00)
+  Draw       = +600  (dec 7.00)
+  Away (FRA) = -588  (dec 1.17)
+
+O/U (Total):
+  Line 0.5:  Over=-3333  Under=+1400
+  Line 1.5:  Over=-500   Under=+350
+  Line 2.5:  Over=-161   Under=+130    ← PRIMARY LINE
+  Line 3.0:  Over=+105   Under=-133
+  Line 3.5:  Over=+163   Under=-200
+  Line 4.5:  Over=+350   Under=-500
+
+AH (Spread) — BetExplorer shows HOME handicap (PAR gets + goals):
+  AH +0.5:  PAR=+340   FRA=-500
+  AH +1.0:  PAR=+255   FRA=-370
+  AH +1.5:  PAR=+120   FRA=-154    ← PRIMARY SPREAD (PAR +1.5)
+  AH +2.0:  PAR=-137   FRA=+108
+  AH +2.5:  PAR=-208   FRA=+160
+  AH +3.0:  PAR=-435   FRA=+310
+
+  NOTE: In our DB, spread is stored as AWAY spread (negative = away favored)
+  So: book_primary_spread = -1.5 (FRA favored by 1.5)
+      book_home_primary_spread_odds = +120 (PAR +1.5)
+      book_away_primary_spread_odds = -154 (FRA -1.5)
+
+DC (Double Chance):
+  1X (PAR or Draw) = +400
+  12 (No Draw)     = -1000
+  X2 (FRA or Draw) = -5000
+
+BTS (Both Teams To Score):
+  Yes = +138
+  No  = -189
+
+Advance Odds (from BetExplorer advance market — earlier scrape):
+  PAR to advance = +800
+  FRA to advance = -1600
+
+═══════════════════════════════════════════════════════════════════════════
+
+=== wc26-r16-090: Canada vs Morocco (event_id=pUYfr7u3) ===
+
+1X2 (Moneyline 3-way):
+  Home (CAN) = +400 (dec 5.00)
+  Draw       = +225 (dec 3.25)
+  Away (MAR) = -120 (dec 1.83)
+
+O/U (Total):
+  Line 0.5:  Over=-1000  Under=+600
+  Line 2.25: Over=+105   Under=-125
+  Line 2.5:  Over=+130   Under=-161   ← PRIMARY LINE
+
+  NOTE: Only 5 lines returned for CAN vs MAR (vs 22 for PAR vs FRA)
+  This is because the match is closer/tighter — fewer lines offered
+
+AH (Spread) — BetExplorer shows HOME handicap (CAN gets + goals):
+  AH  0:    CAN=+245   MAR=-333    (pick'em)
+  AH +0.25: CAN=+138   MAR=-182
+  AH +0.5:  CAN=+103   MAR=-120    ← PRIMARY SPREAD (CAN +0.5)
+  AH +0.75: CAN=-133   MAR=+105
+  AH +1.0:  CAN=-200   MAR=+150
+  AH +1.5:  CAN=-303   MAR=+230
+  AH +2.0:  CAN=-833   MAR=+540
+
+  NOTE: In our DB, spread is stored as AWAY spread (negative = away favored)
+  So: book_primary_spread = -0.5 (MAR favored by 0.5)
+      book_home_primary_spread_odds = +103 (CAN +0.5)
+      book_away_primary_spread_odds = -120 (MAR -0.5)
+
+  CRITICAL: DB currently has spread = -2.5 with odds +1400/-500
+  This is WRONG — the actual bet365 spread is -0.5 with +103/-120
+
+DC (Double Chance):
+  1X (CAN or Draw) = -110
+  X2 (MAR or Draw) = -588
+  12 (No Draw)     = -303
+
+BTS (Both Teams To Score):
+  Yes = +105
+  No  = -143
+
+Advance Odds (from BetExplorer advance market — earlier scrape):
+  CAN to advance = +210
+  MAR to advance = -265
+
+═══════════════════════════════════════════════════════════════════════════
+  COMPARISON WITH CURRENT DB VALUES
+═══════════════════════════════════════════════════════════════════════════
+
+wc26-r16-089 (PAR vs FRA):
+  DB book_home_ml = +375        FRESH = +1600   ← STALE (odds moved significantly)
+  DB book_draw = +250           FRESH = +600    ← STALE
+  DB book_away_ml = -125        FRESH = -588    ← STALE
+  DB book_over_odds = +130      FRESH = -161    ← WRONG SIGN (was from earlier avg)
+  DB book_under_odds = -161     FRESH = +130    ← SWAPPED
+  DB book_primary_spread = -1.5 FRESH = -1.5    ✓ CORRECT
+  DB book_home_spread = +375    FRESH = +120    ← WRONG (was ML, not spread)
+  DB book_away_spread = -125    FRESH = -154    ← WRONG (was ML, not spread)
+  DB book_home_wd = +333        FRESH = +400    ← STALE
+  DB book_no_draw = -1000       FRESH = -1000   ✓ CORRECT
+  DB book_away_wd = -3333       FRESH = -5000   ← STALE
+  DB book_btts_yes = +105       FRESH = +138    ← STALE
+  DB book_btts_no = -143        FRESH = -189    ← STALE
+
+wc26-r16-090 (CAN vs MAR):
+  DB book_home_ml = +410        FRESH = +400    ← CLOSE (was avg, now bet365)
+  DB book_draw = +228           FRESH = +225    ← CLOSE
+  DB book_away_ml = -120        FRESH = -120    ✓ CORRECT
+  DB book_over_odds = +124      FRESH = +130    ← CLOSE
+  DB book_under_odds = -156     FRESH = -161    ← CLOSE
+  DB book_primary_spread = -2.5 FRESH = -0.5    ← CRITICAL ERROR
+  DB book_home_spread = +1400   FRESH = +103    ← CRITICAL ERROR
+  DB book_away_spread = -500    FRESH = -120    ← CRITICAL ERROR
+  DB book_home_wd = +333        FRESH = -110    ← WRONG
+  DB book_no_draw = -1000       FRESH = -303    ← WRONG
+  DB book_away_wd = -3333       FRESH = -588    ← WRONG
+  DB book_btts_yes = +138       FRESH = +105    ← STALE
+  DB book_btts_no = -189        FRESH = -143    ← STALE
