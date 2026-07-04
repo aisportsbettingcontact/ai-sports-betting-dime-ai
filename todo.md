@@ -4415,3 +4415,13 @@
 - [x] Fix kickoff_time_et rendering on feed cards (already correct — displays in ET)
 - [x] Verify correct matches appear on correct dates (Jul 2 vs Jul 3) — ALL PASS
 - [x] Save checkpoint with permanent fix (6c63f9c8)
+
+## Session: 2026-07-04 — BetExplorer Scraper R16 Upgrade + Jul 4 DB Completion
+
+- [x] Add R16 matches to betexplorer_scraper.py MATCHES list (wc26-r16-089, wc26-r16-090)
+- [x] Fix hardcoded world_cup_round="r32" → dynamic detection from match_id (r16/r32/qf/sf/final)
+- [x] Update wc2026MatchOdds book_home_to_advance / book_away_to_advance for both Jul 4 matches (BetExplorer advance odds)
+- [x] Update wc2026MatchOdds 1X2 + O/U for CAN vs MAR (wc26-r16-090) from BetExplorer averages
+- [x] Populate espn_slug, bet_explorer_match_id, bet_explorer_slug for both Jul 4 matches
+- [x] Full NULL audit: 43/43 critical columns populated for BOTH rows — ZERO nulls
+- [x] Log all changes to wc2026modeling.txt and wcfilecleanup.txt
