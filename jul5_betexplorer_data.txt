@@ -1,0 +1,37 @@
+═══════════════════════════════════════════════════════════════════════════════
+JUL 5 R16 BETEXPLORER DATA — SCRAPED 2026-07-05 19:01 UTC
+═══════════════════════════════════════════════════════════════════════════════
+
+SOURCE: https://www.betexplorer.com/football/world/world-championship-2026/
+
+CONFIRMED MATCHES (from BetExplorer fixture list):
+- Brazil vs Norway — Today 21:00 (Jul 5) — 1X2: 1.78 / 3.78 / 4.55
+- Mexico vs England — Tomorrow 01:00 (Jul 6 UTC, still Jul 5 ET) — 1X2: 3.08 / 3.14 / 2.48
+
+IMPORTANT: BetExplorer shows HOME team first:
+- wc26-r16-091: BRA (home) vs NOR (away) — ESPN 760504
+- wc26-r16-092: MEX (home) vs ENG (away) — ESPN 760505
+
+BETEXPLORER AVERAGE 1X2 ODDS (decimal):
+- BRA vs NOR: Home=1.78, Draw=3.78, Away=4.55
+- MEX vs ENG: Home=3.08, Draw=3.14, Away=2.48
+
+CONVERTED TO AMERICAN:
+- BRA vs NOR: BRA=-128, Draw=+278, NOR=+355
+- MEX vs ENG: MEX=+208, Draw=+214, ENG=+148
+
+BRACKET CONFIRMATION:
+- R32-074: BRA 2-1 JPN → BRA advances
+- R32-077: CIV 1-2 NOR → NOR advances
+- R32-079: MEX 2-0 ECU → MEX advances
+- R32-080: ENG 2-1 COD → ENG advances
+
+R16 RESULTS ALREADY KNOWN:
+- R16-089: PAR 0-1 FRA (France advances)
+- R16-090: CAN 0-3 MAR (Morocco advances)
+
+NEED TO SCRAPE: Individual match pages for bet365 odds, O/U, AH, BTTS, advance
+- brazil-norway/[EVENT_ID]
+- mexico-england/[EVENT_ID]
+
+SLUGS TO TRY: Need to click through from main page to get event IDs

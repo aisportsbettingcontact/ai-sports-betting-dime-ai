@@ -1,0 +1,63 @@
+═══════════════════════════════════════════════════════════════════════════════
+JUL 5 R16 BETEXPLORER DATA — COMPLETE SCRAPE 2026-07-05 19:07 UTC
+═══════════════════════════════════════════════════════════════════════════════
+
+MATCH IDS:
+- BRA vs NOR: event_id=tpOhKWcC, slug=brazil-norway, ESPN=760504
+- MEX vs ENG: event_id=bc27lzfo, slug=mexico-england, ESPN=760505
+
+ORIENTATION (BetExplorer home team first):
+- wc26-r16-091: BRA (home) vs NOR (away)
+- wc26-r16-092: MEX (home) vs ENG (away)
+
+═══ BRA vs NOR — BET365 ODDS (DECIMAL) ═══
+1X2: BRA=1.75, Draw=3.70, NOR=4.75
+O/U: ONLY 0.5 line available (Over=1.04, Under=13.00) — 2.5 NOT YET POSTED
+AH: ONLY extreme line available (22.24/1.02) — primary line NOT YET POSTED
+DC: BRA_WD=1.18, NOR_WD=1.29, NoDraw=2.00 (SUSPECT - seems wrong, these are too low)
+BTTS: Yes=1.67, No=2.10
+
+═══ MEX vs ENG — BET365 ODDS (DECIMAL) ═══
+1X2: MEX=3.00, Draw=3.20, ENG=2.45
+O/U: ONLY 0.5 line available (Over=1.10, Under=7.00) — 2.5 NOT YET POSTED
+AH: -3.5 line (76.05/1.01) — primary line NOT YET POSTED
+DC: MEX_WD=1.53, ENG_WD=1.36, NoDraw=1.36
+BTTS: Yes=2.00, No=1.75
+
+═══ CONVERTED TO AMERICAN ═══
+BRA vs NOR:
+  1X2: BRA=-133, Draw=+270, NOR=+375
+  BTTS: Yes=-149, No=+110
+  DC: BRA_WD=-556, NOR_WD=-345, NoDraw=+100
+
+MEX vs ENG:
+  1X2: MEX=+200, Draw=+220, ENG=+145
+  BTTS: Yes=+100, No=-133
+  DC: MEX_WD=-189, ENG_WD=-278, NoDraw=-278
+
+═══ ISSUES ═══
+1. O/U 2.5 line NOT YET POSTED by bet365 for either match (only 0.5 available)
+2. AH primary line NOT YET POSTED (only extreme lines available)
+3. DC odds for BRA vs NOR look suspicious (1.18/1.29/2.00 don't match 1X2 math)
+4. These games are TODAY (21:00 UTC) — lines may not be fully posted yet
+
+═══ ADVANCE ODDS ═══
+Not available on BetExplorer yet — need to check other source or use model-derived
+
+═══ AVERAGE 1X2 FROM BETEXPLORER MAIN PAGE ═══
+BRA vs NOR: 1.78 / 3.78 / 4.55 (average across all books)
+MEX vs ENG: 3.08 / 3.14 / 2.48 (average across all books)
+
+═══ ESPN DATA AVAILABLE ═══
+BRA group stage data: 4 matches (vs MAR, HAI, SCO, JPN)
+NOR group stage data: 4 matches (vs SEN, FRA, IRQ, CIV)
+MEX group stage data: 4 matches (vs RSA, KOR, CZE, ECU)
+ENG group stage data: 4 matches (vs CRO, GHA, PAN, COD)
+
+═══ ACTION PLAN ═══
+1. Use bet365 1X2 odds (confirmed accurate)
+2. For O/U 2.5: derive from BetExplorer average (1.78/3.78/4.55 → compute implied total)
+   OR use the average from main page which shows these are pre-match lines
+3. For AH: use model-derived spread with bet365 1X2 as anchor
+4. BTTS and DC: use bet365 values (confirmed)
+5. Advance odds: derive from model (no book advance odds available yet)
