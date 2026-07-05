@@ -1,0 +1,86 @@
+═══════════════════════════════════════════════════════════════════════════════
+JUL 5 BETEXPLORER SCRAPER FIX PLAN — 2026-07-05 19:10 UTC
+═══════════════════════════════════════════════════════════════════════════════
+
+CONFIRMED BET365 ODDS (SCRAPED VIA allOdds ENDPOINT):
+─────────────────────────────────────────────────────
+BRA vs NOR (event_id=tpOhKWcC):
+  1X2: BRA=1.75 (-133), Draw=3.70 (+270), NOR=4.75 (+375)
+  O/U 2.5: Over=1.73 (-137), Under=2.10 (+110)
+  AH: Need to get from allOdds (bestOdds only shows 0.5 default)
+  BTTS: Yes=1.67 (-149), No=2.10 (+110)
+  DC: BRA_WD=1.18 (-556), NOR_WD=1.29 (-345), NoDraw=2.00 (+100)
+
+MEX vs ENG (event_id=bc27lzfo):
+  1X2: MEX=3.00 (+200), Draw=3.20 (+220), ENG=2.45 (+145)
+  O/U 2.5: Over=2.38 (+138), Under=1.57 (-175)
+  AH: Need from allOdds
+  BTTS: Yes=2.00 (+100), No=1.75 (-133)
+  DC: MEX_WD=1.53 (-189), ENG_WD=1.36 (-278), NoDraw=1.36 (-278)
+
+KEY DISCOVERY — ENDPOINT BEHAVIOR:
+─────────────────────────────────────────────────────
+1. bestOdds endpoint: Returns ONLY the default/first line (O/U 0.5, AH extreme)
+   - URL: /match-odds/{id}/0/{market_code}/bestOdds/
+   - market_code is STRING: '1x2', 'ou', 'ah', 'dc', 'bts', 'ha'
+   - For 1x2/dc/bts: works perfectly (no lines needed)
+   - For ou/ah: ONLY returns the default line (usually 0.5 for O/U, extreme for AH)
+
+2. allOdds endpoint: Returns ALL lines with data-hcp encoding
+   - URL: /match-odds/{id}/0/{market_code}/allOdds/
+   - Response is 1.4MB JSON with 'odds' HTML containing ALL lines
+   - data-hcp format: "E-{mkt_num}-{mkt_num}-0-{LINE}-0"
+   - For O/U 2.5: data-hcp="E-2-2-0-2.5-0"
+   - For AH -1.5: data-hcp="E-3-3-0-1.5-0" (or "E-3-3-0--1.5-0" for negative)
+   - bid=16 rows contain bet365 data
+
+SCRAPER FIXES NEEDED:
+─────────────────────────────────────────────────────
+1. MATCHES_PAGE: Change from "/matches/" to "/" (line 157)
+   OLD: f"{BASE_URL}/football/world/world-championship-2026/matches/"
+   NEW: f"{BASE_URL}/football/world/world-championship-2026/"
+
+2. AJAX_TEMPLATE: Change bestOdds to allOdds for ou/ah markets (line 158)
+   - For 1x2/dc/bts: keep bestOdds (works fine, smaller response)
+   - For ou/ah: use allOdds to get all lines including 2.5 and primary AH
+
+3. Add Jul 5 R16 matches to MATCHES list (after line 153):
+   {"id": "wc26-r16-091", "event_id": "tpOhKWcC", "espn_match_id": "760504",
+    "be_name": "Brazil - Norway", "slug": "brazil-norway",
+    "espn_slug": "nor-bra", "espn_away_team_id": 464, "espn_home_team_id": 205},
+   {"id": "wc26-r16-092", "event_id": "bc27lzfo", "espn_match_id": "760505",
+    "be_name": "Mexico - England", "slug": "mexico-england",
+    "espn_slug": "eng-mex", "espn_away_team_id": 448, "espn_home_team_id": 203},
+
+4. Add to TeamMapper.CANONICAL_MAP (after line 403):
+   "Brazil - Norway": ("nor", "bra"),
+   "Mexico - England": ("eng", "mex"),
+   "Paraguay - France": ("fra", "par"),
+   "Canada - Morocco": ("mar", "can"),
+
+5. fetch_market: Use allOdds for ou/ah markets
+   Change AJAX_TEMPLATE usage in fetch_market (line 1531):
+   - If market in ('ou', 'ah'): use allOdds endpoint
+   - If market in ('1x2', 'dc', 'bts'): keep bestOdds
+
+6. The parse_ou and parse_ah functions ALREADY handle data-hcp parsing correctly!
+   They already know how to decode "E-2-2-0-2.5-0" format.
+   The only issue was that bestOdds only returns the default line.
+
+7. upsert_to_mysql: Fix hardcoded "r32" round detection (line ~2100+)
+   Need to detect R16 from match_id prefix "wc26-r16-"
+
+AVAILABLE O/U LINES (BRA vs NOR allOdds):
+  0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75, 6.5, 7.5, 8.5
+
+AVAILABLE AH LINES (BRA vs NOR allOdds):
+  0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75
+
+ESPN MATCH IDS:
+  760504 = NOR @ BRA (Norway at Brazil)
+  760505 = ENG @ MEX (England at Mexico) — CONFIRMED from ESPN API
+
+ORIENTATION:
+  BetExplorer: Home listed first (Brazil - Norway = BRA home, NOR away)
+  ESPN: Away @ Home format in slug (nor-bra = NOR away, BRA home)
+  wc2026MatchOdds: home_team = BetExplorer home = ESPN home

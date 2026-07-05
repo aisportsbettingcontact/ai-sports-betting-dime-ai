@@ -151,11 +151,19 @@ MATCHES = [
     {"id": "wc26-r16-090", "event_id": "pUYfr7u3", "espn_match_id": "760502",
      "be_name": "Canada - Morocco",               "slug": "canada-morocco",
      "espn_slug": "mar-can",   "espn_away_team_id": 2869,  "espn_home_team_id": 206},
+    # R16 — Scheduled (Jul 5)
+    {"id": "wc26-r16-091", "event_id": "tpOhKWcC", "espn_match_id": "760504",
+     "be_name": "Brazil - Norway",                 "slug": "brazil-norway",
+     "espn_slug": "nor-bra",   "espn_away_team_id": 464,   "espn_home_team_id": 205},
+    {"id": "wc26-r16-092", "event_id": "bc27lzfo", "espn_match_id": "760505",
+     "be_name": "Mexico - England",                "slug": "mexico-england",
+     "espn_slug": "eng-mex",   "espn_away_team_id": 448,   "espn_home_team_id": 203},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
-MATCHES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/matches/"
-AJAX_TEMPLATE = "{base}/match-odds/{event_id}/0/{market}/bestOdds/?lang=en"
+MATCHES_PAGE = f"{BASE_URL}/football/world/world-championship-2026/"
+AJAX_TEMPLATE_BEST = "{base}/match-odds/{event_id}/0/{market}/bestOdds/?lang=en"
+AJAX_TEMPLATE_ALL = "{base}/match-odds/{event_id}/0/{market}/allOdds/"
 MATCH_PAGE_TEMPLATE = "{base}/football/world/world-championship-2026/{slug}/{event_id}/"
 
 
@@ -401,6 +409,11 @@ class TeamMapper:
         "Ivory Coast - Norway":            ("nor",  "civ"),
         "France - Sweden":                 ("swe",  "fra"),
         "Colombia - Ghana":               ("gha",  "col"),
+        # R16 matches
+        "Paraguay - France":              ("fra",  "par"),
+        "Canada - Morocco":               ("mar",  "can"),
+        "Brazil - Norway":                ("nor",  "bra"),
+        "Mexico - England":               ("eng",  "mex"),
     }
 
     def resolve(self, be_name: str) -> tuple:
@@ -1528,7 +1541,11 @@ def fetch_market(session: requests.Session, event_id: str, market: str,
                  logger: ForensicLogger, inspector: DebugInspector,
                  max_retries: int = 3) -> BeautifulSoup:
     """Fetch a single market AJAX endpoint with throttle control and retry."""
-    url = AJAX_TEMPLATE.format(base=BASE_URL, event_id=event_id, market=market)
+    # Use allOdds for ou/ah (need all lines), bestOdds for 1x2/dc/bts (flat markets)
+    if market in ('ou', 'ah'):
+        url = AJAX_TEMPLATE_ALL.format(base=BASE_URL, event_id=event_id, market=market)
+    else:
+        url = AJAX_TEMPLATE_BEST.format(base=BASE_URL, event_id=event_id, market=market)
     logger.emit("STEP", f"FETCH [{market.upper()}]", event_id=event_id, url=url)
 
     for attempt in range(1, max_retries + 1):
@@ -1691,6 +1708,10 @@ def run_scraper(match_ids: list = None):
             "event_id": event_id,
             "match_id": match_id,
             "espn_match_id": match.get("espn_match_id"),
+            "espn_slug": match.get("espn_slug"),
+            "espn_away_team_id": match.get("espn_away_team_id"),
+            "espn_home_team_id": match.get("espn_home_team_id"),
+            "slug": match.get("slug"),
             "be_name": be_name,
             "away_display": away_display,
             "home_display": home_display,
