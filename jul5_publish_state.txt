@@ -1,0 +1,30 @@
+═══ JUL 5 PUBLISH STATE — 2026-07-05T19:36 ═══
+
+STATUS: ALL TABLES POPULATED ✅
+
+1. wc2026_matches (PRIMARY FEED TABLE):
+   - wc26-r16-091: BRA vs NOR, date=2026-07-05, stage=R16, home=bra, away=nor, venue=inglewood, ESPN=760504, kickoff=2026-07-05T20:00Z
+   - wc26-r16-092: MEX vs ENG, date=2026-07-05, stage=R16, home=mex, away=eng, venue=inglewood, ESPN=760505, kickoff=2026-07-06T00:00Z
+
+2. wc2026MatchOdds (BOOK + MODEL ODDS):
+   - wc26-r16-091: All 42 columns populated, zero NULLs
+   - wc26-r16-092: All 42 columns populated, zero NULLs
+
+3. wc2026_model_projections:
+   - wc26-r16-091: v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16-JUL5, λ=2.26/1.80
+   - wc26-r16-092: v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16-JUL5, λ=1.10/1.94
+
+4. wc2026_espn_matches (ESPN METADATA):
+   - 760504: Brazil vs Norway, inserted successfully
+   - 760505: Mexico vs England, inserted successfully
+
+FEED PIPELINE:
+- Router: wc2026Router.ts matchesByDate procedure
+- Queries wc2026_matches WHERE match_date = '2026-07-05'
+- Gets matchIds: ['wc26-r16-091', 'wc26-r16-092']
+- Then queries wc2026MatchOdds and wc2026_model_projections by those matchIds
+- Both tables have data → feed should display
+
+NEXT: Navigate to the WC feed page to verify display
+- Feed URL: /feed or /world-cup-2026 or similar
+- Need to find the correct route that shows WC projections
