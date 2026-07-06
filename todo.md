@@ -4427,22 +4427,34 @@
 - [x] Log all changes to wc2026modeling.txt and wcfilecleanup.txt
 
 ## Mobile Owner Tabs Foundation (Jul 5, 2026)
-- [ ] Feature flags (MOBILE_OWNER_TABS_ENABLED, TEST_MODE, PUBLIC_ENABLED, DEBUG_PANEL)
-- [ ] TypeScript types (MobileOwnerTab, MobileOwnerTabConfig, MobileOwnerAccessDecision)
-- [ ] Server-side owner-only route protection for /m/* routes
-- [ ] MobileOwnerAccessGate component (frontend visibility gating)
-- [ ] MobileOwnerBottomTabs component (fixed bottom nav, iOS safe-area, 44px targets)
-- [ ] MobileOwnerTabsShell layout component
-- [ ] Feed shell screen
-- [ ] Splits shell screen
-- [ ] Chat (AI Betting Analyst) shell screen with preview action chips
-- [ ] Bet Tracker shell screen
-- [ ] Profile shell screen with credit preview
-- [ ] Logging system (all 22 required events with metadata)
-- [ ] Debug panel (owner-only, flag-controlled)
-- [ ] Route wiring in App.tsx (/m/feed, /m/splits, /m/chat, /m/bet-tracker, /m/profile)
-- [ ] Access control tests (8 tests)
-- [ ] UI tests (14 tests)
-- [ ] Tabs-only safety tests (6 tests)
-- [ ] Logging tests (13 tests)
-- [ ] Build tests (9 tests)
+- [x] Feature flags (MOBILE_OWNER_TABS_ENABLED, TEST_MODE, PUBLIC_ENABLED, DEBUG_PANEL)
+- [x] TypeScript types (MobileOwnerTab, MobileOwnerTabConfig, MobileOwnerAccessDecision)
+- [x] Server-side owner-only route protection for /m/* routes
+- [x] MobileOwnerAccessGate component (frontend visibility gating)
+- [x] MobileOwnerBottomTabs component (fixed bottom nav, iOS safe-area, 44px targets)
+- [x] MobileOwnerTabsShell layout component
+- [x] Feed shell screen
+- [x] Splits shell screen
+- [x] Chat (AI Betting Analyst) shell screen with preview action chips
+- [x] Bet Tracker shell screen
+- [x] Profile shell screen with credit preview
+- [x] Logging system (all 22 required events with metadata)
+- [x] Debug panel (owner-only, flag-controlled)
+- [x] Route wiring in App.tsx (/m/feed, /m/splits, /m/chat, /m/bet-tracker, /m/profile)
+- [x] Access control tests (8 tests)
+- [x] UI tests (14 tests)
+- [x] Tabs-only safety tests (6 tests)
+- [x] Logging tests (13 tests)
+- [x] Build tests (9 tests)
+
+## Mobile Owner Tabs Phase 2: Data Connection (Jul 5-6, 2026)
+- [x] MobileFeed connected to games.list + wc2026.matchesByDate (real data)
+- [x] MobileSplits connected to real bet%/money% splits data
+- [x] MobileChat rewritten: pricing list, sonner toast on click, no fake data, no OpenAI calls
+- [x] MobileBetTracker connected to betTracker.listWithStats (real data)
+- [x] MobileProfile connected to appUsers.me with subscription/discord status
+- [x] Shared loading/empty/error state components built
+- [x] Logger extended with Phase 2 events (preview_action_clicked, preview_action_blocked)
+- [x] Zero TypeScript errors
+- [x] 1256/1256 tests passing
+- [x] No credit deductions, no OpenAI calls in Phase 2
