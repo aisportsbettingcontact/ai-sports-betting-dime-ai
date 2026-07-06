@@ -45,6 +45,7 @@ const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 
 // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
 const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
+import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOwnerTabs';
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -182,6 +183,8 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          {/* Global mobile owner bottom tabs — appears on ALL pages for owner users on mobile */}
+          <GlobalMobileOwnerTabs />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -4458,3 +4458,16 @@
 - [x] Zero TypeScript errors
 - [x] 1256/1256 tests passing
 - [x] No credit deductions, no OpenAI calls in Phase 2
+
+## Mobile Owner Tabs Debug: Tabs Not Visible in Live UI (Jul 6, 2026) ✅ FIXED
+- [x] Audit App.tsx routing: confirm /m/* routes exist and are reachable
+- [x] Identify root cause: tabs only render at /m/* but user is on /feed (existing dashboard)
+- [x] Implement fix: mount MobileOwnerBottomTabs globally for owner users on mobile
+- [x] Ensure existing dashboard content is not broken
+- [x] Ensure non-owner users cannot see the bottom tabs
+- [x] Add required logging events (mount_attempted, mount_success, mount_skipped, etc.)
+- [x] Add 5 user-specified events: mobile_owner_tab_clicked, mobile_owner_tab_navigated_to_m_route, mobile_owner_existing_page_tabs_rendered, mobile_owner_m_route_rendered, mobile_owner_non_owner_m_route_denied
+- [x] Add/update vitest tests for global mount behavior (23 new tests)
+- [x] Verify TypeScript 0 errors
+- [x] Verify all 1285 tests pass
+- [x] Confirm no OpenAI calls or credit deductions

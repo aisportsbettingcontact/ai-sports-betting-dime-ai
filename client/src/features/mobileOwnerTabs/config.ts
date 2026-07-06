@@ -102,7 +102,25 @@ export type MobileOwnerTabEvent =
   | "mobile_bet_tracker_data_fetch_failed"
   | "mobile_bet_tracker_empty_state_rendered"
   | "mobile_profile_data_loaded"
-  | "mobile_profile_data_failed";
+  | "mobile_profile_data_failed"
+  // Phase 2.5: Global mount events
+  | "mount_attempted"
+  | "mount_success"
+  | "mount_skipped"
+  | "mount_skipped_non_owner"
+  | "mount_skipped_feature_disabled"
+  | "mount_skipped_not_mobile"
+  | "global_layout_mount_enabled"
+  | "role_resolution"
+  | "feature_flags_detected"
+  | "css_visibility_checked"
+  | "route_render_verified"
+  // Phase 2.5b: User-specified global tab interaction events
+  | "mobile_owner_tab_clicked"
+  | "mobile_owner_tab_navigated_to_m_route"
+  | "mobile_owner_existing_page_tabs_rendered"
+  | "mobile_owner_m_route_rendered"
+  | "mobile_owner_non_owner_m_route_denied";
 
 export interface MobileOwnerTabLogEntry {
   timestamp: number;
