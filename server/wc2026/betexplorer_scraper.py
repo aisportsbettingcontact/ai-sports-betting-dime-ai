@@ -158,6 +158,13 @@ MATCHES = [
     {"id": "wc26-r16-092", "event_id": "bc27lzfo", "espn_match_id": "760505",
      "be_name": "Mexico - England",                "slug": "mexico-england",
      "espn_slug": "eng-mex",   "espn_away_team_id": 448,   "espn_home_team_id": 203},
+    # R16 — Scheduled (Jul 6)
+    {"id": "wc26-r16-093", "event_id": "tbTsReVa", "espn_match_id": "760506",
+     "be_name": "Portugal - Spain",               "slug": "portugal-spain",
+     "espn_slug": "esp-por",   "espn_away_team_id": 164,   "espn_home_team_id": 482},
+    {"id": "wc26-r16-094", "event_id": "PLACEHOLDER", "espn_match_id": "760507",
+     "be_name": "USA - Belgium",                  "slug": "usa-belgium",
+     "espn_slug": "bel-usa",   "espn_away_team_id": 459,   "espn_home_team_id": 660},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
