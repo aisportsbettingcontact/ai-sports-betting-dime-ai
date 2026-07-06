@@ -120,7 +120,11 @@ export type MobileOwnerTabEvent =
   | "mobile_owner_tab_navigated_to_m_route"
   | "mobile_owner_existing_page_tabs_rendered"
   | "mobile_owner_m_route_rendered"
-  | "mobile_owner_non_owner_m_route_denied";
+  | "mobile_owner_non_owner_m_route_denied"
+  // Phase 2.5c: Visual refinement events
+  | "mobile_owner_tabs_visual_refinement_loaded"
+  | "mobile_owner_tabs_visual_refinement_active_state_verified"
+  | "mobile_owner_tabs_visual_refinement_safe_area_verified";
 
 export interface MobileOwnerTabLogEntry {
   timestamp: number;
