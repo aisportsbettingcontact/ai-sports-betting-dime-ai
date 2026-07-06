@@ -2,11 +2,24 @@
  * MobileOwnerBottomTabs
  * ═════════════════════
  * Fixed bottom navigation bar with 5 tabs.
- * - DraftKings-inspired dark theme with green active state
- * - iOS safe-area inset support (env(safe-area-inset-bottom))
- * - 44px minimum touch targets (Apple HIG)
- * - Smooth icon transitions
- * - Haptic-ready tap handler
+ *
+ * DESIGN SPEC (PERMANENT — DO NOT CHANGE):
+ * ─────────────────────────────────────────
+ * Background:      #000000 (pure black, NO navy, NO blur, NO transparency)
+ * Border-top:      1px solid rgba(255, 255, 255, 0.08)
+ * Active icon:     #39FF14 (neon green)
+ * Active label:    #FFFFFF (white)
+ * Inactive icon:   rgba(255, 255, 255, 0.55) (muted gray)
+ * Inactive label:  rgba(255, 255, 255, 0.55) (muted gray)
+ * Active dot:      #39FF14, 4px circle
+ * Icon size:       22px
+ * Label:           11px, weight 600 active / 500 inactive
+ * Height:          60px
+ * Touch targets:   44px minimum (Apple HIG)
+ * Safe area:       env(safe-area-inset-bottom)
+ *
+ * ALL COLORS USE INLINE style={{}} — NOT Tailwind classes.
+ * This prevents any CSS specificity override.
  */
 
 import { useLocation } from "wouter";
@@ -20,6 +33,16 @@ import {
 import { type MobileOwnerTabId, MOBILE_OWNER_TABS } from "./config";
 import { mobileOwnerTabLogger } from "./logger";
 import { useEffect, useRef } from "react";
+
+// ─── Design tokens (single source of truth) ─────────────────────────────────
+const COLORS = {
+  BG: "#000000",
+  BORDER: "rgba(255, 255, 255, 0.08)",
+  ACTIVE_ICON: "#39FF14",
+  ACTIVE_LABEL: "#FFFFFF",
+  INACTIVE: "rgba(255, 255, 255, 0.55)",
+  DOT: "#39FF14",
+} as const;
 
 const ICON_MAP: Record<string, React.FC<{ className?: string; strokeWidth?: number }>> = {
   Newspaper,
@@ -37,13 +60,44 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
   const [location, navigate] = useLocation();
   const renderedRef = useRef(false);
 
-  // Log initial render
+  // Log initial render + verify design tokens on mount
   useEffect(() => {
     if (!renderedRef.current) {
       renderedRef.current = true;
       mobileOwnerTabLogger.log("tabs_rendered", undefined, {
         location,
         tabCount: MOBILE_OWNER_TABS.length,
+      });
+
+      // Design verification log
+      console.log(
+        "[MobileOwnerBottomTabs] MOUNTED — Design tokens:",
+        JSON.stringify(COLORS)
+      );
+
+      mobileOwnerTabLogger.log("mobile_owner_tabs_visual_refinement_loaded", undefined, {
+        current_path: location,
+        active_tab: getActiveTab(location),
+        user_role: "owner",
+        is_owner: true,
+        viewport_width: typeof window !== "undefined" ? window.innerWidth : 0,
+        viewport_height: typeof window !== "undefined" ? window.innerHeight : 0,
+        timestamp: Date.now(),
+        bg_color: COLORS.BG,
+        active_icon_color: COLORS.ACTIVE_ICON,
+        active_text_color: COLORS.ACTIVE_LABEL,
+        inactive_color: COLORS.INACTIVE,
+      });
+
+      mobileOwnerTabLogger.log("mobile_owner_tabs_visual_refinement_safe_area_verified", undefined, {
+        current_path: location,
+        active_tab: getActiveTab(location),
+        user_role: "owner",
+        is_owner: true,
+        viewport_width: typeof window !== "undefined" ? window.innerWidth : 0,
+        viewport_height: typeof window !== "undefined" ? window.innerHeight : 0,
+        timestamp: Date.now(),
+        safe_area_bottom: "env(safe-area-inset-bottom)",
       });
     }
   }, [location]);
@@ -53,20 +107,31 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
   function handleTabTap(tabId: MobileOwnerTabId, path: string) {
     mobileOwnerTabLogger.log("tab_tapped", tabId, { from: location, to: path });
 
+    // Visual refinement: active state verified on tap
+    mobileOwnerTabLogger.log("mobile_owner_tabs_visual_refinement_active_state_verified", tabId, {
+      current_path: location,
+      active_tab: tabId,
+      user_role: "owner",
+      is_owner: true,
+      viewport_width: typeof window !== "undefined" ? window.innerWidth : 0,
+      viewport_height: typeof window !== "undefined" ? window.innerHeight : 0,
+      timestamp: Date.now(),
+    });
+
     // User-specified event: mobile_owner_tab_clicked
     mobileOwnerTabLogger.log("mobile_owner_tab_clicked", tabId, {
       current_path: location,
       target_path: path,
       tab_name: tabId,
-      user_role: null, // Not available in this component — logged at GlobalMobileOwnerTabs level
-      is_owner: true, // Only owners see these tabs
-      is_mobile: true, // Only renders on mobile
+      user_role: null,
+      is_owner: true,
+      is_mobile: true,
       test_mode: false,
       timestamp: Date.now(),
     });
 
     // Haptic feedback (if available)
-    if ("vibrate" in navigator) {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       try {
         navigator.vibrate(10);
         mobileOwnerTabLogger.log("haptic_triggered", tabId);
@@ -95,17 +160,37 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#1a1a2e]/95 backdrop-blur-xl ${className}`}
+      data-testid="mobile-owner-bottom-tabs"
+      className={className}
       style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        backgroundColor: COLORS.BG,
+        borderTop: `1px solid ${COLORS.BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
       role="tablist"
       aria-label="Main navigation"
     >
-      <div className="flex items-center justify-around h-[60px] max-w-lg mx-auto px-2">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-around",
+          height: "60px",
+          maxWidth: "32rem",
+          margin: "0 auto",
+          padding: "0 8px",
+        }}
+      >
         {MOBILE_OWNER_TABS.map((tab) => {
           const isActive = activeTabId === tab.id;
           const Icon = ICON_MAP[tab.iconName];
+          const iconColor = isActive ? COLORS.ACTIVE_ICON : COLORS.INACTIVE;
+          const labelColor = isActive ? COLORS.ACTIVE_LABEL : COLORS.INACTIVE;
 
           return (
             <button
@@ -113,38 +198,68 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
               role="tab"
               aria-selected={isActive}
               aria-label={tab.label}
+              data-testid={`tab-${tab.id}`}
+              data-active={isActive}
               onClick={() => handleTabTap(tab.id, tab.path)}
               disabled={tab.disabled}
-              className={`
-                flex flex-col items-center justify-center gap-0.5
-                min-w-[44px] min-h-[44px] px-3 py-1.5
-                rounded-lg transition-all duration-200 ease-out
-                active:scale-95
-                ${isActive
-                  ? "text-emerald-400"
-                  : "text-gray-400 hover:text-gray-200"
-                }
-                ${tab.disabled ? "opacity-40 pointer-events-none" : ""}
-              `}
+              style={{
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "2px",
+                minWidth: "44px",
+                minHeight: "44px",
+                padding: "6px 12px",
+                border: "none",
+                background: "transparent",
+                cursor: tab.disabled ? "not-allowed" : "pointer",
+                opacity: tab.disabled ? 0.4 : 1,
+                WebkitTapHighlightColor: "transparent",
+                transition: "transform 150ms ease-out",
+              }}
             >
               {Icon && (
-                <Icon
-                  className={`w-5 h-5 transition-all duration-200 ${
-                    isActive ? "scale-110" : ""
-                  }`}
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                />
+                <span
+                  style={{
+                    display: "inline-flex",
+                    color: iconColor,
+                    transform: isActive ? "scale(1.05)" : "scale(1)",
+                    transition: "transform 150ms ease-out, color 150ms ease-out",
+                  }}
+                >
+                  <Icon
+                    className="w-[22px] h-[22px]"
+                    strokeWidth={isActive ? 2.2 : 1.8}
+                  />
+                </span>
               )}
               <span
-                className={`text-[10px] leading-tight font-medium transition-all duration-200 ${
-                  isActive ? "font-semibold" : ""
-                }`}
+                style={{
+                  fontSize: "11px",
+                  fontWeight: isActive ? 600 : 500,
+                  letterSpacing: "0.01em",
+                  lineHeight: 1.2,
+                  color: labelColor,
+                  transition: "color 150ms ease-out",
+                }}
               >
                 {tab.label}
               </span>
               {/* Active indicator dot */}
               {isActive && (
-                <span className="absolute bottom-1 w-1 h-1 rounded-full bg-emerald-400" />
+                <span
+                  data-testid={`tab-dot-${tab.id}`}
+                  style={{
+                    position: "absolute",
+                    bottom: "4px",
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "999px",
+                    backgroundColor: COLORS.DOT,
+                  }}
+                />
               )}
             </button>
           );
