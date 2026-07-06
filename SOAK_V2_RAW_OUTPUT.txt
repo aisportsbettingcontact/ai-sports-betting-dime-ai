@@ -1,0 +1,1415 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  TIER 4 SOAK TEST v2 — 100-REQUEST DIME WC2026 HARNESS                     ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  RUN_ID: SOAK_1783345181871_11c11bc9
+║  TIMESTAMP: 2026-07-06T13:39:41.877Z
+║  RATE_LIMIT_WINDOW: 61000ms (reset between groups)
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+[AUTH] Tokens generated: owner ✓ | noSub ✓ | expired ✓
+
+━━━ GROUP 1: AUTH_FAIL (10 cases) — rejected before rate limit ━━━
+  [SOAK-F001] ✓ PASS | AUTH_FAIL              | HTTP 401  |     86ms | test
+  [SOAK-F002] ✓ PASS | AUTH_FAIL              | HTTP 401  |     16ms | test
+  [SOAK-F003] ✓ PASS | AUTH_FAIL              | HTTP 401  |     19ms | test
+  [SOAK-F004] ✓ PASS | AUTH_FAIL              | HTTP 403  |     21ms | test
+  [SOAK-F005] ✓ PASS | AUTH_FAIL              | HTTP 403  |     15ms | test
+  [SOAK-F006] ✓ PASS | AUTH_FAIL              | HTTP 401  |     22ms | test
+  [SOAK-F007] ✓ PASS | AUTH_FAIL              | HTTP 401  |     17ms | test
+  [SOAK-F008] ✓ PASS | AUTH_FAIL              | HTTP 401  |     14ms | test
+  [SOAK-F009] ✓ PASS | AUTH_FAIL              | HTTP 403  |     17ms | test
+  [SOAK-F010] ✓ PASS | AUTH_FAIL              | HTTP 401  |     14ms | test
+
+━━━ GROUP 2: MALFORMED (10 cases) — validation failures ━━━
+    [RATE_LIMIT_RESET] Waiting 61s for rate limit window to expire...
+    [RATE_LIMIT_RESET] Window expired. Proceeding.
+  [SOAK-M001] ✓ PASS | MALFORMED              | HTTP 400  |     10ms | invalid_json
+  [SOAK-M002] ✓ PASS | MALFORMED              | HTTP 400  |     38ms | empty_object
+  [SOAK-M003] ✓ PASS | MALFORMED              | HTTP 400  |     26ms | null_messages
+  [SOAK-M004] ✓ PASS | MALFORMED              | HTTP 400  |     25ms | string_messages
+  [SOAK-M005] ✓ PASS | MALFORMED              | HTTP 400  |     25ms | oversized_message
+  [SOAK-M006] ✓ PASS | MALFORMED              | HTTP 400  |     26ms | too_many_messages
+  [SOAK-M007] ✓ PASS | MALFORMED              | HTTP 400  |     28ms | missing_role
+  [SOAK-M008] ✓ PASS | MALFORMED              | HTTP 400  |     27ms | no_user_message
+  [SOAK-M009] ✓ PASS | MALFORMED              | HTTP 400  |     27ms | empty_content
+  [SOAK-M010] ✓ PASS | MALFORMED              | HTTP 400  |     30ms | numeric_content
+
+━━━ GROUP 3: PASS_NO_BET (20 cases) — market not supported refusals ━━━
+    [RATE_LIMIT_RESET] Waiting 61s for rate limit window to expire...
+    [RATE_LIMIT_RESET] Window expired. Proceeding (10 per window).
+  [SOAK-P001] ✓ PASS | PASS_NO_BET            | HTTP 200  |    136ms | What spread should I bet on the USA game
+  [SOAK-P002] ✓ PASS | PASS_NO_BET            | HTTP 200  |    118ms | What is the over/under total for Brazil 
+  [SOAK-P003] ✓ PASS | PASS_NO_BET            | HTTP 200  |    136ms | Will both teams score in France vs Iraq?
+  [SOAK-P004] ✓ PASS | PASS_NO_BET            | HTTP 200  |    136ms | What is the Asian handicap for Mexico vs
+  [SOAK-P005] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1350ms | Give me the correct score prediction for
+  [SOAK-P006] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1101ms | How many corners will there be in USA vs
+  [SOAK-P007] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1118ms | What is the first goal scorer market for
+  [SOAK-P008] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1673ms | Should I bet the draw no bet market?
+  [SOAK-P009] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1264ms | What is the half-time/full-time predicti
+  [SOAK-P010] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1126ms | Give me the exact score line prediction
+    [RATE_LIMIT_RESET] Waiting 61s for window reset (batch 2/2)...
+  [SOAK-P011] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1106ms | What is the double chance market for Can
+  [SOAK-P012] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1015ms | How many yellow cards in Brazil vs Norwa
+  [SOAK-P013] ✓ PASS | PASS_NO_BET            | HTTP 200  |    112ms | What is the BTTS and over 2.5 combo?
+  [SOAK-P014] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1303ms | Give me the anytime goalscorer odds
+  [SOAK-P015] ✓ PASS | PASS_NO_BET            | HTTP 200  |    111ms | What is the handicap result for Group B 
+  [SOAK-P016] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1143ms | Should I take the under 1.5 goals?
+  [SOAK-P017] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1167ms | What are the prop bets for Mbappe?
+  [SOAK-P018] ✓ PASS | PASS_NO_BET            | HTTP 200  |    122ms | Give me the total goals over 3.5 predict
+  [SOAK-P019] ✓ PASS | PASS_NO_BET            | HTTP 200  |   1435ms | What is the win-to-nil market for Englan
+  [SOAK-P020] ✓ PASS | PASS_NO_BET            | HTTP 200  |    123ms | Should I bet the both teams to score mar
+
+━━━ GROUP 4: UNSUPPORTED_REFUSAL (20 cases) — non-WC2026 scope ━━━
+    [RATE_LIMIT_RESET] Waiting 61s for rate limit window to expire...
+    [RATE_LIMIT_RESET] Window expired. Proceeding (10 per window).
+  [SOAK-U001] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1254ms | Who will win the NBA Finals this year?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U002] ✓ PASS | UNSUPPORTED_REFUSAL    | HTTP 200  |    116ms | What are the NFL Week 1 spreads?
+  [SOAK-U003] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1740ms | Give me MLB betting picks for today
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U004] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1293ms | What is the best NHL parlay?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U005] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1154ms | Who will win the Premier League?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U006] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1030ms | What are the UFC odds this weekend?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U007] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1184ms | Give me tennis betting tips
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U008] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1301ms | What is the best horse racing bet today?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U009] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1183ms | Who will win the Super Bowl?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U010] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1139ms | What are the college football rankings?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+    [RATE_LIMIT_RESET] Waiting 61s for window reset (batch 2/2)...
+  [SOAK-U011] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1273ms | Give me NBA player props
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U012] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |    998ms | What is the best cricket bet?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U013] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1210ms | Who will win the Champions League?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U014] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1595ms | What are the boxing odds for the next fi
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U015] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1720ms | Give me Formula 1 betting tips
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U016] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1359ms | What is the best golf bet this week?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U017] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1136ms | Who will win the World Series?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U018] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1154ms | What are the rugby odds?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U019] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |   1604ms | Give me esports betting picks
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+  [SOAK-U020] ✗ FAIL | UNSUPPORTED_REFUSAL    | HTTP 200  |    997ms | What is the best MMA parlay?
+         ↳ FAILURE: Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+
+━━━ GROUP 5: ANSWER (20 cases) — Claude intelligence calls ━━━
+    [RATE_LIMIT_RESET] Waiting 61s for rate limit window to expire...
+    [RATE_LIMIT_RESET] Window expired. Proceeding (10 per window).
+  [SOAK-A001] ✓ PASS | ANSWER                 | HTTP 200  |   1477ms | What is the best edge today?
+  [SOAK-A002] ✓ PASS | ANSWER                 | HTTP 200  |   1092ms | Analyze the Mexico vs England match
+  [SOAK-A003] ✓ PASS | ANSWER                 | HTTP 200  |   1009ms | Compare model versions and their Brier s
+  [SOAK-A004] ✓ PASS | ANSWER                 | HTTP 200  |   1075ms | What are the current odds for Brazil vs 
+  [SOAK-A005] ✓ PASS | ANSWER                 | HTTP 200  |   1323ms | How many matches are in the World Cup 20
+  [SOAK-A006] ✓ PASS | ANSWER                 | HTTP 200  |   1027ms | What's on today's card?
+  [SOAK-A007] ✓ PASS | ANSWER                 | HTTP 200  |   1164ms | Why is there no bet on France vs Iraq?
+  [SOAK-A008] ✓ PASS | ANSWER                 | HTTP 200  |   1438ms | Which team has the highest win probabili
+  [SOAK-A009] ✓ PASS | ANSWER                 | HTTP 200  |   1124ms | What is the model projection for USA vs 
+  [SOAK-A010] ✓ PASS | ANSWER                 | HTTP 200  |   1125ms | Show me the top 5 edges by ROI
+    [RATE_LIMIT_RESET] Waiting 61s for window reset (batch 2/2)...
+  [SOAK-A011] ✓ PASS | ANSWER                 | HTTP 200  |   1249ms | How fresh are the current odds?
+  [SOAK-A012] ✓ PASS | ANSWER                 | HTTP 200  |   1109ms | What matches have BET recommendations?
+  [SOAK-A013] ✓ PASS | ANSWER                 | HTTP 200  |    973ms | Explain the no-vig calculation for Japan
+  [SOAK-A014] ✓ PASS | ANSWER                 | HTTP 200  |   1063ms | Which group has the most competitive mat
+  [SOAK-A015] ✓ PASS | ANSWER                 | HTTP 200  |   1224ms | What is the Brier score for the latest m
+  [SOAK-A016] ✓ PASS | ANSWER                 | HTTP 200  |    944ms | Are there any value bets in the Round of
+  [SOAK-A017] ✓ PASS | ANSWER                 | HTTP 200  |   1067ms | Compare the odds for Argentina across di
+  [SOAK-A018] ✓ PASS | ANSWER                 | HTTP 200  |   1041ms | What is the edge on the Canada vs Morocc
+  [SOAK-A019] ✓ PASS | ANSWER                 | HTTP 200  |   1109ms | How does the model handle draws?
+  [SOAK-A020] ✓ PASS | ANSWER                 | HTTP 200  |   1181ms | Summarize all PASS recommendations and w
+
+━━━ GROUP 6: DUPLICATE_IDEMPOTENCY (10 cases) — audit trail verification ━━━
+    [RATE_LIMIT_RESET] Waiting 61s for rate limit window to expire...
+    [RATE_LIMIT_RESET] Window expired. Proceeding.
+  [SOAK-D001] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   2159ms | Idempotency test 1: What is the best edg
+  [SOAK-D002] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1177ms | Idempotency test 2: What is the best edg
+  [SOAK-D003] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1086ms | Idempotency test 3: What is the best edg
+  [SOAK-D004] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1220ms | Idempotency test 4: What is the best edg
+  [SOAK-D005] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1104ms | Idempotency test 5: What is the best edg
+  [SOAK-D006] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1395ms | Idempotency test 6: What is the best edg
+  [SOAK-D007] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1301ms | Idempotency test 7: What is the best edg
+  [SOAK-D008] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1113ms | Idempotency test 8: What is the best edg
+  [SOAK-D009] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1288ms | Idempotency test 9: What is the best edg
+  [SOAK-D010] ✓ PASS | DUPLICATE_IDEMPOTENCY  | HTTP 200  |   1126ms | Idempotency test 10: What is the best ed
+
+━━━ GROUP 7: RATE_LIMIT (10 cases) — burst to trigger 429 ━━━
+    [NOTE] Rate limit should already be near capacity from Group 6. Sending burst.
+  [SOAK-R001] ✓ PASS | RATE_LIMIT             | HTTP 429  |     26ms | Rate limit burst 1
+  [SOAK-R002] ✓ PASS | RATE_LIMIT             | HTTP 429  |     38ms | Rate limit burst 2
+  [SOAK-R003] ✓ PASS | RATE_LIMIT             | HTTP 429  |     38ms | Rate limit burst 3
+  [SOAK-R004] ✓ PASS | RATE_LIMIT             | HTTP 429  |     28ms | Rate limit burst 4
+  [SOAK-R005] ✓ PASS | RATE_LIMIT             | HTTP 429  |     25ms | Rate limit burst 5
+  [SOAK-R006] ✓ PASS | RATE_LIMIT             | HTTP 429  |     25ms | Rate limit burst 6
+  [SOAK-R007] ✓ PASS | RATE_LIMIT             | HTTP 429  |     25ms | Rate limit burst 7
+  [SOAK-R008] ✓ PASS | RATE_LIMIT             | HTTP 429  |     29ms | Rate limit burst 8
+  [SOAK-R009] ✓ PASS | RATE_LIMIT             | HTTP 429  |     27ms | Rate limit burst 9
+  [SOAK-R010] ✓ PASS | RATE_LIMIT             | HTTP 429  |     26ms | Rate limit burst 10
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  SOAK TEST v2 SUMMARY                                                       ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  RUN_ID: SOAK_1783345181871_11c11bc9
+║  TOTAL: 100 | PASS: 81 | FAIL: 19
+║  PASS RATE: 81.0%
+║  TOTAL TIME: 565.1s
+║  AVG LATENCY: 768ms
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  AUTH_FAIL                10/10 PASS
+║  MALFORMED                10/10 PASS
+║  PASS_NO_BET              20/20 PASS
+║  UNSUPPORTED_REFUSAL      1/20 PASS
+║  ANSWER                   20/20 PASS
+║  DUPLICATE_IDEMPOTENCY    10/10 PASS
+║  RATE_LIMIT               10/10 PASS
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  FAILURES:
+║    [SOAK-U001] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U003] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U004] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U005] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U006] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U007] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U008] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U009] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U010] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U011] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U012] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U013] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U014] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U015] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U016] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U017] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U018] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U019] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+║    [SOAK-U020] UNSUPPORTED_REFUSAL → Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+[CREDIT_INTEGRITY] Total credits charged: 0 (expected: 20 for 20 answers)
+[HALLUCINATION_CHECK] Detected: 0
+
+[SOAK_RESULTS_JSON]
+{
+  "runId": "SOAK_1783345181871_11c11bc9",
+  "timestamp": "2026-07-06T13:49:06.972Z",
+  "totalTests": 100,
+  "passCount": 81,
+  "failCount": 19,
+  "passRate": "81.0%",
+  "totalTimeMs": 565099,
+  "results": [
+    {
+      "id": "SOAK-F001",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 86,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F002",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 16,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F003",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 19,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F004",
+      "type": "AUTH_FAIL",
+      "status": 403,
+      "outcome": "REFUSE_SUBSCRIPTION_REQUIRED",
+      "pass": "PASS",
+      "latency": 21,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 29
+    },
+    {
+      "id": "SOAK-F005",
+      "type": "AUTH_FAIL",
+      "status": 403,
+      "outcome": "REFUSE_SUBSCRIPTION_REQUIRED",
+      "pass": "PASS",
+      "latency": 15,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 29
+    },
+    {
+      "id": "SOAK-F006",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 22,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F007",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 17,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F008",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 14,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-F009",
+      "type": "AUTH_FAIL",
+      "status": 403,
+      "outcome": "REFUSE_SUBSCRIPTION_REQUIRED",
+      "pass": "PASS",
+      "latency": 17,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 29
+    },
+    {
+      "id": "SOAK-F010",
+      "type": "AUTH_FAIL",
+      "status": 401,
+      "outcome": "REFUSE_AUTH_REQUIRED",
+      "pass": "PASS",
+      "latency": 14,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 24
+    },
+    {
+      "id": "SOAK-M001",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 10,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 0
+    },
+    {
+      "id": "SOAK-M002",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 38,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M003",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 26,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M004",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 25,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M005",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "REFUSE_REQUEST_TOO_LARGE",
+      "pass": "PASS",
+      "latency": 25,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 17
+    },
+    {
+      "id": "SOAK-M006",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "REFUSE_REQUEST_TOO_LARGE",
+      "pass": "PASS",
+      "latency": 26,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 29
+    },
+    {
+      "id": "SOAK-M007",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 28,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M008",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 27,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M009",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 27,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-M010",
+      "type": "MALFORMED",
+      "status": 400,
+      "outcome": "UNKNOWN",
+      "pass": "PASS",
+      "latency": 30,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 37
+    },
+    {
+      "id": "SOAK-P001",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 136,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P002",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 118,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P003",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 136,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P004",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 136,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P005",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1350,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P006",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1101,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P007",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1118,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P008",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1673,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P009",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1264,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P010",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1126,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P011",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1106,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P012",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1015,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P013",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 112,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P014",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1303,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P015",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 111,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P016",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1143,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P017",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1167,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P018",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 122,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-P019",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1435,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-P020",
+      "type": "PASS_NO_BET",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 123,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-U001",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1254,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U002",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "REFUSE_MARKET_NOT_SUPPORTED",
+      "pass": "PASS",
+      "latency": 116,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 167
+    },
+    {
+      "id": "SOAK-U003",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1740,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U004",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1293,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U005",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1154,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U006",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1030,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U007",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1184,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U008",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1301,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U009",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1183,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U010",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1139,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U011",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1273,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U012",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 998,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U013",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1210,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U014",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1595,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U015",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1720,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U016",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1359,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U017",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1136,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U018",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1154,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U019",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 1604,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-U020",
+      "type": "UNSUPPORTED_REFUSAL",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "FAIL",
+      "latency": 997,
+      "failure": "Claude answered non-WC2026 without scope mention: Dime encountered an error. No credits charged.",
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A001",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1477,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A002",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1092,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A003",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1009,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A004",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1075,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A005",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1323,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A006",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1027,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A007",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1164,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A008",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1438,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A009",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1124,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A010",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1125,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A011",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1249,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A012",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1109,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A013",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 973,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A014",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1063,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A015",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1224,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A016",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 944,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A017",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1067,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A018",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1041,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A019",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1109,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-A020",
+      "type": "ANSWER",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1181,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D001",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 2159,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D002",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1177,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D003",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1086,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D004",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1220,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D005",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1104,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D006",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1395,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D007",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1301,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D008",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1113,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D009",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1288,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-D010",
+      "type": "DUPLICATE_IDEMPOTENCY",
+      "status": 200,
+      "outcome": "INTERNAL_ERROR",
+      "pass": "PASS",
+      "latency": 1126,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 46
+    },
+    {
+      "id": "SOAK-R001",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 26,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R002",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 38,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R003",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 38,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R004",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 28,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R005",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 25,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R006",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 25,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R007",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 25,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R008",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 29,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R009",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 27,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    },
+    {
+      "id": "SOAK-R010",
+      "type": "RATE_LIMIT",
+      "status": 429,
+      "outcome": "REFUSE_RATE_LIMITED",
+      "pass": "PASS",
+      "latency": 26,
+      "failure": null,
+      "hallucination": false,
+      "creditsCharged": 0,
+      "textLen": 39
+    }
+  ]
+}
+
+████████████████████████████████████████████████████████████████████████████████
+██  SOAK TEST v2 VERDICT: 81/100 PASS — FAILURES DETECTED                   ██
+████████████████████████████████████████████████████████████████████████████████
