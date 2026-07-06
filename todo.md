@@ -4500,3 +4500,18 @@
 - [x] Console.log on mount prints exact COLORS object
 - [x] 56/56 mobileOwnerTabs tests passing
 - [x] TypeScript 0 errors
+
+## Mobile Owner Tabs: Content Migration to Bottom Nav (Jul 6, 2026) ✅
+- [x] Rename Tracker tab to Props (id, label, icon)
+- [x] Feed tab → /feed?tab=dual (MLB Projections)
+- [x] Splits tab → /feed?tab=splits (MLB Splits)
+- [x] Props tab → /feed?tab=lineups (LINEUPS, K PROPS, CHEAT SHEETS, HR PROPS)
+- [x] Chat tab → /m/chat (unchanged)
+- [x] Profile tab → /m/profile (unchanged)
+- [x] getActiveTab() handles query params via window.location.search
+- [x] handleTabTap() uses window.location.href for paths with ?tab=
+- [x] FlaskConical icon for Props tab
+- [x] All colors remain inline styles (#000000 bg, #39FF14 active, #FFFFFF text)
+- [x] 56/56 mobileOwnerTabs tests passing
+- [x] 0 TypeScript errors
+- [x] Full ui-ux_log.txt written

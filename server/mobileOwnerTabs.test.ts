@@ -27,13 +27,18 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
 
   it("should have correct tab IDs", () => {
     const ids = MOBILE_OWNER_TABS.map(t => t.id);
-    expect(ids).toEqual(["feed", "splits", "chat", "bet-tracker", "profile"]);
+    expect(ids).toEqual(["feed", "splits", "chat", "props", "profile"]);
   });
 
-  it("should have correct paths starting with /m/", () => {
-    for (const tab of MOBILE_OWNER_TABS) {
-      expect(tab.path).toMatch(/^\/m\//);
-    }
+  it("should have correct paths for each tab", () => {
+    const paths = MOBILE_OWNER_TABS.map(t => t.path);
+    expect(paths).toEqual([
+      "/feed?tab=dual",
+      "/feed?tab=splits",
+      "/m/chat",
+      "/feed?tab=lineups",
+      "/m/profile",
+    ]);
   });
 
   it("should have non-empty labels for all tabs", () => {
@@ -43,7 +48,7 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
   });
 
   it("should have valid lucide icon names", () => {
-    const validIcons = ["Newspaper", "BarChart3", "MessageSquare", "Receipt", "User"];
+    const validIcons = ["Newspaper", "BarChart3", "MessageSquare", "FlaskConical", "User"];
     for (const tab of MOBILE_OWNER_TABS) {
       expect(validIcons).toContain(tab.iconName);
     }
@@ -302,17 +307,20 @@ describe("Mobile Owner Tabs — New Event Types Validity", () => {
 });
 
 describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", () => {
-  it("/m/* routes should still be defined in config", () => {
-    for (const tab of MOBILE_OWNER_TABS) {
-      expect(tab.path).toMatch(/^\/m\//);
-    }
+  it("Feed/Splits/Props tabs should route to /feed with correct tab param", () => {
+    const feedTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/feed"));
+    expect(feedTabs.length).toBe(3);
+    expect(feedTabs.map(t => t.path)).toEqual([
+      "/feed?tab=dual",
+      "/feed?tab=splits",
+      "/feed?tab=lineups",
+    ]);
   });
 
-  it("tabs should not interfere with /feed route (different path prefix)", () => {
-    // Verify no tab path starts with /feed
-    for (const tab of MOBILE_OWNER_TABS) {
-      expect(tab.path.startsWith("/feed")).toBe(false);
-    }
+  it("Chat and Profile tabs should still route to /m/* paths", () => {
+    const mTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/m/"));
+    expect(mTabs.length).toBe(2);
+    expect(mTabs.map(t => t.path)).toEqual(["/m/chat", "/m/profile"]);
   });
 
   it("tabs should not interfere with /betting-splits route", () => {
@@ -324,7 +332,7 @@ describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", ()
   it("global mount skips /m/* routes (no duplicate tabs)", () => {
     // The GlobalMobileOwnerTabs component checks: if (location.startsWith("/m")) return false
     // This test validates the logic concept
-    const mPaths = ["/m/feed", "/m/splits", "/m/chat", "/m/bet-tracker", "/m/profile"];
+    const mPaths = ["/m/chat", "/m/profile", "/m/props"];
     for (const p of mPaths) {
       expect(p.startsWith("/m")).toBe(true);
     }
@@ -350,7 +358,7 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
   it("should accept mobile_owner_tab_clicked event with full metadata", () => {
     mobileOwnerTabLogger.log("mobile_owner_tab_clicked", "feed", {
       current_path: "/feed",
-      target_path: "/m/feed",
+      target_path: "/feed?tab=dual",
       tab_name: "feed",
       user_role: "owner",
       is_owner: true,
@@ -362,14 +370,14 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
     expect(last?.event).toBe("mobile_owner_tab_clicked");
     expect(last?.tabId).toBe("feed");
     expect(last?.metadata?.current_path).toBe("/feed");
-    expect(last?.metadata?.target_path).toBe("/m/feed");
+    expect(last?.metadata?.target_path).toBe("/feed?tab=dual");
     expect(last?.metadata?.is_owner).toBe(true);
   });
 
   it("should accept mobile_owner_tab_navigated_to_m_route event", () => {
     mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", "splits", {
       current_path: "/feed",
-      target_path: "/m/splits",
+      target_path: "/feed?tab=splits",
       tab_name: "splits",
       is_owner: true,
       is_mobile: true,
@@ -379,7 +387,7 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_tab_navigated_to_m_route");
     expect(last?.tabId).toBe("splits");
-    expect(last?.metadata?.target_path).toBe("/m/splits");
+    expect(last?.metadata?.target_path).toBe("/feed?tab=splits");
   });
 
   it("should accept mobile_owner_existing_page_tabs_rendered event", () => {

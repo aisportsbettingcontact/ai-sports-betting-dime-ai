@@ -12,7 +12,7 @@ export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = false; // When true, all users s
 export const MOBILE_OWNER_TABS_DEBUG_PANEL = true; // Shows debug overlay for owner
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
-export type MobileOwnerTabId = "feed" | "splits" | "chat" | "bet-tracker" | "profile";
+export type MobileOwnerTabId = "feed" | "splits" | "chat" | "props" | "profile";
 
 export interface MobileOwnerTabConfig {
   id: MobileOwnerTabId;
@@ -24,10 +24,10 @@ export interface MobileOwnerTabConfig {
 }
 
 export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
-  { id: "feed", label: "Feed", path: "/m/feed", iconName: "Newspaper" },
-  { id: "splits", label: "Splits", path: "/m/splits", iconName: "BarChart3" },
+  { id: "feed", label: "Feed", path: "/feed?tab=dual", iconName: "Newspaper" },
+  { id: "splits", label: "Splits", path: "/feed?tab=splits", iconName: "BarChart3" },
   { id: "chat", label: "Chat", path: "/m/chat", iconName: "MessageSquare" },
-  { id: "bet-tracker", label: "Tracker", path: "/m/bet-tracker", iconName: "Receipt" },
+  { id: "props", label: "Props", path: "/feed?tab=lineups", iconName: "FlaskConical" },
   { id: "profile", label: "Profile", path: "/m/profile", iconName: "User" },
 ];
 
