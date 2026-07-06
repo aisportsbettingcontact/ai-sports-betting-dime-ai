@@ -4425,3 +4425,24 @@
 - [x] Populate espn_slug, bet_explorer_match_id, bet_explorer_slug for both Jul 4 matches
 - [x] Full NULL audit: 43/43 critical columns populated for BOTH rows — ZERO nulls
 - [x] Log all changes to wc2026modeling.txt and wcfilecleanup.txt
+
+## Mobile Owner Tabs Foundation (Jul 5, 2026)
+- [ ] Feature flags (MOBILE_OWNER_TABS_ENABLED, TEST_MODE, PUBLIC_ENABLED, DEBUG_PANEL)
+- [ ] TypeScript types (MobileOwnerTab, MobileOwnerTabConfig, MobileOwnerAccessDecision)
+- [ ] Server-side owner-only route protection for /m/* routes
+- [ ] MobileOwnerAccessGate component (frontend visibility gating)
+- [ ] MobileOwnerBottomTabs component (fixed bottom nav, iOS safe-area, 44px targets)
+- [ ] MobileOwnerTabsShell layout component
+- [ ] Feed shell screen
+- [ ] Splits shell screen
+- [ ] Chat (AI Betting Analyst) shell screen with preview action chips
+- [ ] Bet Tracker shell screen
+- [ ] Profile shell screen with credit preview
+- [ ] Logging system (all 22 required events with metadata)
+- [ ] Debug panel (owner-only, flag-controlled)
+- [ ] Route wiring in App.tsx (/m/feed, /m/splits, /m/chat, /m/bet-tracker, /m/profile)
+- [ ] Access control tests (8 tests)
+- [ ] UI tests (14 tests)
+- [ ] Tabs-only safety tests (6 tests)
+- [ ] Logging tests (13 tests)
+- [ ] Build tests (9 tests)

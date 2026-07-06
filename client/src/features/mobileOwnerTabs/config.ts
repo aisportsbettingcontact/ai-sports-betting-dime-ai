@@ -1,0 +1,94 @@
+/**
+ * Mobile Owner Tabs — Feature Flags & Configuration
+ * ═══════════════════════════════════════════════════
+ * Owner-only mobile bottom tab navigation.
+ * All flags are compile-time constants for tree-shaking.
+ */
+
+// ─── Feature Flags ───────────────────────────────────────────────────────────
+export const MOBILE_OWNER_TABS_ENABLED = true;
+export const MOBILE_OWNER_TABS_TEST_MODE = false; // When true, any authenticated user can see tabs
+export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = false; // When true, all users see tabs (future)
+export const MOBILE_OWNER_TABS_DEBUG_PANEL = true; // Shows debug overlay for owner
+
+// ─── Tab Definitions ─────────────────────────────────────────────────────────
+export type MobileOwnerTabId = "feed" | "splits" | "chat" | "bet-tracker" | "profile";
+
+export interface MobileOwnerTabConfig {
+  id: MobileOwnerTabId;
+  label: string;
+  path: string;
+  iconName: string; // lucide-react icon name
+  badge?: number | null;
+  disabled?: boolean;
+}
+
+export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
+  { id: "feed", label: "Feed", path: "/m/feed", iconName: "Newspaper" },
+  { id: "splits", label: "Splits", path: "/m/splits", iconName: "BarChart3" },
+  { id: "chat", label: "Chat", path: "/m/chat", iconName: "MessageSquare" },
+  { id: "bet-tracker", label: "Tracker", path: "/m/bet-tracker", iconName: "Receipt" },
+  { id: "profile", label: "Profile", path: "/m/profile", iconName: "User" },
+];
+
+// ─── Access Decision Type ────────────────────────────────────────────────────
+export type MobileOwnerAccessDecision =
+  | { granted: true; reason: "owner" | "test_mode" | "public" }
+  | { granted: false; reason: "feature_disabled" | "not_authenticated" | "not_owner" | "not_mobile" };
+
+// ─── Access Logic ────────────────────────────────────────────────────────────
+export function decideMobileOwnerAccess(
+  userRole: string | null | undefined,
+  isAuthenticated: boolean,
+  isMobile: boolean
+): MobileOwnerAccessDecision {
+  if (!MOBILE_OWNER_TABS_ENABLED) {
+    return { granted: false, reason: "feature_disabled" };
+  }
+  if (!isAuthenticated) {
+    return { granted: false, reason: "not_authenticated" };
+  }
+  if (MOBILE_OWNER_TABS_PUBLIC_ENABLED) {
+    return { granted: true, reason: "public" };
+  }
+  if (MOBILE_OWNER_TABS_TEST_MODE) {
+    return { granted: true, reason: "test_mode" };
+  }
+  if (userRole === "owner") {
+    return { granted: true, reason: "owner" };
+  }
+  return { granted: false, reason: "not_owner" };
+}
+
+// ─── Logging Event Types ─────────────────────────────────────────────────────
+export type MobileOwnerTabEvent =
+  | "tabs_rendered"
+  | "tab_tapped"
+  | "tab_changed"
+  | "access_granted"
+  | "access_denied"
+  | "shell_mounted"
+  | "shell_unmounted"
+  | "debug_panel_opened"
+  | "debug_panel_closed"
+  | "feature_flag_checked"
+  | "route_navigated"
+  | "haptic_triggered"
+  | "animation_started"
+  | "animation_completed"
+  | "error_boundary_caught"
+  | "chat_chip_tapped"
+  | "bet_tracker_action"
+  | "profile_action"
+  | "scroll_position_saved"
+  | "scroll_position_restored"
+  | "viewport_resized"
+  | "safe_area_detected"
+  | "theme_applied";
+
+export interface MobileOwnerTabLogEntry {
+  timestamp: number;
+  event: MobileOwnerTabEvent;
+  tabId?: MobileOwnerTabId;
+  metadata?: Record<string, unknown>;
+}
