@@ -251,7 +251,7 @@ export const wc2026ModelProjections = mysqlTable(
     matchId: varchar("match_id", { length: 16 })
       .notNull()
       .references(() => wc2026Matches.matchId),
-    modelVersion: varchar("model_version", { length: 32 }).notNull(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
     nSimulations: int("n_simulations").notNull().default(1000000),
     homeTeam: varchar("home_team", { length: 64 }),
     awayTeam: varchar("away_team", { length: 64 }),
@@ -316,7 +316,7 @@ export const wc2026ModelProjections = mysqlTable(
     createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (t) => [
-    uniqueIndex("uq_mp_match").on(t.matchId),
+    uniqueIndex("uq_match_version").on(t.matchId, t.modelVersion),
     index("idx_mp_match").on(t.matchId),
   ],
 );

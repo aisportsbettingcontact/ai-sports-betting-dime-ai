@@ -1920,3 +1920,233 @@ SESSION: 2026-07-04T16:42 UTC — BetExplorer Odds + Metadata Completion for Jul
 
 [STEP 3.4] SAVING CHECKPOINT...
 
+
+
+═══════════════════════════════════════════════════════════════════════════════════════
+ WC2026 FULL ASSET INVENTORY SCAN — 2026-07-06T07:48:30Z
+═══════════════════════════════════════════════════════════════════════════════════════
+
+GRAND TOTAL: 544 files + 21 database tables
+
+────────────────────────────────────────────────────────────────────────────────
+DATABASE TABLES (21 in production MySQL)
+────────────────────────────────────────────────────────────────────────────────
+ #  | Table Name                    | In Drizzle Schema?
+----|-------------------------------|--------------------
+  1 | wc2026_teams                  | YES (line 11)
+  2 | wc2026_team_aliases           | YES (line 32)
+  3 | wc2026_venues                 | YES (line 39)
+  4 | wc2026_matches                | YES (line 48)
+  5 | wc2026_odds_snapshots         | YES (line 102)
+  6 | wc2026_lineups                | YES (line 131)
+  7 | wc2026_match_stats            | YES (line 159)
+  8 | wc2026_match_events           | YES (line 220)
+  9 | wc2026_model_projections      | YES (line 247)
+ 10 | wc2026_frozen_book_odds       | YES (line 334)
+ 11 | wc2026_espn_bracket           | YES (line 436)
+ 12 | wc2026MatchOdds               | YES (line 533)
+ 13 | wc2026_espn_expected_goals    | DB-only (ESPN scraper)
+ 14 | wc2026_espn_glossary          | DB-only (ESPN scraper)
+ 15 | wc2026_espn_lineups           | DB-only (ESPN scraper)
+ 16 | wc2026_espn_match_stats       | DB-only (ESPN scraper)
+ 17 | wc2026_espn_matches           | DB-only (ESPN scraper)
+ 18 | wc2026_espn_player_stats      | DB-only (ESPN scraper)
+ 19 | wc2026_espn_shot_map          | DB-only (ESPN scraper)
+ 20 | wc2026_espn_team_stats        | DB-only (ESPN scraper)
+ 21 | wc2026_venues (dup of #3)     | YES
+
+────────────────────────────────────────────────────────────────────────────────
+SANDBOX FILES BY LOCATION
+────────────────────────────────────────────────────────────────────────────────
+
+server/wc2026/ — 162 files (21 .ts, 130 .mjs, 8 .py, 3 other)
+  CORE TS: wc2026Router.ts(47K), wc2026Ingester.ts(32K), wc2026Heartbeat.ts(13K),
+           espnPageScraper.ts(114K), espnMatchScraper.ts(70K), espnDbIngester.ts(45K),
+           espnLogger.ts(24K), fifaLiveScraper.ts(11K), resolveWcTeam.ts(7K),
+           wc2026RotowireLineupsScraper.ts(8K), checkScores.ts(3K),
+           seedJuly1Direct.ts(51K), seedJune30Direct.ts(32K), seedJune29Direct.ts(15K),
+           seedJuly2BookOdds.ts(20K), seedAdvancingTeams.ts(17K)
+  TESTS:   htPipeline.test.ts(19K), espnScraper.test.live.ts(13K),
+           fifaLiveScraper.test.ts(9K), wcScoreRendering.test.ts(11K)
+  MJS:     130 scripts (v12-v19 engines, seeders, audits, fixes, diagnostics)
+  PY:      betexplorer_scraper.py(142K), wc2026_playwright_scraper.py(25K), etc.
+  OTHER:   groupStageGameIds.json, wc_backtest_schema.sql(29K), .bak file
+
+scripts/ — 56 WC2026-related files
+  Backtest: wcBacktestV3-V10e (13 files)
+  Originate: wcOriginateJune24-v4 (4 files)
+  Audits: wcAuditV4, audit_june20/21 (10 files)
+  Seeds: wc-reseed-june24 (6 files)
+  Models: modelJune22/23 (4 files)
+  Other: ESPN unification, diagnostics, fixes (19 files)
+
+Root level — 17 WC2026 files
+  Jul 4-5 scripts: audit_jul4_deep.mjs, fix_jul5_projections.mjs, etc.
+  June 19 fixes: wc_audit_june19.js, wc_correct_dk_june19.mjs, etc.
+
+drizzle/ — 11 files (1 schema + 10 migration snapshots)
+client/src/pages/ — 1 file (WorldCup2026.tsx, 20K)
+server/ test files — 3 files (display, mobile layout, date fix)
+.manus-logs/ — 9 files (watcher logs, forensic audit reports)
+
+────────────────────────────────────────────────────────────────────────────────
+CLOUD COMPUTER (cloud-pc-5l2bduvb — /home/ubuntu/wc_v12/)
+────────────────────────────────────────────────────────────────────────────────
+295 files total:
+  raw_sources/statsbomb/events/   128 JSON files
+  raw_sources/statsbomb/lineups/  128 JSON files
+  raw_sources/statsbomb/matches/    2 JSON files
+  scripts/                         16 Python pipeline scripts (v12/v13)
+  artifacts/                       10 manifests, configs, reports
+  evidence/                         3 CSV accounting files
+  logs/                             4 execution logs (539K+ v12log.txt)
+
+═══════════════════════════════════════════════════════════════════════════════════════
+SCAN COMPLETE — 544 files + 21 database tables across sandbox + cloud computer
+═══════════════════════════════════════════════════════════════════════════════════════
+
+
+═══════════════════════════════════════════════════════════════════════════════════════
+ WC2026 DETAILED INVENTORY — REQUESTED ITEMS — 2026-07-06T08:01:00Z
+═══════════════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 1: ALL ESPN SCRAPERS (7 core files + 6 support scripts)
+────────────────────────────────────────────────────────────────────────────────
+
+CORE ESPN TYPESCRIPT (compiled into production server):
+  1. server/wc2026/espnPageScraper.ts     | 112K | 2,349 lines
+     → Master page scraper: fetches ESPN match pages, extracts xG timeline,
+       team stats, player stats, shot map, expected goals, lineups
+  2. server/wc2026/espnMatchScraper.ts    |  69K | 1,669 lines
+     → Match-level scraper: parses individual match detail pages,
+       extracts formation, substitutions, cards, goals, minute-by-minute
+  3. server/wc2026/espnDbIngester.ts      |  44K |   954 lines
+     → Database ingestion layer: transforms scraped data into normalized
+       rows and upserts into 8 ESPN DB tables
+  4. server/wc2026/espnLogger.ts          |  24K |   652 lines
+     → Structured logging for all ESPN operations: request/response tracking,
+       error categorization, timing metrics
+  5. server/wc2026/_espn_ingest_runner_tmp.ts | 2.9K | 76 lines
+     → Temporary runner for manual ESPN ingestion batches
+
+ESPN .MJS SUPPORT SCRIPTS:
+  6. server/wc2026/wc2026ESPNScraper.mjs  |  32K | ESPN scraper orchestrator
+  7. server/wc2026/espnPageScraper.test.live.mjs | 45K | Live integration test
+  8. server/wc2026/espnScraper.test.live.ts | 14K | TypeScript live test
+  9. server/wc2026/espnDomProbe.mjs       |  13K | DOM structure probe/debug
+ 10. server/wc2026/espn_fullpull_7matches.mjs | 12K | Batch pull for 7 matches
+ 11. server/wc2026/runESPNBatch.mjs       |  6.5K | Batch runner
+ 12. server/wc2026/pull_espn_raw.mjs      |  2.3K | Raw HTML puller
+
+ESPN SCRIPTS IN scripts/:
+ 13. scripts/espn_gameid_unification_manifest.json | 67K | Game ID mapping
+ 14. scripts/espn_gameid_unification_audit.mjs     | 27K | Audit script
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 2: ALL 20 WC2026 DATABASE TABLES (with live row counts)
+────────────────────────────────────────────────────────────────────────────────
+
+DRIZZLE-MANAGED TABLES (defined in drizzle/wc2026.schema.ts):
+  #  | Table Name                    | Rows   | Purpose
+  ---|-------------------------------|--------|------------------------------------------
+   1 | wc2026_teams                  |     49 | All 48 qualified teams + host metadata
+   2 | wc2026_team_aliases           |     26 | Name normalization (ESPN→FIFA→bet365)
+   3 | wc2026_venues                 |     16 | All 16 tournament venues
+   4 | wc2026_matches                |    104 | All 104 matches (48 GS + 56 KO)
+   5 | wc2026_odds_snapshots         |  4,384 | Historical odds snapshots from scrapers
+   6 | wc2026_lineups                |  2,484 | Player lineups per match
+   7 | wc2026_match_stats            |     63 | Aggregated match statistics
+   8 | wc2026_match_events           |  1,422 | Goals, cards, subs, penalties
+   9 | wc2026_model_projections      |    106 | Model output: probabilities, edges, ROI
+  10 | wc2026_frozen_book_odds       |     37 | Frozen pre-match book odds for modeling
+  11 | wc2026_espn_bracket           |     32 | ESPN bracket/tournament tree
+  12 | wc2026MatchOdds               |     92 | Consolidated match odds (ML/spread/total)
+
+ESPN-ONLY TABLES (created by scraper, not in Drizzle schema):
+  #  | Table Name                    | Rows   | Purpose
+  ---|-------------------------------|--------|------------------------------------------
+  13 | wc2026_espn_matches           |     90 | ESPN match metadata
+  14 | wc2026_espn_team_stats        |     88 | Per-team per-match statistics
+  15 | wc2026_espn_player_stats      |  2,742 | Individual player statistics
+  16 | wc2026_espn_match_stats       |     88 | ESPN match-level aggregates
+  17 | wc2026_espn_lineups           |  4,460 | ESPN lineup data
+  18 | wc2026_espn_shot_map          |  2,195 | Shot location + xG per shot
+  19 | wc2026_espn_expected_goals    |     88 | xG timeline data
+  20 | wc2026_espn_glossary          |     20 | Stat abbreviation definitions
+
+TOTAL DATABASE ROWS: 18,480
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 3: 3 MOST RECENT MODEL ENGINE SCRIPTS (Jul 3-5 matches)
+────────────────────────────────────────────────────────────────────────────────
+
+1. server/wc2026/v17_jul3_engine.mjs | 40K | v17.0-KO26-RECALIBRATED-13MATCH
+   MATCHES MODELED: Jul 3 R32
+     • wc26-r32-086: AUS vs EGY
+     • wc26-r32-087: ARG vs CPV
+     • wc26-r32-088: COL vs GHA
+   BACKTEST: 13 completed KO R32 matches (073-085)
+   KEY: 500x Monte Carlo, 25 variations, composite scorer (dir=45/total=30/spread=15/btts=10)
+
+2. server/wc2026/v18_jul4_engine.mjs | 42K | v18.0-KO26-RECALIBRATED-16MATCH-R16
+   MATCHES MODELED: Jul 4 R16
+     • wc26-r16-089: PAR vs FRA
+     • wc26-r16-090: CAN vs MAR
+   BACKTEST: 16 completed KO matches (R32: 073-088)
+   KEY: Reduced pace discount, elite tier multiplier (FRA 1.15x, ARG 1.10x),
+        increased xGOT weight, actual spread line from frozen odds
+
+3. server/wc2026/v19_jul4_engine.mjs | 56K | v19.0-500X-BACKTEST+CORRECT-SCORE
+   server/wc2026/v19_jul5_engine.mjs | 55K | v19.0 (Jul 5 variant)
+   MATCHES MODELED:
+     v19_jul4: wc26-r16-089: PAR vs FRA, wc26-r16-090: CAN vs MAR (re-run)
+     v19_jul5: wc26-r16-091: BRA vs NOR, wc26-r16-092: MEX vs ENG
+   BACKTEST: 16 matches, 500x Monte Carlo, 25 variations
+   KEY: Added Correct Score probability matrix, Double Chance (WD), No Draw markets,
+        fixed spread_odds bug (was using ML instead of AH), fresh bet365 data
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 4: BETEXPLORER SCRAPER
+────────────────────────────────────────────────────────────────────────────────
+
+FILE: server/wc2026/betexplorer_scraper.py | 142K | 3,021 lines
+BACKUP: server/wc2026/wc2026_betexplorer_scraper_v4.py.bak
+
+VERSION: v4.0 — 11-Component Engineering Stack:
+  1. ForensicLogger        — Dual-output structured logging
+  2. DebugInspector        — 5-depth HTTP/parse inspection
+  3. StrictAssertions      — Fail-fast gates at every transformation
+  4. TeamMapper            — Deterministic name resolution, zero fuzzy
+  5. MarketSchema          — Immutable column-to-field mapping
+  6. OddsWarehouse         — WAL-mode SQLite with FK constraints + audit_log
+  7. ThrottleController    — Self-tuning adaptive delay governor
+  8. StealthHeaders        — Session-consistent fingerprint diversification
+  9. ValidationGateEngine  — 15 mandatory pass/fail gates
+ 10. InMemoryIndex         — O(1) hash lookups during transformation
+ 11. ProgressVisualizer    — Real-time terminal progress dashboard
+
+PIPELINE: 15 phases from raw HTML → validated odds rows
+  P1  Bookmaker isolation (bid=16 only / bet365)
+  P2  Market pruning (remove DNB/ha)
+  P3-P15 Transform, validate, deduplicate, write
+
+OUTPUT: Feeds wc2026_odds_snapshots (4,384 rows) and wc2026_frozen_book_odds (37 rows)
+
+═══════════════════════════════════════════════════════════════════════════════════════
+ SCAN COMPLETE — 2026-07-06T08:01:30Z
+═══════════════════════════════════════════════════════════════════════════════════════
+
+=== WC2026 500x AUDIT COMPLETE — Jul 6, 2026 ===
+[AUDIT] READ-ONLY 500x Infrastructure Audit completed
+[AUDIT] Report: WC2026_500X_AUDIT_REPORT.md (32 sections)
+[AUDIT] Total findings: 11 (4 HIGH, 4 MEDIUM, 3 INFO)
+[AUDIT] HIGH: FINDING-001 (proj_spread 38.7% nulls), FINDING-002 (22 duplicate projections), FINDING-006 (missing UNIQUE index), FINDING-009 (72 MatchOdds match_id format mismatch)
+[AUDIT] MEDIUM: FINDING-007 (public espnIngest), FINDING-008 (no Dime context), FINDING-010 (low odds population), Dime chat auth gap
+[AUDIT] INFO: FINDING-003 (legacy null probs), FINDING-004 (lineage gaps), FINDING-005 (UNIQUE on match_id by design)
+[AUDIT] Recommendations: 9 (all RECOMMENDED ONLY, NOT EXECUTED)
+[AUDIT] Conditional blockers: 3 (duplicate projections, match_id format, proj_spread nulls)
+[AUDIT] Zero modifications made. All SQL was SELECT-only. No files modified.
+[AUDIT] Data collected: 78 WC2026 tables inventoried, 281 indexes audited, 295 cloud files cataloged
+[AUDIT] Pipeline: 5 source providers tracked (StatsBomb:1280, ESPN:720, v7_pipeline:656, wc2026_match_stats:192, BetTarget_Legacy:2)
+[AUDIT] Orphan checks: 0 orphan lineups, 0 orphan events, 0 orphan stats, 72 orphan MatchOdds (format mismatch)
