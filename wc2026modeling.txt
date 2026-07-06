@@ -2150,3 +2150,296 @@ OUTPUT: Feeds wc2026_odds_snapshots (4,384 rows) and wc2026_frozen_book_odds (37
 [AUDIT] Data collected: 78 WC2026 tables inventoried, 281 indexes audited, 295 cloud files cataloged
 [AUDIT] Pipeline: 5 source providers tracked (StatsBomb:1280, ESPN:720, v7_pipeline:656, wc2026_match_stats:192, BetTarget_Legacy:2)
 [AUDIT] Orphan checks: 0 orphan lineups, 0 orphan events, 0 orphan stats, 72 orphan MatchOdds (format mismatch)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  WC2026 COMPLETE SYSTEM INVENTORY — EXHAUSTIVE FILE, SCRIPT, AND DATABASE TABLE AUDIT
+  Generated: 2026-07-06T18:30:00Z | Scope: Sandbox + Cloud PC | Trigger: User directive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[AUDIT] File restoration: wc2026modeling.txt was accidentally overwritten. Restored from git HEAD.
+[AUDIT] Original 2,152 lines preserved. Inventory appended below.
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION A: JULY 5 MODEL ENGINE (PRIMARY PRODUCTION SCRIPT)                                        ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  FILE: server/wc2026/v19_jul5_engine.mjs
+  SIZE: 55,472 bytes (55 KB)
+  MODEL VERSION: v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16-JUL5
+  RUN ID (DB): 13
+  EXECUTION DATE: 2026-07-05T19:22:44Z
+  MATCHES PROCESSED: 2 | SUCCEEDED: 2 | FAILED: 0
+  RUN STATUS: COMPLETED
+  
+  ALSO USED BY (same engine, earlier run):
+    DB RUN ID: 12 | VERSION: v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16
+    EXECUTION DATE: 2026-07-05T18:56:03Z | MATCHES: 2
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION B: ALL MODEL ENGINE FILES (server/wc2026/) — 56 FILES, 4.2 MB                            ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  MODEL ENGINES (chronological):
+    v7.0_engine.mjs              (base)     Runs 2-11, 20
+    v7.2_engine.mjs              (base)     Run 1 (June 27-28)
+    v12_500x_forensic_engine.mjs 59,688     500x Monte Carlo forensic
+    v12_book_vs_model.mjs        35,883     Book vs model comparison
+    v12_bvm_v2.mjs               50,274     Book vs model v2
+    v12_engine_final.mjs         54,846     v12 final production engine
+    v12_forensic_500x_full.mjs   36,568     Full forensic 500x
+    v12_forensic_audit.mjs       67,293     Forensic audit engine
+    v12_forensic_diag.mjs        52,793     Forensic diagnostics
+    v12_fullmarket_crossref.mjs  23,290     Full market cross-reference
+    v12_fullstats_engine.mjs     42,916     Full stats engine
+    v12_july2_engine.mjs         55,606     July 2 production engine
+    v12_model_build.mjs          42,186     Model build script
+    v12_pure_data_engine.mjs     44,114     Pure data engine
+    v13_500x_audit.mjs           32,897     v13 500x audit
+    v13_db_audit.mjs             19,252     v13 database audit
+    v13_engine_fixed.mjs         68,145     v13 engine (fixed)
+    v13_no_null_engine.mjs       37,088     v13 no-null engine
+    v14_500x_db_audit.mjs        48,892     v14 500x DB audit
+    v14_definitive_audit.mjs     26,773     v14 definitive audit
+    v14_engine.mjs               40,357     v14 production engine
+    v15_bel_sen_forensic_audit.mjs 29,822   v15 BEL/SEN forensic audit
+    v15_engine.mjs               59,788     v15 production engine
+    v16_engine.mjs               58,678     v16 production engine
+    v17_jul3_engine.mjs          40,764     July 3 production engine
+    v18_jul4_engine.mjs          42,191     July 4 production engine
+    v19_jul4_engine.mjs          55,947     July 4 v19 engine
+    v19_jul5_engine.mjs          55,472     ★ JULY 5 PRODUCTION ENGINE ★
+
+  SCRAPERS & DATA ACQUISITION:
+    wc2026ESPNScraper.mjs        32,485     ESPN match/stats scraper
+    wc2026BracketScraper.mjs     46,648     ESPN bracket scraper
+    wc2026LiveWatcher.mjs        84,952     Live match watcher (SSE)
+    wc2026RotowireLineupsScraper.ts 8,360   Rotowire lineups scraper
+    wc2026_playwright_scraper.py 25,142     Playwright-based scraper
+    wc2026_betexplorer_scraper_v4.py.bak 137,094 BetExplorer scraper (bak)
+    pull_wc2026_backtest_data.mjs (exists)  Backtest data puller
+
+  INGESTION & ROUTING:
+    wc2026Ingester.ts            31,558     Data ingestion pipeline
+    wc2026Router.ts              47,126     API router (feed, projections)
+    wc2026Router.ts.bak_t4_20260706 47,126  Router backup (Tier 4)
+    wc2026Heartbeat.ts           12,713     Heartbeat/health check
+
+  AUDIT & VALIDATION:
+    wc2026AuditEngine.mjs        46,404     Full audit engine
+    wc2026BatchAudit.mjs         17,176     Batch audit
+    wc2026DateAudit.mjs          4,271      Date validation audit
+    wc2026DrizzleTest.mjs        6,775      Drizzle ORM test
+    wc2026FeedAudit.mjs          18,377     Feed integrity audit
+    wc2026_duplicate_audit.mjs   11,797     Duplicate detection
+    wc_backtest_phase1_audit.mjs 17,391     Backtest phase 1 audit
+    wc_deep_audit.mjs            9,002      Deep audit
+    wc_full_audit.py             8,591      Full audit (Python)
+    wc_orientation_audit.py      10,787     Orientation audit (Python)
+    validateFeedJuly2.mjs        14,443     July 2 feed validation
+    verifyFeed.mjs               3,448      Feed verification
+    verify_june15_dk_odds.mjs    6,533      June 15 DK odds verification
+
+  TESTS:
+    wcScoreRendering.test.ts     10,687     Score rendering tests
+    wc_backtest_schema.sql       28,677     Backtest schema SQL
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION C: DIME AI ADVISOR SYSTEM FILES                                                           ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  ROUTE & CONTEXT:
+    server/dime-wc2026.route.ts  36 KB      Main Dime WC2026 endpoint
+    server/dime-chat.route.ts    8 KB       Dime chat route
+    server/dime-chat.route.ts.bak 8 KB      Chat route backup
+    server/dime/wc2026Context.ts (dir)      WC2026 context builder
+
+  CLIENT PAGES:
+    client/src/pages/DimeChat.tsx 12 KB     Dime chat UI
+    client/src/pages/dime-chat.css 8 KB     Dime chat styles
+    client/src/pages/WorldCup2026.tsx 20 KB WC2026 main page
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION D: ROOT-LEVEL TEST & AUDIT SCRIPTS                                                        ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  SOAK TEST HARNESSES (Tier 4):
+    test_dime_soak_v3_certified.mjs  35,840  v3 certified soak (DB persist)
+    test_dime_wc2026_soak_100.mjs    26,107  Original 100-request soak
+    test_dime_soak_dry_run.mjs       2,677   Dry run test
+    test_p0_postsoak.mjs             4,863   P0 post-soak verification
+    test_p0_postsoak_v2.mjs          1,002   P0 post-soak v2
+    test_p0_postsoak_v3.mjs          4,087   P0 post-soak v3
+    test_p0_baseline_v3.mjs          3,200   P0 baseline capture
+
+  AUDIT LAYER SCRIPTS (6-Layer):
+    audit_layer1_db_integrity.mjs    12,090  Layer 1: DB integrity
+    audit_layer2_code_integrity.mjs  8,187   Layer 2: Code integrity
+    audit_layer3_credit.mjs          7,081   Layer 3: Credit accounting
+    audit_layer4_trail.mjs           8,881   Layer 4: Audit trail
+
+  WC2026-SPECIFIC AUDITS:
+    audit_espn_vs_db.mjs             16,091  ESPN vs DB comparison
+    audit_espn_vs_db_v2.mjs          16,231  ESPN vs DB v2
+    audit_jul4_deep.mjs              24,048  July 4 deep audit
+    audit_may20.mjs                  4,192   May 20 audit
+    audit_may20_deep.mjs             4,739   May 20 deep audit
+    audit_may20_v2.mjs               5,214   May 20 v2 audit
+    audit_requests.mjs               2,740   Request audit
+
+  PATH MATRIX & DIME TESTS:
+    test_22_path_matrix.mjs          (exists) 22-path enforcement matrix
+    test_idempotency_v2.mjs          (exists) Idempotency verification
+    test_ratelimit_v2.mjs            (exists) Rate limit pressure test
+    test_tier5_gap_assessment.mjs    (exists) Tier 5 gap assessment
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION E: REPORTS & EVIDENCE FILES                                                               ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  TIER4_FULL_AUDIT_REPORT.md         11,007  Tier 4 full audit report
+  TIER4_EVIDENCE_PACKAGE.md          33,829  Tier 4 evidence package
+  TIER4_EVIDENCE_PACKAGE.txt         32,802  Tier 4 evidence (text)
+  TIER4_SOAK_REPORT.md               5,163   Tier 4 soak report
+  EVIDENCE_SQL_RAW.txt               8,462   Raw SQL evidence
+  SOAK_V2_RAW_OUTPUT.txt             49,249  Soak v2 raw output
+  TRIPLE_TEST_V4_OUTPUT.txt          (exists) Triple-test v4 output
+  database_audit.txt                 212,672  Full Dime audit trail (212 KB)
+  wc2026modeling.txt                 THIS FILE (220+ KB)
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION F: CLOUD COMPUTER FILES (/home/ubuntu/wc_v12)                                             ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  Location: Cloud PC (cloud-pc-5l2bduvb) at /home/ubuntu/wc_v12/
+  Purpose: StatsBomb raw data pipeline + ESPN team registry
+  Total files: ~291
+
+  DIRECTORY TREE:
+    /home/ubuntu/wc_v12/
+    ├── artifacts/              (9 files)   Pipeline artifacts & reports
+    │   └── db_export/          (0 files)   DB export (empty)
+    ├── evidence/               (3 files)   Source record accounting
+    ├── logs/                   (4 files)   Pipeline logs (676 KB)
+    ├── raw_sources/            (1 file)    ESPN HTML source
+    │   └── statsbomb/                      StatsBomb open data
+    │       ├── events/         (128 files) Match event JSONs
+    │       ├── lineups/        (128 files) Match lineup JSONs
+    │       ├── matches/43/     (2 files)   Competition 43 matches
+    │       └── matches/3869/   (0 files)   Competition 3869 (empty)
+    └── scripts/                (16 files)  Python pipeline scripts
+
+  PYTHON SCRIPTS (by size):
+    v12_master_pipeline.py       126 KB     Master pipeline orchestrator
+    v12_master_final.py          119 KB     Final master script
+    v12_pipeline_core.py         57 KB      Pipeline core logic
+    v12_repair_all_defects.py    32 KB      Defect repair script
+    v12_espn_acquisition.py      31 KB      ESPN data acquisition
+    v13_espn_team_registry.py    25 KB      48-team ESPN registry builder
+    v12_fix_sections_04_05_18.py 24 KB      Section fix script
+    v12_fix_final.py             23 KB      Final fix script
+    v12_statsbomb_schema_discovery.py 17 KB StatsBomb schema discovery
+    v12_logger.py                15 KB      Logging framework
+    v12_phase03_acquisition.py   14 KB      Phase 3 acquisition
+    v12_final_repairs.py         12 KB      Final repairs
+    v12_repair_lineups.py        7.4 KB     Lineup repair
+    v12_verify_state.py          3.9 KB     State verification
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION G: DATABASE TABLES — COMPLETE INVENTORY (45 TABLES)                                       ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  DIME SYSTEM TABLES (7):
+    dime_chat_route_bak_t4_note          1       Tier 4 backup note
+    dime_context_audit                   217     Context sent to Claude
+    dime_credit_ledger                   40      Credit charges (all delta=-1)
+    dime_request_audit                   392     All incoming requests
+    dime_response_audit                  217     All responses generated
+    dime_soak_test_results               99      Soak test results (v3)
+    dime_user_entitlements               0       User entitlements
+
+  WC2026 CORE DATA (13):
+    wc2026_matches                       104     All matches (GS+KO)
+    wc2026_teams                         49      All 48 teams + host
+    wc2026_venues                        16      Tournament venues
+    wc2026_team_aliases                  26      Team name aliases
+    wc2026_match_events                  1,422   In-match events
+    wc2026_match_stats                   63      Match-level statistics
+    wc2026_lineups                       2,484   Match lineups
+    wc2026_data_lineage                  8       Data provenance
+    wc2026_model_runs                    20      Model execution history
+    wc2026_model_projections             92      Model probability outputs
+    wc2026_model_grades                  57      Model accuracy grades
+    wc2026_holdout_validation            258     Holdout validation
+    wc2026_recommendations               264     Betting recommendations
+
+  WC2026 ESPN DATA (8):
+    wc2026_espn_matches                  90      ESPN match records
+    wc2026_espn_team_stats               88      ESPN team statistics
+    wc2026_espn_match_stats              88      ESPN match statistics
+    wc2026_espn_expected_goals           88      ESPN expected goals (xG)
+    wc2026_espn_shot_map                 2,195   ESPN shot map data
+    wc2026_espn_player_stats             2,742   ESPN player statistics
+    wc2026_espn_lineups                  4,460   ESPN lineup data
+    wc2026_espn_glossary                 20      ESPN stat glossary
+
+  WC2026 ODDS & MARKET (7):
+    wc2026MatchOdds                      80      Current match odds
+    wc2026_odds_snapshots                4,384   Historical odds snapshots
+    wc2026_market_edges                  54      Market edge calculations
+    wc2026_market_no_vig                 63      No-vig fair odds
+    wc2026_frozen_book_odds              37      Frozen book odds at kickoff
+    wc2026_provider_match_map            92      Provider match ID mapping
+    wc2026_orphan_match_odds_quarantine  12      Orphaned odds quarantine
+
+  WC2026 BRACKET & BACKUP (6):
+    wc2026_espn_bracket                  32      ESPN bracket data
+    wc2026_edges_bak_t3r                 54      Edges backup (Tier 3)
+    wc2026_rec_bak_t3r                   264     Recommendations backup
+    wc2026_novig_bak_t3r                 63      No-vig backup
+    wc2026_proj_bak_t3r                  92      Projections backup (Tier 3)
+    wc2026_proj_bak_tier2                92      Projections backup (Tier 2)
+
+  WC2026 MAINTENANCE (4):
+    wc2026_odds_bak_t2                   0       Odds backup (empty)
+    wc2026_odds_bak_tier2                92      Odds backup (Tier 2)
+    wc2026_mp_bak                        0       Model projections bak (empty)
+    wc2026_mp_dedup_archive              14      Dedup archive
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION H: MODEL RUN HISTORY (ALL 20 RUNS)                                                        ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  ID  MODEL_VERSION                                    ENGINE              DATE         STATUS
+  1   v7.2-initial-2294853                             v7.2_engine.mjs     Jun 27-28    COMPLETED
+  2   v4.0-recal-june20-initial-37                     v7.0_engine.mjs     Jun 20       COMPLETED
+  3   v10e-june24-v4-final-initial-2264816             v7.0_engine.mjs     Jun 24       COMPLETED
+  4   v10e-june24-v3-final-initial-2264810             v7.0_engine.mjs     Jun 24       COMPLETED
+  5   v11.0-KO22-initial-2294869                       v7.0_engine.mjs     Jun 30       COMPLETED
+  6   v10e-june24-v2-initial-2264804                   v7.0_engine.mjs     Jun 24       COMPLETED
+  7   v3-champion-2026-initial-57                      v7.0_engine.mjs     Jun 22-23    COMPLETED
+  8   v11.0-KO23-initial-2294875                       v7.0_engine.mjs     Jun 30       COMPLETED
+  9   v4.2-corrected-june25-27-initial-2264786         v7.0_engine.mjs     Jun 24       COMPLETED
+  10  v12.0-KO24-V5-initial-2294878                    v7.0_engine.mjs     Jul 1        COMPLETED
+  11  v12.0-KO25-V5-initial-2294881                    v7.0_engine.mjs     Jul 1        COMPLETED
+  12  v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16        v19_jul5_engine     Jul 5        COMPLETED
+  13  v19.0-500X-CORRECT-SCORE-RECALIBRATED-R16-JUL5  v19_jul5_engine     Jul 5 ★      COMPLETED
+  14  v17.0-KO26-RECALIBRATED-13MATCH                  v17_jul3_engine     Jul 3        COMPLETED
+  15  v17.0-KO26-RECALIBRATED-13MATCH-JUL3             v17_jul3_engine     Jul 3        COMPLETED
+  16  v18.0-KO26-RECALIBRATED-16MATCH                  v18_jul4_engine     Jul 4        COMPLETED
+  17  v18.0-KO26-RECALIBRATED-16MATCH-JUL4             v18_jul4_engine     Jul 4        COMPLETED
+  18  v19.0-KO26-RECALIBRATED-16MATCH-R16              v19_jul4_engine     Jul 4        COMPLETED
+  19  v19.0-KO26-RECALIBRATED-16MATCH-R16-JUL4         v19_jul4_engine     Jul 4        COMPLETED
+  20  v18.0-KO26-RECALIBRATED-16MATCH-R16              v7.0_engine.mjs     Jul 4        COMPLETED
+
+  ★ = Most recent production run (July 5, 2026 at 19:22:44 UTC)
+
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION I: SUMMARY STATISTICS                                                                     ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+  SANDBOX PROJECT:  ~85 WC2026/Dime files | 4.2 MB engine dir | 28 engine versions
+  CLOUD COMPUTER:   ~291 files | 14 Python scripts (507 KB) | 258 StatsBomb JSONs
+  DATABASE:         45 tables | 21,025+ total rows | 13 core + 8 ESPN + 7 odds + 7 Dime
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  END OF INVENTORY | Search: find, grep, ls, SQL | Zero omissions | All locations searched
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
