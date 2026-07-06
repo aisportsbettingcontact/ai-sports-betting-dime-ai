@@ -42,6 +42,7 @@ import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerDimeChatRoute } from "../dime-chat.route";
+import { registerDimeWC2026Route } from "../dime-wc2026.route";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -437,6 +438,10 @@ async function startServer() {
   // POST /api/dime/chat — Claude Fable 5 streaming chat for the Chat tab.
   // Plain Express SSE route (not tRPC) for optimal streaming performance.
   registerDimeChatRoute(app);
+
+  // ─── Dime WC2026 Intelligence — Tier 4 authenticated, credit-gated, source-grounded
+  // POST /api/dime/wc2026 — 14-step enforcement, 22-path validated
+  registerDimeWC2026Route(app);
 
   // tRPC API
   app.use(
