@@ -28,7 +28,7 @@ export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
   { id: "splits", label: "Splits", path: "/feed?tab=splits", iconName: "BarChart3" },
   { id: "chat", label: "Chat", path: "/chat", iconName: "MessageSquare" },
   { id: "props", label: "Props", path: "/feed?tab=lineups", iconName: "FlaskConical" },
-  { id: "profile", label: "Profile", path: "/m/profile", iconName: "User" },
+  { id: "profile", label: "Profile", path: "/profile", iconName: "User" },
 ];
 
 // ─── Access Decision Type ────────────────────────────────────────────────────

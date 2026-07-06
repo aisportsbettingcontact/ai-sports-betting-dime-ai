@@ -4528,3 +4528,11 @@
 - [x] Precision pass: 0 TS errors, 0 hardcoded secrets, system prompt confirmed
 - [x] Client diagnostics: localStorage.DIME_DEBUG flag
 - [x] All 4 gates PASS
+
+## Profile Page Integration (Jul 6, 2026)
+- [ ] Phase 0: Reconnaissance (repo map, session data shape, logout/reset flows, style pipeline)
+- [ ] Phase 1: Place files, add /profile route, update bottom nav Profile tab
+- [ ] Phase 2: Wire live session data, logout, reset password, loading/error/unauth states, logging
+- [ ] Phase 3: Doctrine audit (8 laws adversarial pass)
+- [ ] Phase 4: Precision pass (typecheck, lint, test, grep for stubs)
+- [ ] Phase 5: Handoff report
