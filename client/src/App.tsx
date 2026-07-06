@@ -42,6 +42,7 @@ const Pricing = lazy(() => import('./pages/Pricing'));
 const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
+const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 
 // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
@@ -165,6 +166,8 @@ function Router() {
       <Route path="/account">{() => <RequireAuth><ManageAccount /></RequireAuth>}</Route>
       {/* Claude UI/UX Assistant */}
       <Route path="/admin/claude">{() => <RequireAuth><ClaudeAssistant /></RequireAuth>}</Route>
+      {/* Profile page — identity and standing */}
+      <Route path="/profile">{() => <RequireAuth><Profile /></RequireAuth>}</Route>
       {/* Dime AI Chat — streaming Claude Fable 5 chat */}
       <Route path="/chat">{() => <RequireAuth><DimeChat /></RequireAuth>}</Route>
       {/* FIFA World Cup 2026 — Group Stage Feed */}

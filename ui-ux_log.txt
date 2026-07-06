@@ -318,3 +318,68 @@ Status: COMPLETE — ALL GATES PASS
 ═══════════════════════════════════════════════════════════════════════════════
 END OF DIME AI INTEGRATION LOG
 ═══════════════════════════════════════════════════════════════════════════════
+
+
+═══════════════════════════════════════════════════════════════════════════════
+UI/UX EXECUTION LOG — PROFILE PAGE INTEGRATION
+═══════════════════════════════════════════════════════════════════════════════
+Started: 2026-07-06T06:28:00Z
+Task: Integrate Profile page into Prez Bets monorepo
+Status: COMPLETE — ALL 5 GATES PASS
+═══════════════════════════════════════════════════════════════════════════════
+
+[2026-07-06T06:28:00Z] [PHASE 0] RECONNAISSANCE
+  - @anthropic-ai/sdk: already installed
+  - ANTHROPIC_API_KEY: already in platform secrets
+  - Session data: useAppAuth() → { appUser, isOwner, loading }
+  - Logout: trpc.appUsers.logout.useMutation()
+  - Password reset: trpc.appUsers.requestPasswordReset.useMutation()
+  - Logo: CDN URL from existing header component
+  - CSS pipeline: side-effect imports work (DimeChat.tsx uses same pattern)
+  - Bottom nav: Profile tab at /m/profile (will change to /profile)
+  GATE 0: PASS ✓
+
+[2026-07-06T06:30:00Z] [PHASE 1] PLACEMENT & ROUTING
+  - Created client/src/pages/Profile.tsx (live data, no hardcoded user)
+  - Created client/src/pages/profile.css (scoped via pf-* prefix)
+  - Added lazy import in App.tsx line 45
+  - Added route at /profile with RequireAuth
+  - Updated bottom nav config: /m/profile → /profile
+  GATE 1: PASS ✓
+
+[2026-07-06T06:31:00Z] [PHASE 2] LIVE DATA WIRING
+  - useAppAuth() → appUser object with all session fields
+  - trpc.appUsers.logout.useMutation() → clears cookie, redirects to /
+  - trpc.appUsers.requestPasswordReset.useMutation() → sends email
+  - Loading skeleton (stable, no layout shift)
+  - Error state with "Sign in" button
+  - Structured logging: profileLog() with 4 events
+  GATE 2: PASS ✓
+
+[2026-07-06T06:35:00Z] [PHASE 3] DOCTRINE AUDIT
+  Law 1 (No secrets): PASS
+  Law 2 (No fake data): PASS
+  Law 3 (Structured logging): PASS
+  Law 4 (No green on profile): PASS
+  Law 5 (Gold once): PASS
+  Law 6 (Accessibility): 7 instances
+  Law 7 (Responsive): 2 instances
+  Law 8 (Error/loading): 20 references
+  GATE 3: PASS ✓
+
+[2026-07-06T06:37:00Z] [PHASE 4] PRECISION PASS
+  TypeScript: 0 errors
+  LSP: No errors
+  Stubs/TODOs: None
+  Imports: All resolve
+  Route: /profile → Profile (RequireAuth)
+  Bottom nav: Profile tab → /profile
+  Tests: 56/56 pass (fixed stale assertions)
+  GATE 4: PASS ✓
+
+[2026-07-06T06:38:00Z] [PHASE 5] HANDOFF
+  Files: Profile.tsx, profile.css, App.tsx, config.ts, test file
+  All 5 gates PASS. Ready for checkpoint.
+═══════════════════════════════════════════════════════════════════════════════
+END OF PROFILE PAGE LOG
+═══════════════════════════════════════════════════════════════════════════════

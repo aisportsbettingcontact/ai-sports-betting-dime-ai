@@ -265,3 +265,141 @@ Dime AI Chat is fully integrated into the Prez Bets monorepo. The Chat tab in th
 - [ ] Add rate limiting (e.g., 20 req/min per user)
 - [ ] Add model context injection (today's edges, bankroll state)
 
+
+
+---
+
+# Profile Page — Execution Log
+
+## Phase 0 — Reconnaissance
+**Timestamp:** 2026-07-06T06:23 UTC
+
+### Repo Map
+
+| Bullet | Finding | Path / Line |
+|--------|---------|-------------|
+| Router config & bottom nav | Bottom nav config at `config.ts:31` — Profile tab currently points to `/m/profile`. Route in `App.tsx:165` for `/account` → ManageAccount. No `/profile` route exists yet. | `client/src/features/mobileOwnerTabs/config.ts:31`, `client/src/App.tsx:165` |
+| Session/user data source | `trpc.appUsers.me` (publicProcedure) returns: `id, email, username, role, hasAccess, expiryDate, termsAccepted, discordId, discordUsername, discordConnectedAt, sessionExpiresAt, stripePlanId, stripeCustomerId, stripeSubscriptionId, cancelAtPeriodEnd`. **createdAt NOT exposed** — exists in DB schema (`drizzle/schema.ts:76`) but not in the me query return. Will render member-since conditionally. | `server/routers/appUsers.ts:537-553` |
+| Styling pipeline | CSS side-effect imports work (confirmed: `DimeChat.tsx` imports `./dime-chat.css`). Static `.jpg` not imported anywhere — project uses CDN URLs via `manus-upload-file --webdev`. Logo already at `/manus-storage/logo-aisportsbetting_429c188f.jpg`. Will use this CDN URL instead of local import. | `client/src/pages/DimeChat.tsx:19` |
+| Logout flow | `trpc.appUsers.logout.useMutation()` — clears cookie, invalidates cache. On success: `utils.appUsers.me.setData(undefined, null)` + `window.location.href = "/"`. | `server/routers/appUsers.ts:485-494`, `client/src/pages/ManageAccount.tsx:48-56` |
+| Password reset flow | `trpc.appUsers.requestPasswordReset.useMutation({ emailOrUsername, origin })` — sends email with reset link. On success: toast "Password reset email sent." | `server/routers/appUsers.ts:981-987`, `client/src/pages/ManageAccount.tsx:63-70` |
+| Global style leak risk | Project uses Tailwind + custom CSS. No global green accent classes detected that would leak into profile page. Bottom nav uses inline styles. The `pf-*` class prefix isolates profile styles. | Confirmed via grep |
+| Old Manage Account page | Route `/account` → `ManageAccount` component. Referenced by: `ModelProjections.tsx:1137` (MANAGE ACCOUNT badge), `ClaudeAssistant.tsx:168` (select item). **Cannot remove route** — has active references. | `client/src/App.tsx:165`, `client/src/pages/ModelProjections.tsx:1137` |
+
+### Key Decisions
+- **Logo:** Will use existing CDN URL `/manus-storage/logo-aisportsbetting_429c188f.jpg` instead of local `.jpg` import (matches project convention, avoids deployment timeout).
+- **Member-since:** Not in `appUsers.me` response. Will render conditionally — show only if data available. Per scope fence: NO Drizzle schema changes.
+- **Plan display:** `stripePlanId` can be "monthly" or "annual". `expiryDate === null` means lifetime. Will derive plan label from these fields.
+- **Old /account route:** Keep it — has active references from ModelProjections and ClaudeAssistant.
+
+### GATE 0: PASS ✓
+All 5 bullets answered with file paths and line references. No source writes.
+
+
+## Phase 1 — Placement and Routing
+**Timestamp:** 2026-07-06T06:30 UTC
+
+### Actions Taken
+
+1. Created `client/src/pages/profile.css` — verbatim from source zip (scoped via `pf-*` prefix).
+2. Created `client/src/pages/Profile.tsx` — rewritten to use live session data:
+   - `trpc.appUsers.me` via `useAppAuth()` for user data
+   - `trpc.appUsers.logout.useMutation()` for sign-out
+   - `trpc.appUsers.requestPasswordReset.useMutation()` for password reset
+   - Loading skeleton, error state, unauthenticated redirect
+   - Structured logging: `profileLog()` with 4 events
+   - Logo: CDN URL `/manus-storage/logo-aisportsbetting_429c188f.jpg`
+   - Plan label derived from `expiryDate` + `stripePlanId`
+3. Added lazy import in `App.tsx` line 45: `const Profile = lazy(() => import('./pages/Profile'));`
+4. Added route in `App.tsx` line 170: `<Route path="/profile">{() => <RequireAuth><Profile /></RequireAuth>}</Route>`
+5. Updated bottom nav config: Profile tab path changed from `/m/profile` to `/profile`.
+
+### GATE 1: PASS ✓
+- 0 TypeScript errors
+- Route wired at /profile with RequireAuth
+- Bottom nav Profile tab points to /profile
+- CSS imported side-effect style
+
+## Phase 2 — Live Data Wiring
+**Timestamp:** 2026-07-06T06:31 UTC
+
+Already done in Phase 1 (Profile.tsx was written with live data from the start):
+- `useAppAuth()` → `appUser` object with all session fields
+- `trpc.appUsers.logout.useMutation()` → clears cookie, redirects to /
+- `trpc.appUsers.requestPasswordReset.useMutation()` → sends email
+- Loading skeleton (stable, no layout shift)
+- Error state with "Sign in" button
+- Structured logging: `profile.view`, `profile.logout.click`, `profile.reset_password.click`, `profile.load.error`
+- No hardcoded user data — all derived from session
+
+### GATE 2: PASS ✓
+
+## Phase 3 — Doctrine Audit
+**Timestamp:** 2026-07-06T06:35 UTC
+
+| Law | Check | Result |
+|-----|-------|--------|
+| 1. No hardcoded secrets | grep for sk-, password, secret, api_key, token | PASS (only "Reset password" label matched — not a secret) |
+| 2. No fake/mock data | grep for mock, fake, dummy, hardcoded | PASS |
+| 3. Structured logging only | grep for console.* excluding profileLog | PASS (only `profileLog` wrapper uses console.log) |
+| 4. No green/neon on profile | grep for #39FF14, neon, green in .tsx/.css | PASS (only CSS comment mentions it to document the rule) |
+| 5. Gold appears once (badge only) | grep gold/#f2c11f in CSS | PASS (5 lines: 2 var defs + badge bg + badge ink + comment) |
+| 6. Accessibility | aria-*, role=, focus-visible | 7 instances (aria-labelledby, aria-hidden, focus-visible styles) |
+| 7. Responsive | max-width, clamp, min-width | 2 instances (max-width: 560px, min-height: 52px) |
+| 8. Error/loading states | skeleton + error components | 20 references in Profile.tsx |
+
+### GATE 3: PASS ✓
+
+## Phase 4 — Precision Pass
+**Timestamp:** 2026-07-06T06:37 UTC
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| TypeScript | 0 errors | webdev_check_status → `typescript: No errors` |
+| LSP | No errors | webdev_check_status → `lsp: No errors` |
+| Stubs/TODOs | None | grep returned empty |
+| Imports valid | 5 imports, all resolve | useEffect, useRef, toast, trpc, useAppAuth, profile.css |
+| Route reachable | Confirmed | App.tsx line 170: `/profile` → Profile |
+| Bottom nav config | Confirmed | config.ts line 31: `path: "/profile"` |
+| Tests | 56/56 pass | mobileOwnerTabs.test.ts |
+
+### GATE 4: PASS ✓
+
+## Phase 5 — Handoff Report
+**Timestamp:** 2026-07-06T06:38 UTC
+
+### Files Changed / Added
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `client/src/pages/Profile.tsx` | **Added** | Profile page component with live session data |
+| `client/src/pages/profile.css` | **Added** | Scoped CSS for profile UI |
+| `client/src/App.tsx` | **Edited** | Lazy import + route at `/profile` |
+| `client/src/features/mobileOwnerTabs/config.ts` | **Edited** | Profile tab path: `/m/profile` → `/profile` |
+| `server/mobileOwnerTabs.test.ts` | **Edited** | Fixed stale assertions for new paths |
+
+### Gate Results
+
+| Gate | Phase | Status |
+|------|-------|--------|
+| 0 | Reconnaissance | PASS ✓ |
+| 1 | Placement & routing | PASS ✓ |
+| 2 | Live data wiring | PASS ✓ |
+| 3 | Doctrine audit | PASS ✓ |
+| 4 | Precision pass | PASS ✓ |
+
+### How to Test
+
+1. Log in as `prez` on mobile (or Chrome DevTools mobile emulation)
+2. Tap the **Profile** tab in the bottom nav
+3. You should see: logo → @prez → LIFETIME ACCESS badge → Discord connection → Account section → Log out
+4. Tap "Reset password" → toast "Password reset email sent"
+5. Tap "Log out" → redirects to /
+
+### Design Doctrine
+
+- Gold (#f2c11f) appears ONCE: the lifetime badge. It is the content of this screen.
+- Neon green (#39FF14) does NOT appear on this page — green means edge/win.
+- Three type tiers: identity (24px/800), section label (11px/700 uppercase), row text (15px/400-600).
+- Pure black background (#000000) matches the app shell.
+- No gradients, no glass, no shadows. Apple-level restraint.

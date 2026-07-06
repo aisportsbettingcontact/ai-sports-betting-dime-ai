@@ -35,9 +35,9 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
     expect(paths).toEqual([
       "/feed?tab=dual",
       "/feed?tab=splits",
-      "/m/chat",
+      "/chat",
       "/feed?tab=lineups",
-      "/m/profile",
+      "/profile",
     ]);
   });
 
@@ -317,10 +317,11 @@ describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", ()
     ]);
   });
 
-  it("Chat and Profile tabs should still route to /m/* paths", () => {
-    const mTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/m/"));
-    expect(mTabs.length).toBe(2);
-    expect(mTabs.map(t => t.path)).toEqual(["/m/chat", "/m/profile"]);
+  it("Chat and Profile tabs should route to their dedicated paths", () => {
+    const chatTab = MOBILE_OWNER_TABS.find(t => t.id === "chat");
+    const profileTab = MOBILE_OWNER_TABS.find(t => t.id === "profile");
+    expect(chatTab?.path).toBe("/chat");
+    expect(profileTab?.path).toBe("/profile");
   });
 
   it("tabs should not interfere with /betting-splits route", () => {
@@ -409,8 +410,8 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
 
   it("should accept mobile_owner_m_route_rendered event", () => {
     mobileOwnerTabLogger.log("mobile_owner_m_route_rendered", undefined, {
-      current_path: "/m/chat",
-      target_path: "/m/chat",
+      current_path: "/chat",
+      target_path: "/chat",
       tab_name: "chat",
       is_owner: true,
       is_mobile: true,
