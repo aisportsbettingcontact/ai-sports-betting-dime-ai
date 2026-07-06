@@ -474,3 +474,286 @@ VERIFICATION: webdev_check_status confirms all health checks pass
 ROLLBACK_COMMAND_OR_PLAN: N/A
 NOTES: Phase 7 FRONTEND SMOKE TEST COMPLETE: (1) /wc2026 returns 200 ✓ (2) tRPC endpoints return valid data ✓ (3) TypeScript 0 errors ✓ (4) Dev server running ✓
 ================================================================================
+
+================================================================================
+TIMESTAMP: 2026-07-06T11:02:00Z
+TASK_ID: T2-BLOCK0-001
+TASK_NAME: Tier 2 Preflight Control
+CATEGORY: PREFLIGHT
+AFFECTED_FILE_OR_TABLE: wc2026_model_projections, wc2026MatchOdds, espnIngest, dime-chat
+ACTION_TYPE: VERIFY
+PRE_STATE: Tier 1 verified at 70/70 on 2026-07-06
+ACTION_EXECUTED: 4 preflight checks + 2 backup creations
+RAW_EVIDENCE:
+  CHECK 1: SELECT COUNT(*) duplicate_projection_combos = 0
+  CHECK 2: INFORMATION_SCHEMA uq_match_version exists (match_id + model_version, NON_UNIQUE=0)
+  CHECK 3: curl POST espnIngest returns 401 UNAUTHORIZED
+  CHECK 4: curl POST /api/dime/chat returns 401 Authentication required
+  BACKUP 1: wc2026_odds_bak_tier2 created via CREATE TABLE LIKE + INSERT SELECT (92 rows)
+  BACKUP 2: wc2026_proj_bak_tier2 created via CREATE TABLE LIKE + INSERT SELECT (92 rows)
+RESULT: All Tier 1 gates intact, backups created
+PASS_FAIL: PASS
+ROOT_CAUSE_IF_FAIL: N/A
+FIX_APPLIED_IF_ANY: N/A
+POST_STATE: Tier 1 confirmed, backups ready for Tier 2 work
+VERIFICATION: All 4 checks returned expected values, backup counts match source
+ROLLBACK_COMMAND_OR_PLAN: DROP TABLE wc2026_odds_bak_tier2; DROP TABLE wc2026_proj_bak_tier2;
+NOTES: Proceeding to Block 1 Canonical Match Mapping. Note: wc2026_odds_bak_t2 was also created accidentally with wrong schema (16 cols vs 49 cols) - will be cleaned up.
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 1: CANONICAL MATCH MAPPING - COMPLETION
+================================================================================
+TASK_ID: T2-B1-COMPLETE
+TIMESTAMP: 2026-07-06T11:07:00Z
+
+PRE_STATE:
+- wc2026_provider_match_map: 92 rows (ESPN provider, all VERIFIED, confidence=1.0000)
+- wc2026MatchOdds: 92 total rows (72 ESPN format 'wc26-gs-*', 20 canonical 'wc26-g-*' or 'wc26-r16-*')
+- ESPN ID extraction: SUBSTRING(match_id, 9) strips 'wc26-gs-' (8 chars) → numeric ESPN ID
+
+ACTION_EXECUTED:
+1. Verified mapping count with correct SUBSTRING offset (9):
+   - 60 ESPN MatchOdds rows successfully map to canonical match IDs via provider map
+   - 12 ESPN MatchOdds rows are UNMAPPABLE (ESPN IDs not in wc2026_matches)
+
+2. Identified 12 unmappable ESPN IDs:
+   - wc26-gs-760438 (ESPN ID: 760438)
+   - wc26-gs-760439 (ESPN ID: 760439)
+   - wc26-gs-760440 (ESPN ID: 760440)
+   - wc26-gs-760441 (ESPN ID: 760441)
+   - wc26-gs-760450 (ESPN ID: 760450)
+   - wc26-gs-760451 (ESPN ID: 760451)
+   - wc26-gs-760452 (ESPN ID: 760452)
+   - wc26-gs-760453 (ESPN ID: 760453)
+   - wc26-gs-760454 (ESPN ID: 760454)
+   - wc26-gs-760455 (ESPN ID: 760455)
+   - wc26-gs-760456 (ESPN ID: 760456)
+   - wc26-gs-760457 (ESPN ID: 760457)
+
+3. Block 1 Triple-Test:
+   TEST 1: Mappable count = 60 PASS (72 total ESPN - 12 unmappable = 60)
+   TEST 2: Duplicate provider IDs = 0 PASS (UNIQUE constraint enforced)
+   TEST 3: Bad canonical mappings = 0 PASS (all 92 map entries point to valid wc2026_matches rows)
+
+RAW_EVIDENCE:
+- SELECT COUNT(*) ... INNER JOIN ... SUBSTRING(o.match_id, 9) → 60
+- SELECT provider, provider_match_id, COUNT(*) ... HAVING cnt > 1 → 0 rows
+- SELECT COUNT(*) ... LEFT JOIN ... WHERE w.match_id IS NULL → 0
+
+RESULT: BLOCK 1 TRIPLE-TEST PASSED (3/3)
+PASS_FAIL: PASS
+
+ROLLBACK_COMMAND:
+- DROP TABLE IF EXISTS wc2026_provider_match_map;
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 2: MATCH ODDS REPAIR & QUARANTINE
+================================================================================
+TASK_ID: T2-B2-COMPLETE
+TIMESTAMP: 2026-07-06T11:09:00Z
+
+PRE_STATE:
+- wc2026MatchOdds: 92 rows (72 ESPN format, 20 canonical)
+- wc2026_orphan_match_odds_quarantine: did not exist
+- 60 ESPN rows mappable, 12 unmappable
+
+ACTION_EXECUTED:
+1. Created wc2026_orphan_match_odds_quarantine table (id, original_match_id, original_row_json JSON, reason, review_status ENUM, quarantined_at, resolved_at)
+2. Inserted 12 unmappable rows into quarantine with JSON snapshot and reason='ESPN_ID_NOT_IN_WC2026_MATCHES'
+3. Deleted 12 unmappable rows from wc2026MatchOdds
+4. Updated 60 ESPN-format rows: SET match_id = canonical_match_id via provider map JOIN
+
+RAW_EVIDENCE:
+- Quarantine count: 12 rows (VERIFIED)
+- Remaining ESPN orphans: 0 (all 'wc26-gs-%' rows remapped or quarantined)
+- Total canonical rows: 80 (20 original + 60 remapped)
+- Orphan odds (LEFT JOIN wc2026_matches WHERE NULL): 0
+
+Block 2 Triple-Test:
+TEST 1: Active ESPN orphans = 0 PASS
+TEST 2: Total canonical rows = 80 PASS (>= 80 threshold)
+TEST 3: Quarantined rows = 12 PASS + 0 orphan odds PASS
+
+RESULT: BLOCK 2 TRIPLE-TEST PASSED (3/3)
+PASS_FAIL: PASS
+
+POST_STATE:
+- wc2026MatchOdds: 80 rows (all canonical match_id format)
+- wc2026_orphan_match_odds_quarantine: 12 rows (all PENDING review)
+- Zero orphan odds remaining
+
+ROLLBACK_COMMAND:
+- UPDATE wc2026MatchOdds o INNER JOIN wc2026_provider_match_map m ON o.match_id = m.canonical_match_id SET o.match_id = CONCAT('wc26-gs-', m.provider_match_id) WHERE m.provider = 'ESPN';
+- INSERT INTO wc2026MatchOdds (...) SELECT ... FROM wc2026_orphan_match_odds_quarantine (reconstruct from JSON);
+- DROP TABLE wc2026_orphan_match_odds_quarantine;
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 3: NO-VIG COMPUTATION
+================================================================================
+TASK_ID: T2-B3-COMPLETE
+TIMESTAMP: 2026-07-06T11:11:00Z
+
+PRE_STATE:
+- wc2026MatchOdds: 80 rows, 21 with complete 1X2 book odds (book_home_ml, book_draw, book_away_ml)
+- wc2026_market_no_vig: did not exist
+
+ACTION_EXECUTED:
+1. Created wc2026_market_no_vig table (match_id, market, selection, book_odds INT, raw_implied_prob, no_vig_prob, market_hold, UNIQUE on match_id+market+selection)
+2. Computed no-vig for 1X2 market:
+   - Formula: raw_prob = if odds<0: |odds|/(|odds|+100); if odds>0: 100/(odds+100)
+   - no_vig = raw_prob / sum(raw_probs for all selections in market)
+   - market_hold = sum(raw_probs) - 1.0
+3. Inserted 63 rows (21 matches × 3 selections: HOME, DRAW, AWAY)
+
+SPOT CHECK (wc26-g-001: home=-238, draw=+333, away=+750):
+- HOME: raw=0.70414, no_vig=0.66886 (sum check: 0.66886+0.21938+0.11176 = 1.00000)
+- DRAW: raw=0.23095, no_vig=0.21938
+- AWAY: raw=0.11765, no_vig=0.11176
+- Market hold: 0.05274 (5.27% vig)
+
+Block 3 Triple-Test:
+TEST 1: Sum of no_vig_prob per market = 1.0 ± 0.001 → 0 violations PASS
+TEST 2: All probs in [0,1] range → 0 out-of-range PASS
+TEST 3: Orphan no-vig rows → 0 PASS
+
+RESULT: BLOCK 3 TRIPLE-TEST PASSED (3/3)
+PASS_FAIL: PASS
+
+POST_STATE:
+- wc2026_market_no_vig: 63 rows (21 matches × 3 selections)
+- All probabilities mathematically valid
+
+ROLLBACK_COMMAND:
+- DROP TABLE IF EXISTS wc2026_market_no_vig;
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 4: EDGE COMPUTATION
+================================================================================
+TASK_ID: T2-B4-COMPLETE
+TIMESTAMP: 2026-07-06T11:13:00Z
+
+PRE_STATE:
+- wc2026_market_no_vig: 63 rows (21 matches × 3 selections)
+- wc2026_model_projections: 92 rows (21 model versions across 18 matches that overlap with no-vig data)
+- wc2026_market_edges: did not exist
+
+ACTION_EXECUTED:
+1. Created wc2026_market_edges table (match_id, model_version, market, selection, model_prob, no_vig_prob, edge, edge_pct, fair_odds, edge_status, UNIQUE on match_id+model_version+market+selection)
+2. Computed edges for 1X2 market (HOME, DRAW, AWAY) by joining model_projections with market_no_vig:
+   - edge = model_prob - no_vig_prob
+   - edge_pct = (edge / no_vig_prob) * 100
+   - fair_odds = probToAmerican(model_prob)
+   - edge_status: POSITIVE if edge > 0.001, NEGATIVE if edge < -0.001, else NEUTRAL
+3. Inserted 54 rows (18 matches × 1 version per match × 3 selections)
+   - Note: Only 18 of 21 no-vig matches have corresponding projections (3 matches have odds but no model projection)
+
+EDGE DISTRIBUTION:
+- Total: 54 edge rows
+- POSITIVE: 28 (51.9%)
+- NEGATIVE: 26 (48.1%)
+- NEUTRAL: 0
+- Distinct matches: 18
+- Distinct model versions: 7
+
+Block 4 Triple-Test:
+TEST 1: Edge math correct (|edge - (model_prob - no_vig_prob)| < 0.0001) → 0 violations PASS
+TEST 2: All probs in [0,1] → 0 out-of-range PASS
+TEST 3: Orphan edges → 0 PASS
+
+RESULT: BLOCK 4 TRIPLE-TEST PASSED (3/3)
+PASS_FAIL: PASS
+
+POST_STATE:
+- wc2026_market_edges: 54 rows (18 matches, 7 model versions, 3 selections each)
+
+ROLLBACK_COMMAND:
+- DROP TABLE IF EXISTS wc2026_market_edges;
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 5: RECOMMENDATIONS
+================================================================================
+TASK_ID: T2-B5-COMPLETE
+TIMESTAMP: 2026-07-06T11:14:30Z
+
+PRE_STATE:
+- wc2026_market_edges: 54 rows (28 POSITIVE, 26 NEGATIVE)
+- wc2026_recommendations: did not exist
+
+ACTION_EXECUTED:
+1. Created wc2026_recommendations table with statuses: BET, LEAN, PASS, NO_MARKET, STALE, INSUFFICIENT_DATA, MARKET_CLOSED
+2. Inserted BET recommendations: 28 rows (all POSITIVE edges with book_odds, model_prob, no_vig_prob, edge > 0)
+3. Inserted PASS recommendations: 26 rows (all NEGATIVE edges with reason)
+4. Inserted NO_MARKET recommendations: 210 rows (projections without corresponding book odds in 1X2 market)
+
+RECOMMENDATION BREAKDOWN:
+- Total: 264 rows
+- BET: 28 (positive edge, all required fields populated)
+- PASS: 26 (negative edge, all have reason)
+- NO_MARKET: 210 (no book odds available)
+- LEAN: 0 (no neutral edges found)
+- STALE: 0 (freshness check not applicable at this tier)
+- INSUFFICIENT_DATA: 0
+- MARKET_CLOSED: 0
+
+Block 5 Triple-Test:
+TEST 1: Invalid BETs (missing fields or edge<=0) = 0 PASS
+TEST 2: PASS without reason = 0 PASS
+TEST 3: Orphan recommendations = 0 PASS
+
+RESULT: BLOCK 5 TRIPLE-TEST PASSED (3/3)
+PASS_FAIL: PASS
+
+POST_STATE:
+- wc2026_recommendations: 264 rows (28 BET, 26 PASS, 210 NO_MARKET)
+
+ROLLBACK_COMMAND:
+- DROP TABLE IF EXISTS wc2026_recommendations;
+================================================================================
+
+================================================================================
+TIER 2 BLOCK 6: FINAL GATE - ALL 9 CRITERIA
+================================================================================
+TASK_ID: T2-B6-FINAL-GATE
+TIMESTAMP: 2026-07-06T11:16:30Z
+
+T2-1: Provider Match Map (92 verified, confidence=1.0, UNIQUE enforced) → PASS
+T2-2: Zero ESPN-format orphans in MatchOdds (0 rows LIKE 'wc26-gs-%') → PASS
+T2-3: Quarantine table (12 rows, all PENDING, JSON snapshots preserved) → PASS
+T2-4: No-vig table (63 rows, sum=1.0 per market, all probs in [0,1]) → PASS
+T2-5: Edge table (54 rows, math verified |edge-(model-novig)|<0.0001, probs in [0,1]) → PASS
+T2-6: Recommendations (264 rows, 0 invalid BETs, all PASS have reason) → PASS
+T2-7: Tier 1 fixes intact (0 duplicates, UNIQUE index uq_match_version active with 2 columns) → PASS
+T2-8: Zero orphans across ALL tables (odds:0, novig:0, edges:0, recs:0) → PASS
+T2-9: Backup tables exist (odds_bak:92, proj_bak:92, dedup_archive:14) → PASS
+
+FINAL SCORE: 9/9 PASS (100%)
+
+=== TIER 2 INTERNAL EDGE BETA: VERIFIED ===
+
+DB STATE SUMMARY:
+- wc2026_matches: 104 rows (88 FT, 16 SCHEDULED)
+- wc2026_model_projections: 92 rows (0 duplicates, UNIQUE index)
+- wc2026MatchOdds: 80 rows (all canonical match_id, 0 ESPN orphans)
+- wc2026_provider_match_map: 92 rows (ESPN, all VERIFIED)
+- wc2026_orphan_match_odds_quarantine: 12 rows (all PENDING)
+- wc2026_market_no_vig: 63 rows (21 matches × 3 selections)
+- wc2026_market_edges: 54 rows (18 matches × 3 selections, 28 POSITIVE, 26 NEGATIVE)
+- wc2026_recommendations: 264 rows (28 BET, 26 PASS, 210 NO_MARKET)
+- wc2026_odds_bak_tier2: 92 rows (pre-repair backup)
+- wc2026_proj_bak_tier2: 92 rows (pre-repair backup)
+- wc2026_mp_dedup_archive: 14 rows (Tier 1 dedup archive)
+
+ROLLBACK COMMANDS (full Tier 2 rollback):
+1. DROP TABLE IF EXISTS wc2026_recommendations;
+2. DROP TABLE IF EXISTS wc2026_market_edges;
+3. DROP TABLE IF EXISTS wc2026_market_no_vig;
+4. DROP TABLE IF EXISTS wc2026_orphan_match_odds_quarantine;
+5. UPDATE wc2026MatchOdds o INNER JOIN wc2026_provider_match_map m ON o.match_id = m.canonical_match_id SET o.match_id = CONCAT('wc26-gs-', m.provider_match_id) WHERE m.provider = 'ESPN';
+6. INSERT INTO wc2026MatchOdds SELECT * FROM wc2026_odds_bak_tier2 WHERE match_id NOT IN (SELECT match_id FROM wc2026MatchOdds);
+7. DROP TABLE IF EXISTS wc2026_provider_match_map;
+================================================================================
