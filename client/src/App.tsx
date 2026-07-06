@@ -43,6 +43,9 @@ const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 
+// ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
+const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
+
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
  *
@@ -162,6 +165,8 @@ function Router() {
       <Route path="/admin/claude">{() => <RequireAuth><ClaudeAssistant /></RequireAuth>}</Route>
       {/* FIFA World Cup 2026 — Group Stage Feed */}
       <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
+      {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+      <Route path="/m/:rest*">{() => <RequireAuth><MobileOwnerLayout /></RequireAuth>}</Route>
       {/* 404 */}
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
