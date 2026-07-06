@@ -41,6 +41,7 @@ import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
+import { registerDimeChatRoute } from "../dime-chat.route";
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -431,6 +432,11 @@ async function startServer() {
   // POST /api/scheduled/wc2026-splits  — every 10 min
   // POST /api/scheduled/wc2026-lineups — every 10 min
   registerWc2026Heartbeats(app);
+
+  // ─── Dime AI Chat — SSE streaming endpoint ──────────────────────────────
+  // POST /api/dime/chat — Claude Fable 5 streaming chat for the Chat tab.
+  // Plain Express SSE route (not tRPC) for optimal streaming performance.
+  registerDimeChatRoute(app);
 
   // tRPC API
   app.use(

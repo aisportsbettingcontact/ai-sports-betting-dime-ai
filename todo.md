@@ -4515,3 +4515,16 @@
 - [x] 56/56 mobileOwnerTabs tests passing
 - [x] 0 TypeScript errors
 - [x] Full ui-ux_log.txt written
+
+## Dime AI Chat Integration (Jul 6, 2026)
+- [x] Backend route: POST /api/dime/chat (SSE streaming, Claude Fable 5)
+- [x] System prompt: DIME_SYSTEM_PROMPT (Prez Bets AI engine persona)
+- [x] Input sanitizer: 24-turn history limit, 8k char message limit
+- [x] Structured logging: 5 events (request, stream.start, stream.done, error, aborted)
+- [x] Frontend page: DimeChat.tsx + dime-chat.css at /chat
+- [x] Route wired in App.tsx with RequireAuth
+- [x] Bottom nav Chat tab updated: /m/chat → /chat
+- [x] Failure-mode hardening: 6 scenarios verified
+- [x] Precision pass: 0 TS errors, 0 hardcoded secrets, system prompt confirmed
+- [x] Client diagnostics: localStorage.DIME_DEBUG flag
+- [x] All 4 gates PASS
