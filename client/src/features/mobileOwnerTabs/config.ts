@@ -84,7 +84,23 @@ export type MobileOwnerTabEvent =
   | "scroll_position_restored"
   | "viewport_resized"
   | "safe_area_detected"
-  | "theme_applied";
+  | "theme_applied"
+  // Phase 2: Data connection events
+  | "mobile_feed_data_fetch_started"
+  | "mobile_feed_data_fetch_completed"
+  | "mobile_feed_data_fetch_failed"
+  | "mobile_feed_empty_state_rendered"
+  | "mobile_splits_data_fetch_started"
+  | "mobile_splits_data_fetch_completed"
+  | "mobile_splits_data_fetch_failed"
+  | "mobile_splits_empty_state_rendered"
+  | "mobile_chat_state_loaded"
+  | "mobile_bet_tracker_data_fetch_started"
+  | "mobile_bet_tracker_data_fetch_completed"
+  | "mobile_bet_tracker_data_fetch_failed"
+  | "mobile_bet_tracker_empty_state_rendered"
+  | "mobile_profile_data_loaded"
+  | "mobile_profile_data_failed";
 
 export interface MobileOwnerTabLogEntry {
   timestamp: number;

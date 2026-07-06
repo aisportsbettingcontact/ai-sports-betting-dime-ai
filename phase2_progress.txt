@@ -1,0 +1,37 @@
+Phase 2: Connect Mobile Owner Tabs to Real Data — PROGRESS LOG
+================================================================
+
+COMPLETED:
+- [x] Phase 1: Inspected data sources (betTracker.listWithStats, appUsers.me, games.list)
+- [x] Phase 2: Built shared components (MobileLoadingState, MobileEmptyState, MobileErrorState, MobileDataState)
+- [x] Phase 3: Connected MobileFeed to real games.list data
+- [x] Phase 4: Connected MobileSplits to real splits data from games.list
+- [x] Phase 5: Connected MobileChat with credit state preview (no LLM calls)
+- [x] Phase 6: Connected MobileBetTracker to betTracker.listWithStats
+- [x] Phase 7: Connected MobileProfile to appUsers.me via useAppAuth()
+
+REMAINING:
+- [ ] Phase 8: Run full test suite and fix issues
+- [ ] Phase 9: Save checkpoint and deliver
+
+KEY ARCHITECTURE:
+- useAppAuth() → trpc.appUsers.me → returns {id, email, username, role, hasAccess, stripePlanId, stripeCustomerId, stripeSubscriptionId, cancelAtPeriodEnd, discordId, discordUsername}
+- betTracker.listWithStats → returns {list: TrackedBet[], stats: {totalBets, wins, losses, pushes, winPct, netUnits, roi}}
+- games.list → returns games with odds, splits, model projections
+- Owner detection: appUser.role === "owner"
+- Owner usernames: "prez" and "sippi"
+
+FILES CREATED/MODIFIED IN PHASE 2:
+- client/src/features/mobileOwnerTabs/components/MobileLoadingState.tsx
+- client/src/features/mobileOwnerTabs/components/MobileEmptyState.tsx
+- client/src/features/mobileOwnerTabs/components/MobileErrorState.tsx
+- client/src/features/mobileOwnerTabs/components/MobileDataState.tsx
+- client/src/features/mobileOwnerTabs/components/index.ts
+- client/src/features/mobileOwnerTabs/screens/MobileFeed.tsx (rewritten)
+- client/src/features/mobileOwnerTabs/screens/MobileSplits.tsx (rewritten)
+- client/src/features/mobileOwnerTabs/screens/MobileChat.tsx (rewritten)
+- client/src/features/mobileOwnerTabs/screens/MobileBetTracker.tsx (rewritten)
+- client/src/features/mobileOwnerTabs/screens/MobileProfile.tsx (rewritten)
+- client/src/features/mobileOwnerTabs/config.ts (extended events)
+
+TS ERRORS: 0 (confirmed by tsc watcher)
