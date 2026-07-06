@@ -714,7 +714,7 @@ export const wc2026Router = router({
    * espnIngest — scrape ESPN match page + ingest all 9 wc2026_espn_* tables in one call.
    * Returns per-phase PASS/FAIL with row counts for all 9 tables.
    */
-  espnIngest: publicProcedure
+  espnIngest: ownerProcedure
     .input(
       z.object({
         urlOrGameId: z.string().min(1),

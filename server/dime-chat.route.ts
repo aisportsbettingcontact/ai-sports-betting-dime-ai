@@ -15,6 +15,7 @@
 import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
+import { sdk } from "./_core/sdk";
 
 const MODEL = "claude-fable-5";
 const MAX_TOKENS = 2048;
@@ -75,6 +76,19 @@ const dimeChatRouter = Router();
 dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
+
+  // --- A2: Backend auth gate — reject unauthenticated requests before any Claude call ---
+  try {
+    await sdk.authenticateRequest(req);
+  } catch (authErr) {
+    dimeLog("dime.chat.auth_rejected", requestId, {
+      errorClass: "AuthenticationError",
+      statusCode: 401,
+      detail: "Unauthenticated request rejected",
+    });
+    res.status(401).json({ error: "Authentication required. Please log in." });
+    return;
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
