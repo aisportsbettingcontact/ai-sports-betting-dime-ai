@@ -53,6 +53,18 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
   function handleTabTap(tabId: MobileOwnerTabId, path: string) {
     mobileOwnerTabLogger.log("tab_tapped", tabId, { from: location, to: path });
 
+    // User-specified event: mobile_owner_tab_clicked
+    mobileOwnerTabLogger.log("mobile_owner_tab_clicked", tabId, {
+      current_path: location,
+      target_path: path,
+      tab_name: tabId,
+      user_role: null, // Not available in this component — logged at GlobalMobileOwnerTabs level
+      is_owner: true, // Only owners see these tabs
+      is_mobile: true, // Only renders on mobile
+      test_mode: false,
+      timestamp: Date.now(),
+    });
+
     // Haptic feedback (if available)
     if ("vibrate" in navigator) {
       try {
@@ -67,6 +79,17 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
       mobileOwnerTabLogger.log("tab_changed", tabId, { from: activeTabId, to: tabId });
       navigate(path);
       mobileOwnerTabLogger.log("route_navigated", tabId, { path });
+
+      // User-specified event: mobile_owner_tab_navigated_to_m_route
+      mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", tabId, {
+        current_path: location,
+        target_path: path,
+        tab_name: tabId,
+        is_owner: true,
+        is_mobile: true,
+        test_mode: false,
+        timestamp: Date.now(),
+      });
     }
   }
 

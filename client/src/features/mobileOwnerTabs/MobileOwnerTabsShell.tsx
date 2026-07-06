@@ -49,6 +49,16 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
   // Log mount/unmount
   useEffect(() => {
     mobileOwnerTabLogger.log("shell_mounted", undefined, { path: location });
+    // User-specified event: mobile_owner_m_route_rendered
+    mobileOwnerTabLogger.log("mobile_owner_m_route_rendered", undefined, {
+      current_path: location,
+      target_path: location,
+      tab_name: location.split("/")[2] ?? null,
+      is_owner: true, // Only owners pass the access gate
+      is_mobile: true,
+      test_mode: false,
+      timestamp: Date.now(),
+    });
     return () => {
       mobileOwnerTabLogger.log("shell_unmounted");
     };
