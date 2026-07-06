@@ -218,6 +218,11 @@
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
 }
 
+/* When mobile owner tabs are visible, add extra bottom padding to prevent content being covered */
+.mobile-owner-tabs-active .feed-pb-safe {
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ── Scrollbar styling ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

@@ -28,6 +28,7 @@ export { mobileOwnerTabLogger } from "./logger";
 export { MobileOwnerAccessGate } from "./MobileOwnerAccessGate";
 export { MobileOwnerBottomTabs } from "./MobileOwnerBottomTabs";
 export { MobileOwnerTabsShell } from "./MobileOwnerTabsShell";
+export { GlobalMobileOwnerTabs } from "./GlobalMobileOwnerTabs";
 
 // Screens
 export { MobileFeed } from "./screens/MobileFeed";
