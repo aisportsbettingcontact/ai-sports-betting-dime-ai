@@ -214,3 +214,38 @@
 [OUTPUT] Access control: Owner-only gate intact
 [OUTPUT] No exposure to normal users: MobileOwnerAccessGate blocks non-owners
 [OUTPUT] All data connections use staleTime: 60s, retry: 2
+
+═══════════════════════════════════════════════════════════════════════════════
+## PHASE 2 FINAL FIX: MobileChat.tsx Toast Import (03:36-03:44 UTC)
+═══════════════════════════════════════════════════════════════════════════════
+
+[03:36 UTC] ISSUE: MobileChat.tsx had broken import `@/hooks/use-toast` — module does not exist
+[03:36 UTC] DIAGNOSIS: Project uses `sonner` for toasts (import { toast } from "sonner"), not shadcn use-toast
+[03:37 UTC] FIX: Replaced `import { useToast } from "@/hooks/use-toast"` with `import { toast } from "sonner"`
+[03:37 UTC] FIX: Changed `const { toast } = useToast()` to direct `toast.info(...)` call
+[03:37 UTC] VERIFY: TypeScript watch mode → Found 0 errors
+[03:38 UTC] Added missing event names to config.ts: mobile_chat_preview_action_clicked, mobile_chat_preview_action_blocked
+[03:38 UTC] Rewrote MobileChat.tsx to be fully blueprint-compliant:
+  - Pricing list with 5 AI actions (Explain Edge 250, Find Price 350, Analyze Movement 400, Break Down Game 750, Summarize Slate 2500)
+  - Toast on click: "Coming soon in test mode" via sonner
+  - No fake "Recent" conversation data (removed)
+  - No OpenAI calls
+  - No credit deductions
+  - Disabled input bar with "Chat disabled in preview mode" label
+  - Full logging: mobile_chat_state_loaded, mobile_chat_preview_action_clicked, mobile_chat_preview_action_blocked
+[03:43 UTC] webdev_check_status: typescript: No errors, lsp: No errors, dev server: running
+[03:43 UTC] TEST SUITE: 59 files, 1256 tests passed, 0 failures (52.18s)
+[03:44 UTC] todo.md updated: all Phase 1 + Phase 2 items marked [x]
+[03:44 UTC] CHECKPOINT: Phase 2 complete — saving
+
+PHASE 2 ACCEPTANCE CRITERIA STATUS:
+✅ Owner-only tabs remain protected (role === "owner" gate)
+✅ Each tab connects to real data (games.list, wc2026.matchesByDate, splits, betTracker, appUsers.me)
+✅ Missing data produces polished empty states
+✅ Errors produce controlled error states
+✅ Chat remains preview-only (no OpenAI calls)
+✅ No credits deducted
+✅ Logs show data lifecycle (all events logged with metadata)
+✅ MobileChat.tsx TS error FIXED (sonner import)
+✅ 0 TypeScript errors
+✅ 1256/1256 tests passing

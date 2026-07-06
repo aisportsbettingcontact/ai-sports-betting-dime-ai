@@ -95,6 +95,8 @@ export type MobileOwnerTabEvent =
   | "mobile_splits_data_fetch_failed"
   | "mobile_splits_empty_state_rendered"
   | "mobile_chat_state_loaded"
+  | "mobile_chat_preview_action_clicked"
+  | "mobile_chat_preview_action_blocked"
   | "mobile_bet_tracker_data_fetch_started"
   | "mobile_bet_tracker_data_fetch_completed"
   | "mobile_bet_tracker_data_fetch_failed"
