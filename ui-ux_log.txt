@@ -1,0 +1,232 @@
+═══════════════════════════════════════════════════════════════════════════════
+UI/UX EXECUTION LOG — Mobile Owner Bottom Tab Migration
+═══════════════════════════════════════════════════════════════════════════════
+Started: 2026-07-06T05:30:00Z
+Task: Migrate MLB in-sport tabs to bottom nav tabs
+
+────────────────────────────────────────────────────────────────────────────────
+[PHASE 1] ARCHITECTURE AUDIT
+────────────────────────────────────────────────────────────────────────────────
+
+[STEP 1.1] CURRENT BOTTOM TAB CONFIG (config.ts)
+  Tab 1: id="feed"         label="Feed"      path="/m/feed"         icon=Newspaper
+  Tab 2: id="splits"       label="Splits"    path="/m/splits"       icon=BarChart3
+  Tab 3: id="chat"         label="Chat"      path="/m/chat"         icon=MessageSquare
+  Tab 4: id="bet-tracker"  label="Tracker"   path="/m/bet-tracker"  icon=Receipt
+  Tab 5: id="profile"      label="Profile"   path="/m/profile"      icon=User
+
+[STEP 1.2] CURRENT IN-SPORT TABS (ModelProjections.tsx, MLB)
+  Tab: 'dual'     → PROJECTIONS
+  Tab: 'splits'   → SPLITS
+  Tab: 'lineups'  → LINEUPS
+  Tab: 'props'    → K PROPS
+  Tab: 'f5nrfi'   → CHEAT SHEETS
+  Tab: 'hrprops'  → HR PROPS
+
+[STEP 1.3] CURRENT ROUTING
+  /feed             → ModelProjections (with in-sport tabs: PROJECTIONS, SPLITS, LINEUPS, etc.)
+  /betting-splits   → BettingSplits
+  /m/feed           → MobileFeed (custom mobile screen)
+  /m/splits         → MobileSplits (custom mobile screen)
+  /m/chat           → MobileChat (custom mobile screen)
+  /m/bet-tracker    → MobileBetTracker (custom mobile screen)
+  /m/profile        → MobileProfile (custom mobile screen)
+
+[STEP 1.4] USER REQUIREMENTS
+  ✓ Bottom "Feed" tab → MLB Projections (PROJECTIONS in-sport tab content)
+  ✓ Bottom "Splits" tab → MLB Splits (SPLITS in-sport tab content)
+  ✓ Bottom "Tracker" → RENAME to "Props" → show LINEUPS, K PROPS, CHEAT SHEETS, HR PROPS
+  ✓ Keep Chat and Profile tabs unchanged
+  ✓ Fix tab bar colors permanently (inline styles)
+
+[STEP 1.5] IMPLEMENTATION STRATEGY
+  The /m/* screens currently show custom lightweight views. The user wants them
+  to show the ACTUAL production content from ModelProjections.tsx, just filtered
+  to the correct tab.
+
+  APPROACH: Instead of duplicating the massive ModelProjections component,
+  we'll make the /m/* routes navigate directly to the existing /feed page
+  with the correct tab pre-selected via URL params. The bottom nav tabs
+  will point to:
+    Feed   → /feed?tab=dual (Projections)
+    Splits → /feed?tab=splits (Splits)
+    Props  → /feed?tab=lineups (default sub-tab, with sub-navigation for lineups/props/f5nrfi/hrprops)
+    Chat   → /m/chat (unchanged)
+    Profile → /m/profile (unchanged)
+
+  WAIT — Re-reading the user's intent. The user says "Move the MLB splits page
+  from the current in sport MLB tab to the new Splits tab created at the bottom
+  of the page." This means the bottom tabs should DIRECTLY show the same content.
+
+  REVISED APPROACH: Update the bottom tab paths to navigate to the existing
+  production routes with the correct tab parameter. The bottom tabs become
+  a quick-access navigation layer that routes to the existing pages with
+  the correct tab pre-selected.
+
+  NEW TAB CONFIG:
+    Feed   → /feed?tab=dual          (shows PROJECTIONS content)
+    Splits → /feed?tab=splits        (shows SPLITS content)
+    Props  → /feed?tab=lineups       (shows LINEUPS/K PROPS/CHEAT SHEETS/HR PROPS)
+    Chat   → /m/chat                 (unchanged)
+    Profile → /m/profile             (unchanged)
+
+  This avoids duplicating the entire ModelProjections component and ensures
+  the bottom tabs show the REAL production data.
+
+[STEP 1.6] DECISION: Tab ID and Label Changes
+  OLD: id="bet-tracker"  label="Tracker"  icon=Receipt
+  NEW: id="props"        label="Props"    icon=FlaskConical (or similar)
+
+────────────────────────────────────────────────────────────────────────────────
+[PHASE 2] IMPLEMENTATION
+────────────────────────────────────────────────────────────────────────────────
+
+
+[STEP 2.1] URL PARAMETER SYSTEM CONFIRMED
+  The existing /feed page uses URL param ?tab=dual|splits|lineups|props|f5nrfi|hrprops
+  to control which in-sport tab is displayed.
+
+  IMPLEMENTATION DECISION:
+  The bottom nav tabs will navigate to /feed with the correct ?tab= parameter.
+  This means the bottom tabs will show the EXACT same production content as the
+  in-sport tabs, just accessed via the bottom nav instead of the horizontal scroll.
+
+  NEW BOTTOM TAB CONFIG:
+    Tab 1: id="feed"    label="Feed"    path="/feed?tab=dual"     icon=Newspaper
+    Tab 2: id="splits"  label="Splits"  path="/feed?tab=splits"   icon=BarChart3
+    Tab 3: id="chat"    label="Chat"    path="/m/chat"            icon=MessageSquare
+    Tab 4: id="props"   label="Props"   path="/feed?tab=lineups"  icon=FlaskConical
+    Tab 5: id="profile" label="Profile" path="/m/profile"         icon=User
+
+  NOTE: The "Props" tab defaults to the lineups sub-tab. Once on the page,
+  the user can switch between LINEUPS, K PROPS, CHEAT SHEETS, HR PROPS
+  using the existing horizontal tab bar.
+
+  WAIT — The user said "Migrate all of the LINEUPS K-PROPS CHEAT SHEETS and
+  HR PROPS pages from the current in sport MLB tab to the new Props tab."
+  This implies the Props tab should show ALL of these, not just one.
+  
+  But the existing architecture shows one tab at a time. The Props bottom tab
+  should navigate to /feed?tab=lineups as the default entry point, and the
+  horizontal tab bar at the top will still allow switching between
+  LINEUPS, K PROPS, CHEAT SHEETS, HR PROPS.
+
+  FINAL DECISION: The bottom nav tabs navigate to the existing /feed route
+  with the appropriate ?tab= parameter. The MobileOwnerBottomTabs component
+  will use wouter's navigate with search params.
+
+[STEP 2.2] UPDATING config.ts — Tab definitions
+
+
+[STEP 2.3] IMPLEMENTATION COMPLETE — Config Changes
+  ✓ MobileOwnerTabId type: "bet-tracker" → "props"
+  ✓ Tab 4 config: id="props", label="Props", path="/feed?tab=lineups", icon=FlaskConical
+  ✓ Tab 1 path: /m/feed → /feed?tab=dual (shows PROJECTIONS)
+  ✓ Tab 2 path: /m/splits → /feed?tab=splits (shows SPLITS)
+  ✓ MobileOwnerBottomTabs: FlaskConical icon imported, Receipt removed
+  ✓ ICON_MAP updated: Receipt → FlaskConical
+  ✓ getActiveTab() rewritten: handles query params via window.location.search
+  ✓ handleTabTap() updated: uses window.location.href for paths with query params
+  ✓ MobileOwnerLayout route: /m/bet-tracker → /m/props
+  ✓ MobileBetTracker.tsx: all "bet-tracker" refs → "props"
+  ✓ TypeScript: 0 errors confirmed
+
+[STEP 3.1] ARCHITECTURE DECISION — Screen Routing
+  The bottom tabs now navigate DIRECTLY to the existing /feed page with ?tab= params.
+  This means:
+    - Feed tab → /feed?tab=dual → ModelProjections renders PROJECTIONS content
+    - Splits tab → /feed?tab=splits → ModelProjections renders SPLITS content
+    - Props tab → /feed?tab=lineups → ModelProjections renders LINEUPS content
+      (user can switch to K PROPS, CHEAT SHEETS, HR PROPS via horizontal tabs)
+    - Chat tab → /m/chat → MobileChat screen (unchanged)
+    - Profile tab → /m/profile → MobileProfile screen (unchanged)
+
+  The /m/feed and /m/splits routes still exist but are no longer the primary
+  entry points. The bottom tabs bypass them entirely and go to the real pages.
+
+  The GlobalMobileOwnerTabs component hides on /m/* routes (line 89: if location
+  starts with "/m"). Since Feed/Splits/Props now navigate to /feed, the global
+  tabs will remain visible on those pages. Only Chat (/m/chat) and Profile
+  (/m/profile) will hide the global tabs and show the shell's own tabs instead.
+
+  ISSUE: This creates a UX inconsistency. When user taps Chat or Profile,
+  they go to /m/* routes where GlobalMobileOwnerTabs hides and MobileOwnerTabsShell
+  shows its own copy. But the shell's tabs have the same config, so it should
+  still work correctly.
+
+  VERIFICATION: The MobileOwnerTabsShell renders its own MobileOwnerBottomTabs
+  at line 82. So on /m/chat and /m/profile, the user still sees the bottom tabs
+  from the shell. On /feed, they see them from GlobalMobileOwnerTabs. Same
+  component, same config. ✓ Consistent.
+
+────────────────────────────────────────────────────────────────────────────────
+[PHASE 3] VERIFY TAB BAR COLORS
+────────────────────────────────────────────────────────────────────────────────
+
+
+[STEP 4.1] COLOR VERIFICATION — INLINE STYLES CONFIRMED
+  ✓ COLORS.BG = "#000000" (pure black) — applied via style={{ backgroundColor }}
+  ✓ COLORS.ACTIVE_ICON = "#39FF14" (neon green) — applied via inline style color
+  ✓ COLORS.ACTIVE_LABEL = "#FFFFFF" (white) — applied via inline style color
+  ✓ COLORS.INACTIVE = "rgba(255,255,255,0.55)" — applied via inline style color
+  ✓ COLORS.DOT = "#39FF14" — applied via inline style backgroundColor
+  ✓ COLORS.BORDER = "rgba(255,255,255,0.08)" — applied via inline style borderTop
+  ✓ nav position: fixed, bottom: 0, zIndex: 9999
+  ✓ All colors use INLINE STYLES (highest CSS specificity, cannot be overridden)
+  ✓ NO Tailwind color classes used for any color property
+  ✓ FlaskConical icon imported for Props tab
+
+[STEP 4.2] POTENTIAL ISSUE — Previous screenshot showed wrong colors
+  The previous screenshot showed a dark navy/blue background. This was because
+  the deployed version had NOT been updated. The current codebase has the correct
+  inline styles. After this checkpoint is published, the colors will be correct.
+
+  ROOT CAUSE OF PREVIOUS COLOR ISSUE:
+  - The file was reverted during a sandbox reset (checkpoint rollback)
+  - The old code used Tailwind classes: bg-[#1a1a2e]/95, text-emerald-400
+  - These were overridden or computed differently on mobile Safari
+  - FIX: All colors now use inline style={} — immune to CSS cascade
+
+────────────────────────────────────────────────────────────────────────────────
+[PHASE 4] TESTS & CHECKPOINT
+────────────────────────────────────────────────────────────────────────────────
+
+
+[STEP 5.1] TEST RESULTS
+  ✓ mobileOwnerTabs.test.ts: 56 tests PASSED (0 failures)
+  ✓ Duration: 260ms
+  ✓ All assertions updated to match new tab config:
+    - Tab IDs: ["feed", "splits", "chat", "props", "profile"]
+    - Paths: ["/feed?tab=dual", "/feed?tab=splits", "/m/chat", "/feed?tab=lineups", "/m/profile"]
+    - Icons: ["Newspaper", "BarChart3", "MessageSquare", "FlaskConical", "User"]
+  ✓ TypeScript: 0 errors
+
+[STEP 5.2] FINAL SUMMARY
+  ═══════════════════════════════════════════════════════════════════════════
+  CHANGES MADE:
+  1. config.ts: MobileOwnerTabId "bet-tracker" → "props"
+  2. config.ts: Tab 4 label "Tracker" → "Props"
+  3. config.ts: Tab 4 icon "Receipt" → "FlaskConical"
+  4. config.ts: Tab 1 path "/m/feed" → "/feed?tab=dual"
+  5. config.ts: Tab 2 path "/m/splits" → "/feed?tab=splits"
+  6. config.ts: Tab 4 path "/m/bet-tracker" → "/feed?tab=lineups"
+  7. MobileOwnerBottomTabs.tsx: Import FlaskConical, remove Receipt
+  8. MobileOwnerBottomTabs.tsx: ICON_MAP updated
+  9. MobileOwnerBottomTabs.tsx: getActiveTab() rewritten for query param matching
+  10. MobileOwnerBottomTabs.tsx: handleTabTap() uses window.location.href for ?tab= paths
+  11. MobileOwnerBottomTabs.tsx: All colors remain INLINE STYLES (permanent fix)
+  12. MobileOwnerLayout.tsx: Route /m/bet-tracker → /m/props
+  13. MobileBetTracker.tsx: All "bet-tracker" refs → "props"
+  14. mobileOwnerTabs.test.ts: 6 assertion blocks updated for new config
+  ═══════════════════════════════════════════════════════════════════════════
+
+  BEHAVIOR AFTER FIX:
+  • Owner taps "Feed" → navigates to /feed?tab=dual → PROJECTIONS content
+  • Owner taps "Splits" → navigates to /feed?tab=splits → SPLITS content
+  • Owner taps "Props" → navigates to /feed?tab=lineups → LINEUPS/K PROPS/CHEAT SHEETS/HR PROPS
+  • Owner taps "Chat" → navigates to /m/chat → AI Chat screen
+  • Owner taps "Profile" → navigates to /m/profile → Profile screen
+  • Tab bar: pure black #000000, active icon #39FF14, active text #FFFFFF
+  • Non-owner users: no bottom tabs, no access to /m/* routes
+  ═══════════════════════════════════════════════════════════════════════════
+  END OF LOG

@@ -27,7 +27,7 @@ import {
   Newspaper,
   BarChart3,
   MessageSquare,
-  Receipt,
+  FlaskConical,
   User,
 } from "lucide-react";
 import { type MobileOwnerTabId, MOBILE_OWNER_TABS } from "./config";
@@ -48,7 +48,7 @@ const ICON_MAP: Record<string, React.FC<{ className?: string; strokeWidth?: numb
   Newspaper,
   BarChart3,
   MessageSquare,
-  Receipt,
+  FlaskConical,
   User,
 };
 
@@ -140,9 +140,17 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
       }
     }
 
-    if (location !== path) {
+    // For paths with query params (e.g., /feed?tab=dual), wouter's navigate
+    // only handles pathname. We need to use window.location for full URL navigation.
+    const currentFull = location + (typeof window !== "undefined" ? window.location.search : "");
+    if (currentFull !== path) {
       mobileOwnerTabLogger.log("tab_changed", tabId, { from: activeTabId, to: tabId });
-      navigate(path);
+      if (path.includes("?")) {
+        // Path has query params — use window.location to preserve them
+        window.location.href = path;
+      } else {
+        navigate(path);
+      }
       mobileOwnerTabLogger.log("route_navigated", tabId, { path });
 
       // User-specified event: mobile_owner_tab_navigated_to_m_route
@@ -270,17 +278,44 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
 }
 
 // ─── Helper: Determine active tab from current path ──────────────────────────
+// Handles both simple paths (/m/chat) and paths with query params (/feed?tab=dual)
 function getActiveTab(path: string): MobileOwnerTabId | null {
+  // wouter's useLocation() returns pathname only (no query string).
+  // We need to check the full URL including search params.
+  const currentSearch = typeof window !== "undefined" ? window.location.search : "";
+  const fullPath = path + currentSearch;
+
+  // Direct match: check if current path+search matches a tab's path exactly
   for (const tab of MOBILE_OWNER_TABS) {
-    if (path === tab.path || path.startsWith(tab.path + "/")) {
-      return tab.id;
+    // For tabs with query params (e.g., /feed?tab=dual)
+    if (tab.path.includes("?")) {
+      const [tabPathname, tabSearch] = tab.path.split("?");
+      if (path === tabPathname && currentSearch.includes(tabSearch)) {
+        return tab.id;
+      }
+    } else {
+      // Simple path match (e.g., /m/chat, /m/profile)
+      if (path === tab.path || path.startsWith(tab.path + "/")) {
+        return tab.id;
+      }
     }
   }
+
+  // Fallback: if on /feed with no recognized tab param, default to "feed"
+  if (path === "/feed") {
+    // Check if ?tab= matches any props-related tab
+    const tabParam = new URLSearchParams(currentSearch).get("tab");
+    if (tabParam === "splits") return "splits";
+    if (tabParam === "lineups" || tabParam === "props" || tabParam === "f5nrfi" || tabParam === "hrprops") return "props";
+    return "feed"; // dual or no param = feed
+  }
+
   // Fallback: if on /m/* but no exact match, try prefix
   if (path.startsWith("/m/")) {
     const segment = path.split("/")[2];
     const match = MOBILE_OWNER_TABS.find(t => t.id === segment || t.path.includes(segment));
     if (match) return match.id;
   }
+
   return "feed"; // Default to feed
 }
