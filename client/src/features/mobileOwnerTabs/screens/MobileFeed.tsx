@@ -1,64 +1,274 @@
 /**
- * MobileFeed — Shell Screen
- * ═════════════════════════
- * Displays the model projections feed in mobile-optimized layout.
- * This is a shell that wraps the existing ModelProjections component.
+ * MobileFeed — Owner-only intelligence feed.
+ * Connects to real platform data:
+ *   - games.list (MLB model projections)
+ *   - wc2026.matchesByDate (World Cup projections + edges)
+ * Shows top edges, recent model updates, and slate overview.
  */
-
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { trpc } from "@/lib/trpc";
+import { MobileDataState } from "../components/MobileDataState";
 import { mobileOwnerTabLogger } from "../logger";
+import { TrendingUp, Globe, Zap, Clock } from "lucide-react";
 
-export function MobileFeed() {
-  useEffect(() => {
-    mobileOwnerTabLogger.log("shell_mounted", "feed", { screen: "MobileFeed" });
-    return () => mobileOwnerTabLogger.log("shell_unmounted", "feed");
-  }, []);
+// ─── Feed Card Component ──────────────────────────────────────────────────────
+
+function FeedCard({
+  type,
+  title,
+  subtitle,
+  sport,
+  timestamp,
+  value,
+  valueColor = "text-emerald-400",
+}: {
+  type: "edge" | "projection" | "alert" | "update";
+  title: string;
+  subtitle: string;
+  sport: string;
+  timestamp?: string;
+  value?: string;
+  valueColor?: string;
+}) {
+  const icons = {
+    edge: <TrendingUp className="w-4 h-4 text-emerald-400" />,
+    projection: <Globe className="w-4 h-4 text-blue-400" />,
+    alert: <Zap className="w-4 h-4 text-amber-400" />,
+    update: <Clock className="w-4 h-4 text-zinc-400" />,
+  };
 
   return (
-    <div className="min-h-full bg-[#0f0f1a]">
+    <div className="rounded-xl bg-zinc-900/60 border border-zinc-800/50 p-4 hover:border-zinc-700/60 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="mt-0.5 shrink-0">{icons[type]}</div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-zinc-100 truncate">{title}</p>
+            <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{subtitle}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium bg-zinc-800/60 px-1.5 py-0.5 rounded">
+                {sport}
+              </span>
+              {timestamp && (
+                <span className="text-[10px] text-zinc-600">{timestamp}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {value && (
+          <span className={`text-sm font-mono font-semibold shrink-0 ${valueColor}`}>
+            {value}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Feed Screen ─────────────────────────────────────────────────────────
+
+export function MobileFeed() {
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
+  // Fetch MLB games for today
+  const mlbQuery = trpc.games.list.useQuery(
+    { sport: "MLB" as any, gameDate: today },
+    { staleTime: 60_000, retry: 2 }
+  );
+
+  // Fetch WC2026 matches for today
+  const wcQuery = trpc.wc2026.matchesByDate.useQuery(
+    { date: today },
+    { staleTime: 60_000, retry: 2 }
+  );
+
+  const isLoading = mlbQuery.isLoading && wcQuery.isLoading;
+  const isError = mlbQuery.isError && wcQuery.isError;
+
+  // Log data fetch lifecycle
+  useEffect(() => {
+    mobileOwnerTabLogger.log("mobile_feed_data_fetch_started", "feed", {
+      data_source: "games.list + wc2026.matchesByDate",
+      date: today,
+    });
+  }, [today]);
+
+  useEffect(() => {
+    if (!mlbQuery.isLoading && !wcQuery.isLoading) {
+      if (mlbQuery.isError && wcQuery.isError) {
+        mobileOwnerTabLogger.log("mobile_feed_data_fetch_failed", "feed", {
+          mlb_error: mlbQuery.error?.message,
+          wc_error: wcQuery.error?.message,
+        });
+      } else {
+        mobileOwnerTabLogger.log("mobile_feed_data_fetch_completed", "feed", {
+          mlb_games: (mlbQuery.data as any[])?.length ?? 0,
+          wc_matches: (wcQuery.data as any[])?.length ?? 0,
+        });
+      }
+    }
+  }, [mlbQuery.isLoading, wcQuery.isLoading, mlbQuery.isError, wcQuery.isError]);
+
+  // Build feed cards from real data
+  const feedCards = useMemo(() => {
+    const cards: Array<{
+      id: string;
+      type: "edge" | "projection" | "alert" | "update";
+      title: string;
+      subtitle: string;
+      sport: string;
+      timestamp?: string;
+      value?: string;
+      valueColor?: string;
+    }> = [];
+
+    // WC2026 edges
+    const wcData = wcQuery.data as any[] | undefined;
+    if (wcData && wcData.length > 0) {
+      for (const match of wcData) {
+        const odds = match.odds;
+        if (!odds) {
+          // Still add as projection card
+          cards.push({
+            id: `wc-proj-${match.matchId}`,
+            type: "projection",
+            title: `${match.homeTeam || "TBD"} vs ${match.awayTeam || "TBD"}`,
+            subtitle: `R16 • ${match.venue || "TBD"}`,
+            sport: "World Cup",
+            timestamp: match.kickoffUtc
+              ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+              : undefined,
+          });
+          continue;
+        }
+
+        // Calculate edge from model vs book ML
+        const modelHomeMl = odds.model_home_ml;
+        const bookHomeMl = odds.book_home_ml;
+        if (modelHomeMl && bookHomeMl) {
+          const modelProb = modelHomeMl < 0
+            ? Math.abs(modelHomeMl) / (Math.abs(modelHomeMl) + 100)
+            : 100 / (modelHomeMl + 100);
+          const bookProb = bookHomeMl < 0
+            ? Math.abs(bookHomeMl) / (Math.abs(bookHomeMl) + 100)
+            : 100 / (bookHomeMl + 100);
+          const edge = ((modelProb - bookProb) * 100).toFixed(1);
+
+          if (Number(edge) > 5) {
+            cards.push({
+              id: `wc-edge-${match.matchId}`,
+              type: "edge",
+              title: `${match.homeTeam} ML Edge`,
+              subtitle: `Model: ${modelHomeMl > 0 ? "+" : ""}${modelHomeMl} vs Book: ${bookHomeMl > 0 ? "+" : ""}${bookHomeMl}`,
+              sport: "World Cup",
+              value: `+${edge}%`,
+              valueColor: "text-emerald-400",
+            });
+          }
+        }
+
+        // Add projection card
+        cards.push({
+          id: `wc-proj-${match.matchId}`,
+          type: "projection",
+          title: `${match.homeTeam || "TBD"} vs ${match.awayTeam || "TBD"}`,
+          subtitle: `R16 • ${match.venue || "TBD"}`,
+          sport: "World Cup",
+          timestamp: match.kickoffUtc
+            ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            : undefined,
+        });
+      }
+    }
+
+    // MLB model projections
+    const mlbData = mlbQuery.data as any[] | undefined;
+    if (mlbData && mlbData.length > 0) {
+      const modeledGames = mlbData.filter((g: any) => g.modelRunAt);
+      const publishedGames = mlbData.filter((g: any) => g.publishedToFeed);
+
+      // Slate overview card
+      cards.push({
+        id: "mlb-slate",
+        type: "update",
+        title: `MLB Slate: ${mlbData.length} Games`,
+        subtitle: `${modeledGames.length} modeled • ${publishedGames.length} published`,
+        sport: "MLB",
+        timestamp: "Today",
+      });
+
+      // Top edges from published games
+      for (const game of publishedGames.slice(0, 5)) {
+        if (game.modelSpread && game.spread) {
+          const modelSpread = parseFloat(game.modelSpread);
+          const bookSpread = parseFloat(game.spread);
+          const diff = Math.abs(modelSpread - bookSpread);
+          if (diff >= 1.0) {
+            cards.push({
+              id: `mlb-edge-${game.id}`,
+              type: "edge",
+              title: `${game.awayTeam} @ ${game.homeTeam}`,
+              subtitle: `Model: ${modelSpread > 0 ? "+" : ""}${modelSpread.toFixed(1)} vs Book: ${bookSpread > 0 ? "+" : ""}${bookSpread.toFixed(1)}`,
+              sport: "MLB",
+              value: `${diff.toFixed(1)} pts`,
+              valueColor: diff >= 2 ? "text-emerald-400" : "text-amber-400",
+            });
+          }
+        }
+      }
+    }
+
+    return cards;
+  }, [wcQuery.data, mlbQuery.data]);
+
+  const isEmpty = !isLoading && !isError && feedCards.length === 0;
+
+  useEffect(() => {
+    if (isEmpty) {
+      mobileOwnerTabLogger.log("mobile_feed_empty_state_rendered", "feed", { date: today });
+    }
+  }, [isEmpty, today]);
+
+  return (
+    <div className="flex flex-col h-full min-h-full bg-[#0f0f1a]">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-white/5 px-4 py-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-white tracking-tight">Model Feed</h1>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
-              LIVE
-            </span>
+          <div>
+            <h1 className="text-lg font-bold text-white tracking-tight">Intelligence Feed</h1>
+            <p className="text-[10px] text-zinc-500 mt-0.5">
+              {today} • Real-time model & market signals
+            </p>
           </div>
+          <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
+            LIVE
+          </span>
         </div>
       </header>
 
-      {/* Content placeholder — will integrate existing ModelProjections */}
-      <div className="px-4 py-6">
-        <div className="space-y-3">
-          {/* Placeholder cards showing the feed will load here */}
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="rounded-xl bg-white/5 border border-white/10 p-4 animate-pulse"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-white/10" />
-                <div className="flex-1">
-                  <div className="h-3 w-24 bg-white/10 rounded" />
-                  <div className="h-2 w-16 bg-white/5 rounded mt-1" />
-                </div>
-                <div className="h-6 w-12 bg-white/10 rounded" />
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/10" />
-                <div className="flex-1">
-                  <div className="h-3 w-28 bg-white/10 rounded" />
-                  <div className="h-2 w-20 bg-white/5 rounded mt-1" />
-                </div>
-                <div className="h-6 w-12 bg-white/10 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="text-center text-gray-500 text-xs mt-6">
-          Feed integration pending — shell ready
-        </p>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto pb-24">
+        <MobileDataState
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={isEmpty}
+          loadingLabel="Loading feed..."
+          emptyMessage="No feed data connected yet."
+          errorMessage="Feed could not be loaded."
+          onRetry={() => {
+            mlbQuery.refetch();
+            wcQuery.refetch();
+          }}
+        >
+          <div className="flex flex-col gap-3 px-4 py-4">
+            {feedCards.map((card) => (
+              <FeedCard key={card.id} {...card} />
+            ))}
+          </div>
+        </MobileDataState>
       </div>
     </div>
   );
