@@ -621,3 +621,20 @@ tsc: Found 0 errors. Watching for file changes.
 
 ---
 
+
+## Entry 20 — Session B REDO (2026-07-07T09:50Z)
+
+**Scope:** Disposition 15 vanished full-stack findings, correct §7/§11/§12, decide-or-remediate 4 confirmed-live issues  
+**Files created:** `SESSION-B-REDO-REPORT.md`, `SESSION-B-REDO-EVIDENCE.md`
+
+**Actions:**
+1. Dispositioned 15 full-stack findings from WC2026_APLUS_AUDIT_V2.md: 7 CARRIED, 6 DOWNGRADED, 1 STRUCK, 1 MERGED
+2. Corrected §7: stripe_events confirmed phantom (ZERO grep results); actual inventory = 67 tables
+3. Corrected §11: Built complete 14-surface map from App.tsx; identified 3 dead `/#pricing` anchor links (WaitlistCapture has `id="waitlist"`, not `id="pricing"`)
+4. Corrected §12: All 4 compliance claims corrected to honest status (UNREVIEWED/ABSENT/UNKNOWN/UNVERIFIED)
+5. Decide-or-remediate documented for PROD-002 (PROPOSE ONLY), DB-006 (CAN IMPLEMENT), PROD-004 (PROPOSE ONLY), SEC-003 (PROPOSE ONLY)
+6. Checkout procedure 9/9 PASS carried forward from prior Session B
+
+**Verification:** All evidence re-verified against live codebase at checkpoint 7911e3ac. Raw command outputs in SESSION-B-REDO-EVIDENCE.md.
+
+**Status:** COMPLETE — awaiting owner acceptance before Workstream W.
