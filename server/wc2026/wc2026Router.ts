@@ -29,7 +29,8 @@ import {
   wc2026ModelProjections,
 } from "../../drizzle/wc2026.schema";
 import { eq, and, asc, desc, sql, inArray } from "drizzle-orm";
-import { wc2026MatchOdds, wc2026EspnMatches, type Wc2026MatchOddsRow } from "../../drizzle/schema";
+import { wc2026MatchOdds } from "../../drizzle/wc2026.schema";
+import { wc2026EspnMatches, type Wc2026MatchOddsRow } from "../../drizzle/schema";
 
 type WcTeam = typeof wc2026Teams.$inferSelect;
 type WcVenue = typeof wc2026Venues.$inferSelect;
