@@ -678,3 +678,35 @@ tsc: Found 0 errors. Watching for file changes.
 - 6 new findings registered (DB-009 through DB-013, plus SCRIPT-004)
 
 **Status:** ANALYSIS COMPLETE — HOLD for owner decisions on Priority 3 items and schema alignment (DB-007 column drift + DB-013 orphan tables) before any population work.
+
+## Entry 23 — WC2026 Recovery Discovery (R1-R4)
+
+**Date:** 2026-07-07  
+**Scope:** Read-only discovery — historical run artifact inventory, coverage match, artifact validation, revised source-split population plan  
+**Deliverable:** `audit-notes/WC2026-RECOVERY-DISCOVERY.md`
+
+**Key findings:**
+
+1. **R1 (Artifact Inventory):** 85 ESPN ingest test logs + 10 BetExplorer data files + 33 seed scripts + 2 v19 engine outputs + forensic audit report + 500X audit report. Cloud computer (wc_v12) contains WC2018+WC2022 only — NOT relevant to WC2026 gaps.
+
+2. **R2 (Coverage Match):** Per-gap-match source buckets produced:
+   - RECOVERABLE FROM ARTIFACT: 42 matches (12 MatchOdds + 3 frozen_book_odds + 27 match_stats/events propagation)
+   - REQUIRES RE-SCRAPE: 29 matches (9 ESPN + 20 BetExplorer)
+   - ACCEPT GAP: 24 matches (model projections g-001 to g-024)
+   - OWNER DECISION: 72 matches (derive frozen_book_odds for group stage from odds_snapshots closing values?)
+
+3. **R3 (Artifact Validation):** 4 spot checks executed:
+   - Spot Check 1: **DATA-001 BUG FOUND** — frozen_book_odds r16-089/r16-090 match_ids SWAPPED in live DB. fix_seeded_odds_v2.mjs has correct values but was NEVER applied.
+   - Spot Check 2: r32-080 MATCH ✓ (DB = seed script)
+   - Spot Check 3: g-001 gap REAL (0 rows, no artifact)
+   - Spot Check 4: r16-091 ESPN RECOVERABLE (match FT, stats not ingested)
+
+4. **R4 (Revised Population Plan):** 4-priority source-split:
+   - P1 RECOVER (artifact-backed, zero-risk): DATA-001 fix + 12 MatchOdds derivation + 3 frozen_book_odds + 27 propagation
+   - P2 RE-SCRAPE ESPN (low-risk): 9 scraper runs for FT matches
+   - P3 RE-SCRAPE BetExplorer (medium-risk): 20 matches, historical odds may differ
+   - P4 ACCEPT/DECIDE: 24 model projections gap + 72 group frozen_book_odds
+
+5. **New Finding Filed:** DATA-001 (P1) — frozen_book_odds r16-089/r16-090 match_id swap. Both fix scripts exist but neither was applied. Impact: DIME edge calculations for these 2 matches are wrong.
+
+**Status:** COMPLETE — STOP gate unchanged. No writes until schema alignment (DB-007 + DB-013) + owner go. DATA-001 fix is schema-independent and can be authorized separately.
