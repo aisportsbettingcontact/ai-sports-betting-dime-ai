@@ -40,12 +40,14 @@
 | Remote | Push Succeeded? | Contains Secrets? | Public? | Evidence |
 |--------|----------------|-------------------|---------|----------|
 | origin (Manus S3) | YES | YES (in history) | No (platform-internal) | VERIFIED: `git ls-tree 9a8a8420 -- .project-config.json` returns blob |
-| ai-sports-betting-models | YES (after filter-branch) | NO | Private repo | VERIFIED: `gh api commits?path=.project-config.json` returns 0 |
+| ai-sports-betting-models | YES (after filter-branch) | NO | **PUBLIC** repo | VERIFIED: `gh api repos/aisportsbettingcontact/ai-sports-betting-models` returns `private: false, visibility: "public"`. Push Protection passed (commit 38b4e02c). |
 | ai-sports-betting-manus | NO (Push Protection blocked) | N/A | N/A | VERIFIED: push error in shell output |
 
 ### Push Protection Assessment
 
 GitHub Push Protection blocked every push attempt containing the dirty history. The only successful push to a GitHub remote contained rewritten (clean) history. No public exposure confirmed. VERIFIED.
+
+**Correction (2026-07-07T06:02Z):** Previous version of this report incorrectly stated the repo was PRIVATE. It is PUBLIC (`visibility: "public"`). Despite being public, the clean history contains zero secrets (Push Protection passed). Owner should verify secret scanning alerts at: https://github.com/aisportsbettingcontact/ai-sports-betting-models/security/secret-scanning (cannot verify from sandbox — 403).
 
 ### Status: OPEN
 
@@ -59,10 +61,10 @@ Credentials remain in Manus S3 git history (not publicly accessible). **Owner mu
 
 - Zero 401/403 runs after SEC-004 deployment (2026-07-07 04:06 UTC). VERIFIED via `manus-heartbeat logs`.
 - The string "caller does not have permission" does NOT exist in our codebase. VERIFIED via `grep -rn`.
-- The string is the Manus platform's notification template label for non-200 heartbeat responses. VERIFIED: the actual response bodies for the two post-deploy 500s were HTML/SVG error pages, not our JSON.
+- The string is the Manus platform's notification template label for non-200 heartbeat responses. INFERRED (basis: string absent from code + response bodies were HTML error pages, not our JSON).
 - 6 consecutive HTTP 200 runs after deploy (04:33 through 05:11). VERIFIED.
 
-SEC-004 is NOT rejecting legitimate platform calls. The incident was caused by deploy-window service unavailability (INC-005), not by the auth gate.
+SEC-004 is NOT rejecting legitimate platform calls. VERIFIED. The notification was caused by deploy-window service unavailability (INC-005), not by the auth gate. String origin is INFERRED, but the core question ("is SEC-004 breaking heartbeats?") is answered: NO.
 
 ---
 
@@ -127,25 +129,25 @@ Only failure: `discord.bot.token.test.ts` — pre-existing Discord token validat
 
 ---
 
-## Updated 9-Finding Status Table
+## Updated 9-Finding Status Table (Corrected 2026-07-07T06:05Z)
 
 | Finding | Status | Evidence Level | Blocking Issue |
 |---------|--------|---------------|----------------|
-| SEC-004 | IN PROGRESS | Sandbox: 401 on unauth curl ✅. Dashboard: 6 consecutive 200s post-deploy ✅. | Cannot verify from sandbox that future scheduled runs will continue succeeding indefinitely. Requires 24h observation. |
-| PROD-001 | IN PROGRESS | Sandbox: routes return 200, content includes compliance text ✅. | Cannot verify production crawlability from sandbox. Requires production URL check. |
-| DB-001 | IN PROGRESS | Code: atomic conditional UPDATE with FOR UPDATE ✅. | Concurrency test not run (requires DB transaction isolation testing beyond vitest). |
-| SEC-001 | IN PROGRESS | Code: tokenVersion check present ✅. Vitest: structural assertion passes ✅. | No behavioral end-to-end test (would need running server + DB with revoked token). |
-| SEC-002 | DONE | Vitest: 3 tests pass (400 on missing sig, invalid sig, missing secret) ✅. Curl: webhook returns 400 without signature ✅. | — |
-| SEC-005 | IN PROGRESS | Code: `unsafe-eval` gated behind `NODE_ENV !== 'production'` ✅. | Cannot verify production CSP header from sandbox. Requires `curl -I` against production URL. |
-| BE-006 | IN PROGRESS | Sandbox: `/api/db-status` and `/api/perf` return 401 without auth ✅. | Cannot verify owner-auth path works (requires authenticated session). |
-| ENG-007 | IN PROGRESS | Code: all 8 error paths call notifyOwner with enriched content ✅. | Cannot trigger a real failure and confirm notification delivery from sandbox. |
-| DB-002 | IN PROGRESS | Code: 6 dime_* tables defined in `drizzle/dime.schema.ts` ✅. Column counts match production (verified via SQL query) ✅. | `drizzle-kit generate` shows drift from other tables (wc2026 espn_match_id columns); dime_* tables specifically are clean but cannot isolate them in the generate output. |
+| SEC-004 | IN PROGRESS | 401 on unauth curl ✅. 162 runs analyzed, zero 401/403 post-deploy ✅. INC-006 RESOLVED (exonerated). | INC-005 (deploy-window 500s) OPEN with INFERRED root cause. |
+| PROD-001 | IN PROGRESS | Routes return 200, compliance content present ✅. | Production crawlability not verified from sandbox. |
+| DB-001 | IN PROGRESS | Atomic SELECT...FOR UPDATE in transaction ✅. | Concurrency load test not run. |
+| SEC-001 | IN PROGRESS | tokenVersion check present ✅. Vitest 3/3 pass ✅. | No behavioral revoked-token test. |
+| SEC-002 | **DONE** | Vitest 3/3 pass ✅. Raw output logged ✅. Zero OPEN incidents. | — |
+| SEC-005 | IN PROGRESS | `unsafe-eval` gated on NODE_ENV ✅. | Production CSP header not inspectable from sandbox. |
+| BE-006 | IN PROGRESS | Unauth curl → 401 ✅. | Owner-auth path not tested from sandbox. |
+| ENG-007 | IN PROGRESS | 8 notifyOwner calls with enriched content ✅. | Runtime delivery not verified from sandbox. |
+| DB-002 | IN PROGRESS | 6 dime_* tables, column counts match production ✅. | DB-007 (wc2026 drift) prevents clean isolated generate. |
 
-### Findings that qualify as DONE under Rule 6:
-- **SEC-002** — acceptance criteria run verbatim (vitest + curl), raw output logged, tests green, zero related OPEN incidents.
+### DONE (1): SEC-002
+Acceptance criteria run verbatim, raw output logged, tests green, zero OPEN incidents.
 
-### Findings that are IN PROGRESS (honest status):
-- All others — each has code-level evidence but lacks either production runtime verification or full behavioral acceptance testing that cannot be performed from this sandbox.
+### IN PROGRESS (8): All others
+Each has code-level evidence but lacks production runtime verification or full behavioral acceptance testing not possible from this sandbox.
 
 ---
 
@@ -157,19 +159,31 @@ Only failure: `discord.bot.token.test.ts` — pre-existing Discord token validat
 | INC-002 | GitHub push — workflows permission | OPEN |
 | INC-003 | GitHub push — secrets detection | RESOLVED |
 | INC-004 | Workflow file removal | RESOLVED |
-| INC-005 | Heartbeat 500s during deploy | RESOLVED |
+| INC-005 | Heartbeat 500s during deploy | OPEN (INFERRED) |
 | INC-006 | "caller does not have permission" | RESOLVED |
+| INC-007 | Sandbox reset restores dirty history | OPEN |
+| DB-007 | wc2026 Drizzle schema drift | OPEN |
 
-**1 OPEN incident remaining:** INC-002 (push to `ai-sports-betting-manus` blocked by GitHub App workflows permission). Owner action required.
+**3 OPEN incidents remaining:**
+1. INC-002 — push to `ai-sports-betting-manus` blocked by GitHub App workflows permission. Owner action required.
+2. INC-005 — heartbeat 500s during deploy window. Confirming step: owner checks deployment logs for restart at 04:10–04:25 UTC.
+3. INC-007 — sandbox resets re-arm dirty history from S3 origin. Owner decision on resolution path.
+4. DB-007 — wc2026 schema drift (backlog item, no immediate action needed).
 
 ---
 
 ## What You Must Do (Owner Actions)
 
-1. **Rotate credentials 1-16** from the SEC-006 table above. Start with items 1-7 (MUST ROTATE). Confirm completion to close SEC-006.
+1. **Rotate credentials** per `audit-notes/ROTATION-CHECKLIST.md`. Start with 6 MUST ROTATE items, then 9 SHOULD ROTATE. Mark each `[x]` when done. SEC-006 closes when all 15 are checked.
 2. **Resolve INC-002:** Either grant `workflows` write permission to the Manus GitHub App, or provide a fine-grained PAT (with `repo` + `workflow` scopes) as a secret via Settings → Secrets.
 3. **Verify production:** After next deploy, check:
    - `curl -I https://aisportsbettingmodels.com/privacy` returns 200 (PROD-001)
    - Response header `Content-Security-Policy` does NOT contain `unsafe-eval` (SEC-005)
    - `/api/db-status` returns 401 without auth, 200 with owner session (BE-006)
-4. **Monitor heartbeats for 24h:** Confirm zero auth rejections in the Manus dashboard (SEC-004 final verification).
+4. **Close INC-005:** Check deployment logs for restart timestamps between 04:10–04:25 UTC 2026-07-07. If confirmed, mark RESOLVED.
+5. **Close INC-007 (choose one):**
+   - (a) File platform ticket to clean S3 origin history
+   - (b) Document post-reset re-clean procedure and accept residual risk
+   - (c) Accept risk: S3 not public, all GitHub pushes use clean-push approach
+6. **Verify secret scanning:** Check https://github.com/aisportsbettingcontact/ai-sports-betting-models/security/secret-scanning for any alerts.
+7. **Monitor heartbeats for 24h:** Confirm zero auth rejections in the Manus dashboard (SEC-004 final verification).
