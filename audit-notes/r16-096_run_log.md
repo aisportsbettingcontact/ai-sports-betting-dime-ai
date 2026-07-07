@@ -138,10 +138,32 @@ Baseline was ~129 rows for r16-095. This match: 138 rows (more due to ET/penalti
 2. **Shot map goal count note:** "goals in map=7 vs scoreGoals=0" logged by ingester. This is CORRECT behavior for a penalty-decided match: the 7 goals are all in period 5 (shootout), regulation/ET score is 0-0.
 3. **Rubén Vargas (SUI, #17) matched by GK name query:** False positive from LIKE '%Vargas%' — he's an outfield player (substitute). The actual COL GK is Camilo Vargas (#12). Both real GKs confirmed present.
 
-### Paths
-- Raw ESPN API payload: `audit-notes/r16-096_raw_payload.json`
-- Scraper page data: saved internally by espnPageScraper.ts
-- Production write log: `/tmp/r16-096_production_write.log`
-- Dry-run log: `/tmp/r16-096_dryrun_full.log`
-- Ingest result JSON: `/tmp/espn_ingest_result_760508.json`
+## Feed Publish (2026-07-07T23:58Z)
+
+### Fixture UPDATE
+```sql
+UPDATE wc2026_matches SET home_score=0, away_score=0, status='FT', advancing_team_id='sui'
+WHERE match_id='wc26-r16-096'
+```
+- Rows affected: 1
+- First attempt with `status='FT-PEN'` failed (WARN_DATA_TRUNCATED) — enum only allows `('SCHEDULED','LIVE','HT','ET','SHOOTOUT','FT')`
+- Used `FT` + `advancing_team_id='sui'` to encode penalty outcome
+
+### Feed Verification
+- Endpoint: `wc2026.todayWithOdds`
+- r16-096 present: homeScore=0, awayScore=0, status=FT, advancingTeamId=sui
+- Shootout display: Score shows 0-0 (regulation), NOT 4-3 (shootout) ✔
+- DK odds present, model projections present
+
+### Grading Gap
+- Model predicted SUI to advance (toAdvanceHomeOdds=-139). Correct outcome.
+- No automated grading system exists. Flagged, not fabricated.
+
+---
+
+### Paths (Persistent)
+- Raw ESPN API payload: `audit-notes/run-logs/raw/espn_760508_raw.json` (440KB)
+- Scraper page data: `audit-notes/run-logs/raw/espn_760508_scrape_payload.json` (750KB)
+- Ingest result JSON: `audit-notes/run-logs/raw/espn_760508_ingest_result.json`
+- Production write log: `audit-notes/r16-096_production_write.log`
 - Runner script: `server/wc2026/_espn_ingest_runner_760508.ts`
