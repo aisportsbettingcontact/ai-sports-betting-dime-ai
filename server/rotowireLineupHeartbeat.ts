@@ -33,6 +33,8 @@
  */
 
 import type { Express, Request, Response } from "express";
+import { sdk } from "./_core/sdk";
+import { notifyOwner } from "./_core/notification";
 import { syncRotowireLineupTabs } from "./rotowireLineupSheetSync";
 
 // ─── Run Lock ─────────────────────────────────────────────────────────────────
@@ -51,6 +53,11 @@ let _lastRunResult: {
 
 export function registerRotoLineupsHeartbeat(app: Express): void {
   app.post("/api/scheduled/roto-lineups", async (req: Request, res: Response) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+    } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
     const reqAt = new Date().toISOString();
     console.log(`\n[RotoHeartbeat] [INPUT] POST /api/scheduled/roto-lineups received at ${reqAt}`);
     console.log(`[RotoHeartbeat] [STATE] isRunning=${_isRunning} lastRunAt=${_lastRunAt ?? "never"}`);
@@ -122,6 +129,7 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
     } catch (err) {
       const msg = (err as Error).message;
       console.error(`[RotoHeartbeat] [VERIFY] FAIL — syncRotowireLineupTabs threw: ${msg}`);
+      notifyOwner({ title: "[HB] rotowire-lineups FAIL", content: msg.slice(0, 500) });
       _lastRunResult = {
         success: false,
         totalRowsWritten: 0,

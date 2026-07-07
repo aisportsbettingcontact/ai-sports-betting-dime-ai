@@ -238,7 +238,7 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-eval needed for Vite HMR in dev
+        scriptSrc: ["'self'", "'unsafe-inline'", ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : [])], // unsafe-eval only in dev (Vite HMR)
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
@@ -277,9 +277,15 @@ async function startServer() {
     });
   });
 
-  // ─── DB status endpoint ───────────────────────────────────────────────────
-  // Detailed circuit breaker + user cache stats for operational monitoring.
-  app.get("/api/db-status", (_req, res) => {
+  // ─── DB status endpoint (owner-only, rate-limited) ─────────────────────────────
+  // BE-006: Protected behind globalApiLimiter + owner auth.
+  app.get("/api/db-status", globalApiLimiter, async (req, res) => {
+    try {
+      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
+      if (user.openId !== process.env.OWNER_OPEN_ID) {
+        return res.status(403).json({ error: "owner-only" });
+      }
+    } catch { return res.status(401).json({ error: "unauthorized" }); }
     const circuit = getCircuitStatus();
     const cache = getCacheStats();
     res.json({
@@ -288,10 +294,15 @@ async function startServer() {
       userCache: cache,
     });
   });
-  // ─── Performance health endpoint ──────────────────────────────────────────
-  // Real-time cache hit rates, invalidation timing, and DB pool stats.
-  // Use this to verify the debounced invalidation and memo optimizations are working.
-  app.get("/api/perf", (_req, res) => {
+  // ─── Performance health endpoint (owner-only, rate-limited) ────────────────────────
+  // BE-006: Protected behind globalApiLimiter + owner auth.
+  app.get("/api/perf", globalApiLimiter, async (req, res) => {
+    try {
+      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
+      if (user.openId !== process.env.OWNER_OPEN_ID) {
+        return res.status(403).json({ error: "owner-only" });
+      }
+    } catch { return res.status(401).json({ error: "unauthorized" }); }
     const cacheHealth = getCacheHealthStats();
     const circuit = getCircuitStatus();
     const uptime = process.uptime();

@@ -90,7 +90,19 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
     const secret = new TextEncoder().encode(ENV.cookieSecret);
     const { payload } = await jwtVerify(token, secret);
     if (payload.type !== "app_user") return null;
-    return { userId: Number(payload.sub), role: payload.role as string };
+
+    // SEC-001: tokenVersion check — reject invalidated sessions
+    const userId = Number(payload.sub);
+    const tv = payload.tv as number | null | undefined;
+    if (tv !== null && tv !== undefined) {
+      const user = await getAppUserById(userId);
+      if (user && user.tokenVersion !== tv) {
+        console.log(`[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+        return null;
+      }
+    }
+
+    return { userId, role: payload.role as string };
   } catch {
     return null;
   }
@@ -136,25 +148,39 @@ function checkRateLimit(userId: number): boolean {
   return true;
 }
 
-// ─── Credit Deduction ────────────────────────────────────────────────────────
+// ─── Credit Deduction (ATOMIC — DB-001 fix) ─────────────────────────────────
+// Uses a transaction with SELECT ... FOR UPDATE to prevent double-spend under
+// concurrent requests. Returns new balance, or -1 if insufficient credits.
 async function deductCredits(userId: number, requestId: string, amount: number): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
-  // Get current balance
-  const balResult = await db.execute(
-    sql`SELECT COALESCE(
-      (SELECT balance_after FROM dime_credit_ledger WHERE user_id = ${String(userId)} ORDER BY id DESC LIMIT 1),
-      100
-    ) AS balance`
-  );
-  const rows = (balResult as any)[0];
-  const currentBalance = Number(rows?.[0]?.balance ?? 100);
-  const newBalance = currentBalance - amount;
-  await db.execute(
-    sql`INSERT INTO dime_credit_ledger (user_id, request_id, delta_credits, balance_after, reason)
-        VALUES (${String(userId)}, ${requestId}, ${-amount}, ${newBalance}, 'DIME_WC2026_ANSWER')`
-  );
-  return newBalance;
+  if (!db) return -1;
+
+  // Atomic transaction: lock the latest ledger row, check balance, insert new row
+  const result = await db.transaction(async (tx) => {
+    // Lock the latest ledger entry for this user (SELECT ... FOR UPDATE)
+    const balResult = await tx.execute(
+      sql`SELECT COALESCE(
+        (SELECT balance_after FROM dime_credit_ledger WHERE user_id = ${String(userId)} ORDER BY id DESC LIMIT 1 FOR UPDATE),
+        100
+      ) AS balance`
+    );
+    const rows = (balResult as any)[0];
+    const currentBalance = Number(rows?.[0]?.balance ?? 100);
+
+    // Insufficient credits — abort transaction
+    if (currentBalance < amount) {
+      return -1;
+    }
+
+    const newBalance = currentBalance - amount;
+    await tx.execute(
+      sql`INSERT INTO dime_credit_ledger (user_id, request_id, delta_credits, balance_after, reason)
+          VALUES (${String(userId)}, ${requestId}, ${-amount}, ${newBalance}, 'DIME_WC2026_ANSWER')`
+    );
+    return newBalance;
+  });
+
+  return result;
 }
 
 // ─── Audit Logging ───────────────────────────────────────────────────────────
@@ -659,8 +685,14 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   let creditsCharged = 0;
   if (responseMode === "ANSWER") {
     const newBalance = await deductCredits(userId, requestId, CREDITS_PER_ANSWER);
-    creditsCharged = CREDITS_PER_ANSWER;
-    dimeLog("step.13.credit_deducted", requestId, { charged: CREDITS_PER_ANSWER, newBalance });
+    if (newBalance === -1) {
+      // Atomic check failed — race condition caught, insufficient credits
+      dimeLog("step.13.credit_RACE_BLOCKED", requestId, { reason: "concurrent deduction drained balance" });
+      creditsCharged = 0;
+    } else {
+      creditsCharged = CREDITS_PER_ANSWER;
+      dimeLog("step.13.credit_deducted", requestId, { charged: CREDITS_PER_ANSWER, newBalance });
+    }
   } else {
     dimeLog("step.13.credit_NOT_charged", requestId, { reason: responseMode });
   }
