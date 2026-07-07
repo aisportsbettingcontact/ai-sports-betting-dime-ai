@@ -638,3 +638,25 @@ tsc: Found 0 errors. Watching for file changes.
 **Verification:** All evidence re-verified against live codebase at checkpoint 7911e3ac. Raw command outputs in SESSION-B-REDO-EVIDENCE.md.
 
 **Status:** COMPLETE — awaiting owner acceptance before Workstream W.
+
+## Entry 21 — DB-006 + Dead Links + §7 Correction (2026-07-07T10:15Z)
+
+**Scope:** Implement two owner-approved fixes + correct §7 table count
+
+**Actions:**
+
+1. **DB-006 (waitlist rate limiter):** Added dedicated `waitlistSubmitLimiter` (5 req/15min/IP) in `server/_core/index.ts:372-393`. Applied to `/api/trpc/waitlist.submit`. Extended `fireRateLimitEvent` union type to include `"waitlist_submit"`. Updated misleading comment in `server/routers/waitlist.ts:8`.
+
+2. **Dead /#pricing links:** Changed 3 `href="/#pricing"` → `href="/#waitlist"` in:
+   - `client/src/pages/landing/components/ComparisonSection.tsx:106`
+   - `client/src/pages/landing/components/ProductMechanism.tsx:84`
+   - `client/src/pages/landing/components/PremiumValueAnchor.tsx:23`
+
+3. **§7 table count correction:** Changed headline from 67 → 63 (verified unique table names via python3 regex extraction). Noted discrepancy with owner's stated count of 60 — to be reconciled in D1.
+
+**Verification:**
+- `grep -rn "/#pricing" client/src/pages/landing/` → exit 1 (zero results)
+- `npx tsc --noEmit --skipLibCheck` → exit 0 (zero errors)
+- `fireRateLimitEvent` type union now includes `"waitlist_submit"`
+
+**Status:** COMPLETE
