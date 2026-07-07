@@ -18,6 +18,8 @@
  */
 
 import type { Request, Response } from 'express';
+import { sdk } from '../_core/sdk';
+import { notifyOwner } from '../_core/notification';
 import { getDb } from '../db';
 import { wc2026Matches } from '../../drizzle/wc2026.schema';
 import { eq, isNotNull } from 'drizzle-orm';
@@ -133,6 +135,11 @@ async function fetchFifaLiveMatches(): Promise<FifaMatchState[]> {
 }
 
 export async function wc2026LiveSyncHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
   stepN = 0;
   const startMs = Date.now();
   log('INPUT', S(), '═══ WC2026 Live Sync — FIFA API v4 ═══');
@@ -175,6 +182,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log('FAIL', S(), `FIFA API fetch failed: ${msg}`);
+      notifyOwner({ title: "[HB] fifa-live-sync FAIL", content: `FIFA API fetch: ${msg}`.slice(0, 500) });
       res.status(500).json({error:'FIFA API fetch failed', detail:msg});
       return;
     }
@@ -250,6 +258,7 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log('FAIL', 'FATAL', `Unhandled exception: ${msg}`);
+    notifyOwner({ title: "[HB] fifa-live-sync FATAL", content: msg.slice(0, 500) });
     res.status(500).json({ok:false, error:msg});
   }
 }

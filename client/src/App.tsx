@@ -44,6 +44,8 @@ const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
 const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 
 // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
 const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
@@ -129,6 +131,9 @@ function Router() {
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
       <Route path="/splits">{() => <Redirect to="/feed" />}</Route>
+      {/* Legal pages — public, no auth required */}
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       {/* Stripe checkout result pages — public, no auth required */}
       <Route path="/subscribe/success" component={SubscribeSuccess} />
       <Route path="/subscribe/cancel" component={SubscribeCancel} />

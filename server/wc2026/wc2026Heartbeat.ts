@@ -26,6 +26,8 @@
  */
 
 import type { Express, Request, Response } from "express";
+import { sdk } from "../_core/sdk";
+import { notifyOwner } from "../_core/notification";
 import { getDb } from "../db";
 import { wc2026Matches } from "../../drizzle/wc2026.schema";
 import { and, gte, lte, eq } from "drizzle-orm";
@@ -56,6 +58,11 @@ function triggerBracketSync(reason: string): void {
 
 // ─── Handler: lineups ─────────────────────────────────────────────────────────
 async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
   const now = new Date();
   console.log(`[WC2026HB] [INPUT] /wc2026-lineups triggered at ${now.toISOString()}`);
 
@@ -78,12 +85,18 @@ async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-lineups unhandled: ${String(err)}`);
+    notifyOwner({ title: "[HB] wc2026-lineups FAIL", content: String(err).slice(0, 500) });
     res.status(500).json({ ok: false, error: String(err) });
   }
 }
 
 // ─── Handler: ESPN results ingestion ─────────────────────────────────────────
 async function handleWc2026EspnResults(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
   const now = new Date();
   // Default to today and yesterday (to catch late-finishing matches)
   const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
@@ -125,6 +138,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-espn-results unhandled: ${String(err)}`);
+    notifyOwner({ title: "[HB] wc2026-espn-results FAIL", content: String(err).slice(0, 500) });
     res.status(500).json({ ok: false, error: String(err) });
   }
 }
@@ -132,6 +146,11 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
 
 // ─── Handler: live score refresh (every 5 min during match window) ──────────────────────────────────────────────────────────────────────────────
 async function handleWc2026LiveScores(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
   const now = new Date();
 
   // [FIX] Query BOTH today UTC and yesterday UTC.
@@ -211,12 +230,18 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-live-scores unhandled: ${String(err)}`);
+    notifyOwner({ title: "[HB] wc2026-live-scores FAIL", content: String(err).slice(0, 500) });
     res.status(500).json({ ok: false, error: String(err) });
   }
 }
 
 // ─── Handler: bracket sync (every 30 min during knockout phase) ──────────────
 async function handleWc2026BracketSync(req: Request, res: Response): Promise<void> {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
+  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+
   const now = new Date();
   console.log(`[WC2026HB] [INPUT] /wc2026-bracket-sync triggered at ${now.toISOString()}`);
 
@@ -254,6 +279,7 @@ async function handleWc2026BracketSync(req: Request, res: Response): Promise<voi
     });
   } catch (err) {
     console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-bracket-sync unhandled: ${String(err)}`);
+    notifyOwner({ title: "[HB] wc2026-bracket-sync FAIL", content: String(err).slice(0, 500) });
     res.status(500).json({ ok: false, error: String(err) });
   }
 }

@@ -363,11 +363,11 @@ export function registerStripeWebhookRoute(app: Express): void {
 
       if (!webhookSecret) {
         console.error(`${tag} STRIPE_WEBHOOK_SECRET not set`);
-        return res.status(200).json({ received: true, warning: "webhook_secret_not_configured" });
+        return res.status(400).json({ error: "webhook_secret_not_configured" });
       }
       if (!sig) {
         console.error(`${tag} Missing Stripe-Signature header`);
-        return res.status(200).json({ received: true, error: "missing_signature_header" });
+        return res.status(400).json({ error: "missing_signature_header" });
       }
 
       let event: Stripe.Event;
@@ -376,7 +376,7 @@ export function registerStripeWebhookRoute(app: Express): void {
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`${tag} Signature verification FAILED: ${msg}`);
-        return res.status(200).json({ received: true, error: "signature_verification_failed", detail: msg });
+        return res.status(400).json({ error: "signature_verification_failed", detail: msg });
       }
 
       console.log(`${tag} Signature verified ✓ event_id=${event.id} type=${event.type}`);
