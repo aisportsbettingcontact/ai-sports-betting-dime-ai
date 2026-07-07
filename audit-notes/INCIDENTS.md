@@ -244,11 +244,14 @@ Bare "DB-007" label RETIRED — use sub-IDs only.
    - Rows with `insert_method` containing 'v21': set `odds_source='betexplorer_bet365'`
    - Rows with only gs_metadata_backfill (no engine update): set `odds_source='unknown_initial_seed'`
 3. Add NOT NULL constraint after backfill to prevent future stale values
-**Status:** RESOLVED (2026-07-07, Slice 4 of Auth A).
-- Backfill applied: 84/84 rows now have meaningful odds_source values.
-- Distribution: betexplorer=81, betexplorer+draftkings_manual_advance=2, betexplorer_bet365=1.
-- NULL count: 0.
-- Verified via live query 2026-07-07T22:12Z.
+**Status:** PARTIALLY RESOLVED → CORRECTED (2026-07-07).
+- Phase 1 (Slice 4): Set all 84 rows to non-NULL. Design error: 59 gs_metadata rows labeled 'betexplorer' but have ALL book_* = NULL (no odds to attribute).
+- Phase 2 (correction): 59 rows relabeled `'no_book_odds'`. Executed 2026-07-07T23:55Z.
+- Final distribution: no_book_odds=59, betexplorer=22, betexplorer+draftkings_manual_advance=2, betexplorer_bet365=1.
+- NULL count: 0. All 25 rows with actual odds have correct provenance.
+- **Cross-reference:** The 59 'no_book_odds' rows ARE DB-009 (skeleton rows with 72% NULL on odds columns). DB-009 resolution = Priority 1b population from odds_snapshots. When 1b populates these rows, odds_source MUST be overwritten with the real source in the same write.
+- **Engine-code fix (DB-014 second half): NOT SHIPPED.** Zero engine files (betexplorer_scraper.py, v19, v20, v22) contain `odds_source` in their UPDATE/INSERT statements. Future writes can still recreate staleness. DB-014 does not fully close until engines write odds_source on every UPDATE.
+- Verified via live query 2026-07-07T23:55Z.
 
 ---
 
