@@ -644,6 +644,11 @@ export const wc2026MatchOdds = mysqlTable(
     modelBttsYes: smallint("model_btts_yes"),
     bookBttsNo:   smallint("book_btts_no"),
     modelBttsNo:  smallint("model_btts_no"),
+
+    // ── Provenance / Status (Slice 5 — Auth A) ──────────────────────────────
+    oddsUpdatedAt:  datetime("odds_updated_at"),
+    oddsSource:     varchar("odds_source", { length: 64 }),
+    marketStatus:   varchar("market_status", { length: 32 }).notNull().default("UNKNOWN"),
   },
   (t) => [
     uniqueIndex("uq_wc2026_match_odds_match").on(t.matchId),

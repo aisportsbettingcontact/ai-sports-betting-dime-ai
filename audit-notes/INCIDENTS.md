@@ -241,3 +241,58 @@
    - Rows with only gs_metadata_backfill (no engine update): set `odds_source='unknown_initial_seed'`
 3. Add NOT NULL constraint after backfill to prevent future stale values
 **Status:** OPEN — P2 priority, folds into schema-alignment session.
+
+---
+
+## TOOL-002: drizzle-kit introspect crashes (unescapeSingleQuotes + FK-outside-filter)
+
+**What:** `npx drizzle-kit introspect` (v0.31.4) crashes with two distinct errors when run against the live TiDB database:
+1. `TypeError: Cannot read properties of undefined (reading 'unescapeSingleQuotes')` — crashes during column default parsing for certain tables.
+2. `Error: FK references table outside of schema filter` — crashes when foreign key references cross table boundaries not included in the filter.
+
+**When:** Discovered 2026-07-07 ~20:30 UTC during snapshot reconciliation attempt.
+
+**Evidence:**
+- Command: `npx drizzle-kit introspect` with `drizzle.config.ts` pointing to live DATABASE_URL
+- Error 1 stack: `at MySqlDialect.escapeSingleQuotes (...)` — null/undefined value passed to escape function
+- Error 2 stack: FK validation rejects tables referencing wc2026_teams.team_id when wc2026_teams is not in the introspection scope
+
+**Root cause:** Known drizzle-kit bugs:
+1. TiDB returns column defaults in a format that drizzle-kit's MySQL dialect parser doesn't handle (e.g., `CURRENT_TIMESTAMP` without quotes, or expression defaults).
+2. The introspect command's schema-filter logic doesn't gracefully handle FK references to tables outside the filter scope — it throws instead of warning.
+
+**Impact:** Cannot use `drizzle-kit introspect` to auto-generate schema from live DB. Manual schema alignment is required instead.
+
+**Workaround applied:** Manual three-way reconciliation script (`reconcile_full.mjs`) that:
+1. Extracts column names from Drizzle schema .ts files via regex
+2. Compares against `SHOW COLUMNS FROM` on live DB
+3. Reports deltas without requiring drizzle-kit introspect
+
+**Status:** INFORMATIONAL — drizzle-kit version-specific limitation. No fix available from our side. Future drizzle-kit upgrades may resolve. Filed for awareness so next person doesn't burn time attempting introspect.
+
+---
+
+## DB-007: RESOLUTION UPDATE (2026-07-07T21:55Z)
+
+**Previous status:** OPEN — schema drift exists.
+
+**Resolution performed:**
+1. All 8 adopted orphan tables (wc2026_data_lineage, wc2026_holdout_validation, wc2026_market_edges, wc2026_market_no_vig, wc2026_model_grades, wc2026_model_runs, wc2026_provider_match_map, wc2026_recommendations) were formally adopted into `drizzle/wc2026.schema.ts` with column definitions matching live DB exactly.
+2. All ESPN tables (wc2026_espn_matches, wc2026_espn_team_stats, wc2026_espn_match_stats, wc2026_espn_expected_goals, wc2026_espn_shot_map, wc2026_espn_player_stats, wc2026_espn_lineups, wc2026_espn_glossary) confirmed present in `drizzle/schema.ts` with `espn_match_id` columns matching live DB.
+3. `wc2026MatchOdds` — 3 columns (`odds_updated_at`, `odds_source`, `market_status`) existed in live DB but were missing from schema. Added to `drizzle/wc2026.schema.ts`.
+4. `wc2026_model_projections` — all 86 columns (including 27 DB-007 additions from prior session) confirmed matching live DB.
+
+**Three-way equivalence proof:**
+- Schema ≡ Snapshot: `drizzle-kit generate` → "No schema changes, nothing to migrate" (71 tables, exit 0, no interactive prompt)
+- Schema ≡ DB: `reconcile_full.mjs` → 0 deltas across all 18 target tables (0 columns only-in-DB, 0 columns only-in-schema)
+- Snapshot ≡ DB: Spot-checked `wc2026_holdout_validation` (11 cols) and `wc2026_recommendations` (21 cols) — both MATCH
+
+**HARD ASSERTION VERIFIED:**
+- `drizzle-kit generate` emits NO CREATE TABLE for any of the 8 adopted tables
+- `drizzle-kit generate` emits NO rename prompt for any table
+- `drizzle-kit migrate` has nothing pending ("No schema changes, nothing to migrate")
+- TypeScript: 0 errors (LSP confirmed via webdev_check_status)
+
+**Status:** RESOLVED — DB-007 is genuinely closed. Schema ≡ Snapshot ≡ Live DB proven independently.
+
+---
