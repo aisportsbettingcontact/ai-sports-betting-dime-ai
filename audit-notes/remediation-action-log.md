@@ -660,3 +660,21 @@ tsc: Found 0 errors. Watching for file changes.
 - `fireRateLimitEvent` type union now includes `"waitlist_submit"`
 
 **Status:** COMPLETE
+
+## Entry 22 — WC2026 Deep Database Reconciliation (D1-D6)
+
+**Date:** 2026-07-07  
+**Scope:** Read-only analysis of all WC2026 data tables  
+**Deliverable:** `audit-notes/WC2026-DB-RECONCILIATION.md`
+
+**Key findings:**
+- 38 live WC2026 tables (20 in Drizzle + 18 orphan)
+- Referential integrity: CLEAN (zero orphans across all FK checks)
+- ESPN coverage: 87-90/90 (near-complete)
+- BetExplorer stopped at R32 (18 matches missing)
+- wc2026MatchOdds: 72% skeleton rows (59/82 have NULL odds)
+- Model projections: first 24 matches never modeled
+- SCRIPT-003 STRUCK: all scripts use env-only credential handling
+- 6 new findings registered (DB-007 through DB-012)
+
+**Status:** ANALYSIS COMPLETE — HOLD for owner decisions on Priority 3 items and DB-007 schema alignment before any population work.
