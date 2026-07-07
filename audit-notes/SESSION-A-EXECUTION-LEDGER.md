@@ -10,7 +10,7 @@
 
 | # | Task | Status | Evidence | Closure Condition | Owner |
 |---|------|--------|----------|-------------------|-------|
-| 1 | FE-005: /privacy + /terms prerender (ALL UAs) | **FIXED / VERIFIED ON PRODUCTION** | Production (post-publish 460c4791): curl-default, Googlebot, python-requests, Chrome all return `<title>Privacy Policy \| AI Sports Betting Models</title>`. /terms: curl-default, Googlebot, Wget all return `<title>Terms of Service \| AI Sports Betting Models</title>`. Landing / unchanged. Test suite 1284/1285 pass. | External production fetch shows legal content for ALL UAs | Agent |
+| 1 | FE-005: /privacy + /terms prerender (ALL UAs) | **FIXED / VERIFIED ON PRODUCTION (08:33Z)** | Production `https://aisportsbettingmodels.com/privacy` at 08:31-08:33Z: 4 UAs (curl-default, Googlebot, python-requests/2.31.0, Chrome/126) all return `<title>Privacy Policy \| AI Sports Betting Models</title>`. `x-prerender: legal` header present. 5107 bytes legal HTML. Zero homepage content. Zero JS bundles. /terms (Wget): `<title>Terms of Service \| AI Sports Betting Models</title>`. Homepage regression check: correct. INC-008 filed for timing gap. | External production GET shows legal content + x-prerender:legal header for ALL UAs | Agent |
 | 2 | SEC-005: Production CSP check | **DONE / VERIFIED** | `curl -sI` production: `script-src 'self' 'unsafe-inline'` — no `unsafe-eval` | `unsafe-eval` absent from production CSP | Agent |
 | 3 | DB-001: Concurrency (10 parallel, balance=1) | **DONE / VERIFIED** | Successes=1, Failures=9. TiDB PessimisticRetry confirms row lock. Test user cleaned. | Exactly 1 success out of 10 | Agent |
 | 4 | SEC-001: Revoked tokenVersion → 401 | **DONE / VERIFIED** | `tokenVersion.db.test.ts` 8/8 pass. [JR-1] stale tv rejected. [FL-5] old JWT rejected after forceLogout. | Stale JWT returns UNAUTHORIZED | Agent |
@@ -90,13 +90,15 @@ Choose one:
 
 ## Final Verdict
 
-**Session A scope completed.** 8 tasks executed, 5 DONE/VERIFIED, 1 FIXED + VERIFIED ON PRODUCTION, 1 NOT EXECUTED BY DESIGN, 2 BLOCKED BY PERMISSION (owner-side). All boundaries respected. No false DONEs. INC-005 closed with new evidence. FE-005 published and verified on production (checkpoint 460c4791, version c1ed37de).
+**Session A scope completed.** 8 tasks executed, 5 DONE/VERIFIED, 1 FIXED + VERIFIED ON PRODUCTION, 1 NOT EXECUTED BY DESIGN, 2 BLOCKED BY PERMISSION (owner-side). All boundaries respected. INC-005 closed with new evidence. FE-005 published and verified on production (checkpoint 460c4791 → published → verified at 08:33Z).
 
 **Corrections applied (post-acceptance):**
-- Correction 1: FE-005 re-fixed — inverted approach serves legal content to ALL UAs (not just bots). VERIFIED on production.
+- Correction 1: FE-005 re-fixed — inverted approach serves legal content to ALL UAs (not just bots). VERIFIED on production at 08:33Z with `x-prerender: legal` header evidence.
 - Correction 2: DB-002 status → NEEDS FOLLOW-UP (blocked by drizzle-kit hang).
 - Correction 3: Gitleaks target → fcc045e6 (newest head, not bf88fe38).
 - Correction 4 (backlog): CSP `unsafe-inline` noted for future hardening.
+
+**INC-008 filed:** Production-verification timing gap. The original verification DID target the public domain but was tested during deploy propagation window. Guard: future verifications require 5-min post-publish wait + `x-prerender` header in evidence.
 
 **Remaining for Session B:** v2.1 report debt (updated FINAL-REPORT with all Session A closures).  
 **Remaining for Session C:** Landing-page + Stripe deep audits (read-only).
