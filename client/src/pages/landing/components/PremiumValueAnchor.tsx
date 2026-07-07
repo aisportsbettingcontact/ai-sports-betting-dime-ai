@@ -20,7 +20,7 @@ export default function PremiumValueAnchor() {
             <div className="text-white text-[12px] mt-2">Save 58% vs monthly</div>
           </div>
         </div>
-        <a href="/#pricing" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black self-center transition-all hover:brightness-110" style={{ background: "#39FF14", fontSize: "15px" }}>
+        <a href="/#waitlist" className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-bold text-black self-center transition-all hover:brightness-110" style={{ background: "#39FF14", fontSize: "15px" }}>
           View Plans
         </a>
       </div>

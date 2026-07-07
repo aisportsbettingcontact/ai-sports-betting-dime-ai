@@ -81,7 +81,7 @@ export default function ProductMechanism() {
               </p>
             </div>
             <a
-              href="/#pricing"
+              href="/#waitlist"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-black self-start transition-all hover:brightness-110 active:scale-[0.98]"
               style={{ background: "#39FF14", fontSize: "14px", boxShadow: "0 0 20px rgba(57,255,20,0.25)" }}
             >

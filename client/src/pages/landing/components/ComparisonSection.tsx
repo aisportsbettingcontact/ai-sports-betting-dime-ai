@@ -103,7 +103,7 @@ export default function ComparisonSection() {
             style={{ background: "rgba(57,255,20,0.04)", borderTop: "1px solid rgba(57,255,20,0.1)" }}
           >
             <a
-              href="/#pricing"
+              href="/#waitlist"
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-black transition-all hover:brightness-110"
               style={{ background: "#39FF14", fontSize: "13px" }}
             >

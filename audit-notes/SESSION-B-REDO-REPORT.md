@@ -99,18 +99,21 @@ $ grep -rn "stripe_events\|stripeEvents" drizzle/*.ts
 
 `stripe_events` does NOT exist as a Drizzle table. The Stripe webhook handler (`server/stripeWebhook.ts`) processes events inline without a dedicated events table. The prior report's reference to this table was incorrect.
 
-### Corrected Inventory: 67 Drizzle Tables
+### Corrected Inventory: 63 Unique Drizzle Tables
 
 | Domain | Count | Key Tables |
 |--------|-------|-----------|
 | App/Auth | 6 | app_users, users, user_sessions, discord_invite_tokens, discord_login_states, discord_oauth_states |
 | Betting | 6 | bet_edit_requests, games, odds_history, tracked_bets, user_favorite_games, waitlist |
-| MLB | 15 | mlb_bullpen_stats, mlb_calibration_constants, mlb_drift_state, mlb_game_backtest, mlb_hr_props, mlb_lineups, mlb_model_learning_log, mlb_park_factors, mlb_pitcher_rolling5, mlb_pitcher_stats, mlb_players, mlb_schedule_history, mlb_strikeout_props, mlb_team_batting_splits, mlb_teams |
-| WC2026 | 20 | wc2026_matches, wc2026_teams, wc2026_venues, wc2026_team_aliases, wc2026_match_odds, wc2026_odds_snapshots, wc2026_lineups, wc2026_match_stats, wc2026_match_events, wc2026_model_projections, wc2026_frozen_book_odds, wc2026_espn_bracket, wc2026_espn_matches, wc2026_espn_team_stats, wc2026_espn_match_stats, wc2026_espn_expected_goals, wc2026_espn_glossary, wc2026_espn_lineups, wc2026_espn_player_stats, wc2026_espn_shot_map |
+| MLB | 16 | mlb_bullpen_stats, mlb_calibration_constants, mlb_drift_state, mlb_game_backtest, mlb_hr_props, mlb_lineups, mlb_model_learning_log, mlb_park_factors, mlb_pitcher_rolling5, mlb_pitcher_stats, mlb_players, mlb_schedule_history, mlb_strikeout_props, mlb_team_batting_splits, mlb_teams, mlb_umpire_modifiers |
+| WC2026 | 20 | wc2026_matches, wc2026_teams, wc2026_venues, wc2026_team_aliases, wc2026MatchOdds, wc2026_odds_snapshots, wc2026_lineups, wc2026_match_stats, wc2026_match_events, wc2026_model_projections, wc2026_frozen_book_odds, wc2026_espn_bracket, wc2026_espn_matches, wc2026_espn_team_stats, wc2026_espn_match_stats, wc2026_espn_expected_goals, wc2026_espn_glossary, wc2026_espn_lineups, wc2026_espn_player_stats, wc2026_espn_shot_map |
 | DIME | 6 | dime_context_audit, dime_credit_ledger, dime_request_audit, dime_response_audit, dime_soak_test_results, dime_user_entitlements |
-| Other | 14 | jack_mac_sync_jobs, model_files, nba_teams, nba_schedule_history, ncaam_teams, nhl_teams, nhl_schedule_history, rg_session_cache, security_events, mlb_umpire_modifiers, + 4 more |
+| Other | 9 | jack_mac_sync_jobs, model_files, nba_teams, nba_schedule_history, ncaam_teams, nhl_teams, nhl_schedule_history, rg_session_cache, security_events |
+| **Sum** | **63** | (1 duplicate definition: wc2026MatchOdds in both schema.ts and wc2026.schema.ts) |
 
-**Verification command:** `grep -c "mysqlTable" drizzle/*.ts | awk -F: '{sum+=$2} END {print sum}'` → **67**
+**Verification command:** `python3 regex extraction of mysqlTable("name") across drizzle/*.ts` → **63 unique table names** (64 definitions; `wc2026MatchOdds` is defined in both `schema.ts` and `wc2026.schema.ts`)
+
+**Note:** Owner stated the correct count is 60. Agent verified 63 from live code at checkpoint `586a684f`. Discrepancy of 3 to be reconciled in D1 (WC2026 table inventory).
 
 ---
 
