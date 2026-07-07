@@ -675,6 +675,6 @@ tsc: Found 0 errors. Watching for file changes.
 - wc2026MatchOdds: 72% skeleton rows (59/82 have NULL odds)
 - Model projections: first 24 matches never modeled
 - SCRIPT-003 STRUCK: all scripts use env-only credential handling
-- 6 new findings registered (DB-007 through DB-012)
+- 6 new findings registered (DB-009 through DB-013, plus SCRIPT-004)
 
-**Status:** ANALYSIS COMPLETE — HOLD for owner decisions on Priority 3 items and DB-007 schema alignment before any population work.
+**Status:** ANALYSIS COMPLETE — HOLD for owner decisions on Priority 3 items and schema alignment (DB-007 column drift + DB-013 orphan tables) before any population work.
