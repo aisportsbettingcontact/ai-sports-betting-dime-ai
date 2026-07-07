@@ -133,3 +133,20 @@
 **Status:** CLOSED — Owner confirmed agent evidence was correct. Contradiction resolved as verifier-side instrument caching, not agent claim error. Independent external fetch of /terms confirmed real legal content on production.
 
 ---
+
+## INC-009: DATA-001 — frozen_book_odds r16-089/r16-090 Match ID Swap (RESOLVED)
+
+**What:** `wc2026_frozen_book_odds` rows for wc26-r16-089 (PAR vs FRA) and wc26-r16-090 (CAN vs MAR) had their moneyline values swapped. PAR/FRA odds (homeML=1400, huge underdog) were in the r16-090 row; CAN/MAR odds (homeML=375, moderate underdog) were in the r16-089 row.  
+**When:** Discovered 2026-07-07 during R3 spot-check (Recovery Discovery report). Existed since 2026-07-01T11:13:48Z (original seed).  
+**Duration of incorrect state:** 6 days (2026-07-01 to 2026-07-07).  
+**Evidence:** Domain logic: France is heavy favorite vs Paraguay (away_ml should be large negative, was -125 = wrong). Canada is moderate underdog vs Morocco (home_ml should be moderate positive ~375, was 1400 = wrong). Two fix scripts existed but were never applied.  
+**Root cause:** Original seeder script wrote odds with match_ids transposed. Both `fix_seeded_odds.mjs` and `fix_seeded_odds_v2.mjs` existed with correct values but were NEVER executed against production.  
+**Impact:** DIME edge calculations for r16-089 and r16-090 were using incorrect book odds for 6 days.  
+**Resolution:** Option A (owner-authorized 2026-07-07): un-swap using fix_seeded_odds_v2 DraftKings values. Rationale: rows carry `book_source=DraftKings` provenance; writing BetExplorer values would corrupt source semantics.  
+**Fix applied:** 2 atomic UPDATEs. All verifications passed (re-read, domain logic, DIME edge query).  
+**Run-log:** `audit-notes/run-logs/data001_fix_wc26-r16-089_wc26-r16-090_2026-07-07T182000Z.log`  
+**Prevention:** LOGGING + SCRAPE PRECISION STANDARD §7 (pre-flight team-name + date verification) now permanent for all frozen_book_odds writes.  
+**Status:** RESOLVED
+
+---
+

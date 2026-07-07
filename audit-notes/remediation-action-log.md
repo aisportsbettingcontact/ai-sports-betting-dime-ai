@@ -726,3 +726,37 @@ tsc: Found 0 errors. Watching for file changes.
 
 **DATA-001 status:** STOPPED at Step B (ground-truth divergence). fix_seeded_odds_v2 targets (DraftKings-sourced) differ from jul4_fresh_scrape.json artifact (BetExplorer-sourced) by 5-200 pts on ML columns. Direction confirmed correct (swap is real). Awaiting owner verdict on which source values to use.
 
+
+## Entry 24 — DATA-001 Fix Executed (Option A)
+
+**Date:** 2026-07-07T18:20Z  
+**Finding:** DATA-001 (P1)  
+**Authorization:** Owner verdict — Option A (un-swap DraftKings values)  
+**Run-log:** `audit-notes/run-logs/data001_fix_wc26-r16-089_wc26-r16-090_2026-07-07T182000Z.log`
+
+**Rationale (logged per owner instruction):**
+frozen_book_odds rows carry source semantics (book_source=DraftKings, frozen_by=system). The correct repair restores the un-swapped DK values. Writing BetExplorer artifact values into a DK-labeled row would fix the swap but corrupt source semantics — same bug class, quieter. The artifact's role is fulfilled: it independently confirmed the swap is real and directionally validated the fix. Exact-match across different books was a wrong assumption in the original protocol; the STOP was correct procedure. Option C (live DK scrape) rejected — today's line for an in-progress/played match is not a valid substitute for the pre-match freeze.
+
+**Steps executed:**
+- B-PROOF: Both rows confirmed `book_source=DraftKings`, `frozen_by=system`, `frozen_at=2026-07-01T11:13:48Z`
+- C (SCOPE): 2 UPDATE statements only, WHERE match_id = specific value, no DELETE, no other table
+- D (WRITE): 2 atomic UPDATEs, 1 row affected each
+- E (VERIFY): Re-read PASS ✓, DIME edge query CORRECT ✓, domain logic validated ✓
+
+**Before/After:**
+```
+BEFORE (SWAPPED):
+  r16-089 (PAR vs FRA): book_home_ml=375, book_draw=250, book_away_ml=-125
+  r16-090 (CAN vs MAR): book_home_ml=1400, book_draw=600, book_away_ml=-500
+
+AFTER (CORRECTED):
+  r16-089 (PAR vs FRA): book_home_ml=1400, book_draw=600, book_away_ml=-500
+  r16-090 (CAN vs MAR): book_home_ml=375, book_draw=250, book_away_ml=-125
+```
+
+**Provenance:** book_source='DraftKings' preserved (correct — these are DK values). frozen_at='2026-07-01T11:13:48Z' preserved (original freeze timestamp per owner instruction). No odds_source/updated_at column exists on this table; repair timestamp in run-log only.
+
+**Incident filed:** INC-009 in INCIDENTS.md  
+**Prevention:** LOGGING + SCRAPE PRECISION STANDARD §7 (pre-flight team-name + date verification) now permanent.  
+**Status:** ✅ RESOLVED — DATA-001 CLOSED
+
