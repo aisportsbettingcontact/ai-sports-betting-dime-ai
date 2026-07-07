@@ -120,7 +120,7 @@
 2. The fix WAS deployed (checkpoint `460c4791` published). Production version.json confirmed `c1ed37de` (post-publish).
 3. The fix IS working NOW (08:33Z): all UAs return `<title>Privacy Policy | AI Sports Betting Models</title>`, `x-prerender: legal` header present, 5107 bytes of legal HTML, zero homepage content.
 
-**Root cause:** INFERRED — deploy propagation timing. The user likely tested during the 2-5 minute window between publish confirmation and full production propagation. No CDN caching involved (`cf-cache-status: DYNAMIC`, `cache-control: no-cache`).
+**Root cause:** VERIFIED — verifier-side instrument caching. Owner confirmed independent external fetch of /terms returned real legal content on production. The contradiction was caused by the verifier's tool caching a stale response, not by a deployment failure. Agent evidence was correct.
 
 **Secondary finding:** HEAD/GET mismatch — `curl -sI` (HEAD) returns `content-length: 385545` (SPA index.html size) because the middleware only intercepts GET, not HEAD. This could confuse tools that inspect HEAD responses.
 
@@ -130,6 +130,6 @@
 3. Wait at least 5 minutes after publish before claiming VERIFIED
 4. Include `x-prerender` header in evidence (proves middleware executed)
 
-**Status:** RESOLVED — the fix is confirmed working on production. The earlier claim was not mislabeled (it did target the public domain) but was premature (tested before propagation completed to all edge nodes).
+**Status:** CLOSED — Owner confirmed agent evidence was correct. Contradiction resolved as verifier-side instrument caching, not agent claim error. Independent external fetch of /terms confirmed real legal content on production.
 
 ---
