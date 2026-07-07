@@ -1,16 +1,13 @@
 /**
  * landingPrerender.ts
  *
- * Server-side prerender middleware for the landing page.
+ * Server-side prerender middleware for the landing page + legal pages.
  *
- * PROBLEM: The React SPA sends a bare <div id="root"></div> shell to all
- * clients. Crawlers, fetch tools (curl, Claude, Googlebot, etc.) that do not
- * execute JavaScript see only a loading spinner.
- *
- * SOLUTION: When a GET "/" request arrives and the User-Agent matches a known
- * bot/crawler/fetch pattern, the server returns a fully expanded, styled HTML
- * page with all landing page content inline.  Real browsers continue to
- * receive the normal SPA shell.
+ * ARCHITECTURE:
+ * - /privacy and /terms: serve full legal HTML to ALL user agents (browser or not).
+ *   There is no correct reason for these routes to ever serve homepage HTML.
+ *   Browsers get the legal content directly (fast, no JS required); React hydrates on top.
+ * - /: serve prerendered landing HTML to bots only; browsers get the SPA shell.
  *
  * LOGGING:
  *   [Prerender][INPUT]  - UA + path
@@ -21,7 +18,7 @@
 
 import { Request, Response, NextFunction } from "express";
 
-// Bot / crawler UA patterns
+// Bot / crawler UA patterns (used for landing page only)
 const BOT_PATTERNS = [
   /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
   /yandexbot/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
@@ -39,6 +36,202 @@ const BOT_PATTERNS = [
 function isBot(ua: string): boolean {
   return BOT_PATTERNS.some((p) => p.test(ua));
 }
+
+// ─── Legal page builders (served to ALL user agents) ───────────────────────
+
+function buildPrivacyHtml(): string {
+  const title = "Privacy Policy | AI Sports Betting Models";
+  const canonical = "https://aisportsbettingmodels.com/privacy";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${title}</title>
+<meta name="description" content="Privacy Policy for AI Sports Betting Models — how we collect, use, and protect your data."/>
+<link rel="canonical" href="${canonical}"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="${canonical}"/>
+<meta property="og:title" content="${title}"/>
+<meta name="robots" content="index,follow"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+.container{max-width:720px;margin:0 auto}
+h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
+h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
+p{margin-bottom:12px;font-size:14px;color:#9ca3af}
+ul{padding-left:24px;margin-bottom:12px}
+li{font-size:14px;color:#9ca3af;margin-bottom:6px}
+a{color:#39FF14;text-decoration:underline}
+.updated{color:#6b7280;font-size:13px;margin-bottom:32px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);text-align:center;color:#4b5563;font-size:12px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Privacy Policy</h1>
+<p class="updated">Last updated: July 7, 2026</p>
+
+<h2>1. Information We Collect</h2>
+<p>When you create an account or use our sports intelligence software, we may collect:</p>
+<ul>
+<li>Account information (name, email address, login method)</li>
+<li>Usage data (pages visited, features used, session duration)</li>
+<li>Subscription and payment information (processed securely via Stripe)</li>
+<li>AI interaction data (queries submitted to our intelligence models)</li>
+</ul>
+
+<h2>2. How We Use Your Information</h2>
+<p>We use collected information to:</p>
+<ul>
+<li>Provide and improve our sports intelligence software services</li>
+<li>Process subscription payments and manage your account</li>
+<li>Generate AI-powered analysis and model projections</li>
+<li>Send service-related communications</li>
+<li>Maintain platform security and prevent abuse</li>
+</ul>
+
+<h2>3. AI &amp; Data Processing Disclosures</h2>
+<p>Our platform uses artificial intelligence models to generate sports analysis, probability distributions, and market projections. Specifically:</p>
+<ul>
+<li>AI models process publicly available sports data (match statistics, odds, team performance metrics) to generate analytical outputs.</li>
+<li>Your queries to our AI intelligence system may be logged for quality assurance and model improvement purposes.</li>
+<li>AI-generated outputs are probabilistic in nature and do not constitute financial advice, guaranteed outcomes, or endorsements of any wagering activity.</li>
+<li>We do not sell or share your AI interaction data with third parties for advertising purposes.</li>
+</ul>
+
+<h2>4. Data Retention</h2>
+<p>We retain your account data for as long as your account is active. AI query logs are retained for up to 90 days for quality assurance, then anonymized or deleted. Payment records are retained as required by applicable law.</p>
+
+<h2>5. Data Security</h2>
+<p>We implement industry-standard security measures including encrypted connections (TLS), secure authentication (OAuth 2.0), and access controls to protect your personal information.</p>
+
+<h2>6. Third-Party Services</h2>
+<p>We use the following third-party services that may process your data:</p>
+<ul>
+<li>Stripe &mdash; payment processing</li>
+<li>Anthropic (Claude) &mdash; AI model inference</li>
+<li>Manus Platform &mdash; authentication and hosting</li>
+</ul>
+
+<h2>7. Your Rights</h2>
+<p>You may request access to, correction of, or deletion of your personal data by contacting us. You may also close your account at any time through your profile settings.</p>
+
+<h2>8. Responsible Gambling Notice</h2>
+<p>This platform provides sports intelligence software for informational and analytical purposes only. We do not facilitate, process, or accept wagers. All analytical outputs are probabilistic and should not be interpreted as guaranteed outcomes.</p>
+<p><strong>If you or someone you know has a gambling problem, call <a href="tel:1-800-426-2537">1-800-GAMBLER</a> (1-800-426-2537) for free, confidential help.</strong></p>
+<p>National Council on Problem Gambling: <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a></p>
+
+<h2>9. Changes to This Policy</h2>
+<p>We may update this Privacy Policy from time to time. We will notify you of material changes via email or a prominent notice on our platform.</p>
+
+<h2>10. Contact</h2>
+<p>For privacy-related inquiries, contact us at the email associated with your account or through the platform's support channels.</p>
+
+<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
+</div>
+</body>
+</html>`;
+}
+
+function buildTermsHtml(): string {
+  const title = "Terms of Service | AI Sports Betting Models";
+  const canonical = "https://aisportsbettingmodels.com/terms";
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${title}</title>
+<meta name="description" content="Terms of Service for AI Sports Betting Models — subscription terms, acceptable use, and disclaimers."/>
+<link rel="canonical" href="${canonical}"/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="${canonical}"/>
+<meta property="og:title" content="${title}"/>
+<meta name="robots" content="index,follow"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+.container{max-width:720px;margin:0 auto}
+h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
+h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
+p{margin-bottom:12px;font-size:14px;color:#9ca3af}
+ul{padding-left:24px;margin-bottom:12px}
+li{font-size:14px;color:#9ca3af;margin-bottom:6px}
+a{color:#39FF14;text-decoration:underline}
+.updated{color:#6b7280;font-size:13px;margin-bottom:32px}
+.caps{text-transform:uppercase;font-size:13px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);text-align:center;color:#4b5563;font-size:12px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Terms of Service</h1>
+<p class="updated">Last updated: July 7, 2026</p>
+
+<h2>1. Acceptance of Terms</h2>
+<p>By accessing or using AI Sports Betting Models ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
+
+<h2>2. Description of Service</h2>
+<p>The Platform provides sports intelligence software that generates AI-powered analytical outputs including probability distributions, no-vig pricing, Monte Carlo simulations, and market edge analysis. The Platform covers multiple sports including soccer (matches), baseball, basketball, and hockey.</p>
+<p><strong>The Platform does NOT provide guaranteed outcomes, financial advice, or wagering services. All outputs are probabilistic analytical tools.</strong></p>
+
+<h2>3. Subscription Terms</h2>
+<ul>
+<li>Subscriptions are billed on a recurring basis (monthly or annually) through Stripe.</li>
+<li>Your subscription renews automatically unless cancelled before the renewal date.</li>
+<li>Cancellation takes effect at the end of the current billing period. No prorated refunds are issued for partial periods.</li>
+<li>We reserve the right to modify pricing with 30 days advance notice. Existing subscribers retain their current rate until the next renewal cycle after the notice period.</li>
+<li>AI credit allocations (DIME credits) are included with your subscription tier. Unused credits do not roll over between billing periods.</li>
+</ul>
+
+<h2>4. Acceptable Use</h2>
+<p>You agree NOT to:</p>
+<ul>
+<li>Redistribute, resell, or publicly share Platform outputs</li>
+<li>Use automated tools to scrape or bulk-download data</li>
+<li>Attempt to reverse-engineer our AI models or algorithms</li>
+<li>Use the Platform for any unlawful purpose</li>
+<li>Share your account credentials with others</li>
+<li>Circumvent rate limits or credit allocation systems</li>
+</ul>
+
+<h2>5. Intellectual Property</h2>
+<p>All models, algorithms, analytical frameworks, and software comprising the Platform are the intellectual property of AI Sports Betting Models. Your subscription grants a limited, non-transferable license to use Platform outputs for personal analytical purposes only.</p>
+
+<h2>6. Disclaimers</h2>
+<p class="caps"><strong>THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE THE ACCURACY, COMPLETENESS, OR RELIABILITY OF ANY ANALYTICAL OUTPUT. PAST PERFORMANCE OF OUR MODELS DOES NOT GUARANTEE FUTURE RESULTS.</strong></p>
+<p>Our intelligence software generates probabilistic analysis based on historical data and statistical modeling. No output should be interpreted as a guarantee of any outcome or as financial advice.</p>
+
+<h2>7. Limitation of Liability</h2>
+<p class="caps"><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY, OR ANY LOSS OF DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES RESULTING FROM YOUR USE OF THE PLATFORM.</strong></p>
+
+<h2>8. Responsible Gambling</h2>
+<p>This Platform provides sports intelligence software for informational and analytical purposes only. We do not facilitate, process, or accept wagers. You are solely responsible for compliance with all applicable laws in your jurisdiction regarding sports wagering.</p>
+<p><strong>If you or someone you know has a gambling problem, call <a href="tel:1-800-426-2537">1-800-GAMBLER</a> (1-800-426-2537) for free, confidential help.</strong></p>
+<p>National Council on Problem Gambling: <a href="https://www.ncpgambling.org" target="_blank" rel="noopener noreferrer">ncpgambling.org</a></p>
+<p>You must be of legal age in your jurisdiction to use this Platform. By using the Platform, you represent that you meet the minimum age requirement.</p>
+
+<h2>9. Account Termination</h2>
+<p>We reserve the right to suspend or terminate your account if you violate these Terms. Upon termination, your access to the Platform and all associated data will be revoked.</p>
+
+<h2>10. Changes to Terms</h2>
+<p>We may modify these Terms at any time. Material changes will be communicated via email or a prominent notice on the Platform at least 14 days before taking effect. Continued use after changes constitutes acceptance.</p>
+
+<h2>11. Governing Law</h2>
+<p>These Terms are governed by the laws of the United States. Any disputes shall be resolved through binding arbitration in accordance with the rules of the American Arbitration Association.</p>
+
+<h2>12. Contact</h2>
+<p>For questions about these Terms, contact us through the Platform's support channels or at the email associated with your account.</p>
+
+<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
+</div>
+</body>
+</html>`;
+}
+
+// ─── Landing page builder (served to bots only) ────────────────────────────
 
 function buildLandingHtml(): string {
   const title = "AI Sports Betting Models | Sports Betting Intelligence Software";
@@ -164,18 +357,54 @@ h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;letter-spacing:-.04em;line-h
 </html>`;
 }
 
+// ─── Middleware ──────────────────────────────────────────────────────────────
+
 export function landingPrerenderMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
 ): void {
-  if (req.method !== "GET" || req.path !== "/") {
+  if (req.method !== "GET") {
     return next();
   }
 
+  const path = req.path;
   const ua = (req.headers["user-agent"] ?? "").toLowerCase();
 
-  console.log(`[Prerender][INPUT] path=${req.path} ua="${ua.slice(0, 120)}"`);
+  // /privacy and /terms: serve legal content to ALL user agents unconditionally.
+  // There is no correct reason for these routes to ever serve homepage HTML.
+  if (path === "/privacy") {
+    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
+    const html = buildPrivacyHtml();
+    console.log(`[Prerender][OUTPUT] /privacy bytes=${html.length}`);
+    console.log("[Prerender][VERIFY] PASS — privacy content served");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=7200");
+    res.setHeader("X-Prerender", "legal");
+    res.status(200).send(html);
+    return;
+  }
+
+  if (path === "/terms") {
+    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
+    const html = buildTermsHtml();
+    console.log(`[Prerender][OUTPUT] /terms bytes=${html.length}`);
+    console.log("[Prerender][VERIFY] PASS — terms content served");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=7200");
+    res.setHeader("X-Prerender", "legal");
+    res.status(200).send(html);
+    return;
+  }
+
+  // Landing page (/): bot-only prerender
+  if (path !== "/") {
+    return next();
+  }
+
+  console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 120)}"`);
 
   const botDetected = isBot(ua);
 
