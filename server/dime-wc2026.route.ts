@@ -156,7 +156,7 @@ async function deductCredits(userId: number, requestId: string, amount: number):
   if (!db) return -1;
 
   // Atomic transaction: lock the latest ledger row, check balance, insert new row
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx: any) => {
     // Lock the latest ledger entry for this user (SELECT ... FOR UPDATE)
     const balResult = await tx.execute(
       sql`SELECT COALESCE(
