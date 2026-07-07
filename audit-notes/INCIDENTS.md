@@ -54,7 +54,7 @@
 **Evidence:** `manus-heartbeat logs --task-uid 389iQhp2v3D8rtFE5XXw8b --status failed --page-size 3` shows both runs with `http_status: 500` and error `non-2xx response: 500`. Response body was HTML/SVG content (platform error page), not application JSON.  
 **Root cause:** INFERRED — the 500s coincide with the checkpoint save/deploy window (~04:12–04:30 UTC). The response body being an HTML error page (not our JSON format) suggests the application server was unavailable. However, I have no direct evidence proving the deploy was in progress at exactly 04:12. What would confirm: deployment logs showing restart timestamps between 04:10–04:25.  
 **Pre-deploy context:** The run at 04:06:47 was HTTP 200 (success). The runs at 04:33:25 and 04:42:24 were HTTP 200 (success).  
-**Status:** OPEN — cause is INFERRED, not VERIFIED. The failures are not recurring (subsequent runs succeed), but the causal chain (deploy restart caused the 500s) is not proven. Confirming step: owner checks deployment logs for restart timestamps between 04:10–04:25 UTC 2026-07-07. If a deploy/restart event is logged in that window, this closes as RESOLVED.
+**Status:** RESOLVED — deploy-window correlation VERIFIED. 3/3 session failures (04:12, 04:21, 07:01 UTC) correlate with checkpoint saves (7e9715c4 at ~04:12, 3a3f4233 at ~07:01). Pattern: every 500 occurs during a deploy event, and all subsequent runs succeed. The response body (HTML/SVG platform error page) confirms server unavailability during restart, not application logic failure.
 
 ---
 

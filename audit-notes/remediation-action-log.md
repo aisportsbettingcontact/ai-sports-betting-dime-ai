@@ -576,3 +576,48 @@ tsc: Found 0 errors. Watching for file changes.
 **Label:** N/A (register update)
 
 ---
+
+## Entry 19 — Session A Corrections (post-acceptance, 2026-07-07T08:15Z)
+
+**Timestamp:** 2026-07-07 ~08:06–08:15 UTC
+
+### Correction 1: FE-005 Re-Fix — VERIFIED ON PRODUCTION
+
+**Problem:** FE-005 was accepted but production still served homepage on /privacy. Diagnosis: (a) checkpoint didn't deploy (version.json showed 8e3ccd06, not 460c4791). Additionally, the original fix was bot-UA-only; user correctly identified that /privacy and /terms must serve legal content to ALL user agents.
+
+**Fix:** Rewrote `server/landingPrerender.ts` with inverted approach:
+- `/privacy` and `/terms`: serve full legal HTML to ALL user agents unconditionally (no UA check)
+- `/` (landing): remains bot-only prerender (unchanged behavior)
+
+**Deploy:** Checkpoint 460c4791 saved. User published. Production version updated to `c1ed37de`.
+
+**Production verification (8 responses, all PASS):**
+```
+/privacy × curl-default    → <title>Privacy Policy | AI Sports Betting Models</title>
+/privacy × Googlebot       → <title>Privacy Policy | AI Sports Betting Models</title>
+/privacy × python-requests → <title>Privacy Policy | AI Sports Betting Models</title>
+/privacy × Chrome browser  → <title>Privacy Policy | AI Sports Betting Models</title>
+/terms × curl-default      → <title>Terms of Service | AI Sports Betting Models</title>
+/terms × Googlebot         → <title>Terms of Service | AI Sports Betting Models</title>
+/terms × Wget              → <title>Terms of Service | AI Sports Betting Models</title>
+/ × Googlebot (regression) → <title>AI Sports Betting Models | Sports Betting Intelligence Software</title>
+```
+
+**Test suite:** 1284/1285 pass (only pre-existing Discord token failure).
+**Label:** VERIFIED (external production fetch, 4+ non-browser UAs + browser UA)
+**Status:** FE-005 CLOSED.
+
+### Correction 2: DB-002 → NEEDS FOLLOW-UP
+**Action:** Reverted DB-002 from IN PROGRESS to NEEDS FOLLOW-UP per Rule 6. The isolated zero-drift check (its closer) is blocked by drizzle-kit hang (DB-007). Endpoint tests and concurrency tests are supporting evidence, not closure.
+**Label:** N/A (status correction)
+
+### Correction 3: Gitleaks target → fcc045e6
+**Action:** Updated SESSION-A-EXECUTION-LEDGER.md and user-owned click-by-click instructions to reference `fcc045e6` (newest pushed head) instead of `bf88fe38`.
+**Label:** N/A (documentation correction)
+
+### Correction 4 (backlog): CSP unsafe-inline
+**Action:** Noted in SEC-005 finding that `unsafe-inline` remains in production CSP. Nonce-based CSP is a future hardening item, not a current finding blocker.
+**Label:** N/A (backlog note)
+
+---
+
