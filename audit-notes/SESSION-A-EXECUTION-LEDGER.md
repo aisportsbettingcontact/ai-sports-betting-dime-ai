@@ -10,12 +10,12 @@
 
 | # | Task | Status | Evidence | Closure Condition | Owner |
 |---|------|--------|----------|-------------------|-------|
-| 1 | FE-005: /privacy bot prerender | **FIXED** | Bot=4554B (legal content), Browser=385296B (SPA). Landing / unchanged (11716B). Test suite 1284/1285 pass. | Bot UA on /privacy returns legal HTML, not homepage | Agent |
+| 1 | FE-005: /privacy + /terms prerender (ALL UAs) | **FIXED / VERIFIED ON PRODUCTION** | Production (post-publish 460c4791): curl-default, Googlebot, python-requests, Chrome all return `<title>Privacy Policy \| AI Sports Betting Models</title>`. /terms: curl-default, Googlebot, Wget all return `<title>Terms of Service \| AI Sports Betting Models</title>`. Landing / unchanged. Test suite 1284/1285 pass. | External production fetch shows legal content for ALL UAs | Agent |
 | 2 | SEC-005: Production CSP check | **DONE / VERIFIED** | `curl -sI` production: `script-src 'self' 'unsafe-inline'` — no `unsafe-eval` | `unsafe-eval` absent from production CSP | Agent |
 | 3 | DB-001: Concurrency (10 parallel, balance=1) | **DONE / VERIFIED** | Successes=1, Failures=9. TiDB PessimisticRetry confirms row lock. Test user cleaned. | Exactly 1 success out of 10 | Agent |
 | 4 | SEC-001: Revoked tokenVersion → 401 | **DONE / VERIFIED** | `tokenVersion.db.test.ts` 8/8 pass. [JR-1] stale tv rejected. [FL-5] old JWT rejected after forceLogout. | Stale JWT returns UNAUTHORIZED | Agent |
 | 5 | ENG-007: Controlled-failure proposal | **NOT EXECUTED BY DESIGN** | Proposal documented (rename route, observe 404, rollback). | Propose only, do not execute | Agent |
-| 6 | Gitleaks CI for bf88fe38 | **BLOCKED BY PERMISSION** | HTTP 403: "Resource not accessible by integration" (actions:read scope missing) | Owner checks Actions tab | Owner |
+| 6 | Gitleaks CI for fcc045e6 | **BLOCKED BY PERMISSION** | HTTP 403: "Resource not accessible by integration" (actions:read scope missing) | Owner checks Actions tab | Owner |
 | 7 | Secret-scanning alerts API | **BLOCKED BY PERMISSION** | HTTP 403: "Resource not accessible by integration" (secret_scanning_alerts:read scope missing) | Owner checks Security tab | Owner |
 | 8 | Heartbeat log sweep + SEC-004 | **DONE / VERIFIED** | 3 enabled jobs swept. Zero 401/403. All failures = HTTP 500 (deploy-window). | Zero auth failures across all jobs | Agent |
 | — | INC-005 closure | **RESOLVED / VERIFIED** | 3rd 500 at 07:01:55 correlates with checkpoint 3a3f4233. Pattern: 3/3 failures = deploy events. | Deploy-window correlation confirmed | Agent |
@@ -40,7 +40,7 @@
 
 ### 1. Verify gitleaks CI (Task 6)
 1. Open https://github.com/aisportsbettingcontact/ai-sports-betting-models/actions
-2. Find the workflow run triggered by commit `bf88fe38`
+2. Find the workflow run triggered by commit `fcc045e6` (newest head)
 3. Confirm status = green (passed)
 4. If red: check the gitleaks step output for detected secrets
 
@@ -90,7 +90,13 @@ Choose one:
 
 ## Final Verdict
 
-**Session A scope completed.** 8 tasks executed, 5 DONE/VERIFIED, 1 FIXED, 1 NOT EXECUTED BY DESIGN, 2 BLOCKED BY PERMISSION (owner-side). All boundaries respected. No false DONEs. INC-005 closed with new evidence. FE-005 deployed to dev (awaiting next checkpoint for production).
+**Session A scope completed.** 8 tasks executed, 5 DONE/VERIFIED, 1 FIXED + VERIFIED ON PRODUCTION, 1 NOT EXECUTED BY DESIGN, 2 BLOCKED BY PERMISSION (owner-side). All boundaries respected. No false DONEs. INC-005 closed with new evidence. FE-005 published and verified on production (checkpoint 460c4791, version c1ed37de).
+
+**Corrections applied (post-acceptance):**
+- Correction 1: FE-005 re-fixed — inverted approach serves legal content to ALL UAs (not just bots). VERIFIED on production.
+- Correction 2: DB-002 status → NEEDS FOLLOW-UP (blocked by drizzle-kit hang).
+- Correction 3: Gitleaks target → fcc045e6 (newest head, not bf88fe38).
+- Correction 4 (backlog): CSP `unsafe-inline` noted for future hardening.
 
 **Remaining for Session B:** v2.1 report debt (updated FINAL-REPORT with all Session A closures).  
 **Remaining for Session C:** Landing-page + Stripe deep audits (read-only).
