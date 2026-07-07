@@ -80,7 +80,7 @@ The 14 scheduled matches include 6 R16 (Jul 4-7) and 8 QF/SF/THIRD/FINAL (TBD da
 | wc2026_mp_dedup_archive | 14 | ARCHIVE |
 | wc2026_orphan_match_odds_quarantine | 12 | QUARANTINE |
 
-**DB-007 Schema Alignment Finding:** 8 active production tables (market_edges, market_no_vig, recommendations, holdout_validation, model_grades, model_runs, data_lineage, provider_match_map) are used by DIME and model pipelines but have NO Drizzle schema definitions. These need to be added to `drizzle/wc2026.schema.ts` during the DB-007 alignment session.
+**DB-013 Schema Absence Finding:** 8 active production tables (market_edges, market_no_vig, recommendations, holdout_validation, model_grades, model_runs, data_lineage, provider_match_map) are used by DIME and model pipelines but have NO Drizzle schema definitions. These need to be added to `drizzle/wc2026.schema.ts` during the schema-alignment session. (Note: DB-007 is reserved for the original espn_match_id column-drift finding from Session A.)
 
 ---
 
@@ -228,7 +228,7 @@ The **wc2026_model_projections** table has 23 rows (24.5%) missing `model_spread
 | frozen_book_odds (53 missing) | Only meaningful for future matches | Owner: freeze historical odds retroactively? |
 | model_spread NULL (23 rows) | Re-run model with spread output for early matches | Owner: worth the compute? |
 
-### Priority 4 — Schema alignment (DB-007)
+### Priority 4 — Schema alignment (DB-007 + DB-013)
 
 Add Drizzle schema definitions for the 8 active orphan tables. This is a prerequisite for safe migrations and should be done before any population work that touches those tables.
 
@@ -238,12 +238,14 @@ Add Drizzle schema definitions for the 8 active orphan tables. This is a prerequ
 
 | ID | Finding | Severity | Status |
 |----|---------|----------|--------|
-| DB-007 | 8 active production tables lack Drizzle schema | MEDIUM | OPEN — schema session |
-| DB-008 | wc2026MatchOdds dual-definition (schema.ts + wc2026.schema.ts) | LOW | OPEN — resolve in DB-007 |
+| DB-013 | 8 active production tables lack Drizzle schema definitions | MEDIUM | OPEN — schema session |
+| DB-007 | espn_match_id column drift (17 refs in schema.ts, drizzle-kit generate proposes adding columns) | MEDIUM | OPEN — schema session |
+| DB-008 | wc2026MatchOdds dual-definition (schema.ts + wc2026.schema.ts) | LOW | OPEN — resolve in schema session |
 | DB-009 | wc2026MatchOdds 72% NULL rate on odds columns (59/82 skeleton) | HIGH | OPEN — population decision |
 | DB-010 | Model projections missing model_spread for 24.5% of rows | MEDIUM | OPEN — owner decision |
 | DB-011 | BetExplorer scraper stopped at R32 (18 matches unscraped) | HIGH | OPEN — re-run needed |
 | DB-012 | ESPN ingester gap: 27-30 matches missing stats/events/lineups | HIGH | OPEN — re-run needed |
+| SCRIPT-004 | wc2026_playwright_scraper.py header advertises frozen_book_odds DB upsert but code only writes JSON (json.dump) — silent no-op for anyone expecting DB population; partly explains frozen_book_odds at 37/90 | P3 | OPEN — fix script or update header |
 
 ---
 
@@ -253,7 +255,7 @@ This report is **READ-ONLY ANALYSIS**. No data has been modified. Population wor
 
 1. Owner acceptance of this reconciliation report
 2. Owner decisions on Priority 3 items (backfill historical model projections? freeze historical odds?)
-3. DB-007 schema alignment session (adds Drizzle definitions for orphan tables)
+3. Schema alignment session resolves DB-007 (column drift) AND DB-013 (orphan tables) with zero-drift proof
 4. Then: Priority 1 → Priority 2 → Priority 3 execution in that order
 
 **HOLD for owner go-ahead.**

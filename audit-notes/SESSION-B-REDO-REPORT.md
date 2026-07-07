@@ -266,7 +266,7 @@ All 9 Stripe integration checklist items verified PASS in prior Session B work:
 
 | Blocker | Blocks | Resolution |
 |---------|--------|-----------|
-| drizzle-kit hangs | DB-007 zero-drift proof, DB-002 closure | Manual SHOW CREATE TABLE comparison |
+| drizzle-kit hangs | DB-007 (column drift) + DB-013 (orphan tables) zero-drift proof, DB-002 closure | Manual SHOW CREATE TABLE comparison |
 | Owner decisions (4) | PROD-002, SEC-003, PROD-003, PROD-004 | Awaiting owner verdict |
 | INC-007 (sandbox landmine) | Clean git history | Platform ticket or accept risk |
 | INC-002 (PAT rotation) | SEC-006 closure | User-owned, never request token |
