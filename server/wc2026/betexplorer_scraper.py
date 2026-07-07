@@ -165,6 +165,13 @@ MATCHES = [
     {"id": "wc26-r16-094", "event_id": "PLACEHOLDER", "espn_match_id": "760507",
      "be_name": "USA - Belgium",                  "slug": "usa-belgium",
      "espn_slug": "bel-usa",   "espn_away_team_id": 459,   "espn_home_team_id": 660},
+    # R16 — Scheduled (Jul 7)
+    {"id": "wc26-r16-095", "event_id": "bodsDyte", "espn_match_id": "760509",
+     "be_name": "Argentina - Egypt",              "slug": "argentina-egypt",
+     "espn_slug": "egy-arg",   "espn_away_team_id": 2620,  "espn_home_team_id": 202},
+    {"id": "wc26-r16-096", "event_id": "EmgOlMbT", "espn_match_id": "760508",
+     "be_name": "Switzerland - Colombia",         "slug": "switzerland-colombia",
+     "espn_slug": "col-sui",   "espn_away_team_id": 208,   "espn_home_team_id": 475},
 ]
 
 BASE_URL = "https://www.betexplorer.com"
