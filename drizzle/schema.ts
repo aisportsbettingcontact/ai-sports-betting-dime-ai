@@ -2987,60 +2987,10 @@ export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInse
 
 
 // ─── wc2026MatchOdds ─────────────────────────────────────────────────────────
-// Primary odds table for WC2026 knockout stage matches.
-// book_* = BetExplorer/bet365 market odds (American format, integers).
-// model_* = owner-entered model projections (editable via Publish Projections).
-export const wc2026MatchOdds = mysqlTable("wc2026MatchOdds", {
-  id:                         bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
-  matchId:                  varchar("match_id", { length: 16 }).notNull().unique(),
-  espnMatchId:                varchar("espn_match_id", { length: 64 }),
-  espnSlug:                   varchar("espn_slug", { length: 64 }),
-  betExplorerMatchId:         varchar("bet_explorer_match_id", { length: 16 }),
-  betExplorerSlug:            varchar("bet_explorer_slug", { length: 128 }),
-  worldCupStage:              mysqlEnum("world_cup_stage", ["group", "knockout"]),
-  worldCupRound:              mysqlEnum("world_cup_round", ["group", "r32", "quarterfinals", "semifinals", "third_place", "finals"]),
-  insertedAt:                 timestamp("inserted_at").defaultNow(),
-  insertMethod:               varchar("insert_method", { length: 255 }),
-  lastInsertedAt:             timestamp("last_inserted_at"),
-  lastInsertMethod:           varchar("last_insert_method", { length: 255 }),
-  awayTeam:                   int("away_team"),
-  homeTeam:                   int("home_team"),
-  bookAwayToAdvance:          smallint("book_away_to_advance"),
-  modelAwayToAdvance:         smallint("model_away_to_advance"),
-  bookHomeToAdvance:          smallint("book_home_to_advance"),
-  modelHomeToAdvance:         smallint("model_home_to_advance"),
-  bookAwayMl:                 smallint("book_away_ml"),
-  modelAwayMl:                smallint("model_away_ml"),
-  bookAwayWd:                 smallint("book_away_wd"),
-  modelAwayWd:                smallint("model_away_wd"),
-  bookDraw:                   smallint("book_draw"),
-  modelDraw:                  smallint("model_draw"),
-  bookNoDraw:                 smallint("book_no_draw"),
-  modelNoDraw:                smallint("model_no_draw"),
-  bookHomeMl:                 smallint("book_home_ml"),
-  modelHomeMl:                smallint("model_home_ml"),
-  bookHomeWd:                 smallint("book_home_wd"),
-  modelHomeWd:                smallint("model_home_wd"),
-  bookPrimarySpread:          double("book_primary_spread"),
-  modelPrimarySpread:         double("model_primary_spread"),
-  bookAwayPrimarySpreadOdds:  smallint("book_away_primary_spread_odds"),
-  modelAwayPrimarySpreadOdds: smallint("model_away_primary_spread_odds"),
-  bookHomePrimarySpreadOdds:  smallint("book_home_primary_spread_odds"),
-  modelHomePrimarySpreadOdds: smallint("model_home_primary_spread_odds"),
-  bookTotal:                  double("book_total"),
-  modelTotal:                 double("model_total"),
-  bookOverOdds:               smallint("book_over_odds"),
-  modelOverOdds:              smallint("model_over_odds"),
-  bookUnderOdds:              smallint("book_under_odds"),
-  modelUnderOdds:             smallint("model_under_odds"),
-  bookBttsYes:                smallint("book_btts_yes"),
-  modelBttsYes:               smallint("model_btts_yes"),
-  bookBttsNo:                 smallint("book_btts_no"),
-  modelBttsNo:                smallint("model_btts_no"),
-}, (t) => ({
-  idxMatchId: uniqueIndex("idx_wc2026MatchOdds_matchId").on(t.matchId),
-  idxRound:     index("idx_wc2026MatchOdds_round").on(t.worldCupRound),
-  idxStage:     index("idx_wc2026MatchOdds_stage").on(t.worldCupStage),
-}));
-export type Wc2026MatchOddsRow    = typeof wc2026MatchOdds.$inferSelect;
-export type InsertWc2026MatchOdds = typeof wc2026MatchOdds.$inferInsert;
+// MOVED to drizzle/wc2026.schema.ts (canonical definition).
+// DB-008 fix: removed duplicate to unblock drizzle-kit generate.
+// Re-export TYPES ONLY (table export removed — drizzle-kit treats re-exported
+// tables from files already in its schema array as duplicates).
+// Importers of the TABLE must use: import { wc2026MatchOdds } from "../../drizzle/wc2026.schema";
+export type { SelectWc2026MatchOdds as Wc2026MatchOddsRow, InsertWc2026MatchOdds } from "./wc2026.schema";
+// END wc2026MatchOdds re-export
