@@ -536,3 +536,43 @@ tsc: Found 0 errors. Watching for file changes.
 **Label:** VERIFIED (tsc watch output after dime-wc2026.route.ts tx type fix)
 
 ---
+
+## Entry 17 — Phase 4 Corrections (Session 2, 2026-07-07T06:02Z)
+
+**Timestamp:** 2026-07-07 ~06:02–06:08 UTC
+
+### Correction 1: FINAL-REPORT.md — PRIVATE → PUBLIC
+**Action:** Edited `audit-notes/FINAL-REPORT.md` and `audit-notes/SEC-006-filing.md` to correct the claim that `ai-sports-betting-models` is PRIVATE.
+**Evidence:** `gh api repos/aisportsbettingcontact/ai-sports-betting-models --jq '.private, .visibility'` returned `false` and `public`. VERIFIED.
+**Note:** Secret scanning alerts cannot be verified from sandbox (403). Owner must check https://github.com/aisportsbettingcontact/ai-sports-betting-models/security/secret-scanning.
+**Label:** VERIFIED (gh api output)
+
+### Correction 2: INC-006 — Updated to RESOLVED
+**Action:** Rewrote INC-006 in `INCIDENTS.md` with corrected closure: SEC-004 EXONERATED (VERIFIED via 162 runs, zero 401/403 post-deploy). String origin changed from UNKNOWN to INFERRED (platform notification label). Core question answered: SEC-004 is NOT breaking heartbeats.
+**Label:** VERIFIED (run history evidence from Entry 15)
+
+### Correction 3: INC-004 → RESOLVED, INC-005 → stays OPEN
+**Action:** Updated INC-004 to RESOLVED with VERIFIED evidence (file restored at f6d06050, present in user_github/main at 38b4e02c, blob 6af2231b confirmed). Updated INC-005 with explicit confirming step (owner checks deployment logs for restart at 04:10–04:25 UTC).
+**INC-004 Label:** VERIFIED (git ls-tree output)
+**INC-005 Label:** INFERRED (stays OPEN per Rule 2)
+
+### Correction 4: DB-007 filed
+**Action:** Filed DB-007 in `INCIDENTS.md` — wc2026 Drizzle schema drift (espn_match_id columns). Production has espn_match_id in 11 tables; schema defines it across schema.ts and wc2026.schema.ts but with potential type/length mismatches. Running `pnpm db:push` would ALTER production tables.
+**Evidence:** `information_schema.COLUMNS` query returned 11 rows for espn_match_id in wc2026 tables. VERIFIED.
+**Label:** VERIFIED (SQL query + grep)
+
+### INC-007 filed
+**Action:** Filed INC-007 in `INCIDENTS.md` — sandbox resets restore dirty git history from S3 origin. The .project-config.json landmine re-arms every reset.
+**Evidence:** `git log --all -- .project-config.json` returns 77+ commits on fresh sandbox. VERIFIED.
+**Mitigation:** Pre-commit hook + Push Protection + clean-push branch approach.
+**Label:** VERIFIED (git log output)
+
+### ROTATION-CHECKLIST.md created
+**Action:** Created `audit-notes/ROTATION-CHECKLIST.md` with checkboxes for all 23 credentials from SEC-006-filing.md. Grouped by priority (MUST ROTATE: 6, SHOULD ROTATE: 9, LOW: 5, NO ACTION: 2). Completion of MUST + SHOULD items closes SEC-006.
+**Label:** N/A (new document, no verification needed)
+
+### 9-finding-status-table.md updated
+**Action:** Rewrote with corrected statuses. SEC-002 now DONE. SEC-004 no longer blocked by INC-006 (resolved). All others remain IN PROGRESS with specific closure criteria documented.
+**Label:** N/A (register update)
+
+---

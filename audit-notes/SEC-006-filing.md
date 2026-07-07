@@ -48,7 +48,7 @@ The file `.project-config.json` containing 23 credentials (API keys, database UR
 | Remote | URL | Push Succeeded? | Contains .project-config.json? | Public? | Evidence |
 |--------|-----|-----------------|-------------------------------|---------|----------|
 | origin (S3) | s3://vida-prod-gitrepo/webdev-git/310519663397752079/MW3FicTy7ae3qrm8dx8Lua | YES (every checkpoint) | YES — commit 9a8a8420 tree contains blob 3e8c3eb1 | No (Manus platform internal) | VERIFIED: `git ls-tree 9a8a8420 -- .project-config.json` returns blob |
-| ai-sports-betting-models | github.com/aisportsbettingcontact/ai-sports-betting-models | YES (force-push after filter-branch) | NO — file removed from all commits before push | YES (public=false returned false, repo IS PUBLIC) | VERIFIED: `gh api commits?path=.project-config.json` returns 0 |
+| ai-sports-betting-models | github.com/aisportsbettingcontact/ai-sports-betting-models | YES (force-push after filter-branch) | NO — file removed from all commits before push | **PUBLIC** (`private: false, visibility: "public"`) | VERIFIED: `gh api repos/...` returns public; `gh api commits?path=.project-config.json` returns 0 results; Push Protection passed (38b4e02c) |
 | ai-sports-betting-manus | github.com/aisportsbettingcontact/ai-sports-betting-manus | NO (workflows permission rejected) | N/A — ref update never accepted | N/A | VERIFIED: push error in shell output |
 | ai-sports-betting-dime | github.com/aisportsbettingcontact/ai-sports-betting-dime | NO (repo not found) | N/A — repo doesn't exist | N/A | VERIFIED: push error in shell output |
 
