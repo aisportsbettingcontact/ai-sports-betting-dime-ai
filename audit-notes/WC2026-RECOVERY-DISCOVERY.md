@@ -76,7 +76,8 @@
 | g-001 to g-072 | 72 | OWNER DECISION | Could derive from odds_snapshots closing values. New data product, not recovery. |
 | r32-086, 087, 088 | 3 | RECOVERABLE | wc2026MatchOdds has book columns for these. |
 | r16-089, r16-090 | 2 | ALREADY PRESENT (SWAPPED) | DATA-001 bug. Fix script exists. |
-| r16-091, r16-092 | 2 | ALREADY PRESENT | Correctly populated. |
+| r16-091 | 1 | ALREADY PRESENT | Correctly populated. |
+| r16-092 | 1 | NOT PRESENT | **CORRECTION (2026-07-07):** r16-092 does NOT exist in frozen_book_odds. Only r16-089/090/091 are present. Previous claim was erroneous — confused with wc2026MatchOdds presence. |
 | r16-093 to r16-096 | 4 | NOT YET PLAYED | Scheduled matches. |
 
 ### Gap 4: ESPN stats (2-3 missing per table)

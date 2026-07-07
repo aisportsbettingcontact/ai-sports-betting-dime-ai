@@ -150,3 +150,94 @@
 
 ---
 
+
+---
+
+## TEST-001: ESPN test harness references non-existent wc2026_espn_match_odds table
+
+**What:** `wc2026ESPNScraper.mjs` (test harness) queries `wc2026_espn_match_odds` at lines 170 and 230, but this table was deprecated and dropped on 2026-07-03. The table exists in neither the Drizzle schema (`drizzle/schema.ts:2564` — explicit REMOVED comment) nor the live database (`SHOW TABLES LIKE 'wc2026_espn_match_odds'` → 0 rows). The ingester (`espnDbIngester.ts`) correctly does NOT write to this table (it imports only the 8 active tables). However, the harness's post-ingest verification step crashes with `ER_NO_SUCH_TABLE`, producing exit code 1 on every successful ingest.
+
+**When:** Discovered 2026-07-07T18:20Z during r16-095 ESPN scrape.
+
+**Evidence:**
+- Harness file: `server/wc2026/wc2026ESPNScraper.mjs` lines 52, 170, 230, 603
+- Schema removal: `drizzle/schema.ts:2564` — `// ─── 2. wc2026_espn_match_odds ── REMOVED (table deprecated & dropped 2026-07-03) ──`
+- Live DB: `SHOW TABLES LIKE 'wc2026_espn_match_odds'` → 0 rows
+- Migration history: `drizzle/0107_majestic_kinsey_walden.sql` created it; subsequent drop removed it from live DB
+
+**Impact:** Every ESPN ingest run produces a false-negative exit code (exit 1) even when all 8 real data tables are written successfully. This masks real failures — a harness that cries wolf will hide a true FAIL later. The actual ingest reports `8/9 phases PASS` (the missing "phase 2" is the deprecated odds table, which the ingester itself already removed from its phase list).
+
+**Root cause:** Harness was not updated when `wc2026_espn_match_odds` was deprecated and dropped. The harness still lists 9 tables in its verification loop (line 170) and queries the non-existent table (line 230).
+
+**Fix (not applied now):**
+1. Remove `"wc2026_espn_match_odds"` from the `tables` array at line 170
+2. Remove the spot-check query at lines 227-231
+3. Remove the odds validation section at lines 602-611
+4. Update `check("result.phases.length", ingestResult.phases.length, 9)` at line 400 to expect 8
+5. Update `check("phases all pass (9/9)", phasesPassed, 9)` at line 402 to expect 8
+
+**Status:** OPEN — fix scope documented, not applied. Pre-cleared for r16-096 (same false-negative expected and acceptable given this filing).
+
+---
+
+---
+
+## DATA-002: wc2026MatchOdds spread inversion — 3 matches in live table (P1)
+**What:** `book_primary_spread` and `book_home/away_primary_spread_odds` are inverted (favorite convention stored in home-perspective column) for 3 matches in the live `wc2026MatchOdds` table. The spread line is stored as if from the FAVORITE's perspective, but the schema convention is HOME team's handicap.
+**Affected matches:**
+- `wc26-r16-089` (PAR home vs FRA away): spread=-1.5 → should be +1.5, H_odds=+120/A_odds=-154 → should be H=-154/A=+120
+- `wc26-r16-090` (CAN home vs MAR away): spread=-0.5 → should be +0.5, H_odds=+103/A_odds=-120 → should be H=-120/A=+103
+- `wc26-r16-092` (MEX home vs ENG away): spread=-0.5 → should be +0.5, H_odds=+108/A_odds=-137 → should be H=-137/A=+108
+**When:** Discovered 2026-07-07 during DATA-001 live-table verification (follow-up 1). Present since v19 engine write (~2026-07-04).
+**Duration of incorrect state:** ~3 days (since v19 engine run).
+**Evidence:**
+- ML orientation is CORRECT for all 3 (home is underdog with positive ML, away is favorite with negative ML)
+- Spread CONTRADICTS ML: home underdog has negative spread (gives goals) instead of positive (gets goals)
+- Reference matches (r16-095/096 written by v22) are CORRECT: home favorite has negative spread, home underdog has positive spread
+- Spread odds confirm inversion: home underdog at + odds on spread (longshot to cover) while supposedly giving goals
+- v19 engine source (`v19_jul4_engine.mjs` line 262-263) shows hardcoded values with this convention
+- R32 matches written by same v19 engine are mostly correct (only r32-085 flagged as false positive — SUI is actually favorite in 3-way)
+**Root cause:** v19 engine hardcoded BetExplorer spread values in FAVORITE convention without converting to HOME convention for matches where home team is the underdog. The v22 engine fixed this for newer matches (r16-095/096).
+**Impact (all 3 matches are PLAYED — no live pre-match wagering exposure):**
+- DIME reads `book_primary_spread` from `wc2026MatchOdds` assuming home-perspective convention
+- Spread edge calculations for r16-089, r16-090, r16-092 are inverted
+- ML edges are UNAFFECTED (ML columns are correct)
+- Feed displays incorrect spread for these 3 matches (historical display only)
+- Future grading of spread outcomes against these lines would produce inverted results
+- Exposure is historical display, DIME queries, and future grading — NOT live pre-match wagering
+**Relationship to INC-009 (DATA-001):** INC-009 fixed the ML swap in `frozen_book_odds` (archive table). This is a DIFFERENT bug in the LIVE table affecting spread columns only. INC-009 remains RESOLVED for its original scope (ML swap in frozen table). DATA-002 is a new finding.
+**Fix (APPLIED 2026-07-07T19:27:09Z):**
+- r16-089: Negated book+model spread, swapped both H/A odds (6 columns)
+- r16-090: Negated book spread, swapped book H/A odds ONLY (3 columns; model was already correct)
+- r16-092: Negated book+model spread, swapped both H/A odds (6 columns)
+- Atomic transaction (BEGIN → 3 UPDATEs → COMMIT)
+**Verification (PASS):** All 3 rows now show positive book_primary_spread for home underdog. ML direction matches spread direction.
+**Run-log:** `audit-notes/run-logs/data002_spread_fix_2026-07-07T192709Z.log`
+**Status:** RESOLVED — fix applied 2026-07-07T19:27:09Z.
+
+---
+
+## DB-014: wc2026MatchOdds odds_source column is stale/mislabeled on 80/84 rows (P2)
+**What:** 80 of 84 rows in `wc2026MatchOdds` carry `odds_source='ESPN_INGEST'` — a label set during initial row creation by the now-deleted `gs_metadata_backfill_v1` script. ESPN is a stats source, not an odds book. The column was never updated by subsequent engine runs (v19, v20, v21) because their UPDATE statements do not include `odds_source`.
+**When:** Discovered 2026-07-07 during M3 analysis (ESPN_INGEST anomaly trace).
+**Evidence:**
+- `SELECT odds_source, COUNT(*) FROM wc2026MatchOdds GROUP BY odds_source`:
+  - 'ESPN_INGEST': 80 rows (stale label from gs_metadata_backfill_v1)
+  - 'betexplorer+draftkings_manual_advance': 2 rows (r16-095/096, set by v22 engine INSERT)
+  - NULL: 2 rows
+- Engine UPDATE statements (v19 line ~660, v20, v21) do NOT include `odds_source` in SET clause
+- Only v22 engine's INSERT sets a meaningful value
+- The gs_metadata_backfill_v1 script is deleted — cannot inspect its logic, but the label 'ESPN_INGEST' refers to the row creation method (ESPN metadata = team IDs, stage, round), NOT the book odds source
+**Impact:**
+- Live odds table's provenance is unreliable — cannot determine actual book source from the table itself
+- Same blindness that allowed DATA-001 swap to hide: if you can't trace where odds came from, you can't verify them
+- Downstream consumers (DIME, feed) cannot filter or weight by book source
+**Root cause:** Engine UPDATE statements were written to update odds values but not metadata. The initial backfill set a misleading label that was never corrected.
+**Remediation (proposed, not executed — folds into schema-alignment session):**
+1. Engines must write `odds_source` on every UPDATE (code fix)
+2. Backfill existing 80 rows from `insert_method`/`last_insert_method` mapping:
+   - Rows with `insert_method` containing 'v19' or 'v20': set `odds_source='betexplorer_bet365'`
+   - Rows with `insert_method` containing 'v21': set `odds_source='betexplorer_bet365'`
+   - Rows with only gs_metadata_backfill (no engine update): set `odds_source='unknown_initial_seed'`
+3. Add NOT NULL constraint after backfill to prevent future stale values
+**Status:** OPEN — P2 priority, folds into schema-alignment session.
