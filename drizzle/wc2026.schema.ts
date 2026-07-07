@@ -314,6 +314,35 @@ export const wc2026ModelProjections = mysqlTable(
     frozenAt: timestamp("frozen_at"),
     modeledAt: timestamp("modeled_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     createdAt: timestamp("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+
+    // ── DB-007: 27 columns added for schema alignment with live DB ──────────
+    over45: double("over_4_5"),
+    homeCleanSheet: double("home_clean_sheet"),
+    awayCleanSheet: double("away_clean_sheet"),
+    htOver05: double("ht_over_0_5"),
+    htOver15: double("ht_over_1_5"),
+    htHomeWin: double("ht_home_win"),
+    htDraw: double("ht_draw"),
+    htAwayWin: double("ht_away_win"),
+    favFragilityScore: double("fav_fragility_score"),
+    drawQualityScore: double("draw_quality_score"),
+    underdogViability: double("underdog_viability"),
+    xgBalanceRatio: double("xg_balance_ratio"),
+    bookOdds: text("book_odds"),  // JSON stored as text
+    homeGoalDist: text("home_goal_dist"),  // JSON stored as text
+    awayGoalDist: text("away_goal_dist"),  // JSON stored as text
+    homeWinBy1: double("home_win_by_1"),
+    homeWinBy2: double("home_win_by_2"),
+    homeWinBy3plus: double("home_win_by_3plus"),
+    awayWinBy1: double("away_win_by_1"),
+    awayWinBy2: double("away_win_by_2"),
+    awayWinBy3plus: double("away_win_by_3plus"),
+    fullOutput: text("full_output"),  // JSON stored as text
+    calculationMethod: varchar("calculation_method", { length: 64 }).notNull().default("ANALYTICAL_DIXON_COLES"),
+    actualSimulations: int("actual_simulations").notNull().default(0),
+    xgSource: varchar("xg_source", { length: 64 }),
+    holdoutValidated: tinyint("holdout_validated").notNull().default(0),
+    integrityFlags: text("integrity_flags"),  // JSON stored as text
   },
   (t) => [
     uniqueIndex("uq_match_version").on(t.matchId, t.modelVersion),
@@ -624,3 +653,187 @@ export const wc2026MatchOdds = mysqlTable(
 
 export type InsertWc2026MatchOdds = typeof wc2026MatchOdds.$inferInsert;
 export type SelectWc2026MatchOdds = typeof wc2026MatchOdds.$inferSelect;
+
+// ─── DB-013: Adopted Orphan Tables ──────────────────────────────────────────
+// These tables exist in the live DB and are used by engine scripts.
+// Adopted into Drizzle schema for drift tracking and type safety.
+
+// ─── Data Lineage ───────────────────────────────────────────────────────────
+export const wc2026DataLineage = mysqlTable(
+  "wc2026_data_lineage",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    derivedTable: varchar("derived_table", { length: 128 }).notNull(),
+    sourceTable: varchar("source_table", { length: 128 }).notNull(),
+    derivationMethod: varchar("derivation_method", { length: 128 }).notNull(),
+    derivationSql: text("derivation_sql"),
+    rowCountAtCreation: int("row_count_at_creation").notNull().default(0),
+    createdBy: varchar("created_by", { length: 128 }).notNull().default("SYSTEM"),
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+    lastVerifiedAt: datetime("last_verified_at"),
+    verificationStatus: varchar("verification_status", { length: 32 }).notNull().default("UNVERIFIED"),
+    notes: text("notes"),
+  },
+  (t) => [
+    uniqueIndex("uq_lineage_derived_source").on(t.derivedTable, t.sourceTable),
+  ],
+);
+
+// ─── Holdout Validation ─────────────────────────────────────────────────────
+export const wc2026HoldoutValidation = mysqlTable(
+  "wc2026_holdout_validation",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    matchId: varchar("match_id", { length: 30 }).notNull(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
+    selection: varchar("selection", { length: 10 }).notNull(),
+    predictedProb: double("predicted_prob").notNull(),
+    actualOutcome: tinyint("actual_outcome").notNull(),
+    homeScore: int("home_score"),
+    awayScore: int("away_score"),
+    actualResult: varchar("actual_result", { length: 10 }),
+    calibrationBucket: varchar("calibration_bucket", { length: 20 }),
+    validatedAt: timestamp("validated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    uniqueIndex("uq_holdout").on(t.matchId, t.modelVersion, t.selection),
+  ],
+);
+
+// ─── Market Edges ───────────────────────────────────────────────────────────
+export const wc2026MarketEdges = mysqlTable(
+  "wc2026_market_edges",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    matchId: varchar("match_id", { length: 64 }).notNull(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
+    market: varchar("market", { length: 32 }).notNull(),
+    selection: varchar("selection", { length: 32 }).notNull(),
+    modelProb: double("model_prob").notNull(),
+    noVigProb: double("no_vig_prob").notNull(),
+    edge: double("edge").notNull(),
+    edgePct: double("edge_pct").notNull(),
+    fairOdds: int("fair_odds").notNull(),
+    edgeStatus: mysqlEnum("edge_status", ["POSITIVE", "NEGATIVE", "NEUTRAL"]).notNull(),
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+    edgeReadinessStatus: varchar("edge_readiness_status", { length: 32 }).notNull().default("UNKNOWN"),
+  },
+  (t) => [
+    uniqueIndex("uq_match_version_market_sel").on(t.matchId, t.modelVersion, t.market, t.selection),
+    index("idx_match_id").on(t.matchId),
+    index("idx_edge_status").on(t.edgeStatus),
+  ],
+);
+
+// ─── Market No-Vig ──────────────────────────────────────────────────────────
+export const wc2026MarketNoVig = mysqlTable(
+  "wc2026_market_no_vig",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    matchId: varchar("match_id", { length: 64 }).notNull(),
+    market: varchar("market", { length: 32 }).notNull(),
+    selection: varchar("selection", { length: 32 }).notNull(),
+    bookOdds: int("book_odds").notNull(),
+    rawImpliedProb: double("raw_implied_prob").notNull(),
+    noVigProb: double("no_vig_prob").notNull(),
+    marketHold: double("market_hold").notNull(),
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    uniqueIndex("uq_match_market_selection").on(t.matchId, t.market, t.selection),
+    index("idx_match_id").on(t.matchId),
+  ],
+);
+
+// ─── Model Grades ───────────────────────────────────────────────────────────
+export const wc2026ModelGrades = mysqlTable(
+  "wc2026_model_grades",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    runId: varchar("run_id", { length: 128 }).notNull(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
+    gradeType: varchar("grade_type", { length: 64 }).notNull(),
+    metricName: varchar("metric_name", { length: 128 }).notNull(),
+    metricValue: double("metric_value"),
+    passThreshold: double("pass_threshold"),
+    gradeStatus: varchar("grade_status", { length: 32 }).notNull().default("PENDING"),
+    notes: text("notes"),
+    gradedAt: datetime("graded_at"),
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    uniqueIndex("uq_grade_run_metric").on(t.runId, t.gradeType, t.metricName),
+  ],
+);
+
+// ─── Model Runs ─────────────────────────────────────────────────────────────
+export const wc2026ModelRuns = mysqlTable(
+  "wc2026_model_runs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    runId: varchar("run_id", { length: 128 }).notNull().unique(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
+    engineFile: varchar("engine_file", { length: 256 }).notNull(),
+    startedAt: datetime("started_at").notNull(),
+    completedAt: datetime("completed_at"),
+    matchesProcessed: int("matches_processed").notNull().default(0),
+    matchesSucceeded: int("matches_succeeded").notNull().default(0),
+    matchesFailed: int("matches_failed").notNull().default(0),
+    runStatus: varchar("run_status", { length: 32 }).notNull().default("RUNNING"),
+    errorLog: text("error_log"),  // JSON
+    configSnapshot: text("config_snapshot"),  // JSON
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+);
+
+// ─── Provider Match Map ─────────────────────────────────────────────────────
+export const wc2026ProviderMatchMap = mysqlTable(
+  "wc2026_provider_match_map",
+  {
+    id: bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey(),
+    canonicalMatchId: varchar("canonical_match_id", { length: 16 }).notNull(),
+    provider: varchar("provider", { length: 32 }).notNull(),
+    providerMatchId: varchar("provider_match_id", { length: 64 }).notNull(),
+    mappingMethod: varchar("mapping_method", { length: 64 }).notNull(),
+    mappingConfidence: double("mapping_confidence").notNull().default(0),
+    mappingStatus: varchar("mapping_status", { length: 32 }).notNull().default("PENDING"),
+    mappedAt: datetime("mapped_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (t) => [
+    uniqueIndex("uq_provider_id").on(t.provider, t.providerMatchId),
+    index("idx_canonical").on(t.canonicalMatchId),
+  ],
+);
+
+// ─── Recommendations ────────────────────────────────────────────────────────
+export const wc2026Recommendations = mysqlTable(
+  "wc2026_recommendations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    matchId: varchar("match_id", { length: 64 }).notNull(),
+    modelVersion: varchar("model_version", { length: 128 }).notNull(),
+    market: varchar("market", { length: 32 }).notNull(),
+    selection: varchar("selection", { length: 32 }).notNull(),
+    status: mysqlEnum("status", ["BET", "LEAN", "PASS", "NO_MARKET", "STALE", "INSUFFICIENT_DATA", "MARKET_CLOSED"]).notNull(),
+    reason: varchar("reason", { length: 255 }),
+    modelProb: double("model_prob"),
+    noVigProb: double("no_vig_prob"),
+    edge: double("edge"),
+    edgePct: double("edge_pct"),
+    fairOdds: int("fair_odds"),
+    bookOdds: int("book_odds"),
+    createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
+    reasonCodes: text("reason_codes"),  // JSON
+    freshnessStatus: varchar("freshness_status", { length: 32 }).notNull().default("UNKNOWN"),
+    marketStatus: varchar("market_status", { length: 32 }).notNull().default("UNKNOWN"),
+    riskFlags: text("risk_flags"),  // JSON
+    sourceEdgeId: bigint("source_edge_id", { mode: "number" }),
+    expiresAt: datetime("expires_at"),
+    updatedAt: datetime("updated_at"),
+  },
+  (t) => [
+    uniqueIndex("uq_rec_match_ver_mkt_sel").on(t.matchId, t.modelVersion, t.market, t.selection),
+    index("idx_status").on(t.status),
+    index("idx_match_id").on(t.matchId),
+  ],
+);

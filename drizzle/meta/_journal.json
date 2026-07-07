@@ -757,6 +757,13 @@
       "when": 1782904315207,
       "tag": "0107_majestic_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "5",
+      "when": 1783457970317,
+      "tag": "0108_adopt_8_orphan_tables",
+      "breakpoints": true
     }
   ]
 }

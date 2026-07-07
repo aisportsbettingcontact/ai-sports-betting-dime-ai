@@ -1,0 +1,20 @@
+-- Custom migration: Adopt 8 orphan tables into Drizzle schema management.
+-- These tables already exist in the live DB (created by engine scripts).
+-- This migration is intentionally a no-op — it registers the tables in the
+-- journal so drizzle-kit no longer prompts about them.
+--
+-- Tables adopted:
+--   wc2026_data_lineage
+--   wc2026_holdout_validation
+--   wc2026_market_edges
+--   wc2026_market_no_vig
+--   wc2026_model_grades
+--   wc2026_model_runs
+--   wc2026_provider_match_map
+--   wc2026_recommendations
+--
+-- Also resolves: wc2026_espn_match_odds (dropped table still in journal)
+-- is no longer referenced in schema, so drizzle-kit won't ask about renames.
+--
+-- Authorization A, Slice 3A (DB-013). 2026-07-07.
+SELECT 1;
