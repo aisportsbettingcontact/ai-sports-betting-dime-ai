@@ -710,3 +710,19 @@ tsc: Found 0 errors. Watching for file changes.
 5. **New Finding Filed:** DATA-001 (P1) — frozen_book_odds r16-089/r16-090 match_id swap. Both fix scripts exist but neither was applied. Impact: DIME edge calculations for these 2 matches are wrong.
 
 **Status:** COMPLETE — STOP gate unchanged. No writes until schema alignment (DB-007 + DB-013) + owner go. DATA-001 fix is schema-independent and can be authorized separately.
+
+## Entry 23 — Jul 7 Live Match Run: Logging Standard + Provenance Fix
+
+**Date:** 2026-07-07
+**Scope:** Retroactive run-log generation for today's Phase 1 (book odds) and Phase 2 (model) writes; provenance column fix.
+
+**Run-log files created (RECONSTRUCTED per LOGGING STANDARD §retroactive):**
+- `audit-notes/run-logs/betexplorer_scrape_wc26-r16-095_2026-07-07T164500Z.log`
+- `audit-notes/run-logs/betexplorer_scrape_wc26-r16-096_2026-07-07T164500Z.log`
+- `audit-notes/run-logs/v22_jul7_engine_wc26-r16-095_wc26-r16-096_2026-07-07T171500Z.log`
+
+**Provenance fix:**
+- wc26-r16-095 and wc26-r16-096 in wc2026MatchOdds: odds_source='betexplorer+draftkings_manual_advance', odds_updated_at='2026-07-07 16:45:00'
+
+**DATA-001 status:** STOPPED at Step B (ground-truth divergence). fix_seeded_odds_v2 targets (DraftKings-sourced) differ from jul4_fresh_scrape.json artifact (BetExplorer-sourced) by 5-200 pts on ML columns. Direction confirmed correct (swap is real). Awaiting owner verdict on which source values to use.
+
