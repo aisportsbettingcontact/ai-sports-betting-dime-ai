@@ -5,7 +5,7 @@
  *
  * Procedures:
  *   publicProcedure:
- *     waitlist.submit         — public form submission (rate-limited by IP at router level)
+ *     waitlist.submit         — public form submission (5 req/15min/IP via dedicated limiter in index.ts)
  *
  *   ownerProcedure:
  *     waitlist.list           — paginated list with filters

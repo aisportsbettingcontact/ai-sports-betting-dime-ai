@@ -56,7 +56,7 @@ function fireRateLimitEvent(
   ip: string,
   path: string,
   method: string,
-  limitType: "global" | "auth" | "trpc_auth" | "stripe_checkout",
+  limitType: "global" | "auth" | "trpc_auth" | "stripe_checkout" | "waitlist_submit",
   ua: string | null,
 ) {
   const now = Date.now();
@@ -368,6 +368,29 @@ async function startServer() {
   });
   // Apply to both direct and batch tRPC calls
   app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
+
+  // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
+  // Public form endpoint — 5 submissions per 15 minutes per IP.
+  // Prevents automated spam/enumeration on the waitlist join endpoint.
+  const waitlistSubmitLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { error: "Too many waitlist submissions. Please wait 15 minutes before trying again." },
+    keyGenerator: (req) => {
+      return `waitlist:${ipKeyGenerator(req.ip ?? "")}`;
+    },
+    handler: (req, res, _next, options) => {
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+      console.warn(`[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
+      res.status(options.statusCode).json(options.message);
+    },
+  });
+  app.use("/api/trpc/waitlist.submit", waitlistSubmitLimiter);
 
   // ─── Request timeout middleware ───────────────────────────────────────────
   // Kill requests that take > 25s to prevent hanging connections from exhausting
