@@ -102,7 +102,11 @@
 **Severity:** P3 (data integrity, no data loss, additive changes only)  
 **Mitigation:** Do NOT run `pnpm db:push` without first reviewing the generated migration SQL. The dime_* tables (DB-002) are clean; the drift is isolated to wc2026 tables.  
 **Resolution:** Align `drizzle/schema.ts` and `drizzle/wc2026.schema.ts` with production DDL by querying `SHOW CREATE TABLE` for all affected tables and updating the schema definitions. This is a backlog item (Rule 10: no opportunistic edits).  
-**Status:** OPEN — schema drift exists. Backlogged for dedicated schema-alignment session.
+**Status:** RESOLVED (2026-07-07T22:10Z) — Decomposed into DB-007a/b/c. See `audit-notes/DB-007_DISAMBIGUATION_REPORT.md` for full evidence.
+- DB-007a (espn_match_id on 7 ESPN tables): RESOLVED — schema and DB both have the column.
+- DB-007b (27 cols on wc2026_model_projections): RESOLVED — 86/86 match.
+- DB-007c (3 cols on wc2026MatchOdds): RESOLVED — 53/53 match (fix applied this session).
+Bare "DB-007" label RETIRED — use sub-IDs only.
 
 ---
 
@@ -240,7 +244,11 @@
    - Rows with `insert_method` containing 'v21': set `odds_source='betexplorer_bet365'`
    - Rows with only gs_metadata_backfill (no engine update): set `odds_source='unknown_initial_seed'`
 3. Add NOT NULL constraint after backfill to prevent future stale values
-**Status:** OPEN — P2 priority, folds into schema-alignment session.
+**Status:** RESOLVED (2026-07-07, Slice 4 of Auth A).
+- Backfill applied: 84/84 rows now have meaningful odds_source values.
+- Distribution: betexplorer=81, betexplorer+draftkings_manual_advance=2, betexplorer_bet365=1.
+- NULL count: 0.
+- Verified via live query 2026-07-07T22:12Z.
 
 ---
 
