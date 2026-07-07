@@ -760,3 +760,152 @@ AFTER (CORRECTED):
 **Prevention:** LOGGING + SCRAPE PRECISION STANDARD §7 (pre-flight team-name + date verification) now permanent.  
 **Status:** ✅ RESOLVED — DATA-001 CLOSED
 
+
+## Entry 25 — Phase 5 ESPN Scrape: r16-095 (ARG 3-2 EGY)
+
+**Timestamp:** 2026-07-07T18:15Z → 2026-07-07T18:21Z  
+**Finding:** WC2026 Live Match Run — Phase 5 (ESPN post-match stats)  
+**Match:** wc26-r16-095 | espn_match_id=760509 | ARG (home) 3-2 EGY (away)
+
+**Action:**
+1. Pre-flight: ESPN API summary confirmed STATUS_FULL_TIME, ARG 3-2 EGY, boxscore present
+2. Raw payload saved: `audit-notes/run-logs/raw/espn_760509_summary_20260707T181502Z.raw.json` (403KB)
+3. Scoreline gate: PASS (ARG=home=3, EGY=away=2, status=FULL_TIME)
+4. Playwright scraper executed: 3 ESPN pages loaded (player-stats, matchstats, team-stats)
+5. Ingester wrote 129 rows across 8 tables (all 8/8 data phases PASS)
+6. Post-write verification: all row counts confirmed, spot-checks passed
+
+**Per-Table Ledger:**
+
+| Table | Rows | Key Data |
+|-------|------|----------|
+| wc2026_espn_matches | 1 | ARG 3-2 EGY, Mercedes-Benz Stadium, 68239 att, Letexier |
+| wc2026_espn_team_stats | 1 | Possession 63.6/36.4, SoG 7/2, Shots 19/5 |
+| wc2026_espn_match_stats | 1 | Tackles 15/8, Passes 541/289, BigChances 5/2 |
+| wc2026_espn_expected_goals | 1 | xG 2.800/0.980, xGOT 2.690/1.290 |
+| wc2026_espn_shot_map | 24 | 5 goals (Romero, Messi, Fernández / Ibrahim, Zico) |
+| wc2026_espn_player_stats | 31 | 29 outfield + 2 GK |
+| wc2026_espn_lineups | 50 | 22 starters + 9 subs + 19 unused |
+| wc2026_espn_glossary | 20 | 20 stat abbreviation entries |
+| **TOTAL** | **129** | |
+
+**Discrepancies:**
+- DISC-001: Test harness queries non-existent `wc2026_espn_match_odds` table (DB-013 scope). No data impact.
+- DISC-002: Roster absent in ESPN summary API (expected). Lineups scraped via Playwright successfully.
+
+**Run-log:** `audit-notes/run-logs/espn_wc26-r16-095_2026-07-07T181500Z.log`  
+**Status:** VERIFIED COMPLETE ✓  
+**Feed publish:** ON HOLD (awaiting owner go)
+
+## Entry 26 — r16-095 Feed Publish (FINAL state + DISC-001 clearance)
+
+**Timestamp:** 2026-07-07T18:40Z  
+**Match:** wc26-r16-095 | ARG 3-2 EGY | FINAL
+
+### DISC-001 Clearance Evidence
+
+**(a) Harness line identification:**
+- File: `server/wc2026/wc2026ESPNScraper.mjs`
+- Lines: 52 (comment), 170 (tables array), 230 (SQL query), 603 (banner)
+- The harness queries: `SELECT COUNT(*) as cnt FROM wc2026_espn_match_odds WHERE espn_match_id = '760509'`
+
+**Schema proof:** `drizzle/schema.ts:2564` — `// ─── 2. wc2026_espn_match_odds ── REMOVED (table deprecated & dropped 2026-07-03) ──`  
+**Live DB proof:** `SHOW TABLES LIKE 'wc2026_espn_match_odds'` → 0 rows  
+**Conclusion:** The harness references a ghost table. The harness is wrong, not the data.
+
+**(b) Expected-vs-Written (8/8 complete):**
+
+| # | Schema Table (drizzle/schema.ts) | Ingester Import (espnDbIngester.ts) | Written? |
+|---|---|---|---|
+| 1 | wc2026EspnMatches (line 2492) | ✓ imported | ✓ 1 row |
+| 2 | ~~wc2026_espn_match_odds~~ | **REMOVED** (line 2564) | N/A — deprecated |
+| 3 | wc2026EspnTeamStats (line 2571) | ✓ imported | ✓ 1 row |
+| 4 | wc2026EspnMatchStats (line 2614) | ✓ imported | ✓ 1 row |
+| 5 | wc2026EspnExpectedGoals (line 2734) | ✓ imported | ✓ 1 row |
+| 6 | wc2026EspnShotMap (line 2771) | ✓ imported | ✓ 24 rows |
+| 7 | wc2026EspnPlayerStats (line 2842) | ✓ imported | ✓ 31 rows |
+| 8 | wc2026EspnLineups (line 2911) | ✓ imported | ✓ 50 rows |
+| 9 | wc2026EspnGlossary (line 2972) | ✓ imported | ✓ 20 rows |
+
+**No real target table was skipped.** The ingester writes to exactly the 8 active schema tables. The harness's 9th table is the deprecated ghost.
+
+**(c) Finding filed:** TEST-001 in `audit-notes/INCIDENTS.md` — harness/schema mismatch producing false-negative exit codes.
+
+**DISC-001 OVERRIDE VERDICT: LEGITIMATE ✓** — The test FAIL is a false negative from a stale harness referencing a dropped table. The actual ingest is 8/8 PASS with 129 verified rows.
+
+---
+
+### Feed Publish
+
+**Action:** Updated `wc2026_matches` for match_id='wc26-r16-095':
+
+```
+BEFORE: status=SCHEDULED, home_score=NULL, away_score=NULL, advancing_team_id=NULL
+AFTER:  status=FT, home_score=3, away_score=2, advancing_team_id='arg'
+```
+
+**Live API verification** (deployed at aisportsbet-mw3ficty.manus.space):
+```
+wc26-r16-095: status=FT, score=3-2, advancing=arg
+  dkOdds: home=-303, draw=375, away=1000
+  dkOdds: spread=-1.5, total=2.5
+  modelOdds: home=-129, draw=365, away=352
+  modelOdds: projHome=1.834, projAway=1.050
+  modelOdds: homeEdge=None, drawEdge=None, awayEdge=None
+```
+
+**Feed shows:** FINAL result (ARG 3-2 EGY) with post-match state ✓  
+**Feed does NOT show:** stale pre-match state ✗ (confirmed replaced)
+
+### Grading Check
+
+**Model edges for r16-095:** `homeEdge=None, drawEdge=None, awayEdge=None`  
+The `wc2026_model_projections` row has `home_edge=NULL, draw_edge=NULL, away_edge=NULL`.
+
+**Grading-on-result status:** NOT WIRED for WC2026 model edges.  
+- The `betAutoGradeScheduler.ts` handles tracked bets (user-placed) but does not reference WC2026 tables.
+- The `wc2026_model_grades` table stores model calibration metrics (Brier scores), not per-match edge resolution.
+- No automated mechanism exists to grade individual model edges (e.g., "model said ARG -129, actual result ARG won → edge HIT") against the actual result.
+
+**GRADING GAP FLAGGED:** Publishing stats only. Edge grading against actual result is not implemented. This is a known gap — the model publishes probabilities and implied odds, but there is no automated settlement/P&L system that marks individual edges as HIT/MISS based on the final scoreline.
+
+**Status:** PUBLISHED ✓ (stats + FINAL state live on feed)
+
+---
+
+## Entry 27: DATA-002 — Spread inversion fix (wc2026MatchOdds, 3 rows)
+
+**Timestamp:** 2026-07-07T19:27:09Z  
+**Finding:** DATA-002 (P1)  
+**Scope:** 3 rows in wc2026MatchOdds (r16-089, r16-090, r16-092)  
+**Protocol:** DATA-001 standard (dry-run → scope proof → atomic → before/after → provenance)
+
+**Before/After:**
+
+| Match | Column | Before | After |
+|-------|--------|--------|-------|
+| r16-089 | book_primary_spread | -1.5 | +1.5 |
+| r16-089 | book_home_primary_spread_odds | +120 | -154 |
+| r16-089 | book_away_primary_spread_odds | -154 | +120 |
+| r16-089 | model_primary_spread | -1.5 | +1.5 |
+| r16-089 | model_home_primary_spread_odds | +20509 | -20509 |
+| r16-089 | model_away_primary_spread_odds | -20509 | +20509 |
+| r16-090 | book_primary_spread | -0.5 | +0.5 |
+| r16-090 | book_home_primary_spread_odds | +103 | -120 |
+| r16-090 | book_away_primary_spread_odds | -120 | +103 |
+| r16-090 | model_* | UNCHANGED | UNCHANGED |
+| r16-092 | book_primary_spread | -0.5 | +0.5 |
+| r16-092 | book_home_primary_spread_odds | +108 | -137 |
+| r16-092 | book_away_primary_spread_odds | -137 | +108 |
+| r16-092 | model_primary_spread | -0.5 | +0.5 |
+| r16-092 | model_home_primary_spread_odds | +363 | -363 |
+| r16-092 | model_away_primary_spread_odds | -363 | +363 |
+
+**Verification:** All 3 rows now show positive book_primary_spread for home underdog. ML direction matches spread direction. PASS.
+
+**Edge impact:**
+- r16-089/092: edges remain internally consistent (both book+model flipped together)
+- r16-090: edge changes from 0 (false no-edge) to -1.0 (model more bullish on CAN by 1 goal)
+
+**Run-log:** `audit-notes/run-logs/data002_spread_fix_2026-07-07T192709Z.log`  
+**Status:** COMPLETE
