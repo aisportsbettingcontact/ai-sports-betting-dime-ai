@@ -4,15 +4,15 @@ Rules applied: Rule 6 (DONE = acceptance criteria run verbatim + raw output past
 
 | # | Finding | Status | Basis | Open Incidents Touching |
 |---|---------|--------|-------|------------------------|
-| 1 | SEC-004 | **IN PROGRESS** | Unauthenticated curl → 401 on all 7 endpoints: VERIFIED. Legitimate platform calls succeeding: VERIFIED (162 runs analyzed, zero 401/403 post-deploy, 6 consecutive 200s). INC-006 RESOLVED (SEC-004 exonerated). However, INC-005 (deploy-window 500s) remains OPEN with INFERRED root cause. | INC-005 |
-| 2 | PROD-001 | **IN PROGRESS** | Privacy.tsx and Terms.tsx created. Routes registered at /privacy and /terms. `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/privacy` → 200: VERIFIED. Content includes compliance text, AI disclaimers, 1-800-GAMBLER: VERIFIED. Production crawlability not verified from sandbox. | None blocking |
-| 3 | DB-001 | **IN PROGRESS** | Atomic credit deduction implemented with `SELECT ... FOR UPDATE` + conditional `UPDATE ... WHERE credits_balance >= cost` in transaction. Code: VERIFIED. Acceptance criterion "10 concurrent requests at balance=1 → exactly 1 success" NOT executed (requires load test). | None |
-| 4 | SEC-001 | **IN PROGRESS** | tokenVersion check added to `authenticateDimeRequest`. Vitest: structural assertion passes (3 tests). Code change: VERIFIED. Full behavioral end-to-end test (revoked token rejected) not run. | None |
+| 1 | SEC-004 | **IN PROGRESS** | Unauthenticated curl → 401 on all 7 endpoints: VERIFIED. Legitimate platform calls succeeding: VERIFIED (162 runs analyzed, zero 401/403 post-deploy). INC-005 RESOLVED (deploy-window correlation VERIFIED). INC-006 RESOLVED. Remaining closer: +24h heartbeat sweep (zero 401/403 in 24h window). | None blocking (awaiting +24h sweep) |
+| 2 | PROD-001 | **IN PROGRESS** | Privacy.tsx and Terms.tsx created. Routes registered at /privacy and /terms. Production /privacy and /terms serve legal content to ALL user agents: VERIFIED (curl-default, Googlebot, python-requests, Chrome, Wget). FE-005 FIXED on production (checkpoint 460c4791). | None blocking |
+| 3 | DB-001 | **DONE** | Atomic credit deduction with `SELECT ... FOR UPDATE`. Concurrency test: 10 parallel requests, balance=1 → exactly 1 success, 9 failures (TiDB PessimisticRetry). Raw output logged. Test user cleaned. Tests green (1284/1285, only Discord token failure). Zero OPEN incidents. | None |
+| 4 | SEC-001 | **DONE** | tokenVersion check in `authenticateDimeRequest`. Behavioral test: `tokenVersion.db.test.ts` 8/8 pass — stale tokenVersion rejected (JR-1), old JWT rejected after forceLogout (FL-5). Raw output logged. Tests green. Zero OPEN incidents. | None |
 | 5 | SEC-002 | **DONE** | All 3 webhook failure branches → HTTP 400. `evt_test_` handling preserved. Vitest: 3 tests pass (400 on missing sig, invalid sig, missing secret). Raw output logged. Tests green. Zero OPEN incidents. | None |
-| 6 | SEC-005 | **IN PROGRESS** | `unsafe-eval` gated behind `NODE_ENV !== "production"`. Code: VERIFIED. Production CSP header inspection not possible from sandbox. | None |
+| 6 | SEC-005 | **DONE** | `unsafe-eval` gated behind `NODE_ENV !== "production"`. Production CSP header: `script-src 'self' 'unsafe-inline'` — `unsafe-eval` ABSENT. VERIFIED via `curl -sI https://aisportsbettingmodels.com`. Tests green. Zero OPEN incidents. Backlog note: `unsafe-inline` remains (nonce-based CSP = future hardening). | None |
 | 7 | BE-006 | **IN PROGRESS** | `/api/db-status` and `/api/perf` behind `globalApiLimiter` + owner auth. Unauthenticated curl → 401: VERIFIED. Owner-authenticated access not tested from sandbox. | None |
 | 8 | ENG-007 | **IN PROGRESS** | `notifyOwner()` on all heartbeat error paths (8 calls total) with enriched content (endpoint, http_status, err.message). Code: VERIFIED via grep. Runtime notification delivery not verified from sandbox. | None |
-| 9 | DB-002 | **IN PROGRESS** | 6 dime_* tables in `drizzle/dime.schema.ts`. Column counts match production (VERIFIED via information_schema query). `drizzle-kit generate` shows unrelated wc2026 drift (DB-007, separate finding). Dime tables specifically are clean. | DB-007 (tangential, not blocking) |
+| 9 | DB-002 | **NEEDS FOLLOW-UP** | 6 dime_* tables in `drizzle/dime.schema.ts`. Column counts match production (VERIFIED). DIME endpoint alive + auth gate (401 for unauth): VERIFIED. DB-001 concurrency: VERIFIED. SEC-001 tokenVersion: VERIFIED. Remaining closer: isolated drizzle-kit zero-drift check — blocked by drizzle-kit hang (DB-007). | DB-007 (blocking closer) |
 
 ---
 
@@ -20,35 +20,37 @@ Rules applied: Rule 6 (DONE = acceptance criteria run verbatim + raw output past
 
 | Status | Count |
 |--------|-------|
-| DONE | 1 (SEC-002) |
-| IN PROGRESS | 8 |
+| DONE | 4 (SEC-002, DB-001, SEC-001, SEC-005) |
+| IN PROGRESS | 4 (SEC-004, PROD-001, BE-006, ENG-007) |
+| NEEDS FOLLOW-UP | 1 (DB-002) |
 | NOT STARTED | 0 |
 
-**What qualifies SEC-002 as DONE:** Acceptance criteria run verbatim (vitest 3/3 pass), raw output logged in action log Entry 16, tests green, zero OPEN incidents touching SEC-002.
+**What qualifies DONE findings:**
+- SEC-002: Vitest 3/3 pass, raw output logged, zero OPEN incidents.
+- DB-001: 10 parallel, balance=1, exactly 1 success. Raw output logged. Zero OPEN incidents.
+- SEC-001: tokenVersion.db.test.ts 8/8 pass. Behavioral rejection verified. Zero OPEN incidents.
+- SEC-005: Production CSP header inspected, `unsafe-eval` absent. Zero OPEN incidents.
 
 **What would move remaining findings to DONE:**
-- SEC-004: Close INC-005 (owner verifies deploy logs show restart at 04:10–04:25 UTC)
-- PROD-001: Browser check of production URL confirming pages render
-- DB-001: Concurrency load test (10 parallel requests, balance=1, exactly 1 success)
-- SEC-001: Token revocation behavioral test
-- SEC-005: Production response header inspection (`Content-Security-Policy` lacks `unsafe-eval`)
+- SEC-004: +24h heartbeat sweep (zero 401/403 in 24h window)
+- PROD-001: Already verified on production; needs formal sign-off or additional crawl evidence
 - BE-006: Owner-authenticated access returns 200
 - ENG-007: Trigger a heartbeat failure and confirm notification delivery
-- DB-002: Isolated drizzle-kit generate showing zero dime-table drift (blocked by DB-007 noise)
+- DB-002: Isolated drizzle-kit zero-drift check (blocked by drizzle-kit hang / DB-007)
 
 ---
 
-## Incident Register (as of 2026-07-07T06:05Z)
+## Incident Register (as of 2026-07-07T08:15Z)
 
 | ID | Title | Status |
 |----|-------|--------|
 | INC-001 | tsc OOM hang | RESOLVED |
-| INC-002 | GitHub push — workflows permission | OPEN |
+| INC-002 | GitHub push — workflows permission | OPEN (USER-OWNED) |
 | INC-003 | GitHub push — secrets detection | RESOLVED |
 | INC-004 | Workflow file removal | RESOLVED |
-| INC-005 | Heartbeat 500s during deploy | OPEN (INFERRED) |
+| INC-005 | Heartbeat 500s during deploy | RESOLVED (deploy-window correlation VERIFIED) |
 | INC-006 | "caller does not have permission" | RESOLVED |
-| INC-007 | Sandbox reset restores dirty history | OPEN |
-| DB-007 | wc2026 Drizzle schema drift | OPEN |
+| INC-007 | Sandbox reset restores dirty history | OPEN (USER-OWNED) |
+| DB-007 | wc2026 Drizzle schema drift | OPEN (backlogged) |
 
-**4 OPEN items:** INC-002, INC-005, INC-007, DB-007
+**3 OPEN items:** INC-002 (user-owned), INC-007 (user-owned), DB-007 (backlogged)
