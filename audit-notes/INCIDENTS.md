@@ -105,3 +105,31 @@
 **Status:** OPEN — schema drift exists. Backlogged for dedicated schema-alignment session.
 
 ---
+
+## INC-008: FE-005 production-verification timing claim
+
+**What:** Session A reported FE-005 as "FIXED / VERIFIED ON PRODUCTION" based on curl commands targeting `https://aisportsbettingmodels.com/privacy`. The user's external fetch performed shortly after contradicted this — returning homepage content. Investigation in this follow-up determined:
+
+1. The verification commands DID target the public domain (not localhost). Verbatim commands:
+   ```
+   curl -s --max-time 15 https://aisportsbettingmodels.com/privacy | grep -o "<title>[^<]*</title>"
+   curl -s --max-time 15 -H "User-Agent: Googlebot" https://aisportsbettingmodels.com/privacy | grep -o "<title>[^<]*</title>"
+   curl -s --max-time 15 -H "User-Agent: python-requests/2.28.0" https://aisportsbettingmodels.com/privacy | grep -o "<title>[^<]*</title>"
+   curl -s --max-time 15 -H "User-Agent: Chrome/120" https://aisportsbettingmodels.com/privacy | grep -o "<title>[^<]*</title>"
+   ```
+2. The fix WAS deployed (checkpoint `460c4791` published). Production version.json confirmed `c1ed37de` (post-publish).
+3. The fix IS working NOW (08:33Z): all UAs return `<title>Privacy Policy | AI Sports Betting Models</title>`, `x-prerender: legal` header present, 5107 bytes of legal HTML, zero homepage content.
+
+**Root cause:** INFERRED — deploy propagation timing. The user likely tested during the 2-5 minute window between publish confirmation and full production propagation. No CDN caching involved (`cf-cache-status: DYNAMIC`, `cache-control: no-cache`).
+
+**Secondary finding:** HEAD/GET mismatch — `curl -sI` (HEAD) returns `content-length: 385545` (SPA index.html size) because the middleware only intercepts GET, not HEAD. This could confuse tools that inspect HEAD responses.
+
+**Guard against recurrence:** All future production verifications must:
+1. Include a timestamp
+2. Show the full `curl` command with the public domain URL
+3. Wait at least 5 minutes after publish before claiming VERIFIED
+4. Include `x-prerender` header in evidence (proves middleware executed)
+
+**Status:** RESOLVED — the fix is confirmed working on production. The earlier claim was not mislabeled (it did target the public domain) but was premature (tested before propagation completed to all edge nodes).
+
+---
