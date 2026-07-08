@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #101014; }
+    a { color: #45E0A8; text-decoration: none; }
+    a:hover { color: #7DEBC4; }
+    .settings-menu { display: none; }
+    .settings-menu.open { display: flex; }
+    /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */
+    :root { --mint: #45E0A8; --mint-on-light: #0FA36B; }
+    .theme-dark { --text-primary: #f7f7f8; --text-secondary: #c9c9d2; --row-hover: rgba(255,255,255,0.065); --row-active: rgba(255,255,255,0.095); --accent: #45E0A8; --ring: rgba(69,224,168,0.36); }
+    .theme-light { --text-primary: #111318; --text-secondary: #2f323b; --row-hover: rgba(15,23,42,0.055); --row-active: rgba(69,224,168,0.13); --accent: #45E0A8; --ring: rgba(69,224,168,0.28); }
+    .sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), box-shadow 160ms cubic-bezier(0.16,1,0.3,1); }
+    .sidebar-row::before { content: ""; position: absolute; left: -6px; top: 50%; width: 3px; height: 18px; border-radius: 999px; background: var(--accent); opacity: 0; transform: translateY(-50%) scaleY(0.7); transition: opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); }
+    .sidebar-row:hover { background: var(--row-hover); color: var(--text-primary); }
+    .sidebar-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+    .sidebar-row.is-active, .sidebar-row[data-active="true"], .sidebar-row[aria-current="page"] { background: var(--row-active); color: var(--text-primary); font-weight: 600; }
+    .sidebar-row.is-active::before, .sidebar-row[data-active="true"]::before, .sidebar-row[aria-current="page"]::before { opacity: 1; transform: translateY(-50%) scaleY(1); }
+    .sidebar-row.is-active .sidebar-icon, .sidebar-row[data-active="true"] .sidebar-icon, .sidebar-row[aria-current="page"] .sidebar-icon { color: var(--accent); }
+    @media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before, .settings-btn { transition: none; } }
+    .composer-input::placeholder { color: #6A6A78; }
+    .theme-light-placeholder::placeholder { color: #9A9AA8; }
+    @keyframes dimeTyping { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+    .typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: dimeTyping 1s infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    .row-actions { margin-left: auto; display: none; align-items: center; gap: 2px; flex-shrink: 0; }
+    .sidebar-row:hover .row-actions, .sidebar-row.is-active .row-actions, .sidebar-row[data-active="true"] .row-actions { display: flex; }
+    .row-btn { background: none; border: none; padding: 0 3px; font-size: 13px; line-height: 1; color: inherit; opacity: 0.65; cursor: pointer; font-family: inherit; }
+    .row-btn:hover { opacity: 1; }
+    .row-btn.starred { color: #45E0A8; opacity: 1; }
+    .sidebar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-icon { width: 14px; display: inline-flex; justify-content: center; }
+    .settings-btn { border-radius: 8px; transition: transform 160ms cubic-bezier(0.16,1,0.3,1), stroke 160ms; }
+    .profile-row:hover .settings-btn, .settings-btn:hover { transform: rotate(18deg); }
+    .settings-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+  </style>
+</helmet>
+
+<section style="padding: 56px; display: flex; flex-direction: column; gap: 28px; font-family: 'Familjen Grotesk', sans-serif; color: #EDEDF2;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: #6A6A78; letter-spacing: 0.12em; text-transform: uppercase;">dime chat — page reference</div>
+    <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">Dime Chat</div>
+    <div style="font-size: 14px; color: #9A9AA8; max-width: 720px;">Home (dark + light) and full-screen active chat (dark + light). 4c wordmark as the empty-state greeting, 4b submit buttons, 2g V7 avatar on model messages.</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 28px;">
+
+    <!-- 5a — dark home -->
+    <div id="5a" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5a" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5a</a><div style="font-size: 13px; font-weight: 700;">Dark mode — home</div></div>
+      <div style="width: 1600px; display: flex; height: 900px; background: #0B0B0F; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div class="theme-dark" style="width: 264px; flex-shrink: 0; background: #101016; border-right: 1px solid #1E1E26; display: flex; flex-direction: column; padding: 20px 14px;">
+          <div style="padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: #EDEDF2; text-align: center;">AI Sports Betting</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <a class="sidebar-row is-active" aria-current="page" href="#" style="font-size: 13px;"><span class="sidebar-icon">＋</span><span class="sidebar-text">New Chat</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">AI Model Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;" data-comment-anchor="584f68ae18-div"><span class="sidebar-text">Betting Splits + Odds History</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Trends</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Prop Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bet Tracker</span></a>
+          </div>
+          <div class="recents-label" style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #55555E; padding: 22px 10px 8px;">Recent Chats</div>
+          <div class="recent-list" style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Will Messi score a goal today vs Egypt?</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Ohtani strikeout total projection</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Rockies vs Dodgers Best Bets</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">The Model's favorite picks July 7</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;" data-comment-anchor="32f4c5694b-div"><span class="sidebar-text">France World Cup Odds</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;" data-comment-anchor="144967be6c-div"><span class="sidebar-text">Bankroll Management Advice</span></a>
+          </div>
+          <div class="profile-row sidebar-row" role="button" tabindex="0" style="position: relative; margin-top: 8px; padding: 10px 8px; border-top: 1px solid #1E1E26; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px;">
+            <img src="uploads/prezcirca.jpg" alt="PREZ BETS" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #EDEDF2;">PREZ BETS</div><div style="font-size: 11px; color: #6A6A78;">Pro</div></div>
+            <div class="settings-menu" role="menu" style="position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; background: #1A1A22; border: 1px solid #2E2E38; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; box-shadow: 0 12px 32px rgba(0,0,0,0.55); z-index: 9; cursor: default;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;">
+                <img src="uploads/prezcirca.jpg" alt="@prez" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                <div style="display: flex; flex-direction: column; gap: 1px;">
+                  <div style="display: flex; align-items: center; gap: 6px;"><div style="font-size: 13px; font-weight: 700; color: #EDEDF2;">@prez</div><div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #0B0B0F; background: #45E0A8; padding: 2px 6px; border-radius: 8px;">PRO</div></div>
+                  <div style="font-size: 11px; color: #9A9AA8;">Expires August 8, 2026</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; padding: 6px 10px 10px;">
+                <div role="menuitem" tabindex="0" style="flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Upgrade Membership</div>
+                <div role="menuitem" tabindex="0" style="text-align: center; padding: 8px 10px; border-radius: 16px; border: 1px solid #34343E; font-size: 12px; font-weight: 600; color: #9A9AA8; cursor: pointer;" style-hover="background: #26262E;">Cancel Membership</div>
+              </div>
+              <div style="height: 1px; background: #2E2E38; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Edit Profile</div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Discord Connected: <span style="color: #45E0A8; font-weight: 600;">@prez</span></div>
+              <div style="height: 1px; background: #2E2E38; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Log Out</div>
+            </div>
+            <svg class="settings-btn" tabindex="0" role="button" aria-label="Account settings" aria-haspopup="menu" viewBox="0 0 24 24" width="17" height="17" style="margin-left: auto; flex-shrink: 0; cursor: pointer;" fill="none" stroke="#9A9AA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+          </div>
+        </div>
+        <div class="home-main" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px;">
+          <div class="brand-hero" style="font-size: 64px; font-weight: 700; letter-spacing: -0.05em; color: #EDEDF2; line-height: 1; display: flex; align-items: baseline;"><span style="display: inline-flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></span></div>
+          <div style="width: 680px; display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 26px; padding: 9px 9px 9px 20px;">
+            <div style="font-size: 18px; color: #6A6A78; font-weight: 500;">＋</div>
+            <input class="composer-input" type="text" placeholder="Ask dime anything…" style="flex: 1; min-width: 0; font-size: 14px; background: transparent; border: none; outline: none; color: #EDEDF2; font-family: inherit;">
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+            </button>
+          </div>
+          <div class="prompt-pills" style="display: flex; align-items: center; gap: 10px;" data-comment-anchor="153b4121a7-div">
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #EDEDF2; border-radius: 20px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">World Cup Model Simulations<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg></span></div>
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #16161C; border: 1px solid #24242E; border-radius: 20px; font-size: 13px; font-weight: 600; color: #EDEDF2; cursor: pointer;" style-hover="opacity: 0.85;">Player Props with the Most Edge<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg></span></div>
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #45E0A8; border-radius: 20px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Best Trends for MLB July 7, 2026<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5b — light home -->
+    <div id="5b" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5b" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5b</a><div style="font-size: 13px; font-weight: 700;">Light mode — home</div></div>
+      <div style="width: 1600px; display: flex; height: 900px; background: #FFFFFF; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div class="theme-light" style="width: 264px; flex-shrink: 0; background: #F4F4F6; border-right: 1px solid #E4E4E9; display: flex; flex-direction: column; padding: 20px 14px;">
+          <div style="padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: #0B0B0F; text-align: center;">AI Sports Betting</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <a class="sidebar-row is-active" aria-current="page" href="#" style="font-size: 13px;"><span class="sidebar-icon">＋</span><span class="sidebar-text">New Chat</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">AI Model Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Betting Splits + Odds History</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Trends</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Prop Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bet Tracker</span></a>
+          </div>
+          <div class="recents-label" style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8; padding: 22px 10px 8px;" data-comment-anchor="8a2624b69b-div">Recent Chats</div>
+          <div class="recent-list" style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Will Messi score a goal today vs Egypt?</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Ohtani strikeout total projection</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Rockies vs Dodgers Best Bets</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">The Model's favorite picks July 7</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">France World Cup Odds</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bankroll Management Advice</span></a>
+          </div>
+          <div class="profile-row sidebar-row" role="button" tabindex="0" style="position: relative; margin-top: 8px; padding: 10px 8px; border-top: 1px solid #E4E4E9; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px;">
+            <img src="uploads/prezcirca.jpg" alt="PREZ BETS" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #0B0B0F;">PREZ BETS</div><div style="font-size: 11px; color: #9A9AA8;">Pro</div></div>
+            <div class="settings-menu" role="menu" style="position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; box-shadow: 0 12px 32px rgba(11,11,15,0.18); z-index: 9; cursor: default;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;">
+                <img src="uploads/prezcirca.jpg" alt="@prez" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                <div style="display: flex; flex-direction: column; gap: 1px;">
+                  <div style="display: flex; align-items: center; gap: 6px;"><div style="font-size: 13px; font-weight: 700; color: #0B0B0F;">@prez</div><div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #0B0B0F; background: #45E0A8; padding: 2px 6px; border-radius: 8px;">PRO</div></div>
+                  <div style="font-size: 11px; color: #9A9AA8;">Expires August 8, 2026</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; padding: 6px 10px 10px;">
+                <div role="menuitem" tabindex="0" style="flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Upgrade Membership</div>
+                <div role="menuitem" tabindex="0" style="text-align: center; padding: 8px 10px; border-radius: 16px; border: 1px solid #D5D5DC; font-size: 12px; font-weight: 600; color: #55555E; cursor: pointer;" style-hover="background: #F0F0F3;">Cancel Membership</div>
+              </div>
+              <div style="height: 1px; background: #E4E4E9; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Edit Profile</div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Discord Connected: <span style="color: var(--mint-on-light); font-weight: 600;">@prez</span></div>
+              <div style="height: 1px; background: #E4E4E9; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Log Out</div>
+            </div>
+            <svg class="settings-btn" tabindex="0" role="button" aria-label="Account settings" aria-haspopup="menu" viewBox="0 0 24 24" width="17" height="17" style="margin-left: auto; flex-shrink: 0; cursor: pointer;" fill="none" stroke="#55555E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+          </div>
+        </div>
+        <div class="home-main" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px;">
+          <div class="brand-hero" style="font-size: 64px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span style="display: inline-flex; align-items: baseline;"><span data-comment-anchor="10196fa85c-span">d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; border: 1px solid #0B0B0F; box-sizing: border-box;"></span></span><span>me</span></span></div>
+          <div style="width: 680px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 26px; padding: 9px 9px 9px 20px; box-shadow: 0 1px 3px rgba(11,11,15,0.06);">
+            <div style="font-size: 18px; color: #9A9AA8; font-weight: 500;">＋</div>
+            <input class="composer-input" type="text" placeholder="Ask dime anything…" style="flex: 1; min-width: 0; font-size: 14px; background: transparent; border: none; outline: none; color: #0B0B0F; font-family: inherit;">
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg>
+            </button>
+          </div>
+          <div class="prompt-pills" style="display: flex; align-items: center; gap: 10px;" data-comment-anchor="8f15005c04-div">
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #45E0A8; border-radius: 20px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">World Cup Model Simulations<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg></span></div>
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 20px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Player Props with the Most Edge<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg></span></div>
+            <div style="display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; background: #0B0B0F; border-radius: 20px; font-size: 13px; font-weight: 600; color: #FFFFFF; cursor: pointer;" style-hover="opacity: 0.85;">Best Trends for MLB July 7, 2026<span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 512 512" width="13" height="13"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5c — dark chat, full screen -->
+    <div id="5c" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5c" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5c</a><div style="font-size: 13px; font-weight: 700;">Dark mode — active chat, full screen</div></div>
+      <div style="width: 1600px; display: flex; height: 900px; background: #0B0B0F; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div class="theme-dark" style="width: 264px; flex-shrink: 0; background: #101016; border-right: 1px solid #1E1E26; display: flex; flex-direction: column; padding: 20px 14px;">
+          <div style="padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: #EDEDF2; text-align: center;">AI Sports Betting</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-icon">＋</span><span class="sidebar-text">New Chat</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">AI Model Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Betting Splits + Odds History</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Trends</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Prop Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bet Tracker</span></a>
+          </div>
+          <div class="recents-label" style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #55555E; padding: 22px 10px 8px;">Recent Chats</div>
+          <div class="recent-list" style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible;">
+            <a class="sidebar-row is-active" aria-current="page" href="#" style="font-size: 13px;"><span class="sidebar-text">Will Messi score a goal today vs Egypt?</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Ohtani strikeout total projection</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Rockies vs Dodgers Best Bets</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">The Model's favorite picks July 7</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">France World Cup Odds</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bankroll Management Advice</span></a>
+          </div>
+          <div class="profile-row sidebar-row" role="button" tabindex="0" style="position: relative; margin-top: 8px; padding: 10px 8px; border-top: 1px solid #1E1E26; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px;">
+            <img src="uploads/prezcirca.jpg" alt="PREZ BETS" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #EDEDF2;">PREZ BETS</div><div style="font-size: 11px; color: #6A6A78;">Pro</div></div>
+            <div class="settings-menu" role="menu" style="position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; background: #1A1A22; border: 1px solid #2E2E38; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; box-shadow: 0 12px 32px rgba(0,0,0,0.55); z-index: 9; cursor: default;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;">
+                <img src="uploads/prezcirca.jpg" alt="@prez" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                <div style="display: flex; flex-direction: column; gap: 1px;">
+                  <div style="display: flex; align-items: center; gap: 6px;"><div style="font-size: 13px; font-weight: 700; color: #EDEDF2;">@prez</div><div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #0B0B0F; background: #45E0A8; padding: 2px 6px; border-radius: 8px;">PRO</div></div>
+                  <div style="font-size: 11px; color: #9A9AA8;">Expires August 8, 2026</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; padding: 6px 10px 10px;">
+                <div role="menuitem" tabindex="0" style="flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Upgrade Membership</div>
+                <div role="menuitem" tabindex="0" style="text-align: center; padding: 8px 10px; border-radius: 16px; border: 1px solid #34343E; font-size: 12px; font-weight: 600; color: #9A9AA8; cursor: pointer;" style-hover="background: #26262E;">Cancel Membership</div>
+              </div>
+              <div style="height: 1px; background: #2E2E38; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Edit Profile</div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Discord Connected: <span style="color: #45E0A8; font-weight: 600;">@prez</span></div>
+              <div style="height: 1px; background: #2E2E38; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #EDEDF2; cursor: pointer;" style-hover="background: #26262E;">Log Out</div>
+            </div>
+            <svg class="settings-btn" tabindex="0" role="button" aria-label="Account settings" aria-haspopup="menu" viewBox="0 0 24 24" width="17" height="17" style="margin-left: auto; flex-shrink: 0; cursor: pointer;" fill="none" stroke="#9A9AA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid #1E1E26;">
+            <div style="font-size: 13px; font-weight: 700; color: #EDEDF2; padding: 6px 14px; background: #1A1A22; border-radius: 16px;">Chat</div>
+            <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px;">Slate</div>
+            <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px;">Bet Tracker</div>
+            <div style="margin-left: auto; font-size: 13px; color: #6A6A78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Will Messi score a goal today vs Egypt?</div>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 24px; padding: 36px 140px; overflow: hidden;">
+            <div style="align-self: flex-end; max-width: 480px; background: #1E1E26; border-radius: 16px 16px 4px 16px; padding: 12px 16px; font-size: 14px; color: #EDEDF2;">Will Messi score a goal today vs Egypt?</div>
+            <div style="display: flex; gap: 16px;">
+              <svg viewBox="0 0 512 512" width="60" height="60" style="flex-shrink: 0;"><rect width="512" height="512" rx="116" fill="#FFFFFF" data-comment-anchor="3b98f0a98e-rect"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+              <div style="display: flex; flex-direction: column; gap: 12px; max-width: 700px;">
+                <div style="background: #16161C; border: 1px solid #24242E; border-radius: 4px 16px 16px 16px; padding: 16px 20px; font-size: 14px; line-height: 1.65; color: #C9C9D4;">Ran 10,000 sims on Argentina–Egypt. Messi projects for 0.68 xG + 2.9 shots — the model puts his anytime-scorer probability at <span style="color: #45E0A8; font-weight: 600;">54.2%</span>. Best available price is +115 (implied 46.5%), so you're holding about 7.7% of edge. That's a dime-line grade play.</div>
+                <div style="display: flex; gap: 18px; background: #16161C; border: 1px solid #24242E; border-radius: 12px; padding: 14px 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6A6A78;">Model prob</div><div style="font-size: 20px; font-weight: 700; color: #45E0A8;">54.2%</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6A6A78;">Best price</div><div style="font-size: 20px; font-weight: 700; color: #EDEDF2;">+115</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6A6A78;">Edge</div><div style="font-size: 20px; font-weight: 700; color: #45E0A8;">+7.7%</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6A6A78;">Grade</div><div style="font-size: 20px; font-weight: 700; color: #EDEDF2;">A−</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 18px 140px 26px;">
+            <div style="display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 26px; padding: 9px 9px 9px 20px;">
+              <div style="flex: 1; font-size: 14px; color: #6A6A78;">Reply to dime…</div>
+              <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+                <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5d — light chat, full screen -->
+    <div id="5d" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5d" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5d</a><div style="font-size: 13px; font-weight: 700;">Light mode — active chat, full screen</div></div>
+      <div style="width: 1600px; display: flex; height: 900px; background: #FFFFFF; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div class="theme-light" style="width: 264px; flex-shrink: 0; background: #F4F4F6; border-right: 1px solid #E4E4E9; display: flex; flex-direction: column; padding: 20px 14px;">
+          <div style="padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: #0B0B0F; text-align: center;">AI Sports Betting</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-icon">＋</span><span class="sidebar-text">New Chat</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">AI Model Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Betting Splits + Odds History</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Trends</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Prop Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bet Tracker</span></a>
+          </div>
+          <div class="recents-label" style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8; padding: 22px 10px 8px;">Recent Chats</div>
+          <div class="recent-list" style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible;">
+            <a class="sidebar-row is-active" aria-current="page" href="#" style="font-size: 13px;"><span class="sidebar-text">Will Messi score a goal today vs Egypt?</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Ohtani strikeout total projection</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Rockies vs Dodgers Best Bets</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">The Model's favorite picks July 7</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">France World Cup Odds</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bankroll Management Advice</span></a>
+          </div>
+          <div class="profile-row sidebar-row" role="button" tabindex="0" style="position: relative; margin-top: 8px; padding: 10px 8px; border-top: 1px solid #E4E4E9; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px;">
+            <img src="uploads/prezcirca.jpg" alt="PREZ BETS" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #0B0B0F;">PREZ BETS</div><div style="font-size: 11px; color: #9A9AA8;">Pro</div></div>
+            <div class="settings-menu" role="menu" style="position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; box-shadow: 0 12px 32px rgba(11,11,15,0.18); z-index: 9; cursor: default;">
+              <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;">
+                <img src="uploads/prezcirca.jpg" alt="@prez" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                <div style="display: flex; flex-direction: column; gap: 1px;">
+                  <div style="display: flex; align-items: center; gap: 6px;"><div style="font-size: 13px; font-weight: 700; color: #0B0B0F;">@prez</div><div style="font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #0B0B0F; background: #45E0A8; padding: 2px 6px; border-radius: 8px;">PRO</div></div>
+                  <div style="font-size: 11px; color: #9A9AA8;">Expires August 8, 2026</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; padding: 6px 10px 10px;">
+                <div role="menuitem" tabindex="0" style="flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #0B0B0F; cursor: pointer;" style-hover="opacity: 0.85;">Upgrade Membership</div>
+                <div role="menuitem" tabindex="0" style="text-align: center; padding: 8px 10px; border-radius: 16px; border: 1px solid #D5D5DC; font-size: 12px; font-weight: 600; color: #55555E; cursor: pointer;" style-hover="background: #F0F0F3;">Cancel Membership</div>
+              </div>
+              <div style="height: 1px; background: #E4E4E9; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Edit Profile</div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Discord Connected: <span style="color: var(--mint-on-light); font-weight: 600;">@prez</span></div>
+              <div style="height: 1px; background: #E4E4E9; margin: 0 2px;"></div>
+              <div role="menuitem" tabindex="0" style="padding: 9px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #0B0B0F; cursor: pointer;" style-hover="background: #F0F0F3;">Log Out</div>
+            </div>
+            <svg class="settings-btn" tabindex="0" role="button" aria-label="Account settings" aria-haspopup="menu" viewBox="0 0 24 24" width="17" height="17" style="margin-left: auto; flex-shrink: 0; cursor: pointer;" fill="none" stroke="#55555E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" data-comment-anchor="ff2af28781-path"></path></svg>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid #E4E4E9;">
+            <div style="font-size: 13px; font-weight: 700; color: #0B0B0F; padding: 6px 14px; background: #E8E8EC; border-radius: 16px;">Chat</div>
+            <div style="font-size: 13px; color: #9A9AA8; padding: 6px 14px;">Slate</div>
+            <div style="font-size: 13px; color: #9A9AA8; padding: 6px 14px;">Bet Tracker</div>
+            <div style="margin-left: auto; font-size: 13px; color: #9A9AA8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Will Messi score a goal today vs Egypt?</div>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 24px; padding: 36px 140px; overflow: hidden;">
+            <div style="align-self: flex-end; max-width: 480px; background: #F0F0F3; border-radius: 16px 16px 4px 16px; padding: 12px 16px; font-size: 14px; color: #0B0B0F;">Will Messi score a goal today vs Egypt?</div>
+            <div style="display: flex; gap: 16px;">
+              <svg viewBox="0 0 512 512" width="60" height="60" style="flex-shrink: 0;"><rect width="512" height="512" rx="116" fill="#101016" data-comment-anchor="cd50d9285c-rect"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+              <div style="display: flex; flex-direction: column; gap: 12px; max-width: 700px;">
+                <div style="background: #F7F7F9; border: 1px solid #E4E4E9; border-radius: 4px 16px 16px 16px; padding: 16px 20px; font-size: 14px; line-height: 1.65; color: #2A2A32;">Ran 10,000 sims on Argentina–Egypt. Messi projects for 0.68 xG + 2.9 shots — the model puts his anytime-scorer probability at <span style="color: var(--mint-on-light); font-weight: 600;">54.2%</span>. Best available price is +115 (implied 46.5%), so you're holding about 7.7% of edge. That's a dime-line grade play.</div>
+                <div style="display: flex; gap: 18px; background: #F7F7F9; border: 1px solid #E4E4E9; border-radius: 12px; padding: 14px 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8;">Model prob</div><div style="font-size: 20px; font-weight: 700; color: var(--mint-on-light);">54.2%</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8;">Best price</div><div style="font-size: 20px; font-weight: 700; color: #0B0B0F;">+115</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8;">Edge</div><div style="font-size: 20px; font-weight: 700; color: var(--mint-on-light);">+7.7%</div></div>
+                  <div style="display: flex; flex-direction: column; gap: 2px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8;">Grade</div><div style="font-size: 20px; font-weight: 700; color: #0B0B0F;">A−</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 18px 140px 26px;">
+            <div style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 26px; padding: 9px 9px 9px 20px; box-shadow: 0 1px 3px rgba(11,11,15,0.06);">
+              <div style="flex: 1; font-size: 14px; color: #9A9AA8;">Reply to dime…</div>
+              <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+                <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1712px&quot;,&quot;height&quot;:&quot;4100px&quot;}}">class Component extends DCLogic {
+  componentDidMount() {
+    this._click = (e) => {
+      // Star / delete controls on chat rows take priority over row activation.
+      const starBtn = e.target.closest('.row-star');
+      if (starBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._toggleStar(starBtn.closest('.sidebar-row'));
+        return;
+      }
+      const delBtn = e.target.closest('.row-del');
+      if (delBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._deleteRow(delBtn.closest('.sidebar-row'));
+        return;
+      }
+      const btn = e.target.closest('.settings-btn');
+      if (btn) {
+        const row = btn.closest('.profile-row');
+        const menu = row && row.querySelector('.settings-menu');
+        const wasOpen = menu && menu.classList.contains('open');
+        document.querySelectorAll('.settings-menu.open').forEach((m) => m.classList.remove('open'));
+        if (menu && !wasOpen) menu.classList.add('open');
+        return;
+      }
+      if (!e.target.closest('.settings-menu')) {
+        document.querySelectorAll('.settings-menu.open').forEach((m) => m.classList.remove('open'));
+      }
+      // New-chat prompt test harness: submit button in a home frame runs the sequence.
+      const submitBtn = e.target.closest('button[aria-label="Submit prompt"]');
+      if (submitBtn && submitBtn.closest('.home-main')) {
+        this._submitPrompt(submitBtn.closest('.home-main'));
+        return;
+      }
+      // Single-active sidebar row logic: active state moves only on explicit click,
+      // scoped to the clicked row's own sidebar. Hover/scroll/focus never set it.
+      const row = e.target.closest('.sidebar-row');
+      if (row && !row.classList.contains('profile-row')) {
+        e.preventDefault();
+        const sidebar = row.closest('.theme-dark, .theme-light');
+        if (sidebar) {
+          sidebar.querySelectorAll('.sidebar-row').forEach((r) => {
+            r.classList.remove('is-active');
+            r.removeAttribute('aria-current');
+            r.removeAttribute('data-active');
+          });
+          row.setAttribute('data-active', 'true');
+          row.setAttribute('aria-current', 'page');
+          // Clicking New Chat resets the test session: thread clears, hero returns,
+          // and the NEXT submitted prompt starts a fresh chat row.
+          if (row.querySelector('.sidebar-icon')) {
+            const frame = sidebar.parentElement;
+            const main = frame && frame.querySelector('.home-main');
+            if (main) {
+              const thread = main.querySelector('.test-thread');
+              if (thread) thread.remove();
+              const log = main.querySelector('.test-log');
+              if (log) log.remove();
+              const hero = main.querySelector('.brand-hero');
+              if (hero) hero.style.display = 'flex';
+              const pills = main.querySelector('.prompt-pills');
+              if (pills) pills.style.display = 'flex';
+              main.style.justifyContent = 'center';
+              main._chatRow = null;
+            }
+          }
+        }
+      }
+    };
+    this._key = (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.settings-menu.open').forEach((m) => m.classList.remove('open'));
+      }
+      if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('settings-btn')) {
+        e.preventDefault();
+        e.target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }
+    };
+    this._enter = (e) => {
+      if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('composer-input')) {
+        const main = e.target.closest('.home-main');
+        if (main) this._submitPrompt(main);
+      }
+    };
+    document.addEventListener('click', this._click);
+    document.addEventListener('keydown', this._key);
+    document.addEventListener('keydown', this._enter);
+    document.querySelectorAll('.recent-list').forEach((list) => {
+      // Chronology index: rows are authored newest-first, so seed descending
+      // recency stamps. Newer chats get larger stamps (Date.now()).
+      const rows = list.querySelectorAll('.sidebar-row');
+      rows.forEach((r, i) => {
+        r.dataset.chrono = String(rows.length - i);
+        this._decorateRow(r);
+      });
+    });
+  }
+
+  // Insert a row into a list keeping newest-first chronological order,
+  // based on the immutable data-chrono stamp.
+  _insertChrono(list, row) {
+    const t = Number(row.dataset.chrono) || 0;
+    const rows = [...list.querySelectorAll('.sidebar-row')];
+    const before = rows.find((r) => (Number(r.dataset.chrono) || 0) < t);
+    list.insertBefore(row, before || null);
+  }
+
+  _decorateRow(row) {
+    if (!row || row.querySelector('.row-actions')) return;
+    const actions = document.createElement('span');
+    actions.className = 'row-actions';
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.className = 'row-btn row-star';
+    star.setAttribute('aria-label', 'Star chat');
+    star.textContent = '\u2606';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'row-btn row-del';
+    del.setAttribute('aria-label', 'Delete chat');
+    del.textContent = '\u2715';
+    actions.appendChild(star);
+    actions.appendChild(del);
+    row.appendChild(actions);
+  }
+
+  _toggleStar(row) {
+    if (!row) return;
+    const sidebar = row.closest('.theme-dark, .theme-light');
+    const label = sidebar.querySelector('.recents-label');
+    const starBtn = row.querySelector('.row-star');
+    if (!row._starred) {
+      let sec = sidebar.querySelector('.starred-section');
+      if (!sec) {
+        sec = document.createElement('div');
+        sec.className = 'starred-section';
+        const l = document.createElement('div');
+        l.className = 'starred-label';
+        l.setAttribute('style', label.getAttribute('style'));
+        l.textContent = 'Starred Chats';
+        const list = document.createElement('div');
+        list.className = 'starred-list';
+        list.style.cssText = 'display:flex;flex-direction:column;gap:2px;overflow:visible;';
+        sec.appendChild(l);
+        sec.appendChild(list);
+        label.parentNode.insertBefore(sec, label);
+      }
+      const list = sec.querySelector('.starred-list');
+      this._insertChrono(list, row);
+      row._starred = true;
+      starBtn.textContent = '\u2605';
+      starBtn.classList.add('starred');
+      starBtn.setAttribute('aria-label', 'Unstar chat');
+    } else {
+      const rl = sidebar.querySelector('.recent-list');
+      this._insertChrono(rl, row);
+      row._starred = false;
+      starBtn.textContent = '\u2606';
+      starBtn.classList.remove('starred');
+      starBtn.setAttribute('aria-label', 'Star chat');
+      const sec = sidebar.querySelector('.starred-section');
+      if (sec && !sec.querySelector('.starred-list .sidebar-row')) sec.remove();
+    }
+  }
+
+  _deleteRow(row) {
+    if (!row) return;
+    const sidebar = row.closest('.theme-dark, .theme-light');
+    const wasActive = row.hasAttribute('data-active') || row.classList.contains('is-active') || row.hasAttribute('aria-current');
+    const sec = row.closest('.starred-section');
+    const main = sidebar.parentElement.querySelector('.home-main');
+    if (main && main._chatRow === row) main._chatRow = null;
+    row.remove();
+    if (sec && !sec.querySelector('.starred-list .sidebar-row')) sec.remove();
+    if (wasActive) {
+      const icon = sidebar.querySelector('.sidebar-icon');
+      const newChat = icon && icon.closest('.sidebar-row');
+      if (newChat) newChat.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
+  }
+
+  _submitPrompt(main) {
+    const input = main.querySelector('.composer-input');
+    const text = (input && input.value || '').trim();
+    if (!text) return;
+    const frame = main.parentElement;
+    const sidebar = frame.querySelector('.theme-dark, .theme-light');
+    const isDark = sidebar.classList.contains('theme-dark');
+    const t0 = performance.now();
+    const stamp = () => ((performance.now() - t0) / 1000).toFixed(2) + 's';
+
+    // 1. First prompt of a session creates ONE chat row; follow-up messages
+    //    continue the same chat and must NOT add rows. Validated on every submit.
+    const list = sidebar.querySelector('.recent-list');
+    const rowsBefore = list.querySelectorAll('.sidebar-row').length;
+    let a = main._chatRow;
+    const isNewChat = !a || !list.contains(a);
+    if (isNewChat) {
+      a = document.createElement('a');
+      a.className = 'sidebar-row';
+      a.href = '#';
+      a.style.fontSize = '13px';
+      const span = document.createElement('span');
+      span.className = 'sidebar-text';
+      span.textContent = text;
+      a.appendChild(span);
+      a.dataset.chrono = String(Date.now());
+      list.insertBefore(a, list.firstChild);
+      this._decorateRow(a);
+      main._chatRow = a;
+    }
+    sidebar.querySelectorAll('.sidebar-row').forEach((r) => {
+      r.classList.remove('is-active');
+      r.removeAttribute('aria-current');
+      r.removeAttribute('data-active');
+    });
+    a.setAttribute('data-active', 'true');
+    a.setAttribute('aria-current', 'page');
+    const rowsAfter = list.querySelectorAll('.sidebar-row').length;
+    const expectedDelta = isNewChat ? 1 : 0;
+    const rowCheck = (rowsAfter - rowsBefore === expectedDelta) ? '\u2713' : '\u2717 ROW-COUNT MISMATCH';
+    const activeCount = sidebar.querySelectorAll('.sidebar-row[data-active]').length;
+    const activeCheck = activeCount === 1 ? '\u2713' : '\u2717 MULTIPLE ACTIVE';
+
+    // 2. home hero collapses into a live thread
+    const hero = main.querySelector('.brand-hero');
+    if (hero) hero.style.display = 'none';
+    const pills = main.querySelector('.prompt-pills');
+    if (pills) pills.style.display = 'none';
+    let thread = main.querySelector('.test-thread');
+    if (!thread) {
+      thread = document.createElement('div');
+      thread.className = 'test-thread';
+      thread.style.cssText = 'width:680px;max-width:100%;flex:1;display:flex;flex-direction:column;gap:16px;overflow:auto;padding-top:12px;';
+      main.style.justifyContent = 'flex-start';
+      main.insertBefore(thread, main.firstChild);
+    }
+    let log = main.querySelector('.test-log');
+    if (!log) {
+      log = document.createElement('div');
+      log.className = 'test-log';
+      log.style.cssText = 'font-family:monospace;font-size:10px;letter-spacing:0.05em;color:' + (isDark ? '#6A6A78' : '#9A9AA8') + ';width:680px;max-width:100%;';
+      main.appendChild(log);
+    }
+    log.textContent = 'TEST \u25b8 ' + stamp() + ' prompt captured \u25b8 ' + (isNewChat ? 'chat created at top of Recent Chats' : 'existing chat continued (no new tab)') + ' \u25b8 rows ' + rowsBefore + '\u2192' + rowsAfter + ' (expected +' + expectedDelta + ') ' + rowCheck + ' \u25b8 active rows: ' + activeCount + ' ' + activeCheck;
+
+    const ub = document.createElement('div');
+    ub.style.cssText = 'align-self:flex-end;max-width:460px;border-radius:16px 16px 4px 16px;padding:12px 16px;font-size:14px;' + (isDark ? 'background:#1E1E26;color:#EDEDF2;' : 'background:#F0F0F3;color:#0B0B0F;');
+    ub.textContent = text;
+    thread.appendChild(ub);
+    input.value = '';
+
+    // 3. model avatar + typing indicator, then simulated reply
+    const AV_DARK = '<svg viewBox="0 0 512 512" width="40" height="40" style="flex-shrink:0"><rect width="512" height="512" rx="116" fill="#FFFFFF"/><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"/><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"/><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"/></g></svg>';
+    const AV_LIGHT = '<svg viewBox="0 0 512 512" width="40" height="40" style="flex-shrink:0"><rect width="512" height="512" rx="116" fill="#101016"/><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"/><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"/><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"/></g></svg>';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:14px;';
+    const bubbleStyle = isDark
+      ? 'background:#16161C;border:1px solid #24242E;color:#C9C9D4;'
+      : 'background:#F7F7F9;border:1px solid #E4E4E9;color:#2A2A32;';
+    row.innerHTML = (isDark ? AV_DARK : AV_LIGHT) + '<div class="reply-bubble" style="border-radius:4px 16px 16px 16px;padding:14px 18px;font-size:14px;line-height:1.6;max-width:560px;' + bubbleStyle + '"><span class="typing-dot"></span> <span class="typing-dot"></span> <span class="typing-dot"></span></div>';
+    thread.appendChild(row);
+    log.textContent += ' \u25b8 model thinking\u2026';
+
+    setTimeout(() => {
+      const bubble = row.querySelector('.reply-bubble');
+      const mint = isDark ? '#45E0A8' : 'var(--mint-on-light)';
+      bubble.innerHTML = 'Ran 10,000 sims on \u201c' + text.replace(/</g, '&lt;').slice(0, 80) + '\u201d \u2014 model probability <span style="color:' + mint + ';font-weight:600">52.4%</span> vs 48.1% implied at the best available price. That\u2019s <span style="color:' + mint + ';font-weight:600">+4.3% edge</span> \u2014 dime-line grade. Want the full breakdown or line-shop alternatives?';
+      log.textContent += ' \u25b8 ' + stamp() + ' response delivered \u2713 sequence complete';
+    }, 1400);
+  }
+  componentWillUnmount() {
+    document.removeEventListener('click', this._click);
+    document.removeEventListener('keydown', this._key);
+    document.removeEventListener('keydown', this._enter);
+  }
+  renderVals() {
+    return {};
+  }
+}</script>
+</body>
+</html>
