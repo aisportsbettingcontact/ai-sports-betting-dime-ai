@@ -30,15 +30,22 @@ automation ceiling — everything before it is scripted, everything after it is 
 - A pricing button opens Stripe checkout (test mode if applicable)
 - `/feed` still works (regression canary)
 
-## Why not full auto (and what it would take)
+## Why not full auto — PROBE ANSWERED (2026-07-08)
 
-- **Manus-side自动:** ask Manus support for a scheduled task / API that pulls `main` and
-  publishes. If that exists, wire it and delete Step 2.
-- **Migrating off Manus** is a real project, not a tweak — four hard platform deps
+Asked Manus directly: **no publish/deploy API exists.** The Publish button in the Manus
+Management UI is the only deploy mechanism — AGENT crons and Heartbeats can run code but
+cannot trigger a deployment. A fully automated GitHub→production pipeline is not
+achievable on this platform. The confirmed ceiling:
+
+- **Manus AGENT cron (SET UP — see below):** on schedule, pulls `github/main`, installs if
+  the lockfile changed, build-verifies, saves a checkpoint, notifies. Everything is
+  pre-staged; the human step is exactly one Publish click.
+- **Migrating off Manus** remains a real project, not a tweak — four hard platform deps
   (recon-verified): Forge LLM proxy + credits (`server/storage.ts:9`), Manus OAuth
   (`api.manus.im`), `/manus-storage/*` file storage, and Heartbeat crons hitting
-  `/api/scheduled/*` (in-process timers die on Cloud Run idle). Budget it as its own epic
-  (roadmap Later) — do not attempt casually.
+  `/api/scheduled/*` (in-process timers die on Cloud Run idle). Strategy decision
+  (2026-07-08, recorded in `dime-ai/ZERO-TO-ONE-ROADMAP.md`): stay on Manus through
+  launch, fold migration seams into E2–E5, migrate only on trigger.
 
 ## Never blocked while waiting
 
