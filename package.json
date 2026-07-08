@@ -118,7 +118,7 @@
     "canvas": "^3.2.1",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
-    "pnpm": "^10.15.1",
+    "pnpm": "^11.10.0",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
     "puppeteer": "^24.40.0",
