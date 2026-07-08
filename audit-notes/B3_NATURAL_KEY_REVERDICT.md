@@ -192,8 +192,10 @@ The true natural key `(match_id, minute_num, team_id, event_type)` correctly ide
 
 **Old match_id-only dupe groups:** 62
 **True-key collision groups:** 360
-**Excess rows (genuine dupes):** 455
+**Excess rows (genuine dupes):** 455 (pre-population; amended to 257 post-population — see amendment above)
 **CONSTRAINT STATUS:** MISSING — `(match_id, minute_num, team_id, event_type)` should have a UNIQUE constraint, but cannot safely add until player_name is populated and legitimate multi-events are distinguishable.
+
+> **REGISTER NOTE (2026-07-08):** The original B3 GROUP BY ran on `(match_id, minute_num, team_id, event_type)` but team_id was empty string ('') on 512 rows (24 early matches, all event types). These rows still collided correctly because all copies shared the same empty team_id — the key was internally consistent (empty = empty). During Phase 2 DATA-016 execution, 352 of these team_id values were populated from ESPN header data. The disjointness proof (Phase 3b) and ESPN reconciliation (Phase 5, 62/62 PASS) both ran AFTER team_id population, so all final verdicts stand on complete keys. The 5 groups that "disappeared" between the original 360 and post-population 355 were groups where copies had different team_ids assigned during population (splitting one group into two single-row groups). This is a benign artifact of the population order.
 
 ---
 
@@ -320,6 +322,8 @@ HAVING COUNT(*) > 1
 
 **FINDING: The naive match_id-based dedup would have destroyed approximately 9,368 legitimate data rows across 6 tables.** match_events has 455 confirmed genuine duplicate rows (ingestion bug) but dedup is BLOCKED per Dedup Gate until player_name is populated and archive-first protocol is executed.
 
+> **POST-EXECUTION AMENDMENT (2026-07-08T06:15Z):** After DATA-016 population, the original 360 groups reclassified: 160 SUB/YELLOW/GOAL groups resolved to LEGITIMATE MULTI-ROW (distinct players confirmed by ESPN). True dupes = 200 VAR groups only. Actual rows deleted = **257** (not 455). Breakdown: 175 groups had 2 copies (175 deletes) + 25 groups had 3–5 copies (82 deletes) = 257 total. The original 455 figure was correct at time of writing (all player_name NULL = all byte-identical) but population revealed that 160 groups were legitimate events masked by missing attribution. Archive artifact: `audit-notes/archives/phase4_var_dupes_deleted.json` (257 rows).
+
 ---
 
 ## ADDITIONAL EVIDENCE
@@ -415,6 +419,8 @@ HAVING COUNT(*) > 1
 1. Player names are populated (re-scrape from ESPN with player data) — DATA-016
 2. After population, re-verify that no legitimate multi-row is hidden among the 360 collision groups
 3. Then apply Dedup Gate (true key stated, impact statement, archive-first, owner authorization)
+
+> **EXECUTED (2026-07-08):** All 3 steps completed. Post-population reclassification: true dupes = 200 VAR groups (257 excess rows). 160 SUB/YELLOW/GOAL groups reclassified as LEGITIMATE MULTI-ROW. Dedup Gate satisfied, 257 rows archived + deleted, UNIQUE constraint applied, ingester made idempotent.
 
 **All other 6 tables: OUT OF DEDUP SCOPE. CLEAN PASS.**
 

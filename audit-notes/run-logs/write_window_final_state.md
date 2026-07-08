@@ -25,7 +25,7 @@
 - Only 200 VAR groups (NULL player_name) remain as genuine dupes
 
 ### Phase 4: Dedup
-- [x] 200 VAR groups deduped: 258 excess rows archived + deleted
+- [x] 200 VAR groups deduped: 257 excess rows archived + deleted (corrected from 258 — see reconciliation note)
 - [x] Post-dedup: 0 collision groups on 4-column key for VAR events
 - Archive: audit-notes/archives/match_events_var_dupes_2026-07-08.json
 
