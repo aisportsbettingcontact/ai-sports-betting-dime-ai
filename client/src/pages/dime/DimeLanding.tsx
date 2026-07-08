@@ -452,7 +452,7 @@ export default function DimeLanding() {
                 },
                 {
                   title: "Source-grounded answers",
-                  copy: "Dime Chat only speaks from the model's own tables — 124 enforcement tests stand between the engine and a made-up number.",
+                  copy: "If the engine didn't compute it, chat won't say it — every answer traces back to a table the model wrote.",
                 },
                 {
                   title: "Frozen at the line",
@@ -488,7 +488,7 @@ export default function DimeLanding() {
               <div className="qa">
                 <span className="qa-q">Isn't this just another pick service?</span>
                 <p>
-                  No — touts sell picks and get paid either way. dime is a pricing engine —{" "}
+                  No — dime doesn't sell picks. It's a pricing engine —{" "}
                   <span className="signal">10,000 simulations per game</span>, 55+ outputs — and when the math isn't
                   there, the answer is PASS.
                 </p>
