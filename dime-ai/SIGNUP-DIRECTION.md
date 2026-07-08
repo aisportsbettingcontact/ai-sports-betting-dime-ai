@@ -34,7 +34,9 @@ How accounts exist today: (a) Stripe checkout webhook creates them, (b) the owne
    `#050810` + Discord purple — `Home.tsx:240, 479`). Every one violates current anti-patterns.
 2. **Discord OAuth errors are swallowed**: `discordLogin.ts` redirects failures to
    `/?discord_error=...` (e.g. `:485, :540`), but the error dictionary renders only on `/login`
-   (`Home.tsx:42-64, 386-401`); LandingPage never reads the param. Dead end.
+   (`Home.tsx:42-64, 386-401`) (the Discord CONNECT flow has its own toast handler on `/feed` —
+   `client/src/pages/ModelProjections.tsx:477-517` — a separate dictionary; do not consolidate
+   them); LandingPage never reads the param. Dead end.
 3. **Duplicate identity steps**: email typed at Stripe, then re-asked on SubscribeSuccess;
    username typed at Stripe can be silently rewritten (`stripeWebhook.ts:136-149`) with no
    confirmation moment.
@@ -96,7 +98,9 @@ One screen, four sequential states of the same slip. Header: wordmark `dıme` + 
   Submit: full-width `.btn--mint` "Create password & open account".
 - **DONE**: all rows stamped; final row `STATUS — OPEN` with the one celebratory move: the value
   set in Familjen 700 at 20px, mint. CTA "Go to the board" → `/feed`. Secondary grey text link
-  "Back to home". No confetti, no scale springs — 160ms fades only.
+  "Back to home". No confetti, no scale springs — 160ms fades only. DONE state hosts the
+  Discord-connect step (ONBOARDING-ROADMAP O6 step 2) as its single post-completion CTA
+  alongside Enter the Platform.
 - **ALREADY OPEN** (existing user / S3b fix): if session resolves to an existing account, slip
   shows `PAYMENT ✓` + "This email already has a dime account." CTA "Sign in to attach" → `/login`
   (requires the backend to also match by customer email; flag as an interlock requirement).
@@ -124,9 +128,16 @@ renders as an ERROR row (fixes edge 2). Kill the "invitation only" copy everywhe
 Pricing CTA → Stripe → slip → `/feed` is the spine; `/login` is the returning-user branch; both
 share the slip column, tokens, and copy register. Checkout-created accounts land on the slip in
 CLAIM; owner-created and Discord-linked accounts land at `/login`. Terms live in CLAIM; the
-restyled AgeModal (slip-styled, no yellow triangle — grey ⚠ outline) remains only as a legacy
-fallback for pre-existing accounts with `termsAccepted=false`. Password rules: adopt the
-`completeAccountSetup` set (`stripe.ts:378-382`) as the single rulebook, mirrored at reset.
+restyled AgeModal (slip-styled, no yellow triangle — Lucide AlertTriangle icon, grey
+(`--text-secondary`)) remains only as a legacy fallback for pre-existing accounts with
+`termsAccepted=false`. Password rules: adopt the `completeAccountSetup` set
+(`stripe.ts:378-382`) as the single rulebook, mirrored at reset.
+
+**E7 interlock.** `E7-EMBEDDED-CHECKOUT.md` (same series) eliminates the Stripe redirect
+entirely. If E7 ships first, D2 becomes the embedded checkout iframe hosted **inside** the slip
+column at `/checkout`, and D1's CTA navigates to `/checkout` instead of redirecting; the funnel
+spine becomes Pricing CTA → `/checkout` (embedded) → slip. The Stripe branding-settings guidance
+and the "Pick your handle" label rename in D2 carry over unchanged.
 
 ---
 
@@ -165,7 +176,16 @@ Everything around it stays quiet — one risk, spent in one place.
 - Any code changes — this is direction only; no components, routes, or backend edits.
 - Backend contract changes (webhook payloads, `pendingStripeSessionId` mechanics, tRPC
   signatures); the S3b email-match and `/login?discord_error` redirect are *flagged requirements*
-  for their own tickets, not designed implementations here.
+  for their own tickets, not designed implementations here. Two more backend interlocks, flagged
+  the same way:
+  - **TERMS row write path** — `completeAccountSetup` (`server/routers/stripe.ts:374-383`) does
+    not accept or write `termsAccepted`. DECISION: the slip calls the existing
+    `appUsers.acceptTerms` mutation immediately after the auto-login cookie lands (no backend
+    change; keeps the `terms_accepted` instrumentation site in ONBOARDING-ROADMAP §5 valid).
+  - **HANDLE row "Change" affordance** — `getCheckoutSessionUser` (`stripe.ts:346-356`) returns
+    only the final username; whether it was rewritten is undetectable, and no rename endpoint
+    exists at setup time. Downgrade the affordance to a *display-only note* for v1; the rename
+    endpoint is listed as a future backend contract.
 - Stripe product/pricing structure, plan economics, promo codes, payment methods.
 - Discord OAuth internals, invite-token flow, owner admin surfaces (`UserManagement`).
 - The `/feed`, `/chat`, `/account`, and reset-password page redesigns (reset inherits D4's
