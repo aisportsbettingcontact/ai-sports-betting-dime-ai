@@ -307,3 +307,62 @@ Bare "DB-007" label RETIRED — use sub-IDs only.
 **Status:** RESOLVED — DB-007 is genuinely closed. Schema ≡ Snapshot ≡ Live DB proven independently.
 
 ---
+
+---
+
+## DATA-016: wc2026_match_events player_name 0% populated — universal completeness gap (P1)
+
+**What:** All 1,422 rows in `wc2026_match_events` have NULL/empty/string-literal-"null" `player_name`. Zero player attribution exists for any event (goals, cards, subs, VAR) across all 62 populated matches. Additionally, 60.8% of rows (864) have empty-string `team_id`.
+
+**When:** Discovered 2026-07-08 during B3 natural-key re-verdict (owner-directed).
+
+**Evidence:**
+```sql
+SELECT COUNT(*) as total_rows,
+  SUM(CASE WHEN player_name IS NULL OR player_name = '' OR player_name = 'null' THEN 1 ELSE 0 END) as null_player_rows
+FROM wc2026_match_events;
+-- Result: total_rows=1422, null_player_rows=1422
+```
+
+**Impact:**
+- Cannot safely dedup 455 genuine duplicate rows (Dedup Gate requires player_name to confirm no legitimate multi-row is hidden)
+- Cannot add UNIQUE constraint on `(match_id, minute_num, team_id, event_type)` until player_name distinguishes legitimate multi-events
+- Event data has no analytical value without player attribution (who scored, who was carded, who was subbed)
+
+**Root cause:** Ingestion pipeline (wc2026_playwright_scraper.py or ESPN event parser) wrote event rows without extracting player names from the source data. ESPN match events API DOES include player names — the scraper simply didn't map them.
+
+**Recovery path:** Re-scrape from ESPN API match events endpoints (same source as shot_map/lineups). Player names are available in ESPN's match commentary/events payload. After population, re-run B3 true-key query to confirm dedup safety, then execute dedup per Dedup Gate.
+
+**Priority:** P1 — blocks dedup execution and constraint enforcement.
+
+**Status:** OPEN — filed as completeness gap. No writes until DB-013 DROP + backup + owner go.
+
+---
+
+## DATA-016b: wc2026_match_events 455 genuine duplicate rows — ingestion bug (P1)
+
+**What:** 360 collision groups on true key `(match_id, minute_num, team_id, event_type)` contain 455 excess rows that are BYTE-IDENTICAL to their group siblings on ALL non-PK columns. Breakdown: VAR=200 groups (458 rows), SUB=157 groups (351 rows), YELLOW=2 groups (4 rows), GOAL=1 group (2 rows).
+
+**When:** Confirmed 2026-07-08 during B3 re-verdict.
+
+**Evidence:**
+```sql
+SELECT match_id, minute_num, team_id, event_type, COUNT(*) as cnt
+FROM wc2026_match_events
+GROUP BY match_id, minute_num, team_id, event_type
+HAVING COUNT(*) > 1;
+-- Result: 360 groups, 815 total rows in groups, 455 excess
+```
+
+Individual inspection: ALL collision groups have rows that are IDENTICAL on player_name, assist_player_name, minute_str, is_first_half, team_id — differing only by auto-increment `id`.
+
+**Root cause:** Ingestion pipeline wrote the same event multiple times per match (likely loop bug or retry-without-dedup-check in scraper).
+
+**Dedup action:** BLOCKED per Dedup Gate. Requires:
+1. DATA-016 resolution (player_name population) to confirm no legitimate multi-row hidden
+2. Archive-first protocol
+3. Owner authorization
+
+**Priority:** P1 — data integrity issue, but dedup execution gated.
+
+**Status:** OPEN — genuine dupes confirmed, dedup blocked pending DATA-016 + Dedup Gate.
