@@ -17,11 +17,18 @@ Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enab
 everything auto-installs on session start in any environment. `skills-lock.json` pins the
 npx-installed sources. `.agents/skills/` is the universal directory (17 agent platforms).
 
-## Custom commands (`.claude/commands/`)
+## Custom commands (`.claude/commands/` — 30 total)
 
-`/pm-story` · `/pm-prd` · `/pm-probe` · `/pm-prioritize` · `/pm-epic` · `/pm-problem` · `/pm-roadmap`
-— each invokes the matching PM skill with structured output requirements. Give `$ARGUMENTS`
-real context, not just a topic name. Chain them: problem → probe → story → epic → prioritize.
+Give `$ARGUMENTS` real context, not just a topic name.
+
+| Namespace | Commands |
+|---|---|
+| Product (`/pm-*`) | `/pm-problem` → `/pm-probe` → `/pm-story` → `/pm-epic` → `/pm-prioritize` (the discovery chain) · `/pm-prd` · `/pm-roadmap` |
+| Process (`/sp-*`) | `/sp-brainstorm` · `/sp-plan` · `/sp-execute` · `/sp-tdd` · `/sp-debug` · `/sp-verify` · `/sp-review-ask` · `/sp-review-apply` · `/sp-parallel` · `/sp-subagents` · `/sp-worktree` · `/sp-finish` · `/sp-skill-new` · `/sp-help` |
+| Design (`/ui-*`) | `/ui-build` · `/ui-tokens` · `/ui-style` · `/ui-direction` · `/ui-design-asset` · `/ui-banner` · `/ui-slides` · `/ui-brand` — ALL enforce Dime brand law from `design-system/dime-ai/MASTER.md` |
+| Payments | `/stripe` — grounded in this repo's webhook/checkout code |
+
+Typical build loop: `/pm-problem` → `/pm-story` → `/sp-plan` → `/sp-tdd` → `/ui-build` → `/sp-verify` → `/sp-review-ask` → `/sp-finish`.
 
 Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [--domain ...] [--stack ...] [--design-system --variance N --motion N --density N]`
 
