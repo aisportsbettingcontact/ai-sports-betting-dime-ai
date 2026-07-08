@@ -4543,8 +4543,8 @@
 - [x] Phase 1: DB-013 DROP — 10 backup tables archived + dropped
 - [x] Phase 2: DATA-016 player_name population (906/1422 = 63.7% from ESPN)
 - [x] Phase 3: UNIQUE pre-check — NULL behavior correction + disjointness proof + keep-rule verification
-- [x] Phase 4: Dedup — 258 excess VAR rows archived + deleted (200 groups)
+- [x] Phase 4: Dedup — 257 excess VAR rows archived + deleted (200 groups; 175×2-copy + 25×3-5-copy)
 - [x] Phase 5: ESPN reconciliation — 62/62 PASS, no attribution corruption
 - [x] Phase 6: UNIQUE constraint uq_me_natural_key APPLIED + ingester idempotency fix
 - [x] Phase 7 (DB-014): odds_source engine-code fix — 6 sites patched
-- [x] Phase 8 (DB-015): FT_PEN enum + 7 consumer sites updated + 4 matches corrected in DB
+- [x] Phase 8 (DB-015): FT_PEN enum + 9 consumer sites updated + 4 matches corrected in DB

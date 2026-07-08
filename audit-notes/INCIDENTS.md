@@ -389,12 +389,12 @@ Individual inspection: ALL collision groups have rows that are IDENTICAL on play
 1. DATA-016 population completed (906/1422 populated)
 2. Disjointness proof: 155 legitimate multi-row groups DISJOINT from original 360 dupe groups
 3. Keep-rule verification: post-population, 0 genuine dupe groups remain among named events; only 200 VAR groups (NULL player) remain
-4. Dedup: 258 excess VAR rows archived to `audit-notes/archives/match_events_var_dupes_2026-07-08.json` + deleted
+4. Dedup: 257 excess VAR rows archived to `audit-notes/archives/match_events_var_dupes_2026-07-08.json` + deleted (200 groups: 175 had 2 copies = 175 deletes; 25 had 3-5 copies = 82 deletes; total = 257)
 5. ESPN reconciliation: 62/62 matches PASS — no attribution corruption
 6. UNIQUE constraint `uq_me_natural_key(match_id, minute_num, team_id, event_type, player_name)` APPLIED
 7. Ingester idempotency fix: check-before-insert pattern prevents future re-emission dupes
 
-Key finding: The original 360 groups included 160 SUB/YELLOW/GOAL groups that were only byte-identical because player_name was NULL. Post-population, these became distinguishable legitimate events. True dupes = 200 VAR groups only (258 excess rows deleted, 200 retained).
+Key finding: The original 360 groups included 160 SUB/YELLOW/GOAL groups that were only byte-identical because player_name was NULL. Post-population, these became distinguishable legitimate events. True dupes = 200 VAR groups only (257 excess rows deleted, 200 retained).
 
 ---
 
@@ -428,3 +428,17 @@ Key finding: The original 360 groups included 160 SUB/YELLOW/GOAL groups that we
 7. DB: 4 matches updated from FT → FT_PEN
 
 **Status:** RESOLVED — all 9 consumer sites updated (7 original + 2 found during certification: wc2026Context.ts, WcFeedInline.tsx), live DB corrected, future penalty-decided matches will auto-classify as FT_PEN.
+
+---
+
+## REGISTER FREEZE NOTE (2026-07-08T06:17Z)
+
+**Open items (owner-owned, cannot be closed by Manus without owner action):**
+- INC-002: GitHub PAT workflows permission — OPEN
+- INC-007: Sandbox S3 dirty git history — OPEN (owner decision required)
+- SEC-006: Credential rotation — OPEN-USER (ROTATION-CHECKLIST.md)
+- TEST-001: ESPN test harness — OPEN (scheduled for next write window)
+
+**TEST-001 scheduling:** The harness fix (replace `wc2026_espn_match_odds` reference with correct table name) is pre-scoped and trivial. Queued for next write window to avoid scope creep in the current certified window.
+
+All other incidents: RESOLVED with evidence.
