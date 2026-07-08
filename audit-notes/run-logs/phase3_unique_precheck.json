@@ -1,0 +1,643 @@
+{
+  "timestamp": "2026-07-08T04:56:11.846Z",
+  "totalCollisionGroups": 355,
+  "genuineDupes": 0,
+  "legitimateMultiRow": 155,
+  "ambiguousNull": 200,
+  "legitimateCases": [
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 66,
+      "team_id": "mex",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Gilberto Mora | Luis Chávez",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 76,
+      "team_id": "mex",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Armando González | Edson Álvarez",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 64,
+      "team_id": "cze",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Adam Hlozek | Michal Sadílek | Tomás Chorý",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 69,
+      "team_id": "kor",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Eom Ji-Sung | Oh Hyeon-Gyu",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 84,
+      "team_id": "kor",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Kim Jin-Gyu | Park Jin-Seop",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 45,
+      "team_id": "bih",
+      "event_type": "YELLOW",
+      "cnt": 2,
+      "distinct_players": "Ermedin Demirovic | Jovo Lukic",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 61,
+      "team_id": "can",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Ali Ahmed | Jacob Shaffelburg | Promise David",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 62,
+      "team_id": "bih",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Armin Gigovic | Samed Bazdar",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 74,
+      "team_id": "bih",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ivan Sunjic | Kerim Alajbegovic",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-004",
+      "minute_num": 60,
+      "team_id": "qat",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Ahmed Alaaeldin | Ahmed Fathy | Karim Boudiaf",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-004",
+      "minute_num": 65,
+      "team_id": "sui",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Fabian Rieder | Johan Manzambi",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-004",
+      "minute_num": 89,
+      "team_id": "sui",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ardon Jashari | Miro Muheim",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-005",
+      "minute_num": 72,
+      "team_id": "usa",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ricardo Pepi | Timothy Weah",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-005",
+      "minute_num": 79,
+      "team_id": "par",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Gustavo Velázquez | Ramón Sosa",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-006",
+      "minute_num": 45,
+      "team_id": "bra",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Danilo | Fabinho",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-006",
+      "minute_num": 65,
+      "team_id": "mar",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Chemsdine Talbi | Samir El Mourabet",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-006",
+      "minute_num": 80,
+      "team_id": "mar",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Anass Salah-Eddine | Ayoube Amaimouni",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-007",
+      "minute_num": 75,
+      "team_id": "sco",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Lyndon Dykes | Nathan Patterson | Ryan Christie",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-007",
+      "minute_num": 83,
+      "team_id": "sco",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Findlay Curtis | Kenny McLean",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-007",
+      "minute_num": 90,
+      "team_id": "sco",
+      "event_type": "YELLOW",
+      "cnt": 2,
+      "distinct_players": "Findlay Curtis | Kenny McLean",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-008",
+      "minute_num": 74,
+      "team_id": "aus",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Jason Geria | Tete Yengi",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-008",
+      "minute_num": 81,
+      "team_id": "tur",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Mert Müldür | Salih Özcan",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-008",
+      "minute_num": 84,
+      "team_id": "aus",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Aziz Behich | Jackson Irvine",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-009",
+      "minute_num": 56,
+      "team_id": "civ",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Amad Diallo | Ange-Yoan Bonny",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-009",
+      "minute_num": 62,
+      "team_id": "ecu",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Jackson Porozo | Ángelo Preciado",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-009",
+      "minute_num": 77,
+      "team_id": "civ",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Christ Inao Oulaï | Ibrahim Sangaré",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-010",
+      "minute_num": 73,
+      "team_id": "ger",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Antonio Rüdiger | David Raum | Leon Goretzka",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-011",
+      "minute_num": 65,
+      "team_id": "swe",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Elliot Stroud | Lucas Bergvall",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-011",
+      "minute_num": 72,
+      "team_id": "tun",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Elias Achouri | Mohamed Hadj Mahmoud | Sebastian Tounekti",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-011",
+      "minute_num": 90,
+      "team_id": "swe",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Anthony Elanga | Daniel Svensson",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-012",
+      "minute_num": 70,
+      "team_id": "ned",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Memphis Depay | Quinten Timber | Teun Koopmeiners",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-012",
+      "minute_num": 75,
+      "team_id": "jpn",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Koki Ogawa | Takehiro Tomiyasu | Yukinari Sugawara",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-013",
+      "minute_num": 56,
+      "team_id": "bel",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Maxim De Cuyper | Nicolas Raskin",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-013",
+      "minute_num": 76,
+      "team_id": "egy",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Hamza Abdelkarim | Zizo",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-013",
+      "minute_num": 86,
+      "team_id": "bel",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Hans Vanaken | Matias Fernandez-Pardo",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-013",
+      "minute_num": 88,
+      "team_id": "egy",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ibrahim Adel | Karim Hafez",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-014",
+      "minute_num": 68,
+      "team_id": "nzl",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ben Old | Ryan Thomas",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-014",
+      "minute_num": 90,
+      "team_id": "nzl",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Jesse Randall | Tyler Bindon",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-015",
+      "minute_num": 61,
+      "team_id": "cpv",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Deroy Duarte | Nuno da Costa | Willy Semedo",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-015",
+      "minute_num": 71,
+      "team_id": "esp",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Lamine Yamal | Mikel Merino",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-016",
+      "minute_num": 45,
+      "team_id": "uru",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Agustín Canobbio | Juan Manuel Sanabria",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-016",
+      "minute_num": 90,
+      "team_id": "ksa",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Abdullah Al-Hamdan | Ala Al-Hajji | Ali Lajami",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-017",
+      "minute_num": 59,
+      "team_id": "irq",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Marko Farji | Zidane Iqbal",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-017",
+      "minute_num": 73,
+      "team_id": "nor",
+      "event_type": "SUB",
+      "cnt": 4,
+      "distinct_players": "Andreas Schjelderup | Kristian Thorstvedt | Leo Østigard | Oscar Bobb",
+      "distinct_player_count": 4
+    },
+    {
+      "match_id": "wc26-g-017",
+      "minute_num": 73,
+      "team_id": "irq",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Ahmed Qasim | Mustafa Saadoon",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-018",
+      "minute_num": 83,
+      "team_id": "sen",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Bamba Dieng | Iliman Ndiaye",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-019",
+      "minute_num": 59,
+      "team_id": "aut",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Carney Chukwuemeka | Kevin Danso | Paul Wanner",
+      "distinct_player_count": 3
+    },
+    {
+      "match_id": "wc26-g-019",
+      "minute_num": 81,
+      "team_id": "jor",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Mahmoud Al-Mardi | Saed Al-Rosan",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-020",
+      "minute_num": 55,
+      "team_id": "arg",
+      "event_type": "SUB",
+      "cnt": 2,
+      "distinct_players": "Julián Álvarez | Nico González",
+      "distinct_player_count": 2
+    },
+    {
+      "match_id": "wc26-g-020",
+      "minute_num": 64,
+      "team_id": "alg",
+      "event_type": "SUB",
+      "cnt": 3,
+      "distinct_players": "Houssem Aouar | Mohamed Amoura | Riyad Mahrez",
+      "distinct_player_count": 3
+    }
+  ],
+  "genuineDupeSample": [],
+  "ambiguousSample": [
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 25,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 27,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 45,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 68,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 70,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 73,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 4,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-001",
+      "minute_num": 81,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 4,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 23,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 25,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 26,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 27,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 45,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 70,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-002",
+      "minute_num": 72,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 12,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 4,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 15,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 4,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 23,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 25,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 45,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    },
+    {
+      "match_id": "wc26-g-003",
+      "minute_num": 49,
+      "team_id": "",
+      "event_type": "VAR",
+      "cnt": 2,
+      "distinct_players": "",
+      "distinct_player_count": 1
+    }
+  ],
+  "verdict": "CONSTRAINT_UNSAFE"
+}
