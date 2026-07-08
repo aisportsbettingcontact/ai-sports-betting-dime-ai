@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0B0B0F">
+  <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(154 154) scale(0.4)">
+      <path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path>
+      <path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path>
+    </g>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #101014; }
+    a { color: #45E0A8; text-decoration: none; }
+    a:hover { color: #7DEBc4; }
+  </style>
+</helmet>
+
+<section style="padding: 56px; display: flex; flex-direction: column; gap: 24px; font-family: 'Familjen Grotesk', sans-serif; color: #EDEDF2;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: #6A6A78; letter-spacing: 0.12em; text-transform: uppercase;">dime chat interface — dark + light · turn 5</div>
+    <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">The chat page, both modes</div>
+    <div style="font-size: 14px; color: #9A9AA8; max-width: 760px;">Home state: 4c wordmark replaces the greeting. 4b submit buttons (white button on dark, black button on light). 2g V7 icon as the model avatar in the chat thread.</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- 5a — dark mode -->
+    <div id="5a" style="width: 1200px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5a" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5a</a><div style="font-size: 13px; font-weight: 700;">Dark mode — home</div></div>
+      <div style="display: flex; height: 720px; background: #0B0B0F; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div style="width: 250px; flex-shrink: 0; background: #101016; border-right: 1px solid #1E1E26; display: flex; flex-direction: column; padding: 18px 14px;">
+          <div style="display: flex; align-items: center; gap: 9px; padding: 0 8px 18px;">
+            <svg viewBox="0 0 512 512" width="26" height="26"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+            <div style="font-size: 17px; font-weight: 700; letter-spacing: -0.045em; color: #EDEDF2; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #1A1A22; font-size: 13px; font-weight: 600; color: #EDEDF2;">＋ New chat</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #9A9AA8;">Search chats</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #9A9AA8;">Today's slate</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #9A9AA8;">Prop research</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #9A9AA8;">Bankroll</div>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #55555E; padding: 20px 10px 8px;">Recents</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: hidden;">
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #C9C9D4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Pirates ML value check</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #C9C9D4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">NBA props — Tatum O/U</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #C9C9D4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Kelly sizing on +130 dogs</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #C9C9D4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sunday slate line moves</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 0; border-top: 1px solid #1E1E26;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #45E0A8; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #0B0B0F;">AB</div>
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 600; color: #EDEDF2;">AI Sports Betting</div><div style="font-size: 11px; color: #6A6A78;">Pro</div></div>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; padding: 40px;">
+          <div style="font-size: 58px; font-weight: 700; letter-spacing: -0.05em; color: #EDEDF2; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></div>
+          <div style="width: 620px; display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 26px; padding: 9px 9px 9px 20px;">
+            <div style="font-size: 18px; color: #6A6A78; font-weight: 500;">＋</div>
+            <div style="flex: 1; font-size: 14px; color: #6A6A78;">Ask dime anything…</div>
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+            </button>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="padding: 9px 16px; border: 1px solid #24242E; border-radius: 20px; font-size: 13px; color: #C9C9D4;">Tonight's dime lines</div>
+            <div style="padding: 9px 16px; border: 1px solid #24242E; border-radius: 20px; font-size: 13px; color: #C9C9D4;">Find me an edge</div>
+            <div style="padding: 9px 16px; border: 1px solid #24242E; border-radius: 20px; font-size: 13px; color: #C9C9D4;">Check my sizing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5b — light mode -->
+    <div id="5b" style="width: 1200px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5b" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5b</a><div style="font-size: 13px; font-weight: 700;">Light mode — home</div></div>
+      <div style="display: flex; height: 720px; background: #FFFFFF; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div style="width: 250px; flex-shrink: 0; background: #F4F4F6; border-right: 1px solid #E4E4E9; display: flex; flex-direction: column; padding: 18px 14px;">
+          <div style="display: flex; align-items: center; gap: 9px; padding: 0 8px 18px;">
+            <svg viewBox="0 0 512 512" width="26" height="26"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+            <div style="font-size: 17px; font-weight: 700; letter-spacing: -0.045em; color: #0B0B0F; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; border: 0.5px solid #0B0B0F; box-sizing: border-box;"></span></span><span>me</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: #E8E8EC; font-size: 13px; font-weight: 600; color: #0B0B0F;">＋ New chat</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #55555E;">Search chats</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #55555E;">Today's slate</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #55555E;">Prop research</div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; color: #55555E;">Bankroll</div>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9AA8; padding: 20px 10px 8px;">Recents</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: hidden;">
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #2A2A32; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Pirates ML value check</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #2A2A32; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">NBA props — Tatum O/U</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #2A2A32; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Kelly sizing on +130 dogs</div>
+            <div style="padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #2A2A32; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sunday slate line moves</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 8px 0; border-top: 1px solid #E4E4E9;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #45E0A8; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #0B0B0F;">AB</div>
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 600; color: #0B0B0F;">AI Sports Betting</div><div style="font-size: 11px; color: #9A9AA8;">Pro</div></div>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px; padding: 40px;">
+          <div style="font-size: 58px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; border: 1px solid #0B0B0F; box-sizing: border-box;"></span></span><span>me</span></div>
+          <div style="width: 620px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 26px; padding: 9px 9px 9px 20px; box-shadow: 0 1px 3px rgba(11,11,15,0.06);">
+            <div style="font-size: 18px; color: #9A9AA8; font-weight: 500;">＋</div>
+            <div style="flex: 1; font-size: 14px; color: #9A9AA8;">Ask dime anything…</div>
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg>
+            </button>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <div style="padding: 9px 16px; border: 1px solid #D5D5DC; border-radius: 20px; font-size: 13px; color: #55555E;">Tonight's dime lines</div>
+            <div style="padding: 9px 16px; border: 1px solid #D5D5DC; border-radius: 20px; font-size: 13px; color: #55555E;">Find me an edge</div>
+            <div style="padding: 9px 16px; border: 1px solid #D5D5DC; border-radius: 20px; font-size: 13px; color: #55555E;">Check my sizing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5c — dark chat thread -->
+    <div id="5c" style="width: 1200px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5c" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5c</a><div style="font-size: 13px; font-weight: 700;">Dark mode — active chat (2g V7 avatar at 60px)</div></div>
+      <div style="height: 560px; background: #0B0B0F; border: 1px solid #24242E; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid #1E1E26;">
+          <div style="font-size: 13px; font-weight: 700; color: #EDEDF2; padding: 6px 14px; background: #1A1A22; border-radius: 16px;">Chat</div>
+          <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px;">Slate</div>
+          <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px;">Bankroll</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 120px; overflow: hidden;">
+          <div style="align-self: flex-end; max-width: 460px; background: #1E1E26; border-radius: 16px 16px 4px 16px; padding: 12px 16px; font-size: 14px; color: #EDEDF2;">Pirates ML is +102 at two books. Worth a dime?</div>
+          <div style="display: flex; gap: 14px;">
+            <svg viewBox="0 0 512 512" width="60" height="60" style="flex-shrink: 0;"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 4px 16px 16px 16px; padding: 14px 18px; font-size: 14px; line-height: 1.6; color: #C9C9D4; max-width: 620px;">Model has PIT at 55.8%. Implied probability at +102 is 49.5%, so you're holding roughly 6.3% of edge — that clears my dime threshold. Take the +102 now; if it moves past -105 before first pitch, cut to a half-unit.</div>
+          </div>
+        </div>
+        <div style="padding: 16px 120px 22px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 26px; padding: 9px 9px 9px 20px;">
+            <div style="flex: 1; font-size: 14px; color: #6A6A78;">Reply to dime…</div>
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5d — light chat thread -->
+    <div id="5d" style="width: 1200px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#5d" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">5d</a><div style="font-size: 13px; font-weight: 700;">Light mode — active chat</div></div>
+      <div style="height: 560px; background: #FFFFFF; border: 1px solid #24242E; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid #E4E4E9;">
+          <div style="font-size: 13px; font-weight: 700; color: #0B0B0F; padding: 6px 14px; background: #E8E8EC; border-radius: 16px;">Chat</div>
+          <div style="font-size: 13px; color: #9A9AA8; padding: 6px 14px;">Slate</div>
+          <div style="font-size: 13px; color: #9A9AA8; padding: 6px 14px;">Bankroll</div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 28px 120px; overflow: hidden;">
+          <div style="align-self: flex-end; max-width: 460px; background: #F0F0F3; border-radius: 16px 16px 4px 16px; padding: 12px 16px; font-size: 14px; color: #0B0B0F;">Pirates ML is +102 at two books. Worth a dime?</div>
+          <div style="display: flex; gap: 14px;">
+            <svg viewBox="0 0 512 512" width="60" height="60" style="flex-shrink: 0;"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+            <div style="background: #F7F7F9; border: 1px solid #E4E4E9; border-radius: 4px 16px 16px 16px; padding: 14px 18px; font-size: 14px; line-height: 1.6; color: #2A2A32; max-width: 620px;">Model has PIT at 55.8%. Implied probability at +102 is 49.5%, so you're holding roughly 6.3% of edge — that clears my dime threshold. Take the +102 now; if it moves past -105 before first pitch, cut to a half-unit.</div>
+          </div>
+        </div>
+        <div style="padding: 16px 120px 22px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #D5D5DC; border-radius: 26px; padding: 9px 9px 9px 20px; box-shadow: 0 1px 3px rgba(11,11,15,0.06);">
+            <div style="flex: 1; font-size: 14px; color: #9A9AA8;">Reply to dime…</div>
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+<section style="padding: 56px; display: flex; flex-direction: column; gap: 24px; font-family: 'Familjen Grotesk', sans-serif; color: #EDEDF2;">
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 13px; font-family: 'IBM Plex Mono', monospace; color: #6A6A78; letter-spacing: 0.12em; text-transform: uppercase;">system lockdown — 1d model mark · 1c prompt glyph · turn 4</div>
+    <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em;">Roles assigned, backgrounds tested</div>
+    <div style="font-size: 14px; color: #9A9AA8; max-width: 760px;"><a href="#4c">4c</a> = the Dime model wordmark (black/white + mint dot). <a href="#4a">4a</a> = the prompt-submit glyph, plus centered to the right of the caret. <a href="#2g">2g</a> V7 = app icon. <a href="#3l">3l</a> rebuilt with the 1d wordmark in the credit line.</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch;">
+
+    <!-- 4a — 1c realigned + button -->
+    <div id="4a" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4a" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4a</a><div style="font-size: 13px; font-weight: 700;">1c — plus outside, centered right of the caret</div></div>
+      <div style="display: flex; gap: 10px;">
+        <div style="flex: 1; height: 150px; display: flex; align-items: center; justify-content: center; background: #0B0B0F; border: 1px solid #17171E; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="104" height="104"><path d="M116 140 L268 256 L116 372" fill="none" stroke="#EDEDF2" stroke-width="52" stroke-linecap="square"></path><rect x="346" y="233" width="148" height="46" fill="#45E0A8"></rect><rect x="397" y="182" width="46" height="148" fill="#45E0A8"></rect></svg>
+        </div>
+        <div style="flex: 1; height: 150px; display: flex; align-items: center; justify-content: center; background: #EDEDF2; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="104" height="104"><path d="M116 140 L268 256 L116 372" fill="none" stroke="#45E0A8" stroke-width="52" stroke-linecap="square"></path><rect x="346" y="233" width="148" height="46" fill="#0B0B0F"></rect><rect x="397" y="182" width="46" height="148" fill="#0B0B0F"></rect></svg>
+        </div>
+        <div style="flex: 1; height: 150px; display: flex; align-items: center; justify-content: center; background: #45E0A8; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="104" height="104"><path d="M116 140 L268 256 L116 372" fill="none" stroke="#0B0B0F" stroke-width="52" stroke-linecap="square"></path><rect x="346" y="233" width="148" height="46" fill="#FFFFFF"></rect><rect x="397" y="182" width="46" height="148" fill="#FFFFFF"></rect></svg>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #17171E; border-radius: 8px; padding: 8px;">
+        <svg viewBox="0 0 512 512" width="64" height="64"><path d="M116 140 L268 256 L116 372" fill="none" stroke="#EDEDF2" stroke-width="52" stroke-linecap="square"></path><rect x="346" y="233" width="148" height="46" fill="#45E0A8"></rect><rect x="397" y="182" width="46" height="148" fill="#45E0A8"></rect></svg>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A6A78;">64px</div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">More air between caret and plus, both centered on one axis, shown on the three brand grounds — black: white caret / mint plus · white: mint caret / black plus · mint: black caret / white plus.</div>
+    </div>
+
+    <!-- 4b — composer button -->
+    <div id="4b" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4b" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4b</a><div style="font-size: 13px; font-weight: 700;">1c as the submit button (36px, composer)</div></div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 24px; padding: 8px 8px 8px 18px;">
+          <div style="flex: 1; font-size: 14px; color: #EDEDF2;">Ask dime about tonight's slate…</div>
+          <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+            <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; background: #EDEDF2; border: 1px solid #D5D5DC; border-radius: 24px; padding: 8px 8px 8px 18px;">
+          <div style="flex: 1; font-size: 14px; color: #0B0B0F;">Is Pirates ML +102 a dime line?</div>
+          <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+            <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#45E0A8" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#FFFFFF"></rect><rect x="377" y="181" width="56" height="150" fill="#FFFFFF"></rect></svg>
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; background: #45E0A8; border: 1px solid #2FB584; border-radius: 24px; padding: 8px 8px 8px 18px;">
+          <div style="flex: 1; font-size: 14px; color: #0B0B0F;" data-comment-anchor="57d43b4ae6-div">Compare tonight's dime lines…</div>
+          <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+            <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+          </button>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">The 36×36 button on all three grounds — dark pill: white text, white button / black keyline / black caret / mint plus · white pill: black text, black button / white keyline / mint caret / white plus · mint pill: white text, black button / white caret / mint plus.</div>
+    </div>
+
+    <!-- 4c — 1d on three grounds -->
+    <div id="4c" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4c" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4c</a><div style="font-size: 13px; font-weight: 700;">1d model wordmark — black / white / mint</div></div>
+      <div style="display: flex; flex-direction: column; gap: 10px;" data-comment-anchor="d27d6b8f7f-div">
+        <div style="height: 92px; display: flex; align-items: center; justify-content: center; background: #0B0B0F; border: 1px solid #17171E; border-radius: 8px;">
+          <div style="font-size: 52px; font-weight: 700; letter-spacing: -0.05em; color: #EDEDF2; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></div>
+        </div>
+        <div style="height: 92px; display: flex; align-items: center; justify-content: center; background: #EDEDF2; border-radius: 8px;">
+          <div style="font-size: 52px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; border: 0.5px solid #0B0B0F; box-sizing: border-box;"></span></span><span>me</span></div>
+        </div>
+        <div style="height: 92px; display: flex; align-items: center; justify-content: center; background: #45E0A8; border-radius: 8px;">
+          <div style="font-size: 52px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #FFFFFF;"></span></span><span>me</span></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">Dot pulled in tighter to the stem. On black: mint dot. On white: mint dot with a hairline near-black keyline for edge definition. On mint: near-black wordmark with a white dot.</div>
+    </div>
+
+    <!-- 4d — 2g icons -->
+    <div id="4d" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4d" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4d</a><div style="font-size: 13px; font-weight: 700;">2g V7 app icon — mint / black / white · icon sizes</div></div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="height: 100px; display: flex; align-items: center; justify-content: center; gap: 18px; border: 1px solid #17171E; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="76" height="76"><rect width="512" height="512" rx="116" fill="#45E0A8"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#FFFFFF" stroke="#0B0B0F" stroke-width="10"></path><path fill-rule="evenodd" fill="#0B0B0F" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="60" height="60"><rect width="512" height="512" rx="116" fill="#45E0A8"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#FFFFFF" stroke="#0B0B0F" stroke-width="10"></path><path fill-rule="evenodd" fill="#0B0B0F" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="40" height="40"><rect width="512" height="512" rx="116" fill="#45E0A8"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#FFFFFF" stroke="#0B0B0F" stroke-width="10"></path><path fill-rule="evenodd" fill="#0B0B0F" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="29" height="29"><rect width="512" height="512" rx="116" fill="#45E0A8"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#FFFFFF" stroke="#0B0B0F" stroke-width="10"></path><path fill-rule="evenodd" fill="#0B0B0F" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+        </div>
+        <div style="height: 100px; display: flex; align-items: center; justify-content: center; gap: 18px; border: 1px solid #17171E; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="76" height="76"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="60" height="60"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="40" height="40"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="29" height="29"><rect width="512" height="512" rx="116" fill="#101016"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#24242E" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#45E0A8"></path><path fill-rule="evenodd" fill="#EDEDF2" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+        </div>
+        <div style="height: 100px; display: flex; align-items: center; justify-content: center; gap: 18px; background: #EDEDF2; border-radius: 8px;">
+          <svg viewBox="0 0 512 512" width="76" height="76"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="60" height="60"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="40" height="40"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+          <svg viewBox="0 0 512 512" width="29" height="29"><rect width="512" height="512" rx="116" fill="#FFFFFF"></rect><rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#D5D5DC" stroke-width="2"></rect><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#45E0A8" stroke="#0B0B0F" stroke-width="10" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">76 / 60 / 40 / 29px — the iOS icon ladder. Mint ground: white 1, black 0. Black ground: mint 1, white 0. White ground: black 1, mint 0. The 29px favicon still splits 1|0 on all three.</div>
+    </div>
+
+    <!-- 4e — 3l rebuilt -->
+    <div id="4e" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4e" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4e</a><div style="font-size: 13px; font-weight: 700;">3l rebuilt — “powered by” + 1d wordmark</div></div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="height: 145px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; background: #0B0B0F; border: 1px solid #17171E; border-radius: 8px;">
+          <div style="text-align: center; font-weight: 700; font-size: 25px; line-height: 1.06; letter-spacing: -0.03em; color: #EDEDF2;">AI Sports<br>Betting</div>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <div style="font-size: 12px; font-weight: 600; color: #C9C9D4;">powered by</div>
+            <div style="font-size: 19px; font-weight: 700; letter-spacing: -0.05em; color: #EDEDF2; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></div>
+          </div>
+        </div>
+        <div style="height: 145px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; background: #EDEDF2; border-radius: 8px;">
+          <div style="text-align: center; font-weight: 700; font-size: 25px; line-height: 1.06; letter-spacing: -0.03em; color: #0B0B0F;">AI Sports<br>Betting</div>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <div style="font-size: 12px; font-weight: 600; color: #4A4A55;">powered by</div>
+            <div style="font-size: 19px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; border: 0.5px solid #0B0B0F; box-sizing: border-box;"></span></span><span>me</span></div>
+          </div>
+        </div>
+        <div style="height: 145px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; background: #45E0A8; border-radius: 8px;">
+          <div style="text-align: center; font-weight: 700; font-size: 25px; line-height: 1.06; letter-spacing: -0.03em; color: #0B0B0F;">AI Sports<br>Betting</div>
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <div style="font-size: 12px; font-weight: 600; color: #0B0B0F;">powered by</div>
+            <div style="font-size: 19px; font-weight: 700; letter-spacing: -0.05em; color: #0B0B0F; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #FFFFFF;"></span></span><span>me</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">The full lockup on all three grounds, credit line centered — semi-bold “powered by” + the 1d wordmark. Dot logic follows <a href="#4c">4c</a>: mint on black, keylined mint on white, white on mint.</div>
+    </div>
+
+    <!-- 4f — full interface mockup -->
+    <div id="4f" style="width: 956px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4f" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4f</a><div style="font-size: 13px; font-weight: 700;">Chat tab — everything in place</div></div>
+      <div style="border: 1px solid #24242E; border-radius: 10px; background: #101016; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid #1E1E26;">
+          <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: #EDEDF2;">AI Sports Betting</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6A6A78;">/ chat</div>
+          <div style="margin-left: auto; display: flex; align-items: baseline; gap: 6px;">
+            <div style="font-size: 11px; font-weight: 600; color: #C9C9D4;">powered by</div>
+            <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.05em; color: #EDEDF2; line-height: 1; display: flex; align-items: baseline;"><span>d</span><span style="position: relative; display: inline-block;">ı<span style="position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8;"></span></span><span>me</span></div>
+          </div>
+        </div>
+        <div style="padding: 24px 20px; display: flex; flex-direction: column; gap: 16px; min-height: 200px;">
+          <div style="align-self: flex-end; max-width: 420px; background: #1E1E26; border-radius: 14px 14px 4px 14px; padding: 10px 14px; font-size: 13px; color: #EDEDF2;">Pirates ML is +102 at two books. Worth a dime?</div>
+          <div style="display: flex; gap: 10px; max-width: 560px;">
+            <svg viewBox="0 0 512 512" width="26" height="26" style="flex-shrink: 0; margin-top: 2px;"><circle cx="256" cy="256" r="256" fill="#45E0A8"></circle><g transform="translate(97 97) scale(0.62)"><path d="M28 142 L66 104 L104 104 L104 408 L28 408 Z" fill="#0B0B0F"></path><path fill-rule="evenodd" fill="#0B0B0F" d="M180 256 a152 152 0 1 0 304 0 a152 152 0 1 0 -304 0 Z M256 256 a76 76 0 1 0 152 0 a76 76 0 1 0 -152 0 Z"></path></g></svg>
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 4px 14px 14px 14px; padding: 10px 14px; font-size: 13px; line-height: 1.55; color: #C9C9D4;">Model has PIT at 55.8% — implied at +102 is 49.5%, so you're holding ~6.3% of edge. That clears my dime threshold. Half-unit if the line moves past -105 before first pitch.</div>
+          </div>
+        </div>
+        <div style="padding: 14px 20px 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 24px; padding: 8px 8px 8px 18px;">
+            <div style="flex: 1; font-size: 13px; color: #6A6A78;">Ask dime anything…</div>
+            <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; border-radius: 50%; background: #0B0B0F; border: 0.5px solid #EDEDF2; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="opacity: 0.7;">
+              <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#EDEDF2" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">The full system in one screen: parent wordmark in the header, 1d credit right-aligned, the Ten Coin as the model's avatar, and 1c as the live submit button.</div>
+    </div>
+
+    <!-- 4g — Boxed AI (kept from 3c) -->
+    <div id="4g" style="width: 300px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px;" data-comment-anchor="789f06611c-div">
+      <div style="display: flex; align-items: center; gap: 8px;"><a href="#4g" style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #1A1A22; color: #45E0A8; padding: 2px 7px; border-radius: 4px;">4g</a><div style="font-size: 13px; font-weight: 700;">Boxed AI — kept from 3c</div></div>
+      <div style="padding: 18px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 1px solid #17171E; border-radius: 8px;">
+        <div style="background: #EDEDF2; color: #0B0B0F; font-weight: 700; font-size: 28px; letter-spacing: -0.02em; padding: 2px 10px; border-radius: 3px;">AI</div>
+        <div style="text-align: center; font-weight: 700; font-size: 22px; line-height: 1.08; letter-spacing: -0.02em; color: #EDEDF2;">SPORTS BETTING</div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: #9A9AA8;">The AI plate becomes a detachable avatar/favicon on its own — the name gains a mark without adding one.</div>
+    </div>
+
+    <!-- 4h — Ten Coin (moved from 1a) -->
+    <div id="4h" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 20px;" data-comment-anchor="25f7fad474-div">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="#4h" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #1A1A22; color: #45E0A8; padding: 3px 8px; border-radius: 4px;">4h</a>
+        <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Ten Coin</div>
+      </div>
+      <div style="height: 260px; display: flex; align-items: center; justify-content: center; background: #0B0B0F; border: 1px solid #17171E; border-radius: 8px;">
+        <svg viewBox="0 0 512 512" width="200" height="200" role="img" aria-label="Ten Coin mark">
+          <rect x="118" y="100" width="62" height="312" fill="#45E0A8"></rect>
+          <path fill-rule="evenodd" fill="#EDEDF2" d="M330 126 a130 130 0 1 1 0 260 a130 130 0 1 1 0 -260 Z M330 198 a58 58 0 1 0 0 116 a58 58 0 1 0 0 -116 Z"></path>
+        </svg>
+      </div>
+      <div style="display: flex; align-items: center; gap: 28px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+          <svg viewBox="0 0 512 512" width="64" height="64"><rect x="118" y="100" width="62" height="312" fill="#45E0A8"></rect><path fill-rule="evenodd" fill="#EDEDF2" d="M330 126 a130 130 0 1 1 0 260 a130 130 0 1 1 0 -260 Z M330 198 a58 58 0 1 0 0 116 a58 58 0 1 0 0 -116 Z"></path></svg>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A6A78;">64px</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+          <svg viewBox="0 0 512 512" width="64" height="64"><rect x="118" y="100" width="62" height="312" fill="#EDEDF2"></rect><path fill-rule="evenodd" fill="#EDEDF2" d="M330 126 a130 130 0 1 1 0 260 a130 130 0 1 1 0 -260 Z M330 198 a58 58 0 1 0 0 116 a58 58 0 1 0 0 -116 Z"></path></svg>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A6A78;">mono</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+          <svg viewBox="0 0 512 512" width="36" height="36"><rect x="118" y="100" width="62" height="312" fill="#45E0A8"></rect><path fill-rule="evenodd" fill="#EDEDF2" d="M330 126 a130 130 0 1 1 0 260 a130 130 0 1 1 0 -260 Z M330 198 a58 58 0 1 0 0 116 a58 58 0 1 0 0 -116 Z"></path></svg>
+          <div style="font-size: 26px; font-weight: 700; letter-spacing: -0.045em;">dime</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.55; color: #9A9AA8;">The dime reduced to its unit: a bar and a ring that read literally as “10” — the $1,000 stake as pure geometry, no coin illustration. Two solid shapes with a fat counter, so it stays crisp at 64px and survives monochrome with zero changes.</div>
+    </div>
+
+
+    <!-- 4i — Line Move (moved from 1b) -->
+    <div id="4i" style="width: 470px; background: #0B0B0F; border: 1px solid #1E1E26; border-radius: 12px; padding: 28px; display: flex; flex-direction: column; gap: 20px;" data-comment-anchor="83f253d4ce-div">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="#4i" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #1A1A22; color: #45E0A8; padding: 3px 8px; border-radius: 4px;">4i</a>
+        <div style="font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Line Move</div>
+      </div>
+      <div style="height: 260px; display: flex; align-items: center; justify-content: center; background: #0B0B0F; border: 1px solid #17171E; border-radius: 8px;">
+        <svg viewBox="0 0 512 512" width="200" height="200" role="img" aria-label="Line Move mark">
+          <path d="M138 96 h110 a160 160 0 0 1 0 320 h-110 z" fill="none" stroke="#EDEDF2" stroke-width="42"></path>
+          <path d="M178 324 h62 v-70 h62 v-62" fill="none" stroke="#45E0A8" stroke-width="30"></path>
+          <circle cx="302" cy="184" r="24" fill="#45E0A8"></circle>
+        </svg>
+      </div>
+      <div style="display: flex; align-items: center; gap: 28px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+          <svg viewBox="0 0 512 512" width="64" height="64"><path d="M138 96 h110 a160 160 0 0 1 0 320 h-110 z" fill="none" stroke="#EDEDF2" stroke-width="42"></path><path d="M178 324 h62 v-70 h62 v-62" fill="none" stroke="#45E0A8" stroke-width="30"></path><circle cx="302" cy="184" r="24" fill="#45E0A8"></circle></svg>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A6A78;">64px</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+          <svg viewBox="0 0 512 512" width="64" height="64"><path d="M138 96 h110 a160 160 0 0 1 0 320 h-110 z" fill="none" stroke="#EDEDF2" stroke-width="42"></path><path d="M178 324 h62 v-70 h62 v-62" fill="none" stroke="#EDEDF2" stroke-width="30"></path><circle cx="302" cy="184" r="24" fill="#EDEDF2"></circle></svg>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6A6A78;">mono</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+          <svg viewBox="0 0 512 512" width="36" height="36"><path d="M138 96 h110 a160 160 0 0 1 0 320 h-110 z" fill="none" stroke="#EDEDF2" stroke-width="42"></path><path d="M178 324 h62 v-70 h62 v-62" fill="none" stroke="#45E0A8" stroke-width="30"></path><circle cx="302" cy="184" r="24" fill="#45E0A8"></circle></svg>
+          <div style="font-size: 26px; font-weight: 700; letter-spacing: -0.045em;">dime</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; line-height: 1.55; color: #9A9AA8;">A capital D whose counter holds a stepped line move — odds climbing tick by tick, the “dime line” living inside the letterform. The chart is only three strokes and a dot, so it reads at 64px; in mono the terminal dot still lands the eye.</div>
+    </div>
+
+
+  </div>
+
+</section>
+
+
+
+
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1560px&quot;,&quot;height&quot;:&quot;1400px&quot;}}"></script>
+</body>
+</html>
