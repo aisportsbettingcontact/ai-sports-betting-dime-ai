@@ -185,9 +185,130 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   return { sessionId: session.id, url: session.url };
 }
 
+// ─── Embedded checkout session builder ────────────────────────────────────────
+// Same plan/price resolution as buildStripeCheckoutSession, but ui_mode:"embedded"
+// so the payment form mounts inside the Dime domain (/checkout) instead of
+// redirecting to a Stripe-hosted page. Stripe still controls all card inputs —
+// no raw card data ever touches this server.
+
+async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
+  const { planId, origin, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"}`);
+
+  const plan = PLANS[planId];
+  if (!plan) {
+    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — unknown planId=${planId}`);
+    throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown plan: ${planId}` });
+  }
+
+  let priceId: string;
+  try {
+    priceId = plan.priceId();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — priceId resolution error: ${msg}`);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Stripe price not configured. Contact support.",
+    });
+  }
+
+  let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
+  if (stripeCustomerId) customerParam = { customer: stripeCustomerId };
+  else if (prefillEmail) customerParam = { customer_email: prefillEmail };
+
+  const stripe = getStripe();
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      // stripe-node v22 API naming: "embedded_page" is the classic Embedded
+      // Checkout iframe (what older API versions called "embedded").
+      ui_mode: "embedded_page",
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      ...customerParam,
+      payment_method_collection: "if_required",
+      client_reference_id: userId != null ? String(userId) : undefined,
+      metadata: {
+        ...(userId != null ? { user_id: String(userId) } : {}),
+        plan_id: planId,
+        desired_username: desiredUsername ?? "",
+      },
+      custom_fields: [
+        {
+          key: "desired_username",
+          label: { type: "custom" as const, custom: "Desired Username" },
+          type: "text" as const,
+          text: {
+            minimum_length: 3,
+            maximum_length: 64,
+            ...(desiredUsername ? { default_value: desiredUsername } : {}),
+          },
+          optional: false,
+        },
+      ],
+      subscription_data: {
+        description: planId === 'annual'
+          ? 'AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.'
+          : 'AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.',
+        metadata: {
+          ...(userId != null ? { user_id: String(userId) } : {}),
+          plan_id: planId,
+        },
+      },
+      allow_promotion_codes: true,
+      // Embedded mode uses return_url (not success_url/cancel_url); the session_id
+      // lands on the same success page the hosted flow already uses.
+      return_url: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
+      billing_address_collection: "auto",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — Stripe API error: ${msg}`);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to create checkout session. Please try again.",
+    });
+  }
+
+  if (!session.client_secret) {
+    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — no client_secret session_id=${session.id}`);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Checkout session created but no client secret returned.",
+    });
+  }
+
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [OUTPUT] session_id=${session.id} — embedded client_secret issued`);
+  return { sessionId: session.id, clientSecret: session.client_secret };
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const stripeRouter = router({
+  /**
+   * publicCreateEmbeddedCheckoutSession
+   *
+   * Embedded (in-domain) variant of publicCreateCheckoutSession. Returns a
+   * client_secret that the /checkout page mounts with Stripe Embedded Checkout,
+   * keeping the URL on the Dime domain. Same rate limiter class as the hosted
+   * variant (see server/_core/index.ts).
+   */
+  publicCreateEmbeddedCheckoutSession: stripeProcedure
+    .input(
+      z.object({
+        planId: zodPlanId,
+        /** Frontend must pass window.location.origin for correct return URL */
+        origin: z.string().url(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { planId, origin } = input;
+      console.log(`${TAG}[publicCreateEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=anon`);
+      return buildEmbeddedCheckoutSession({ planId, origin });
+    }),
+
   /**
    * publicCreateCheckoutSession
    *
