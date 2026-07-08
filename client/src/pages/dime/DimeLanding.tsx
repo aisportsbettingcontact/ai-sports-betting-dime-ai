@@ -172,13 +172,14 @@ export default function DimeLanding() {
       <main id="top">
         {/* ═══ HERO ═══ */}
         <header className="hero">
-          <div className="wrap hero-grid">
-            <div>
-              <span className="mono mono--mint">AI Sports Betting&nbsp;&nbsp;·&nbsp;&nbsp;powered by dıme</span>
-              <h1>
-                The AI engine that prices <em>the edge</em> in every line.
-              </h1>
-              <p className="lede">
+          <div className="wrap">
+            <span className="mono mono--mint">Not a pick service&nbsp;&nbsp;·&nbsp;&nbsp;a pricing engine</span>
+            <h1>
+              The AI engine that prices <em>the edge</em> in every line.
+            </h1>
+            <div className="hero-grid">
+              <div>
+                <p className="lede">
                 dime runs 10,000 Monte Carlo simulations on every matchup — pricing moneylines, totals, props and
                 first-five markets against the books in real time, then telling you exactly where the value is. Or
                 when there isn't any.
@@ -194,17 +195,17 @@ export default function DimeLanding() {
                   See tonight's board
                 </Link>
               </div>
-              <div className="hero-trust">
-                <span className="mono">MLB</span>
-                <span className="dot" />
-                <span className="mono">World Cup 2026</span>
-                <span className="dot" />
-                <span className="mono">Live 24/7 pipeline</span>
+                <div className="hero-trust">
+                  <span className="mono">MLB</span>
+                  <span className="dot" />
+                  <span className="mono">World Cup 2026</span>
+                  <span className="dot" />
+                  <span className="mono">Live 24/7 pipeline</span>
+                </div>
               </div>
-            </div>
 
-            {/* Product mock: chat answer + live edge card */}
-            <div className="mock-stack" aria-label="Product preview">
+              {/* Product mock: chat answer + live edge card */}
+              <div className="mock-stack" aria-label="Product preview">
               <div className="mock-user">Will Messi score a goal today vs Egypt?</div>
               <div className="mock-chat">
                 <span className="mock-avatar">
@@ -212,8 +213,8 @@ export default function DimeLanding() {
                 </span>
                 <div className="mock-bubble">
                   Ran 10,000 sims. Messi projects 0.68 xG — anytime-scorer probability{" "}
-                  <span className="signal">54.2%</span> vs 46.5% implied at +115. You're holding{" "}
-                  <span className="signal">+7.7% edge</span>. Dime-line grade play.
+                  <span className="signal">54.2%</span> vs 46.5% implied at +115. That's{" "}
+                  <span className="signal">+7.7% edge</span> — grade A.
                 </div>
               </div>
               <div className="mock-card">
@@ -244,6 +245,7 @@ export default function DimeLanding() {
                     <span className="mono">Grade</span>
                     <b>A−</b>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -411,7 +413,7 @@ export default function DimeLanding() {
                   <div className="mock-bubble">
                     Wheeler–Senga at Citi is the spot: model has first-inning zero at <span className="signal">62.4%</span>{" "}
                     against −138 (58% implied). <span className="signal">+3.9% edge</span>, grade B. The other four
-                    slates price clean — I'd pass.
+                    games on the slate price clean — I'd pass.
                   </div>
                 </div>
                 <div className="composer">
@@ -428,14 +430,14 @@ export default function DimeLanding() {
         {/* ═══ DISCIPLINE ═══ */}
         <section className="section" id="discipline">
           <div className="wrap discipline">
-            <div className="section-head" style={{ marginBottom: 0 }}>
+            <div className="section-head">
               <span className="mono mono--mint">Discipline</span>
               <h2>
-                The unicorn move: telling you when <em>not</em> to bet.
+                Built to tell you when <em>not</em> to bet.
               </h2>
               <p>
-                Anyone can output picks. dime's product is restraint — a system engineered so that when something
-                lights up mint, it means the math is actually there.
+                Touts get paid when you buy picks — win or lose. dime is built the other way: mint lights up only
+                when the math is there, and when it isn't, the answer is keep your money.
               </p>
             </div>
             <div className="creed">
@@ -450,7 +452,7 @@ export default function DimeLanding() {
                 },
                 {
                   title: "Source-grounded answers",
-                  copy: "Dime Chat only speaks from the model's own tables — 124 enforcement tests stand between the engine and a made-up number.",
+                  copy: "If the engine didn't compute it, chat won't say it — every answer traces back to a table the model wrote.",
                 },
                 {
                   title: "Frozen at the line",
@@ -471,26 +473,77 @@ export default function DimeLanding() {
           </div>
         </section>
 
+        {/* ═══ STRAIGHT ANSWERS (objection layer) ═══ */}
+        <section className="section" id="answers">
+          <div className="wrap">
+            <div className="section-head">
+              <span className="mono mono--mint">Straight answers</span>
+              <h2>The questions you should be asking.</h2>
+              <p>
+                You're about to pay for numbers that touch your bankroll. Here's what we'd want to know before
+                subscribing — answered without the sales voice.
+              </p>
+            </div>
+            <div className="answers-grid">
+              <div className="qa">
+                <span className="qa-q">Isn't this just another pick service?</span>
+                <p>
+                  No — dime doesn't sell picks. It's a pricing engine —{" "}
+                  <span className="signal">10,000 simulations per game</span>, 55+ outputs — and when the math isn't
+                  there, the answer is PASS.
+                </p>
+                <span className="qa-stamp">No</span>
+              </div>
+              <div className="qa">
+                <span className="qa-q">Where's the track record?</span>
+                <p>
+                  We don't post cherry-picked win streaks — no honest model can promise you profit. Instead, every
+                  projection is <span className="signal">graded against the close</span> after the final out, Brier-scored,
+                  with odds frozen the moment a game goes live. The grading is the record, and it's built into the engine.
+                </p>
+                <span className="qa-stamp">Graded</span>
+              </div>
+              <div className="qa">
+                <span className="qa-q">Why $99.99 a month?</span>
+                <p>
+                  That's ≈ $3.30 a day for every market the model prices — full board, full chat, all 55+ outputs per
+                  game. Annual drops it to ≈ $1.37 a day.
+                </p>
+                <span className="qa-stamp">≈ $3.30/day</span>
+              </div>
+              <div className="qa">
+                <span className="qa-q">What if I want out?</span>
+                <p>
+                  Cancel anytime — no contracts, no cancellation calls, no fees to leave. Billing runs through Stripe's
+                  secure checkout, and your access runs through the period you've already paid for.
+                </p>
+                <span className="qa-stamp">Anytime</span>
+              </div>
+              <div className="qa">
+                <span className="qa-q">How do I know the numbers are real?</span>
+                <p>
+                  Dime Chat can only speak from the model's own tables — <span className="signal">124 enforcement tests</span>{" "}
+                  stand between the engine and a made-up number, and frozen odds mean nothing is graded retroactively. This
+                  is statistical analysis, not gambling advice: 21+, bet responsibly, and no one here will ever guarantee
+                  you a profit.
+                </p>
+                <span className="qa-stamp">124 tests</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ═══ PRICING (whitelabel) ═══ */}
         <section className="section" id="dime-pricing">
-          <div className="wrap" style={{ textAlign: "center" }}>
-            <span className="mono mono--mint">Pricing</span>
-            <h2
-              style={{
-                margin: "14px auto 12px",
-                maxWidth: 560,
-                fontSize: "clamp(28px, 3.6vw, 42px)",
-                letterSpacing: "-0.03em",
-                lineHeight: 1.08,
-                color: "var(--text-primary)",
-                fontWeight: 700,
-              }}
-            >
-              One subscription. Every edge.
-            </h2>
-            <p style={{ margin: "0 auto 56px", maxWidth: 480, color: "var(--text-secondary)", fontSize: 16 }}>
-              Full board, full chat, every market the model prices. No tiers, no add-ons, no gotchas.
-            </p>
+          <div className="wrap wrap--center">
+            <div className="section-head section-head--center">
+              <span className="mono mono--mint">Pricing</span>
+              <h2>One subscription. Every edge.</h2>
+              <p>
+                Full board, full chat, every market the model prices. No tiers, no add-ons, no contracts — cancel
+                anytime and keep access through the period you paid for.
+              </p>
+            </div>
             <div className="pricing-grid">
               {PLANS.map((plan) => (
                 <div className={plan.featured ? "plan plan--featured" : "plan"} key={plan.id}>
@@ -526,13 +579,17 @@ export default function DimeLanding() {
                 </div>
               ))}
             </div>
+            <p className="pricing-proof">
+              Every number you're paying for is <span className="signal">graded against the close</span> after the
+              final out — and when there's no edge, the model says PASS instead of selling you a pick.
+            </p>
             <p className="mono pricing-legal">Secure checkout · Auto-renews · Cancel anytime · 21+</p>
 
             {/* CTA plate */}
             <div className="plate">
               <span className="mono">No noise · No gut calls · Just the number</span>
               <h2>Bet with the math.</h2>
-              <p>Join the bettors pricing every line against 10,000 simulations before they touch their bankroll.</p>
+              <p>Price every line against 10,000 simulations before a dollar of your bankroll moves.</p>
               <button className="btn btn--black" type="button" onClick={() => startCheckout("annual")} disabled={loadingPlan !== null}>
                 Get started with <Wordmark fontSize={17} />
               </button>
