@@ -1,13 +1,74 @@
 {
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "jobs-to-be-done@pm-skills": true,
+    "acquisition-channel-advisor@pm-skills": true,
+    "agent-orchestration-advisor@pm-skills": true,
+    "ai-shaped-readiness-advisor@pm-skills": true,
+    "altitude-horizon-framework@pm-skills": true,
+    "business-health-diagnostic@pm-skills": true,
+    "company-intel@pm-skills": true,
+    "company-research@pm-skills": true,
+    "context-engineering-advisor@pm-skills": true,
+    "customer-journey-map@pm-skills": true,
+    "customer-journey-mapping-workshop@pm-skills": true,
+    "derisk-measurement-advisor@pm-skills": true,
+    "director-readiness-advisor@pm-skills": true,
+    "discovery-interview-prep@pm-skills": true,
+    "discovery-process@pm-skills": true,
+    "eol-message@pm-skills": true,
+    "epic-breakdown-advisor@pm-skills": true,
+    "epic-hypothesis@pm-skills": true,
+    "executive-onboarding-playbook@pm-skills": true,
+    "feature-investment-advisor@pm-skills": true,
+    "finance-based-pricing-advisor@pm-skills": true,
+    "finance-metrics-quickref@pm-skills": true,
+    "lean-ux-canvas@pm-skills": true,
+    "opportunity-solution-tree@pm-skills": true,
+    "organic-growth-advisor@pm-skills": true,
+    "pestel-analysis@pm-skills": true,
+    "pm-skill-creator@pm-skills": true,
+    "pol-probe@pm-skills": true,
+    "pol-probe-advisor@pm-skills": true,
+    "positioning-statement@pm-skills": true,
+    "positioning-workshop@pm-skills": true,
+    "prd-development@pm-skills": true,
+    "press-release@pm-skills": true,
+    "prioritization-advisor@pm-skills": true,
+    "problem-framing-canvas@pm-skills": true,
+    "problem-statement@pm-skills": true,
+    "product-sense-interview-answer@pm-skills": true,
+    "product-strategy-session@pm-skills": true,
+    "proto-persona@pm-skills": true,
+    "recommendation-canvas@pm-skills": true,
+    "roadmap-planning@pm-skills": true,
+    "saas-economics-efficiency-metrics@pm-skills": true,
+    "saas-revenue-growth-metrics@pm-skills": true,
+    "skill-authoring-workflow@pm-skills": true,
+    "stakeholder-engagement-advisor@pm-skills": true,
+    "stakeholder-identification@pm-skills": true,
+    "stakeholder-mapping@pm-skills": true,
+    "storyboard@pm-skills": true,
+    "tam-sam-som-calculator@pm-skills": true,
+    "user-story@pm-skills": true,
+    "user-story-mapping@pm-skills": true,
+    "user-story-mapping-workshop@pm-skills": true,
+    "user-story-splitting@pm-skills": true,
+    "vp-cpo-readiness-advisor@pm-skills": true,
+    "workshop-facilitation@pm-skills": true
+  },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
       "source": {
         "source": "github",
         "repo": "anthropics/claude-plugins-official"
       }
+    },
+    "pm-skills": {
+      "source": {
+        "source": "github",
+        "repo": "deanpeters/Product-Manager-Skills"
+      }
     }
-  },
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
   }
 }

@@ -1,5 +1,5 @@
-import { scrapeAndIngest } from "/home/ubuntu/ai-sports-betting/server/wc2026/espnDbIngester.ts";
-import { getDb } from "/home/ubuntu/ai-sports-betting/server/db.ts";
+import { scrapeAndIngest } from "./espnDbIngester.ts";
+import { getDb } from "../db.ts";
 import { sql } from "drizzle-orm";
 import { writeFileSync } from "fs";
 
