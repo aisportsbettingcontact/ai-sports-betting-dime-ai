@@ -165,6 +165,12 @@ jobs:
         # [VERIFY] This gate ensures no type regressions are merged. Combined with
         # strict: true in tsconfig, it catches null dereferences, missing props,
         # and incorrect API call shapes before they reach production.
+        #
+        # NODE_OPTIONS: the project outgrew Node's default ~2 GB heap — tsc was
+        # dying with "JavaScript heap out of memory" (exit 134) on every run
+        # since at least 80bdda2, before any type errors could be reported.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           echo "[INPUT] Running tsc --noEmit on full project..."
           npx tsc --noEmit 2>&1 | tee typecheck-report.txt
