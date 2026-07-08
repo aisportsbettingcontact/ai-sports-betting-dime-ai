@@ -148,6 +148,14 @@
 .dime-landing .creed-item h4 { margin: 0 0 4px; font-size: 16px; font-weight: 700; color: var(--text-primary); }
 .dime-landing .creed-item p { margin: 0; font-size: 14px; color: var(--text-secondary); }
 
+/* ── Straight answers (objection layer) ───────────────── */
+.dime-landing .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dime-landing .qa { background: var(--surface-card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+.dime-landing .qa:last-child { grid-column: 1 / -1; }
+.dime-landing .qa-q { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 10px; }
+.dime-landing .qa p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-body); }
+.dime-landing .qa .signal { color: var(--mint); font-weight: 600; }
+
 /* ── Pricing (whitelabel) ─────────────────────────────── */
 .dime-landing .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 860px; margin: 0 auto; }
 .dime-landing .plan { position: relative; background: var(--surface-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 26px; display: flex; flex-direction: column; gap: 18px; text-align: left; }
@@ -162,7 +170,9 @@
 .dime-landing .plan-features li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text-body); }
 .dime-landing .plan-features svg { flex-shrink: 0; margin-top: 4px; }
 .dime-landing .current-chip { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mint); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
-.dime-landing .pricing-legal { margin-top: 22px; text-align: center; }
+.dime-landing .pricing-proof { margin: 26px auto 0; max-width: 560px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
+.dime-landing .pricing-proof .signal { color: var(--mint); font-weight: 600; }
+.dime-landing .pricing-legal { margin-top: 18px; text-align: center; }
 
 /* ── CTA plate ────────────────────────────────────────── */
 .dime-landing .plate { margin: 96px 0; background: var(--mint); border-radius: 20px; padding: clamp(40px, 6vw, 72px); text-align: center; color: #0B0B0F; }
@@ -188,6 +198,7 @@
   .dime-landing .cards3 { grid-template-columns: 1fr; }
   .dime-landing .duo { grid-template-columns: 1fr; }
   .dime-landing .discipline { grid-template-columns: 1fr; gap: 32px; }
+  .dime-landing .answers-grid { grid-template-columns: 1fr; }
   .dime-landing .pricing-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {

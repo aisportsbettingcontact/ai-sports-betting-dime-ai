@@ -434,8 +434,9 @@ export default function DimeLanding() {
                 The unicorn move: telling you when <em>not</em> to bet.
               </h2>
               <p>
-                Anyone can output picks. dime's product is restraint — a system engineered so that when something
-                lights up mint, it means the math is actually there.
+                Touts get paid when you buy picks — win or lose. dime is built the other way: a system engineered so
+                that when something lights up mint, the math is actually there. And when it isn't, it tells you to
+                keep your money.
               </p>
             </div>
             <div className="creed">
@@ -471,6 +472,61 @@ export default function DimeLanding() {
           </div>
         </section>
 
+        {/* ═══ STRAIGHT ANSWERS (objection layer) ═══ */}
+        <section className="section" id="answers">
+          <div className="wrap">
+            <div className="section-head">
+              <span className="mono mono--mint">Straight answers</span>
+              <h2>The questions you should be asking.</h2>
+              <p>
+                You're about to pay for numbers that touch your bankroll. Here's what we'd want to know before
+                subscribing — answered without the sales voice.
+              </p>
+            </div>
+            <div className="answers-grid">
+              <div className="qa">
+                <span className="qa-q">Isn't this just another pick service?</span>
+                <p>
+                  No. Touts sell picks and get paid either way. dime is a pricing engine —{" "}
+                  <span className="signal">10,000 simulations per game</span>, 55+ outputs — and when the math isn't
+                  there, the answer is PASS, in grey. Restraint is the product.
+                </p>
+              </div>
+              <div className="qa">
+                <span className="qa-q">Where's the track record?</span>
+                <p>
+                  We don't post cherry-picked win streaks — no honest model can promise you profit. Instead, every
+                  projection is <span className="signal">graded against the close</span> after the final out, Brier-scored,
+                  with odds frozen the moment a game goes live. The grading is the record, and it's built into the engine.
+                </p>
+              </div>
+              <div className="qa">
+                <span className="qa-q">Why $99.99 a month?</span>
+                <p>
+                  That's ≈ $3.30 a day for every market the model prices — full board, full chat, all 55+ outputs per
+                  game. One mispriced bet can cost more than a month of dime. Annual drops it to ≈ $1.37 a day.
+                </p>
+              </div>
+              <div className="qa">
+                <span className="qa-q">What if I want out?</span>
+                <p>
+                  Cancel anytime — no contracts, no cancellation calls, no fees to leave. Billing runs through Stripe's
+                  secure checkout, and your access runs through the period you've already paid for.
+                </p>
+              </div>
+              <div className="qa">
+                <span className="qa-q">How do I know the numbers are real?</span>
+                <p>
+                  Dime Chat can only speak from the model's own tables — <span className="signal">124 enforcement tests</span>{" "}
+                  stand between the engine and a made-up number, and frozen odds mean nothing is graded retroactively. This
+                  is statistical analysis, not gambling advice: 21+, bet responsibly, and no one here will ever guarantee
+                  you a profit.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ═══ PRICING (whitelabel) ═══ */}
         <section className="section" id="dime-pricing">
           <div className="wrap" style={{ textAlign: "center" }}>
@@ -489,7 +545,8 @@ export default function DimeLanding() {
               One subscription. Every edge.
             </h2>
             <p style={{ margin: "0 auto 56px", maxWidth: 480, color: "var(--text-secondary)", fontSize: 16 }}>
-              Full board, full chat, every market the model prices. No tiers, no add-ons, no gotchas.
+              Full board, full chat, every market the model prices. No tiers, no add-ons, no contracts — cancel
+              anytime and keep access through the period you paid for.
             </p>
             <div className="pricing-grid">
               {PLANS.map((plan) => (
@@ -526,6 +583,10 @@ export default function DimeLanding() {
                 </div>
               ))}
             </div>
+            <p className="pricing-proof">
+              Every number you're paying for is <span className="signal">graded against the close</span> after the
+              final out — and when there's no edge, the model says PASS instead of selling you a pick.
+            </p>
             <p className="mono pricing-legal">Secure checkout · Auto-renews · Cancel anytime · 21+</p>
 
             {/* CTA plate */}
