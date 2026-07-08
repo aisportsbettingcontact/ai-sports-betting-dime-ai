@@ -368,6 +368,8 @@ async function startServer() {
   });
   // Apply to both direct and batch tRPC calls
   app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
+  // Embedded (in-domain) checkout variant — same abuse surface, same limiter
+  app.use("/api/trpc/stripe.publicCreateEmbeddedCheckoutSession", stripeCheckoutLimiter);
 
   // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
   // Public form endpoint — 5 submissions per 15 minutes per IP.

@@ -43,6 +43,8 @@ const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
 const DimeLanding = lazy(() => import('./pages/dime/DimeLanding'));
+const DimeLandingV2 = lazy(() => import('./pages/dime/landing/DimeLandingV2'));
+const CheckoutPage = lazy(() => import('./pages/dime/CheckoutPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 const Privacy = lazy(() => import('./pages/Privacy'));
@@ -146,6 +148,10 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       {/* Dime AI landing — public test hook for the rebrand (E1) */}
       <Route path="/landingpage" component={DimeLanding} />
+      {/* Dime AI landing v2 — console-concept rebuild (approved via brainstorm 2026-07-08) */}
+      <Route path="/landingpage-v2" component={DimeLandingV2} />
+      {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
+      <Route path="/checkout" component={CheckoutPage} />
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
       {/* Main feed */}
       <Route path="/feed">{() => <RequireAuth><ModelProjections /></RequireAuth>}</Route>
