@@ -671,7 +671,7 @@ async function main() {
         book_total = ?, book_over_odds = ?, book_under_odds = ?,
         book_btts_yes = ?, book_btts_no = ?,
         book_home_wd = ?, book_away_wd = ?, book_no_draw = ?,
-        insert_method = ?, last_inserted_at = NOW(), last_insert_method = ?
+        insert_method = ?, last_inserted_at = NOW(), last_insert_method = ?, odds_source = 'betexplorer'
       WHERE match_id = ?
     `, [
       markets.mlHome, markets.mlAway, markets.mlDraw,
@@ -690,7 +690,7 @@ async function main() {
       book.bookHomeWD, book.bookAwayWD, book.bookNoDraw,
       ENGINE_VERSION, ENGINE_VERSION, match.fid
     ]);
-    log('DB', `wc2026MatchOdds UPDATED: ${match.fid} (${match.home} vs ${match.away}) — ALL 36+ columns written`);
+    log('DB', `wc2026MatchOdds UPDATED: ${match.fid} (${match.home} vs ${match.away}) — ALL 36+ columns + odds_source written`);
 
     // Update wc2026_model_projections
     await conn.query(`

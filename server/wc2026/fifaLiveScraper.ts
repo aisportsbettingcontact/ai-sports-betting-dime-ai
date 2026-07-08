@@ -46,7 +46,7 @@ const FIFA_HEADERS = {
   'Cache-Control': 'no-cache',
 };
 
-type DbStatus = 'SCHEDULED'|'LIVE'|'HT'|'ET'|'SHOOTOUT'|'FT';
+type DbStatus = 'SCHEDULED'|'LIVE'|'HT'|'ET'|'SHOOTOUT'|'FT'|'FT_PEN';
 
 interface FifaMatchState {
   fifaMatchId: string;
@@ -77,6 +77,8 @@ function normalizeMatchTime(raw: string|null): string|null {
 }
 
 function resolveStatus(matchStatus: number, period: number|null, matchTime: string|null): {status: DbStatus; minute: string|null} {
+  // matchStatus=0 means completed — but if penalty scores exist, it's FT_PEN
+  // (penalty detection happens downstream after we know pen scores)
   if (matchStatus === 0) return {status:'FT', minute:null};
   if (matchStatus === 3) {
     switch (period) {
@@ -205,11 +207,13 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
       if (liveMatch.awayScore !== null && liveMatch.awayScore !== match.awayScore) patch.awayScore = liveMatch.awayScore;
       if (liveMatch.minute !== match.matchMinute) patch.matchMinute = liveMatch.minute;
 
-      // Auto-set advancingTeamId when FT
-      if (liveMatch.status === 'FT' && !match.advancingTeamId) {
-        // Case 1: Clear winner from regular/ET score
+      // Auto-set advancingTeamId when FT or FT_PEN
+      // Also upgrade status to FT_PEN if penalty scores are present
+      if ((liveMatch.status === 'FT' || liveMatch.status === 'FT_PEN') && !match.advancingTeamId) {
+        // Case 1: Clear winner from regular/ET score (no pens)
         if (liveMatch.homeScore !== null && liveMatch.awayScore !== null &&
-            liveMatch.homeScore !== liveMatch.awayScore) {
+            liveMatch.homeScore !== liveMatch.awayScore &&
+            liveMatch.homePenScore === null && liveMatch.awayPenScore === null) {
           patch.advancingTeamId = liveMatch.homeScore > liveMatch.awayScore
             ? match.homeTeamId : match.awayTeamId;
           log('DB', S(), `FT winner (score): ${match.matchId} → advancingTeamId=${patch.advancingTeamId}`);
@@ -221,16 +225,20 @@ export async function wc2026LiveSyncHandler(req: Request, res: Response): Promis
           } else if (liveMatch.fifaWinnerId === liveMatch.awayTeamFifaId) {
             patch.advancingTeamId = match.awayTeamId;
           }
+          // Upgrade status to FT_PEN since penalty shootout was used
+          patch.status = 'FT_PEN';
           const penStr = liveMatch.homePenScore !== null
             ? `(${liveMatch.homePenScore}-${liveMatch.awayPenScore} pens)` : '';
-          log('DB', S(), `FT winner (pens) ${penStr}: ${match.matchId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
+          log('DB', S(), `FT_PEN winner (pens) ${penStr}: ${match.matchId} → advancingTeamId=${patch.advancingTeamId??'unknown'}`);
         }
         // Case 3: Penalty shootout winner via penalty scores
         else if (liveMatch.homePenScore !== null && liveMatch.awayPenScore !== null &&
                  liveMatch.homePenScore !== liveMatch.awayPenScore) {
           patch.advancingTeamId = liveMatch.homePenScore > liveMatch.awayPenScore
             ? match.homeTeamId : match.awayTeamId;
-          log('DB', S(), `FT winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${match.matchId} → advancingTeamId=${patch.advancingTeamId}`);
+          // Upgrade status to FT_PEN since penalty shootout was used
+          patch.status = 'FT_PEN';
+          log('DB', S(), `FT_PEN winner (pen scores ${liveMatch.homePenScore}-${liveMatch.awayPenScore}): ${match.matchId} → advancingTeamId=${patch.advancingTeamId}`);
         }
       }
 

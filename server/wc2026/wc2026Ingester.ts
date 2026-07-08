@@ -43,7 +43,7 @@ import {
   type InsertWc2026MatchEvent,
   type InsertWc2026Lineup,
 } from "../../drizzle/wc2026.schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
@@ -304,10 +304,12 @@ export async function ingestWc2026EspnResults(options: {
     ]);
     const isInProgress = ESPN_LIVE_STATUS_NAMES.has(statusName) || statusDesc.toLowerCase().includes("in progress");
     // [FIX] Determine target DB status dynamically:
+    //   completed=true + statusDesc contains "Pens" → FT_PEN (decided by penalty shootout)
     //   completed=true  → FT
     //   in-progress     → LIVE
     //   otherwise       → null (skip — do NOT write FT/0-0 to unplayed matches)
-    const matchStatus: "FT" | "LIVE" | null = isCompleted ? "FT" : isInProgress ? "LIVE" : null;
+    const isPenaltyDecided = isCompleted && (statusDesc.toLowerCase().includes("pen") || statusName === "STATUS_FULL_TIME_PENALTY");
+    const matchStatus: "FT" | "FT_PEN" | "LIVE" | null = isPenaltyDecided ? "FT_PEN" : isCompleted ? "FT" : isInProgress ? "LIVE" : null;
 
     console.log(`[WC2026ESPN] [STEP] Processing event ${eventId}: "${event.name}" status=${statusDesc} statusName=${statusName} completed=${isCompleted} isInProgress=${isInProgress} → matchStatus=${matchStatus ?? 'SKIP'}`);
 
@@ -423,8 +425,8 @@ export async function ingestWc2026EspnResults(options: {
       ` | [VERIFY] matchId=${matchId}`
     );
 
-    if (match.status === "FT" && !forceReingest) {
-      console.log(`[WC2026ESPN] [STEP] Skipping match ${matchId} — already FT and forceReingest=false`);
+    if ((match.status === "FT" || match.status === "FT_PEN") && !forceReingest) {
+      console.log(`[WC2026ESPN] [STEP] Skipping match ${matchId} — already ${match.status} and forceReingest=false`);
       continue;
     }
 
@@ -532,7 +534,7 @@ export async function ingestWc2026EspnResults(options: {
       .set({
         homeScore: dbHomeScore,
         awayScore: dbAwayScore,
-        status: matchStatus as "FT" | "LIVE",
+        status: matchStatus as "FT" | "FT_PEN" | "LIVE",
         espnMatchId: eventId,
         attendance,
         ...(kickoffUtc ? { kickoffUtc } : {}),
@@ -595,10 +597,12 @@ export async function ingestWc2026EspnResults(options: {
     const allDetails: any[] = summary.header?.competitions?.[0]?.details ?? [];
     const detailsToProcess = keyEvents.length > 0 ? keyEvents : allDetails;
 
-    // Delete existing events for this match before reinserting
-    await db.delete(wc2026MatchEvents).where(eq(wc2026MatchEvents.matchId, matchId));
-
+    // Idempotent event ingestion: check for existing row before insert.
+    // The UNIQUE constraint uq_me_natural_key(match_id, minute_num, team_id, event_type, player_name)
+    // guards named events at the DB level. For VAR events (NULL player_name), the constraint
+    // allows duplicates (NULL != NULL in MySQL), so we check explicitly here.
     let eventsInserted = 0;
+    let eventsSkipped = 0;
     for (const detail of detailsToProcess) {
       const typeText: string = detail.type?.text ?? detail.type?.name ?? "";
       let eventType: "GOAL" | "OWN_GOAL" | "PENALTY" | "YELLOW" | "RED" | "SUB" | "VAR" | null = null;
@@ -632,6 +636,38 @@ export async function ingestWc2026EspnResults(options: {
         ? (homeComp.team?.id === detail.team.id ? homeTeamId : awayTeamId)
         : null;
 
+      // Idempotency check: does this exact event already exist?
+      const existingConditions = [
+        eq(wc2026MatchEvents.matchId, matchId),
+        eq(wc2026MatchEvents.eventType, eventType),
+      ];
+      if (minuteNum !== null) {
+        existingConditions.push(eq(wc2026MatchEvents.minuteNum, minuteNum));
+      }
+      if (eventTeamId) {
+        existingConditions.push(eq(wc2026MatchEvents.teamId, eventTeamId));
+      }
+      if (playerName) {
+        existingConditions.push(eq(wc2026MatchEvents.playerName, playerName));
+      } else {
+        // For NULL player_name (VAR events), also match on minuteStr for specificity
+        existingConditions.push(sql`${wc2026MatchEvents.playerName} IS NULL`);
+        if (clockStr) {
+          existingConditions.push(eq(wc2026MatchEvents.minuteStr, clockStr));
+        }
+      }
+
+      const [existing] = await db
+        .select({ id: wc2026MatchEvents.id })
+        .from(wc2026MatchEvents)
+        .where(and(...existingConditions))
+        .limit(1);
+
+      if (existing) {
+        eventsSkipped++;
+        continue;
+      }
+
       const eventRow: InsertWc2026MatchEvent = {
         matchId,
         teamId: eventTeamId,
@@ -648,7 +684,7 @@ export async function ingestWc2026EspnResults(options: {
     }
 
     result.eventsWritten += eventsInserted;
-    console.log(`[WC2026ESPN] [OUTPUT] ${eventsInserted} match events inserted for ${matchId} ✅`);
+    console.log(`[WC2026ESPN] [OUTPUT] ${eventsInserted} match events inserted, ${eventsSkipped} skipped (idempotent) for ${matchId} ✅`);
 
     // Step 8: Ingest confirmed lineups from ESPN rosters
     const rosters: EspnRoster[] = summary.rosters ?? [];
