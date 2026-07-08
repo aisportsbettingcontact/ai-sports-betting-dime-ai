@@ -6,6 +6,12 @@
 > ("save a checkpoint, ask the user to Deploy"), `server/discordAuth.ts:8`.
 > No GitHub workflow deploys code; no Manus publish API exists in this repo.
 
+
+> **REPO MOVE (2026-07-08):** the canonical repo is now
+> `aisportsbettingcontact/ai-sports-betting-dime-ai`. The old `ai-sports-betting-models`
+> repo is read-only history. First Manus deploy after the move must switch the
+> project's git remote (the paste-prompt below does it).
+
 ## The 2-step release (do this every time)
 
 **Step 1 — GitHub (automated, `/ship` command or manually):**
@@ -15,7 +21,8 @@
 **Step 2 — Manus (the only manual click):** open the Manus project and paste:
 
 ```
-Pull the latest main branch from GitHub (aisportsbettingcontact/ai-sports-betting-models),
+Set the git remote to https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai
+(if it still points at ai-sports-betting-dime-ai), then pull the latest main branch,
 run npm install if the lockfile changed, run npm run build to verify it compiles,
 save a checkpoint, and Deploy/Publish the site. Then confirm the deployed URL serves
 the latest commit (check that /landingpage returns the Dime landing page).
