@@ -173,7 +173,7 @@ export default function DimeLanding() {
         {/* ═══ HERO ═══ */}
         <header className="hero">
           <div className="wrap">
-            <span className="mono mono--mint">AI Sports Betting&nbsp;&nbsp;·&nbsp;&nbsp;powered by dıme</span>
+            <span className="mono mono--mint">Not a pick service&nbsp;&nbsp;·&nbsp;&nbsp;a pricing engine</span>
             <h1>
               The AI engine that prices <em>the edge</em> in every line.
             </h1>
@@ -213,8 +213,8 @@ export default function DimeLanding() {
                 </span>
                 <div className="mock-bubble">
                   Ran 10,000 sims. Messi projects 0.68 xG — anytime-scorer probability{" "}
-                  <span className="signal">54.2%</span> vs 46.5% implied at +115. You're holding{" "}
-                  <span className="signal">+7.7% edge</span>. Dime-line grade play.
+                  <span className="signal">54.2%</span> vs 46.5% implied at +115. That's{" "}
+                  <span className="signal">+7.7% edge</span> — grade A.
                 </div>
               </div>
               <div className="mock-card">
@@ -413,7 +413,7 @@ export default function DimeLanding() {
                   <div className="mock-bubble">
                     Wheeler–Senga at Citi is the spot: model has first-inning zero at <span className="signal">62.4%</span>{" "}
                     against −138 (58% implied). <span className="signal">+3.9% edge</span>, grade B. The other four
-                    slates price clean — I'd pass.
+                    games on the slate price clean — I'd pass.
                   </div>
                 </div>
                 <div className="composer">
@@ -433,12 +433,11 @@ export default function DimeLanding() {
             <div className="section-head">
               <span className="mono mono--mint">Discipline</span>
               <h2>
-                The unicorn move: telling you when <em>not</em> to bet.
+                Built to tell you when <em>not</em> to bet.
               </h2>
               <p>
-                Touts get paid when you buy picks — win or lose. dime is built the other way: a system engineered so
-                that when something lights up mint, the math is actually there. And when it isn't, it tells you to
-                keep your money.
+                Touts get paid when you buy picks — win or lose. dime is built the other way: mint lights up only
+                when the math is there, and when it isn't, the answer is keep your money.
               </p>
             </div>
             <div className="creed">
@@ -489,10 +488,11 @@ export default function DimeLanding() {
               <div className="qa">
                 <span className="qa-q">Isn't this just another pick service?</span>
                 <p>
-                  No. Touts sell picks and get paid either way. dime is a pricing engine —{" "}
+                  No — touts sell picks and get paid either way. dime is a pricing engine —{" "}
                   <span className="signal">10,000 simulations per game</span>, 55+ outputs — and when the math isn't
-                  there, the answer is PASS, in grey. Restraint is the product.
+                  there, the answer is PASS.
                 </p>
+                <span className="qa-stamp">No</span>
               </div>
               <div className="qa">
                 <span className="qa-q">Where's the track record?</span>
@@ -501,13 +501,15 @@ export default function DimeLanding() {
                   projection is <span className="signal">graded against the close</span> after the final out, Brier-scored,
                   with odds frozen the moment a game goes live. The grading is the record, and it's built into the engine.
                 </p>
+                <span className="qa-stamp">Graded</span>
               </div>
               <div className="qa">
                 <span className="qa-q">Why $99.99 a month?</span>
                 <p>
                   That's ≈ $3.30 a day for every market the model prices — full board, full chat, all 55+ outputs per
-                  game. One mispriced bet can cost more than a month of dime. Annual drops it to ≈ $1.37 a day.
+                  game. Annual drops it to ≈ $1.37 a day.
                 </p>
+                <span className="qa-stamp">≈ $3.30/day</span>
               </div>
               <div className="qa">
                 <span className="qa-q">What if I want out?</span>
@@ -515,6 +517,7 @@ export default function DimeLanding() {
                   Cancel anytime — no contracts, no cancellation calls, no fees to leave. Billing runs through Stripe's
                   secure checkout, and your access runs through the period you've already paid for.
                 </p>
+                <span className="qa-stamp">Anytime</span>
               </div>
               <div className="qa">
                 <span className="qa-q">How do I know the numbers are real?</span>
@@ -524,6 +527,7 @@ export default function DimeLanding() {
                   is statistical analysis, not gambling advice: 21+, bet responsibly, and no one here will ever guarantee
                   you a profit.
                 </p>
+                <span className="qa-stamp">124 tests</span>
               </div>
             </div>
           </div>
@@ -585,7 +589,7 @@ export default function DimeLanding() {
             <div className="plate">
               <span className="mono">No noise · No gut calls · Just the number</span>
               <h2>Bet with the math.</h2>
-              <p>Join the bettors pricing every line against 10,000 simulations before they touch their bankroll.</p>
+              <p>Price every line against 10,000 simulations before a dollar of your bankroll moves.</p>
               <button className="btn btn--black" type="button" onClick={() => startCheckout("annual")} disabled={loadingPlan !== null}>
                 Get started with <Wordmark fontSize={17} />
               </button>
