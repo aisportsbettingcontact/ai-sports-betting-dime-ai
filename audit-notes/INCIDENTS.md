@@ -250,8 +250,14 @@ Bare "DB-007" label RETIRED — use sub-IDs only.
 - Final distribution: no_book_odds=59, betexplorer=22, betexplorer+draftkings_manual_advance=2, betexplorer_bet365=1.
 - NULL count: 0. All 25 rows with actual odds have correct provenance.
 - **Cross-reference:** The 59 'no_book_odds' rows ARE DB-009 (skeleton rows with 72% NULL on odds columns). DB-009 resolution = Priority 1b population from odds_snapshots. When 1b populates these rows, odds_source MUST be overwritten with the real source in the same write.
-- **Engine-code fix (DB-014 second half): NOT SHIPPED.** Zero engine files (betexplorer_scraper.py, v19, v20, v22) contain `odds_source` in their UPDATE/INSERT statements. Future writes can still recreate staleness. DB-014 does not fully close until engines write odds_source on every UPDATE.
-- Verified via live query 2026-07-07T23:55Z.
+- **Engine-code fix (DB-014 second half): SHIPPED (2026-07-08T05:41Z).** All 6 write sites now include `odds_source` in their UPDATE/INSERT statements:
+  - betexplorer_scraper.py INSERT #1: `odds_source = 'betexplorer'`
+  - betexplorer_scraper.py INSERT #2: `odds_source = 'betexplorer'`
+  - v19_jul4_engine.mjs UPDATE: `odds_source = 'betexplorer'`
+  - v19_jul5_engine.mjs UPDATE: `odds_source = 'betexplorer'`
+  - v20_jul6_engine.mjs UPDATE: `odds_source = 'betexplorer'`
+  - v22_jul7_engine.mjs UPDATE: `odds_source = 'betexplorer+draftkings_manual_advance'`
+- **Status: FULLY RESOLVED.** Future writes will always set odds_source. No staleness can recur.
 
 ---
 
@@ -335,7 +341,7 @@ FROM wc2026_match_events;
 
 **Priority:** P1 — blocks dedup execution and constraint enforcement.
 
-**Status:** OPEN — filed as completeness gap. No writes until DB-013 DROP + backup + owner go.
+**Status:** RESOLVED (2026-07-08T05:42Z) — 906/1422 rows populated from ESPN keyEvents API. Breakdown: GOAL 160/160 (100%), SUB 573/576 (99%), YELLOW 156/157 (99%), RED 6/7 (86%), OWN_GOAL 10/10 (100%), VAR 1/508 (0% — ESPN does not include VAR events with player attribution; these are system-level referee events). Also fixed 352 team_id values for early matches. Remaining 516 NULL are almost entirely VAR events which inherently lack player attribution.
 
 ---
 
@@ -379,4 +385,46 @@ Individual inspection: ALL collision groups have rows that are IDENTICAL on play
 
 **Priority:** P1 — data integrity issue, but dedup execution gated.
 
-**Status:** OPEN — genuine dupes confirmed, two-part fix documented, all execution blocked pending DB-013 DROP + backup + owner go.
+**Status:** RESOLVED (2026-07-08T05:42Z) — Executed in corrected dependency order:
+1. DATA-016 population completed (906/1422 populated)
+2. Disjointness proof: 155 legitimate multi-row groups DISJOINT from original 360 dupe groups
+3. Keep-rule verification: post-population, 0 genuine dupe groups remain among named events; only 200 VAR groups (NULL player) remain
+4. Dedup: 258 excess VAR rows archived to `audit-notes/archives/match_events_var_dupes_2026-07-08.json` + deleted
+5. ESPN reconciliation: 62/62 matches PASS — no attribution corruption
+6. UNIQUE constraint `uq_me_natural_key(match_id, minute_num, team_id, event_type, player_name)` APPLIED
+7. Ingester idempotency fix: check-before-insert pattern prevents future re-emission dupes
+
+Key finding: The original 360 groups included 160 SUB/YELLOW/GOAL groups that were only byte-identical because player_name was NULL. Post-population, these became distinguishable legitimate events. True dupes = 200 VAR groups only (258 excess rows deleted, 200 retained).
+
+---
+
+## DB-015: wc2026_matches status enum missing FT_PEN — penalty-decided matches mislabeled 'FT' (P2)
+
+**What:** Matches decided by penalty shootout were stored as status='FT' (same as regulation wins), making it impossible to distinguish penalty outcomes from regulation outcomes. The schema enum lacked 'FT_PEN' entirely.
+
+**When:** Discovered 2026-07-08 during write-window execution planning.
+
+**Evidence:**
+- 4 matches with drawn scores + advancing_team_id (= penalty-decided) all had status='FT':
+  - wc26-r32-075 (GER 1-1 PAR → PAR advances)
+  - wc26-r32-076 (NED 1-1 MAR → MAR advances)
+  - wc26-r32-086 (URU 1-1 EGY → EGY advances)
+  - wc26-r16-096 (ENG 0-0 SUI → SUI advances)
+
+**Impact:**
+- Frontend `isFinal` check treated all FT matches identically — no penalty indicator shown
+- Bracket advancement logic couldn't distinguish regulation from shootout outcomes
+- Odds/model context lost the method-of-advancement signal
+
+**Root cause:** Schema designed before knockout rounds began; 'FT_PEN' was never added to the enum. All ingestion paths (ESPN, FIFA live scraper, seed script) wrote 'FT' for completed matches regardless of method.
+
+**Fix (SHIPPED 2026-07-08T05:42Z):**
+1. Schema: Added 'FT_PEN' to status enum (migration 0111)
+2. wc2026Ingester.ts: Detects ESPN statusDesc containing "FT-Pens" → writes FT_PEN
+3. fifaLiveScraper.ts: Upgrades status to FT_PEN when penalty scores present
+4. seedAdvancingTeams.ts: Uses FT_PEN for advancingMethod === "PENALTIES"
+5. wc2026Heartbeat.ts: Post-FT hook includes FT_PEN for bracket advancement trigger
+6. WorldCup2026.tsx: isFinal check includes FT_PEN
+7. DB: 4 matches updated from FT → FT_PEN
+
+**Status:** RESOLVED — all 7 consumer sites updated, live DB corrected, future penalty-decided matches will auto-classify as FT_PEN.

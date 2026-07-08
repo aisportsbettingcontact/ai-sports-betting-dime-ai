@@ -236,7 +236,7 @@ function OddsRow({
 function MatchCard({ match }: { match: MatchWithTeams }) {
   const { homeTeam, awayTeam, venue, dkOdds, modelOdds, status } = match;
   const isLive = status === "LIVE";
-  const isFinal = status === "FT";
+  const isFinal = status === "FT" || status === "FT_PEN";
   const hasOdds =
     dkOdds != null &&
     (dkOdds.home != null || dkOdds.away != null || dkOdds.draw != null);

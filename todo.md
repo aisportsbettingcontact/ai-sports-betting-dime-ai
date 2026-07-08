@@ -4536,3 +4536,15 @@
 - [ ] Phase 3: Doctrine audit (8 laws adversarial pass)
 - [ ] Phase 4: Precision pass (typecheck, lint, test, grep for stubs)
 - [ ] Phase 5: Handoff report
+## Write Window Execution (Jul 8, 2026)
+- [x] Phase 0a: Full live-DB backup (47MB, 196 tables, 2.5M rows) + restore verify PASS
+- [x] Phase 0b: Git checkpoint 078a1875
+- [x] Phase 0c: r16 feed quiet (0 live matches)
+- [x] Phase 1: DB-013 DROP — 10 backup tables archived + dropped
+- [x] Phase 2: DATA-016 player_name population (906/1422 = 63.7% from ESPN)
+- [x] Phase 3: UNIQUE pre-check — NULL behavior correction + disjointness proof + keep-rule verification
+- [x] Phase 4: Dedup — 258 excess VAR rows archived + deleted (200 groups)
+- [x] Phase 5: ESPN reconciliation — 62/62 PASS, no attribution corruption
+- [x] Phase 6: UNIQUE constraint uq_me_natural_key APPLIED + ingester idempotency fix
+- [x] Phase 7 (DB-014): odds_source engine-code fix — 6 sites patched
+- [x] Phase 8 (DB-015): FT_PEN enum + 7 consumer sites updated + 4 matches corrected in DB

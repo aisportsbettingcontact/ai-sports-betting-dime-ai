@@ -211,7 +211,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
       (s: any) => (s.matchId?.startsWith("wc26-r32") || s.matchId?.startsWith("wc26-r16") ||
                    s.matchId?.startsWith("wc26-qf") || s.matchId?.startsWith("wc26-sf") ||
                    s.matchId?.startsWith("wc26-final")) &&
-                  (s.status === "FT" || s.status === "AET" || s.status === "PEN")
+                  (s.status === "FT" || s.status === "FT_PEN" || s.status === "AET" || s.status === "PEN")
     );
     if (ftKnockoutMatches.length > 0) {
       console.log(`[WC2026HB] [STEP] ${ftKnockoutMatches.length} knockout match(es) went FT during live-sync — triggering bracket-sync`);

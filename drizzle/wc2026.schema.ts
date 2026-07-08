@@ -67,7 +67,7 @@ export const wc2026Matches = mysqlTable(
       .references(() => wc2026Venues.venueId),
     homeScore: tinyint("home_score"),
     awayScore: tinyint("away_score"),
-    status: mysqlEnum("status", ["SCHEDULED", "LIVE", "HT", "ET", "SHOOTOUT", "FT"])
+    status: mysqlEnum("status", ["SCHEDULED", "LIVE", "HT", "ET", "SHOOTOUT", "FT", "FT_PEN"])
       .notNull()
       .default("SCHEDULED"),
     // TRUE only for USA/CAN/MEX playing inside their own country —
@@ -237,6 +237,7 @@ export const wc2026MatchEvents = mysqlTable(
   (t) => [
     index("idx_me_match").on(t.matchId),
     index("idx_me_type").on(t.eventType),
+    uniqueIndex("uq_me_natural_key").on(t.matchId, t.minuteNum, t.teamId, t.eventType, t.playerName),
   ],
 );
 

@@ -1,0 +1,1 @@
+ALTER TABLE `wc2026_match_events` ADD CONSTRAINT `uq_me_natural_key` UNIQUE(`match_id`,`minute_num`,`team_id`,`event_type`,`player_name`);

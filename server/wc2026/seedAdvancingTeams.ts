@@ -98,7 +98,7 @@ interface R32Result {
   awayFifaCode: string;
   homeScore: number | null;
   awayScore: number | null;
-  status: "FT" | "SCHEDULED" | "LIVE";
+  status: "FT" | "FT_PEN" | "SCHEDULED" | "LIVE";
   advancingFifaCode: string | null; // null = not yet played
   advancingMethod: string; // 'REGULATION' | 'PENALTIES' | 'EXTRA_TIME' | 'TBD'
   source: string;
@@ -133,7 +133,7 @@ const R32_RESULTS: R32Result[] = [
     awayFifaCode: "PAR",
     homeScore: 1,
     awayScore: 1,
-    status: "FT",
+    status: "FT_PEN",
     advancingFifaCode: "PAR",
     advancingMethod: "PENALTIES",
     source: "FIFA_HTML_2026-06-30 (PAR scoreWinner class) + DB_CONFIRMED",
@@ -244,6 +244,7 @@ async function main() {
     homeScore: number | null;
     awayScore: number | null;
     advancingMethod: string;
+    status: "FT" | "FT_PEN";
   }> = [];
 
   for (const result of completedResults) {
@@ -275,6 +276,7 @@ async function main() {
       homeScore: result.homeScore,
       awayScore: result.awayScore,
       advancingMethod: result.advancingMethod,
+      status: result.advancingMethod === "PENALTIES" ? "FT_PEN" : "FT",
     });
   }
 
@@ -293,14 +295,14 @@ async function main() {
   for (const adv of resolvedAdvancers) {
     stepCount++;
     log("STEP", `P5-S${stepCount}`, `Updating ${adv.matchId}`,
-      `SET advancing_team_id='${adv.advancingTeamId}' | home_score=${adv.homeScore} | away_score=${adv.awayScore} | status='FT'`
+      `SET advancing_team_id='${adv.advancingTeamId}' | home_score=${adv.homeScore} | away_score=${adv.awayScore} | status='${adv.status}'`
     );
 
     try {
-      // Build update payload
+      // Build update payload — use the result's status (FT or FT_PEN)
       const updatePayload: Record<string, any> = {
         advancingTeamId: adv.advancingTeamId,
-        status: "FT" as const,
+        status: adv.status,
       };
       if (adv.homeScore !== null) (updatePayload as any).homeScore = adv.homeScore;
       if (adv.awayScore !== null) (updatePayload as any).awayScore = adv.awayScore;
