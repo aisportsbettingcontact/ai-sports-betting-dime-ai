@@ -42,6 +42,7 @@ const Pricing = lazy(() => import('./pages/Pricing'));
 const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
+const DimeLanding = lazy(() => import('./pages/dime/DimeLanding'));
 const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
 const Privacy = lazy(() => import('./pages/Privacy'));
@@ -143,6 +144,8 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       {/* Password reset — public, accessed via reset link */}
       <Route path="/reset-password" component={ResetPassword} />
+      {/* Dime AI landing — public test hook for the rebrand (E1) */}
+      <Route path="/landingpage" component={DimeLanding} />
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
       {/* Main feed */}
       <Route path="/feed">{() => <RequireAuth><ModelProjections /></RequireAuth>}</Route>
