@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-07-08T04:50:36.138Z",
+  "totalEvents": 864,
+  "totalPopulated": 352,
+  "totalTeamFixed": 352,
+  "totalStillNull": 512,
+  "finalNullCount": 516,
+  "finalTotal": 1422,
+  "emptyTeamRemaining": 512,
+  "populationRate": "63.7%",
+  "byType": [
+    {
+      "event_type": "PENALTY",
+      "populated": "0",
+      "still_null": "4",
+      "total": 4
+    },
+    {
+      "event_type": "RED",
+      "populated": "6",
+      "still_null": "1",
+      "total": 7
+    },
+    {
+      "event_type": "GOAL",
+      "populated": "160",
+      "still_null": "0",
+      "total": 160
+    },
+    {
+      "event_type": "YELLOW",
+      "populated": "156",
+      "still_null": "1",
+      "total": 157
+    },
+    {
+      "event_type": "OWN_GOAL",
+      "populated": "10",
+      "still_null": "0",
+      "total": 10
+    },
+    {
+      "event_type": "VAR",
+      "populated": "1",
+      "still_null": "507",
+      "total": 508
+    },
+    {
+      "event_type": "SUB",
+      "populated": "573",
+      "still_null": "3",
+      "total": 576
+    }
+  ]
+}
