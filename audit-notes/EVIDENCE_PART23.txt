@@ -1,0 +1,61 @@
+=== PART 2: COMPLETENESS TARGETS ===
+
+Ground truth: 92 played matches (FT status in wc2026_matches)
+Tournament total: 104 matches (12 still unplayed)
+
+Played matches by round:
+  GROUP: 72 matches, 2026-06-11 to 2026-06-28
+  R32: 16 matches, 2026-06-28 to 2026-07-04
+  R16: 4 matches, 2026-07-05 to 2026-07-07
+
+Earliest model_projections row: match_id=wc26-g-029, created_at=Fri Jun 19 2026 04:53:34 GMT+0000 (Coordinated Universal Time)
+
+MD1 matches (g-001 to g-024): 24 total
+  Earliest: wc26-g-001 on 2026-06-11T19:00:00.000Z
+  Latest: wc26-g-022 on 2026-06-18T02:00:00.000Z
+Model projections for MD1 (g-001 to g-024): 0 rows
+First model run timestamp: Fri Jun 19 2026 04:53:34 GMT+0000 (Coordinated Universal Time)
+
+Model versions by first appearance:
+  v7.0: first_seen=Fri Jun 19 2026 04:53:34 GMT+0000 (Coordinated Universal Time)
+  v4.0-recal-june20: first_seen=Sat Jun 20 2026 06:50:55 GMT+0000 (Coordinated Universal Time)
+  v4.1-recal-june21: first_seen=Sun Jun 21 2026 07:19:08 GMT+0000 (Coordinated Universal Time)
+  v4.2-corrected-june21: first_seen=Sun Jun 21 2026 08:17:18 GMT+0000 (Coordinated Universal Time)
+  v3-champion-2026: first_seen=Mon Jun 22 2026 06:18:49 GMT+0000 (Coordinated Universal Time)
+
+
+=== PART 3.1: ACCEPT-GAP RECLASSIFICATION (24 MD1 projections) ===
+
+QUESTION: Were MD1 matches played BEFORE the model existed?
+  MD1 match dates: 2026-06-11 to 2026-06-18
+  First model projection: Fri Jun 19 2026 04:53:34 GMT+0000 (Coordinated Universal Time)
+
+Frozen book odds for MD1: 0 distinct match_ids
+Holdout validation for MD1: 0 distinct match_ids
+Recommendations for MD1: 0 distinct match_ids
+Market edges for MD1: 0 distinct match_ids
+Market no-vig for MD1: 1 distinct match_ids
+
+
+=== CROSS-TABLE DUPLICATE CHECK: frozen_book_odds vs MatchOdds ===
+
+Cross-table odds divergences (frozen_book_odds vs MatchOdds): 19 rows
+  wc26-r32-073: FBO(home=475, away=-145, total=2.5) vs MO(home=400, away=-120, total=2.5)
+  wc26-r32-074: FBO(home=-140, away=425, total=2.5) vs MO(home=-133, away=400, total=2.5)
+  wc26-r32-075: FBO(home=-275, away=800, total=2.5) vs MO(home=-303, away=850, total=2.5)
+  wc26-r32-076: FBO(home=130, away=250, total=2.5) vs MO(home=135, away=230, total=2.5)
+  wc26-r32-077: FBO(home=255, away=240, total=2.5) vs MO(home=270, away=110, total=2.5)
+  wc26-r32-078: FBO(home=-340, away=475, total=3.5) vs MO(home=-345, away=900, total=3.5)
+  wc26-r32-079: FBO(home=130, away=190, total=1.5) vs MO(home=130, away=310, total=1.5)
+  wc26-r32-086: FBO(home=240, away=145, total=1.5) vs MO(home=230, away=145, total=1.5)
+  wc26-r32-087: FBO(home=-588, away=1400, total=2.5) vs MO(home=-714, away=1800, total=2.5)
+  wc26-r32-088: FBO(home=-189, away=600, total=2.5) vs MO(home=-200, away=650, total=2.5)
+  wc26-r16-089: FBO(home=1400, away=-500, total=2.5) vs MO(home=1600, away=-588, total=2.5)
+  wc26-r16-090: FBO(home=375, away=-125, total=2.5) vs MO(home=400, away=-120, total=2.5)
+  wc26-r16-091: FBO(home=-111, away=320, total=2.5) vs MO(home=-133, away=375, total=2.5)
+  wc26-r32-080: FBO(home=-345, away=1100, total=2.5) vs MO(home=-345, away=1200, total=2.5)
+  wc26-r32-081: FBO(home=115, away=270, total=2.5) vs MO(home=-110, away=320, total=2.5)
+  wc26-r32-082: FBO(home=-250, away=600, total=2.5) vs MO(home=-303, away=800, total=2.5)
+  wc26-r32-083: FBO(home=-303, away=750, total=2.5) vs MO(home=-333, away=1000, total=2.5)
+  wc26-r32-084: FBO(home=-133, away=400, total=2.5) vs MO(home=-143, away=400, total=2.5)
+  wc26-r32-085: FBO(home=100, away=320, total=2.5) vs MO(home=100, away=300, total=2.5)

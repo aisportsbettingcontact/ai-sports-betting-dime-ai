@@ -1,0 +1,307 @@
+=== PART 1.2: B3 DUPLICATE EVIDENCE (FULL KEYS) ===
+
+--- TABLE: wc2026_model_projections ---
+QUERY: SELECT match_id, COUNT(*) as cnt FROM wc2026_model_projections GROUP BY match_id HAVING COUNT(*) > 1
+RESULT: 18 match_ids with duplicates
+  wc26-g-037: 2 rows
+  wc26-g-038: 2 rows
+  wc26-g-039: 2 rows
+  wc26-g-040: 2 rows
+  wc26-g-049: 3 rows
+  wc26-g-050: 3 rows
+  wc26-g-051: 3 rows
+  wc26-g-052: 3 rows
+  wc26-g-053: 3 rows
+  wc26-g-054: 3 rows
+  wc26-g-061: 2 rows
+  wc26-g-062: 2 rows
+  wc26-g-063: 2 rows
+  wc26-g-064: 2 rows
+  wc26-g-065: 2 rows
+  wc26-g-066: 2 rows
+  wc26-r16-089: 2 rows
+  wc26-r16-090: 2 rows
+
+--- TABLE: wc2026_espn_shot_map ---
+QUERY: SELECT espn_match_id, period, clock, playerName, shotType, COUNT(*) as cnt FROM wc2026_espn_shot_map GROUP BY espn_match_id, period, clock, playerName, shotType HAVING COUNT(*) > 1
+RESULT: 17 duplicate keys (showing up to 20)
+  espn:760415, period=1, clock=42', player=Julián Quiñones, type=Right Foot → cnt=2
+  espn:760421, period=2, clock=66', player=Kenan Yildiz, type=Right Foot → cnt=2
+  espn:760430, period=1, clock=43', player=Erling Haaland, type=Right Foot → cnt=2
+  espn:760450, period=1, clock=24', player=Federico Valverde, type=Right Foot → cnt=2
+  espn:760456, period=2, clock=90'+5', player=Lionel Messi, type=Left Foot → cnt=2
+  espn:760457, period=2, clock=66', player=Ousmane Dembélé, type=Right Foot → cnt=2
+  espn:760459, period=2, clock=86', player=Gustavo Puerta, type=Right Foot → cnt=2
+  espn:760460, period=2, clock=57', player=Marco Pasalic, type=Left Foot → cnt=2
+  espn:760462, period=1, clock=45'+3', player=Pedro Miguel, type=Right Foot → cnt=2
+  espn:760464, period=2, clock=75', player=Achraf Hakimi, type=Right Foot → cnt=2
+  espn:760469, period=2, clock=82', player=Julio Enciso, type=Right Foot → cnt=2
+  espn:760474, period=1, clock=20', player=Ali Jasim, type=Right Foot → cnt=2
+  espn:760477, period=2, clock=50', player=Leandro Trossard, type=Right Foot → cnt=2
+  espn:760477, period=2, clock=66', player=Kevin De Bruyne, type=Left Foot → cnt=2
+  espn:760493, period=1, clock=13', player=Ismaïla Sarr, type=Right Foot → cnt=2
+  espn:760496, period=2, clock=75', player=Mateo Kovacic, type=Right Foot → cnt=2
+  espn:760496, period=1, clock=4', player=Bruno Fernandes, type=Right Foot → cnt=2
+
+--- TABLE: wc2026_lineups ---
+QUERY: SELECT match_id, player_name, team_id, COUNT(*) as cnt FROM wc2026_lineups GROUP BY match_id, player_name, team_id HAVING COUNT(*) > 1
+RESULT: 20 duplicate keys (showing up to 20)
+  wc26-g-033, player=Felix Nmecha, team=ger → cnt=2
+  wc26-g-033, player=Yan Diomande, team=civ → cnt=2
+  wc26-g-033, player=Aleksandar Pavlovic, team=ger → cnt=2
+  wc26-g-033, player=Antonio Rüdiger, team=ger → cnt=2
+  wc26-g-033, player=Joshua Kimmich, team=ger → cnt=2
+  wc26-g-033, player=Evann Guessand, team=civ → cnt=2
+  wc26-g-033, player=Jamal Musiala, team=ger → cnt=2
+  wc26-g-033, player=Manuel Neuer, team=ger → cnt=2
+  wc26-g-033, player=Ange-Yoan Bonny, team=civ → cnt=2
+  wc26-g-033, player=Amad Diallo, team=civ → cnt=2
+  wc26-g-033, player=Emmanuel Agbadou, team=civ → cnt=2
+  wc26-g-033, player=Leroy Sané, team=ger → cnt=2
+  wc26-g-033, player=Yahia Fofana, team=civ → cnt=2
+  wc26-g-033, player=Jonathan Tah, team=ger → cnt=2
+  wc26-g-033, player=Odilon Kossounou, team=civ → cnt=2
+  wc26-g-033, player=Seko Fofana, team=civ → cnt=2
+  wc26-g-033, player=Ghislain Konan, team=civ → cnt=2
+  wc26-g-033, player=Christ Inao Oulaï, team=civ → cnt=2
+  wc26-g-033, player=Wilfried Singo, team=civ → cnt=2
+  wc26-g-033, player=Kai Havertz, team=ger → cnt=2
+
+--- TABLE: wc2026_match_events ---
+QUERY: SELECT match_id, event_type, minute_str, player_name, COUNT(*) as cnt FROM wc2026_match_events GROUP BY match_id, event_type, minute_str, player_name HAVING COUNT(*) > 1
+RESULT: 20 duplicate keys (showing up to 20)
+  wc26-g-001, type=SUB, min=76, player= → cnt=3
+  wc26-g-001, type=VAR, min=73, player= → cnt=4
+  wc26-g-001, type=VAR, min=27, player= → cnt=2
+  wc26-g-001, type=VAR, min=81, player= → cnt=4
+  wc26-g-001, type=SUB, min=66, player= → cnt=2
+  wc26-g-001, type=VAR, min=68, player= → cnt=2
+  wc26-g-001, type=VAR, min=70, player= → cnt=2
+  wc26-g-001, type=VAR, min=45, player= → cnt=2
+  wc26-g-001, type=VAR, min=25, player= → cnt=2
+  wc26-g-002, type=VAR, min=25, player= → cnt=2
+  wc26-g-002, type=SUB, min=64, player= → cnt=3
+  wc26-g-002, type=VAR, min=72, player= → cnt=2
+  wc26-g-002, type=VAR, min=23, player= → cnt=2
+  wc26-g-002, type=VAR, min=45, player= → cnt=2
+  wc26-g-002, type=SUB, min=84, player= → cnt=3
+  wc26-g-002, type=VAR, min=27, player= → cnt=2
+  wc26-g-002, type=SUB, min=69, player= → cnt=2
+  wc26-g-002, type=VAR, min=70, player= → cnt=2
+  wc26-g-002, type=VAR, min=26, player= → cnt=2
+  wc26-g-003, type=VAR, min=83, player= → cnt=2
+
+--- TABLE: wc2026_holdout_validation ---
+QUERY: SELECT match_id, selection, COUNT(*) as cnt FROM wc2026_holdout_validation GROUP BY match_id, selection HAVING COUNT(*) > 1
+RESULT: 48 duplicate keys
+  wc26-g-037, selection=HOME → cnt=2
+  wc26-g-037, selection=AWAY → cnt=2
+  wc26-g-037, selection=DRAW → cnt=2
+  wc26-g-038, selection=AWAY → cnt=2
+  wc26-g-038, selection=DRAW → cnt=2
+  wc26-g-038, selection=HOME → cnt=2
+  wc26-g-039, selection=DRAW → cnt=2
+  wc26-g-039, selection=HOME → cnt=2
+  wc26-g-039, selection=AWAY → cnt=2
+  wc26-g-040, selection=AWAY → cnt=2
+  wc26-g-040, selection=HOME → cnt=2
+  wc26-g-040, selection=DRAW → cnt=2
+  wc26-g-049, selection=AWAY → cnt=3
+  wc26-g-049, selection=DRAW → cnt=3
+  wc26-g-049, selection=HOME → cnt=3
+  wc26-g-050, selection=AWAY → cnt=3
+  wc26-g-050, selection=DRAW → cnt=3
+  wc26-g-050, selection=HOME → cnt=3
+  wc26-g-051, selection=AWAY → cnt=3
+  wc26-g-051, selection=HOME → cnt=3
+  wc26-g-051, selection=DRAW → cnt=3
+  wc26-g-052, selection=HOME → cnt=3
+  wc26-g-052, selection=AWAY → cnt=3
+  wc26-g-052, selection=DRAW → cnt=3
+  wc26-g-053, selection=DRAW → cnt=3
+  wc26-g-053, selection=HOME → cnt=3
+  wc26-g-053, selection=AWAY → cnt=3
+  wc26-g-054, selection=DRAW → cnt=3
+  wc26-g-054, selection=AWAY → cnt=3
+  wc26-g-054, selection=HOME → cnt=3
+  wc26-g-061, selection=HOME → cnt=2
+  wc26-g-061, selection=AWAY → cnt=2
+  wc26-g-061, selection=DRAW → cnt=2
+  wc26-g-062, selection=AWAY → cnt=2
+  wc26-g-062, selection=HOME → cnt=2
+  wc26-g-062, selection=DRAW → cnt=2
+  wc26-g-063, selection=AWAY → cnt=2
+  wc26-g-063, selection=HOME → cnt=2
+  wc26-g-063, selection=DRAW → cnt=2
+  wc26-g-064, selection=DRAW → cnt=2
+  wc26-g-064, selection=AWAY → cnt=2
+  wc26-g-064, selection=HOME → cnt=2
+  wc26-g-065, selection=AWAY → cnt=2
+  wc26-g-065, selection=DRAW → cnt=2
+  wc26-g-065, selection=HOME → cnt=2
+  wc26-g-066, selection=AWAY → cnt=2
+  wc26-g-066, selection=HOME → cnt=2
+  wc26-g-066, selection=DRAW → cnt=2
+
+--- TABLE: wc2026_recommendations ---
+QUERY: SELECT match_id, market, selection, COUNT(*) as cnt FROM wc2026_recommendations GROUP BY match_id, market, selection HAVING COUNT(*) > 1
+RESULT: 48 duplicate keys
+  wc26-g-037, market=1X2, selection=DRAW → cnt=2
+  wc26-g-037, market=1X2, selection=HOME → cnt=2
+  wc26-g-037, market=1X2, selection=AWAY → cnt=2
+  wc26-g-038, market=1X2, selection=HOME → cnt=2
+  wc26-g-038, market=1X2, selection=AWAY → cnt=2
+  wc26-g-038, market=1X2, selection=DRAW → cnt=2
+  wc26-g-039, market=1X2, selection=HOME → cnt=2
+  wc26-g-039, market=1X2, selection=DRAW → cnt=2
+  wc26-g-039, market=1X2, selection=AWAY → cnt=2
+  wc26-g-040, market=1X2, selection=DRAW → cnt=2
+  wc26-g-040, market=1X2, selection=HOME → cnt=2
+  wc26-g-040, market=1X2, selection=AWAY → cnt=2
+  wc26-g-049, market=1X2, selection=DRAW → cnt=3
+  wc26-g-049, market=1X2, selection=HOME → cnt=3
+  wc26-g-049, market=1X2, selection=AWAY → cnt=3
+  wc26-g-050, market=1X2, selection=HOME → cnt=3
+  wc26-g-050, market=1X2, selection=AWAY → cnt=3
+  wc26-g-050, market=1X2, selection=DRAW → cnt=3
+  wc26-g-051, market=1X2, selection=HOME → cnt=3
+  wc26-g-051, market=1X2, selection=AWAY → cnt=3
+  wc26-g-051, market=1X2, selection=DRAW → cnt=3
+  wc26-g-052, market=1X2, selection=DRAW → cnt=3
+  wc26-g-052, market=1X2, selection=HOME → cnt=3
+  wc26-g-052, market=1X2, selection=AWAY → cnt=3
+  wc26-g-053, market=1X2, selection=AWAY → cnt=3
+  wc26-g-053, market=1X2, selection=DRAW → cnt=3
+  wc26-g-053, market=1X2, selection=HOME → cnt=3
+  wc26-g-054, market=1X2, selection=AWAY → cnt=3
+  wc26-g-054, market=1X2, selection=DRAW → cnt=3
+  wc26-g-054, market=1X2, selection=HOME → cnt=3
+  wc26-g-061, market=1X2, selection=DRAW → cnt=2
+  wc26-g-061, market=1X2, selection=HOME → cnt=2
+  wc26-g-061, market=1X2, selection=AWAY → cnt=2
+  wc26-g-062, market=1X2, selection=DRAW → cnt=2
+  wc26-g-062, market=1X2, selection=HOME → cnt=2
+  wc26-g-062, market=1X2, selection=AWAY → cnt=2
+  wc26-g-063, market=1X2, selection=HOME → cnt=2
+  wc26-g-063, market=1X2, selection=DRAW → cnt=2
+  wc26-g-063, market=1X2, selection=AWAY → cnt=2
+  wc26-g-064, market=1X2, selection=DRAW → cnt=2
+  wc26-g-064, market=1X2, selection=HOME → cnt=2
+  wc26-g-064, market=1X2, selection=AWAY → cnt=2
+  wc26-g-065, market=1X2, selection=HOME → cnt=2
+  wc26-g-065, market=1X2, selection=DRAW → cnt=2
+  wc26-g-065, market=1X2, selection=AWAY → cnt=2
+  wc26-g-066, market=1X2, selection=HOME → cnt=2
+  wc26-g-066, market=1X2, selection=DRAW → cnt=2
+  wc26-g-066, market=1X2, selection=AWAY → cnt=2
+
+--- TABLE: wc2026_odds_snapshots ---
+QUERY: SELECT match_id, snapshot_ts, market, selection, COUNT(*) as cnt FROM wc2026_odds_snapshots GROUP BY match_id, snapshot_ts, market, selection HAVING COUNT(*) > 1 LIMIT 20
+RESULT: 20 duplicate keys (showing top 20 by count)
+  wc26-g-035, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=1X2, sel=home → cnt=9
+  wc26-g-034, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-035, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=1X2, sel=draw → cnt=9
+  wc26-g-038, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-033, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-039, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-038, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-040, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-036, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-035, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-036, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-034, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-035, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=1X2, sel=away → cnt=9
+  wc26-g-033, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-039, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-035, ts=Sat Jun 20 2026 06:40:09 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-040, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-037, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=over → cnt=9
+  wc26-g-037, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=TOTAL, sel=under → cnt=9
+  wc26-g-039, ts=Sun Jun 21 2026 08:00:08 GMT+0000 (Coordinated Universal Time), market=1X2, sel=away → cnt=8
+
+
+=== PART 1.3: B2 GAP EVIDENCE (MISSING MATCH_IDS) ===
+
+Ground truth: 92 played matches (FT)
+
+--- ESPN Team Stats (wc2026_espn_team_stats) ---
+  Have: 90 distinct espn_match_ids
+  Missing: 2
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505)
+--- ESPN Match Stats (wc2026_espn_match_stats) ---
+  Have: 90 distinct espn_match_ids
+  Missing: 2
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505)
+--- ESPN Expected Goals (wc2026_espn_expected_goals) ---
+  Have: 90 distinct espn_match_ids
+  Missing: 2
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505)
+--- ESPN Shot Map (wc2026_espn_shot_map) ---
+  Have: 89 distinct espn_match_ids
+  Missing: 3
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505), wc26-r32-086(espn:760499)
+--- ESPN Player Stats (wc2026_espn_player_stats) ---
+  Have: 89 distinct espn_match_ids
+  Missing: 3
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505), wc26-r32-086(espn:760499)
+--- ESPN Lineups (wc2026_espn_lineups) ---
+  Have: 89 distinct espn_match_ids
+  Missing: 3
+  IDs: wc26-r16-091(espn:760504), wc26-r16-092(espn:760505), wc26-r32-086(espn:760499)
+--- Match Odds (wc2026MatchOdds) ---
+  Have: 84 distinct match_ids
+  Missing: 12
+  IDs: wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044
+--- Model Projections (wc2026_model_projections) ---
+  Have: 72 distinct match_ids
+  Missing: 24
+  IDs: wc26-g-001, wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024
+--- Frozen Book Odds (wc2026_frozen_book_odds) ---
+  Have: 37 distinct match_ids
+  Missing: 57
+  IDs: wc26-g-001, wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024, wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-029, wc26-g-030, wc26-g-031, wc26-g-032, wc26-g-033, wc26-g-034, wc26-g-035, wc26-g-036, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-g-045, wc26-g-046, wc26-g-047, wc26-g-048, wc26-g-049, wc26-g-050, wc26-g-051, wc26-g-052, wc26-g-053, wc26-g-054, wc26-r16-092, wc26-r16-095, wc26-r16-096
+--- Odds Snapshots (wc2026_odds_snapshots) ---
+  Have: 72 distinct match_ids
+  Missing: 20
+  IDs: wc26-r16-091, wc26-r16-092, wc26-r16-095, wc26-r16-096, wc26-r32-073, wc26-r32-074, wc26-r32-075, wc26-r32-076, wc26-r32-077, wc26-r32-078, wc26-r32-079, wc26-r32-080, wc26-r32-081, wc26-r32-082, wc26-r32-083, wc26-r32-084, wc26-r32-085, wc26-r32-086, wc26-r32-087, wc26-r32-088
+--- Holdout Validation (wc2026_holdout_validation) ---
+  Have: 64 distinct match_ids
+  Missing: 28
+  IDs: wc26-g-001, wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024, wc26-r16-091, wc26-r16-092, wc26-r16-095, wc26-r16-096
+--- Recommendations (wc2026_recommendations) ---
+  Have: 66 distinct match_ids
+  Missing: 26
+  IDs: wc26-g-001, wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024, wc26-r16-095, wc26-r16-096
+--- Market Edges (wc2026_market_edges) ---
+  Have: 18 distinct match_ids
+  Missing: 74
+  IDs (first 60): wc26-g-001, wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024, wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-029, wc26-g-030, wc26-g-031, wc26-g-032, wc26-g-033, wc26-g-034, wc26-g-035, wc26-g-036, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-g-045, wc26-g-046, wc26-g-047, wc26-g-048, wc26-g-049, wc26-g-050, wc26-g-051, wc26-g-052, wc26-g-053, wc26-g-054, wc26-g-055, wc26-g-056, wc26-g-057, wc26-g-058, wc26-g-059, wc26-g-060
+  ... and 14 more
+--- Market No-Vig (wc2026_market_no_vig) ---
+  Have: 21 distinct match_ids
+  Missing: 73
+  IDs (first 60): wc26-g-002, wc26-g-003, wc26-g-004, wc26-g-005, wc26-g-006, wc26-g-007, wc26-g-008, wc26-g-009, wc26-g-010, wc26-g-011, wc26-g-012, wc26-g-013, wc26-g-014, wc26-g-015, wc26-g-016, wc26-g-017, wc26-g-018, wc26-g-019, wc26-g-020, wc26-g-021, wc26-g-022, wc26-g-023, wc26-g-024, wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-029, wc26-g-030, wc26-g-031, wc26-g-032, wc26-g-033, wc26-g-034, wc26-g-035, wc26-g-036, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-g-045, wc26-g-046, wc26-g-047, wc26-g-048, wc26-g-049, wc26-g-050, wc26-g-051, wc26-g-052, wc26-g-053, wc26-g-054, wc26-g-055, wc26-g-056, wc26-g-057, wc26-g-058, wc26-g-059, wc26-g-060, wc26-g-061
+  ... and 13 more
+--- Match Stats (wc2026_match_stats) ---
+  Have: 63 distinct match_ids
+  Missing: 29
+  IDs: wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-r16-091, wc26-r16-092, wc26-r16-095, wc26-r16-096, wc26-r32-076, wc26-r32-077, wc26-r32-078, wc26-r32-079, wc26-r32-080, wc26-r32-081, wc26-r32-082, wc26-r32-083, wc26-r32-084, wc26-r32-085, wc26-r32-086, wc26-r32-087, wc26-r32-088
+--- Match Events (wc2026_match_events) ---
+  Have: 62 distinct match_ids
+  Missing: 30
+  IDs: wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-g-063, wc26-r16-091, wc26-r16-092, wc26-r16-095, wc26-r16-096, wc26-r32-076, wc26-r32-077, wc26-r32-078, wc26-r32-079, wc26-r32-080, wc26-r32-081, wc26-r32-082, wc26-r32-083, wc26-r32-084, wc26-r32-085, wc26-r32-086, wc26-r32-087, wc26-r32-088
+--- Lineups (wc2026_lineups) ---
+  Have: 60 distinct match_ids
+  Missing: 32
+  IDs: wc26-g-025, wc26-g-026, wc26-g-027, wc26-g-028, wc26-g-037, wc26-g-038, wc26-g-039, wc26-g-040, wc26-g-041, wc26-g-042, wc26-g-043, wc26-g-044, wc26-g-063, wc26-g-068, wc26-r16-091, wc26-r16-092, wc26-r16-095, wc26-r16-096, wc26-r32-074, wc26-r32-076, wc26-r32-077, wc26-r32-078, wc26-r32-079, wc26-r32-080, wc26-r32-081, wc26-r32-082, wc26-r32-083, wc26-r32-084, wc26-r32-085, wc26-r32-086, wc26-r32-087, wc26-r32-088
+
+
+=== PART 3.2: UNIQUE CONSTRAINT CHECK (7 dupe tables) ===
+
+wc2026_model_projections: 2 unique indexes: PRIMARY, uq_match_version
+wc2026_espn_shot_map: 1 unique indexes: PRIMARY
+wc2026_lineups: 1 unique indexes: PRIMARY
+wc2026_match_events: 1 unique indexes: PRIMARY
+wc2026_holdout_validation: 2 unique indexes: PRIMARY, uq_holdout
+wc2026_recommendations: 3 unique indexes: PRIMARY, uq_rec_match_ver_mkt_sel, uq_rec_match_model_market_selection
+wc2026_odds_snapshots: 1 unique indexes: PRIMARY
