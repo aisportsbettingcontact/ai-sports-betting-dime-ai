@@ -20,9 +20,13 @@ dime-ai/
 │       ├── uploads/ · screenshots/      Design references (contains personal reference
 │       │                                screenshots — do not redistribute)
 │       └── support.js                   Claude Design prototype runtime (NOT production code)
-├── reference-pages/      Static, script-free exports of the four final frames
+├── reference-pages/      Static, script-free design references
 │   ├── dime-home-dark.html   (5a)   dime-home-light.html  (5b)
-│   └── dime-chat-dark.html   (5c)   dime-chat-light.html  (5d)
+│   ├── dime-chat-dark.html   (5c)   dime-chat-light.html  (5d)
+│   └── dime-feed-dark.html / dime-feed-light.html — MLB Projections feed prototype
+│       ("AI Model Projections" pane in the Dime shell; strict one-accent mint —
+│       mint only for edges/picks/live/active, PASS rows grey, no gold, no red;
+│       sample July 8 slate; see DIME-FEED-MIGRATION-DRAFT.md for the data mapping)
 └── logo-pngs/            Raster wordmarks, 1720×368 RGBA (= 430×92 SVG @4×), pixel-verified
 ```
 

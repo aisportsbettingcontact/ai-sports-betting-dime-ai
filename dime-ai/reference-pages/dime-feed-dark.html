@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dime — AI Model Projections (Dark)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+
+    body { margin: 0; background: #0B0B0F; display: flex; justify-content: center; font-family: 'Familjen Grotesk', sans-serif; }
+    a { color: #45E0A8; text-decoration: none; }
+    a:hover { color: #7DEBC4; }
+    /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */
+    :root { --mint: #45E0A8; --mint-on-light: #0FA36B; }
+    .theme-dark { --text-primary: #f7f7f8; --text-secondary: #c9c9d2; --row-hover: rgba(255,255,255,0.065); --row-active: rgba(255,255,255,0.095); --accent: #45E0A8; --ring: rgba(69,224,168,0.36); }
+    .sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1); }
+    .sidebar-row::before { content: ""; position: absolute; left: -6px; top: 50%; width: 3px; height: 18px; border-radius: 999px; background: var(--accent); opacity: 0; transform: translateY(-50%) scaleY(0.7); transition: opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); }
+    .sidebar-row:hover { background: var(--row-hover); color: var(--text-primary); }
+    .sidebar-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
+    .sidebar-row.is-active { background: var(--row-active); color: var(--text-primary); font-weight: 600; }
+    .sidebar-row.is-active::before { opacity: 1; transform: translateY(-50%) scaleY(1); }
+    .sidebar-row.is-active .sidebar-icon { color: var(--accent); }
+    .sidebar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-icon { width: 14px; display: inline-flex; justify-content: center; }
+    @media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before { transition: none; } }
+    /* Feed */
+    .feed-tab { font-size: 13px; font-weight: 600; color: #6A6A78; padding: 6px 2px; cursor: pointer; border-bottom: 2px solid transparent; }
+    .feed-tab.is-active { color: #EDEDF2; border-bottom-color: #45E0A8; }
+    .feed-tab:hover { color: #C9C9D4; }
+    .mono-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6A6A78; }
+    .hv1:hover { opacity: 0.85 !important; }
+    .hv3:hover { opacity: 0.7 !important; }
+    @keyframes dimeLive { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #45E0A8; animation: dimeLive 1.6s infinite; }
+    @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+</style>
+</head>
+<body>
+<div style="width: 1600px; display: flex; height: 900px; background: #0B0B0F; border: 1px solid #24242E; border-radius: 12px; overflow: hidden;">
+        <div class="theme-dark" style="width: 264px; flex-shrink: 0; background: #101016; border-right: 1px solid #1E1E26; display: flex; flex-direction: column; padding: 20px 14px;">
+          <div style="padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; color: #EDEDF2; text-align: center;">AI Sports Betting</div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-icon">＋</span><span class="sidebar-text">New Chat</span></a>
+            <a class="sidebar-row is-active" aria-current="page" href="#" style="font-size: 13px;"><span class="sidebar-text">AI Model Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Betting Splits + Odds History</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Trends</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Prop Projections</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bet Tracker</span></a>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #55555E; padding: 22px 10px 8px;">Recent Chats</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible;">
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Will Messi score a goal today vs Egypt?</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Ohtani strikeout total projection</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Rockies vs Dodgers Best Bets</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">The Model's favorite picks July 7</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">France World Cup Odds</span></a>
+            <a class="sidebar-row" href="#" style="font-size: 13px;"><span class="sidebar-text">Bankroll Management Advice</span></a>
+          </div>
+          <div class="sidebar-row" role="button" tabindex="0" style="position: relative; margin-top: 8px; padding: 10px 8px; border-top: 1px solid #1E1E26; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px;">
+            <img src="../design-bundle/project/uploads/prezcirca.jpg" alt="PREZ BETS" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;">
+            <div style="display: flex; flex-direction: column;"><div style="font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: #EDEDF2;">PREZ BETS</div><div style="font-size: 11px; color: #6A6A78;">Pro</div></div>
+            <svg tabindex="0" role="button" aria-label="Account settings" viewBox="0 0 24 24" width="17" height="17" style="margin-left: auto; flex-shrink: 0; cursor: pointer;" fill="none" stroke="#9A9AA8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>
+          </div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+
+          <!-- Top bar: app tabs (Slate = the projections feed) -->
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 32px; border-bottom: 1px solid #1E1E26;">
+            <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px; cursor: pointer;">Chat</div>
+            <div style="font-size: 13px; font-weight: 700; color: #EDEDF2; padding: 6px 14px; background: #1A1A22; border-radius: 16px;">Slate</div>
+            <div style="font-size: 13px; color: #6A6A78; padding: 6px 14px; cursor: pointer;">Bet Tracker</div>
+            <div class="mono-label" style="margin-left: auto; display: flex; align-items: center; gap: 8px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #45E0A8; display: inline-block;"></span>SYNCED 2 MIN AGO</div>
+          </div>
+
+          <!-- Feed toolbar: date + market tabs -->
+          <div style="display: flex; align-items: center; gap: 24px; padding: 16px 40px 0;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 28px; height: 28px; border-radius: 8px; border: 1px solid #24242E; display: flex; align-items: center; justify-content: center; color: #9A9AA8; cursor: pointer; font-size: 14px;" class="hv1">‹</div>
+              <div style="font-size: 15px; font-weight: 700; color: #EDEDF2; letter-spacing: -0.01em;">Tuesday, July 8</div>
+              <div style="width: 28px; height: 28px; border-radius: 8px; border: 1px solid #24242E; display: flex; align-items: center; justify-content: center; color: #9A9AA8; cursor: pointer; font-size: 14px;" class="hv1">›</div>
+              <div class="mono-label" style="margin-left: 4px;">MLB · 5 GAMES</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 20px; margin-left: auto;">
+              <div class="feed-tab is-active">Projections</div>
+              <div class="feed-tab">Splits</div>
+              <div class="feed-tab">Lineups</div>
+              <div class="feed-tab">K Props</div>
+              <div class="feed-tab">Cheat Sheets</div>
+              <div class="feed-tab">HR Props</div>
+            </div>
+          </div>
+
+          <!-- Column header -->
+          <div style="display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; padding: 18px 56px 8px;">
+            <div class="mono-label">Matchup</div>
+            <div class="mono-label" style="text-align: center;">Run Line · Book / Model</div>
+            <div class="mono-label" style="text-align: center;">Total · Book / Model</div>
+            <div class="mono-label" style="text-align: center;">Moneyline · Book / Model</div>
+            <div class="mono-label" style="text-align: right;">Model Verdict</div>
+          </div>
+
+          <!-- Cards -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 4px 40px 28px; overflow: hidden;">
+
+            <!-- Card 1 — LIVE game -->
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 16px; padding: 16px 16px; display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; align-items: center;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;"><span class="live-dot"></span><span class="mono-label" style="color: #45E0A8;">LIVE · TOP 6</span></div>
+                <div style="font-size: 16px; font-weight: 700; color: #EDEDF2;">Dodgers 4 <span style="color: #6A6A78; font-weight: 400;">@</span> Rockies 2</div>
+                <div class="mono-label">GLASNOW (R) VS FREELAND (L) · COORS FIELD</div>
+              </div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">LAD -1.5 <span style="color: #6A6A78;">(+104)</span></div><div style="font-size: 15px; font-weight: 700; color: #45E0A8;">-2.2</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">O/U 11.5 <span style="color: #6A6A78;">(-110)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">11.1</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">LAD -168</div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-181 <span style="font-size: 12px; color: #9A9AA8;">(64.4%)</span></div></div>
+              <div style="display: flex; gap: 14px; justify-content: flex-end; border-left: 1px solid #24242E; padding-left: 18px;">
+                <div><div class="mono-label">Pick</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">LAD -1.5</div></div>
+                <div><div class="mono-label">Edge</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">+6.1%</div></div>
+                <div><div class="mono-label">Grade</div><div style="font-size: 17px; font-weight: 700; color: #EDEDF2;">A−</div></div>
+              </div>
+            </div>
+
+            <!-- Card 2 — strong edge -->
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 16px; padding: 16px 16px; display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; align-items: center;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="mono-label">7:10 PM ET</div>
+                <div style="font-size: 16px; font-weight: 700; color: #EDEDF2;">Yankees <span style="color: #6A6A78; font-weight: 400;">@</span> Red Sox</div>
+                <div class="mono-label">COLE (R) VS CROCHET (L) · FENWAY PARK</div>
+              </div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">NYY -1.5 <span style="color: #6A6A78;">(+122)</span></div><div style="font-size: 15px; font-weight: 700; color: #45E0A8;">-1.9</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">O/U 9.0 <span style="color: #6A6A78;">(-108)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">8.7</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">NYY -136</div><div style="font-size: 15px; font-weight: 700; color: #45E0A8;">-171 <span style="font-size: 12px; color: #9A9AA8;">(63.1%)</span></div></div>
+              <div style="display: flex; gap: 14px; justify-content: flex-end; border-left: 1px solid #24242E; padding-left: 18px;">
+                <div><div class="mono-label">Pick</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">NYY ML</div></div>
+                <div><div class="mono-label">Edge</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">+5.5%</div></div>
+                <div><div class="mono-label">Grade</div><div style="font-size: 17px; font-weight: 700; color: #EDEDF2;">A</div></div>
+              </div>
+            </div>
+
+            <!-- Card 3 — total edge -->
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 16px; padding: 16px 16px; display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; align-items: center;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="mono-label">8:05 PM ET</div>
+                <div style="font-size: 16px; font-weight: 700; color: #EDEDF2;">Brewers <span style="color: #6A6A78; font-weight: 400;">@</span> Cubs</div>
+                <div class="mono-label">PERALTA (L) VS ASSAD (R) · WRIGLEY FIELD</div>
+              </div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">CHC -1.5 <span style="color: #6A6A78;">(+146)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-1.3</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">O/U 8.5 <span style="color: #6A6A78;">(-112)</span></div><div style="font-size: 15px; font-weight: 700; color: #45E0A8;">7.6</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">CHC -124</div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-129 <span style="font-size: 12px; color: #9A9AA8;">(56.3%)</span></div></div>
+              <div style="display: flex; gap: 14px; justify-content: flex-end; border-left: 1px solid #24242E; padding-left: 18px;">
+                <div><div class="mono-label">Pick</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">UNDER 8.5</div></div>
+                <div><div class="mono-label">Edge</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">+4.8%</div></div>
+                <div><div class="mono-label">Grade</div><div style="font-size: 17px; font-weight: 700; color: #EDEDF2;">B+</div></div>
+              </div>
+            </div>
+
+            <!-- Card 4 — NRFI angle -->
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 16px; padding: 16px 16px; display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; align-items: center;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="mono-label">6:40 PM ET</div>
+                <div style="font-size: 16px; font-weight: 700; color: #EDEDF2;">Phillies <span style="color: #6A6A78; font-weight: 400;">@</span> Mets</div>
+                <div class="mono-label">WHEELER (R) VS SENGA (R) · CITI FIELD</div>
+              </div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">PHI -1.5 <span style="color: #6A6A78;">(+138)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-1.4</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">O/U 7.5 <span style="color: #6A6A78;">(-115)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">7.4</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">PHI -142</div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-147 <span style="font-size: 12px; color: #9A9AA8;">(59.5%)</span></div></div>
+              <div style="display: flex; gap: 14px; justify-content: flex-end; border-left: 1px solid #24242E; padding-left: 18px;">
+                <div><div class="mono-label">Pick</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">NRFI -138</div></div>
+                <div><div class="mono-label">Edge</div><div style="font-size: 17px; font-weight: 700; color: #45E0A8;">+3.9%</div></div>
+                <div><div class="mono-label">Grade</div><div style="font-size: 17px; font-weight: 700; color: #EDEDF2;">B</div></div>
+              </div>
+            </div>
+
+            <!-- Card 5 — PASS (no edge → no mint) -->
+            <div style="background: #16161C; border: 1px solid #24242E; border-radius: 16px; padding: 16px 16px; display: grid; grid-template-columns: 340px 1fr 1fr 1fr 300px; gap: 16px; align-items: center; opacity: 0.82;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div class="mono-label">9:40 PM ET</div>
+                <div style="font-size: 16px; font-weight: 700; color: #EDEDF2;">Astros <span style="color: #6A6A78; font-weight: 400;">@</span> Mariners</div>
+                <div class="mono-label">VALDEZ (L) VS GILBERT (R) · T-MOBILE PARK</div>
+              </div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">SEA -1.5 <span style="color: #6A6A78;">(+150)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-1.4</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">O/U 7.0 <span style="color: #6A6A78;">(-110)</span></div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">7.1</div></div>
+              <div style="text-align: center;"><div style="font-size: 15px; color: #C9C9D4;">SEA -118</div><div style="font-size: 15px; font-weight: 700; color: #EDEDF2;">-121 <span style="font-size: 12px; color: #9A9AA8;">(54.8%)</span></div></div>
+              <div style="display: flex; gap: 14px; justify-content: flex-end; border-left: 1px solid #24242E; padding-left: 18px;">
+                <div><div class="mono-label">Pick</div><div style="font-size: 17px; font-weight: 700; color: #9A9AA8;">PASS</div></div>
+                <div><div class="mono-label">Edge</div><div style="font-size: 17px; font-weight: 700; color: #9A9AA8;">+0.7%</div></div>
+                <div><div class="mono-label">Grade</div><div style="font-size: 17px; font-weight: 700; color: #9A9AA8;">—</div></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Ask dime about the slate -->
+          <div style="padding: 0 40px 26px;">
+            <div style="display: flex; align-items: center; gap: 10px; background: #16161C; border: 1px solid #24242E; border-radius: 26px; padding: 9px 9px 9px 20px;">
+              <div style="font-size: 18px; color: #6A6A78; font-weight: 500;">＋</div>
+              <div style="flex: 1; font-size: 14px; color: #6A6A78;">Ask dime about tonight's slate…</div>
+              <button type="button" aria-label="Submit prompt" style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: #FFFFFF; border: 0.5px solid #0B0B0F; display: flex; align-items: center; justify-content: center; cursor: pointer;" class="hv3">
+                <svg viewBox="0 0 512 512" width="20" height="20"><path d="M96 140 L248 256 L96 372" fill="none" stroke="#0B0B0F" stroke-width="64" stroke-linecap="square"></path><rect x="330" y="228" width="150" height="56" fill="#45E0A8"></rect><rect x="377" y="181" width="56" height="150" fill="#45E0A8"></rect></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+</body>
+</html>
