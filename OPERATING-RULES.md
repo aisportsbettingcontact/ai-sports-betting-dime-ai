@@ -34,3 +34,17 @@
 - **Disclosing your own mistakes is always safe; concealment always voids trust.**
 - audit-notes/ and this file are permanent repo fixtures, updated every session.
 - All session work begins by reading this file.
+
+---
+
+## Dedup Gate (Permanent — added 2026-07-08)
+
+No DELETE/dedup operation on any wc2026_* table may execute without ALL of:
+
+1. **TRUE KEY STATED** — with schema evidence (file:line, column definitions, constraint name if exists). The key must identify ONE legitimate row, not merely one match.
+2. **GROUPING ON TRUE KEY** — GROUP BY must use the full composite natural key, never just `match_id` for multi-row-per-match tables.
+3. **DATA-LOSS IMPACT STATEMENT** — exact count of rows to be deleted vs retained, with PROOF each deleted row is redundant on the true key (not just same match_id).
+4. **ARCHIVE-FIRST REVERSIBILITY** — `INSERT INTO {table}_archive SELECT * FROM {table} WHERE id IN (...)` before any DELETE. Archive table must exist and be verified.
+5. **EXPLICIT OWNER AUTHORIZATION** — owner must approve after reviewing the impact statement.
+
+No gate = no dedup. Violation = INCIDENT.
