@@ -167,7 +167,6 @@ async function run() {
   const db = await getDb();
   const tables = [
     "wc2026_espn_matches",
-    "wc2026_espn_match_odds",
     "wc2026_espn_team_stats",
     "wc2026_espn_match_stats",
     "wc2026_espn_expected_goals",
@@ -223,12 +222,8 @@ async function run() {
      FROM wc2026_espn_expected_goals WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
   ));
 
-  // 5. Match odds
-  const [oddsData] = await db.execute(sql.raw(
-    \`SELECT provider, homeMoneylineCurrent, awayMoneylineCurrent, drawMoneylineCurrent,
-            homeSpreadLine, homeTotalSide, homeMoneylineOpen, awayMoneylineOpen
-     FROM wc2026_espn_match_odds WHERE espn_match_id = '${GAME_ID}' LIMIT 1\`
-  ));
+  // 5. Match odds (table dropped in DB-013 — skip)
+  const oddsData = [null];
 
   // 6. Team stats (tmStatsGrph)
   const [teamStatsData] = await db.execute(sql.raw(
@@ -599,16 +594,8 @@ log(`  Total lineup entries: ${spotChecks.lineupTotal}`);
 check("starters count = 22", spotChecks.starterCount, 22);
 checkGt("total lineup entries", spotChecks.lineupTotal, 22);
 
-// ─── ODDS ─────────────────────────────────────────────────────────────────────
-banner("Match Odds (wc2026_espn_match_odds)");
-if (spotChecks.odds) {
-  const o = spotChecks.odds;
-  log(`  Provider: ${o.provider}`);
-  log(`  Moneylines: H=${o.homeMoneylineCurrent} D=${o.drawMoneylineCurrent} A=${o.awayMoneylineCurrent}`);
-  log(`  Open: H=${o.homeMoneylineOpen} A=${o.awayMoneylineOpen}`);
-  log(`  Spread: ${o.homeSpreadLine} | Total: ${o.homeTotalSide}`);
-  checkTruthy("odds.provider", o.provider);
-}
+// ─── ODDS (table dropped in DB-013 — skipped) ──────────────────────────────
+log(`  [SKIP] wc2026_espn_match_odds dropped in DB-013`);
 
 // ─── FINAL SUMMARY ───────────────────────────────────────────────────────────
 banner("LIVE INGEST TEST COMPLETE", C.magenta);
