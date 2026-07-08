@@ -55,7 +55,8 @@
     "user-story-mapping-workshop@pm-skills": true,
     "user-story-splitting@pm-skills": true,
     "vp-cpo-readiness-advisor@pm-skills": true,
-    "workshop-facilitation@pm-skills": true
+    "workshop-facilitation@pm-skills": true,
+    "figma@knowledge-work-plugins": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -68,6 +69,12 @@
       "source": {
         "source": "github",
         "repo": "deanpeters/Product-Manager-Skills"
+      }
+    },
+    "knowledge-work-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/knowledge-work-plugins"
       }
     }
   }
