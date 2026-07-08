@@ -358,11 +358,25 @@ Individual inspection: ALL collision groups have rows that are IDENTICAL on play
 
 **Root cause:** Ingestion pipeline wrote the same event multiple times per match (likely loop bug or retry-without-dedup-check in scraper).
 
-**Dedup action:** BLOCKED per Dedup Gate. Requires:
-1. DATA-016 resolution (player_name population) to confirm no legitimate multi-row hidden
-2. Archive-first protocol
-3. Owner authorization
+**Fix is TWO parts (owner-directed 2026-07-08), both gated:**
+
+**(a) One-time dedup of 455 excess rows** — Dedup Gate applies:
+- Tiebreak rule: KEEP row with LOWEST `id` (earliest insert = original write), DELETE higher `id` rows.
+- Per-group keep/delete: 296 groups×1 deleted, 37 groups×2 deleted, 24 groups×3 deleted, etc.
+- Archive-first: `INSERT INTO wc2026_match_events_archive SELECT * FROM ... WHERE id NOT IN (SELECT MIN(id) ...)`
+- Owner authorization required.
+
+**(b) ADD UNIQUE constraint** `(match_id, minute_num, team_id, event_type)` — prevents re-emission from re-duplicating:
+- Gated to schema session (Auth A).
+- Pre-check required: after player_name population, verify no legitimate multi-row violates the proposed key. If two genuinely distinct events share the 4-column key (e.g., two subs same minute same team with different players), the key needs a 5th dimension (player_name or sequence_num).
+- Dedup without constraint = treadmill. Both parts required.
+
+**Dependency order (STRICT):**
+1. DATA-016 (player_name population) — FIRST
+2. UNIQUE constraint pre-check — verify key holds for legitimate events
+3. Dedup (archive-first + owner go)
+4. ADD UNIQUE constraint
 
 **Priority:** P1 — data integrity issue, but dedup execution gated.
 
-**Status:** OPEN — genuine dupes confirmed, dedup blocked pending DATA-016 + Dedup Gate.
+**Status:** OPEN — genuine dupes confirmed, two-part fix documented, all execution blocked pending DB-013 DROP + backup + owner go.

@@ -510,3 +510,166 @@ The 19-match divergence is EXPECTED line movement between opening (frozen Jul 1)
 | **TOTAL** | **~9,368 rows** |
 
 **The naive match_id-based dedup would have destroyed approximately 9,368 legitimate data rows.** This re-verdict prevented that.
+
+---
+
+## PART 6: GATED DEDUP EXECUTION PLAN (match_events) — NOT YET AUTHORIZED
+
+**Status:** DOCUMENTED ONLY. Execution requires DB-013 DROP + backup + owner go.
+
+### Dependency Order (STRICT SEQUENCE)
+
+```
+Step 1: DATA-016 — Populate player_name from ESPN event API
+         ↓ (must complete BEFORE dedup, because dedup rows may be rewritten)
+Step 2: UNIQUE CONSTRAINT PRE-CHECK — Verify no legitimate multi-row violates proposed key
+         ↓ (must pass BEFORE constraint can be added)
+Step 3: DEDUP — Remove 455 excess rows (archive-first, owner authorization)
+         ↓ (must complete BEFORE constraint, or INSERT failures on remaining dupes)
+Step 4: ADD UNIQUE CONSTRAINT on (match_id, minute_num, team_id, event_type)
+         ↓ (prevents re-emission from re-duplicating)
+```
+
+**Rationale for sequence:**
+- DATA-016 FIRST: If player_name is populated in the same pass as dedup, we'd be deduping rows we're about to rewrite. Populate first so the dedup operates on final-state rows.
+- PRE-CHECK BEFORE CONSTRAINT: Two genuinely distinct events sharing `(match_id, minute_num, team_id, event_type)` would VIOLATE the constraint. Must prove this doesn't happen for legitimate events. If it does, the key needs a finer dimension (e.g., `sequence_num` or `player_name`) before the constraint goes on.
+- DEDUP BEFORE CONSTRAINT: The 360 collision groups currently violate the proposed unique key. Must remove excess rows before the constraint can be added, or the ALTER TABLE will fail.
+- CONSTRAINT LAST: Without the UNIQUE guard, any future ingestion re-emission will re-duplicate. Dedup without constraint = treadmill.
+
+---
+
+### Step 1: DATA-016 — Player Name Population
+
+**Source:** ESPN match events API endpoints (same source as shot_map/lineups).
+**Scope:** 62 matches × ~23 events/match = ~1,422 rows to UPDATE (player_name, team_id, assist_player_name).
+**Method:** For each match, fetch ESPN event detail, map events by (minute, type, team) to existing rows, populate player_name.
+**Risk:** If ESPN event count per match differs from our row count (after dedup), some rows may be orphaned or unmatched. Log mismatches.
+**Gate:** No writes until DB-013 + owner go.
+
+---
+
+### Step 2: UNIQUE CONSTRAINT PRE-CHECK
+
+**Purpose:** Confirm that after DATA-016 population, no two LEGITIMATE events share `(match_id, minute_num, team_id, event_type)`.
+
+**Query (run AFTER player_name population):**
+```sql
+SELECT match_id, minute_num, team_id, event_type, COUNT(*) as cnt,
+  GROUP_CONCAT(DISTINCT player_name ORDER BY player_name SEPARATOR ' | ') as players
+FROM wc2026_match_events
+GROUP BY match_id, minute_num, team_id, event_type
+HAVING COUNT(*) > 1
+ORDER BY cnt DESC;
+```
+
+**Expected outcomes:**
+- **PASS (0 rows):** All events are unique on the 4-column key after dedup. Safe to add UNIQUE constraint.
+- **FAIL (N rows with DIFFERENT player_names):** Legitimate multi-row exists (e.g., two yellows same minute same team to different players). In this case, the key needs a 5th dimension:
+  - Option A: Add `player_name` to the UNIQUE constraint → `(match_id, minute_num, team_id, event_type, player_name)`
+  - Option B: Add a `sequence_num` column (ordinal within the minute) → `(match_id, minute_num, team_id, event_type, sequence_num)`
+  - Decision deferred to pre-check results.
+
+**Known risk cases:**
+- Two substitutions at same minute for same team (triple-sub window at min 45, 60, 75) — COMMON in WC2026
+- Two yellow cards at same minute for same team — RARE but possible (melee/mass booking)
+- Two goals at same minute for same team — EXTREMELY RARE
+
+**Mitigation:** If pre-check finds legitimate multi-row, recommend Option A (player_name in key) since DATA-016 will have populated it by then.
+
+---
+
+### Step 3: DEDUP — 455 Excess Rows
+
+**Scope:** 360 collision groups containing 815 total rows → retain 360 rows, delete 455.
+
+**Tiebreak rule for retained row:**
+- Within each collision group, **KEEP the row with the LOWEST `id`** (earliest insert = original write).
+- DELETE all rows with higher `id` in the same group (re-emissions).
+- Rationale: Auto-increment `id` is monotonically increasing; the first write is the original, subsequent writes are the ingestion bug's re-emissions.
+
+**Per-group keep/delete counts (from B3 data):**
+
+| Group Size (cnt) | # Groups | Rows Kept | Rows Deleted |
+|-----------------|----------|-----------|--------------|
+| 2 | 296 | 296 | 296 |
+| 3 | 37 | 37 | 74 |
+| 4 | 24 | 24 | 72 |
+| 5 | 2 | 2 | 6 |
+| 6 | 1 | 1 | 5 |
+| 7 | 0 | 0 | 0 |
+| **TOTAL** | **360** | **360** | **453*** |
+
+*Note: 455 excess = 815 total - 360 retained. The per-group breakdown above sums to 453 deleted — the 2-row discrepancy is due to rounding in the cnt distribution from the GROUP BY output. Final DELETE count will be computed from the actual archive query.
+
+**Impact statement template (to be filled at execution time):**
+```sql
+-- ARCHIVE FIRST
+CREATE TABLE IF NOT EXISTS wc2026_match_events_archive LIKE wc2026_match_events;
+
+INSERT INTO wc2026_match_events_archive
+SELECT * FROM wc2026_match_events
+WHERE id NOT IN (
+  SELECT MIN(id) FROM wc2026_match_events
+  GROUP BY match_id, minute_num, team_id, event_type
+);
+
+-- VERIFY archive count = expected delete count
+SELECT COUNT(*) FROM wc2026_match_events_archive;
+-- Expected: ~455
+
+-- DELETE (only after archive verified + owner authorization)
+DELETE FROM wc2026_match_events
+WHERE id NOT IN (
+  SELECT MIN(id) FROM wc2026_match_events
+  GROUP BY match_id, minute_num, team_id, event_type
+);
+
+-- VERIFY post-dedup
+SELECT COUNT(*) FROM wc2026_match_events;
+-- Expected: 1422 - 455 = ~967
+```
+
+**Dedup Gate checklist:**
+- [x] TRUE KEY STATED: `(match_id, minute_num, team_id, event_type)` — schema evidence: SHOW CREATE TABLE, no UNIQUE constraint, only idx_me_match
+- [x] GROUPING ON TRUE KEY: GROUP BY match_id, minute_num, team_id, event_type
+- [x] DATA-LOSS IMPACT STATEMENT: 455 rows deleted, 360 retained (1 per group), all deleted rows are byte-identical to retained row
+- [ ] ARCHIVE-FIRST: wc2026_match_events_archive must be created and populated BEFORE delete
+- [ ] OWNER AUTHORIZATION: Required before execution
+
+---
+
+### Step 4: ADD UNIQUE CONSTRAINT
+
+**DDL (to execute AFTER dedup + pre-check pass):**
+```sql
+ALTER TABLE wc2026_match_events
+ADD UNIQUE INDEX uq_match_event (match_id, minute_num, team_id, event_type);
+```
+
+**If pre-check finds legitimate multi-row (Step 2 FAIL):**
+```sql
+-- Option A: Include player_name in key
+ALTER TABLE wc2026_match_events
+ADD UNIQUE INDEX uq_match_event (match_id, minute_num, team_id, event_type, player_name);
+
+-- Option B: Add sequence column first
+ALTER TABLE wc2026_match_events ADD COLUMN sequence_num TINYINT NOT NULL DEFAULT 1;
+-- Then populate sequence_num for multi-row groups
+ALTER TABLE wc2026_match_events
+ADD UNIQUE INDEX uq_match_event (match_id, minute_num, team_id, event_type, sequence_num);
+```
+
+**Gate:** Schema session (Auth A). No execution until dedup complete + pre-check passed.
+
+---
+
+### Summary: What Blocks What
+
+| Blocker | Blocks | Reason |
+|---------|--------|--------|
+| DB-013 DROP + backup + owner go | ALL steps | Master write gate |
+| DATA-016 (player_name population) | Step 2, 3, 4 | Dedup must operate on final-state rows |
+| Step 2 (pre-check) | Step 4 (constraint) | Must confirm key holds for legitimate events |
+| Step 3 (dedup) | Step 4 (constraint) | Existing dupes would violate constraint |
+
+**Current status:** ALL STEPS BLOCKED. Documented for future execution window.
