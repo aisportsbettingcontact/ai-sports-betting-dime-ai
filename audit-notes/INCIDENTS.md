@@ -390,6 +390,7 @@ Individual inspection: ALL collision groups have rows that are IDENTICAL on play
 2. Disjointness proof: 155 legitimate multi-row groups DISJOINT from original 360 dupe groups
 3. Keep-rule verification: post-population, 0 genuine dupe groups remain among named events; only 200 VAR groups (NULL player) remain
 4. Dedup: 257 excess VAR rows archived to `audit-notes/archives/match_events_var_dupes_2026-07-08.json` + deleted (200 groups: 175 had 2 copies = 175 deletes; 25 had 3-5 copies = 82 deletes; total = 257)
+   4b. Split-group verification found 1 additional escaped dupe (id=291, wc26-g-005 min=52 VAR) — archived + deleted. See `audit-notes/run-logs/split_group_verification.md`. Final dedup total: 258 rows.
 5. ESPN reconciliation: 62/62 matches PASS — no attribution corruption
 6. UNIQUE constraint `uq_me_natural_key(match_id, minute_num, team_id, event_type, player_name)` APPLIED
 7. Ingester idempotency fix: check-before-insert pattern prevents future re-emission dupes
