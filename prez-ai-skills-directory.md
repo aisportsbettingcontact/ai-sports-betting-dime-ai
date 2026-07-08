@@ -1,6 +1,6 @@
 # PREZ AI — SKILLS DIRECTORY & OPERATING MAP
 
-> The complete arsenal: **79 skills · 30 invocable commands · 2 auto-resolving marketplaces ·
+> The complete arsenal: **91 skills · 32 invocable commands · 2 auto-resolving marketplaces ·
 > universal + project skill directories.** Every session on this repo inherits all of it on boot.
 > This file is both the inventory and the operating manual: how to **call, trigger, execute,
 > streamline, and subagent-execute** every skill.
@@ -202,6 +202,21 @@ Profile plan labels). Trigger on ANY payment-adjacent diff, not just new feature
 > `skill-authoring-workflow` (compliance) → `superpowers:writing-skills` (TDD: baseline-fail
 > before writing, close loopholes after). **Subagent play:** pressure-test scenarios run as
 > subagents WITHOUT the draft skill (RED), then with it (GREEN).
+
+### Layer F — Advertising (12 · realkimbarrett/advertising-skills · `.agents/skills/`)
+
+`avatar-extraction` · `offer-extraction` · `schwartz-awareness-mapper` · `headline-matrix` ·
+`mechanism-builder` · `objection-crusher` · `ad-angle-multiplier` (creative testing) ·
+`scroll-stopping-creative` · `conversion-path-builder` · `performance-diagnosis` ·
+`generic-language-killer` · `full-funnel-campaign-orchestrator`
+
+> **Operate:** the growth counterpart to the PM layer — invoke when the work is ACQUIRING
+> users, not building product: landing/ad copy, paid campaigns, funnel design, creative
+> testing. `full-funnel-campaign-orchestrator` is the workflow tier; the rest are
+> components. `generic-language-killer` doubles as a copy QA gate for ANY marketing
+> surface (run it on landing page copy before shipping). Dime brand law still governs all
+> visual output. **Subagent play:** `ad-angle-multiplier` fans out naturally — one agent
+> per angle batch; `performance-diagnosis` gets campaign exports as file handoffs.
 
 ---
 

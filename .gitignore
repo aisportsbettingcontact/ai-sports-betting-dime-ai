@@ -113,3 +113,8 @@ temp/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Isolated agent workspaces (superpowers:using-git-worktrees)
+.worktrees/
+.claude/worktrees/
+.superpowers/
