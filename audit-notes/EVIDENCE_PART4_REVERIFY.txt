@@ -1,0 +1,44 @@
+=== PART 4: FRESH-CONTEXT INDEPENDENT RE-VERIFICATION ===
+Timestamp: 2026-07-08T01:57:59.895Z
+Sampling method: Deterministic selection of 8 tables covering all categories
+  (core, ESPN, odds, model, derived) to maximize coverage.
+
+--- TABLE: wc2026_matches ---
+  Row count: 104
+  Distinct match_id: 104
+  Duplicate groups (match_id): 0
+
+--- TABLE: wc2026_espn_matches ---
+  Row count: 92
+  Distinct espn_match_id: 92
+  Duplicate groups (espn_match_id): 0
+
+--- TABLE: wc2026_espn_shot_map ---
+  Row count: 2251
+  Distinct espn_match_id: 89
+  Duplicate groups (espn_match_id, period, clock, playerName, shotType): 17
+
+--- TABLE: wc2026MatchOdds ---
+  Row count: 84
+  Distinct match_id: 84
+  Duplicate groups (match_id): 0
+
+--- TABLE: wc2026_model_projections ---
+  Row count: 96
+  Distinct match_id: 72
+  Duplicate groups (match_id): 18
+
+--- TABLE: wc2026_holdout_validation ---
+  Row count: 258
+  Distinct match_id: 64
+  Duplicate groups (match_id, selection): 48
+
+--- TABLE: wc2026_odds_snapshots ---
+  Row count: 4384
+  Distinct match_id: 72
+  Duplicate groups (match_id, snapshot_ts, market, selection): 670
+
+--- TABLE: wc2026_lineups ---
+  Row count: 2484
+  Distinct match_id: 60
+  Duplicate groups (match_id, player_name, team_id): 157
