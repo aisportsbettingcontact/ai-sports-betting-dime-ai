@@ -172,13 +172,14 @@ export default function DimeLanding() {
       <main id="top">
         {/* ═══ HERO ═══ */}
         <header className="hero">
-          <div className="wrap hero-grid">
-            <div>
-              <span className="mono mono--mint">AI Sports Betting&nbsp;&nbsp;·&nbsp;&nbsp;powered by dıme</span>
-              <h1>
-                The AI engine that prices <em>the edge</em> in every line.
-              </h1>
-              <p className="lede">
+          <div className="wrap">
+            <span className="mono mono--mint">AI Sports Betting&nbsp;&nbsp;·&nbsp;&nbsp;powered by dıme</span>
+            <h1>
+              The AI engine that prices <em>the edge</em> in every line.
+            </h1>
+            <div className="hero-grid">
+              <div>
+                <p className="lede">
                 dime runs 10,000 Monte Carlo simulations on every matchup — pricing moneylines, totals, props and
                 first-five markets against the books in real time, then telling you exactly where the value is. Or
                 when there isn't any.
@@ -194,17 +195,17 @@ export default function DimeLanding() {
                   See tonight's board
                 </Link>
               </div>
-              <div className="hero-trust">
-                <span className="mono">MLB</span>
-                <span className="dot" />
-                <span className="mono">World Cup 2026</span>
-                <span className="dot" />
-                <span className="mono">Live 24/7 pipeline</span>
+                <div className="hero-trust">
+                  <span className="mono">MLB</span>
+                  <span className="dot" />
+                  <span className="mono">World Cup 2026</span>
+                  <span className="dot" />
+                  <span className="mono">Live 24/7 pipeline</span>
+                </div>
               </div>
-            </div>
 
-            {/* Product mock: chat answer + live edge card */}
-            <div className="mock-stack" aria-label="Product preview">
+              {/* Product mock: chat answer + live edge card */}
+              <div className="mock-stack" aria-label="Product preview">
               <div className="mock-user">Will Messi score a goal today vs Egypt?</div>
               <div className="mock-chat">
                 <span className="mock-avatar">
@@ -244,6 +245,7 @@ export default function DimeLanding() {
                     <span className="mono">Grade</span>
                     <b>A−</b>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -428,7 +430,7 @@ export default function DimeLanding() {
         {/* ═══ DISCIPLINE ═══ */}
         <section className="section" id="discipline">
           <div className="wrap discipline">
-            <div className="section-head" style={{ marginBottom: 0 }}>
+            <div className="section-head">
               <span className="mono mono--mint">Discipline</span>
               <h2>
                 The unicorn move: telling you when <em>not</em> to bet.
@@ -529,25 +531,15 @@ export default function DimeLanding() {
 
         {/* ═══ PRICING (whitelabel) ═══ */}
         <section className="section" id="dime-pricing">
-          <div className="wrap" style={{ textAlign: "center" }}>
-            <span className="mono mono--mint">Pricing</span>
-            <h2
-              style={{
-                margin: "14px auto 12px",
-                maxWidth: 560,
-                fontSize: "clamp(28px, 3.6vw, 42px)",
-                letterSpacing: "-0.03em",
-                lineHeight: 1.08,
-                color: "var(--text-primary)",
-                fontWeight: 700,
-              }}
-            >
-              One subscription. Every edge.
-            </h2>
-            <p style={{ margin: "0 auto 56px", maxWidth: 480, color: "var(--text-secondary)", fontSize: 16 }}>
-              Full board, full chat, every market the model prices. No tiers, no add-ons, no contracts — cancel
-              anytime and keep access through the period you paid for.
-            </p>
+          <div className="wrap wrap--center">
+            <div className="section-head section-head--center">
+              <span className="mono mono--mint">Pricing</span>
+              <h2>One subscription. Every edge.</h2>
+              <p>
+                Full board, full chat, every market the model prices. No tiers, no add-ons, no contracts — cancel
+                anytime and keep access through the period you paid for.
+              </p>
+            </div>
             <div className="pricing-grid">
               {PLANS.map((plan) => (
                 <div className={plan.featured ? "plan plan--featured" : "plan"} key={plan.id}>
