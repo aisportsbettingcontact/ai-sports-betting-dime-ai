@@ -48,3 +48,23 @@ No DELETE/dedup operation on any wc2026_* table may execute without ALL of:
 5. **EXPLICIT OWNER AUTHORIZATION** — owner must approve after reviewing the impact statement.
 
 No gate = no dedup. Violation = INCIDENT.
+
+---
+
+## Verdict Standards (Permanent — added 2026-07-08)
+
+**"AMBIGUOUS" is not an allowed verdict.** When the expected key column is NULL/missing, the correct move is:
+
+1. Find the ACTUAL identifying key from the schema (SHOW CREATE TABLE + column semantics), OR
+2. Label it **UNKNOWN** with the SPECIFIC reason (e.g., "column X is universally NULL, cannot distinguish Y from Z") and state what would resolve it (e.g., "populate column X from source Y").
+
+Never use a soft "ambiguous" that hides whether real dupes exist. The verdict must be one of:
+
+| Verdict | Meaning |
+|---------|--------|
+| **CLEAN** | 0 collisions on true key |
+| **GENUINE DUPLICATES** | N excess rows, evidence of byte-identity on all non-PK columns |
+| **LEGITIMATE MULTI-ROW** | Collisions are distinct events (different attribute values prove distinctness) |
+| **UNKNOWN** | Cannot determine — with specific reason AND resolution path stated |
+
+Collapsing two separate findings (duplication + completeness) into one non-answer is prohibited. Split them.

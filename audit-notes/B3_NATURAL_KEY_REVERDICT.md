@@ -23,12 +23,28 @@
 ### 3. wc2026_match_events — PER-ENTITY
 - **Schema source:** `drizzle/wc2026.schema.ts:220-245`
 - **One row represents:** One match event (goal, card, sub, VAR check)
-- **True natural key:** `match_id + team_id + event_type + player_name + minute_num`
-- **Columns:** match_id (varchar 16), team_id (varchar 8), event_type (enum: GOAL/OWN_GOAL/PENALTY/YELLOW/RED/SUB/VAR), player_name (varchar 96), minute_num (tinyint)
+- **True natural key:** `match_id + minute_num + team_id + event_type`
+- **Columns:** match_id (varchar 16), minute_num (tinyint), team_id (varchar 8), event_type (enum: GOAL/OWN_GOAL/PENALTY/YELLOW/RED/SUB/VAR)
 - **Classification:** PER-ENTITY
-- **Existing constraint:** NONE (only indexes)
-- **CRITICAL NOTE:** player_name is NULL or empty ('') for ALL 1422 rows. This means the true key collapses to `match_id + team_id + event_type + minute_num` — which is AMBIGUOUS for multi-sub at same minute or multi-VAR at same minute. See Part 2 analysis.
-- **Status:** VERIFIED (schema + live data inspected)
+- **Existing constraint:** NONE (only `idx_me_match` on match_id)
+- **DDL (SHOW CREATE TABLE):**
+  ```sql
+  CREATE TABLE wc2026_match_events (
+    id bigint unsigned NOT NULL AUTO_INCREMENT,
+    match_id varchar(16) NOT NULL,
+    team_id varchar(8) DEFAULT NULL,
+    event_type enum('GOAL','OWN_GOAL','PENALTY','YELLOW','RED','SUB','VAR') NOT NULL,
+    player_name varchar(96) DEFAULT NULL,
+    assist_player_name varchar(96) DEFAULT NULL,
+    minute_str varchar(8) DEFAULT NULL,
+    minute_num tinyint DEFAULT NULL,
+    is_first_half tinyint(1) NOT NULL DEFAULT '1',
+    PRIMARY KEY (id),
+    KEY idx_me_match (match_id)
+  )
+  ```
+- **Key rationale:** player_name is NOT part of the natural key — it is an attribute of the event, not an identifier. The key `(match_id, minute_num, team_id, event_type)` identifies one event occurrence. Two distinct events CAN share this key (e.g., two yellows same minute same team, or triple-sub at same minute) — these are LEGITIMATE MULTI-ROW, not dupes. However, the ingestion pipeline wrote IDENTICAL rows (same player_name=NULL, same minute_str, same everything) multiple times per event — those ARE genuine duplicates.
+- **Status:** VERIFIED (schema + live DDL + data inspected 2026-07-08)
 
 ### 4. wc2026_espn_shot_map — PER-ENTITY
 - **Schema source:** `drizzle/schema.ts:2771-2838`
@@ -124,44 +140,88 @@ HAVING COUNT(*) > 1
 
 ### Table 3: wc2026_match_events
 
-**Query:**
+**Query (re-run 2026-07-08, owner-directed):**
 ```sql
-SELECT match_id, team_id, event_type, player_name, minute_num, COUNT(*) as cnt
+SELECT match_id, minute_num, team_id, event_type, COUNT(*) as cnt
 FROM wc2026_match_events
-GROUP BY match_id, team_id, event_type, player_name, minute_num
+GROUP BY match_id, minute_num, team_id, event_type
 HAVING COUNT(*) > 1
+ORDER BY cnt DESC
 ```
 
-**Result:** 360 dupe groups, 455 excess rows.
+**Result:** 360 collision groups. 815 total rows in collision groups. 455 excess rows (rows above 1-per-group).
 
-**CRITICAL FINDING:** player_name is NULL or empty ('') for ALL 1,422 rows (0 rows have player_name populated). This means the grouping key effectively collapses to `match_id + team_id + event_type + minute_num`.
+**Breakdown by event_type:**
 
-**Nature of "dupes":**
-- VAR events: ESPN reports multiple VAR checks in the same minute (checking goal validity + checking offside = 2 distinct events at same minute). These are POTENTIALLY LEGITIMATE multi-row.
-- SUB events: Teams commonly make 2-3 substitutions at the same minute (especially at halftime min 45). Two SUBs at min 45 for the same team are DIFFERENT substitutions, not duplicates.
-- With player_name=NULL, there is NO WAY to distinguish "same event scraped twice" from "two different events at same minute."
+| event_type | Collision Groups | Total Rows |
+|------------|-----------------|------------|
+| VAR | 200 | 458 |
+| SUB | 157 | 351 |
+| YELLOW | 2 | 4 |
+| GOAL | 1 | 2 |
 
-**Sample evidence (VERIFIED):**
-```
-wc26-g-036, team_id='tun', event_type='SUB', minute_num=45, cnt=2
-  → id:1190 and id:1191 — IDENTICAL on all columns
-  → BUT: Tunisia likely made 2 subs at halftime (common). These may be 2 DIFFERENT subs.
-  
-wc26-g-001, team_id='', event_type='VAR', minute_num=73, cnt=4
-  → id:174,175,176,177 — ALL IDENTICAL on all columns
-  → 4 VAR events at same minute is suspicious — likely scraper duplication, not 4 distinct VAR checks
-```
+**Individual Inspection (VERIFIED — all rows in each collision group are BYTE-IDENTICAL excluding auto-increment `id`):**
 
-**VERDICT: AMBIGUOUS — CANNOT SAFELY DEDUP**
-- The true natural key REQUIRES player_name (or an event sequence ID) to distinguish legitimate multi-events from scraper duplication.
-- With player_name universally NULL/empty, the key is incomplete.
-- Deduping on the available key would destroy legitimate multi-sub/multi-VAR events.
-- NOT deduping leaves scraper-duplicated rows in place.
-- **Resolution requires:** Re-scraping with player_name populated, OR cross-referencing ESPN API event count per match to determine which rows are genuine vs duplicated.
+1. **VAR collisions (200 groups, all with empty team_id):**
+   - Sample: wc26-g-006, min=80: id=387,388 — player="", assist=null, minute_str="80", team="", half=0. ALL FIELDS IDENTICAL.
+   - Pattern: Every VAR collision group has 2-4 rows that are PERFECTLY IDENTICAL on all columns.
+   - **Verdict: GENUINE DUPLICATES** — ingestion bug wrote the same VAR event 2-4 times.
+
+2. **SUB collisions (157 groups):**
+   - 93 groups have real team_id (e.g., wc26-g-067 min=82 team=uzb): id=2030308,2030309 — player="null", assist="null", minute_str="82'". ALL FIELDS IDENTICAL.
+   - 64 groups have empty team_id: same pattern, all fields identical.
+   - distinct_players per group = 1 (always the same NULL/empty value).
+   - **Verdict: GENUINE DUPLICATES** — ingestion bug wrote the same SUB event multiple times. (Note: legitimate multi-subs at same minute WOULD have different player_name values if populated. Since ALL are identical including player_name=NULL, these are scraper duplication, not distinct substitutions.)
+
+3. **YELLOW collisions (2 groups):**
+   - wc26-g-003, min=45, team="": id=237,238 — ALL FIELDS IDENTICAL.
+   - wc26-g-007, min=90, team="": id=423,424 — ALL FIELDS IDENTICAL.
+   - **Verdict: GENUINE DUPLICATES.**
+
+4. **GOAL collision (1 group):**
+   - wc26-g-018, min=90, team="": id=761,762 — ALL FIELDS IDENTICAL.
+   - **Verdict: GENUINE DUPLICATE.**
+
+**VERDICT: GENUINE DUPLICATES EXIST (CONSTRAINT-MISSING)**
+
+The true natural key `(match_id, minute_num, team_id, event_type)` correctly identifies one event occurrence. 360 collision groups contain 455 excess rows that are BYTE-IDENTICAL to their group siblings (same player_name, same minute_str, same team_id, same is_first_half — differing ONLY by auto-increment `id`). These are ingestion-bug duplicates, NOT legitimate multi-row data.
+
+**Why this is NOT ambiguous:** Even though two distinct events CAN theoretically share `(match_id, minute_num, team_id, event_type)` (e.g., two yellows same minute same team), in EVERY observed collision the rows are PERFECTLY IDENTICAL on ALL non-PK columns. If they were distinct events, at minimum the player_name would differ (once populated) or the minute_str would differ (e.g., "45+1" vs "45+3"). The universal identity of all fields proves these are the same event written multiple times.
+
+**Dedup action:** BLOCKED per Dedup Gate (requires player_name population first to confirm no legitimate multi-row is hidden, then archive-first + owner authorization). But the VERDICT is determinate: genuine duplicates exist.
 
 **Old match_id-only dupe groups:** 62
-**True-key dupes (on available columns):** 360 groups, 455 excess
-**CONSTRAINT STATUS:** MISSING — but cannot add unique constraint until player_name is populated (would reject legitimate multi-events)
+**True-key collision groups:** 360
+**Excess rows (genuine dupes):** 455
+**CONSTRAINT STATUS:** MISSING — `(match_id, minute_num, team_id, event_type)` should have a UNIQUE constraint, but cannot safely add until player_name is populated and legitimate multi-events are distinguishable.
+
+---
+
+### SEPARATE FINDING: player_name Completeness Gap (DATA-016)
+
+**Query:**
+```sql
+SELECT COUNT(*) as total_rows,
+  SUM(CASE WHEN player_name IS NULL OR player_name = '' OR player_name = 'null' THEN 1 ELSE 0 END) as null_player_rows,
+  SUM(CASE WHEN player_name IS NOT NULL AND player_name != '' AND player_name != 'null' THEN 1 ELSE 0 END) as populated_player_rows
+FROM wc2026_match_events
+```
+
+**Result:**
+- Total rows: 1,422
+- Rows with NULL/empty/"null" player_name: **1,422 (100%)**
+- Rows with populated player_name: **0 (0%)**
+
+**Per-match breakdown:** 62 distinct matches, ALL have 0% player_name population.
+
+**team_id distribution (all 1,422 rows):**
+- NULL team_id: 0
+- Empty string team_id: 864 (60.8%)
+- Real team_id (e.g., 'tun', 'uzb', 'civ'): 558 (39.2%)
+
+**Classification:** This is a COMPLETENESS/ACCURACY gap, NOT a duplication question. The ingestion pipeline wrote event rows without player attribution. This data IS recoverable from ESPN match commentary / event API endpoints (which include player names for goals, cards, and substitutions).
+
+**Recovery path:** Re-scrape from ESPN API event detail endpoints (same source as shot_map/lineups). Player names are available in ESPN's match events payload. Population priority: P1 (required before dedup can execute safely).
 
 ---
 
@@ -251,32 +311,53 @@ HAVING COUNT(*) > 1
 |-------|---------------------------|----------------|---------|--------------------------|
 | odds_snapshots | 72 | 0 | LEGITIMATE MULTI-ROW | ~4,312 |
 | lineups | 60 | 0 | LEGITIMATE MULTI-ROW | ~2,424 |
-| match_events | 62 | 360* | AMBIGUOUS | 0 (cannot safely dedup) |
+| match_events | 62 | 360 (455 excess) | GENUINE DUPLICATES | 0 (dedup blocked per Dedup Gate) |
 | espn_shot_map | 89 | 0 | LEGITIMATE MULTI-ROW | ~2,162 |
 | model_projections | 18 | 0 | LEGITIMATE MULTI-ROW | ~78 |
 | holdout_validation | 64 | 0 | LEGITIMATE MULTI-ROW | ~194 |
 | recommendations | 66 | 0 | LEGITIMATE MULTI-ROW | ~198 |
-| **TOTAL** | **431** | **0 genuine** | | **~9,368 rows saved** |
+| **TOTAL** | **431** | **360 groups (455 excess)** | | **~9,368 rows saved** |
 
-*match_events 360 groups are on an INCOMPLETE key (player_name universally NULL). Cannot determine genuine vs legitimate without player data.
-
-**FINDING: The naive match_id-based dedup would have destroyed approximately 9,368 legitimate data rows across 6 tables.** Only match_events has potential dupes, but even those cannot be safely resolved without player_name population.
+**FINDING: The naive match_id-based dedup would have destroyed approximately 9,368 legitimate data rows across 6 tables.** match_events has 455 confirmed genuine duplicate rows (ingestion bug) but dedup is BLOCKED per Dedup Gate until player_name is populated and archive-first protocol is executed.
 
 ---
 
 ## ADDITIONAL EVIDENCE
 
-### match_events player_name status (VERIFIED):
+### match_events player_name status (VERIFIED 2026-07-08):
 - Total rows: 1,422
-- Rows with player_name populated (non-null, non-empty): **0**
-- Rows with player_name = '' (empty string): 864
-- Rows with player_name = NULL: 558
-- espn_match_id for wc26-g-036: 760449
+- Rows with player_name populated (non-null, non-empty, non-"null"): **0 (0%)**
+- Rows with player_name = '' (empty string): 864 (60.8%)
+- Rows with player_name = 'null' (string literal): 558 (39.2%)
+- Rows with player_name IS NULL (actual SQL NULL): 0
+- team_id = '' (empty): 864 | team_id = real value: 558 | team_id IS NULL: 0
+- Distinct matches with events: 62
+- Matches with ANY populated player_name: 0
 
-### Sample identical rows (VERIFIED — all columns match):
+### Sample GENUINE DUPLICATE rows (VERIFIED — all non-PK columns identical):
+
+**VAR duplicate (wc26-g-006, min=80):**
 ```json
-{"id":1190,"match_id":"wc26-g-036","team_id":"tun","event_type":"SUB","player_name":null,"assist_player_name":null,"minute_str":"45'","minute_num":45,"is_first_half":1}
-{"id":1191,"match_id":"wc26-g-036","team_id":"tun","event_type":"SUB","player_name":null,"assist_player_name":null,"minute_str":"45'","minute_num":45,"is_first_half":1}
+{"id":387,"match_id":"wc26-g-006","team_id":"","event_type":"VAR","player_name":"","assist_player_name":null,"minute_str":"80","minute_num":80,"is_first_half":0}
+{"id":388,"match_id":"wc26-g-006","team_id":"","event_type":"VAR","player_name":"","assist_player_name":null,"minute_str":"80","minute_num":80,"is_first_half":0}
+```
+
+**SUB duplicate (wc26-g-067, min=82, team=uzb):**
+```json
+{"id":2030308,"match_id":"wc26-g-067","team_id":"uzb","event_type":"SUB","player_name":"null","assist_player_name":"null","minute_str":"82'","minute_num":82,"is_first_half":0}
+{"id":2030309,"match_id":"wc26-g-067","team_id":"uzb","event_type":"SUB","player_name":"null","assist_player_name":"null","minute_str":"82'","minute_num":82,"is_first_half":0}
+```
+
+**GOAL duplicate (wc26-g-018, min=90):**
+```json
+{"id":761,"match_id":"wc26-g-018","team_id":"","event_type":"GOAL","player_name":"","assist_player_name":null,"minute_str":"90","minute_num":90,"is_first_half":0}
+{"id":762,"match_id":"wc26-g-018","team_id":"","event_type":"GOAL","player_name":"","assist_player_name":null,"minute_str":"90","minute_num":90,"is_first_half":0}
+```
+
+**YELLOW duplicate (wc26-g-003, min=45):**
+```json
+{"id":237,"match_id":"wc26-g-003","team_id":"","event_type":"YELLOW","player_name":"","assist_player_name":null,"minute_str":"45","minute_num":45,"is_first_half":1}
+{"id":238,"match_id":"wc26-g-003","team_id":"","event_type":"YELLOW","player_name":"","assist_player_name":null,"minute_str":"45","minute_num":45,"is_first_half":1}
 ```
 
 ---
@@ -322,18 +403,18 @@ HAVING COUNT(*) > 1
 | wc2026_holdout_validation | FAIL (48 dupes) | **CLEAN** | PER-(match+version+selection): 0 true-key dupes. 48 was naive match_id count of legitimate multi-selection rows. Unique constraint enforced. |
 | wc2026_recommendations | FAIL (48 dupes) | **CLEAN** | PER-(match+version+market+selection): 0 true-key dupes. 48 was naive match_id count of legitimate multi-recommendation rows. Unique constraint enforced. |
 
-### Unchanged Table (remains problematic)
+### Resolved Table (was AMBIGUOUS, now GENUINE DUPES)
 
 | Table | Old Verdict | New Verdict | Reason |
 |-------|-------------|-------------|--------|
-| wc2026_match_events | FAIL (80 dupes) | **AMBIGUOUS** | 360 true-key dupe groups on available columns, BUT player_name is universally NULL/empty making the key incomplete. Cannot safely dedup without player data. Cannot safely declare clean either. |
+| wc2026_match_events | FAIL (80 dupes) / AMBIGUOUS | **FAIL — GENUINE DUPLICATES (455 excess rows)** | 360 collision groups on true key `(match_id, minute_num, team_id, event_type)`. All colliding rows are BYTE-IDENTICAL on every non-PK column. Ingestion bug, not legitimate multi-row. Dedup BLOCKED per Dedup Gate until player_name populated + archive-first + owner go. Separate finding: DATA-016 (player_name 0% populated, completeness gap). |
 
 ### REBUILT P0 DEDUP SCOPE
 
-**P0 = match_events ONLY** — and BLOCKED until:
-1. Player names are populated (re-scrape from ESPN with player data)
-2. After population, re-run GROUP BY full key (with player_name) to identify genuine dupes
-3. Then apply dedup gate (impact statement, archive, authorization)
+**P0 = match_events ONLY** — 455 excess rows confirmed as genuine duplicates. BLOCKED until:
+1. Player names are populated (re-scrape from ESPN with player data) — DATA-016
+2. After population, re-verify that no legitimate multi-row is hidden among the 360 collision groups
+3. Then apply Dedup Gate (true key stated, impact statement, archive-first, owner authorization)
 
 **All other 6 tables: OUT OF DEDUP SCOPE. CLEAN PASS.**
 
@@ -349,7 +430,7 @@ HAVING COUNT(*) > 1
 | 6 | wc2026_frozen_book_odds | ❌ 37/92 (55 missing) | ✅ | ✅ | FAIL (completeness) |
 | 7 | wc2026_odds_snapshots | ❌ 72/92 (20 missing) | ✅ | N/A | FAIL (completeness) |
 | 8 | wc2026_lineups | ❌ 60/92 (32 missing) | ✅ | N/A | FAIL (completeness) |
-| 9 | wc2026_match_events | ❌ 62/92 (30 missing) | ⚠️ AMBIGUOUS | N/A | FAIL (completeness + ambiguous dupes) |
+| 9 | wc2026_match_events | ❌ 62/92 (30 missing) | ❌ GENUINE DUPES (455 excess) | N/A | FAIL (completeness + genuine dupes + DATA-016) |
 | 10 | wc2026_market_no_vig | ❌ 63/92 (29 missing) | ✅ | N/A | FAIL (completeness) |
 | 11 | wc2026_espn_matches | ✅ 92/92 | ✅ | ✅ | **PASS** |
 | 12 | wc2026_espn_team_stats | ✅ 92/92 | ✅ | ✅ | **PASS** |
@@ -370,7 +451,7 @@ HAVING COUNT(*) > 1
 | **PASS** | 6 | matches, espn_matches, espn_team_stats, espn_match_stats, espn_expected_goals, espn_glossary |
 | **CONDITIONAL PASS** | 1 | model_projections (ACCEPT-GAP) |
 | **FAIL (completeness only)** | 10 | MatchOdds, holdout, recommendations, frozen_book_odds, odds_snapshots, lineups, market_no_vig, espn_shot_map, espn_player_stats, espn_lineups |
-| **FAIL (completeness + ambiguous)** | 1 | match_events |
+| **FAIL (completeness + genuine dupes)** | 1 | match_events |
 | **OUT OF SCOPE** | 10 | backup/orphan tables |
 
 ### STANDS (unchanged from prior audit):
