@@ -18,11 +18,19 @@ What actually happens to a brand-new buyer with no prior account:
    role is deferred until setup completes (`server/stripeWebhook.ts:79-84`). If the email
    already exists, access is silently granted to the *existing* account instead
    (`server/stripeWebhook.ts:152-164`).
-2. **Redirect to `/subscribe/success`.** Page polls `stripe.getCheckoutSessionUser` with 5
-   exponential-backoff retries (`client/src/pages/SubscribeSuccess.tsx:100-109`).
-   - **Friction F1 — webhook race dead end:** if the webhook hasn't landed after ~30s of
-     retries, the user sees "Could not confirm your subscription… contact support"
-     (`SubscribeSuccess.tsx:174-184`). Paid, but stranded.
+   - **Friction F9 — existing-email purchase dead end:** `checkout.session.completed` for an
+     email that already has an account grants access silently *without* writing
+     `pendingStripeSessionId` (`stripeWebhook.ts:151-164`), so the success page can never
+     resolve setup for that session. Payment succeeds, screen fails. (Cross-ref
+     `SIGNUP-DIRECTION.md` S3b.)
+2. **Redirect to `/subscribe/success`.** Page queries `stripe.getCheckoutSessionUser` with
+   react-query `retry: 5` configured (`client/src/pages/SubscribeSuccess.tsx:100-109`).
+   - **Friction F1 — webhook race dead end:** `getCheckoutSessionUser` returns `null` as a
+     *success* when the webhook row doesn't exist yet (`server/routers/stripe.ts:358-361`), so
+     react-query's `retry: 5` never fires. SubscribeSuccess falls through (`:186-190`) and
+     renders the setup form against a nonexistent row; the dead end surfaces only on submit,
+     as NOT_FOUND "Account not found. Please contact support." (`stripe.ts:393-395`). The
+     `:174-184` error screen appears only when the query actually *throws*. Paid, but stranded.
 3. **Password gate.** New user must set email + password before seeing anything
    (`SubscribeSuccess.tsx:244-407`). Submit → `stripe.completeAccountSetup`
    (`server/routers/stripe.ts:374-475`): clears `pendingSetup`, grants Discord role
@@ -46,7 +54,7 @@ What actually happens to a brand-new buyer with no prior account:
    (`ModelProjections.tsx:1025-1072` → `/api/auth/discord/connect`); Profile shows Discord
    only if *already* connected (`client/src/pages/Profile.tsx:188-202`). No pitch for why
    the community matters (**F5**).
-8. **Chat is unreachable.** `/chat` (DimeChat) is routed (`App.tsx:180`) with a real empty
+8. **Chat is invisible in nav.** `/chat` (DimeChat) is routed (`App.tsx:180`) with a real empty
    state — "Ask Dime." + suggestion chips (`client/src/pages/DimeChat.tsx:182-206`) — but
    the only nav link lives in the owner-only mobile tabs
    (`client/src/features/mobileOwnerTabs/config.ts:29`; `MOBILE_OWNER_TABS_PUBLIC_ENABLED =
@@ -84,7 +92,7 @@ already captures this — `server/routers/metrics.ts:61-68`).
 | # | Epic | Hypothesis | Success metric |
 |---|---|---|---|
 | O1 | **Activation instrumentation** — persist onboarding events via a `metrics.trackEvent` procedure + server-side emits | We believe we cannot improve what we can't see; wiring 8 events makes activation measurable at all | Funnel dashboard live: checkout→setup→terms→feed→edge→chat; baseline activation % known |
-| O2 | **Un-dead-end the doorway** — webhook-race recovery UI, AgeModal "Close" no longer logs out, existing-email path explains which account got access | Removing the three F1/F3/F9 dead ends recovers paid users we currently strand | Setup completion +5pts; zero "contact support" terminal states in the happy path; first-session logout rate ↓ |
+| O2 | **Un-dead-end the doorway** — webhook race: poll `getCheckoutSessionUser` until non-null on the null-success branch, with a "still settling…" state (NOT retry UI on the error branch — the error screen is not where F1 lives; agrees with SIGNUP-DIRECTION edge 4); AgeModal "Close" no longer logs out; existing-email path explains which account got access | Removing the three F1/F3/F9 dead ends recovers paid users we currently strand | Setup completion +5pts; zero "contact support" terminal states in the happy path; first-session logout rate ↓ |
 | O3 | **Chat surfaced + entitlements bootstrap** — member nav entry to `/chat` on feed header/profile; write a `dime_user_entitlements` row at `completeAccountSetup` | Making Dime chat discoverable to members (it's invisible today) drives the "(c)" leg of activation; the entitlement row future-proofs credit gating | % of new members sending ≥1 chat message in 24h: ~0% → 40%; 100% of new accounts have an entitlement row |
 | O4 | **First-edge guided moment** — one-time spotlight on the strongest edge card ("this is a Dime: model vs. book, here's why") | Teaching the edge concept in the first minute converts the grid from noise into the product's aha | `edge_card_viewed` within first session: baseline → 70%; time-to-first-edge < 2 min |
 | O5 | **Welcome / first-run tour in Dime brand** — 3-step overlay (Feed → Edges → Ask Dime) per `design-system/dime-ai/MASTER.md`, plus a responsible-gaming touch reframed as care, not eviction | A branded first-run that ends in a chat prompt lifts full activation vs. cold drop-in | 24h activation rate baseline → +20pts; tour completion ≥ 60%; RG link click-through measured, not zero |
@@ -125,7 +133,10 @@ persisted event log — one `user_events` table (userId, event, metadata JSON, c
 - Server-side emits (preferred — already console-logged, just persist them):
   - `account_created_pending` — webhook new-user path (`stripeWebhook.ts:196`)
   - `account_setup_completed` — `stripe.ts:429` (also stamp entitlement row here, O3)
-  - `terms_accepted` — `appUsers.acceptTerms` (`server/routers/appUsers.ts:559`)
+  - `terms_accepted` — `appUsers.acceptTerms` (`server/routers/appUsers.ts:559`). Reconciled
+    with SIGNUP-DIRECTION: it moves terms into the CLAIM step, but its slip calls
+    `appUsers.acceptTerms` post-auto-login, so this emit site remains valid for new members;
+    if that write path ever changes, duplicate the emit at the new write site.
   - `chat_first_message` / `chat_opened` — `dime-chat.route.ts` `dimeLog` sites (`:106`, `:151`)
   - `discord_connected` — OAuth callback success path
 - Client emits: `feed_first_view`, `edge_card_viewed` (card expand on a positive-ROI game),

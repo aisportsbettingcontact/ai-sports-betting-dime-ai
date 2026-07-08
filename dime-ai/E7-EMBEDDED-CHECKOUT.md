@@ -15,7 +15,8 @@ Governing guidance: `.agents/skills/stripe-best-practices/SKILL.md` + `reference
 | Username capture | `server/routers/stripe.ts:131-143` | Required `custom_fields` text input `desired_username` (3–64 chars), duplicated into `metadata.desired_username` (:126) |
 | Fulfillment metadata | `server/routers/stripe.ts:122-127, 147-157` | `client_reference_id` + `metadata.user_id` + `metadata.plan_id` on session and `subscription_data.metadata` |
 | Public endpoint | `server/routers/stripe.ts:204` (`publicCreateCheckoutSession`) | Unauthenticated, on `stripeProcedure` (`server/_core/trpc.ts:519`, CSRF-exempt) |
-| Authed endpoint | `server/routers/stripe.ts:234` (`createCheckoutSession`) | On `stripeAppUserProcedure`, which **rejects `hasAccess === false`** (`server/routers/appUsers.ts:275-278`; middleware defined :253) — so it only serves already-subscribed users. Both client consumers already know this trap (`client/src/pages/dime/DimeLanding.tsx:9-11`) |
+| Authed endpoint | `server/routers/stripe.ts:234` (`createCheckoutSession`) | On `stripeAppUserProcedure`, which **rejects `hasAccess === false`** (`server/routers/appUsers.ts:275-278`; middleware defined :253) — so it only serves already-subscribed users. Only `client/src/pages/dime/DimeLanding.tsx:126-128` explicitly branches on `appUser?.hasAccess`; `PricingCTA.tsx:132` branches on `appUser` truthiness alone, which is safe only because sessions with `hasAccess=false` cannot exist — the `appUserProcedure` gate (`server/routers/appUsers.ts:225-227`) plus the login-time gates (:136, :181, :407) guarantee it. Rely on that invariant, not on PricingCTA's branch, when reasoning about this trap |
+| Payment methods | `server/routers/stripe.ts:119` | `payment_method_collection: "if_required"` on the session builder |
 | Plans | `server/stripe/products.ts:36-63` | monthly 9999¢ / annual 49999¢; price IDs from `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_ANNUAL` env with **hardcoded live-price fallbacks** (:45, :58) |
 | Webhook | `server/stripeWebhook.ts:355-396` | Raw-body + `constructEvent` signature verification (:375) per security.md. `checkout.session.completed` (:208) drives entitlement: existing user via `client_reference_id`/`metadata.user_id` → `grantUserAccess` (:233); anonymous → `createPendingUserFromCheckout` (:247) reading email from `customer_details` and username from `session.custom_fields` (:241-244). Renewals via `invoice.paid` (:305); revoke via `customer.subscription.deleted` (:295) |
 | Post-pay account setup | `server/routers/stripe.ts:339` (`getCheckoutSessionUser`), `:374` (`completeAccountSetup`) | Keyed on `pendingStripeSessionId` = Checkout Session id |
@@ -123,7 +124,10 @@ Grotesk/mint inside the widget). We control everything around it, not the inputs
 6. New `client/src/pages/CheckoutEmbedded.tsx` (route `/checkout?plan=monthly|annual`):
    `loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)` once at module scope;
    `<EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>` where
-   `fetchClientSecret` calls the existing tRPC mutation with `uiMode: 'embedded'`; render
+   `fetchClientSecret` calls one of the **two** existing tRPC mutations with `uiMode: 'embedded'`
+   — the `/checkout` page must replicate DimeLanding's `hasAccess` branch: the public
+   `publicCreateCheckoutSession` for everyone (anonymous *and* logged-in-without-access),
+   the authed `createCheckoutSession` only for `appUser?.hasAccess` subscribers; render
    `<EmbeddedCheckout />` inside the Dime shell (brand law: chrome only, per MASTER.md).
 7. `PricingCTA.tsx` (:97-119) and `DimeLanding.tsx` (:113-131): replace
    `window.location.replace(data.url)` with SPA navigation to `/checkout?plan=…`.
