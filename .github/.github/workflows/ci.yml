@@ -1,1 +1,274 @@
+# ─── CI Pipeline — aisportsbettingmodels.com ─────────────────────────────────
+#
+# Triggers:
+#   - Every push to main (post-merge validation)
+#   - Every pull request targeting main (pre-merge gate)
+#   - Manual dispatch (on-demand audit)
+#
+# Stages (run in order, each must pass before the next begins):
+#   1. security-audit   — pnpm audit --audit-level=high (blocks on HIGH or CRITICAL CVEs)
+#   2. typecheck        — tsc --noEmit (zero TypeScript errors required)
+#   3. test             — vitest run (all 435 tests must pass)
+#
+# Secrets required in GitHub repository settings:
+#   (Settings → Secrets and variables → Actions → New repository secret)
+#
+#   DATABASE_URL        — MySQL/TiDB connection string
+#                         Format: mysql://user:password@host:port/database
+#   JWT_SECRET          — Session signing secret (min 16 chars, any string)
+#   PUBLIC_ORIGIN       — Canonical public origin, no trailing slash
+#                         Value: https://aisportsbettingmodels.com
+#   VITE_APP_ID         — Manus OAuth application ID
+#   OAUTH_SERVER_URL    — Manus OAuth backend base URL
+#                         Value: https://api.manus.im
+#   OWNER_OPEN_ID       — Owner's Manus open ID
+#   NBA_SHEET_ID        — Google Sheets ID for NBA model sync (44-char base64url string)
+#
+# ─────────────────────────────────────────────────────────────────────────────
 
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel any in-progress run for the same ref so pushes don't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Stage 1: Dependency Security Audit ──────────────────────────────────
+  security-audit:
+    name: Security Audit (pnpm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+        # No 'version' key — packageManager in package.json is the single source of truth.
+        # Specifying version here conflicts with the packageManager field and causes
+        # ERR_PNPM_BAD_PM_VERSION in pnpm/action-setup@v4.
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Run security audit — fail on new HIGH or CRITICAL CVEs"
+        # --audit-level=high: exits non-zero if any HIGH or CRITICAL vulnerability
+        # is found in the dependency tree. MODERATE and LOW are reported but do
+        # not fail the build (they are transitive and often unfixable).
+        #
+        # IGNORED ADVISORIES (9 total) — all confirmed unfixable as of 2026-04-10:
+        #
+        # GHSA-4r6h-8v6p-xvw6  xlsx@0.18.5  Prototype Pollution
+        #   Reason: patched:<0.0.0 — no fix exists upstream. Server-side only.
+        #
+        # GHSA-5pgg-2g8v-p4x9  xlsx@0.18.5  ReDoS
+        #   Reason: patched:<0.0.0 — no fix exists upstream. Server-side only.
+        #
+        # GHSA-379q-355j-w6rj  pnpm self  Lifecycle scripts bypass
+        #   Reason: patched:>=10.26.0 — pnpm/action-setup@v4 misparses sha512 hash
+        #   in packageManager field. Using pnpm@10.33.0 (no hash) as workaround.
+        #   pnpm self-CVE is a dev-tool issue, not a runtime vulnerability.
+        #
+        # GHSA-7vhp-vf5g-r2fw  pnpm self  Lockfile integrity bypass
+        #   Reason: same as above — pnpm self-CVE, dev-tool only.
+        #
+        # GHSA-2phv-j68v-wwqx  pnpm self  Command injection via env var
+        #   Reason: same as above — pnpm self-CVE, dev-tool only.
+        #
+        # GHSA-37ch-88jc-xwx2  path-to-regexp@0.1.12  ReDoS
+        #   Reason: patched:>=0.1.13 does not exist on npm. Requires express v5
+        #   migration. Express v5 breaks @types/express@4 + wildcard routes.
+        #
+        # GHSA-r5fr-rjxr-66jc  lodash@4.17.21  Code injection via _.template
+        #   Reason: patched:>=4.18.0 does not exist on npm (lodash jumped to 5.x
+        #   beta). We do not use _.template anywhere in our codebase.
+        #
+        # GHSA-chqc-8p9q-pq6q  basic-ftp@5.2.0  CRLF injection
+        #   Reason: via puppeteer (dev-only). No newer get-uri available.
+        #
+        # GHSA-6v7q-wjvx-w8wg  basic-ftp@5.2.0  Incomplete CRLF protection
+        #   Reason: same as above — via puppeteer (dev-only).
+        #
+        # [VERIFY] Any NEW HIGH/CRITICAL CVE not in this ignore list will block
+        # the merge. This list must be reviewed and updated quarterly.
+        run: |
+          echo "[INPUT] Running pnpm audit at level=high with ignore list..."
+          pnpm audit --audit-level=high \
+            --ignore GHSA-4r6h-8v6p-xvw6 \
+            --ignore GHSA-5pgg-2g8v-p4x9 \
+            --ignore GHSA-379q-355j-w6rj \
+            --ignore GHSA-7vhp-vf5g-r2fw \
+            --ignore GHSA-2phv-j68v-wwqx \
+            --ignore GHSA-37ch-88jc-xwx2 \
+            --ignore GHSA-r5fr-rjxr-66jc \
+            --ignore GHSA-chqc-8p9q-pq6q \
+            --ignore GHSA-6v7q-wjvx-w8wg \
+            2>&1 | tee audit-report.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "[STATE] Audit exit code: $EXIT_CODE"
+          echo "[STATE] Ignored advisories: 9 (all confirmed unfixable — see comments above)"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "[OUTPUT] FAIL — NEW HIGH or CRITICAL vulnerability detected (not in ignore list)"
+            echo "[VERIFY] Review audit-report.txt — add to ignore list only after confirming no fix exists"
+            exit $EXIT_CODE
+          fi
+          echo "[OUTPUT] PASS — No new HIGH or CRITICAL vulnerabilities found"
+          echo "[VERIFY] All non-ignored dependencies clear at audit-level=high"
+
+      - name: "[OUTPUT] Upload audit report as artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-report
+          path: audit-report.txt
+          retention-days: 30
+
+  # ─── Stage 2: TypeScript Type Check ──────────────────────────────────────
+  typecheck:
+    name: TypeScript Check (tsc --noEmit)
+    runs-on: ubuntu-latest
+    needs: security-audit
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+        # No 'version' key — packageManager in package.json is the single source of truth.
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Run TypeScript compiler — zero errors required"
+        # tsc --noEmit: type-checks the entire project without emitting output.
+        # Strict mode is enforced via tsconfig.json. Any type error fails the build.
+        #
+        # [VERIFY] This gate ensures no type regressions are merged. Combined with
+        # strict: true in tsconfig, it catches null dereferences, missing props,
+        # and incorrect API call shapes before they reach production.
+        #
+        # NODE_OPTIONS: the project outgrew Node's default ~2 GB heap — tsc was
+        # dying with "JavaScript heap out of memory" (exit 134) on every run
+        # since at least 80bdda2, before any type errors could be reported.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          echo "[INPUT] Running tsc --noEmit on full project..."
+          npx tsc --noEmit 2>&1 | tee typecheck-report.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "[STATE] TypeScript exit code: $EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "[OUTPUT] FAIL — TypeScript errors detected"
+            cat typecheck-report.txt
+            echo "[VERIFY] Fix all type errors before merging"
+            exit $EXIT_CODE
+          fi
+          echo "[OUTPUT] PASS — TypeScript: 0 errors"
+          echo "[VERIFY] Full project type-checks clean"
+
+      - name: "[OUTPUT] Upload typecheck report as artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typecheck-report
+          path: typecheck-report.txt
+          retention-days: 30
+
+  # ─── Stage 3: Vitest Test Suite ──────────────────────────────────────────
+  test:
+    name: Vitest (458 tests)
+    runs-on: ubuntu-latest
+    needs: typecheck
+    env:
+      # All secrets required by the test suite are injected from GitHub Secrets.
+      # Tests that require DB connectivity use DATABASE_URL.
+      # Tests that require auth use JWT_SECRET.
+      # Tests that require Discord OAuth use PUBLIC_ORIGIN + DISCORD_* vars.
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      PUBLIC_ORIGIN: ${{ secrets.PUBLIC_ORIGIN }}
+      VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
+      OAUTH_SERVER_URL: ${{ secrets.OAUTH_SERVER_URL }}
+      OWNER_OPEN_ID: ${{ secrets.OWNER_OPEN_ID }}
+      NBA_SHEET_ID: ${{ secrets.NBA_SHEET_ID }}
+      # Non-secret config values
+      NODE_ENV: test
+      VSIN_EMAIL: ${{ secrets.VSIN_EMAIL }}
+      VSIN_PASSWORD: ${{ secrets.VSIN_PASSWORD }}
+      KENPOM_EMAIL: ${{ secrets.KENPOM_EMAIL }}
+      KENPOM_PASSWORD: ${{ secrets.KENPOM_PASSWORD }}
+      METABET_API_KEY: ${{ secrets.METABET_API_KEY }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+        # No 'version' key — packageManager in package.json is the single source of truth.
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Run Vitest test suite — all tests must pass"
+        # vitest run: executes all test files once (non-watch mode).
+        # --reporter=verbose: prints each test name and result for full traceability.
+        # --coverage is intentionally omitted here to keep CI fast; run locally
+        # with `pnpm test --coverage` for coverage reports.
+        #
+        # [VERIFY] All 458 tests must pass. Any failure blocks the merge.
+        # Test categories: ciSecrets (validates all GitHub secrets are present),
+        # auth, fileParser, strikeoutProps, kenpomCredentials, nbaSheetId,
+        # vsinCredentials, discordAuth, tokenVersion, and more.
+        run: |
+          echo "[INPUT] Running vitest run --reporter=verbose..."
+          pnpm test -- --reporter=verbose 2>&1 | tee test-report.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "[STATE] Vitest exit code: $EXIT_CODE"
+          # Extract pass/fail summary from output
+          PASSED=$(grep -oP '\d+ passed' test-report.txt | tail -1 || echo "unknown")
+          FAILED=$(grep -oP '\d+ failed' test-report.txt | tail -1 || echo "0")
+          echo "[STATE] Tests passed: $PASSED | Tests failed: $FAILED"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "[OUTPUT] FAIL — One or more tests failed"
+            echo "[VERIFY] Review test-report.txt for failure details"
+            exit $EXIT_CODE
+          fi
+          echo "[OUTPUT] PASS — All tests passed: $PASSED"
+          echo "[VERIFY] Full test suite clean"
+
+      - name: "[OUTPUT] Upload test report as artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.txt
+          retention-days: 30
