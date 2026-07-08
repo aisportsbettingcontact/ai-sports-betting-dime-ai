@@ -427,4 +427,4 @@ Key finding: The original 360 groups included 160 SUB/YELLOW/GOAL groups that we
 6. WorldCup2026.tsx: isFinal check includes FT_PEN
 7. DB: 4 matches updated from FT → FT_PEN
 
-**Status:** RESOLVED — all 7 consumer sites updated, live DB corrected, future penalty-decided matches will auto-classify as FT_PEN.
+**Status:** RESOLVED — all 9 consumer sites updated (7 original + 2 found during certification: wc2026Context.ts, WcFeedInline.tsx), live DB corrected, future penalty-decided matches will auto-classify as FT_PEN.

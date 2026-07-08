@@ -179,7 +179,7 @@ export async function getWC2026DimeContext(requestId: string, userId: string): P
       status: m.status || "UNKNOWN",
       kickoff_utc: m.match_date ? String(m.match_date) : null,
       venue: m.venue_name ? `${m.venue_name}${m.venue_city ? `, ${m.venue_city}` : ""}` : null,
-      score_if_final: m.status === "FT" ? `${m.home_score}-${m.away_score}` : null,
+      score_if_final: (m.status === "FT" || m.status === "FT_PEN") ? `${m.home_score}-${m.away_score}${m.status === "FT_PEN" ? " (pens)" : ""}` : null,
       odds: odds ? { home: Number(odds.book_home), draw: Number(odds.book_draw), away: Number(odds.book_away) } : null,
       odds_updated_at: odds?.odds_updated_at ? String(odds.odds_updated_at) : null,
       odds_source: odds?.odds_source || null,
