@@ -1,0 +1,63 @@
+# AI Model Projections (Dime Feed) — Page Overrides
+
+> **PROJECT:** Dime AI
+> **Generated:** 2026-07-08 (authored from `dime-ai/reference-pages/dime-feed-*.html` and `dime-ai/DIME-FEED-MIGRATION-DRAFT.md`)
+> **Page Type:** Dashboard / Data View
+
+> ⚠️ **IMPORTANT:** Rules in this file **override** the Master file (`design-system/dime-ai/MASTER.md`).
+> Only deviations from the Master are documented here. For all other rules, refer to the Master.
+
+---
+
+## Page-Specific Rules
+
+### Layout Overrides
+
+- **Shell:** Dime sidebar with "AI Model Projections" as `is-active`; top bar shows Slate as the active pill tab
+- **Main pane gutters:** 40px (not the chat pane's 140px)
+- **Card grid:** `grid-template-columns: 340px 1fr 1fr 1fr 300px` — Matchup | Run Line | Total | Moneyline | Model Verdict
+- **Column headers:** IBM Plex Mono micro-labels above the card list ("MATCHUP", "RUN LINE · BOOK / MODEL", …)
+- **Sub-tabs:** Projections · Splits · Lineups · K Props · Cheat Sheets · HR Props — 13px/600, active = `--text-primary` + 2px mint underline, inactive = `--text-muted`
+- **Date nav:** ‹ › square buttons (28px, radius 8, 1px border) around "Weekday, Month D" (15px/700) + mono "MLB · N GAMES"
+- **Sync status:** top-bar right — mono micro-label "SYNCED N MIN AGO" with 6px mint dot
+- **Bottom composer:** "Ask dime about tonight's slate…" — ties the feed back to chat
+
+### Spacing Overrides
+
+- Card list gap: `12px`; card padding: `16px` (Master dense tier applies)
+
+### Typography Overrides
+
+- Matchup line: 16px/700 `--text-primary`; "@" separator in `--text-muted` at 400
+- Book values: 15px `--text-body`, juice in parens `--text-muted`
+- Model values: 15px/700 — mint ONLY if the model disagrees with the book enough to be signal
+- Verdict strip values: 17px/700 over 10px mono labels (PICK / EDGE / GRADE)
+
+### Color Overrides
+
+- **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
+- **PASS games:** verdict values in `--text-secondary`, grade "—", whole card at `opacity: 0.82`, zero mint anywhere in the card
+- **Win% annotation** next to model ML: 12px `--text-secondary`
+
+### Component Overrides
+
+- Verdict strip is separated from market columns by a 1px left border (`--color-border`), right-aligned
+- No favorites gold: star = neutral outline, mint fill only when active (pending final call)
+
+---
+
+## Data Contract (do not violate — see `dime-ai/DIME-FEED-MIGRATION-DRAFT.md` §4)
+
+- `games.list` requires exact `{ sport, gameDate }`; sync date to `games.getCurrentDate` (11:00 UTC cutoff)
+- Honor ETag/304 (empty 304 body ≠ "no games"); keep 0-games auto-retry ×3 + auto-advance-to-first-available-date
+- F5/NRFI/team-HR ride on the `games.list` row; K props / HR props / lineups are separate batched queries
+- Keep 60s polling with `placeholderData: prev`
+- Feed data is public; only `favorites.*` and Last-5 need the app session
+
+---
+
+## Recommendations
+
+- Stream Dime chat answers about the slate token-by-token (existing SSE core)
+- Mobile (<768px): sidebar becomes drawer; reuse frozen-panel MobileGameCard pattern inside the Dime skin
+- Empty state: keep it quiet — mono label + date-advance hint, no illustration
