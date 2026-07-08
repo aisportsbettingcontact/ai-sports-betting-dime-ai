@@ -17,7 +17,7 @@ Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enab
 everything auto-installs on session start in any environment. `skills-lock.json` pins the
 npx-installed sources. `.agents/skills/` is the universal directory (17 agent platforms).
 
-## Custom commands (`.claude/commands/` — 30 total)
+## Custom commands (`.claude/commands/` — 32 total)
 
 Give `$ARGUMENTS` real context, not just a topic name.
 
@@ -27,6 +27,7 @@ Give `$ARGUMENTS` real context, not just a topic name.
 | Process (`/sp-*`) | `/sp-brainstorm` · `/sp-plan` · `/sp-execute` · `/sp-tdd` · `/sp-debug` · `/sp-verify` · `/sp-review-ask` · `/sp-review-apply` · `/sp-parallel` · `/sp-subagents` · `/sp-worktree` · `/sp-finish` · `/sp-skill-new` · `/sp-help` |
 | Design (`/ui-*`) | `/ui-build` · `/ui-tokens` · `/ui-style` · `/ui-direction` · `/ui-design-asset` · `/ui-banner` · `/ui-slides` · `/ui-brand` — ALL enforce Dime brand law from `design-system/dime-ai/MASTER.md` |
 | Payments | `/stripe` — grounded in this repo's webhook/checkout code |
+| Shipping | `/ship <PR#>` — CI-verify → merge → branch restart → Manus deploy prompt · `/gh-fix <issue#>` — issue → isolated worktree → fix → PR |
 
 Typical build loop: `/pm-problem` → `/pm-story` → `/sp-plan` → `/sp-tdd` → `/ui-build` → `/sp-verify` → `/sp-review-ask` → `/sp-finish`.
 
@@ -54,6 +55,12 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   feed inside the Dime shell (route `/feed` → "AI Model Projections" tab)
 - Chat page: `client/src/pages/DimeChat.tsx` (`/chat`, SSE via `POST /api/dime/chat`) — keep the
   streaming core when reskinning
+
+## Deploy law (IMPORTANT)
+
+**Merging to `main` does NOT deploy.** Production is Manus-hosted; code ships only via
+Deploy/Publish inside Manus. Full runbook + paste-prompt: `RELEASING.md`. Schema changes
+additionally need the manual `db-push.yml` workflow before the deploy.
 
 ## Repo conventions
 
