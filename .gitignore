@@ -117,3 +117,4 @@ __pycache__/
 # Isolated agent workspaces (superpowers:using-git-worktrees)
 .worktrees/
 .claude/worktrees/
+.superpowers/
