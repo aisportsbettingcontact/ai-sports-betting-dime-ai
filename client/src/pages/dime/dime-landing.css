@@ -23,6 +23,7 @@
   --surface-bubble: #1E1E26;
   --border: #24242E;
   --border-soft: #1E1E26;
+  --border-strong: #2E2E38;
   --text-primary: #EDEDF2;
   --text-body: #C9C9D4;
   --text-secondary: #9A9AA8;
@@ -39,8 +40,8 @@
   --pad-section: clamp(64px, 9vw, 112px);
   --head-gap: clamp(40px, 5vw, 60px);
 
-  /* Ledger dotted leader (settlement-slip motif; #2E2E38 = brand border tier) */
-  --leader: 1px dotted #2E2E38;
+  /* Ledger dotted leader (settlement-slip motif) */
+  --leader: 1px dotted var(--border-strong);
 
   margin: 0;
   background: var(--bg);
@@ -59,7 +60,7 @@
 .dime-landing .wrap--center { text-align: center; }
 .dime-landing :focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); }
 .dime-landing a:focus-visible { border-radius: 8px; }
-.dime-landing section[id], .dime-landing #dime-pricing { scroll-margin-top: 84px; }
+.dime-landing section[id] { scroll-margin-top: 84px; }
 
 /* ── Wordmark ─────────────────────────────────────────── */
 .dime-landing .wordmark { font-weight: 700; letter-spacing: -0.05em; color: var(--text-primary); line-height: 1; display: inline-flex; align-items: baseline; }
@@ -179,13 +180,16 @@
 
 /* ── Straight answers — ledger rows ───────────────────── */
 /* Objections settle like slip entries: the stamped mono question runs
-   a dotted leader across its column; the answer sits opposite. */
+   a dotted leader across its column; the answer sits opposite, and each
+   row closes with a grey mono stamp at the right edge (signup-slip
+   grammar — stamps are NEVER mint). */
 .dime-landing .answers-grid { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
-.dime-landing .qa { display: grid; grid-template-columns: minmax(200px, 320px) 1fr; gap: 12px 56px; align-items: start; padding: 28px 0; border-bottom: 1px solid var(--border-soft); }
+.dime-landing .qa { display: grid; grid-template-columns: minmax(200px, 320px) 1fr auto; gap: 12px 56px; align-items: start; padding: 28px 0; border-bottom: 1px solid var(--border-soft); }
 .dime-landing .qa-q { display: flex; align-items: baseline; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin: 0; padding-top: 5px; line-height: 1.7; }
 .dime-landing .qa-q::after { content: ""; flex: 1; min-width: 48px; border-bottom: var(--leader); transform: translateY(-4px); }
 .dime-landing .qa p { margin: 0; max-width: 640px; font-size: 14px; line-height: 1.6; color: var(--text-body); }
 .dime-landing .qa .signal { color: var(--mint); font-weight: 600; }
+.dime-landing .qa-stamp { justify-self: end; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); line-height: 1.7; padding-top: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ── Pricing (whitelabel) ─────────────────────────────── */
 .dime-landing .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; max-width: 860px; margin: 0 auto; }
@@ -234,7 +238,10 @@
   .dime-landing .cards3 { grid-template-columns: 1fr; }
   .dime-landing .duo { grid-template-columns: 1fr; }
   .dime-landing .discipline { grid-template-columns: 1fr; gap: 32px; }
-  .dime-landing .qa { grid-template-columns: 1fr; gap: 10px; }
+  /* Stacked slip row: question + leader run into the stamp on line one, answer below. */
+  .dime-landing .qa { grid-template-columns: 1fr auto; gap: 10px 16px; }
+  .dime-landing .qa .qa-stamp { grid-row: 1; grid-column: 2; }
+  .dime-landing .qa p { grid-column: 1 / -1; }
   .dime-landing .pricing-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
