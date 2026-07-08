@@ -950,7 +950,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
   const isHT = match.status === "HT";
   const isET = match.status === "ET";   // [2026-06-30] Extra time (1st or 2nd half)
   const isShootout = match.status === "SHOOTOUT"; // [2026-06-30] Penalty shootout in progress
-  const isFinal = match.status === "FT";
+  const isFinal = match.status === "FT" || match.status === "FT_PEN";
   const matchMinute = match.matchMinute ?? null;
   // [FIX 2026-06-30 v3] isExtraTimeHT: special sub-state of HT where match_minute='ETHT'
   // FIFA renders this as 'EXTRA TIME HALF TIME' — stored as status=HT, matchMinute='ETHT'
