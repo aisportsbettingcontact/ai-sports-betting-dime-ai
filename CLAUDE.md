@@ -12,12 +12,13 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
 | Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
 | Product management | plugins `*@pm-skills` (55 skills) | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors |
+| Advertising | `.agents/skills/` (12, realkimbarrett/advertising-skills) | Direct response: avatar/offer extraction, Schwartz awareness mapping, headline-matrix, mechanism-builder, objection-crusher, ad-angle-multiplier (creative testing), scroll-stopping-creative, conversion-path-builder, performance-diagnosis, generic-language-killer, full-funnel-campaign-orchestrator |
 
 Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enabledPlugins`) —
 everything auto-installs on session start in any environment. `skills-lock.json` pins the
 npx-installed sources. `.agents/skills/` is the universal directory (17 agent platforms).
 
-## Custom commands (`.claude/commands/` — 30 total)
+## Custom commands (`.claude/commands/` — 32 total)
 
 Give `$ARGUMENTS` real context, not just a topic name.
 
@@ -27,6 +28,7 @@ Give `$ARGUMENTS` real context, not just a topic name.
 | Process (`/sp-*`) | `/sp-brainstorm` · `/sp-plan` · `/sp-execute` · `/sp-tdd` · `/sp-debug` · `/sp-verify` · `/sp-review-ask` · `/sp-review-apply` · `/sp-parallel` · `/sp-subagents` · `/sp-worktree` · `/sp-finish` · `/sp-skill-new` · `/sp-help` |
 | Design (`/ui-*`) | `/ui-build` · `/ui-tokens` · `/ui-style` · `/ui-direction` · `/ui-design-asset` · `/ui-banner` · `/ui-slides` · `/ui-brand` — ALL enforce Dime brand law from `design-system/dime-ai/MASTER.md` |
 | Payments | `/stripe` — grounded in this repo's webhook/checkout code |
+| Shipping | `/ship <PR#>` — CI-verify → merge → branch restart → Manus deploy prompt · `/gh-fix <issue#>` — issue → isolated worktree → fix → PR |
 
 Typical build loop: `/pm-problem` → `/pm-story` → `/sp-plan` → `/sp-tdd` → `/ui-build` → `/sp-verify` → `/sp-review-ask` → `/sp-finish`.
 
@@ -54,6 +56,12 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   feed inside the Dime shell (route `/feed` → "AI Model Projections" tab)
 - Chat page: `client/src/pages/DimeChat.tsx` (`/chat`, SSE via `POST /api/dime/chat`) — keep the
   streaming core when reskinning
+
+## Deploy law (IMPORTANT)
+
+**Merging to `main` does NOT deploy.** Production is Manus-hosted; code ships only via
+Deploy/Publish inside Manus. Full runbook + paste-prompt: `RELEASING.md`. Schema changes
+additionally need the manual `db-push.yml` workflow before the deploy.
 
 ## Repo conventions
 
