@@ -80,7 +80,16 @@ Dockerfile gotchas learned the hard way (don't regress these):
    `vercel.json`. Fix: Project → Settings → Build & Deployment → Root
    Directory → clear it → redeploy. `dime-ai/.vercelignore` exists as a safety
    net so a misrooted deploy can never publish `design-bundle/` (private
-   reference material).
+   reference material). Until the setting is fixed, `dime-ai/vercel.json` is a
+   self-healing workaround that builds the real app from the parent directory
+   (first green deploy: 2ec6nj1H, PR #28) — delete it once Root Directory is
+   corrected.
+   **Deployment Protection:** preview URLs currently require Vercel
+   Authentication (302 → SSO login). Fine for private review; to let automation
+   (smoke script, agents) verify previews, either disable protection for
+   previews or create a Protection Bypass for Automation secret
+   (Project → Settings → Deployment Protection) and send it as the
+   `x-vercel-protection-bypass` header.
 2. **Edit `vercel.json`**: replace `REPLACE-WITH-RAILWAY-DOMAIN.up.railway.app`
    with the Railway domain from step 1.3, commit, push.
 3. Point the custom domain (e.g. `aisportsbettingmodels.com`) at the Vercel
