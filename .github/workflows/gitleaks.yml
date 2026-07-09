@@ -1,0 +1,29 @@
+# Gitleaks — secret scan on every PR and push to main (SEC-006 phase 2).
+# The job FAILS (non-zero exit) on any finding, so with this check listed
+# as required, a leak blocks the merge — it does not report-and-pass.
+name: Gitleaks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout full history"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan every commit in the push/PR, not just HEAD
+
+      - name: "[STEP] Run gitleaks — fail on any finding"
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Personal account — no GITLEAKS_LICENSE needed (orgs require one).
+          # Config auto-detected from .gitleaks.toml at repo root.
