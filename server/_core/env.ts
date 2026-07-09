@@ -1,6 +1,10 @@
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
+  cookieSecret: (() => {
+    const v = process.env.APP_SESSION_SECRET;
+    if (!v) throw new Error("[BOOT] APP_SESSION_SECRET is not set");
+    return v;
+  })(),
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
