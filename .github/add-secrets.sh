@@ -90,7 +90,7 @@ set_secret \
   "mysql://user:password@host:3306/dbname"
 
 set_secret \
-  "JWT_SECRET" \
+  "APP_SESSION_SECRET" \
   "Session cookie signing secret — must be at least 16 chars" \
   "random-string-min-16-chars"
 
@@ -125,7 +125,7 @@ echo "[STEP] Verifying all secrets are now set..."
 echo ""
 
 SECRETS_SET=$(gh secret list --repo "$REPO" 2>/dev/null | awk '{print $1}')
-REQUIRED=("DATABASE_URL" "JWT_SECRET" "PUBLIC_ORIGIN" "VITE_APP_ID" "OAUTH_SERVER_URL" "OWNER_OPEN_ID" "NBA_SHEET_ID")
+REQUIRED=("DATABASE_URL" "APP_SESSION_SECRET" "PUBLIC_ORIGIN" "VITE_APP_ID" "OAUTH_SERVER_URL" "OWNER_OPEN_ID" "NBA_SHEET_ID")
 ALL_PASS=true
 
 for secret in "${REQUIRED[@]}"; do

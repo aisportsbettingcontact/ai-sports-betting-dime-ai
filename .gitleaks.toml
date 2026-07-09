@@ -1,0 +1,46 @@
+# .gitleaks.toml — dime-ai secret-scanning config (SEC-006 phase 2)
+#
+# PRINCIPLE: default rules stay fully active; the allowlist suppresses only
+# specific, named false positives. Never allowlist a source directory, an
+# env template, or any pattern loose enough to mask a real credential.
+
+title = "dime-ai gitleaks config"
+
+[extend]
+# Inherit ALL gitleaks default rules (Stripe, AWS, generic api-key, JWT,
+# connection strings, private keys, …) — this config only narrows noise.
+useDefault = true
+
+[allowlist]
+description = "Named false positives only — keep this list narrow"
+
+# Paths that structurally cannot hold live secrets but trip entropy rules.
+paths = [
+  '''^pnpm-lock\.yaml$''',            # dependency integrity hashes (high entropy)
+  '''^drizzle/meta/.*\.json$''',      # migration snapshot ids (high entropy)
+  '''^client/public/.*\.(svg|png|ico|woff2?)$''',  # binary/vector assets
+]
+
+# Secret-value patterns that are unambiguously fixtures. regexTarget=secret
+# means the MATCHED SECRET itself must start with one of these prefixes —
+# a real key (sk_live_…, mysql://user:pass@…) can never match.
+regexTarget = "secret"
+regexes = [
+  '''^(test|mock|dummy|fake|example)[_-]''',   # e.g. test_jwt_secret_32_bytes_minimum_x
+  '''^password$''',                            # the literal docs placeholder mysql://user:password@host
+  '''^pass$''',                                # same placeholder, short form mysql://user:pass@host
+  '''^abc123def456$''',                        # dummy Discord invite code in discordInvite.test.ts
+]
+
+# NOTE deliberately absent:
+#  - .env.example is NOT allowlisted — if a real value ever lands in the
+#    template, it must be caught.
+#  - No stopwords — stopwords match anywhere in the secret and are too blunt.
+
+# Default gitleaks rules do NOT catch passworded connection URIs (verified
+# empirically 2026-07-09: mysql://user:pass@host passed a default scan).
+[[rules]]
+id = "connection-string-password"
+description = "Database/broker URI with embedded password"
+regex = '''(?i)\b(?:mysql|postgres(?:ql)?|mongodb(?:\+srv)?|rediss?|amqps?|mssql)://[^\s:@/'"]{1,64}:([^\s@/'"()\[\]{}$]{4,})@'''   # charset excludes regex metachars: kills URL-parsing-code false positives; real URI passwords percent-encode these
+secretGroup = 1
