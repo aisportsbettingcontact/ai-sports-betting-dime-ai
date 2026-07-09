@@ -6,10 +6,13 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAppAuth } from "./_core/hooks/useAppAuth";
-// [PERF/FIX] LandingPage is EAGER (not lazy) — it's the first thing unauthenticated users see.
-// Making it lazy would add a Suspense gap (fallback=null → #root empty) while the chunk downloads,
-// which keeps the HTML loading shell visible. Eager import = synchronous render on first paint.
-import LandingPage from './pages/landing/LandingPage';
+// [PERF/FIX] The root landing page is EAGER (not lazy) — it's the first thing unauthenticated
+// users see. Making it lazy would add a Suspense gap (fallback=null → #root empty) while the
+// chunk downloads, which keeps the HTML loading shell visible. Eager import = synchronous
+// render on first paint.
+// [REBRAND] Dime AI landing v2 promoted to "/" (approved via brainstorm 2026-07-08).
+// The previous AI Sports Betting funnel remains reachable at /landingpage-legacy.
+import DimeLandingV2 from './pages/dime/landing/DimeLandingV2';
 // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -43,7 +46,7 @@ const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
 const DimeLanding = lazy(() => import('./pages/dime/DimeLanding'));
-const DimeLandingV2 = lazy(() => import('./pages/dime/landing/DimeLandingV2'));
+const LegacyLandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const CheckoutPage = lazy(() => import('./pages/dime/CheckoutPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
@@ -94,8 +97,8 @@ function RootRoute() {
       const pendingCheckout = sessionStorage.getItem("pendingCheckout");
       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
         sessionStorage.removeItem("pendingCheckout");
-        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /?checkout=${pendingCheckout}`);
-        navigate(`/?checkout=${pendingCheckout}`);
+        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
+        navigate(`/checkout?plan=${pendingCheckout}`);
         return;
       }
       console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);
@@ -105,11 +108,11 @@ function RootRoute() {
     }
   }, [loading, appUser]);
 
-  // [OPTIMISTIC] Always render LandingPage immediately — no null return, no loading gap.
-  // LandingPage is an eager import — no Suspense needed, renders synchronously.
+  // [OPTIMISTIC] Always render the landing page immediately — no null return, no loading gap.
+  // DimeLandingV2 is an eager import — no Suspense needed, renders synchronously.
   // The HTML loading shell dismisses the moment this component renders into #root.
-  console.log(`[RootRoute] [RENDER] Rendering LandingPage immediately (loading=${loading}, authed=${!!appUser})`);
-  return <LandingPage />;
+  console.log(`[RootRoute] [RENDER] Rendering DimeLandingV2 immediately (loading=${loading}, authed=${!!appUser})`);
+  return <DimeLandingV2 />;
 }
 
 function Router() {
@@ -146,10 +149,12 @@ function Router() {
       <Route path="/pricing" component={Pricing} />
       {/* Password reset — public, accessed via reset link */}
       <Route path="/reset-password" component={ResetPassword} />
-      {/* Dime AI landing — public test hook for the rebrand (E1) */}
+      {/* Dime AI landing v1 — earlier rebrand iteration (E1), kept for reference */}
       <Route path="/landingpage" component={DimeLanding} />
-      {/* Dime AI landing v2 — console-concept rebuild (approved via brainstorm 2026-07-08) */}
-      <Route path="/landingpage-v2" component={DimeLandingV2} />
+      {/* Dime AI landing v2 is now the root landing — keep the old test URL working */}
+      <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>
+      {/* Pre-rebrand AI Sports Betting funnel — parked for comparison/rollback */}
+      <Route path="/landingpage-legacy" component={LegacyLandingPage} />
       {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
       <Route path="/checkout" component={CheckoutPage} />
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
