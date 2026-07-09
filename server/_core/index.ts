@@ -36,6 +36,7 @@ import { startMlbModelSyncScheduler } from "../mlbModelRunner";
 // startJackMacScheduler removed — Jack Mac tab purged
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
+import { ensureDebugLogsTable } from "./debugLogger";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
@@ -398,6 +399,55 @@ async function startServer() {
     });
   });
 
+  // ─── Debug logs endpoint (owner-only, rate-limited) ────────────────────────
+  // Returns recent background job logs from the debug_logs table.
+  // Supports ?source=ANApiOdds&level=warn&limit=100 query params.
+  // Replaces stdout log inspection for background job debugging.
+  app.get("/api/debug-logs", globalApiLimiter, async (req, res) => {
+    try {
+      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
+      if (user.openId !== process.env.OWNER_OPEN_ID) {
+        return res.status(403).json({ error: "owner-only" });
+      }
+    } catch { return res.status(401).json({ error: "unauthorized" }); }
+
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: "db-unavailable" });
+
+    try {
+      const source = typeof req.query.source === "string" ? req.query.source : null;
+      const level  = typeof req.query.level  === "string" ? req.query.level  : null;
+      const limit  = Math.min(parseInt(String(req.query.limit ?? "200"), 10) || 200, 1000);
+
+      // Build WHERE clause dynamically
+      let whereClause = "WHERE 1=1";
+      const params: (string | number)[] = [];
+      if (source) { whereClause += " AND source = ?"; params.push(source); }
+      if (level)  { whereClause += " AND level = ?";  params.push(level); }
+      params.push(limit);
+
+      const [rows] = await db.execute(
+        `SELECT id, source, level, message, context, created_at FROM debug_logs ${whereClause} ORDER BY created_at DESC LIMIT ?`,
+        params
+      );
+
+      res.json({
+        ts: Date.now(),
+        count: (rows as unknown[]).length,
+        filters: { source, level, limit },
+        logs: rows,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Table may not exist yet — return helpful error
+      if (msg.includes("doesn't exist") || msg.includes("Table") || msg.includes("ER_NO_SUCH_TABLE")) {
+        return res.status(404).json({ error: "debug_logs table not found — restart server to auto-create it" });
+      }
+      console.error("[DebugLogs] Query failed:", err);
+      res.status(500).json({ error: "query-failed", message: msg });
+    }
+  });
+
   // ─── Global API rate limiter ──────────────────────────────────────────────
   // Applied to all /api/* routes. Skips /health (handled above).
   console.log(`[SERVER_STARTUP] Registering global API rate limiter on /api`);
@@ -605,6 +655,8 @@ async function startServer() {
     const addr = server.address();
     console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://0.0.0.0:${port}/`);
     console.log(`Server running on http://localhost:${port}/`);
+    // Ensure debug_logs table exists — idempotent, non-fatal
+    ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
     // Start daily 6am EST game purge (removes previous day's games)
     startDailyPurgeSchedule();
     // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
