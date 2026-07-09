@@ -1,0 +1,104 @@
+# Read-only DB verification against the migration TARGET cluster.
+#
+# Manual trigger only (workflow_dispatch). Connects with the
+# TARGET_DATABASE_URL repo secret from a CI runner (which has real egress to
+# TiDB, unlike sandboxed agent environments) and runs one of a fixed set of
+# read-only queries — no free-text SQL, so this never becomes an injection
+# surface in the Actions logs. Reports table counts / row counts only; it
+# never selects data rows and never writes.
+name: DB Query (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "What to report from the target cluster"
+        required: true
+        default: summary
+        type: choice
+        options:
+          - summary        # per-schema table count + estimated rows + grand total
+          - tables         # full table list per schema
+          - exact-counts   # exact SELECT COUNT(*) per table (slower, precise)
+
+permissions:
+  contents: read
+
+jobs:
+  query:
+    name: "Query target (${{ github.event.inputs.mode }})"
+    runs-on: ubuntu-latest
+    env:
+      # The four application databases cloned in the migration.
+      DBS: "9w3eZzSJhkkc5sJ763dXxA MW3FicTy7ae3qrm8dx8Lua ZTNf5uThCjBDEX2kNSs593 mLJ3UFRGiMBjj6Ve3qzhT4"
+    steps:
+      - name: "[STEP] Install MySQL client"
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: "[STEP] Build client config from TARGET_DATABASE_URL (secret never printed)"
+        env:
+          TARGET_DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["TARGET_DATABASE_URL"])
+          if not u.hostname:
+              raise SystemExit("TARGET_DATABASE_URL is not a valid mysql:// URL")
+          cnf = (
+              "[client]\n"
+              f"host={u.hostname}\n"
+              f"port={u.port or 4000}\n"
+              f"user={urllib.parse.unquote(u.username or '')}\n"
+              f"password={urllib.parse.unquote(u.password or '')}\n"
+              # TiDB Serverless mandates TLS; REQUIRED encrypts the connection.
+              "ssl-mode=REQUIRED\n"
+          )
+          with open("client.cnf", "w") as f:
+              f.write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR | stat.S_IWUSR)  # 600
+          print("client.cnf written (host/port/user only shown, password omitted):")
+          print(f"  host={u.hostname} port={u.port or 4000} user={urllib.parse.unquote(u.username or '')}")
+          PY
+
+      - name: "[STEP] Run query"
+        run: |
+          set -euo pipefail
+          MODE="${{ github.event.inputs.mode }}"
+          IN_LIST=$(printf "'%s'," $DBS | sed "s/,$//")
+
+          if [ "$MODE" = "summary" ]; then
+            echo "===== TARGET: per-schema summary ====="
+            mysql --defaults-extra-file=client.cnf -t -e "
+              SELECT table_schema, COUNT(*) AS tables, SUM(table_rows) AS est_rows
+              FROM information_schema.tables
+              WHERE table_schema IN ($IN_LIST)
+              GROUP BY table_schema ORDER BY table_schema;"
+            echo "===== TARGET: grand total ====="
+            mysql --defaults-extra-file=client.cnf -t -e "
+              SELECT COUNT(*) AS total_tables, SUM(table_rows) AS total_est_rows
+              FROM information_schema.tables WHERE table_schema IN ($IN_LIST);"
+
+          elif [ "$MODE" = "tables" ]; then
+            for db in $DBS; do
+              echo "===== $db ====="
+              mysql --defaults-extra-file=client.cnf -N -e "
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema='$db' ORDER BY table_name;"
+            done
+
+          elif [ "$MODE" = "exact-counts" ]; then
+            for db in $DBS; do
+              echo "===== $db (exact row counts) ====="
+              TBLS=$(mysql --defaults-extra-file=client.cnf -N -e "
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema='$db' AND table_type='BASE TABLE' ORDER BY table_name;")
+              for t in $TBLS; do
+                n=$(mysql --defaults-extra-file=client.cnf -N -e "SELECT COUNT(*) FROM \`$db\`.\`$t\`;")
+                printf "  %-48s %s\n" "$t" "$n"
+              done
+            done
+          fi
+
+      - name: "[STEP] Cleanup"
+        if: always()
+        run: rm -f client.cnf
