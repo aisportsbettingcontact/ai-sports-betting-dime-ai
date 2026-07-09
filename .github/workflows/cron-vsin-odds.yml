@@ -1,0 +1,72 @@
+# VSiN odds refresh — GitHub Actions timer replacing the in-process scheduler.
+#
+# Fires POST /api/cron/vsin-odds on the Railway app on a schedule. The endpoint
+# is shared-secret authed (CRON_SECRET) and responds 200 immediately while the
+# refresh runs in the background under a run-lock (see server/cron/).
+#
+# Why Actions instead of the app's own setInterval: the always-on schedulers
+# burn Railway credits 24/7. DISABLE_BACKGROUND_JOBS=1 gates them off; this
+# workflow drives the same work on demand instead.
+#
+# Required repo secrets:
+#   RAILWAY_APP_URL — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+#
+# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
+# platform load). Fine for odds freshness; do not rely on it for hard deadlines.
+name: Cron — VSiN odds refresh
+
+on:
+  schedule:
+    - cron: "*/15 * * * *" # every 15 minutes
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never let two odds refreshes queue up on top of each other.
+  group: cron-vsin-odds
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/vsin-odds
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present; target host: ${RAILWAY_APP_URL%%/*}//$(echo "$RAILWAY_APP_URL" | sed -E 's#https?://##' | cut -d/ -f1)"
+
+      - name: "[STEP] POST /api/cron/vsin-odds (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/vsin-odds"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/vsin-odds")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::vsin-odds trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — vsin-odds accepted (HTTP $CODE)"

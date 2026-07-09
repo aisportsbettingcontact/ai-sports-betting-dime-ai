@@ -42,6 +42,7 @@ import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
+import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
 import { registerDimeWC2026Route } from "../dime-wc2026.route";
 
@@ -604,6 +605,13 @@ async function startServer() {
   // POST /api/scheduled/wc2026-lineups — every 10 min
   console.log(`[SERVER_STARTUP] Registering WC2026 heartbeat routes`);
   registerWc2026Heartbeats(app);
+
+  // ─── GitHub Actions cron endpoints (off-Manus data freshness) ────────────
+  // POST /api/cron/vsin-odds · /api/cron/scores — fired by GitHub Actions on a
+  // timer, shared-secret authed (CRON_SECRET). These replace the always-on
+  // in-process schedulers gated off via DISABLE_BACKGROUND_JOBS on Railway.
+  console.log(`[SERVER_STARTUP] Registering GitHub Actions cron routes`);
+  registerCronRoutes(app);
 
   // ─── Dime AI Chat — SSE streaming endpoint ──────────────────────────────
   // POST /api/dime/chat — Claude Fable 5 streaming chat for the Chat tab.
