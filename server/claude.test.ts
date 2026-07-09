@@ -15,7 +15,7 @@ vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn().mockImplementation(() => 
 
 describe("Claude Fable 5 Integration", () => {
   // Presence-probe only — the rest of this suite is fully mocked and keeps running in CI.
-  it.skipIf(IS_CI)("ANTHROPIC_API_KEY is set", () => { expect(process.env.ANTHROPIC_API_KEY?.length).toBeGreaterThan(0); });
+  it.skipIf(IS_CI)("Anthropic credentials are set (API key or AI Gateway auth token)", () => { expect((process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY)?.length).toBeGreaterThan(0); });
   it("CLAUDE_MODEL is claude-fable-5", async () => { const { CLAUDE_MODEL } = await import("./_core/claude"); expect(CLAUDE_MODEL).toBe("claude-fable-5"); });
   describe("invokeClaude", () => {
     beforeEach(() => mockCreate.mockClear());
