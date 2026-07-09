@@ -129,3 +129,9 @@ audit-notes/
 
 # Manus runtime scrape/audit logs — never track (14MB of artifacts)
 .manus-logs/
+
+# SEC-INC-001: secret-bearing debug/audit artifacts — local only, never track
+database_audit.txt
+debug_rg_today-hitters.html
+debug_rg_today-pitchers.html
+schema_alignment_findings.md

@@ -29,10 +29,10 @@ In wc2026Context.ts query #2:
 
 ## JWT payload for app_session:
 { sub: String(userId), role: 'owner'|'admin'|'user', type: 'app_user', tv: tokenVersion }
-Signed with HS256 using ENV.cookieSecret (JWT_SECRET)
+Signed with HS256 using ENV.cookieSecret (APP_SESSION_SECRET)
 
 ## Owner token for testing:
-eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6Im93bmVyIiwidHlwZSI6ImFwcF91c2VyIiwidHYiOjEsImlhdCI6MTc4MzM0MTgxMSwiZXhwIjoxNzgzMzQ1NDExfQ.eXpdHBDgvwlJac_p3P5TGjU_r19VkD76CUVKtWy8bCM
+[REDACTED — token rotated and session-secret renamed, see SEC-INC-001]
 
 ## getAppUserById function location:
 server/db.ts - returns user object with: id, role, hasAccess, expiryDate, stripeSubscriptionId, etc.
