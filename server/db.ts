@@ -174,7 +174,7 @@ export async function getDb() {
         waitForConnections: true,
         // Increased from 50 → 100: burst traffic during game-day peaks
         queueLimit: 100,
-        connectTimeout: 5000,   // 5s — fast failure detection
+        connectTimeout: 15000,  // 15s — allows remote TiDB Serverless connections to establish
         // Increased from 10s → 30s: TiDB serverless has ~30s idle before connection reset
         idleTimeout: 30000,
         enableKeepAlive: true,
