@@ -1,0 +1,12 @@
+{
+  "budget": {
+    "ttfbMs": 1200,
+    "domContentLoaded": 4000,
+    "loadMs": 6000,
+    "fcpMs": 3000,
+    "lcpMs": 4000,
+    "transferBytes": 4000000
+  },
+  "tolerancePct": 0.2,
+  "baseline": {}
+}
