@@ -228,6 +228,11 @@ async function startServer() {
   // ─── Top-level request logger ────────────────────────────────────────────
   // Installed FIRST so every request — including those rejected by later
   // middleware — is captured. Logs method, path, key headers, and final status.
+  //
+  // Sampling: only 10% of normal requests are logged to stay well under
+  // Railway's 500 logs/sec rate limit. Errors (5xx) and slow requests
+  // (>1000ms) are ALWAYS logged regardless of the sample decision so that
+  // production visibility into problems is fully preserved.
   console.log(`[SERVER_STARTUP] Registering top-level request logging middleware`);
   app.use((req, res, next) => {
     const start = Date.now();
@@ -236,18 +241,30 @@ async function startServer() {
       (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
       req.socket?.remoteAddress ??
       "unknown";
-    console.log(
-      `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
-      ` host=${req.headers["host"] ?? "-"}` +
-      ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
-      ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
-      ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
-    );
+    // Decide at request-time whether this request falls in the 10% sample.
+    // The same flag is reused on the response so both log lines are emitted
+    // together or suppressed together for normal requests.
+    const sampled = Math.random() < 0.1;
+    if (sampled) {
+      console.log(
+        `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
+        ` host=${req.headers["host"] ?? "-"}` +
+        ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
+        ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
+        ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+      );
+    }
     res.on("finish", () => {
       const ms = Date.now() - start;
-      console.log(
-        `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}`
-      );
+      const isError = res.statusCode >= 500;
+      const isSlow = ms > 1000;
+      if (sampled || isError || isSlow) {
+        console.log(
+          `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}` +
+          (isError ? " [ERROR]" : "") +
+          (isSlow ? " [SLOW]" : "")
+        );
+      }
     });
     next();
   });
