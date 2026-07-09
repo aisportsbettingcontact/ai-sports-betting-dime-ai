@@ -2985,3 +2985,214 @@ OUTPUT: Feeds wc2026_odds_snapshots (4,384 rows) and wc2026_frozen_book_odds (37
 [2026-07-07T17:11:44.919Z] +0.582s S0220 [🎯 PROJ    ]   BTTS: Y=-152 N=+152
 [2026-07-07T17:11:44.919Z] +0.582s S0221 [🎯 PROJ    ]   DC: HomeWD=-217 AwayWD=-117 NoDraw=-348
 [2026-07-07T17:11:44.920Z] +0.583s S0222 [✅ PASS    ] Database connection closed. Engine complete.
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  WC2026 v23.0-500X-CORRECT-SCORE-RECALIBRATED-QF-JUL9 — 500X BACKTEST → CORRECT SCORE → RECALIBRATION → REINFORCEMENT → JUL 9 QF PROJECTION
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:39.666Z] +0.002s S0001 [📥 INPUT   ] Engine: v23.0-500X-CORRECT-SCORE-RECALIBRATED-QF-JUL9
+[2026-07-09T14:09:39.666Z] +0.002s S0002 [📥 INPUT   ] Session: v23-JUL9-500X-BACKTEST-RECAL-1783606179664
+[2026-07-09T14:09:39.666Z] +0.002s S0003 [📥 INPUT   ] Backtest: 24 matches | Variations: 25 | Projection: 1 matches
+[2026-07-09T14:09:39.667Z] +0.003s S0004 [📥 INPUT   ] Scoring: Dir=45% Total=30% Spread=15% BTTS=10% + Correct Score overlay
+[2026-07-09T14:09:39.667Z] +0.003s S0005 [📥 INPUT   ] Book source: BetExplorer bet365 (scraped 2026-07-09 via CI odds probe)
+[2026-07-09T14:09:39.667Z] +0.003s S0006 [▶  STEP    ] Pipeline: DATA → 500X BACKTEST → CORRECT SCORE GRADE → RECALIBRATION → 25 VARIATIONS → REINFORCEMENT → MODEL → AUDIT → DB
+[2026-07-09T14:09:40.186Z] +0.522s S0007 [✅ PASS    ] Database connection established (TLS)
+[2026-07-09T14:09:40.443Z] +0.779s S0008 [✅ PASS    ] wc2026 schema resolved: MW3FicTy7ae3qrm8dx8Lua
+[2026-07-09T14:09:40.443Z] +0.779s S0009 [⚠️  WARN    ] DRY_RUN=1 — Phase 7 DB writes will be SKIPPED
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 1/7 — PULL ESPN DATA (GROUP STAGE + R32)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.443Z] +0.779s S0010 [📥 INPUT   ] Teams: RSA, CAN, BRA, JPN, GER, PAR, NED, MAR, CIV, NOR, FRA, SWE, MEX, ECU, ENG, COD, BEL, SEN, USA, BIH, ESP, AUT, POR, CRO, SUI, ALG, AUS, EGY, ARG, CPV, COL, GHA (32 total)
+[2026-07-09T14:09:40.515Z] +0.851s S0011 [✅ PASS    ] xG data: 88 rows loaded
+[2026-07-09T14:09:40.515Z] +0.851s S0012 [◈  STATE   ] Unique match IDs in xG data: 88
+[2026-07-09T14:09:40.595Z] +0.931s S0013 [✅ PASS    ] Team stats: 88 rows loaded
+[2026-07-09T14:09:40.664Z] +1.000s S0014 [✅ PASS    ] Match stats: 88 rows loaded
+[2026-07-09T14:09:40.753Z] +1.089s S0015 [✅ PASS    ] Player stats: 136 rows loaded
+[2026-07-09T14:09:40.840Z] +1.176s S0016 [✅ PASS    ] Shot map: 136 rows loaded
+[2026-07-09T14:09:40.840Z] +1.176s S0017 [◈  STATE   ] RSA: 4 xG rows available
+[2026-07-09T14:09:40.840Z] +1.176s S0018 [◈  STATE   ] CAN: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0019 [◈  STATE   ] BRA: 5 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0020 [◈  STATE   ] JPN: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0021 [◈  STATE   ] GER: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0022 [◈  STATE   ] PAR: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0023 [◈  STATE   ] NED: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0024 [◈  STATE   ] MAR: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0025 [◈  STATE   ] CIV: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0026 [◈  STATE   ] NOR: 5 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0027 [◈  STATE   ] FRA: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0028 [◈  STATE   ] SWE: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0029 [◈  STATE   ] MEX: 5 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0030 [◈  STATE   ] ECU: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0031 [◈  STATE   ] ENG: 5 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0032 [◈  STATE   ] COD: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0033 [◈  STATE   ] BEL: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0034 [◈  STATE   ] SEN: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0035 [◈  STATE   ] USA: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0036 [◈  STATE   ] BIH: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0037 [◈  STATE   ] ESP: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0038 [◈  STATE   ] AUT: 4 xG rows available
+[2026-07-09T14:09:40.841Z] +1.177s S0039 [◈  STATE   ] POR: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0040 [◈  STATE   ] CRO: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0041 [◈  STATE   ] SUI: 5 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0042 [◈  STATE   ] ALG: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0043 [◈  STATE   ] AUS: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0044 [◈  STATE   ] EGY: 5 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0045 [◈  STATE   ] ARG: 5 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0046 [◈  STATE   ] CPV: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0047 [◈  STATE   ] COL: 5 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0048 [◈  STATE   ] GHA: 4 xG rows available
+[2026-07-09T14:09:40.842Z] +1.178s S0049 [✅ PASS    ] Data completeness check: 32/32 teams have data (0 gaps)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 2/7 — 500X BACKTEST (25 VARIATIONS × 16 MATCHES = 400 MODEL RUNS)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.857Z] +1.193s S0050 [📊 BACKTEST] V1 [1/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.56% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.866Z] +1.202s S0051 [📊 BACKTEST] V2 [2/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.55% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.875Z] +1.211s S0052 [📊 BACKTEST] V3 [3/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.55% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.878Z] +1.214s S0053 [📊 BACKTEST] V4 [4/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.60% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.883Z] +1.219s S0054 [📊 BACKTEST] V5 [5/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.59% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.886Z] +1.222s S0055 [📊 BACKTEST] V6 [6/25]: composite=74.6 | Dir=21/24 Tot=14/24 Spr=17/24 BTTS=17/24 | CS_avg_prob=8.82% CS_avg_rank=6.2 | Skip=0
+[2026-07-09T14:09:40.888Z] +1.224s S0056 [📊 BACKTEST] V7 [7/25]: composite=73.3 | Dir=20/24 Tot=16/24 Spr=16/24 BTTS=14/24 | CS_avg_prob=8.47% CS_avg_rank=6.0 | Skip=0
+[2026-07-09T14:09:40.892Z] +1.228s S0057 [📊 BACKTEST] V8 [8/25]: composite=74.0 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=14/24 | CS_avg_prob=8.45% CS_avg_rank=6.0 | Skip=0
+[2026-07-09T14:09:40.895Z] +1.231s S0058 [📊 BACKTEST] V9 [9/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.59% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.897Z] +1.233s S0059 [📊 BACKTEST] V10 [10/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.58% CS_avg_rank=6.2 | Skip=0
+[2026-07-09T14:09:40.900Z] +1.236s S0060 [📊 BACKTEST] V11 [11/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.53% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.904Z] +1.240s S0061 [📊 BACKTEST] V12 [12/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.54% CS_avg_rank=6.0 | Skip=0
+[2026-07-09T14:09:40.907Z] +1.243s S0062 [📊 BACKTEST] V13 [13/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.55% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.910Z] +1.246s S0063 [📊 BACKTEST] V14 [14/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.67% CS_avg_rank=6.2 | Skip=0
+[2026-07-09T14:09:40.914Z] +1.250s S0064 [📊 BACKTEST] V15 [15/25]: composite=75.2 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=14/24 | CS_avg_prob=8.48% CS_avg_rank=6.0 | Skip=0
+[2026-07-09T14:09:40.919Z] +1.255s S0065 [📊 BACKTEST] V16 [16/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.56% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.923Z] +1.259s S0066 [📊 BACKTEST] V17 [17/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.66% CS_avg_rank=6.3 | Skip=0
+[2026-07-09T14:09:40.926Z] +1.262s S0067 [📊 BACKTEST] V18 [18/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.55% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.928Z] +1.264s S0068 [📊 BACKTEST] V19 [19/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.58% CS_avg_rank=6.2 | Skip=0
+[2026-07-09T14:09:40.931Z] +1.267s S0069 [📊 BACKTEST] V20 [20/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.55% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.933Z] +1.269s S0070 [📊 BACKTEST] V21 [21/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.54% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.936Z] +1.272s S0071 [📊 BACKTEST] V22 [22/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.54% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.939Z] +1.275s S0072 [📊 BACKTEST] V23 [23/25]: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.58% CS_avg_rank=6.1 | Skip=0
+[2026-07-09T14:09:40.941Z] +1.277s S0073 [📊 BACKTEST] V24 [24/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.53% CS_avg_rank=6.0 | Skip=0
+[2026-07-09T14:09:40.944Z] +1.280s S0074 [📊 BACKTEST] V25 [25/25]: composite=74.4 | Dir=21/24 Tot=15/24 Spr=16/24 BTTS=15/24 | CS_avg_prob=8.59% CS_avg_rank=6.1 | Skip=0
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 3/7 — CORRECT SCORE OUTCOME GRADE (BEST VARIATION)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.944Z] +1.280s S0075 [📋 GRADE   ] Best Variation: V1 | Composite: 75.6
+[2026-07-09T14:09:40.944Z] +1.280s S0076 [📋 GRADE   ] Parameters: xGW=0.3 xGOTW=0.28 smW=0.12 psW=0.15 xAW=0.1 rho=0.06 pace=0.012
+[2026-07-09T14:09:40.944Z] +1.280s S0077 [🎲 SCORE   ] ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+[2026-07-09T14:09:40.944Z] +1.280s S0078 [🎲 SCORE   ] │  CORRECT SCORE ASSESSMENT — V1 (24 matches)                                     │
+[2026-07-09T14:09:40.944Z] +1.280s S0079 [🎲 SCORE   ] ├────────────┬──────────┬──────────┬──────────┬────────┬────────┬────────┬────────┬──────────┤
+[2026-07-09T14:09:40.944Z] +1.280s S0080 [🎲 SCORE   ] │ Match      │ Score    │ CS Prob  │ CS Rank  │ Top    │ Dir    │ Total  │ Spread │ BTTS     │
+[2026-07-09T14:09:40.944Z] +1.280s S0081 [🎲 SCORE   ] ├────────────┼──────────┼──────────┼──────────┼────────┼────────┼────────┼────────┼──────────┤
+[2026-07-09T14:09:40.944Z] +1.280s S0082 [🎲 SCORE   ] │ 073 RSA-CAN │ 0-1      │  17.04%  │ # 1/100  │ 0-1    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0083 [🎲 SCORE   ] │ 074 BRA-JPN │ 2-1      │   9.90%  │ # 1/100  │ 2-1    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0084 [🎲 SCORE   ] │ 075 GER-PAR │ 1-1      │   5.72%  │ # 7/100  │ 1-0    │ ❌      │ ✅      │ ❌      │ ❌        │
+[2026-07-09T14:09:40.944Z] +1.280s S0085 [🎲 SCORE   ] │ 076 NED-MAR │ 1-1      │  10.22%  │ # 1/100  │ 1-1    │ ✅      │ ❌      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0086 [🎲 SCORE   ] │ 077 CIV-NOR │ 1-2      │   9.40%  │ # 3/100  │ 1-1    │ ✅      │ ✅      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0087 [🎲 SCORE   ] │ 078 FRA-SWE │ 3-0      │   8.40%  │ # 4/100  │ 2-0    │ ✅      │ ❌      │ ❌      │ ❌        │
+[2026-07-09T14:09:40.944Z] +1.280s S0088 [🎲 SCORE   ] │ 079 MEX-ECU │ 2-0      │   6.76%  │ # 7/100  │ 1-1    │ ✅      │ ❌      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0089 [🎲 SCORE   ] │ 080 ENG-COD │ 2-1      │   9.73%  │ # 3/100  │ 1-0    │ ✅      │ ✅      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.944Z] +1.280s S0090 [🎲 SCORE   ] │ 081 BEL-SEN │ 3-2      │   4.40%  │ #10/100  │ 1-1    │ ✅      │ ✅      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.944Z] +1.280s S0091 [🎲 SCORE   ] │ 082 USA-BIH │ 2-0      │  14.04%  │ # 3/100  │ 1-0    │ ✅      │ ✅      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0092 [🎲 SCORE   ] │ 083 ESP-AUT │ 3-0      │   7.74%  │ # 5/100  │ 1-0    │ ✅      │ ❌      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0093 [🎲 SCORE   ] │ 084 POR-CRO │ 2-1      │   8.92%  │ # 6/100  │ 1-0    │ ✅      │ ❌      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0094 [🎲 SCORE   ] │ 085 SUI-ALG │ 2-0      │   8.42%  │ # 5/100  │ 1-0    │ ✅      │ ✅      │ ❌      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0095 [🎲 SCORE   ] │ 086 AUS-EGY │ 1-1      │  10.79%  │ # 5/100  │ 0-1    │ ✅      │ ❌      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0096 [🎲 SCORE   ] │ 087 ARG-CPV │ 3-2      │   1.93%  │ #14/100  │ 1-0    │ ✅      │ ❌      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0097 [🎲 SCORE   ] │ 088 COL-GHA │ 1-0      │  23.31%  │ # 1/100  │ 1-0    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0098 [🎲 SCORE   ] │ 091 BRA-NOR │ 1-2      │   6.48%  │ # 4/100  │ 2-1    │ ❌      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0099 [🎲 SCORE   ] │ 092 MEX-ENG │ 2-3      │   3.64%  │ #11/100  │ 1-2    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0100 [🎲 SCORE   ] │ 089 PAR-FRA │ 0-1      │  16.61%  │ # 2/100  │ 0-2    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0101 [🎲 SCORE   ] │ 090 CAN-MAR │ 0-3      │   1.90%  │ #18/100  │ 2-1    │ ❌      │ ✅      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0102 [🎲 SCORE   ] │ 093 POR-ESP │ 0-1      │   7.57%  │ # 3/100  │ 1-1    │ ✅      │ ❌      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0103 [🎲 SCORE   ] │ 094 USA-BEL │ 1-4      │   2.69%  │ #14/100  │ 1-1    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0104 [🎲 SCORE   ] │ 095 ARG-EGY │ 3-2      │   3.46%  │ #11/100  │ 1-0    │ ✅      │ ✅      │ ✅      │ ✅        │
+[2026-07-09T14:09:40.945Z] +1.281s S0105 [🎲 SCORE   ] │ 096 SUI-COL │ 0-0      │   6.24%  │ # 7/100  │ 1-1    │ ✅      │ ✅      │ ✅      │ ❌        │
+[2026-07-09T14:09:40.945Z] +1.281s S0106 [🎲 SCORE   ] ├────────────┴──────────┴──────────┴──────────┴────────┴────────┴────────┴────────┴──────────┤
+[2026-07-09T14:09:40.945Z] +1.281s S0107 [🎲 SCORE   ] │ TOTALS: Dir=21/24 Total=16/24 Spread=16/24 BTTS=15/24 | AvgCSProb=8.56% AvgCSRank=#6.1 │
+[2026-07-09T14:09:40.945Z] +1.281s S0108 [🎲 SCORE   ] └──────────────────────────────────────────────────────────────────────────────────────────────┘
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 4/7 — RECALIBRATION FROM BACKTEST RESULTS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.945Z] +1.281s S0109 [🔄 RECAL   ] TOP 5 VARIATIONS:
+[2026-07-09T14:09:40.945Z] +1.281s S0110 [🔄 RECAL   ]   #1 V1: composite=75.6 | Dir=87.5% Tot=66.7% Spr=66.7% BTTS=62.5% | CS=8.56%
+[2026-07-09T14:09:40.945Z] +1.281s S0111 [🔄 RECAL   ]   #2 V5: composite=75.6 | Dir=87.5% Tot=66.7% Spr=66.7% BTTS=62.5% | CS=8.59%
+[2026-07-09T14:09:40.946Z] +1.282s S0112 [🔄 RECAL   ]   #3 V9: composite=75.6 | Dir=87.5% Tot=66.7% Spr=66.7% BTTS=62.5% | CS=8.59%
+[2026-07-09T14:09:40.946Z] +1.282s S0113 [🔄 RECAL   ]   #4 V10: composite=75.6 | Dir=87.5% Tot=66.7% Spr=66.7% BTTS=62.5% | CS=8.58%
+[2026-07-09T14:09:40.946Z] +1.282s S0114 [🔄 RECAL   ]   #5 V19: composite=75.6 | Dir=87.5% Tot=66.7% Spr=66.7% BTTS=62.5% | CS=8.58%
+[2026-07-09T14:09:40.946Z] +1.282s S0115 [🔄 RECAL   ] BOTTOM 5 VARIATIONS:
+[2026-07-09T14:09:40.946Z] +1.282s S0116 [🔄 RECAL   ]   #21 V22: composite=74.4 | Dir=87.5% Tot=62.5% Spr=66.7% BTTS=62.5% | CS=8.54%
+[2026-07-09T14:09:40.946Z] +1.282s S0117 [🔄 RECAL   ]   #22 V24: composite=74.4 | Dir=87.5% Tot=62.5% Spr=66.7% BTTS=62.5% | CS=8.53%
+[2026-07-09T14:09:40.946Z] +1.282s S0118 [🔄 RECAL   ]   #23 V25: composite=74.4 | Dir=87.5% Tot=62.5% Spr=66.7% BTTS=62.5% | CS=8.59%
+[2026-07-09T14:09:40.946Z] +1.282s S0119 [🔄 RECAL   ]   #24 V8: composite=74.0 | Dir=87.5% Tot=62.5% Spr=66.7% BTTS=58.3% | CS=8.45%
+[2026-07-09T14:09:40.946Z] +1.282s S0120 [🔄 RECAL   ]   #25 V7: composite=73.3 | Dir=83.3% Tot=66.7% Spr=66.7% BTTS=58.3% | CS=8.47%
+[2026-07-09T14:09:40.946Z] +1.282s S0121 [🔄 RECAL   ] Recalibrated params (avg of top-3): xGW=0.3033 xGOTW=0.2633 smW=0.1267 psW=0.1633 rho=0.0633 pace=0.0130
+[2026-07-09T14:09:40.953Z] +1.289s S0122 [🔄 RECAL   ] RECALIBRATED RESULT: composite=75.6 | Dir=21/24 Tot=16/24 Spr=16/24 BTTS=15/24 | CS=8.58%
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 5/7 — REINFORCEMENT: SELECT FINAL PARAMETERS
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.953Z] +1.289s S0123 [🔒 REINF   ] 🔒 LOCKED: V1 params (composite=75.6 >= recal 75.6)
+[2026-07-09T14:09:40.953Z] +1.289s S0124 [🔒 REINF   ] FINAL LOCKED PARAMETERS:
+[2026-07-09T14:09:40.953Z] +1.289s S0125 [🔒 REINF   ]   xGW=0.3 xGOTW=0.28 smW=0.12 psW=0.15
+[2026-07-09T14:09:40.953Z] +1.289s S0126 [🔒 REINF   ]   xAW=0.1 spW=0.05 possW=0.03 convW=0.05
+[2026-07-09T14:09:40.953Z] +1.289s S0127 [🔒 REINF   ]   rho=0.06 pace=0.012
+[2026-07-09T14:09:40.953Z] +1.289s S0128 [🔒 REINF   ]   Backtest: Dir=21/24(87.5%) Tot=16/24(66.7%) Spr=16/24(66.7%) BTTS=15/24(62.5%)
+[2026-07-09T14:09:40.953Z] +1.289s S0129 [🔒 REINF   ]   Correct Score: AvgProb=8.56% AvgRank=#6.1
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 6/7 — MODEL JULY 9 QF MATCH (FINAL CALIBRATED ENGINE)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.953Z] +1.289s S0130 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-09T14:09:40.953Z] +1.289s S0131 [🎯 PROJ    ] wc26-qf-097: FRA vs MAR (QF — Jul 9, 2026)
+[2026-07-09T14:09:40.953Z] +1.289s S0132 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-09T14:09:40.954Z] +1.290s S0133 [📥 INPUT   ] FRA: 4 data rows | MAR: 4 data rows
+[2026-07-09T14:09:40.954Z] +1.290s S0134 [⚡ LAMBDA  ] FRA: λ=2.358092 | xG=2.3000 xGOT=2.7925 xA=1.5950 poss=56.7% SOT=8.5 conv=100.0% tier=1.15x
+[2026-07-09T14:09:40.954Z] +1.290s S0135 [⚡ LAMBDA  ] MAR: λ=1.594136 | xG=1.8750 xGOT=1.8325 xA=1.1925 poss=61.7% SOT=5.3 conv=100.0% tier=1.03x
+[2026-07-09T14:09:40.954Z] +1.290s S0136 [💰 MARKET  ] ──── 1X2 MONEYLINE ────
+[2026-07-09T14:09:40.954Z] +1.290s S0137 [💰 MARKET  ]   MODEL: H=-123(55.2%) D=+435(18.7%) A=+283(26.1%)
+[2026-07-09T14:09:40.954Z] +1.290s S0138 [💰 MARKET  ]   BOOK:  H=-175 D=+290 A=+525
+[2026-07-09T14:09:40.954Z] +1.290s S0139 [💰 MARKET  ] ──── TO ADVANCE ────
+[2026-07-09T14:09:40.954Z] +1.290s S0140 [💰 MARKET  ]   MODEL: H=-194(66.0%) A=+194(34.0%)
+[2026-07-09T14:09:40.954Z] +1.290s S0141 [💰 MARKET  ]   BOOK:  H=null A=null
+[2026-07-09T14:09:40.954Z] +1.290s S0142 [💰 MARKET  ] ──── SPREAD (-1.5) ────
+[2026-07-09T14:09:40.954Z] +1.290s S0143 [💰 MARKET  ]   MODEL: H=+191(34.4%) A=-191(65.6%)
+[2026-07-09T14:09:40.954Z] +1.290s S0144 [💰 MARKET  ]   BOOK:  H=+160 A=-208
+[2026-07-09T14:09:40.954Z] +1.290s S0145 [💰 MARKET  ] ──── TOTAL (O/U 2.5) ────
+[2026-07-09T14:09:40.954Z] +1.290s S0146 [💰 MARKET  ]   MODEL: O=-308(75.5%) U=+308(24.5%)
+[2026-07-09T14:09:40.954Z] +1.290s S0147 [💰 MARKET  ]   BOOK:  O=+103 U=-120
+[2026-07-09T14:09:40.954Z] +1.290s S0148 [💰 MARKET  ] ──── BTTS ────
+[2026-07-09T14:09:40.954Z] +1.290s S0149 [💰 MARKET  ]   MODEL: Y=-254(71.7%) N=+254(28.3%)
+[2026-07-09T14:09:40.955Z] +1.291s S0150 [💰 MARKET  ]   BOOK:  Y=+100 N=-133
+[2026-07-09T14:09:40.955Z] +1.291s S0151 [💰 MARKET  ] ──── DOUBLE CHANCE ────
+[2026-07-09T14:09:40.955Z] +1.291s S0152 [💰 MARKET  ]   MODEL: HomeWD=-283(73.9%) AwayWD=+123(44.8%) NoDraw=-435(81.3%)
+[2026-07-09T14:09:40.955Z] +1.291s S0153 [💰 MARKET  ]   BOOK:  HomeWD=-769 AwayWD=+130 NoDraw=-400
+[2026-07-09T14:09:40.955Z] +1.291s S0154 [💰 MARKET  ] ──── PROJECTED SCORE ────
+[2026-07-09T14:09:40.955Z] +1.291s S0155 [💰 MARKET  ]   FRA 2.36 — 1.59 MAR (Total: 3.95)
+[2026-07-09T14:09:40.955Z] +1.291s S0156 [🎲 SCORE   ] ──── TOP 5 MOST LIKELY SCORES ────
+[2026-07-09T14:09:40.955Z] +1.291s S0157 [🎲 SCORE   ]   #1: FRA 2-1 MAR (8.52%)
+[2026-07-09T14:09:40.955Z] +1.291s S0158 [🎲 SCORE   ]   #2: FRA 1-1 MAR (6.79%)
+[2026-07-09T14:09:40.955Z] +1.291s S0159 [🎲 SCORE   ]   #3: FRA 2-2 MAR (6.79%)
+[2026-07-09T14:09:40.955Z] +1.291s S0160 [🎲 SCORE   ]   #4: FRA 3-1 MAR (6.69%)
+[2026-07-09T14:09:40.955Z] +1.291s S0161 [🎲 SCORE   ]   #5: FRA 1-2 MAR (5.76%)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  PHASE 7/7 — WRITE TO DATABASE + FINAL AUDIT
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.955Z] +1.291s S0162 [⚠️  WARN    ] DRY_RUN=1 — skipping ALL Phase 7 DB writes and audit (projection output above is the deliverable)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  FINAL AUDIT — VERIFY ALL COLUMNS NON-NULL
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.955Z] +1.291s S0163 [⚠️  WARN    ] DRY_RUN=1 — audit skipped (no rows were written)
+════════════════════════════════════════════════════════════════════════════════════════════════════
+  ═══ FINAL CERTIFICATION ═══
+════════════════════════════════════════════════════════════════════════════════════════════════════
+[2026-07-09T14:09:40.955Z] +1.291s S0164 [📤 OUTPUT  ] Engine: v23.0-500X-CORRECT-SCORE-RECALIBRATED-QF-JUL9
+[2026-07-09T14:09:40.955Z] +1.291s S0165 [📤 OUTPUT  ] Final Variation: V1 (composite=75.6)
+[2026-07-09T14:09:40.955Z] +1.291s S0166 [📤 OUTPUT  ] Backtest: Dir=21/24(87.5%) Tot=16/24(66.7%) Spr=16/24(66.7%) BTTS=15/24(62.5%)
+[2026-07-09T14:09:40.955Z] +1.291s S0167 [📤 OUTPUT  ] Correct Score: AvgProb=8.56% AvgRank=#6.1
+[2026-07-09T14:09:40.955Z] +1.291s S0168 [📤 OUTPUT  ] NULL Audit: SKIPPED (dry run)
+[2026-07-09T14:09:40.956Z] +1.292s S0169 [📤 OUTPUT  ] Session: 8 PASS | 0 FAIL | 3 WARN
+[2026-07-09T14:09:40.956Z] +1.292s S0170 [📤 OUTPUT  ] Duration: 1.3s
+[2026-07-09T14:09:40.956Z] +1.292s S0171 [🎯 PROJ    ] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[2026-07-09T14:09:40.956Z] +1.292s S0172 [🎯 PROJ    ] wc26-qf-097: FRA vs MAR
+[2026-07-09T14:09:40.956Z] +1.292s S0173 [🎯 PROJ    ]   Score: FRA 2.36 — 1.59 MAR
+[2026-07-09T14:09:40.956Z] +1.292s S0174 [🎯 PROJ    ]   ML: H=-123 D=+435 A=+283
+[2026-07-09T14:09:40.956Z] +1.292s S0175 [🎯 PROJ    ]   Advance: H=-194(66.0%) A=+194(34.0%)
+[2026-07-09T14:09:40.956Z] +1.292s S0176 [🎯 PROJ    ]   Spread(-1.5): H=+191 A=-191
+[2026-07-09T14:09:40.956Z] +1.292s S0177 [🎯 PROJ    ]   O/U(2.5): O=-308 U=+308
+[2026-07-09T14:09:40.956Z] +1.292s S0178 [🎯 PROJ    ]   BTTS: Y=-254 N=+254
+[2026-07-09T14:09:40.956Z] +1.292s S0179 [🎯 PROJ    ]   DC: HomeWD=-283 AwayWD=+123 NoDraw=-435
+[2026-07-09T14:09:40.956Z] +1.292s S0180 [✅ PASS    ] Database connection closed. Engine complete.
