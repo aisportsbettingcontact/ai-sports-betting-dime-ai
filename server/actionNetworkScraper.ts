@@ -39,6 +39,8 @@
  *   "nhl"   = NHL
  */
 
+import { debugLog } from "./_core/debugLogger";
+
 export type AnSport = "ncaab" | "nba" | "nhl" | "mlb";
 
 export interface AnGameOdds {
@@ -210,7 +212,7 @@ function findOutcome(
   // Debug log when a live line is being used as fallback (indicates game is in-progress
   // but DK has not yet posted a pre-game line — should be rare)
   if (result?.is_live === true) {
-    console.warn(
+    debugLog("ANApiOdds", "warn",
       `[ActionNetwork][findOutcome] WARNING: Using live in-game line as fallback ` +
       `(no pre-game line found) — side=${matcher.side ?? 'teamId=' + matcher.teamId} ` +
       `value=${result.value} odds=${result.odds} is_live=true`
@@ -286,16 +288,15 @@ export async function fetchActionNetworkOdds(
 
   // Log MLB specifically since it's a new integration
   if (sport === "mlb") {
-    console.log(
+    debugLog("ANApiOdds", "info",
       `[ActionNetwork][v2][MLB] Fetching MLB run line + total + ML odds for ${date}` +
       ` | bookIds=${BOOK_IDS} (30=Open, 68=DK NJ, 69=FD NJ)`
     );
   }
 
-  console.log(
-    `[ActionNetwork][v2] Fetching ${sport.toUpperCase()} Open + DK NJ odds for ${date} ...`
+  debugLog("ANApiOdds", "info",
+    `[ActionNetwork][v2] Fetching ${sport.toUpperCase()} Open + DK NJ odds for ${date} | URL: ${url}`
   );
-  console.log(`[ActionNetwork][v2] URL: ${url}`);
 
   // ── Fetch with exponential backoff retry (3 attempts: 2s → 4s → 8s) ──────────
   // Handles transient TLS/network failures ("Client network socket disconnected").
@@ -304,7 +305,7 @@ export async function fetchActionNetworkOdds(
   let resp: Response | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      console.log(
+      debugLog("ANApiOdds", "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch attempt ${attempt}/${MAX_ATTEMPTS}`
       );
       const r = await fetch(url, { headers: AN_HEADERS });
@@ -313,7 +314,7 @@ export async function fetchActionNetworkOdds(
           `[ActionNetwork][v2] HTTP ${r.status} for ${sport} ${date}`
         );
       }
-      console.log(
+      debugLog("ANApiOdds", "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch OK on attempt ${attempt}/${MAX_ATTEMPTS} (status=${r.status})`
       );
       resp = r;
@@ -322,7 +323,7 @@ export async function fetchActionNetworkOdds(
       const errMsg = err instanceof Error ? err.message : String(err);
       if (attempt < MAX_ATTEMPTS) {
         const delayMs = RETRY_DELAYS_MS[attempt - 1];
-        console.warn(
+        debugLog("ANApiOdds", "warn",
           `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: attempt ${attempt}/${MAX_ATTEMPTS} FAILED — ` +
           `retrying in ${delayMs}ms | error: ${errMsg}`
         );
@@ -340,7 +341,7 @@ export async function fetchActionNetworkOdds(
   const data = (await resp.json()) as AnV2ApiResponse;
   const games = data?.games ?? [];
 
-  console.log(
+  debugLog("ANApiOdds", "info",
     `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: ${games.length} total games from API`
   );
 
@@ -357,7 +358,7 @@ export async function fetchActionNetworkOdds(
     const homeTeam = teamMap.get(game.home_team_id);
 
     if (!awayTeam || !homeTeam) {
-      console.warn(
+      debugLog("ANApiOdds", "warn",
         `[ActionNetwork][v2] SKIP game ${game.id}: missing team data ` +
         `(awayId=${game.away_team_id}, homeId=${game.home_team_id})`
       );
@@ -396,11 +397,11 @@ export async function fetchActionNetworkOdds(
     const dkMlAway     = findOutcome(dkEvent?.moneyline, { teamId: game.away_team_id });
     const dkMlHome     = findOutcome(dkEvent?.moneyline, { teamId: game.home_team_id });
 
-    // Log every game with full detail — no noise, no filtering
+    // Log every game with full detail — redirected to DB to avoid stdout noise
     const hasDk = !!(dkSpreadAway || dkTotalOver || dkMlAway);
     const hasOpen = !!(openSpreadAway || openTotalOver || openMlAway);
 
-    console.log(
+    debugLog("ANApiOdds", "info",
       `[ActionNetwork][v2] ${sport.toUpperCase()} ${hasDk ? "✓DK" : "✗DK"} ${hasOpen ? "✓OPEN" : "✗OPEN"} | ` +
       `${gameLabel} | ` +
       `Open: spread=${openSpreadAway?.value ?? "null"}(${openSpreadAway?.odds ?? "null"}) ` +
@@ -458,7 +459,7 @@ export async function fetchActionNetworkOdds(
     });
   }
 
-  console.log(
+  debugLog("ANApiOdds", "info",
     `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: ` +
     `${results.length} games returned | ` +
     `${results.filter(g => g.dkAwaySpread != null || g.dkTotal != null || g.dkAwayML != null).length} with DK NJ odds | ` +
