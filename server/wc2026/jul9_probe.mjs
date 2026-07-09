@@ -24,8 +24,12 @@ const CANDIDATE_SCHEMAS = [
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
-  const conn = await mysql.createConnection(process.env.DATABASE_URL);
-  out('CONN', 'Database connection established (read-only probe)');
+  // TiDB Serverless mandates TLS ("insecure transport prohibited") — force it.
+  const conn = await mysql.createConnection({
+    uri: process.env.DATABASE_URL,
+    ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true },
+  });
+  out('CONN', 'Database connection established (read-only probe, TLS)');
 
   // Resolve which schema holds the wc2026 tables: prefer the connection's
   // default database, fall back to scanning the cloned migration schemas.
