@@ -1,0 +1,67 @@
+# WC2026 v23 Jul 9 engine — one-off model run for FRA vs MAR (wc26-qf-097).
+#
+# Manual trigger only. Runs v23_jul9_engine.mjs on a CI runner (real TiDB
+# egress) against the production DB via the DATABASE_URL repo secret:
+# 500x backtest -> correct-score grade -> recalibration -> reinforcement ->
+# model QF-097 -> write wc2026MatchOdds + wc2026_model_projections -> audit.
+#
+# This is the same "run the model as a script against the production tables"
+# path used for the Jul 7 (v22) run — NO deploy, NO Manus involvement. The
+# live site serves the new rows because it reads the same tables.
+name: WC Jul9 Engine (v23 FRA vs MAR)
+
+# Same registration constraint as wc-jul9-probe.yml: dispatch-only workflows
+# aren't registered off the default branch, so the run is triggered by a
+# branch-scoped push touching the engine trigger file — one deliberate push,
+# one model run.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/world-cup-france-morocco-model-vsan3o]
+    paths:
+      - server/wc2026/v23_jul9_engine.trigger
+
+permissions:
+  contents: read
+
+jobs:
+  model:
+    name: "v23 engine — model wc26-qf-097"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # The trigger file's first line carries DRY_RUN=0|1. DRY_RUN=1 runs the
+      # full backtest+model pipeline but skips every Phase 7 DB write.
+      - name: Resolve DRY_RUN from trigger file
+        run: |
+          MODE=$(grep -o 'DRY_RUN=[01]' server/wc2026/v23_jul9_engine.trigger | head -1 | cut -d= -f2)
+          echo "DRY_RUN=${MODE:-1}" >> "$GITHUB_ENV"
+          echo "Resolved DRY_RUN=${MODE:-1}"
+
+      # DATABASE_URL (old Manus production cluster) is preferred when the
+      # secret exists; otherwise fall back to the migration TARGET clone —
+      # safe for DRY_RUN because no writes happen.
+      - name: Run v23 engine
+        run: node server/wc2026/v23_jul9_engine.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.TARGET_DATABASE_URL }}
+          DRY_RUN: ${{ env.DRY_RUN }}
+
+      - name: Upload modeling log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wc2026modeling-jul9
+          path: wc2026modeling_jul9.txt
+          if-no-files-found: warn

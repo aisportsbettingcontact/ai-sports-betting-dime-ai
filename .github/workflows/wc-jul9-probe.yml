@@ -1,0 +1,57 @@
+# WC2026 Jul 9 probe — recon for the v23 FRA vs MAR (wc26-qf-097) model run.
+#
+# Manual trigger only. Two independent jobs:
+#   db-probe    — READ-ONLY queries against the production DB (DATABASE_URL
+#                 secret): QF-097 fixture orientation, Jul 7 final scores,
+#                 existing book odds columns, xG data completeness.
+#   odds-probe  — scrapes fresh bet365 odds for France - Morocco from
+#                 BetExplorer AJAX endpoints (CI runner has real egress,
+#                 unlike sandboxed agent environments).
+#
+# Neither job writes anything anywhere. Output is read from the job logs to
+# assemble v23_jul9_engine.mjs — the same recon the v22 Jul 7 run used.
+name: WC Jul9 Probe (read-only)
+
+# workflow_dispatch alone can't be used here: this workflow lives only on the
+# model feature branch, and GitHub only registers dispatchable workflows from
+# the default branch. A branch-scoped push trigger with a paths filter gives
+# the same one-shot behavior — it fires only when the probe trigger file
+# changes on this branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/world-cup-france-morocco-model-vsan3o]
+    paths:
+      - server/wc2026/jul9_probe.trigger
+
+permissions:
+  contents: read
+
+jobs:
+  # Read-only probe against the migration TARGET cluster — a fresh clone of
+  # the production data, so fixture ids, Jul 7 final scores, and existing
+  # book odds columns match production content.
+  db-probe:
+    name: "DB probe (read-only, target clone)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run DB probe
+        run: node server/wc2026/jul9_probe.mjs
+        env:
+          DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+
+  # odds-probe + secret-scan jobs removed after capture:
+  #   odds  -> run 29022964715 (event jJ5yWPhU, bet365.us bid=549)
+  #   scan  -> run 29023512465 (only TARGET_DATABASE_URL is SET)
