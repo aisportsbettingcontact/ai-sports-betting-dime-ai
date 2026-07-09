@@ -41,10 +41,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # The trigger file's first line carries DRY_RUN=0|1. DRY_RUN=1 runs the
+      # full backtest+model pipeline but skips every Phase 7 DB write.
+      - name: Resolve DRY_RUN from trigger file
+        run: |
+          MODE=$(grep -o 'DRY_RUN=[01]' server/wc2026/v23_jul9_engine.trigger | head -1 | cut -d= -f2)
+          echo "DRY_RUN=${MODE:-1}" >> "$GITHUB_ENV"
+          echo "Resolved DRY_RUN=${MODE:-1}"
+
+      # DATABASE_URL (old Manus production cluster) is preferred when the
+      # secret exists; otherwise fall back to the migration TARGET clone —
+      # safe for DRY_RUN because no writes happen.
       - name: Run v23 engine
         run: node server/wc2026/v23_jul9_engine.mjs
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.TARGET_DATABASE_URL }}
+          DRY_RUN: ${{ env.DRY_RUN }}
 
       - name: Upload modeling log
         if: always()
