@@ -3,8 +3,10 @@
  * These are required for the Refresh Books scraper to auto-login.
  */
 import { describe, it, expect } from "vitest";
+import { IS_CI } from "./_core/ciTestGuard";
 
-describe("VSiN credentials", () => {
+// Presence-probe — scoped out of CI; validates a real operator environment.
+describe.skipIf(IS_CI)("VSiN credentials", () => {
   it("VSIN_EMAIL is set and non-empty", () => {
     expect(process.env.VSIN_EMAIL).toBeTruthy();
     expect(process.env.VSIN_EMAIL?.length).toBeGreaterThan(0);
