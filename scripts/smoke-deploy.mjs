@@ -99,6 +99,13 @@ await check("bot UA on / → v2 landing prerender (SEO snapshot)", async () => {
   expect(!/39FF14/i.test(html), "forbidden neon #39FF14 present in bot snapshot (brand law)");
 });
 
+await check("vendored /manus-storage asset → 200 image (no Manus dependency)", async () => {
+  const res = await fetch(`${base}/manus-storage/logo-aisportsbetting_429c188f.jpg`, { redirect: "follow" });
+  expect(res.status === 200, `status ${res.status}`);
+  const type = res.headers.get("content-type") ?? "";
+  expect(type.startsWith("image/"), `content-type ${type} — storage proxy failed instead of serving the vendored file`);
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 process.exit(failed.length === 0 ? 0 : 1);
