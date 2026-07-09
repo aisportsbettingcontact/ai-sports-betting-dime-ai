@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "_comment": "WORKAROUND — the Vercel project currently has Root Directory set to dime-ai/ (should be the repo root; see references/railway-vercel-deploy.md). While misrooted, this config builds the REAL app from the parent directory so PR previews still work. Once Root Directory is cleared in the dashboard, the repo-root vercel.json takes over and this file is ignored — delete it then.",
   "framework": null,
   "installCommand": "corepack enable",
   "buildCommand": "cd .. && PUPPETEER_SKIP_DOWNLOAD=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile && pnpm run build:client && rm -rf dime-ai/.vercel-output && cp -r dist/public dime-ai/.vercel-output",
