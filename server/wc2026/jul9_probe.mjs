@@ -16,10 +16,31 @@ function out(section, msg) {
   console.log(`[JUL9-PROBE] [${section}] ${msg}`);
 }
 
+// The four application schemas cloned in the migration (from db-query.yml).
+const CANDIDATE_SCHEMAS = [
+  '9w3eZzSJhkkc5sJ763dXxA', 'MW3FicTy7ae3qrm8dx8Lua',
+  'ZTNf5uThCjBDEX2kNSs593', 'mLJ3UFRGiMBjj6Ve3qzhT4',
+];
+
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
   const conn = await mysql.createConnection(process.env.DATABASE_URL);
   out('CONN', 'Database connection established (read-only probe)');
+
+  // Resolve which schema holds the wc2026 tables: prefer the connection's
+  // default database, fall back to scanning the cloned migration schemas.
+  const [[dbRow]] = await conn.query('SELECT DATABASE() AS db');
+  out('CONN', `default schema: ${dbRow.db ?? '(none)'}`);
+  let schema = null;
+  const toCheck = dbRow.db ? [dbRow.db, ...CANDIDATE_SCHEMAS] : CANDIDATE_SCHEMAS;
+  for (const s of toCheck) {
+    const [rows] = await conn.query(
+      `SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = ? AND table_name = 'wc2026_matches'`, [s]);
+    if (rows[0].n > 0) { schema = s; break; }
+  }
+  if (!schema) throw new Error(`wc2026_matches not found in any schema (checked: ${toCheck.join(', ')})`);
+  out('CONN', `wc2026 schema resolved: ${schema}`);
+  await conn.query(`USE \`${schema}\``);
 
   // 1. Fixtures: Jul 7 R16 results + all QF rows
   const ids = ['wc26-r16-095', 'wc26-r16-096', 'wc26-qf-097', 'wc26-qf-098', 'wc26-qf-099', 'wc26-qf-100'];
