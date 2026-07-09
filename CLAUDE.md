@@ -57,6 +57,9 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   feed inside the Dime shell (route `/feed` → "AI Model Projections" tab)
 - Chat page: `client/src/pages/DimeChat.tsx` (`/chat`, SSE via `POST /api/dime/chat`) — keep the
   streaming core when reskinning
+- `references/ai-gateway-setup.md` — routing all Claude traffic (Anthropic SDK via
+  `server/_core/anthropicClient.ts`, Agent SDK via `server/_core/dimeAgent.ts`, Claude Code CLI)
+  through Vercel AI Gateway with `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
 
 ## Deploy law (IMPORTANT)
 

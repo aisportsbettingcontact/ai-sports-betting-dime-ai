@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient } from "./anthropicClient";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = createAnthropicClient();
 
 export const CLAUDE_MODEL = "claude-fable-5";
 

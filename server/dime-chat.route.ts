@@ -4,7 +4,9 @@
  * POST /api/dime/chat
  * Streams Claude Fable 5 responses via Server-Sent Events (SSE).
  *
- * Env:  ANTHROPIC_API_KEY  (platform-injected secret)
+ * Env:  ANTHROPIC_API_KEY (direct) — or ANTHROPIC_AUTH_TOKEN +
+ *       ANTHROPIC_BASE_URL to route through Vercel AI Gateway
+ *       (see references/ai-gateway-setup.md)
  * Deps: @anthropic-ai/sdk (already installed)
  *
  * Mount in server/_core/index.ts:
@@ -16,6 +18,7 @@ import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
 import { sdk } from "./_core/sdk";
+import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 
 const MODEL = "claude-fable-5";
 const MAX_TOKENS = 2048;
@@ -90,14 +93,16 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!hasAnthropicCredentials()) {
     dimeLog("dime.chat.error", requestId, {
       errorClass: "ConfigurationError",
       statusCode: 500,
-      detail: "ANTHROPIC_API_KEY not configured",
+      detail: "Anthropic credentials not configured",
     });
-    res.status(500).json({ error: "ANTHROPIC_API_KEY is not configured." });
+    res.status(500).json({
+      error:
+        "Anthropic credentials are not configured. Set ANTHROPIC_API_KEY (direct) or ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL (AI Gateway).",
+    });
     return;
   }
 
@@ -134,7 +139,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = createAnthropicClient();
   const abort = new AbortController();
   let aborted = false;
 
