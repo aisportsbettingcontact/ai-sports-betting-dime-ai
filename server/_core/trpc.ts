@@ -110,6 +110,18 @@ function buildAllowedOrigins(): Set<string> {
     }
   }
 
+  // Additional exact origins (comma-separated) for the split Railway/Vercel
+  // deployment — e.g. the Vercel production domain when the frontend is hosted
+  // separately from this backend, or the Railway domain itself while testing.
+  //   ADDITIONAL_ALLOWED_ORIGINS=https://myapp.vercel.app,https://myapp.up.railway.app
+  for (const raw of (process.env.ADDITIONAL_ALLOWED_ORIGINS ?? "").split(",")) {
+    const extra = raw.trim().replace(/\/$/, "").toLowerCase();
+    if (extra) {
+      origins.add(extra);
+      console.log(`[CSRF] Allowed origin (ADDITIONAL_ALLOWED_ORIGINS): ${extra}`);
+    }
+  }
+
   if (!ENV.isProduction) {
     // Development: allow localhost on common ports
     const devOrigins = [
@@ -139,6 +151,22 @@ function buildAllowedOrigins(): Set<string> {
 // Build once at module load time — origins don't change at runtime.
 const ALLOWED_ORIGINS = buildAllowedOrigins();
 
+// Operator-controlled origin SUFFIXES (comma-separated, https-only) for
+// per-deploy preview domains that can't be enumerated in advance — e.g.
+// Vercel previews (`https://<project>-<hash>-<team>.vercel.app`):
+//   ALLOWED_ORIGIN_SUFFIXES=-yourteam.vercel.app
+// ⚠️ CSRF caveat: every origin matching a listed suffix is trusted for
+// mutations. Never list a bare shared-hosting suffix like ".vercel.app" or
+// ".up.railway.app" — anyone can deploy there. Scope suffixes to a segment
+// only your team controls (project/team slug).
+const ALLOWED_ORIGIN_SUFFIXES: string[] = (process.env.ALLOWED_ORIGIN_SUFFIXES ?? "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+if (ALLOWED_ORIGIN_SUFFIXES.length > 0) {
+  console.log(`[CSRF] Allowed origin suffixes: ${ALLOWED_ORIGIN_SUFFIXES.join(", ")}`);
+}
+
 /**
  * Determine whether a given Origin header value is permitted.
  *
@@ -160,6 +188,16 @@ function isOriginAllowed(origin: string | undefined): boolean {
 
   // [CHECK 1] Static set: PUBLIC_ORIGIN + www variant + http variant + dev localhost
   if (ALLOWED_ORIGINS.has(normalized)) return true;
+
+  // [CHECK 1b] Operator-configured suffixes (Vercel preview deployments etc.)
+  // https-only; see ALLOWED_ORIGIN_SUFFIXES above for the CSRF scoping rules.
+  if (
+    normalized.startsWith("https://") &&
+    ALLOWED_ORIGIN_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
+  ) {
+    console.log(`[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${normalized}`);
+    return true;
+  }
 
   // [CHECK 2] Manus deployment domains (*.manus.space)
   // The app is deployed on both the custom domain AND a *.manus.space subdomain.

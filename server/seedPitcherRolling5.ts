@@ -358,7 +358,11 @@ export async function seedPitcherRolling5(): Promise<{
 }
 
 // ─── CLI Entry Point ──────────────────────────────────────────────────────────
-if (import.meta.url === `file://${process.argv[1]}`) {
+// NOTE: must match on the script filename, not `import.meta.url === file://argv[1]` —
+// inside the esbuild server bundle every module's import.meta.url equals the entry
+// file's URL, so that comparison is true at server boot and process.exit() here
+// kills the production server (observed as an instant crash at Railway boot).
+if (process.argv[1]?.endsWith("seedPitcherRolling5.ts")) {
   seedPitcherRolling5()
     .then((r) => {
       console.log("\n[DONE]", r);
