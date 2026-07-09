@@ -47,6 +47,9 @@
 
 import * as cheerio from "cheerio";
 import { MLB_BY_ABBREV } from "../shared/mlbTeams.js";
+import { logToDb } from "./dbLogger";
+
+const ROTO_SRC = "RotoScraper";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -252,7 +255,7 @@ function parseLineupHtml(
 
   const cards = $(".lineup.is-mlb");
   const cardsFound = cards.length;
-  console.log(`${tag} Found ${cardsFound} .lineup.is-mlb cards on ${dateScope} page`);
+  logToDb(ROTO_SRC, 'info', `${tag} Found ${cardsFound} .lineup.is-mlb cards on ${dateScope} page`);
 
   let cardsParsed = 0;
   let cardsSkipped = 0;
@@ -276,7 +279,7 @@ function parseLineupHtml(
       const homeTeam = MLB_BY_ABBREV.get(homeAbbrev);
 
       if (!awayTeam || !homeTeam) {
-        console.warn(
+        logToDb(ROTO_SRC, 'warn',
           `${cardTag} SKIP — unknown team(s): ` +
           `away="${rawAway}"→"${awayAbbrev}" (${awayTeam ? "found" : "MISSING"}) | ` +
           `home="${rawHome}"→"${homeAbbrev}" (${homeTeam ? "found" : "MISSING"})`
@@ -292,7 +295,7 @@ function parseLineupHtml(
         $card.find(".lineup__meta").first().children().first().text().trim() ||
         "TBD";
 
-      console.log(`${cardTag} Parsing ${awayAbbrev} @ ${homeAbbrev} | startTime="${startTime}"`);
+      logToDb(ROTO_SRC, 'info', `${cardTag} Parsing ${awayAbbrev} @ ${homeAbbrev} | startTime="${startTime}"`);
 
       // ── Parse one team's lineup column ────────────────────────────────────
       const parseColumn = (
@@ -334,15 +337,15 @@ function parseLineupHtml(
 
           if (pitcherName) {
             pitcher = { name: pitcherName, hand, era, rotowireId, confirmed };
-            console.log(
+            logToDb(ROTO_SRC, 'info',
               `${colTag} Pitcher: "${pitcherName}" (${hand}HP) | era="${era}" | ` +
               `rotowireId=${rotowireId ?? "null"} | confirmed=${confirmed}`
             );
           } else {
-            console.warn(`${colTag} Pitcher highlight found but name is empty (TBD)`);
+            logToDb(ROTO_SRC, 'warn', `${colTag} Pitcher highlight found but name is empty (TBD)`);
           }
         } else {
-          console.warn(`${colTag} No .lineup__player-highlight found — pitcher TBD`);
+          logToDb(ROTO_SRC, 'warn', `${colTag} No .lineup__player-highlight found — pitcher TBD`);
         }
 
         // ── Batting lineup ────────────────────────────────────────────────
@@ -364,7 +367,7 @@ function parseLineupHtml(
           const bats = $p.find(".lineup__bats").text().trim() || "?";
 
           if (!name) {
-            console.warn(`${colTag} Empty player name at batting order ${battingOrder}`);
+            logToDb(ROTO_SRC, 'warn', `${colTag} Empty player name at batting order ${battingOrder}`);
             return;
           }
 
@@ -372,13 +375,13 @@ function parseLineupHtml(
         });
 
         if (lineup.length > 0) {
-          console.log(
+          logToDb(ROTO_SRC, 'info',
             `${colTag} Lineup: ${lineup.length}/9 players | confirmed=${lineupConfirmed} | ` +
             `1: ${lineup[0]?.name ?? "?"} (${lineup[0]?.position ?? "?"}, ${lineup[0]?.bats ?? "?"}B) | ` +
             `4: ${lineup[3]?.name ?? "?"} (${lineup[3]?.position ?? "?"}, ${lineup[3]?.bats ?? "?"}B)`
           );
         } else {
-          console.log(`${colTag} Lineup: not yet posted (0 players)`);
+          logToDb(ROTO_SRC, 'info', `${colTag} Lineup: not yet posted (0 players)`);
         }
 
         return { pitcher, lineup, lineupConfirmed };
@@ -400,16 +403,16 @@ function parseLineupHtml(
 
         if (weatherText || isDome) {
           weather = parseWeatherText(weatherText, isDome);
-          console.log(
+          logToDb(ROTO_SRC, 'info',
             `${cardTag} Weather: ${weather.icon} ${weather.temp} | ` +
             `wind="${weather.wind}" | precip=${weather.precip}% | dome=${weather.dome} | ` +
             `raw="${weatherText}"`
           );
         } else {
-          console.warn(`${cardTag} No weather text in .lineup__bottom`);
+          logToDb(ROTO_SRC, 'warn', `${cardTag} No weather text in .lineup__bottom`);
         }
       } else {
-        console.warn(`${cardTag} No .lineup__bottom found`);
+        logToDb(ROTO_SRC, 'warn', `${cardTag} No .lineup__bottom found`);
       }
 
       // ── Umpire ─────────────────────────────────────────────────────────────
@@ -436,7 +439,7 @@ function parseLineupHtml(
             .replace(/\s+/g, " ")
             .trim() || null;
         }
-        if (umpire) console.log(`${cardTag} Umpire: "${umpire}"`);
+        if (umpire) logToDb(ROTO_SRC, 'info', `${cardTag} Umpire: "${umpire}"`);
       }
 
       // ── Assemble ───────────────────────────────────────────────────────────
@@ -457,7 +460,7 @@ function parseLineupHtml(
       games.push(game);
       cardsParsed++;
 
-      console.log(
+      logToDb(ROTO_SRC, 'info',
         `${cardTag} OK ${awayAbbrev} @ ${homeAbbrev} | ` +
         `awayP=${awayData.pitcher?.name ?? "TBD"} | homeP=${homeData.pitcher?.name ?? "TBD"} | ` +
         `awayLineup=${awayData.lineup.length}/9 | homeLineup=${homeData.lineup.length}/9 | ` +
@@ -466,7 +469,7 @@ function parseLineupHtml(
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${cardTag} PARSE ERROR: ${msg}`);
+      logToDb(ROTO_SRC, 'error', `${cardTag} PARSE ERROR: ${msg}`);
       parseErrors++;
     }
   });
@@ -478,7 +481,7 @@ function parseLineupHtml(
 
 async function fetchLineupPage(url: string, tag: string): Promise<{ html: string; httpStatus: number; fetchMs: number }> {
   const fetchStart = Date.now();
-  console.log(`${tag} GET ${url}`);
+  logToDb(ROTO_SRC, 'info', `${tag} GET ${url}`);
 
   const resp = await fetch(url, {
     headers: {
@@ -494,7 +497,7 @@ async function fetchLineupPage(url: string, tag: string): Promise<{ html: string
 
   const fetchMs = Date.now() - fetchStart;
   const html = await resp.text();
-  console.log(`${tag} HTTP ${resp.status} in ${fetchMs}ms | HTML ${html.length} chars`);
+  logToDb(ROTO_SRC, 'info', `${tag} HTTP ${resp.status} in ${fetchMs}ms | HTML ${html.length} chars`);
 
   return { html, httpStatus: resp.status, fetchMs };
 }
@@ -517,7 +520,7 @@ export async function scrapeRotowireLineupsToday(): Promise<ScrapeRotowireResult
     ({ html, httpStatus, fetchMs } = await fetchLineupPage(TODAY_URL, tag));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Fetch failed: ${msg}`);
+    logToDb(ROTO_SRC, 'error', `${tag} Fetch failed: ${msg}`);
     return {
       games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
       scrapedAt: Date.now(), httpStatus: 0, fetchMs: 0, parseMs: 0, dateScope: "today",
@@ -525,7 +528,7 @@ export async function scrapeRotowireLineupsToday(): Promise<ScrapeRotowireResult
   }
 
   if (httpStatus !== 200) {
-    console.error(`${tag} Non-200 HTTP status: ${httpStatus}`);
+    logToDb(ROTO_SRC, 'error', `${tag} Non-200 HTTP status: ${httpStatus}`);
     return {
       games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
       scrapedAt: Date.now(), httpStatus, fetchMs, parseMs: 0, dateScope: "today",
@@ -537,7 +540,7 @@ export async function scrapeRotowireLineupsToday(): Promise<ScrapeRotowireResult
   const parseMs = Date.now() - parseStart;
   const totalMs = Date.now() - startMs;
 
-  console.log(
+  logToDb(ROTO_SRC, 'info',
     `${tag} DONE | cardsFound=${result.cardsFound} parsed=${result.cardsParsed} ` +
     `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
     `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
@@ -563,7 +566,7 @@ export async function scrapeRotowireLineupsTomorrow(): Promise<ScrapeRotowireRes
     ({ html, httpStatus, fetchMs } = await fetchLineupPage(TOMORROW_URL, tag));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Fetch failed: ${msg}`);
+    logToDb(ROTO_SRC, 'error', `${tag} Fetch failed: ${msg}`);
     return {
       games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
       scrapedAt: Date.now(), httpStatus: 0, fetchMs: 0, parseMs: 0, dateScope: "tomorrow",
@@ -571,7 +574,7 @@ export async function scrapeRotowireLineupsTomorrow(): Promise<ScrapeRotowireRes
   }
 
   if (httpStatus !== 200) {
-    console.error(`${tag} Non-200 HTTP status: ${httpStatus}`);
+    logToDb(ROTO_SRC, 'error', `${tag} Non-200 HTTP status: ${httpStatus}`);
     return {
       games: [], cardsFound: 0, cardsParsed: 0, cardsSkipped: 0, parseErrors: 1,
       scrapedAt: Date.now(), httpStatus, fetchMs, parseMs: 0, dateScope: "tomorrow",
@@ -583,7 +586,7 @@ export async function scrapeRotowireLineupsTomorrow(): Promise<ScrapeRotowireRes
   const parseMs = Date.now() - parseStart;
   const totalMs = Date.now() - startMs;
 
-  console.log(
+  logToDb(ROTO_SRC, 'info',
     `${tag} DONE | cardsFound=${result.cardsFound} parsed=${result.cardsParsed} ` +
     `skipped=${result.cardsSkipped} errors=${result.parseErrors} | ` +
     `fetchMs=${fetchMs} parseMs=${parseMs} totalMs=${totalMs}`
@@ -603,7 +606,7 @@ export async function scrapeRotowireLineupsBoth(): Promise<{
   combined: RotoLineupGame[];
 }> {
   const tag = "[RotoScraper][both]";
-  console.log(`${tag} Scraping today + tomorrow in parallel`);
+  logToDb(ROTO_SRC, 'info', `${tag} Scraping today + tomorrow in parallel`);
 
   const [today, tomorrow] = await Promise.all([
     scrapeRotowireLineupsToday(),
@@ -622,7 +625,7 @@ export async function scrapeRotowireLineupsBoth(): Promise<{
     }
   }
 
-  console.log(
+  logToDb(ROTO_SRC, 'info',
     `${tag} Combined: today=${today.cardsParsed} + tomorrow=${tomorrow.cardsParsed} → ` +
     `${combined.length} unique games`
   );
@@ -651,7 +654,7 @@ export async function upsertLineupsToDB(
   const tag = "[RotoScraper][upsertDB]";
 
   if (games.length === 0) {
-    console.log(`${tag} No games to upsert`);
+    logToDb(ROTO_SRC, 'info', `${tag} No games to upsert`);
     return { saved: 0, skipped: 0, errors: 0, gameIdMap: new Map() };
   }
 
@@ -668,11 +671,11 @@ export async function upsertLineupsToDB(
   const plusSevenDate = new Date(dateFrom + "T12:00:00Z");
   plusSevenDate.setUTCDate(plusSevenDate.getUTCDate() + (targetDate ? 0 : 6));
   const dateTo = targetDate ?? plusSevenDate.toISOString().slice(0, 10);
-  console.log(`${tag} Date window: ${dateFrom} → ${dateTo} (targetDate=${targetDate ?? "none, using 7-day window"})`);
+  logToDb(ROTO_SRC, 'info', `${tag} Date window: ${dateFrom} → ${dateTo} (targetDate=${targetDate ?? "none, using 7-day window"})`);
 
   const db = await getDb();
   if (!db) {
-    console.warn(`${tag} DB not available — skipping all ${games.length} games`);
+    logToDb(ROTO_SRC, 'warn', `${tag} DB not available — skipping all ${games.length} games`);
     return { saved: 0, skipped: games.length, errors: 0, gameIdMap: new Map() };
   }
 
@@ -700,7 +703,7 @@ export async function upsertLineupsToDB(
       nameToMlbamId.set(normalize(p.name), p.mlbamId);
     }
   }
-  console.log(`${tag} Loaded ${nameToMlbamId.size} active players for mlbamId lookup`);
+  logToDb(ROTO_SRC, 'info', `${tag} Loaded ${nameToMlbamId.size} active players for mlbamId lookup`);
 
   const resolveMlbamId = (name: string | null | undefined): number | null => {
     if (!name) return null;
@@ -734,7 +737,7 @@ export async function upsertLineupsToDB(
         .limit(1);
 
       if (rows.length === 0) {
-        console.log(`${gameTag} NO_MATCH in DB — skipping (Spring Training or unseeded game)`);
+        logToDb(ROTO_SRC, 'info', `${gameTag} NO_MATCH in DB — skipping (Spring Training or unseeded game)`);
         skipped++;
         continue;
       }
@@ -785,7 +788,7 @@ export async function upsertLineupsToDB(
         umpire: g.umpire ?? null,
       };
 
-      console.log(
+      logToDb(ROTO_SRC, 'info',
         `${gameTag} Upserting gameId=${gameId} | ` +
         `awayP="${payload.awayPitcherName ?? "TBD"}" (${payload.awayPitcherHand ?? "?"}) | ` +
         `homeP="${payload.homePitcherName ?? "TBD"}" (${payload.homePitcherHand ?? "?"}) | ` +
@@ -799,11 +802,11 @@ export async function upsertLineupsToDB(
       saved++;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${gameTag} Error: ${msg}`);
+      logToDb(ROTO_SRC, 'error', `${gameTag} Error: ${msg}`);
       errors++;
     }
   }
 
-  console.log(`${tag} Done — saved=${saved} skipped=${skipped} errors=${errors} gameIdMap=${gameIdMap.size}`);
+  logToDb(ROTO_SRC, 'info', `${tag} Done — saved=${saved} skipped=${skipped} errors=${errors} gameIdMap=${gameIdMap.size}`);
   return { saved, skipped, errors, gameIdMap };
 }
