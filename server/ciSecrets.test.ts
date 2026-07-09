@@ -53,6 +53,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { IS_CI } from "./_core/ciTestGuard";
 
 // ─── Secret descriptor type ───────────────────────────────────────────────────
 type SecretDescriptor = {
@@ -126,7 +127,9 @@ function safePreview(value: string): string {
 }
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
-describe("CI secrets validation", () => {
+// Presence-probes are scoped out of CI (secrets deliberately not configured
+// there) — run locally/operator-side to validate a real environment.
+describe.skipIf(IS_CI)("CI secrets validation", () => {
   it("All required GitHub Actions secrets are present and correctly formatted", () => {
     console.log("[INPUT] Validating CI secrets in test environment...");
     console.log(`[INPUT] NODE_ENV: ${process.env.NODE_ENV ?? "(not set)"}`);
