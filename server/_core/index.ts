@@ -658,10 +658,6 @@ async function startServer() {
     console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  // Registered via server.once("listening") — NOT as a listen() callback — so it
-  // runs exactly once even when the IPv6 attempt fails and we re-listen on IPv4
-  // (a listen(cb) callback from a failed attempt would stay armed and fire again
-  // on the fallback bind, double-starting every scheduler below).
   const onListening = () => {
     const addr = server.address();
     console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
@@ -875,19 +871,22 @@ async function startServer() {
     scheduleNextCutoffInvalidation();
   };
 
-  // Bind dual-stack ("::" = IPv6 + IPv4-mapped). Railway's edge proxy dials the
-  // container over IPv6; an IPv4-only 0.0.0.0 bind makes every request 502 at
-  // the edge with "connection dial timeout" before it reaches Express. Hosts
-  // without an IPv6 stack reject "::" with EAFNOSUPPORT — fall back to IPv4.
-  server.once("listening", onListening);
-  server.once("error", (err: NodeJS.ErrnoException) => {
-    if (err.code === "EAFNOSUPPORT" && !server.listening) {
-      console.warn(`[SERVER_STARTUP] IPv6 unavailable (EAFNOSUPPORT) — falling back to IPv4-only 0.0.0.0 bind`);
-      server.listen(port, "0.0.0.0");
-    }
+  // Host omitted → Node binds dual-stack "::" (IPv6 + IPv4-mapped) when IPv6
+  // exists and natively falls back to "0.0.0.0" on any IPv6 handle failure.
+  // Railway's edge proxy dials the container over IPv6, so the previous
+  // explicit IPv4-only "0.0.0.0" bind made every request 502 at the edge
+  // ("connection dial timeout") before it ever reached Express.
+  const onBindError = (err: NodeJS.ErrnoException) => {
+    console.error(`[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code}) — exiting so the platform restarts`);
+    process.exit(1);
+  };
+  server.once("error", onBindError);
+  server.once("listening", () => {
+    server.removeListener("error", onBindError);
+    onListening();
   });
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "::") ...`);
-  server.listen(port, "::");
+  console.log(`[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`);
+  server.listen(port);
 }
 
 startServer().catch(console.error);
