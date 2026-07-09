@@ -658,10 +658,13 @@ async function startServer() {
     console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "0.0.0.0") ...`);
-  server.listen(port, "0.0.0.0", () => {
+  // Registered via server.once("listening") — NOT as a listen() callback — so it
+  // runs exactly once even when the IPv6 attempt fails and we re-listen on IPv4
+  // (a listen(cb) callback from a failed attempt would stay armed and fire again
+  // on the fallback bind, double-starting every scheduler below).
+  const onListening = () => {
     const addr = server.address();
-    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://0.0.0.0:${port}/`);
+    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
     console.log(`Server running on http://localhost:${port}/`);
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
@@ -870,7 +873,21 @@ async function startServer() {
       cutoffTimer.unref();
     };
     scheduleNextCutoffInvalidation();
+  };
+
+  // Bind dual-stack ("::" = IPv6 + IPv4-mapped). Railway's edge proxy dials the
+  // container over IPv6; an IPv4-only 0.0.0.0 bind makes every request 502 at
+  // the edge with "connection dial timeout" before it reaches Express. Hosts
+  // without an IPv6 stack reject "::" with EAFNOSUPPORT — fall back to IPv4.
+  server.once("listening", onListening);
+  server.once("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EAFNOSUPPORT" && !server.listening) {
+      console.warn(`[SERVER_STARTUP] IPv6 unavailable (EAFNOSUPPORT) — falling back to IPv4-only 0.0.0.0 bind`);
+      server.listen(port, "0.0.0.0");
+    }
   });
+  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "::") ...`);
+  server.listen(port, "::");
 }
 
 startServer().catch(console.error);
