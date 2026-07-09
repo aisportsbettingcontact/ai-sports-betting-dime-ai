@@ -1,6 +1,7 @@
 {
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
+    "mcp-server-dev@claude-plugins-official": true,
     "jobs-to-be-done@pm-skills": true,
     "acquisition-channel-advisor@pm-skills": true,
     "agent-orchestration-advisor@pm-skills": true,
