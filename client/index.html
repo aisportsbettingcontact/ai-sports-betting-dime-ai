@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
-    <title>AI Sports Betting Models | Sports Betting Intelligence Software</title>
-    <meta name="description" content="Get AI-powered sports betting models, projections, market signals, betting trends, and line movement context in one premium betting intelligence platform." />
+    <title>dıme — See where price and probability disagree | AI Sports Betting Models</title>
+    <meta name="description" content="Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected." />
     <!-- Performance: preload Inter 700 woff2 before stylesheet to prevent FOUT -->
     <link rel="preload" as="font" type="font/woff2" crossorigin
       href="https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZJhiJ-Ek-_EeA.woff2" />
@@ -84,7 +84,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        background-color: #0a0a0f;
+        background-color: #0B0B0F;
         z-index: 9999;
         transition: opacity 0.25s ease;
       }
@@ -92,19 +92,17 @@
         opacity: 0;
         pointer-events: none;
       }
-      /* AI Sports Betting site logo image */
+      /* Dime wordmark (SVG, natural 430×92 aspect) */
       .html-shell-logo-img {
-        width: 120px;
-        height: 120px;
-        border-radius: 16px;
-        object-fit: cover;
-        margin-bottom: 20px;
-        /* Subtle neon glow halo that pulses — draws attention without distraction */
+        width: 160px;
+        height: auto;
+        margin-bottom: 24px;
+        /* Subtle mint glow halo that pulses — draws attention without distraction */
         animation: shell-logo-pulse 2.2s ease-in-out infinite;
       }
       @keyframes shell-logo-pulse {
-        0%, 100% { filter: drop-shadow(0 0 8px rgba(57,255,20,0.20)); }
-        50%       { filter: drop-shadow(0 0 18px rgba(57,255,20,0.45)); }
+        0%, 100% { filter: drop-shadow(0 0 8px rgba(69,224,168,0.18)); }
+        50%       { filter: drop-shadow(0 0 16px rgba(69,224,168,0.40)); }
       }
       /* Progress bar track */
       .html-shell-bar-track {
@@ -115,13 +113,13 @@
         overflow: hidden;
         margin-bottom: 12px;
       }
-      /* Neon green left-to-right fill that loops */
+      /* Mint left-to-right fill that loops (brand law: #45E0A8, no gradients) */
       .html-shell-bar-fill {
         height: 100%;
         width: 45%;
         border-radius: 99px;
-        background: linear-gradient(90deg, #39FF14 0%, #22c55e 60%, #39FF14 100%);
-        box-shadow: 0 0 8px rgba(57,255,20,0.7);
+        background: #45E0A8;
+        box-shadow: 0 0 8px rgba(69,224,168,0.45);
         animation: shell-bar-slide 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
       @keyframes shell-bar-slide {
@@ -130,7 +128,7 @@
       }
       /* "Loading..." label */
       .html-shell-label {
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         font-size: 12px;
         font-weight: 500;
         letter-spacing: 0.08em;
@@ -138,15 +136,15 @@
         text-transform: uppercase;
       }
     </style>
-    <!-- AI Sports Betting loading shell: logo + neon green progress bar + label -->
+    <!-- Dime loading shell: brand-kit wordmark + mint progress bar + label -->
     <div id="html-loading-shell">
-      <!-- AI Sports Betting site logo -->
+      <!-- Dime wordmark (dime-ai brand kit: dime-white-transparent.svg) -->
       <img
         class="html-shell-logo-img"
-        src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
-        alt="AI Sports Betting"
+        src="/brand/dime-wordmark-white.svg"
+        alt="dıme"
       />
-      <!-- Neon green left-to-right progress bar -->
+      <!-- Mint left-to-right progress bar -->
       <div class="html-shell-bar-track">
         <div class="html-shell-bar-fill"></div>
       </div>
@@ -175,8 +173,8 @@
     <style>
       /* SEO static content: shown by default, hidden when JS runs */
       #seo-static-content {
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
-        background-color: #0a0a0f;
+        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background-color: #0B0B0F;
         color: #ffffff;
         padding: 48px 24px 64px;
         max-width: 860px;
@@ -191,7 +189,7 @@
         font-weight: 600;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: #39FF14;
+        color: #45E0A8;
         margin-bottom: 16px;
       }
       #seo-static-content h1 {
@@ -211,8 +209,8 @@
       }
       #seo-static-content .seo-cta {
         display: inline-block;
-        background: #39FF14;
-        color: #0a0a0f;
+        background: #45E0A8;
+        color: #0B0B0F;
         font-size: 15px;
         font-weight: 700;
         padding: 14px 28px;
@@ -244,18 +242,18 @@
         #seo-static-content.js-ready { display: block !important; }
       </style>
     </noscript>
-    <section id="seo-static-content" aria-label="AI Sports Betting Models — Homepage">
-      <p class="seo-eyebrow">AI-Powered Betting Intelligence</p>
-      <h1>The Betting Intelligence Dashboard Built for Serious Bettors</h1>
+    <section id="seo-static-content" aria-label="dıme — Sports Betting Intelligence Software">
+      <p class="seo-eyebrow">Sports betting intelligence software</p>
+      <h1>See where price and probability disagree.</h1>
       <p class="seo-subtitle">
-        AI model projections, betting splits, line movement, and sharp indicators — all in one dashboard. Research smarter. Bet with conviction.
+        Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.
       </p>
-      <a class="seo-cta" href="/login">View Today's Projections</a>
+      <a class="seo-cta" href="/checkout?plan=monthly">Get Access</a>
       <p class="seo-body">
-        AI Sports Betting Models is sports betting intelligence software that consolidates AI model projections, book odds, betting splits, and line movement into one premium dashboard. Built on Dixon-Coles Poisson distributions and Monte Carlo simulation, the platform lets serious bettors compare model-implied prices against current market lines before placing a bet.
+        Dime AI (AI Sports Betting Models) runs 10,000 simulations per game to project probability for every market, strips the book's margin for a no-vig baseline, and classifies each market as Pass, Monitor, or Edge Detected. Outputs are Brier-scored against closing prices. Pass is a first-class output — most markets are efficiently priced, and the software says so.
       </p>
       <p class="seo-disclaimer">
-        Sports betting involves risk. AI Sports Betting Models does not guarantee profits or outcomes. Use this platform for informational and analytical purposes only. Bet responsibly and only with money you can afford to lose.
+        21+ only. Sports betting involves risk. Dime AI does not guarantee profits or outcomes — analytical software for informational purposes only. Bet responsibly and within your means. Gambling problem? Call 1-800-GAMBLER.
       </p>
     </section>
     <script>
@@ -345,20 +343,20 @@
       "name": "AI Sports Betting Models",
       "applicationCategory": "SportsApplication",
       "operatingSystem": "Web",
-      "description": "AI-powered sports betting intelligence software with model projections, betting splits, line movement, and sharp indicators in one premium dashboard.",
+      "description": "Dime AI compares sportsbook prices against projected probability so every market resolves to Pass, Monitor, or Edge Detected.",
       "url": "https://aisportsbettingmodels.com",
       "offers": [
         {
           "@type": "Offer",
-          "name": "Monthly Plan",
-          "price": "99",
+          "name": "Pro Monthly",
+          "price": "99.99",
           "priceCurrency": "USD",
           "billingIncrement": "P1M"
         },
         {
           "@type": "Offer",
-          "name": "Annual Plan",
-          "price": "499",
+          "name": "Elite Annual",
+          "price": "499.99",
           "priceCurrency": "USD",
           "billingIncrement": "P1Y"
         }

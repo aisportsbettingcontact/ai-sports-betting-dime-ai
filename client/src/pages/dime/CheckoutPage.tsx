@@ -104,7 +104,7 @@ export default function CheckoutPage() {
     <div className="dlv2" style={{ minHeight: "100vh" }}>
       <nav className="nav" aria-label="Checkout">
         <div className="wrap nav-inner">
-          <Link href="/landingpage-v2" aria-label="dime home" style={{ textDecoration: "none" }}>
+          <Link href="/" aria-label="dime home" style={{ textDecoration: "none" }}>
             <Wordmark />
           </Link>
           <span className="mono" style={{ marginLeft: "auto" }}>Secure checkout · Stripe</span>
@@ -141,7 +141,7 @@ export default function CheckoutPage() {
             in your jurisdiction). Bet responsibly. Gambling problem? Call 1-800-GAMBLER.
           </span>
           <Link
-            href="/landingpage-v2"
+            href="/"
             className="mono"
             style={{ color: "var(--text-muted)", textDecoration: "none" }}
             data-cta-id="checkout-back"
@@ -184,7 +184,7 @@ export default function CheckoutPage() {
               >
                 Try again
               </button>
-              <Link href="/landingpage-v2" className="mono" style={{ color: "var(--text-muted)" }}>
+              <Link href="/" className="mono" style={{ color: "var(--text-muted)" }}>
                 ← Back to pricing
               </Link>
             </div>

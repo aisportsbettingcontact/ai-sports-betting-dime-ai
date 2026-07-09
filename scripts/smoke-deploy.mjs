@@ -90,6 +90,15 @@ await check("POST /api/dime/chat unauthenticated → 401 JSON (auth gate)", asyn
   expect(body?.error, "401 without JSON error body");
 });
 
+await check("bot UA on / → v2 landing prerender (SEO snapshot)", async () => {
+  const res = await fetch(`${base}/`, { headers: { "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" } });
+  expect(res.status === 200, `status ${res.status}`);
+  expect(res.headers.get("x-prerender") === "1", "X-Prerender header missing — prerender is being shadowed (check middleware order vs express.static)");
+  const html = await res.text();
+  expect(html.includes("See where price and probability"), "v2 hero copy missing from bot snapshot");
+  expect(!/39FF14/i.test(html), "forbidden neon #39FF14 present in bot snapshot (brand law)");
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 process.exit(failed.length === 0 ? 0 : 1);
