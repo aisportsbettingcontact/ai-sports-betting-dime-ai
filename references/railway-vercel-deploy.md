@@ -24,6 +24,16 @@ no CORS preflights, and SSE streams straight through the proxy.
 | `railway.json` | Dockerfile builder, `node dist/index.js` start, `/health` healthcheck, on-failure restarts |
 | `vercel.json` | Vite client build (`pnpm run build:client` → `dist/public`), `/api/*` rewrite to Railway, SPA fallback |
 | `package.json` | `build:client` (Vite) and `build:server` (esbuild) split; `build` runs both |
+| `scripts/smoke-deploy.mjs` | Post-deploy smoke suite (health, SPA shell, asset caching, tRPC mount, dime-chat auth gate) — run against any origin: `node scripts/smoke-deploy.mjs https://<domain>` |
+| `.github/workflows/deploy-smoke.yml` | Runs the smoke suite against the live Railway origin after pushes to `main`, or on demand (workflow_dispatch takes a custom origin, e.g. the Vercel domain) |
+
+Dockerfile gotchas learned the hard way (don't regress these):
+- `patches/` + `.npmrc` must be COPY'd **before** `pnpm install` — package.json
+  declares `patchedDependencies`, and `.npmrc` carries `allow-build=puppeteer`.
+- The seed scripts' CLI guards must match on filename, not
+  `import.meta.url === file://argv[1]` — in the esbuild bundle that comparison
+  is always true and the seeders' `process.exit()` kills the server at boot.
+- Chromium's Debian shared libraries are installed for the puppeteer scrapers.
 
 ## One-time setup
 
@@ -31,7 +41,10 @@ no CORS preflights, and SSE streams straight through the proxy.
 
 1. New project → **Deploy from GitHub repo** → this repo. Railway picks up
    `railway.json` + `Dockerfile` automatically.
-2. Set environment variables (Service → Variables). Everything the server
+2. Set environment variables (Service → Variables). Currently `PUBLIC_ORIGIN`
+   is set to the Railway domain itself — **switch it to the Vercel-served app
+   domain at DNS cutover** (and move the Railway domain into
+   `ADDITIONAL_ALLOWED_ORIGINS`). Everything the server
    reads — from `.env.example`: `APP_SESSION_SECRET`, `DATABASE_URL`,
    `PUBLIC_ORIGIN` (the **Vercel-served app domain**), Stripe, Discord,
    scraper credentials, `ANTHROPIC_API_KEY` *or* the AI Gateway pair
