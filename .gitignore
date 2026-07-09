@@ -121,3 +121,6 @@ __pycache__/
 
 # Claude skills symlinks (local tooling, not for deployment)
 .claude/skills/
+
+# Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
+audit-notes/
