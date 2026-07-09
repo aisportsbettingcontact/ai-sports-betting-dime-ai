@@ -74,6 +74,13 @@ Dockerfile gotchas learned the hard way (don't regress these):
 
 1. New project → import this repo. `vercel.json` supplies the build command
    (`pnpm run build:client`) and output dir (`dist/public`) — no framework preset.
+   ⚠️ **Root Directory must be the repo root (leave the field empty).** The
+   project was initially imported with Root Directory = `dime-ai/` (the design-
+   assets folder), which breaks the build AND ignores the repo-root
+   `vercel.json`. Fix: Project → Settings → Build & Deployment → Root
+   Directory → clear it → redeploy. `dime-ai/.vercelignore` exists as a safety
+   net so a misrooted deploy can never publish `design-bundle/` (private
+   reference material).
 2. **Edit `vercel.json`**: replace `REPLACE-WITH-RAILWAY-DOMAIN.up.railway.app`
    with the Railway domain from step 1.3, commit, push.
 3. Point the custom domain (e.g. `aisportsbettingmodels.com`) at the Vercel
