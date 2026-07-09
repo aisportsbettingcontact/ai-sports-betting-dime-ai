@@ -86,6 +86,8 @@ claude   # then log in with Option 1 — Claude account with subscription
   then toggle with `/fast`. Billed as extra usage at premium per-token rates.
 - **Tests**: `server/claude.test.ts` mocks `@anthropic-ai/sdk`, so none of this
   affects CI; the credential presence probe is CI-skipped.
-- **Deploys**: env vars live in Manus (see `RELEASING.md`) — merging to `main`
-  does not deploy, and gateway routing only takes effect once the vars are set
-  in the Manus environment and the app is republished.
+- **Deploys**: the backend env vars live wherever the server runs — Railway
+  service variables once the Railway migration lands
+  (`references/railway-vercel-deploy.md`), Manus until then (`RELEASING.md`).
+  Gateway routing takes effect only after the vars are set there and the
+  backend is redeployed.
