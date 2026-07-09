@@ -1,0 +1,57 @@
+# WC2026 Jul 9 probe — recon for the v23 FRA vs MAR (wc26-qf-097) model run.
+#
+# Manual trigger only. Two independent jobs:
+#   db-probe    — READ-ONLY queries against the production DB (DATABASE_URL
+#                 secret): QF-097 fixture orientation, Jul 7 final scores,
+#                 existing book odds columns, xG data completeness.
+#   odds-probe  — scrapes fresh bet365 odds for France - Morocco from
+#                 BetExplorer AJAX endpoints (CI runner has real egress,
+#                 unlike sandboxed agent environments).
+#
+# Neither job writes anything anywhere. Output is read from the job logs to
+# assemble v23_jul9_engine.mjs — the same recon the v22 Jul 7 run used.
+name: WC Jul9 Probe (read-only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  db-probe:
+    name: "DB probe (read-only)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run DB probe
+        run: node server/wc2026/jul9_probe.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  odds-probe:
+    name: "BetExplorer odds probe (FRA vs MAR)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scraper deps
+        run: pip install requests beautifulsoup4
+
+      - name: Scrape bet365 odds for wc26-qf-097
+        run: python3 server/wc2026/jul9_betexplorer_probe.py
