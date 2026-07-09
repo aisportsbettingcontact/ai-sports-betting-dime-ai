@@ -41,8 +41,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceDisplay: "$99.99/month",
     interval: "month",
     priceId: () => {
-      // Primary: env var (allows override). Fallback: hardcoded live price ID.
-      const id = process.env.STRIPE_PRICE_MONTHLY ?? "price_1TaVc2Pa3TFEAkkYucDoFPcW";
+      const id = process.env.STRIPE_PRICE_MONTHLY;
+      if (!id) throw new Error("[BOOT] STRIPE_PRICE_MONTHLY is not set — cannot create checkout session");
       console.log(`${TAG} [STATE] monthly priceId=${id}`);
       return id;
     },
@@ -54,8 +54,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     priceDisplay: "$499.99/year",
     interval: "year",
     priceId: () => {
-      // Primary: env var (allows override). Fallback: hardcoded live price ID.
-      const id = process.env.STRIPE_PRICE_ANNUAL ?? "price_1TaVdfPa3TFEAkkY0tW4eKSV";
+      const id = process.env.STRIPE_PRICE_ANNUAL;
+      if (!id) throw new Error("[BOOT] STRIPE_PRICE_ANNUAL is not set — cannot create checkout session");
       console.log(`${TAG} [STATE] annual priceId=${id}`);
       return id;
     },

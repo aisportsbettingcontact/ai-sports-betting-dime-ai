@@ -32,7 +32,7 @@ In wc2026Context.ts query #2:
 Signed with HS256 using ENV.cookieSecret (JWT_SECRET)
 
 ## Owner token for testing:
-eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwicm9sZSI6Im93bmVyIiwidHlwZSI6ImFwcF91c2VyIiwidHYiOjEsImlhdCI6MTc4MzM0MTgxMSwiZXhwIjoxNzgzMzQ1NDExfQ.eXpdHBDgvwlJac_p3P5TGjU_r19VkD76CUVKtWy8bCM
+[REDACTED — token rotated, see SEC-INC-001]
 
 ## getAppUserById function location:
 server/db.ts - returns user object with: id, role, hasAccess, expiryDate, stripeSubscriptionId, etc.

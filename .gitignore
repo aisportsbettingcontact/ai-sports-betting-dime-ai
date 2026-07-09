@@ -118,3 +118,14 @@ __pycache__/
 .worktrees/
 .claude/worktrees/
 .superpowers/
+
+# SEC-INC-001: secret-bearing artifacts — untracked, kept local only
+audit-notes/FINAL-REPORT.md
+database_audit.txt
+debug_rg_today-hitters.html
+debug_rg_today-pitchers.html
+schema_alignment_findings.md
+
+# SEC-INC-001: SQL dump purged from history via filter-repo
+audit-notes/backups/*.sql
+audit-notes/archives/*.sql

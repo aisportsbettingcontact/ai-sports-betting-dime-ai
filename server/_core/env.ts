@@ -1,6 +1,10 @@
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
+  cookieSecret: (() => {
+    const v = process.env.JWT_SECRET;
+    if (!v) throw new Error("[BOOT] JWT_SECRET is not set — server cannot start");
+    return v;
+  })(),
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
@@ -29,7 +33,11 @@ export const ENV = {
   // Must be set via NBA_SHEET_ID env var — no hardcoded fallback permitted
   nbaSheetId: process.env.NBA_SHEET_ID ?? "",
   // ─── Stripe ──────────────────────────────────────────────────────────────────
-  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
+  stripeSecretKey: (() => {
+    const v = process.env.STRIPE_SECRET_KEY;
+    if (!v) throw new Error("[BOOT] STRIPE_SECRET_KEY is not set — server cannot start");
+    return v;
+  })(),
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
   // Stripe Price IDs — must be created in Stripe Dashboard and set as env vars
   // STRIPE_PRICE_MONTHLY: $49/month recurring price ID (price_xxx)
