@@ -17,8 +17,8 @@
  *                       Format: mysql://user:password@host:port/database
  *                       Used by: all DB-backed test procedures
  *
- *   JWT_SECRET        — Session cookie signing secret
- *                       Format: any non-empty string (min 32 chars recommended)
+ *   APP_SESSION_SECRET — Session cookie signing secret (replaces exposed JWT_SECRET)
+ *                       Format: any non-empty string (min 44 chars required)
  *                       Used by: auth.logout.test.ts, tokenVersion.test.ts
  *
  *   PUBLIC_ORIGIN     — Canonical public origin for CSRF Origin check
@@ -80,9 +80,9 @@ const REQUIRED_SECRETS: SecretDescriptor[] = [
     formatDescription: "mysql://user:password@host:port/database",
   },
   {
-    key: "JWT_SECRET",
-    description: "Session cookie signing secret",
-    minLength: 16,
+    key: "APP_SESSION_SECRET",
+    description: "Session cookie signing secret (replaces exposed JWT_SECRET)",
+    minLength: 44,
     // No format constraint — any non-empty string of sufficient length is valid
   },
   {
@@ -213,12 +213,12 @@ describe("CI secrets validation", () => {
     console.log("[VERIFY] PASS — DATABASE_URL is set and format-valid");
   });
 
-  it("JWT_SECRET is set with sufficient length (min 16 chars)", () => {
-    const value = process.env.JWT_SECRET ?? "";
-    console.log(`[INPUT] JWT_SECRET: ${safePreview(value)}`);
-    expect(value.length, "JWT_SECRET is not set").toBeGreaterThan(0);
-    expect(value.length, `JWT_SECRET too short (${value.length} chars, min 16)`).toBeGreaterThanOrEqual(16);
-    console.log(`[VERIFY] PASS — JWT_SECRET is set, length=${value.length}`);
+  it("APP_SESSION_SECRET is set with sufficient length (min 44 chars)", () => {
+    const value = process.env.APP_SESSION_SECRET ?? "";
+    console.log(`[INPUT] APP_SESSION_SECRET: ${safePreview(value)}`);
+    expect(value.length, "APP_SESSION_SECRET is not set").toBeGreaterThan(0);
+    expect(value.length, `APP_SESSION_SECRET too short (${value.length} chars, min 44)`).toBeGreaterThanOrEqual(44);
+    console.log(`[VERIFY] PASS — APP_SESSION_SECRET is set, length=${value.length}`);
   });
 
   it("PUBLIC_ORIGIN is set and has no trailing slash", () => {
