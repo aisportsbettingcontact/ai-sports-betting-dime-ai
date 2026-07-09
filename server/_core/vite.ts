@@ -103,11 +103,14 @@ export function serveStatic(app: Express) {
     })
   );
 
+  // ── SSR prerender for bots/crawlers (prod) ────────────────────────────────
+  // MUST be mounted BEFORE express.static: static serves index.html for "/"
+  // (index option defaults on), which shadows the bot prerender entirely —
+  // crawlers would index the SPA shell instead of the landing snapshot.
+  app.use(landingPrerenderMiddleware);
+
   // ── Other static files (favicon, robots.txt, etc.) ───────────────────────────
   app.use(express.static(distPath));
-
-  // ── SSR prerender for bots/crawlers (prod) ────────────────────────────────
-  app.use(landingPrerenderMiddleware);
 
   // fall through to index.html if the file doesn't exist
   // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.
