@@ -16,6 +16,7 @@
  * Only HTTP 401 (explicit rejection by Discord) is treated as a hard failure.
  */
 import { describe, it, expect } from "vitest";
+import { IS_CI } from "./_core/ciTestGuard";
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 
@@ -30,7 +31,8 @@ function isNetworkError(err: unknown): boolean {
   return ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "ENETUNREACH"].includes(code);
 }
 
-describe("Discord Bot Token Validation", () => {
+// Live Discord REST credential probe — scoped out of CI.
+describe.skipIf(IS_CI)("Discord Bot Token Validation", () => {
   it("DISCORD_BOT_TOKEN is set in environment", () => {
     const token = process.env.DISCORD_BOT_TOKEN;
     expect(token, "DISCORD_BOT_TOKEN must be set").toBeTruthy();
