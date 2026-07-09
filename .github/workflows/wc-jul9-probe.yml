@@ -12,8 +12,17 @@
 # assemble v23_jul9_engine.mjs — the same recon the v22 Jul 7 run used.
 name: WC Jul9 Probe (read-only)
 
+# workflow_dispatch alone can't be used here: this workflow lives only on the
+# model feature branch, and GitHub only registers dispatchable workflows from
+# the default branch. A branch-scoped push trigger with a paths filter gives
+# the same one-shot behavior — it fires only when the probe trigger file
+# changes on this branch.
 on:
   workflow_dispatch:
+  push:
+    branches: [claude/world-cup-france-morocco-model-vsan3o]
+    paths:
+      - server/wc2026/jul9_probe.trigger
 
 permissions:
   contents: read
