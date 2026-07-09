@@ -27,6 +27,18 @@ no CORS preflights, and SSE streams straight through the proxy.
 | `scripts/smoke-deploy.mjs` | Post-deploy smoke suite (health, SPA shell, asset caching, tRPC mount, dime-chat auth gate) — run against any origin: `node scripts/smoke-deploy.mjs https://<domain>` |
 | `.github/workflows/deploy-smoke.yml` | Runs the smoke suite against the live Railway origin after pushes to `main`, or on demand (workflow_dispatch takes a custom origin, e.g. the Vercel domain) |
 
+**Parallel-track law:** this stack runs separate from and parallel to the Manus
+production. Nothing here deploys Manus (that remains manual via `RELEASING.md`),
+and the Railway/Vercel track must not depend on Manus at runtime:
+- `/manus-storage/*` images are **vendored** in `client/public/manus-storage/`
+  and served local-first by `server/_core/storageProxy.ts` (Forge signed-URL
+  redirect remains as the fallback, so Manus behavior is unchanged). Smoke
+  check 7 guards this on every deploy.
+- Remaining known Manus dependency: the OAuth login flow (`OAUTH_SERVER_URL`
+  etc., unset on Railway). Session cookies are verified locally
+  (`APP_SESSION_SECRET` JWT) and password-reset/Discord flows exist, but
+  end-to-end login on Railway has NOT been verified — test at cutover.
+
 Dockerfile gotchas learned the hard way (don't regress these):
 - `patches/` + `.npmrc` must be COPY'd **before** `pnpm install` — package.json
   declares `patchedDependencies`, and `.npmrc` carries `allow-build=puppeteer`.
