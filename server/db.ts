@@ -17,6 +17,18 @@ import {
 import { ENV } from './_core/env';
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 
+// Lazy reference to logToDb — avoids circular import at module load time.
+// db.ts is imported by dbLogger.ts (lazily), so we must not import dbLogger.ts
+// at the top level here. Instead we resolve it on first use.
+let _logToDb: ((source: string, level: 'info' | 'warn' | 'error', message: string) => void) | null = null;
+function getLogToDb(): (source: string, level: 'info' | 'warn' | 'error', message: string) => void {
+  if (!_logToDb) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _logToDb = require('./dbLogger').logToDb;
+  }
+  return _logToDb!;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
 let _pool: mysql.Pool | null = null;
@@ -1586,7 +1598,7 @@ export async function insertOddsHistory(
 ): Promise<void> {
   const db = await getDb();
   if (!db) {
-    console.warn(`[OddsHistory][INSERT] SKIP gameId=${gameId} - DB not available`);
+    getLogToDb()('OddsHistory', 'warn', `[OddsHistory][INSERT] SKIP gameId=${gameId} - DB not available`);
     return;
   }
   const now = Date.now();
@@ -1599,7 +1611,7 @@ export async function insertOddsHistory(
                         (snap.totalOverMoneyPct == null || snap.totalOverMoneyPct === 0);
   const mlPending     = (snap.mlAwayBetsPct == null || snap.mlAwayBetsPct === 0) &&
                         (snap.mlAwayMoneyPct == null || snap.mlAwayMoneyPct === 0);
-  console.log(
+  getLogToDb()('OddsHistory', 'info',
     `[OddsHistory][INSERT][INPUT] gameId=${gameId} sport=${sport} source=${source} lineSource=${snap.lineSource ?? 'null'} scrapedAt=${estStr} EST | ` +
     `spread=${snap.awaySpread ?? 'null'}(${snap.awaySpreadOdds ?? 'null'}) ` +
     `total=${snap.total ?? 'null'} over=${snap.overOdds ?? 'null'} under=${snap.underOdds ?? 'null'} ` +
@@ -1634,15 +1646,10 @@ export async function insertOddsHistory(
       lineSource: snap.lineSource ?? null,
     });
     // [OUTPUT] Confirm successful write with full context
-    console.log(
-      `[OddsHistory][INSERT][OUTPUT] OK gameId=${gameId} sport=${sport} source=${source} lineSource=${snap.lineSource ?? 'null'} at ${estStr} EST`
-    );
+    getLogToDb()('OddsHistory', 'info', `[OddsHistory][INSERT][OUTPUT] OK gameId=${gameId} sport=${sport} source=${source} lineSource=${snap.lineSource ?? 'null'} at ${estStr} EST`);
   } catch (err) {
     // [VERIFY] FAIL - log full error with context for immediate diagnosis
-    console.error(
-      `[OddsHistory][INSERT][VERIFY] FAIL gameId=${gameId} sport=${sport} source=${source}:`,
-      err
-    );
+    getLogToDb()('OddsHistory', 'error', `[OddsHistory][INSERT][VERIFY] FAIL gameId=${gameId} sport=${sport} source=${source}: ${err}`);
   }
 }
 
@@ -1653,11 +1660,11 @@ export async function insertOddsHistory(
 export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]> {
   const db = await getDb();
   if (!db) {
-    console.warn(`[OddsHistory][LIST] SKIP gameId=${gameId} - DB not available`);
+    getLogToDb()('OddsHistory', 'warn', `[OddsHistory][LIST] SKIP gameId=${gameId} - DB not available`);
     return [];
   }
   // [INPUT] Log query intent
-  console.log(`[OddsHistory][LIST][INPUT] gameId=${gameId} - querying history (limit=200, newest first)`);
+  getLogToDb()('OddsHistory', 'info', `[OddsHistory][LIST][INPUT] gameId=${gameId} - querying history (limit=200, newest first)`);
   try {
     const rows = await db
       .select()
@@ -1668,7 +1675,7 @@ export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]>
     // [OUTPUT] Log result summary with timestamps for traceability
     const latest = rows[0];
     const oldest = rows[rows.length - 1];
-    console.log(
+    getLogToDb()('OddsHistory', 'info',
       `[OddsHistory][LIST][OUTPUT] gameId=${gameId} rows=${rows.length}` +
       (rows.length > 0
         ? ` | latest=${new Date(latest!.scrapedAt).toLocaleString('en-US', { timeZone: 'America/New_York' })} EST` +
@@ -1678,7 +1685,7 @@ export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]>
     return rows;
   } catch (err) {
     // [VERIFY] FAIL - log full error with context
-    console.error(`[OddsHistory][LIST][VERIFY] FAIL gameId=${gameId}:`, err);
+    getLogToDb()('OddsHistory', 'error', `[OddsHistory][LIST][VERIFY] FAIL gameId=${gameId}: ${err}`);
     return [];
   }
 }
@@ -1691,7 +1698,7 @@ export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]>
 export async function backfillOddsHistoryLineSource(): Promise<void> {
   const db = await getDb();
   if (!db) {
-    console.warn('[OddsHistory][BACKFILL] SKIP — DB not available');
+    getLogToDb()('OddsHistory', 'warn', '[OddsHistory][BACKFILL] SKIP — DB not available');
     return;
   }
   try {
@@ -1703,11 +1710,11 @@ export async function backfillOddsHistoryLineSource(): Promise<void> {
       .limit(5000);
 
     if (nullRows.length === 0) {
-      console.log('[OddsHistory][BACKFILL] SKIP — all rows already have lineSource populated');
+      getLogToDb()('OddsHistory', 'info', '[OddsHistory][BACKFILL] SKIP — all rows already have lineSource populated');
       return;
     }
 
-    console.log(`[OddsHistory][BACKFILL][INPUT] Found ${nullRows.length} rows with null lineSource — resolving via game.oddsSource`);
+    getLogToDb()('OddsHistory', 'info', `[OddsHistory][BACKFILL][INPUT] Found ${nullRows.length} rows with null lineSource — resolving via game.oddsSource`);
 
     // [STEP] Get unique gameIds from null rows
     const gameIds = Array.from(new Set(nullRows.map((r: { id: number; gameId: number }) => r.gameId)));
@@ -1754,12 +1761,12 @@ export async function backfillOddsHistoryLineSource(): Promise<void> {
       updated += openIds.length;
     }
 
-    console.log(
+    getLogToDb()('OddsHistory', 'info',
       `[OddsHistory][BACKFILL][OUTPUT] COMPLETE — updated=${updated} skipped=${skipped} ` +
       `(dk=${dkIds.length} open=${openIds.length}) total_null_rows=${nullRows.length}`
     );
   } catch (err) {
-    console.error('[OddsHistory][BACKFILL][VERIFY] FAIL:', err);
+    getLogToDb()('OddsHistory', 'error', `[OddsHistory][BACKFILL][VERIFY] FAIL: ${err}`);
   }
 }
 
