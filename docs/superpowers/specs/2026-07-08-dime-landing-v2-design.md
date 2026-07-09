@@ -1,6 +1,6 @@
 # Dime AI Landing v2 — design + build spec (2026-07-08)
 
-**Route:** `/landingpage-v2` (live funnel at `/landingpage` untouched; route swap is a separate approved step).
+**Route:** `/` — the root landing page (route swap executed 2026-07-09; `/landingpage-v2` now redirects to `/`, v1 remains at `/landingpage` as a comparison hook, and the bot prerender + index.html shell/SEO block carry v2 parity).
 **Positioning:** Sports betting intelligence software — decision advantage, never "AI picks".
 **Core promise:** See where price and probability disagree. Every market resolves to **Pass / Monitor / Edge Detected**.
 

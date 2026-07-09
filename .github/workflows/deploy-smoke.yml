@@ -1,0 +1,39 @@
+# Post-deploy smoke test — validates the live Railway backend (and, once the
+# frontend is imported, can be pointed at the Vercel domain too).
+#
+# Railway auto-deploys pushes to main once the repo is connected; this job
+# waits out the build, then asserts the five smoke checks in
+# scripts/smoke-deploy.mjs against the live origin. No secrets needed.
+name: deploy-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: "Origin to smoke-test"
+        default: "https://ai-sports-betting-dime-ai-production.up.railway.app"
+        required: true
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait for deploy to settle (push only)
+        if: github.event_name == 'push'
+        run: sleep 240
+      - name: Smoke test live origin (retry x3)
+        env:
+          ORIGIN: ${{ github.event.inputs.origin || 'https://ai-sports-betting-dime-ai-production.up.railway.app' }}
+        run: |
+          for i in 1 2 3; do
+            node scripts/smoke-deploy.mjs "$ORIGIN" && exit 0
+            echo "attempt $i failed; retrying in 60s"; sleep 60
+          done
+          exit 1

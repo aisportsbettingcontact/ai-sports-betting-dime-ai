@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+# Personal reference material — never ship to production bundles (CLAUDE.md)
+dime-ai/design-bundle/uploads
+# Local tooling / scratch
+.claude
+.agents
+*.log
+ui-ux_log.txt

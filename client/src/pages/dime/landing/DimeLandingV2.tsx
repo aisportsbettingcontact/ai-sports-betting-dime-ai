@@ -1,5 +1,5 @@
 /**
- * Dime AI — landing v2 (/landingpage-v2)
+ * Dime AI — landing v2 (root landing page at /; formerly /landingpage-v2)
  * ---------------------------------------
  * Category-positioned homepage: sports betting intelligence software.
  * 16 componentized sections; content in landing-content.ts; tokens in

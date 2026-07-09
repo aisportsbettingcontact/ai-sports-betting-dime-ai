@@ -1,0 +1,6 @@
+# Safety net: the Vercel project currently has Root Directory set to dime-ai/
+# (should be the repo root — see references/railway-vercel-deploy.md). If a
+# deploy ever runs from this folder, NEVER upload the design bundle: it
+# contains personal reference material (uploads/, screenshots/) that must not
+# be redistributed (CLAUDE.md repo law).
+design-bundle
