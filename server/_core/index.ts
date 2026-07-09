@@ -189,17 +189,68 @@ function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(startPort: number = 3000): Promise<number> {
+  console.log(`[PORT_CHECK] Scanning for available port starting at ${startPort}`);
   for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
+    console.log(`[PORT_CHECK] Testing port ${port}...`);
+    const available = await isPortAvailable(port);
+    if (available) {
+      console.log(`[PORT_CHECK] Port ${port} is available ✓`);
       return port;
     }
+    console.log(`[PORT_CHECK] Port ${port} is in use, trying next`);
   }
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
 async function startServer() {
+  console.log(`[SERVER_STARTUP] startServer() invoked — NODE_ENV=${process.env.NODE_ENV} PORT_ENV=${process.env.PORT ?? "(unset)"} pid=${process.pid}`);
+
   const app = express();
+  console.log(`[SERVER_STARTUP] Express app created`);
+
   const server = createServer(app);
+  console.log(`[SERVER_STARTUP] HTTP server created`);
+
+  // ─── Server-level error handlers ─────────────────────────────────────────
+  // Catch binding errors (EADDRINUSE, EACCES) and connection-level errors
+  // that would otherwise surface silently or crash the process.
+  server.on("error", (err: NodeJS.ErrnoException) => {
+    console.error(`[ERROR] HTTP server error event: code=${err.code} message=${err.message}`, err);
+  });
+  server.on("clientError", (err: NodeJS.ErrnoException, socket) => {
+    console.error(`[ERROR] HTTP client error: code=${err.code} message=${err.message}`);
+    socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+  });
+  server.on("connection", (socket) => {
+    console.log(`[SERVER_STARTUP] New TCP connection from ${socket.remoteAddress}:${socket.remotePort}`);
+  });
+
+  // ─── Top-level request logger ────────────────────────────────────────────
+  // Installed FIRST so every request — including those rejected by later
+  // middleware — is captured. Logs method, path, key headers, and final status.
+  console.log(`[SERVER_STARTUP] Registering top-level request logging middleware`);
+  app.use((req, res, next) => {
+    const start = Date.now();
+    const ts = new Date().toISOString();
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      req.socket?.remoteAddress ??
+      "unknown";
+    console.log(
+      `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
+      ` host=${req.headers["host"] ?? "-"}` +
+      ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
+      ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
+      ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+    );
+    res.on("finish", () => {
+      const ms = Date.now() - start;
+      console.log(
+        `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}`
+      );
+    });
+    next();
+  });
 
   // ─── www → non-www canonical redirect (308) ─────────────────────────────
   // The edge proxy www redirect uses 301 (which converts POST→GET per HTTP spec),
@@ -222,6 +273,7 @@ async function startServer() {
   // Compresses all JSON/HTML responses. tRPC payloads (often 50-200KB for large
   // bet lists) shrink 70-85% — dramatically reducing network transfer time.
   // threshold=512: skip compression for tiny responses where overhead > benefit.
+  console.log(`[SERVER_STARTUP] Registering compression middleware`);
   app.use(compression({ threshold: 512 }));
 
   // Trust the first proxy (Manus edge) so req.protocol reflects
@@ -234,6 +286,7 @@ async function startServer() {
   // Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
   // Strict-Transport-Security, Referrer-Policy, and a Content-Security-Policy
   // that allows our own origin + CDN assets. Vite HMR websocket is allowed in dev.
+  console.log(`[SERVER_STARTUP] Registering helmet security headers middleware`);
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -255,21 +308,29 @@ async function startServer() {
   // Uses express.raw() to preserve the raw buffer for HMAC-SHA256 signature
   // verification. Placed here so it intercepts /api/stripe/webhook before the
   // JSON body parser consumes and discards the raw body.
+  console.log(`[SERVER_STARTUP] Registering Stripe webhook route`);
   registerStripeWebhookRoute(app);
 
   // ─── Body parser with tight size limits ──────────────────────────────────
   // 10kb for JSON API calls (tRPC procedures never need more than a few KB).
   // 1mb for URL-encoded forms. The previous 50mb limit was a DoS vector.
   // Note: file upload procedures use base64 strings — if needed, raise to 2mb max.
+  console.log(`[SERVER_STARTUP] Registering JSON + URL-encoded body parsers`);
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "1mb", extended: true }));
 
   // ─── Health check endpoint ────────────────────────────────────────────────
   // Lightweight endpoint for load balancer health probes and uptime monitoring.
   // Returns 200 immediately without hitting the DB so it never times out.
-  app.get("/health", (_req, res) => {
+  console.log(`[SERVER_STARTUP] Registering /health endpoint`);
+  app.get("/health", (req, res) => {
     const circuit = getCircuitStatus();
     const dbOk = circuit.state === 'CLOSED';
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      req.socket?.remoteAddress ??
+      "unknown";
+    console.log(`[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`);
     res.status(dbOk ? 200 : 503).json({
       status: dbOk ? 'ok' : 'degraded',
       ts: Date.now(),
@@ -322,6 +383,7 @@ async function startServer() {
 
   // ─── Global API rate limiter ──────────────────────────────────────────────
   // Applied to all /api/* routes. Skips /health (handled above).
+  console.log(`[SERVER_STARTUP] Registering global API rate limiter on /api`);
   app.use("/api", globalApiLimiter);
 
   // ─── Auth-specific rate limiters ─────────────────────────────────────────
@@ -443,10 +505,13 @@ async function startServer() {
   });
 
   // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
+  console.log(`[SERVER_STARTUP] Registering storage proxy routes`);
   registerStorageProxy(app);
   // OAuth callback under /api/oauth/callback
+  console.log(`[SERVER_STARTUP] Registering OAuth routes`);
   registerOAuthRoutes(app);
   // Discord account linking routes
+  console.log(`[SERVER_STARTUP] Registering Discord auth/login/invite routes`);
   registerDiscordAuthRoutes(app);
   registerDiscordLoginRoutes(app);
   registerDiscordInviteRoutes(app);
@@ -456,30 +521,36 @@ async function startServer() {
   // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
   // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
   // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
+  console.log(`[SERVER_STARTUP] Registering Fangraphs lineup heartbeat route`);
   registerFgLineupsHeartbeat(app);
 
   // ─── Rotowire lineup Heartbeat ──────────────────────────────────────────
   // POST /api/scheduled/roto-lineups — called every 10 min by Manus Heartbeat
   // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
   // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
+  console.log(`[SERVER_STARTUP] Registering Rotowire lineup heartbeat route`);
   registerRotoLineupsHeartbeat(app);
 
   // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
   // POST /api/scheduled/wc2026-odds    — every 30 min (5 min near kickoff)
   // POST /api/scheduled/wc2026-splits  — every 10 min
   // POST /api/scheduled/wc2026-lineups — every 10 min
+  console.log(`[SERVER_STARTUP] Registering WC2026 heartbeat routes`);
   registerWc2026Heartbeats(app);
 
   // ─── Dime AI Chat — SSE streaming endpoint ──────────────────────────────
   // POST /api/dime/chat — Claude Fable 5 streaming chat for the Chat tab.
   // Plain Express SSE route (not tRPC) for optimal streaming performance.
+  console.log(`[SERVER_STARTUP] Registering Dime AI chat SSE route`);
   registerDimeChatRoute(app);
 
   // ─── Dime WC2026 Intelligence — Tier 4 authenticated, credit-gated, source-grounded
   // POST /api/dime/wc2026 — 14-step enforcement, 22-path validated
+  console.log(`[SERVER_STARTUP] Registering Dime WC2026 intelligence route`);
   registerDimeWC2026Route(app);
 
   // tRPC API
+  console.log(`[SERVER_STARTUP] Registering tRPC middleware on /api/trpc`);
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -496,19 +567,26 @@ async function startServer() {
 
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
+    console.log(`[SERVER_STARTUP] Setting up Vite dev middleware`);
     await setupVite(app, server);
+    console.log(`[SERVER_STARTUP] Vite dev middleware ready`);
   } else {
+    console.log(`[SERVER_STARTUP] Registering static file serving (production)`);
     serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
+  console.log(`[SERVER_STARTUP] Preferred port from env: ${preferredPort} (PORT="${process.env.PORT ?? "(unset)"}")`);
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "0.0.0.0") ...`);
+  server.listen(port, "0.0.0.0", () => {
+    const addr = server.address();
+    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://0.0.0.0:${port}/`);
     console.log(`Server running on http://localhost:${port}/`);
     // Start daily 6am EST game purge (removes previous day's games)
     startDailyPurgeSchedule();
