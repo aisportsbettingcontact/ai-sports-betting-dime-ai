@@ -28,8 +28,34 @@ permissions:
   contents: read
 
 jobs:
+  # Report which candidate DB secret names are configured (SET/EMPTY only —
+  # values are never printed). DATABASE_URL resolved empty on the first run,
+  # so this locates where the production connection string lives now.
+  secret-scan:
+    name: "Secret presence scan (names only)"
+    runs-on: ubuntu-latest
+    env:
+      C_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      C_TARGET_DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
+      C_SOURCE_DATABASE_URL: ${{ secrets.SOURCE_DATABASE_URL }}
+      C_OLD_DATABASE_URL: ${{ secrets.OLD_DATABASE_URL }}
+      C_PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      C_MANUS_DATABASE_URL: ${{ secrets.MANUS_DATABASE_URL }}
+      C_TIDB_DATABASE_URL: ${{ secrets.TIDB_DATABASE_URL }}
+      C_MYSQL_URL: ${{ secrets.MYSQL_URL }}
+    steps:
+      - name: Report presence
+        run: |
+          for name in DATABASE_URL TARGET_DATABASE_URL SOURCE_DATABASE_URL OLD_DATABASE_URL PROD_DATABASE_URL MANUS_DATABASE_URL TIDB_DATABASE_URL MYSQL_URL; do
+            var="C_${name}"
+            if [ -n "${!var}" ]; then echo "[SECRET-SCAN] ${name}: SET"; else echo "[SECRET-SCAN] ${name}: EMPTY"; fi
+          done
+
+  # Read-only probe against the migration TARGET cluster — a fresh clone of
+  # the production data, so fixture ids, Jul 7 final scores, and existing
+  # book odds columns match production content.
   db-probe:
-    name: "DB probe (read-only)"
+    name: "DB probe (read-only, target clone)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +73,7 @@ jobs:
       - name: Run DB probe
         run: node server/wc2026/jul9_probe.mjs
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.TARGET_DATABASE_URL }}
 
   odds-probe:
     name: "BetExplorer odds probe (FRA vs MAR)"
