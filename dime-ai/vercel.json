@@ -6,12 +6,27 @@
   "outputDirectory": ".vercel-output",
   "rewrites": [
     {
+      "source": "/health",
+      "destination": "https://ai-sports-betting-dime-ai-production.up.railway.app/health"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://ai-sports-betting-dime-ai-production.up.railway.app/api/:path*"
     },
     {
       "source": "/:path*",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
