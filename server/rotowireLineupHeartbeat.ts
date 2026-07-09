@@ -36,6 +36,7 @@ import type { Express, Request, Response } from "express";
 import { sdk } from "./_core/sdk";
 import { notifyOwner } from "./_core/notification";
 import { syncRotowireLineupTabs } from "./rotowireLineupSheetSync";
+import { debugLog } from "./_core/debugLogger";
 
 // ─── Run Lock ─────────────────────────────────────────────────────────────────
 
@@ -59,12 +60,11 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
     } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
 
     const reqAt = new Date().toISOString();
-    console.log(`\n[RotoHeartbeat] [INPUT] POST /api/scheduled/roto-lineups received at ${reqAt}`);
-    console.log(`[RotoHeartbeat] [STATE] isRunning=${_isRunning} lastRunAt=${_lastRunAt ?? "never"}`);
+    debugLog("RotoScraper", "info", `[RotoHeartbeat] [INPUT] POST /api/scheduled/roto-lineups received at ${reqAt} | isRunning=${_isRunning} lastRunAt=${_lastRunAt ?? "never"}`);
 
     // ── Run lock check ────────────────────────────────────────────────────
     if (_isRunning) {
-      console.warn(
+      debugLog("RotoScraper", "warn",
         `[RotoHeartbeat] [VERIFY] WARN — Sync already in progress (started ${_lastRunAt}). ` +
         `Skipping this invocation to prevent overlap.`
       );
@@ -79,7 +79,7 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
 
     _isRunning = true;
     _lastRunAt = reqAt;
-    console.log(`[RotoHeartbeat] [STEP] Acquired run lock — starting syncRotowireLineupTabs()`);
+    debugLog("RotoScraper", "info", `[RotoHeartbeat] [STEP] Acquired run lock — starting syncRotowireLineupTabs()`);
 
     // Respond immediately so Heartbeat platform doesn't time out waiting.
     // The sync continues in the background.
@@ -108,11 +108,11 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
           rowsWritten: result.tomorrowTab.rowsWritten,
         },
       };
-      console.log(
+      debugLog("RotoScraper", "info",
         `[RotoHeartbeat] [OUTPUT] syncRotowireLineupTabs complete — ` +
         `success=${result.success} rows=${result.totalRowsWritten} elapsed=${result.elapsedMs}ms`
       );
-      console.log(
+      debugLog("RotoScraper", result.success ? "info" : "warn",
         `[RotoHeartbeat] [VERIFY] ${result.success ? "PASS" : "PARTIAL"} — ` +
         `today="${result.todayTab.tabName}" status=${result.todayTab.status} ` +
         `rows=${result.todayTab.rowsWritten} readBack=${result.todayTab.readBackRowCount} ` +
@@ -123,7 +123,7 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
       );
       if (result.errors.length > 0) {
         for (const e of result.errors) {
-          console.warn(`[RotoHeartbeat] [VERIFY] WARN — sync error: ${e}`);
+          debugLog("RotoScraper", "warn", `[RotoHeartbeat] [VERIFY] WARN — sync error: ${e}`);
         }
       }
     } catch (err) {
@@ -139,7 +139,7 @@ export function registerRotoLineupsHeartbeat(app: Express): void {
       };
     } finally {
       _isRunning = false;
-      console.log(`[RotoHeartbeat] [STEP] Run lock released`);
+      debugLog("RotoScraper", "info", `[RotoHeartbeat] [STEP] Run lock released`);
     }
   });
 

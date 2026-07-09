@@ -16,6 +16,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
+import { debugLog } from './_core/debugLogger';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
@@ -1599,7 +1600,7 @@ export async function insertOddsHistory(
                         (snap.totalOverMoneyPct == null || snap.totalOverMoneyPct === 0);
   const mlPending     = (snap.mlAwayBetsPct == null || snap.mlAwayBetsPct === 0) &&
                         (snap.mlAwayMoneyPct == null || snap.mlAwayMoneyPct === 0);
-  console.log(
+  debugLog("OddsHistory", "info",
     `[OddsHistory][INSERT][INPUT] gameId=${gameId} sport=${sport} source=${source} lineSource=${snap.lineSource ?? 'null'} scrapedAt=${estStr} EST | ` +
     `spread=${snap.awaySpread ?? 'null'}(${snap.awaySpreadOdds ?? 'null'}) ` +
     `total=${snap.total ?? 'null'} over=${snap.overOdds ?? 'null'} under=${snap.underOdds ?? 'null'} ` +
@@ -1634,7 +1635,7 @@ export async function insertOddsHistory(
       lineSource: snap.lineSource ?? null,
     });
     // [OUTPUT] Confirm successful write with full context
-    console.log(
+    debugLog("OddsHistory", "info",
       `[OddsHistory][INSERT][OUTPUT] OK gameId=${gameId} sport=${sport} source=${source} lineSource=${snap.lineSource ?? 'null'} at ${estStr} EST`
     );
   } catch (err) {
@@ -1657,7 +1658,7 @@ export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]>
     return [];
   }
   // [INPUT] Log query intent
-  console.log(`[OddsHistory][LIST][INPUT] gameId=${gameId} - querying history (limit=200, newest first)`);
+  debugLog("OddsHistory", "info", `[OddsHistory][LIST][INPUT] gameId=${gameId} - querying history (limit=200, newest first)`);
   try {
     const rows = await db
       .select()
@@ -1668,7 +1669,7 @@ export async function listOddsHistory(gameId: number): Promise<OddsHistoryRow[]>
     // [OUTPUT] Log result summary with timestamps for traceability
     const latest = rows[0];
     const oldest = rows[rows.length - 1];
-    console.log(
+    debugLog("OddsHistory", "info",
       `[OddsHistory][LIST][OUTPUT] gameId=${gameId} rows=${rows.length}` +
       (rows.length > 0
         ? ` | latest=${new Date(latest!.scrapedAt).toLocaleString('en-US', { timeZone: 'America/New_York' })} EST` +
@@ -1707,7 +1708,7 @@ export async function backfillOddsHistoryLineSource(): Promise<void> {
       return;
     }
 
-    console.log(`[OddsHistory][BACKFILL][INPUT] Found ${nullRows.length} rows with null lineSource — resolving via game.oddsSource`);
+    debugLog("OddsHistory", "info", `[OddsHistory][BACKFILL][INPUT] Found ${nullRows.length} rows with null lineSource — resolving via game.oddsSource`);
 
     // [STEP] Get unique gameIds from null rows
     const gameIds = Array.from(new Set(nullRows.map((r: { id: number; gameId: number }) => r.gameId)));
@@ -1754,7 +1755,7 @@ export async function backfillOddsHistoryLineSource(): Promise<void> {
       updated += openIds.length;
     }
 
-    console.log(
+    debugLog("OddsHistory", "info",
       `[OddsHistory][BACKFILL][OUTPUT] COMPLETE — updated=${updated} skipped=${skipped} ` +
       `(dk=${dkIds.length} open=${openIds.length}) total_null_rows=${nullRows.length}`
     );
@@ -2645,10 +2646,10 @@ export async function closeUserSessions(userId: number): Promise<void> {
         .update(userSessions)
         .set({ endedAt: now, durationMs: dur })
         .where(eq(userSessions.id, s.id));
-      console.log(`${tag} [OUTPUT] Closed session | sessionId=${s.id} userId=${userId} durationMs=${dur} (${Math.round(dur/60000)} min) lastHeartbeat=${s.lastHeartbeat ? new Date(s.lastHeartbeat).toISOString() : 'null'}`);
+      debugLog("STATE", "info", `${tag} [OUTPUT] Closed session | sessionId=${s.id} userId=${userId} durationMs=${dur} (${Math.round(dur/60000)} min) lastHeartbeat=${s.lastHeartbeat ? new Date(s.lastHeartbeat).toISOString() : 'null'}`);
     }
     if (open.length === 0) {
-      console.log(`${tag} [STATE] No open sessions found for userId=${userId}`);
+      debugLog("STATE", "info", `${tag} [STATE] No open sessions found for userId=${userId}`);
     }
   } catch (err: unknown) {
     console.error(`${tag} Failed | userId=${userId} error=${err instanceof Error ? err.message : String(err)}`);
