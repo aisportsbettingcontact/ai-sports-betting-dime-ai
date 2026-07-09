@@ -12,11 +12,13 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { IS_CI } from "./_core/ciTestGuard";
 import nodemailer from "nodemailer";
 
 const FROM_EMAIL = "team@aisportsbettingmodels.com";
 
-describe("Gmail SMTP credentials", () => {
+// Live SMTP credential check (network + real GMAIL_APP_PASSWORD) — scoped out of CI.
+describe.skipIf(IS_CI)("Gmail SMTP credentials", () => {
   it("should authenticate successfully with GMAIL_APP_PASSWORD", async () => {
     const appPassword = process.env.GMAIL_APP_PASSWORD;
 
