@@ -5,7 +5,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp server/discord/splits_card.html dist/splits_card.html && cp server/nhl_model_engine.py dist/nhl_model_engine.py",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp server/discord/splits_card.html dist/splits_card.html && cp server/nhl_model_engine.py dist/nhl_model_engine.py",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
