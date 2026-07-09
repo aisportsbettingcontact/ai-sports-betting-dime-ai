@@ -657,6 +657,18 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
+    // ── Recurring background jobs (metered-host credit control) ──────────────
+    // Every job below is an in-process 24/7 loop (VSiN scrapers, model runs,
+    // schedule-history refreshes, bet auto-grading, security digests). On a
+    // metered host like Railway these loops dominate CPU cost and log volume.
+    // Set DISABLE_BACKGROUND_JOBS=1 to run this instance web-only: it still
+    // serves pages, DB reads/writes, checkout and Dime Chat — it just stops
+    // refreshing odds/lineups/scores/models (and the Discord bot) until the
+    // flag is removed or the jobs are moved to a dedicated worker service.
+    // Unset (the default) preserves current behavior — every job runs.
+    if (process.env.DISABLE_BACKGROUND_JOBS === '1') {
+      console.log('[SCHEDULERS] DISABLE_BACKGROUND_JOBS=1 — web-only mode: recurring background jobs skipped');
+    } else {
     // Start daily 6am EST game purge (removes previous day's games)
     startDailyPurgeSchedule();
     // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
@@ -697,6 +709,7 @@ async function startServer() {
     startSecurityDigestScheduler();
     // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
     startWeeklySecurityDigestScheduler();
+    } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
     // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
     // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
     import('../db').then(({ backfillOddsHistoryLineSource }) => {
