@@ -658,10 +658,9 @@ async function startServer() {
     console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "0.0.0.0") ...`);
-  server.listen(port, "0.0.0.0", () => {
+  const onListening = () => {
     const addr = server.address();
-    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://0.0.0.0:${port}/`);
+    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
     console.log(`Server running on http://localhost:${port}/`);
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
@@ -870,7 +869,24 @@ async function startServer() {
       cutoffTimer.unref();
     };
     scheduleNextCutoffInvalidation();
+  };
+
+  // Host omitted → Node binds dual-stack "::" (IPv6 + IPv4-mapped) when IPv6
+  // exists and natively falls back to "0.0.0.0" on any IPv6 handle failure.
+  // Railway's edge proxy dials the container over IPv6, so the previous
+  // explicit IPv4-only "0.0.0.0" bind made every request 502 at the edge
+  // ("connection dial timeout") before it ever reached Express.
+  const onBindError = (err: NodeJS.ErrnoException) => {
+    console.error(`[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code}) — exiting so the platform restarts`);
+    process.exit(1);
+  };
+  server.once("error", onBindError);
+  server.once("listening", () => {
+    server.removeListener("error", onBindError);
+    onListening();
   });
+  console.log(`[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`);
+  server.listen(port);
 }
 
 startServer().catch(console.error);
