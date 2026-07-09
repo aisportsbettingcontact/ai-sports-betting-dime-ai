@@ -15,7 +15,7 @@
 #
 #   DATABASE_URL        — MySQL/TiDB connection string
 #                         Format: mysql://user:password@host:port/database
-#   JWT_SECRET          — Session signing secret (min 16 chars, any string)
+#   APP_SESSION_SECRET  — Session cookie signing secret (min 44 chars)
 #   PUBLIC_ORIGIN       — Canonical public origin, no trailing slash
 #                         Value: https://aisportsbettingmodels.com
 #   VITE_APP_ID         — Manus OAuth application ID
@@ -201,10 +201,10 @@ jobs:
     env:
       # All secrets required by the test suite are injected from GitHub Secrets.
       # Tests that require DB connectivity use DATABASE_URL.
-      # Tests that require auth use JWT_SECRET.
+      # Tests that require auth use APP_SESSION_SECRET.
       # Tests that require Discord OAuth use PUBLIC_ORIGIN + DISCORD_* vars.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      APP_SESSION_SECRET: ${{ secrets.APP_SESSION_SECRET }}
       PUBLIC_ORIGIN: ${{ secrets.PUBLIC_ORIGIN }}
       VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
       OAUTH_SERVER_URL: ${{ secrets.OAUTH_SERVER_URL }}
