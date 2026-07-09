@@ -72,8 +72,10 @@ await check("GET /api/trpc/<bogus> → tRPC JSON error (API mounted)", async () 
   const res = await fetch(`${base}/api/trpc/smokeTest.doesNotExist`);
   const type = res.headers.get("content-type") ?? "";
   expect(type.includes("application/json"), `content-type ${type} — SPA fallback answered; /api proxy or mount is broken`);
+  expect(res.status < 500, `status ${res.status} — upstream/gateway error, not a tRPC response`);
   const body = await res.json();
-  expect(res.status !== 200 || body?.error || Array.isArray(body), `unexpected 200: ${JSON.stringify(body).slice(0, 80)}`);
+  const isTrpcShape = Array.isArray(body) ? body[0]?.error : body?.error;
+  expect(isTrpcShape, `not a tRPC error envelope: ${JSON.stringify(body).slice(0, 80)}`);
   return `status ${res.status}`;
 });
 
