@@ -1,0 +1,67 @@
+# Live score refresh — GitHub Actions timer replacing the in-process scheduler.
+#
+# Fires POST /api/cron/scores on the Railway app on a schedule. The endpoint is
+# shared-secret authed (CRON_SECRET) and responds 200 immediately while
+# refreshAllScoresNow() (NBA/NHL/MLB) runs in the background under a run-lock.
+#
+# Required repo secrets:
+#   RAILWAY_APP_URL — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+#
+# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
+# platform load).
+name: Cron — live score refresh
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-scores
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/scores
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST /api/cron/scores (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/scores"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/scores")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::scores trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — scores accepted (HTTP $CODE)"

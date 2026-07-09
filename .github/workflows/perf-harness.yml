@@ -1,0 +1,84 @@
+# CI perf harness — real-browser load + weight budgets against the live deploy.
+#
+# Loads a set of routes on the deployed Railway app with headless Chromium,
+# measures TTFB / DCL / load / FCP / LCP / transfer weight, and enforces perf
+# budgets + a regression guard (perf/baseline.json). Fails the run on any
+# violation so a slow deploy is caught. See perf/README.md.
+#
+# Required repo secret:
+#   RAILWAY_APP_URL — public app URL, no trailing slash.
+#
+# Manual + scheduled. workflow_dispatch exposes `update_baseline` to reseed the
+# committed baseline from a known-good run (artifact is uploaded either way).
+name: Perf harness
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: "Reseed perf/baseline.json from this run instead of gating"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+  schedule:
+    - cron: "0 12 * * *" # daily 12:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-harness
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    name: Measure live routes
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Preflight — RAILWAY_APP_URL present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] target secret present"
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Install Chromium for Playwright"
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: "[STEP] Run perf harness"
+        env:
+          PERF_TARGET_URL: ${{ secrets.RAILWAY_APP_URL }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
+            pnpm exec tsx perf/harness.ts --update-baseline
+          else
+            pnpm exec tsx perf/harness.ts
+          fi
+
+      - name: "[OUTPUT] Upload raw metrics artifact"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results
+          path: perf-results.json
+          if-no-files-found: ignore
