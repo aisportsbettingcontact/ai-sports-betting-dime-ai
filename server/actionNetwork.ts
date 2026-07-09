@@ -27,6 +27,7 @@ import { MLB_BY_ABBREV, MLB_BY_ID } from "@shared/mlbTeams";
 import { NHL_TEAMS } from "@shared/nhlTeams";
 import { NBA_TEAMS } from "@shared/nbaTeams";
 import { getTeamColors } from "@shared/teamColors";
+import { logToDb } from "./dbLogger";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -150,7 +151,7 @@ function evictExpired(): void {
     }
   }
   if (evicted > 0) {
-    console.log(`[AN][CACHE] Evicted ${evicted} expired entries | remaining=${slateCache.size}`);
+    logToDb('STATE', 'info', `[AN][CACHE] Evicted ${evicted} expired entries | remaining=${slateCache.size}`);
   }
 }
 
@@ -232,10 +233,10 @@ export function resolveLogoUrl(sport: string, abbrev: string, anLogoUrl: string)
     const normalized = MLB_ABBREV_ALIASES[abbrev] ?? abbrev;
     const team = MLB_BY_ABBREV.get(normalized) ?? MLB_BY_ABBREV.get(abbrev);
     if (team?.logoUrl) {
-      console.log(`[AN][STEP]  Logo resolved: sport=MLB abbrev=${abbrev} (normalized=${normalized}) → mlbId=${team.mlbId} url=${team.logoUrl}`);
+      logToDb('STATE', 'info', `[AN][STEP]  Logo resolved: sport=MLB abbrev=${abbrev} (normalized=${normalized}) → mlbId=${team.mlbId} url=${team.logoUrl}`);
       return team.logoUrl;
     }
-    console.warn(`[AN][STATE] Logo fallback: sport=MLB abbrev=${abbrev} (normalized=${normalized}) not in MLB_BY_ABBREV — using AN logo`);
+    logToDb('STATE', 'warn', `[AN][STATE] Logo fallback: sport=MLB abbrev=${abbrev} (normalized=${normalized}) not in MLB_BY_ABBREV — using AN logo`);
   }
 
   if (sport === "NBA") {
@@ -243,17 +244,17 @@ export function resolveLogoUrl(sport: string, abbrev: string, anLogoUrl: string)
     const abbrevUpper = abbrev.toUpperCase();
     const team = _NBA_BY_ABBREV_EARLY.get(abbrevUpper) ?? _NBA_BY_ABBREV_EARLY.get(abbrev);
     if (team?.logoUrl) {
-      console.log(`[AN][STEP]  Logo resolved: sport=NBA abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
+      logToDb('STATE', 'info', `[AN][STEP]  Logo resolved: sport=NBA abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
       return team.logoUrl;
     }
     // Fallback: try matching by anSlug (Action Network uses slug-based team IDs)
     const byAnSlug = NBA_TEAMS.find(t => t.anSlug === abbrev || t.anSlug === abbrev.toLowerCase());
     if (byAnSlug?.logoUrl) {
-      console.log(`[AN][STEP]  Logo resolved via anSlug: sport=NBA abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
+      logToDb('STATE', 'info', `[AN][STEP]  Logo resolved via anSlug: sport=NBA abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
       return byAnSlug.logoUrl;
     }
     if (anLogoUrl) return anLogoUrl; // AN CDN fallback
-    console.warn(`[AN][STATE] Logo fallback: sport=NBA abbrev=${abbrev} not in NBA_BY_ABBREV or anSlug map — no logo`);
+    logToDb('STATE', 'warn', `[AN][STATE] Logo fallback: sport=NBA abbrev=${abbrev} not in NBA_BY_ABBREV or anSlug map — no logo`);
   }
 
   if (sport === "NHL") {
@@ -261,17 +262,17 @@ export function resolveLogoUrl(sport: string, abbrev: string, anLogoUrl: string)
     const abbrevUpper = abbrev.toUpperCase();
     const team = _NHL_BY_ABBREV_EARLY.get(abbrevUpper) ?? _NHL_BY_ABBREV_EARLY.get(abbrev);
     if (team?.logoUrl) {
-      console.log(`[AN][STEP]  Logo resolved: sport=NHL abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
+      logToDb('STATE', 'info', `[AN][STEP]  Logo resolved: sport=NHL abbrev=${abbrev} (upper=${abbrevUpper}) → url=${team.logoUrl}`);
       return team.logoUrl;
     }
     // Fallback: try matching by anSlug
     const byAnSlug = NHL_TEAMS.find(t => t.anSlug === abbrev || t.anSlug === abbrev.toLowerCase());
     if (byAnSlug?.logoUrl) {
-      console.log(`[AN][STEP]  Logo resolved via anSlug: sport=NHL abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
+      logToDb('STATE', 'info', `[AN][STEP]  Logo resolved via anSlug: sport=NHL abbrev=${abbrev} → url=${byAnSlug.logoUrl}`);
       return byAnSlug.logoUrl;
     }
     if (anLogoUrl) return anLogoUrl; // AN CDN fallback
-    console.warn(`[AN][STATE] Logo fallback: sport=NHL abbrev=${abbrev} not in NHL_BY_ABBREV or anSlug map — no logo`);
+    logToDb('STATE', 'warn', `[AN][STATE] Logo fallback: sport=NHL abbrev=${abbrev} not in NHL_BY_ABBREV or anSlug map — no logo`);
   }
 
   return anLogoUrl;
@@ -322,7 +323,7 @@ function extractOdds(
   };
 
   if (!markets || typeof markets !== "object") {
-    console.warn(`[AN][STATE] game=${gameId}: markets field missing or invalid`);
+    logToDb('STATE', 'warn', `[AN][STATE] game=${gameId}: markets field missing or invalid`);
     return emptyOdds;
   }
 
@@ -339,13 +340,13 @@ function extractOdds(
     if (Array.isArray(ml) && ml.length > 0) {
       bestBookId = bookId;
       bestEvent = eventData;
-      console.log(`[AN][STATE] game=${gameId}: using book_id=${bookId} for odds`);
+      logToDb('STATE', 'info', `[AN][STATE] game=${gameId}: using book_id=${bookId} for odds`);
       break;
     }
   }
 
   if (!bestEvent) {
-    console.warn(`[AN][STATE] game=${gameId}: no book with moneyline data found in books=${Object.keys(markets).join(",")}`);
+    logToDb('STATE', 'warn', `[AN][STATE] game=${gameId}: no book with moneyline data found in books=${Object.keys(markets).join(",")}`);
     return emptyOdds;
   }
 
@@ -378,7 +379,7 @@ function extractOdds(
     bookId: bestBookId,
   };
 
-  console.log(
+  logToDb('STATE', 'info',
     `[AN][STATE] game=${gameId} odds: ` +
     `ML away=${result.awayMl?.odds ?? "N/A"} home=${result.homeMl?.odds ?? "N/A"} | ` +
     `RL away=${result.awayRl?.value ?? "N/A"}(${result.awayRl?.odds ?? "N/A"}) home=${result.homeRl?.value ?? "N/A"}(${result.homeRl?.odds ?? "N/A"}) | ` +
@@ -393,15 +394,14 @@ function extractOdds(
 async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGame[]> {
   const slug = AN_SPORT_SLUG[sport.toUpperCase()];
   if (!slug) {
-    console.error(`[AN][ERROR] Unknown sport="${sport}" — no AN slug mapping`);
+    logToDb('STATE', 'error', `[AN][ERROR] Unknown sport="${sport}" — no AN slug mapping`);
     return [];
   }
 
   const anDate = dateStr.replace(/-/g, "");
   const url = `${AN_BASE}/${slug}?bookIds=${BOOK_IDS}&date=${anDate}&periods=event`;
 
-  console.log(`[AN][INPUT] fetchAnSlateRaw: sport=${sport} date=${dateStr}`);
-  console.log(`[AN][STEP]  Fetching: ${url}`);
+  logToDb('STATE', 'info', `[AN][INPUT] fetchAnSlateRaw: sport=${sport} date=${dateStr} | URL: ${url}`);
 
   let raw: Record<string, unknown>;
   try {
@@ -411,29 +411,29 @@ async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGam
     const resp = await fetch(url, { headers: FETCH_HEADERS, signal: controller.signal });
     clearTimeout(timer);
 
-    console.log(`[AN][STATE] HTTP status=${resp.status} sport=${sport} date=${dateStr}`);
+    logToDb('STATE', 'info', `[AN][STATE] HTTP status=${resp.status} sport=${sport} date=${dateStr}`);
 
     if (!resp.ok) {
       const body = await resp.text();
-      console.error(`[AN][ERROR] Non-OK: status=${resp.status} body=${body.slice(0, 200)}`);
+      logToDb('STATE', 'error', `[AN][ERROR] Non-OK: status=${resp.status} body=${body.slice(0, 200)}`);
       return [];
     }
 
     raw = (await resp.json()) as Record<string, unknown>;
   } catch (err) {
     if ((err as Error).name === "AbortError") {
-      console.error(`[AN][ERROR] Fetch timeout after ${FETCH_TIMEOUT_MS}ms for sport=${sport} date=${dateStr}`);
+      logToDb('STATE', 'error', `[AN][ERROR] Fetch timeout after ${FETCH_TIMEOUT_MS}ms for sport=${sport} date=${dateStr}`);
     } else {
-      console.error(`[AN][ERROR] Fetch failed: ${err}`);
+      logToDb('STATE', 'error', `[AN][ERROR] Fetch failed: ${err}`);
     }
     return [];
   }
 
   const games = (raw.games as Record<string, unknown>[]) ?? [];
-  console.log(`[AN][STATE] Raw games count=${games.length} sport=${sport} date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][STATE] Raw games count=${games.length} sport=${sport} date=${dateStr}`);
 
   if (games.length === 0) {
-    console.log(`[AN][OUTPUT] No games for sport=${sport} date=${dateStr}`);
+    logToDb('STATE', 'info', `[AN][OUTPUT] No games for sport=${sport} date=${dateStr}`);
     return [];
   }
 
@@ -458,7 +458,7 @@ async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGam
       const home = teamMap.get(homeTeamId);
 
       if (!away || !home) {
-        console.warn(`[AN][STATE] game id=${id}: missing team — awayId=${awayTeamId} homeId=${homeTeamId}`);
+        logToDb('STATE', 'warn', `[AN][STATE] game id=${id}: missing team — awayId=${awayTeamId} homeId=${homeTeamId}`);
         parseErrors++;
         continue;
       }
@@ -496,7 +496,7 @@ async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGam
         gameNumber:   1, // default; overwritten below for doubleheaders
       });
     } catch (err) {
-      console.error(`[AN][ERROR] Parse error on game: ${err}`);
+      logToDb('STATE', 'error', `[AN][ERROR] Parse error on game: ${err}`);
       parseErrors++;
     }
   }
@@ -521,21 +521,20 @@ async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGam
       g.gameNumber = 2;
       matchupCount.set(key, seen + 1);
       dhDetected++;
-      console.log(
+      logToDb('STATE', 'info',
         `[AN][DH] Doubleheader detected: ${g.awayTeam}@${g.homeTeam} on ${g.gameDate} ` +
         `— id=${g.id} assigned gameNumber=2 (G2, starts ${g.gameTime} ET)`
       );
     }
   }
   if (dhDetected > 0) {
-    console.log(`[AN][DH] Total doubleheader G2 games assigned: ${dhDetected}`);
+    logToDb('STATE', 'info', `[AN][DH] Total doubleheader G2 games assigned: ${dhDetected}`);
   }
 
-  console.log(`[AN][OUTPUT] Parsed ${result.length} games | sport=${sport} date=${dateStr} | oddsFound=${oddsFound}/${result.length} | errors=${parseErrors}`);
-  console.log(`[AN][VERIFY] ${parseErrors === 0 ? "PASS" : "WARN"} — ${parseErrors} parse errors`);
+  logToDb('STATE', 'info', `[AN][OUTPUT] Parsed ${result.length} games | sport=${sport} date=${dateStr} | oddsFound=${oddsFound}/${result.length} | errors=${parseErrors}`);
 
   result.forEach((g, i) => {
-    console.log(
+    logToDb('STATE', 'info',
       `[AN][OUTPUT]   [${i + 1}] id=${g.id} ${g.awayTeam} @ ${g.homeTeam} G${g.gameNumber} | ${g.gameTime} ET | ` +
       `ML: ${g.odds.awayMl?.odds ?? "N/A"}/${g.odds.homeMl?.odds ?? "N/A"} | ` +
       `RL: ${g.odds.awayRl?.value ?? "N/A"}(${g.odds.awayRl?.odds ?? "N/A"}) | ` +
@@ -558,25 +557,25 @@ async function fetchAnSlateRaw(sport: string, dateStr: string): Promise<SlateGam
 export async function fetchAnSlate(sport: string, dateStr: string): Promise<SlateGame[]> {
   const key = cacheKey(sport, dateStr);
 
-  console.log(`[AN][INPUT] fetchAnSlate: sport=${sport} date=${dateStr} key=${key}`);
+  logToDb('STATE', 'info', `[AN][INPUT] fetchAnSlate: sport=${sport} date=${dateStr} key=${key}`);
 
   // ── Cache hit ──────────────────────────────────────────────────────────────
   const cached = slateCache.get(key);
   if (cached && isCacheValid(cached)) {
     const ageMs = Date.now() - cached.fetchedAt;
-    console.log(`[AN][CACHE] HIT key=${key} | age=${ageMs}ms | games=${cached.games.length}`);
+    logToDb('STATE', 'info', `[AN][CACHE] HIT key=${key} | age=${ageMs}ms | games=${cached.games.length}`);
     return cached.games;
   }
 
   // ── In-flight dedup ────────────────────────────────────────────────────────
   const existing = inFlight.get(key);
   if (existing) {
-    console.log(`[AN][CACHE] IN-FLIGHT dedup key=${key} — awaiting existing request`);
+    logToDb('STATE', 'info', `[AN][CACHE] IN-FLIGHT dedup key=${key} — awaiting existing request`);
     return existing;
   }
 
   // ── Cache miss — fetch ─────────────────────────────────────────────────────
-  console.log(`[AN][CACHE] MISS key=${key} — initiating fetch`);
+  logToDb('STATE', 'info', `[AN][CACHE] MISS key=${key} — initiating fetch`);
 
   const promise = fetchAnSlateRaw(sport, dateStr).then(async games => {
     // ── Per-sport fallback for past dates ────────────────────────────────────────────────────────────────────────────
@@ -586,31 +585,31 @@ export async function fetchAnSlate(sport: string, dateStr: string): Promise<Slat
     if (games.length === 0) {
       const sportUpper = sport.toUpperCase();
       if (sportUpper === "MLB") {
-        console.log(`[AN][FALLBACK][STEP] AN returned 0 MLB games for date=${dateStr} — trying MLB Stats API fallback`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][STEP] AN returned 0 MLB games for date=${dateStr} — trying MLB Stats API fallback`);
         finalGames = await fetchMlbStatsSlate(dateStr);
-        console.log(`[AN][FALLBACK][OUTPUT] MLB Stats API fallback: date=${dateStr} games=${finalGames.length}`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] MLB Stats API fallback: date=${dateStr} games=${finalGames.length}`);
       } else if (sportUpper === "NHL") {
-        console.log(`[AN][FALLBACK][STEP] AN returned 0 NHL games for date=${dateStr} — trying NHL API fallback`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][STEP] AN returned 0 NHL games for date=${dateStr} — trying NHL API fallback`);
         finalGames = await fetchNhlStatsSlate(dateStr);
-        console.log(`[AN][FALLBACK][OUTPUT] NHL API fallback: date=${dateStr} games=${finalGames.length}`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] NHL API fallback: date=${dateStr} games=${finalGames.length}`);
       } else if (sportUpper === "NBA") {
-        console.log(`[AN][FALLBACK][STEP] AN returned 0 NBA games for date=${dateStr} — trying ESPN NBA fallback`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][STEP] AN returned 0 NBA games for date=${dateStr} — trying ESPN NBA fallback`);
         finalGames = await fetchEspnSlate("NBA", dateStr);
-        console.log(`[AN][FALLBACK][OUTPUT] ESPN NBA fallback: date=${dateStr} games=${finalGames.length}`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] ESPN NBA fallback: date=${dateStr} games=${finalGames.length}`);
       } else if (sportUpper === "NCAAM") {
-        console.log(`[AN][FALLBACK][STEP] AN returned 0 NCAAM games for date=${dateStr} — trying ESPN NCAAM fallback`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][STEP] AN returned 0 NCAAM games for date=${dateStr} — trying ESPN NCAAM fallback`);
         finalGames = await fetchEspnSlate("NCAAM", dateStr);
-        console.log(`[AN][FALLBACK][OUTPUT] ESPN NCAAM fallback: date=${dateStr} games=${finalGames.length}`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] ESPN NCAAM fallback: date=${dateStr} games=${finalGames.length}`);
       }
     }
     evictExpired();
     slateCache.set(key, { games: finalGames, fetchedAt: Date.now() });
     inFlight.delete(key);
-    console.log(`[AN][CACHE] STORED key=${key} | games=${finalGames.length} | TTL=${CACHE_TTL_MS / 1000}s`);
+    logToDb('STATE', 'info', `[AN][CACHE] STORED key=${key} | games=${finalGames.length} | TTL=${CACHE_TTL_MS / 1000}s`);
     return finalGames;
   }).catch(err => {
     inFlight.delete(key);
-    console.error(`[AN][ERROR] fetchAnSlateRaw threw: ${err}`);
+    logToDb('STATE', 'error', `[AN][ERROR] fetchAnSlateRaw threw: ${err}`);
     return [] as SlateGame[];
   });
 
@@ -624,7 +623,7 @@ export async function fetchAnSlate(sport: string, dateStr: string): Promise<Slat
  */
 export async function prewarmSlateCache(): Promise<void> {
   const today = todayEstDate();
-  console.log(`[AN][CACHE] Pre-warming slate cache for date=${today} sports=${PREWARM_SPORTS.join(",")}`);
+  logToDb('STATE', 'info', `[AN][CACHE] Pre-warming slate cache for date=${today} sports=${PREWARM_SPORTS.join(",")}`);
 
   const start = Date.now();
   const results = await Promise.allSettled(
@@ -636,14 +635,14 @@ export async function prewarmSlateCache(): Promise<void> {
     const sport = PREWARM_SPORTS[i];
     if (r.status === "fulfilled") {
       totalGames += r.value.length;
-      console.log(`[AN][CACHE] Pre-warm OK: sport=${sport} games=${r.value.length}`);
+      logToDb('STATE', 'info', `[AN][CACHE] Pre-warm OK: sport=${sport} games=${r.value.length}`);
     } else {
-      console.error(`[AN][CACHE] Pre-warm FAIL: sport=${sport} reason=${r.reason}`);
+      logToDb('STATE', 'error', `[AN][CACHE] Pre-warm FAIL: sport=${sport} reason=${r.reason}`);
     }
   });
 
   const elapsed = Date.now() - start;
-  console.log(`[AN][CACHE] Pre-warm complete | elapsed=${elapsed}ms | totalGames=${totalGames} | cacheSize=${slateCache.size}`);
+  logToDb('STATE', 'info', `[AN][CACHE] Pre-warm complete | elapsed=${elapsed}ms | totalGames=${totalGames} | cacheSize=${slateCache.size}`);
 }
 
 // ─── MLB Stats API Fallback ───────────────────────────────────────────────────
@@ -666,8 +665,7 @@ const MLB_STATS_ABBREV_ALIASES: Record<string, string> = {
  */
 async function fetchMlbStatsSlate(dateStr: string): Promise<SlateGame[]> {
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${dateStr}&hydrate=team&language=en`;
-  console.log(`[AN][FALLBACK][INPUT] fetchMlbStatsSlate: date=${dateStr}`);
-  console.log(`[AN][FALLBACK][STEP]  URL=${url}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][INPUT] fetchMlbStatsSlate: date=${dateStr} | URL=${url}`);
   const fetchStart = Date.now();
   let resp: Response;
   try {
@@ -683,29 +681,29 @@ async function fetchMlbStatsSlate(dateStr: string): Promise<SlateGame[]> {
     });
     clearTimeout(timer);
   } catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchMlbStatsSlate: fetch failed date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchMlbStatsSlate: fetch failed date=${dateStr} err=${err}`);
     return [];
   }
   const elapsed = Date.now() - fetchStart;
-  console.log(`[AN][FALLBACK][STATE] HTTP ${resp.status} date=${dateStr} elapsed=${elapsed}ms`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] HTTP ${resp.status} date=${dateStr} elapsed=${elapsed}ms`);
   if (!resp.ok) {
-    console.error(`[AN][FALLBACK][ERROR] fetchMlbStatsSlate: non-OK status=${resp.status} date=${dateStr}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchMlbStatsSlate: non-OK status=${resp.status} date=${dateStr}`);
     return [];
   }
   let data: Record<string, unknown>;
   try {
     data = (await resp.json()) as Record<string, unknown>;
   } catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchMlbStatsSlate: JSON parse failed date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchMlbStatsSlate: JSON parse failed date=${dateStr} err=${err}`);
     return [];
   }
   const dates = (data.dates as Array<Record<string, unknown>>) ?? [];
   // Stats API returns date in "YYYY-MM-DD" format matching our dateStr
   const dateEntry = dates.find((d) => (d.date as string) === dateStr);
   const apiGames = (dateEntry?.games as Array<Record<string, unknown>>) ?? [];
-  console.log(`[AN][FALLBACK][STATE] ${apiGames.length} raw games for date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] ${apiGames.length} raw games for date=${dateStr}`);
   if (apiGames.length === 0) {
-    console.log(`[AN][FALLBACK][OUTPUT] 0 games for date=${dateStr} — no MLB games scheduled`);
+    logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] 0 games for date=${dateStr} — no MLB games scheduled`);
     return [];
   }
   const result: SlateGame[] = [];
@@ -730,7 +728,7 @@ async function fetchMlbStatsSlate(dateStr: string): Promise<SlateGame[]> {
       const awayTeam = awayEntry ?? MLB_BY_ABBREV.get(awayAbbrev);
       const homeTeam = homeEntry ?? MLB_BY_ABBREV.get(homeAbbrev);
       if (!awayTeam || !homeTeam) {
-        console.warn(`[AN][FALLBACK][STATE] SKIP gamePk=${gamePk}: unknown team away=${awayAbbrev}(id=${awayId}) home=${homeAbbrev}(id=${homeId})`);
+        logToDb('STATE', 'warn', `[AN][FALLBACK][STATE] SKIP gamePk=${gamePk}: unknown team away=${awayAbbrev}(id=${awayId}) home=${homeAbbrev}(id=${homeId})`);
         skipped++;
         continue;
       }
@@ -768,9 +766,9 @@ async function fetchMlbStatsSlate(dateStr: string): Promise<SlateGame[]> {
         odds:         emptyOdds,
         gameNumber:   1, // default; overwritten below for doubleheaders
       });
-      console.log(`[AN][FALLBACK][STATE] Mapped gamePk=${gamePk} ${awayTeam.abbrev}@${homeTeam.abbrev} status=${status} time=${utcToEstTime(startTime)}`);
+      logToDb('STATE', 'info', `[AN][FALLBACK][STATE] Mapped gamePk=${gamePk} ${awayTeam.abbrev}@${homeTeam.abbrev} status=${status} time=${utcToEstTime(startTime)}`);
     } catch (err) {
-      console.error(`[AN][FALLBACK][ERROR] fetchMlbStatsSlate: parse error on game: ${err}`);
+      logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchMlbStatsSlate: parse error on game: ${err}`);
       skipped++;
     }
   }
@@ -785,11 +783,10 @@ async function fetchMlbStatsSlate(dateStr: string): Promise<SlateGame[]> {
     } else {
       g.gameNumber = 2;
       fbMatchupCount.set(key, seen + 1);
-      console.log(`[AN][FALLBACK][DH] Doubleheader G2: ${g.awayTeam}@${g.homeTeam} id=${g.id} time=${g.gameTime} ET`);
+      logToDb('STATE', 'info', `[AN][FALLBACK][DH] Doubleheader G2: ${g.awayTeam}@${g.homeTeam} id=${g.id} time=${g.gameTime} ET`);
     }
   }
-  console.log(`[AN][FALLBACK][OUTPUT] fetchMlbStatsSlate DONE: date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
-  console.log(`[AN][FALLBACK][VERIFY] ${result.length > 0 ? "PASS" : "WARN — 0 games"} | date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] fetchMlbStatsSlate DONE: date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
   return result;
 }
 
@@ -808,8 +805,7 @@ const NHL_BY_ABBREV = new Map(NHL_TEAMS.map(t => [t.abbrev, t]));
  */
 async function fetchNhlStatsSlate(dateStr: string): Promise<SlateGame[]> {
   const url = `https://api-web.nhle.com/v1/schedule/${dateStr}`;
-  console.log(`[AN][FALLBACK][INPUT] fetchNhlStatsSlate: date=${dateStr}`);
-  console.log(`[AN][FALLBACK][STEP]  URL=${url}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][INPUT] fetchNhlStatsSlate: date=${dateStr} | URL=${url}`);
   const fetchStart = Date.now();
   let resp: Response;
   try {
@@ -821,19 +817,19 @@ async function fetchNhlStatsSlate(dateStr: string): Promise<SlateGame[]> {
     });
     clearTimeout(timer);
   } catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchNhlStatsSlate: fetch failed date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchNhlStatsSlate: fetch failed date=${dateStr} err=${err}`);
     return [];
   }
   const elapsed = Date.now() - fetchStart;
-  console.log(`[AN][FALLBACK][STATE] HTTP ${resp.status} date=${dateStr} elapsed=${elapsed}ms`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] HTTP ${resp.status} date=${dateStr} elapsed=${elapsed}ms`);
   if (!resp.ok) {
-    console.error(`[AN][FALLBACK][ERROR] fetchNhlStatsSlate: non-OK status=${resp.status} date=${dateStr}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchNhlStatsSlate: non-OK status=${resp.status} date=${dateStr}`);
     return [];
   }
   let data: Record<string, unknown>;
   try { data = (await resp.json()) as Record<string, unknown>; }
   catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchNhlStatsSlate: JSON parse failed date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchNhlStatsSlate: JSON parse failed date=${dateStr} err=${err}`);
     return [];
   }
   // NHL API returns gameWeek array — find the day matching dateStr
@@ -846,9 +842,9 @@ async function fetchNhlStatsSlate(dateStr: string): Promise<SlateGame[]> {
       break;
     }
   }
-  console.log(`[AN][FALLBACK][STATE] ${apiGames.length} raw NHL games for date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] ${apiGames.length} raw NHL games for date=${dateStr}`);
   if (apiGames.length === 0) {
-    console.log(`[AN][FALLBACK][OUTPUT] 0 NHL games for date=${dateStr}`);
+    logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] 0 NHL games for date=${dateStr}`);
     return [];
   }
   const result: SlateGame[] = [];
@@ -864,14 +860,14 @@ async function fetchNhlStatsSlate(dateStr: string): Promise<SlateGame[]> {
       const homeAbbrev = (homeObj.abbrev as string) ?? "";
       // Skip TBD teams (conference finals before opponent determined)
       if (!awayAbbrev || awayAbbrev === "TBD" || !homeAbbrev || homeAbbrev === "TBD") {
-        console.log(`[AN][FALLBACK][STATE] SKIP NHL game id=${id}: TBD team away=${awayAbbrev} home=${homeAbbrev}`);
+        logToDb('STATE', 'info', `[AN][FALLBACK][STATE] SKIP NHL game id=${id}: TBD team away=${awayAbbrev} home=${homeAbbrev}`);
         skipped++;
         continue;
       }
       const awayTeam = NHL_BY_ABBREV.get(awayAbbrev);
       const homeTeam = NHL_BY_ABBREV.get(homeAbbrev);
       if (!awayTeam || !homeTeam) {
-        console.warn(`[AN][FALLBACK][STATE] SKIP NHL game id=${id}: unknown team away=${awayAbbrev} home=${homeAbbrev}`);
+        logToDb('STATE', 'warn', `[AN][FALLBACK][STATE] SKIP NHL game id=${id}: unknown team away=${awayAbbrev} home=${homeAbbrev}`);
         skipped++;
         continue;
       }
@@ -902,15 +898,14 @@ async function fetchNhlStatsSlate(dateStr: string): Promise<SlateGame[]> {
         odds:         emptyOdds,
         gameNumber:   1,
       });
-      console.log(`[AN][FALLBACK][STATE] NHL mapped id=${id} ${awayAbbrev}@${homeAbbrev} status=${status}`);
+      logToDb('STATE', 'info', `[AN][FALLBACK][STATE] NHL mapped id=${id} ${awayAbbrev}@${homeAbbrev} status=${status}`);
     } catch (err) {
-      console.error(`[AN][FALLBACK][ERROR] fetchNhlStatsSlate: parse error on game: ${err}`);
+      logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchNhlStatsSlate: parse error on game: ${err}`);
       skipped++;
     }
   }
   result.sort((a, b) => a.startUtc.localeCompare(b.startUtc));
-  console.log(`[AN][FALLBACK][OUTPUT] fetchNhlStatsSlate DONE: date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
-  console.log(`[AN][FALLBACK][VERIFY] ${result.length > 0 ? "PASS" : "WARN — 0 games"} | date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] fetchNhlStatsSlate DONE: date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
   return result;
 }
 
@@ -952,8 +947,7 @@ async function fetchEspnSlate(sport: "NBA" | "NCAAM", dateStr: string): Promise<
   const dateCompact = dateStr.replace(/-/g, ""); // YYYYMMDD
   const groupsParam = sport === "NCAAM" ? "&groups=50" : "";
   const url = `https://site.api.espn.com/apis/site/v2/sports/${cfg.path}/scoreboard?dates=${dateCompact}${groupsParam}`;
-  console.log(`[AN][FALLBACK][INPUT] fetchEspnSlate: sport=${sport} date=${dateStr}`);
-  console.log(`[AN][FALLBACK][STEP]  URL=${url}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][INPUT] fetchEspnSlate: sport=${sport} date=${dateStr} | URL=${url}`);
   const fetchStart = Date.now();
   let resp: Response;
   try {
@@ -965,25 +959,25 @@ async function fetchEspnSlate(sport: "NBA" | "NCAAM", dateStr: string): Promise<
     });
     clearTimeout(timer);
   } catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchEspnSlate: fetch failed sport=${sport} date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchEspnSlate: fetch failed sport=${sport} date=${dateStr} err=${err}`);
     return [];
   }
   const elapsed = Date.now() - fetchStart;
-  console.log(`[AN][FALLBACK][STATE] HTTP ${resp.status} sport=${sport} date=${dateStr} elapsed=${elapsed}ms`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] HTTP ${resp.status} sport=${sport} date=${dateStr} elapsed=${elapsed}ms`);
   if (!resp.ok) {
-    console.error(`[AN][FALLBACK][ERROR] fetchEspnSlate: non-OK status=${resp.status} sport=${sport} date=${dateStr}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchEspnSlate: non-OK status=${resp.status} sport=${sport} date=${dateStr}`);
     return [];
   }
   let data: Record<string, unknown>;
   try { data = (await resp.json()) as Record<string, unknown>; }
   catch (err) {
-    console.error(`[AN][FALLBACK][ERROR] fetchEspnSlate: JSON parse failed sport=${sport} date=${dateStr} err=${err}`);
+    logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchEspnSlate: JSON parse failed sport=${sport} date=${dateStr} err=${err}`);
     return [];
   }
   const events = (data.events as Array<Record<string, unknown>>) ?? [];
-  console.log(`[AN][FALLBACK][STATE] ${events.length} raw ESPN ${sport} events for date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][STATE] ${events.length} raw ESPN ${sport} events for date=${dateStr}`);
   if (events.length === 0) {
-    console.log(`[AN][FALLBACK][OUTPUT] 0 ${sport} games for date=${dateStr}`);
+    logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] 0 ${sport} games for date=${dateStr}`);
     return [];
   }
   const result: SlateGame[] = [];
@@ -1069,15 +1063,14 @@ async function fetchEspnSlate(sport: "NBA" | "NCAAM", dateStr: string): Promise<
         odds:         emptyOdds,
         gameNumber:   1,
       });
-      console.log(`[AN][FALLBACK][STATE] ESPN ${sport} mapped id=${id} ${awayAbbrev}@${homeAbbrev} status=${status}`);
+      logToDb('STATE', 'info', `[AN][FALLBACK][STATE] ESPN ${sport} mapped id=${id} ${awayAbbrev}@${homeAbbrev} status=${status}`);
     } catch (err) {
-      console.error(`[AN][FALLBACK][ERROR] fetchEspnSlate: parse error on event: ${err}`);
+      logToDb('STATE', 'error', `[AN][FALLBACK][ERROR] fetchEspnSlate: parse error on event: ${err}`);
       skipped++;
     }
   }
   result.sort((a, b) => a.startUtc.localeCompare(b.startUtc));
-  console.log(`[AN][FALLBACK][OUTPUT] fetchEspnSlate DONE: sport=${sport} date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
-  console.log(`[AN][FALLBACK][VERIFY] ${result.length > 0 ? "PASS" : "WARN — 0 games"} | sport=${sport} date=${dateStr}`);
+  logToDb('STATE', 'info', `[AN][FALLBACK][OUTPUT] fetchEspnSlate DONE: sport=${sport} date=${dateStr} games=${result.length} skipped=${skipped} elapsed=${elapsed}ms`);
   return result;
 }
 
@@ -1087,5 +1080,5 @@ async function fetchEspnSlate(sport: "NBA" | "NCAAM", dateStr: string): Promise<
 function invalidateSlateCache(sport: string, dateStr: string): void {
   const key = cacheKey(sport, dateStr);
   const existed = slateCache.delete(key);
-  console.log(`[AN][CACHE] Invalidate key=${key} | existed=${existed}`);
+  logToDb('STATE', 'info', `[AN][CACHE] Invalidate key=${key} | existed=${existed}`);
 }

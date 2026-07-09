@@ -58,10 +58,12 @@ import {
   type MlbScheduleHistoryRow,
 } from "../drizzle/schema";
 import { eq, and, or, desc, gte, lte, sql } from "drizzle-orm";
+import { logToDb } from "./dbLogger";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TAG = "[MlbScheduleHistory]";
+const SRC = "MlbScheduleHistory";
 const AN_V1_BASE = "https://api.actionnetwork.com/web/v1/scoreboard/mlb";
 
 // ─── Season Date Boundaries ───────────────────────────────────────────────────
@@ -237,9 +239,7 @@ export async function fetchMlbScheduleForDate(
 ): Promise<InsertMlbScheduleHistory[]> {
   const url = `${AN_V1_BASE}?period=game&bookIds=${DK_NJ_BOOK_ID}&date=${dateStr}`;
 
-  console.log(
-    `${TAG}[FETCH] Requesting AN v1 API | date=${dateStr} | URL: ${url}`
-  );
+  logToDb(SRC, 'info', `${TAG}[FETCH] Requesting AN v1 API | date=${dateStr} | URL: ${url}`);
 
   let response: AnV1Response;
   try {
@@ -250,19 +250,15 @@ export async function fetchMlbScheduleForDate(
     response = res.data;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `${TAG}[FETCH] AN v1 API request FAILED for date=${dateStr}: ${msg}`
-    );
+    logToDb(SRC, 'error', `${TAG}[FETCH] AN v1 API request FAILED for date=${dateStr}: ${msg}`);
     throw new Error(`AN v1 API fetch failed for date=${dateStr}: ${msg}`);
   }
 
   const games = response.games ?? [];
-  console.log(
-    `${TAG}[FETCH] AN v1 API returned ${games.length} games for date=${dateStr}`
-  );
+  logToDb(SRC, 'info', `${TAG}[FETCH] AN v1 API returned ${games.length} games for date=${dateStr}`);
 
   if (games.length === 0) {
-    console.log(`${TAG}[FETCH] No games for date=${dateStr} — off-day or pre/post-season`);
+    logToDb(SRC, 'info', `${TAG}[FETCH] No games for date=${dateStr} — off-day or pre/post-season`);
     return [];
   }
 
@@ -288,7 +284,7 @@ export async function fetchMlbScheduleForDate(
       homeTeam = teams.find((t) => t.id === game.home_team_id);
       if (!awayTeam || !homeTeam) {
         // Fallback: ids didn't match any team entry — use positional as last resort
-        console.warn(
+        logToDb(SRC, 'warn',
           `${TAG}[WARN] Game id=${game.id} — away_team_id=${game.away_team_id} home_team_id=${game.home_team_id}` +
           ` did not match any teams[] entry (ids: ${teams.map(t=>t.id).join(',')}) — falling back to teams[0]/[1]`
         );
@@ -297,7 +293,7 @@ export async function fetchMlbScheduleForDate(
       } else {
         // Log when teams[] order differs from away_team_id assignment (the bug we fixed)
         if (teams[0]?.id !== game.away_team_id) {
-          console.log(
+          logToDb(SRC, 'info',
             `${TAG}[FIX] Game id=${game.id} — teams[] order mismatch corrected:` +
             ` teams[0]=${teams[0]?.abbr}(id=${teams[0]?.id}) but away_team_id=${game.away_team_id}` +
             ` → AWAY=${awayTeam.abbr} HOME=${homeTeam.abbr}`
@@ -306,17 +302,13 @@ export async function fetchMlbScheduleForDate(
       }
     } else {
       // No away_team_id/home_team_id present — fall back to positional (legacy)
-      console.warn(
-        `${TAG}[WARN] Game id=${game.id} — no away_team_id/home_team_id in response, using teams[0]/[1]`
-      );
+      logToDb(SRC, 'warn', `${TAG}[WARN] Game id=${game.id} — no away_team_id/home_team_id in response, using teams[0]/[1]`);
       awayTeam = teams[0];
       homeTeam = teams[1];
     }
 
     if (!awayTeam || !homeTeam) {
-      console.warn(
-        `${TAG}[SKIP] Game id=${game.id} — missing team data (teams.length=${teams.length})`
-      );
+      logToDb(SRC, 'warn', `${TAG}[SKIP] Game id=${game.id} — missing team data (teams.length=${teams.length})`);
       skippedNoTeam++;
       continue;
     }
@@ -345,7 +337,7 @@ export async function fetchMlbScheduleForDate(
       }
     }
     if (usedBookId !== null && usedBookId !== DK_NJ_BOOK_ID) {
-      console.log(
+      logToDb(SRC, 'info',
         `${TAG}[ODDS_FALLBACK] ${awayAbbr}@${homeAbbr} — DK NJ (68) absent, using book_id=${usedBookId} as fallback` +
         ` | ml_away=${dk?.ml_away} ml_home=${dk?.ml_home} spread=${dk?.spread_away} total=${dk?.total}`
       );
@@ -372,14 +364,12 @@ export async function fetchMlbScheduleForDate(
     if (!hasDk) {
       skippedNoDk++;
       const availableBooks = oddsList.map((o) => o.book_id).join(",") || "none";
-      console.log(
+      logToDb(SRC, 'info',
         `${TAG}[ODDS] ${gameLabel} — No usable odds in fallback chain [${BOOK_FALLBACK_CHAIN.join(",")}]` +
         ` (status=${game.status}) | available books: ${availableBooks} — storing without odds`
       );
     } else if (!hasFullOdds) {
-      console.log(
-        `${TAG}[ODDS] ${gameLabel} — DK NJ partial odds: RL=${spreadAway ?? "—"} ML=${mlAway ?? "—"} TOT=${totalLine ?? "—"}`
-      );
+      logToDb(SRC, 'info', `${TAG}[ODDS] ${gameLabel} — DK NJ partial odds: RL=${spreadAway ?? "—"} ML=${mlAway ?? "—"} TOT=${totalLine ?? "—"}`);
     } else {
       gamesWithFullOdds++;
     }
@@ -406,7 +396,7 @@ export async function fetchMlbScheduleForDate(
     const gameDateEst = utcToEstDate(game.start_time);
 
     // ── Log this game ─────────────────────────────────────────────────────────
-    console.log(
+    logToDb(SRC, 'info',
       `${TAG}[GAME] ${gameLabel}` +
       ` | date=${gameDateEst} status=${game.status}` +
       ` | score=${awayScore ?? "?"}–${homeScore ?? "?"}` +
@@ -455,7 +445,7 @@ export async function fetchMlbScheduleForDate(
     });
   }
 
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[FETCH] date=${dateStr} processed ${games.length} games:` +
     ` ${results.length} valid | ${gamesWithFullOdds} with full odds` +
     ` | ${skippedNoDk} without DK odds | ${skippedNoTeam} skipped (no team data)`
@@ -477,11 +467,11 @@ export async function upsertMlbScheduleHistory(
   records: InsertMlbScheduleHistory[]
 ): Promise<number> {
   if (records.length === 0) {
-    console.log(`${TAG}[UPSERT] No records to upsert`);
+    logToDb(SRC, 'info', `${TAG}[UPSERT] No records to upsert`);
     return 0;
   }
 
-  console.log(`${TAG}[UPSERT] Upserting ${records.length} records into mlb_schedule_history`);
+  logToDb(SRC, 'info', `${TAG}[UPSERT] Upserting ${records.length} records into mlb_schedule_history`);
 
   const db = await getDb();
 
@@ -516,12 +506,10 @@ export async function upsertMlbScheduleHistory(
         },
       });
     totalUpserted += batch.length;
-    console.log(
-      `${TAG}[UPSERT] Batch ${Math.floor(i / BATCH_SIZE) + 1}: upserted ${batch.length} records (total so far: ${totalUpserted})`
-    );
+    logToDb(SRC, 'info', `${TAG}[UPSERT] Batch ${Math.floor(i / BATCH_SIZE) + 1}: upserted ${batch.length} records (total so far: ${totalUpserted})`);
   }
 
-  console.log(`${TAG}[UPSERT] Complete — ${totalUpserted} records upserted`);
+  logToDb(SRC, 'info', `${TAG}[UPSERT] Complete — ${totalUpserted} records upserted`);
   return totalUpserted;
 }
 
@@ -536,7 +524,7 @@ export async function upsertMlbScheduleHistory(
 export async function refreshMlbScheduleForDate(
   dateStr: string
 ): Promise<MlbScheduleRefreshResult> {
-  console.log(`${TAG}[REFRESH] Starting refresh for date=${dateStr}`);
+  logToDb(SRC, 'info', `${TAG}[REFRESH] Starting refresh for date=${dateStr}`);
 
   const errors: string[] = [];
   let fetched = 0;
@@ -551,12 +539,10 @@ export async function refreshMlbScheduleForDate(
       upserted = await upsertMlbScheduleHistory(records);
     }
 
-    console.log(
-      `${TAG}[REFRESH] date=${dateStr} COMPLETE — fetched=${fetched} upserted=${upserted} skipped=${skipped}`
-    );
+    logToDb(SRC, 'info', `${TAG}[REFRESH] date=${dateStr} COMPLETE — fetched=${fetched} upserted=${upserted} skipped=${skipped}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG}[REFRESH] date=${dateStr} FAILED: ${msg}`);
+    logToDb(SRC, 'error', `${TAG}[REFRESH] date=${dateStr} FAILED: ${msg}`);
     errors.push(msg);
   }
 
@@ -582,9 +568,7 @@ export async function refreshMlbScheduleLastNDays(
   days = 7,
   delayMs = 400
 ): Promise<MlbScheduleRefreshResult[]> {
-  console.log(
-    `${TAG}[ROLLING] Starting rolling refresh for last ${days} days`
-  );
+  logToDb(SRC, 'info', `${TAG}[ROLLING] Starting rolling refresh for last ${days} days`);
 
   const results: MlbScheduleRefreshResult[] = [];
   const today = new Date();
@@ -606,7 +590,7 @@ export async function refreshMlbScheduleLastNDays(
   const totalUpserted = results.reduce((s, r) => s + r.upserted, 0);
   const totalErrors = results.reduce((s, r) => s + r.errors.length, 0);
 
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[ROLLING] Complete — ${days} days processed` +
     ` | totalFetched=${totalFetched} totalUpserted=${totalUpserted} errors=${totalErrors}`
   );
@@ -652,15 +636,7 @@ export async function backfillMlbScheduleHistory(
   const start = new Date(startDate + "T00:00:00Z");
   const end = endDate ? new Date(endDate + "T00:00:00Z") : new Date();
 
-  console.log(
-    `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
-  );
-  console.log(
-    `${TAG}[BACKFILL] Starting full historical backfill`
-  );
-  console.log(
-    `${TAG}[BACKFILL] Date range: ${startDate} → ${endDate ?? "today"}`
-  );
+  logToDb(SRC, 'info', `${TAG}[BACKFILL] Starting full historical backfill | Date range: ${startDate} → ${endDate ?? "today"}`);
 
   // Build list of all dates in range
   const allDates: string[] = [];
@@ -670,15 +646,7 @@ export async function backfillMlbScheduleHistory(
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  console.log(
-    `${TAG}[BACKFILL] Total dates to process: ${allDates.length}`
-  );
-  console.log(
-    `${TAG}[BACKFILL] Estimated time at ${delayMs}ms delay: ~${Math.ceil(allDates.length * delayMs / 60000)} minutes`
-  );
-  console.log(
-    `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
-  );
+  logToDb(SRC, 'info', `${TAG}[BACKFILL] Total dates: ${allDates.length} | Est. time: ~${Math.ceil(allDates.length * delayMs / 60000)} min at ${delayMs}ms delay`);
 
   const dateResults: MlbScheduleRefreshResult[] = [];
   let totalFetched = 0;
@@ -691,9 +659,7 @@ export async function backfillMlbScheduleHistory(
     const dateStr = allDates[i];
     const dateLabel = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
 
-    console.log(
-      `${TAG}[BACKFILL] [${i + 1}/${allDates.length}] Processing date=${dateLabel}`
-    );
+    logToDb(SRC, 'info', `${TAG}[BACKFILL] [${i + 1}/${allDates.length}] Processing date=${dateLabel}`);
 
     const result = await refreshMlbScheduleForDate(dateStr);
     dateResults.push(result);
@@ -717,7 +683,7 @@ export async function backfillMlbScheduleHistory(
 
     // Log milestone summaries every 50 dates
     if ((i + 1) % 50 === 0 || i === allDates.length - 1) {
-      console.log(
+      logToDb(SRC, 'info',
         `${TAG}[BACKFILL] ── Milestone [${i + 1}/${allDates.length}] ──` +
         ` totalFetched=${totalFetched} totalUpserted=${totalUpserted}` +
         ` datesWithGames=${datesWithGames} errors=${totalErrors}`
@@ -730,18 +696,10 @@ export async function backfillMlbScheduleHistory(
     }
   }
 
-  console.log(
-    `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
-  );
-  console.log(`${TAG}[BACKFILL] COMPLETE`);
-  console.log(`${TAG}[BACKFILL] Total dates processed: ${allDates.length}`);
-  console.log(`${TAG}[BACKFILL] Dates with games: ${datesWithGames}`);
-  console.log(`${TAG}[BACKFILL] Dates with upserted records: ${datesWithOdds}`);
-  console.log(`${TAG}[BACKFILL] Total games fetched: ${totalFetched}`);
-  console.log(`${TAG}[BACKFILL] Total records upserted: ${totalUpserted}`);
-  console.log(`${TAG}[BACKFILL] Total errors: ${totalErrors}`);
-  console.log(
-    `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
+  logToDb(SRC, 'info',
+    `${TAG}[BACKFILL] COMPLETE — dates=${allDates.length} datesWithGames=${datesWithGames}` +
+    ` datesWithOdds=${datesWithOdds} totalFetched=${totalFetched}` +
+    ` totalUpserted=${totalUpserted} errors=${totalErrors}`
   );
 
   return {
@@ -772,10 +730,7 @@ export async function getLastNGamesForTeam(
   teamSlug: string,
   limit = 5
 ) {
-  console.log(
-    `${TAG}[getLastNGamesForTeam] [INPUT] teamSlug="${teamSlug}" limit=${limit}` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
-  );
+  logToDb(SRC, 'info', `${TAG}[getLastNGamesForTeam] [INPUT] teamSlug="${teamSlug}" limit=${limit} | seasonFilter=gte(${SEASON_2026_START})`);
 
   const db = await getDb();
 
@@ -800,22 +755,7 @@ export async function getLastNGamesForTeam(
 
   const teamGames = rows as MlbScheduleHistoryRow[];
 
-  console.log(
-    `${TAG}[getLastNGamesForTeam] [OUTPUT] team="${teamSlug}"` +
-    ` → ${teamGames.length} 2026 completed games returned (limit=${limit})`
-  );
-
-  if (teamGames.length > 0) {
-    console.log(
-      `${TAG}[getLastNGamesForTeam] [STATE]` +
-      ` mostRecent=${teamGames[0].gameDate}` +
-      ` oldest=${teamGames[teamGames.length - 1].gameDate}`
-    );
-  } else {
-    console.log(
-      `${TAG}[getLastNGamesForTeam] [VERIFY] WARN — 0 2026 completed games for team="${teamSlug}"` +
-      ` | seasonStart=${SEASON_2026_START} — DB may not yet have 2026 data for this team`
-    );
+  logToDb(SRC, 'info', `${TAG}[getLastNGamesForTeam] [OUTPUT] team="${teamSlug}" → ${teamGames.length} 2026 completed games returned (limit=${limit})`);
   }
 
   return teamGames;
@@ -828,10 +768,7 @@ export async function getLastNGamesForTeam(
  * @param teamSlug - AN url_slug, e.g. "arizona-diamondbacks"
  */
 export async function getFullScheduleForTeam(teamSlug: string) {
-  console.log(
-    `${TAG}[getFullScheduleForTeam] [INPUT] teamSlug="${teamSlug}"` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
-  );
+  logToDb(SRC, 'info', `${TAG}[getFullScheduleForTeam] [INPUT] teamSlug="${teamSlug}" | seasonFilter=gte(${SEASON_2026_START})`);
 
   const db = await getDb();
 
@@ -858,22 +795,11 @@ export async function getFullScheduleForTeam(teamSlug: string) {
   const scheduled  = teamGames.filter((r) => r.gameStatus === "scheduled").length;
   const inprogress = teamGames.filter((r) => r.gameStatus === "inprogress").length;
 
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[getFullScheduleForTeam] [OUTPUT] team="${teamSlug}"` +
     ` → ${teamGames.length} 2026 games` +
     ` | complete=${completed} scheduled=${scheduled} inprogress=${inprogress}`
   );
-
-  if (teamGames.length > 0) {
-    console.log(
-      `${TAG}[getFullScheduleForTeam] [STATE]` +
-      ` dateRange: ${teamGames[teamGames.length - 1].gameDate} → ${teamGames[0].gameDate}`
-    );
-  } else {
-    console.log(
-      `${TAG}[getFullScheduleForTeam] [VERIFY] WARN — 0 2026 games for team="${teamSlug}"` +
-      ` | seasonStart=${SEASON_2026_START} — check that 2026 backfill has run`
-    );
   }
 
   return teamGames;
@@ -887,19 +813,14 @@ export async function getFullScheduleForTeam(teamSlug: string) {
  * @param homeSlug - AN url_slug for the home team
  */
 export async function getLast5ForMatchup(awaySlug: string, homeSlug: string) {
-  console.log(
-    `${TAG}[QUERY] Fetching Last 5 for matchup: away="${awaySlug}" vs home="${homeSlug}"`
-  );
+  logToDb(SRC, 'info', `${TAG}[QUERY] Fetching Last 5 for matchup: away="${awaySlug}" vs home="${homeSlug}"`);
 
   const [awayLast5, homeLast5] = await Promise.all([
     getLastNGamesForTeam(awaySlug, 5),
     getLastNGamesForTeam(homeSlug, 5),
   ]);
 
-  console.log(
-    `${TAG}[QUERY] Last 5 results — away="${awaySlug}": ${awayLast5.length} games` +
-    ` | home="${homeSlug}": ${homeLast5.length} games`
-  );
+  logToDb(SRC, 'info', `${TAG}[QUERY] Last 5 results — away="${awaySlug}": ${awayLast5.length} games | home="${homeSlug}": ${homeLast5.length} games`);
 
   return { awayLast5, homeLast5 };
 }
@@ -919,10 +840,7 @@ export async function getMlbH2HGames(
   slugB: string,
   limit = 5
 ): Promise<MlbScheduleHistoryRow[]> {
-  console.log(
-    `${TAG}[getMlbH2HGames] [INPUT] slugA="${slugA}" slugB="${slugB}"` +
-    ` limit=${limit} | lookbackFloor=${H2H_LOOKBACK_START}`
-  );
+  logToDb(SRC, 'info', `${TAG}[getMlbH2HGames] [INPUT] slugA="${slugA}" slugB="${slugB}" limit=${limit} | lookbackFloor=${H2H_LOOKBACK_START}`);
 
   const db = await getDb();
 
@@ -954,23 +872,20 @@ export async function getMlbH2HGames(
 
   const h2h = rows as MlbScheduleHistoryRow[];
 
-  console.log(
-    `${TAG}[getMlbH2HGames] [OUTPUT] "${slugA}" vs "${slugB}"` +
-    ` → ${h2h.length} H2H games returned (limit=${limit})`
-  );
+  logToDb(SRC, 'info', `${TAG}[getMlbH2HGames] [OUTPUT] "${slugA}" vs "${slugB}" → ${h2h.length} H2H games returned (limit=${limit})`);
 
   if (h2h.length > 0) {
     const latest = h2h[0];
     const oldest = h2h[h2h.length - 1];
-    console.log(
+    logToDb(SRC, 'info',
       `${TAG}[getMlbH2HGames] [STATE]` +
       ` mostRecent=${latest.gameDate}` +
-      ` (${latest.awayAbbr}@${latest.homeAbbr} ${latest.awayScore ?? "?"}\u2013${latest.homeScore ?? "?"})` +
+      ` (${latest.awayAbbr}@${latest.homeAbbr} ${latest.awayScore ?? "?"}–${latest.homeScore ?? "?"})` +
       ` | oldest=${oldest.gameDate}` +
       ` | gamesFound=${h2h.length}/${limit} requested`
     );
   } else {
-    console.log(
+    logToDb(SRC, 'warn',
       `${TAG}[getMlbH2HGames] [VERIFY] WARN — 0 H2H games found between "${slugA}" and "${slugB}"` +
       ` since ${H2H_LOOKBACK_START} — teams may not have played each other in DB date range`
     );
@@ -992,15 +907,10 @@ export async function getMlbH2HGames(
  * @param limit    - Max games to analyze (default: 162 = full MLB season)
  */
 export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
-  console.log(
-    `${TAG}[getMlbSituationalStats] [INPUT] team="${teamSlug}" limit=${limit}` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
-  );
+  logToDb(SRC, 'info', `${TAG}[getMlbSituationalStats] [INPUT] team="${teamSlug}" limit=${limit} | seasonFilter=gte(${SEASON_2026_START})`);
 
   const db = await getDb();
 
-  // ── SQL-level filter: 2026 season only, completed games for this team ────────
-  // gte(gameDate, SEASON_2026_START) pins to 2026 Opening Day forward.
   // LIMIT pushed to DB — no full-table scan, no JS filtering, no JS sorting.
   const rows = await db
     .select()
@@ -1020,13 +930,10 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
 
   const teamGames = rows as MlbScheduleHistoryRow[];
 
-  console.log(
-    `${TAG}[getMlbSituationalStats] [STATE] team="${teamSlug}"` +
-    ` → ${teamGames.length} 2026 completed games fetched from DB`
-  );
+  logToDb(SRC, 'info', `${TAG}[getMlbSituationalStats] [STATE] team="${teamSlug}" → ${teamGames.length} 2026 completed games fetched from DB`);
 
   if (teamGames.length === 0) {
-    console.log(
+    logToDb(SRC, 'warn',
       `${TAG}[getMlbSituationalStats] [VERIFY] WARN — 0 2026 completed games for team="${teamSlug}"` +
       ` | seasonStart=${SEASON_2026_START} — all situational records will be 0-0`
     );
@@ -1099,7 +1006,7 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   const noOddsGames = teamGames.filter((g) => wasFavoriteOrNull(g) === null);
 
   if (noOddsGames.length > 0) {
-    console.log(
+    logToDb(SRC, 'warn',
       `${TAG}[getMlbSituationalStats] [VERIFY] WARN — ${noOddsGames.length} games have no ML odds` +
       ` for team="${teamSlug}" — excluded from fav/dog classification` +
       ` | games: ${noOddsGames.map(g => `${g.awayAbbr}@${g.homeAbbr}(${g.gameDate})`).join(", ")}`
@@ -1135,13 +1042,13 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   };
 
   // ── Comprehensive output log ───────────────────────────────────────────────────────────────────────
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[getMlbSituationalStats] [OUTPUT] team="${teamSlug}" 2026 season` +
     ` | analyzed=${teamGames.length} games` +
     ` | home=${homeGames.length} away=${awayGames.length}` +
     ` | fav=${favGames.length} dog=${dogGames.length} last10=${last10.length}`
   );
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[getMlbSituationalStats] [OUTPUT] ML:` +
     ` overall=${stats.ml.overall.wins}-${stats.ml.overall.losses}` +
     ` last10=${stats.ml.last10.wins}-${stats.ml.last10.losses}` +
@@ -1150,7 +1057,7 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
     ` fav=${stats.ml.favorite.wins}-${stats.ml.favorite.losses}` +
     ` dog=${stats.ml.underdog.wins}-${stats.ml.underdog.losses}`
   );
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[getMlbSituationalStats] [OUTPUT] ATS:` +
     ` overall=${stats.spread.overall.wins}-${stats.spread.overall.losses}` +
     ` last10=${stats.spread.last10.wins}-${stats.spread.last10.losses}` +
@@ -1159,7 +1066,7 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
     ` fav=${stats.spread.favorite.wins}-${stats.spread.favorite.losses}` +
     ` dog=${stats.spread.underdog.wins}-${stats.spread.underdog.losses}`
   );
-  console.log(
+  logToDb(SRC, 'info',
     `${TAG}[getMlbSituationalStats] [OUTPUT] O/U:` +
     ` overall=${stats.total.overall.wins}O-${stats.total.overall.losses}U-${stats.total.overall.pushes}P` +
     ` last10=${stats.total.last10.wins}O-${stats.total.last10.losses}U-${stats.total.last10.pushes}P` +
@@ -1170,12 +1077,12 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   // ── Sanity check: ML wins + losses should not exceed gamesAnalyzed ──────────
   const mlTotal = stats.ml.overall.wins + stats.ml.overall.losses;
   if (mlTotal > teamGames.length) {
-    console.error(
+    logToDb(SRC, 'error',
       `${TAG}[getMlbSituationalStats] [VERIFY] FAIL — ML wins+losses (${mlTotal}) > gamesAnalyzed (${teamGames.length})` +
       ` — data integrity issue`
     );
   } else {
-    console.log(
+    logToDb(SRC, 'info',
       `${TAG}[getMlbSituationalStats] [VERIFY] PASS — ML total=${mlTotal} ≤ gamesAnalyzed=${teamGames.length}` +
       ` | null/pending games=${teamGames.length - mlTotal}`
     );
@@ -1215,13 +1122,13 @@ export async function captureClosingLines(): Promise<{
   const CTAG = "[MlbClosingLine]";
   const now = Date.now();
 
-  console.log(`${CTAG}[STEP] Starting closing line capture | utcMs=${now}`);
+  logToDb(SRC, 'info', `${CTAG}[STEP] Starting closing line capture | utcMs=${now}`);
 
   // ── Step 1: Fetch today's games from AN API ──────────────────────────────
   const todayStr = formatAnDate(new Date());
   const url = `${AN_V1_BASE}?period=game&bookIds=${DK_NJ_BOOK_ID}&date=${todayStr}`;
 
-  console.log(`${CTAG}[FETCH] Requesting AN v1 API | date=${todayStr} | URL: ${url}`);
+  logToDb(SRC, 'info', `${CTAG}[FETCH] Requesting AN v1 API | date=${todayStr} | URL: ${url}`);
 
   let games: AnV1Game[] = [];
   try {
@@ -1230,10 +1137,10 @@ export async function captureClosingLines(): Promise<{
       timeout: 15_000,
     });
     games = res.data.games ?? [];
-    console.log(`${CTAG}[FETCH] AN v1 returned ${games.length} games for date=${todayStr}`);
+    logToDb(SRC, 'info', `${CTAG}[FETCH] AN v1 returned ${games.length} games for date=${todayStr}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${CTAG}[FETCH] AN v1 API request FAILED: ${msg}`);
+    logToDb(SRC, 'error', `${CTAG}[FETCH] AN v1 API request FAILED: ${msg}`);
     return { scanned: 0, locked: 0, alreadyLocked: 0, noOdds: 0, errors: [msg] };
   }
 
@@ -1242,9 +1149,7 @@ export async function captureClosingLines(): Promise<{
     (g) => g.status === "inprogress" || g.real_status === "inprogress"
   );
 
-  console.log(
-    `${CTAG}[STEP] ${inProgressGames.length} in-progress games found out of ${games.length} total`
-  );
+  logToDb(SRC, 'info', `${CTAG}[STEP] ${inProgressGames.length} in-progress games found out of ${games.length} total`);
 
   const db = await getDb();
   let locked = 0;
@@ -1271,7 +1176,7 @@ export async function captureClosingLines(): Promise<{
         .limit(1);
 
       if (rows.length === 0) {
-        console.log(`${CTAG}[SKIP] ${gameLabel} — not found in DB (not yet ingested)`);
+        logToDb(SRC, 'info', `${CTAG}[SKIP] ${gameLabel} — not found in DB (not yet ingested)`);
         continue;
       }
 
@@ -1280,9 +1185,7 @@ export async function captureClosingLines(): Promise<{
 
       // ── Already locked — skip ────────────────────────────────────────────
       if (row.closingLineLockedAt != null) {
-        console.log(
-          `${CTAG}[SKIP] ${matchLabel} — closing lines already locked at utcMs=${row.closingLineLockedAt}`
-        );
+        logToDb(SRC, 'info', `${CTAG}[SKIP] ${matchLabel} — closing lines already locked at utcMs=${row.closingLineLockedAt}`);
         alreadyLocked++;
         continue;
       }
@@ -1292,7 +1195,7 @@ export async function captureClosingLines(): Promise<{
       const dk = oddsList.find((o) => o.book_id === DK_NJ_BOOK_ID) ?? null;
 
       if (!dk) {
-        console.log(`${CTAG}[SKIP] ${matchLabel} — no DK NJ odds entry in API response`);
+        logToDb(SRC, 'info', `${CTAG}[SKIP] ${matchLabel} — no DK NJ odds entry in API response`);
         noOdds++;
         continue;
       }
@@ -1309,7 +1212,7 @@ export async function captureClosingLines(): Promise<{
 
       const hasFullClosing = closingAwayRL != null && closingAwayML != null && closingTotal != null;
 
-      console.log(
+      logToDb(SRC, 'info',
         `${CTAG}[LOCK] ${matchLabel}` +
         ` | RL=${fmtLine(closingAwayRL) ?? "—"}(${fmtOdds(closingAwayRLOdds) ?? "—"})` +
         ` ML=${fmtOdds(closingAwayML) ?? "—"}/${fmtOdds(closingHomeML) ?? "—"}` +
@@ -1335,20 +1238,18 @@ export async function captureClosingLines(): Promise<{
         })
         .where(eq(mlbScheduleHistory.anGameId, game.id));
 
-      console.log(
-        `${CTAG}[LOCK] ${matchLabel} — closing lines LOCKED at utcMs=${now}`
-      );
+      logToDb(SRC, 'info', `${CTAG}[LOCK] ${matchLabel} — closing lines LOCKED at utcMs=${now}`);
       locked++;
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${CTAG}[ERROR] ${gameLabel} — ${msg}`);
+      logToDb(SRC, 'error', `${CTAG}[ERROR] ${gameLabel} — ${msg}`);
       errors.push(`anId=${game.id}: ${msg}`);
     }
   }
 
   // ── Step 4: Final verification log ──────────────────────────────────────
-  console.log(
+  logToDb(SRC, 'info',
     `${CTAG}[VERIFY] ${locked > 0 ? "✅ PASS" : "ℹ️  INFO"} — ` +
     `scanned=${inProgressGames.length} locked=${locked} alreadyLocked=${alreadyLocked} ` +
     `noOdds=${noOdds} errors=${errors.length}`

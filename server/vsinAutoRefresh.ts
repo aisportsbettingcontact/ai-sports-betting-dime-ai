@@ -13,6 +13,7 @@
  */
 
 import { listGamesByDate, updateBookOdds, insertGames, updateAnOdds, insertOddsHistory, getGameByNcaaContestId, updateNcaaStartTime } from "./db";
+import { logToDb } from "./dbLogger";
 import { fetchActionNetworkOdds, type AnSport } from "./actionNetworkScraper";
 import { scrapeVsinBettingSplits, scrapeVsinBettingSplitsBothDays, scrapeVsinMlbBettingSplits, scrapeVsinNbaBettingSplits, scrapeVsinNhlBettingSplits, type VsinSplitsGame } from "./vsinBettingSplitsScraper";
 import { fetchNbaGamesForDate, buildNbaStartTimeMap, fetchNbaLiveScores } from "./nbaScoreboard";
@@ -824,7 +825,7 @@ export async function refreshAnApiOdds(
       const anGames = await fetchActionNetworkOdds(sport, dateStr);
 
       if (anGames.length === 0) {
-        console.log(`[ANApiOdds][${dbSport}] No games with DK odds for ${dateStr}`);
+        logToDb('ANApiOdds', 'info', `[ANApiOdds][${dbSport}] No games with DK odds for ${dateStr}`);
         continue;
       }
 
@@ -851,13 +852,13 @@ export async function refreshAnApiOdds(
           awayDbSlug = awayMlb?.abbrev;
           homeDbSlug = homeMlb?.abbrev;
           if (!awayMlb || !homeMlb) {
-            console.warn(
+            logToDb('ANApiOdds', 'warn',
               `[ANApiOdds][MLB] UNRESOLVED AN slug: "${anGame.awayUrlSlug}" @ "${anGame.homeUrlSlug}" ` +
               `— awayResolved=${!!awayMlb} homeResolved=${!!homeMlb} ` +
               `— add to MLB_AN_SLUG_ALIASES in mlbTeams.ts if this is a known alias`
             );
           } else {
-            console.log(
+            logToDb('ANApiOdds', 'info',
               `[ANApiOdds][MLB] Resolved: "${anGame.awayUrlSlug}" → ${awayMlb.abbrev} | ` +
               `"${anGame.homeUrlSlug}" → ${homeMlb.abbrev} | ` +
               `runLine=${anGame.dkAwaySpread}/${anGame.dkHomeSpread} ` +
@@ -866,14 +867,14 @@ export async function refreshAnApiOdds(
           }
         } else {
           // Unknown sport — skip
-          console.warn(`[ANApiOdds] Unknown sport "${dbSport}" — skipping game ${anGame.awayUrlSlug} @ ${anGame.homeUrlSlug}`);
+          logToDb('ANApiOdds', 'warn', `[ANApiOdds] Unknown sport "${dbSport}" — skipping game ${anGame.awayUrlSlug} @ ${anGame.homeUrlSlug}`);
           skipped++;
           continue;
         }
 
         if (!awayDbSlug || !homeDbSlug) {
           const msg = `[ANApiOdds][${dbSport}] NO_SLUG: ${anGame.awayUrlSlug} @ ${anGame.homeUrlSlug} (anId=${anGame.gameId})`;
-          console.warn(msg);
+          logToDb('ANApiOdds', 'warn', msg);
           allErrors.push(msg);
           skipped++;
           continue;
@@ -891,23 +892,21 @@ export async function refreshAnApiOdds(
 
         if (!dbGame) {
           const msg = `[ANApiOdds][${dbSport}] NO_MATCH: ${awayDbSlug} @ ${homeDbSlug} on ${dateStr} (anId=${anGame.gameId})`;
-          console.warn(msg);
+          logToDb('ANApiOdds', 'warn', msg);
           allErrors.push(msg);
           skipped++;
           continue;
         }
 
         if (teamsSwapped) {
-          console.log(
-            `[ANApiOdds][${dbSport}] SWAPPED: AN has ${awayDbSlug}@${homeDbSlug} but DB has ${dbGame.awayTeam}@${dbGame.homeTeam} — flipping spreads/ML`
-          );
+          logToDb('ANApiOdds', 'info', `[ANApiOdds][${dbSport}] SWAPPED: AN has ${awayDbSlug}@${homeDbSlug} but DB has ${dbGame.awayTeam}@${dbGame.homeTeam} — flipping spreads/ML`);
         }
 
         // ── ODDS FREEZE: skip games that have already started or finished ──────
         // Once a game goes live, the AN API starts returning live in-game lines.
         // We lock in the pre-game line by refusing to overwrite it.
         if (dbGame.gameStatus === "live" || dbGame.gameStatus === "final") {
-          console.log(
+          logToDb('ANApiOdds', 'info',
             `[ANApiOdds][${dbSport}] FROZEN: ${awayDbSlug} @ ${homeDbSlug} (${dateStr}) ` +
             `— gameStatus=${dbGame.gameStatus}, odds locked in, skipping update`
           );
@@ -954,7 +953,7 @@ export async function refreshAnApiOdds(
         const dkAllComplete    = dkSpreadComplete && dkTotalComplete && dkMlComplete;
 
         // [STATE] Log DK completeness check
-        console.log(
+        logToDb('ANApiOdds', 'info',
           `[ANApiOdds][${dbSport}][DK_CHECK] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
           `dkSpread=${dkSpreadComplete ? '✓' : '✗'} ` +
           `dkTotal=${dkTotalComplete ? '✓' : '✗'} ` +
@@ -981,7 +980,7 @@ export async function refreshAnApiOdds(
         const useHomeML         = dkAllComplete ? dkHomeML                    : openHomeML;
 
         // [STATE] Log final resolved values
-        console.log(
+        logToDb('ANApiOdds', 'info',
           `[ANApiOdds][${dbSport}][RESOLVED] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
           `oddsSource=${oddsSource} | ` +
           `spread=${useAwaySpread ?? '-'}(${useAwaySpreadOdds ?? '-'}) / ${useHomeSpread ?? '-'}(${useHomeSpreadOdds ?? '-'}) ` +
@@ -1039,7 +1038,7 @@ export async function refreshAnApiOdds(
               // ORIGINAL (wrong) direction. After flipping the line, the away team is now the
               // dog (+1.5) so it gets the dog odds (previously homeSpreadOdds), and vice versa.
               _layer2OddsSwapped = true;
-              console.warn(
+              logToDb('ANApiOdds', 'warn',
                 `[ANApiOdds][MLB][LAYER2_ML_GUARD] ${dbGame.awayTeam}@${dbGame.homeTeam} — ` +
                 `scraped awayRunLine=${rAwaySpread.value} contradicts awayML=${useAwayML}. ` +
                 `Corrected to awayRunLine=${_finalAwayRunLine} homeRunLine=${_finalHomeRunLine}. ` +
@@ -1061,7 +1060,7 @@ export async function refreshAnApiOdds(
           homeRunLineOdds: _finalHomeRunLineOdds,
         } : {};
         if (sport === 'mlb' && _finalAwayRunLine !== null) {
-          console.log(
+          logToDb('ANApiOdds', 'info',
             `[ANApiOdds][MLB][DUAL_WRITE] ${dbGame.awayTeam}@${dbGame.homeTeam} ` +
             `awayRunLine=${_finalAwayRunLine}(${rAwaySpreadOdds.value ?? '-'}) ` +
             `homeRunLine=${_finalHomeRunLine}(${rHomeSpreadOdds.value ?? '-'}) ` +
@@ -1126,7 +1125,7 @@ export async function refreshAnApiOdds(
         if (_anOddsResult.layer3Fired && _anOddsResult.gameDate) {
           const _l3GameId   = _anOddsResult.gameId;
           const _l3GameDate = _anOddsResult.gameDate;
-          console.log(
+          logToDb('ANApiOdds', 'info',
             `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} gameDate=${_l3GameDate} — ` +
             `ML direction flipped → triggering immediate model re-run to eliminate stale RL display.`
           );
@@ -1135,15 +1134,13 @@ export async function refreshAnApiOdds(
           import('./mlbModelRunner').then(({ runMlbModelForDate }) =>
             runMlbModelForDate(_l3GameDate, { targetGameIds: [_l3GameId], forceRerun: true })
           ).then(result => {
-            console.log(
+            logToDb('ANApiOdds', 'info',
               `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} COMPLETE — ` +
               `written=${result.written} errors=${result.errors} ` +
               `validation=${result.validation.passed ? '✅ PASSED' : '❌ FAILED'}`
             );
           }).catch(err => {
-            console.error(
-              `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} FAILED (non-fatal, 5-min cycle will retry):`, err
-            );
+            logToDb('ANApiOdds', 'error', `[ANApiOdds][LAYER3_IMMEDIATE_RERUN] id=${_l3GameId} FAILED (non-fatal, 5-min cycle will retry): ${err}`);
           });
         }
 
@@ -1192,7 +1189,7 @@ export async function refreshAnApiOdds(
 
         // [OUTPUT] Confirm update with full resolved values
         updated++;
-        console.log(
+        logToDb('ANApiOdds', 'info',
           `[ANApiOdds][${dbSport}][UPDATED] ${dbGame.awayTeam}@${dbGame.homeTeam} (${dateStr}) ` +
           `source=${source} oddsSource=${oddsSource ?? 'null'}${teamsSwapped ? ' [SWAPPED]' : ''} | ` +
           `spread=${rAwaySpread.value ?? '-'}/${rHomeSpread.value ?? '-'} ` +
@@ -1204,7 +1201,7 @@ export async function refreshAnApiOdds(
         );
       }
 
-      console.log(`[ANApiOdds][${dbSport}] ${dateStr}: updated=${updated} skipped=${skipped} frozen=${totalFrozen} total=${anGames.length}`);
+      logToDb('ANApiOdds', 'info', `[ANApiOdds][${dbSport}] ${dateStr}: updated=${updated} skipped=${skipped} frozen=${totalFrozen} total=${anGames.length}`);
       totalUpdated += updated;
       totalSkipped += skipped;
 
@@ -1226,13 +1223,9 @@ export async function refreshAnApiOdds(
           g.underOdds == null
         );
         if (incomplete.length === 0) {
-          console.log(
-            `[ANApiOdds][${dbSport}][COMPLETENESS] ✅ PASS — all ${afterGames.length} games on ${dateStr} have full primary odds`
-          );
+          logToDb('ANApiOdds', 'info', `[ANApiOdds][${dbSport}][COMPLETENESS] ✅ PASS — all ${afterGames.length} games on ${dateStr} have full primary odds`);
         } else {
-          console.warn(
-            `[ANApiOdds][${dbSport}][COMPLETENESS] ⚠️  ${incomplete.length}/${afterGames.length} games on ${dateStr} have MISSING primary fields:`
-          );
+          logToDb('ANApiOdds', 'warn', `[ANApiOdds][${dbSport}][COMPLETENESS] ⚠️  ${incomplete.length}/${afterGames.length} games on ${dateStr} have MISSING primary fields:`);
           for (const g of incomplete) {
             const missing: string[] = [];
             if (g.awayBookSpread == null)  missing.push('awayBookSpread');
@@ -1244,7 +1237,7 @@ export async function refreshAnApiOdds(
             if (g.homeSpreadOdds == null)  missing.push('homeSpreadOdds');
             if (g.overOdds == null)        missing.push('overOdds');
             if (g.underOdds == null)       missing.push('underOdds');
-            console.warn(
+            logToDb('ANApiOdds', 'warn',
               `[ANApiOdds][${dbSport}][COMPLETENESS]   INCOMPLETE gameId=${g.id} ` +
               `${g.awayTeam}@${g.homeTeam} oddsSource=${(g as any).oddsSource ?? 'null'} ` +
               `MISSING=[${missing.join(', ')}]`
@@ -1252,11 +1245,11 @@ export async function refreshAnApiOdds(
           }
         }
       } catch (completenessErr) {
-        console.warn(`[ANApiOdds][${dbSport}][COMPLETENESS] WARN: completeness check failed: ${completenessErr instanceof Error ? completenessErr.message : String(completenessErr)}`);
+        logToDb('ANApiOdds', 'warn', `[ANApiOdds][${dbSport}][COMPLETENESS] WARN: completeness check failed: ${completenessErr instanceof Error ? completenessErr.message : String(completenessErr)}`);
       }
     } catch (err) {
       const msg = `[ANApiOdds][${sport.toUpperCase()}] Failed for ${dateStr}: ${err instanceof Error ? err.message : String(err)}`;
-      console.warn(msg);
+      logToDb('ANApiOdds', 'warn', msg);
       allErrors.push(msg);
     }
   }
