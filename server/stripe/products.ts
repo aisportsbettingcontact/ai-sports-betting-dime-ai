@@ -6,18 +6,36 @@
  * IMPORTANT: Price IDs must be created in the Stripe Dashboard first.
  * Set them via environment variables so they can differ between test and live mode:
  *
- *   STRIPE_PRICE_MONTHLY   — price_xxx for the $99.99/month recurring plan
- *   STRIPE_PRICE_ANNUAL    — price_xxx for the $499.99/year recurring plan
+ *   STRIPE_PRICE_MONTHLY          — price_xxx for the legacy $99.99/month plan
+ *   STRIPE_PRICE_ANNUAL           — price_xxx for the legacy $499.99/year plan
+ *   STRIPE_PRICE_PRO_MONTHLY      — price_xxx for the Pro $99/month plan
+ *   STRIPE_PRICE_SHARP_MONTHLY    — price_xxx for the Sharp $249/month plan
+ *   STRIPE_PRICE_OPERATOR_MONTHLY — price_xxx for the Operator $499/month plan
  *
- * If the env vars are not set, the checkout procedure will throw a descriptive
- * error rather than silently using a wrong or missing price.
+ * The three v2 plan price IDs have NO hardcoded fallbacks (SEC-006): if the
+ * env var is missing, priceId() throws and the checkout mutation surfaces a
+ * clean PRECONDITION_FAILED "plan not yet available" — never a wrong price.
  */
 
 const TAG = "[Stripe][Products]";
 
 // ─── Plan IDs (used as keys throughout the codebase) ─────────────────────────
 
-export type PlanId = "monthly" | "annual";
+export type PlanId = "monthly" | "annual" | "pro" | "sharp" | "operator";
+
+/** v2 ladder plans — env-driven price IDs only, no fallbacks (SEC-006). */
+export const NEW_PLAN_IDS: ReadonlySet<PlanId> = new Set<PlanId>(["pro", "sharp", "operator"]);
+
+/** Resolve a v2 price ID from env — throws (no fallback) when unset. */
+function requirePriceEnv(envVar: string): string {
+  const id = process.env[envVar]?.trim();
+  if (!id) {
+    console.error(`${TAG} [VERIFY] FAIL — ${envVar} is not set (no fallback by design)`);
+    throw new Error(`${envVar} is not set`);
+  }
+  console.log(`${TAG} [STATE] ${envVar} priceId=${id}`);
+  return id;
+}
 
 // ─── Plan metadata (mirrors landing page PricingCTA) ─────────────────────────
 
@@ -60,7 +78,40 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
       return id;
     },
   },
+  pro: {
+    id: "pro",
+    name: "Dime AI — Pro",
+    amountCents: 9900,
+    priceDisplay: "$99/month",
+    interval: "month",
+    priceId: () => requirePriceEnv("STRIPE_PRICE_PRO_MONTHLY"),
+  },
+  sharp: {
+    id: "sharp",
+    name: "Dime AI — Sharp",
+    amountCents: 24900,
+    priceDisplay: "$249/month",
+    interval: "month",
+    priceId: () => requirePriceEnv("STRIPE_PRICE_SHARP_MONTHLY"),
+  },
+  operator: {
+    id: "operator",
+    name: "Dime AI — Operator",
+    amountCents: 49900,
+    priceDisplay: "$499/month",
+    interval: "month",
+    priceId: () => requirePriceEnv("STRIPE_PRICE_OPERATOR_MONTHLY"),
+  },
 };
+
+/**
+ * Normalize a raw plan string (webhook metadata, DB column) to a known PlanId.
+ * Unknown/missing values fall back to "monthly" — the legacy default.
+ */
+export function normalizePlanId(raw: string | null | undefined): PlanId {
+  if (raw && Object.prototype.hasOwnProperty.call(PLANS, raw)) return raw as PlanId;
+  return "monthly";
+}
 
 /**
  * Resolve a PlanId from a Stripe Price ID.
@@ -70,9 +121,15 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 export function getPlanByPriceId(priceId: string): PlanDefinition | null {
   const monthlyId = process.env.STRIPE_PRICE_MONTHLY;
   const annualId = process.env.STRIPE_PRICE_ANNUAL;
+  const proId = process.env.STRIPE_PRICE_PRO_MONTHLY?.trim();
+  const sharpId = process.env.STRIPE_PRICE_SHARP_MONTHLY?.trim();
+  const operatorId = process.env.STRIPE_PRICE_OPERATOR_MONTHLY?.trim();
 
   if (monthlyId && priceId === monthlyId) return PLANS.monthly;
   if (annualId && priceId === annualId) return PLANS.annual;
+  if (proId && priceId === proId) return PLANS.pro;
+  if (sharpId && priceId === sharpId) return PLANS.sharp;
+  if (operatorId && priceId === operatorId) return PLANS.operator;
 
   console.warn(`${TAG} [VERIFY] Unknown priceId=${priceId} — not matched to any plan`);
   return null;
