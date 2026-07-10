@@ -31,6 +31,7 @@ import {
   type DataFreshness,
 } from "./chatReducer";
 import { parseAssistantContent, segmentNumerals, type EdgeBlock } from "./edgeParser";
+import { addSessionRecent, getSessionRecents, type RecentChat } from "./recentChats";
 import avatarUrl from "./assets/prez-avatar.jpg";
 import "./frozen-tokens.css";
 import "./conversation.css";
@@ -50,14 +51,9 @@ const NAV_ROWS: Array<{ label: string; href: string; active?: boolean }> = [
   { label: "Bet Tracker", href: "/bet-tracker" }, // D/L:62
 ];
 
-const RECENT_CHATS = [
-  "Will Messi score a goal today vs Egypt?",
-  "Ohtani strikeout total projection",
-  "Rockies vs Dodgers Best Bets",
-  "The Model's favorite picks July 7",
-  "France World Cup Odds",
-  "Bankroll Management Advice",
-]; // D/L:66-71 — static frozen sample labels (no persistence backend exists)
+// Recent chats are session-only and honest (Ph1): titles derive from the first
+// user message of conversations started this session (recentChats.ts). The six
+// sample labels at D/L:66-71 are design law and are never rendered to users.
 
 const PILL_LABELS = [
   "World Cup Model Simulations",
@@ -141,7 +137,13 @@ const GEAR_PATH =
 /* Sidebar — D/L:54-96                                                */
 /* ----------------------------------------------------------------- */
 
-function DimeSidebar({ onNewChat }: { onNewChat: () => void }) {
+function DimeSidebar({
+  onNewChat,
+  recentChats,
+}: {
+  onNewChat: () => void;
+  recentChats: RecentChat[];
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -195,14 +197,23 @@ function DimeSidebar({ onNewChat }: { onNewChat: () => void }) {
           ),
         )}
       </nav>
-      <div className="dc-recents-label">Recent Chats</div>
-      <div className="dc-recent-list">
-        {RECENT_CHATS.map((label) => (
-          <a key={label} href="#" className="dc-sidebar-row" onClick={inert}>
-            <span className="dc-sidebar-text">{label}</span>
-          </a>
-        ))}
-      </div>
+      {recentChats.length > 0 ? (
+        <>
+          <div className="dc-recents-label">Recent Chats</div>
+          <div className="dc-recent-list">
+            {recentChats.map((rc) => (
+              <a key={rc.id} href="#" className="dc-sidebar-row" onClick={inert}>
+                <span className="dc-sidebar-text">{rc.title}</span>
+              </a>
+            ))}
+          </div>
+        </>
+      ) : (
+        // No conversations yet this session: hide the whole section (honesty —
+        // an empty frozen shell must not render). The spacer takes over the
+        // recent list's flex: 1 slot (D/L:65) so the profile row stays pinned.
+        <div className="dc-sidebar-spacer" />
+      )}
       <div
         ref={profileRef}
         className="dc-sidebar-row dc-profile-row"
@@ -460,6 +471,27 @@ function Turn({
   );
 }
 
+/**
+ * Ph3 viewport gate (<1024px): the frozen screens have no sub-desktop spec, so
+ * narrow viewports get a full-viewport branded notice instead of the shell.
+ * Frozen tokens only: page bg per theme (D/L:46 via .dc-page), hero wordmark
+ * (F:98), body copy at composer-input size (F:101), mono micro-label sub (C3)
+ * carrying the frozen link colors (F:13-14). Static — reduced-motion-safe.
+ */
+function ViewportGate({ theme }: { theme: Theme }) {
+  return (
+    <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
+      <div className="dc-gate">
+        <BrandHero />
+        <div className="dc-gate-line">Dime chat is built for desktop right now.</div>
+        <Link href="/feed" className="dc-microlabel dc-gate-sub dc-link">
+          OPEN ON A LARGER SCREEN · THE BOARD LIVES AT /feed
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="dc-error-card">
@@ -504,6 +536,12 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
   const [ghost, setGhost] = useState<GhostRects | null>(null);
   const [stuck, setStuck] = useState(true);
   const [firstSendFx, setFirstSendFx] = useState(false);
+  const [recentChats, setRecentChats] = useState<RecentChat[]>(() => getSessionRecents());
+  const [narrow, setNarrow] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!window.matchMedia?.("(max-width: 1023px)").matches,
+  );
 
   const composerRef = useRef<HTMLFormElement>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
@@ -518,6 +556,15 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
   const conversation = state.messages.length > 0;
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  /* --- Ph3: viewport gate listener (matchMedia — no resize-loop thrash) --- */
+  useEffect(() => {
+    const mq = window.matchMedia?.("(max-width: 1023px)");
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   /* --- SSE streaming core (preserved from the previous DimeChat.tsx) --- */
   const runStream = useCallback(
@@ -609,6 +656,12 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
       if (!trimmed || state.streaming) return;
 
       const wasHome = state.messages.length === 0;
+      if (wasHome) {
+        // Ph1: a new conversation starts — record its session-only title from
+        // this first user message.
+        addSessionRecent(trimmed);
+        setRecentChats(getSessionRecents());
+      }
       if (wasHome && !prefersReducedMotion()) {
         // FLIP first-position capture + ghost rects (spec §3.2)
         flipFromRef.current = composerRef.current?.getBoundingClientRect().top ?? null;
@@ -735,10 +788,17 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
     });
   };
 
+  // Ph3: below the desktop floor the shell is replaced wholesale (the frozen
+  // design has no sub-1024px spec). All hooks above still run, so an active
+  // stream survives a temporary resize; placed after every hook by design.
+  if (narrow) {
+    return <ViewportGate theme={theme} />;
+  }
+
   return (
     <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
       <div className="dc-app">
-        <DimeSidebar onNewChat={newChat} />
+        <DimeSidebar onNewChat={newChat} recentChats={recentChats} />
         <main className={`dc-main${conversation ? " dc-main--conv" : ""}`}>
           {conversation && (
             <div className="dc-scroller" ref={scrollerRef} onScroll={onScroll}>
