@@ -22,7 +22,6 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 // (GameCard, BettingSplitsPanel, MlbLineupCard, MlbCheatSheetCard,
 // framer-motion, all MLB components). Now lazy: loads in parallel with auth check.
 const ModelProjections = lazy(() => import("./pages/ModelProjections"));
-const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
 const SplitsLive = lazy(() => import("./pages/SplitsLive"));
 const Home = lazy(() => import("./pages/Home"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
@@ -100,8 +99,8 @@ function RootRoute() {
         navigate(`/checkout?plan=${pendingCheckout}`);
         return;
       }
-      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /splits`);
-      navigate("/splits");
+      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /betting-splits`);
+      navigate("/betting-splits");
     } else {
       console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
     }
@@ -135,8 +134,8 @@ function Router() {
       {/* Legacy redirects */}
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
-      {/* Live VSiN MLB betting splits — public */}
-      <Route path="/splits" component={SplitsLive} />
+      {/* Legacy /splits path → canonical /betting-splits */}
+      <Route path="/splits">{() => <Redirect to="/betting-splits" />}</Route>
       {/* Legal pages — public, no auth required */}
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
@@ -162,8 +161,8 @@ function Router() {
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
       {/* Main feed */}
       <Route path="/feed">{() => <RequireAuth><ModelProjections /></RequireAuth>}</Route>
-      {/* Betting splits */}
-      <Route path="/betting-splits">{() => <RequireAuth><BettingSplits /></RequireAuth>}</Route>
+      {/* Betting splits — live VSiN MLB splits view (public) */}
+      <Route path="/betting-splits" component={SplitsLive} />
       {/* Admin pages */}
       <Route path="/admin/users">{() => <RequireAuth><UserManagement /></RequireAuth>}</Route>
       <Route path="/admin/publish">{() => <RequireAuth><PublishProjections /></RequireAuth>}</Route>
