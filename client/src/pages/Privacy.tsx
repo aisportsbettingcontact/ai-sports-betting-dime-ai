@@ -89,7 +89,8 @@ export default function Privacy() {
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>Stripe — payment processing</li>
               <li>Anthropic (Claude) — AI model inference</li>
-              <li>Manus Platform — authentication and hosting</li>
+              <li>Railway — application hosting</li>
+              <li>Discord — OAuth authentication</li>
             </ul>
           </div>
 
