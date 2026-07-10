@@ -102,7 +102,7 @@ export default function Home() {
   useEffect(() => {
     if (!authLoading && appUser) {
       const searchParams = new URLSearchParams(window.location.search);
-      const returnPath = searchParams.get("returnPath") ?? "/feed";
+      const returnPath = searchParams.get("returnPath") ?? "/splits";
       console.log(`[Login] [STATE] Already authenticated — redirecting to returnPath=${returnPath}`);
       setLocation(returnPath);
     }
@@ -114,7 +114,7 @@ export default function Home() {
   );
   const discordError = searchParams.get("discord_error");
   const discordUser  = searchParams.get("discord_user");
-  const returnPath   = searchParams.get("returnPath") ?? "/feed";
+  const returnPath   = searchParams.get("returnPath") ?? "/splits";
   const loginUrl     = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent(returnPath)}`;
 
   // ── Transient error auto-retry ────────────────────────────────────────────

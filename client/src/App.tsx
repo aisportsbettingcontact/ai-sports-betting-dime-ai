@@ -100,8 +100,8 @@ function RootRoute() {
         navigate(`/checkout?plan=${pendingCheckout}`);
         return;
       }
-      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);
-      navigate("/feed");
+      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /splits`);
+      navigate("/splits");
     } else {
       console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
     }
