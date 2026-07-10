@@ -27,6 +27,40 @@ import http from "http";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = path.join(__dirname, "splits_card.html");
 
+// ─── Chromium executable path resolution ──────────────────────────────────────
+// Same convention as server/wc2026/espnPageScraper.ts's CHROMIUM_PATH: prefer
+// PLAYWRIGHT_CHROMIUM_PATH (set in the Dockerfile to the apt-installed
+// /usr/bin/chromium), then fall back through the same candidate list. Unlike
+// espnPageScraper.ts, every candidate — including the env var — is verified with
+// fs.existsSync before use, and if none exist this resolves to `undefined`
+// instead of a hardcoded guess. That undefined is the signal to omit
+// `executablePath` entirely so Playwright falls back to its OWN self-managed
+// browser resolution (chromium.executablePath()), which is what makes local dev
+// (PLAYWRIGHT_CHROMIUM_PATH unset, no apt chromium, but `playwright install`
+// already run) keep working unchanged.
+function resolveChromiumExecutablePath(): string | undefined {
+  const candidates = [
+    process.env.PLAYWRIGHT_CHROMIUM_PATH,
+    "/home/ubuntu/.cache/ms-playwright/chromium-1161/chrome-linux/chrome",
+    "/home/ubuntu/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome",
+    "/home/ubuntu/.cache/ms-playwright/chromium-1169/chrome-linux/chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+  ].filter((c): c is string => !!c);
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return undefined;
+}
+
+/**
+ * Resolved once at module load (mirrors espnPageScraper.ts's CHROMIUM_PATH
+ * being a module-level constant). `undefined` means "let Playwright resolve
+ * its own bundled browser" — i.e. local dev.
+ */
+export const CHROMIUM_EXECUTABLE_PATH: string | undefined = resolveChromiumExecutablePath();
+
 // ─── Template cache: read once at module load ─────────────────────────────────
 // Reading splits_card.html (1.1 MB with embedded fonts) on every render adds
 // unnecessary I/O. Cache it in memory at module load time.
@@ -91,6 +125,19 @@ let _warmUpPromise: Promise<void> | null = null;
  * startup), but it acts as a safety net for the first call.
  */
 async function ensurePlaywrightBrowsers(): Promise<void> {
+  // No-op when we already resolved an explicit executablePath (the container:
+  // PLAYWRIGHT_CHROMIUM_PATH → apt-installed /usr/bin/chromium). In that case
+  // chromium.launch() below is called WITH executablePath, so Playwright never
+  // consults its own self-managed browser cache — checking or installing into
+  // that cache would be pointless, and reaching a runtime network install
+  // (`playwright install chromium`, up to 180s against Playwright's CDN) on
+  // every cold start is exactly the failure mode this function used to risk.
+  // Local dev (no explicit path resolved) still gets the original behavior.
+  if (CHROMIUM_EXECUTABLE_PATH) {
+    console.log(`[SplitsRenderer] Using explicit Chromium executablePath — skipping playwright-managed browser check (${CHROMIUM_EXECUTABLE_PATH})`);
+    return;
+  }
+
   const execPath = chromium.executablePath();
   console.log(`[SplitsRenderer] Checking Chromium binary at: ${execPath}`);
   if (!fs.existsSync(execPath)) {
@@ -121,10 +168,15 @@ async function getBrowser(): Promise<Browser> {
   if (_browser && _browser.isConnected()) return _browser;
   console.log("[SplitsRenderer] Launching headless Chromium...");
   const t0 = Date.now();
-  // Auto-install browser if missing (e.g. after deployment to a new host)
+  // Auto-install browser if missing (e.g. after deployment to a new host) —
+  // no-op when CHROMIUM_EXECUTABLE_PATH is set (see ensurePlaywrightBrowsers).
   await ensurePlaywrightBrowsers();
   _browser = await chromium.launch({
     headless: true,
+    // In the container this resolves to the apt-installed /usr/bin/chromium
+    // via PLAYWRIGHT_CHROMIUM_PATH. Left undefined in local dev, which makes
+    // Playwright fall back to its own self-managed browser resolution.
+    ...(CHROMIUM_EXECUTABLE_PATH ? { executablePath: CHROMIUM_EXECUTABLE_PATH } : {}),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
