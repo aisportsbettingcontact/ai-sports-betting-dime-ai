@@ -550,6 +550,17 @@ export const appRouter = router({
     }),
 
     /**
+     * Live VSiN MLB betting splits, straight from the scraper (5-min cache).
+     * Does NOT depend on the vsinAutoRefresh DB pipeline — book lines are
+     * joined from the games table best-effort. Used by the mobile Splits tab.
+     */
+    // OK: returns only public VSiN splits + book lines — no model data
+    liveSplits: publicProcedure.query(async () => {
+      const { getLiveMlbSplits } = await import("./liveSplits");
+      return getLiveMlbSplits();
+    }),
+
+    /**
      * Owner-only: list all postponed and suspended games across all sports.
      * Used by the admin postponed-game audit view.
      */
