@@ -97,8 +97,8 @@ function RootRoute() {
       const pendingCheckout = sessionStorage.getItem("pendingCheckout");
       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
         sessionStorage.removeItem("pendingCheckout");
-        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /?checkout=${pendingCheckout}`);
-        navigate(`/?checkout=${pendingCheckout}`);
+        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
+        navigate(`/checkout?plan=${pendingCheckout}`);
         return;
       }
       console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /feed`);

@@ -9,20 +9,14 @@
  *   - No transform scale on Annual — prominence via border, glow, badge, color
  *   - On mobile (< 480px) cards are compact: clamp-based padding, no description
  *
- * Checkout flow (NO MODAL):
- *   - Unauthenticated user clicks CTA
- *     → publicCreateCheckoutSession (no auth required) → Stripe Checkout
- *     → Stripe collects email + "Desired Username" custom field + payment
- *   - Authenticated user clicks CTA
- *     → createCheckoutSession → Stripe Checkout
- *     → email + username prefilled from account
- *   - Same-tab redirect (window.location.href) — no popup blocker issues
+ * Checkout flow (NO MODAL, NO STRIPE-HOSTED PAGE):
+ *   - Every CTA navigates to /checkout?plan=<id> — the on-domain page that
+ *     mounts Stripe Embedded Checkout. Owner directive: Stripe must never
+ *     redirect off-site; the embedded page is the only checkout surface.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { trpc } from "@/lib/trpc";
-import { useAppAuth } from "@/_core/hooks/useAppAuth";
 
 
 // ─── Plan definitions ─────────────────────────────────────────────────────────
@@ -89,62 +83,15 @@ type PlanId = "monthly" | "annual";
 
 export default function PricingCTA() {
   const shouldReduce = useReducedMotion();
-  const { appUser, loading: authLoading } = useAppAuth();
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
 
-  // ── Authenticated checkout mutation ──────────────────────────────────────────
-  const createCheckoutSession = trpc.stripe.createCheckoutSession.useMutation({
-    onSuccess: (data) => {
-      console.log("[PricingCTA] [OUTPUT] Authenticated checkout session created — redirecting to:", data.url);
-      window.location.replace(data.url);
-      setLoadingPlan(null);
-    },
-    onError: (err) => {
-      console.error("[PricingCTA] [VERIFY] FAIL — Authenticated checkout error:", err.message);
-      setLoadingPlan(null);
-    },
-  });
-
-  // ── Public (unauthenticated) checkout mutation ────────────────────────────────
-  const publicCreateCheckoutSession = trpc.stripe.publicCreateCheckoutSession.useMutation({
-    onSuccess: (data) => {
-      console.log("[PricingCTA] [OUTPUT] Public checkout session created — redirecting to:", data.url);
-      window.location.replace(data.url);
-      setLoadingPlan(null);
-    },
-    onError: (err) => {
-      console.error("[PricingCTA] [VERIFY] FAIL — Public checkout error:", err.message);
-      setLoadingPlan(null);
-    },
-  });
-
-  // ── Handle button click ───────────────────────────────────────────────────────
+  // ── Handle button click — embedded checkout only, never a hosted redirect ────
   const handlePlanClick = (planId: PlanId) => {
-    console.log(`[PricingCTA] [INPUT] handlePlanClick planId=${planId} appUser=${appUser?.id ?? "anon"} authLoading=${authLoading}`);
-
-    if (loadingPlan !== null) {
-      console.log("[PricingCTA] [STATE] Already loading — ignoring duplicate click");
-      return;
-    }
-
+    console.log(`[PricingCTA] [INPUT] handlePlanClick planId=${planId} — navigating to embedded /checkout`);
+    if (loadingPlan !== null) return;
     setLoadingPlan(planId);
-
-    if (!authLoading && appUser) {
-      // ── Authenticated path: email + username prefilled from account ──────────
-      console.log(`[PricingCTA] [STATE] Authenticated — calling createCheckoutSession planId=${planId}`);
-      createCheckoutSession.mutate({ planId, origin: window.location.origin });
-    } else {
-      // ── Unauthenticated path: straight to Stripe, no modal ──────────────────
-      console.log(`[PricingCTA] [STATE] Unauthenticated — calling publicCreateCheckoutSession planId=${planId}`);
-      publicCreateCheckoutSession.mutate({ planId, origin: window.location.origin });
-    }
+    window.location.assign(`/checkout?plan=${planId}`);
   };
-
-  // ── Safety reset if auth state resolves while loading ────────────────────────
-  useEffect(() => {
-    if (!authLoading && loadingPlan === null) return;
-    // No-op: loading state is cleared in mutation callbacks
-  }, [authLoading, loadingPlan]);
 
   return (
     <section

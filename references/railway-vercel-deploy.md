@@ -77,13 +77,17 @@ Dockerfile gotchas learned the hard way (don't regress these):
    ⚠️ **Root Directory must be the repo root (leave the field empty).** The
    project was initially imported with Root Directory = `dime-ai/` (the design-
    assets folder), which breaks the build AND ignores the repo-root
-   `vercel.json`. Fix: Project → Settings → Build & Deployment → Root
-   Directory → clear it → redeploy. `dime-ai/.vercelignore` exists as a safety
-   net so a misrooted deploy can never publish `design-bundle/` (private
-   reference material). Until the setting is fixed, `dime-ai/vercel.json` is a
-   self-healing workaround that builds the real app from the parent directory
-   (first green deploy: 2ec6nj1H, PR #28) — delete it once Root Directory is
-   corrected.
+   `vercel.json` — and, worse, makes Vercel skip production deploys for `main`
+   commits that don't touch `dime-ai/` (root-directory-scoped change
+   detection). Fixed 2026-07-10 via the `vercel-ops` bridge workflow
+   (`.github/workflows/vercel-ops.yml`, command file `.vercel-ops/command`):
+   `fix-root` PATCHes `rootDirectory → null` and force-creates a production
+   deployment from `main` (first production deploy:
+   dpl_FSNgtcURwWUymaHtgzEwFGzWykHM, verified 8/8 smoke checks). The interim
+   `dime-ai/vercel.json` + `dime-ai/.vercelignore` workaround (first green
+   preview: 2ec6nj1H, PR #28) has been deleted. Note: the project's Framework
+   setting still says `nextjs` (import leftover) — harmless because the root
+   `vercel.json` pins `"framework": null`, but clear it if editing settings.
    **Deployment Protection:** preview URLs currently require Vercel
    Authentication (302 → SSO login). Fine for private review; to let automation
    (smoke script, agents) verify previews, either disable protection for

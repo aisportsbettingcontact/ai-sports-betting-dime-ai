@@ -150,10 +150,16 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
-
-export default defineConfig({
-  plugins,
+export default defineConfig(({ command }) => ({
+  // The Manus previewer runtime + debug collector serve the Manus editor's dev
+  // preview (postMessage bridge, element selector, log collector). Baked into a
+  // production build they inline ~367KB of dead script into every HTML response
+  // (measured on the Railway/Vercel deploys, 2026-07-10) — so they are dev-server
+  // only. `command` is "serve" for the dev server, "build" for production builds.
+  plugins:
+    command === "serve"
+      ? [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()]
+      : [react(), tailwindcss(), jsxLocPlugin()],
   optimizeDeps: {
     include: ["html2canvas"],
   },
@@ -252,4 +258,4 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
-});
+}));
