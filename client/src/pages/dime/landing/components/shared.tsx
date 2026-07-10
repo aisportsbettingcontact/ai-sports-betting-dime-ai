@@ -13,10 +13,12 @@ export function Wordmark({ fontSize }: { fontSize?: number }) {
   );
 }
 
-export function MintCheck() {
+/** Feature check. Mint is rationed to the featured tier — everywhere else the
+ *  check is grey so mint stays a signal, not decoration (MASTER.md one-accent). */
+export function MintCheck({ muted }: { muted?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width={13} height={13} aria-hidden="true">
-      <path d="M4 12 L10 18 L20 6" fill="none" stroke="#45E0A8" strokeWidth={3} strokeLinecap="square" />
+      <path d="M4 12 L10 18 L20 6" fill="none" stroke={muted ? "var(--text-muted)" : "#45E0A8"} strokeWidth={3} strokeLinecap="square" />
     </svg>
   );
 }

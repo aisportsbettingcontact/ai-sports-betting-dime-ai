@@ -517,6 +517,9 @@ async function startServer() {
   app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
   // Embedded (in-domain) checkout variant — same abuse surface, same limiter
   app.use("/api/trpc/stripe.publicCreateEmbeddedCheckoutSession", stripeCheckoutLimiter);
+  // Identity attach (elements-mode username metadata) — public + hits Stripe API,
+  // same limiter class (per-path buckets via keyGenerator).
+  app.use("/api/trpc/stripe.publicAttachCheckoutIdentity", stripeCheckoutLimiter);
 
   // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
   // Public form endpoint — 5 submissions per 15 minutes per IP.
