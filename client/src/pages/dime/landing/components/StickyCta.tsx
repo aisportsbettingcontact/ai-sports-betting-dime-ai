@@ -32,12 +32,12 @@ export default function StickyCta() {
           after the visitor has scrolled past the hero — the highest-intent click
           on the page goes straight to embedded checkout, not back to the grid. */}
       <a
-        href="/checkout?plan=monthly"
+        href="/checkout?plan=pro"
         className="btn btn--mint"
         tabIndex={on ? 0 : -1}
         data-cta-id="sticky-get-access"
         data-cta-location="sticky-bar"
-        data-plan="monthly"
+        data-plan="pro"
         data-mode="paid"
       >
         Start Pro →

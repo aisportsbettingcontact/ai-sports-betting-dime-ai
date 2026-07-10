@@ -10,7 +10,8 @@
  *  - Demo/console data uses abstract team names (Team A/C/E) and is labeled DEMO.
  *  - Whitelisted product claims only: 10,000 sims/game, 55+ outputs,
  *    124 enforcement tests, Brier-scored vs close, odds frozen at first pitch,
- *    MLB + World Cup 2026, $99.99/mo, $499.99/yr, ≈$3.30 & ≈$1.37/day, Save 58%.
+ *    MLB + World Cup 2026, Pro $99/mo, Sharp $249/mo, Operator $499/mo,
+ *    ≈$3.30 / ≈$8.30 / ≈$16.63 per day (legacy checkout only: $99.99/mo, $499.99/yr).
  */
 
 /** Switches CTA labels + destinations between waitlist capture and live checkout. */
@@ -312,7 +313,7 @@ export interface SignalRow {
   edge: string;
   state: MarketState | "locked";
   stateLabel: string;
-  lockedTier?: "Elite" | "Max";
+  lockedTier?: "Sharp" | "Operator";
   filters: string[];
 }
 
@@ -320,8 +321,8 @@ export const SIGNAL_ROWS: SignalRow[] = [
   { id: "s1", market: "Team A ML", sport: "MLB", price: "−115", implied: "53.5%", projection: "58.9%", edge: "+5.4%", state: "edge", stateLabel: "Edge Detected", filters: ["MLB"] },
   { id: "s2", market: "Team C −4.5", sport: "NBA", price: "−110", implied: "52.4%", projection: "55.8%", edge: "+3.4%", state: "monitor", stateLabel: "Monitor", filters: ["NBA", "Spreads"] },
   { id: "s3", market: "Team E Over 8.5", sport: "MLB", price: "−105", implied: "51.2%", projection: "49.6%", edge: "−1.6%", state: "pass", stateLabel: "Pass", filters: ["MLB", "Totals"] },
-  { id: "s4", market: "Player Prop Volatility Scan", sport: "MLB", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Elite", filters: ["Props", "MLB"] },
-  { id: "s5", market: "Full Slate Simulation", sport: "All", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Max", filters: [] },
+  { id: "s4", market: "Player Prop Volatility Scan", sport: "MLB", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Sharp", filters: ["Props", "MLB"] },
+  { id: "s5", market: "Full Slate Simulation", sport: "All", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Operator", filters: [] },
 ];
 
 export const SIGNAL_FILTERS = ["All", "MLB", "NBA", "Soccer", "Spreads", "Totals", "Props"] as const;
@@ -359,7 +360,7 @@ export const TRUST = {
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 
-export type CheckoutPlanId = "monthly" | "annual";
+export type CheckoutPlanId = "pro" | "sharp" | "operator" | "monthly" | "annual";
 
 export interface Tier {
   id: string;
@@ -396,64 +397,64 @@ export const TIERS: Tier[] = [
     id: "pro",
     name: "Pro",
     audience: "For serious daily bettors",
-    price: "$99.99",
+    price: "$99",
     period: "/month",
     perDay: "≈ $3.30 / day · cancel anytime",
     featured: true,
     badge: "Most popular",
     features: [
       "Full AI Model Projections board — every game, priced",
-      "Dime Chat — ask the engine anything on the slate",
-      "F5, NRFI, K props & HR props markets",
+      "Dime Chat — Standard + Pro Analyst (Sonnet + Opus)",
+      "1,000 AI Analyst credits / month",
       "Live edge grades, honest PASS signals",
     ],
     cta: { paid: "Start Pro", waitlist: "Request Pro Access" },
-    action: { type: "checkout", plan: "monthly" },
+    action: { type: "checkout", plan: "pro" },
   },
   {
-    id: "elite",
-    name: "Elite",
-    audience: "The season pass — for sharper users",
-    price: "$499.99",
-    period: "/year",
-    perDay: "≈ $1.37 / day · save 58% vs monthly",
-    badge: "Best value",
+    id: "sharp",
+    name: "Sharp",
+    audience: "For bettors working the full slate",
+    price: "$249",
+    period: "/month",
+    perDay: "≈ $8.30 / day · cancel anytime",
     features: [
       "Everything in Pro",
-      "Save 58% vs paying monthly",
-      "Locked-in price through the World Cup and full MLB season",
+      "MAX Analyst access — monthly cap",
+      "3,000 AI Analyst credits / month",
       "Priority access to new model markets",
     ],
-    cta: { paid: "Upgrade to Elite", waitlist: "Request Elite Access" },
-    action: { type: "checkout", plan: "annual" },
+    cta: { paid: "Start Sharp", waitlist: "Request Sharp Access" },
+    action: { type: "checkout", plan: "sharp" },
   },
   {
-    id: "founder",
-    name: "Founder",
-    audience: "For power users — application based",
-    price: "By application",
-    period: "",
+    id: "operator",
+    name: "Operator",
+    audience: "For operators running this professionally",
+    price: "$499",
+    period: "/month",
+    perDay: "≈ $16.63 / day · cancel anytime",
     features: [
+      "Everything in Sharp",
+      "Full MAX Analyst access — no cap",
+      "8,000 AI Analyst credits / month",
       "Early access to new markets and model releases",
-      "Priority feature input, direct line to the builder",
-      "First in line for usage-credit add-ons when metering ships",
-      "Limited seats — reviewed personally",
     ],
-    cta: { paid: "Apply for Founder Access", waitlist: "Apply for Founder Access" },
-    action: { type: "apply" },
+    cta: { paid: "Start Operator", waitlist: "Request Operator Access" },
+    action: { type: "checkout", plan: "operator" },
   },
 ];
 
 export const CREDITS_NOTE = {
-  title: "Dime Credits",
+  title: "AI Analyst credits",
   copy:
-    "Scans, chat queries and simulations in the demos are metered in Dime Credits — the usage unit the product is built around. Metered credit add-ons (extra chat queries, custom breakdowns, full-slate research runs) ship after launch; today every paid plan includes the full board and chat.",
+    "Every paid tier includes a monthly allowance of AI Analyst credits — 1,000 on Pro, 3,000 on Sharp, 8,000 on Operator — covering scans, chat queries and simulation runs. Add-on credit packs ship once the credit ledger does.",
 } as const;
 
 export const PRICING_HEAD = {
   eyebrow: "Pricing",
   headline: { before: "One engine. ", em: "Priced like software", after: "." },
-  sub: "No tiers of picks, no upsells to a 'VIP room'. Software access, billed like software — cancel anytime and keep access through the period you paid for.",
+  sub: "Three levels of the same engine — more analyst depth and more credits at each step, never a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
   legal: "Secure checkout · Auto-renews · Cancel anytime · 21+",
   proof:
     "Every number you're paying for is graded against the close after the final out — and when there's no edge, the model says PASS instead of selling you a pick. A month costs less than one losing $110 bet; one honest Pass that keeps you off a bad number covers it.",
@@ -490,8 +491,8 @@ export const OBJECTIONS = {
       stamp: "Graded",
     },
     {
-      q: "Why $99.99 a month?",
-      a: "That's ≈ $3.30 a day for every market the model prices — full board, full chat, all 55+ outputs per game. Elite drops it to ≈ $1.37 a day.",
+      q: "Why $99 a month?",
+      a: "That's ≈ $3.30 a day for every market the model prices — full board, full chat, all 55+ outputs per game. Sharp and Operator add analyst depth and credits on top of the same engine, not a different set of picks.",
       stamp: "≈ $3.30/day",
     },
     {
@@ -515,7 +516,7 @@ export const FAQ = {
   items: [
     {
       q: "Which sports are covered?",
-      a: "MLB is live today with moneyline, run line, totals, F5, NRFI, K props and HR props. World Cup 2026 markets are in the engine. New sports ship to Elite and Founder tiers first.",
+      a: "MLB is live today with moneyline, run line, totals, F5, NRFI, K props and HR props. World Cup 2026 markets are in the engine. New sports ship to Sharp, Operator and Founder tiers first.",
     },
     {
       q: "Is this betting advice?",
