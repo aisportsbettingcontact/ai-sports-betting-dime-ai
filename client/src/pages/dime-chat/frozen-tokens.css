@@ -23,6 +23,21 @@
    ========================================================================== */
 
 /* ----------------------------------------------------------------------------
+   0. FROZEN UA DEFAULT ENVIRONMENT — F1/F2 (pixel-parity fix directive).
+      The frozen pages carry no CSS reset: they render on UA defaults
+      (box-sizing: content-box, line-height: normal). The app's global
+      Tailwind preflight (box-sizing: border-box) and base line-height were
+      measured to shrink the sidebar 293->264px, the composer 711->680px and
+      compress row heights (36->37.5px drift). Scoped to .dc-page only —
+      this mirrors the frozen environment, it does not restyle anything.
+   -------------------------------------------------------------------------- */
+
+.dc-page, .dc-page *, .dc-page *::before, .dc-page *::after { box-sizing: content-box; line-height: normal; } /* frozen UA default environment — F1/F2 */
+/* UA stylesheets give form controls border-box by default (html.css) — the
+   frozen <button>/<input> elements rendered border-box; restore that too. */
+.dc-page button, .dc-page input, .dc-page select, .dc-page textarea { box-sizing: border-box; } /* frozen UA default environment — F1 */
+
+/* ----------------------------------------------------------------------------
    1. TOKENS — verbatim from D:18-20 = L:18-20
    -------------------------------------------------------------------------- */
 
