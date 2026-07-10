@@ -310,12 +310,29 @@ async function startServer() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : [])], // unsafe-eval only in dev (Vite HMR)
+        // Stripe Embedded Checkout (/checkout, MUST stay on-domain — owner
+        // directive): Stripe.js loads from js.stripe.com and mounts an iframe.
+        // Without these CSP allowances the browser blocks the script and the
+        // page shows "Failed to load Stripe.js" (observed live 2026-07-10).
+        // Per https://docs.stripe.com/security/guide#content-security-policy
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://js.stripe.com",
+          "https://*.js.stripe.com",
+          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
+        ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
         connectSrc: ["'self'", "wss:", "ws:", "https:"],
-        frameSrc: ["'self'"], // Allow same-origin iframes (Rotogrinders proxy)
+        frameSrc: [
+          "'self'", // same-origin iframes (Rotogrinders proxy)
+          "https://js.stripe.com",
+          "https://*.js.stripe.com",
+          "https://checkout.stripe.com", // Embedded Checkout session iframe
+          "https://hooks.stripe.com",    // 3DS / bank-redirect auth frames
+        ],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
       },

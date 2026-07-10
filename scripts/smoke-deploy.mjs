@@ -111,6 +111,20 @@ await check("vendored /manus-storage asset → 200 image (no Manus dependency)",
   expect(type.startsWith("image/"), `content-type ${type} — storage proxy failed instead of serving the vendored file`);
 });
 
+await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com)", async () => {
+  const res = await fetch(`${base}/checkout?plan=monthly`, { headers: { "user-agent": "Mozilla/5.0 Chrome/126" } });
+  const csp = res.headers.get("content-security-policy") ?? "";
+  // Vercel serves the SPA statically (no helmet CSP header) — only enforce
+  // where a CSP exists; an Express origin without Stripe allowances breaks
+  // embedded checkout with "Failed to load Stripe.js" (live incident 2026-07-10).
+  if (!csp) return "no CSP header (static host) — nothing to block Stripe";
+  const scriptSrc = csp.split(";").find((d) => d.trim().startsWith("script-src")) ?? "";
+  const frameSrc = csp.split(";").find((d) => d.trim().startsWith("frame-src")) ?? "";
+  expect(scriptSrc.includes("js.stripe.com"), `script-src blocks Stripe.js: "${scriptSrc.trim()}"`);
+  expect(frameSrc.includes("checkout.stripe.com"), `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`);
+  return "CSP allows Stripe";
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 process.exit(failed.length === 0 ? 0 : 1);
