@@ -9,14 +9,21 @@ export const getLoginUrl = () => {
   const appId = import.meta.env.VITE_APP_ID;
   if (!oauthPortalUrl || !appId) return "/login";
 
-  const redirectUri = `${window.location.origin}/api/oauth/callback`;
-  const state = btoa(redirectUri);
+  // useAuth() evaluates this as a default parameter on every render, so this
+  // function must NEVER throw. A malformed VITE_OAUTH_PORTAL_URL would make
+  // `new URL()` throw and crash every page calling useAuth — guard against it.
+  try {
+    const redirectUri = `${window.location.origin}/api/oauth/callback`;
+    const state = btoa(redirectUri);
 
-  const url = new URL(`${oauthPortalUrl}/app-auth`);
-  url.searchParams.set("appId", appId);
-  url.searchParams.set("redirectUri", redirectUri);
-  url.searchParams.set("state", state);
-  url.searchParams.set("type", "signIn");
+    const url = new URL(`${oauthPortalUrl}/app-auth`);
+    url.searchParams.set("appId", appId);
+    url.searchParams.set("redirectUri", redirectUri);
+    url.searchParams.set("state", state);
+    url.searchParams.set("type", "signIn");
 
-  return url.toString();
+    return url.toString();
+  } catch {
+    return "/login";
+  }
 };
