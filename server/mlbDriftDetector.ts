@@ -46,6 +46,7 @@ import { games, mlbModelLearningLog, mlbDriftState, mlbCalibrationConstants } fr
 import { spawn } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
+import * as os from "os";
 import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,8 +103,28 @@ const BACKTEST_SCRIPT_CANDIDATES = [
 const BACKTEST_SCRIPT =
   BACKTEST_SCRIPT_CANDIDATES.find((p) => fs.existsSync(p)) ?? BACKTEST_SCRIPT_CANDIDATES[0];
 
-/** Path to the calibration constants output */
-const CALIBRATION_JSON = "/home/ubuntu/mlb_calibration_constants.json";
+/**
+ * Path to the calibration constants output JSON.
+ *
+ * The old hardcoded value (`/home/ubuntu/mlb_calibration_constants.json`) was a Manus
+ * sandbox path that does not exist on Railway (`node:22-bookworm-slim`, runs as root in
+ * /app, no `ubuntu` user, no `/home/ubuntu`). runMlbBacktest2.py's `open(OUTPUT_JSON, "w")`
+ * would raise FileNotFoundError in production, silently breaking the whole
+ * drift-recalibration feature.
+ *
+ * Overridable via MLB_CALIBRATION_PATH (useful for local dev / tests). The default falls
+ * back to os.tmpdir() — always present and writable as root in the container, does not
+ * pollute the repo, and persists for the lifetime of the process (which is all this
+ * write-then-read-in-the-same-process-tree flow needs: runBacktestScript() below spawns
+ * the python process, which writes this file, then triggerRecalibration() reads it back
+ * immediately after the process exits).
+ *
+ * The resolved path is passed to the python child process via the same env var
+ * (see runBacktestScript()) so both ends read/write the identical location instead of
+ * duplicating the literal in two languages.
+ */
+const CALIBRATION_JSON =
+  process.env.MLB_CALIBRATION_PATH ?? path.join(os.tmpdir(), "mlb_calibration_constants.json");
 
 /** Path to MLBAIModel.py */
 const MODEL_PY = path.resolve(__dirname, "MLBAIModel.py");
@@ -649,7 +670,11 @@ async function runBacktestScript(): Promise<{ success: boolean; error?: string; 
   return new Promise((resolve) => {
     const proc = spawn("python3", [BACKTEST_SCRIPT], {
       cwd: path.dirname(BACKTEST_SCRIPT),
-      env: { ...process.env },
+      // Pass the resolved CALIBRATION_JSON path through explicitly so the python
+      // process always agrees with this process on the output location, even if
+      // MLB_CALIBRATION_PATH wasn't set in the parent env (CALIBRATION_JSON's
+      // os.tmpdir() default is resolved here, not in the child).
+      env: { ...process.env, MLB_CALIBRATION_PATH: CALIBRATION_JSON },
       stdio: ["ignore", "pipe", "pipe"],
     });
 
