@@ -24,7 +24,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Eye, EyeOff, TrendingUp, BarChart2, Zap, Shield } from "lucide-react";
+import { Loader2, Eye, EyeOff, TrendingUp, MessageSquare, ListChecks, Clock } from "lucide-react";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -63,27 +63,27 @@ const DISCORD_ERRORS: Record<string, string> = {
   invalid_callback:      "Invalid Discord OAuth callback. Please try again.",
 };
 
-// ── Feature bullets for the left brand panel ──────────────────────────────────
+// ── Feature bullets for the left brand panel (v2 whitelist claims only) ───────
 const BRAND_FEATURES = [
   {
     icon: TrendingUp,
-    title: "AI Model Projections",
-    desc: "Book vs. model odds on every spread, total, and moneyline.",
+    title: "Full projections board",
+    desc: "Moneyline, run line, totals, F5, NRFI, K props and HR props — every market priced book vs model.",
   },
   {
-    icon: BarChart2,
-    title: "Betting Splits",
-    desc: "Real-time ticket and money percentages. Know where sharp money moves.",
+    icon: MessageSquare,
+    title: "Dime Chat",
+    desc: "Ask the engine anything on the slate. Answers trace back to tables the model wrote.",
   },
   {
-    icon: Zap,
-    title: "Edge Signals",
-    desc: "Positive ROI flags when the model's probability beats the market.",
+    icon: ListChecks,
+    title: "The Dime Verdict",
+    desc: "Every market resolves to Pass, Monitor, or Edge Detected. Most verdicts are Pass.",
   },
   {
-    icon: Shield,
-    title: "Daily Lineups and Cheat Sheets",
-    desc: "Starting pitchers, batting orders, NRFI signals. All confirmed.",
+    icon: Clock,
+    title: "Graded against the close",
+    desc: "Odds freeze at first pitch. Every projection is Brier-scored after the final out.",
   },
 ];
 
@@ -226,7 +226,10 @@ export default function Home() {
      * Root: full-viewport flex row on desktop, flex column on mobile.
      * [LOG] Layout: lg:flex-row (split-screen) | <lg: flex-col (stacked, form only)
      */
-    <div className="flex flex-col lg:flex-row min-h-screen w-full" style={{ background: "#0B0B0F" }}>
+    <div
+      className="flex flex-col lg:flex-row min-h-screen w-full"
+      style={{ background: "#0B0B0F", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
+    >
 
       {/* ═══════════════════════════════════════════════════════════════════════
           LEFT PANEL — Brand / feature showcase
@@ -264,7 +267,7 @@ export default function Home() {
               </span>
             </div>
             <h1
-              className="font-black text-white leading-[1.05]"
+              className="font-bold text-white leading-[1.05]"
               style={{
                 fontSize: "clamp(2rem, 3.5vw, 3.75rem)",
                 letterSpacing: "-0.04em",
@@ -327,12 +330,13 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Bottom: disclaimer */}
+        {/* Bottom: disclaimer — legible grey (contrast law), full RG language */}
         <p
-          className="text-[#374151] mt-8"
+          className="text-[#9A9AA8] mt-8"
           style={{ fontSize: "clamp(0.65rem, 0.8vw, 0.75rem)" }}
         >
-          No guaranteed outcomes. For informational purposes only. Gamble responsibly.
+          No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
+          your jurisdiction). Gambling problem? Call 1-800-GAMBLER.
         </p>
       </div>
 
@@ -356,8 +360,8 @@ export default function Home() {
             />
           </a>
           <div className="text-center">
-            <h1 className="text-lg font-black text-white tracking-tight">dıme</h1>
-            <p className="text-[12px] text-[#6b7280] mt-0.5">Sign in to your account</p>
+            <h1 className="text-lg font-bold text-white tracking-tight">dıme</h1>
+            <p className="text-[12px] text-[#9A9AA8] mt-0.5">Sign in to your account</p>
           </div>
         </div>
 
@@ -367,7 +371,7 @@ export default function Home() {
           {/* Desktop heading */}
           <div className="hidden lg:block mb-8">
             <h2
-              className="font-black text-white"
+              className="font-bold text-white"
               style={{ fontSize: "clamp(1.5rem, 2.2vw, 2.25rem)", letterSpacing: "-0.03em" }}
             >
               Sign in
@@ -377,17 +381,25 @@ export default function Home() {
             </p>
           </div>
 
-          {/* ── Discord error banner ── */}
+          {/* ── Discord error stamp — grey, never red (signup.md: auth errors are
+                mono stamps on neutral surface; red is not in the Dime palette) ── */}
           {discordErrorMsg && (
-            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[12px] text-red-400 text-center space-y-1.5">
-              <p>{discordErrorMsg}</p>
+            <div
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] text-center space-y-1.5"
+              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              role="alert"
+            >
+              <p className="uppercase tracking-widest text-[10px] text-[#6E6E78]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                Sign-in error
+              </p>
+              <p className="text-white/90">{discordErrorMsg}</p>
               {isTransientError && retryCountdown !== null && (
-                <p className="text-red-400/70 animate-pulse">Retrying in {retryCountdown}s…</p>
+                <p>Retrying in {retryCountdown}s…</p>
               )}
               {isTransientError && (
                 <button
                   onClick={() => { window.location.href = loginUrl; }}
-                  className="text-xs underline text-red-300 hover:text-red-200 transition-colors"
+                  className="text-xs underline text-white/80 hover:text-white transition-colors"
                 >
                   Retry now
                 </button>
@@ -413,7 +425,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -434,14 +446,13 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] transition-colors"
-                    tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9AA8] hover:text-white transition-colors"
                     aria-label={showPw ? "Hide password" : "Show password"}
                   >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -449,32 +460,31 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Forgot password link */}
+              {/* Forgot password link — grey: Sign In is this surface's single mint action */}
               <div className="flex justify-end -mt-2">
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setFormError(null); }}
-                  className="text-[11px] transition-colors"
-                  style={{ color: "#45E0A8" }}
+                  className="text-[11px] text-[#9A9AA8] hover:text-white underline transition-colors"
                 >
                   Forgot password?
                 </button>
               </div>
 
-              {/* Form error */}
+              {/* Form error — grey stamp, never red (signup.md) */}
               {formError && (
-                <p className="text-[12px] text-red-400 text-center -mt-1">{formError}</p>
+                <p className="text-[12px] text-[#9A9AA8] text-center -mt-1" role="alert">{formError}</p>
               )}
 
               {/* Submit */}
               <button
                 type="submit"
                 disabled={loginMutation.isPending}
-                className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-opacity hover:opacity-85 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: "#45E0A8" }}
               >
                 {loginMutation.isPending ? (
-                  <><Loader2 size={15} className="animate-spin" /> Signing in…</>
+                  <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Signing in…</>
                 ) : (
                   "Sign In"
                 )}
@@ -510,17 +520,17 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
                     type="submit"
                     disabled={requestResetMutation.isPending || !forgotIdentifier.trim()}
-                    className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-opacity hover:opacity-85 disabled:opacity-60 disabled:cursor-not-allowed"
                     style={{ background: "#45E0A8" }}
                   >
                     {requestResetMutation.isPending ? (
-                      <><Loader2 size={15} className="animate-spin" /> Sending…</>
+                      <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Sending…</>
                     ) : (
                       "Send Reset Link"
                     )}
@@ -545,7 +555,7 @@ export default function Home() {
               href={loginUrl}
               onClick={handleDiscordClick}
               aria-disabled={isDiscordRedirecting}
-              className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-all active:scale-[0.98]"
+              className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-opacity hover:opacity-85"
               style={{
                 backgroundColor: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
@@ -553,30 +563,30 @@ export default function Home() {
               }}
             >
               {isDiscordRedirecting ? (
-                <><Loader2 size={15} className="animate-spin" /> Redirecting to Discord…</>
+                <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Redirecting to Discord…</>
               ) : (
-                <><DiscordIcon size={18} /> Login with Discord</>
+                <><DiscordIcon size={18} /> Continue with Discord</>
               )}
             </a>
           )}
 
-          {/* ── Sign Up link ── */}
+          {/* ── Sign Up link — grey: Sign In keeps the surface's single mint action ── */}
           {!forgotOpen && (
-            <p className="text-center text-[12px] text-[#6b7280] mt-5">
+            <p className="text-center text-[12px] text-[#9A9AA8] mt-5">
               Don't have an account?{" "}
               <a
                 href="/#pricing"
-                className="font-semibold transition-colors"
-                style={{ color: "#45E0A8" }}
+                className="font-semibold text-white underline hover:text-[#45E0A8] transition-colors"
               >
                 Sign Up
               </a>
             </p>
           )}
 
-          {/* ── Disclaimer ── */}
-          <p className="text-center text-[11px] text-[#374151] mt-6">
-            By signing in you agree to gamble responsibly. This tool is for informational purposes only.
+          {/* ── Disclaimer — legible grey, full RG language ── */}
+          <p className="text-center text-[11px] text-[#9A9AA8] mt-6">
+            By signing in you agree to gamble responsibly. For informational purposes only. 21+.
+            Gambling problem? Call 1-800-GAMBLER.
           </p>
         </div>
       </div>

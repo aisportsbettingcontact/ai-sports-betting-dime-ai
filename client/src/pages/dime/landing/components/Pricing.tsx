@@ -68,7 +68,7 @@ export default function Pricing() {
                 <ul className="tier-features">
                   {tier.features.map((f) => (
                     <li key={f}>
-                      <MintCheck />
+                      <MintCheck muted={!tier.featured} />
                       {f}
                     </li>
                   ))}

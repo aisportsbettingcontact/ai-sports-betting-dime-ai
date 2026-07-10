@@ -28,8 +28,11 @@ export default function StickyCta() {
     <div className={on ? "slipbar on" : "slipbar"} role="complementary" aria-label="Subscribe" aria-hidden={!on}>
       <span className="price num">≈ $3.30 / day</span>
       <span className="lead" aria-hidden="true" />
+      {/* Deep-link: the bar already quotes the Pro per-day price and only shows
+          after the visitor has scrolled past the hero — the highest-intent click
+          on the page goes straight to embedded checkout, not back to the grid. */}
       <a
-        href="#pricing"
+        href="/checkout?plan=monthly"
         className="btn btn--mint"
         tabIndex={on ? 0 : -1}
         data-cta-id="sticky-get-access"
@@ -37,7 +40,7 @@ export default function StickyCta() {
         data-plan="monthly"
         data-mode="paid"
       >
-        Get Access →
+        Start Pro →
       </a>
       <button
         type="button"

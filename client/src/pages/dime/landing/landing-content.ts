@@ -271,7 +271,7 @@ export const PROBLEM = {
 export const MECHANISM = {
   eyebrow: "The mechanism",
   headline: { before: "Four moves from line to ", em: "verdict", after: "." },
-  sub: "The same engine behind every number on the site — ingested live, simulated in full, and graded against the close.",
+  sub: "The same engine behind every number on the site — ingested live, simulated in full, and graded against the close. Every market ends in one of three verdicts. We call it the Dime Verdict.",
   steps: [
     {
       num: "01",
@@ -413,7 +413,7 @@ export const TIERS: Tier[] = [
   {
     id: "elite",
     name: "Elite",
-    audience: "For sharper users",
+    audience: "The season pass — for sharper users",
     price: "$499.99",
     period: "/year",
     perDay: "≈ $1.37 / day · save 58% vs monthly",
@@ -456,7 +456,7 @@ export const PRICING_HEAD = {
   sub: "No tiers of picks, no upsells to a 'VIP room'. Software access, billed like software — cancel anytime and keep access through the period you paid for.",
   legal: "Secure checkout · Auto-renews · Cancel anytime · 21+",
   proof:
-    "Every number you're paying for is graded against the close after the final out — and when there's no edge, the model says PASS instead of selling you a pick.",
+    "Every number you're paying for is graded against the close after the final out — and when there's no edge, the model says PASS instead of selling you a pick. A month costs less than one losing $110 bet; one honest Pass that keeps you off a bad number covers it.",
 } as const;
 
 // ─── Controlled access ────────────────────────────────────────────────────────
@@ -543,7 +543,7 @@ export const FAQ = {
 // ─── Final CTA ────────────────────────────────────────────────────────────────
 
 export const FINAL_CTA = {
-  mono: "No noise · No gut calls · Just the number",
+  mono: "PASS · MONITOR · EDGE DETECTED — the Dime Verdict",
   headline: "Bet with the math.",
   copy: "Price every line against 10,000 simulations before a dollar of your bankroll moves.",
   cta: "Get Access",
@@ -559,6 +559,6 @@ export const FOOTER_LEGAL =
 export const STATS = [
   { value: "10,000", label: "Simulations per game" },
   { value: "55+", label: "Model outputs per matchup" },
-  { value: "6", label: "Markets priced, book vs model" },
+  { value: "7", label: "Markets priced, book vs model" },
   { value: "24/7", label: "Odds, lineups & weather pipeline" },
 ] as const;
