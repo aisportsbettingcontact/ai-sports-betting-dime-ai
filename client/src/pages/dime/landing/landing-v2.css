@@ -58,7 +58,7 @@
 /* ── Buttons ── */
 .dlv2 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 22px; border-radius: 22px; font: 600 15px 'Familjen Grotesk', sans-serif; letter-spacing: -0.01em; cursor: pointer; border: 1px solid transparent; text-decoration: none; transition: transform 160ms var(--curve), background 160ms var(--curve), border-color 160ms var(--curve), color 160ms var(--curve); }
 .dlv2 .btn--mint { background: var(--mint); color: #0B0B0F; }
-.dlv2 .btn--mint:hover { transform: translateY(-1px); }
+.dlv2 .btn--mint:hover { opacity: 0.85; } /* MASTER.md: mint hover = opacity, no lift */
 .dlv2 .btn--ghost { background: transparent; color: var(--text-primary); border-color: var(--border-strong); }
 .dlv2 .btn--ghost:hover { border-color: var(--text-faint); }
 .dlv2 .btn--wide { width: 100%; }
@@ -105,13 +105,14 @@
 .dlv2 .hero h1 em { font-style: normal; color: var(--mint); }
 .dlv2 .hero .lede { max-width: 620px; margin: 22px 0 30px; font-size: 18px; color: var(--text-secondary); }
 .dlv2 .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.dlv2 .hero-micro { display: block; margin-top: 22px; color: var(--text-faint); }
+/* secondary, not faint: this line carries the risk disclosure — must clear 4.5:1 */
+.dlv2 .hero-micro { display: block; margin-top: 22px; color: var(--text-secondary); }
 
 /* ── Market Console ── */
 .dlv2 .console { margin-top: clamp(36px, 5vw, 56px); background: var(--surface-sidebar); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5); overflow: hidden; }
 .dlv2 .console-chrome { display: flex; align-items: center; gap: 12px; padding: 11px 16px; background: var(--surface-raised); border-bottom: 1px solid var(--border-soft); font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); flex-wrap: wrap; }
 .dlv2 .console-chrome .right { margin-left: auto; display: flex; align-items: center; gap: 14px; color: var(--text-faint); }
-.dlv2 .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); animation: dlv2-pulse 2.4s ease-in-out infinite; }
+.dlv2 .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); animation: dlv2-pulse 1.6s ease-in-out infinite; } /* 1.6s per MASTER.md live-dot */
 @keyframes dlv2-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .dlv2 .demo-tag { border: 1px solid var(--border-strong); border-radius: 4px; padding: 2px 7px; color: var(--text-faint); }
 
@@ -341,7 +342,8 @@
 .dlv2 .foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
 .dlv2 .foot-links a { font-size: 14px; color: var(--text-secondary); text-decoration: none; }
 .dlv2 .foot-links a:hover { color: var(--text-primary); }
-.dlv2 .foot-legal { font-size: 12.5px; color: var(--text-faint); max-width: 82ch; margin: 0; }
+/* secondary, not faint: 21+/1-800-GAMBLER compliance text must be legible (4.5:1+) */
+.dlv2 .foot-legal { font-size: 12.5px; color: var(--text-secondary); max-width: 82ch; margin: 0; }
 
 /* ── Sticky CTA bar ── */
 .dlv2 .slipbar { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 90px); width: min(640px, calc(100vw - 32px)); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); display: flex; align-items: center; gap: 14px; padding: 10px 14px; z-index: 70; transition: transform 160ms var(--curve), opacity 160ms var(--curve); opacity: 0; pointer-events: none; }
