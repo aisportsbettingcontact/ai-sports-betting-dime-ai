@@ -33,7 +33,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { sdk } from "./_core/sdk";
+import { requireCronSecret } from "./cron/cronAuth";
 import { notifyOwner } from "./_core/notification";
 import { syncRotowireLineupTabs } from "./rotowireLineupSheetSync";
 import { debugLog } from "./_core/debugLogger";
@@ -54,10 +54,7 @@ let _lastRunResult: {
 
 export function registerRotoLineupsHeartbeat(app: Express): void {
   app.post("/api/scheduled/roto-lineups", async (req: Request, res: Response) => {
-    try {
-      const user = await sdk.authenticateRequest(req);
-      if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-    } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+    if (!requireCronSecret(req, res, "roto-lineups")) return;
 
     const reqAt = new Date().toISOString();
     debugLog("RotoScraper", "info", `[RotoHeartbeat] [INPUT] POST /api/scheduled/roto-lineups received at ${reqAt} | isRunning=${_isRunning} lastRunAt=${_lastRunAt ?? "never"}`);

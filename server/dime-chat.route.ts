@@ -17,7 +17,10 @@
 import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
-import { sdk } from "./_core/sdk";
+import { parse as parseCookieHeader } from "cookie";
+import { jwtVerify } from "jose";
+import { ENV } from "./_core/env";
+import { getAppUserById } from "./db";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import {
   DIME_CHAT_MAX_TOKENS,
@@ -40,6 +43,35 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------
+// Auth — app_session JWT (Manus OAuth has no Railway-reachable server)
+// ---------------------------------------------------------------
+async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
+  const cookies = parseCookieHeader(req.headers.cookie ?? "");
+  const token = cookies["app_session"];
+  if (!token) return null;
+  try {
+    const secret = new TextEncoder().encode(ENV.cookieSecret);
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.type !== "app_user") return null;
+
+    // SEC-001: tokenVersion check — reject invalidated sessions
+    const userId = Number(payload.sub);
+    const tv = payload.tv as number | null | undefined;
+    if (tv !== null && tv !== undefined) {
+      const user = await getAppUserById(userId);
+      if (user && user.tokenVersion !== tv) {
+        console.log(`[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+        return null;
+      }
+    }
+
+    return { userId, role: payload.role as string };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------
 
 const dimeChatRouter = Router();
 
@@ -48,9 +80,8 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   const startTime = Date.now();
 
   // --- A2: Backend auth gate — reject unauthenticated requests before any Claude call ---
-  try {
-    await sdk.authenticateRequest(req);
-  } catch (authErr) {
+  const authedUser = await authenticateDimeRequest(req);
+  if (!authedUser) {
     dimeLog("dime.chat.auth_rejected", requestId, {
       errorClass: "AuthenticationError",
       statusCode: 401,
