@@ -27,7 +27,7 @@ import {
   getAppUserByStripeCustomerId,
   invalidateAppUserByIdCache,
 } from "./db";
-import { getPlanByPriceId, computeExpiryMs } from "./stripe/products";
+import { getPlanByPriceId, computeExpiryMs, normalizePlanId } from "./stripe/products";
 import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import bcrypt from "bcryptjs";
@@ -215,8 +215,9 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         console.warn(`${tag} [STATE] payment_status=${session.payment_status} — skipping`); break;
       }
 
-      const planId = session.metadata?.plan_id ?? "monthly";
-      const plan = planId === "monthly" || planId === "annual" ? planId : "monthly";
+      // Plan resolution: metadata plan_id first, else price→plan map (env-driven
+      // for all five plans: monthly/annual + pro/sharp/operator), else "monthly".
+      const plan = normalizePlanId(session.metadata?.plan_id);
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
       const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? "";
 
@@ -238,10 +239,20 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         const customerEmail = session.customer_details?.email ?? "";
         if (!customerEmail) { console.error(`${tag} [VERIFY] FAIL — no customer email for new user`); break; }
 
+        // Username sources, in order:
+        //  1. session.metadata.desired_username — elements-mode checkout (our
+        //     /checkout form attaches it via publicAttachCheckoutIdentity);
+        //     custom_fields are always EMPTY in ui_mode:"elements".
+        //  2. custom_fields — legacy hosted/embedded_page sessions.
+        //  3. email prefix fallback.
+        const metadataUsername = session.metadata?.desired_username?.trim();
         const desiredUsernameField = (session.custom_fields ?? []).find(
           (f: { key: string; text?: { value?: string | null } }) => f.key === "desired_username"
         );
-        const desiredUsername = desiredUsernameField?.text?.value ?? customerEmail.split("@")[0];
+        const desiredUsername =
+          (metadataUsername && metadataUsername.length > 0 ? metadataUsername : null) ??
+          desiredUsernameField?.text?.value ??
+          customerEmail.split("@")[0];
         console.log(`${tag} [STATE] desiredUsername="${desiredUsername}" email="${customerEmail}"`);
 
         const newUserId = await createPendingUserFromCheckout({
@@ -281,8 +292,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const subUserId = parseInt(subUserIdStr, 10);
       if (isNaN(subUserId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id in sub metadata`); break; }
 
-      const subPlanId = sub.metadata?.plan_id ?? "monthly";
-      const subPlan = subPlanId === "monthly" || subPlanId === "annual" ? subPlanId : "monthly";
+      const subPlan = normalizePlanId(sub.metadata?.plan_id);
       const subCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
       const subExpiryMs = computeExpiryMs(subPlan);
 
@@ -309,7 +319,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       if (invoiceCustomerId && invoice.billing_reason === "subscription_cycle") {
         const existingUser = await getAppUserByStripeCustomerId(invoiceCustomerId);
         if (existingUser) {
-          const renewPlan = (existingUser.stripePlanId === "monthly" || existingUser.stripePlanId === "annual") ? existingUser.stripePlanId : "monthly";
+          const renewPlan = normalizePlanId(existingUser.stripePlanId);
           const renewExpiry = computeExpiryMs(renewPlan);
           const invoiceSubId = (() => {
             const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription;

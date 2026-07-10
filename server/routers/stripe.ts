@@ -23,7 +23,7 @@ import { z } from "zod";
 import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
-import { PLANS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
+import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
 import { getDb, invalidateAppUserByIdCache, updateAppUser } from "../db";
 import { appUsers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -37,7 +37,42 @@ const TAG = "[tRPC][stripe]";
 
 // ─── Input validation ─────────────────────────────────────────────────────────
 
-const zodPlanId = z.enum(["monthly", "annual"]);
+const zodPlanId = z.enum(["monthly", "annual", "pro", "sharp", "operator"]);
+
+// ─── Auto-renewal disclosure copy (subscription_data.description) ─────────────
+
+function subscriptionDescription(planId: PlanId): string {
+  switch (planId) {
+    case "annual":
+      return "AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.";
+    case "monthly":
+      return "AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.";
+    case "pro":
+      return "Dime AI — Pro ($99/month). Auto-renews monthly at $99 until cancelled. Cancel anytime before renewal.";
+    case "sharp":
+      return "Dime AI — Sharp ($249/month). Auto-renews monthly at $249 until cancelled. Cancel anytime before renewal.";
+    case "operator":
+      return "Dime AI — Operator ($499/month). Auto-renews monthly at $499 until cancelled. Cancel anytime before renewal.";
+  }
+}
+
+/**
+ * Map a priceId() resolution failure to a clean TRPCError.
+ * v2 plans (pro/sharp/operator) have env-only price IDs — when the env var is
+ * missing the plan simply is not sellable yet: PRECONDITION_FAILED, not a 500.
+ */
+function priceResolutionError(planId: PlanId): TRPCError {
+  if (NEW_PLAN_IDS.has(planId)) {
+    return new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "plan not yet available",
+    });
+  }
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Stripe price not configured. Contact support.",
+  });
+}
 
 // ─── Shared checkout session builder ─────────────────────────────────────────
 // Used by both authenticated and unauthenticated procedures to avoid duplication.
@@ -74,10 +109,7 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${TAG}[buildStripeCheckoutSession] [VERIFY] FAIL — priceId resolution error: ${msg}`);
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Stripe price not configured. Contact support.",
-    });
+    throw priceResolutionError(planId);
   }
 
   console.log(`${TAG}[buildStripeCheckoutSession] [STATE] plan=${plan.name} priceId=${priceId} amount=${plan.priceDisplay}`);
@@ -145,11 +177,7 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
       // description is shown on the Stripe Checkout page and in Stripe-generated
       // customer emails, providing explicit auto-renewal disclosure.
       subscription_data: {
-        description: planId === 'annual'
-          ? 'AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.'
-          : planId === 'monthly'
-          ? 'AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.'
-          : 'AI Sports Betting Models — Test Plan ($1.00/month). Auto-renews monthly.',
+        description: subscriptionDescription(planId),
         metadata: {
           ...(userId != null ? { user_id: String(userId) } : {}),
           plan_id: planId,
@@ -186,10 +214,17 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
 }
 
 // ─── Embedded checkout session builder ────────────────────────────────────────
-// Same plan/price resolution as buildStripeCheckoutSession, but ui_mode:"embedded"
-// so the payment form mounts inside the Dime domain (/checkout) instead of
-// redirecting to a Stripe-hosted page. Stripe still controls all card inputs —
-// no raw card data ever touches this server.
+// Same plan/price resolution as buildStripeCheckoutSession, but ui_mode:"elements"
+// (Checkout Sessions consumed by stripe.initCheckoutElementsSdk + Payment Element)
+// so the payment form mounts inside the Dime domain (/checkout) with full
+// Appearance API theming. Stripe still controls all card inputs — no raw card
+// data ever touches this server.
+//
+// Params forbidden in elements mode (stripe-node d.ts, R-package): custom_fields,
+// custom_text, branding_settings, cancel_url, success_url, submit_type,
+// redirect_on_completion — none are sent. The "Desired Username" field is now
+// OUR form field on /checkout, attached via publicAttachCheckoutIdentity
+// (sessions.update metadata) before confirm.
 
 async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
   const { planId, origin, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
@@ -208,10 +243,7 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — priceId resolution error: ${msg}`);
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Stripe price not configured. Contact support.",
-    });
+    throw priceResolutionError(planId);
   }
 
   let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
@@ -222,9 +254,9 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
   let session;
   try {
     session = await stripe.checkout.sessions.create({
-      // stripe-node v22 API naming: "embedded_page" is the classic Embedded
-      // Checkout iframe (what older API versions called "embedded").
-      ui_mode: "embedded_page",
+      // "elements" = the custom ui_mode consumed by initCheckoutElementsSdk
+      // (stripe-node v22 JSDoc: custom ≡ elements).
+      ui_mode: "elements",
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
       ...customerParam,
@@ -235,31 +267,16 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
         plan_id: planId,
         desired_username: desiredUsername ?? "",
       },
-      custom_fields: [
-        {
-          key: "desired_username",
-          label: { type: "custom" as const, custom: "Desired Username" },
-          type: "text" as const,
-          text: {
-            minimum_length: 3,
-            maximum_length: 64,
-            ...(desiredUsername ? { default_value: desiredUsername } : {}),
-          },
-          optional: false,
-        },
-      ],
       subscription_data: {
-        description: planId === 'annual'
-          ? 'AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.'
-          : 'AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.',
+        description: subscriptionDescription(planId),
         metadata: {
           ...(userId != null ? { user_id: String(userId) } : {}),
           plan_id: planId,
         },
       },
       allow_promotion_codes: true,
-      // Embedded mode uses return_url (not success_url/cancel_url); the session_id
-      // lands on the same success page the hosted flow already uses.
+      // Elements mode uses return_url (required for redirect-based payment
+      // methods); the session_id lands on the same success page as always.
       return_url: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
       billing_address_collection: "auto",
     });
@@ -312,9 +329,10 @@ export const stripeRouter = router({
    * publicCreateEmbeddedCheckoutSession
    *
    * Embedded (in-domain) variant of publicCreateCheckoutSession. Returns a
-   * client_secret that the /checkout page mounts with Stripe Embedded Checkout,
-   * keeping the URL on the Dime domain. Same rate limiter class as the hosted
-   * variant (see server/_core/index.ts).
+   * client_secret for a ui_mode:"elements" Checkout Session that the /checkout
+   * page consumes with stripe.initCheckoutElementsSdk + a themed Payment
+   * Element, keeping the URL on the Dime domain. Same rate limiter class as
+   * the hosted variant (see server/_core/index.ts).
    */
   publicCreateEmbeddedCheckoutSession: stripeProcedure
     .input(
@@ -328,6 +346,55 @@ export const stripeRouter = router({
       const { planId, origin } = input;
       console.log(`${TAG}[publicCreateEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=anon`);
       return buildEmbeddedCheckoutSession({ planId, origin });
+    }),
+
+  /**
+   * publicAttachCheckoutIdentity
+   *
+   * Attaches the buyer's desired username to an open elements-mode Checkout
+   * Session via sessions.update metadata (custom_fields are not allowed in
+   * ui_mode:"elements"). Called by /checkout before actions.confirm(); the
+   * webhook reads session.metadata.desired_username at fulfillment.
+   */
+  publicAttachCheckoutIdentity: stripeProcedure
+    .input(
+      z.object({
+        sessionId: z.string().startsWith("cs_"),
+        desiredUsername: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const TAG5 = `${TAG}[publicAttachCheckoutIdentity]`;
+      const username = input.desiredUsername.trim();
+      console.log(`${TAG5} [INPUT] sessionId=${input.sessionId} desiredUsername="${username}"`);
+
+      // Server-side validation — same rules the webhook sanitizer enforces.
+      if (username.length < 3 || username.length > 64 || !/^[a-zA-Z0-9_ .-]+$/.test(username)) {
+        console.warn(`${TAG5} [VERIFY] FAIL — username rejected by validation rule`);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Username must be 3–64 characters and use only letters, numbers, spaces, underscores, dots or hyphens.",
+        });
+      }
+
+      const stripe = getStripe();
+      try {
+        await stripe.checkout.sessions.update(input.sessionId, {
+          metadata: { desired_username: username },
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`${TAG5} [VERIFY] FAIL — Stripe API error: ${msg}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not attach your username to this checkout. Please try again.",
+        });
+      }
+
+      console.log(`${TAG5} [OUTPUT] desired_username attached sessionId=${input.sessionId}`);
+      console.log(`${TAG5} [VERIFY] PASS`);
+      return { success: true as const };
     }),
 
   /**
@@ -593,6 +660,9 @@ export const stripeRouter = router({
       const planLabelMap: Record<string, string> = {
         monthly: 'Monthly Plan',
         annual: 'Annual Plan',
+        pro: 'Pro Plan',
+        sharp: 'Sharp Plan',
+        operator: 'Operator Plan',
         lifetime: 'Lifetime Access',
         test: 'Monthly Plan',
       };
