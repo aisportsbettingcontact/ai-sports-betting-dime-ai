@@ -17,7 +17,7 @@ export default function SubscribeCancel() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "linear-gradient(135deg, #050810 0%, #0a0e16 100%)" }}
+      style={{ background: "#0B0B0F" }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -58,7 +58,7 @@ export default function SubscribeCancel() {
               }, 100);
             }}
             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
-            style={{ background: "#39FF14" }}
+            style={{ background: "#45E0A8" }}
           >
             View Pricing
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">

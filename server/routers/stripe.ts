@@ -315,10 +315,16 @@ export const stripeRouter = router({
    * — there is deliberately no hosted-redirect fallback anymore.
    */
   publicGetConfig: stripeProcedure.query(() => {
-    const publishableKey =
+    const rawKey =
       process.env.STRIPE_PUBLISHABLE_KEY?.trim() ||
       process.env.VITE_STRIPE_PUBLISHABLE_KEY?.trim() ||
       "";
+    // Fail closed: never ship anything that isn't a publishable key to
+    // browsers (a secret key pasted into the wrong env var must not leak).
+    const publishableKey = rawKey.startsWith("pk_") ? rawKey : "";
+    if (rawKey && !publishableKey) {
+      console.error(`${TAG}[publicGetConfig] [VERIFY] FAIL — configured key does not start with pk_; refusing to serve it`);
+    }
     console.log(
       `${TAG}[publicGetConfig] [OUTPUT] publishableKey=${publishableKey ? `${publishableKey.slice(0, 8)}… (${publishableKey.length} chars)` : "(unset)"}`
     );
@@ -368,13 +374,14 @@ export const stripeRouter = router({
       const username = input.desiredUsername.trim();
       console.log(`${TAG5} [INPUT] sessionId=${input.sessionId} desiredUsername="${username}"`);
 
-      // Server-side validation — same rules the webhook sanitizer enforces.
-      if (username.length < 3 || username.length > 64 || !/^[a-zA-Z0-9_ .-]+$/.test(username)) {
+      // Server-side validation — aligned with the webhook sanitizer, which
+      // strips spaces (so a spaced name accepted here would silently change).
+      if (username.length < 3 || username.length > 64 || !/^[a-zA-Z0-9_.-]+$/.test(username)) {
         console.warn(`${TAG5} [VERIFY] FAIL — username rejected by validation rule`);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
-            "Username must be 3–64 characters and use only letters, numbers, spaces, underscores, dots or hyphens.",
+            "Username must be 3–64 characters and use only letters, numbers, underscores, dots or hyphens (no spaces).",
         });
       }
 
@@ -453,6 +460,19 @@ export const stripeRouter = router({
       const user = ctx.appUser;
 
       console.log(`${TAG}[createCheckoutSession] [INPUT] userId=${user.id} email=${user.email} planId=${planId} origin=${origin}`);
+
+      // Duplicate-subscription guard: this procedure is only reachable by users
+      // who already have access, so creating another subscription on the same
+      // Stripe customer double-bills them (the webhook would then overwrite
+      // stripeSubscriptionId, orphaning the old still-billing subscription).
+      if (user.stripeSubscriptionId) {
+        console.warn(`${TAG}[createCheckoutSession] [VERIFY] BLOCKED — userId=${user.id} already has subId=${user.stripeSubscriptionId}`);
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "You already have an active subscription. Manage or change your plan from your account settings instead.",
+        });
+      }
 
       return buildStripeCheckoutSession({
         planId,

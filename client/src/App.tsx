@@ -42,11 +42,9 @@ const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
 const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
 const ManageAccount = lazy(() => import('./pages/ManageAccount'));
-const Pricing = lazy(() => import('./pages/Pricing'));
 const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
 const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
 const DimeChat = lazy(() => import('./pages/DimeChat'));
-const DimeLanding = lazy(() => import('./pages/dime/DimeLanding'));
 const CheckoutPage = lazy(() => import('./pages/dime/CheckoutPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
@@ -145,12 +143,15 @@ function Router() {
       <Route path="/subscribe/cancel" component={SubscribeCancel} />
       {/* Login page — public, no auth required */}
       <Route path="/login" component={Home} />
-      {/* Standalone pricing page — public */}
-      <Route path="/pricing" component={Pricing} />
+      {/* Legacy standalone pricing page retired: it advertised the old $99/$499
+          copy while its CTAs charged the legacy $99.99/$499.99 prices (live
+          audit 2026-07-10). The v2 grid on the landing page is canonical. */}
+      <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
       {/* Password reset — public, accessed via reset link */}
       <Route path="/reset-password" component={ResetPassword} />
-      {/* Dime AI landing v1 — kept as a comparison hook (E1) */}
-      <Route path="/landingpage" component={DimeLanding} />
+      {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
+          old page still marketed the de-marketed annual plan. */}
+      <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
       {/* Landing v2 is now the root landing page — redirect the old test route
           so existing links and the checkout back-links keep working. */}
       <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>

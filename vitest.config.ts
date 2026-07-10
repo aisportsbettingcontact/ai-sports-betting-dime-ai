@@ -14,7 +14,13 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts", "perf/**/*.test.ts"],
+    include: [
+      "server/**/*.test.ts",
+      "server/**/*.spec.ts",
+      "perf/**/*.test.ts",
+      // Pure client-side units (no DOM, no DB): dime-chat reducer + [EDGE] parser
+      "client/src/**/*.test.ts",
+    ],
     // 15s global timeout: the appRouter import in strikeoutProps.test.ts triggers a full
     // DB connection pool init which takes ~4-5s in isolation but can approach the old 5s
     // default when the full suite runs in parallel. 15s provides a safe margin without
