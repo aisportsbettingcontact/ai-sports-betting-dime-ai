@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build:client",
+  "installCommand": "PUPPETEER_SKIP_DOWNLOAD=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx -y pnpm@10.33.0 install --frozen-lockfile",
+  "buildCommand": "npx -y pnpm@10.33.0 run build:client",
   "outputDirectory": "dist/public",
   "rewrites": [
     {
