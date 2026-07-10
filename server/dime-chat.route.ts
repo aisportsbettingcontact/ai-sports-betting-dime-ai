@@ -19,36 +19,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
 import { sdk } from "./_core/sdk";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
-
-const MODEL = "claude-fable-5";
-const MAX_TOKENS = 2048;
-const MAX_HISTORY = 24; // last N turns sent to the model
-
-// ---------------------------------------------------------------
-// Dime's persona. Keep this in one place so the Discord bot and
-// the web chat can share it later.
-// ---------------------------------------------------------------
-const DIME_SYSTEM_PROMPT = `You are Dime, the AI engine behind Prez Bets (AI Sports Betting Models).
-
-Identity:
-- You run large-scale Monte Carlo simulations across MLB, NHL, NBA, NCAAM, and NFL to find edges between the model's numbers and the book's numbers.
-- Your voice: sharp, concise, numbers-first, zero hype. You talk like a quant who bets, not a tout who sells. Bettor slang is fine (chalk, juice, CLV, steam) but never forced.
-- You are transparent about uncertainty. Confidence is expressed on the platform's 1-10 unit scale, never as a guarantee. When the model has no edge, you say "no edge" plainly.
-
-Behavior:
-- Lead with the verdict, then the reasoning. Bettors are deciding under time pressure.
-- When asked about specific games, picks, or model performance, be clear about what you can and cannot see. If live platform data has not been provided in the conversation, say so rather than inventing lines, odds, or results.
-- Encourage disciplined bankroll management. Never encourage chasing losses, betting beyond one's means, or presenting any bet as a sure thing.
-- If someone appears to be in distress about gambling losses, respond with care and mention that help is available (in the US, the problem gambling helpline is 1-800-GAMBLER).
-- Keep responses tight. Short paragraphs. No filler, no disclaimers longer than the analysis.
-
-You are a paid product feature. Be worth it.
-
-Verdict blocks:
-- When you evaluate a specific market AND the lines and odds are grounded in data supplied in this conversation (platform context, or numbers the user themselves provided), you MAY end that answer with exactly one fenced verdict block, on its own line, in exactly this format:
-[EDGE] verdict=edge_detected|monitor|pass market=<market> model_line=<x> market_line=<y> edge_pct=<z> confidence=low|medium|high [/EDGE]
-- Choose verdict=edge_detected only when the grounded numbers show a real edge; monitor when it is borderline or the data is thin; pass when there is no edge.
-- If no grounded numbers exist in this conversation, answer in plain prose and do NOT emit a block. Never fabricate odds, lines, or edge percentages to fill the block — the block summarizes numbers already established in the conversation; it is never a source of new ones.`;
+import {
+  DIME_CHAT_MAX_TOKENS,
+  DIME_CHAT_MODEL,
+  DIME_CHAT_SYSTEM_PROMPT,
+  DIME_CHAT_SYSTEM_PROMPT_SOURCE,
+  sanitizeDimeChatHistory,
+} from "./_core/dimeChatModel";
+import { getDimeChatContext } from "./_core/dimeChatContext";
 
 // ---------------------------------------------------------------
 // Structured logging
@@ -62,23 +40,6 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------
-
-type ChatMessage = { role: "user" | "assistant"; content: string };
-
-function sanitizeHistory(raw: unknown): ChatMessage[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter(
-      (m): m is ChatMessage =>
-        !!m &&
-        typeof m === "object" &&
-        (m.role === "user" || m.role === "assistant") &&
-        typeof m.content === "string" &&
-        m.content.trim().length > 0,
-    )
-    .slice(-MAX_HISTORY)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 8_000) }));
-}
 
 const dimeChatRouter = Router();
 
@@ -112,7 +73,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  const messages = sanitizeHistory(req.body?.messages);
+  const messages = sanitizeDimeChatHistory(req.body?.messages);
 
   dimeLog("dime.chat.request", requestId, {
     messageCount: messages.length,
@@ -129,11 +90,34 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // Optional: inject live platform context (today's card, model outputs)
-  // before the final user turn. Wire this to your tRPC/Drizzle layer.
-  // const context = await getTodaysCardContext();
-  // messages.unshift({ role: "user", content: `Platform data:\n${context}` },
-  //                  { role: "assistant", content: "Understood. I'll ground my answers in this data." });
+  let dataFreshness: "live" | "none" = "none";
+
+  try {
+    const context = await getDimeChatContext();
+    dataFreshness = context.freshness;
+
+    if (context.context) {
+      messages.unshift(
+        { role: "user", content: context.context },
+        {
+          role: "assistant",
+          content:
+            "Understood. I will ground Dime Chat answers in this platform context and clearly say when a requested market is missing.",
+        },
+      );
+    }
+
+    dimeLog("dime.chat.context", requestId, {
+      dataFreshness,
+      rowCount: context.rowCount,
+    });
+  } catch (contextErr) {
+    dataFreshness = "none";
+    dimeLog("dime.chat.context_error", requestId, {
+      errorClass: (contextErr as Error)?.constructor?.name ?? "Unknown",
+      detail: (contextErr as Error)?.message ?? "Context lookup failed",
+    });
+  }
 
   // --- SSE headers ---
   res.setHeader("Content-Type", "text/event-stream");
@@ -145,10 +129,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  // Additive data-freshness declaration for the client DataPill. The live
-  // platform-context injection above is still a stub, so every turn honestly
-  // reports no live data. Older clients ignore unknown frame types.
-  send({ type: "meta", dataFreshness: "none" });
+  // Additive data-freshness declaration for the client DataPill. Older clients
+  // ignore unknown frame types.
+  send({ type: "meta", dataFreshness });
 
   const anthropic = createAnthropicClient();
   const abort = new AbortController();
@@ -165,16 +148,17 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   });
 
   dimeLog("dime.chat.stream.start", requestId, {
-    model: MODEL,
+    model: DIME_CHAT_MODEL,
     historyLength: messages.length,
+    promptSource: DIME_CHAT_SYSTEM_PROMPT_SOURCE,
   });
 
   try {
     const stream = anthropic.messages.stream(
       {
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system: DIME_SYSTEM_PROMPT,
+        model: DIME_CHAT_MODEL,
+        max_tokens: DIME_CHAT_MAX_TOKENS,
+        system: DIME_CHAT_SYSTEM_PROMPT,
         messages,
       },
       { signal: abort.signal },
