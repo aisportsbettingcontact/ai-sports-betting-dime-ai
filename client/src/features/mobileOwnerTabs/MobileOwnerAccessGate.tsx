@@ -9,7 +9,7 @@
  * Non-owners see nothing (no flash, no redirect, no error).
  */
 
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { type ReactNode, useEffect, useMemo } from "react";
 import { decideMobileOwnerAccess } from "./config";
 import { mobileOwnerTabLogger } from "./logger";
@@ -20,21 +20,25 @@ interface MobileOwnerAccessGateProps {
 }
 
 export function MobileOwnerAccessGate({ children, fallback = null }: MobileOwnerAccessGateProps) {
-  const { user, isAuthenticated, loading } = useAuth();
+  // Source of truth is the app's own Discord-OAuth-backed session (appUsers.me),
+  // NOT the legacy Manus useAuth() hook — that hook's backend is gone post-cutover
+  // and always resolves isAuthenticated: false, which would hide these tabs from
+  // everyone including real owners. See GlobalMobileOwnerTabs for the same pattern.
+  const { appUser, loading } = useAppAuth();
 
   const decision = useMemo(() => {
     if (loading) return null;
-    return decideMobileOwnerAccess(user?.role, isAuthenticated, true);
-  }, [user?.role, isAuthenticated, loading]);
+    return decideMobileOwnerAccess(appUser?.role, Boolean(appUser), true);
+  }, [appUser, loading]);
 
   useEffect(() => {
     if (!decision) return;
     if (decision.granted) {
-      mobileOwnerTabLogger.log("access_granted", undefined, { reason: decision.reason, role: user?.role });
+      mobileOwnerTabLogger.log("access_granted", undefined, { reason: decision.reason, role: appUser?.role });
     } else {
-      mobileOwnerTabLogger.log("access_denied", undefined, { reason: decision.reason, role: user?.role });
+      mobileOwnerTabLogger.log("access_denied", undefined, { reason: decision.reason, role: appUser?.role });
     }
-  }, [decision, user?.role]);
+  }, [decision, appUser?.role]);
 
   // While loading auth, render nothing (HTML shell covers)
   if (loading || !decision) return null;

@@ -18,6 +18,8 @@ export default defineConfig({
       "server/**/*.test.ts",
       "server/**/*.spec.ts",
       "perf/**/*.test.ts",
+      "shared/**/*.test.ts",
+      "shared/**/*.spec.ts",
       // Pure client-side units (no DOM, no DB): dime-chat reducer + [EDGE] parser
       "client/src/**/*.test.ts",
     ],

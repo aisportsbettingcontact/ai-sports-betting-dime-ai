@@ -1,0 +1,17 @@
+# Third-party imports required by the Python model runners spawned from
+# server/*.ts (nhl_model_engine.py, MLBAIModel.py, StrikeoutModel.py,
+# ActionNetworkHRPropsAPI.py, ActionNetworkF5NrfiAPI.py) — see the grep in
+# each file's `import`/`from` lines for the source of truth.
+#
+# NOTE: on Railway, these are installed as Debian apt packages in the
+# Dockerfile (python3-numpy, python3-pandas, python3-scipy,
+# python3-requests) landing in /usr/lib/python3/dist-packages, which is
+# already on the PYTHONPATH the runners construct — this file is NOT
+# consulted in that path. It exists so local dev (`npm install` outside
+# Docker) can provision the same interpreter deps via `postinstall`,
+# and so a genuinely broken/missing dependency fails loudly instead of
+# being swallowed by an unconditional `|| true`.
+numpy==1.26.4
+scipy==1.13.1
+pandas==2.2.3
+requests==2.32.3

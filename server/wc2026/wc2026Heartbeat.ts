@@ -26,7 +26,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { sdk } from "../_core/sdk";
+import { requireCronSecret } from "../cron/cronAuth";
 import { notifyOwner } from "../_core/notification";
 import { getDb } from "../db";
 import { wc2026Matches } from "../../drizzle/wc2026.schema";
@@ -58,10 +58,7 @@ function triggerBracketSync(reason: string): void {
 
 // ─── Handler: lineups ─────────────────────────────────────────────────────────
 async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
-  try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+  if (!requireCronSecret(req, res, "wc2026-lineups")) return;
 
   const now = new Date();
   console.log(`[WC2026HB] [INPUT] /wc2026-lineups triggered at ${now.toISOString()}`);
@@ -92,10 +89,7 @@ async function handleWc2026Lineups(req: Request, res: Response): Promise<void> {
 
 // ─── Handler: ESPN results ingestion ─────────────────────────────────────────
 async function handleWc2026EspnResults(req: Request, res: Response): Promise<void> {
-  try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+  if (!requireCronSecret(req, res, "wc2026-espn-results")) return;
 
   const now = new Date();
   // Default to today and yesterday (to catch late-finishing matches)
@@ -146,10 +140,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
 
 // ─── Handler: live score refresh (every 5 min during match window) ──────────────────────────────────────────────────────────────────────────────
 async function handleWc2026LiveScores(req: Request, res: Response): Promise<void> {
-  try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+  if (!requireCronSecret(req, res, "wc2026-live-scores")) return;
 
   const now = new Date();
 
@@ -237,10 +228,7 @@ async function handleWc2026LiveScores(req: Request, res: Response): Promise<void
 
 // ─── Handler: bracket sync (every 30 min during knockout phase) ──────────────
 async function handleWc2026BracketSync(req: Request, res: Response): Promise<void> {
-  try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+  if (!requireCronSecret(req, res, "wc2026-bracket-sync")) return;
 
   const now = new Date();
   console.log(`[WC2026HB] [INPUT] /wc2026-bracket-sync triggered at ${now.toISOString()}`);

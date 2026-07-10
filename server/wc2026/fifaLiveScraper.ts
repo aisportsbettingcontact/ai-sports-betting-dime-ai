@@ -18,7 +18,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { sdk } from '../_core/sdk';
+import { requireCronSecret } from '../cron/cronAuth';
 import { notifyOwner } from '../_core/notification';
 import { getDb } from '../db';
 import { wc2026Matches } from '../../drizzle/wc2026.schema';
@@ -137,10 +137,7 @@ async function fetchFifaLiveMatches(): Promise<FifaMatchState[]> {
 }
 
 export async function wc2026LiveSyncHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const user = await sdk.authenticateRequest(req);
-    if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-  } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+  if (!requireCronSecret(req, res, "wc2026-live-sync")) return;
 
   stepN = 0;
   const startMs = Date.now();

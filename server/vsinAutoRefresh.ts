@@ -1655,34 +1655,17 @@ export async function runVsinRefreshManual(
  * Odds freeze: games with gameStatus='live' or 'final' are skipped by refreshAnApiOdds
  * so the pre-game DK NJ line is permanently locked in the DB once the game starts.
  */
-export function startVsinAutoRefresh() {
-  // 24/7 — no active hours gate
-  void runVsinRefresh();
-
-  // Fire score refresh immediately on startup (don't wait for first 15-sec tick)
-  void refreshAllScoresNow();
-
-  // 24/7 — runs every 5 minutes with no time gate
-  setInterval(() => {
-    void runVsinRefresh();
-  }, INTERVAL_MS);
-
-  // 15-second score refresh (runs independently of the main refresh) — 24/7, no gate
-  // NBA, NHL only — MLB has its own 5-minute cycle below
-  setInterval(() => {
-    void refreshNbaScores();
-    void refreshNhlScores();
-  }, SCORE_INTERVAL_MS);
-
-  // ─── MLB 5-minute refresh cycle ──────────────────────────────────────────────
-  // Runs every 5 minutes 24/7 (no time gates):
-  //   1. MLB Stats API live scores (runs, hits, errors, inning, status, pitchers)
-  //   2. VSiN MLB betting splits (run line, total, ML percentages)
-  //   3. Action Network DK NJ odds (run line, total, ML lines)
-  //
-  // Fires immediately on startup so MLB data is never stale after a restart.
-  // Non-fatal: each step is isolated; errors in one do not block the others.
-  const runMlbCycle = async () => {
+// ─── MLB refresh cycle (module-scope, HTTP-triggerable) ───────────────────────
+// One full MLB data cycle: MLB Stats API scores, VSiN splits, AN DK odds, Rotowire
+// lineups + LineupWatcher, model fallback, K-Props/HR-Props pipelines and backtests.
+// Writes mlb_lineups, mlb_strikeout_props, mlb_game_backtest (among others).
+//
+// Hoisted to module scope and exported so GitHub Actions can drive exactly one cycle
+// via POST /api/cron/mlb-cycle when the in-process schedulers are disabled on Railway
+// (DISABLE_BACKGROUND_JOBS). Overlap protection is enforced by the CronJobRunner at the
+// route layer — identical to the other /api/cron/* jobs. The in-process startup +
+// 10-minute interval callers in startVsinAutoRefresh() invoke this same function.
+export async function runMlbCycleOnce(): Promise<void> {
     // 24/7 — no active hours gate
     const todayStr = datePst();
     console.log(`[MLBCycle] ► START — ${new Date().toISOString()} | date: ${todayStr}`);
@@ -2080,13 +2063,41 @@ export function startVsinAutoRefresh() {
     } // end isAfter7amEst() gate for HR Props
 
     console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
-  };
-  // Fire MLB cycle immediately on startup
-  void runMlbCycle();
+}
 
-  // Then repeat every 10 minutes
+export function startVsinAutoRefresh() {
+  // 24/7 — no active hours gate
+  void runVsinRefresh();
+
+  // Fire score refresh immediately on startup (don't wait for first 15-sec tick)
+  void refreshAllScoresNow();
+
+  // 24/7 — runs every 5 minutes with no time gate
   setInterval(() => {
-    void runMlbCycle();
+    void runVsinRefresh();
+  }, INTERVAL_MS);
+
+  // 15-second score refresh (runs independently of the main refresh) — 24/7, no gate
+  // NBA, NHL only — MLB has its own 5-minute cycle below
+  setInterval(() => {
+    void refreshNbaScores();
+    void refreshNhlScores();
+  }, SCORE_INTERVAL_MS);
+
+  // ─── MLB 5-minute refresh cycle ──────────────────────────────────────────────
+  // Runs every 5 minutes 24/7 (no time gates):
+  //   1. MLB Stats API live scores (runs, hits, errors, inning, status, pitchers)
+  //   2. VSiN MLB betting splits (run line, total, ML percentages)
+  //   3. Action Network DK NJ odds (run line, total, ML lines)
+  //
+  // Fires immediately on startup so MLB data is never stale after a restart.
+  // Non-fatal: each step is isolated; errors in one do not block the others.
+  // Fire MLB cycle immediately on startup
+  void runMlbCycleOnce();
+
+  // Then repeat every 5 minutes
+  setInterval(() => {
+    void runMlbCycleOnce();
   }, MLB_INTERVAL_MS);
 
   // ─── Daily MLB data seeders ───────────────────────────────────────────────

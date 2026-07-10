@@ -20,7 +20,7 @@
  */
 
 import type { Express, Request, Response } from "express";
-import { sdk } from "./_core/sdk";
+import { requireCronSecret } from "./cron/cronAuth";
 import { notifyOwner } from "./_core/notification";
 import { syncFangraphsLineupTabs } from "./fangraphsLineupSync";
 
@@ -35,10 +35,7 @@ let _lastRunResult: { success: boolean; totalRowsWritten: number; elapsedMs: num
 
 export function registerFgLineupsHeartbeat(app: Express): void {
   app.post("/api/scheduled/fg-lineups", async (req: Request, res: Response) => {
-    try {
-      const user = await sdk.authenticateRequest(req);
-      if (!user.isCron) { res.status(403).json({ error: "cron-only" }); return; }
-    } catch (e) { res.status(401).json({ error: "unauthorized" }); return; }
+    if (!requireCronSecret(req, res, "fg-lineups")) return;
 
     const reqAt = new Date().toISOString();
     console.log(`\n[FgHeartbeat] [INPUT] POST /api/scheduled/fg-lineups received at ${reqAt}`);

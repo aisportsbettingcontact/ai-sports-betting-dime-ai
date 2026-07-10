@@ -11,7 +11,11 @@ INPUTS:
   - mlb_game_backtest table: market, result, modelProb, gameId
 
 OUTPUTS:
-  - /home/ubuntu/mlb_calibration_constants.json (required by mlbDriftDetector.ts)
+  - $MLB_CALIBRATION_PATH, or <tempfile.gettempdir()>/mlb_calibration_constants.json if
+    that env var is unset (required by mlbDriftDetector.ts, which spawns this script and
+    always sets MLB_CALIBRATION_PATH explicitly so both sides agree on the location; the
+    tempdir fallback only applies when this script is run standalone). Container-safe:
+    no hardcoded /home/ubuntu/* Manus sandbox path, which does not exist on Railway.
   - stdout: structured log lines with [INPUT], [STEP], [STATE], [OUTPUT], [VERIFY] tags
 
 JSON OUTPUT FORMAT (required by mlbDriftDetector.ts triggerRecalibration):
@@ -46,19 +50,33 @@ JSON OUTPUT FORMAT (required by mlbDriftDetector.ts triggerRecalibration):
 EXECUTION:
   python3 server/scripts/runMlbBacktest2.py
   Exit code 0 = success, 1 = failure
+  Optional: MLB_CALIBRATION_PATH=/custom/path.json python3 server/scripts/runMlbBacktest2.py
 """
 
 import json
 import math
 import os
 import sys
+import tempfile
 import traceback
 from datetime import datetime, timezone
 
 TAG = "[runMlbBacktest2]"
 
 # ─── Output path ──────────────────────────────────────────────────────────────
-OUTPUT_JSON = "/home/ubuntu/mlb_calibration_constants.json"
+# mlbDriftDetector.ts spawns this script and always passes MLB_CALIBRATION_PATH (its
+# resolved CALIBRATION_JSON) so both sides agree on the exact location. The tempdir
+# fallback below only matters when this script is invoked standalone and mirrors the
+# TS default (os.tmpdir()) — both respect TMPDIR/TEMP/TMP and fall back to /tmp on
+# POSIX, so they resolve identically inside the same container.
+#
+# NOTE: do NOT hardcode a /home/ubuntu/* path here — that was a Manus sandbox path
+# that does not exist on Railway (node:22-bookworm-slim, runs as root in /app, no
+# `ubuntu` user, no /home/ubuntu). That bug caused open(OUTPUT_JSON, "w") to raise
+# FileNotFoundError in production, silently breaking the drift-recalibration feature.
+OUTPUT_JSON = os.environ.get("MLB_CALIBRATION_PATH") or os.path.join(
+    tempfile.gettempdir(), "mlb_calibration_constants.json"
+)
 
 # ─── Lookback window (days) ───────────────────────────────────────────────────
 # Use current season data (2026 season started 2026-03-26)
@@ -270,6 +288,9 @@ def main() -> int:
 
         # ── Step 7: Write JSON output ──────────────────────────────────────────
         log("STEP", f"Writing calibration JSON to {OUTPUT_JSON}")
+        out_dir = os.path.dirname(OUTPUT_JSON)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
         with open(OUTPUT_JSON, "w") as f:
             json.dump(calibration, f, indent=2)
         log("OUTPUT", f"Calibration JSON written: {OUTPUT_JSON}")

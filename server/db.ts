@@ -2897,18 +2897,29 @@ export async function getAppUserByStripeSessionId(sessionId: string): Promise<Ap
 
 /**
  * Look up an app_user by their Stripe Customer ID.
+ *
+ * Callers (notably the Stripe webhook's grant-access paths) must be able to
+ * distinguish "no such customer" from "we couldn't ask the database" — a
+ * silent `null` for both would let a DB outage look identical to a
+ * legitimately-unknown customer, which the webhook is otherwise allowed to
+ * ack with 200. So: infrastructure failure THROWS; only a successful query
+ * with zero rows returns `null`.
  */
 export async function getAppUserByStripeCustomerId(stripeCustomerId: string): Promise<AppUser | null> {
   const tag = "[DB][getAppUserByStripeCustomerId]";
   const db = await getDb();
-  if (!db) { console.warn(`${tag} DB not available`); return null; }
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    throw new Error(`${tag} database not available — cannot look up stripeCustomerId=${stripeCustomerId}`);
+  }
   try {
     const rows = await db.select().from(appUsers).where(eq(appUsers.stripeCustomerId, stripeCustomerId)).limit(1);
     const user = rows[0] ?? null;
     console.log(`${tag} [OUTPUT] stripeCustomerId=${stripeCustomerId} found=${user !== null}` + (user ? ` userId=${user.id}` : ""));
     return user;
   } catch (err) {
-    console.error(`${tag} [VERIFY] FAIL error=${err instanceof Error ? err.message : String(err)}`);
-    return null;
+    const causeMsg = err instanceof Error ? err.message : String(err);
+    console.error(`${tag} [VERIFY] FAIL error=${causeMsg}`);
+    throw new Error(`${tag} query failed for stripeCustomerId=${stripeCustomerId} | cause: ${causeMsg}`);
   }
 }
