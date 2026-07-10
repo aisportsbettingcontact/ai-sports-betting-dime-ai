@@ -1,5 +1,5 @@
 /* Dime AI — Chat page styles
-   Prez Bets design system: OLED black, disciplined #39FF14,
+   Prez Bets design system: OLED black, disciplined #45E0A8,
    tabular numerics, terminal register.
    Green is reserved for: Dime's identity mark, the live status,
    and the send action. Everything else stays quiet. */
@@ -11,7 +11,7 @@
   --border: #232327;
   --text: #f2f2f2;
   --text-dim: #8a8a92;
-  --accent: #39ff14;
+  --accent: #45E0A8;
   --accent-dim: rgba(57, 255, 20, 0.12);
   --danger: #ff5a5a;
 
