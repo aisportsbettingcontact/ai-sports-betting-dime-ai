@@ -54,6 +54,8 @@
 .dlv2 .wordmark { font-weight: 700; letter-spacing: -0.05em; color: var(--text-primary); line-height: 1; display: inline-flex; align-items: baseline; font-style: normal; }
 .dlv2 .wordmark .i { position: relative; display: inline-block; }
 .dlv2 .wordmark .i::after { content: ""; position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.2em; height: 0.2em; border-radius: 50%; background: var(--mint); }
+/* Coin-dot logic (MASTER.md): white dot on mint — a mint dot inside a mint button is invisible */
+.dlv2 .btn--mint .wordmark .i::after { background: #FFFFFF; }
 
 /* ── Buttons ── */
 .dlv2 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 22px; border-radius: 22px; font: 600 15px 'Familjen Grotesk', sans-serif; letter-spacing: -0.01em; cursor: pointer; border: 1px solid transparent; text-decoration: none; transition: transform 160ms var(--curve), background 160ms var(--curve), border-color 160ms var(--curve), color 160ms var(--curve); }
@@ -392,6 +394,7 @@
 
 /* Payment Element block — 16px above+below (12px form gap + 4px margin) */
 .dlv2 .checkout-pe-block { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+.dlv2 .checkout-pe { overflow: visible; } /* never clip Stripe's self-measured iframe */
 .dlv2 .checkout-pe--hidden { height: 0; overflow: hidden; }
 .dlv2 .pe-skeleton { display: flex; flex-direction: column; gap: 12px; }
 .dlv2 .pe-skeleton .bar { display: block; height: 44px; border-radius: 10px; background: var(--surface-raised); animation: dlv2-skel 1.6s ease-in-out infinite; }
