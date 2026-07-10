@@ -1,2 +1,2 @@
-fix-root
-rerun-2-jq-fix
+diagnose
+rerun-3-check-prod-deploy
