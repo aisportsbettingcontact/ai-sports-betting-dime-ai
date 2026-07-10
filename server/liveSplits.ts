@@ -37,8 +37,10 @@ export interface LiveSplitRow {
   /** Book lines from the games table (DB-oriented to VSiN's away team) — null if no DB match */
   dbGameId: number | null;
   awayBookSpread: string | null;
+  homeBookSpread: string | null;
   bookTotal: string | null;
   awayML: string | null;
+  homeML: string | null;
   startTimeEst: string | null;
 }
 
@@ -82,8 +84,10 @@ function buildBaseRows(games: VsinSplitsGame[]): LiveSplitRow[] {
       mlAwayBetsPct: g.mlAwayBetsPct,
       dbGameId: null,
       awayBookSpread: null,
+      homeBookSpread: null,
       bookTotal: null,
       awayML: null,
+      homeML: null,
       startTimeEst: null,
     };
   });
@@ -120,7 +124,9 @@ async function joinDbLines(rows: LiveSplitRow[]): Promise<void> {
       // Orient lines to VSiN's away team: if the DB has teams reversed,
       // the DB *home* line is VSiN's away line.
       row.awayBookSpread = (direct ? dbGame.awayBookSpread : dbGame.homeBookSpread) ?? null;
+      row.homeBookSpread = (direct ? dbGame.homeBookSpread : dbGame.awayBookSpread) ?? null;
       row.awayML = (direct ? dbGame.awayML : dbGame.homeML) ?? null;
+      row.homeML = (direct ? dbGame.homeML : dbGame.awayML) ?? null;
       row.bookTotal = dbGame.bookTotal ?? null;
     }
   }
