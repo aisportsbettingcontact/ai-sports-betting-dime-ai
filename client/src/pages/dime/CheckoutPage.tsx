@@ -1,15 +1,19 @@
 /**
  * /checkout?plan=monthly|annual — in-domain, Dime-branded Stripe checkout.
  *
- * Preferred path: Stripe Embedded Checkout (ui_mode:"embedded") mounted inside
- * a Dime shell — the URL never leaves the domain and Stripe controls all card
- * inputs (no raw card data ever touches our code).
+ * ONLY path: Stripe Embedded Checkout (ui_mode:"embedded") mounted inside a
+ * Dime shell — the URL never leaves the domain and Stripe controls all card
+ * inputs (no raw card data ever touches our code). Redirecting to the
+ * Stripe-hosted checkout page is FORBIDDEN (owner directive, 2026-07-10) —
+ * there is no hosted fallback.
  *
- * Fallback path: if VITE_STRIPE_PUBLISHABLE_KEY is not configured at build
- * time, the page transparently creates a hosted Checkout session and redirects
- * — a real checkout either way, never a dead or fake one.
+ * Publishable-key resolution: build-time VITE_STRIPE_PUBLISHABLE_KEY when
+ * present, otherwise fetched at runtime from stripe.publicGetConfig — so the
+ * embedded form works on builds that had no env vars (Railway Docker image,
+ * Vercel without project env). If no key is available at all, the page shows
+ * an explicit error with retry — never a redirect.
  *
- * States: loading → embedded form | error (+retry) | fallback redirect.
+ * States: loading → embedded form | error (+retry).
  * Success returns to /subscribe/success (existing fulfillment page);
  * cancel is simply navigating back — a "Back to pricing" link is always visible.
  */
@@ -51,41 +55,48 @@ export default function CheckoutPage() {
   const plan = parsePlan(typeof window !== "undefined" ? window.location.search : "");
   const copy = PLAN_COPY[plan];
 
-  const [phase, setPhase] = useState<"loading" | "embedded" | "redirecting" | "error">("loading");
+  const [phase, setPhase] = useState<"loading" | "embedded" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const mountRef = useRef<HTMLDivElement>(null);
   const checkoutRef = useRef<{ destroy: () => void } | null>(null);
   const startedRef = useRef(false);
 
   const embedded = trpc.stripe.publicCreateEmbeddedCheckoutSession.useMutation();
-  const hosted = trpc.stripe.publicCreateCheckoutSession.useMutation();
+  const utils = trpc.useUtils();
 
   const start = useCallback(async () => {
     const origin = window.location.origin;
     try {
-      if (PUBLISHABLE_KEY) {
-        setPhase("loading");
-        const [{ loadStripe }, session] = await Promise.all([
-          import("@stripe/stripe-js"),
-          embedded.mutateAsync({ planId: plan, origin }),
-        ]);
-        const stripe = await loadStripe(PUBLISHABLE_KEY);
-        if (!stripe) throw new Error("Stripe.js failed to load");
-        const checkout = await stripe.createEmbeddedCheckoutPage({ clientSecret: session.clientSecret });
-        checkoutRef.current = checkout;
-        if (mountRef.current) {
-          checkout.mount(mountRef.current);
-          setPhase("embedded");
-        }
-      } else {
-        // No publishable key at build time — real hosted checkout instead.
-        setPhase("redirecting");
-        const session = await hosted.mutateAsync({ planId: plan, origin });
-        window.location.replace(session.url);
+      setPhase("loading");
+      console.log(`[Checkout] [INPUT] plan=${plan} buildTimeKey=${PUBLISHABLE_KEY ? "present" : "absent"}`);
+      // Key resolution: build-time env first, runtime config endpoint second.
+      // NEVER a hosted redirect — embedded checkout is the only path.
+      let publishableKey = PUBLISHABLE_KEY;
+      if (!publishableKey) {
+        const config = await utils.stripe.publicGetConfig.fetch();
+        publishableKey = config.publishableKey;
+        console.log(`[Checkout] [STEP] runtime key fetch → ${publishableKey ? "present" : "ABSENT"}`);
+      }
+      if (!publishableKey) {
+        throw new Error("Payments are temporarily unavailable (configuration). Please try again shortly.");
+      }
+      const [{ loadStripe }, session] = await Promise.all([
+        import("@stripe/stripe-js"),
+        embedded.mutateAsync({ planId: plan, origin }),
+      ]);
+      const stripe = await loadStripe(publishableKey);
+      if (!stripe) throw new Error("Stripe.js failed to load");
+      const checkout = await stripe.createEmbeddedCheckoutPage({ clientSecret: session.clientSecret });
+      checkoutRef.current = checkout;
+      if (mountRef.current) {
+        checkout.mount(mountRef.current);
+        setPhase("embedded");
+        console.log("[Checkout] [VERIFY] PASS — embedded checkout mounted on-domain");
       }
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Could not start checkout.");
       setPhase("error");
+      console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan]);
@@ -164,11 +175,6 @@ export default function CheckoutPage() {
                 </div>
               )}
               <div ref={mountRef} className="checkout-mount" style={phase === "loading" ? { display: "none" } : undefined} />
-            </div>
-          ) : phase === "redirecting" ? (
-            <div className="checkout-status" role="status" aria-live="polite">
-              <span className="pulse" aria-hidden="true" />
-              <span>Opening secure Stripe checkout…</span>
             </div>
           ) : (
             <div className="checkout-status" role="alert">

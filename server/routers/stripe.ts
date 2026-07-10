@@ -288,6 +288,27 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
 
 export const stripeRouter = router({
   /**
+   * publicGetConfig
+   *
+   * Runtime delivery of the Stripe PUBLISHABLE key (safe to expose — it is
+   * designed for browsers). The /checkout page uses this when the key was not
+   * baked in at build time (VITE_STRIPE_PUBLISHABLE_KEY), which is the case on
+   * any host that builds the client without env vars (e.g. the Railway Docker
+   * image). This is what guarantees Embedded Checkout ALWAYS renders on-domain
+   * — there is deliberately no hosted-redirect fallback anymore.
+   */
+  publicGetConfig: stripeProcedure.query(() => {
+    const publishableKey =
+      process.env.STRIPE_PUBLISHABLE_KEY?.trim() ||
+      process.env.VITE_STRIPE_PUBLISHABLE_KEY?.trim() ||
+      "";
+    console.log(
+      `${TAG}[publicGetConfig] [OUTPUT] publishableKey=${publishableKey ? `${publishableKey.slice(0, 8)}… (${publishableKey.length} chars)` : "(unset)"}`
+    );
+    return { publishableKey };
+  }),
+
+  /**
    * publicCreateEmbeddedCheckoutSession
    *
    * Embedded (in-domain) variant of publicCreateCheckoutSession. Returns a
