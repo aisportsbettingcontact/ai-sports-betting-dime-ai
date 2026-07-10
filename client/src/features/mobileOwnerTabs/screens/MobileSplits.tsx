@@ -2,7 +2,8 @@
  * MobileSplits — MLB betting splits view.
  * Per-game card: "Away vs Home" matchup row, then stacked Run Line / Total /
  * Moneyline markets, each with Tickets + Money percentage bars.
- * All-black background; white borders on cards and team logos.
+ * All-black background; white borders on the splits bars and team logos;
+ * cards separated by a hairline only.
  *
  * Data: trpc.games.liveSplits — live VSiN DK splits straight from
  * server/vsinBettingSplitsScraper.ts (5-min cache); book lines joined from
@@ -19,8 +20,9 @@ import { BarChart3 } from "lucide-react";
 const T = {
   canvas: "#000000",
   surface: "#000000",
-  border: "#FFFFFF",               // cell + logo borders
-  divider: "rgba(255,255,255,0.25)", // internal market separators
+  barBorder: "#FFFFFF",              // white border on splits bars + team logos
+  cardBorder: "rgba(237,237,242,0.12)", // hairline card definition (reference value)
+  divider: "rgba(237,237,242,0.12)",    // internal market separators
   text1: "#EDEDF2",
   body: "#C9C9D4",
   text2: "#9A9AA8",
@@ -75,7 +77,13 @@ function PctBar({ bar }: { bar: SplitBar }) {
         <span style={microLabel}>{bar.heading}</span>
         <span style={{ fontSize: 11, color: T.text2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bar.labelB}</span>
       </div>
-      <div style={{ display: "flex", height: 20, borderRadius: 6, overflow: "hidden", background: T.track }} aria-hidden="true">
+      <div
+        aria-hidden="true"
+        style={{
+          display: "flex", height: 22, borderRadius: 6, overflow: "hidden",
+          background: T.track, border: `1px solid ${T.barBorder}`,
+        }}
+      >
         <div style={{ flexGrow: a, flexBasis: 0, minWidth: 46, background: T.mint, display: "flex", alignItems: "center", padding: "0 7px" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: T.barInk }}>{a}%</span>
         </div>
@@ -91,8 +99,8 @@ function TeamLogo({ dataUri, alt, size }: { dataUri: string | null; alt: string;
   return (
     <div
       style={{
-        width: size, height: size, borderRadius: "50%", flex: "none",
-        border: `1px solid ${T.border}`, background: T.surface,
+        width: size, height: size, borderRadius: 8, flex: "none",
+        border: `1px solid ${T.barBorder}`, background: T.surface,
         display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
       }}
     >
@@ -248,7 +256,7 @@ export function MobileSplits() {
                 aria-label={`${card.away.nick} vs ${card.home.nick} betting splits`}
                 style={{
                   background: T.surface,
-                  border: `1px solid ${T.border}`,
+                  border: `1px solid ${T.cardBorder}`,
                   borderRadius: 16,
                   padding: 16,
                   display: "flex",
