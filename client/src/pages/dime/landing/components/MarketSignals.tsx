@@ -1,6 +1,6 @@
 /**
  * Today's Market Signals — sample slate with tier gating.
- * Pass rows are the trust signal; locked rows gate Elite/Max scope honestly
+ * Pass rows are the trust signal; locked rows gate Sharp/Operator scope honestly
  * (no fake paywall on public data — locked rows are future/deeper products).
  */
 
@@ -50,12 +50,12 @@ export default function MarketSignals() {
                   <span className="statecell" style={{ justifySelf: "end" }}>
                     {r.state === "locked" ? (
                       <a
-                        href={r.lockedTier === "Max" ? "#access" : "#pricing"}
+                        href="#pricing"
                         className="state-pill"
                         style={{ textDecoration: "none" }}
                         data-cta-id={`signals-unlock-${r.lockedTier?.toLowerCase()}`}
                         data-cta-location="market-signals"
-                        data-plan={r.lockedTier === "Elite" ? "annual" : undefined}
+                        data-plan={r.lockedTier?.toLowerCase()}
                         data-mode="paid"
                       >
                         <span className="dot" aria-hidden="true" />

@@ -362,11 +362,66 @@
 /* ═══ Checkout page (shares tokens via .dlv2 wrapper) ═══ */
 .dlv2 .checkout-wrap { max-width: 980px; margin: 0 auto; padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 40px); display: grid; grid-template-columns: 320px 1fr; gap: clamp(24px, 4vw, 44px); align-items: start; }
 .dlv2 .checkout-summary { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 10px; position: sticky; top: 92px; }
+.dlv2 .cs-plan, .dlv2 .cs-legal { display: contents; }
 .dlv2 .checkout-summary h2 { margin: 0; font-size: 20px; color: var(--text-primary); letter-spacing: -0.02em; }
 .dlv2 .checkout-summary .rowline { display: flex; align-items: baseline; gap: 10px; font-size: 14px; color: var(--text-secondary); }
 .dlv2 .checkout-summary .rowline .lead { flex: 1; border-top: var(--leader); }
-.dlv2 .checkout-summary .rowline b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.dlv2 .checkout-summary .fine { font-size: 12px; color: var(--text-faint); }
-.dlv2 .checkout-mount { background: #FFFFFF; border-radius: 16px; min-height: 480px; overflow: hidden; }
+.dlv2 .checkout-summary .rowline b { color: var(--text-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.dlv2 .checkout-features { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.dlv2 .checkout-features li { display: flex; gap: 9px; font-size: 13.5px; color: var(--text-body); align-items: baseline; }
+.dlv2 .checkout-features li svg { flex: 0 0 auto; transform: translateY(1px); }
+.dlv2 .checkout-summary .fine, .dlv2 .cs-legal .fine { font-size: 12.5px; color: var(--text-secondary); }
+.dlv2 .checkout-back { color: var(--text-muted); text-decoration: none; transition: color 160ms var(--curve); }
+.dlv2 .checkout-back:hover { color: var(--text-secondary); }
+
+/* Right form card — apply-card pattern promoted */
+.dlv2 .checkout-formcard { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 16px; padding: 24px; }
+.dlv2 .checkout-form { display: flex; flex-direction: column; gap: 12px; }
+.dlv2 .checkout-heading { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
+.dlv2 .checkout-sub { margin: 4px 0 0; font-size: 14px; color: var(--text-secondary); }
+.dlv2 .checkout-field { display: flex; flex-direction: column; gap: 6px; }
+.dlv2 .checkout-field label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.dlv2 .checkout-field input { background: var(--surface-sidebar); border: 1px solid var(--border-strong); border-radius: 10px; padding: 11px 13px; font: 400 15px 'Familjen Grotesk', sans-serif; color: var(--text-primary); min-height: 44px; }
+.dlv2 .checkout-field input::placeholder { color: var(--text-faint); }
+.dlv2 .checkout-field input:focus { outline: none; box-shadow: 0 0 0 3px var(--ring); border-color: var(--border-strong); }
+.dlv2 .checkout-field input:disabled { opacity: 0.55; }
+.dlv2 .field-help { font-size: 12.5px; color: var(--text-secondary); }
+.dlv2 .field-err { display: flex; align-items: baseline; gap: 8px; }
+.dlv2 .field-err .stamp { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.dlv2 .field-err .msg { font-size: 13px; color: var(--text-primary); }
+
+/* Payment Element block — 16px above+below (12px form gap + 4px margin) */
+.dlv2 .checkout-pe-block { display: flex; flex-direction: column; gap: 8px; margin: 4px 0; }
+.dlv2 .checkout-pe--hidden { height: 0; overflow: hidden; }
+.dlv2 .pe-skeleton { display: flex; flex-direction: column; gap: 12px; }
+.dlv2 .pe-skeleton .bar { display: block; height: 44px; border-radius: 10px; background: var(--surface-raised); animation: dlv2-skel 1.6s ease-in-out infinite; }
+@keyframes dlv2-skel { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.dlv2 .pe-status { display: inline-flex; align-items: center; gap: 8px; }
+.dlv2 .btn--pay:hover { opacity: 0.85; transform: none; }
+.dlv2 .btn--pay .pulse { background: #0B0B0F; }
+.dlv2 .checkout-legal-line { margin-top: -2px; font-size: 12.5px; color: var(--text-secondary); }
+
+/* Success / expired panels (replace the form inside the card) */
+.dlv2 .checkout-panel { display: flex; flex-direction: column; gap: 12px; }
+.dlv2 .checkout-panel h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
+.dlv2 .checkout-panel p { margin: 0; font-size: 14.5px; color: var(--text-body); }
+.dlv2 .checkout-panel-stamp { display: flex; align-items: baseline; gap: 10px; }
+.dlv2 .checkout-stamp { color: var(--text-secondary); }
+
 .dlv2 .checkout-status { border: 1px solid var(--border-soft); border-radius: 16px; padding: 40px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; gap: 16px; align-items: center; }
-@media (max-width: 820px) { .dlv2 .checkout-wrap { grid-template-columns: 1fr; } .dlv2 .checkout-summary { position: static; } }
+
+/* Mobile: (1) compact plan header · (2) form card · (3) terms + RG + back */
+@media (max-width: 820px) {
+  .dlv2 .checkout-wrap { display: flex; flex-direction: column; }
+  .dlv2 .checkout-summary { display: contents; position: static; }
+  .dlv2 .cs-plan { display: flex; flex-direction: column; gap: 10px; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 16px; padding: 20px; order: 1; }
+  .dlv2 .checkout-right { order: 2; }
+  .dlv2 .cs-legal { display: flex; flex-direction: column; gap: 10px; order: 3; }
+  .dlv2 .cs-plan .rowline--detail, .dlv2 .cs-plan .checkout-features { display: none; }
+}
+
+/* Reduced motion: skeleton bars hold a static 60% opacity (animation is
+   killed by the .dlv2 kill-switch above) */
+@media (prefers-reduced-motion: reduce) {
+  .dlv2 .pe-skeleton .bar { opacity: 0.6; }
+}

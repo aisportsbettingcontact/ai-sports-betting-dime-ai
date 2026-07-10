@@ -181,14 +181,14 @@ export default function MarketConsole() {
             {done ? market.status : "Comparing implied vs projected…"}
           </div>
           <div className="locked-row">
-            <span className="mono">Elite</span>
+            <span className="mono">Sharp</span>
             <span>Player prop volatility scan</span>
-            <a href="#pricing" data-cta-id="console-unlock-elite" data-cta-location="market-console" data-plan="annual" data-mode="paid">Unlock →</a>
+            <a href="#pricing" data-cta-id="console-unlock-sharp" data-cta-location="market-console" data-plan="sharp" data-mode="paid">Unlock →</a>
           </div>
           <div className="locked-row">
-            <span className="mono">Max</span>
+            <span className="mono">Operator</span>
             <span>Full slate simulation</span>
-            <a href="#access" data-cta-id="console-unlock-max" data-cta-location="market-console" data-mode="paid">Apply →</a>
+            <a href="#pricing" data-cta-id="console-unlock-operator" data-cta-location="market-console" data-plan="operator" data-mode="paid">Unlock →</a>
           </div>
         </div>
       </div>
