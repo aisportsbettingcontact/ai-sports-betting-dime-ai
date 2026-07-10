@@ -1,0 +1,86 @@
+# Cron — MLB cycle (lineups / strikeout props / backtest) — GitHub Actions timer
+# replacing the in-process scheduler.
+#
+# ⚠️  DO NOT ENABLE IN THE ACTIONS UI UNTIL THE MANUS HOST IS RETIRED. ⚠️
+# Manus's in-process loop (server/vsinAutoRefresh.ts) still calls runMlbCycleOnce()
+# on its own setInterval today. If this workflow is enabled at the same time, both
+# hosts will write mlb_lineups, mlb_strikeout_props, and mlb_game_backtest
+# concurrently — those tables lack unique constraints, so concurrent writes risk
+# duplicate rows, not just a harmless race. Leave this workflow disabled (⋯ →
+# Disable workflow) until Manus is decommissioned, then enable it as part of the
+# cutover runbook.
+#
+# Fires POST /api/cron/mlb-cycle on the Railway app on a schedule. The endpoint is
+# shared-secret authed (CRON_SECRET) and responds 200 immediately while
+# runMlbCycleOnce() runs in the background under a run-lock (CronJobRunner in
+# server/cron/cronRunner.ts, wired in server/cron/cronRoutes.ts) — the same
+# single-flight/overlap protection the in-process interval relied on.
+#
+# Cadence: the in-process loop calls runMlbCycleOnce() every 5 minutes, 24/7, with
+# no time-of-day gate (MLB_INTERVAL_MS = 5 * 60 * 1000 at
+# server/vsinAutoRefresh.ts:1361; wired via setInterval at
+# server/vsinAutoRefresh.ts:2098-2101). That is already at the floor of what GitHub
+# Actions cron can reliably do, so this workflow matches it at */5 rather than
+# capping it down further.
+#
+# Required repo secrets:
+#   RAILWAY_APP_URL — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+#
+# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
+# platform load).
+name: Cron — MLB cycle
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes — matches the in-process MLB_INTERVAL_MS
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-mlb-cycle
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/mlb-cycle
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST /api/cron/mlb-cycle (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/mlb-cycle"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/mlb-cycle")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::mlb-cycle trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — mlb-cycle accepted (HTTP $CODE)"
