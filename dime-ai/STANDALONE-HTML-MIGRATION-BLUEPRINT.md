@@ -402,15 +402,15 @@ Dime shell; legacy accents gone from user paths.
 
 | # | Decision | Status |
 |---|---|---|
-| D1 | Mint theme | **RESOLVED: ships sitewide, non-negotiable, per the HTML prototype token block** (:282–296). Prototype's phone-only gate + force-reset-to-dark are dropped; mint is a first-class `data-theme` on all devices/surfaces. MASTER.md gains a mint column (values = prototype block + `--text3` alpha ≥0.62 contrast correction). Sub-item **D1a (open)**: whether marketing landing (dark-only today, outside prototype scope) also gets mint |
-| D2 | Credit pricing | **RESOLVED: implementing.** Sub-item **D2a (open)**: price point — prototype shows 40 cr/analysis; live wc2026 route charges 1; unify on ledger with per-route cost config |
+| D1 | Mint theme | **RESOLVED: ships sitewide, non-negotiable, per the HTML prototype token block** (:282–296). Prototype's phone-only gate + force-reset-to-dark are dropped; mint is a first-class `data-theme` on all devices/surfaces. MASTER.md gains a mint column (values = prototype block + `--text3` alpha ≥0.62 contrast correction). Sub-item **D1a RESOLVED: "all mint needs to be our color mint"** — brand mint `#45E0A8` is THE mint everywhere, all surfaces including landing; no alternate greens. (`#0FA36B` survives only in its MASTER-defined role as the dark *text* rendering of mint on light surfaces for WCAG — it is not a second brand color; if the owner wants it gone entirely, mint text on light must be ≥18.66px/700) |
+| D2 | Credit pricing | **RESOLVED: implementing.** Sub-item **D2a: deferred — credit system ships "soon"; price point set at build time** (prototype shows 40 cr/analysis; live wc2026 route charges 1; unify on ledger with per-route cost config) |
 | D3 | Betting Splits source | **RESOLVED: VSiN** (already the live pipeline — 15-min cron, §17-C field map). Prototype layout (Book+Model columns, model-favored highlight, ROI chips) renders over VSiN splits + `games` model columns via `edgeUtils` recomputation |
-| D4 | Odds-format preference | Open — ship in W3 (converter exists at `edgeUtils.ts:59`) or DEFER |
+| D4 | Odds-format preference | **RESOLVED: fix it — implement** the American/Decimal setting end-to-end (user pref + formatting layer over `edgeUtils.ts:59` converter; the prototype's toggle is dead, the repo has no pref). Ship in W3 |
 | D5 | MASTER amendments | Required before W1: mint column + `--scrim/--track/--on-mint/--sp-*` etc. with corrected values |
 | D6 | Saved analyses | Open — new table + router (W4) or DEFER to E8 |
 | D7 | NBA props | **RESOLVED: none for now.** DEFER until an NBA pipeline exists (do not fake) |
 | D8 | Credit top-up packs | **RESOLVED: implementing.** Requires the full §17-B gap set: one-time price catalog, `mode:"payment"` session builder, webhook mode branch + idempotent fulfillment + dedup store, refund clawback. **Do not ship pack prices before the webhook branch** (misfulfillment walk-through §17-B) |
-| D9 | Charge policy on aborted streams | Open (new, from §17-A risk 1): wc2026 charges full credit when the client disconnects mid-answer; decide charge/no-charge/partial before porting to chat |
+| D9 | Charge policy on aborted streams | **Deferred by owner ("fix it when it happens")** — decide charge/no-charge/partial at Q7b build time; the defect stays documented in §17-A risk 1 and MUST NOT be ported silently |
 
 ---
 
