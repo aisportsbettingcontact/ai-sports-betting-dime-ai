@@ -5,16 +5,14 @@
  * whitelabel pricing section wired to the existing Stripe checkout flow.
  *
  * Brand law: design-system/dime-ai/MASTER.md (one-accent mint).
- * Checkout notes (from flow recon):
- *  - trpc.stripe.createCheckoutSession requires hasAccess === true, so it is
- *    ONLY used for already-subscribed users; everyone else (anonymous AND
- *    logged-in-unsubscribed) goes through publicCreateCheckoutSession.
+ * Checkout notes:
+ *  - All plan CTAs navigate to the on-domain /checkout page (Stripe Embedded
+ *    Checkout). Never a hosted checkout.stripe.com redirect — owner directive.
  *  - Prices shown match what Stripe actually bills ($99.99 / $499.99).
  */
 
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import "./dime-landing.css";
 
@@ -107,26 +105,14 @@ const PLANS: Array<{
 ];
 
 function useStartCheckout() {
-  const { appUser } = useAppAuth();
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
 
-  const onSuccess = (data: { url: string | null }) => {
-    if (data.url) window.location.replace(data.url);
-    else setLoadingPlan(null);
-  };
-  const onError = () => setLoadingPlan(null);
-
-  const publicCheckout = trpc.stripe.publicCreateCheckoutSession.useMutation({ onSuccess, onError });
-  const authedCheckout = trpc.stripe.createCheckoutSession.useMutation({ onSuccess, onError });
-
+  // Embedded checkout only — owner directive: Stripe must never redirect to a
+  // hosted checkout.stripe.com page. /checkout mounts Embedded Checkout on-domain.
   const startCheckout = (plan: PlanId) => {
     if (loadingPlan) return;
     setLoadingPlan(plan);
-    const origin = window.location.origin;
-    // Authed mutation is gated on hasAccess===true — only route current
-    // subscribers through it. Everyone else uses the public session.
-    if (appUser?.hasAccess) authedCheckout.mutate({ planId: plan, origin });
-    else publicCheckout.mutate({ planId: plan, origin });
+    window.location.assign(`/checkout?plan=${plan}`);
   };
 
   return { startCheckout, loadingPlan };
