@@ -18,6 +18,16 @@ export default function Nav() {
           <a href="#faq">FAQ</a>
         </div>
         <a
+          href="/login"
+          className="btn btn--ghost"
+          data-cta-id="nav-login"
+          data-cta-location="nav"
+          data-mode="paid"
+          aria-label="Log in (username/password or Discord)"
+        >
+          Log in
+        </a>
+        <a
           href="#pricing"
           className="btn btn--mint"
           data-cta-id="nav-get-access"
