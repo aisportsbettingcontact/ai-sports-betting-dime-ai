@@ -465,7 +465,7 @@ function OddsCell({
   const pillBorder = isBook
     ? (isEdge ? '1px solid rgba(57,255,20,0.45)' : '1px solid rgba(255,255,255,0.13)')
     : (isEdge ? '1px solid rgba(57,255,20,0.30)' : '1px solid transparent');
-  const mainColor = isEdge ? '#39FF14' : '#FFFFFF';
+  const mainColor = isEdge ? '#45E0A8' : '#FFFFFF';
   const mainWeight = isEdge ? 800 : 700;
 
   return (
@@ -853,7 +853,7 @@ function WcMktCol({
   const SubCol = ({ line, juice, isBook: isBookCol, hasEdge: subEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
     const juiceColor = isBookCol
       ? 'rgba(255,255,255,0.90)'
-      : subEdge ? '#39FF14' : 'rgba(255,255,255,0.90)';
+      : subEdge ? '#45E0A8' : 'rgba(255,255,255,0.90)';
     const isVeryLongOdds = juice.length >= 6; // e.g. +2200, -1000
     const isLongOdds = juice.length >= 5;     // e.g. +1000, -900
     // [FIX] Match MLB VAL_FS scale: larger odds values get smaller font
@@ -898,7 +898,7 @@ function WcMktCol({
           {/* BOOK header: full white — matches MLB SectionCol exactly */}
           <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>BOOK</span>
           {/* MODEL header: neon green — matches MLB SectionCol exactly */}
-          <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#39FF14', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>MODEL</span>
+          <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#45E0A8', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>MODEL</span>
         </div>
 
         {/* Away / Over / Draw row (top) */}
@@ -1089,7 +1089,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               style={{
                 fontSize: LIVE_FONT_SIZE,
                 background: "rgba(57,255,20,0.12)",
-                color: "#39FF14",
+                color: "#45E0A8",
                 border: "1px solid rgba(57,255,20,0.4)",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
@@ -1097,7 +1097,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
                 lineHeight: 1,
               }}
             >
-              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#39FF14" }} />
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#45E0A8" }} />
               {/* [FIX 2026-06-30 v3] Exclude 'ETHT' from live minute display — that's an HT state not a minute */}
               LIVE{matchMinute && matchMinute !== 'ETHT' ? ` ${matchMinute}'` : ''}
             </span>
@@ -1108,7 +1108,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               style={{
                 fontSize: FINAL_FONT_SIZE,
                 background: "rgba(57,255,20,0.12)",
-                color: "#39FF14",
+                color: "#45E0A8",
                 border: "1px solid rgba(57,255,20,0.4)",
                 borderRadius: '6px',
                 lineHeight: 1,
@@ -1138,7 +1138,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
 
       {/* Team group */}
       {/* [LOG] WcScorePanel:Teams — homeAbbr=${homeFifaCode.toUpperCase()} awayAbbr=${awayFifaCode.toUpperCase()} */}
-      {/* [STATE] Win/loss coloring: homeScore vs awayScore — winner gets #39FF14 bold, loser gets white unbolded */}
+      {/* [STATE] Win/loss coloring: homeScore vs awayScore — winner gets #45E0A8 bold, loser gets white unbolded */}
       {/* [VERIFY] Projected scores: amber rgba(251,191,36,0.75) for SCHEDULED; actual scores: green/white for LIVE/FT */}
       {(() => {
         // [STEP] Determine winner for score coloring
@@ -1154,22 +1154,22 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
           ` | [OUTPUT] homeWins=${homeWins} awayWins=${awayWins} isDraw=${isDraw}` +
           ` | [VERIFY] hasScores=${hasScores} isLive=${isLive} isFinal=${isFinal}`
         );
-        // [STEP] Score color: winner = #39FF14 bold, loser/draw = white unbolded
+        // [STEP] Score color: winner = #45E0A8 bold, loser/draw = white unbolded
         // [FIX 2026-06-30 v3] Use showScores (includes HT) — halftime scores are real scores
         const homeScoreColor = showScores
-          ? (isFinal && homeWins ? '#39FF14' : 'rgba(255,255,255,0.95)')
+          ? (isFinal && homeWins ? '#45E0A8' : 'rgba(255,255,255,0.95)')
           : 'rgba(251,191,36,0.75)';
         const homeScoreBold = showScores && homeWins ? 700 : 400;
         const awayScoreColor = showScores
-          ? (isFinal && awayWins ? '#39FF14' : 'rgba(255,255,255,0.95)')
+          ? (isFinal && awayWins ? '#45E0A8' : 'rgba(255,255,255,0.95)')
           : 'rgba(251,191,36,0.75)';
         const awayScoreBold = showScores && awayWins ? 700 : 400;
-        // [STEP] Projected score color: winner proj = #39FF14 bold, loser/draw = amber unbolded
+        // [STEP] Projected score color: winner proj = #45E0A8 bold, loser/draw = amber unbolded
         const projHomeWins = hasProjScores && (proj!.projHomeScore ?? 0) > (proj!.projAwayScore ?? 0);
         const projAwayWins = hasProjScores && (proj!.projAwayScore ?? 0) > (proj!.projHomeScore ?? 0);
-        const projHomeColor = projHomeWins ? '#39FF14' : 'rgba(251,191,36,0.75)';
+        const projHomeColor = projHomeWins ? '#45E0A8' : 'rgba(251,191,36,0.75)';
         const projHomeBold = projHomeWins ? 700 : 400;
-        const projAwayColor = projAwayWins ? '#39FF14' : 'rgba(251,191,36,0.75)';
+        const projAwayColor = projAwayWins ? '#45E0A8' : 'rgba(251,191,36,0.75)';
         const projAwayBold = projAwayWins ? 700 : 400;
         return (
           <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
@@ -1189,7 +1189,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
                   {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
                 </span>
               </div>
-              {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
+              {/* [FIX] Win/loss score coloring: winner = #45E0A8 bold, loser = white unbolded */}
               {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
               {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: awayScoreBold, color: awayScoreColor }}>
@@ -1221,7 +1221,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
                   {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
                 </span>
               </div>
-              {/* [FIX] Win/loss score coloring: winner = #39FF14 bold, loser = white unbolded */}
+              {/* [FIX] Win/loss score coloring: winner = #45E0A8 bold, loser = white unbolded */}
               {/* [FIX 2026-06-30 v3] showScores includes isHT — scores visible at halftime */}
               {showScores ? (
                 <span className="tabular-nums flex-shrink-0" style={{ fontSize: 'clamp(22px, 2.5vw, 44px)', lineHeight: 1, fontWeight: homeScoreBold, color: homeScoreColor }}>
@@ -1281,7 +1281,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="font-black"
               style={{
                 fontSize: 'clamp(7px, 1.9vw, 9.5px)',
-                color: '#39FF14',
+                color: '#45E0A8',
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
                 lineHeight: 1.2,
@@ -1829,7 +1829,7 @@ function WcDesktopMergedPanel({
         awayModelNum={modelOdds?.overOdds}
         homeModelNum={modelOdds?.underOdds}
         singleRow={false}
-        awayColor="#39FF14"
+        awayColor="#45E0A8"
         homeColor="#FF6B35"
       />
 
@@ -2603,7 +2603,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
           fontWeight: 600,
           letterSpacing: "0.5px",
           textTransform: "uppercase",
-          color: confirmed ? "#39FF14" : "#FFFF33",
+          color: confirmed ? "#45E0A8" : "#FFFF33",
         }}
       >
         <span
@@ -2611,7 +2611,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
             width: isMobile ? 4 : 5,
             height: isMobile ? 4 : 5,
             borderRadius: "50%",
-            background: confirmed ? "#39FF14" : "#FFFF33",
+            background: confirmed ? "#45E0A8" : "#FFFF33",
             display: "inline-block",
           }}
         />
@@ -3208,7 +3208,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                   <MergedSplitBar
                     awayPct={totalSplits.awayTickets}
                     homePct={totalSplits.homeTickets}
-                    awayColor="#39FF14"
+                    awayColor="#45E0A8"
                     homeColor="#FF6B35"
                     rowLabel="TICKETS"
                     awayLabel="OVER"
@@ -3217,7 +3217,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                   <MergedSplitBar
                     awayPct={totalSplits.awayMoney}
                     homePct={totalSplits.homeMoney}
-                    awayColor="#39FF14"
+                    awayColor="#45E0A8"
                     homeColor="#FF6B35"
                     rowLabel="MONEY"
                     awayLabel="OVER"
@@ -3362,7 +3362,7 @@ export function WcFeedInline({
                   color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.55)',
                   background: 'transparent',
                   border: 'none',
-                  borderBottom: isActive ? '2px solid #39FF14' : '2px solid transparent',
+                  borderBottom: isActive ? '2px solid #45E0A8' : '2px solid transparent',
                   marginBottom: '-2px',
                   cursor: 'pointer',
                   transition: 'color 0.15s, border-color 0.15s',
