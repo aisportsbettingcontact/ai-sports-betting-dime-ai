@@ -11,10 +11,11 @@ export default function FinalCTA() {
         <h2>{FINAL_CTA.headline}</h2>
         <p>{FINAL_CTA.copy}</p>
         <a
-          href="#pricing"
+          href="/checkout?plan=pro"
           className="btn btn--mint"
           data-cta-id="final-get-access"
           data-cta-location="final-cta"
+          data-plan="pro"
           data-mode="paid"
         >
           {FINAL_CTA.cta} — <Wordmark fontSize={17} />

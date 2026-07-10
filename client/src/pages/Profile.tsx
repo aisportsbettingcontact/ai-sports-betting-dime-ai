@@ -33,6 +33,9 @@ function derivePlanLabel(user: {
   }
   if (user.stripePlanId === "annual") return "ANNUAL";
   if (user.stripePlanId === "monthly") return "MONTHLY";
+  if (user.stripePlanId === "pro") return "PRO";
+  if (user.stripePlanId === "sharp") return "SHARP";
+  if (user.stripePlanId === "operator") return "OPERATOR";
   if (user.hasAccess) return "ACTIVE";
   return "EXPIRED";
 }

@@ -41,9 +41,15 @@ describe("landing prerender — Dime landing v2 parity", () => {
     expect(html).toContain("Edge Detected");
     expect(html).toContain("Monitor");
     expect(html).toContain("Pass");
-    // v2 money mapping — real tiers, not the retired waitlist funnel
-    expect(html).toContain("$99.99");
-    expect(html).toContain("$499.99");
+    // v2 money mapping — the blueprint §4.2 ladder, not the retired pricing
+    expect(html).toContain("$99");
+    expect(html).toContain("$249");
+    expect(html).toContain("$499");
+    expect(html).toContain("/checkout?plan=pro");
+    expect(html).toContain("/checkout?plan=sharp");
+    expect(html).toContain("/checkout?plan=operator");
+    expect(html).not.toContain("$99.99");
+    expect(html).not.toContain("$499.99");
     expect(html).not.toContain("Join the Waitlist");
     expect(html).not.toContain("Be First to Access");
   });

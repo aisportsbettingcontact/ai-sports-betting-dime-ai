@@ -1,10 +1,11 @@
 /**
- * Pricing — four-tier presentation over the two REAL Stripe plans + application tier.
+ * Pricing — blueprint §4.2 ladder over REAL Stripe plans.
  *   Free Preview → scrolls to the on-page demos (no fake free product)
- *   Pro          → /checkout?plan=monthly  ($99.99/mo — real Stripe price)
- *   Elite        → /checkout?plan=annual   ($499.99/yr — real Stripe price)
- *   Founder      → #access application form (real waitlist backend)
- * Dime Credits are explained, not sold — no credit SKU exists in Stripe yet.
+ *   Pro          → /checkout?plan=pro       ($99/mo — real Stripe price)
+ *   Sharp        → /checkout?plan=sharp     ($249/mo — real Stripe price)
+ *   Operator     → /checkout?plan=operator  ($499/mo — real Stripe price)
+ * Founder stays in ControlledAccess (#access), out of the grid.
+ * AI Analyst credits are explained, not sold — no credit SKU exists in Stripe yet.
  */
 
 import { Link } from "wouter";
@@ -68,7 +69,7 @@ export default function Pricing() {
                 <ul className="tier-features">
                   {tier.features.map((f) => (
                     <li key={f}>
-                      <MintCheck />
+                      <MintCheck muted={!tier.featured} />
                       {f}
                     </li>
                   ))}
