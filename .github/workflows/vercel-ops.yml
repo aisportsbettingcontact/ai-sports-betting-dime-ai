@@ -29,7 +29,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          CMD=$(cat .vercel-ops/command | tr -d '[:space:]')
+          CMD=$(head -n1 .vercel-ops/command | tr -d '[:space:]')
           echo "::group::command=$CMD"
           if [ -z "${VERCEL_TOKEN:-}" ]; then echo "VERCEL_TOKEN secret is empty/unset"; exit 1; fi
           AUTH="Authorization: Bearer $VERCEL_TOKEN"
@@ -63,7 +63,7 @@ jobs:
             curl -sS -X POST -H "$AUTH" -H "Content-Type: application/json" \
               "https://api.vercel.com/v13/deployments?$TQ" \
               -d "{\"name\":\"ai-sports-betting-dime-ai\",\"project\":\"$PROJECT_ID\",\"target\":\"production\",\"gitSource\":{\"type\":\"github\",\"ref\":\"main\",\"repoId\":$REPO_ID}}" \
-              | jq '{uid: .id // .uid, readyState, target, url}'
+              | jq '{uid: (.id // .uid), readyState, target, url, error}'
             echo "::endgroup::"
           else
             echo "unknown command: $CMD"; exit 1
