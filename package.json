@@ -14,7 +14,7 @@
     "test": "vitest run",
     "smoke-test": "node -e \"import('./dist/index.js').then(() => { console.log('[SMOKE] Server initialized without crash'); process.exit(0); }).catch(e => { console.error('[SMOKE] CRASH:', e.message); process.exit(1); })\" & sleep 8 && kill %1 2>/dev/null; wait",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "postinstall": "if [ -f requirements.txt ] && command -v pip3 >/dev/null 2>&1; then pip3 install -r requirements.txt -q; else echo '[postinstall] skipping python deps: pip3 unavailable or requirements.txt missing (expected on Railway, which installs via apt in Dockerfile)'; fi"
+    "postinstall": "if [ -n \"$VERCEL\" ]; then echo '[postinstall] Vercel build detected — skipping python model deps (client-only build; runners live on Railway)'; elif [ -f requirements.txt ] && command -v pip3 >/dev/null 2>&1; then pip3 install -r requirements.txt -q || echo '[postinstall] pip install failed (non-fatal) — python model deps unavailable in this environment (externally-managed?)'; else echo '[postinstall] skipping python deps: pip3 unavailable or requirements.txt missing (expected on Railway, which installs via apt in Dockerfile)'; fi"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.205",
