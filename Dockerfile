@@ -18,16 +18,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-scipy \
       python3-requests \
       ca-certificates \
-      # Debian Chromium for the Playwright-based scrapers (server/wc2026/espnPageScraper.ts,
-      # server/discord/renderLineupCard.ts, server/discord/renderSplitsCard.ts import
-      # "playwright" directly). pnpm's script allowlist only covers puppeteer
-      # (package.json pnpm.onlyBuiltDependencies), so Playwright's own postinstall browser
-      # download never runs here — apt chromium is the smallest reliable substitute: it
-      # reuses the shared libs installed below (no second copy of the same dependency
-      # closure) and lands at a fixed, version-independent path (/usr/bin/chromium) that
-      # espnPageScraper.ts's PLAYWRIGHT_CHROMIUM_PATH resolution can target directly,
-      # unlike Playwright's own download which nests under a version-numbered
-      # ms-playwright/chromium-<rev>/ directory that shifts on every Playwright bump.
+      # Debian Chromium for the Playwright-based scrapers/renderers (server/wc2026/
+      # espnPageScraper.ts, server/discord/renderSplitsCard.ts, server/discord/
+      # renderLineupCard.ts import "playwright" directly). pnpm's script allowlist only
+      # covers puppeteer (package.json pnpm.onlyBuiltDependencies), so Playwright's own
+      # postinstall browser download never runs here — apt chromium is the smallest
+      # reliable substitute: it reuses the shared libs installed below (no second copy
+      # of the same dependency closure) and lands at a fixed, version-independent path
+      # (/usr/bin/chromium) that all three files' PLAYWRIGHT_CHROMIUM_PATH resolution
+      # can target directly via an explicit `executablePath`, unlike Playwright's own
+      # download which nests under a version-numbered ms-playwright/chromium-<rev>/
+      # directory that shifts on every Playwright bump. All three fall back to
+      # Playwright's own self-managed browser resolution when this env var is unset
+      # and no apt/ms-playwright binary is found on disk, which is what keeps local
+      # dev working without it.
       chromium \
       # Shared libs below cover both the apt chromium binary above and puppeteer's
       # own downloaded browser (.npmrc allow-build=puppeteer runs its postinstall
