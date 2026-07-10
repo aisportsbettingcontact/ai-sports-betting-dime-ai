@@ -23,6 +23,7 @@
 
 .dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
 .dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
+.dc-sidebar-spacer { flex: 1; } /* Ph1: with no session chats the RECENT CHATS section hides entirely; this takes over the recent list's flex: 1 slot (D/L:65) so the profile row stays pinned to the sidebar foot */
 
 /* ----------------------------------------------------------------------------
    1. MAIN PANE — two states of the SAME element (spec §2, §2.7)
@@ -177,3 +178,12 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
   .dc-ghost { transition: none; display: none; }
   .dc-fade-in { animation: none; }
 } /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */
+
+/* ----------------------------------------------------------------------------
+   10. VIEWPORT GATE (<1024px, Ph3) — full-viewport branded notice replacing
+       the shell. Frozen tokens only; fully static (reduced-motion-safe).
+   -------------------------------------------------------------------------- */
+
+.dc-gate { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px; text-align: center; } /* home-main geometry F:97; page bg comes from the .dc-page theme rules (D/L:46) */
+.dc-gate-line { font-size: 14px; color: var(--text-primary); } /* body size F:101; text tokens F:19/20 */
+.dc-gate-sub { text-transform: none; } /* copy is literal caps so "/feed" keeps its real lowercase route name; mono/size/tracking from .dc-microlabel (C3); mint link colors from .dc-link (F:13-14) */
