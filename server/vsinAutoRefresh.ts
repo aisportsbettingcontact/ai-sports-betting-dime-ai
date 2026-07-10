@@ -2095,7 +2095,7 @@ export function startVsinAutoRefresh() {
   // Fire MLB cycle immediately on startup
   void runMlbCycleOnce();
 
-  // Then repeat every 10 minutes
+  // Then repeat every 5 minutes
   setInterval(() => {
     void runMlbCycleOnce();
   }, MLB_INTERVAL_MS);

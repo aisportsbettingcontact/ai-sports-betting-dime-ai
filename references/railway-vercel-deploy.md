@@ -21,7 +21,7 @@ no CORS preflights, and SSE streams straight through the proxy.
 | File | Purpose |
 |---|---|
 | `Dockerfile` | Railway image: Node 22 + Debian Python 3.11 (+ numpy/pandas/scipy/requests) — matches the hardcoded `/usr/bin/python3*` paths in the model runners and fixes the historical `spawn /usr/bin/python3 ENOENT` Railway failure |
-| `railway.json` | Dockerfile builder, `node dist/index.js` start, `/health` healthcheck, on-failure restarts |
+| `railway.json` | Dockerfile builder, `node dist/index.js` start, `/health` healthcheck, on-failure restarts, `numReplicas: 1` (see [§3b](#3b-replica-count-and-background-jobs-data-integrity--do-not-change-without-a-distributed-lock) — do not raise without a distributed lock) |
 | `vercel.json` | Vite client build (`pnpm run build:client` → `dist/public`), `/api/*` rewrite to Railway, SPA fallback |
 | `package.json` | `build:client` (Vite) and `build:server` (esbuild) split; `build` runs both |
 | `scripts/smoke-deploy.mjs` | Post-deploy smoke suite (health, SPA shell, asset caching, tRPC mount, dime-chat auth gate) — run against any origin: `node scripts/smoke-deploy.mjs https://<domain>` |
@@ -109,6 +109,34 @@ pointed at the **Railway** domain (not the Vercel proxy, to avoid its function
 timeout on slow jobs). The MLB Monte-Carlo model that previously failed on
 Railway (`spawn /usr/bin/python3 ENOENT`) is unblocked by the Dockerfile's
 Debian Python — re-test it on Railway before relying on it.
+
+### 3b. Replica count and background jobs (data-integrity — do not change without a distributed lock)
+
+`odds_history`, `games`, `mlb_lineups`, and `dime_credit_ledger` have **no unique
+constraints** in TiDB — a duplicate write from a second writer is silent and
+unrecoverable (no constraint violation, no error, just a duplicate row). The
+in-process overlap guard (`CronJobRunner` in `server/cron/cronRunner.ts`) is an
+**in-memory instance field**: it only prevents overlap *within one process*, not
+across replicas. Given that:
+
+- `railway.json` pins `deploy.numReplicas: 1`. **Do not raise this** unless a
+  distributed lock (e.g. a DB-backed or Redis-backed mutex) replaces the
+  in-memory `CronJobRunner` guard — a second replica would silently double-write
+  the tables above.
+- `DISABLE_BACKGROUND_JOBS=1` **must** be set on any Railway web replica whose
+  job is only to serve HTTP traffic. Leaving it unset starts 15+ in-process
+  timers (`server/_core/index.ts`) that write the same tables the GitHub Actions
+  crons and the Manus Heartbeat also write.
+- Exactly **one** process may run background jobs at any given time — whichever
+  one has `DISABLE_BACKGROUND_JOBS` unset (or `0`). With `numReplicas: 1` this
+  is automatically satisfied as long as the single replica is the one intended
+  to run jobs; it stops being true the moment a second replica is added without
+  also gating it off.
+- The 8 `.github/workflows/cron-*.yml` GitHub Actions crons that target the
+  Manus-orphaned `/api/scheduled/*` endpoints must stay **disabled** in the
+  Actions UI (⋯ → Disable workflow) until the Manus Heartbeat platform is
+  retired — running both at once double-writes the same tables from two
+  independent triggers, same failure mode as the replica case above.
 
 ### 4. Stripe webhooks
 
