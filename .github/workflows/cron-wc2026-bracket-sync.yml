@@ -2,8 +2,16 @@
 #
 # After the Manus Heartbeat is retired, nothing triggers /api/scheduled/wc2026-bracket-sync. This
 # workflow fires POST /api/scheduled/wc2026-bracket-sync on the Railway app on a schedule. The
-# endpoint is shared-secret authed (CRON_SECRET, re-gated by cronAuth.ts) and
-# runs the sync under its own in-process overlap guard.
+# endpoint is shared-secret authed (CRON_SECRET, re-gated by cronAuth.ts).
+#
+# NO in-process overlap guard: handleWc2026BracketSync (server/wc2026/wc2026Heartbeat.ts:230-273)
+# has no run-lock — it spawns wc2026BracketScraper.mjs as a child process on every
+# invocation with no _isRunning/single-flight check. Two overlapping triggers (this
+# schedule firing again before the previous run finishes, or a POST-FT hook from
+# handleWc2026EspnResults/handleWc2026LiveScores landing mid-run) can spawn concurrent
+# scrapers. curl's --max-time 60 only aborts the GitHub Actions HTTP client; the
+# Express handler already responded and the spawned scraper keeps running server-side
+# regardless of the curl timeout.
 #
 # IMPORTANT (cutover runbook): this workflow ships ENABLED on the default cron.
 # GitHub Actions cron cannot be shipped disabled, so a workflow_dispatch trigger
@@ -21,7 +29,10 @@ name: Cron — WC2026 bracket sync
 
 on:
   schedule:
-    - cron: "*/10 * * * *" # every 10 minutes
+    - cron: "*/30 * * * *" # every 30 minutes — matches "every 30 min during knockout phase"
+      # (server/wc2026/wc2026Heartbeat.ts:229). Previously */10 (3x over-fire vs. the
+      # documented cadence); with no in-process run-lock (see header above) that could
+      # spawn concurrent scrapers.
   workflow_dispatch: {}
 
 permissions:
