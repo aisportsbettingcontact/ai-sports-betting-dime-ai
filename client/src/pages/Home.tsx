@@ -226,7 +226,7 @@ export default function Home() {
      * Root: full-viewport flex row on desktop, flex column on mobile.
      * [LOG] Layout: lg:flex-row (split-screen) | <lg: flex-col (stacked, form only)
      */
-    <div className="flex flex-col lg:flex-row min-h-screen w-full" style={{ background: "#050810" }}>
+    <div className="flex flex-col lg:flex-row min-h-screen w-full" style={{ background: "#0B0B0F" }}>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           LEFT PANEL — Brand / feature showcase
@@ -237,35 +237,30 @@ export default function Home() {
         className="hidden lg:flex flex-col justify-between w-1/2 min-h-screen sticky top-0 self-start"
         style={{
           background:
-            "radial-gradient(ellipse 100% 80% at 20% 30%, rgba(57,255,20,0.10) 0%, transparent 60%), linear-gradient(160deg, #080c12 0%, #050810 100%)",
+            "#101014"  /* brand law: flat surface, no gradients */,
           borderRight: "1px solid rgba(255,255,255,0.06)",
           padding: "clamp(2.5rem, 5vw, 5rem) clamp(2rem, 4vw, 4rem)",
         }}
       >
         {/* Top: logo + brand name */}
         <div>
-          <a href="/" aria-label="Back to home" className="inline-flex items-center gap-3 mb-12 group">
+          <a href="/" aria-label="Back to home" className="inline-flex items-center mb-12 group">
+            {/* Brand-kit wordmark (430×92) — natural aspect, no crop */}
             <img
-              src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
-              alt="AI Sports Betting"
-              className="rounded-xl object-cover group-hover:opacity-90 transition-opacity"
-              style={{ width: "clamp(2.5rem, 3.5vw, 3.5rem)", height: "clamp(2.5rem, 3.5vw, 3.5rem)" }}
+              src="/brand/dime-wordmark-on-dark.svg"
+              alt="dıme"
+              className="group-hover:opacity-90 transition-opacity"
+              style={{ width: "clamp(6.5rem, 9vw, 8.5rem)", height: "auto" }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
-            <span
-              className="font-black text-white"
-              style={{ fontSize: "clamp(1rem, 1.4vw, 1.25rem)", letterSpacing: "-0.02em" }}
-            >
-              AI Sports Betting
-            </span>
           </a>
 
           {/* Headline */}
           <div className="mb-10">
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-[#39FF14]" style={{ animation: "pulse-green 2s ease-in-out infinite" }} />
-              <span className="text-[11px] font-bold text-[#39FF14] tracking-widest uppercase">
-                AI-Powered Betting Intelligence
+              <span className="w-2 h-2 rounded-full bg-[#45E0A8]" />
+              <span className="text-[11px] font-bold text-[#45E0A8] tracking-widest uppercase">
+                Sports betting intelligence software
               </span>
             </div>
             <h1
@@ -275,18 +270,18 @@ export default function Home() {
                 letterSpacing: "-0.04em",
               }}
             >
-              Find The Edge
+              See where price
               <br />
-              <span style={{ color: "#39FF14" }}>Before The Market</span>
+              <span style={{ color: "#45E0A8" }}>and probability</span>
               <br />
-              Moves.
+              disagree.
             </h1>
             <p
               className="text-[#6b7280] mt-4 leading-relaxed"
               style={{ fontSize: "clamp(0.875rem, 1.1vw, 1.05rem)" }}
             >
-              Model projections, betting splits, daily lineups, and cheat sheets.
-              All in one dashboard.
+              Dime AI compares sportsbook prices against projected probability so every
+              market resolves to Pass, Monitor, or Edge Detected.
             </p>
           </div>
 
@@ -301,12 +296,12 @@ export default function Home() {
                     style={{
                       width: "clamp(2rem, 2.5vw, 2.5rem)",
                       height: "clamp(2rem, 2.5vw, 2.5rem)",
-                      background: "rgba(57,255,20,0.10)",
+                      background: "rgba(69,224,168,0.10)",
                     }}
                   >
                     <Icon
                       style={{
-                        color: "#39FF14",
+                        color: "#45E0A8",
                         width: "clamp(1rem, 1.2vw, 1.2rem)",
                         height: "clamp(1rem, 1.2vw, 1.2rem)",
                       }}
@@ -354,14 +349,14 @@ export default function Home() {
         <div className="flex lg:hidden flex-col items-center gap-3 mb-8">
           <a href="/" aria-label="Back to home">
             <img
-              src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
-              alt="AI Sports Betting"
-              className="w-14 h-14 rounded-xl object-cover"
+              src="/brand/dime-wordmark-on-dark.svg"
+              alt="dıme"
+              style={{ width: "104px", height: "auto" }}
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           </a>
           <div className="text-center">
-            <h1 className="text-lg font-black text-white tracking-tight">AI Sports Betting</h1>
+            <h1 className="text-lg font-black text-white tracking-tight">dıme</h1>
             <p className="text-[12px] text-[#6b7280] mt-0.5">Sign in to your account</p>
           </div>
         </div>
@@ -418,7 +413,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -439,7 +434,7 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
@@ -460,7 +455,7 @@ export default function Home() {
                   type="button"
                   onClick={() => { setForgotOpen(true); setFormError(null); }}
                   className="text-[11px] transition-colors"
-                  style={{ color: "#39FF14" }}
+                  style={{ color: "#45E0A8" }}
                 >
                   Forgot password?
                 </button>
@@ -476,7 +471,7 @@ export default function Home() {
                 type="submit"
                 disabled={loginMutation.isPending}
                 className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: "#39FF14" }}
+                style={{ background: "#45E0A8" }}
               >
                 {loginMutation.isPending ? (
                   <><Loader2 size={15} className="animate-spin" /> Signing in…</>
@@ -501,7 +496,7 @@ export default function Home() {
               </div>
 
               {forgotSent ? (
-                <div className="px-4 py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[12px] text-[#39FF14] text-center">
+                <div className="px-4 py-3 rounded-xl bg-[#45E0A8]/10 border border-[#45E0A8]/30 text-[12px] text-[#45E0A8] text-center">
                   If an account exists for that username or email, a reset link has been sent.
                 </div>
               ) : (
@@ -515,14 +510,14 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#39FF14]/50 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:border-[#45E0A8]/50 transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
                     type="submit"
                     disabled={requestResetMutation.isPending || !forgotIdentifier.trim()}
                     className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-black transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{ background: "#39FF14" }}
+                    style={{ background: "#45E0A8" }}
                   >
                     {requestResetMutation.isPending ? (
                       <><Loader2 size={15} className="animate-spin" /> Sending…</>
@@ -552,7 +547,7 @@ export default function Home() {
               aria-disabled={isDiscordRedirecting}
               className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-all active:scale-[0.98]"
               style={{
-                backgroundColor: "#5865F2",
+                backgroundColor: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
                 pointerEvents: isDiscordRedirecting ? "none" : "auto",
               }}
@@ -572,7 +567,7 @@ export default function Home() {
               <a
                 href="/#pricing"
                 className="font-semibold transition-colors"
-                style={{ color: "#39FF14" }}
+                style={{ color: "#45E0A8" }}
               >
                 Sign Up
               </a>

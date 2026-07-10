@@ -90,13 +90,18 @@ await check("POST /api/dime/chat unauthenticated → 401 JSON (auth gate)", asyn
   expect(body?.error, "401 without JSON error body");
 });
 
-await check("bot UA on / → v2 landing prerender (SEO snapshot)", async () => {
+await check("bot UA on / → v2 SEO content (prerender or shell block)", async () => {
   const res = await fetch(`${base}/`, { headers: { "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" } });
   expect(res.status === 200, `status ${res.status}`);
-  expect(res.headers.get("x-prerender") === "1", "X-Prerender header missing — prerender is being shadowed (check middleware order vs express.static)");
   const html = await res.text();
-  expect(html.includes("See where price and probability"), "v2 hero copy missing from bot snapshot");
-  expect(!/39FF14/i.test(html), "forbidden neon #39FF14 present in bot snapshot (brand law)");
+  // Express origins (Railway) serve the full prerender snapshot (X-Prerender: 1).
+  // Vercel serves index.html statically — its filesystem check precedes rewrites
+  // for "/", so bots get the SPA shell there; the shell's noscript SEO block must
+  // then carry the v2 copy. Either way: v2 positioning present, no forbidden neon.
+  const surface = res.headers.get("x-prerender") === "1" ? "prerender snapshot" : "SPA shell SEO block";
+  expect(html.includes("See where price and probability"), `v2 copy missing from bot-served HTML (${surface})`);
+  expect(!/39FF14/i.test(html), `forbidden neon #39FF14 present (${surface}, brand law)`);
+  return surface;
 });
 
 await check("vendored /manus-storage asset → 200 image (no Manus dependency)", async () => {
@@ -104,6 +109,20 @@ await check("vendored /manus-storage asset → 200 image (no Manus dependency)",
   expect(res.status === 200, `status ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   expect(type.startsWith("image/"), `content-type ${type} — storage proxy failed instead of serving the vendored file`);
+});
+
+await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com)", async () => {
+  const res = await fetch(`${base}/checkout?plan=monthly`, { headers: { "user-agent": "Mozilla/5.0 Chrome/126" } });
+  const csp = res.headers.get("content-security-policy") ?? "";
+  // Vercel serves the SPA statically (no helmet CSP header) — only enforce
+  // where a CSP exists; an Express origin without Stripe allowances breaks
+  // embedded checkout with "Failed to load Stripe.js" (live incident 2026-07-10).
+  if (!csp) return "no CSP header (static host) — nothing to block Stripe";
+  const scriptSrc = csp.split(";").find((d) => d.trim().startsWith("script-src")) ?? "";
+  const frameSrc = csp.split(";").find((d) => d.trim().startsWith("frame-src")) ?? "";
+  expect(scriptSrc.includes("js.stripe.com"), `script-src blocks Stripe.js: "${scriptSrc.trim()}"`);
+  expect(frameSrc.includes("checkout.stripe.com"), `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`);
+  return "CSP allows Stripe";
 });
 
 const failed = results.filter((r) => !r.ok);
