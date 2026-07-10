@@ -29,15 +29,15 @@ export default function StickyCta() {
       <span className="price num">≈ $3.30 / day</span>
       <span className="lead" aria-hidden="true" />
       <a
-        href="#pricing"
+        href="/checkout?plan=pro"
         className="btn btn--mint"
         tabIndex={on ? 0 : -1}
         data-cta-id="sticky-get-access"
         data-cta-location="sticky-bar"
-        data-plan="monthly"
+        data-plan="pro"
         data-mode="paid"
       >
-        Get Access →
+        Start Pro →
       </a>
       <button
         type="button"

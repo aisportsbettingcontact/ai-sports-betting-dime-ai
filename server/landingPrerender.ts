@@ -299,19 +299,19 @@ td b{color:var(--text);font-weight:700}
 .footer{border-top:1px solid var(--line);padding:32px 24px;text-align:center;color:var(--text-muted);font-size:12px}
 .disclaimer{max-width:720px;margin:0 auto 12px;line-height:1.7}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI (AI Sports Betting Models)","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99.99","priceCurrency":"USD"},{"@type":"Offer","name":"Elite Annual","price":"499.99","priceCurrency":"USD"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"10,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99.99/month and Elite is $499.99/year. On-page demos are free to preview, and founder access is by application."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI (AI Sports Betting Models)","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"10,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99/month, Sharp is $249/month and Operator is $499/month. On-page demos are free to preview, and founder access is by application."}}]}</script>
 </head>
 <body>
 <nav class="nav">
   <span class="nav-logo">d&#305;me</span>
-  <a href="/checkout?plan=monthly" class="nav-cta">Get Access</a>
+  <a href="/checkout?plan=pro" class="nav-cta">Get Access</a>
 </nav>
 <section class="hero">
   <div class="mono">Sports betting intelligence software</div>
   <h1>See where price and probability <em>disagree</em>.</h1>
   <p class="sub">Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.</p>
-  <a href="/checkout?plan=monthly" class="cta">Get Access</a>
+  <a href="/checkout?plan=pro" class="cta">Get Access</a>
   <p class="micro">Analytical software. No guaranteed outcomes. Built for disciplined market evaluation.</p>
 </section>
 <section class="section" id="console">
@@ -343,8 +343,11 @@ td b{color:var(--text);font-weight:700}
   <p class="lead">No picks packages. No units sold. Software pricing for disciplined market evaluation.</p>
   <div class="grid">
     <div class="card"><div class="mono">Free Preview</div><div class="price">$0</div><div class="per">On-page demos</div><p>Explore the Market Console and Dime Chat demos on this page.</p></div>
-    <div class="card"><div class="mono">Pro</div><div class="price">$99.99</div><div class="per">per month &mdash; &asymp;$3.30/day</div><p>Full market console access.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=monthly">Get Pro</a></p></div>
-    <div class="card"><div class="mono">Elite</div><div class="price">$499.99</div><div class="per">per year &mdash; &asymp;$1.37/day &middot; Save 58%</div><p>Everything in Pro, billed annually.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=annual">Get Elite</a></p></div>
+    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Standard + Pro Analyst chat, 1,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
+    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, MAX Analyst access (monthly cap), 3,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
+    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, full MAX Analyst access (no cap), 8,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
+  </div>
+  <div class="grid" style="margin-top:20px">
     <div class="card"><div class="mono">Founder</div><div class="price">By application</div><div class="per">Limited</div><p>Controlled access for serious operators. Application reviewed manually.</p></div>
   </div>
 </section>

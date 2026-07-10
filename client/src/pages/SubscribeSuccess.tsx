@@ -83,8 +83,18 @@ export default function SubscribeSuccess() {
   const plan = params.get("plan") ?? "monthly";
   const sessionId = params.get("session_id") ?? "";
 
-  const planLabel = plan === "annual" ? "Annual" : "Monthly";
-  const planPrice = plan === "annual" ? "$499.99/year" : "$99.99/month";
+  const planLabel =
+    plan === "annual" ? "Annual"
+    : plan === "pro" ? "Pro"
+    : plan === "sharp" ? "Sharp"
+    : plan === "operator" ? "Operator"
+    : "Monthly";
+  const planPrice =
+    plan === "annual" ? "$499.99/year"
+    : plan === "pro" ? "$99/month"
+    : plan === "sharp" ? "$249/month"
+    : plan === "operator" ? "$499/month"
+    : "$99.99/month";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

@@ -13,10 +13,11 @@ export function Wordmark({ fontSize }: { fontSize?: number }) {
   );
 }
 
-export function MintCheck() {
+/** Check bullet. Mint = signal (featured tier only); muted grey everywhere else. */
+export function MintCheck({ muted }: { muted?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width={13} height={13} aria-hidden="true">
-      <path d="M4 12 L10 18 L20 6" fill="none" stroke="#45E0A8" strokeWidth={3} strokeLinecap="square" />
+      <path d="M4 12 L10 18 L20 6" fill="none" stroke={muted ? "#6A6A78" : "#45E0A8"} strokeWidth={3} strokeLinecap="square" />
     </svg>
   );
 }
