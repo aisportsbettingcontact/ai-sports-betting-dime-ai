@@ -1,0 +1,70 @@
+# Vercel operations bridge — runs where VERCEL_TOKEN lives (repo secrets).
+#
+# Driven by pushing a command into .vercel-ops/command on this branch:
+#   diagnose  — project settings (rootDirectory, production branch, protection),
+#               last 6 deployments with states, and the newest production
+#               deployment's build log tail
+#   fix-root  — PATCH the project: rootDirectory -> repo root (null), then
+#               trigger a fresh production deployment from main
+#
+# Output goes to the job log (readable via the GitHub API). The token is only
+# ever sent to api.vercel.com; GitHub masks it in logs automatically.
+name: vercel-ops
+
+on:
+  push:
+    paths: [".vercel-ops/command"]
+
+env:
+  PROJECT_ID: prj_y0lR9Cw9K6JjMC5aVh7w8cze8OoY
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run command
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          CMD=$(cat .vercel-ops/command | tr -d '[:space:]')
+          echo "::group::command=$CMD"
+          if [ -z "${VERCEL_TOKEN:-}" ]; then echo "VERCEL_TOKEN secret is empty/unset"; exit 1; fi
+          AUTH="Authorization: Bearer $VERCEL_TOKEN"
+          PROJ=$(curl -sS -H "$AUTH" "https://api.vercel.com/v9/projects/$PROJECT_ID")
+          TEAM_ID=$(echo "$PROJ" | jq -r '.accountId // empty')
+          TQ="teamId=$TEAM_ID"
+          echo "$PROJ" | jq '{name, accountId, rootDirectory, framework, nodeVersion, link: {type: .link.type, repo: .link.repo, productionBranch: .link.productionBranch}, ssoProtection, passwordProtection}'
+          echo "::endgroup::"
+
+          if [ "$CMD" = "diagnose" ]; then
+            echo "::group::last 6 deployments"
+            curl -sS -H "$AUTH" "https://api.vercel.com/v6/deployments?projectId=$PROJECT_ID&limit=6&$TQ" \
+              | jq -r '.deployments[] | "\(.createdAt) \(.state // .readyState) target=\(.target // "preview") \(.uid) \(.meta.githubCommitRef // "-") \(.meta.githubCommitMessage // "-" | .[0:60])"'
+            echo "::endgroup::"
+            echo "::group::newest production deployment events"
+            PROD_UID=$(curl -sS -H "$AUTH" "https://api.vercel.com/v6/deployments?projectId=$PROJECT_ID&limit=20&target=production&$TQ" | jq -r '.deployments[0].uid // empty')
+            echo "prod deployment: ${PROD_UID:-none-found}"
+            if [ -n "$PROD_UID" ]; then
+              curl -sS -H "$AUTH" "https://api.vercel.com/v3/deployments/$PROD_UID/events?limit=120&$TQ" \
+                | jq -r '.[] | select(.type=="stderr" or .type=="stdout" or .type=="error") | .payload.text // .text // empty' | tail -80
+            fi
+            echo "::endgroup::"
+          elif [ "$CMD" = "fix-root" ]; then
+            echo "::group::PATCH rootDirectory -> null"
+            curl -sS -X PATCH -H "$AUTH" -H "Content-Type: application/json" \
+              "https://api.vercel.com/v9/projects/$PROJECT_ID?$TQ" \
+              -d '{"rootDirectory": null}' | jq '{name, rootDirectory}'
+            echo "::endgroup::"
+            echo "::group::trigger production deployment from main"
+            REPO_ID=$(echo "$PROJ" | jq -r '.link.repoId')
+            curl -sS -X POST -H "$AUTH" -H "Content-Type: application/json" \
+              "https://api.vercel.com/v13/deployments?$TQ" \
+              -d "{\"name\":\"ai-sports-betting-dime-ai\",\"project\":\"$PROJECT_ID\",\"target\":\"production\",\"gitSource\":{\"type\":\"github\",\"ref\":\"main\",\"repoId\":$REPO_ID}}" \
+              | jq '{uid: .id // .uid, readyState, target, url}'
+            echo "::endgroup::"
+          else
+            echo "unknown command: $CMD"; exit 1
+          fi
