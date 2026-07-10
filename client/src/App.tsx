@@ -23,6 +23,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 // framer-motion, all MLB components). Now lazy: loads in parallel with auth check.
 const ModelProjections = lazy(() => import("./pages/ModelProjections"));
 const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
+const SplitsLive = lazy(() => import("./pages/SplitsLive"));
 const Home = lazy(() => import("./pages/Home"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
@@ -134,7 +135,8 @@ function Router() {
       {/* Legacy redirects */}
       <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
       <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
-      <Route path="/splits">{() => <Redirect to="/feed" />}</Route>
+      {/* Live VSiN MLB betting splits — public */}
+      <Route path="/splits" component={SplitsLive} />
       {/* Legal pages — public, no auth required */}
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
