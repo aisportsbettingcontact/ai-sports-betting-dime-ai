@@ -50,7 +50,7 @@ console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY.slice(0, 12)}.
 console.log(`${TAG} [INPUT] DATABASE_URL=${DATABASE_URL.replace(/:[^@]+@/, ":***@")}`);
 
 // ─── Initialize Stripe ────────────────────────────────────────────────────────
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-04-30.basil" });
+const stripe = new Stripe(STRIPE_SECRET_KEY); // no apiVersion pin: use the installed SDK default (dahlia); the old basil pin sent stale headers
 console.log(`${TAG} [STATE] Stripe client initialized`);
 
 // ─── Connect to database ──────────────────────────────────────────────────────
