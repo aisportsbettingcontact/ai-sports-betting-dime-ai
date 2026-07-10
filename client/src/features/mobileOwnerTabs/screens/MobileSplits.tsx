@@ -1,6 +1,7 @@
 /**
  * MobileSplits — Owner-only betting splits view.
- * Connects to games.list (spreadAwayBetsPct, totalOverBetsPct, mlAwayBetsPct).
+ * Connects to games.liveSplits — live VSiN MLB splits straight from the
+ * scraper (vsinBettingSplitsScraper.ts), no DB refresh dependency.
  * Toggle between SPREAD/TOTAL/ML. Shows steam moves.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -19,55 +20,67 @@ export function MobileSplits() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }, []);
 
-  const gamesQuery = trpc.games.list.useQuery(
-    { sport: "MLB" as any, gameDate: today },
-    { staleTime: 60_000, retry: 2 }
-  );
+  const splitsQuery = trpc.games.liveSplits.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: 2,
+  });
 
   useEffect(() => {
     mobileOwnerTabLogger.log("mobile_splits_data_fetch_started", "splits", { market, date: today });
   }, [today, market]);
 
   useEffect(() => {
-    if (!gamesQuery.isLoading) {
-      if (gamesQuery.isError) {
-        mobileOwnerTabLogger.log("mobile_splits_data_fetch_failed", "splits", { error: gamesQuery.error?.message });
+    if (!splitsQuery.isLoading) {
+      if (splitsQuery.isError) {
+        mobileOwnerTabLogger.log("mobile_splits_data_fetch_failed", "splits", { error: splitsQuery.error?.message });
       } else {
-        mobileOwnerTabLogger.log("mobile_splits_data_fetch_completed", "splits", { games: (gamesQuery.data as any[])?.length ?? 0, market });
+        mobileOwnerTabLogger.log("mobile_splits_data_fetch_completed", "splits", { games: splitsQuery.data?.rows.length ?? 0, market });
       }
     }
-  }, [gamesQuery.isLoading, gamesQuery.isError, market]);
+  }, [splitsQuery.isLoading, splitsQuery.isError, market]);
 
-  const splitRows = useMemo(() => {
-    const data = gamesQuery.data as any[] | undefined;
-    if (!data) return [];
-    return data
-      .filter((g: any) => {
-        if (market === "spread") return g.spreadAwayBetsPct != null;
-        if (market === "total") return g.totalOverBetsPct != null;
-        return g.mlAwayBetsPct != null;
+  // Scraper returns today + tomorrow merged. Prefer today's slate; if VSiN has
+  // already rolled over to tomorrow-only, show the earliest available date.
+  const { splitRows, displayDate } = useMemo(() => {
+    const rows = splitsQuery.data?.rows;
+    if (!rows || rows.length === 0) return { splitRows: [], displayDate: today };
+    const todayRows = rows.filter((r) => r.gameDate === today);
+    const activeDate = todayRows.length > 0 ? today : [...rows].map((r) => r.gameDate).sort()[0];
+    const activeRows = todayRows.length > 0 ? todayRows : rows.filter((r) => r.gameDate === activeDate);
+    const fmtSigned = (v: string | number) => {
+      const s = String(v).trim();
+      return s.startsWith("+") || s.startsWith("-") ? s : Number(s) > 0 ? `+${s}` : s;
+    };
+    const mapped = activeRows
+      .filter((r) => {
+        if (market === "spread") return r.spreadAwayBetsPct != null;
+        if (market === "total") return r.totalOverBetsPct != null;
+        return r.mlAwayBetsPct != null;
       })
-      .map((g: any) => {
+      .map((r) => {
+        const away = r.awayAbbrev ?? r.awayName;
+        const home = r.homeAbbrev ?? r.homeName;
         let betsPct = 50, moneyPct = 50, line = "-";
         if (market === "spread") {
-          betsPct = g.spreadAwayBetsPct ?? 50;
-          moneyPct = g.spreadAwayMoneyPct ?? 50;
-          line = g.spread ? `${g.awayTeam} ${Number(g.spread) > 0 ? "+" : ""}${g.spread}` : "-";
+          betsPct = r.spreadAwayBetsPct ?? 50;
+          moneyPct = r.spreadAwayMoneyPct ?? 50;
+          line = r.awayBookSpread != null ? `${away} ${fmtSigned(r.awayBookSpread)}` : "-";
         } else if (market === "total") {
-          betsPct = g.totalOverBetsPct ?? 50;
-          moneyPct = g.totalOverMoneyPct ?? 50;
-          line = g.total ? `O/U ${g.total}` : "-";
+          betsPct = r.totalOverBetsPct ?? 50;
+          moneyPct = r.totalOverMoneyPct ?? 50;
+          line = r.bookTotal != null ? `O/U ${r.bookTotal}` : "-";
         } else {
-          betsPct = g.mlAwayBetsPct ?? 50;
-          moneyPct = g.mlAwayMoneyPct ?? 50;
-          line = g.mlAway ? `${g.awayTeam} ${Number(g.mlAway) > 0 ? "+" : ""}${g.mlAway}` : "-";
+          betsPct = r.mlAwayBetsPct ?? 50;
+          moneyPct = r.mlAwayMoneyPct ?? 50;
+          line = r.awayML != null ? `${away} ${fmtSigned(r.awayML)}` : "-";
         }
-        return { gameId: g.id, away: g.awayTeam || "TBD", home: g.homeTeam || "TBD", betsPct, moneyPct, line };
+        return { gameId: r.vsinGameId, away, home, betsPct, moneyPct, line };
       })
-      .sort((a: any, b: any) => Math.abs(b.betsPct - b.moneyPct) - Math.abs(a.betsPct - a.moneyPct));
-  }, [gamesQuery.data, market]);
+      .sort((a, b) => Math.abs(b.betsPct - b.moneyPct) - Math.abs(a.betsPct - a.moneyPct));
+    return { splitRows: mapped, displayDate: activeDate };
+  }, [splitsQuery.data, market, today]);
 
-  const isEmpty = !gamesQuery.isLoading && !gamesQuery.isError && splitRows.length === 0;
+  const isEmpty = !splitsQuery.isLoading && !splitsQuery.isError && splitRows.length === 0;
 
   useEffect(() => {
     if (isEmpty) mobileOwnerTabLogger.log("mobile_splits_empty_state_rendered", "splits", { market, date: today });
@@ -79,7 +92,7 @@ export function MobileSplits() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">Betting Splits</h1>
-            <p className="text-[10px] text-zinc-500 mt-0.5">{today} • MLB</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">{displayDate} • MLB • VSiN DK</p>
           </div>
           <BarChart3 className="w-5 h-5 text-zinc-500" />
         </div>
@@ -102,13 +115,13 @@ export function MobileSplits() {
 
       <div className="flex-1 overflow-y-auto pb-24">
         <MobileDataState
-          isLoading={gamesQuery.isLoading}
-          isError={gamesQuery.isError}
+          isLoading={splitsQuery.isLoading}
+          isError={splitsQuery.isError}
           isEmpty={isEmpty}
           loadingLabel="Loading splits..."
           emptyMessage={`No ${market} splits available for today.`}
           errorMessage="Splits could not be loaded."
-          onRetry={() => gamesQuery.refetch()}
+          onRetry={() => splitsQuery.refetch()}
         >
           <div className="flex flex-col gap-3 px-4 py-4">
             {splitRows.map((row) => {
