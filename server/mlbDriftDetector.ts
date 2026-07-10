@@ -69,8 +69,38 @@ export const MIN_SAMPLE = 20;
 /** Minimum hours between recalibration runs (prevents thrashing) */
 const RECAL_COOLDOWN_HOURS = 24;
 
-/** Path to the backtest script */
-const BACKTEST_SCRIPT = path.resolve(__dirname, "../scripts/runMlbBacktest2.py");
+/**
+ * Path to the backtest script.
+ *
+ * Two files named runMlbBacktest2.py exist in this repo:
+ *   - server/scripts/runMlbBacktest2.py  — purpose-built for this caller (DB-driven via
+ *     DATABASE_URL, writes the JSON shape triggerRecalibration() below expects).
+ *   - scripts/runMlbBacktest2.py         — an unrelated Manus-era script that hardcodes
+ *     /home/ubuntu/* sandbox paths and reads a local mlb_historical_results.json; it does
+ *     not exist on Railway.
+ *
+ * The old `path.resolve(__dirname, "../scripts/runMlbBacktest2.py")` always resolved to
+ * the WRONG (root, Manus-pathed) file: __dirname is server/ in dev (tsx) and dist/ once
+ * esbuild bundles server/_core/index.ts into dist/index.js (bundling collapses
+ * import.meta.url to the single output file), and both server/ and dist/ are direct
+ * children of the repo root — so "../scripts" lands on <root>/scripts in either case,
+ * never on server/scripts.
+ *
+ * package.json's build:server step does not yet copy this .py file into dist/ at all
+ * (only splits_card.html and nhl_model_engine.py are copied there today), so the exact
+ * post-build dist/ location isn't knowable from this file alone. Rather than hardcode a
+ * single guess, check the known-correct candidate locations in priority order — flat
+ * alongside the bundle (matching the existing nhl_model_engine.py copy convention),
+ * nested under scripts/ (dist/scripts/ if a future copy step preserves the subfolder, or
+ * server/scripts/ in dev mode) — and never fall back to the root Manus-pathed file.
+ */
+const BACKTEST_SCRIPT_CANDIDATES = [
+  path.resolve(__dirname, "runMlbBacktest2.py"),
+  path.resolve(__dirname, "scripts", "runMlbBacktest2.py"),
+  path.resolve(__dirname, "..", "server", "scripts", "runMlbBacktest2.py"),
+];
+const BACKTEST_SCRIPT =
+  BACKTEST_SCRIPT_CANDIDATES.find((p) => fs.existsSync(p)) ?? BACKTEST_SCRIPT_CANDIDATES[0];
 
 /** Path to the calibration constants output */
 const CALIBRATION_JSON = "/home/ubuntu/mlb_calibration_constants.json";

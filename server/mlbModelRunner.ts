@@ -34,7 +34,7 @@ const __dirname  = path.dirname(__filename);
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ENGINE_PATH = path.join(__dirname, "MLBAIModel.py");
-const PYTHON      = "/usr/bin/python3"; // version-agnostic; was 3.11, now 3.12 after sandbox reset
+const PYTHON      = "/usr/bin/python3"; // version-agnostic path; on the Railway image (Debian bookworm) this is apt python3, i.e. 3.11
 
 // 2025 MLB team season stats — used as model inputs
 // Format: rpg, era, avg, obp, slg, k9, bb9, whip, ip_per_game
@@ -1296,17 +1296,25 @@ for inp in inputs:
 print(json.dumps(results))
 `], {
       env: (() => {
-        // Build a clean env for python3.11:
+        // Build a clean env for the spawned python3:
         // 1. Start from process.env (inherits PATH, HOME, etc.)
         // 2. DELETE PYTHONHOME entirely — setting it to undefined in JS passes the
         //    string "undefined" to the child process, which breaks stdlib lookup.
         //    We must use delete to actually remove it from the env object.
-        // 3. Override PYTHONPATH to point at the correct python3.11 site-packages.
+        // 3. No PYTHONPATH override. Debian patches the system python3's site.py to add
+        //    /usr/lib/python3/dist-packages (and /usr/lib/python3.X/dist-packages) to
+        //    sys.path automatically — exactly where the Dockerfile's apt-get install
+        //    lands numpy/pandas/scipy/requests. A hardcoded PYTHONPATH here previously
+        //    pointed at python3.12 dist-packages paths, but the Railway image (Debian
+        //    bookworm) ships apt python3 as 3.11 — those entries didn't exist and were
+        //    silently ignored, while the one entry that did exist
+        //    (/usr/lib/python3/dist-packages) is already on the interpreter's default
+        //    sys.path without needing PYTHONPATH at all. Omitting it removes the
+        //    version-hardcoding failure mode entirely instead of re-hardcoding a new one.
         const env: Record<string, string> = {};
         for (const [k, v] of Object.entries(process.env)) {
           if (v !== undefined && k !== 'PYTHONHOME') env[k] = v;
         }
-        env['PYTHONPATH'] = '/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/usr/lib/python3.12/dist-packages';
         env['PYTHONDONTWRITEBYTECODE'] = '1';
         return env;
       })(),
