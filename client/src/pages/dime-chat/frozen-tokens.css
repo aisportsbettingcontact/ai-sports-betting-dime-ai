@@ -1,0 +1,279 @@
+/* ============================================================================
+   frozen-tokens.css — Dime chat, mechanically extracted from THE LAW:
+     D = design/frozen/dime-ai-home-dark.html
+     L = design/frozen/dime-ai-home-light.html
+   Every declaration's value is quoted verbatim from the cited line(s).
+   Line numbers are identical in both files (structurally identical DOM).
+   See extraction-mapping.md (same dir) for the full side-by-side catalog.
+
+   USAGE CONTRACT:
+   - Mount `.theme-dark` OR `.theme-light` on the chat page root together with
+     `.dc-page`. (The frozen files mount the theme class on the sidebar only and
+     hardcode the main-column values per file; scoping every theme value under
+     .theme-dark/.theme-light is the mechanical merge of the two files.)
+   - Derived component classes are `dc-` prefixed to avoid collisions with
+     dime-chat.css (`dime-*`, scope .dime-page) and landing-v2.css (scope .dlv2).
+   - Frozen style-block selectors are kept verbatim, aliased with their dc-
+     equivalents in the same rule so markup can use either.
+   - `--ring`/`--accent` stay INSIDE the theme scopes (as frozen). Never hoist
+     them to :root — index.css :root already owns --ring/--accent (shadcn,
+     purple) and maps them to --color-ring/--color-accent.
+   - Do not apply this sheet to a subtree that also carries `.dime-page` or
+     `.dlv2`.
+   ========================================================================== */
+
+/* ----------------------------------------------------------------------------
+   1. TOKENS — verbatim from D:18-20 = L:18-20
+   -------------------------------------------------------------------------- */
+
+/* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */ /* D/L:17 */
+:root { --mint: #45E0A8; --mint-on-light: #0FA36B; } /* D/L:18 */
+
+.theme-dark { --text-primary: #f7f7f8; --text-secondary: #c9c9d2; --row-hover: rgba(255,255,255,0.065); --row-active: rgba(255,255,255,0.095); --accent: #45E0A8; --ring: rgba(69,224,168,0.36); } /* D/L:19 */
+.theme-light { --text-primary: #111318; --text-secondary: #2f323b; --row-hover: rgba(15,23,42,0.055); --row-active: rgba(69,224,168,0.13); --accent: #45E0A8; --ring: rgba(69,224,168,0.28); } /* D/L:20 */
+
+/* ----------------------------------------------------------------------------
+   2. FROZEN STYLE-BLOCK RULES — declarations verbatim, frozen selector kept,
+      dc- alias added in the same selector list.
+   -------------------------------------------------------------------------- */
+
+/* Links — frozen selector is bare `a` (D/L:13-14); re-expressed on a class to
+   avoid restyling every anchor in the app. Values verbatim. */
+.dc-link { color: #45E0A8; text-decoration: none; } /* D/L:13 */
+.dc-link:hover { color: #7DEBC4; } /* D/L:14 — state rule */
+
+/* Account menu visibility — D/L:15-16 */
+.settings-menu, .dc-settings-menu { display: none; } /* D/L:15 */
+.settings-menu.open, .dc-settings-menu.open { display: flex; } /* D/L:16 — state rule */
+
+/* Sidebar row system — D/L:21-28. Frozen instances (D/L:57-62, 66-71) all add
+   inline `font-size: 13px;` — folded in here (identical on all 12 instances). */
+.sidebar-row, .dc-sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), box-shadow 160ms cubic-bezier(0.16,1,0.3,1); font-size: 13px; } /* D/L:21 + inline D/L:57-62,66-71 */
+.sidebar-row::before, .dc-sidebar-row::before { content: ""; position: absolute; left: -6px; top: 50%; width: 3px; height: 18px; border-radius: 999px; background: var(--accent); opacity: 0; transform: translateY(-50%) scaleY(0.7); transition: opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); } /* D/L:22 */
+.sidebar-row:hover, .dc-sidebar-row:hover { background: var(--row-hover); color: var(--text-primary); } /* D/L:23 — state rule */
+.sidebar-row:focus-visible, .dc-sidebar-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:24 — state rule */
+.sidebar-row.is-active, .sidebar-row[data-active="true"], .sidebar-row[aria-current="page"],
+.dc-sidebar-row.is-active, .dc-sidebar-row[data-active="true"], .dc-sidebar-row[aria-current="page"] { background: var(--row-active); color: var(--text-primary); font-weight: 600; } /* D/L:25 — state rule */
+.sidebar-row.is-active::before, .sidebar-row[data-active="true"]::before, .sidebar-row[aria-current="page"]::before,
+.dc-sidebar-row.is-active::before, .dc-sidebar-row[data-active="true"]::before, .dc-sidebar-row[aria-current="page"]::before { opacity: 1; transform: translateY(-50%) scaleY(1); } /* D/L:26 — state rule */
+.sidebar-row.is-active .sidebar-icon, .sidebar-row[data-active="true"] .sidebar-icon, .sidebar-row[aria-current="page"] .sidebar-icon,
+.dc-sidebar-row.is-active .dc-sidebar-icon, .dc-sidebar-row[data-active="true"] .dc-sidebar-icon, .dc-sidebar-row[aria-current="page"] .dc-sidebar-icon { color: var(--accent); } /* D/L:27 — state rule */
+@media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before, .settings-btn, .dc-sidebar-row, .dc-sidebar-row::before, .dc-settings-btn { transition: none; } } /* D/L:28 — state rule */
+
+/* Placeholders — D/L:29-30. NOTE: `.theme-light-placeholder` is declared but
+   NOT applied in the frozen light markup (L:101 input has class="composer-input"
+   only), so as frozen the placeholder renders #6A6A78 in both themes. */
+.composer-input::placeholder, .dc-composer-input::placeholder { color: #6A6A78; } /* D/L:29 */
+.theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #9A9AA8; } /* D/L:30 */
+
+/* Typing indicator — D/L:31-34 (keyframes name verbatim; no clash with
+   dime-chat.css's `dime-pulse`). */
+@keyframes dimeTyping { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } } /* D/L:31 */
+.typing-dot, .dc-typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: dimeTyping 1s infinite; } /* D/L:32 */
+.typing-dot:nth-child(2), .dc-typing-dot:nth-child(2) { animation-delay: 0.2s; } /* D/L:33 — state rule */
+.typing-dot:nth-child(3), .dc-typing-dot:nth-child(3) { animation-delay: 0.4s; } /* D/L:34 — state rule */
+
+/* Recent-chat row actions — D/L:35-39 (vocabulary; not instantiated in home markup) */
+.row-actions, .dc-row-actions { margin-left: auto; display: none; align-items: center; gap: 2px; flex-shrink: 0; } /* D/L:35 */
+.sidebar-row:hover .row-actions, .sidebar-row.is-active .row-actions, .sidebar-row[data-active="true"] .row-actions,
+.dc-sidebar-row:hover .dc-row-actions, .dc-sidebar-row.is-active .dc-row-actions, .dc-sidebar-row[data-active="true"] .dc-row-actions { display: flex; } /* D/L:36 — state rule */
+.row-btn, .dc-row-btn { background: none; border: none; padding: 0 3px; font-size: 13px; line-height: 1; color: inherit; opacity: 0.65; cursor: pointer; font-family: inherit; } /* D/L:37 */
+.row-btn:hover, .dc-row-btn:hover { opacity: 1; } /* D/L:38 — state rule */
+.row-btn.starred, .dc-row-btn.starred { color: #45E0A8; opacity: 1; } /* D/L:39 — state rule */
+
+/* Sidebar text/icon helpers — D/L:40-41 */
+.sidebar-text, .dc-sidebar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* D/L:40 */
+.sidebar-icon, .dc-sidebar-icon { width: 14px; display: inline-flex; justify-content: center; } /* D/L:41 */
+
+/* Settings (gear) button — D/L:42-44 + inline D/L:94 + svg stroke attr */
+.settings-btn, .dc-settings-btn { border-radius: 8px; transition: transform 160ms cubic-bezier(0.16,1,0.3,1), stroke 160ms; } /* D/L:42 */
+.profile-row:hover .settings-btn, .settings-btn:hover,
+.dc-profile-row:hover .dc-settings-btn, .dc-settings-btn:hover { transform: rotate(18deg); } /* D/L:43 — state rule */
+.settings-btn:focus-visible, .dc-settings-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:44 — state rule */
+.dc-settings-btn { margin-left: auto; flex-shrink: 0; cursor: pointer; } /* inline D:94 = L:94 */
+.theme-dark .dc-settings-btn { stroke: #9A9AA8; } /* svg stroke attr D:94 */
+.theme-light .dc-settings-btn { stroke: #55555E; } /* svg stroke attr L:94 */
+/* svg attrs both files (D/L:94): viewBox 0 0 24 24, width/height 17,
+   fill="none", stroke-width 1.8, stroke-linecap/linejoin round */
+
+/* Hover utilities — D/L:47-49 (hv2 fill differs per file; theme-scoped merge) */
+.hv1:hover, .dc-hv1:hover { opacity: 0.85 !important; } /* D:47 = L:47 — state rule */
+.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: #26262E !important; } /* D:48 — state rule */
+.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: #F0F0F3 !important; } /* L:48 — state rule */
+.hv3:hover, .dc-hv3:hover { opacity: 0.7 !important; } /* D:49 = L:49 — state rule */
+
+/* ----------------------------------------------------------------------------
+   3. PAGE / FRAME — inline + body rule (D/L:46, 53)
+   -------------------------------------------------------------------------- */
+
+/* Frozen page body (line 46). Frozen line 12 (`body { background: #101014 }`)
+   is a superseded leftover, identical in both files — not emitted. */
+.dc-page { margin: 0; display: flex; justify-content: center; font-family: 'Familjen Grotesk', sans-serif; } /* D:46 = L:46 (shared decls) */
+.theme-dark.dc-page, .theme-dark .dc-page { background: #0B0B0F; } /* D:46 */
+.theme-light.dc-page, .theme-light .dc-page { background: #FFFFFF; } /* L:46 */
+
+/* Demo canvas frame — D/L:53. 1600x900 are the frozen mock dimensions. */
+.dc-frame { width: 1600px; display: flex; height: 900px; border: 1px solid #24242E; border-radius: 12px; overflow: hidden; } /* D:53 = L:53 — border #24242E identical in BOTH themes */
+.theme-dark .dc-frame { background: #0B0B0F; } /* D:53 */
+.theme-light .dc-frame { background: #FFFFFF; } /* L:53 */
+
+/* ----------------------------------------------------------------------------
+   4. SIDEBAR — inline vocabulary (D/L:54-75)
+   -------------------------------------------------------------------------- */
+
+.dc-sidebar { width: 264px; flex-shrink: 0; display: flex; flex-direction: column; padding: 20px 14px; } /* D:54 = L:54 (shared decls) */
+.theme-dark .dc-sidebar, .theme-dark.dc-sidebar { background: #101016; border-right: 1px solid #1E1E26; } /* D:54 */
+.theme-light .dc-sidebar, .theme-light.dc-sidebar { background: #F4F4F6; border-right: 1px solid #E4E4E9; } /* L:54 */
+
+.dc-sidebar-title { padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; text-align: center; } /* D:55 = L:55 (shared decls) */
+.theme-dark .dc-sidebar-title { color: #EDEDF2; } /* D:55 */
+.theme-light .dc-sidebar-title { color: #0B0B0F; } /* L:55 */
+
+.dc-nav-group { display: flex; flex-direction: column; gap: 2px; } /* D:56 = L:56 */
+
+.dc-recents-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 22px 10px 8px; } /* D:64 = L:64 (shared decls) */
+.theme-dark .dc-recents-label { color: #55555E; } /* D:64 */
+.theme-light .dc-recents-label { color: #9A9AA8; } /* L:64 */
+
+.dc-recent-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible; } /* D:65 = L:65 */
+
+/* Profile row — applied WITH .dc-sidebar-row (frozen: class="profile-row sidebar-row") */
+.profile-row, .dc-profile-row { position: relative; margin-top: 8px; padding: 10px 8px; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px; } /* D:73 = L:73 (shared decls) */
+.theme-dark .dc-profile-row, .theme-dark .profile-row { border-top: 1px solid #1E1E26; } /* D:73 */
+.theme-light .dc-profile-row, .theme-light .profile-row { border-top: 1px solid #E4E4E9; } /* L:73 */
+
+.dc-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; } /* D:74 = L:74 */
+.dc-avatar--menu { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; } /* D:78 = L:78 */
+
+.dc-profile-id { display: flex; flex-direction: column; } /* D:75 = L:75 (wrapper) */
+.dc-profile-name { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; } /* D:75 = L:75 (shared decls) */
+.theme-dark .dc-profile-name { color: #EDEDF2; } /* D:75 */
+.theme-light .dc-profile-name { color: #0B0B0F; } /* L:75 */
+.dc-profile-tier { font-size: 11px; } /* D:75 = L:75 (shared decls) */
+.theme-dark .dc-profile-tier { color: #6A6A78; } /* D:75 */
+.theme-light .dc-profile-tier { color: #9A9AA8; } /* L:75 */
+
+/* ----------------------------------------------------------------------------
+   5. ACCOUNT / SETTINGS MENU — inline vocabulary (D/L:76-92)
+      (.dc-settings-menu display none/flex.open comes from §2, D/L:15-16)
+   -------------------------------------------------------------------------- */
+
+.dc-settings-menu, .settings-menu { position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; z-index: 9; cursor: default; } /* D:76 = L:76 (shared decls) */
+.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #1A1A22; border: 1px solid #2E2E38; box-shadow: 0 12px 32px rgba(0,0,0,0.55); } /* D:76 */
+.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 12px 32px rgba(11,11,15,0.18); } /* L:76 */
+
+.dc-menu-header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; } /* D:77 = L:77 */
+.dc-menu-id { display: flex; flex-direction: column; gap: 1px; } /* D:79 = L:79 */
+.dc-menu-handle-row { display: flex; align-items: center; gap: 6px; } /* D:80 = L:80 */
+.dc-menu-handle { font-size: 13px; font-weight: 700; } /* D:80 = L:80 (shared decls) */
+.theme-dark .dc-menu-handle { color: #EDEDF2; } /* D:80 */
+.theme-light .dc-menu-handle { color: #0B0B0F; } /* L:80 */
+.dc-badge-pro { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #0B0B0F; background: #45E0A8; padding: 2px 6px; border-radius: 8px; } /* D:80 = L:80 — identical both themes */
+.dc-menu-expiry { font-size: 11px; color: #9A9AA8; } /* D:81 = L:81 — identical both themes */
+
+.dc-menu-cta-row { display: flex; gap: 8px; padding: 6px 10px 10px; } /* D:84 = L:84 */
+/* hover = .dc-hv1 (frozen markup: class="hv1") */
+.dc-btn-upgrade { flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #0B0B0F; cursor: pointer; } /* D:85 = L:85 — identical both themes */
+/* hover = .dc-hv2 (frozen markup: class="hv2") */
+.dc-btn-cancel { text-align: center; padding: 8px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; } /* D:86 = L:86 (shared decls) */
+.theme-dark .dc-btn-cancel { border: 1px solid #34343E; color: #9A9AA8; } /* D:86 */
+.theme-light .dc-btn-cancel { border: 1px solid #D5D5DC; color: #55555E; } /* L:86 */
+
+.dc-menu-divider { height: 1px; margin: 0 2px; } /* D:88,91 = L:88,91 (shared decls) */
+.theme-dark .dc-menu-divider { background: #2E2E38; } /* D:88,91 */
+.theme-light .dc-menu-divider { background: #E4E4E9; } /* L:88,91 */
+
+/* hover = .dc-hv2 (frozen markup: class="hv2") */
+.dc-menu-item { padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; } /* D:89,90,92 = L:89,90,92 (shared decls) */
+.theme-dark .dc-menu-item { color: #EDEDF2; } /* D:89,90,92 */
+.theme-light .dc-menu-item { color: #0B0B0F; } /* L:89,90,92 */
+.dc-menu-item--strong { font-weight: 600; } /* D:92 = L:92 ("Log Out") */
+
+.dc-menu-accent { font-weight: 600; } /* D:90 = L:90 (shared decl) */
+.theme-dark .dc-menu-accent { color: #45E0A8; } /* D:90 (literal) */
+.theme-light .dc-menu-accent { color: var(--mint-on-light); } /* L:90 — the only frozen use of --mint-on-light */
+
+/* ----------------------------------------------------------------------------
+   6. MAIN COLUMN: HERO + COMPOSER + PILLS — inline vocabulary (D/L:97-109)
+   -------------------------------------------------------------------------- */
+
+.dc-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px; } /* D:97 = L:97 (markup class "home-main") */
+
+/* Wordmark hero "dıme" (markup class "brand-hero"; the i is dotless U+0131) */
+.dc-hero { font-size: 64px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; display: flex; align-items: baseline; } /* D:98 = L:98 (shared decls) */
+.theme-dark .dc-hero { color: #EDEDF2; } /* D:98 */
+.theme-light .dc-hero { color: #0B0B0F; } /* L:98 */
+.dc-hero-word { display: inline-flex; align-items: baseline; } /* D:98 = L:98 (inner span) */
+.dc-hero-i { position: relative; display: inline-block; } /* D:98 = L:98 (the "ı" span) */
+.dc-hero-dot { position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; } /* D:98 = L:98 (shared decls) */
+.theme-light .dc-hero-dot { border: 1px solid #0B0B0F; box-sizing: border-box; } /* L:98 ONLY — dark dot has no border */
+
+/* Composer */
+.dc-composer { width: 680px; display: flex; align-items: center; gap: 10px; border-radius: 26px; padding: 9px 9px 9px 20px; } /* D:99 = L:99 (shared decls) */
+.theme-dark .dc-composer { background: #16161C; border: 1px solid #24242E; } /* D:99 — no box-shadow in dark */
+.theme-light .dc-composer { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 1px 3px rgba(11,11,15,0.06); } /* L:99 */
+
+.dc-composer-plus { font-size: 18px; font-weight: 500; } /* D:100 = L:100 (shared decls; glyph is ＋ U+FF0B) */
+.theme-dark .dc-composer-plus { color: #6A6A78; } /* D:100 */
+.theme-light .dc-composer-plus { color: #9A9AA8; } /* L:100 */
+
+.dc-composer-input { flex: 1; min-width: 0; font-size: 14px; background: transparent; border: none; outline: none; font-family: inherit; } /* D:101 = L:101 (shared decls; placeholder "Ask dime anything…") */
+.theme-dark .dc-composer-input { color: #EDEDF2; } /* D:101 */
+.theme-light .dc-composer-input { color: #0B0B0F; } /* L:101 */
+/* ::placeholder → §2 (D/L:29-30) */
+
+/* Send button (aria-label="Submit prompt"); hover = .dc-hv3 (frozen: class="hv3") */
+.dc-send { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; } /* D:102 = L:102 (shared decls) */
+.theme-dark .dc-send { background: #FFFFFF; border: 0.5px solid #0B0B0F; } /* D:102 */
+.theme-light .dc-send { background: #0B0B0F; border: 0.5px solid #FFFFFF; } /* L:102 */
+/* Send glyph svg (D/L:103): viewBox 0 0 512 512, width/height 20;
+   chevron path d="M96 140 L248 256 L96 372" stroke-width 64 linecap square fill none;
+   rects x330 y228 w150 h56 and x377 y181 w56 h150 */
+.theme-dark .dc-send-chevron { stroke: #0B0B0F; } /* D:103 */
+.theme-light .dc-send-chevron { stroke: #45E0A8; } /* L:103 */
+.theme-dark .dc-send-rect { fill: #45E0A8; } /* D:103 */
+.theme-light .dc-send-rect { fill: #FFFFFF; } /* L:103 */
+
+/* Suggestion pills (markup class "prompt-pills"); hover = .dc-hv1 on every pill.
+   NOTE frozen emphasis ORDER differs per theme:
+   dark  (D:107-109) = [contrast, outline, mint]
+   light (L:107-109) = [mint, outline, contrast]                              */
+.dc-pills { display: flex; align-items: center; gap: 10px; } /* D:106 = L:106 */
+
+.dc-pill { display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; } /* shared decls of all 6 pills, D/L:107-109 */
+
+.dc-pill--mint { background: #45E0A8; color: #0B0B0F; } /* D:109 = L:107 — identical both themes */
+.theme-dark .dc-pill--outline { background: #16161C; border: 1px solid #24242E; color: #EDEDF2; } /* D:108 */
+.theme-light .dc-pill--outline { background: #FFFFFF; border: 1px solid #D5D5DC; color: #0B0B0F; } /* L:108 */
+.theme-dark .dc-pill--contrast { background: #EDEDF2; color: #0B0B0F; } /* D:107 */
+.theme-light .dc-pill--contrast { background: #0B0B0F; color: #FFFFFF; } /* L:109 */
+
+/* Pill icon circle (inner span of every pill; svg viewBox 0 0 512 512, 13x13,
+   same chevron+rects geometry as the send glyph). Variant follows its pill. */
+.dc-pill-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; } /* shared decls of all 6 icon circles, D/L:107-109 */
+
+.dc-pill-icon--on-mint { background: #0B0B0F; } /* D:109 = L:107 — no border on the mint pill's icon circle in either theme */
+.dc-pill-icon--on-mint .dc-pill-chevron { stroke: #FFFFFF; } /* D:109 = L:107 */
+.dc-pill-icon--on-mint .dc-pill-rect { fill: #45E0A8; } /* D:109 = L:107 */
+
+.theme-dark .dc-pill-icon--on-outline { background: #FFFFFF; border: 0.5px solid #0B0B0F; } /* D:108 */
+.theme-dark .dc-pill-icon--on-outline .dc-pill-chevron { stroke: #0B0B0F; } /* D:108 */
+.theme-dark .dc-pill-icon--on-outline .dc-pill-rect { fill: #45E0A8; } /* D:108 */
+.theme-light .dc-pill-icon--on-outline { background: #0B0B0F; border: 0.5px solid #FFFFFF; } /* L:108 */
+.theme-light .dc-pill-icon--on-outline .dc-pill-chevron { stroke: #45E0A8; } /* L:108 */
+.theme-light .dc-pill-icon--on-outline .dc-pill-rect { fill: #FFFFFF; } /* L:108 */
+
+.theme-dark .dc-pill-icon--on-contrast { background: #0B0B0F; border: 0.5px solid #FFFFFF; } /* D:107 */
+.theme-dark .dc-pill-icon--on-contrast .dc-pill-chevron { stroke: #45E0A8; } /* D:107 */
+.theme-dark .dc-pill-icon--on-contrast .dc-pill-rect { fill: #FFFFFF; } /* D:107 */
+.theme-light .dc-pill-icon--on-contrast { background: #FFFFFF; border: 0.5px solid #0B0B0F; } /* L:109 */
+.theme-light .dc-pill-icon--on-contrast .dc-pill-chevron { stroke: #0B0B0F; } /* L:109 */
+.theme-light .dc-pill-icon--on-contrast .dc-pill-rect { fill: #45E0A8; } /* L:109 */
+
+/* ----------------------------------------------------------------------------
+   FONTS (D/L:7-9): Google Fonts —
+   https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap
+   with preconnects to fonts.googleapis.com and fonts.gstatic.com (crossorigin).
+   IBM Plex Mono (400,500) is loaded but unreferenced by any frozen rule on
+   these two pages. Load via <link> or app-level @import — not embedded here.
+   ========================================================================== */
