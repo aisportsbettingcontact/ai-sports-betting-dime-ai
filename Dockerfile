@@ -2,15 +2,15 @@
 #
 # Why Docker instead of Nixpacks: the model runners spawn Python with
 # hardcoded Debian paths — /usr/bin/python3 (mlbModelRunner), /usr/bin/python3.11
-# (nhlModelEngine), and a PYTHONPATH pointing at dist-packages. Debian bookworm
-# ships Python 3.11 at exactly those paths; Nixpacks (nix store paths) does not,
-# which is the source of the historical `spawn /usr/bin/python3 ENOENT` failure
-# on Railway (see server/cron/cronRoutes.ts).
+# (nhlModelEngine). Debian bookworm ships Python 3.11 at exactly those paths;
+# Nixpacks (nix store paths) does not, which is the source of the historical
+# `spawn /usr/bin/python3 ENOENT` failure on Railway (see server/cron/cronRoutes.ts).
 FROM node:22-bookworm-slim
 
-# apt python packages land in /usr/lib/python3/dist-packages — already on the
-# PYTHONPATH the runners construct. Third-party imports across server/*.py:
-# numpy, pandas, scipy, requests.
+# apt python packages land in /usr/lib/python3/dist-packages, which Debian's system
+# python3 already searches by default (no PYTHONPATH override needed — see
+# mlbModelRunner.ts's spawn env construction). Third-party imports across
+# server/*.py: numpy, pandas, scipy, requests.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 \
       python3-numpy \
@@ -18,9 +18,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-scipy \
       python3-requests \
       ca-certificates \
-      # Chromium shared libraries for the puppeteer-based scrapers (.npmrc
-      # allow-build=puppeteer downloads the browser at install time; these are
-      # its runtime deps on Debian bookworm)
+      # Debian Chromium for the Playwright-based scrapers (server/wc2026/espnPageScraper.ts,
+      # server/discord/renderLineupCard.ts, server/discord/renderSplitsCard.ts import
+      # "playwright" directly). pnpm's script allowlist only covers puppeteer
+      # (package.json pnpm.onlyBuiltDependencies), so Playwright's own postinstall browser
+      # download never runs here — apt chromium is the smallest reliable substitute: it
+      # reuses the shared libs installed below (no second copy of the same dependency
+      # closure) and lands at a fixed, version-independent path (/usr/bin/chromium) that
+      # espnPageScraper.ts's PLAYWRIGHT_CHROMIUM_PATH resolution can target directly,
+      # unlike Playwright's own download which nests under a version-numbered
+      # ms-playwright/chromium-<rev>/ directory that shifts on every Playwright bump.
+      chromium \
+      # Shared libs below cover both the apt chromium binary above and puppeteer's
+      # own downloaded browser (.npmrc allow-build=puppeteer runs its postinstall
+      # download at install time), even though no server/*.ts currently imports puppeteer.
       fonts-liberation \
       libasound2 \
       libatk-bridge2.0-0 \
@@ -64,5 +75,10 @@ COPY . .
 RUN pnpm run build
 
 ENV NODE_ENV=production
+# Matches the apt-installed chromium binary above. espnPageScraper.ts's fallback candidate
+# chain otherwise only checks Manus-sandbox ms-playwright cache paths (/home/ubuntu/...)
+# and a bare /usr/bin/chromium guess — setting this explicitly makes the resolution
+# deterministic instead of depending on that fallback ordering.
+ENV PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

@@ -45,6 +45,57 @@ import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
 import { registerDimeWC2026Route } from "../dime-wc2026.route";
+import { jwtVerify } from "jose";
+import { parse as parseCookieHeader } from "cookie";
+import { ENV } from "./env";
+import { getAppUserById } from "../db";
+
+// ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
+// The legacy owner debug endpoints authenticated via the Manus SDK request-auth
+// helper + an OWNER_OPEN_ID comparison against the Manus OAuth server — permanently
+// dead off Manus. This mirrors authenticateDimeRequest() in dime-wc2026.route.ts: verify
+// the app_session JWT with ENV.cookieSecret, require type === "app_user", enforce
+// the tokenVersion check, then gate on role === "owner" (hasAccess is NOT enough).
+// Returns "unauthenticated" (→401) vs "forbidden" (→403) vs an authorized userId.
+type OwnerAuthResult =
+  | { ok: true; userId: number }
+  | { ok: false; status: 401 | 403 };
+
+async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuthResult> {
+  const cookies = parseCookieHeader(req.headers.cookie ?? "");
+  const token = cookies["app_session"];
+  if (!token) return { ok: false, status: 401 };
+  try {
+    const secret = new TextEncoder().encode(ENV.cookieSecret);
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.type !== "app_user") return { ok: false, status: 401 };
+
+    const userId = Number(payload.sub);
+    const tv = payload.tv as number | null | undefined;
+    const user = await getAppUserById(userId);
+    // tokenVersion check — reject invalidated sessions (SEC-001 parity)
+    if (tv !== null && tv !== undefined && user && user.tokenVersion !== tv) {
+      console.log(`[OwnerAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+      return { ok: false, status: 401 };
+    }
+    const role = (payload.role as string | undefined) ?? user?.role;
+    if (role !== "owner") {
+      console.log(`[OwnerAuth] FORBIDDEN — role=${role ?? "?"} userId=${userId} (owner required)`);
+      return { ok: false, status: 403 };
+    }
+    return { ok: true, userId };
+  } catch {
+    return { ok: false, status: 401 };
+  }
+}
+
+// ─── Background-jobs kill switch ───────────────────────────────────────────────
+// Treat both "1" and "true" (case-insensitive, whitespace-tolerant) as disabled.
+// The previous exact-"1" check silently ignored DISABLE_BACKGROUND_JOBS=true.
+function isBackgroundJobsDisabled(): boolean {
+  const v = (process.env.DISABLE_BACKGROUND_JOBS ?? "").trim().toLowerCase();
+  return v === "1" || v === "true";
+}
 
 // ─── Rate limit event helper ─────────────────────────────────────────────────
 // Fire-and-forget: writes a RATE_LIMIT row to security_events.
@@ -377,12 +428,10 @@ async function startServer() {
   // ─── DB status endpoint (owner-only, rate-limited) ─────────────────────────────
   // BE-006: Protected behind globalApiLimiter + owner auth.
   app.get("/api/db-status", globalApiLimiter, async (req, res) => {
-    try {
-      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
-      if (user.openId !== process.env.OWNER_OPEN_ID) {
-        return res.status(403).json({ error: "owner-only" });
-      }
-    } catch { return res.status(401).json({ error: "unauthorized" }); }
+    const auth = await authenticateOwnerRequest(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+    }
     const circuit = getCircuitStatus();
     const cache = getCacheStats();
     res.json({
@@ -394,12 +443,10 @@ async function startServer() {
   // ─── Performance health endpoint (owner-only, rate-limited) ────────────────────────
   // BE-006: Protected behind globalApiLimiter + owner auth.
   app.get("/api/perf", globalApiLimiter, async (req, res) => {
-    try {
-      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
-      if (user.openId !== process.env.OWNER_OPEN_ID) {
-        return res.status(403).json({ error: "owner-only" });
-      }
-    } catch { return res.status(401).json({ error: "unauthorized" }); }
+    const auth = await authenticateOwnerRequest(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+    }
     const cacheHealth = getCacheHealthStats();
     const circuit = getCircuitStatus();
     const uptime = process.uptime();
@@ -422,12 +469,10 @@ async function startServer() {
   // Supports ?source=ANApiOdds&level=warn&limit=100 query params.
   // Replaces stdout log inspection for background job debugging.
   app.get("/api/debug-logs", globalApiLimiter, async (req, res) => {
-    try {
-      const user = await (await import("./sdk")).sdk.authenticateRequest(req);
-      if (user.openId !== process.env.OWNER_OPEN_ID) {
-        return res.status(403).json({ error: "owner-only" });
-      }
-    } catch { return res.status(401).json({ error: "unauthorized" }); }
+    const auth = await authenticateOwnerRequest(req);
+    if (!auth.ok) {
+      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+    }
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "db-unavailable" });
@@ -678,10 +723,12 @@ async function startServer() {
     console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}, "0.0.0.0") ...`);
-  server.listen(port, "0.0.0.0", () => {
+  // Registered via server.once("listening") — NOT as a listen() callback — so it
+  // runs exactly once (a listen(cb) callback stays armed across re-listens and
+  // would double-start every scheduler below).
+  const onListening = () => {
     const addr = server.address();
-    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://0.0.0.0:${port}/`);
+    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
     console.log(`Server running on http://localhost:${port}/`);
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
@@ -694,8 +741,8 @@ async function startServer() {
     // refreshing odds/lineups/scores/models (and the Discord bot) until the
     // flag is removed or the jobs are moved to a dedicated worker service.
     // Unset (the default) preserves current behavior — every job runs.
-    if (process.env.DISABLE_BACKGROUND_JOBS === '1') {
-      console.log('[SCHEDULERS] DISABLE_BACKGROUND_JOBS=1 — web-only mode: recurring background jobs skipped');
+    if (isBackgroundJobsDisabled()) {
+      console.log('[SCHEDULERS] DISABLE_BACKGROUND_JOBS set — web-only mode: recurring background jobs skipped');
     } else {
     // Start daily 6am EST game purge (removes previous day's games)
     startDailyPurgeSchedule();
@@ -737,13 +784,50 @@ async function startServer() {
     startSecurityDigestScheduler();
     // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
     startWeeklySecurityDigestScheduler();
-    } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
+
+    // ── Startup DB backfills + Fangraphs scrape loop (MOVED inside the guard) ──
+    // These write to the DB / scrape an upstream feed on a timer. Previously they
+    // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
+    // them — double-writing the backfills and duplicating the 30-min scrape. They
+    // are background jobs and belong behind the kill switch.
     // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
     // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
     import('../db').then(({ backfillOddsHistoryLineSource }) => {
       backfillOddsHistoryLineSource()
         .catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):', err));
     }).catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):', err));
+
+    // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
+    // Runs once on server start, non-fatal, no-ops if all rows already resolved
+    import('../mlbKPropsModelService').then(({ backfillAllKPropsMlbamIds }) => {
+      backfillAllKPropsMlbamIds()
+        .then((r: { resolved: number; alreadyHad: number; unresolved: number; errors: number }) =>
+          console.log(`[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`)
+        )
+        .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
+    }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
+
+    // ── Lineup cache pre-warm + recurring 30-min Fangraphs scrape loop ─────────
+    // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant,
+    // then refresh every 30 minutes. This scrapes an upstream feed on a timer, so
+    // a web-only replica must skip it (the next user request triggers a live fetch).
+    import('../fangraphsScraper').then(({ scrapeFangraphsLineups }) => {
+      // Initial pre-fetch: 3 seconds after startup (avoids blocking the listen callback)
+      setTimeout(() => {
+        scrapeFangraphsLineups()
+          .then(r => console.log(`[Startup] [LINEUP_CACHE] Pre-warmed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
+          .catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Pre-fetch failed (non-fatal):', err));
+      }, 3000);
+      // Recurring refresh: every 30 minutes (force-refresh to bypass cache)
+      const lineupRefreshInterval = setInterval(() => {
+        scrapeFangraphsLineups(true)
+          .then(r => console.log(`[Scheduler] [LINEUP_CACHE] Refreshed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
+          .catch((err: unknown) => console.warn('[Scheduler] [LINEUP_CACHE] Refresh failed (non-fatal):', err));
+      }, 30 * 60 * 1000);
+      lineupRefreshInterval.unref();
+      console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
+    }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
+    } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
     // ── DB keep-alive ping ──────────────────────────────────────────────────
     // TiDB Serverless drops idle connections after ~5 minutes. Without a
     // recurring keep-alive, the second password update (or any mutation that
@@ -767,16 +851,6 @@ async function startServer() {
     const keepAliveInterval = setInterval(runDbKeepAlive, 4 * 60 * 1000);
     keepAliveInterval.unref();
     console.log('[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)');
-
-    // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
-    // Runs once on server start, non-fatal, no-ops if all rows already resolved
-    import('../mlbKPropsModelService').then(({ backfillAllKPropsMlbamIds }) => {
-      backfillAllKPropsMlbamIds()
-        .then((r: { resolved: number; alreadyHad: number; unresolved: number; errors: number }) =>
-          console.log(`[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`)
-        )
-        .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
-    }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
 
     // ── Games list cache pre-warm ─────────────────────────────────────────────
     // Pre-warm the games.list cache for all active sports at startup.
@@ -816,28 +890,6 @@ async function startServer() {
       ]).catch((err: unknown) => console.warn('[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):', err));
     }, 1000); // 1s after startup — before lineup pre-warm, after DB keep-alive
     console.log('[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)');
-
-    // ── Lineup cache pre-warm ───────────────────────────────────────────────
-    // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant.
-    // Refreshes every 30 minutes to keep the cache warm throughout the day.
-    // Non-fatal: if the MLB Stats API is down, the cache stays empty and the
-    // next user request will trigger a live fetch.
-    import('../fangraphsScraper').then(({ scrapeFangraphsLineups }) => {
-      // Initial pre-fetch: 3 seconds after startup (avoids blocking the listen callback)
-      setTimeout(() => {
-        scrapeFangraphsLineups()
-          .then(r => console.log(`[Startup] [LINEUP_CACHE] Pre-warmed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Pre-fetch failed (non-fatal):', err));
-      }, 3000);
-      // Recurring refresh: every 30 minutes (force-refresh to bypass cache)
-      const lineupRefreshInterval = setInterval(() => {
-        scrapeFangraphsLineups(true)
-          .then(r => console.log(`[Scheduler] [LINEUP_CACHE] Refreshed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Scheduler] [LINEUP_CACHE] Refresh failed (non-fatal):', err));
-      }, 30 * 60 * 1000);
-      lineupRefreshInterval.unref();
-      console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
-    }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
 
     // ── 11:00 UTC boundary cache invalidation ─────────────────────────────────
     // The feed rolls over to the new day's slate at 11:00 UTC. The games cache
@@ -890,7 +942,25 @@ async function startServer() {
       cutoffTimer.unref();
     };
     scheduleNextCutoffInvalidation();
+  };
+
+  // Host omitted → Node binds dual-stack "::" (IPv6 + IPv4-mapped) when IPv6
+  // exists and natively falls back to "0.0.0.0" on any IPv6 handle failure.
+  // Railway's edge proxy dials the container over IPv6, so the previous explicit
+  // IPv4-only "0.0.0.0" bind made every request 502 at the edge ("connection dial
+  // timeout") before it ever reached Express. Fail fast on a bind error so the
+  // platform restarts the container instead of leaving a zombie that serves nothing.
+  const onBindError = (err: NodeJS.ErrnoException) => {
+    console.error(`[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code ?? "?"}) — exiting so the platform restarts`);
+    process.exit(1);
+  };
+  server.once("error", onBindError);
+  server.once("listening", () => {
+    server.removeListener("error", onBindError);
+    onListening();
   });
+  console.log(`[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`);
+  server.listen(port);
 }
 
 startServer().catch(console.error);
