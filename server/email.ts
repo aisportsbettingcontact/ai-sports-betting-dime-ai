@@ -1,7 +1,7 @@
 /**
  * email.ts
  *
- * Branded transactional email service for AI Sports Betting Models.
+ * Branded transactional email service — Dime AI (mint #45E0A8, ink surfaces).
  * Delivers via Google Workspace SMTP (team@aisportsbettingmodels.com).
  *
  * All emails are fully branded — no Manus logos, no external branding.
@@ -18,12 +18,12 @@ import nodemailer from "nodemailer";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FROM_NAME = "AI Sports Betting";
+const FROM_NAME = "Dime AI";
 const FROM_EMAIL = "team@aisportsbettingmodels.com";
-const BRAND_COLOR = "#39FF14"; // neon green
-const DARK_BG = "#0a0a0a";
-const CARD_BG = "#111111";
-const BORDER_COLOR = "#222222";
+const BRAND_COLOR = "#45E0A8"; // Dime mint (brand law: no neon #39FF14)
+const DARK_BG = "#0B0B0F";
+const CARD_BG = "#16161C";
+const BORDER_COLOR = "#1E1E26";
 
 // ─── Transporter ──────────────────────────────────────────────────────────────
 
@@ -77,16 +77,9 @@ function buildEmailHtml(opts: {
             <td align="center" style="padding-bottom:24px;">
               <table cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding-right:8px;vertical-align:middle;">
-                    <!-- Bar chart icon (SVG) -->
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="3" y="12" width="4" height="9" fill="${BRAND_COLOR}" rx="1"/>
-                      <rect x="10" y="6" width="4" height="15" fill="${BRAND_COLOR}" rx="1"/>
-                      <rect x="17" y="2" width="4" height="19" fill="${BRAND_COLOR}" rx="1"/>
-                    </svg>
-                  </td>
                   <td style="vertical-align:middle;">
-                    <span style="font-size:14px;font-weight:900;color:#ffffff;letter-spacing:0.12em;text-transform:uppercase;">AI SPORTS BETTING</span>
+                    <!-- dime wordmark: dotless-i + mint coin-dot (brand kit) -->
+                    <span style="font-size:22px;font-weight:700;color:#EDEDF2;letter-spacing:-0.05em;">d&#305;me<span style="color:${BRAND_COLOR};">.</span></span>
                   </td>
                 </tr>
               </table>
@@ -104,11 +97,11 @@ function buildEmailHtml(opts: {
           <tr>
             <td align="center" style="padding-top:20px;">
               <p style="font-size:11px;color:#444444;margin:0;">
-                &copy; ${new Date().getFullYear()} AI Sports Betting Models &nbsp;&bull;&nbsp;
+                &copy; ${new Date().getFullYear()} Dime AI &mdash; AI Sports Betting Models &nbsp;&bull;&nbsp;
                 <a href="https://aisportsbettingmodels.com" style="color:#444444;text-decoration:none;">aisportsbettingmodels.com</a>
               </p>
               <p style="font-size:10px;color:#333333;margin:6px 0 0;">
-                This tool is for informational purposes only. Gamble responsibly. 21+.
+                Analytical software &mdash; no guaranteed outcomes. For informational purposes only. 21+. Gambling problem? Call 1-800-GAMBLER.
               </p>
             </td>
           </tr>
@@ -173,7 +166,7 @@ export async function sendPasswordResetEmail(opts: {
   `;
 
   const html = buildEmailHtml({
-    title: "Reset your AI Sports Betting password",
+    title: "Reset your Dime AI password",
     preheader: "Click the link to reset your password. Expires in 30 minutes.",
     bodyHtml,
   });
@@ -184,9 +177,9 @@ export async function sendPasswordResetEmail(opts: {
     const info = await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: opts.toEmail,
-      subject: "Reset your AI Sports Betting password",
+      subject: "Reset your Dime AI password",
       html,
-      text: `Reset your AI Sports Betting password\n\nHi @${opts.username},\n\nClick the link below to reset your password (expires ${expiryStr} ET):\n${opts.resetUrl}\n\nIf you did not request this, ignore this email.\n\n— AI Sports Betting Models`,
+      text: `Reset your Dime AI password\n\nHi @${opts.username},\n\nClick the link below to reset your password (expires ${expiryStr} ET):\n${opts.resetUrl}\n\nIf you did not request this, ignore this email.\n\n— Dime AI`,
     });
     console.log(`${TAG} [OUTPUT] Email sent messageId=${info.messageId} to=${opts.toEmail}`);
     console.log(`${TAG} [VERIFY] PASS`);
@@ -223,11 +216,11 @@ export async function sendWelcomeEmail(opts: {
     <div style="background:#0d0d0d;border:1px solid ${BORDER_COLOR};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
       <p style="font-size:11px;color:#666666;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;font-weight:700;">What you now have access to</p>
       <ul style="margin:0;padding-left:18px;color:#aaaaaa;font-size:12px;line-height:1.8;">
-        <li>AI model projections across MLB, NBA, NFL, NHL</li>
-        <li>Betting splits &amp; public money percentages</li>
-        <li>No-vig fair odds &amp; ROI edge signals</li>
-        <li>Live game feed with real-time updates</li>
-        <li>Bet tracker &amp; performance analytics</li>
+        <li>Full AI Model Projections board &mdash; every game, priced (MLB live; World Cup 2026 in the engine)</li>
+        <li>Dime Chat &mdash; ask the engine anything on the slate</li>
+        <li>The Dime Verdict on every market: Pass, Monitor, or Edge Detected</li>
+        <li>Live edge grades, honest PASS signals</li>
+        <li>Graded against the close after the final out</li>
       </ul>
     </div>
 
@@ -247,7 +240,7 @@ export async function sendWelcomeEmail(opts: {
   `;
 
   const html = buildEmailHtml({
-    title: "Welcome to AI Sports Betting Models",
+    title: "Welcome to Dime AI",
     preheader: `Your ${opts.planLabel} is now active. Enter the platform.`,
     bodyHtml,
   });
@@ -258,9 +251,9 @@ export async function sendWelcomeEmail(opts: {
     const info = await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: opts.toEmail,
-      subject: `Welcome to AI Sports Betting — Your ${opts.planLabel} is active`,
+      subject: `Welcome to Dime AI — Your ${opts.planLabel} is active`,
       html,
-      text: `Welcome to AI Sports Betting Models!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed\n\n— AI Sports Betting Models`,
+      text: `Welcome to Dime AI!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed\n\n— Dime AI`,
     });
     console.log(`${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`);
     console.log(`${TAG} [VERIFY] PASS`);

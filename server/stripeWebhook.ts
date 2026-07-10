@@ -217,7 +217,25 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
 
       // Plan resolution: metadata plan_id first, else price→plan map (env-driven
       // for all five plans: monthly/annual + pro/sharp/operator), else "monthly".
-      const plan = normalizePlanId(session.metadata?.plan_id);
+      let plan = normalizePlanId(session.metadata?.plan_id);
+      if (!session.metadata?.plan_id) {
+        // Sessions our server creates always carry plan_id metadata; anything
+        // else (Payment Link, dashboard-created) must resolve from its price so
+        // a $499 purchase can never silently provision as "monthly".
+        try {
+          const items = await getStripe().checkout.sessions.listLineItems(session.id, { limit: 1 });
+          const priceId = items.data[0]?.price?.id;
+          const mapped = priceId ? getPlanByPriceId(priceId) : null;
+          if (mapped) {
+            plan = mapped.id;
+            console.warn(`${tag} [STATE] plan_id metadata absent — resolved plan="${plan}" from price=${priceId}`);
+          } else {
+            console.error(`${tag} [VERIFY] FAIL — plan_id metadata absent and price ${priceId ?? "(none)"} not in plan map; defaulting to "${plan}"`);
+          }
+        } catch (err) {
+          console.error(`${tag} [VERIFY] FAIL — could not list line items for plan resolution: ${err instanceof Error ? err.message : String(err)}; defaulting to "${plan}"`);
+        }
+      }
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
       const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? "";
 

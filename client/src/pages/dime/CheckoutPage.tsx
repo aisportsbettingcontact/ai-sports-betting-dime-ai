@@ -311,7 +311,10 @@ export default function CheckoutPage() {
         }
       });
 
-      const paymentElement = checkout.createPaymentElement({ layout: "tabs" });
+      // terms: never — Stripe's auto mandate line wraps to 3 lines at 390px and
+      // clipped (live audit 2026-07-10); the equivalent renewal/authorization
+      // copy is our own legal line directly under the pay button.
+      const paymentElement = checkout.createPaymentElement({ layout: "tabs", terms: { card: "never" } });
       peRef.current = paymentElement;
       paymentElement.on("ready", () => {
         if (gen !== genRef.current) return;
