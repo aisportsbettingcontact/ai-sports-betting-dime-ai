@@ -72,6 +72,18 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ---------------------------------------------------------------
+// Entitlement — require an active paid subscription (or owner role)
+// before any Anthropic call or SSE stream begins. Evaluated per-request
+// against the DB (not the JWT), so a revoked subscriber loses chat access
+// immediately instead of waiting out their JWT expiry.
+// ---------------------------------------------------------------
+async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
+  if (role === "owner") return true;
+  const user = await getAppUserById(userId);
+  return !!user?.hasAccess;
+}
+
+// ---------------------------------------------------------------
 
 const dimeChatRouter = Router();
 
@@ -88,6 +100,22 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       detail: "Unauthenticated request rejected",
     });
     res.status(401).json({ error: "Authentication required. Please log in." });
+    return;
+  }
+
+  // --- SEC-CRIT: Entitlement gate — reject authenticated-but-unentitled requests
+  // before any Claude call or SSE stream. Closes the free-tier billing leak and
+  // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
+  // bumping tokenVersion, so this must be checked per-request, not just at login). ---
+  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
+  if (!entitled) {
+    dimeLog("dime.chat.entitlement_rejected", requestId, {
+      errorClass: "AuthorizationError",
+      statusCode: 403,
+      userId: authedUser.userId,
+      detail: "Active subscription required",
+    });
+    res.status(403).json({ error: "Active subscription required." });
     return;
   }
 
