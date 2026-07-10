@@ -1,35 +1,53 @@
 /**
  * MobileSplits — Owner-only betting splits view, Dime AI design.
- * Mirrors the "SPLITS TAB" card from the Dime standalone reference
- * (dime-ai design bundle, phone "stack" tier): per-game card with team
+ * Mirrors the "SPLITS TAB" card from the Dime standalone reference under the
+ * token law of design-system/dime-ai/MASTER.md: per-game card with team
  * identity rows, stacked Run Line / Total / Moneyline markets, each with
  * Tickets + Money percentage bars, and sharp-money signal chips.
  *
+ * Brand rules applied (MASTER.md):
+ *  - Card surface #16161C, border #24242E, radius 16 (game-card tier)
+ *  - IBM Plex Mono ONLY for micro-labels (10-11px, uppercase, 0.08em, muted)
+ *  - Numeric data values in Familjen Grotesk 700
+ *  - Mint ONLY on signal: status chip, split share, sharp-money chips
+ *  - Motion 2/10: no animation on static data render
+ *
  * Data: trpc.games.liveSplits — live VSiN DK splits straight from
- * server/vsinBettingSplitsScraper.ts (5-min cache), book lines joined
- * from the games table best-effort.
+ * server/vsinBettingSplitsScraper.ts (5-min cache); book lines joined from
+ * the games table best-effort; team logos arrive as server-fetched data URIs.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { MobileDataState } from "../components/MobileDataState";
 import { mobileOwnerTabLogger } from "../logger";
 import { BarChart3 } from "lucide-react";
 
-// ── Dime dark tokens (design-system/dime-ai/MASTER.md + splits reference) ────
+// ── Dime dark tokens — design-system/dime-ai/MASTER.md ──────────────────────
 const T = {
-  canvas: "#0B0B0F",
-  surface: "#101016",
-  border: "rgba(237,237,242,0.12)",
-  text1: "#EDEDF2",
-  text2: "#9A9AA8",
-  text3: "#6A6A78",
-  mint: "#45E0A8",
+  canvas: "#0B0B0F",            // --color-background
+  surface: "#16161C",           // --surface-card
+  border: "#24242E",            // --color-border
+  text1: "#EDEDF2",             // --text-primary
+  body: "#C9C9D4",              // --text-body
+  text2: "#9A9AA8",             // --text-secondary
+  text3: "#6A6A78",             // --text-muted
+  mint: "#45E0A8",              // --mint
   mintSoft: "rgba(69,224,168,0.12)",
   mintBrd: "rgba(69,224,168,0.35)",
-  track: "rgba(237,237,242,0.10)",
-  barInk: "#0B0B0F",
+  track: "rgba(237,237,242,0.10)", // bar track (splits reference)
+  barInk: "#0B0B0F",            // ink on mint fill
   mono: "'IBM Plex Mono', monospace",
+};
+
+// IBM Plex Mono micro-label — the ONLY sanctioned mono usage (labels, not values)
+const microLabel: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: 10,
+  fontWeight: 500,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: T.text3,
 };
 
 const fmtSigned = (v: string | number) => {
@@ -59,7 +77,7 @@ interface SharpSignal {
   ticketsPct: number;
 }
 
-function PctBar({ bar, barH }: { bar: SplitBar; barH: number }) {
+function PctBar({ bar }: { bar: SplitBar }) {
   const a = Math.max(0, Math.min(100, bar.a));
   const b = Math.max(0, Math.min(100, bar.b));
   return (
@@ -70,36 +88,23 @@ function PctBar({ bar, barH }: { bar: SplitBar; barH: number }) {
     >
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
         <span style={{ fontSize: 11, color: T.text2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bar.labelA}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.9px", textTransform: "uppercase", color: T.text3 }}>{bar.heading}</span>
+        <span style={microLabel}>{bar.heading}</span>
         <span style={{ fontSize: 11, color: T.text2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bar.labelB}</span>
       </div>
-      <div style={{ display: "flex", height: barH, borderRadius: 6, overflow: "hidden", background: T.track }} aria-hidden="true">
-        <div
-          style={{
-            flexGrow: a, flexBasis: 0, minWidth: 46, background: T.mint,
-            display: "flex", alignItems: "center", padding: "0 7px",
-            transition: "flex-grow 160ms ease",
-          }}
-        >
-          <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 600, color: T.barInk }}>{a}%</span>
+      <div style={{ display: "flex", height: 20, borderRadius: 6, overflow: "hidden", background: T.track }} aria-hidden="true">
+        <div style={{ flexGrow: a, flexBasis: 0, minWidth: 46, background: T.mint, display: "flex", alignItems: "center", padding: "0 7px" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.barInk }}>{a}%</span>
         </div>
-        <div
-          style={{
-            flexGrow: b, flexBasis: 0, minWidth: 46,
-            display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 7px",
-            transition: "flex-grow 160ms ease",
-          }}
-        >
-          <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 600, color: T.text1 }}>{b}%</span>
+        <div style={{ flexGrow: b, flexBasis: 0, minWidth: 46, display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 7px" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.text1 }}>{b}%</span>
         </div>
       </div>
     </div>
   );
 }
 
-function TeamLogo({ url, alt, size }: { url: string | null; alt: string; size: number }) {
-  const [failed, setFailed] = useState(false);
-  if (!url || failed) {
+function TeamLogo({ dataUri, alt, size }: { dataUri: string | null; alt: string; size: number }) {
+  if (!dataUri) {
     return (
       <div
         aria-hidden="true"
@@ -115,13 +120,11 @@ function TeamLogo({ url, alt, size }: { url: string | null; alt: string; size: n
   }
   return (
     <img
-      src={url}
-      alt={alt}
+      src={dataUri}
+      alt={`${alt} logo`}
       width={size}
       height={size}
-      loading="lazy"
       style={{ width: size, height: size, objectFit: "contain", flex: "none" }}
-      onError={() => setFailed(true)}
     />
   );
 }
@@ -155,6 +158,7 @@ export function MobileSplits() {
   // already rolled over to tomorrow-only, show the earliest available date.
   const { cards, displayDate } = useMemo(() => {
     const rows = splitsQuery.data?.rows;
+    const logos = splitsQuery.data?.logos ?? {};
     if (!rows || rows.length === 0) return { cards: [], displayDate: today };
     const todayRows = rows.filter((r) => r.gameDate === today);
     const activeDate = todayRows.length > 0 ? today : [...rows].map((r) => r.gameDate).sort()[0];
@@ -227,8 +231,8 @@ export function MobileSplits() {
         key: r.vsinGameId,
         chip: r.gameDate === today ? (r.startTimeEst ?? "Today") : "Tomorrow",
         teams: [
-          { city: awayTeam?.city ?? "", nick: awayNick, logo: awayTeam?.logoUrl ?? null, ml: r.awayML },
-          { city: homeTeam?.city ?? "", nick: homeNick, logo: homeTeam?.logoUrl ?? null, ml: r.homeML },
+          { city: awayTeam?.city ?? "", nick: awayNick, logo: (r.awayAbbrev && logos[r.awayAbbrev]) || null, ml: r.awayML },
+          { city: homeTeam?.city ?? "", nick: homeNick, logo: (r.homeAbbrev && logos[r.homeAbbrev]) || null, ml: r.homeML },
         ],
         markets,
         signals,
@@ -236,7 +240,7 @@ export function MobileSplits() {
       };
     });
 
-    // Sharpest money divergence first — same spirit as the old STEAM sort
+    // Sharpest money divergence first — surfaces steam the same way the old view did
     built.sort((a, b) => b.maxDivergence - a.maxDivergence);
     return { cards: built.filter((c) => c.markets.length > 0), displayDate: activeDate };
   }, [splitsQuery.data, today]);
@@ -247,25 +251,26 @@ export function MobileSplits() {
     if (isEmpty) mobileOwnerTabLogger.log("mobile_splits_empty_state_rendered", "splits", { date: today });
   }, [isEmpty, today]);
 
+  const updatedAt = splitsQuery.data?.fetchedAt
+    ? new Date(splitsQuery.data.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+
   return (
     <div className="flex flex-col h-full min-h-full" style={{ background: T.canvas }}>
       <header
-        className="sticky top-0 z-40 backdrop-blur-sm"
-        style={{ background: "rgba(11,11,15,0.95)", borderBottom: `1px solid ${T.border}`, padding: "12px 16px" }}
+        className="sticky top-0 z-40"
+        style={{ background: T.canvas, borderBottom: `1px solid ${T.border}`, padding: "12px 16px" }}
       >
         <div className="flex items-center justify-between">
           <div>
             <h1 style={{ margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: "-0.2px", color: T.text1 }}>
               MLB Betting Splits
             </h1>
-            <p style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>
-              {displayDate} • VSiN DK
-              {splitsQuery.data?.fetchedAt
-                ? ` • updated ${new Date(splitsQuery.data.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
-                : ""}
+            <p style={{ ...microLabel, marginTop: 3 }}>
+              {displayDate} · VSiN DK{updatedAt ? ` · Synced ${updatedAt}` : ""}
             </p>
           </div>
-          <BarChart3 className="w-5 h-5" style={{ color: T.text3 }} />
+          <BarChart3 className="w-5 h-5" style={{ color: T.text3 }} aria-hidden="true" />
         </div>
       </header>
 
@@ -279,7 +284,7 @@ export function MobileSplits() {
           errorMessage="Splits could not be loaded."
           onRetry={() => splitsQuery.refetch()}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
             {cards.map((card) => (
               <section
                 key={card.key}
@@ -287,7 +292,7 @@ export function MobileSplits() {
                 style={{
                   background: T.surface,
                   border: `1px solid ${T.border}`,
-                  borderRadius: 12,
+                  borderRadius: 16,
                   padding: 16,
                   display: "flex",
                   flexDirection: "column",
@@ -309,18 +314,13 @@ export function MobileSplits() {
                   </div>
                   {card.teams.map((tm, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                      <TeamLogo url={tm.logo} alt={tm.nick} size={36} />
+                      <TeamLogo dataUri={tm.logo} alt={tm.nick} size={36} />
                       <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
                         {tm.city && <span style={{ fontSize: 12, color: T.text2, whiteSpace: "nowrap" }}>{tm.city}</span>}
                         <span style={{ fontSize: 15, fontWeight: 600, color: T.text1, whiteSpace: "nowrap" }}>{tm.nick}</span>
                       </div>
                       {tm.ml != null && (
-                        <span
-                          style={{
-                            marginLeft: "auto", fontFamily: T.mono, fontSize: 16,
-                            fontWeight: 600, lineHeight: 1, color: T.text1,
-                          }}
-                        >
+                        <span style={{ marginLeft: "auto", fontSize: 17, fontWeight: 700, lineHeight: 1, color: T.text1 }}>
                           {fmtSigned(tm.ml)}
                         </span>
                       )}
@@ -344,14 +344,14 @@ export function MobileSplits() {
                         {mk.title}
                       </span>
                       {(mk.bookA != null || mk.bookB != null) && (
-                        <span style={{ fontFamily: T.mono, fontSize: 12, color: T.text2, whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 13, color: T.body, whiteSpace: "nowrap" }}>
                           {mk.bookA ?? "—"} / {mk.bookB ?? "—"}
                         </span>
                       )}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {mk.bars.map((bar) => (
-                        <PctBar key={bar.heading} bar={bar} barH={20} />
+                        <PctBar key={bar.heading} bar={bar} />
                       ))}
                     </div>
                   </div>
@@ -360,9 +360,7 @@ export function MobileSplits() {
                 {/* sharp-money signals */}
                 {card.signals.length > 0 && (
                   <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.9px", textTransform: "uppercase", color: T.text3, textAlign: "center" }}>
-                      Sharp Money
-                    </div>
+                    <div style={{ ...microLabel, textAlign: "center" }}>Sharp Money</div>
                     {card.signals.map((sig) => (
                       <div
                         key={`${sig.market}-${sig.side}`}
@@ -379,7 +377,7 @@ export function MobileSplits() {
                           </span>
                           <div style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 11, color: T.text3, whiteSpace: "nowrap" }}>{sig.market}</span>
-                            <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 600, color: T.mint, whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: T.mint, whiteSpace: "nowrap" }}>
                               {sig.moneyPct}% $ vs {sig.ticketsPct}% tix
                             </span>
                           </div>

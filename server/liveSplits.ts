@@ -11,10 +11,13 @@
  *   2. VSiN slug → MLB abbrev via getMlbTeamByVsinSlug (alias-aware)
  *   3. Best-effort join against the games table for book lines
  *      (awayBookSpread / bookTotal / awayML) — non-fatal if the DB is down
+ *   4. Team logos fetched server-side and returned as base64 data URIs
+ *      (same pattern as server/discord/renderSplitsCard.ts) so the client
+ *      never depends on reaching the MLB CDN directly
  */
 
 import { scrapeVsinMlbBettingSplits, type VsinSplitsGame } from "./vsinBettingSplitsScraper";
-import { getMlbTeamByVsinSlug } from "../shared/mlbTeams";
+import { getMlbTeamByVsinSlug, MLB_BY_ABBREV } from "../shared/mlbTeams";
 import { listGamesByDate } from "./db";
 
 export interface LiveSplitRow {
@@ -48,11 +51,62 @@ export interface LiveSplitsResult {
   fetchedAt: string;
   fromCache: boolean;
   rows: LiveSplitRow[];
+  /** MLB abbrev → base64 data URI of the official team logo (server-fetched) */
+  logos: Record<string, string>;
+}
+
+interface CachePayload {
+  rows: LiveSplitRow[];
+  logos: Record<string, string>;
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
-let cache: { at: number; rows: LiveSplitRow[] } | null = null;
-let inflight: Promise<LiveSplitRow[]> | null = null;
+let cache: { at: number; payload: CachePayload } | null = null;
+let inflight: Promise<CachePayload> | null = null;
+
+// ─── Logo cache: URL → base64 data URI (per-process, same as renderSplitsCard) ─
+const logoCache = new Map<string, string>();
+
+async function fetchLogoAsDataUri(url: string): Promise<string | null> {
+  const cached = logoCache.get(url);
+  if (cached) return cached;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) {
+      console.warn(`[LiveSplits] Logo fetch failed (${res.status}): ${url}`);
+      return null;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") ?? "image/svg+xml";
+    const dataUri = `data:${contentType};base64,${buf.toString("base64")}`;
+    logoCache.set(url, dataUri);
+    return dataUri;
+  } catch (err) {
+    console.warn(`[LiveSplits] Logo fetch error: ${url} —`, err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/** Fetch logos for every resolved team in the rows, in parallel, deduped by abbrev. */
+async function fetchLogos(rows: LiveSplitRow[]): Promise<Record<string, string>> {
+  const wanted = new Map<string, string>(); // abbrev → logoUrl
+  for (const row of rows) {
+    for (const abbrev of [row.awayAbbrev, row.homeAbbrev]) {
+      if (!abbrev || wanted.has(abbrev)) continue;
+      const team = MLB_BY_ABBREV.get(abbrev);
+      if (team?.logoUrl) wanted.set(abbrev, team.logoUrl);
+    }
+  }
+  const logos: Record<string, string> = {};
+  await Promise.all(
+    Array.from(wanted.entries()).map(async ([abbrev, url]) => {
+      const dataUri = await fetchLogoAsDataUri(url);
+      if (dataUri) logos[abbrev] = dataUri;
+    })
+  );
+  console.log(`[LiveSplits] Logos resolved: ${Object.keys(logos).length}/${wanted.size} teams`);
+  return logos;
+}
 
 /** "20260710MLB00008" → "2026-07-10" */
 function gameDateFromVsinId(gameId: string): string {
@@ -132,11 +186,11 @@ async function joinDbLines(rows: LiveSplitRow[]): Promise<void> {
   }
 }
 
-async function fetchRows(): Promise<LiveSplitRow[]> {
+async function fetchPayload(): Promise<CachePayload> {
   const games = await scrapeVsinMlbBettingSplits();
   const rows = buildBaseRows(games);
-  await joinDbLines(rows);
-  return rows;
+  const [logos] = await Promise.all([fetchLogos(rows), joinDbLines(rows)]);
+  return { rows, logos };
 }
 
 /**
@@ -147,19 +201,19 @@ async function fetchRows(): Promise<LiveSplitRow[]> {
 export async function getLiveMlbSplits(): Promise<LiveSplitsResult> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_TTL_MS) {
-    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, rows: cache.rows };
+    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, ...cache.payload };
   }
   if (!inflight) {
-    inflight = fetchRows().finally(() => { inflight = null; });
+    inflight = fetchPayload().finally(() => { inflight = null; });
   }
   try {
-    const rows = await inflight;
-    cache = { at: Date.now(), rows };
-    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: false, rows };
+    const payload = await inflight;
+    cache = { at: Date.now(), payload };
+    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: false, ...payload };
   } catch (err) {
     if (cache) {
       console.warn("[LiveSplits] Scrape failed — serving stale cache (non-fatal):", err);
-      return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, rows: cache.rows };
+      return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, ...cache.payload };
     }
     throw err;
   }
