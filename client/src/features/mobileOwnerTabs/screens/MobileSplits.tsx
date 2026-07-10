@@ -2,8 +2,8 @@
  * MobileSplits — MLB betting splits view.
  * Per-game card: "Away vs Home" matchup row, then stacked Run Line / Total /
  * Moneyline markets, each with Tickets + Money percentage bars.
- * All-black background; white borders on the splits bars and team logos;
- * cards separated by a hairline only.
+ * All-black background; the white border lives ONLY on the split-percentage
+ * bars. Team logos and cards carry no border (cards separated by a hairline).
  *
  * Data: trpc.games.liveSplits — live VSiN DK splits straight from
  * server/vsinBettingSplitsScraper.ts (5-min cache); book lines joined from
@@ -20,7 +20,7 @@ import { BarChart3 } from "lucide-react";
 const T = {
   canvas: "#000000",
   surface: "#000000",
-  barBorder: "#FFFFFF",              // white border on splits bars + team logos
+  barBorder: "#FFFFFF",              // white border — split-percentage bars ONLY
   cardBorder: "rgba(237,237,242,0.12)", // hairline card definition (reference value)
   divider: "rgba(237,237,242,0.12)",    // internal market separators
   text1: "#EDEDF2",
@@ -96,28 +96,29 @@ function PctBar({ bar }: { bar: SplitBar }) {
 }
 
 function TeamLogo({ dataUri, alt, size }: { dataUri: string | null; alt: string; size: number }) {
+  if (dataUri) {
+    return (
+      <img
+        src={dataUri}
+        alt={`${alt} logo`}
+        width={size}
+        height={size}
+        style={{ width: size, height: size, objectFit: "contain", flex: "none" }}
+      />
+    );
+  }
+  // No-logo fallback: bare abbreviation, no border or tile
   return (
-    <div
+    <span
+      aria-hidden="true"
       style={{
-        width: size, height: size, borderRadius: 8, flex: "none",
-        border: `1px solid ${T.barBorder}`, background: T.surface,
-        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+        width: size, height: size, flex: "none",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 11, fontWeight: 700, color: T.text2,
       }}
     >
-      {dataUri ? (
-        <img
-          src={dataUri}
-          alt={`${alt} logo`}
-          width={size - 8}
-          height={size - 8}
-          style={{ width: size - 8, height: size - 8, objectFit: "contain" }}
-        />
-      ) : (
-        <span aria-hidden="true" style={{ fontSize: 10, fontWeight: 700, color: T.text2 }}>
-          {alt.slice(0, 3).toUpperCase()}
-        </span>
-      )}
-    </div>
+      {alt.slice(0, 3).toUpperCase()}
+    </span>
   );
 }
 
