@@ -48,14 +48,24 @@ import { registerDimeWC2026Route } from "../dime-wc2026.route";
 import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getAppUserById } from "../db";
+import { getAppUserById, invalidateAppUserByIdCache } from "../db";
+import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
 // The legacy owner debug endpoints authenticated via the Manus SDK request-auth
 // helper + an OWNER_OPEN_ID comparison against the Manus OAuth server — permanently
-// dead off Manus. This mirrors authenticateDimeRequest() in dime-wc2026.route.ts: verify
-// the app_session JWT with ENV.cookieSecret, require type === "app_user", enforce
-// the tokenVersion check, then gate on role === "owner" (hasAccess is NOT enough).
+// dead off Manus. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
+// app_session JWT with ENV.cookieSecret, require type === "app_user", load the user
+// row (DB-authoritative — NEVER trust payload.role, a JWT is signed at login and a
+// later demotion must take effect immediately), enforce the tokenVersion check, then
+// gate on DB role === "owner" (hasAccess/JWT role are NOT enough).
+//
+// DB-unavailability: these are debug endpoints (e.g. /api/db-status exists to report
+// DB health), so a hard-down DB must not lock an owner out entirely. We reuse the
+// same reviewed in-memory cache fallback as ownerProcedure (getCachedAppUser) — never
+// a bespoke one. The cached row, not the JWT, still supplies the role. If there is no
+// cache hit either, we fail closed (401) — a locked-out owner beats an open debug
+// endpoint.
 // Returns "unauthenticated" (→401) vs "forbidden" (→403) vs an authorized userId.
 type OwnerAuthResult =
   | { ok: true; userId: number }
@@ -72,15 +82,42 @@ async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuth
 
     const userId = Number(payload.sub);
     const tv = payload.tv as number | null | undefined;
-    const user = await getAppUserById(userId);
-    // tokenVersion check — reject invalidated sessions (SEC-001 parity)
-    if (tv !== null && tv !== undefined && user && user.tokenVersion !== tv) {
+
+    // Force a fresh DB read — a stale cache entry could still carry a demoted-from-owner
+    // role. Mirrors ownerProcedure's cache-invalidation-before-read.
+    invalidateAppUserByIdCache(userId);
+    invalidateCachedAppUser(userId);
+
+    let user = await getAppUserById(userId);
+    const fromCache = !user;
+    if (!user) {
+      // getAppUserById returns null both for "no such user" and "DB unreachable" —
+      // fall back to the in-memory cache (same one ownerProcedure uses) to distinguish
+      // a real DB outage from a genuinely deleted user. If nothing is cached either,
+      // fail closed below.
+      user = getCachedAppUser(userId);
+      if (user) console.log(`[OwnerAuth] DB unavailable — serving userId=${userId} from cache (role=${user?.role})`);
+    } else {
+      setCachedAppUser(user);
+    }
+
+    if (!user) {
+      // Fail closed: user doesn't exist (deleted) OR DB is down with no cache — either
+      // way we cannot verify the caller is a live owner.
+      console.log(`[OwnerAuth] REJECTED — user not found / DB unavailable with no cache userId=${userId}`);
+      return { ok: false, status: 401 };
+    }
+
+    // tokenVersion check — only enforced when we have a fresh DB read (cache entries
+    // may predate a force-logout) and the JWT actually carries a tv claim.
+    if (!fromCache && tv !== null && tv !== undefined && user.tokenVersion !== tv) {
       console.log(`[OwnerAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
       return { ok: false, status: 401 };
     }
-    const role = (payload.role as string | undefined) ?? user?.role;
-    if (role !== "owner") {
-      console.log(`[OwnerAuth] FORBIDDEN — role=${role ?? "?"} userId=${userId} (owner required)`);
+
+    // Role check: DB (or DB-derived cache) row only — the JWT claim is never trusted.
+    if (user.role !== "owner") {
+      console.log(`[OwnerAuth] FORBIDDEN — dbRole=${user.role} jwtRole=${payload.role ?? "?"} userId=${userId} (owner required)`);
       return { ok: false, status: 403 };
     }
     return { ok: true, userId };
