@@ -1,0 +1,179 @@
+/* ============================================================================
+   conversation.css — Dime chat conversation-state + app-shell adaptation.
+   Visual source of truth: design/frozen/dime-ai-home-{dark,light}.html
+   (cited as D:n / L:n / F:n like frozen-tokens.css) — do not restyle.
+   Every derived value below cites its frozen source or its composition rule
+   from scratchpad chat-derivation-spec.md (§ refs). UNKNOWN-n values are the
+   spec's declared compositions for values the frozen files genuinely lack.
+   Companion sheet: frozen-tokens.css (verbatim frozen extraction, same dir).
+   ========================================================================== */
+
+/* ----------------------------------------------------------------------------
+   0. APP-SHELL ADAPTATION (plan.md risk #4 decision): the frozen 1600x900
+      demo canvas (F:53, kept verbatim as .dc-frame in frozen-tokens.css)
+      becomes a viewport-filling shell with IDENTICAL internal metrics
+      (264px sidebar, 680px column, 40px gutters). The mock's outer border/
+      radius are canvas-edge artifacts and are not drawn at full viewport.
+   -------------------------------------------------------------------------- */
+
+.dc-page.dc-page--app { width: 100%; min-height: 100dvh; }
+.dc-app { width: 100%; height: 100dvh; display: flex; overflow: hidden; } /* metrics from F:53 minus mock border/radius */
+.theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #0B0B0F; } /* D:53 */
+.theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
+
+.dc-sidebar { height: 100%; min-height: 0; } /* fill the shell; frozen column behavior D/L:54 */
+.dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
+
+/* ----------------------------------------------------------------------------
+   1. MAIN PANE — two states of the SAME element (spec §2, §2.7)
+      Home state = the frozen .home-main verbatim (.dc-main, F:97).
+   -------------------------------------------------------------------------- */
+
+.dc-main { min-width: 0; position: relative; height: 100%; } /* container for FLIP ghost overlay (spec §3.2) */
+.dc-main--conv { justify-content: flex-start; align-items: stretch; gap: 0; padding: 0; } /* conversation replaces the centered stack; 680px column + 40px gutters persist below (spec §2) */
+
+/* Scroller: main pane minus the docked composer zone (spec §2.1) */
+.dc-scroller { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; padding: 40px 40px 20px; } /* 40px = home-main gutter F:97; 20px bottom = sidebar vertical pad step F:54 (spec §2.1) */
+
+/* Thread grid: one 680px column (C6 = composer width F:99), append-only rows */
+.dc-thread { width: 680px; max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 100%; row-gap: 28px; } /* UNKNOWN-2: 28px turn gap (40px section gap F:97 x 0.7 hv3 register F:49) */
+
+/* ----------------------------------------------------------------------------
+   2. USER MESSAGE — "your prompt, moved into history" (spec §2.2)
+   -------------------------------------------------------------------------- */
+
+.dc-turn--user { display: flex; justify-content: flex-end; } /* right edge = the send button's side of the composer (D:102) */
+.dc-user-capsule { max-width: 85%; border-radius: 20px; padding: 10px 16px; font-size: 14px; font-weight: 400; font-family: inherit; white-space: pre-wrap; word-break: break-word; } /* radius 20 = prompt pill D:107; padding 16px = pill inset D:107, 10px = sidebar-row gap unit F:21; type = composer input F:101; max-width 85% = UNKNOWN-3 */
+.theme-dark .dc-user-capsule { background: #1E1E26; color: #EDEDF2; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
+.theme-light .dc-user-capsule { background: #F0F0F3; color: #0B0B0F; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
+
+/* ----------------------------------------------------------------------------
+   3. ASSISTANT MESSAGE — bare text on the page itself (spec §2.3)
+   -------------------------------------------------------------------------- */
+
+.dc-turn--assistant { display: flex; flex-direction: column; gap: 12px; min-height: 24px; } /* 12px intra-turn block gap = UNKNOWN-2; 24px reserved line box = pill icon circle size D:107 (spec §1.b) */
+.dc-prose { font-size: 14px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; } /* size F:101; color F:19/20; line-height 1.6 = UNKNOWN-1 */
+.dc-prose strong, .dc-prose b { font-weight: 600; } /* kit mid-emphasis weight (pills F:107, menu items D:92) */
+.dc-prose a { color: #45E0A8; text-decoration: none; } /* F:13 */
+.dc-prose a:hover { color: #7DEBC4; } /* F:14 — state rule */
+.theme-light .dc-prose a { color: var(--mint-on-light); } /* mint text on light rule, L:90 (spec §2.3) */
+
+/* Numerals: odds/lines/edges/prices/records/percentages (spec §5) */
+.dc-num { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-variant-numeric: tabular-nums; } /* mono loaded at 400/500 by F:9; 500 is the max loaded mono weight */
+
+/* ----------------------------------------------------------------------------
+   4. TYPING INDICATOR ROW — the ONLY thinking affordance (spec §2.8)
+      Dot rules themselves are frozen (.typing-dot, F:31-34, in frozen-tokens).
+   -------------------------------------------------------------------------- */
+
+.dc-typing-row { display: flex; align-items: center; gap: 4px; min-height: 24px; color: var(--text-secondary); } /* gap 4px = UNKNOWN-4; quiet color F:19/20 — mint claims signal, thinking is not yet signal; 24px height-neutral slot (spec §1.b) */
+@media (prefers-reduced-motion: reduce) { .typing-dot, .dc-typing-dot { animation: none; opacity: 1; } } /* F:28 pattern extended to animation (spec §2.8) */
+
+/* ----------------------------------------------------------------------------
+   5. [EDGE] VERDICT BLOCK — C1 card + C3 micro-labels (spec §2.4)
+   -------------------------------------------------------------------------- */
+
+.dc-edge { border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; } /* card shell = menu card D:76; padding 16px = pill inset D:107, 14px pairs the radius (spec §2.4, composed); 10px = sidebar-row gap unit F:21 */
+.theme-dark .dc-edge { background: #1A1A22; border: 1px solid #2E2E38; } /* D:76 — in-flow dark cards carry no shadow */
+.theme-light .dc-edge { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 1px 3px rgba(11,11,15,0.06); } /* L:76 + raised in-flow shadow L:99 */
+
+.dc-edge-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dc-microlabel { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
+.dc-edge-label { color: #45E0A8; } /* mint text rule F:13 */
+.theme-light .dc-edge-label { color: var(--mint-on-light); } /* L:90 (spec §2.4) */
+
+.dc-edge-pick { font-size: 15px; font-weight: 700; color: var(--text-primary); } /* UNKNOWN-7: 15px/700 pick line (700 = kit headline weight D:55/F:98) */
+
+.dc-edge-stats { display: flex; gap: 18px; flex-wrap: wrap; }
+.dc-stat { display: flex; flex-direction: column; gap: 2px; } /* 2px = nav-group row gap F:56 */
+.theme-dark .dc-stat-label { color: #55555E; } /* recents-label color D:64 */
+.theme-light .dc-stat-label { color: #9A9AA8; } /* recents-label color L:64 */
+.dc-stat-value { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
+.dc-stat-value--mint { color: #45E0A8; } /* positive-signal mint, F:13 */
+.theme-light .dc-stat-value--mint { color: var(--mint-on-light); } /* L:90 */
+
+.dc-edge-divider { height: 1px; } /* menu divider geometry D/L:88 */
+.theme-dark .dc-edge-divider { background: #2E2E38; } /* D:88 */
+.theme-light .dc-edge-divider { background: #E4E4E9; } /* L:88 */
+
+/* PASS verdict: de-emphasized, zero mint (spec §2.4, hv-register composition) */
+.dc-edge--pass { opacity: 0.82; }
+.dc-edge--pass .dc-edge-label, .dc-edge--pass .dc-stat-value, .dc-edge--pass .dc-edge-pick { color: var(--text-secondary); }
+
+/* ----------------------------------------------------------------------------
+   6. DATA PILL — LIVE / DELAYED / NO LIVE DATA (spec §2.5)
+      Shell = PRO badge geometry (C4, F:80) + C3 mono micro-label.
+   -------------------------------------------------------------------------- */
+
+.dc-datapill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; } /* badge geometry F:80 (side pad relaxed 6->8 for the dot — spec §2.5, composed); gap 6px = menu handle-row gap F:80 */
+
+.dc-datapill-dot { width: 6px; height: 6px; border-radius: 999px; flex-shrink: 0; } /* dot size = typing-dot F:32; material C5 (active rail F:22) */
+
+.dc-datapill--live { color: #45E0A8; border: 1px solid rgba(69,224,168,0.36); } /* text F:13; border alpha = frozen dark --ring F:19 */
+.theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid rgba(69,224,168,0.28); } /* text L:90; border alpha = frozen light --ring F:20 */
+.dc-datapill--live .dc-datapill-dot { background: #45E0A8; animation: dimeTyping 2s infinite; } /* dot = mint rail material F:22; pulse = dimeTyping F:31 at half tempo (spec §2.5) */
+.theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #0B0B0F; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
+@media (prefers-reduced-motion: reduce) { .dc-datapill--live .dc-datapill-dot { animation: none; opacity: 1; } } /* F:28 pattern */
+
+.dc-datapill--delayed { color: var(--text-secondary); } /* F:19/20 */
+.theme-dark .dc-datapill--delayed { border: 1px solid #34343E; } /* outline token D:86 */
+.theme-light .dc-datapill--delayed { border: 1px solid #D5D5DC; } /* outline token L:86 */
+.dc-datapill--delayed .dc-datapill-dot { background: transparent; border: 1px solid currentColor; box-sizing: border-box; } /* hollow = outline-vs-fill grammar (D:86 vs D:85) */
+
+.theme-dark .dc-datapill--none { color: #6A6A78; border: 1px dashed #34343E; } /* text = muted placeholder D:29; UNKNOWN-6: dashed = outline grammar interrupted, on D:86 outline color */
+.theme-light .dc-datapill--none { color: #9A9AA8; border: 1px dashed #D5D5DC; } /* text L:30; outline color L:86 */
+
+/* ----------------------------------------------------------------------------
+   7. ERROR CARD + RETRY / JUMP PILL / FOOTNOTES (spec §2.6, §1.b, §4)
+   -------------------------------------------------------------------------- */
+
+.dc-error-card { align-self: flex-start; max-width: 85%; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; } /* menu card incl. its 10px control-cluster padding D:76; 8px = CTA row gap D:84 */
+.theme-dark .dc-error-card { background: #1A1A22; border: 1px solid #2E2E38; } /* D:76 */
+.theme-light .dc-error-card { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 12px 32px rgba(11,11,15,0.18); } /* L:76 */
+.theme-dark .dc-error-label { color: #55555E; } /* recents-label D:64 */
+.theme-light .dc-error-label { color: #9A9AA8; } /* recents-label L:64 */
+.dc-error-message { font-size: 13px; color: var(--text-primary); padding: 0 2px; } /* row/menu-item text size F:21/D:89 */
+
+/* Retry + Jump pills = the frozen secondary pill ("Cancel Membership", D/L:86),
+   already extracted as .dc-btn-cancel; buttons reuse that class + .dc-hv2. */
+button.dc-btn-cancel { background: none; font-family: inherit; } /* button-element reset only; visual recipe stays D/L:86 */
+.dc-focusable:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* focus treatment F:24/F:44 */
+
+.dc-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 12px); white-space: nowrap; z-index: 2; } /* floated bottom-center 12px above the composer (spec §1.b) */
+
+.dc-footnote { font-size: 11px; } /* 11px muted footnote register D:75 */
+.theme-dark .dc-footnote { color: #6A6A78; } /* placeholder muted D:29 */
+.theme-light .dc-footnote { color: #9A9AA8; } /* placeholder muted L:30 */
+
+/* ----------------------------------------------------------------------------
+   8. DOCKED COMPOSER ZONE (spec §2.9) — the composer element itself is the
+      frozen one (.dc-composer, F:99); only its zone changes per state.
+   -------------------------------------------------------------------------- */
+
+.dc-composer-zone { position: relative; }
+.dc-main--conv .dc-composer-zone { padding: 20px 40px; display: flex; justify-content: center; } /* 40px = home-main gutter F:97; 20px = sidebar vertical pad F:54 */
+.dc-main--conv .dc-composer-zone::before { content: ""; position: absolute; left: 0; right: 0; top: -24px; height: 24px; pointer-events: none; } /* 24px top fade instead of a border — the frozen main pane has no horizontal rule (spec §2.9) */
+.theme-dark .dc-main--conv .dc-composer-zone::before { background: linear-gradient(to bottom, rgba(11,11,15,0), #0B0B0F); } /* fade to page bg D:46 */
+.theme-light .dc-main--conv .dc-composer-zone::before { background: linear-gradient(to bottom, rgba(255,255,255,0), #FFFFFF); } /* fade to page bg L:46 */
+
+.dc-composer { max-width: 100%; } /* app adaptation: never overflow a narrow pane; 680px otherwise (F:99) */
+.dc-send:disabled { cursor: default; } /* guard state; visual unchanged (frozen defines no disabled paint) */
+.dc-pill { border: none; font-family: inherit; text-align: left; } /* button-element reset for the interactive pills; visual recipe from frozen-tokens (D/L:107-109) */
+.dc-composer-plus { flex-shrink: 0; }
+
+/* ----------------------------------------------------------------------------
+   9. HOME->CONVERSATION TRANSITION — single 160ms beat (spec §3)
+      The ONLY easing the kit owns: 160ms cubic-bezier(0.16,1,0.3,1) (F:21).
+   -------------------------------------------------------------------------- */
+
+.dc-composer--flip { transition: transform 160ms cubic-bezier(0.16,1,0.3,1); will-change: transform; } /* F:21 curve; translateY only (spec §3.1) */
+.dc-ghost { position: fixed; margin: 0; opacity: 1; transition: opacity 160ms cubic-bezier(0.16,1,0.3,1); pointer-events: none; z-index: 3; } /* hero+pills fade out-of-flow (spec §3.2) */
+.dc-ghost--fading { opacity: 0; }
+.dc-fade-in { animation: dcFadeIn 160ms cubic-bezier(0.16,1,0.3,1); } /* user capsule + dots fade in at final position (spec §3.2) */
+@keyframes dcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-composer--flip { transition: none; }
+  .dc-ghost { transition: none; display: none; }
+  .dc-fade-in { animation: none; }
+} /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */

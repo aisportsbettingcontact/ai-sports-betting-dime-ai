@@ -139,6 +139,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
+  // Additive data-freshness declaration for the client DataPill. The live
+  // platform-context injection above is still a stub, so every turn honestly
+  // reports no live data. Older clients ignore unknown frame types.
+  send({ type: "meta", dataFreshness: "none" });
+
   const anthropic = createAnthropicClient();
   const abort = new AbortController();
   let aborted = false;
