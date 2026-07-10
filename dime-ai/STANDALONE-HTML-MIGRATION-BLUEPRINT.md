@@ -10,6 +10,12 @@
 > **Artifact:** `Dime_AI_Standalone.html` · 1,911,608 bytes ·
 > sha256 `5dca1193664cff40b49c3a2cae4714da6e106b9cf0362325b7f851271e917c1d`
 > **Date:** 2026-07-10 · **Target repo state:** branch `claude/dime-ai-html-migration-audit-ao6q81`
+>
+> **v2 — owner decisions applied (2026-07-10):** D1 **mint theme ships sitewide, non-negotiable,
+> per the HTML prototype** · D2 credit pricing IS being implemented · D3 Betting Splits stay
+> VSiN-sourced · D7 no NBA props for now · D8 credit **top-up packs ARE being implemented**.
+> This blueprint is a **write-only audit**: it maps and investigates; **nothing in it has been
+> executed** (no issues opened, no code changed). See §17 for the credits/packs/VSiN deep audit.
 
 ---
 
@@ -128,7 +134,7 @@ BottomNav, DeviceFrame + ReviewerControls}. All REBUILD as typed React component
 | Discord connect | boolean toggle + toast | real OAuth exists (`server/discordAuth.ts`, cols on `app_users`) | RETAIN repo |
 | Notifications toggle | boolean, off-law 0.2s motion | no user pref field exists | DEFER |
 | Odds format | state exists, **zero consumers — dead control** (all prices are strings) | `edgeUtils.ts:59` has converter; needs user pref + formatting layer | REBUILD or DEFER |
-| Theme dark/light/mint | body[data-theme]; mint phone-only, force-reset to dark off-phone | repo dark-locked (`App.tsx:207`); mint unsanctioned by MASTER | REBUILD dark/light; **mint = decision D1** |
+| Theme dark/light/mint | body[data-theme]; mint phone-only, force-reset to dark off-phone | repo dark-locked (`App.tsx:207`); MASTER defines dark+light | REBUILD all three — **D1 resolved: mint ships sitewide per prototype token block (:282–296); drop the phone-only gate/force-reset (dc-script.js:474,752,768); amend MASTER with a mint column** |
 | History drawer search/rename/delete | in-memory only | no `dime_conversations` table (planned, DIME-FEED-MIGRATION-DRAFT Phase D) | REBUILD (needs `db-push.yml`) |
 | Recent chats (6 canned titles) | click → canned convo | repo session-only `recentChats.ts`, inert rows | REBUILD on persistence |
 | Betting splits page | fully hardcoded (ATL 10–5 PIT; 6 bars; 2 ROI chips) | real: VSiN scraper → `games` cols → `BettingSplitsPanel` (tested: `server/splitsBar.test.ts`) | RETAIN data path; REBUILD skin |
@@ -306,7 +312,7 @@ survives.
 | Team logos, flags, profile JPEG, font files | REMOVE (repo equivalents exist) | — |
 | navIcons glyph shapes | EXTRACT (reference) | keep lucide set |
 | Token vocabulary (3 themes) | EXTRACT + correct per §7 | `client/src/styles/dime-tokens.css` (new shared layer feeding `.theme-*`) |
-| Mint theme | DEFER (decision D1) | — |
+| Mint theme (token block :282–296) | EXTRACT + correct (D1: sitewide, first-class) | third `data-theme` value; `--text3` alpha 0.52→**≥0.62** (3.47:1→4.64:1, computed); rest of block passes (`--text2` 6.24:1, ink-on-mint 11.68:1, splits dark-island cards 16.84:1); wordmark white-dot+hairline already matches MASTER coin-dot rule |
 | Wordmark markup | REMOVE (repo BrandHero is spec-correct) | shared `<DimeWordmark>` from repo code |
 | Chat chrome (identity fade, composer states, followups, actions row) | REBUILD | `dime-chat/` components |
 | Match card / prop cards | REBUILD (visual intent + ARIA sentences) | `dime-chat/cards/` on `[EDGE]`-grammar extension |
@@ -337,25 +343,41 @@ logic extracted; fixtures frozen; this blueprint committed. Exit: blueprint on b
 
 **W1 — Foundation (maps E2 shell + draft Phase A/B).** Unified `DimeShell` (desktop/tablet
 left sidebar, mobile header+bottom nav) at test route `/dime`; one theme mechanism
-(`data-theme` on `<html>`, ThemeProvider switchable dark/light, chat `.theme-*` bridged);
-shared corrected token layer; purple `--primary` fenced; legacy Inter/JetBrains dropped;
-`<DimeWordmark>` shared. Entry: D1–D2 decided. Exit: shell renders at `/dime` both themes;
-typecheck green; zero regressions on existing routes (visual baselines).
+(`data-theme` on `<html>`, ThemeProvider switchable **dark/light/mint** — mint is first-class
+sitewide per D1, typed `'dark'|'light'|'mint'`, prototype token block with the §11 contrast
+correction, no device gating); chat `.theme-*` bridged; shared corrected token layer
+(+ mint column added to MASTER.md); purple `--primary` fenced; legacy Inter/JetBrains dropped;
+`<DimeWordmark>` shared (mint = white dot + black hairline). Exit: shell renders at `/dime`
+in all THREE themes; typecheck green; zero regressions on existing routes (visual baselines).
 Rollback: test-route only — delete route.
 
 **W2 — Static visual parity (E3/E4 start, draft Phase C).** Chat chrome parity (placeholder
-copy, stop glyph, followup chip shells, actions row); splits reskin on real data (mint bars
-+ mono-label law, `width:%` bars, Money label, `/splits` self-link fix, ROI chips wired in
-splits mode if D3=yes); profile consolidation shell; mobile nav retokenized behind flag.
-Exit: side-by-side screenshot parity vs corrected spec at 390/768/1440 dark+light;
-`#39FF14` count in touched components = 0.
+copy, stop glyph, followup chip shells, actions row); splits reskin on real VSiN data per the
+§17-C field map (mint bars + mono-label law, `width:%` bars, Money label, `/splits` self-link
+fix, Book+Model columns + model-favored highlight + ROI chips recomputed via `edgeUtils` —
+prototype layout wins per D1/D3, values never from the artifact); profile consolidation shell;
+mobile nav retokenized behind flag. Exit: side-by-side screenshot parity vs corrected spec at
+390/768/1440 × **dark+light+mint**; `#39FF14` count in touched components = 0.
 
-**W3 — Production data integration (E5 + credits).** `dimeCredits` tRPC router (balance,
-activity from ledger); charge `/api/dime/chat` (D2 pricing) with 402 → pill states
+**W3 — Production data integration (E5 + credits + packs; D2/D8 confirmed).** Prereq:
+**auth unification** — `/api/dime/chat` authenticates via Manus OAuth (`sdk.authenticateRequest`,
+identity discarded) while the ledger keys on `app_users.id` via `app_session` JWT; the chat
+route must adopt the wc2026 JWT pattern before it can charge (§17-A gap 3). Then: `dimeCredits`
+tRPC router on `appUserProcedure` (balance, activity from ledger); charge `/api/dime/chat`
+(price per D2a) — port the wc2026 transaction pattern **with its three defects fixed**
+(abort-then-fallthrough double charge, virtual-first-row race, non-unique `request_id` index —
+§17-A risks); pre-flight 402 before `flushHeaders()`, new SSE frame
+`{type:"error", reason:"INSUFFICIENT_CREDITS"}` + `creditsCharged` on `done`; pill states
 (live/low/critical/zero/unlimited/loading/error as real derivations); credit pill + sheet;
+**top-up packs (D8)**: pack catalog (one-time prices), `mode:"payment"` embedded session
+builder, webhook `session.mode` branch + idempotent ledger credit (+N under the same
+`FOR UPDATE` pattern) + event-dedup store + `charge.refunded` clawback (§17-B — currently a
+pack purchase would be misfulfilled as a 31-day "monthly" subscription); monthly plan-credit
+grant mechanism (pricing page promises 1,000/3,000/8,000 — no schema/job exists);
 membership surface wiring (upgrade→CheckoutPage, cancel/resume); edit-name mutation;
-`dime_conversations` schema → **`db-push.yml` before code deploy**. Exit: credits
-decrement server-side and survive reload; Stripe flows pass `/stripe` review gates.
+`dime_conversations` schema → **`db-push.yml` before code deploy**. Exit: credits decrement
+server-side and survive reload; pack purchase credits exactly once under webhook replay;
+Stripe flows pass `/stripe` review gates.
 
 **W4 — Interaction parity (E3 completion).** Structured match/prop cards from `[EDGE]`
 grammar v2 (MLB + WC2026); history drawer (search/rename/two-tap delete) on persistence;
@@ -376,34 +398,38 @@ Dime shell; legacy accents gone from user paths.
 
 ---
 
-## 13. Decision Register (blockers for their waves)
+## 13. Decision Register — owner rulings applied 2026-07-10
 
-| # | Decision | Options / recommendation |
+| # | Decision | Status |
 |---|---|---|
-| D1 | Mint theme | MASTER defines dark+light only; prototype's mint is phone-only and unsanctioned. **Recommend: DEFER mint; ship dark/light** (amend MASTER first if adopted) |
-| D2 | Credit pricing | Prototype 40 cr/analysis vs live WC2026 route 1 cr; and whether `/api/dime/chat` charges. **Recommend: unify on ledger with per-route cost config; product sets price** |
-| D3 | Model prices on Betting Splits page | Page header intentionally hides model odds ("use Model Projections"); prototype shows Book+Model+highlight. Product call |
-| D4 | Odds-format preference | Ship in W3 (converter exists) or DEFER |
-| D5 | MASTER amendments | Add `--scrim/--track/--on-mint/--sp-*` etc. with corrected values (recommended before W1) |
-| D6 | Saved analyses | New table + router (W4) or DEFER to E8 |
-| D7 | NBA props | No data source exists. DEFER until an NBA pipeline exists (do not fake) |
-| D8 | Credit top-up packs | Prototype "+1,000 credits" implies one-time purchases; `server/stripe/products.ts` has subscriptions only. Needs Stripe product decision before the sheet's "Add credits" CTA is real |
+| D1 | Mint theme | **RESOLVED: ships sitewide, non-negotiable, per the HTML prototype token block** (:282–296). Prototype's phone-only gate + force-reset-to-dark are dropped; mint is a first-class `data-theme` on all devices/surfaces. MASTER.md gains a mint column (values = prototype block + `--text3` alpha ≥0.62 contrast correction). Sub-item **D1a (open)**: whether marketing landing (dark-only today, outside prototype scope) also gets mint |
+| D2 | Credit pricing | **RESOLVED: implementing.** Sub-item **D2a (open)**: price point — prototype shows 40 cr/analysis; live wc2026 route charges 1; unify on ledger with per-route cost config |
+| D3 | Betting Splits source | **RESOLVED: VSiN** (already the live pipeline — 15-min cron, §17-C field map). Prototype layout (Book+Model columns, model-favored highlight, ROI chips) renders over VSiN splits + `games` model columns via `edgeUtils` recomputation |
+| D4 | Odds-format preference | Open — ship in W3 (converter exists at `edgeUtils.ts:59`) or DEFER |
+| D5 | MASTER amendments | Required before W1: mint column + `--scrim/--track/--on-mint/--sp-*` etc. with corrected values |
+| D6 | Saved analyses | Open — new table + router (W4) or DEFER to E8 |
+| D7 | NBA props | **RESOLVED: none for now.** DEFER until an NBA pipeline exists (do not fake) |
+| D8 | Credit top-up packs | **RESOLVED: implementing.** Requires the full §17-B gap set: one-time price catalog, `mode:"payment"` session builder, webhook mode branch + idempotent fulfillment + dedup store, refund clawback. **Do not ship pack prices before the webhook branch** (misfulfillment walk-through §17-B) |
+| D9 | Charge policy on aborted streams | Open (new, from §17-A risk 1): wc2026 charges full credit when the client disconnects mid-answer; decide charge/no-charge/partial before porting to chat |
 
 ---
 
-## 14. /gh-fix Work Queue (issue-ready; one worktree/PR each)
+## 14. Mapped Work Queue — **NOT EXECUTED** (write-only audit)
 
-Create each as a GitHub issue, then run `/gh-fix <issue#>`. Ordered by wave.
+Issue-ready specifications, one worktree/PR each when the owner gives the go
+(`/gh-fix <issue#>` after issues are opened). Nothing below has been started. Ordered by wave.
 
 | # | Title | Files | Acceptance |
 |---|---|---|---|
-| Q1 (W1) | Unify theme mechanism + switchable dark/light provider | `ThemeContext.tsx`, `App.tsx:207`, `index.html:2`, `dime-chat/frozen-tokens.css`, `DimeChatPage.tsx:799` | one `data-theme` source; chat + shell follow it; no visual regression dark |
-| Q2 (W1) | Shared corrected Dime token layer (light canvas `#FFFFFF`, mint-fill/text split, text tiers incl. `--text-body`) | new `client/src/styles/dime-tokens.css`; MASTER.md amendment (D5) | tokens match MASTER table; contrast checks ≥4.5:1 scripted |
+| Q1 (W1) | Unify theme mechanism + switchable **dark/light/mint** provider (D1: mint sitewide, typed `'dark'\|'light'\|'mint'`, no device gating) | `ThemeContext.tsx`, `App.tsx:207`, `index.html:2`, `dime-chat/frozen-tokens.css` (+ new `.theme-mint` block), `DimeChatPage.tsx:799` | one `data-theme` source; chat + shell follow it in all three themes; no visual regression dark |
+| Q2 (W1) | Shared corrected Dime token layer (light canvas `#FFFFFF`, mint-fill/text split, text tiers incl. `--text-body`) + **mint theme block from prototype :282–296 with `--text3` alpha ≥0.62** | new `client/src/styles/dime-tokens.css`; MASTER.md amendment (D5: mint column) | tokens match amended MASTER; contrast script ≥4.5:1 across all three themes |
 | Q3 (W1) | `DimeShell` at `/dime` test route (sidebar/tablet/mobile chrome, wordmark shared) | new `client/src/components/dime-shell/`; `App.tsx` route | shell renders 390/768/1440; existing routes untouched |
 | Q4 (W1) | Fence purple shadcn vars + drop legacy Inter/JetBrains load | `index.css:125-156`, `client/index.html:20` | no oklch purple reachable under Dime surfaces; fonts request count −1 |
-| Q5 (W2) | Betting Splits reskin per blueprint §10/§11 + `/splits` self-link fix + Money/Handle unification + proportional bars | `BettingSplits.tsx`, `BettingSplitsPanel.tsx`, `GameCard.tsx` (splits-mode ROI chips per D3) | bars width:% (97/3 renders 97/3); tab stays on page; `#39FF14`=0 in files |
+| Q5 (W2) | Betting Splits reskin per §10/§11/§17-C: prototype layout (Book+Model columns, model-favored highlight via `edgeUtils`, ROI chips) over VSiN data + `/splits` self-link fix + Money/Handle unification + proportional bars + replicate the 0%/0% guard for Total/ML (only spread is server-guarded) | `BettingSplits.tsx`, `BettingSplitsPanel.tsx`, `GameCard.tsx`, `edgeUtils.ts` (read-only reuse) | bars width:% (97/3 renders 97/3); tab stays on page; `#39FF14`=0 in files; 0/0 markets show "not yet available", never 100% bars |
 | Q6 (W2) | Mobile bottom nav: retokenize `#39FF14/#000000` → tokens; prep public flag | `MobileOwnerBottomTabs.tsx`, `config.ts` | matches prototype semantics (mint active, canvas bg, no dot); flag still off |
-| Q7 (W3) | `dimeCredits` tRPC router + charge `/api/dime/chat` + 402 path | `server/routers.ts`, `server/dime-chat.route.ts`, reuse `dime-wc2026.route.ts` ledger pattern | balance survives reload; concurrent-request test; 402 on zero |
+| Q7 (W3) | Chat auth unification: `/api/dime/chat` adopts the `app_session` JWT pattern (identity captured) — prerequisite for any charge | `server/dime-chat.route.ts:92` (replace `sdk.authenticateRequest`), pattern from `dime-wc2026.route.ts:85-109` | chat rejects Manus-only sessions consistently; user_id available to metering |
+| Q7b (W3) | `dimeCredits` tRPC router (balance + activity on `appUserProcedure`) + charge `/api/dime/chat` per D2a + pre-flush 402 + `INSUFFICIENT_CREDITS` SSE frame + `creditsCharged` on done — fixing the three wc2026 defects (abort fallthrough double-charge per D9, virtual-first-row race via seed row on entitlement grant, unique index on `(request_id, reason)`) | `server/routers.ts`, `server/dime-chat.route.ts`, `drizzle/dime.schema.ts:66` | balance survives reload; concurrent first-request test; abort test charges per D9 policy; replayed request_id cannot double-insert |
+| Q7c (W3) | Plan-credit grant mechanism: schema for monthly allotments (pricing page promises 1,000/3,000/8,000), grant job/webhook hook writing +N ledger rows, wire `dime_user_entitlements` (currently dead: no reader/writer) | `drizzle/dime.schema.ts`, `server/stripeWebhook.ts`, new cron or invoice.paid hook — **schema via `db-push.yml` first** | new subscriber receives plan credits exactly once per cycle; renewal grants on `invoice.paid` |
 | Q8 (W3) | Credit pill + credits sheet (all 7 states server-derived) | `dime-chat/`, shell header | states driven by real balance; a11y labels per prototype |
 | Q9 (W3) | Profile consolidation (merge ManageAccount, edit-name mutation, logout confirm, theme picker) | `Profile.tsx`, `ManageAccount.tsx`, `server/routers/appUsers.ts` | cancel/resume/upgrade live; name persists; confirm dialog focus-trapped |
 | Q10 (W3) | `dime_conversations` schema + router (**db-push.yml first**) | `drizzle/dime.schema.ts`, new router | CRUD + list-by-user; RLS/user scoping tested |
@@ -413,14 +439,18 @@ Create each as a GitHub issue, then run `/gh-fix <issue#>`. Ordered by wave.
 | Q14 (W5) | Focus-trapped `<DimeSheet>/<DimeDialog>` primitives + aria-live stream region | shared components | Escape/restore/initial-focus tests; SR announces stream completion |
 | Q15 (W5) | axe + visual-regression CI gates for Dime surfaces | `.github/workflows/ci.yml`, Playwright | axe zero critical; baselines at 6 viewports × 2 themes |
 | Q16 (W2, sweep) | `#39FF14` → mint across feed components (252 occurrences, batched per component per draft Phase C) | GameCard, OddsHistoryPanel, MlbPropsCard, BetTracker*, Mobile*, Calendar* | grep count trends to 0; edge math untouched |
+| Q17 (W3, D8) | Credit-pack catalog: one-time products/prices (env-var price IDs, `pack_size` credits), extend `zodPlanId`-style validation with pack ids | `server/stripe/products.ts`, `server/routers/stripe.ts:40` | packs listed; subscriptions unaffected |
+| Q18 (W3, D8) | Pack checkout: `mode:"payment"` embedded session builder (login required or `customer_creation:"always"`; `metadata:{pack_id,pack_size,user_id}`) + CheckoutPage pack path (Elements plumbing is mode-agnostic and reusable) | `server/routers/stripe.ts` (new builder — do NOT reuse subscription builders, `mode` is hardcoded at :144/:259), `client/src/pages/dime/CheckoutPage.tsx` | pack session creates; no `subscription_data` present; anonymous purchase impossible or fully fulfillable |
+| Q19 (W3, D8) | Webhook pack fulfillment: branch on `session.mode === "payment"` **before** plan resolution (today a pack would default to plan "monthly" and grant 31-day access with zero credits); idempotent `+N` ledger insert under `FOR UPDATE` with event-dedup (unique key on event/session id); `charge.refunded` clawback (−N row, floor at spent) | `server/stripeWebhook.ts:208-293` (mode branch), `drizzle/dime.schema.ts` (dedup store — `db-push.yml` first) | replayed `checkout.session.completed` credits once; subscription path regression-tested; refund writes clawback row |
+| Q20 (W2) | Splits freshness: add `splitsUpdatedAt` (or expose scrape timestamp) so the 15-min VSiN cadence is visible; surface "as of" on the splits page | `server/vsinAutoRefresh.ts`, `drizzle/schema.ts` (`db-push.yml` first), `BettingSplitsPanel.tsx` | stale (>30 min) splits visibly flagged |
 
 ---
 
 ## 15. Acceptance & Parity Test Matrix (per wave gates)
 
-- **Visual:** Playwright baselines at 360×780, 390×844, 430×932, 768×1024, 1032×1376, 1366×768, 1440×900, 1920×1080 × dark+light × chat-home/conversation/splits/profile/sheets.
+- **Visual:** Playwright baselines at 360×780, 390×844, 430×932, 768×1024, 1032×1376, 1366×768, 1440×900, 1920×1080 × **dark+light+mint** × chat-home/conversation/splits/profile/sheets.
 - **Interaction:** send→stream→stop→regenerate; Enter vs Shift+Enter; followup chip → send; history search/rename/delete; pill → sheet; cancel/resume membership; theme switch persists.
-- **Data:** credits decrement server-side (parallel-request race test); 402 → zero-state UI; splits %s sum to 100 and bar widths equal data; edge values match `edgeUtils` output (never artifact numbers).
+- **Data:** credits decrement server-side (parallel-request race test incl. two concurrent FIRST requests); 402 → zero-state UI; abort-mid-stream charge behavior matches D9 policy; pack purchase credits exactly once under simulated Stripe event replay; refund writes clawback; subscription webhook path regression-green after the mode branch lands; splits %s sum to 100 and bar widths equal data; 0%/0% Total/ML markets render "not yet available"; edge/ROI values match `edgeUtils` output (never artifact numbers).
 - **A11y:** keyboard-only full walkthrough; focus trap + Escape + restore on all dialogs; stream announced via live region; contrast script ≥4.5:1 on all text tokens; 200% zoom no clipping; reduced-motion disables all animation.
 - **Deploy:** typecheck (`npx tsc --noEmit`), Vitest (CI secrets), `deploy-smoke.yml` green on Railway+Vercel preview before flag flip; rollback = release-flag revert; schema rollbacks never required by UI waves (additive only).
 
@@ -428,11 +458,18 @@ Create each as a GitHub issue, then run `/gh-fix <issue#>`. Ordered by wave.
 
 ## 16. Implementation prompt for the executing Claude Code session
 
+> [This prompt is a deliverable for a FUTURE session. It has NOT been executed; the owner
+> must explicitly start it.]
+>
 > Execute the Dime AI standalone-HTML migration per
 > `dime-ai/STANDALONE-HTML-MIGRATION-BLUEPRINT.md` (this file — source of truth; do not
-> re-audit the artifact). Work wave by wave (W1→W6, §12), one `/gh-fix`-style
-> issue/worktree/PR per queue item (§14), in queue order, respecting decision gates (§13)
-> — stop and ask if a gated decision (D1–D8) is unresolved. Hard rules: strict TypeScript
+> re-audit the artifact). Resolved rulings are binding: mint theme sitewide per the
+> prototype (D1), credit pricing on (D2), VSiN splits (D3), no NBA props (D7), top-up
+> packs on (D8). Work wave by wave (W1→W6, §12), one `/gh-fix`-style issue/worktree/PR
+> per queue item (§14), in queue order, respecting the still-open gates (D1a, D2a, D4,
+> D6, D9 — stop and ask). Sequencing law from §17: webhook `session.mode` branch (Q19)
+> lands BEFORE any pack price exists in Stripe; chat auth unification (Q7) lands before
+> any chat charge (Q7b). Hard rules: strict TypeScript
 > (`npx tsc --noEmit` green before every PR); Dime brand law
 > (`design-system/dime-ai/MASTER.md` + pages overrides) beats the prototype wherever they
 > conflict (§7 corrections are mandatory); never port the artifact's bundler, Babel,
@@ -451,6 +488,126 @@ Create each as a GitHub issue, then run `/gh-fix <issue#>`. Ordered by wave.
 
 ---
 
+## 17. Deep Audit Addendum — Credits, Top-Up Packs, VSiN (triggered by D2/D3/D8)
+
+Read-only investigation of the exact server paths the resolved decisions depend on.
+
+### 17-A. Credit metering path
+
+**Working reference — `server/dime-wc2026.route.ts`:** `CREDITS_PER_ANSWER=1` (:42);
+auth = `app_session` JWT + tokenVersion vs DB (:85-109); entitlement check reads
+**app_users** (`hasAccess`/`expiryDate`/owner-admin bypass), NOT `dime_user_entitlements`
+(:112-121); balance = latest `dime_credit_ledger.balance_after` with **virtual default 100**
+(COALESCE fallback, never seeded; :124-136); pre-flight 402 JSON with
+`reason:"INSUFFICIENT_CREDITS"` + balance (:415-425); atomic deduction in a
+`db.transaction` with `... FOR UPDATE` re-check, insert `delta_credits=-N, balance_after,
+reason='DIME_WC2026_ANSWER'` (:154-184); charges **post-stream**, only when
+`responseMode==="ANSWER"` (:685-698); audit rows in `dime_request_audit` (unique
+`request_id`, dime.schema.ts:89) + `dime_response_audit.credits_charged`.
+
+**Ledger schema (`drizzle/dime.schema.ts`):** `dime_credit_ledger` (:53-68) —
+user_id/request_id/delta_credits/balance_after/reason; indexes `idx_credit_user`,
+`idx_credit_request` **both non-unique** (:64-67). `dime_user_entitlements` (:161-177) —
+unique user_id, status/tier/source/dates; **no quota/unlimited/allotment columns and zero
+runtime readers or writers — the table is dead code today.**
+
+**Chat route (`server/dime-chat.route.ts`):** zero credit code. Auth is
+`sdk.authenticateRequest(req)` (:92) = **Manus OAuth** (`users` table by openId,
+`server/_core/sdk.ts:319-339`) — a *different identity domain* than the ledger's
+`app_users.id`, and the result is discarded (user never captured). Charge hook must sit
+between auth and `res.flushHeaders()` (:139-142) for a plain 402; after flush, only SSE
+frames exist (`{type: meta|delta|error|done}`, :151/:197/:211) — an
+`INSUFFICIENT_CREDITS` frame type does not exist yet. No tRPC procedure anywhere reads the
+ledger; the only balance ever surfaced is the wc2026 402 body. A new `dimeCredits` router
+belongs on `appUserProcedure` (`server/routers/appUsers.ts:199-240`) — same identity
+domain as the ledger.
+
+**GAPS:** (1) no metering on chat; (2) no balance/activity API or UI; (3) chat↔ledger auth
+mismatch; (4) `dime_user_entitlements` dead + pricing page promises 1,000/3,000/8,000
+monthly credits (`CheckoutPage.tsx:71,94,109`) with **no schema or grant mechanism**;
+(5) no monthly grant/reset job (default-100 is a SQL fallback in two places);
+(6) no SSE credit frames.
+
+**RISKS (must be fixed, not ported):**
+1. **Abort double-charge:** on client disconnect the catch block no-ops without returning
+   (:650-675) → falls through to the deduction (STEP 13) → full charge for an aborted
+   answer; a client retry re-charges. Policy = open decision D9.
+2. **Virtual-first-row race:** `FOR UPDATE` locks no row when the user has zero ledger
+   rows — two concurrent first requests both read the virtual 100 and both write
+   `balance_after=99` (forked history). Fix: seed a grant row on entitlement creation.
+3. **Non-unique `idx_credit_request`** — DB permits duplicate ledger rows per request_id;
+   the unique guard exists only on the *audit* table.
+4. Check-then-act spans the whole Claude call — race loser gets a free answer (caught,
+   returns −1) but model tokens were spent.
+
+### 17-B. Stripe top-up packs — gap analysis (D8)
+
+**Catalog (`server/stripe/products.ts`):** five subscription plans only (monthly $99.99 /
+annual $499.99 with hardcoded live-price fallbacks :45/:58; pro $99 / sharp $249 /
+operator $499 env-only). Every plan has an `interval`; `normalizePlanId` **defaults
+unknown ids to "monthly"** (:111-114). No one-time products.
+
+**Webhook (`server/stripeWebhook.ts:203-380`):** handles checkout.session.completed
+(:208-293), subscription created/updated (:295-321), deleted (:323-331), invoice.paid
+renewal (:333-353), invoice.payment_failed log-only (:355-361),
+**payment_intent.succeeded/failed log-only** (:363-375). `checkout.session.completed`
+**never reads `session.mode`.**
+
+**Misfulfillment walk-through (why Q19 precedes any pack price):** a `mode:"payment"`
+pack session today → `payment_status==="paid"` passes → pack price not in plan map →
+plan **defaults to "monthly"** → `subscription:null` → `stripeSubscriptionId=""` → if
+customer+`client_reference_id` exist, `grantUserAccess` sets `hasAccess=true`,
+`expiryDate=now+31d`, `stripePlanId="monthly"` — **a one-time pack buys a month of
+subscription access and grants zero credits**; if anonymous, it dead-ends at the
+no-customer check (:242) or mints a pending *subscriber* account (:256-289). No webhook
+path writes `dime_credit_ledger`.
+
+**Idempotency:** endpoint 200s before async processing (:417-421); **no processed-events
+store exists** (grep: none); `grantUserAccess` is replay-safe (overwrite) but a naive
+ledger `+N` insert is not — Stripe retries would double-credit. **Refunds:** no
+`charge.refunded`/dispute handling anywhere → no clawback path.
+
+**Reusable:** `CheckoutPage.tsx` Payment-Element/Appearance plumbing (:155-341) is
+mode-agnostic; both session builders are NOT (`mode:"subscription"` hardcoded,
+`server/routers/stripe.ts:144/:259-260`; `zodPlanId` enum blocks pack ids, :40).
+
+### 17-C. VSiN splits field map (D3)
+
+**Scraper → DB:** `server/vsinBettingSplitsScraper.ts` extracts six away-side 0-100
+percentages per game — spread bets/money (td[4]/td[3]), total-over bets/money
+(td[7]/td[6]), ML-away bets/money (td[10]/td[9]); "Money"=handle%, "Tickets"=bets%.
+Written by `server/vsinAutoRefresh.ts` (NBA :316-322, NHL :486-492, MLB :753-764) into
+`games.{spreadAway,totalOver,mlAway}{Bets,Money}Pct` (schema.ts:216-226); MLB also mirrors
+spread→`rlAway*Pct` (:349-351) — **columns no client code reads**. Home/under side is never
+stored; always derived `100−x` at render (BettingSplitsPanel.tsx:325-327,541-543) so bars
+sum to 100 by construction. Swapped team order flips via `100−x`
+(vsinAutoRefresh.ts:722-733). **0%/0% unopened-market guard exists server-side for
+spread/run-line only** (:196-199,:230-233,:742-752); Total/ML rely on the client `bothZero`
+check — a new UI must replicate it or render a false 100% bar. Cadence: GitHub cron every
+15 min (`cron-vsin-odds.yml:21`) → `POST /api/cron/vsin-odds` under run-lock; history
+snapshots to `odds_history` (schema.ts:887-896).
+
+**Prototype-unit sources:** Tickets/Money bars ← the six `games` columns (+`100−x`);
+Book prices ← Action Network/MetaBet ingestion into the same `games` row (schema.ts:194-265,
+340-347 — the scraper deliberately ignores VSiN's own price cells); Model prices ←
+`games.model{Away,Home}ML/modelTotal/model*SpreadOdds/model{Over,Under}Odds`
+(schema.ts:200,267-285,374-376); model-favored highlight ← client
+`calculateEdge ≥ 1.5pp` (edgeUtils.ts:79-84,141); ROI chips ← `calculateRoi`/`formatRoi`
+(edgeUtils.ts:191-205,236-240); freshness gate ← `modelRunAt` (schema.ts:293).
+**No source exists for:** stored home/under splits, stored edge/ROI/verdict (all
+client-computed), and any **splits timestamp** (`splitsUpdatedAt` missing → staleness
+invisible; Q20).
+
+**RISKS:** VSiN HTML-structure coupling (11-td contract) silently nulls splits on markup
+change; unresolved team slugs drop games silently (SPLITS_HEALTH log is the only
+detector); cron is best-effort UTC — lag has no user-facing signal.
+
+---
+
 *Verification record: all quantitative claims in this document were reproduced by command
-(hash, asset counts/sizes, contrast ratios 2.38/3.24, edge recomputations, `#39FF14`=252,
-font URL weights, `/splits` redirect, theme lock) in the audit session on 2026-07-10.*
+(hash, asset counts/sizes, contrast ratios 2.38/3.24 and mint-correction threshold
+alpha≥0.62→4.64:1, edge recomputations, `#39FF14`=252, font URL weights, `/splits`
+redirect, theme lock) in the audit session on 2026-07-10. §17 claims carry inline
+file:line citations gathered by a read-only investigation agent in the same session.
+This document is the audit deliverable; no repo code was modified and no issues/PRs
+were created.*
