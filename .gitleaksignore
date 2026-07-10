@@ -1,0 +1,11 @@
+# Verified non-secrets in historical audit documentation (SEC-006, commit e7fa6482,
+# 2026-07-08). These are the audit's own worksheet records ABOUT credentials, not
+# credentials: an expired STS-temporary key ID (expired 2026-07-09T10:25:59Z), a
+# constructed sk_live_[REDACTED] placeholder from pre-commit-hook test docs, and a
+# third-party (RotoGrinders) Stripe customer ID captured in page data. The files were
+# already removed from the working tree; these fingerprints stop gitleaks from
+# re-failing every push to main on the immutable history.
+e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-tasks-HIJ-addendum.md:generic-api-key:86
+e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verification-worksheet.md:aws-access-token:44
+e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verification-worksheet.md:aws-access-token:128
+e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-corrections-1-2-addendum.md:generic-api-key:54
