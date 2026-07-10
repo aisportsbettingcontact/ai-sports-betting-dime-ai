@@ -21,7 +21,7 @@
 .theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #0B0B0F; } /* D:53 */
 .theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
 
-.dc-sidebar { height: 100%; min-height: 0; } /* fill the shell; frozen column behavior D/L:54 */
+.dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
 .dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
 
 /* ----------------------------------------------------------------------------
@@ -29,7 +29,7 @@
       Home state = the frozen .home-main verbatim (.dc-main, F:97).
    -------------------------------------------------------------------------- */
 
-.dc-main { min-width: 0; position: relative; height: 100%; } /* container for FLIP ghost overlay (spec §3.2) */
+.dc-main { min-width: 0; min-height: 0; position: relative; } /* R2: no height declaration — frozen main pane sizes by flex stretch (F:97 inside F:53); position context for the FLIP ghost overlay (spec §3.2); min-height 0 so the conv-state scroller can shrink */
 .dc-main--conv { justify-content: flex-start; align-items: stretch; gap: 0; padding: 0; } /* conversation replaces the centered stack; 680px column + 40px gutters persist below (spec §2) */
 
 /* Scroller: main pane minus the docked composer zone (spec §2.1) */

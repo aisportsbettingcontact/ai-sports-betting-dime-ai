@@ -32,7 +32,12 @@
       this mirrors the frozen environment, it does not restyle anything.
    -------------------------------------------------------------------------- */
 
-.dc-page, .dc-page *, .dc-page *::before, .dc-page *::after { box-sizing: content-box; line-height: normal; } /* frozen UA default environment — F1/F2 */
+.dc-page, .dc-page *, .dc-page *::before, .dc-page *::after { box-sizing: content-box; } /* frozen UA default environment — F1 */
+/* Line-height resets on the page ROOT only (R1): the frozen environment is UA
+   `normal` at the root with children INHERITING explicit ancestor values
+   (e.g. .dc-hero's line-height: 1 into its spans). A blanket descendant rule
+   would pin children to `normal` and defeat that inheritance. */
+.dc-page { line-height: normal; } /* frozen UA default environment — F2/R1 */
 /* UA stylesheets give form controls border-box by default (html.css) — the
    frozen <button>/<input> elements rendered border-box; restore that too. */
 .dc-page button, .dc-page input, .dc-page select, .dc-page textarea { box-sizing: border-box; } /* frozen UA default environment — F1 */
