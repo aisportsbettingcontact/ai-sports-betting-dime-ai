@@ -17,7 +17,10 @@
 import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import crypto from "crypto";
-import { sdk } from "./_core/sdk";
+import { parse as parseCookieHeader } from "cookie";
+import { jwtVerify } from "jose";
+import { ENV } from "./_core/env";
+import { getAppUserById } from "./db";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import {
   DIME_CHAT_MAX_TOKENS,
@@ -40,6 +43,47 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------
+// Auth — app_session JWT (Manus OAuth has no Railway-reachable server)
+// ---------------------------------------------------------------
+async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
+  const cookies = parseCookieHeader(req.headers.cookie ?? "");
+  const token = cookies["app_session"];
+  if (!token) return null;
+  try {
+    const secret = new TextEncoder().encode(ENV.cookieSecret);
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.type !== "app_user") return null;
+
+    // SEC-001: tokenVersion check — reject invalidated sessions
+    const userId = Number(payload.sub);
+    const tv = payload.tv as number | null | undefined;
+    if (tv !== null && tv !== undefined) {
+      const user = await getAppUserById(userId);
+      if (user && user.tokenVersion !== tv) {
+        console.log(`[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+        return null;
+      }
+    }
+
+    return { userId, role: payload.role as string };
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------
+// Entitlement — require an active paid subscription (or owner role)
+// before any Anthropic call or SSE stream begins. Evaluated per-request
+// against the DB (not the JWT), so a revoked subscriber loses chat access
+// immediately instead of waiting out their JWT expiry.
+// ---------------------------------------------------------------
+async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
+  if (role === "owner") return true;
+  const user = await getAppUserById(userId);
+  return !!user?.hasAccess;
+}
+
+// ---------------------------------------------------------------
 
 const dimeChatRouter = Router();
 
@@ -48,15 +92,30 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   const startTime = Date.now();
 
   // --- A2: Backend auth gate — reject unauthenticated requests before any Claude call ---
-  try {
-    await sdk.authenticateRequest(req);
-  } catch (authErr) {
+  const authedUser = await authenticateDimeRequest(req);
+  if (!authedUser) {
     dimeLog("dime.chat.auth_rejected", requestId, {
       errorClass: "AuthenticationError",
       statusCode: 401,
       detail: "Unauthenticated request rejected",
     });
     res.status(401).json({ error: "Authentication required. Please log in." });
+    return;
+  }
+
+  // --- SEC-CRIT: Entitlement gate — reject authenticated-but-unentitled requests
+  // before any Claude call or SSE stream. Closes the free-tier billing leak and
+  // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
+  // bumping tokenVersion, so this must be checked per-request, not just at login). ---
+  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
+  if (!entitled) {
+    dimeLog("dime.chat.entitlement_rejected", requestId, {
+      errorClass: "AuthorizationError",
+      statusCode: 403,
+      userId: authedUser.userId,
+      detail: "Active subscription required",
+    });
+    res.status(403).json({ error: "Active subscription required." });
     return;
   }
 

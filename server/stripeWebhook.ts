@@ -58,16 +58,26 @@ async function grantUserAccess(params: {
 }): Promise<void> {
   const tag = "[Stripe][DB][grantUserAccess]";
   const db = await getDb();
-  if (!db) { console.error(`${tag} [VERIFY] FAIL — database not available`); return; }
+  if (!db) {
+    console.error(`${tag} [VERIFY] FAIL — database not available`);
+    throw new Error(`${tag} database not available — cannot grant access userId=${params.userId}`);
+  }
 
   console.log(`${tag} [STEP] Granting access userId=${params.userId} planId=${params.planId} expiryMs=${params.expiryMs}`);
-  await db.update(appUsers).set({
+  const updateValues: Partial<typeof appUsers.$inferInsert> = {
     hasAccess: true,
     expiryDate: params.expiryMs,
     stripeCustomerId: params.stripeCustomerId,
-    stripeSubscriptionId: params.stripeSubscriptionId,
     stripePlanId: params.planId,
-  }).where(eq(appUsers.id, params.userId));
+  };
+  // An empty/absent subscription id (e.g. a mode:"payment" session with no
+  // subscription attached) must never clobber a real subscriber's existing id.
+  if (params.stripeSubscriptionId) {
+    updateValues.stripeSubscriptionId = params.stripeSubscriptionId;
+  } else {
+    console.log(`${tag} [STATE] No stripeSubscriptionId provided — leaving existing value untouched userId=${params.userId}`);
+  }
+  await db.update(appUsers).set(updateValues).where(eq(appUsers.id, params.userId));
 
   invalidateAppUserByIdCache(params.userId);
   invalidateCachedAppUser(params.userId);
@@ -130,7 +140,10 @@ async function createPendingUserFromCheckout(params: {
 }): Promise<number | null> {
   const tag = "[Stripe][DB][createPendingUser]";
   const db = await getDb();
-  if (!db) { console.error(`${tag} [VERIFY] FAIL — database not available`); return null; }
+  if (!db) {
+    console.error(`${tag} [VERIFY] FAIL — database not available`);
+    throw new Error(`${tag} database not available — cannot create pending user sessionId=${params.sessionId}`);
+  }
 
   // [STEP 1] Sanitize username
   let username = (params.desiredUsername ?? "").trim().replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 64);
@@ -412,6 +425,30 @@ export function registerStripeWebhookRoute(app: Express): void {
       if (event.id.startsWith("evt_test_")) {
         console.log(`${tag} Test event — returning verification response`);
         return res.status(200).json({ verified: true });
+      }
+
+      // Events that GRANT ACCESS must not be silently swallowed on a DB outage
+      // or a failed grant — Stripe only redelivers on a non-2xx response, so
+      // these are awaited and a failure yields a 5xx instead of the default
+      // 200 so Stripe retries. Every other event type (including unknown
+      // types) keeps the original fire-and-forget 200 behavior unchanged.
+      const GRANT_EVENT_TYPES = new Set<string>([
+        "checkout.session.completed",
+        "invoice.paid",
+        "customer.subscription.created",
+        "customer.subscription.updated",
+      ]);
+
+      if (GRANT_EVENT_TYPES.has(event.type)) {
+        processWebhookEvent(event).then(
+          () => res.status(200).json({ received: true }),
+          (err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.error(`${tag} Grant processing FAILED for ${event.id} (${event.type}) — responding 5xx so Stripe retries: ${msg}`);
+            res.status(500).json({ error: "processing_failed" });
+          }
+        );
+        return;
       }
 
       res.status(200).json({ received: true });

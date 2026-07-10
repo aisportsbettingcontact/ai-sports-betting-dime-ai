@@ -11,7 +11,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { warmUpRenderer, closeSplitsRenderer } from "./renderSplitsCard.js";
+import { warmUpRenderer, closeSplitsRenderer, CHROMIUM_EXECUTABLE_PATH } from "./renderSplitsCard.js";
 import { chromium, type Browser, type Page } from "playwright";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +46,10 @@ async function getBrowser(): Promise<Browser> {
   const t0 = Date.now();
   _browser = await chromium.launch({
     headless: true,
+    // Same resolution as renderSplitsCard.ts's getBrowser(): in the container
+    // this is the apt-installed /usr/bin/chromium (via PLAYWRIGHT_CHROMIUM_PATH);
+    // undefined in local dev, so Playwright resolves its own bundled browser.
+    ...(CHROMIUM_EXECUTABLE_PATH ? { executablePath: CHROMIUM_EXECUTABLE_PATH } : {}),
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",

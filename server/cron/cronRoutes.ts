@@ -17,6 +17,7 @@
  * SCOPE (first pass — "critical data-freshness first"):
  *   - POST /api/cron/vsin-odds → runVsinRefresh()      (NBA/NHL/MLB VSiN + AN odds)
  *   - POST /api/cron/scores    → refreshAllScoresNow()  (live score refresh)
+ *   - POST /api/cron/mlb-cycle → runMlbCycleOnce()      (MLB lineups/K-props/backtest writes)
  *   - GET  /api/cron/status    → run-lock state for all jobs (observability)
  *
  * DELIBERATELY NOT wired here: MLB model sync. runMlbModelForDate() spawns
@@ -29,7 +30,7 @@
 import type { Express, Request, Response } from "express";
 import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
-import { runVsinRefresh, refreshAllScoresNow } from "../vsinAutoRefresh";
+import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -38,6 +39,14 @@ const vsinRunner = new CronJobRunner("vsin-odds", async () => {
 
 const scoresRunner = new CronJobRunner("scores", async () => {
   await refreshAllScoresNow();
+});
+
+// MLB cycle — writes mlb_lineups, mlb_strikeout_props, mlb_game_backtest. Previously
+// only reachable via the in-process 10-min interval; with DISABLE_BACKGROUND_JOBS set
+// on Railway that interval never runs, so this endpoint is the only trigger. The
+// run-lock below preserves the single-flight/overlap protection the interval relied on.
+const mlbCycleRunner = new CronJobRunner("mlb-cycle", async () => {
+  await runMlbCycleOnce();
 });
 
 /** Wire a POST endpoint that auth-guards, triggers the runner, responds 200. */
@@ -70,6 +79,7 @@ function mountJob(app: Express, path: string, label: string, runner: CronJobRunn
 export function registerCronRoutes(app: Express): void {
   mountJob(app, "/api/cron/vsin-odds", "vsin-odds", vsinRunner);
   mountJob(app, "/api/cron/scores", "scores", scoresRunner);
+  mountJob(app, "/api/cron/mlb-cycle", "mlb-cycle", mlbCycleRunner);
 
   // Observability: read-only run-lock state for all jobs (still secret-guarded so
   // it can't be scraped anonymously). Handy for the CI perf harness and debugging.
@@ -80,6 +90,7 @@ export function registerCronRoutes(app: Express): void {
       jobs: {
         "vsin-odds": vsinRunner.state,
         scores: scoresRunner.state,
+        "mlb-cycle": mlbCycleRunner.state,
       },
     });
   });
