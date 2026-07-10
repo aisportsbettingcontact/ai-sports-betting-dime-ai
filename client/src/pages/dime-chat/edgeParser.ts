@@ -130,11 +130,14 @@ const NUMERAL_RE =
 export function segmentNumerals(text: string): NumeralPart[] {
   const parts: NumeralPart[] = [];
   let last = 0;
-  for (const m of text.matchAll(NUMERAL_RE)) {
-    const idx = m.index ?? 0;
+  const re = new RegExp(NUMERAL_RE.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const idx = m.index;
     if (idx > last) parts.push({ kind: "plain", text: text.slice(last, idx) });
     parts.push({ kind: "num", text: m[0] });
     last = idx + m[0].length;
+    if (m[0].length === 0) re.lastIndex++;
   }
   if (last < text.length) parts.push({ kind: "plain", text: text.slice(last) });
   return parts;
