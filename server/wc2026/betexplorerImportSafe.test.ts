@@ -11,8 +11,8 @@ import path from "path";
  * On any other host (GitHub CI runner, Railway/Debian, dev container) /home/ubuntu
  * is absent, so the parent is missing and mkdir raises FileNotFoundError at IMPORT
  * time. That broke the read-only Jul-11 odds probe (which imports the scraper to
- * reuse its parse_*/_select_primary_* functions) and is a latent crash anywhere the
- * module is imported off Manus.
+ * reuse its parse and primary-line-selection functions) and is a latent crash
+ * anywhere the module is imported off Manus.
  *
  * Fix: guard the mkdir with parents=True + try/except OSError so import never
  * crashes; the dir is only used for optional forensic HTML dumps.
