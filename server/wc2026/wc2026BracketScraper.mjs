@@ -758,7 +758,11 @@ async function seedCalendar(conn, rows, matchMap) {
 
     // Parse ESPN date
     const espnDate    = new Date(row.date_utc);
-    const espnDateStr = espnDate.toISOString().slice(0, 10); // YYYY-MM-DD
+    // match_date is the PT KICKOFF-DAY, not the UTC day (owner seeding rule).
+    // A 9PM-ET kickoff is 01:00 UTC the NEXT day; slicing the ISO string put
+    // wc26-qf-100 (ARG/SUI) on Jul 12 and knocked it off the Jul-11 feed —
+    // and re-reverted the engine's repair on every bracket sync.
+    const espnDateStr = espnDate.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // YYYY-MM-DD (PT)
     // kickoff_utc is a DATETIME column — format as 'YYYY-MM-DD HH:MM:SS' UTC
     const espnKickoffStr = espnDate.toISOString().replace('T', ' ').slice(0, 19); // MySQL DATETIME
 

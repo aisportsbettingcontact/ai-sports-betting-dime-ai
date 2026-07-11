@@ -99,6 +99,17 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).toMatch(/UPDATE wc2026_matches SET match_date = \? WHERE match_id = \? AND DATE\(match_date\) <> \?/);
   });
 
+  it("bracket scraper Phase D seeds match_date on the PT kickoff-day, not the UTC day", () => {
+    // The UTC slice reverted the engine's Jul-11 repair on every bracket sync
+    // (wc26-qf-100 kept flipping back to Jul 12 and vanishing from the feed).
+    const scraperSrc = fs.readFileSync(
+      path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs"),
+      "utf8",
+    );
+    expect(scraperSrc).toMatch(/toLocaleDateString\("en-CA", \{ timeZone: "America\/Los_Angeles" \}\)/);
+    expect(scraperSrc).not.toMatch(/const espnDateStr = espnDate\.toISOString\(\)\.slice\(0, 10\)/);
+  });
+
   it("carries the owner-provided book to-advance (to-qualify) lines for both QFs", () => {
     // qf-099: NOR +160 / ENG -200 ; qf-100: ARG -310 / SUI +240.
     expect(engineSrc).toMatch(/bookHomeAdv:\s*160,\s*bookAwayAdv:\s*-200/);
