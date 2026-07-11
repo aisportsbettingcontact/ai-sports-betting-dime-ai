@@ -262,10 +262,10 @@ const ESPN_TEAM_IDS = {
 const PROJECTION_MATCHES = [
   { fid:'wc26-qf-099', home:'NOR', away:'ENG', espnId:'760512',
     beId:'UyLHmWuh', beSlug:'norway-england', espnSlug:'norway-england',
-    homeId:'nor', awayId:'eng' },
+    homeId:'nor', awayId:'eng', venueCityLike:'Miami' },      // Hard Rock Stadium, Miami Gardens
   { fid:'wc26-qf-100', home:'ARG', away:'SUI', espnId:'760513',
     beId:'Wv4IS6zg', beSlug:'argentina-switzerland', espnSlug:'argentina-switzerland',
-    homeId:'arg', awayId:'sui' },
+    homeId:'arg', awayId:'sui', venueCityLike:'Kansas' },     // Arrowhead Stadium, Kansas City
 ];
 
 // FRESH bet365 book odds (scraped 2026-07-11 09:23–09:24 UTC from BetExplorer
@@ -733,6 +733,24 @@ async function main() {
     `, [match.homeId, match.awayId, match.fid]);
     if (fixRes.affectedRows > 0) log('DB', `wc2026_matches: ${match.fid} team slots tbd/tbd -> ${match.homeId}/${match.awayId} (bracket-confirmed)`);
 
+    // Venue repair. The two Jul-11 QFs were seeded with the wrong venue
+    // (defaulted to 'inglewood'/SoFi); the real venues are Hard Rock (Miami
+    // Gardens) for qf-099 and Arrowhead (Kansas City) for qf-100. Look the
+    // correct venue_id up from wc2026_venues BY CITY so we use the app's own
+    // slug (never hardcode a guessed slug); only update when a row matches.
+    if (match.venueCityLike) {
+      const [vrows] = await conn.query(
+        `SELECT venue_id, city FROM wc2026_venues WHERE LOWER(city) LIKE ? ORDER BY venue_id LIMIT 1`,
+        [`%${match.venueCityLike.toLowerCase()}%`]);
+      if (vrows.length > 0) {
+        const [vres] = await conn.query(
+          `UPDATE wc2026_matches SET venue_id = ? WHERE match_id = ?`, [vrows[0].venue_id, match.fid]);
+        log('DB', `wc2026_matches: ${match.fid} venue_id -> '${vrows[0].venue_id}' (${vrows[0].city}) [matched '${match.venueCityLike}', rows=${vres.affectedRows}]`);
+      } else {
+        log('WARN', `No wc2026_venues row with city like '${match.venueCityLike}' for ${match.fid} — venue left unchanged`);
+      }
+    }
+
     // QF wc2026MatchOdds rows are not auto-created by any scraper (the
     // BetExplorer scraper's match list stops at R16) — INSERT with ODKU keyed
     // on the unique match_id, safe whether or not a row already exists.
@@ -813,9 +831,10 @@ async function main() {
         to_advance_home_odds, to_advance_away_odds,
         over_odds, under_odds, btts_yes_odds, btts_no_odds,
         home_spread_odds, away_spread_odds,
+        dc_1x_odds, dc_x2_odds, no_draw_home_odds,
         model_spread, model_total,
         modeled_at, created_at
-      ) VALUES (?, ?, 1000000, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      ) VALUES (?, ?, 1000000, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
       ON DUPLICATE KEY UPDATE
         model_version=VALUES(model_version), home_lambda=VALUES(home_lambda), away_lambda=VALUES(away_lambda),
         proj_home_score=VALUES(proj_home_score), proj_away_score=VALUES(proj_away_score), proj_total=VALUES(proj_total),
@@ -824,6 +843,7 @@ async function main() {
         over_odds=VALUES(over_odds), under_odds=VALUES(under_odds),
         btts_yes_odds=VALUES(btts_yes_odds), btts_no_odds=VALUES(btts_no_odds),
         home_spread_odds=VALUES(home_spread_odds), away_spread_odds=VALUES(away_spread_odds),
+        dc_1x_odds=VALUES(dc_1x_odds), dc_x2_odds=VALUES(dc_x2_odds), no_draw_home_odds=VALUES(no_draw_home_odds),
         model_spread=VALUES(model_spread), model_total=VALUES(model_total), modeled_at=NOW()
     `, [
       match.fid, ENGINE_VERSION, match.home, match.away, lambdaH, lambdaA,
@@ -832,6 +852,7 @@ async function main() {
       markets.mlAdvH, markets.mlAdvA,
       markets.mlOver, markets.mlUnder, markets.mlBTTSY, markets.mlBTTSN,
       markets.mlHomeSpread, markets.mlAwaySpread,
+      markets.mlHomeWD, markets.mlAwayWD, markets.mlNoDraw,
       markets.spreadLine, markets.projTotal
     ]);
     log('DB', `wc2026_model_projections UPSERTED: ${match.fid}`);
