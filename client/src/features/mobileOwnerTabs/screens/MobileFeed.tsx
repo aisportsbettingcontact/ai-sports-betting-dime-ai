@@ -126,28 +126,19 @@ export function MobileFeed() {
     }> = [];
 
     // WC2026 edges
+    // wc2026.matchesByDate shape: homeTeam/awayTeam/venue are objects (team.name, venue.stadium),
+    // book odds live on dkOdds and model odds on modelOdds (american ML under .home/.draw/.away).
     const wcData = wcQuery.data as any[] | undefined;
     if (wcData && wcData.length > 0) {
       for (const match of wcData) {
-        const odds = match.odds;
-        if (!odds) {
-          // Still add as projection card
-          cards.push({
-            id: `wc-proj-${match.matchId}`,
-            type: "projection",
-            title: `${match.homeTeam || "TBD"} vs ${match.awayTeam || "TBD"}`,
-            subtitle: `R16 • ${match.venue || "TBD"}`,
-            sport: "World Cup",
-            timestamp: match.kickoffUtc
-              ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-              : undefined,
-          });
-          continue;
-        }
+        const homeName = match.homeTeam?.name ?? "TBD";
+        const awayName = match.awayTeam?.name ?? "TBD";
+        const venueName = match.venue?.stadium ?? "TBD";
+        const stage = match.stage ? `${match.stage} • ` : "";
 
-        // Calculate edge from model vs book ML
-        const modelHomeMl = odds.model_home_ml;
-        const bookHomeMl = odds.book_home_ml;
+        // Calculate edge from model vs book ML (dkOdds = book, modelOdds = model)
+        const modelHomeMl = match.modelOdds?.home;
+        const bookHomeMl = match.dkOdds?.home;
         if (modelHomeMl && bookHomeMl) {
           const modelProb = modelHomeMl < 0
             ? Math.abs(modelHomeMl) / (Math.abs(modelHomeMl) + 100)
@@ -161,7 +152,7 @@ export function MobileFeed() {
             cards.push({
               id: `wc-edge-${match.matchId}`,
               type: "edge",
-              title: `${match.homeTeam} ML Edge`,
+              title: `${homeName} ML Edge`,
               subtitle: `Model: ${modelHomeMl > 0 ? "+" : ""}${modelHomeMl} vs Book: ${bookHomeMl > 0 ? "+" : ""}${bookHomeMl}`,
               sport: "World Cup",
               value: `+${edge}%`,
@@ -174,8 +165,8 @@ export function MobileFeed() {
         cards.push({
           id: `wc-proj-${match.matchId}`,
           type: "projection",
-          title: `${match.homeTeam || "TBD"} vs ${match.awayTeam || "TBD"}`,
-          subtitle: `R16 • ${match.venue || "TBD"}`,
+          title: `${homeName} vs ${awayName}`,
+          subtitle: `${stage}${venueName}`,
           sport: "World Cup",
           timestamp: match.kickoffUtc
             ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
@@ -202,9 +193,9 @@ export function MobileFeed() {
 
       // Top edges from published games
       for (const game of publishedGames.slice(0, 5)) {
-        if (game.modelSpread && game.spread) {
-          const modelSpread = parseFloat(game.modelSpread);
-          const bookSpread = parseFloat(game.spread);
+        if (game.awayModelSpread && game.awayBookSpread) {
+          const modelSpread = parseFloat(game.awayModelSpread);
+          const bookSpread = parseFloat(game.awayBookSpread);
           const diff = Math.abs(modelSpread - bookSpread);
           if (diff >= 1.0) {
             cards.push({
@@ -269,6 +260,11 @@ export function MobileFeed() {
             ))}
           </div>
         </MobileDataState>
+        {/* Responsible-gaming footer (repo convention: RG language on product surfaces) */}
+        <p className="px-4 pb-4 text-[10px] text-zinc-500 text-center">
+          No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
+          your jurisdiction). Gambling problem? Call 1-800-GAMBLER.
+        </p>
       </div>
     </div>
   );

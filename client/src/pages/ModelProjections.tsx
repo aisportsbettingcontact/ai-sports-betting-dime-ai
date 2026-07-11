@@ -1789,6 +1789,12 @@ export default function ModelProjections() {
             )}
           </>
         )}
+
+        {/* Responsible-gaming footer (repo convention: RG language on product surfaces) */}
+        <p className="px-4 py-6 text-[11px] text-muted-foreground text-center">
+          No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
+          your jurisdiction). Gambling problem? Call 1-800-GAMBLER.
+        </p>
       </main>
     </div>
   );

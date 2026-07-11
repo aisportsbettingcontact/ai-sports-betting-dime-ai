@@ -335,19 +335,18 @@ export const appRouter = router({
 
         // Performance: Cache-Control + ETag for public feed (eliminates redundant DB queries)
         try {
+          // ETag covers model-run, status, AND odds/splits fields so line moves bust the 30s cache.
           const etag = createHash('md5')
-            .update(JSON.stringify(filtered.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
+            .update(JSON.stringify(filtered.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus, bookTotal: g.bookTotal, awayML: g.awayML, homeML: g.homeML, awayBookSpread: g.awayBookSpread, overOdds: g.overOdds, underOdds: g.underOdds, spreadAwayBetsPct: g.spreadAwayBetsPct, spreadAwayMoneyPct: g.spreadAwayMoneyPct, totalOverBetsPct: g.totalOverBetsPct, totalOverMoneyPct: g.totalOverMoneyPct, mlAwayBetsPct: g.mlAwayBetsPct, mlAwayMoneyPct: g.mlAwayMoneyPct }))))
             .digest('hex')
             .slice(0, 16);
           ctx.res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
           ctx.res.setHeader('ETag', `"${etag}"`);
           ctx.res.setHeader('X-Games-Count', String(stripped.length));
           ctx.res.setHeader('X-Cache-Status', 'MISS'); // overridden by cache layer if HIT
-          const ifNoneMatch = (ctx.req as import('express').Request).headers['if-none-match'];
-          if (ifNoneMatch === `"${etag}"`) {
-            ctx.res.status(304).end();
-            return [] as typeof stripped;
-          }
+          // NOTE: no in-resolver 304 short-circuit — ending the response inside a tRPC
+          // batch truncates sibling procedures and caches [] as data. Conditional
+          // revalidation is handled at the browser/transport layer via the headers above.
         } catch {
           // Non-fatal: header setting can fail in some edge cases
         }
