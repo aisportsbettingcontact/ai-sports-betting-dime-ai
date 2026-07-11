@@ -222,7 +222,7 @@ function OddsRow({
         {/* Model odds */}
         <span
           className="text-xs tabular-nums w-[44px] text-right font-bold"
-          style={{ color: modelOdds != null ? '#39FF14' : undefined }}
+          style={{ color: modelOdds != null ? '#45E0A8' : undefined }}
         >
           {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-zinc-600">—</span>}
         </span>
@@ -349,7 +349,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold w-[44px] text-right">
               BOOK
             </span>
-            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#39FF14' }}>
+            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#45E0A8' }}>
               MODEL
             </span>
           </div>
