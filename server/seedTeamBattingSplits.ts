@@ -120,6 +120,18 @@ function computeDerivedMetrics(st: Record<string, any>): {
   };
 }
 
+// ─── Numeric Parsing ──────────────────────────────────────────────────────────
+
+/**
+ * Parses an API stat value to a number, preserving legitimate zeros.
+ * Returns null only for missing/non-numeric values (never coerces 0 → null).
+ */
+const num = (v: unknown): number | null => {
+  if (v == null || v === "") return null;
+  const n = typeof v === "string" ? parseFloat(v) : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 // ─── MLB API Fetch ────────────────────────────────────────────────────────────
 
 async function fetchTeamBattingSplits(teamId: number, teamAbbrev: string, teamName: string): Promise<Array<{
@@ -127,7 +139,7 @@ async function fetchTeamBattingSplits(teamId: number, teamAbbrev: string, teamNa
   stat: Record<string, any>;
 }>> {
   const url = `https://statsapi.mlb.com/api/v1/teams/${teamId}/stats?stats=statSplits&group=hitting&season=2026&sitCodes=vl,vr`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`HTTP ${res.status} for team ${teamAbbrev} (${teamId})`);
   const data = await res.json();
 
@@ -206,11 +218,11 @@ export async function seedTeamBattingSplits(): Promise<{
       for (const { hand, stat } of splits) {
         const derived = computeDerivedMetrics(stat);
 
-        // Parse slash line
-        const avg = parseFloat(stat.avg) || null;
-        const obp = parseFloat(stat.obp) || null;
-        const slg = parseFloat(stat.slg) || null;
-        const ops = parseFloat(stat.ops) || null;
+        // Parse slash line (zero-safe: 0 is legitimate data, only missing → null)
+        const avg = num(stat.avg);
+        const obp = num(stat.obp);
+        const slg = num(stat.slg);
+        const ops = num(stat.ops);
 
         console.log(
           `${prefix} vs ${hand}HP: avg=${stat.avg} obp=${stat.obp} slg=${stat.slg} ops=${stat.ops} ` +
@@ -226,12 +238,12 @@ export async function seedTeamBattingSplits(): Promise<{
           obp,
           slg,
           ops,
-          homeRuns: Number(stat.homeRuns) || null,
-          atBats: Number(stat.atBats) || null,
-          baseOnBalls: Number(stat.baseOnBalls) || null,
-          strikeOuts: Number(stat.strikeOuts) || null,
-          hits: Number(stat.hits) || null,
-          gamesPlayed: Number(stat.gamesPlayed) || null,
+          homeRuns: num(stat.homeRuns),
+          atBats: num(stat.atBats),
+          baseOnBalls: num(stat.baseOnBalls),
+          strikeOuts: num(stat.strikeOuts),
+          hits: num(stat.hits),
+          gamesPlayed: num(stat.gamesPlayed),
           hr9: derived.hr9,
           bb9: derived.bb9,
           k9: derived.k9,

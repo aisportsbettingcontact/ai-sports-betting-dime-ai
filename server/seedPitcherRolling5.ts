@@ -154,7 +154,7 @@ function computeRolling5(starts: GameLogEntry[]): Rolling5Result {
 
 async function fetchGameLog(mlbamId: number): Promise<GameLogEntry[]> {
   const url = `https://statsapi.mlb.com/api/v1/people/${mlbamId}/stats?stats=gameLog&group=pitching&season=2026`;
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
 
@@ -261,22 +261,14 @@ export async function seedPitcherRolling5(): Promise<{
 
       rollingRows.push({ mlbamId, fullName, teamAbbrev, rolling });
     } catch (e: any) {
+      // On fetch error, do NOT push a zeroed row — skipping the upsert preserves
+      // the pitcher's existing (good) row in mlb_pitcher_rolling5.
       fetchErrors++;
-      console.error(`${prefix} — ✗ ERROR: ${e.message}`);
-      rollingRows.push({
-        mlbamId, fullName, teamAbbrev,
-        rolling: {
-          startsIncluded: 0,
-          ip5: 0, er5: 0, h5: 0, bb5: 0, k5: 0, hr5: 0,
-          era5: null, k9_5: null, bb9_5: null, hr9_5: null,
-          whip5: null, fip5: null,
-          lastStartDate: null, firstStartDate: null,
-        },
-      });
+      console.error(`${prefix} — ✗ ERROR: ${e.message} (skipping — existing DB row preserved)`);
     }
   }, 10);
 
-  console.log(`\n[STATE] Fetch complete: ${rollingRows.length} processed, ${noStarts} no-starts, ${fetchErrors} errors`);
+  console.log(`\n[STATE] Fetch complete: ${rollingRows.length} fetched OK, ${noStarts} no-starts, ${fetchErrors} errors (skipped)`);
 
   // ── Step 3: Upsert into mlb_pitcher_rolling5 ──────────────────────────────
   console.log(`[STEP] Upserting ${rollingRows.length} rows into mlb_pitcher_rolling5...`);
