@@ -73,7 +73,14 @@ LOG_PATH = Path("/home/ubuntu/wc2026oddslog.txt")
 DB_PATH = Path("/home/ubuntu/wc2026_betexplorer_v4.db")
 OUTPUT_JSON = Path("/home/ubuntu/wc2026_betexplorer_odds_v4.json")
 DEBUG_DUMP_DIR = Path("/home/ubuntu/be_debug_dumps_v4")
-DEBUG_DUMP_DIR.mkdir(exist_ok=True)
+# Import-safe: the hardcoded /home/ubuntu home only exists on the legacy Manus
+# box. On any other host (GitHub CI runner, Railway/Debian, dev container) the
+# parent is absent, so creating it must never crash module import — the dir is
+# only used for optional forensic HTML dumps. Best-effort with parents=True.
+try:
+    DEBUG_DUMP_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
 
 # MySQL target table for production upsert
 MYSQL_TABLE = "wc2026MatchOdds"
