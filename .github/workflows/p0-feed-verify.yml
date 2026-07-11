@@ -18,6 +18,15 @@ on:
         required: true
         default: "https://ai-sports-betting-dime-ai-production.up.railway.app"
         type: string
+      proc:
+        description: "Ad-hoc: single tRPC procedure to probe (optional; overrides the default suite)"
+        required: false
+        type: string
+      input_json:
+        description: "Ad-hoc: JSON input for the procedure (e.g. {\"sport\":\"MLB\"} or null)"
+        required: false
+        default: "null"
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +41,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ORIGIN: ${{ inputs.origin }}
+      PROC: ${{ inputs.proc }}
+      INPUT_JSON: ${{ inputs.input_json }}
     steps:
       - name: Probe public feed endpoints
         run: |
@@ -69,9 +80,15 @@ jobs:
 
           echo "=================== P0 FEED VERIFY @ $(stamp) ==================="
           echo "ORIGIN: $base"
-          probe "current date"       "games.getCurrentDate" "null"
-          probe "last refresh"       "games.lastRefresh"    "null"
-          probe "MLB projections"    "games.list"           '{"sport":"mlb"}'
-          probe "MLB splits"         "games.liveSplits"     "null"
-          probe "WC projections"     "wc2026.todayWithOdds" "null"
+          if [ -n "${PROC:-}" ]; then
+            probe "ad-hoc" "$PROC" "${INPUT_JSON:-null}"
+          else
+            probe "current date"       "games.getCurrentDate" "null"
+            probe "last refresh"       "games.lastRefresh"    "null"
+            probe "MLB projections"    "games.list"           '{"sport":"MLB"}'
+            probe "all games"          "games.list"           "null"
+            probe "MLB splits"         "games.liveSplits"     "null"
+            probe "WC today+odds"      "wc2026.todayWithOdds" "null"
+            probe "WC by date (eff.)"  "wc2026.matchesByDate" '{"date":"2026-07-10"}'
+          fi
           echo "=================== END ==================="
