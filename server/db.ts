@@ -973,7 +973,8 @@ export async function bulkApproveModels(gameDate: string, sport?: string): Promi
   const result = await db.update(games)
     .set({ publishedModel: true, publishedToFeed: true })
     .where(and(...conditions));
-  const affected = (result as unknown as { rowsAffected?: number }[])[0]?.rowsAffected ?? 0;
+  const [header] = result as unknown as [{ affectedRows?: number }];
+  const affected = header?.affectedRows ?? 0;
   console.log(`[DB] bulkApproveModels: gameDate=${gameDate} sport=${sport ?? "all"} isNhl=${isNhl} — approved+published ${affected} games`);
   if (affected > 0) forceInvalidateGamesCache(); // admin op — immediate visibility required
   return affected;
