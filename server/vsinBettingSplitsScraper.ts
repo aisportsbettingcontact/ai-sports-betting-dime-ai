@@ -171,6 +171,21 @@ function parseAllSpTables(
         continue;
       }
 
+      // ── ROW-PAIRING INTEGRITY ──────────────────────────────────────────────
+      // Verify the home row belongs to the same game before consuming the pair.
+      // If VSiN emits an odd/orphaned row, blindly pairing i/i+1 would shift
+      // every subsequent away/home assignment by one row.
+      const homeGameId = homeRow.find("button[data-gamecode]").attr("data-gamecode") ?? "";
+      if (homeGameId && homeGameId !== gameId) {
+        console.warn(
+          `${blockTag} Row ${i}: away gamecode ${gameId} != home gamecode ${homeGameId} — ` +
+          `orphaned row, resynchronizing`
+        );
+        skipped++;
+        i -= 1; // advance by ONE row (loop adds 2): treat next row as the new away row
+        continue;
+      }
+
       // Detect sport from game ID
       const sport = detectSportFromGameId(gameId);
       if (!sport) {
@@ -205,10 +220,11 @@ function parseAllSpTables(
         continue;
       }
 
-      // Validate column count
+      // Validate column count — strict equality: a column insertion (length > 11)
+      // would silently shift every fixed td index below and write garbage splits
       const awayTds = awayRow.find("td");
-      if (awayTds.length < 11) {
-        console.warn(`${blockTag} Game ${gameId}: expected 11 tds, got ${awayTds.length}, skipping`);
+      if (awayTds.length !== 11) {
+        console.warn(`${blockTag} Game ${gameId}: expected exactly 11 tds, got ${awayTds.length} — column layout changed, skipping`);
         skipped++;
         continue;
       }
@@ -266,7 +282,8 @@ export async function scrapeVsinBettingSplits(
   console.log(`${logTag} Fetching ${url} ...`);
   const startTime = Date.now();
 
-  const resp = await fetch(url, { headers: HEADERS });
+  // 15s timeout — a hung VSiN response must not stall the whole refresh cycle
+  const resp = await fetch(url, { headers: HEADERS, signal: AbortSignal.timeout(15000) });
   if (!resp.ok) {
     throw new Error(`${logTag} HTTP ${resp.status} fetching ${url}`);
   }

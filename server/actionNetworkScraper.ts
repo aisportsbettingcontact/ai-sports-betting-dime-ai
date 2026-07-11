@@ -308,7 +308,9 @@ export async function fetchActionNetworkOdds(
       debugLog("ANApiOdds", "info",
         `[ActionNetwork][v2] ${sport.toUpperCase()} ${date}: fetch attempt ${attempt}/${MAX_ATTEMPTS}`
       );
-      const r = await fetch(url, { headers: AN_HEADERS });
+      // 15s timeout — a hung AN response must not stall the refresh cycle.
+      // A timeout abort throws here and is retried like any other transient error.
+      const r = await fetch(url, { headers: AN_HEADERS, signal: AbortSignal.timeout(15000) });
       if (!r.ok) {
         throw new Error(
           `[ActionNetwork][v2] HTTP ${r.status} for ${sport} ${date}`

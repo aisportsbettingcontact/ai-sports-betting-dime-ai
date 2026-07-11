@@ -11,8 +11,9 @@
  *    rescheduled. On detection:
  *      - Logs a structured [RESCHEDULED] alert with old date, new date, old pk, new pk
  *      - Sends an owner notification via notifyOwner()
- *      - The new game will be auto-inserted by the normal mlbScheduleHistoryScheduler
- *        on its date — no manual action required
+ *      - The new game is NOT auto-inserted into the `games` table — no code inserts
+ *        MLB rows automatically. The owner must add it manually (model-file upload)
+ *        before odds/model/feed will cover it
  *
  * 2. SUSPENDED GAME HANDLING
  *    A 'Suspended' game (e.g. rain delay resumed next day) is distinct from
@@ -303,8 +304,9 @@ export async function detectRescheduledGames(): Promise<{
     const notifContent =
       `${rescheduled.length} postponed MLB game(s) have been rescheduled:\n\n` +
       lines.join("\n") +
-      `\n\nThe new game(s) will be auto-inserted by the schedule sync on their new date. ` +
-      `No manual action required.`;
+      `\n\nACTION REQUIRED: the new game(s) are NOT auto-inserted into the games table. ` +
+      `Add them manually (owner model-file upload) on their new date — odds, model runs, ` +
+      `and the feed will not cover them until then.`;
 
     try {
       await notifyOwner({
