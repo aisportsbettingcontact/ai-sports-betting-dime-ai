@@ -57,7 +57,8 @@
     "user-story-splitting@pm-skills": true,
     "vp-cpo-readiness-advisor@pm-skills": true,
     "workshop-facilitation@pm-skills": true,
-    "figma@knowledge-work-plugins": true
+    "figma@knowledge-work-plugins": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
@@ -76,6 +77,12 @@
       "source": {
         "source": "github",
         "repo": "anthropics/knowledge-work-plugins"
+      }
+    },
+    "ui-ux-pro-max-skill": {
+      "source": {
+        "source": "github",
+        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
       }
     }
   }
