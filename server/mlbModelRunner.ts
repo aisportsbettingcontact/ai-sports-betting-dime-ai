@@ -701,7 +701,7 @@ async function batchFetchPitcherStats(
     season: Record<string, number>,
     r5: typeof rolling5Rows[0] | undefined
   ): Record<string, number> {
-    if (!r5 || (r5.startsIncluded ?? 0) < MIN_ROLLING_STARTS || !r5.era5) {
+    if (!r5 || (r5.startsIncluded ?? 0) < MIN_ROLLING_STARTS || r5.era5 == null) {
       // Not enough rolling data — use season stats only
       return season;
     }
@@ -1588,16 +1588,17 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     if (opts?.targetGameIds && !opts.targetGameIds.includes(g.id)) return false;
     // Skip already-modeled games unless forceRerun is explicitly set
     // Prevents the 5-min fallback cycle from re-running games already done.
-    // CRITICAL FIX: only skip if modelRunAt was set on the SAME calendar date as the game.
-    // If modelRunAt was set on a different date (e.g., yesterday's run wrote to today's game record),
-    // the game must be re-modeled — the previous model run used stale data for a different date.
+    // CRITICAL FIX: skip only if modelRunAt falls on the CURRENT Pacific calendar day.
+    // Any game (today's or tomorrow's slate) modeled at any point today-PT stays skipped
+    // for the rest of today-PT; on its game day it re-models once with fresh data.
     if (!opts?.forceRerun && g.modelRunAt !== null && g.modelRunAt !== undefined) {
-      const modelRunDate = new Date(Number(g.modelRunAt)).toISOString().slice(0, 10);
-      if (modelRunDate === dateStr) {
-        return false; // already modeled today — skip
+      const ptDay = (ms: number) => new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      const modelRunDate = ptDay(Number(g.modelRunAt));
+      if (modelRunDate === ptDay(Date.now())) {
+        return false; // already modeled today (PT) — skip
       }
-      // modelRunAt was set on a different date — clear it and re-model
-      console.warn(`${TAG} [STALE-MODEL] id=${g.id} ${g.awayTeam}@${g.homeTeam} — modelRunAt=${modelRunDate} ≠ gameDate=${dateStr} — re-modeling`);
+      // modelRunAt was set on a previous PT day — re-model with fresh data
+      console.warn(`${TAG} [STALE-MODEL] id=${g.id} ${g.awayTeam}@${g.homeTeam} — modelRunAt(PT)=${modelRunDate} ≠ today(PT) — re-modeling`);
     }
     // CRITICAL: require confirmed DK run line — never fall back to ML-derived RL direction
     // Missing awayRunLine causes RL inversion when ML is even-money (e.g. +100 treated as dog)
@@ -1785,8 +1786,12 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
     // Augment team stats with hand-specific batting splits vs the opposing pitcher
     // Away team bats against HOME pitcher (homeHand)
     // Home team bats against AWAY pitcher (awayHand)
-    const awayBattingSplit = battingSplits?.get(awayAbbrev)?.[homeHand];
-    const homeBattingSplit = battingSplits?.get(homeAbbrev)?.[awayHand];
+    // Lookup keys are uppercased at build time; a hand with no DB row stays `{}` —
+    // treat an empty split as absent so it can't spread undefined over base stats.
+    const awaySplitRaw = battingSplits?.get(awayAbbrev.toUpperCase())?.[homeHand];
+    const homeSplitRaw = battingSplits?.get(homeAbbrev.toUpperCase())?.[awayHand];
+    const awayBattingSplit = awaySplitRaw && Object.keys(awaySplitRaw).length > 0 ? awaySplitRaw : undefined;
+    const homeBattingSplit = homeSplitRaw && Object.keys(homeSplitRaw).length > 0 ? homeSplitRaw : undefined;
 
     const awayTeamStats = awayBattingSplit
       ? {
@@ -2069,348 +2074,349 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       continue;
     }
 
-    console.log(`\n${TAG} [${r.db_id}] ${r.game}`);
-    console.log(`  Proj: ${r.proj_away_runs.toFixed(2)}–${r.proj_home_runs.toFixed(2)} (total: ${r.proj_total.toFixed(2)})`);
-    console.log(`  Book total: ${r.total_line} | Over: ${r.over_pct.toFixed(2)}% (${fmtMl(r.over_odds)}) | Under: ${r.under_pct.toFixed(2)}% (${fmtMl(r.under_odds)})`);
-    console.log(`  ML: ${fmtMl(r.away_ml)}/${fmtMl(r.home_ml)} | Win%: ${r.away_win_pct.toFixed(2)}%/${r.home_win_pct.toFixed(2)}%`);
-    console.log(`  RL: ${r.away_run_line} (${fmtMl(r.away_rl_odds)}) / ${r.home_run_line} (${fmtMl(r.home_rl_odds)})`);
-    console.log(`  Cover%: away=${r.away_rl_cover_pct.toFixed(2)}% home=${r.home_rl_cover_pct.toFixed(2)}%`);
-    console.log(`  Model spread: ${r.model_spread.toFixed(3)} | Sims: ${r.simulations} | Elapsed: ${r.elapsed_sec}s`);
-    // ── SIGN-ENFORCEMENT GUARD ────────────────────────────────────────────────
-    // awayModelSpread MUST mirror awayBookSpread sign.
-    // The Python engine computes away_run_line from rl_home_spread (derived from awayRunLine).
-    // If awayBookSpread was NULL at model-run START (odds not yet scraped), the snapshot
-    // in dbGameById is stale. We use liveBookSpreadMap (re-read right before DB writes)
-    // as the authoritative source. Falls back to dbGameById snapshot if live re-read failed.
-    // awayBookSpread is written ONLY by the VSiN scraper and is always the authoritative book value.
-    const dbGame = dbGameById.get(r.db_id);
-    const liveSpread = liveBookSpreadMap.get(r.db_id);
-    // Prefer live re-read value; fall back to snapshot if live re-read failed or returned null
-    const bookAwaySpreadForGuard: number | null = (
-      liveSpread?.awayBookSpread != null ? liveSpread.awayBookSpread
-      : dbGame?.awayBookSpread != null   ? parseFloat(String(dbGame.awayBookSpread))
-      : null
-    );
-    const modelAwayRLNum = parseFloat(r.away_run_line);
-    let safeAwayRunLine = r.away_run_line;
-    let safeHomeRunLine = r.home_run_line;
-    // ── RL SIGN GUARD: detect flip and INVALIDATE (not patch) ──────────────────
-    // When the model ran with the wrong rl_home_spread sign (e.g. awayRunLine was
-    // written with wrong sign before odds were confirmed), the entire simulation
-    // used the wrong spread direction. The resulting odds are computed for the wrong
-    // team's perspective and CANNOT be salvaged by simply swapping labels.
-    // Correct action: skip DB write for this game and clear modelRunAt so it
-    // re-runs next cycle with the now-correct awayRunLine from the scraper.
-    let rlSignFlipDetected = false;
-    if (bookAwaySpreadForGuard !== null && !isNaN(bookAwaySpreadForGuard) && !isNaN(modelAwayRLNum)) {
-      const bookSign  = bookAwaySpreadForGuard >= 0 ? 1 : -1;
-      const modelSign = modelAwayRLNum >= 0 ? 1 : -1;
-      if (bookSign !== modelSign) {
-        rlSignFlipDetected = true;
-        console.error(
-          `${TAG} [${r.db_id}] ${r.game} — [RL SIGN GUARD] FLIP DETECTED: ` +
-          `Python away_run_line=${r.away_run_line} but awayBookSpread=${bookAwaySpreadForGuard}. ` +
-          `Model ran with wrong rl_home_spread — odds are invalid. ` +
-          `INVALIDATING modelRunAt so game re-runs next cycle with corrected awayRunLine.`
-        );
-        // Correct the run line labels for the invalidation write below
-        const correctedAway = bookSign > 0 ? Math.abs(modelAwayRLNum) : -Math.abs(modelAwayRLNum);
-        const correctedHome = -correctedAway;
-        safeAwayRunLine = correctedAway >= 0 ? `+${correctedAway.toFixed(1)}` : `${correctedAway.toFixed(1)}`;
-        safeHomeRunLine = correctedHome >= 0 ? `+${correctedHome.toFixed(1)}` : `${correctedHome.toFixed(1)}`;
-      }
-    }
-    // ── POST-WRITE INVARIANT CHECK: P(cover -1.5) must be ≤ P(win outright) ────
-    // Even if no sign flip was detected, verify the mathematical invariant:
-    // if home has -1.5 (home is RL fav), P(home covers -1.5) MUST be ≤ P(home wins).
-    // Violation means the model ran with wrong rl_spread (e.g. awayRunLine was null
-    // at run time and default +1.5 was used when home should have been -1.5).
-    if (!rlSignFlipDetected) {
-      const liveHomeBookSpread = liveBookSpreadMap.get(r.db_id)?.homeBookSpread;
-      const homeBookSpreadNum = liveHomeBookSpread != null ? liveHomeBookSpread
-        : dbGame?.homeBookSpread != null ? parseFloat(String(dbGame.homeBookSpread)) : null;
-      if (homeBookSpreadNum !== null && homeBookSpreadNum < 0) {
-        // Home has -1.5: P(home covers -1.5) must be ≤ P(home wins outright)
-        const pHomeCoverRL = r.home_rl_cover_pct / 100;
-        const pHomeWin = r.home_win_pct / 100;
-        if (pHomeCoverRL > pHomeWin + 0.02) {  // 2pp tolerance for simulation noise
-          rlSignFlipDetected = true;
-          console.error(
-            `${TAG} [${r.db_id}] ${r.game} — [RL INVARIANT VIOLATION] ` +
-            `homeBookSpread=${homeBookSpreadNum} (home is -1.5 fav) but ` +
-            `P(home covers -1.5)=${(pHomeCoverRL*100).toFixed(2)}% > P(home wins)=${(pHomeWin*100).toFixed(2)}%. ` +
-            `Model ran with wrong rl_home_spread. INVALIDATING modelRunAt for re-run.`
-          );
-        }
-      }
-      // Symmetric check: if away has -1.5 (away is RL fav)
-      if (!rlSignFlipDetected && bookAwaySpreadForGuard !== null && bookAwaySpreadForGuard < 0) {
-        const pAwayCoverRL = r.away_rl_cover_pct / 100;
-        const pAwayWin = r.away_win_pct / 100;
-        if (pAwayCoverRL > pAwayWin + 0.02) {
-          rlSignFlipDetected = true;
-          console.error(
-            `${TAG} [${r.db_id}] ${r.game} — [RL INVARIANT VIOLATION] ` +
-            `awayBookSpread=${bookAwaySpreadForGuard} (away is -1.5 fav) but ` +
-            `P(away covers -1.5)=${(pAwayCoverRL*100).toFixed(2)}% > P(away wins)=${(pAwayWin*100).toFixed(2)}%. ` +
-            `Model ran with wrong rl_home_spread. INVALIDATING modelRunAt for re-run.`
-          );
-        }
-      }
-    }
-
-    // ── MLB RL EDGE DETECTION ─────────────────────────────────────────────────
-    // MLB run lines are ALWAYS ±1.5 — line arithmetic (|awayModelSpread - awayBookSpread|)
-    // is useless (always 0 when signs match). The edge lives in the ODDS.
-    //
-    // OPTION B RULE (mirrors total edge detection exactly):
-    //   Edge exists ONLY when modelImplied(side) > bookImplied(side)
-    //   Both probabilities are RAW (vig-inclusive). No vig removal.
-    //
-    // FORMULA:
-    //   modelAwayImplied = americanToImplied(away_rl_odds)   [model fair odds → raw implied]
-    //   modelHomeImplied = americanToImplied(home_rl_odds)
-    //   bookAwayImplied  = americanToImplied(awayRunLineOdds) [book raw implied, vig-inclusive]
-    //   bookHomeImplied  = americanToImplied(homeRunLineOdds)
-    //
-    //   edgeAway = modelAwayImplied - bookAwayImplied  [positive = model more confident than book on away]
-    //   edgeHome = modelHomeImplied - bookHomeImplied  [positive = model more confident than book on home]
-    //
-    //   VALIDATION (CLE +1.5 -103 book, model +104):
-    //     bookAwayImplied  = 103/(103+100) = 50.74%
-    //     modelAwayImplied = 100/(104+100) = 49.02%
-    //     edgeAway = 49.02% - 50.74% = -1.72pp  → NO EDGE (model LESS confident than book) ✓
-    //
-    //   VALIDATION (SD +1.5 -175 book, model -167):
-    //     bookHomeImplied  = 175/(175+100) = 63.64%
-    //     modelHomeImplied = 167/(167+100) = 62.55%
-    //     edgeHome = 62.55% - 63.64% = -1.09pp  → NO EDGE (model LESS confident than book) ✓
-    //
-    // [INPUT]  r.away_rl_odds = model fair odds at book's +1.5 line (e.g. +104)
-    // [INPUT]  r.home_rl_odds = model fair odds at book's -1.5 line (e.g. -120)
-    // [INPUT]  awayRunLineOdds = book's raw odds at +1.5 (e.g. -103)
-    // [INPUT]  homeRunLineOdds = book's raw odds at -1.5 (e.g. -118)
-    const _mlbRlAwayOdds = r.away_rl_odds;  // model fair odds at book's away RL line
-    const _mlbRlHomeOdds = r.home_rl_odds;  // model fair odds at book's home RL line
-    // Book break-even: raw implied probability at book's RL odds
-    // Use liveBookSpreadMap (live re-read) for RL odds — more accurate than snapshot
-    const _liveRLOdds = liveBookSpreadMap.get(r.db_id);
-    const _bkAwayRLOddsNum = parseFloat(String(
-      _liveRLOdds?.awayRunLineOdds ?? dbGame?.awayRunLineOdds ?? ''
-    ));
-    const _bkHomeRLOddsNum = parseFloat(String(
-      _liveRLOdds?.homeRunLineOdds ?? dbGame?.homeRunLineOdds ?? ''
-    ));
-    const _americanBreakEven = (odds: number): number | null => {
-      if (isNaN(odds)) return null;
-      return odds < 0 ? Math.abs(odds) / (Math.abs(odds) + 100) : 100 / (odds + 100);
-    };
-    // OPTION B: model implied vs book implied (raw vs raw, same side)
-    const _mdlAwayRLImplied = _americanBreakEven(_mlbRlAwayOdds);  // model implied for away RL
-    const _mdlHomeRLImplied = _americanBreakEven(_mlbRlHomeOdds);  // model implied for home RL
-    const _bkAwayRLImplied  = _americanBreakEven(_bkAwayRLOddsNum); // book raw implied for away RL
-    const _bkHomeRLImplied  = _americanBreakEven(_bkHomeRLOddsNum); // book raw implied for home RL
-    let mlbSpreadDiff: string | null = null;
-    let mlbSpreadEdge: string | null = null;
-    if (_mdlAwayRLImplied !== null && _mdlHomeRLImplied !== null &&
-        _bkAwayRLImplied  !== null && _bkHomeRLImplied  !== null) {
-      // Option B: edge = model implied - book implied (positive = model more confident than book)
-      const edgeAway = _mdlAwayRLImplied - _bkAwayRLImplied;  // positive = away RL edge
-      const edgeHome = _mdlHomeRLImplied - _bkHomeRLImplied;  // positive = home RL edge
-      const bestEdge = Math.max(edgeAway, edgeHome);
-      console.log(
-        `${TAG} [${r.db_id}] ${r.game} — [RL OPTION B AUDIT] ` +
-        `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
-        `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
-        `[STATE] mdlAwayImpl=${(_mdlAwayRLImplied*100).toFixed(2)}% mdlHomeImpl=${(_mdlHomeRLImplied*100).toFixed(2)}% ` +
-        `bkAwayImpl=${(_bkAwayRLImplied*100).toFixed(2)}% bkHomeImpl=${(_bkHomeRLImplied*100).toFixed(2)}% ` +
-        `[OUTPUT] edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp bestEdge=${(bestEdge*100).toFixed(2)}pp ` +
-        `[VERIFY] ${bestEdge > 0 ? 'EDGE DETECTED' : 'NO EDGE'}`
-      );
-      if (bestEdge > 0) {
-        mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);  // pp with 1 decimal
-        const awayRLLabel = safeAwayRunLine;  // sign-enforced RL label e.g. "+1.5" or "-1.5"
-        const homeRLLabel = safeHomeRunLine;
-        const awayAbbrForEdge = r.game.split('@')[0]?.trim() ?? 'AWAY';
-        const homeAbbrForEdge = r.game.split('@')[1]?.trim() ?? 'HOME';
-        if (edgeAway >= edgeHome) {
-          mlbSpreadEdge = `${awayAbbrForEdge} ${awayRLLabel} [EDGE]`;
-        } else {
-          mlbSpreadEdge = `${homeAbbrForEdge} ${homeRLLabel} [EDGE]`;
-        }
-        console.log(
-          `${TAG} [${r.db_id}] ${r.game} — [RL EDGE CONFIRMED] ` +
-          `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp ` +
-          `→ spreadDiff=${mlbSpreadDiff}pp spreadEdge="${mlbSpreadEdge}"`
-        );
-      } else {
-        // No edge — still write spreadDiff as raw probability diff (negative = no edge)
-        mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);
-        console.log(
-          `${TAG} [${r.db_id}] ${r.game} — [RL NO EDGE] ` +
-          `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp → PASS (no edge)`
-        );
-      }
-    } else {
-      console.warn(
-        `${TAG} [${r.db_id}] ${r.game} — [RL EDGE] SKIP: book RL odds or model RL odds unavailable ` +
-        `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
-        `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
-        `[VERIFY] FAIL — NaN detected in implied probability computation`
-      );
-    }
-
-    // ── MLB TOTAL EDGE DETECTION ─────────────────────────────────────────────────
-    // OPTION B RULE (confirmed by user): edge exists ONLY when modelImplied(side) > bookImplied(side)
-    // Both probabilities are RAW (vig-inclusive). No vig removal for edge detection.
-    //
-    // Formula:
-    //   modelOverProb  = r.over_pct / 100  (from Python Monte Carlo simulation)
-    //   modelUnderProb = 1 - modelOverProb  (complementary)
-    //   rawBkOver      = americanToImplied(bookOverOdds)   [raw, vig-inclusive]
-    //   rawBkUnder     = americanToImplied(bookUnderOdds)  [raw, vig-inclusive]
-    //
-    //   OVER  edge: modelOverProb  > rawBkOver  → edge on OVER
-    //   UNDER edge: modelUnderProb > rawBkUnder → edge on UNDER
-    //   (these are mutually exclusive for a fair-priced model)
-    //
-    //   totalDiff = |modelSideProb - rawBkSideProb| * 100  [pp]
-    //   totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
-    //
-    // VALIDATION (u7.5 book=+102/-122, model=+116/-116):
-    //   rawBkOver  = 100/202 = 49.50%,  modelOverProb  = 100/216 = 46.30% → 46.30 < 49.50 → NO OVER EDGE
-    //   rawBkUnder = 122/222 = 54.95%,  modelUnderProb = 116/216 = 53.70% → 53.70 < 54.95 → NO UNDER EDGE
-    //   Result: PASS (no edge) ✓
-    const _mlbOverPct   = r.over_pct / 100;   // model over probability (0-1 scale)
-    const _mlbUnderPct  = 1 - _mlbOverPct;    // model under probability (complementary)
-    // Use live book O/U odds for raw implied computation
-    const _bkOverOddsRaw  = dbGame?.overOdds  ?? null;
-    const _bkUnderOddsRaw = dbGame?.underOdds ?? null;
-    const _bkOverOddsNum  = parseFloat(String(_bkOverOddsRaw  ?? ''));
-    const _bkUnderOddsNum = parseFloat(String(_bkUnderOddsRaw ?? ''));
-    let mlbTotalDiff: string | null = null;
-    let mlbTotalEdge: string | null = null;
-    if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
-      // Option B: raw vs raw comparison on each side independently
-      const _rawBkOver  = _americanBreakEven(_bkOverOddsNum);   // raw implied (vig-inclusive)
-      const _rawBkUnder = _americanBreakEven(_bkUnderOddsNum);  // raw implied (vig-inclusive)
-      if (_rawBkOver !== null && _rawBkUnder !== null) {
-        // Option B edge detection: model must be MORE confident than book on the SAME side
-        const _overEdgePP  = (_mlbOverPct  - _rawBkOver)  * 100;  // positive = OVER edge
-        const _underEdgePP = (_mlbUnderPct - _rawBkUnder) * 100;  // positive = UNDER edge
-        // Anchor total label to book total (not model total)
-        const _totalLabel = (() => {
-          const liveTotal = liveBookTotalMap.get(r.db_id);
-          if (liveTotal != null && !isNaN(liveTotal)) return String(liveTotal);
-          const snapTotal = dbGameById.get(r.db_id)?.bookTotal;
-          if (snapTotal != null) return String(snapTotal);
-          return String(r.total_line);
-        })();
-        if (_overEdgePP > 0 && _underEdgePP <= 0) {
-          // OVER edge only: model more confident in OVER than book (raw vs raw)
-          mlbTotalDiff = String(Math.round(_overEdgePP * 10) / 10);
-          mlbTotalEdge = `OVER ${_totalLabel} [EDGE]`;
-          console.log(
-            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE OVER] ` +
-            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
-            `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% ` +
-            `[OUTPUT] overEdgePP=+${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
-            `[VERIFY] PASS — OVER edge confirmed (model > book raw) ` +
-            `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
-          );
-        } else if (_underEdgePP > 0 && _overEdgePP <= 0) {
-          // UNDER edge only: model more confident in UNDER than book (raw vs raw)
-          mlbTotalDiff = String(Math.round(_underEdgePP * 10) / 10);
-          mlbTotalEdge = `UNDER ${_totalLabel} [EDGE]`;
-          console.log(
-            `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE UNDER] ` +
-            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
-            `[STATE] rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
-            `[OUTPUT] underEdgePP=+${_underEdgePP.toFixed(2)}pp overEdgePP=${_overEdgePP.toFixed(2)}pp ` +
-            `[VERIFY] PASS — UNDER edge confirmed (model > book raw) ` +
-            `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
-          );
-        } else {
-          // No edge on either side (or impossible both-edge case for fair-priced model)
-          mlbTotalDiff = '0';
-          console.log(
-            `${TAG} [${r.db_id}] ${r.game} — [TOTAL NO EDGE] ` +
-            `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
-            `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% ` +
-            `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
-            `[OUTPUT] overEdgePP=${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
-            `[VERIFY] PASS — no edge on either side → PASS`
-          );
-        }
-      }
-    } else {
-      console.warn(
-        `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE] SKIP: book O/U odds unavailable ` +
-        `(overOdds=${_bkOverOddsRaw} underOdds=${_bkUnderOddsRaw})`
-      );
-    }
-
-    // ── RL SIGN FLIP / INVARIANT VIOLATION: null ALL model fields atomically ──
-    // CRITICAL FIX (2026-06-10): Previously only modelRunAt was cleared, leaving stale
-    // inverted odds (e.g. -196 for a +157 ML fav) in all other model columns. The desktop
-    // GameCard gated on modelRunAt=null (hasModelData=false) and showed '—', but the mobile
-    // GameCard did NOT have this gate and rendered the stale inverted odds directly.
-    // Fix: null ALL model-derived fields atomically so both mobile and desktop show
-    // clean '—' until the game re-runs successfully with the correct rl_home_spread.
-    if (rlSignFlipDetected) {
-      try {
-        console.log(
-          `[INPUT]  [RL INVALIDATE] id=${r.db_id} game=${r.game}` +
-          ` awayRunLine=${r.away_run_line} bookAwaySpread=${bookAwaySpreadForGuard}` +
-          ` modelAwayML=${r.away_ml} modelHomePLCoverPct=${r.home_rl_cover_pct}%`
-        );
-        console.log(`[STEP]   Nulling ALL model fields for id=${r.db_id} — stale inverted data must not render`);
-        await db.update(games)
-          .set({
-            // ── Invalidation marker ────────────────────────────────────────────────────────
-            modelRunAt:          null,
-            // ── Run line model fields ──────────────────────────────────────────────────────
-            awayModelSpread:     null,
-            homeModelSpread:     null,
-            modelAwaySpreadOdds: null,
-            modelHomeSpreadOdds: null,
-            modelAwayPLCoverPct: null,
-            modelHomePLCoverPct: null,
-            spreadDiff:          null,
-            spreadEdge:          null,
-            // ── Total model fields ────────────────────────────────────────────────────────
-            modelTotal:          null,
-            totalDiff:           null,
-            totalEdge:           null,
-            modelOverOdds:       null,
-            modelUnderOdds:      null,
-            modelOverRate:       null,
-            modelUnderRate:      null,
-            // ── Moneyline model fields ───────────────────────────────────────────────────
-            modelAwayML:         null,
-            modelHomeML:         null,
-            modelAwayWinPct:     null,
-            modelHomeWinPct:     null,
-            // ── Projected scores ───────────────────────────────────────────────────────────
-            modelAwayScore:      null,
-            modelHomeScore:      null,
-          })
-          .where(eq(games.id, r.db_id));
-        console.log(
-          `[OUTPUT] [RL INVALIDATE] id=${r.db_id} ${r.game} — ALL model fields nulled.` +
-          ` Game will re-run next cycle with corrected awayRunLine.`
-        );
-        console.log(`[VERIFY] PASS — stale model data cleared, UI will show '—' until re-run completes`);
-        invalidated++;
-        invalidatedGameIds.push(r.db_id);  // queue for immediate targeted re-run
-      } catch (invErr) {
-        console.error(`[RL INVALIDATE] id=${r.db_id} ${r.game} — DB clear failed: ${invErr}`);
-        errors++;
-      }
-      continue;  // skip the full model write below
-    }
-
+    // Per-game isolation: one malformed engine result must not abort the slate loop.
     try {
+      console.log(`\n${TAG} [${r.db_id}] ${r.game}`);
+      console.log(`  Proj: ${r.proj_away_runs.toFixed(2)}–${r.proj_home_runs.toFixed(2)} (total: ${r.proj_total.toFixed(2)})`);
+      console.log(`  Book total: ${r.total_line} | Over: ${r.over_pct.toFixed(2)}% (${fmtMl(r.over_odds)}) | Under: ${r.under_pct.toFixed(2)}% (${fmtMl(r.under_odds)})`);
+      console.log(`  ML: ${fmtMl(r.away_ml)}/${fmtMl(r.home_ml)} | Win%: ${r.away_win_pct.toFixed(2)}%/${r.home_win_pct.toFixed(2)}%`);
+      console.log(`  RL: ${r.away_run_line} (${fmtMl(r.away_rl_odds)}) / ${r.home_run_line} (${fmtMl(r.home_rl_odds)})`);
+      console.log(`  Cover%: away=${r.away_rl_cover_pct.toFixed(2)}% home=${r.home_rl_cover_pct.toFixed(2)}%`);
+      console.log(`  Model spread: ${r.model_spread.toFixed(3)} | Sims: ${r.simulations} | Elapsed: ${r.elapsed_sec}s`);
+      // ── SIGN-ENFORCEMENT GUARD ────────────────────────────────────────────────
+      // awayModelSpread MUST mirror awayBookSpread sign.
+      // The Python engine computes away_run_line from rl_home_spread (derived from awayRunLine).
+      // If awayBookSpread was NULL at model-run START (odds not yet scraped), the snapshot
+      // in dbGameById is stale. We use liveBookSpreadMap (re-read right before DB writes)
+      // as the authoritative source. Falls back to dbGameById snapshot if live re-read failed.
+      // awayBookSpread is written ONLY by the VSiN scraper and is always the authoritative book value.
+      const dbGame = dbGameById.get(r.db_id);
+      const liveSpread = liveBookSpreadMap.get(r.db_id);
+      // Prefer live re-read value; fall back to snapshot if live re-read failed or returned null
+      const bookAwaySpreadForGuard: number | null = (
+        liveSpread?.awayBookSpread != null ? liveSpread.awayBookSpread
+        : dbGame?.awayBookSpread != null   ? parseFloat(String(dbGame.awayBookSpread))
+        : null
+      );
+      const modelAwayRLNum = parseFloat(r.away_run_line);
+      let safeAwayRunLine = r.away_run_line;
+      let safeHomeRunLine = r.home_run_line;
+      // ── RL SIGN GUARD: detect flip and INVALIDATE (not patch) ──────────────────
+      // When the model ran with the wrong rl_home_spread sign (e.g. awayRunLine was
+      // written with wrong sign before odds were confirmed), the entire simulation
+      // used the wrong spread direction. The resulting odds are computed for the wrong
+      // team's perspective and CANNOT be salvaged by simply swapping labels.
+      // Correct action: skip DB write for this game and clear modelRunAt so it
+      // re-runs next cycle with the now-correct awayRunLine from the scraper.
+      let rlSignFlipDetected = false;
+      if (bookAwaySpreadForGuard !== null && !isNaN(bookAwaySpreadForGuard) && !isNaN(modelAwayRLNum)) {
+        const bookSign  = bookAwaySpreadForGuard >= 0 ? 1 : -1;
+        const modelSign = modelAwayRLNum >= 0 ? 1 : -1;
+        if (bookSign !== modelSign) {
+          rlSignFlipDetected = true;
+          console.error(
+            `${TAG} [${r.db_id}] ${r.game} — [RL SIGN GUARD] FLIP DETECTED: ` +
+            `Python away_run_line=${r.away_run_line} but awayBookSpread=${bookAwaySpreadForGuard}. ` +
+            `Model ran with wrong rl_home_spread — odds are invalid. ` +
+            `INVALIDATING modelRunAt so game re-runs next cycle with corrected awayRunLine.`
+          );
+          // Correct the run line labels for the invalidation write below
+          const correctedAway = bookSign > 0 ? Math.abs(modelAwayRLNum) : -Math.abs(modelAwayRLNum);
+          const correctedHome = -correctedAway;
+          safeAwayRunLine = correctedAway >= 0 ? `+${correctedAway.toFixed(1)}` : `${correctedAway.toFixed(1)}`;
+          safeHomeRunLine = correctedHome >= 0 ? `+${correctedHome.toFixed(1)}` : `${correctedHome.toFixed(1)}`;
+        }
+      }
+      // ── POST-WRITE INVARIANT CHECK: P(cover -1.5) must be ≤ P(win outright) ────
+      // Even if no sign flip was detected, verify the mathematical invariant:
+      // if home has -1.5 (home is RL fav), P(home covers -1.5) MUST be ≤ P(home wins).
+      // Violation means the model ran with wrong rl_spread (e.g. awayRunLine was null
+      // at run time and default +1.5 was used when home should have been -1.5).
+      if (!rlSignFlipDetected) {
+        const liveHomeBookSpread = liveBookSpreadMap.get(r.db_id)?.homeBookSpread;
+        const homeBookSpreadNum = liveHomeBookSpread != null ? liveHomeBookSpread
+          : dbGame?.homeBookSpread != null ? parseFloat(String(dbGame.homeBookSpread)) : null;
+        if (homeBookSpreadNum !== null && homeBookSpreadNum < 0) {
+          // Home has -1.5: P(home covers -1.5) must be ≤ P(home wins outright)
+          const pHomeCoverRL = r.home_rl_cover_pct / 100;
+          const pHomeWin = r.home_win_pct / 100;
+          if (pHomeCoverRL > pHomeWin + 0.02) {  // 2pp tolerance for simulation noise
+            rlSignFlipDetected = true;
+            console.error(
+              `${TAG} [${r.db_id}] ${r.game} — [RL INVARIANT VIOLATION] ` +
+              `homeBookSpread=${homeBookSpreadNum} (home is -1.5 fav) but ` +
+              `P(home covers -1.5)=${(pHomeCoverRL*100).toFixed(2)}% > P(home wins)=${(pHomeWin*100).toFixed(2)}%. ` +
+              `Model ran with wrong rl_home_spread. INVALIDATING modelRunAt for re-run.`
+            );
+          }
+        }
+        // Symmetric check: if away has -1.5 (away is RL fav)
+        if (!rlSignFlipDetected && bookAwaySpreadForGuard !== null && bookAwaySpreadForGuard < 0) {
+          const pAwayCoverRL = r.away_rl_cover_pct / 100;
+          const pAwayWin = r.away_win_pct / 100;
+          if (pAwayCoverRL > pAwayWin + 0.02) {
+            rlSignFlipDetected = true;
+            console.error(
+              `${TAG} [${r.db_id}] ${r.game} — [RL INVARIANT VIOLATION] ` +
+              `awayBookSpread=${bookAwaySpreadForGuard} (away is -1.5 fav) but ` +
+              `P(away covers -1.5)=${(pAwayCoverRL*100).toFixed(2)}% > P(away wins)=${(pAwayWin*100).toFixed(2)}%. ` +
+              `Model ran with wrong rl_home_spread. INVALIDATING modelRunAt for re-run.`
+            );
+          }
+        }
+      }
+
+      // ── MLB RL EDGE DETECTION ─────────────────────────────────────────────────
+      // MLB run lines are ALWAYS ±1.5 — line arithmetic (|awayModelSpread - awayBookSpread|)
+      // is useless (always 0 when signs match). The edge lives in the ODDS.
+      //
+      // OPTION B RULE (mirrors total edge detection exactly):
+      //   Edge exists ONLY when modelImplied(side) > bookImplied(side)
+      //   Both probabilities are RAW (vig-inclusive). No vig removal.
+      //
+      // FORMULA:
+      //   modelAwayImplied = americanToImplied(away_rl_odds)   [model fair odds → raw implied]
+      //   modelHomeImplied = americanToImplied(home_rl_odds)
+      //   bookAwayImplied  = americanToImplied(awayRunLineOdds) [book raw implied, vig-inclusive]
+      //   bookHomeImplied  = americanToImplied(homeRunLineOdds)
+      //
+      //   edgeAway = modelAwayImplied - bookAwayImplied  [positive = model more confident than book on away]
+      //   edgeHome = modelHomeImplied - bookHomeImplied  [positive = model more confident than book on home]
+      //
+      //   VALIDATION (CLE +1.5 -103 book, model +104):
+      //     bookAwayImplied  = 103/(103+100) = 50.74%
+      //     modelAwayImplied = 100/(104+100) = 49.02%
+      //     edgeAway = 49.02% - 50.74% = -1.72pp  → NO EDGE (model LESS confident than book) ✓
+      //
+      //   VALIDATION (SD +1.5 -175 book, model -167):
+      //     bookHomeImplied  = 175/(175+100) = 63.64%
+      //     modelHomeImplied = 167/(167+100) = 62.55%
+      //     edgeHome = 62.55% - 63.64% = -1.09pp  → NO EDGE (model LESS confident than book) ✓
+      //
+      // [INPUT]  r.away_rl_odds = model fair odds at book's +1.5 line (e.g. +104)
+      // [INPUT]  r.home_rl_odds = model fair odds at book's -1.5 line (e.g. -120)
+      // [INPUT]  awayRunLineOdds = book's raw odds at +1.5 (e.g. -103)
+      // [INPUT]  homeRunLineOdds = book's raw odds at -1.5 (e.g. -118)
+      const _mlbRlAwayOdds = r.away_rl_odds;  // model fair odds at book's away RL line
+      const _mlbRlHomeOdds = r.home_rl_odds;  // model fair odds at book's home RL line
+      // Book break-even: raw implied probability at book's RL odds
+      // Use liveBookSpreadMap (live re-read) for RL odds — more accurate than snapshot
+      const _liveRLOdds = liveBookSpreadMap.get(r.db_id);
+      const _bkAwayRLOddsNum = parseFloat(String(
+        _liveRLOdds?.awayRunLineOdds ?? dbGame?.awayRunLineOdds ?? ''
+      ));
+      const _bkHomeRLOddsNum = parseFloat(String(
+        _liveRLOdds?.homeRunLineOdds ?? dbGame?.homeRunLineOdds ?? ''
+      ));
+      const _americanBreakEven = (odds: number): number | null => {
+        if (isNaN(odds)) return null;
+        return odds < 0 ? Math.abs(odds) / (Math.abs(odds) + 100) : 100 / (odds + 100);
+      };
+      // OPTION B: model implied vs book implied (raw vs raw, same side)
+      const _mdlAwayRLImplied = _americanBreakEven(_mlbRlAwayOdds);  // model implied for away RL
+      const _mdlHomeRLImplied = _americanBreakEven(_mlbRlHomeOdds);  // model implied for home RL
+      const _bkAwayRLImplied  = _americanBreakEven(_bkAwayRLOddsNum); // book raw implied for away RL
+      const _bkHomeRLImplied  = _americanBreakEven(_bkHomeRLOddsNum); // book raw implied for home RL
+      let mlbSpreadDiff: string | null = null;
+      let mlbSpreadEdge: string | null = null;
+      if (_mdlAwayRLImplied !== null && _mdlHomeRLImplied !== null &&
+          _bkAwayRLImplied  !== null && _bkHomeRLImplied  !== null) {
+        // Option B: edge = model implied - book implied (positive = model more confident than book)
+        const edgeAway = _mdlAwayRLImplied - _bkAwayRLImplied;  // positive = away RL edge
+        const edgeHome = _mdlHomeRLImplied - _bkHomeRLImplied;  // positive = home RL edge
+        const bestEdge = Math.max(edgeAway, edgeHome);
+        console.log(
+          `${TAG} [${r.db_id}] ${r.game} — [RL OPTION B AUDIT] ` +
+          `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
+          `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
+          `[STATE] mdlAwayImpl=${(_mdlAwayRLImplied*100).toFixed(2)}% mdlHomeImpl=${(_mdlHomeRLImplied*100).toFixed(2)}% ` +
+          `bkAwayImpl=${(_bkAwayRLImplied*100).toFixed(2)}% bkHomeImpl=${(_bkHomeRLImplied*100).toFixed(2)}% ` +
+          `[OUTPUT] edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp bestEdge=${(bestEdge*100).toFixed(2)}pp ` +
+          `[VERIFY] ${bestEdge > 0 ? 'EDGE DETECTED' : 'NO EDGE'}`
+        );
+        if (bestEdge > 0) {
+          mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);  // pp with 1 decimal
+          const awayRLLabel = safeAwayRunLine;  // sign-enforced RL label e.g. "+1.5" or "-1.5"
+          const homeRLLabel = safeHomeRunLine;
+          const awayAbbrForEdge = r.game.split('@')[0]?.trim() ?? 'AWAY';
+          const homeAbbrForEdge = r.game.split('@')[1]?.trim() ?? 'HOME';
+          if (edgeAway >= edgeHome) {
+            mlbSpreadEdge = `${awayAbbrForEdge} ${awayRLLabel} [EDGE]`;
+          } else {
+            mlbSpreadEdge = `${homeAbbrForEdge} ${homeRLLabel} [EDGE]`;
+          }
+          console.log(
+            `${TAG} [${r.db_id}] ${r.game} — [RL EDGE CONFIRMED] ` +
+            `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp ` +
+            `→ spreadDiff=${mlbSpreadDiff}pp spreadEdge="${mlbSpreadEdge}"`
+          );
+        } else {
+          // No edge — still write spreadDiff as raw probability diff (negative = no edge)
+          mlbSpreadDiff = String(Math.round(bestEdge * 1000) / 10);
+          console.log(
+            `${TAG} [${r.db_id}] ${r.game} — [RL NO EDGE] ` +
+            `edgeAway=${(edgeAway*100).toFixed(2)}pp edgeHome=${(edgeHome*100).toFixed(2)}pp → PASS (no edge)`
+          );
+        }
+      } else {
+        console.warn(
+          `${TAG} [${r.db_id}] ${r.game} — [RL EDGE] SKIP: book RL odds or model RL odds unavailable ` +
+          `[INPUT] mdlAwayOdds=${_mlbRlAwayOdds} mdlHomeOdds=${_mlbRlHomeOdds} ` +
+          `bkAwayOdds=${_bkAwayRLOddsNum} bkHomeOdds=${_bkHomeRLOddsNum} ` +
+          `[VERIFY] FAIL — NaN detected in implied probability computation`
+        );
+      }
+
+      // ── MLB TOTAL EDGE DETECTION ─────────────────────────────────────────────────
+      // OPTION B RULE (confirmed by user): edge exists ONLY when modelImplied(side) > bookImplied(side)
+      // Both probabilities are RAW (vig-inclusive). No vig removal for edge detection.
+      //
+      // Formula:
+      //   modelOverProb  = r.over_pct / 100  (from Python Monte Carlo simulation)
+      //   modelUnderProb = 1 - modelOverProb  (complementary)
+      //   rawBkOver      = americanToImplied(bookOverOdds)   [raw, vig-inclusive]
+      //   rawBkUnder     = americanToImplied(bookUnderOdds)  [raw, vig-inclusive]
+      //
+      //   OVER  edge: modelOverProb  > rawBkOver  → edge on OVER
+      //   UNDER edge: modelUnderProb > rawBkUnder → edge on UNDER
+      //   (these are mutually exclusive for a fair-priced model)
+      //
+      //   totalDiff = |modelSideProb - rawBkSideProb| * 100  [pp]
+      //   totalEdge = "OVER {bookTotal} [EDGE]" or "UNDER {bookTotal} [EDGE]"
+      //
+      // VALIDATION (u7.5 book=+102/-122, model=+116/-116):
+      //   rawBkOver  = 100/202 = 49.50%,  modelOverProb  = 100/216 = 46.30% → 46.30 < 49.50 → NO OVER EDGE
+      //   rawBkUnder = 122/222 = 54.95%,  modelUnderProb = 116/216 = 53.70% → 53.70 < 54.95 → NO UNDER EDGE
+      //   Result: PASS (no edge) ✓
+      const _mlbOverPct   = r.over_pct / 100;   // model over probability (0-1 scale)
+      const _mlbUnderPct  = 1 - _mlbOverPct;    // model under probability (complementary)
+      // Use live book O/U odds for raw implied computation
+      const _bkOverOddsRaw  = dbGame?.overOdds  ?? null;
+      const _bkUnderOddsRaw = dbGame?.underOdds ?? null;
+      const _bkOverOddsNum  = parseFloat(String(_bkOverOddsRaw  ?? ''));
+      const _bkUnderOddsNum = parseFloat(String(_bkUnderOddsRaw ?? ''));
+      let mlbTotalDiff: string | null = null;
+      let mlbTotalEdge: string | null = null;
+      if (!isNaN(_bkOverOddsNum) && !isNaN(_bkUnderOddsNum)) {
+        // Option B: raw vs raw comparison on each side independently
+        const _rawBkOver  = _americanBreakEven(_bkOverOddsNum);   // raw implied (vig-inclusive)
+        const _rawBkUnder = _americanBreakEven(_bkUnderOddsNum);  // raw implied (vig-inclusive)
+        if (_rawBkOver !== null && _rawBkUnder !== null) {
+          // Option B edge detection: model must be MORE confident than book on the SAME side
+          const _overEdgePP  = (_mlbOverPct  - _rawBkOver)  * 100;  // positive = OVER edge
+          const _underEdgePP = (_mlbUnderPct - _rawBkUnder) * 100;  // positive = UNDER edge
+          // Anchor total label to book total (not model total)
+          const _totalLabel = (() => {
+            const liveTotal = liveBookTotalMap.get(r.db_id);
+            if (liveTotal != null && !isNaN(liveTotal)) return String(liveTotal);
+            const snapTotal = dbGameById.get(r.db_id)?.bookTotal;
+            if (snapTotal != null) return String(snapTotal);
+            return String(r.total_line);
+          })();
+          if (_overEdgePP > 0 && _underEdgePP <= 0) {
+            // OVER edge only: model more confident in OVER than book (raw vs raw)
+            mlbTotalDiff = String(Math.round(_overEdgePP * 10) / 10);
+            mlbTotalEdge = `OVER ${_totalLabel} [EDGE]`;
+            console.log(
+              `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE OVER] ` +
+              `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+              `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% ` +
+              `[OUTPUT] overEdgePP=+${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
+              `[VERIFY] PASS — OVER edge confirmed (model > book raw) ` +
+              `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
+            );
+          } else if (_underEdgePP > 0 && _overEdgePP <= 0) {
+            // UNDER edge only: model more confident in UNDER than book (raw vs raw)
+            mlbTotalDiff = String(Math.round(_underEdgePP * 10) / 10);
+            mlbTotalEdge = `UNDER ${_totalLabel} [EDGE]`;
+            console.log(
+              `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE UNDER] ` +
+              `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+              `[STATE] rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
+              `[OUTPUT] underEdgePP=+${_underEdgePP.toFixed(2)}pp overEdgePP=${_overEdgePP.toFixed(2)}pp ` +
+              `[VERIFY] PASS — UNDER edge confirmed (model > book raw) ` +
+              `→ totalDiff=${mlbTotalDiff}pp totalEdge="${mlbTotalEdge}"`
+            );
+          } else {
+            // No edge on either side (or impossible both-edge case for fair-priced model)
+            mlbTotalDiff = '0';
+            console.log(
+              `${TAG} [${r.db_id}] ${r.game} — [TOTAL NO EDGE] ` +
+              `[INPUT] bkOver=${_bkOverOddsNum} bkUnder=${_bkUnderOddsNum} ` +
+              `[STATE] rawBkOver=${(_rawBkOver*100).toFixed(2)}% rawBkUnder=${(_rawBkUnder*100).toFixed(2)}% ` +
+              `mdlOverProb=${(_mlbOverPct*100).toFixed(2)}% mdlUnderProb=${(_mlbUnderPct*100).toFixed(2)}% ` +
+              `[OUTPUT] overEdgePP=${_overEdgePP.toFixed(2)}pp underEdgePP=${_underEdgePP.toFixed(2)}pp ` +
+              `[VERIFY] PASS — no edge on either side → PASS`
+            );
+          }
+        }
+      } else {
+        console.warn(
+          `${TAG} [${r.db_id}] ${r.game} — [TOTAL EDGE] SKIP: book O/U odds unavailable ` +
+          `(overOdds=${_bkOverOddsRaw} underOdds=${_bkUnderOddsRaw})`
+        );
+      }
+
+      // ── RL SIGN FLIP / INVARIANT VIOLATION: null ALL model fields atomically ──
+      // CRITICAL FIX (2026-06-10): Previously only modelRunAt was cleared, leaving stale
+      // inverted odds (e.g. -196 for a +157 ML fav) in all other model columns. The desktop
+      // GameCard gated on modelRunAt=null (hasModelData=false) and showed '—', but the mobile
+      // GameCard did NOT have this gate and rendered the stale inverted odds directly.
+      // Fix: null ALL model-derived fields atomically so both mobile and desktop show
+      // clean '—' until the game re-runs successfully with the correct rl_home_spread.
+      if (rlSignFlipDetected) {
+        try {
+          console.log(
+            `[INPUT]  [RL INVALIDATE] id=${r.db_id} game=${r.game}` +
+            ` awayRunLine=${r.away_run_line} bookAwaySpread=${bookAwaySpreadForGuard}` +
+            ` modelAwayML=${r.away_ml} modelHomePLCoverPct=${r.home_rl_cover_pct}%`
+          );
+          console.log(`[STEP]   Nulling ALL model fields for id=${r.db_id} — stale inverted data must not render`);
+          await db.update(games)
+            .set({
+              // ── Invalidation marker ────────────────────────────────────────────────────────
+              modelRunAt:          null,
+              // ── Run line model fields ──────────────────────────────────────────────────────
+              awayModelSpread:     null,
+              homeModelSpread:     null,
+              modelAwaySpreadOdds: null,
+              modelHomeSpreadOdds: null,
+              modelAwayPLCoverPct: null,
+              modelHomePLCoverPct: null,
+              spreadDiff:          null,
+              spreadEdge:          null,
+              // ── Total model fields ────────────────────────────────────────────────────────
+              modelTotal:          null,
+              totalDiff:           null,
+              totalEdge:           null,
+              modelOverOdds:       null,
+              modelUnderOdds:      null,
+              modelOverRate:       null,
+              modelUnderRate:      null,
+              // ── Moneyline model fields ───────────────────────────────────────────────────
+              modelAwayML:         null,
+              modelHomeML:         null,
+              modelAwayWinPct:     null,
+              modelHomeWinPct:     null,
+              // ── Projected scores ───────────────────────────────────────────────────────────
+              modelAwayScore:      null,
+              modelHomeScore:      null,
+            })
+            .where(eq(games.id, r.db_id));
+          console.log(
+            `[OUTPUT] [RL INVALIDATE] id=${r.db_id} ${r.game} — ALL model fields nulled.` +
+            ` Game will re-run next cycle with corrected awayRunLine.`
+          );
+          console.log(`[VERIFY] PASS — stale model data cleared, UI will show '—' until re-run completes`);
+          invalidated++;
+          invalidatedGameIds.push(r.db_id);  // queue for immediate targeted re-run
+        } catch (invErr) {
+          console.error(`[RL INVALIDATE] id=${r.db_id} ${r.game} — DB clear failed: ${invErr}`);
+          errors++;
+        }
+        continue;  // skip the full model write below
+      }
+
       await db.update(games)
         .set({
           // ── Run line ─────────────────────────────────────────────────────
@@ -2578,12 +2584,12 @@ export async function runMlbModelForDate(dateStr: string, opts?: { targetGameIds
       console.log(`  [DB] ✓ Written id=${r.db_id}`);
       written++;
     } catch (err) {
-      // Expose the underlying MySQL error from DrizzleQueryError.cause
+      // Expose the underlying MySQL error from DrizzleQueryError.cause (if any)
       const cause = (err as any)?.cause;
       const mysqlCode = (cause as any)?.code ?? 'UNKNOWN';
       const mysqlMsg  = (cause as any)?.message ?? (cause ? String(cause) : 'no cause');
-      console.error(`  [DB] ✗ ERROR id=${r.db_id}: ${err}`);
-      console.error(`  [DB] ✗ MYSQL CAUSE id=${r.db_id}: code=${mysqlCode} msg=${mysqlMsg}`);
+      console.error(`  [GAME] ✗ ERROR id=${r.db_id}: ${err}`);
+      console.error(`  [GAME] ✗ CAUSE id=${r.db_id}: code=${mysqlCode} msg=${mysqlMsg}`);
       errors++;
     }
   }
