@@ -66,4 +66,12 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     // No stale qf-097 targeting left behind.
     expect(engineSrc).not.toMatch(/fid:'wc26-qf-097'/);
   });
+
+  it("carries the owner-provided book to-advance (to-qualify) lines for both QFs", () => {
+    // qf-099: NOR +160 / ENG -200 ; qf-100: ARG -310 / SUI +240.
+    expect(engineSrc).toMatch(/bookHomeAdv:\s*160,\s*bookAwayAdv:\s*-200/);
+    expect(engineSrc).toMatch(/bookHomeAdv:\s*-310,\s*bookAwayAdv:\s*240/);
+    // The advance columns must no longer be null for these QFs.
+    expect(engineSrc).not.toMatch(/bookHomeAdv:\s*null,\s*bookAwayAdv:\s*null/);
+  });
 });
