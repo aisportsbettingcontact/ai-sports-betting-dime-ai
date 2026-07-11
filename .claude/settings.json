@@ -1,5 +1,6 @@
 {
   "enabledPlugins": {
+    "railway@railway-skills": true,
     "superpowers@claude-plugins-official": true,
     "mcp-server-dev@claude-plugins-official": true,
     "jobs-to-be-done@pm-skills": true,
@@ -83,6 +84,12 @@
       "source": {
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+      }
+    },
+    "railway-skills": {
+      "source": {
+        "source": "github",
+        "repo": "railwayapp/railway-skills"
       }
     }
   }
