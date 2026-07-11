@@ -70,13 +70,13 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
 
 ## Deploy law (IMPORTANT)
 
-**Migration in progress: Manus → Railway (backend) + Vercel (frontend).**
-Runbook: `references/railway-vercel-deploy.md` — Dockerfile/`railway.json` build the
-Express+tRPC backend (with Debian Python for the model runners), `vercel.json` builds the
-Vite client and proxies `/api/*` to Railway. Once cut over, both platforms auto-deploy on
-push to `main` — until then, production remains Manus-hosted and **merging to `main` does
-NOT deploy** (legacy runbook: `RELEASING.md`). Schema changes always need the manual
-`db-push.yml` workflow before any code deploy.
+**Hosting: Railway serves the whole app** (Express serves API + built Vite client;
+DNS on the custom domain points at Railway). Runbook: `references/railway-deploy.md` —
+Dockerfile/`railway.json` build everything, with Debian Python for the model runners.
+Railway auto-deploys on push to `main`. Vercel was removed 2026-07-11 (was the planned
+frontend host mid-migration; also disconnect the repo in the Vercel dashboard to stop PR
+deploy statuses). The legacy Manus deployment (manual, `RELEASING.md`) is being retired.
+Schema changes always need the manual `db-push.yml` workflow before any code deploy.
 
 ## Repo conventions
 
