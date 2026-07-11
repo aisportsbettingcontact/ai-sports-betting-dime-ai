@@ -30,6 +30,10 @@ import {
   sanitizeDimeChatHistory,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import {
+  checkDimeChatRateLimit,
+  DIME_CHAT_RATE_LIMIT_WINDOW_MS,
+} from "./dimeChatRateLimit";
 
 // ---------------------------------------------------------------
 // Structured logging
@@ -83,8 +87,6 @@ async function checkDimeChatEntitlement(userId: number, role: string): Promise<b
   return !!user?.hasAccess;
 }
 
-// ---------------------------------------------------------------
-
 const dimeChatRouter = Router();
 
 dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
@@ -116,6 +118,20 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       detail: "Active subscription required",
     });
     res.status(403).json({ error: "Active subscription required." });
+    return;
+  }
+
+  // --- SEC-CRIT: Per-user rate limit — cap streaming requests per user per
+  // window so an entitled account cannot drive unbounded Anthropic spend. ---
+  if (!checkDimeChatRateLimit(authedUser.userId)) {
+    dimeLog("dime.chat.rate_limited", requestId, {
+      errorClass: "RateLimitError",
+      statusCode: 429,
+      userId: authedUser.userId,
+      detail: "Chat rate limit exceeded",
+    });
+    res.setHeader("Retry-After", Math.ceil(DIME_CHAT_RATE_LIMIT_WINDOW_MS / 1000).toString());
+    res.status(429).json({ error: "You're sending messages too quickly. Please wait a moment." });
     return;
   }
 
