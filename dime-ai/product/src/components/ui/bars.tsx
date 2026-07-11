@@ -27,10 +27,17 @@ export function ProbabilityBar({
 /**
  * One shared two-segment split bar (tickets or money distribution) used by
  * the Splits tab. Single outer track, single border, single clip radius,
- * one mint segment + one neutral segment, one internal separator — no
- * per-segment borders or doubled seams. Includes a visually-hidden text
- * equivalent for screen readers per the non-color-differentiation
- * requirement.
+ * one filled segment + one neutral segment, one internal separator — no
+ * per-segment borders or doubled seams.
+ *
+ * The filled segment uses a neutral emphasis token (--sp-bar-fill), NOT the
+ * mint signal color. Tickets/money split bars show the public betting
+ * distribution, which is not a model signal; painting side A mint here made
+ * mint mean "side A of the crowd" in the same column where the mint model-
+ * highlight pill meant "the side the model favors" — often the opposite team.
+ * Keeping mint reserved for the model signal removes that contradiction. The
+ * two segments are distinguished by their in-bar percentages (and the
+ * aria-label), so the bar does not rely on color alone.
  */
 export function SplitBar({
   heading,
@@ -69,7 +76,7 @@ export function SplitBar({
             flexGrow: aFlex,
             flexBasis: 0,
             minWidth: 46,
-            background: "var(--sp-mint)",
+            background: "var(--sp-bar-fill)",
             color: "var(--sp-bar-ink)",
           }}
         >

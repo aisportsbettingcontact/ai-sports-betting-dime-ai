@@ -27,6 +27,7 @@
  */
 import { Router, type Request, type Response, type Express } from "express";
 import Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import crypto from "crypto";
 import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
@@ -564,8 +565,11 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 11: Claude/API call (SSE streaming)
   // ═══════════════════════════════════════════════════════════════════════════
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  // Accept either a direct ANTHROPIC_API_KEY or the AI Gateway auth-token path
+  // (ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL). Previously this route read only
+  // ANTHROPIC_API_KEY, so a gateway-only deployment 500'd here while the sibling
+  // chat route worked. createAnthropicClient() resolves both credential modes.
+  if (!hasAnthropicCredentials()) {
     dimeLog("step.11.api_key_MISSING", requestId);
     await logRequestAudit({
       requestId, userId: userIdStr, authStatus: "PASSED",
@@ -599,7 +603,7 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(payload)}\n\n`);
   };
 
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = createAnthropicClient();
   const abort = new AbortController();
   let aborted = false;
 
