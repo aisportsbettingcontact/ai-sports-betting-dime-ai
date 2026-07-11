@@ -9,11 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Branch protection visibility
+      - name: Current rules state
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           H1="Authorization: Bearer $GH_TOKEN"; H2="Accept: application/vnd.github+json"
-          echo "::group::branch object (protected flag + protection summary)"
-          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/branches/main" | jq '{name, protected, protection}'
+          echo "::group::aggregated active rules for main"
+          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/rules/branches/main" | jq .
+          echo "::endgroup::"
+          echo "::group::classic protection flag"
+          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/branches/main" | jq '{protected, protection}'
           echo "::endgroup::"
