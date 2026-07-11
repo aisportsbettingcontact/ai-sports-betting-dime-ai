@@ -67,6 +67,24 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).not.toMatch(/fid:'wc26-qf-097'/);
   });
 
+  it("writes model Double Chance into wc2026_model_projections (feed reads DC from there, not wc2026MatchOdds)", () => {
+    // The feed's projToModelOdds reads dc1XOdds/dcX2Odds/noDrawHomeOdds from
+    // wc2026_model_projections — so the projections INSERT MUST include these
+    // columns or model Double Chance renders empty on the feed.
+    expect(engineSrc).toMatch(/dc_1x_odds,\s*dc_x2_odds,\s*no_draw_home_odds/);
+    expect(engineSrc).toMatch(/dc_1x_odds=VALUES\(dc_1x_odds\)/);
+    // Bound to the engine's computed DC values (1X=HomeWD, X2=AwayWD, NoDraw).
+    expect(engineSrc).toMatch(/markets\.mlHomeWD,\s*markets\.mlAwayWD,\s*markets\.mlNoDraw,\s*\n\s*markets\.spreadLine/);
+  });
+
+  it("repairs the QF venues from wc2026_venues by city (Miami for qf-099, Kansas City for qf-100)", () => {
+    expect(engineSrc).toMatch(/venueCityLike:'Miami'/);
+    expect(engineSrc).toMatch(/venueCityLike:'Kansas'/);
+    // Looks the slug up from wc2026_venues (never hardcodes a guessed slug).
+    expect(engineSrc).toMatch(/SELECT venue_id, city FROM wc2026_venues WHERE LOWER\(city\) LIKE/);
+    expect(engineSrc).toMatch(/UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/);
+  });
+
   it("carries the owner-provided book to-advance (to-qualify) lines for both QFs", () => {
     // qf-099: NOR +160 / ENG -200 ; qf-100: ARG -310 / SUI +240.
     expect(engineSrc).toMatch(/bookHomeAdv:\s*160,\s*bookAwayAdv:\s*-200/);
