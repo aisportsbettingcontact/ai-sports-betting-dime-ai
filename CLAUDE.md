@@ -8,7 +8,14 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Layer | Location | Contents |
 |---|---|---|
 | Design intelligence | `.claude/skills/` (uipro) | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides |
+| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill` | nextlevelbuilder/ui-ux-pro-max-skill marketplace — upstream ui-ux-pro-max (v2.6.x: 84 styles, 161 palettes, 73 font pairings, 17 stacks), tracks upstream releases alongside the vendored `.claude/skills/` copy |
 | Design taste | `.agents/skills/frontend-design/` | Anthropic official — distinctive, non-templated visual direction |
+| Writing quality | `.claude/skills/stop-slop/` | hardikpandya/stop-slop — strips AI writing tells from prose (filler phrases, formulaic structures, passive voice); use when drafting/editing copy or docs |
+| Design taste (Emil Kowalski) | `.claude/skills/` (emilkowalski/skill) | emil-design-eng (UI polish philosophy), apple-design (Apple-style motion/materials for web), animation-vocabulary (name-that-motion glossary), review-animations |
+| Design taste (Anthropic, pinned 9d2f1ae) | `.claude/skills/` | frontend-design (also in `.agents/skills/`), algorithmic-art (p5.js generative art + templates), mcp-builder (MCP server quality guide) |
+| Code review | `.claude/skills/code-review-excellence/` | wshobson/agents (pinned d7cf7dc) — review methodology: severity triage, security/perf/maintainability checklists, feedback phrasing |
+| Product management (phuryn) | `.claude/skills/` (68 skills, phuryn/pm-skills) | Strategy (canvases, five-forces, pricing), discovery (assumptions, experiments, interviews, OST), execution (PRD, OKRs, sprints, retros), GTM (ICP, battlecards, growth loops), market research, analytics (SQL, A/B, cohorts), toolkit (NDA, privacy policy). Overlaps deanpeters plugins — prefer `/pm-*` commands for the deanpeters chain |
+| Upload bundles | `.claude/skill-zips/` | 17 claude.ai-ready skill zips (one skill per zip; `phuryn-pm-skills-all.zip` = 68 inner zips) for Settings → Skills → Add |
 | Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
 | Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
 | MCP development | plugin `mcp-server-dev@claude-plugins-official` | Designing and building MCP servers that work well with Claude: deployment models (remote HTTP, MCPB, local), tool design patterns, auth, interactive MCP apps |
