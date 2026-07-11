@@ -89,14 +89,14 @@ export default function ClaudeAssistant() {
   const [, setLocation] = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [currentPage, setCurrentPage] = useState("/feed");
+  const [currentPage, setCurrentPage] = useState("/feed/model/mlb");
   const [focusArea, setFocusArea] = useState<FocusArea>("general");
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { if (!loading && (!appUser || !isOwner)) setLocation("/feed"); }, [loading, appUser, isOwner, setLocation]);
+  useEffect(() => { if (!loading && (!appUser || !isOwner)) setLocation("/feed/model/mlb"); }, [loading, appUser, isOwner, setLocation]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const chatMutation = trpc.claude.chat.useMutation({ onError: (err) => toast.error(`Claude error: ${err.message}`) });
@@ -158,8 +158,8 @@ export default function ClaudeAssistant() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-[#111] border-white/10 text-gray-300 text-xs">
-              <SelectItem value="/feed">Feed (Model Projections)</SelectItem>
-              <SelectItem value="/betting-splits">Betting Splits</SelectItem>
+              <SelectItem value="/feed/model/mlb">Feed (Model Projections)</SelectItem>
+              <SelectItem value="/betting-splits/MLB">Betting Splits</SelectItem>
               <SelectItem value="/wc2026">WC2026</SelectItem>
               <SelectItem value="/bet-tracker">Bet Tracker</SelectItem>
               <SelectItem value="/resources">Resources</SelectItem>

@@ -566,7 +566,7 @@ export default function MlbTeamSchedule() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/feed")}
+            onClick={() => navigate("/feed/model/mlb")}
             className="text-zinc-200 hover:text-white gap-1 -ml-1 px-2 flex-shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" />

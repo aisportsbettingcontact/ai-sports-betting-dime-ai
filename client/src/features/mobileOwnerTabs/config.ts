@@ -23,11 +23,14 @@ export interface MobileOwnerTabConfig {
   disabled?: boolean;
 }
 
+// [NAV RECONSTRUCTION 2026-07-11] Legacy query-string hooks are eradicated —
+// tabs target the canonical path-based routes only.
+// /feed/model/mlb canonicalizes to today's dated URL inside DimeModelFeed.
 export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
-  { id: "feed", label: "Feed", path: "/feed?tab=dual", iconName: "Newspaper" },
-  { id: "splits", label: "Splits", path: "/feed?tab=splits", iconName: "BarChart3" },
+  { id: "feed", label: "Feed", path: "/feed/model/mlb", iconName: "Newspaper" },
+  { id: "splits", label: "Splits", path: "/betting-splits/MLB", iconName: "BarChart3" },
   { id: "chat", label: "Chat", path: "/chat", iconName: "MessageSquare" },
-  { id: "props", label: "Props", path: "/feed?tab=lineups", iconName: "FlaskConical" },
+  { id: "props", label: "Props", path: "/m/props", iconName: "FlaskConical" },
   { id: "profile", label: "Profile", path: "/profile", iconName: "User" },
 ];
 

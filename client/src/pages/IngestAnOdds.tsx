@@ -80,7 +80,7 @@ export default function IngestAnOdds() {
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
       console.warn(`[IngestAnOdds] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting`);
-      navigate(appUser ? "/dashboard" : "/");
+      navigate(appUser ? "/feed/model/mlb" : "/");
     }
   }, [authLoading, appUser, isOwner, navigate]);
 

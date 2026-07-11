@@ -441,7 +441,7 @@ export default function ModelResults() {
   // ── Strict owner-only guard ─────────────────────────────────────────────────
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
-      setLocation("/feed");
+      setLocation("/feed/model/mlb");
     }
   }, [authLoading, appUser, isOwner, setLocation]);
 

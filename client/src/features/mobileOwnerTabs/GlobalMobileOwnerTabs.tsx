@@ -3,7 +3,8 @@
  * ═════════════════════
  * Mounts the MobileOwnerBottomTabs globally for owner users on mobile.
  * This component lives in App.tsx (outside any route) so the bottom nav
- * appears on ALL pages (e.g. /feed, /betting-splits) — not just /m/* routes.
+ * appears on ALL pages (e.g. /feed/model/mlb-…, /betting-splits/MLB) — not
+ * just /m/* routes.
  *
  * Visibility rules:
  * - Only renders if MOBILE_OWNER_TABS_ENABLED === true

@@ -3,6 +3,7 @@
  *
  * Route: /feed/model/:sport-:date  (e.g. /feed/model/mlb-07-11-2026,
  *        /feed/model/wc-07-11-2026) and /feed/model/:sport/:date.
+ *        Bare /feed/model/:sport canonicalizes to today's dated URL.
  *
  * A parallel surface over the SAME tRPC data contracts as /feed
  * (DIME-FEED-MIGRATION-DRAFT §2: new frontend, zero backend changes).
@@ -32,6 +33,7 @@ import {
   EDGE_THRESHOLD_PP,
   type ThreeWayOdds,
 } from "@/lib/edgeUtils";
+import { feedModelPath, toFeedSlugDate } from "@/lib/feedRoutes";
 
 // ─── Normalized card model (adapters below map tRPC rows into this) ─────────
 
@@ -244,11 +246,13 @@ function SkeletonRow() {
 
 // ─── Route parsing ───────────────────────────────────────────────────────────
 
-/** Accepts "mlb-07-11-2026" | "wc-07-11-2026" (also :sport/:date split form). */
+/** Accepts "mlb-07-11-2026" | "wc-07-11-2026" (also :sport/:date split form).
+ *  A bare "mlb" | "wc" parses with isoDate=null — the page canonicalizes it
+ *  to today's dated URL so sport-only links always land on a real slate. */
 export function parseFeedModelPath(
   sportSeg: string | undefined,
   dateSeg: string | undefined,
-): { sport: "MLB" | "WC"; isoDate: string } | null {
+): { sport: "MLB" | "WC"; isoDate: string | null } | null {
   let sport = (sportSeg ?? "").toLowerCase();
   let date = dateSeg ?? "";
   if (!date && /^(mlb|wc)-\d{2}-\d{2}-\d{4}$/.test(sport)) {
@@ -256,18 +260,15 @@ export function parseFeedModelPath(
     sport = sport.slice(0, sport.indexOf("-"));
   }
   if (sport !== "mlb" && sport !== "wc") return null;
+  const sportCode = sport === "mlb" ? ("MLB" as const) : ("WC" as const);
+  if (!date) return { sport: sportCode, isoDate: null };
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(date);
   if (!m) return null;
   const [, mm, dd, yyyy] = m;
   const mo = Number(mm), da = Number(dd);
   if (mo < 1 || mo > 12 || da < 1 || da > 31) return null;
-  return { sport: sport === "mlb" ? "MLB" : "WC", isoDate: `${yyyy}-${mm}-${dd}` };
+  return { sport: sportCode, isoDate: `${yyyy}-${mm}-${dd}` };
 }
-
-const toSlugDate = (iso: string): string => {
-  const [y, mo, d] = iso.split("-");
-  return `${mo}-${d}-${y}`;
-};
 
 const shiftIso = (iso: string, days: number): string => {
   const d = new Date(`${iso}T12:00:00Z`);
@@ -309,12 +310,30 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
   const sport = parsed?.sport ?? "MLB";
   const isoDate = parsed?.isoDate ?? "";
 
+  // Bare-sport URLs (/feed/model/mlb) canonicalize to today's dated URL —
+  // replace, so back-button never re-lands on the dateless form.
+  const needsDateCanonicalize = parsed !== null && parsed.isoDate === null;
+  useEffect(() => {
+    if (needsDateCanonicalize) {
+      navigate(feedModelPath(sport), { replace: true });
+    }
+  }, [needsDateCanonicalize, sport, navigate]);
+
   // ADAPTER WIRING (exact bindings from GameCard / WcFeedInline) is attached
   // below in useFeedCards — see mlbRowsToCards / wcMatchesToCards.
   const { cards, isLoading, gamesCount } = useFeedCards(sport, isoDate);
 
   const go = (nextSport: "MLB" | "WC", nextIso: string) =>
-    navigate(`/feed/model/${nextSport.toLowerCase()}-${toSlugDate(nextIso)}`);
+    navigate(feedModelPath(nextSport, nextIso));
+
+  if (needsDateCanonicalize) {
+    // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
+    return (
+      <div className="dmf-root" data-dmf-theme={theme}>
+        <style>{DMF_CSS}</style>
+      </div>
+    );
+  }
 
   if (!parsed) {
     return (

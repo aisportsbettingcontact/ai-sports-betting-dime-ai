@@ -123,4 +123,14 @@ describe("DimeModelFeed — routes", () => {
   it("parseFeedModelPath accepts slug and split forms", () => {
     expect(src).toMatch(/\^\(mlb\|wc\)-\\d\{2\}-\\d\{2\}-\\d\{4\}\$/);
   });
+
+  it("bare /feed/model/:sport canonicalizes to today's dated URL (history replace)", () => {
+    expect(src).toMatch(/if \(!date\) return \{ sport: sportCode, isoDate: null \}/);
+    expect(src).toMatch(/navigate\(feedModelPath\(sport\), \{ replace: true \}\)/);
+  });
+
+  it("in-page navigation builds URLs through the canonical feedModelPath helper", () => {
+    expect(src).toMatch(/from "@\/lib\/feedRoutes"/);
+    expect(src).toMatch(/navigate\(feedModelPath\(nextSport, nextIso\)\)/);
+  });
 });
