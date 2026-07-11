@@ -68,13 +68,14 @@ jobs:
             local n; n=$(wc -c < "$body")
             echo "body_bytes=$n"
             # Field-presence signals (counts, never values):
-            echo "modelRunAt_present=$(grep -o '\"modelRunAt\":\"[^\"]' "$body" | wc -l)"
+            # modelRunAt is a numeric bigint (epoch ms) or null — count both correctly.
+            echo "modelRunAt_number=$(grep -o '\"modelRunAt\":[0-9]' "$body" | wc -l)"
             echo "modelRunAt_null=$(grep -o '\"modelRunAt\":null' "$body" | wc -l)"
-            echo "moneyline_fields=$(grep -o '\"modelHomeScore\"\|\"modelOverRate\"\|\"fairHomeMl\"\|\"awayMoneyline\"' "$body" | wc -l)"
-            echo "edge_fields=$(grep -o '\"edge\"\|\"Edge\"\|estimatedEdge' "$body" | wc -l)"
+            echo "edge_tags=$(grep -o '\[EDGE\]' "$body" | wc -l)"
+            echo "modelTotal_fields=$(grep -o '\"modelTotal\"' "$body" | wc -l)"
             echo "splits_fields=$(grep -o 'BetsPct\|MoneyPct\|ticketsPct\|moneyPct' "$body" | wc -l)"
-            # First 300 bytes for shape sanity (public data only):
-            echo "head: $(head -c 300 "$body" | tr '\n' ' ')"
+            # First 500 bytes for shape sanity (public data only):
+            echo "head: $(head -c 500 "$body" | tr '\n' ' ')"
             echo
           }
 
@@ -85,10 +86,10 @@ jobs:
           else
             probe "current date"       "games.getCurrentDate" "null"
             probe "last refresh"       "games.lastRefresh"    "null"
-            probe "MLB projections"    "games.list"           '{"sport":"MLB"}'
-            probe "all games"          "games.list"           "null"
+            probe "MLB 07-10"          "games.list"           '{"sport":"MLB","gameDate":"2026-07-10"}'
+            probe "MLB 07-11"          "games.list"           '{"sport":"MLB","gameDate":"2026-07-11"}'
             probe "MLB splits"         "games.liveSplits"     "null"
             probe "WC today+odds"      "wc2026.todayWithOdds" "null"
-            probe "WC by date (eff.)"  "wc2026.matchesByDate" '{"date":"2026-07-10"}'
+            probe "WC by date 07-11"   "wc2026.matchesByDate" '{"date":"2026-07-11"}'
           fi
           echo "=================== END ==================="
