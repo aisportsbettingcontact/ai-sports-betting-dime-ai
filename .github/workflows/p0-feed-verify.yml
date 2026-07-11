@@ -74,6 +74,14 @@ jobs:
             echo "edge_tags=$(grep -o '\[EDGE\]' "$body" | wc -l)"
             echo "modelTotal_fields=$(grep -o '\"modelTotal\"' "$body" | wc -l)"
             echo "splits_fields=$(grep -o 'BetsPct\|MoneyPct\|ticketsPct\|moneyPct' "$body" | wc -l)"
+            # WC-specific signals: Double Chance appears once per side (dkOdds=book,
+            # modelOdds=model), so N matches with both book AND model DC → 2N counts.
+            echo "wc_homeDrawOdds=$(grep -o '\"homeDrawOdds\":-\?[0-9]' "$body" | wc -l)"
+            echo "wc_awayDrawOdds=$(grep -o '\"awayDrawOdds\":-\?[0-9]' "$body" | wc -l)"
+            echo "wc_noDraw=$(grep -o '\"noDraw\":-\?[0-9]' "$body" | wc -l)"
+            echo "wc_dkOdds_objs=$(grep -o '\"dkOdds\":{' "$body" | wc -l)"
+            echo "wc_modelOdds_objs=$(grep -o '\"modelOdds\":{' "$body" | wc -l)"
+            echo "wc_venueIds=$(grep -o '\"venueId\":\"[a-z0-9-]*\"' "$body" | sort | uniq -c | tr '\n' ' ')"
             # First 500 bytes for shape sanity (public data only):
             echo "head: $(head -c 500 "$body" | tr '\n' ' ')"
             echo
