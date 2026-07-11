@@ -6,6 +6,8 @@
 #               deployment's build log tail
 #   fix-root  — PATCH the project: rootDirectory -> repo root (null), then
 #               trigger a fresh production deployment from main
+#   unlink    — DELETE the project's git link (disconnect the GitHub
+#               integration) so Vercel stops deploying pushes/PRs entirely
 #
 # Output goes to the job log (readable via the GitHub API). The token is only
 # ever sent to api.vercel.com; GitHub masks it in logs automatically.
@@ -64,6 +66,13 @@ jobs:
               "https://api.vercel.com/v13/deployments?$TQ" \
               -d "{\"name\":\"ai-sports-betting-dime-ai\",\"project\":\"$PROJECT_ID\",\"target\":\"production\",\"gitSource\":{\"type\":\"github\",\"ref\":\"main\",\"repoId\":$REPO_ID}}" \
               | jq '{uid: (.id // .uid), readyState, target, url, error}'
+            echo "::endgroup::"
+          elif [ "$CMD" = "unlink" ]; then
+            echo "::group::DELETE git link (disconnect GitHub integration)"
+            curl -sS -X DELETE -H "$AUTH" "https://api.vercel.com/v9/projects/$PROJECT_ID/link?$TQ" -w '\nHTTP %{http_code}\n'
+            echo "::endgroup::"
+            echo "::group::verify link removed"
+            curl -sS -H "$AUTH" "https://api.vercel.com/v9/projects/$PROJECT_ID?$TQ" | jq '{name, link}'
             echo "::endgroup::"
           else
             echo "unknown command: $CMD"; exit 1
