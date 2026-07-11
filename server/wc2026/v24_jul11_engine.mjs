@@ -260,12 +260,17 @@ const ESPN_TEAM_IDS = {
 // espnSlug (espn_slug column), and homeId/awayId (lowercase wc2026_matches team
 // ids used to repair any lingering 'tbd' slots before the odds write).
 const PROJECTION_MATCHES = [
+  // seedDatePT = the PACIFIC-TIME calendar day of kickoff (the app's seeding-day
+  // rule); the kickoff TIME is displayed in ET. Both QFs are July-11 in PT:
+  //   qf-099 21:00 UTC = 14:00 PT Jul 11 (5:00 PM ET)
+  //   qf-100 01:00 UTC Jul 12 = 18:00 PT Jul 11 (9:00 PM ET) — UTC day rolls to
+  //   the 12th but the PT day is still the 11th, so it must bucket on Jul 11.
   { fid:'wc26-qf-099', home:'NOR', away:'ENG', espnId:'760512',
     beId:'UyLHmWuh', beSlug:'norway-england', espnSlug:'norway-england',
-    homeId:'nor', awayId:'eng', venueCityLike:'Miami' },      // Hard Rock Stadium, Miami Gardens
+    homeId:'nor', awayId:'eng', venueCityLike:'Miami', seedDatePT:'2026-07-11' },   // Hard Rock, Miami Gardens
   { fid:'wc26-qf-100', home:'ARG', away:'SUI', espnId:'760513',
     beId:'Wv4IS6zg', beSlug:'argentina-switzerland', espnSlug:'argentina-switzerland',
-    homeId:'arg', awayId:'sui', venueCityLike:'Kansas' },     // Arrowhead Stadium, Kansas City
+    homeId:'arg', awayId:'sui', venueCityLike:'Kansas', seedDatePT:'2026-07-11' },  // Arrowhead, Kansas City
 ];
 
 // FRESH bet365 book odds (scraped 2026-07-11 09:23–09:24 UTC from BetExplorer
@@ -749,6 +754,20 @@ async function main() {
       } else {
         log('WARN', `No wc2026_venues row with city like '${match.venueCityLike}' for ${match.fid} — venue left unchanged`);
       }
+    }
+
+    // Match-date bucketing repair. The feed groups matches by match_date, and the
+    // seeding DAY must be the kickoff's PACIFIC-TIME calendar day (kickoff TIME is
+    // shown in ET). qf-100 kicks off 01:00 UTC (9pm ET / 6pm PT) so its UTC day is
+    // Jul 12 but its PT day is Jul 11 — it was mis-bucketed on Jul 12 and dropped
+    // off the Jul-11 feed. Repair match_date to the PT day WITHOUT touching the
+    // (correct) kickoff_utc, which still renders 9:00 PM ET.
+    if (match.seedDatePT) {
+      const [dres] = await conn.query(
+        `UPDATE wc2026_matches SET match_date = ? WHERE match_id = ? AND DATE(match_date) <> ?`,
+        [match.seedDatePT, match.fid, match.seedDatePT]);
+      if (dres.affectedRows > 0) log('DB', `wc2026_matches: ${match.fid} match_date -> ${match.seedDatePT} (PT kickoff-day rule; kickoff_utc unchanged)`);
+      else log('STATE', `wc2026_matches: ${match.fid} match_date already ${match.seedDatePT} (PT kickoff day)`);
     }
 
     // QF wc2026MatchOdds rows are not auto-created by any scraper (the
