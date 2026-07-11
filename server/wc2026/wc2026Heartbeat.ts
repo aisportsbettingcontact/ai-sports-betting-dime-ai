@@ -34,6 +34,7 @@ import { and, gte, lte, eq } from "drizzle-orm";
 import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 import { ingestWc2026EspnResults } from "./wc2026Ingester";
 import { wc2026LiveSyncHandler } from "./fifaLiveScraper";
+import { scrapeAndIngest } from "./espnDbIngester";
 import { spawn } from "child_process";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -63,6 +64,157 @@ function triggerBracketSync(reason: string): void {
   child.on("error", (err) => {
     console.error(`[WC2026HB] [VERIFY] FAIL — bracket-sync spawn error: ${err.message}`);
   });
+}
+
+// ─── Owner-triggered .mjs runner (engine / audit) ────────────────────────────
+// Spawns a standalone ESM model/audit script as a child `node` process INSIDE
+// this Railway container, so it inherits the app's own valid DATABASE_URL. This
+// is the whole point of the "run inside Railway" path: the GitHub-Actions runner
+// cannot reach the live TiDB cluster (the DATABASE_URL repo secret is empty and
+// the TARGET_DATABASE_URL clone creds are rotated), but the deployed app can.
+// Combined stdout+stderr is captured (tail-capped) and returned so the trigger
+// workflow sees the result; the child is hard-killed after timeoutMs.
+function spawnMjs(
+  scriptFile: string,
+  extraEnv: Record<string, string>,
+  timeoutMs: number,
+): Promise<{ exitCode: number | null; timedOut: boolean; output: string }> {
+  return new Promise((resolve) => {
+    const scriptPath = join(__dirname, scriptFile);
+    const chunks: string[] = [];
+    let bytes = 0;
+    const CAP = 200_000; // retain at most ~200KB of tail output in memory
+    const append = (b: Buffer) => {
+      const s = b.toString();
+      bytes += s.length;
+      chunks.push(s);
+      while (bytes > CAP && chunks.length > 1) {
+        bytes -= chunks[0].length;
+        chunks.shift();
+      }
+    };
+    const child = spawn("node", [scriptPath], { env: { ...process.env, ...extraEnv } });
+    child.stdout?.on("data", append);
+    child.stderr?.on("data", append);
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
+    child.on("exit", (code) => {
+      clearTimeout(timer);
+      resolve({ exitCode: code, timedOut, output: chunks.join("") });
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ exitCode: -1, timedOut, output: `spawn error: ${err.message}` });
+    });
+  });
+}
+
+// ─── Handler: WC2026 model engine (owner-triggered, runs inside Railway) ──────
+// POST /api/scheduled/wc2026-engine  { dryRun?: boolean }
+// Runs the v24 Jul-11 QF engine (NOR/ENG, ARG/SUI) against the live DB: 500x
+// backtest -> recalibration -> model -> write wc2026MatchOdds + wc2026_model_
+// projections -> NULL audit. dryRun=true runs the full pipeline but skips every
+// Phase-7 DB write.
+async function handleWc2026Engine(req: Request, res: Response): Promise<void> {
+  if (!requireCronSecret(req, res, "wc2026-engine")) return;
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === "1";
+  console.log(`[WC2026HB] [INPUT] /wc2026-engine triggered dryRun=${dryRun} at ${new Date().toISOString()}`);
+  try {
+    const result = await spawnMjs("v24_jul11_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
+    const ok = result.exitCode === 0 && !result.timedOut;
+    const tail = result.output.slice(-8000);
+    console.log(`[WC2026HB] [OUTPUT] wc2026-engine exit=${result.exitCode} timedOut=${result.timedOut}`);
+    console.log(`[WC2026HB] [VERIFY] ${ok ? "PASS" : "FAIL"} — /wc2026-engine`);
+    if (!ok) notifyOwner({ title: "[HB] wc2026-engine FAIL", content: tail.slice(-500) });
+    res.status(ok ? 200 : 500).json({ ok, dryRun, exitCode: result.exitCode, timedOut: result.timedOut, tail });
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-engine unhandled: ${String(err)}`);
+    notifyOwner({ title: "[HB] wc2026-engine FAIL", content: String(err).slice(0, 500) });
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+}
+
+// ─── Handler: WC2026 forensic audit (owner-triggered, read-only) ─────────────
+// POST /api/scheduled/wc2026-audit
+// Runs wc2026AuditEngine.mjs — a read-only forensic auditor of the wc2026_espn_*
+// stats tables (no DB writes). Returns the audit tail; exit code 0 = all checks
+// passed.
+async function handleWc2026Audit(req: Request, res: Response): Promise<void> {
+  if (!requireCronSecret(req, res, "wc2026-audit")) return;
+  console.log(`[WC2026HB] [INPUT] /wc2026-audit triggered at ${new Date().toISOString()}`);
+  try {
+    const result = await spawnMjs("wc2026AuditEngine.mjs", {}, 240_000);
+    const ok = result.exitCode === 0 && !result.timedOut;
+    const tail = result.output.slice(-8000);
+    console.log(`[WC2026HB] [OUTPUT] wc2026-audit exit=${result.exitCode} timedOut=${result.timedOut}`);
+    console.log(`[WC2026HB] [VERIFY] ${ok ? "PASS" : "FAIL"} — /wc2026-audit`);
+    res.status(200).json({ ok, exitCode: result.exitCode, timedOut: result.timedOut, tail });
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-audit unhandled: ${String(err)}`);
+    res.status(500).json({ ok: false, error: String(err) });
+  }
+}
+
+// ─── Handler: WC2026 ESPN match-data backfill (owner-triggered) ──────────────
+// POST /api/scheduled/wc2026-espn-backfill  { gameIds?: string[], dryRun?: boolean }
+// Re-scrapes ESPN match pages (Playwright) and ingests the 8 wc2026_espn_* stats
+// tables for every played match. Default target = every wc2026_matches row with
+// a real ESPN id that has been played (a score is present) — stats only exist
+// for completed/live matches. A full Playwright backfill of ~80 matches far
+// exceeds any HTTP timeout, so this responds 202 immediately and streams
+// progress to the Railway logs (fire-and-forget). Runs in-process (chromium is
+// installed in the image at /usr/bin/chromium; DATABASE_URL is valid here).
+async function handleWc2026EspnBackfill(req: Request, res: Response): Promise<void> {
+  if (!requireCronSecret(req, res, "wc2026-espn-backfill")) return;
+  const dryRun = req.body?.dryRun === true;
+  const explicitIds: string[] | undefined = Array.isArray(req.body?.gameIds)
+    ? req.body.gameIds.map(String)
+    : undefined;
+  console.log(`[WC2026HB] [INPUT] /wc2026-espn-backfill triggered dryRun=${dryRun} explicit=${explicitIds?.length ?? "auto"}`);
+  try {
+    let gameIds: string[];
+    if (explicitIds && explicitIds.length) {
+      gameIds = explicitIds;
+    } else {
+      const db = await getDb();
+      const rows = await db
+        .select({ espn: wc2026Matches.espnMatchId, homeScore: wc2026Matches.homeScore })
+        .from(wc2026Matches);
+      // "All matches" = every fixture with a real ESPN id that has been played
+      // (a score is present). Unplayed matches carry no stats to scrape.
+      gameIds = rows
+        .filter((r: { espn: string | null; homeScore: number | null }) => r.espn != null && r.homeScore != null)
+        .map((r: { espn: string | null; homeScore: number | null }) => String(r.espn));
+    }
+    console.log(`[WC2026HB] [STATE] espn-backfill target count=${gameIds.length}`);
+    // Respond before the long-running loop starts.
+    res.status(202).json({ ok: true, accepted: gameIds.length, dryRun });
+    void (async () => {
+      let done = 0;
+      let failed = 0;
+      for (const gid of gameIds) {
+        try {
+          await scrapeAndIngest(gid, { dryRun });
+          done++;
+          console.log(`[WC2026HB] [OUTPUT] espn-backfill ${done + failed}/${gameIds.length} gid=${gid} ok`);
+        } catch (e) {
+          failed++;
+          console.error(`[WC2026HB] [OUTPUT] espn-backfill gid=${gid} FAIL: ${String(e).slice(0, 200)}`);
+        }
+      }
+      console.log(`[WC2026HB] [VERIFY] espn-backfill complete: done=${done} failed=${failed} of ${gameIds.length}`);
+      notifyOwner({
+        title: "[HB] wc2026-espn-backfill complete",
+        content: `done=${done} failed=${failed} of ${gameIds.length} (dryRun=${dryRun})`,
+      });
+    })();
+  } catch (err) {
+    console.error(`[WC2026HB] [VERIFY] FAIL — /wc2026-espn-backfill unhandled: ${String(err)}`);
+    if (!res.headersSent) res.status(500).json({ ok: false, error: String(err) });
+  }
 }
 
 // ─── Handler: lineups ─────────────────────────────────────────────────────────
@@ -290,8 +442,14 @@ export function registerWc2026Heartbeats(app: Express): void {
   app.post("/api/scheduled/wc2026-live-sync", wc2026LiveSyncHandler);
   // POST /api/scheduled/wc2026-bracket-sync — Bracket advancement + opponent mapping + calendar seeding
   app.post("/api/scheduled/wc2026-bracket-sync", handleWc2026BracketSync);
+  // POST /api/scheduled/wc2026-engine — owner-triggered v24 QF model run (inside Railway)
+  app.post("/api/scheduled/wc2026-engine", handleWc2026Engine);
+  // POST /api/scheduled/wc2026-audit — owner-triggered read-only forensic audit
+  app.post("/api/scheduled/wc2026-audit", handleWc2026Audit);
+  // POST /api/scheduled/wc2026-espn-backfill — owner-triggered ESPN stats backfill (all played matches)
+  app.post("/api/scheduled/wc2026-espn-backfill", handleWc2026EspnBackfill);
 
   console.log(
-    "[WC2026HB] Registered: /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores | /api/scheduled/wc2026-live-sync | /api/scheduled/wc2026-bracket-sync"
+    "[WC2026HB] Registered: /api/scheduled/wc2026-lineups | /api/scheduled/wc2026-espn-results | /api/scheduled/wc2026-live-scores | /api/scheduled/wc2026-live-sync | /api/scheduled/wc2026-bracket-sync | /api/scheduled/wc2026-engine | /api/scheduled/wc2026-audit | /api/scheduled/wc2026-espn-backfill"
   );
 }

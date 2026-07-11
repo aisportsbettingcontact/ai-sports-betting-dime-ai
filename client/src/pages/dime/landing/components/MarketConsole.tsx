@@ -68,7 +68,7 @@ export default function MarketConsole() {
         <span className="pulse" aria-hidden="true" />
         <span>dime.market-console</span>
         <span className="right">
-          <span>scan // 10,000_sims</span>
+          <span>scan // 400,000_sims</span>
           <span className="demo-tag">Demo — sample markets</span>
         </span>
       </div>
