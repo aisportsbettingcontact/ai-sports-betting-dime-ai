@@ -104,12 +104,13 @@ function RootRoute() {
       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
         sessionStorage.removeItem("pendingCheckout");
         console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
-        navigate(`/checkout?plan=${pendingCheckout}`);
+        navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
         return;
       }
       const target = feedModelPath("MLB");
       console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`);
-      navigate(target);
+      // replace — otherwise Back lands on "/" which instantly re-pushes forward
+      navigate(target, { replace: true });
     } else {
       console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
     }
@@ -216,6 +217,8 @@ function Router() {
       {/* FIFA World Cup 2026 — Group Stage Feed */}
       <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
       {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+      {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
+      <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
       <Route path="/m/:rest*">{() => <RequireAuth><MobileOwnerLayout /></RequireAuth>}</Route>
       {/* 404 */}
       <Route path="/404" component={NotFound} />

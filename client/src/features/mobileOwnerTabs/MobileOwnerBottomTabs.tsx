@@ -145,7 +145,9 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
     // no full-page window.location fallback.
     if (location !== path) {
       mobileOwnerTabLogger.log("tab_changed", tabId, { from: activeTabId, to: tabId });
-      navigate(path);
+      // Re-tapping the active tab (e.g. Feed from a dated URL back to
+      // /feed/model/mlb) replaces instead of pushing — no history pile-up.
+      navigate(path, { replace: activeTabId === tabId });
       mobileOwnerTabLogger.log("route_navigated", tabId, { path });
 
       // User-specified event: mobile_owner_tab_navigated_to_m_route
@@ -170,7 +172,9 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 9999,
+        // Below the app modals (AgeModal/LoginModal render at z-50): the 21+
+        // age gate must not be overlapped or routable-around by the tab bar.
+        zIndex: 40,
         backgroundColor: COLORS.BG,
         borderTop: `1px solid ${COLORS.BORDER}`,
         paddingBottom: "env(safe-area-inset-bottom, 0px)",

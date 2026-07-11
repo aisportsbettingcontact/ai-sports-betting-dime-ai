@@ -42,7 +42,51 @@ describe("Legacy slug eradication — server 308 layer", () => {
   });
 
   it("uses the 07:00 UTC (00:00 PT) feed rollover for the default date", () => {
-    expect(serverSrc).toMatch(/const FEED_CUTOFF_UTC_HOUR = 7;/);
+    // Scope the assertion to the feedSlugDate helper — index.ts also carries
+    // an unrelated FEED_CUTOFF_UTC_HOUR = 11 (games-cache pre-warm), so a
+    // whole-file match could not catch the redirect being rewired to it.
+    const start = serverSrc.indexOf("const feedSlugDate");
+    const end = serverSrc.indexOf("app.get([\"/feed\"", start);
+    expect(start).toBeGreaterThan(-1);
+    const helper = serverSrc.slice(start, end);
+    expect(helper).toMatch(/const FEED_CUTOFF_UTC_HOUR = 7;/);
+  });
+
+  it("forbids caching of the date-varying 308 and forwards unconsumed query params", () => {
+    expect(serverSrc).toMatch(/res\.set\("Cache-Control", "no-store"\)/);
+    expect(serverSrc).toMatch(/key === "tab" \|\| key === "sport" \|\| key === "date"/);
+  });
+});
+
+describe("Legacy slug eradication — server-side emitters", () => {
+  const emailSrc = read("email.ts");
+  const discordAuthSrc = read("discordAuth.ts");
+  const discordLoginSrc = read("discordLogin.ts");
+  const discordInviteSrc = read("discordInvite.ts");
+
+  it("welcome email CTA links the canonical feed, not the legacy slug", () => {
+    expect(emailSrc).toContain("aisportsbettingmodels.com/feed/model/mlb");
+    expect(emailSrc).not.toMatch(/aisportsbettingmodels\.com\/feed(?!\/model)/);
+  });
+
+  it("Discord account-linking redirects carry state to the canonical feed", () => {
+    expect(discordAuthSrc).toContain("/feed/model/mlb?discord_");
+    expect(discordAuthSrc).not.toContain("/dashboard");
+  });
+
+  it("Discord login errors land on /login where the error banner lives", () => {
+    expect(discordLoginSrc).not.toMatch(/redirect\(302, `\/\?/);
+    expect(discordLoginSrc).toContain("/login?discord_error=");
+  });
+
+  it("Discord login sanitizes returnPath against open redirects", () => {
+    expect(discordLoginSrc).toMatch(/function sanitizeReturnPath/);
+    expect(discordLoginSrc).toMatch(/sanitizeReturnPath\(req\.query\.returnPath\)/);
+    expect(discordLoginSrc).toMatch(/sanitizeReturnPath\(payload\.returnPath\)/);
+  });
+
+  it("Discord invite success lands on the canonical feed", () => {
+    expect(discordInviteSrc).toContain('res.redirect(302, "/feed/model/mlb")');
   });
 });
 

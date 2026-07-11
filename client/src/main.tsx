@@ -226,8 +226,13 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   }
 
   // [STEP] Delay redirect by 1.5 s so the toast is visible before navigation.
+  // Land on /login (matching the toast copy) with the current path preserved
+  // so signing back in returns the user to where their session expired.
   setTimeout(() => {
-    window.location.href = "/";
+    const rp = window.location.pathname + window.location.search;
+    window.location.href = rp === "/" || rp === "/login"
+      ? "/login"
+      : `/login?returnPath=${encodeURIComponent(rp)}`;
   }, 1500);
 };
 

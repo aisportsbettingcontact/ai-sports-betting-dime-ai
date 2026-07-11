@@ -223,6 +223,14 @@
   padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Global clearance while the fixed bottom tab bar is mounted: reserve real
+   document-flow space so the 60px bar (+ home indicator) never occludes the
+   last row of ANY page — game cards, the 21+ / 1-800-GAMBLER line, etc.
+   (The old in-component "spacer" was position:fixed and reserved nothing.) */
+body.mobile-owner-tabs-active {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ── Scrollbar styling ────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
