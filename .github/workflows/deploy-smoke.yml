@@ -1,5 +1,5 @@
-# Post-deploy smoke test — validates the live Railway backend (and, once the
-# frontend is imported, can be pointed at the Vercel domain too).
+# Post-deploy smoke test — validates the live Railway deployment (workflow_dispatch
+# accepts any origin to test against).
 #
 # Railway auto-deploys pushes to main once the repo is connected; this job
 # waits out the build, then asserts the five smoke checks in
