@@ -93,7 +93,7 @@ type SeasonKey = 2024 | 2025 | 2026;
 
 async function fetchVenueSeasonData(venueId: number, season: number): Promise<VenueSeasonData> {
   const url = `${MLB_STATS_BASE}/schedule?sportId=1&season=${season}&gameType=R&venueIds=${venueId}&hydrate=linescore`;
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!resp.ok) throw new Error(`HTTP ${resp.status} for venue ${venueId} season ${season}`);
   const data = await resp.json() as any;
 
@@ -105,8 +105,13 @@ async function fetchVenueSeasonData(venueId: number, season: number): Promise<Ve
       const ls = game.linescore ?? {};
       const awayR = ls.teams?.away?.runs ?? null;
       const homeR = ls.teams?.home?.runs ?? null;
-      // Only count completed games (both teams have run totals, at least 1 run scored)
-      if (awayR !== null && homeR !== null && (awayR > 0 || homeR > 0)) {
+      // Only count final games (codedGameState "F"), excluding in-progress games.
+      // Fallback: if status is missing (unexpected shape), keep the old runs-based heuristic.
+      const coded = game?.status?.codedGameState;
+      const isCompleted = coded !== undefined
+        ? coded === 'F' && awayR !== null && homeR !== null
+        : awayR !== null && homeR !== null && (awayR > 0 || homeR > 0);
+      if (isCompleted) {
         totalRuns += awayR + homeR;
         games++;
       }
@@ -191,11 +196,16 @@ export async function seedParkFactors(): Promise<{ inserted: number; updated: nu
     if (pf2025 !== null) available.push({ pf: pf2025, w: WEIGHTS[2025] });
     if (include2026)     available.push({ pf: pf2026!, w: WEIGHTS[2026] });
 
-    let parkFactor3yr = 1.0; // neutral default
-    if (available.length > 0) {
-      const totalWeight = available.reduce((s, x) => s + x.w, 0);
-      parkFactor3yr = available.reduce((s, x) => s + x.pf * (x.w / totalWeight), 0);
+    if (available.length === 0) {
+      // No usable season data (all fetches failed or venue has no games) — skip the
+      // upsert entirely so an existing good row is never overwritten with neutral 1.0.
+      // Consumers already fall back to 1.0 for venues with no row.
+      console.warn(`[STATE] ${tv.abbrev}: no usable season data — skipping upsert (existing DB row preserved)`);
+      continue;
     }
+
+    const totalWeight = available.reduce((s, x) => s + x.w, 0);
+    const parkFactor3yr = available.reduce((s, x) => s + x.pf * (x.w / totalWeight), 0);
     if (!include2026 && pf2026 !== null) {
       console.log(`[STATE] ${tv.abbrev}: pf2026=${pf2026.toFixed(4)} excluded (games2026=${games2026} < MIN_GAMES_FOR_PF=${MIN_GAMES_FOR_PF}) — using prior years only`);
     }

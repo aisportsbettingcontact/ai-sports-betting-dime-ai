@@ -21,7 +21,7 @@
 
 import { getDb } from './db';
 import { mlbBullpenStats } from '../drizzle/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 const MLB_STATS_BASE = 'https://statsapi.mlb.com/api/v1';
 const SEASON = 2026;
@@ -90,7 +90,7 @@ export async function seedBullpenStats(): Promise<{ inserted: number; updated: n
 
     try {
       const url = `${MLB_STATS_BASE}/stats?stats=season&group=pitching&gameType=R&season=${SEASON}&teamId=${team.teamId}&sportId=1&playerPool=All&limit=100`;
-      const resp = await fetch(url);
+      const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json() as any;
 
@@ -154,7 +154,7 @@ export async function seedBullpenStats(): Promise<{ inserted: number; updated: n
       // Upsert
       const existing = await db.select({ id: mlbBullpenStats.id })
         .from(mlbBullpenStats)
-        .where(eq(mlbBullpenStats.teamAbbrev, team.abbrev))
+        .where(and(eq(mlbBullpenStats.teamAbbrev, team.abbrev), eq(mlbBullpenStats.season, SEASON)))
         .limit(1);
 
       const row = {
@@ -179,7 +179,7 @@ export async function seedBullpenStats(): Promise<{ inserted: number; updated: n
       };
 
       if (existing.length > 0) {
-        await db.update(mlbBullpenStats).set(row).where(eq(mlbBullpenStats.teamAbbrev, team.abbrev));
+        await db.update(mlbBullpenStats).set(row).where(and(eq(mlbBullpenStats.teamAbbrev, team.abbrev), eq(mlbBullpenStats.season, SEASON)));
         updated++;
         console.log(`[OUTPUT] ${team.abbrev}: UPDATED`);
       } else {

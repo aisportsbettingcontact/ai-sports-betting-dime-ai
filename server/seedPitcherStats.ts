@@ -124,7 +124,7 @@ async function fetchMlbPitchingStats(): Promise<PitcherRecord[]> {
     "&limit=2000" +
     "&fields=stats,splits,player,id,fullName,team,id,name,stat,era,strikeoutsPer9Inn,walksPer9Inn,homeRunsPer9,whip,inningsPitched,gamesStarted,gamesPlayed";
 
-  const resp = await fetch(url);
+  const resp = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!resp.ok) {
     throw new Error(`MLB Stats API HTTP ${resp.status}: ${resp.statusText}`);
   }
@@ -214,7 +214,8 @@ async function upsertPitcherStats(records: PitcherRecord[]): Promise<{ inserted:
             ip: rec.ip,
             gamesStarted: rec.gamesStarted,
             gamesPlayed: rec.gamesPlayed,
-            xera: rec.xera,
+            // xera intentionally omitted: the API never provides it, and setting it
+            // to null here would clobber backfilled xERA values on every refresh.
             lastFetchedAt: rec.lastFetchedAt,
           })
           .where(
