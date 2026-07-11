@@ -750,18 +750,27 @@ async function refreshMlb(todayStr: string): Promise<{
         `— run-line splits are 0%/0% (market not yet open), preserving existing DB value`
       );
     }
+    // Same both-zero guard for the total and ML pairs — evaluated on the RAW scraped
+    // values BEFORE any 100−x swap flip (a swapped 0/0 ML would otherwise become 100/100).
+    const totalSplitsAvailable = !(splits.totalOverBetsPct === 0 && splits.totalOverMoneyPct === 0);
+    const mlSplitsAvailable = !(splits.mlAwayBetsPct === 0 && splits.mlAwayMoneyPct === 0);
+    // NULL-PARSE GUARD: the scraper returns null when a badge is missing on the VSiN
+    // page; updateBookOdds treats null as "explicitly clear". Omit null fields
+    // (undefined = skip) so a partial parse never wipes existing DB values.
     await updateBookOdds(dbGame.id, {
       // Only write run-line splits when VSIN has real non-zero data
-      ...(rlSplitsAvailable ? {
+      ...(rlSplitsAvailable && spreadAwayBetsPct !== null ? {
         spreadAwayBetsPct,       // generic spread column (used by GameCard display)
-        spreadAwayMoneyPct,
         rlAwayBetsPct: spreadAwayBetsPct,   // dedicated MLB run line column
+      } : {}),
+      ...(rlSplitsAvailable && spreadAwayMoneyPct !== null ? {
+        spreadAwayMoneyPct,
         rlAwayMoneyPct: spreadAwayMoneyPct,
       } : {}),
-      totalOverBetsPct: splits.totalOverBetsPct,
-      totalOverMoneyPct: splits.totalOverMoneyPct,
-      mlAwayBetsPct,
-      mlAwayMoneyPct,
+      ...(totalSplitsAvailable && splits.totalOverBetsPct !== null ? { totalOverBetsPct: splits.totalOverBetsPct } : {}),
+      ...(totalSplitsAvailable && splits.totalOverMoneyPct !== null ? { totalOverMoneyPct: splits.totalOverMoneyPct } : {}),
+      ...(mlSplitsAvailable && mlAwayBetsPct !== null ? { mlAwayBetsPct } : {}),
+      ...(mlSplitsAvailable && mlAwayMoneyPct !== null ? { mlAwayMoneyPct } : {}),
     });
     totalUpdated++;
 
@@ -1087,26 +1096,58 @@ export async function refreshAnApiOdds(
           ? _finalHomeRunLine
           : rHomeSpread.value;
 
+        // ── NULL-WIPE GUARD (audit C5) ──────────────────────────────────────────
+        // updateAnOdds treats null as "explicitly clear" — a transient AN gap
+        // (a market group entirely absent from the API response) must NOT wipe
+        // previously-good lines. Per market group: if EVERY field in the group is
+        // null, omit the group (undefined = skip is updateAnOdds' documented
+        // contract) so existing DB values are preserved. Legitimate partial
+        // updates (e.g. total present, spread group null) still go through.
+        const _finalAwaySpreadOdds = _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value;
+        const _finalHomeSpreadOdds = _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value;
+        const _spreadGroupNull = _finalAwayBookSpread === null && _finalHomeBookSpread === null &&
+                                 _finalAwaySpreadOdds === null && _finalHomeSpreadOdds === null;
+        const _totalGroupNull  = rTotal.value === null && rOverOdds.value === null && rUnderOdds.value === null;
+        const _mlGroupNull     = rAwayML.value === null && rHomeML.value === null;
+        const _rlGroupNull     = _finalAwayRunLine === null && _finalHomeRunLine === null &&
+                                 _finalAwayRunLineOdds === null && _finalHomeRunLineOdds === null;
+        if (_spreadGroupNull && _totalGroupNull && _mlGroupNull && (sport !== 'mlb' || _rlGroupNull)) {
+          console.warn(
+            `[ANApiOdds][${dbSport}][NULL_WIPE_GUARD] ${dbGame.awayTeam}@${dbGame.homeTeam} ` +
+            `(gameId=${dbGame.id}, ${dateStr}) — AN returned no markets (all groups null); ` +
+            `skipping odds update + history snapshot to preserve existing lines`
+          );
+          skipped++;
+          continue;
+        }
+
         const _anOddsResult = await updateAnOdds(dbGame.id, {
           // Resolved primary book columns (DK NJ or Open-line — atomic switch)
           // For MLB: use LAYER2-corrected run line values so awayBookSpread always
           // matches the ML direction (invariant: ML fav = RL fav).
-          awayBookSpread:  _finalAwayBookSpread,
           // LAYER2 odds swap: when the run line direction is corrected, the display odds
           // (awaySpreadOdds/homeSpreadOdds) must also be swapped so the fav odds (-203)
           // are shown next to the fav's -1.5 line, not the dog's +1.5 line.
-          awaySpreadOdds:  _layer2OddsSwapped ? rHomeSpreadOdds.value : rAwaySpreadOdds.value,
-          homeBookSpread:  _finalHomeBookSpread,
-          homeSpreadOdds:  _layer2OddsSwapped ? rAwaySpreadOdds.value : rHomeSpreadOdds.value,
-          bookTotal:       rTotal.value,
-          overOdds:        rOverOdds.value,
-          underOdds:       rUnderOdds.value,
-          awayML:          rAwayML.value,
-          homeML:          rHomeML.value,
+          ...(!_spreadGroupNull ? {
+            awayBookSpread:  _finalAwayBookSpread,
+            awaySpreadOdds:  _finalAwaySpreadOdds,
+            homeBookSpread:  _finalHomeBookSpread,
+            homeSpreadOdds:  _finalHomeSpreadOdds,
+          } : {}),
+          ...(!_totalGroupNull ? {
+            bookTotal:       rTotal.value,
+            overOdds:        rOverOdds.value,
+            underOdds:       rUnderOdds.value,
+          } : {}),
+          ...(!_mlGroupNull ? {
+            awayML:          rAwayML.value,
+            homeML:          rHomeML.value,
+          } : {}),
           // Computed odds source label — always 'dk' or 'open', never null or partial
           oddsSource,
           // MLB run line dual-write — same values as awayBookSpread/homeBookSpread
-          ...mlbRunLineFields,
+          // (omitted when the whole RL group is null — see NULL_WIPE_GUARD above)
+          ...(!_rlGroupNull ? mlbRunLineFields : {}),
           // Open line reference columns (always write when AN has open data)
           ...(openAwaySpread !== null ? {
             openAwaySpread:     fmtSpread(openAwaySpread),
@@ -1305,8 +1346,8 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
 
     // Auto-populate DK NJ current lines from Action Network API for today
     // (non-fatal — errors are logged but do not block the refresh)
-    // MLB included: run line (spread), total, moneyline from AN DK NJ
-    const anOddsResult = await refreshAnApiOdds(todayStr, ["nba", "nhl", "mlb"], "auto");
+    // MLB excluded: runMlbCycleOnce owns MLB AN odds (avoids dual-loop write race)
+    const anOddsResult = await refreshAnApiOdds(todayStr, ["nba", "nhl"], "auto");
     console.log(
       `[VSiNAutoRefresh] AN API DK odds: updated=${anOddsResult.updated} ` +
       `skipped=${anOddsResult.skipped} frozen=${anOddsResult.frozen} errors=${anOddsResult.errors.length}`
@@ -1316,8 +1357,8 @@ export async function runVsinRefresh(): Promise<RefreshResult | null> {
     const tomorrowStr = datePst(1);
     await runTomorrowSplitsUpdate(tomorrowStr);
     // Also populate tomorrow's DK odds from AN API (tomorrow games are never live, no freeze needed)
-    // MLB included for tomorrow
-    const anOddsTomorrow = await refreshAnApiOdds(tomorrowStr, ["nba", "nhl", "mlb"], "auto");
+    // MLB excluded: runMlbCycleOnce owns MLB AN odds (today + tomorrow)
+    const anOddsTomorrow = await refreshAnApiOdds(tomorrowStr, ["nba", "nhl"], "auto");
     console.log(
       `[VSiNAutoRefresh] AN API DK odds (tomorrow): updated=${anOddsTomorrow.updated} ` +
       `skipped=${anOddsTomorrow.skipped} frozen=${anOddsTomorrow.frozen} errors=${anOddsTomorrow.errors.length}`
@@ -2065,16 +2106,50 @@ export async function runMlbCycleOnce(): Promise<void> {
     console.log(`[MLBCycle] ✅ DONE — ${new Date().toISOString()}`);
 }
 
+// ── In-process overlap guards (audit H24) ─────────────────────────────────────
+// The boot-time fire and setInterval callbacks below can overlap when a cycle
+// runs longer than its interval, causing concurrent DB writes over the same rows.
+// These wrappers guard the in-process scheduler entry points ONLY — the HTTP cron
+// routes call the raw runVsinRefresh/runMlbCycleOnce and keep their own
+// CronJobRunner lock (HTTP semantics unchanged).
+let _vsinRefreshInFlight = false;
+async function runVsinRefreshGuarded(): Promise<void> {
+  if (_vsinRefreshInFlight) {
+    console.warn("[VSiNAutoRefresh] SKIP — previous refresh still in flight");
+    return;
+  }
+  _vsinRefreshInFlight = true;
+  try {
+    await runVsinRefresh();
+  } finally {
+    _vsinRefreshInFlight = false;
+  }
+}
+
+let _mlbCycleInFlight = false;
+async function runMlbCycleOnceGuarded(): Promise<void> {
+  if (_mlbCycleInFlight) {
+    console.warn("[MLBCycle] SKIP — previous cycle still in flight");
+    return;
+  }
+  _mlbCycleInFlight = true;
+  try {
+    await runMlbCycleOnce();
+  } finally {
+    _mlbCycleInFlight = false;
+  }
+}
+
 export function startVsinAutoRefresh() {
   // 24/7 — no active hours gate
-  void runVsinRefresh();
+  void runVsinRefreshGuarded();
 
   // Fire score refresh immediately on startup (don't wait for first 15-sec tick)
   void refreshAllScoresNow();
 
   // 24/7 — runs every 5 minutes with no time gate
   setInterval(() => {
-    void runVsinRefresh();
+    void runVsinRefreshGuarded();
   }, INTERVAL_MS);
 
   // 15-second score refresh (runs independently of the main refresh) — 24/7, no gate
@@ -2093,11 +2168,11 @@ export function startVsinAutoRefresh() {
   // Fires immediately on startup so MLB data is never stale after a restart.
   // Non-fatal: each step is isolated; errors in one do not block the others.
   // Fire MLB cycle immediately on startup
-  void runMlbCycleOnce();
+  void runMlbCycleOnceGuarded();
 
   // Then repeat every 5 minutes
   setInterval(() => {
-    void runMlbCycleOnce();
+    void runMlbCycleOnceGuarded();
   }, MLB_INTERVAL_MS);
 
   // ─── Daily MLB data seeders ───────────────────────────────────────────────
