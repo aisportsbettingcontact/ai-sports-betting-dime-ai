@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dime AI — Projections Feed (Apple-design prototype v4)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   DIME AI — Projections Feed prototype v4  (post judge-panel)
+   RULE 1A/1B  Apple-design + Dime brand kit, zero drift. Brand law wins on
+               conflict: one 160ms curve, solid surfaces + 1px borders, mint
+               ONLY on signal. Apple principles fill where brand is silent:
+               44px hit areas, presentation-value motion, focus states,
+               reduced-motion/contrast correctness.
+   RULE 1C     Mobile-first; dark + light first-class at every breakpoint.
+   RULE 2      Team logos / country flags always present.
+   RULE 3      Multi-side market rows preserved (away/home · O/U · DRAW/NO
+               DRAW · HOME WD/AWAY WD · YES/NO), Book | Model per side.
+   RULE 4      No team code/name without its logo beside it — anywhere.
+   RULE 5      No truncated values or labels, ever.
+   ───────────────────────────────────────────────────────────────────────── */
+:root{
+  --page:#0B0B0F; --sidebar:#101016; --card:#16161C; --card-hi:#1A1A22;
+  --border:#1E1E26; --border-hi:#24242E; --border-hover:#2E2E38;
+  --t1:#EDEDF2; --t2:#C9C9D4; --t3:#9A9AA8; --t4:#6A6A78;
+  --mint:#45E0A8; --mint-dim:rgba(69,224,168,.10); --ring:rgba(69,224,168,.35);
+  --r-sm:8px; --r:12px; --r-lg:16px; --r-xl:26px;
+  --ease:cubic-bezier(.16,1,.3,1); --t:160ms;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --shadow-input:none;
+}
+:root[data-theme="light"]{
+  --page:#FFFFFF; --sidebar:#F4F4F6; --card:#F7F7F9; --card-hi:#F4F4F6;
+  --border:#E4E4E9; --border-hi:#D5D5DC; --border-hover:#C6C6CF;
+  --t1:#0B0B0F; --t2:#2A2A32; --t3:#55555E; --t4:#9A9AA8;
+  --mint:#0FA36B; --mint-dim:rgba(15,163,107,.08); --ring:rgba(15,163,107,.35);
+  --shadow-input:0 1px 3px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--page); color:var(--t1);
+  font-family:var(--sans); font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overflow:hidden;
+}
+.micro{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t3)}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+:is(button,[tabindex]):focus-visible{outline:none; box-shadow:0 0 0 3px var(--ring); border-radius:var(--r-sm)}
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.app{display:flex; height:100vh; height:100dvh; width:100vw}
+.sidebar{
+  width:264px; flex:0 0 264px; background:var(--sidebar);
+  border-right:1px solid var(--border); display:flex; flex-direction:column;
+  padding:22px 16px 14px; gap:4px;
+}
+/* Wordmark: lowercase dıme, mint coin-dot over the dotless ı (keyline on light) */
+.brand{padding:6px 8px 16px}
+.wordmark{font-size:21px; font-weight:700; letter-spacing:-.05em; line-height:1}
+.wordmark .i{position:relative; display:inline-block}
+.wordmark .coindot{position:absolute; width:.2em; height:.2em; border-radius:50%; background:#45E0A8; left:calc(50% + .03em); top:.02em; transform:translateX(-50%)}
+:root[data-theme="light"] .wordmark .coindot{box-shadow:0 0 0 1px #0B0B0F}
+.navrow{
+  display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:var(--r-sm);
+  color:var(--t3); font-size:14px; font-weight:500; cursor:pointer; position:relative; text-align:left; width:100%;
+  transition:background var(--t) var(--ease), color var(--t) var(--ease);
+}
+.navrow:hover{background:var(--card-hi); color:var(--t2)}
+.navrow:active{background:var(--card-hi); color:var(--t1)}
+.navrow.active{background:var(--card-hi); color:var(--t1); font-weight:600}
+.navrow.active::before{content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:2px; background:var(--mint)}
+.navrow.new{color:var(--t1); font-weight:600}
+.sect{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t4); padding:16px 10px 6px}
+.recent{color:var(--t3); font-size:13.5px; font-weight:500; padding:9px 10px; border-radius:var(--r-sm); cursor:pointer; text-align:left; width:100%; transition:color var(--t) var(--ease)}
+.recent:hover{color:var(--t1)}
+.spacer{flex:1}
+.credits{display:flex; align-items:center; gap:8px; padding:8px 10px; font-size:12px; color:var(--t3)}
+.credits .cd{width:7px;height:7px;border-radius:50%;background:var(--mint)}
+.profile{display:flex; align-items:center; gap:10px; padding:10px 8px; border-top:1px solid var(--border); margin-top:6px}
+.avatar{width:34px;height:34px;border-radius:50%; background:var(--card-hi); box-shadow:inset 0 0 0 1px var(--border-hi); flex:0 0 34px; display:grid; place-items:center; font-size:13px; color:var(--t2)}
+.profile .who{font-size:13px;font-weight:700;letter-spacing:.02em}
+.profile .plan{font-size:11px;color:var(--t3)}
+.gear{margin-left:auto;color:var(--t4); width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r-sm)}
+.gear:hover{color:var(--t2)}
+
+.main{flex:1; min-width:0; display:flex; flex-direction:column; position:relative; container-type:inline-size; container-name:feed}
+
+/* Top bar — solid surface, 1px border (brand law: tiers + borders, no glass) */
+.topbar{
+  display:flex; align-items:center; gap:6px; padding:12px 40px;
+  background:var(--page); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:20;
+}
+.toptab{padding:8px 16px; border-radius:18px; font-size:14px; font-weight:600; color:var(--t3); white-space:nowrap; position:relative;
+  transition:color var(--t) var(--ease), background var(--t) var(--ease)}
+.toptab::after{content:""; position:absolute; inset:-6px}   /* 44px hit area */
+.toptab:hover{color:var(--t1)}
+.toptab:active{color:var(--t1); background:var(--card-hi)}
+.toptab.active{background:var(--card-hi); color:var(--t1); box-shadow:inset 0 0 0 1px var(--border-hi)}
+.sync{margin-left:auto; display:flex; align-items:center; gap:7px; white-space:nowrap}
+.sync .sd{width:6px;height:6px;border-radius:50%;background:var(--mint)}
+.syncshort{display:none}
+
+.scroll{flex:1; overflow-y:auto; padding:0 40px 120px; position:relative}
+.scroll::-webkit-scrollbar{width:10px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-hi); border-radius:999px; border:3px solid var(--page)}
+
+.feedhead{
+  position:sticky; top:0; z-index:10; padding:16px 0 10px;
+  background:var(--page); border-bottom:1px solid var(--border);
+  margin-bottom:10px;
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+}
+.datenav{display:flex; align-items:center; gap:12px}
+.sq{width:28px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border-hi); background:transparent; color:var(--t2); display:grid; place-items:center; position:relative;
+  transition:border-color var(--t) var(--ease), color var(--t) var(--ease)}
+.sq::after{content:""; position:absolute; inset:-8px}       /* 44px hit area */
+.sq:hover{border-color:var(--border-hover); color:var(--t1)}
+.sq:active{background:var(--card-hi)}
+.datelbl{font-size:15px;font-weight:700;letter-spacing:-.005em; white-space:nowrap}
+.subtabs{margin-left:auto; display:flex; gap:20px; align-items:center; overflow-x:auto; scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent); mask-image:linear-gradient(90deg,#000 88%,transparent); padding-right:24px}
+.subtabs::-webkit-scrollbar{display:none}
+.subtab{position:relative; font-size:13px; font-weight:600; color:var(--t3); padding:10px 0 12px; white-space:nowrap; transition:color var(--t) var(--ease)}
+.subtab::before{content:""; position:absolute; inset:-4px 0}
+.subtab:hover,.subtab:active{color:var(--t2)}
+.subtab.active{color:var(--t1)}
+.subtab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--mint)}
+
+/* ── Game card — informational surface (no click affordance on the card) ── */
+.list{display:flex; flex-direction:column; gap:12px; padding-top:6px}
+.game{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--r-lg);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.game.pass{opacity:.82}
+.gbody{display:grid; grid-template-columns:250px 1fr 240px; align-items:stretch}
+
+/* Matchup — crest + full name per side, away top / home bottom */
+.matchup{padding:14px 16px; display:flex; flex-direction:column; justify-content:center; gap:8px; min-width:0}
+.status{display:flex; align-items:center; gap:7px; margin-bottom:2px}
+.status .ld{width:7px;height:7px;border-radius:50%;background:var(--mint); animation:pulse 1.6s var(--ease) infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+:root[data-theme="light"] .status .ld{box-shadow:0 0 0 1px #0B0B0F}
+.status .lt{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--mint)}
+.status .time{font-family:var(--mono); font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--t3); text-transform:uppercase}
+.teams{display:flex; flex-direction:column; gap:8px; min-width:0}
+.teamrow{display:flex; align-items:center; gap:9px; min-width:0}
+.crest{width:24px; height:24px; flex:0 0 24px; border-radius:50%; overflow:hidden; display:grid; place-items:center; box-shadow:inset 0 0 0 1px var(--border-hi); background:var(--card-hi)}
+.crest svg{width:100%;height:100%;display:block}
+.tname{font-size:15.5px; font-weight:700; letter-spacing:-.006em; color:var(--t1)}
+.tscore{margin-left:auto; font-size:16px; font-weight:700; color:var(--t2); font-variant-numeric:tabular-nums}
+.meta{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t4); margin-top:2px; line-height:1.6}
+.disclose{display:inline-flex; align-items:center; gap:6px; margin-top:6px; font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); padding:6px 0; position:relative}
+.disclose::after{content:""; position:absolute; inset:-8px 0}
+.disclose:hover{color:var(--t1)}
+.disclose svg{width:12px;height:12px; transition:transform var(--t) var(--ease)}
+.game.open .disclose svg{transform:rotate(180deg)}
+
+/* Markets — RULE 3 rows; RULE 4 crest labels */
+.markets{display:grid; grid-auto-flow:column; grid-auto-columns:1fr; border-left:1px solid var(--border); min-width:0}
+.mkcol{padding:10px 8px 8px; border-right:1px solid var(--border); display:flex; flex-direction:column; min-width:0}
+.mkcol:last-child{border-right:0}
+.mktitle{display:flex; align-items:center; gap:5px; margin-bottom:7px}
+.mktitle::before,.mktitle::after{content:""; flex:1; height:1px; background:var(--border)}
+.mktitle span{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t3); white-space:nowrap}
+.mkbox{background:var(--card-hi); border:1px solid var(--border); border-radius:var(--r-sm); flex:1; display:flex; flex-direction:column; overflow:hidden}
+.mkhead{display:grid; grid-template-columns:minmax(72px,1.15fr) 1fr 1fr; padding:4px 6px 3px; border-bottom:1px solid var(--border)}
+.mkhead span{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; text-align:center; color:var(--t4)}
+.mkhead span:first-child{text-align:left}
+.mkrow{display:grid; grid-template-columns:minmax(72px,1.15fr) 1fr 1fr; padding:6px 6px; align-items:center; column-gap:8px}
+.mkrow + .mkrow{border-top:1px solid var(--border)}
+.rlab{display:flex; align-items:center; gap:5px; min-width:0}
+.rcrest{box-shadow:inset 0 0 0 1px var(--border-hi)}
+.rlab .rcrest{width:14px;height:14px;flex:0 0 14px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center}
+.rlab .rcrest svg{width:100%;height:100%;display:block}
+.rlab .lab{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.04em; color:var(--t3); text-transform:uppercase; white-space:nowrap}
+.side{display:flex; align-items:center; justify-content:center; min-width:0; gap:4px}
+.side .val{font-size:15px; font-weight:500; color:var(--t2); font-variant-numeric:tabular-nums; white-space:nowrap}
+.side.model .val{font-weight:700; color:var(--t1)}
+.side.model.sig .val{color:var(--mint)}
+.side .wp{font-size:11px; color:var(--t3); font-weight:500; white-space:nowrap}
+.mkfoot{margin-top:auto; border-top:1px solid var(--border); padding:4px 6px; display:flex; align-items:center; justify-content:center; gap:5px; font-family:var(--mono); letter-spacing:.05em; text-transform:uppercase; white-space:nowrap}
+.mkfoot .rcrest{width:12px;height:12px;flex:0 0 12px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center}
+.mkfoot .rcrest svg{width:100%;height:100%;display:block}
+.mkfoot.edge{color:var(--mint); background:var(--mint-dim); font-size:11px; font-weight:500}
+.mkfoot.none{color:var(--t4); font-size:10px; font-weight:500}
+
+/* Verdict — PICK (crest + value) full-width, EDGE | GRADE beneath */
+.verdict{border-left:1px solid var(--border); display:grid; grid-template-columns:1fr 1fr; align-content:center; gap:12px 4px; padding:12px 14px}
+.vitem{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:0 4px; min-width:0}
+.vitem.vpick{grid-column:1 / -1}
+.vitem .vl{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t4)}
+.vitem .vv{font-size:17px; font-weight:700; letter-spacing:-.01em; color:var(--t1); font-variant-numeric:tabular-nums; white-space:nowrap; display:flex; align-items:center; gap:7px}
+.vitem.vpick .vv{font-size:19px}
+.vitem .vv .rcrest{width:18px;height:18px;flex:0 0 18px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center}
+.vitem .vv .rcrest svg{width:100%;height:100%;display:block}
+.vitem .vv.pick,.vitem .vv.edge{color:var(--mint)}
+.game.pass .vitem .vv{color:var(--t3)}
+.grade{display:inline-grid; place-items:center; min-width:32px; height:26px; padding:0 8px; border-radius:var(--r-sm); font-size:15px; font-weight:700; background:var(--card-hi); box-shadow:inset 0 0 0 1px var(--border-hi); color:var(--t1)}
+
+/* Splits drawer — 160ms height transition (interruptible: animates from the
+   presentation value natively). Neutral bars; crest beside every team code. */
+.drawer{overflow:hidden; height:0; transition:height var(--t) var(--ease)}
+.game.open .drawer{border-top:1px solid var(--border)}
+.drawer-inner{padding:14px 16px 16px}
+.drawer-title{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t4); margin-bottom:10px}
+.splitwrap{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+.splitgrp .sglab{font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--t4); margin-bottom:8px}
+.bar{height:24px; border-radius:var(--r-sm); overflow:hidden; display:flex; margin-bottom:8px; background:var(--border)}
+.bar > span{display:flex; align-items:center; gap:5px; padding:0 8px; font-family:var(--mono); font-size:10.5px; font-weight:500; color:var(--t1); font-variant-numeric:tabular-nums; white-space:nowrap}
+.bar .a{background:var(--border-hi)}
+.bar .a.pickside{box-shadow:inset 0 -2px 0 var(--mint)}
+.bar .b{background:transparent; justify-content:flex-end; flex:1; color:var(--t2)}
+.bar .rcrest{width:13px;height:13px;flex:0 0 13px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center}
+.bar .rcrest svg{width:100%;height:100%;display:block}
+
+/* Composer — solid surface per brand law; shadow only on light */
+.composer{
+  position:absolute; left:40px; right:40px; bottom:22px; z-index:15;
+  display:flex; align-items:center; gap:12px; padding:13px 14px 13px 20px;
+  background:var(--card); border:1px solid var(--border-hi); border-radius:var(--r-xl);
+  box-shadow:var(--shadow-input);
+}
+.composer .ph{flex:1; color:var(--t3); font-size:15px}
+.composer .icn{color:var(--t3); width:20px;height:20px}
+.composer .send{width:44px;height:44px;border-radius:50%; display:grid; place-items:center; flex:0 0 44px;
+  background:#FFFFFF; color:#0B0B0F}
+:root[data-theme="light"] .composer .send{background:#0B0B0F; color:#0FA36B}
+.composer .send svg{width:18px;height:18px}
+
+.menu{display:none}
+svg.ic{width:18px;height:18px;display:block}
+
+/* ── Layout modes ───────────────────────────────────────────────────────── */
+.game.mk7 .gbody{grid-template-columns:1fr}
+.game.mk7 .matchup{border-bottom:1px solid var(--border); display:grid; grid-template-columns:1fr auto; align-items:start; gap:4px 16px}
+.game.mk7 .matchup .status{grid-column:1; grid-row:1}
+.game.mk7 .matchup .meta{grid-column:2; grid-row:1; text-align:right; margin:0}
+.game.mk7 .matchup .teams{grid-column:1 / -1; grid-row:2; max-width:420px}
+.game.mk7 .markets{border-left:0; grid-auto-flow:row; grid-template-columns:repeat(4,1fr); grid-auto-columns:unset}
+.game.mk7 .mkcol{border-bottom:1px solid var(--border)}
+.game.mk7 .mkcol:nth-child(4n){border-right:0}
+.game.mk7 .mkcol:last-child:nth-child(4n+3){grid-column:span 2; border-right:0}
+.game.mk7 .verdict{display:flex; border-left:0; border-top:1px solid var(--border); background:var(--card-hi); padding:10px 16px; justify-content:center; gap:56px}
+.game.mk7 .vitem{flex:0 0 auto}
+.game.mk7 .vitem.vpick .vv{font-size:17px}
+
+@container feed (max-width: 1000px){
+  .game.mk3 .gbody{grid-template-columns:1fr}
+  .game.mk3 .matchup{border-bottom:1px solid var(--border)}
+  .game.mk3 .markets{border-left:0; grid-auto-flow:row; grid-template-columns:repeat(3,1fr); grid-auto-columns:unset}
+  .game.mk3 .mkcol{border-bottom:1px solid var(--border)}
+  .game.mk3 .mkcol:nth-child(3n){border-right:0}
+  .game.mk3 .verdict{display:flex; border-left:0; border-top:1px solid var(--border); background:var(--card-hi); padding:10px 16px; justify-content:center; gap:56px}
+  .game.mk3 .vitem{flex:0 0 auto}
+  .game.mk3 .vitem.vpick .vv{font-size:17px}
+}
+@container feed (max-width: 700px){
+  .game .markets{grid-template-columns:repeat(2,1fr) !important}
+  .game .mkcol{border-right:1px solid var(--border) !important; border-bottom:1px solid var(--border)}
+  .game .mkcol:nth-child(2n){border-right:0 !important}
+  .game .mkcol:last-child:nth-child(odd){grid-column:1 / -1 !important; border-right:0 !important}
+  .game.mk7 .matchup{grid-template-columns:1fr}
+  .game.mk7 .matchup .meta{grid-column:1; grid-row:3; text-align:left}
+  .game.mk7 .matchup .teams{grid-row:2}
+  .game .verdict{display:flex !important; gap:0 !important; justify-content:space-between !important; padding:10px 12px !important}
+  .game .vitem{flex:1 1 0 !important}
+  .game .vitem.vpick .vv{font-size:16px !important}
+  .side .wp{display:none}
+  .synclong{display:none}
+  .syncshort{display:inline}
+  .splitwrap{grid-template-columns:1fr}
+  .topbar,.scroll{padding-left:16px;padding-right:16px}
+  .composer{left:14px;right:14px}
+}
+
+/* Below ~380px container: stack the side label above the values so labels and
+   numbers can never collide or clip (RULE 5 safety at 360/375px devices). */
+@container feed (max-width: 380px){
+  .mkhead{grid-template-columns:1fr 1fr}
+  .mkhead span:first-child{display:none}
+  .mkrow{grid-template-columns:1fr 1fr; grid-template-rows:auto auto; row-gap:2px}
+  .rlab{grid-column:1 / -1; justify-content:flex-start}
+}
+
+/* Sidebar → off-canvas drawer below 768px viewport */
+@media (max-width:767px){
+  .sidebar{
+    position:fixed; left:0; top:0; bottom:0; width:min(84vw,320px); z-index:50;
+    transform:translateX(-100%); transition:transform var(--t) var(--ease);
+    border-right:1px solid var(--border-hi);
+  }
+  body.drawer-open .sidebar{transform:none}
+  body::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity var(--t) var(--ease)}
+  body.drawer-open::after{opacity:1;pointer-events:auto}
+  .menu{display:grid !important; margin-right:2px}
+  .topbar{padding-left:16px;padding-right:16px}
+}
+
+/* Reduced-motion / transparency / contrast */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important}
+  .status .ld{animation:none; opacity:1}
+}
+@media (prefers-contrast: more){
+  :root{--border:#33333E; --border-hi:#44444E; --t3:#B6B6C2; --t4:#8E8E9C}
+  :root[data-theme="light"]{--border:#B9B9C2; --border-hi:#9A9AA6; --t3:#3A3A44; --t4:#55555E}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="wordmark">d<span class="i">ı<span class="coindot"></span></span>me</span></div>
+    <button class="navrow new">＋&nbsp; New Chat</button>
+    <button class="navrow active">AI Model Projections</button>
+    <button class="navrow">Betting Splits + Odds History</button>
+    <button class="navrow">Trends</button>
+    <button class="navrow">Prop Projections</button>
+    <button class="navrow">Bet Tracker</button>
+    <div class="sect">Recent Chats</div>
+    <button class="recent">Will Messi score a goal today?</button>
+    <button class="recent">Ohtani strikeout total projection</button>
+    <button class="recent">Best bets for tonight's slate</button>
+    <button class="recent">Quarterfinal model edges today</button>
+    <button class="recent">Bankroll management advice</button>
+    <div class="spacer"></div>
+    <div class="credits"><span class="cd"></span> 2,480 credits</div>
+    <div class="profile">
+      <div class="avatar">PB</div>
+      <div><div class="who">PREZ BETS</div><div class="plan">Pro</div></div>
+      <button class="gear" aria-label="Settings"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="menu sq" id="menu" aria-label="Menu"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <button class="toptab" data-tab="chat">Chat</button>
+      <button class="toptab active" data-tab="slate">Slate</button>
+      <button class="toptab" data-tab="tracker">Bet Tracker</button>
+      <div class="sync"><span class="sd"></span><span class="micro synclong">Synced 2 min ago</span><span class="micro syncshort">2m</span></div>
+    </div>
+
+    <div class="scroll" id="scroll">
+      <div class="feedhead">
+        <div class="datenav">
+          <button class="sq" aria-label="Previous day">‹</button>
+          <div class="datelbl">Saturday, July 11</div>
+          <button class="sq" aria-label="Next day">›</button>
+          <span class="micro" id="slatecount" style="margin-left:2px">MLB · 4 GAMES</span>
+        </div>
+        <div class="subtabs" id="subtabs" role="tablist">
+          <button class="subtab active" role="tab" aria-selected="true" data-sub="proj">Projections</button>
+          <button class="subtab" role="tab" aria-selected="false" data-sub="splits">Splits</button>
+          <button class="subtab" role="tab" aria-selected="false" data-sub="lineups">Lineups</button>
+          <button class="subtab" role="tab" aria-selected="false" data-sub="k">K Props</button>
+          <button class="subtab" role="tab" aria-selected="false" data-sub="cheat">Cheat Sheets</button>
+          <button class="subtab" role="tab" aria-selected="false" data-sub="hr">HR Props</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin:2px 0 10px" role="tablist">
+        <button class="toptab active" role="tab" aria-selected="true" data-sport="mlb" style="padding:6px 14px;font-size:12.5px">MLB</button>
+        <button class="toptab" role="tab" aria-selected="false" data-sport="wc" style="padding:6px 14px;font-size:12.5px">World Cup</button>
+      </div>
+
+      <div class="list" id="list"></div>
+    </div>
+
+    <div class="composer">
+      <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="ph">Ask dime about tonight's slate</span>
+      <button class="send" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Crests. Prototype stand-ins: MLB = monogram badges (production swaps in the
+   real logo assets); WC = inline SVG flags. */
+function badge(code,c1,c2){
+  return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="${c1}"/><text x="12" y="16" text-anchor="middle" font-family="Familjen Grotesk,sans-serif" font-size="9" font-weight="700" fill="${c2}">${code}</text></svg>`;
+}
+const CR = {
+  LAD: badge("LA","#005A9C","#fff"),  COL: badge("COL","#333366","#fff"),
+  NYY: badge("NY","#0C2340","#fff"),  BOS: badge("BOS","#BD3039","#fff"),
+  MIL: badge("MIL","#12284B","#FFC52F"), CHC: badge("CHC","#0E3386","#fff"),
+  HOU: badge("HOU","#002D62","#EB6E1F"), SEA: badge("SEA","#0C2C56","#C4CED4"),
+  ENG:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#fff"/><rect x="10" y="0" width="4" height="24" fill="#CE1126"/><rect x="0" y="10" width="24" height="4" fill="#CE1126"/></svg>`,
+  NOR:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#BA0C2F"/><rect x="7" y="0" width="6" height="24" fill="#fff"/><rect x="0" y="9" width="24" height="6" fill="#fff"/><rect x="8.5" y="0" width="3" height="24" fill="#00205B"/><rect x="0" y="10.5" width="24" height="3" fill="#00205B"/></svg>`,
+  ARG:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#74ACDF"/><rect x="0" y="8" width="24" height="8" fill="#fff"/><circle cx="12" cy="12" r="2.4" fill="#F6B40E"/></svg>`,
+  SUI:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#DA291C"/><rect x="10" y="5" width="4" height="14" fill="#fff"/><rect x="5" y="10" width="14" height="4" fill="#fff"/></svg>`,
+};
+
+/* Data — RULE 3 both sides; RULE 4 crests; wp = win% annotation (model ML). */
+const MLB = [
+  {live:"LIVE · TOP 6",
+   away:{n:"Dodgers",c:CR.LAD,score:"4"}, home:{n:"Rockies",c:CR.COL,score:"2"},
+   meta:"Glasnow (R) vs Freeland (L) · Coors Field",
+   verdict:{pick:"LAD -1.5",pc:CR.LAD,edge:"+6.1%",grade:"A−",pass:false},
+   splits:true,
+   markets:[
+     {t:"Run Line",rows:[
+       {lab:"LAD -1.5",c:CR.LAD,b:"+104",m:"-108",sig:true},
+       {lab:"COL +1.5",c:CR.COL,b:"-125",m:"-112"}],foot:{lab:"LAD -1.5 · +6.1%",c:CR.LAD,edge:true}},
+     {t:"Total",rows:[
+       {lab:"O 11.5",b:"-110",m:"-118"},
+       {lab:"U 11.5",b:"-110",m:"-104"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Moneyline",rows:[
+       {lab:"LAD",c:CR.LAD,b:"-168",m:"-181",sig:true,wp:"64%"},
+       {lab:"COL",c:CR.COL,b:"+142",m:"+155"}],foot:{lab:"LAD · +3.2%",c:CR.LAD,edge:true}},
+   ]},
+  {time:"7:10 PM ET",
+   away:{n:"Yankees",c:CR.NYY}, home:{n:"Red Sox",c:CR.BOS},
+   meta:"Cole (R) vs Crochet (L) · Fenway Park",
+   verdict:{pick:"NYY ML",pc:CR.NYY,edge:"+5.5%",grade:"A",pass:false},
+   markets:[
+     {t:"Run Line",rows:[
+       {lab:"NYY -1.5",c:CR.NYY,b:"+122",m:"+112"},
+       {lab:"BOS +1.5",c:CR.BOS,b:"-145",m:"-133"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Total",rows:[
+       {lab:"O 9.0",b:"-108",m:"+102"},
+       {lab:"U 9.0",b:"-112",m:"-122",sig:true}],foot:{lab:"U 9.0 · +2.1%",edge:true}},
+     {t:"Moneyline",rows:[
+       {lab:"NYY",c:CR.NYY,b:"-136",m:"-171",sig:true,wp:"63%"},
+       {lab:"BOS",c:CR.BOS,b:"+116",m:"+140"}],foot:{lab:"NYY · +5.5%",c:CR.NYY,edge:true}},
+   ]},
+  {time:"8:05 PM ET",
+   away:{n:"Brewers",c:CR.MIL}, home:{n:"Cubs",c:CR.CHC},
+   meta:"Peralta (L) vs Assad (R) · Wrigley Field",
+   verdict:{pick:"UNDER 8.5",edge:"+4.8%",grade:"B+",pass:false},
+   markets:[
+     {t:"Run Line",rows:[
+       {lab:"MIL +1.5",c:CR.MIL,b:"-172",m:"-186"},
+       {lab:"CHC -1.5",c:CR.CHC,b:"+146",m:"+158"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Total",rows:[
+       {lab:"O 8.5",b:"-112",m:"+118"},
+       {lab:"U 8.5",b:"-108",m:"-142",sig:true}],foot:{lab:"U 8.5 · +4.8%",edge:true}},
+     {t:"Moneyline",rows:[
+       {lab:"MIL",c:CR.MIL,b:"+104",m:"+110"},
+       {lab:"CHC",c:CR.CHC,b:"-124",m:"-129",wp:"56%"}],foot:{lab:"NO EDGE",edge:false}},
+   ]},
+  {time:"9:40 PM ET",
+   away:{n:"Astros",c:CR.HOU}, home:{n:"Mariners",c:CR.SEA},
+   meta:"Valdez (L) vs Gilbert (R) · T-Mobile Park",
+   verdict:{pick:"PASS",edge:"+0.7%",grade:"—",pass:true},
+   markets:[
+     {t:"Run Line",rows:[
+       {lab:"HOU +1.5",c:CR.HOU,b:"-178",m:"-175"},
+       {lab:"SEA -1.5",c:CR.SEA,b:"+150",m:"+148"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Total",rows:[
+       {lab:"O 7.0",b:"-110",m:"-113"},
+       {lab:"U 7.0",b:"-110",m:"-107"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Moneyline",rows:[
+       {lab:"HOU",c:CR.HOU,b:"+100",m:"+102"},
+       {lab:"SEA",c:CR.SEA,b:"-118",m:"-121",wp:"55%"}],foot:{lab:"NO EDGE",edge:false}},
+   ]},
+];
+
+/* WC — away row TOP / home row BOTTOM. qf-099 home NOR / away ENG;
+   qf-100 home ARG / away SUI. HOME WD / AWAY WD carry the matching flag. */
+const WC = [
+  {time:"5:00 PM ET",
+   away:{n:"England",c:CR.ENG}, home:{n:"Norway",c:CR.NOR},
+   meta:"Quarterfinal · Hard Rock Stadium, Miami Gardens",
+   verdict:{pick:"ENG ML",pc:CR.ENG,edge:"+4.4%",grade:"A−",pass:false},
+   markets:[
+     {t:"ML",rows:[
+       {lab:"ENG",c:CR.ENG,b:"-111",m:"-142",sig:true,wp:"57%"},
+       {lab:"NOR",c:CR.NOR,b:"+300",m:"+340"}],foot:{lab:"ENG · +4.4%",c:CR.ENG,edge:true}},
+     {t:"To Adv",rows:[
+       {lab:"ENG",c:CR.ENG,b:"-200",m:"-235",sig:true},
+       {lab:"NOR",c:CR.NOR,b:"+160",m:"+184"}],foot:{lab:"ENG · +3.1%",c:CR.ENG,edge:true}},
+     {t:"Draw",rows:[
+       {lab:"DRAW",b:"+270",m:"+282"},
+       {lab:"NO DRAW",b:"-345",m:"-362"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Total",rows:[
+       {lab:"O 2.5",b:"-137",m:"-149"},
+       {lab:"U 2.5",b:"+110",m:"+118"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Spread",rows:[
+       {lab:"ENG -1.5",c:CR.ENG,b:"+230",m:"+212"},
+       {lab:"NOR +1.5",c:CR.NOR,b:"-303",m:"-328"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Dbl Chc",rows:[
+       {lab:"HOME WD",c:CR.NOR,b:"-110",m:"-127",sig:true},
+       {lab:"AWAY WD",c:CR.ENG,b:"-455",m:"-490"}],foot:{lab:"HOME WD · +2.0%",c:CR.NOR,edge:true}},
+     {t:"BTTS",rows:[
+       {lab:"YES",b:"-161",m:"-172"},
+       {lab:"NO",b:"+120",m:"+126"}],foot:{lab:"NO EDGE",edge:false}},
+   ]},
+  {time:"9:00 PM ET",
+   away:{n:"Switzerland",c:CR.SUI}, home:{n:"Argentina",c:CR.ARG},
+   meta:"Quarterfinal · Arrowhead Stadium, Kansas City",
+   verdict:{pick:"ARG ML",pc:CR.ARG,edge:"+3.5%",grade:"B+",pass:false},
+   markets:[
+     {t:"ML",rows:[
+       {lab:"SUI",c:CR.SUI,b:"+475",m:"+512"},
+       {lab:"ARG",c:CR.ARG,b:"-149",m:"-172",sig:true,wp:"60%"}],foot:{lab:"ARG · +3.5%",c:CR.ARG,edge:true}},
+     {t:"To Adv",rows:[
+       {lab:"SUI",c:CR.SUI,b:"+240",m:"+266"},
+       {lab:"ARG",c:CR.ARG,b:"-310",m:"-342",sig:true}],foot:{lab:"ARG · +1.8%",c:CR.ARG,edge:true}},
+     {t:"Draw",rows:[
+       {lab:"DRAW",b:"+260",m:"+271"},
+       {lab:"NO DRAW",b:"-345",m:"-358"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Total",rows:[
+       {lab:"O 2.5",b:"+120",m:"+131"},
+       {lab:"U 2.5",b:"-149",m:"-161"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Spread",rows:[
+       {lab:"SUI +1.5",c:CR.SUI,b:"-250",m:"-272"},
+       {lab:"ARG -1.5",c:CR.ARG,b:"+185",m:"+171"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"Dbl Chc",rows:[
+       {lab:"HOME WD",c:CR.ARG,b:"-714",m:"-760"},
+       {lab:"AWAY WD",c:CR.SUI,b:"+115",m:"+109"}],foot:{lab:"NO EDGE",edge:false}},
+     {t:"BTTS",rows:[
+       {lab:"YES",b:"+110",m:"+119"},
+       {lab:"NO",b:"-149",m:"-158"}],foot:{lab:"NO EDGE",edge:false}},
+   ]},
+];
+
+const list=document.getElementById('list');
+const crest = (svg,cls="rcrest") => svg?`<span class="${cls}">${svg}</span>`:"";
+
+function mkcol(mc){
+  const rows = mc.rows.map(r=>`
+    <div class="mkrow">
+      <div class="rlab">${crest(r.c)}<span class="lab">${r.lab}</span></div>
+      <div class="side"><span class="val">${r.b}</span></div>
+      <div class="side model ${r.sig?'sig':''}"><span class="val">${r.m}</span>${r.wp?`<span class="wp">${r.wp}</span>`:""}</div>
+    </div>`).join("");
+  const f = mc.foot;
+  const foot = `<div class="mkfoot ${f.edge?'edge':'none'}">${crest(f.c)}<span>${f.lab}</span></div>`;
+  return `<div class="mkcol">
+    <div class="mktitle"><span>${mc.t}</span></div>
+    <div class="mkbox">
+      <div class="mkhead"><span>Side</span><span>Book</span><span>Model</span></div>
+      ${rows}${foot}
+    </div>
+  </div>`;
+}
+function teamRow(t){
+  return `<div class="teamrow">
+    <span class="crest">${t.c}</span>
+    <span class="tname">${t.n}</span>
+    ${t.score!=null?`<span class="tscore">${t.score}</span>`:""}
+  </div>`;
+}
+function row(g){
+  const status = g.live
+    ? `<div class="status"><span class="ld"></span><span class="lt">${g.live}</span></div>`
+    : `<div class="status"><span class="time">${g.time}</span></div>`;
+  const v=g.verdict;
+  const el=document.createElement('div');
+  el.className=`game ${g.markets.length>=6?'mk7':'mk3'}${v.pass?' pass':''}${g.live?' live':''}`;
+  el.innerHTML=`
+    <div class="gbody">
+      <div class="matchup">
+        ${status}
+        <div class="teams">${teamRow(g.away)}${teamRow(g.home)}</div>
+        <div class="meta">${g.meta}</div>
+        ${g.splits?`<button class="disclose" aria-expanded="false">Betting Splits
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>`:""}
+      </div>
+      <div class="markets">${g.markets.map(mkcol).join("")}</div>
+      <div class="verdict">
+        <div class="vitem vpick"><span class="vl">Pick</span><span class="vv ${v.pass?'':'pick'}">${crest(v.pc)}${v.pick}</span></div>
+        <div class="vitem vedge"><span class="vl">Edge</span><span class="vv ${v.pass?'':'edge'}">${v.edge}</span></div>
+        <div class="vitem vgrade"><span class="vl">Grade</span><span class="vv"><span class="grade">${v.grade}</span></span></div>
+      </div>
+    </div>
+    ${g.splits?`<div class="drawer"><div class="drawer-inner">
+      <div class="drawer-title">Betting Splits · Tickets vs Money</div>
+      <div class="splitwrap">
+        <div class="splitgrp"><div class="sglab">Moneyline</div>
+          <div class="bar"><span class="a pickside" style="flex:0 0 62%">${crest(CR.LAD)}LAD 62%</span><span class="b">${crest(CR.COL)}COL 38%</span></div>
+          <div class="bar"><span class="a pickside" style="flex:0 0 71%">${crest(CR.LAD)}LAD 71%</span><span class="b">${crest(CR.COL)}COL 29%</span></div></div>
+        <div class="splitgrp"><div class="sglab">Total</div>
+          <div class="bar"><span class="a" style="flex:0 0 44%">O 44%</span><span class="b">U 56%</span></div>
+          <div class="bar"><span class="a" style="flex:0 0 39%">O 39%</span><span class="b">U 61%</span></div></div>
+      </div>
+    </div></div>`:""}`;
+  const btn = el.querySelector('.disclose');
+  if(btn) btn.addEventListener('click',(e)=>{e.stopPropagation(); toggle(el,btn);});
+  return el;
+}
+function render(sport){
+  list.innerHTML="";
+  const data=sport==='wc'?WC:MLB;
+  document.getElementById('slatecount').textContent=sport==='wc'?'WORLD CUP · 2 GAMES · QUARTERFINALS':'MLB · 4 GAMES';
+  data.forEach(g=>list.appendChild(row(g)));
+}
+
+/* Drawer — 160ms CSS height transition (single brand curve; a CSS transition
+   natively animates FROM the presentation value, so interrupts never jump). */
+function toggle(game,btn){
+  const dr=game.querySelector('.drawer'); if(!dr)return;
+  const inner=dr.firstElementChild;
+  const open=game.classList.contains('open');
+  if(open){
+    dr.style.height=inner.offsetHeight+'px'; // pin from auto → px so it can transition
+    requestAnimationFrame(()=>{dr.style.height='0';});
+    btn.setAttribute('aria-expanded','false');
+    dr.addEventListener('transitionend',function h(){game.classList.remove('open');dr.removeEventListener('transitionend',h);});
+  }else{
+    game.classList.add('open');
+    dr.style.height=inner.offsetHeight+'px';
+    btn.setAttribute('aria-expanded','true');
+    dr.addEventListener('transitionend',function h(){if(game.classList.contains('open'))dr.style.height='auto';dr.removeEventListener('transitionend',h);});
+  }
+}
+
+document.querySelectorAll('[data-sport]').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sport]').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-selected','false');});
+  c.classList.add('active'); c.setAttribute('aria-selected','true');
+  render(c.dataset.sport);
+}));
+document.getElementById('subtabs').addEventListener('click',e=>{
+  const t=e.target.closest('.subtab'); if(!t)return;
+  document.querySelectorAll('.subtab').forEach(x=>{x.classList.remove('active');x.setAttribute('aria-selected','false');});
+  t.classList.add('active'); t.setAttribute('aria-selected','true');
+});
+document.querySelectorAll('.topbar .toptab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.topbar .toptab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+}));
+document.getElementById('menu').addEventListener('click',e=>{e.stopPropagation();document.body.classList.toggle('drawer-open');});
+document.addEventListener('click',e=>{ if(document.body.classList.contains('drawer-open')&&!e.target.closest('.sidebar')&&!e.target.closest('#menu')) document.body.classList.remove('drawer-open'); });
+
+render('mlb');
+</script>
+</body>
+</html>
