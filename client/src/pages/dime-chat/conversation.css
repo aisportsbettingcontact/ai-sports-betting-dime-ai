@@ -186,4 +186,6 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
 
 .dc-gate { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px; text-align: center; } /* home-main geometry F:97; page bg comes from the .dc-page theme rules (D/L:46) */
 .dc-gate-line { font-size: 14px; color: var(--text-primary); } /* body size F:101; text tokens F:19/20 */
-.dc-gate-sub { text-transform: none; } /* copy is literal caps so "/feed/model" keeps its real lowercase route name; mono/size/tracking from .dc-microlabel (C3); mint link colors from .dc-link (F:13-14) */
+.dc-gate-sub { text-transform: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 4px 12px; } /* copy is literal caps so "/feed/model" keeps its real lowercase route name; mono/size/tracking from .dc-microlabel (C3); mint link colors from .dc-link (F:13-14); 44px min hit area — this link is the gate's only in-page action */
+.theme-light .dc-gate-sub.dc-link { color: #0FA36B; } /* MASTER.md: raw mint #45E0A8 is never TEXT on light surfaces (1.68:1) — light-mint token instead */
+.theme-light .dc-gate-sub.dc-link:hover { color: #0C8A5A; }

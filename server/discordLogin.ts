@@ -15,7 +15,7 @@
  * │     → Fetch Discord profile (id, username, avatar)                     │
  * │     → Find existing appUser by discordId (single indexed query)        │
  * │       → If found + hasAccess + not expired: issue session cookie       │
- * │       → If NOT found: redirect /?discord_error=no_account              │
+ * │       → If NOT found: redirect /login?discord_error=no_account         │
  * │     → Fire-and-forget: update Discord profile fields + lastSignedIn    │
  * │                                                                         │
  * └─────────────────────────────────────────────────────────────────────────┘
@@ -98,6 +98,25 @@ async function createStateToken(returnPath: string): Promise<string> {
     .sign(getStateSecret());
 }
 
+/**
+ * Restricts returnPath to same-site relative paths. Anything absolute
+ * (https://evil.example), protocol-relative (//evil.example), or otherwise
+ * malformed falls back to the canonical feed — closes the open-redirect
+ * where the OAuth callback 302s to an attacker-supplied URL.
+ */
+function sanitizeReturnPath(p: unknown): string {
+  if (
+    typeof p === "string" &&
+    p.startsWith("/") &&
+    !p.startsWith("//") &&
+    !p.includes("://") &&
+    !p.includes("\\")
+  ) {
+    return p;
+  }
+  return "/feed/model/mlb";
+}
+
 async function verifyStateToken(
   token: string,
   requestId: string
@@ -109,7 +128,7 @@ async function verifyStateToken(
     if (payload.type !== "discord_login_state") {
       return { ok: false, reason: "wrong_token_type" };
     }
-    const returnPath = typeof payload.returnPath === "string" ? payload.returnPath : "/";
+    const returnPath = sanitizeReturnPath(payload.returnPath);
     console.log(
       `[DiscordLogin][STATE_JWT][OK] requestId=${requestId} returnPath="${returnPath}"`
     );
@@ -189,9 +208,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
   app.get(`${ROUTE_PREFIX}/connect`, async (req: Request, res: Response) => {
     const t0        = Date.now();
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const returnPath = typeof req.query.returnPath === "string"
-      ? req.query.returnPath
-      : "/";
+    const returnPath = sanitizeReturnPath(req.query.returnPath);
 
     // prompt=consent: always show consent screen (forces re-auth, most compatible).
     // prompt=none: skip consent if user already authorized this app in this browser.
@@ -207,7 +224,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
         `[DiscordLogin][CONNECT][FAIL] requestId=${requestId}` +
         ` DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set.`
       );
-      res.redirect(302, `/?error=discord_not_configured`);
+      res.redirect(302, `/login?error=discord_not_configured`);
       return;
     }
 
@@ -237,7 +254,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
       res.redirect(302, authorizeUrl);
     } catch (err) {
       console.error(`[DiscordLogin][CONNECT][EXCEPTION] requestId=${requestId}`, err);
-      res.redirect(302, `/?error=discord_connect_failed`);
+      res.redirect(302, `/login?error=discord_connect_failed`);
     }
   });
 
@@ -270,7 +287,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
           ` discordError="${discordError}"`
         );
-        res.redirect(302, `/?discord_error=discord_cancelled`);
+        res.redirect(302, `/login?discord_error=discord_cancelled`);
         return;
       }
 
@@ -279,7 +296,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][MISSING_PARAMS] requestId=${requestId}` +
           ` code=${!!code} state=${!!state}`
         );
-        res.redirect(302, `/?discord_error=invalid_callback`);
+        res.redirect(302, `/login?discord_error=invalid_callback`);
         return;
       }
 
@@ -290,7 +307,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][STATE_FAIL] requestId=${requestId}` +
           ` reason="${stateResult.reason}"`
         );
-        res.redirect(302, `/?discord_error=${stateResult.reason}`);
+        res.redirect(302, `/login?discord_error=${stateResult.reason}`);
         return;
       }
 
@@ -314,7 +331,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             `[DiscordLogin][CALLBACK][DEADLINE_EXCEEDED] requestId=${requestId}` +
             ` totalMs=${Date.now() - t0} — forcing redirect to prevent Service Unavailable`
           );
-          res.redirect(302, `/?discord_error=timeout`);
+          res.redirect(302, `/login?discord_error=timeout`);
         }
       }, CALLBACK_DEADLINE_MS);
       // Ensure the deadline timer never prevents Node from exiting
@@ -345,7 +362,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             `[DiscordLogin][CALLBACK][TOKEN_FAIL] requestId=${requestId}` +
             ` HTTP ${tokenRes.status}: "${errText.slice(0, 300)}"`
           );
-          res.redirect(302, `/?discord_error=token_exchange_failed`);
+          res.redirect(302, `/login?discord_error=token_exchange_failed`);
           return;
         }
 
@@ -355,7 +372,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             `[DiscordLogin][CALLBACK][TOKEN_MISSING] requestId=${requestId}` +
             ` Discord token response missing access_token field`
           );
-          res.redirect(302, `/?discord_error=token_exchange_failed`);
+          res.redirect(302, `/login?discord_error=token_exchange_failed`);
           return;
         }
         accessToken = tokenData.access_token;
@@ -373,8 +390,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         if (!res.headersSent) {
           res.redirect(302, isTimeout
-            ? `/?discord_error=timeout`
-            : `/?discord_error=token_exchange_failed`);
+            ? `/login?discord_error=timeout`
+            : `/login?discord_error=token_exchange_failed`);
         }
         return;
       }
@@ -402,7 +419,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             `[DiscordLogin][CALLBACK][PROFILE_HTTP_FAIL] requestId=${requestId}` +
             ` HTTP ${profileRes.status}: "${errText.slice(0, 200)}"`
           );
-          res.redirect(302, `/?discord_error=profile_fetch_failed`);
+          res.redirect(302, `/login?discord_error=profile_fetch_failed`);
           return;
         }
 
@@ -417,8 +434,8 @@ export function registerDiscordLoginRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         if (!res.headersSent) {
           res.redirect(302, isTimeout
-            ? `/?discord_error=timeout`
-            : `/?discord_error=profile_fetch_failed`);
+            ? `/login?discord_error=timeout`
+            : `/login?discord_error=profile_fetch_failed`);
         }
         return;
       }
@@ -428,7 +445,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][PROFILE_INVALID] requestId=${requestId}` +
           ` profile missing id field: ${JSON.stringify(profile).slice(0, 200)}`
         );
-        res.redirect(302, `/?discord_error=profile_fetch_failed`);
+        res.redirect(302, `/login?discord_error=profile_fetch_failed`);
         return;
       }
 
@@ -447,7 +464,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
       const db = await getDb();
       if (!db) {
         console.error(`[DiscordLogin][CALLBACK][DB_FAIL] requestId=${requestId} DB unavailable`);
-        res.redirect(302, `/?discord_error=db_unavailable`);
+        res.redirect(302, `/login?discord_error=db_unavailable`);
         return;
       }
 
@@ -482,7 +499,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             ` No appUser found with discordId="${discordId}" OR manualDiscordId="${discordId}"` +
             ` (@${discordUsername}). dbMs=${Date.now() - t3}`
           );
-          res.redirect(302, `/?discord_error=no_account&discord_user=${encodeURIComponent(discordUsername)}`);
+          res.redirect(302, `/login?discord_error=no_account&discord_user=${encodeURIComponent(discordUsername)}`);
           return;
         }
 
@@ -513,7 +530,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
             `[DiscordLogin][CALLBACK][CP3B_PROMOTE_FAIL] requestId=${requestId}` +
             ` userId=${manualUserId} error=${msg}`
           );
-          res.redirect(302, `/?discord_error=server_error`);
+          res.redirect(302, `/login?discord_error=server_error`);
           return;
         }
         userId = manualUserId;
@@ -528,7 +545,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][USER_NOT_FOUND] requestId=${requestId}` +
           ` getAppUserById(${userId}) returned null. DB inconsistency.`
         );
-        res.redirect(302, `/?discord_error=user_not_found`);
+        res.redirect(302, `/login?discord_error=user_not_found`);
         return;
       }
 
@@ -537,7 +554,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][NO_ACCESS] requestId=${requestId}` +
           ` userId=${userId} hasAccess=false`
         );
-        res.redirect(302, `/?discord_error=access_disabled`);
+        res.redirect(302, `/login?discord_error=access_disabled`);
         return;
       }
 
@@ -546,7 +563,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
           `[DiscordLogin][CALLBACK][EXPIRED] requestId=${requestId}` +
           ` userId=${userId} expired at ${new Date(user.expiryDate).toISOString()}`
         );
-        res.redirect(302, `/?discord_error=account_expired`);
+        res.redirect(302, `/login?discord_error=account_expired`);
         return;
       }
 
@@ -606,7 +623,7 @@ export function registerDiscordLoginRoutes(app: Express): void {
         err
       );
       if (!res.headersSent) {
-        res.redirect(302, `/?discord_error=server_error`);
+        res.redirect(302, `/login?discord_error=server_error`);
       }
     }
   });

@@ -768,20 +768,35 @@ async function startServer() {
     return `${mo}-${da}-${d.getUTCFullYear()}`;
   };
   console.log(`[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`);
+  const firstQueryValue = (v: unknown): string =>
+    typeof v === "string" ? v : Array.isArray(v) && typeof v[0] === "string" ? v[0] : "";
   app.get(["/feed", "/splits", "/projections", "/dashboard"], (req, res) => {
-    const tab = typeof req.query.tab === "string" ? req.query.tab : "";
+    const tab = firstQueryValue(req.query.tab);
     let target: string;
     if (req.path === "/splits" || tab === "splits") {
       target = "/betting-splits/MLB";
     } else {
-      const sportParam = typeof req.query.sport === "string" ? req.query.sport.toUpperCase() : "";
-      const sport = sportParam === "WC" ? "wc" : "mlb";
-      const legacyDate = typeof req.query.date === "string" ? req.query.date : "";
+      const sport = firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
+      const legacyDate = firstQueryValue(req.query.date);
       const slugDate = /^\d{4}-\d{2}-\d{2}$/.test(legacyDate)
         ? `${legacyDate.slice(5, 7)}-${legacyDate.slice(8, 10)}-${legacyDate.slice(0, 4)}`
         : feedSlugDate();
       target = `/feed/model/${sport}-${slugDate}`;
     }
+    // Forward every query param the redirect itself doesn't consume — e.g.
+    // discord_linked / discord_error state from OAuth callbacks must survive
+    // the hop instead of being silently stripped.
+    const passthrough = new URLSearchParams();
+    for (const [key, value] of Object.entries(req.query)) {
+      if (key === "tab" || key === "sport" || key === "date") continue;
+      const v = firstQueryValue(value);
+      if (v !== "" || value === "") passthrough.set(key, v);
+    }
+    const qs = passthrough.toString();
+    if (qs) target += `?${qs}`;
+    // The /feed target varies with the 07:00 UTC rollover — a cached 308
+    // would pin repeat visitors to a stale date, so forbid caching.
+    res.set("Cache-Control", "no-store");
     console.log(`[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`);
     res.redirect(308, target);
   });

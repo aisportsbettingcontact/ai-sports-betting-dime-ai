@@ -485,7 +485,9 @@ function ViewportGate({ theme }: { theme: Theme }) {
     <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
       <div className="dc-gate">
         <BrandHero />
-        <div className="dc-gate-line">Dime chat is built for desktop right now.</div>
+        <div className="dc-gate-line">
+          Dime chat is built for larger screens — on a tablet, rotating to landscape works.
+        </div>
         <Link href="/feed/model/mlb" className="dc-microlabel dc-gate-sub dc-link">
           OPEN ON A LARGER SCREEN · THE BOARD LIVES AT /feed/model
         </Link>
