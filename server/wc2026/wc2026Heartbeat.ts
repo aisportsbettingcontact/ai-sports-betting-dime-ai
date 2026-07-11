@@ -35,7 +35,16 @@ import { scrapeWc2026Lineups } from "./wc2026RotowireLineupsScraper";
 import { ingestWc2026EspnResults } from "./wc2026Ingester";
 import { wc2026LiveSyncHandler } from "./fifaLiveScraper";
 import { spawn } from "child_process";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// The production server is bundled by esbuild with --format=esm, where the
+// CommonJS `__dirname` global does not exist. Deriving it from import.meta.url
+// works in both the ESM bundle (resolves next to dist/index.js) and tsx dev
+// (resolves to server/wc2026). Without this, every bracket-sync call threw
+// `ReferenceError: __dirname is not defined` (HTTP 500), so R16 winners never
+// propagated into the QF/SF/Final slots and knockout teams stayed "tbd".
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Bracket sync helper (spawns the MJS scraper as a child process) ─────────
 // We spawn instead of import because the bracket scraper is ESM (.mjs) and
