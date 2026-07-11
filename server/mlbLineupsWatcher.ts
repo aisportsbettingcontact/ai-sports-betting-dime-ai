@@ -580,7 +580,9 @@ export async function runLineupWatcher(
     console.log(`${TAG} [STEP] Triggering model for ${gamesToModel.length} game(s): ${gamesToModel.join(", ")}`);
     try {
       const { runMlbModelForDate } = await import("./mlbModelRunner.js");
-      const modelResult = await runMlbModelForDate(dateStr);
+      // Force re-run for exactly the FIRST_LINEUP/CHANGED games — without forceRerun,
+      // games already modeled today would be silently skipped despite the lineup change.
+      const modelResult = await runMlbModelForDate(dateStr, { targetGameIds: gamesToModel, forceRerun: true });
       console.log(
         `${TAG} [OUTPUT] Model run complete: ` +
         `written=${modelResult.written} skipped=${modelResult.skipped} errors=${modelResult.errors} ` +
