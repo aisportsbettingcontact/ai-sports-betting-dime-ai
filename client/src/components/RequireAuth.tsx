@@ -28,19 +28,13 @@
  * │  This eliminates the double loading screen (HTML shell → React spinner).│
  * │                                                                         │
  * │  [PERF] URL-aware feed data prefetch — fires the moment auth resolves.  │
- * │  Reads ?sport= and ?date= from the URL so the prefetched cache key      │
- * │  EXACTLY matches what ModelProjections will request on mount.           │
- * │                                                                         │
- * │  This eliminates the server date sync double-fetch:                     │
- * │    Old: prefetch MLB+today → getCurrentDate resolves → date mismatch    │
- * │         → setSelectedDate → NEW games.list query (second loading cycle) │
- * │    New: prefetch correct sport+date + yesterday fallback → cache hit    │
- * │         → getCurrentDate resolves → already cached → no second query   │
+ * │  Parses the canonical /feed/model/{sport}-{date} slug so the prefetched │
+ * │  cache key EXACTLY matches what DimeModelFeed requests on mount.        │
  * └─────────────────────────────────────────────────────────────────────────┘
  *
  * Usage:
- *   <Route path="/feed">
- *     {() => <RequireAuth><ModelProjections /></RequireAuth>}
+ *   <Route path="/feed/model/:sport">
+ *     {(p) => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}
  *   </Route>
  */
 
@@ -53,67 +47,44 @@ interface RequireAuthProps {
   children: React.ReactNode;
 }
 
-const VALID_SPORTS_SET = new Set(["MLB", "NHL", "NBA"]);
-
-// Feed data prefetch — fires once when auth resolves on /feed routes.
-// Populates React Query cache so ModelProjections renders with data immediately.
+// Feed data prefetch — fires once when auth resolves on the canonical feed
+// surface (/feed/model/{mlb|wc}-MM-DD-YYYY). Populates the React Query cache
+// so DimeModelFeed renders with data immediately.
 //
-// [PERF] URL-aware: reads ?sport= and ?date= from the current URL so the
-// prefetched cache key EXACTLY matches what ModelProjections will request on mount.
-// Also prefetches getCurrentDate FIRST so the date sync effect in ModelProjections
-// resolves from cache — preventing the setSelectedDate → second games.list cascade.
+// [NAV RECONSTRUCTION 2026-07-11] Rewritten for the canonical path-based URLs.
+// The legacy /feed?sport=&date= query hooks are eradicated — the sport and
+// date are parsed from the path slug so the prefetched cache key EXACTLY
+// matches what useFeedCards requests on mount ({sport,"gameDate"} for MLB,
+// {date} for WC — see DimeModelFeed useFeedCards).
 function useFeedPrefetch(authenticated: boolean) {
   const utils = trpc.useUtils();
   const prefetchedRef = useRef(false);
 
   useEffect(() => {
     if (!authenticated || prefetchedRef.current) return;
-    // Only prefetch on /feed route — other routes don't need games.list
-    if (!window.location.pathname.startsWith("/feed")) return;
+    const pathname = window.location.pathname;
+    // Only prefetch on the canonical feed surface — other routes don't need feed data
+    if (!pathname.startsWith("/feed/model")) return;
 
     prefetchedRef.current = true;
 
-    // [PERF] Read URL params to prefetch the exact sport+date the user will see.
-    // Falls back to MLB+todayUTC() if no params are present (first visit).
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlSport = urlParams.get("sport");
-    const urlDate  = urlParams.get("date");
-    const sport = (urlSport && VALID_SPORTS_SET.has(urlSport))
-      ? (urlSport as "MLB" | "NHL" | "NBA")
-      : "MLB";
-    const today = todayUTC();
-    // Validate YYYY-MM-DD format for the date param
-    const dateParam = (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate)) ? urlDate : null;
-    const gameDate = dateParam ?? today;
+    // Parse /feed/model/{mlb|wc}-MM-DD-YYYY (also the split /{sport}/{date}
+    // form and the bare /{sport} form, which canonicalizes to today).
+    const seg = pathname.split("/").filter(Boolean); // ["feed","model","mlb-07-11-2026"(,"07-11-2026")]
+    let sport = (seg[2] ?? "").toLowerCase();
+    let slugDate = seg[3] ?? "";
+    const combined = /^(mlb|wc)-(\d{2}-\d{2}-\d{4})$/.exec(sport);
+    if (combined) {
+      sport = combined[1];
+      slugDate = combined[2];
+    }
+    const dm = /^(\d{2})-(\d{2})-(\d{4})$/.exec(slugDate);
+    const gameDate = dm ? `${dm[3]}-${dm[1]}-${dm[2]}` : todayUTC();
 
-    // Step 1: Prefetch getCurrentDate so the date sync effect in ModelProjections
-    // reads from cache (no network round-trip) → no second games.list query.
-    void utils.games.getCurrentDate.prefetch(undefined, { staleTime: 5 * 60 * 1000 });
-
-    // Step 2: Prefetch the primary games.list for the detected sport+date.
-    void utils.games.list.prefetch(
-      { sport, gameDate },
-      { staleTime: 60 * 1000 }
-    );
-
-    // Step 3: Prefetch activeSports for sport pill visibility.
-    void utils.games.activeSports.prefetch(undefined, { staleTime: 5 * 60 * 1000 });
-
-    // [PERF] If no explicit ?date= in URL, also prefetch yesterday as a fallback.
-    // Covers the case where the server's effective date is yesterday (before 11:00 UTC
-    // cutoff) but the client computed today. Both cache entries will be warm — whichever
-    // the server date sync picks will be a cache hit, not a network round-trip.
-    if (!dateParam) {
-      const d = new Date();
-      const yesterday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1))
-        .toISOString()
-        .slice(0, 10);
-      if (yesterday !== gameDate) {
-        void utils.games.list.prefetch(
-          { sport, gameDate: yesterday },
-          { staleTime: 60 * 1000 }
-        );
-      }
+    if (sport === "wc") {
+      void utils.wc2026.matchesByDate.prefetch({ date: gameDate }, { staleTime: 60 * 1000 });
+    } else {
+      void utils.games.list.prefetch({ sport: "MLB", gameDate }, { staleTime: 60 * 1000 });
     }
   }, [authenticated, utils]);
 }

@@ -5,10 +5,11 @@
  * ODDS/LINES model projections are intentionally hidden — use Model Projections for those.
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
+import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
 
 // CDN icon URLs
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
@@ -174,12 +175,19 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function BettingSplitsPage() {
+export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSport?: "MLB" | "NHL" | "NBA" }) {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [selectedSport, setSelectedSport] = useState<"MLB" | "NHL" | "NBA">("MLB");
+  // Sport is seeded from the canonical route (/betting-splits/:sport) and the
+  // URL is kept in sync on pill changes so the address bar stays shareable.
+  const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
+  const setSelectedSport = useCallback((sport: "MLB" | "NHL" | "NBA") => {
+    setSelectedSportState(sport);
+    setLocation(bettingSplitsPath(sport), { replace: true });
+  }, [setLocation]);
+  useEffect(() => { setSelectedSportState(initialSport); }, [initialSport]);
   const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
   const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());
   const [searchQuery, setSearchQuery] = useState("");
@@ -415,18 +423,24 @@ export default function BettingSplitsPage() {
 
   const scrollToGame = (gameId: number) => {
     setSearchFocused(false); setSearchQuery("");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setTimeout(() => {
       const el = document.getElementById(`game-card-${gameId}`);
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.style.transition = "box-shadow 0.15s ease, outline 0.15s ease";
-      el.style.outline = "2px solid #22c55e"; el.style.borderRadius = "12px";
-      el.style.boxShadow = "0 0 0 4px rgba(34,197,94,0.3), 0 0 24px rgba(34,197,94,0.2)";
+      el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      el.style.outline = "2px solid #45E0A8"; el.style.borderRadius = "12px";
+      if (reducedMotion) {
+        // Static highlight, no pulse — clears after the same total dwell time
+        setTimeout(() => { el.style.outline = ""; el.style.borderRadius = ""; }, 2100);
+        return;
+      }
+      el.style.transition = "box-shadow 0.16s ease, outline 0.16s ease";
+      el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)";
       let count = 0;
       const pulse = setInterval(() => {
         count++;
-        if (count % 2 === 0) { el.style.boxShadow = "0 0 0 4px rgba(34,197,94,0.3), 0 0 24px rgba(34,197,94,0.2)"; el.style.outline = "2px solid #22c55e"; }
-        else { el.style.boxShadow = "0 0 0 2px rgba(34,197,94,0.15)"; el.style.outline = "2px solid rgba(34,197,94,0.4)"; }
+        if (count % 2 === 0) { el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)"; el.style.outline = "2px solid #45E0A8"; }
+        else { el.style.boxShadow = "0 0 0 2px rgba(69,224,168,0.15)"; el.style.outline = "2px solid rgba(69,224,168,0.4)"; }
         if (count >= 5) { clearInterval(pulse); setTimeout(() => { el.style.outline = ""; el.style.boxShadow = ""; el.style.borderRadius = ""; el.style.transition = ""; }, 600); }
       }, 300);
     }, 120);
@@ -443,7 +457,7 @@ export default function BettingSplitsPage() {
         {/* Row 1: brand + user icon */}
         <div className="relative flex items-center px-4 pt-2 pb-1">
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <BarChart3 className="flex-shrink-0 text-primary" style={{ width: "clamp(14px, 2.5vw, 22px)", height: "clamp(14px, 2.5vw, 22px)" }} />
+            <BarChart3 className="flex-shrink-0" style={{ width: "clamp(14px, 2.5vw, 22px)", height: "clamp(14px, 2.5vw, 22px)", color: "#45E0A8" }} />
             <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 22px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
           </div>
           <div className="flex-1" />
@@ -528,24 +542,26 @@ export default function BettingSplitsPage() {
 
         {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active) */}
         <div className="flex w-full" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+          {/* Links style themselves (no nested <button> — interactive-inside-
+              interactive is invalid HTML and doubles the keyboard tab stops). */}
           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
-          <Link href="/projections" className="flex-1">
-            <button type="button" className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
-              style={{ color: "rgba(255,255,255,0.45)" }}
-            >
-              <img src={CDN_TEST_TUBE} alt="Test tube" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.45 }} />
-              <span>AI MODEL PROJECTIONS</span>
-            </button>
+          <Link href={feedModelPath("MLB")}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            <img src={CDN_TEST_TUBE} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.45 }} />
+            <span>AI MODEL PROJECTIONS</span>
           </Link>
-          {/* Right: BETTING SPLITS — active on this page */}
-          <Link href="/splits" className="flex-1">
-            <button type="button" className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
-              style={{ color: "#ffffff" }}
-            >
-              <img src={CDN_MONEY_BAG} alt="Money bag" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)" }} />
-              <span>BETTING SPLITS</span>
-              <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full" style={{ background: "#39FF14" }} />
-            </button>
+          {/* Right: BETTING SPLITS — active on this page. Self-link targets the
+              canonical sport path (the old /splits href navigated away to the
+              retired public page — the tab un-selected itself on click). */}
+          <Link href={bettingSplitsPath(selectedSport)} aria-current="page"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
+            style={{ color: "#ffffff" }}
+          >
+            <img src={CDN_MONEY_BAG} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)" }} />
+            <span>BETTING SPLITS</span>
+            <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full" style={{ background: "#45E0A8" }} />
           </Link>
         </div>
 
@@ -588,7 +604,8 @@ export default function BettingSplitsPage() {
             <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
               style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "rgba(34,197,94,0.5)" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px rgba(34,197,94,0.15)" : "none" }}>
               <Search className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-              <input ref={inputRef} type="text" placeholder="Search…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setSearchFocused(true)} className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none" />
+              {/* 16px on touch widths — anything smaller makes iOS Safari zoom the page on focus */}
+              <input ref={inputRef} type="text" placeholder="Search…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setSearchFocused(true)} className="flex-1 min-w-0 bg-transparent text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none" />
               {searchQuery && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setSearchQuery(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"><X className="w-3 h-3" /></button>}
             </div>
           </div>
@@ -634,7 +651,7 @@ export default function BettingSplitsPage() {
       <main className="w-full pb-1">
         {(gamesLoading) ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#45E0A8" }} />
             <p className="text-sm text-muted-foreground">Loading betting splits…</p>
           </div>
         ) : sortedDates.length === 0 ? (

@@ -229,7 +229,7 @@ export async function sendWelcomeEmail(opts: {
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
       <tr>
         <td align="center">
-          <a href="https://aisportsbettingmodels.com/feed"
+          <a href="https://aisportsbettingmodels.com/feed/model/mlb"
              style="display:inline-block;background:${BRAND_COLOR};color:#000000;font-weight:900;font-size:14px;
                     letter-spacing:0.06em;text-decoration:none;padding:14px 32px;border-radius:8px;">
             ENTER THE PLATFORM
@@ -253,7 +253,7 @@ export async function sendWelcomeEmail(opts: {
       to: opts.toEmail,
       subject: `Welcome to Dime AI — Your ${opts.planLabel} is active`,
       html,
-      text: `Welcome to Dime AI!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed\n\n— Dime AI`,
+      text: `Welcome to Dime AI!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed/model/mlb\n\n— Dime AI`,
     });
     console.log(`${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`);
     console.log(`${TAG} [VERIFY] PASS`);

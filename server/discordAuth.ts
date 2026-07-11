@@ -247,9 +247,9 @@ export function registerDiscordAuthRoutes(app: Express) {
         `[DiscordAuth][CHECKPOINT:3.FAIL] /connect — requestId=${requestId}` +
         ` FATAL: getDb() returned null — cannot store CSRF state in DB.` +
         ` DATABASE_URL may be missing or DB connection failed.` +
-        ` Redirecting to /dashboard?discord_error=db_unavailable`
+        ` Redirecting to /feed/model/mlb?discord_error=db_unavailable`
       );
-      res.redirect(302, "/dashboard?discord_error=db_unavailable");
+      res.redirect(302, "/feed/model/mlb?discord_error=db_unavailable");
       return;
     }
 
@@ -318,7 +318,7 @@ export function registerDiscordAuthRoutes(app: Express) {
   // CHECKPOINT 8: Profile fetch — GET Discord /users/@me
   // CHECKPOINT 9: Conflict check — ensure discordId not already linked to another user
   // CHECKPOINT 10: DB write — save discordId/username/avatar/connectedAt to app_users
-  // CHECKPOINT 11: SUCCESS — redirect to /dashboard?discord_linked=1
+  // CHECKPOINT 11: SUCCESS — redirect to /feed/model/mlb?discord_linked=1
   app.get(`${ROUTE_PREFIX}/callback`, async (req: Request, res: Response) => {
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
     const code  = typeof req.query.code  === "string" ? req.query.code  : null;
@@ -340,9 +340,9 @@ export function registerDiscordAuthRoutes(app: Express) {
       console.log(
         `[DiscordAuth][CHECKPOINT:5.DISCORD_ERROR] /callback — requestId=${requestId}` +
         ` Discord returned error="${error}" (user denied OAuth or Discord-side error).` +
-        ` Redirecting to /dashboard?discord_error=denied`
+        ` Redirecting to /feed/model/mlb?discord_error=denied`
       );
-      res.redirect(302, "/dashboard?discord_error=denied");
+      res.redirect(302, "/feed/model/mlb?discord_error=denied");
       return;
     }
 
@@ -351,9 +351,9 @@ export function registerDiscordAuthRoutes(app: Express) {
         `[DiscordAuth][CHECKPOINT:5.FAIL] /callback — requestId=${requestId}` +
         ` REJECTED: missing required params.` +
         ` code_missing=${!code} state_missing=${!state}.` +
-        ` Redirecting to /dashboard?discord_error=invalid_request`
+        ` Redirecting to /feed/model/mlb?discord_error=invalid_request`
       );
-      res.redirect(302, "/dashboard?discord_error=invalid_request");
+      res.redirect(302, "/feed/model/mlb?discord_error=invalid_request");
       return;
     }
 
@@ -366,9 +366,9 @@ export function registerDiscordAuthRoutes(app: Express) {
       console.error(
         `[DiscordAuth][CHECKPOINT:6.FAIL] /callback — requestId=${requestId}` +
         ` FATAL: getDb() returned null — cannot look up CSRF state from DB.` +
-        ` Redirecting to /dashboard?discord_error=db_unavailable`
+        ` Redirecting to /feed/model/mlb?discord_error=db_unavailable`
       );
-      res.redirect(302, "/dashboard?discord_error=db_unavailable");
+      res.redirect(302, "/feed/model/mlb?discord_error=db_unavailable");
       return;
     }
 
@@ -407,9 +407,9 @@ export function registerDiscordAuthRoutes(app: Express) {
         `\n  2. State was already consumed (duplicate callback request)` +
         `\n  3. DB migration not applied (run pnpm db:push)` +
         `\n  4. State was never inserted (DB write failed in /connect)` +
-        ` Redirecting to /dashboard?discord_error=state_mismatch`
+        ` Redirecting to /feed/model/mlb?discord_error=state_mismatch`
       );
-      res.redirect(302, "/dashboard?discord_error=state_mismatch");
+      res.redirect(302, "/feed/model/mlb?discord_error=state_mismatch");
       return;
     }
 
@@ -418,10 +418,10 @@ export function registerDiscordAuthRoutes(app: Express) {
         `[DiscordAuth][CHECKPOINT:6.FAIL] /callback — requestId=${requestId}` +
         ` REJECTED: state "${state.slice(0, 8)}…" EXPIRED at ${new Date(stateRow.expiresAt).toISOString()}` +
         ` (${Math.round((now - stateRow.expiresAt) / 1000)}s ago).` +
-        ` User must restart the OAuth flow. Redirecting to /dashboard?discord_error=state_expired`
+        ` User must restart the OAuth flow. Redirecting to /feed/model/mlb?discord_error=state_expired`
       );
       await db.delete(discordOAuthStates).where(eq(discordOAuthStates.state, state));
-      res.redirect(302, "/dashboard?discord_error=state_expired");
+      res.redirect(302, "/feed/model/mlb?discord_error=state_expired");
       return;
     }
 
@@ -481,9 +481,9 @@ export function registerDiscordAuthRoutes(app: Express) {
           `\n  → LIKELY CAUSE: redirect_uri mismatch between /connect and /callback,` +
           `\n    OR the URI is not registered in Discord Developer Portal → OAuth2 → Redirects.` +
           `\n  → REGISTERED URI must be: "${redirectUri}"` +
-          ` Redirecting to /dashboard?discord_error=token_exchange_failed`
+          ` Redirecting to /feed/model/mlb?discord_error=token_exchange_failed`
         );
-        res.redirect(302, "/dashboard?discord_error=token_exchange_failed");
+        res.redirect(302, "/feed/model/mlb?discord_error=token_exchange_failed");
         return;
       }
 
@@ -528,9 +528,9 @@ export function registerDiscordAuthRoutes(app: Express) {
           `[DiscordAuth][CHECKPOINT:8.FAIL] /callback — requestId=${requestId}` +
           ` Profile fetch FAILED: HTTP ${profileRes.status}` +
           `\n  → body: "${errText.slice(0, 300)}"` +
-          ` Redirecting to /dashboard?discord_error=profile_fetch_failed`
+          ` Redirecting to /feed/model/mlb?discord_error=profile_fetch_failed`
         );
-        res.redirect(302, "/dashboard?discord_error=profile_fetch_failed");
+        res.redirect(302, "/feed/model/mlb?discord_error=profile_fetch_failed");
         return;
       }
 
@@ -587,9 +587,9 @@ export function registerDiscordAuthRoutes(app: Express) {
           ` CONFLICT: discordId="${discordId}" (@${discordUsername}) is already linked to` +
           ` userId=${existing[0].id} ("${existing[0].username}").` +
           ` Blocking link from userId=${userId} to prevent account takeover.` +
-          ` Redirecting to /dashboard?discord_error=already_linked`
+          ` Redirecting to /feed/model/mlb?discord_error=already_linked`
         );
-        res.redirect(302, "/dashboard?discord_error=already_linked");
+        res.redirect(302, "/feed/model/mlb?discord_error=already_linked");
         return;
       }
 
@@ -634,9 +634,9 @@ export function registerDiscordAuthRoutes(app: Express) {
           ` DB write FAILED: discordId not found in DB after updateAppUser().` +
           ` updatedUser.discordId="${updatedUser?.discordId ?? "null"}" expected="${discordId}".` +
           ` This may indicate a schema mismatch or DB write error.` +
-          ` Redirecting to /dashboard?discord_error=db_write_failed`
+          ` Redirecting to /feed/model/mlb?discord_error=db_write_failed`
         );
-        res.redirect(302, "/dashboard?discord_error=db_write_failed");
+        res.redirect(302, "/feed/model/mlb?discord_error=db_write_failed");
         return;
       }
 
@@ -645,10 +645,10 @@ export function registerDiscordAuthRoutes(app: Express) {
         `[DiscordAuth][CHECKPOINT:11.SUCCESS] /callback — requestId=${requestId}` +
         ` ✅ userId=${userId} ("${updatedUser?.username}") successfully linked to` +
         ` Discord @${discordUsername} (id=${discordId}).` +
-        ` DB write verified. Redirecting to /dashboard?discord_linked=1`
+        ` DB write verified. Redirecting to /feed/model/mlb?discord_linked=1`
       );
 
-      res.redirect(302, "/dashboard?discord_linked=1");
+      res.redirect(302, "/feed/model/mlb?discord_linked=1");
 
     } catch (err) {
       console.error(
@@ -656,7 +656,7 @@ export function registerDiscordAuthRoutes(app: Express) {
         ` userId=${userId} UNEXPECTED ERROR:`,
         err
       );
-      res.redirect(302, "/dashboard?discord_error=server_error");
+      res.redirect(302, "/feed/model/mlb?discord_error=server_error");
     }
   });
 

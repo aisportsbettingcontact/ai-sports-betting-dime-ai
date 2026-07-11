@@ -1628,7 +1628,7 @@ export default function PublishProjections() {
   // ── Strict owner-only guard ─────────────────────────────────────────────────
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
-      setLocation("/dashboard");
+      setLocation("/feed/model/mlb");
     }
   }, [authLoading, appUser, isOwner, setLocation]);
 
@@ -1913,7 +1913,7 @@ export default function PublishProjections() {
         <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
 
           {/* Back button */}
-          <button type="button" onClick={() => setLocation("/dashboard")}
+          <button type="button" onClick={() => setLocation("/feed/model/mlb")}
             className="p-1.5 rounded-lg transition-colors hover:bg-white/10 mr-2 flex-shrink-0"
           >
             <ChevronLeft size={18} style={{ color: "hsl(var(--muted-foreground))" }} />

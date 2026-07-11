@@ -3,7 +3,8 @@
  * ═════════════════════
  * Mounts the MobileOwnerBottomTabs globally for owner users on mobile.
  * This component lives in App.tsx (outside any route) so the bottom nav
- * appears on ALL pages (e.g. /feed, /betting-splits) — not just /m/* routes.
+ * appears on ALL pages (e.g. /feed/model/mlb-…, /betting-splits/MLB) — not
+ * just /m/* routes.
  *
  * Visibility rules:
  * - Only renders if MOBILE_OWNER_TABS_ENABLED === true
@@ -67,10 +68,11 @@ export function GlobalMobileOwnerTabs() {
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile viewport
+  // Detect mobile viewport — strictly <768 so it agrees with the CSS
+  // clearance breakpoint (max-width:767px); at exactly 768 neither applies.
   useEffect(() => {
     function checkMobile() {
-      setIsMobile(window.innerWidth <= 768);
+      setIsMobile(window.innerWidth < 768);
     }
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -85,8 +87,9 @@ export function GlobalMobileOwnerTabs() {
     if (loading) return false;
     // Not authenticated
     if (!appUser) return false;
-    // Already on /m/* routes (those have their own tab shell)
-    if (location.startsWith("/m")) return false;
+    // Already on /m/* routes (those have their own tab shell) — segment-exact
+    // so /mlb/team/:slug (which merely starts with "/m") keeps the global tabs
+    if (location === "/m" || location.startsWith("/m/")) return false;
     // Not mobile
     if (!isMobile) return false;
     // Public mode — show to everyone
@@ -103,7 +106,7 @@ export function GlobalMobileOwnerTabs() {
     if (loading) return;
     if (!shouldShow) return;
     // Only log when NOT on /m/* (those have their own logging)
-    if (location.startsWith("/m")) return;
+    if (location === "/m" || location.startsWith("/m/")) return;
 
     mobileOwnerTabLogger.log(
       "mobile_owner_existing_page_tabs_rendered",
@@ -143,15 +146,8 @@ export function GlobalMobileOwnerTabs() {
 
   if (!shouldShow) return null;
 
-  return (
-    <>
-      {/* Bottom spacer to prevent content from being hidden behind the fixed nav */}
-      <div
-        className="fixed bottom-0 left-0 right-0 pointer-events-none"
-        style={{ height: "calc(60px + env(safe-area-inset-bottom, 0px))" }}
-        aria-hidden="true"
-      />
-      <MobileOwnerBottomTabs />
-    </>
-  );
+  // Content clearance comes from body.mobile-owner-tabs-active (index.css),
+  // which reserves real document-flow space — the old position:fixed "spacer"
+  // reserved none and let the bar occlude the last row of every page.
+  return <MobileOwnerBottomTabs />;
 }
