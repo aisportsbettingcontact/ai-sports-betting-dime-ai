@@ -234,7 +234,7 @@ export default function SubscribeSuccess() {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65, duration: 0.4 }} className="flex flex-col gap-3">
             <button
-              onClick={() => navigate("/feed")}
+              onClick={() => navigate("/feed/model/mlb")}
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
               style={{ background: "#45E0A8" }}
             >

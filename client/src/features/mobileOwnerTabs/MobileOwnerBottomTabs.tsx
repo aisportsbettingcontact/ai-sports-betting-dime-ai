@@ -140,17 +140,12 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
       }
     }
 
-    // For paths with query params (e.g., /feed?tab=dual), wouter's navigate
-    // only handles pathname. We need to use window.location for full URL navigation.
-    const currentFull = location + (typeof window !== "undefined" ? window.location.search : "");
-    if (currentFull !== path) {
+    // [NAV RECONSTRUCTION 2026-07-11] All tab paths are pathname-only (the
+    // /feed?tab=… query hooks are eradicated) — SPA navigation everywhere,
+    // no full-page window.location fallback.
+    if (location !== path) {
       mobileOwnerTabLogger.log("tab_changed", tabId, { from: activeTabId, to: tabId });
-      if (path.includes("?")) {
-        // Path has query params — use window.location to preserve them
-        window.location.href = path;
-      } else {
-        navigate(path);
-      }
+      navigate(path);
       mobileOwnerTabLogger.log("route_navigated", tabId, { path });
 
       // User-specified event: mobile_owner_tab_navigated_to_m_route
@@ -278,36 +273,20 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
 }
 
 // ─── Helper: Determine active tab from current path ──────────────────────────
-// Handles both simple paths (/m/chat) and paths with query params (/feed?tab=dual)
+// [NAV RECONSTRUCTION 2026-07-11] Pure pathname matching — the legacy
+// /feed?tab=… query hooks are eradicated, so no query-string parsing remains.
 function getActiveTab(path: string): MobileOwnerTabId | null {
-  // wouter's useLocation() returns pathname only (no query string).
-  // We need to check the full URL including search params.
-  const currentSearch = typeof window !== "undefined" ? window.location.search : "";
-  const fullPath = path + currentSearch;
+  // Canonical surface prefixes (any date/sport variant of the surface
+  // keeps its tab lit — e.g. /feed/model/wc-07-11-2026 is still "feed").
+  if (path.startsWith("/feed/model")) return "feed";
+  if (path.startsWith("/betting-splits")) return "splits";
+  if (path === "/m/props" || path.startsWith("/m/props/")) return "props";
 
-  // Direct match: check if current path+search matches a tab's path exactly
+  // Exact/prefix match against configured tab paths (/chat, /profile, /m/*)
   for (const tab of MOBILE_OWNER_TABS) {
-    // For tabs with query params (e.g., /feed?tab=dual)
-    if (tab.path.includes("?")) {
-      const [tabPathname, tabSearch] = tab.path.split("?");
-      if (path === tabPathname && currentSearch.includes(tabSearch)) {
-        return tab.id;
-      }
-    } else {
-      // Simple path match (e.g., /m/chat, /m/profile)
-      if (path === tab.path || path.startsWith(tab.path + "/")) {
-        return tab.id;
-      }
+    if (path === tab.path || path.startsWith(tab.path + "/")) {
+      return tab.id;
     }
-  }
-
-  // Fallback: if on /feed with no recognized tab param, default to "feed"
-  if (path === "/feed") {
-    // Check if ?tab= matches any props-related tab
-    const tabParam = new URLSearchParams(currentSearch).get("tab");
-    if (tabParam === "splits") return "splits";
-    if (tabParam === "lineups" || tabParam === "props" || tabParam === "f5nrfi" || tabParam === "hrprops") return "props";
-    return "feed"; // dual or no param = feed
   }
 
   // Fallback: if on /m/* but no exact match, try prefix

@@ -1009,7 +1009,7 @@ export default function TheModelResults() {
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!authLoading && (!appUser || !isOwner)) setLocation("/feed");
+    if (!authLoading && (!appUser || !isOwner)) setLocation("/feed/model/mlb");
   }, [authLoading, appUser, isOwner, setLocation]);
 
   // ─── tRPC Queries ─────────────────────────────────────────────────────────

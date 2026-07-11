@@ -30,15 +30,22 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
     expect(ids).toEqual(["feed", "splits", "chat", "props", "profile"]);
   });
 
-  it("should have correct paths for each tab", () => {
+  it("should have correct canonical paths for each tab (no query hooks)", () => {
     const paths = MOBILE_OWNER_TABS.map(t => t.path);
     expect(paths).toEqual([
-      "/feed?tab=dual",
-      "/feed?tab=splits",
+      "/feed/model/mlb",
+      "/betting-splits/MLB",
       "/chat",
-      "/feed?tab=lineups",
+      "/m/props",
       "/profile",
     ]);
+  });
+
+  it("no tab path may carry a legacy query-string hook", () => {
+    for (const tab of MOBILE_OWNER_TABS) {
+      expect(tab.path).not.toContain("?");
+      expect(tab.path).not.toMatch(/^\/feed$|^\/feed\?|^\/splits/);
+    }
   });
 
   it("should have non-empty labels for all tabs", () => {
@@ -301,20 +308,17 @@ describe("Mobile Owner Tabs — New Event Types Validity", () => {
   });
 
   it("should accept route_render_verified event", () => {
-    mobileOwnerTabLogger.log("route_render_verified", undefined, { path: "/feed" });
+    mobileOwnerTabLogger.log("route_render_verified", undefined, { path: "/feed/model/mlb" });
     expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("route_render_verified");
   });
 });
 
 describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", () => {
-  it("Feed/Splits/Props tabs should route to /feed with correct tab param", () => {
-    const feedTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/feed"));
-    expect(feedTabs.length).toBe(3);
-    expect(feedTabs.map(t => t.path)).toEqual([
-      "/feed?tab=dual",
-      "/feed?tab=splits",
-      "/feed?tab=lineups",
-    ]);
+  it("Feed/Splits/Props tabs route to their canonical path-based surfaces", () => {
+    const byId = new Map(MOBILE_OWNER_TABS.map(t => [t.id, t.path]));
+    expect(byId.get("feed")).toBe("/feed/model/mlb");
+    expect(byId.get("splits")).toBe("/betting-splits/MLB");
+    expect(byId.get("props")).toBe("/m/props");
   });
 
   it("Chat and Profile tabs should route to their dedicated paths", () => {
@@ -324,10 +328,10 @@ describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", ()
     expect(profileTab?.path).toBe("/profile");
   });
 
-  it("tabs should not interfere with /betting-splits route", () => {
-    for (const tab of MOBILE_OWNER_TABS) {
-      expect(tab.path.startsWith("/betting-splits")).toBe(false);
-    }
+  it("only the Splits tab targets /betting-splits, at its canonical sport path", () => {
+    const splitsTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/betting-splits"));
+    expect(splitsTabs.map(t => t.id)).toEqual(["splits"]);
+    expect(splitsTabs[0]?.path).toBe("/betting-splits/MLB");
   });
 
   it("global mount skips /m/* routes (no duplicate tabs)", () => {
@@ -358,8 +362,8 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
 
   it("should accept mobile_owner_tab_clicked event with full metadata", () => {
     mobileOwnerTabLogger.log("mobile_owner_tab_clicked", "feed", {
-      current_path: "/feed",
-      target_path: "/feed?tab=dual",
+      current_path: "/chat",
+      target_path: "/feed/model/mlb",
       tab_name: "feed",
       user_role: "owner",
       is_owner: true,
@@ -370,15 +374,15 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_tab_clicked");
     expect(last?.tabId).toBe("feed");
-    expect(last?.metadata?.current_path).toBe("/feed");
-    expect(last?.metadata?.target_path).toBe("/feed?tab=dual");
+    expect(last?.metadata?.current_path).toBe("/chat");
+    expect(last?.metadata?.target_path).toBe("/feed/model/mlb");
     expect(last?.metadata?.is_owner).toBe(true);
   });
 
   it("should accept mobile_owner_tab_navigated_to_m_route event", () => {
     mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", "splits", {
-      current_path: "/feed",
-      target_path: "/feed?tab=splits",
+      current_path: "/feed/model/mlb",
+      target_path: "/betting-splits/MLB",
       tab_name: "splits",
       is_owner: true,
       is_mobile: true,
@@ -388,7 +392,7 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_tab_navigated_to_m_route");
     expect(last?.tabId).toBe("splits");
-    expect(last?.metadata?.target_path).toBe("/feed?tab=splits");
+    expect(last?.metadata?.target_path).toBe("/betting-splits/MLB");
   });
 
   it("should accept mobile_owner_existing_page_tabs_rendered event", () => {
@@ -425,7 +429,7 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
 
   it("should accept mobile_owner_non_owner_m_route_denied event", () => {
     mobileOwnerTabLogger.log("mobile_owner_non_owner_m_route_denied", undefined, {
-      current_path: "/feed",
+      current_path: "/feed/model/mlb",
       target_path: null,
       tab_name: null,
       user_role: "user",

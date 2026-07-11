@@ -206,7 +206,7 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (onLandingPage) return;
 
   // Don't redirect from /admin/* pages — they manage their own auth guards
-  // via useEffect + setLocation("/feed"). Redirecting from admin pages causes
+  // via useEffect + setLocation("/feed/model/mlb"). Redirecting from admin pages causes
   // a race condition where button clicks trigger query re-fires that return
   // UNAUTHORIZED before auth state has fully settled, sending the user to OAuth.
   const onAdminPage = pathname.startsWith("/admin");

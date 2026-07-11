@@ -5,10 +5,11 @@
  * ODDS/LINES model projections are intentionally hidden — use Model Projections for those.
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
+import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
 
 // CDN icon URLs
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
@@ -174,12 +175,19 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function BettingSplitsPage() {
+export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSport?: "MLB" | "NHL" | "NBA" }) {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [selectedSport, setSelectedSport] = useState<"MLB" | "NHL" | "NBA">("MLB");
+  // Sport is seeded from the canonical route (/betting-splits/:sport) and the
+  // URL is kept in sync on pill changes so the address bar stays shareable.
+  const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
+  const setSelectedSport = useCallback((sport: "MLB" | "NHL" | "NBA") => {
+    setSelectedSportState(sport);
+    setLocation(bettingSplitsPath(sport), { replace: true });
+  }, [setLocation]);
+  useEffect(() => { setSelectedSportState(initialSport); }, [initialSport]);
   const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
   const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());
   const [searchQuery, setSearchQuery] = useState("");
@@ -529,7 +537,7 @@ export default function BettingSplitsPage() {
         {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active) */}
         <div className="flex w-full" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
-          <Link href="/projections" className="flex-1">
+          <Link href={feedModelPath("MLB")} className="flex-1">
             <button type="button" className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
               style={{ color: "rgba(255,255,255,0.45)" }}
             >
@@ -537,8 +545,10 @@ export default function BettingSplitsPage() {
               <span>AI MODEL PROJECTIONS</span>
             </button>
           </Link>
-          {/* Right: BETTING SPLITS — active on this page */}
-          <Link href="/splits" className="flex-1">
+          {/* Right: BETTING SPLITS — active on this page. Self-link targets the
+              canonical sport path (the old /splits href navigated away to the
+              retired public page — the tab un-selected itself on click). */}
+          <Link href={bettingSplitsPath(selectedSport)} className="flex-1">
             <button type="button" className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
               style={{ color: "#ffffff" }}
             >
