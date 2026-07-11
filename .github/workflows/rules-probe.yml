@@ -1,0 +1,25 @@
+name: rules-probe
+on:
+  push:
+    branches: [rules-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Active rules on main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          H1="Authorization: Bearer $GH_TOKEN"; H2="Accept: application/vnd.github+json"
+          echo "::group::aggregated active rules for main"
+          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/rules/branches/main" | jq .
+          echo "::endgroup::"
+          echo "::group::repo rulesets"
+          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/rulesets?includes_parents=true" | jq .
+          echo "::endgroup::"
+          echo "::group::classic branch protection (may 403 without admin)"
+          curl -sS -H "$H1" -H "$H2" "https://api.github.com/repos/${{ github.repository }}/branches/main/protection" | jq . || true
+          echo "::endgroup::"
