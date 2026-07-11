@@ -44,8 +44,10 @@ type Theme = "dark" | "light";
 
 const NAV_ROWS: Array<{ label: string; href: string; active?: boolean }> = [
   { label: "New Chat", href: "/chat", active: true }, // D/L:57
-  { label: "AI Model Projections", href: "/feed" }, // D/L:58 → existing route
-  { label: "Betting Splits + Odds History", href: "/betting-splits" }, // D/L:59
+  // Canonical routes only — /feed/model/mlb self-canonicalizes to today's
+  // dated URL, so this module-scope config never holds a stale date.
+  { label: "AI Model Projections", href: "/feed/model/mlb" }, // D/L:58
+  { label: "Betting Splits + Odds History", href: "/betting-splits/MLB" }, // D/L:59
   { label: "Trends", href: "#" }, // D/L:60 — no route exists; frozen href="#"
   { label: "Prop Projections", href: "#" }, // D/L:61 — no route exists
   { label: "Bet Tracker", href: "/bet-tracker" }, // D/L:62
@@ -483,9 +485,11 @@ function ViewportGate({ theme }: { theme: Theme }) {
     <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
       <div className="dc-gate">
         <BrandHero />
-        <div className="dc-gate-line">Dime chat is built for desktop right now.</div>
-        <Link href="/feed" className="dc-microlabel dc-gate-sub dc-link">
-          OPEN ON A LARGER SCREEN · THE BOARD LIVES AT /feed
+        <div className="dc-gate-line">
+          Dime chat is built for larger screens — on a tablet, rotating to landscape works.
+        </div>
+        <Link href="/feed/model/mlb" className="dc-microlabel dc-gate-sub dc-link">
+          OPEN ON A LARGER SCREEN · THE BOARD LIVES AT /feed/model
         </Link>
       </div>
     </div>

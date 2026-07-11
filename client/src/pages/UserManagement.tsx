@@ -682,8 +682,8 @@ export default function UserManagement() {
   // Calling navigate() during render crashes React 19 silently (blank screen)
   useEffect(() => {
     if (!loading && (!appUser || appUser.role !== "owner")) {
-      console.warn(`[UserManagement] Unauthorized: user=${appUser?.username ?? "unauthenticated"} role=${appUser?.role ?? "none"} → redirecting to /dashboard`);
-      navigate("/dashboard");
+      console.warn(`[UserManagement] Unauthorized: user=${appUser?.username ?? "unauthenticated"} role=${appUser?.role ?? "none"} → redirecting to /feed/model/mlb`);
+      navigate("/feed/model/mlb");
     }
   }, [loading, appUser, navigate]);
 
@@ -811,7 +811,7 @@ export default function UserManagement() {
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/8 w-full">
         {/* Row 1: Back + Title */}
         <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
-          <button type="button" onClick={() => navigate("/dashboard")}
+          <button type="button" onClick={() => navigate("/feed/model/mlb")}
             className="flex items-center gap-1.5 text-zinc-200 hover:text-white transition-colors text-sm flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />

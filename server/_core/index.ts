@@ -742,6 +742,65 @@ async function startServer() {
     })
   );
 
+  // ─── Legacy slug eradication — permanent redirects (308) ────────────────
+  // [NAV RECONSTRUCTION 2026-07-11] The pre-Dime navigation slugs (/feed with
+  // its ?tab=… query hooks, the public /splits page, /projections, /dashboard)
+  // are permanently routed to the canonical surfaces:
+  //   /feed/model/{mlb|wc}-MM-DD-YYYY  (AI Model Projections)
+  //   /betting-splits/MLB              (Betting Splits)
+  // Client-side <Redirect>s in App.tsx cover SPA navigations; this middleware
+  // covers full-page loads (bookmarks, Discord links, crawlers) with a real
+  // HTTP 308 so the legacy URLs drop out of caches and search indexes.
+  // 308 (method-preserving) mirrors the www→canonical middleware above.
+  // Matches are EXACT paths — /feed/model/* never enters this handler.
+  const feedSlugDate = (): string => {
+    // Mirrors client CalendarPicker todayUTC(): the feed advances at
+    // 07:00 UTC (00:01 PT) — NOT tRPC getCurrentDate's 11:00 cutoff — so the
+    // redirect lands on the same slate DimeModelFeed defaults to.
+    const FEED_CUTOFF_UTC_HOUR = 7;
+    const now = new Date();
+    const ms = now.getUTCHours() < FEED_CUTOFF_UTC_HOUR
+      ? now.getTime() - 24 * 60 * 60 * 1000
+      : now.getTime();
+    const d = new Date(ms);
+    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const da = String(d.getUTCDate()).padStart(2, "0");
+    return `${mo}-${da}-${d.getUTCFullYear()}`;
+  };
+  console.log(`[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`);
+  const firstQueryValue = (v: unknown): string =>
+    typeof v === "string" ? v : Array.isArray(v) && typeof v[0] === "string" ? v[0] : "";
+  app.get(["/feed", "/splits", "/projections", "/dashboard"], (req, res) => {
+    const tab = firstQueryValue(req.query.tab);
+    let target: string;
+    if (req.path === "/splits" || tab === "splits") {
+      target = "/betting-splits/MLB";
+    } else {
+      const sport = firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
+      const legacyDate = firstQueryValue(req.query.date);
+      const slugDate = /^\d{4}-\d{2}-\d{2}$/.test(legacyDate)
+        ? `${legacyDate.slice(5, 7)}-${legacyDate.slice(8, 10)}-${legacyDate.slice(0, 4)}`
+        : feedSlugDate();
+      target = `/feed/model/${sport}-${slugDate}`;
+    }
+    // Forward every query param the redirect itself doesn't consume — e.g.
+    // discord_linked / discord_error state from OAuth callbacks must survive
+    // the hop instead of being silently stripped.
+    const passthrough = new URLSearchParams();
+    for (const [key, value] of Object.entries(req.query)) {
+      if (key === "tab" || key === "sport" || key === "date") continue;
+      const v = firstQueryValue(value);
+      if (v !== "" || value === "") passthrough.set(key, v);
+    }
+    const qs = passthrough.toString();
+    if (qs) target += `?${qs}`;
+    // The /feed target varies with the 07:00 UTC rollover — a cached 308
+    // would pin repeat visitors to a stale date, so forbid caching.
+    res.set("Cache-Control", "no-store");
+    console.log(`[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`);
+    res.redirect(308, target);
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     console.log(`[SERVER_STARTUP] Setting up Vite dev middleware`);

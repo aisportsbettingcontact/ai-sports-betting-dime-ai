@@ -18,13 +18,12 @@ import DimeLandingV2 from './pages/dime/landing/DimeLandingV2';
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
 // ── ALL routes are lazy-loaded — zero page code in the initial bundle ────────
-// [PERF] ModelProjections was previously eager — it pulled in 531KB of deps
-// (GameCard, BettingSplitsPanel, MlbLineupCard, MlbCheatSheetCard,
-// framer-motion, all MLB components). Now lazy: loads in parallel with auth check.
-const ModelProjections = lazy(() => import("./pages/ModelProjections"));
+// [NAV RECONSTRUCTION 2026-07-11] The legacy query-tab feed page and the old
+// public splits page are unrouted — their slugs permanently redirect to the
+// canonical surfaces (docs/plans/2026-07-11-navigation-reconstruction.md):
+//   /feed/model/{mlb|wc}-MM-DD-YYYY (DimeModelFeed) · /betting-splits/:sport
 const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
 const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
-const SplitsLive = lazy(() => import("./pages/SplitsLive"));
 const Home = lazy(() => import("./pages/Home"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
@@ -56,6 +55,12 @@ const Terms = lazy(() => import('./pages/Terms'));
 // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
 const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
 import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOwnerTabs';
+import {
+  feedModelPath,
+  bettingSplitsPath,
+  legacyFeedRedirectTarget,
+  parseSplitsSport,
+} from "@/lib/feedRoutes";
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -64,7 +69,8 @@ import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOw
  *   1. IMMEDIATE: Render <LandingPage /> without waiting for auth.
  *      The landing page is public — there is no reason to gate it behind an auth check.
  *      This eliminates the loading shell entirely for unauthenticated users.
- *   2. Auth resolves as authenticated → redirect to /feed (imperceptible for logged-in users).
+ *   2. Auth resolves as authenticated → redirect to the canonical feed
+ *      (/feed/model/mlb-MM-DD-YYYY — imperceptible for logged-in users).
  *   3. Auth resolves as unauthenticated → LandingPage stays visible (already rendered).
  *
  * [FIX] Optimistic render pattern:
@@ -73,7 +79,7 @@ import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOw
  *   Result: Loading shell dismissed the moment React mounts (0ms after JS executes).
  *
  * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
- * Discord-logged-in users are correctly detected and redirected to /feed.
+ * Discord-logged-in users are correctly detected and redirected to the feed.
  *
  * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
  * Flow: unauthenticated user clicks pricing → login → auto-checkout.
@@ -98,11 +104,13 @@ function RootRoute() {
       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
         sessionStorage.removeItem("pendingCheckout");
         console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
-        navigate(`/checkout?plan=${pendingCheckout}`);
+        navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
         return;
       }
-      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to /splits`);
-      navigate("/splits");
+      const target = feedModelPath("MLB");
+      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`);
+      // replace — otherwise Back lands on "/" which instantly re-pushes forward
+      navigate(target, { replace: true });
     } else {
       console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
     }
@@ -126,18 +134,19 @@ function Router() {
     <Switch>
       {/* ── Public routes (no auth required) ───────────────────────────────── */}
       {/* / → auth-aware root:
-           - Authenticated users → /feed (skip landing page, go straight to dashboard)
+           - Authenticated users → canonical feed (/feed/model/mlb-MM-DD-YYYY)
            - Unauthenticated users → LandingPage (public marketing page)
            - While auth is loading → render nothing (HTML shell covers this state)
       */}
       <Route path="/">{() => <RootRoute />}</Route>
       {/* /home → redirect to landing */}
       <Route path="/home">{() => <Redirect to="/" />}</Route>
-      {/* Legacy redirects */}
-      <Route path="/dashboard">{() => <Redirect to="/feed" />}</Route>
-      <Route path="/projections">{() => <Redirect to="/feed" />}</Route>
-      {/* Live VSiN MLB betting splits — public */}
-      <Route path="/splits" component={SplitsLive} />
+      {/* ── Legacy slug eradication — permanent client-side redirects ─────────
+          (server issues 308s for full-page loads; these cover SPA navigations).
+          None of these slugs may be emitted by app code — see lib/feedRoutes. */}
+      <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+      <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+      <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
       {/* Legal pages — public, no auth required */}
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
@@ -161,15 +170,23 @@ function Router() {
       {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
       <Route path="/checkout" component={CheckoutPage} />
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
-      {/* Main feed */}
-      <Route path="/feed">{() => <RequireAuth><ModelProjections /></RequireAuth>}</Route>
-      {/* Dime AI Model Projections surface — /feed/model/mlb-07-11-2026 or
-          /feed/model/wc-07-11-2026 (also /feed/model/mlb/07-11-2026). Parallel
-          surface over the same public feed contracts; RequireAuth-gated like /feed. */}
+      {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
+          maps to /betting-splits/MLB; everything else to the dated feed URL. */}
+      <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
+      {/* Dime AI Model Projections — the canonical feed surface.
+          /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
+          split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
+          canonicalizes to today's dated URL inside DimeModelFeed). */}
       <Route path="/feed/model/:sport/:date">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
       <Route path="/feed/model/:sport">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
-      {/* Betting splits */}
-      <Route path="/betting-splits">{() => <RequireAuth><BettingSplits /></RequireAuth>}</Route>
+      {/* Betting splits — canonical /betting-splits/:sport (MLB | NHL | NBA) */}
+      <Route path="/betting-splits/:sport">{(p) => {
+        const sport = parseSplitsSport(p.sport);
+        return sport
+          ? <RequireAuth><BettingSplits initialSport={sport} /></RequireAuth>
+          : <Redirect to={bettingSplitsPath("MLB")} replace />;
+      }}</Route>
+      <Route path="/betting-splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
       {/* Admin pages */}
       <Route path="/admin/users">{() => <RequireAuth><UserManagement /></RequireAuth>}</Route>
       <Route path="/admin/publish">{() => <RequireAuth><PublishProjections /></RequireAuth>}</Route>
@@ -200,6 +217,8 @@ function Router() {
       {/* FIFA World Cup 2026 — Group Stage Feed */}
       <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
       {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+      {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
+      <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
       <Route path="/m/:rest*">{() => <RequireAuth><MobileOwnerLayout /></RequireAuth>}</Route>
       {/* 404 */}
       <Route path="/404" component={NotFound} />

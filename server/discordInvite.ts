@@ -528,7 +528,9 @@ export function registerDiscordInviteRoutes(app: Express): void {
         ` discordId=${discordId} discordUsername="${discordUsername}"` +
         ` totalMs=${Date.now() - t0}`
       );
-      res.redirect(302, "/feed");
+      // Canonical feed surface — /feed/model/mlb self-canonicalizes to
+      // today's dated URL client-side (nav reconstruction 2026-07-11).
+      res.redirect(302, "/feed/model/mlb");
     } catch (err) {
       clearTimeout(deadlineTimer);
       if (deadlineTriggered) return;

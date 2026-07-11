@@ -211,9 +211,9 @@ describe("Discord Invite Callback — success path logic", () => {
     expect(jwt.split(".")).toHaveLength(3); // valid JWT structure
   });
 
-  it("valid flow: redirect target is /feed after successful link", () => {
-    const redirectTarget = "/feed";
-    expect(redirectTarget).toBe("/feed");
+  it("valid flow: redirect target is the canonical feed after successful link", () => {
+    const redirectTarget = "/feed/model/mlb";
+    expect(redirectTarget).toBe("/feed/model/mlb");
     expect(redirectTarget).not.toContain("discord_error");
   });
 });

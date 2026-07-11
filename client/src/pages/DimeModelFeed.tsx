@@ -3,6 +3,7 @@
  *
  * Route: /feed/model/:sport-:date  (e.g. /feed/model/mlb-07-11-2026,
  *        /feed/model/wc-07-11-2026) and /feed/model/:sport/:date.
+ *        Bare /feed/model/:sport canonicalizes to today's dated URL.
  *
  * A parallel surface over the SAME tRPC data contracts as /feed
  * (DIME-FEED-MIGRATION-DRAFT §2: new frontend, zero backend changes).
@@ -20,7 +21,8 @@
  *    zero truncation down to 360px (labels stack above values <380px).
  */
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
+import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
@@ -32,6 +34,7 @@ import {
   EDGE_THRESHOLD_PP,
   type ThreeWayOdds,
 } from "@/lib/edgeUtils";
+import { feedModelPath, bettingSplitsPath, toFeedSlugDate } from "@/lib/feedRoutes";
 
 // ─── Normalized card model (adapters below map tRPC rows into this) ─────────
 
@@ -244,11 +247,13 @@ function SkeletonRow() {
 
 // ─── Route parsing ───────────────────────────────────────────────────────────
 
-/** Accepts "mlb-07-11-2026" | "wc-07-11-2026" (also :sport/:date split form). */
+/** Accepts "mlb-07-11-2026" | "wc-07-11-2026" (also :sport/:date split form).
+ *  A bare "mlb" | "wc" parses with isoDate=null — the page canonicalizes it
+ *  to today's dated URL so sport-only links always land on a real slate. */
 export function parseFeedModelPath(
   sportSeg: string | undefined,
   dateSeg: string | undefined,
-): { sport: "MLB" | "WC"; isoDate: string } | null {
+): { sport: "MLB" | "WC"; isoDate: string | null } | null {
   let sport = (sportSeg ?? "").toLowerCase();
   let date = dateSeg ?? "";
   if (!date && /^(mlb|wc)-\d{2}-\d{2}-\d{4}$/.test(sport)) {
@@ -256,18 +261,15 @@ export function parseFeedModelPath(
     sport = sport.slice(0, sport.indexOf("-"));
   }
   if (sport !== "mlb" && sport !== "wc") return null;
+  const sportCode = sport === "mlb" ? ("MLB" as const) : ("WC" as const);
+  if (!date) return { sport: sportCode, isoDate: null };
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(date);
   if (!m) return null;
   const [, mm, dd, yyyy] = m;
   const mo = Number(mm), da = Number(dd);
   if (mo < 1 || mo > 12 || da < 1 || da > 31) return null;
-  return { sport: sport === "mlb" ? "MLB" : "WC", isoDate: `${yyyy}-${mm}-${dd}` };
+  return { sport: sportCode, isoDate: `${yyyy}-${mm}-${dd}` };
 }
-
-const toSlugDate = (iso: string): string => {
-  const [y, mo, d] = iso.split("-");
-  return `${mo}-${d}-${y}`;
-};
 
 const shiftIso = (iso: string, days: number): string => {
   const d = new Date(`${iso}T12:00:00Z`);
@@ -309,12 +311,45 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
   const sport = parsed?.sport ?? "MLB";
   const isoDate = parsed?.isoDate ?? "";
 
+  // Bare-sport URLs (/feed/model/mlb) canonicalize to today's dated URL —
+  // replace, so back-button never re-lands on the dateless form.
+  const needsDateCanonicalize = parsed !== null && parsed.isoDate === null;
+  useEffect(() => {
+    if (needsDateCanonicalize) {
+      navigate(feedModelPath(sport), { replace: true });
+    }
+  }, [needsDateCanonicalize, sport, navigate]);
+
+  // Discord account-link feedback lands here now (the legacy /dashboard
+  // consumer is unrouted): surface it once, then strip the params.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("discord_linked");
+    const linkError = params.get("discord_error");
+    if (!linked && !linkError) return;
+    if (linked === "1") toast.success("Discord account linked.");
+    else if (linkError) toast.error(`Discord link failed: ${linkError.replace(/_/g, " ")}`);
+    params.delete("discord_linked");
+    params.delete("discord_error");
+    const qs = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
+  }, []);
+
   // ADAPTER WIRING (exact bindings from GameCard / WcFeedInline) is attached
   // below in useFeedCards — see mlbRowsToCards / wcMatchesToCards.
-  const { cards, isLoading, gamesCount } = useFeedCards(sport, isoDate);
+  const { cards, isLoading, isStale, gamesCount } = useFeedCards(sport, isoDate);
 
   const go = (nextSport: "MLB" | "WC", nextIso: string) =>
-    navigate(`/feed/model/${nextSport.toLowerCase()}-${toSlugDate(nextIso)}`);
+    navigate(feedModelPath(nextSport, nextIso));
+
+  if (needsDateCanonicalize) {
+    // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
+    return (
+      <div className="dmf-root" data-dmf-theme={theme}>
+        <style>{DMF_CSS}</style>
+      </div>
+    );
+  }
 
   if (!parsed) {
     return (
@@ -342,6 +377,13 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
         <span className="dmf-topsep" />
         <span className="dmf-toptitle">AI Model Projections</span>
         <div className="dmf-sync">
+          {/* Outbound nav — the canonical feed must never be a dead end
+              (tablet/desktop have no bottom tab bar; non-owners never do) */}
+          <nav className="dmf-nav" aria-label="Dime surfaces">
+            <Link href={bettingSplitsPath("MLB")} className="dmf-navlink">Splits</Link>
+            <Link href="/chat" className="dmf-navlink">Chat</Link>
+            <Link href="/profile" className="dmf-navlink">Profile</Link>
+          </nav>
           <button
             className="dmf-themebtn"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -386,7 +428,7 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
           </div>
         </div>
 
-        <div className="dmf-list">
+        <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
           {isLoading && cards.length === 0 ? (
             <>
               <SkeletonRow />
@@ -779,7 +821,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
 function useFeedCards(
   sport: "MLB" | "WC",
   isoDate: string,
-): { cards: FeedCardSpec[]; isLoading: boolean; gamesCount: number } {
+): { cards: FeedCardSpec[]; isLoading: boolean; isStale: boolean; gamesCount: number } {
   const isWc = sport === "WC";
   const mlbQuery = trpc.games.list.useQuery(
     { sport: "MLB", gameDate: isoDate },
@@ -808,7 +850,13 @@ function useFeedCards(
   }, [isWc, wcQuery.data, mlbQuery.data, isoDate]);
 
   const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
-  return { cards, isLoading, gamesCount: cards.length };
+  // Stale = paging dates while placeholderData keeps the previous slate
+  // mounted — the UI dims so the old cards are never mistaken for the new
+  // date's numbers (this is a betting surface; wrong-slate reads cost money).
+  const isStale = isWc
+    ? wcQuery.isPlaceholderData && wcQuery.isFetching
+    : mlbQuery.isPlaceholderData && mlbQuery.isFetching;
+  return { cards, isLoading, isStale, gamesCount: cards.length };
 }
 
 // ─── Scoped stylesheet — MASTER.md tokens verbatim, v4 reference layout ──────
@@ -831,16 +879,19 @@ const DMF_CSS = `
 .dmf-root[data-dmf-theme="light"]{
   --dmf-page:#FFFFFF; --dmf-sidebar:#F4F4F6; --dmf-card:#F7F7F9; --dmf-card-hi:#F4F4F6;
   --dmf-border:#E4E4E9; --dmf-border-hi:#D5D5DC; --dmf-border-hover:#C6C6CF;
-  --dmf-t1:#0B0B0F; --dmf-t2:#2A2A32; --dmf-t3:#55555E; --dmf-t4:#9A9AA8;
+  /* t4 #6A6A78 (not #9A9AA8): 10px data labels need AA — 4.9:1 on the
+     #F4F4F6 card vs 2.5:1 for the lighter gray */
+  --dmf-t1:#0B0B0F; --dmf-t2:#2A2A32; --dmf-t3:#55555E; --dmf-t4:#6A6A78;
   --dmf-mint:#0FA36B; --dmf-mint-dim:rgba(15,163,107,.08); --dmf-ring:rgba(15,163,107,.35);
   --dmf-shadow-input:0 1px 3px rgba(0,0,0,.12);
 }
 .dmf-root *{box-sizing:border-box}
-.dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
+.dmf-root :where(a){touch-action:manipulation}
 .dmf-root :is(button,[tabindex]):focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring);border-radius:8px}
 .dmf-micro{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3)}
 
-.dmf-topbar{display:flex;align-items:center;gap:14px;padding:12px 40px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);position:sticky;top:0;z-index:20}
+.dmf-topbar{display:flex;align-items:center;gap:14px;height:46px;padding:0 40px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);position:sticky;top:0;z-index:20}
 .dmf-wordmark{font-size:21px;font-weight:700;letter-spacing:-.05em;line-height:1}
 .dmf-i{position:relative;display:inline-block}
 .dmf-coindot{position:absolute;width:.2em;height:.2em;border-radius:50%;background:#45E0A8;left:calc(50% + .03em);top:.02em;transform:translateX(-50%)}
@@ -851,10 +902,16 @@ const DMF_CSS = `
 .dmf-themebtn{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);border:1px solid var(--dmf-border-hi);border-radius:8px;padding:6px 10px;position:relative}
 .dmf-themebtn::after{content:"";position:absolute;inset:-8px}
 .dmf-themebtn:hover{color:var(--dmf-t1);border-color:var(--dmf-border-hover)}
+.dmf-nav{display:flex;align-items:center;gap:4px}
+.dmf-navlink{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);text-decoration:none;padding:6px 8px;border-radius:8px;position:relative;transition:color var(--dmf-t) var(--dmf-ease)}
+.dmf-navlink::after{content:"";position:absolute;inset:-8px -2px}
+.dmf-navlink:hover{color:var(--dmf-t1)}
 
-.dmf-scroll{flex:1;overflow-y:auto;padding:0 40px 60px;position:relative}
+/* Document scroll (no inner overflow) — otherwise .dmf-scroll becomes a
+   never-scrolling scrollport and the sticky slate header can never stick. */
+.dmf-scroll{flex:1;padding:0 40px 60px;position:relative}
 @media (max-width:767px){.dmf-scroll{padding-bottom:130px}}
-.dmf-feedhead{position:sticky;top:0;z-index:10;padding:16px 0 10px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);margin-bottom:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.dmf-feedhead{position:sticky;top:46px;z-index:10;padding:16px 0 10px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);margin-bottom:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .dmf-datenav{display:flex;align-items:center;gap:12px}
 .dmf-sq{width:28px;height:28px;border-radius:8px;border:1px solid var(--dmf-border-hi);color:var(--dmf-t2);display:grid;place-items:center;position:relative;transition:border-color var(--dmf-t) var(--dmf-ease),color var(--dmf-t) var(--dmf-ease)}
 .dmf-sq::after{content:"";position:absolute;inset:-8px}
@@ -867,7 +924,8 @@ const DMF_CSS = `
 .dmf-chip:hover{color:var(--dmf-t1)}
 .dmf-chip.dmf-active{background:var(--dmf-card-hi);color:var(--dmf-t1);box-shadow:inset 0 0 0 1px var(--dmf-border-hi)}
 
-.dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px}
+.dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px;transition:opacity var(--dmf-t) var(--dmf-ease)}
+.dmf-list.dmf-stale{opacity:.45;pointer-events:none}
 .dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
 .dmf-game.dmf-pass{opacity:.82}
 .dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
@@ -939,7 +997,11 @@ const DMF_CSS = `
 .dmf-game.dmf-mk7 .dmf-vitem{flex:0 0 auto}
 .dmf-game.dmf-mk7 .dmf-vpick .dmf-vv{font-size:17px}
 
-@container dmf (max-width: 1000px){
+/* 1200 (not 1000): at 1001-1200px containers the 250|1fr|240 desktop grid
+   left the three market columns ~17-43px value tracks — Book/Model odds
+   overlapped on every iPad landscape (1024/1080/1180). Stack until true
+   desktop widths. */
+@container dmf (max-width: 1200px){
   .dmf-game.dmf-mk3 .dmf-gbody{grid-template-columns:1fr}
   .dmf-game.dmf-mk3 .dmf-matchup{border-bottom:1px solid var(--dmf-border)}
   .dmf-game.dmf-mk3 .dmf-markets{border-left:0;grid-auto-flow:row;grid-template-columns:repeat(3,1fr);grid-auto-columns:unset}
@@ -948,6 +1010,14 @@ const DMF_CSS = `
   .dmf-game.dmf-mk3 .dmf-verdict{display:flex;border-left:0;border-top:1px solid var(--dmf-border);background:var(--dmf-card-hi);padding:10px 16px;justify-content:center;gap:56px}
   .dmf-game.dmf-mk3 .dmf-vitem{flex:0 0 auto}
   .dmf-game.dmf-mk3 .dmf-vpick .dmf-vv{font-size:17px}
+}
+/* WC cards: 4-across squeezes the ML win%% annotation into the Book column
+   on iPad portrait (768-834) — drop to 2x2 well before that point. */
+@container dmf (max-width: 900px){
+  .dmf-game.dmf-mk7 .dmf-markets{grid-template-columns:repeat(2,1fr)}
+  .dmf-game.dmf-mk7 .dmf-mkcol{border-right:1px solid var(--dmf-border)}
+  .dmf-game.dmf-mk7 .dmf-mkcol:nth-child(2n){border-right:0}
+  .dmf-game.dmf-mk7 .dmf-mkcol:last-child:nth-child(odd){grid-column:1 / -1;border-right:0}
 }
 @container dmf (max-width: 700px){
   .dmf-game .dmf-markets{grid-template-columns:repeat(2,1fr) !important}
@@ -964,11 +1034,19 @@ const DMF_CSS = `
   .dmf-topbar{padding-left:16px;padding-right:16px}
   .dmf-scroll{padding-left:16px;padding-right:16px}
 }
+@container dmf (max-width: 520px){
+  .dmf-toptitle,.dmf-topsep{display:none}
+}
 @container dmf (max-width: 440px){
   .dmf-mkhead{grid-template-columns:1fr 1fr}
   .dmf-mkhead span:first-child{display:none}
   .dmf-mkrow{grid-template-columns:1fr 1fr;grid-template-rows:auto auto;row-gap:2px}
   .dmf-rlab{grid-column:1 / -1;justify-content:flex-start}
+  /* 320-360px: keep the date row inside the viewport without shrinking the
+     28px arrows (their ::after keeps the effective hit area at 44px) */
+  .dmf-datenav{flex-wrap:wrap;gap:8px}
+  .dmf-datelbl{font-size:13.5px}
+  .dmf-feedhead{gap:10px}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}
