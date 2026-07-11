@@ -85,6 +85,12 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).toMatch(/UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/);
   });
 
+  it("buckets both QFs on the PT kickoff-day (Jul 11) so ARG/SUI (9pm ET) isn't lost to the UTC Jul-12 rollover", () => {
+    // qf-100 kicks off 01:00 UTC (9pm ET / 6pm PT) — PT day is still Jul 11.
+    expect(engineSrc).toMatch(/seedDatePT:'2026-07-11'/);
+    expect(engineSrc).toMatch(/UPDATE wc2026_matches SET match_date = \? WHERE match_id = \? AND DATE\(match_date\) <> \?/);
+  });
+
   it("carries the owner-provided book to-advance (to-qualify) lines for both QFs", () => {
     // qf-099: NOR +160 / ENG -200 ; qf-100: ARG -310 / SUI +240.
     expect(engineSrc).toMatch(/bookHomeAdv:\s*160,\s*bookAwayAdv:\s*-200/);
