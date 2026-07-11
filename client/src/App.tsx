@@ -22,6 +22,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 // (GameCard, BettingSplitsPanel, MlbLineupCard, MlbCheatSheetCard,
 // framer-motion, all MLB components). Now lazy: loads in parallel with auth check.
 const ModelProjections = lazy(() => import("./pages/ModelProjections"));
+const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
 const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
 const SplitsLive = lazy(() => import("./pages/SplitsLive"));
 const Home = lazy(() => import("./pages/Home"));
@@ -162,6 +163,11 @@ function Router() {
       {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
       {/* Main feed */}
       <Route path="/feed">{() => <RequireAuth><ModelProjections /></RequireAuth>}</Route>
+      {/* Dime AI Model Projections surface — /feed/model/mlb-07-11-2026 or
+          /feed/model/wc-07-11-2026 (also /feed/model/mlb/07-11-2026). Parallel
+          surface over the same public feed contracts; RequireAuth-gated like /feed. */}
+      <Route path="/feed/model/:sport/:date">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
+      <Route path="/feed/model/:sport">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
       {/* Betting splits */}
       <Route path="/betting-splits">{() => <RequireAuth><BettingSplits /></RequireAuth>}</Route>
       {/* Admin pages */}
