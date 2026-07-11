@@ -272,16 +272,20 @@ const PROJECTION_MATCHES = [
 // AJAX via the CI probe wc-jul11-probe.yml run 29147628100, using the
 // production scraper's own parse_*/_select_primary_* functions; qf-099 event
 // UyLHmWuh slug norway-england, qf-100 event Wv4IS6zg slug argentina-switzerland).
-// Advance (to-qualify) odds are not offered on BetExplorer — bookHomeAdv/
-// bookAwayAdv are null and the engine preserves any existing DB value (COALESCE)
-// instead of overwriting with NULL.
+// Advance (to-qualify) odds are not offered on BetExplorer, so bookHomeAdv/
+// bookAwayAdv are taken from a sportsbook "To Qualify" market (owner-provided)
+// and hardcoded per match below. The model computes its own to-advance odds
+// independently (model_*_to_advance), so the feed shows both book and model
+// advance prices.
 const JUL11_BOOK = {
   'wc26-qf-099': {   // NOR (home) vs ENG (away) — NOR home underdog
     bookHomeMl: 300, bookDraw: 270, bookAwayMl: -111,
     bookSpread: 1.5, bookTotal: 2.5,
     bookOver: -137, bookUnder: 110,
     bookBttsY: -161, bookBttsN: 120,
-    bookHomeAdv: null, bookAwayAdv: null,                 // ← preserved from DB if present
+    // To-qualify (advance) book lines — sportsbook "To Qualify" market
+    // (BetExplorer doesn't carry it): NOR +160, ENG -200.
+    bookHomeAdv: 160, bookAwayAdv: -200,
     bookHomeWD: -110, bookAwayWD: -455, bookNoDraw: -345,
     bookHomeSpreadOdds: -303, bookAwaySpreadOdds: 230,
   },
@@ -290,7 +294,9 @@ const JUL11_BOOK = {
     bookSpread: -1.5, bookTotal: 2.5,
     bookOver: 120, bookUnder: -149,
     bookBttsY: 110, bookBttsN: -149,
-    bookHomeAdv: null, bookAwayAdv: null,                 // ← preserved from DB if present
+    // To-qualify (advance) book lines — sportsbook "To Qualify" market
+    // (BetExplorer doesn't carry it): ARG -310, SUI +240.
+    bookHomeAdv: -310, bookAwayAdv: 240,
     bookHomeWD: -714, bookAwayWD: 115, bookNoDraw: -345,
     bookHomeSpreadOdds: 185, bookAwaySpreadOdds: -250,
   },
