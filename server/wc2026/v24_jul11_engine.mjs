@@ -684,6 +684,26 @@ async function main() {
     const joint = buildJointMatrix(lH.lambda, lA.lambda, finalVariation.rho);
     const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine);
 
+    // ── ORIENTATION GUARD (home/away flip tripwire) ──────────────────────────
+    // The whole pipeline binds odds POSITIONALLY (bookHomeMl vs bookAwayMl), and
+    // the book block is hand-typed — the exact failure mode that made England
+    // (the favorite) show underdog prices. A home/away flip reliably surfaces as
+    // the BOOK favorite disagreeing with the MODEL favorite. Hard-fail on a real
+    // disagreement (>8pp implied-prob gap) so a flipped book can never be written.
+    {
+      const amToProb = (a) => a == null ? null : (a < 0 ? (-a) / (-a + 100) : 100 / (a + 100));
+      const bph = amToProb(book.bookHomeMl), bpa = amToProb(book.bookAwayMl);
+      if (bph != null && bpa != null && markets.mlHome != null && markets.mlAway != null) {
+        const bookFav = book.bookHomeMl <= book.bookAwayMl ? 'home' : 'away';
+        const modelFav = markets.mlHome <= markets.mlAway ? 'home' : 'away';
+        const gap = Math.abs(bph - bpa);
+        if (bookFav !== modelFav && gap > 0.08) {
+          hardFail(`${match.fid}: BOOK favors ${bookFav} (H=${book.bookHomeMl}/A=${book.bookAwayMl}) but MODEL favors ${modelFav} (H=${markets.mlHome}/A=${markets.mlAway}), gap=${(gap*100).toFixed(1)}pp — likely home/away flip; refusing to write`);
+        }
+        log('PASS', `${match.fid}: book/model favorite agree (${bookFav}), gap=${(gap*100).toFixed(1)}pp`);
+      }
+    }
+
     log('MARKET', `──── 1X2 MONEYLINE ────`);
     log('MARKET', `  MODEL: H=${ml(markets.mlHome)}(${pct(markets.pH)}) D=${ml(markets.mlDraw)}(${pct(markets.pD)}) A=${ml(markets.mlAway)}(${pct(markets.pA)})`);
     log('MARKET', `  BOOK:  H=${ml(book.bookHomeMl)} D=${ml(book.bookDraw)} A=${ml(book.bookAwayMl)}`);
