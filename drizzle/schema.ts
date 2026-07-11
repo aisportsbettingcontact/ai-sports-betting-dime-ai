@@ -271,9 +271,9 @@ export const games = mysqlTable("games", {
   modelAwayScore: decimal("modelAwayScore", { precision: 6, scale: 2 }),
   /** Model projected score for the home team (decimal, hundredths precision) */
   modelHomeScore: decimal("modelHomeScore", { precision: 6, scale: 2 }),
-  /** Model over rate from 250k simulations (0-100) */
+  /** Model over rate from 400k simulations (0-100) */
   modelOverRate: decimal("modelOverRate", { precision: 5, scale: 2 }),
-  /** Model under rate from 250k simulations (0-100) */
+  /** Model under rate from 400k simulations (0-100) */
   modelUnderRate: decimal("modelUnderRate", { precision: 5, scale: 2 }),
   /** Model fair odds for away team at book spread line, e.g. "-118" or "+105" */
   modelAwaySpreadOdds: varchar("modelAwaySpreadOdds", { length: 16 }),

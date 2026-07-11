@@ -17,7 +17,7 @@ export default function Hero() {
             <span className="corner">┌</span>
             <span className="lbl">
               <span className="pulse" style={{ marginRight: 7 }} />
-              SIM.ENGINE // ACTIVE &nbsp;·&nbsp; RUNS // 10,000 PER GAME &nbsp;·&nbsp; ODDS.FREEZE // FIRST_PITCH
+              SIM.ENGINE // ACTIVE &nbsp;·&nbsp; RUNS // 400,000 PER GAME &nbsp;·&nbsp; ODDS.FREEZE // FIRST_PITCH
             </span>
             <span className="line" />
             <span className="corner">┐</span>
