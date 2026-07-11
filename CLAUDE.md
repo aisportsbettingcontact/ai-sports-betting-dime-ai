@@ -8,6 +8,7 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Layer | Location | Contents |
 |---|---|---|
 | Design intelligence | `.claude/skills/` (uipro) | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides |
+| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill` | nextlevelbuilder/ui-ux-pro-max-skill marketplace — upstream ui-ux-pro-max (v2.6.x: 84 styles, 161 palettes, 73 font pairings, 17 stacks), tracks upstream releases alongside the vendored `.claude/skills/` copy |
 | Design taste | `.agents/skills/frontend-design/` | Anthropic official — distinctive, non-templated visual direction |
 | Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
 | Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
