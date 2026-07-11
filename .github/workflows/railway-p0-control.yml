@@ -1,0 +1,165 @@
+name: Railway P0 Control
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Secure, owner-controlled Railway control plane for the P0 feed-recovery work.
+#
+# The RAILWAY_API_TOKEN repository secret is consumed ONLY inside this workflow
+# run (it is never present in the local dev container). This workflow NEVER
+# prints the token and NEVER prints Railway variable VALUES — only names,
+# service/environment scope, and presence. Read-only inspection is the default;
+# any mutating operation (deploy-service, run-job) requires an explicit
+# operation input plus a service, and prints exactly what it will do first.
+#
+# Trigger: manual only (workflow_dispatch). No push trigger, so it can never
+# run production operations by accident on a commit.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Operation to run"
+        required: true
+        default: inspect
+        type: choice
+        options:
+          - inspect        # whoami + project list + (if project given) status/services/variable-NAMES/deployments/logs
+          - topology       # projects → environments → services → domains
+          - variables      # variable NAMES only (never values) for a service/environment
+          - logs           # recent deploy logs for a service (sanitized tail)
+          - health         # HTTP health probe of a public domain
+          - run-job        # MUTATING: run a one-off command in a service (job_command)
+          - deploy-service # MUTATING: redeploy a service in an environment
+          - verify         # read back status + a health probe after a deploy
+      project:
+        description: "Railway project id or name (optional for inspect/topology)"
+        required: false
+        type: string
+      environment:
+        description: "Railway environment name (e.g. production)"
+        required: false
+        default: production
+        type: string
+      service:
+        description: "Railway service name (required for variables/logs/run-job/deploy-service/verify)"
+        required: false
+        type: string
+      job_command:
+        description: "run-job only: the command to execute inside the service"
+        required: false
+        type: string
+      health_url:
+        description: "health/verify only: full https URL to probe"
+        required: false
+        type: string
+
+# Never run two Railway control operations at once.
+concurrency:
+  group: railway-p0-control
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  railway:
+    name: "Railway ${{ inputs.operation }}"
+    runs-on: ubuntu-latest
+    env:
+      # Account/workspace token. Consumed only by the railway CLI below.
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      OP: ${{ inputs.operation }}
+      PROJECT: ${{ inputs.project }}
+      ENVIRONMENT: ${{ inputs.environment }}
+      SERVICE: ${{ inputs.service }}
+      JOB_COMMAND: ${{ inputs.job_command }}
+      HEALTH_URL: ${{ inputs.health_url }}
+    steps:
+      - name: Guard — token present
+        run: |
+          if [ -z "${RAILWAY_API_TOKEN}" ]; then
+            echo "::error::RAILWAY_API_TOKEN secret is not set on this repository."
+            exit 1
+          fi
+          echo "RAILWAY_API_TOKEN is present (value hidden)."
+
+      - name: Install Railway CLI
+        run: |
+          npm i -g @railway/cli >/dev/null 2>&1
+          echo "railway CLI version: $(railway --version 2>&1 | head -1)"
+
+      - name: Authenticate (whoami)
+        run: |
+          echo "== railway whoami =="
+          railway whoami 2>&1 | sed -E 's/[A-Za-z0-9_-]{20,}/<redacted>/g' || {
+            echo "::error::railway whoami failed — token invalid or lacks account scope."
+            exit 1
+          }
+
+      - name: Sanitized inspection
+        run: |
+          set +e
+          # Helper: strip anything that looks like a token/long id from output.
+          redact() { sed -E 's/[A-Za-z0-9_-]{24,}/<redacted>/g'; }
+
+          proj_flags=""
+          [ -n "$PROJECT" ] && proj_flags="--project $PROJECT"
+          env_flags=""
+          [ -n "$ENVIRONMENT" ] && env_flags="--environment $ENVIRONMENT"
+          svc_flags=""
+          [ -n "$SERVICE" ] && svc_flags="--service $SERVICE"
+
+          echo "### Operation: $OP"
+
+          case "$OP" in
+            inspect|topology)
+              echo "== railway list (projects visible to this token) =="
+              railway list 2>&1 | redact
+              if [ -n "$PROJECT" ]; then
+                echo "== railway status ($PROJECT / $ENVIRONMENT) =="
+                railway status $proj_flags $env_flags 2>&1 | redact
+              else
+                echo "(no project input — pass 'project' to see services/status/domains)"
+              fi
+              ;;
+            variables)
+              if [ -z "$SERVICE" ]; then echo "::error::variables requires 'service'"; exit 2; fi
+              echo "== variable NAMES only for $SERVICE / $ENVIRONMENT (values hidden) =="
+              # --json emits {NAME: value,...}; jq keys[] drops all values.
+              railway variables $proj_flags $env_flags $svc_flags --json 2>/dev/null \
+                | jq -r 'keys[]' 2>/dev/null \
+                || echo "<blocked: variables --json unavailable with this token scope>"
+              ;;
+            logs)
+              if [ -z "$SERVICE" ]; then echo "::error::logs requires 'service'"; exit 2; fi
+              echo "== recent logs for $SERVICE / $ENVIRONMENT (sanitized, last 200) =="
+              railway logs $proj_flags $env_flags $svc_flags 2>&1 | tail -200 | redact \
+                || echo "<blocked: logs unavailable with this token scope>"
+              ;;
+            health|verify)
+              if [ -z "$HEALTH_URL" ]; then echo "::error::health/verify requires 'health_url'"; exit 2; fi
+              echo "== HTTP probe $HEALTH_URL =="
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$HEALTH_URL")
+              echo "HTTP $code"
+              if [ "$OP" = "verify" ] && [ -n "$PROJECT" ]; then
+                echo "== post-op status =="
+                railway status $proj_flags $env_flags 2>&1 | redact
+              fi
+              ;;
+            run-job)
+              if [ -z "$SERVICE" ] || [ -z "$JOB_COMMAND" ]; then
+                echo "::error::run-job requires 'service' and 'job_command'"; exit 2; fi
+              echo "::warning::MUTATING run-job in $SERVICE / $ENVIRONMENT"
+              echo "== command: $JOB_COMMAND =="
+              railway run $proj_flags $env_flags $svc_flags -- bash -lc "$JOB_COMMAND" 2>&1 | redact
+              ;;
+            deploy-service)
+              if [ -z "$SERVICE" ]; then echo "::error::deploy-service requires 'service'"; exit 2; fi
+              echo "::warning::MUTATING redeploy of $SERVICE / $ENVIRONMENT"
+              railway redeploy $proj_flags $env_flags $svc_flags --yes 2>&1 | redact \
+                || echo "<blocked or failed: see message above>"
+              ;;
+            *)
+              echo "::error::unknown operation '$OP'"; exit 2 ;;
+          esac
+          echo "### Done: $OP"
