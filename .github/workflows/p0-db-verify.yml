@@ -1,0 +1,110 @@
+name: P0 DB Verify (read-only)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-only cross-reference of the LIVE production database (DATABASE_URL secret)
+# for the three P0 surfaces. Fixed queries only (no free-text SQL), COUNTs and a
+# tiny sample of non-sensitive identifiers — never bulk rows, never secrets. Runs
+# from a CI runner (real egress to TiDB, unlike the sandboxed agent container).
+#
+# Answers: for 2026-07-10 and 2026-07-11 — how many MLB games exist, how many have
+# a completed model run (modelRunAt), how fresh, how many carry splits; and for the
+# World Cup, how many matches exist, how many have RESOLVED teams (not 'tbd'), and
+# whether odds/model-projection rows exist for them.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "Comma-separated gameDate values to inspect"
+        required: true
+        default: "2026-07-10,2026-07-11"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-db-verify
+  cancel-in-progress: false
+
+jobs:
+  query:
+    name: Cross-reference prod DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Build client config from DATABASE_URL (secret never printed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then echo "::error::DATABASE_URL secret is not set"; exit 1; fi
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+          if not u.hostname: raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          db = (u.path or "/").lstrip("/")
+          cnf = ("[client]\n"
+                 f"host={u.hostname}\n"
+                 f"port={u.port or 4000}\n"
+                 f"user={urllib.parse.unquote(u.username or '')}\n"
+                 f"password={urllib.parse.unquote(u.password or '')}\n"
+                 "ssl-mode=REQUIRED\n")
+          open("client.cnf","w").write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR|stat.S_IWUSR)
+          open("dbname.txt","w").write(db)
+          print(f"client.cnf written (password omitted): host={u.hostname} port={u.port or 4000} db={db}")
+          PY
+
+      - name: P0 cross-reference queries
+        env:
+          DATES: ${{ inputs.dates }}
+        run: |
+          set -uo pipefail
+          DB="$(cat dbname.txt)"
+          IN_LIST=$(printf "'%s'," $(echo "$DATES" | tr ',' ' ') | sed "s/,$//")
+          M() { mysql --defaults-extra-file=client.cnf -D "$DB" -t -e "$1" 2>&1 || echo "<query blocked/failed>"; }
+
+          echo "===== [MLB] games coverage by sport × date ====="
+          M "SELECT sport, gameDate,
+                    COUNT(*) AS games,
+                    SUM(modelRunAt IS NOT NULL) AS with_model,
+                    FROM_UNIXTIME(MAX(modelRunAt)/1000) AS last_model_run_utc,
+                    SUM(mlAwayMoneyPct IS NOT NULL) AS with_splits
+             FROM games
+             WHERE gameDate IN ($IN_LIST)
+             GROUP BY sport, gameDate ORDER BY gameDate, sport;"
+
+          echo "===== [MLB] sample: first 5 games for the dates (model vs book) ====="
+          M "SELECT id, gameDate, sport, awayTeam, homeTeam,
+                    modelRunAt IS NOT NULL AS modeled,
+                    awayModelSpread, awayBookSpread, modelTotal, bookTotal
+             FROM games WHERE gameDate IN ($IN_LIST) AND sport='MLB'
+             ORDER BY gameDate, id LIMIT 5;"
+
+          echo "===== [WC] wc2026_matches by date (team resolution) ====="
+          M "SELECT match_date,
+                    COUNT(*) AS matches,
+                    SUM(home_team_id<>'tbd' AND away_team_id<>'tbd') AS resolved_teams
+             FROM wc2026_matches
+             WHERE match_date IN ($IN_LIST)
+             GROUP BY match_date ORDER BY match_date;"
+
+          echo "===== [WC] match rows for the dates ====="
+          M "SELECT match_id, match_date, stage, home_team_id, away_team_id, kickoff_utc
+             FROM wc2026_matches WHERE match_date IN ($IN_LIST) ORDER BY kickoff_utc;"
+
+          echo "===== [WC] odds snapshot + model-projection presence for those matches ====="
+          M "SELECT
+               (SELECT COUNT(*) FROM wc2026_odds_snapshots o
+                  JOIN wc2026_matches m ON m.match_id=o.match_id
+                  WHERE m.match_date IN ($IN_LIST)) AS odds_snapshots,
+               (SELECT COUNT(*) FROM wc2026_model_projections p
+                  JOIN wc2026_matches m ON m.match_id=p.match_id
+                  WHERE m.match_date IN ($IN_LIST)) AS model_projections;"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f client.cnf dbname.txt
