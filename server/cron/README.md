@@ -17,7 +17,16 @@ in the background under a single-flight run-lock (no overlapping runs).
 |---|---|---|---|
 | `POST /api/cron/vsin-odds` | `runVsinRefresh()` — NBA/NHL/MLB VSiN + AN odds | `cron-vsin-odds.yml` | every 15 min |
 | `POST /api/cron/scores` | `refreshAllScoresNow()` — live scores | `cron-scores.yml` | every 10 min |
+| `POST /api/cron/mlb-cycle` | `runMlbCycleOnce()` — MLB lineups / K-props / backtest | `cron-mlb-cycle.yml` | every 5 min |
+| `POST /api/cron/mlb-daily-seeds` | `seedPitcherStats()` + `seedBullpenStats()` + `seedPitcherRolling5()` + `seedTeamBattingSplits()` — sequential, per-seeder try/catch; job reports failure if any seeder failed | `cron-mlb-daily-seeds.yml` | daily 10:00 UTC |
+| `POST /api/cron/mlb-weekly-seeds` | `seedParkFactors()` + `seedUmpireModifiers()` — same batch semantics | `cron-mlb-weekly-seeds.yml` | Mondays 09:00 UTC |
 | `GET  /api/cron/status` | run-lock state for all jobs (observability) | — | — |
+
+The two `mlb-*-seeds` workflows ship **inert**: their trigger step is gated on the
+repo **variable** `MLB_SEEDS_CRON_ENABLED == '1'` (Settings → Secrets and variables
+→ Actions → Variables), so enabling them at Manus cutover is a variable flip — no
+workflow-file edit or manual UI disable/enable dance. `workflow_dispatch` runs
+bypass the gate for manual/dry-run triggering.
 
 ## Why not reuse the Manus `/api/scheduled/*` auth
 

@@ -1,0 +1,94 @@
+# Cron — MLB weekly stat seeds (park factors / umpire modifiers) — GitHub
+# Actions timer replacing the in-process scheduler.
+#
+# These two seeders previously ran ONLY via in-process 7-day setIntervals inside
+# startVsinAutoRefresh (server/vsinAutoRefresh.ts) — slow-moving data (3yr rolling
+# park factors, historical umpire modifiers). With DISABLE_BACKGROUND_JOBS=1 on
+# the Railway web replica those intervals never start, so post-Manus-cutover this
+# workflow is the ONLY thing that keeps them fresh.
+#
+# ── Gating (better than the other cron-*.yml "disable in the UI" headers) ──
+# This workflow ships INERT: the trigger step only runs when the repo VARIABLE
+# MLB_SEEDS_CRON_ENABLED is set to '1' (Settings → Secrets and variables →
+# Actions → Variables). While Manus still runs its own in-process seeders,
+# leave the variable unset and scheduled runs no-op (green, zero side effects).
+# At cutover, flip the variable to '1' — no workflow-file edit, no manual
+# "Disable workflow" UI state to remember. Manual workflow_dispatch runs bypass
+# the gate so you can trigger/dry-run the endpoint on demand at any time.
+#
+# Fires POST /api/cron/mlb-weekly-seeds on the Railway app. The endpoint is
+# shared-secret authed (CRON_SECRET) and responds 200 immediately while the two
+# seeders run sequentially in the background under a run-lock (CronJobRunner in
+# server/cron/cronRunner.ts, wired in server/cron/cronRoutes.ts). Each seeder is
+# individually try/caught server-side — one failure never blocks the other — and
+# the job records ok:false (visible via GET /api/cron/status) if any failed.
+#
+# Required repo secrets:
+#   RAILWAY_APP_URL — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+#
+# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
+# platform load). Fine for weekly stat seeds.
+name: Cron — MLB weekly stat seeds
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays at 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-mlb-weekly-seeds
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger /api/cron/mlb-weekly-seeds
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        if: github.event_name == 'workflow_dispatch' || vars.MLB_SEEDS_CRON_ENABLED == '1'
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST /api/cron/mlb-weekly-seeds (secret never printed)"
+        if: github.event_name == 'workflow_dispatch' || vars.MLB_SEEDS_CRON_ENABLED == '1'
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/mlb-weekly-seeds"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/mlb-weekly-seeds")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::mlb-weekly-seeds trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — mlb-weekly-seeds accepted (HTTP $CODE)"
+
+      - name: "[STEP] Gated off — MLB_SEEDS_CRON_ENABLED != '1'"
+        if: github.event_name != 'workflow_dispatch' && vars.MLB_SEEDS_CRON_ENABLED != '1'
+        run: |
+          echo "[SKIP] Scheduled run is inert: repo variable MLB_SEEDS_CRON_ENABLED is not '1'."
+          echo "[SKIP] Flip it to '1' at Manus cutover (Settings → Secrets and variables → Actions → Variables)."
