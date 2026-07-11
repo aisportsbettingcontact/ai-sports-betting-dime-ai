@@ -880,6 +880,11 @@ function WcMktCol({
   // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
   const roiStr = (hasEdge && !isNaN(edgeDisplayRoi)) ? formatRoi(edgeDisplayRoi) : 'NO EDGE';
   const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
+  // Per-row label (line above the juice): show for every market whose two rows
+  // are OPTIONS/lines (TOTAL O/U, SPREAD ±line, DRAW/NO-DRAW, DBL CHC HOME-WD/
+  // AWAY-WD, BTTS YES/NO). ML and TO ADV are team rows (team shown on the left),
+  // so their labels stay in the edge footer only.
+  const showRowLabel = title !== 'ML' && title !== 'TO ADV';
 
   return (
     <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
@@ -903,9 +908,9 @@ function WcMktCol({
 
         {/* Away / Over / Draw row (top) */}
         <TeamRow
-          bookLine={title === 'TOTAL' ? awayLabel : ''}
+          bookLine={showRowLabel ? awayLabel : ''}
           bookJuice={awayBook}
-          modelLine={title === 'TOTAL' ? awayLabel : ''}
+          modelLine={showRowLabel ? awayLabel : ''}
           modelJuice={awayModel}
           modelHasEdge={awayHasEdge}
         />
@@ -916,9 +921,9 @@ function WcMktCol({
         {/* Home / Under row (bottom) — hidden for singleRow (DRAW) */}
         {!singleRow && (
           <TeamRow
-            bookLine={title === 'TOTAL' ? homeLabel : ''}
+            bookLine={showRowLabel ? homeLabel : ''}
             bookJuice={homeBook}
-            modelLine={title === 'TOTAL' ? homeLabel : ''}
+            modelLine={showRowLabel ? homeLabel : ''}
             modelJuice={homeModel}
             modelHasEdge={homeHasEdge}
           />
@@ -1763,34 +1768,36 @@ function WcDesktopMergedPanel({
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%', overflowX: 'auto' }}>
 
-      {/* ── Col 0: TO ADVANCE — Row 1: HOME advances (top), Row 2: AWAY advances (bottom) ── */}
+      {/* ── Col 0: TO ADVANCE — Row 1: AWAY advances (top), Row 2: HOME advances (bottom) ──
+           The score panel lists AWAY on top / HOME on bottom, and WcMktCol renders the
+           away* props in the top row. So each row must carry ITS OWN team's value. */}
       <WcMktCol
         title="TO ADV"
-        awayLabel={`${homeName} ADV`}
-        homeLabel={`${awayName} ADV`}
-        awayBookNum={dkOdds?.toAdvanceHome}
-        homeBookNum={dkOdds?.toAdvanceAway}
-        awayModelNum={modelOdds?.toAdvanceHome}
-        homeModelNum={modelOdds?.toAdvanceAway}
+        awayLabel={`${awayName} ADV`}
+        homeLabel={`${homeName} ADV`}
+        awayBookNum={dkOdds?.toAdvanceAway}
+        homeBookNum={dkOdds?.toAdvanceHome}
+        awayModelNum={modelOdds?.toAdvanceAway}
+        homeModelNum={modelOdds?.toAdvanceHome}
         singleRow={false}
-        awayColor={homeColors.primary}
-        homeColor={awayColors.primary}
+        awayColor={awayColors.primary}
+        homeColor={homeColors.primary}
       />
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 1: ML — Row 1: HOME (top), Row 2: AWAY (bottom) ───────────────────────────── */}
+      {/* ── Col 1: ML — Row 1: AWAY (top), Row 2: HOME (bottom) — each row = its own team ── */}
       <WcMktCol
         title="ML"
-        awayLabel={`${homeName} ML`}
-        homeLabel={`${awayName} ML`}
-        awayBookNum={dkOdds?.home}
-        homeBookNum={dkOdds?.away}
-        awayModelNum={modelOdds?.home}
-        homeModelNum={modelOdds?.away}
+        awayLabel={`${awayName} ML`}
+        homeLabel={`${homeName} ML`}
+        awayBookNum={dkOdds?.away}
+        homeBookNum={dkOdds?.home}
+        awayModelNum={modelOdds?.away}
+        homeModelNum={modelOdds?.home}
         singleRow={false}
-        awayColor={homeColors.primary}
-        homeColor={awayColors.primary}
+        awayColor={awayColors.primary}
+        homeColor={homeColors.primary}
         threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
           ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
         threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
@@ -1851,18 +1858,20 @@ function WcDesktopMergedPanel({
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
-      {/* ── Col 5: DOUBLE CHANCE — Row 1: AWAY OR DRAW (X2), Row 2: HOME OR DRAW (1X) ────────────── */}
+      {/* ── Col 5: DOUBLE CHANCE — Row 1: HOME WD (home-or-draw / 1X), Row 2: AWAY WD (away-or-draw / X2) ──
+           Owner spec: HOME WD on top, AWAY WD on bottom. DC rows are bet OPTIONS
+           (1X / X2), not team rows, so the top slot carries the home-or-draw price. */}
       <WcMktCol
         title="DBL CHC"
-        awayLabel={`${awayName} / D`}
-        homeLabel={`${homeName} / D`}
-        awayBookNum={dkOdds?.awayDrawOdds}
-        homeBookNum={dkOdds?.homeDrawOdds}
-        awayModelNum={modelOdds?.awayDrawOdds}
-        homeModelNum={modelOdds?.homeDrawOdds}
+        awayLabel="HOME WD"
+        homeLabel="AWAY WD"
+        awayBookNum={dkOdds?.homeDrawOdds}
+        homeBookNum={dkOdds?.awayDrawOdds}
+        awayModelNum={modelOdds?.homeDrawOdds}
+        homeModelNum={modelOdds?.awayDrawOdds}
         singleRow={false}
-        awayColor={awayColors.primary}
-        homeColor={homeColors.primary}
+        awayColor={homeColors.primary}
+        homeColor={awayColors.primary}
       />
 
       <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
@@ -3307,9 +3316,15 @@ export function WcFeedInline({
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white tracking-wide">FIFA World Cup 2026</div>
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
-              {/* [2026-06-29] Dynamic stage label: KO Round of 32 started Jun 28 */}
-              {selectedDate >= '2026-06-28'
-                ? 'Knockout Stage · Round of 32'
+              {/* Stage label derived from the selected date's knockout round (was a
+                  single Jun-28 threshold that printed "Round of 32" for every KO
+                  round, so quarterfinals wrongly showed "Round of 32"). */}
+              {selectedDate >= '2026-07-19' ? 'Knockout Stage · Final'
+                : selectedDate >= '2026-07-18' ? 'Knockout Stage · Third-Place Play-Off'
+                : selectedDate >= '2026-07-14' ? 'Knockout Stage · Semifinals'
+                : selectedDate >= '2026-07-09' ? 'Knockout Stage · Quarterfinals'
+                : selectedDate >= '2026-07-04' ? 'Knockout Stage · Round of 16'
+                : selectedDate >= '2026-06-28' ? 'Knockout Stage · Round of 32'
                 : 'Group Stage · USA / CAN / MEX'
               }
             </div>
