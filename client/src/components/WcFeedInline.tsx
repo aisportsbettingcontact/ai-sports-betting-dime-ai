@@ -2314,19 +2314,22 @@ function WcMobileOddsPanel({ match }: { match: WcMatchWithOdds }) {
     ` | [OUTPUT] awayDC="${awayFifaCode.toUpperCase()} WD" homeDC="${homeFifaCode.toUpperCase()} WD"` +
     ` | [VERIFY] dkAwayDrawOdds=${dkOdds?.awayDrawOdds ?? 'N/A'} dkHomeDrawOdds=${dkOdds?.homeDrawOdds ?? 'N/A'}`
   );
+  // Owner spec (matches the desktop panel): TOP = HOME WD (home-or-draw / 1X),
+  // BOTTOM = AWAY WD (away-or-draw / X2). BetCell renders the `away` prop on top,
+  // so dcAway carries the HOME-WD price and dcHome the AWAY-WD price.
   const dcAway: BetCellSide = {
-    bookLine: `${awayFifaCode.toUpperCase()} WD`,
-    bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
-    modelLine: `${awayFifaCode.toUpperCase()} WD`,
-    modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
-    edgePP: awayDcEdgePP,
-  };
-  const dcHome: BetCellSide = {
-    bookLine: `${homeFifaCode.toUpperCase()} WD`,
+    bookLine: 'HOME WD',
     bookJuice: fmtAmerican(dkOdds?.homeDrawOdds) ?? '—',
-    modelLine: `${homeFifaCode.toUpperCase()} WD`,
+    modelLine: 'HOME WD',
     modelJuice: fmtAmerican(modelOdds?.homeDrawOdds) ?? '—',
     edgePP: homeDcEdgePP,
+  };
+  const dcHome: BetCellSide = {
+    bookLine: 'AWAY WD',
+    bookJuice: fmtAmerican(dkOdds?.awayDrawOdds) ?? '—',
+    modelLine: 'AWAY WD',
+    modelJuice: fmtAmerican(modelOdds?.awayDrawOdds) ?? '—',
+    edgePP: awayDcEdgePP,
   };
   // [FIX] BTTS: YES on top (bookLine='YES'), NO on bottom (bookLine='NO')
   // [LOG] WcMobileOddsPanel:BTTS YES/NO labels confirmed
