@@ -37,16 +37,24 @@ def _ensure_scipy() -> None:
     try:
         importlib.import_module("scipy")
     except ModuleNotFoundError:
-        print("[STARTUP] scipy not found — auto-installing...", flush=True)
+        print(
+            "[STARTUP] scipy not found — auto-installing...",
+            file=sys.stderr,
+            flush=True,
+        )
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "scipy", "-q"],
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
-            print(f"[STARTUP] FATAL: scipy install failed: {result.stderr}", flush=True)
+            print(
+                f"[STARTUP] FATAL: scipy install failed: {result.stderr}",
+                file=sys.stderr,
+                flush=True,
+            )
             sys.exit(1)
-        print("[STARTUP] scipy installed successfully", flush=True)
+        print("[STARTUP] scipy installed successfully", file=sys.stderr, flush=True)
         importlib.invalidate_caches()
 
 
@@ -802,14 +810,12 @@ class NBGammaMixtureDistribution:
         rate_multipliers = np.clip(rate_multipliers, 0.3, 3.0)
         # Apply rate multipliers to the NB mean
         adjusted_mus = mu * rate_multipliers
-        # Sample NB for each adjusted mean
-        samples = np.zeros(n, dtype=float)
-        for i in range(n):
-            adj_mu = float(adjusted_mus[i])
-            adj_var = max(adj_mu * 1.5, adj_mu + 0.5)  # maintain overdispersion
-            r_i, p_i = NBGammaMixtureDistribution.fit_nb(adj_mu, adj_var)
-            samples[i] = rng.negative_binomial(r_i, p_i)
-        return samples
+        # Sample NB for each adjusted mean (vectorized fit_nb over the array)
+        adj_vars = np.maximum(adjusted_mus * 1.5, adjusted_mus + 0.5)  # maintain overdispersion
+        adj_vars = np.maximum(adj_vars, adjusted_mus + 0.01)  # fit_nb variance floor
+        p_arr = np.clip(adjusted_mus / adj_vars, 0.01, 0.99)
+        r_arr = np.maximum(0.01, (adjusted_mus * p_arr) / (1.0 - p_arr))
+        return rng.negative_binomial(r_arr, p_arr).astype(float)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
