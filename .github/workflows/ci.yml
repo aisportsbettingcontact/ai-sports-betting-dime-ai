@@ -43,7 +43,7 @@ concurrency:
 jobs:
   # ─── Stage 1: Dependency Security Audit ──────────────────────────────────
   security-audit:
-    name: Security Audit (pnpm audit)
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
       - name: "[INPUT] Checkout repository"
@@ -138,7 +138,7 @@ jobs:
 
   # ─── Stage 2: TypeScript Type Check ──────────────────────────────────────
   typecheck:
-    name: TypeScript Check (tsc --noEmit)
+    name: TypeScript Check
     runs-on: ubuntu-latest
     needs: security-audit
     steps:
@@ -195,7 +195,7 @@ jobs:
 
   # ─── Stage 3: Vitest Test Suite ──────────────────────────────────────────
   test:
-    name: Vitest (458 tests)
+    name: Vitest
     runs-on: ubuntu-latest
     needs: typecheck
     env:
