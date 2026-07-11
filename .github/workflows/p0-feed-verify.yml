@@ -1,0 +1,77 @@
+name: P0 Feed Verify (read-only)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-only verification that the THREE P0 surfaces actually carry live data on
+# the deployed Railway app. Hits public tRPC feed endpoints from a GitHub runner
+# (which has real egress, unlike the sandboxed agent container) and reports
+# HTTP status, the X-Games-Count header, and presence/counts of key fields.
+#
+# No secrets. No writes. It never dumps full rows — only counts and field
+# presence — so it is safe to run repeatedly (e.g. for two-cycle verification).
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: "Origin to verify"
+        required: true
+        default: "https://ai-sports-betting-dime-ai-production.up.railway.app"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-feed-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify live feed data
+    runs-on: ubuntu-latest
+    env:
+      ORIGIN: ${{ inputs.origin }}
+    steps:
+      - name: Probe public feed endpoints
+        run: |
+          set -uo pipefail
+          base="${ORIGIN%/}"
+          stamp() { date -u +%FT%TZ; }
+
+          # tRPC httpBatchLink GET: /api/trpc/<proc>?batch=1&input=<urlenc {"0":{"json":<input>}}>
+          enc() { jq -rn --arg s "$1" '$s|@uri'; }
+          batch_input() { printf '{"0":{"json":%s}}' "$1"; }
+
+          probe() {
+            local label="$1" proc="$2" json="$3"
+            local input; input="$(batch_input "$json")"
+            local url="$base/api/trpc/$proc?batch=1&input=$(enc "$input")"
+            echo "---- $label : $proc  @ $(stamp) ----"
+            local hdr body code
+            hdr="$(mktemp)"; body="$(mktemp)"
+            code="$(curl -sS -D "$hdr" -o "$body" -w '%{http_code}' --max-time 45 "$url" 2>&1)" || code="ERR"
+            echo "HTTP $code"
+            grep -i '^x-games-count:' "$hdr" || true
+            grep -i '^x-cache-status:' "$hdr" || true
+            local n; n=$(wc -c < "$body")
+            echo "body_bytes=$n"
+            # Field-presence signals (counts, never values):
+            echo "modelRunAt_present=$(grep -o '\"modelRunAt\":\"[^\"]' "$body" | wc -l)"
+            echo "modelRunAt_null=$(grep -o '\"modelRunAt\":null' "$body" | wc -l)"
+            echo "moneyline_fields=$(grep -o '\"modelHomeScore\"\|\"modelOverRate\"\|\"fairHomeMl\"\|\"awayMoneyline\"' "$body" | wc -l)"
+            echo "edge_fields=$(grep -o '\"edge\"\|\"Edge\"\|estimatedEdge' "$body" | wc -l)"
+            echo "splits_fields=$(grep -o 'BetsPct\|MoneyPct\|ticketsPct\|moneyPct' "$body" | wc -l)"
+            # First 300 bytes for shape sanity (public data only):
+            echo "head: $(head -c 300 "$body" | tr '\n' ' ')"
+            echo
+          }
+
+          echo "=================== P0 FEED VERIFY @ $(stamp) ==================="
+          echo "ORIGIN: $base"
+          probe "current date"       "games.getCurrentDate" "null"
+          probe "last refresh"       "games.lastRefresh"    "null"
+          probe "MLB projections"    "games.list"           '{"sport":"mlb"}'
+          probe "MLB splits"         "games.liveSplits"     "null"
+          probe "WC projections"     "wc2026.todayWithOdds" "null"
+          echo "=================== END ==================="
