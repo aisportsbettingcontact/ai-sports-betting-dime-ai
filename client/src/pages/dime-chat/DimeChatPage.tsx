@@ -802,7 +802,14 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
         <main className={`dc-main${conversation ? " dc-main--conv" : ""}`}>
           {conversation && (
             <div className="dc-scroller" ref={scrollerRef} onScroll={onScroll}>
-              <div className="dc-thread">
+              <div
+                className="dc-thread"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                aria-atomic="false"
+                aria-label="Dime chat conversation"
+              >
                 {state.messages.map((m) => (
                   <Turn key={m.id} msg={m} freshness={state.dataFreshness} fx={firstSendFx} />
                 ))}

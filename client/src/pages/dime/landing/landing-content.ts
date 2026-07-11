@@ -8,7 +8,7 @@
  *  - No fabricated win rates, records, testimonials or user counts.
  *  - No profit guarantees. PASS is a first-class output.
  *  - Demo/console data uses abstract team names (Team A/C/E) and is labeled DEMO.
- *  - Whitelisted product claims only: 10,000 sims/game, 55+ outputs,
+ *  - Whitelisted product claims only: 400,000 sims/game, 55+ outputs,
  *    124 enforcement tests, Brier-scored vs close, odds frozen at first pitch,
  *    MLB + World Cup 2026, Pro $99/mo, Sharp $249/mo, Operator $499/mo,
  *    ≈$3.30 / ≈$8.30 / ≈$16.63 per day (legacy checkout only: $99.99/mo, $499.99/yr).
@@ -115,7 +115,7 @@ export const CONSOLE_MARKETS: ConsoleMarket[] = [
 
 export const CONSOLE_SCAN_STEPS = [
   "Ingesting book prices",
-  "Running 10,000 simulations",
+  "Running 400,000 simulations",
   "Comparing implied vs projected",
   "Flagging movement & volatility",
   "Classifying market",
@@ -221,7 +221,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     chip: "Explain the edge without hype.",
     user: "Explain the Team A edge without hype.",
     dime:
-      "The book charges −115, which implies 53.5%. Ten thousand simulations of this matchup put Team A at 58.9%, which prices to −143. The 5.4-point gap is the edge — an estimate, not a promise. Confidence is 74/100 with medium volatility, so the classification is Edge Detected with a note to monitor the number before close.",
+      "The book charges −115, which implies 53.5%. Four hundred thousand simulations of this matchup put Team A at 58.9%, which prices to −143. The 5.4-point gap is the edge — an estimate, not a promise. Confidence is 74/100 with medium volatility, so the classification is Edge Detected with a note to monitor the number before close.",
     card: {
       classification: "Edge Detected",
       state: "edge",
@@ -283,8 +283,8 @@ export const MECHANISM = {
     {
       num: "02",
       title: "Compare price",
-      copy: "The book's price becomes an implied probability and meets the model's projection from 10,000 simulations of the matchup.",
-      tele: "SIM // 10,000_PER_GAME",
+      copy: "The book's price becomes an implied probability and meets the model's projection from 400,000 simulations of the matchup.",
+      tele: "SIM // 400,000_PER_GAME",
     },
     {
       num: "03",
@@ -333,7 +333,7 @@ export const FEATURES = {
   eyebrow: "What you get",
   headline: { before: "An engine, not ", em: "a feed of opinions", after: "." },
   items: [
-    { title: "10,000 simulations per game", copy: "A Monte Carlo engine plays every matchup inning by inning — 55+ outputs per game.", tele: "SIM.ENGINE" },
+    { title: "400,000 simulations per game", copy: "A Monte Carlo engine plays every matchup inning by inning — 55+ outputs per game.", tele: "SIM.ENGINE" },
     { title: "Full projections board", copy: "Moneyline, run line, totals, F5, NRFI, K props and HR props — every market priced book vs model.", tele: "BOARD" },
     { title: "Dime Chat", copy: "Interrogate any number on the slate. Answers trace back to tables the model wrote — 124 enforcement tests stand between the engine and a made-up number.", tele: "CHAT // GROUNDED" },
     { title: "Graded against the close", copy: "Odds freeze at first pitch. Every projection is Brier-scored after the final out. The grading is the record.", tele: "SCORING // BRIER" },
@@ -482,7 +482,7 @@ export const OBJECTIONS = {
   items: [
     {
       q: "Isn't this just another pick service?",
-      a: "No — dime doesn't sell picks. It's a pricing engine — 10,000 simulations per game, 55+ outputs — and when the math isn't there, the answer is PASS.",
+      a: "No — dime doesn't sell picks. It's a pricing engine — 400,000 simulations per game, 55+ outputs — and when the math isn't there, the answer is PASS.",
       stamp: "No",
     },
     {
@@ -546,7 +546,7 @@ export const FAQ = {
 export const FINAL_CTA = {
   mono: "PASS · MONITOR · EDGE DETECTED — the Dime Verdict",
   headline: "Bet with the math.",
-  copy: "Price every line against 10,000 simulations before a dollar of your bankroll moves.",
+  copy: "Price every line against 400,000 simulations before a dollar of your bankroll moves.",
   cta: "Get Access",
 } as const;
 
@@ -558,7 +558,7 @@ export const FOOTER_LEGAL =
 // ─── Stats band ───────────────────────────────────────────────────────────────
 
 export const STATS = [
-  { value: "10,000", label: "Simulations per game" },
+  { value: "400,000", label: "Simulations per game" },
   { value: "55+", label: "Model outputs per matchup" },
   { value: "7", label: "Markets priced, book vs model" },
   { value: "24/7", label: "Odds, lineups & weather pipeline" },

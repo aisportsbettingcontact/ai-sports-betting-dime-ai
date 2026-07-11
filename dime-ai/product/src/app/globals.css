@@ -42,6 +42,7 @@
   --sp-mint-border: rgba(69, 224, 168, 0.35);
   --sp-track: rgba(237, 237, 242, 0.1);
   --sp-bar-ink: #0b0b0f;
+  --sp-bar-fill: rgba(237, 237, 242, 0.5);
   --side-bg: #101016;
   --work-bg: #0b0b0f;
   --pp1-bg: #ededf2;
@@ -89,6 +90,7 @@
   --sp-mint-border: rgba(15, 163, 107, 0.4);
   --sp-track: rgba(11, 11, 15, 0.1);
   --sp-bar-ink: #ffffff;
+  --sp-bar-fill: rgba(11, 11, 15, 0.55);
   --side-bg: #e6e6ec;
   --work-bg: #ededf2;
   --pp1-bg: #45e0a8;
@@ -136,6 +138,7 @@
   --sp-mint-border: rgba(69, 224, 168, 0.4);
   --sp-track: rgba(237, 237, 242, 0.12);
   --sp-bar-ink: #0b0b0f;
+  --sp-bar-fill: rgba(237, 237, 242, 0.5);
   --side-bg: #45e0a8;
   --work-bg: #ededf2;
   --pp1-bg: #45e0a8;
@@ -179,8 +182,15 @@
   --color-sp-mint-border: var(--sp-mint-border);
   --color-sp-track: var(--sp-track);
 
-  --font-sans: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-numeric: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  /* next/font/google registers each face under a hashed family name reachable
+     only via its CSS variable. Referencing the literal "Familjen Grotesk" here
+     silently fell back to system sans, so brand type never actually rendered.
+     Use the variables the layout injects. */
+  --font-sans: var(--font-familjen-grotesk), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Brand law: numeric data values are Familjen Grotesk (mono is labels-only),
+     with tabular-nums applied via .tabular-nums-font. */
+  --font-numeric: var(--font-familjen-grotesk), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, "SFMono-Regular", "Menlo", monospace;
 }
 
 html,
