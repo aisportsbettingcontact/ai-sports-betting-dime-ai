@@ -12,7 +12,7 @@ export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = false; // When true, all users s
 export const MOBILE_OWNER_TABS_DEBUG_PANEL = true; // Shows debug overlay for owner
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
-export type MobileOwnerTabId = "feed" | "splits" | "chat" | "tracker" | "profile";
+export type MobileOwnerTabId = "feed" | "splits" | "chat" | "props" | "profile";
 
 export interface MobileOwnerTabConfig {
   id: MobileOwnerTabId;
@@ -30,9 +30,7 @@ export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
   { id: "feed", label: "Feed", path: "/feed/model/mlb", iconName: "Newspaper" },
   { id: "splits", label: "Splits", path: "/betting-splits/MLB", iconName: "BarChart3" },
   { id: "chat", label: "Chat", path: "/chat", iconName: "MessageSquare" },
-  // [2026-07-12] "Props" tab replaced with "Bet Tracker" (screen was already
-  // MobileBetTracker). /m/props permanently redirects to /m/tracker.
-  { id: "tracker", label: "Bet Tracker", path: "/m/tracker", iconName: "TrendingUp" },
+  { id: "props", label: "Props", path: "/m/props", iconName: "FlaskConical" },
   { id: "profile", label: "Profile", path: "/profile", iconName: "User" },
 ];
 
