@@ -108,8 +108,15 @@ describe("Legacy slug eradication — client router", () => {
   it("canonical routes stay registered behind RequireAuth", () => {
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport\/:date"/);
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport"/);
-    expect(appSrc).toMatch(/path="\/betting-splits\/:sport"/);
-    expect(appSrc).toMatch(/<RequireAuth><BettingSplits initialSport=\{sport\} \/><\/RequireAuth>/);
+    expect(appSrc).toMatch(
+      /path="\/betting-splits\/:sport\/:date">[\s\S]*?<StandaloneSplitsRoute[\s\S]*?sportSegment=\{p\.sport\}[\s\S]*?dateSegment=\{p\.date\}[\s\S]*?\/>/,
+    );
+    expect(appSrc).toMatch(
+      /path="\/betting-splits\/:sport">[\s\S]*?<StandaloneSplitsRoute sportSegment=\{p\.sport\} \/>/,
+    );
+    expect(appSrc).toMatch(
+      /<RequireAuth>\s*<BettingSplits initialSport=\{parsed\.sport\} initialDate=\{parsed\.isoDate\} \/>\s*<\/RequireAuth>/,
+    );
   });
 
   it("RootRoute lands authenticated users on the canonical feed", () => {
@@ -131,8 +138,13 @@ describe("Legacy slug eradication — navigation hooks", () => {
     expect(tabsSrc).not.toMatch(/tab\.path\.includes\("\?"\)/);
   });
 
-  it("login returnPath defaults to the canonical feed, not /splits", () => {
-    expect(homeSrc).toMatch(/returnPath"\) \?\? "\/feed\/model\/mlb"/);
+  it("login returnPath uses the shared viewport-aware default, never /splits", () => {
+    expect(homeSrc).toMatch(
+      /import \{ resolvePostLoginPath \} from "\.\/dime-shell\/breakpoints"/,
+    );
+    expect(homeSrc).toMatch(
+      /resolvePostLoginPath\(searchParams\.get\("returnPath"\)\)/,
+    );
     expect(homeSrc).not.toMatch(/\?\? "\/splits"/);
   });
 });

@@ -1350,15 +1350,6 @@ export default function DimeChatPage({
                 aria-expanded={drawerOpen}
                 onClick={openDrawer}
               >
-                {shell && (
-                  <h1
-                    ref={shell.chatHeadingRef}
-                    className="dc-shell-sr-only"
-                    tabIndex={-1}
-                  >
-                    Dime Chat
-                  </h1>
-                )}
                 Menu
               </button>
               <span className="dc-mobile-title">AI Sports Betting</span>
@@ -1438,6 +1429,15 @@ export default function DimeChatPage({
                     : undefined
                 }
               >
+                {shell && (
+                  <h1
+                    ref={shell.chatHeadingRef}
+                    className="dc-shell-sr-only"
+                    tabIndex={-1}
+                  >
+                    Dime Chat
+                  </h1>
+                )}
                 {conversation && (
                   <div
                     className="dc-scroller"

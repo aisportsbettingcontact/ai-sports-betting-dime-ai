@@ -30,15 +30,24 @@ export function matchesDimeShellViewport(
   return matchMedia?.(DIME_SHELL_MEDIA_QUERY).matches ?? false;
 }
 
+function isSafeInternalReturnPath(value: string): boolean {
+  return /^\/(?!\/)[^\\\u0000-\u001f\u007f]*$/.test(value);
+}
+
 /**
- * Explicit return paths always win. Only an absent path receives a
- * viewport-aware product default.
+ * Safe internal return paths always win. Missing, external, protocol-relative,
+ * backslash-bearing, and malformed values receive the viewport-aware default.
  */
 export function resolvePostLoginPath(
   explicitReturnPath: string | null | undefined,
   matchMedia: MediaQueryMatcher | undefined = browserMatchMedia()
 ): string {
-  if (explicitReturnPath != null) return explicitReturnPath;
+  if (
+    explicitReturnPath != null &&
+    isSafeInternalReturnPath(explicitReturnPath)
+  ) {
+    return explicitReturnPath;
+  }
   return matchesDimeShellViewport(matchMedia)
     ? DIME_SHELL_DEFAULT_PATH
     : MOBILE_DEFAULT_PATH;

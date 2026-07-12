@@ -5,8 +5,9 @@
 export function resolveSplitsServerDate(
   currentDate: string,
   serverDate: string | undefined,
-  urlDate: string | undefined
+  urlDate: string | undefined,
+  wasUserSelected = false
 ): string {
-  if (urlDate) return currentDate;
+  if (urlDate || wasUserSelected) return currentDate;
   return serverDate ?? currentDate;
 }

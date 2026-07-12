@@ -12,10 +12,12 @@ import { useLocation } from "wouter";
 import DimeChatPage from "../dime-chat/DimeChatPage";
 import {
   bettingSplitsPath,
+  canonicalBettingSplitsPath,
   parseBettingSplitsPath,
   type SplitsSport,
 } from "@/lib/feedRoutes";
 import { parseDimeProductRoute, type DimeProductPane } from "./productRoute";
+import { withLocalDimePreview } from "./previewGate";
 import "./shell.css";
 
 const DimeModelFeed = lazy(() => import("../DimeModelFeed"));
@@ -40,7 +42,14 @@ function defaultSplitsState(): { sport: SplitsSport; isoDate: string } {
   return { sport: parsed.sport, isoDate: parsed.isoDate };
 }
 
-export default function DimeAppShell() {
+export interface DimeAppShellProps {
+  /** Compile-time DEV-gated visual preview capability supplied by App.tsx. */
+  previewMode?: boolean;
+}
+
+export default function DimeAppShell({
+  previewMode = false,
+}: DimeAppShellProps) {
   const [location, navigate] = useLocation();
   const actualRoute = useMemo(
     () => parseDimeProductRoute(location) ?? ({ pane: "chat" } as const),
@@ -56,25 +65,28 @@ export default function DimeAppShell() {
   const scrollPositionsRef = useRef<Partial<Record<DimeProductPane, number>>>(
     {}
   );
+  const resolveRouteHref = useCallback(
+    (href: string) => withLocalDimePreview(href, previewMode),
+    [previewMode]
+  );
 
   useEffect(() => {
     if (actualRoute.pane !== "splits") return;
-    const parsed = parseBettingSplitsPath(
+    const canonical = canonicalBettingSplitsPath(
       actualRoute.sportSegment,
       actualRoute.dateSegment
     );
-    const canonical = parsed?.isoDate
-      ? bettingSplitsPath(parsed.sport, parsed.isoDate)
-      : bettingSplitsPath(parsed?.sport ?? "MLB");
     const pathname = location.split(/[?#]/, 1)[0];
-    if (pathname !== canonical) navigate(canonical, { replace: true });
-  }, [actualRoute, location, navigate]);
+    if (pathname !== canonical) {
+      navigate(resolveRouteHref(canonical), { replace: true });
+    }
+  }, [actualRoute, location, navigate, resolveRouteHref]);
 
   const onNavigate = useCallback(
     (href: string) => {
-      startTransition(() => navigate(href));
+      startTransition(() => navigate(resolveRouteHref(href)));
     },
-    [navigate]
+    [navigate, resolveRouteHref]
   );
 
   const onExternalScroll = useCallback(() => {
@@ -106,6 +118,7 @@ export default function DimeAppShell() {
         sport={renderedRoute.sportSegment}
         date={renderedRoute.dateSegment}
         embeddedInShell
+        resolveRouteHref={resolveRouteHref}
       />
     );
   } else if (renderedRoute.pane === "splits") {
@@ -117,10 +130,14 @@ export default function DimeAppShell() {
       ? { sport: parsed.sport, isoDate: parsed.isoDate }
       : defaultSplitsState();
     paneContent = (
-      <BettingSplits initialSport={state.sport} initialDate={state.isoDate} />
+      <BettingSplits
+        initialSport={state.sport}
+        initialDate={state.isoDate}
+        resolveRouteHref={resolveRouteHref}
+      />
     );
   } else if (renderedRoute.pane === "tracker") {
-    paneContent = <BetTracker />;
+    paneContent = <BetTracker previewMode={previewMode} />;
   }
 
   return (

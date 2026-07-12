@@ -14,6 +14,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    env: {
+      APP_SESSION_SECRET: "vitest-dummy-not-a-secret",
+    },
     include: [
       "server/**/*.test.ts",
       "server/**/*.spec.ts",
