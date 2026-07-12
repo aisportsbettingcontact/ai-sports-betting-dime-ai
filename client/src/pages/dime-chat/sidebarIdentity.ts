@@ -11,7 +11,20 @@ export type SidebarUser = {
   expiryDate: number | null;
   discordUsername: string | null;
   stripePlanId: string | null;
+  /** Discord snowflake + avatar hash — present when the account is linked;
+   *  used to build the CDN avatar URL (optional so test fixtures stay lean). */
+  discordId?: string | null;
+  discordAvatar?: string | null;
 };
+
+/**
+ * Lifetime membership (repo convention, ManageAccount.tsx): no expiry date or
+ * the explicit 'lifetime' plan id. Lifetime members have no plan to upgrade
+ * or cancel, so the sidebar hides those CTAs (product requirement 2026-07-12).
+ */
+export function isLifetimeMember(user: SidebarUser): boolean {
+  return user.expiryDate == null || user.stripePlanId === "lifetime";
+}
 
 /** Sidebar profile-row name — the frozen design renders it in caps (D/L:75). */
 export function displaySidebarName(username: string | null | undefined): string {
@@ -26,20 +39,6 @@ export function formatHandle(username: string | null | undefined): string {
 /** The prez photo stays exclusive to the prez account (plan assumption A2). */
 export function isPrezAccount(username: string | null | undefined): boolean {
   return (username ?? "").trim().toLowerCase() === "prez";
-}
-
-/**
- * Initials for the brand-styled avatar fallback: first letters of the first
- * and last word-ish segments, or the first two letters of a single segment.
- */
-export function deriveInitials(username: string | null | undefined): string {
-  const parts = (username ?? "").trim().split(/[\s._-]+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  const raw =
-    parts.length === 1
-      ? parts[0].slice(0, 2)
-      : `${parts[0][0]}${parts[parts.length - 1][0]}`;
-  return raw.toUpperCase();
 }
 
 /**

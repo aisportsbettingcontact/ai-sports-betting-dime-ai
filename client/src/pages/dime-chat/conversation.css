@@ -550,23 +550,105 @@ button.dc-sidebar-row {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Real identity + owner gate (plan 2026-07-12, Phases 1-2)            */
-/* ------------------------------------------------------------------ */
+/* ----------------------------------------------------------------------------
+   11. OWNER-ONLY COMING SOON (product requirement 2026-07-12) — non-owners see
+       only the Dime wordmark with the coming-soon line: no composer, no pills.
+       Copy styling follows the mono microlabel vocabulary (recents-label F:64)
+       with the mandated pure white (dark) / black (light) copy color.
+   -------------------------------------------------------------------------- */
+.dc-coming-soon {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px;
+  text-align: center;
+}
+.dc-coming-soon-mark {
+  width: min(220px, 60vw);
+  height: auto;
+}
+.dc-coming-soon-copy {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.theme-dark .dc-coming-soon-copy {
+  color: #ffffff;
+}
+.theme-light .dc-coming-soon-copy {
+  color: #000000;
+}
 
-/* Initials avatar fallback (plan A2): brand mint on the theme surface,
-   frozen avatar geometry (30px row / 34px menu — F:74/78). Mint text on
-   light uses #0FA36B per design-system/dime-ai/MASTER.md. */
-.dc-avatar--initials { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; }
-.theme-dark .dc-avatar--initials { background: #1E1E26; color: #45E0A8; }
-.theme-light .dc-avatar--initials { background: #E4E4E9; color: #0FA36B; }
-div.dc-avatar--menu.dc-avatar--initials { font-size: 12px; }
+/* ----------------------------------------------------------------------------
+   12. CHAT SETTINGS "⋯" (product requirement 2026-07-12) — top-right of an
+       open conversation; Star / Archive / Delete for the stored thread.
+   -------------------------------------------------------------------------- */
+.dc-thread-actions {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 4;
+}
+.dc-thread-menu-trigger {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-dark .dc-thread-menu-trigger { background: #1e1e26; color: #ededf2; }
+.theme-light .dc-thread-menu-trigger { background: #f0f0f3; color: #0b0b0f; }
+.dc-thread-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  min-width: 160px;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.theme-dark .dc-thread-menu { background: #16161c; border: 1px solid #24242e; }
+.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #d5d5dc; box-shadow: 0 1px 3px rgba(11, 11, 15, 0.06); }
+.dc-thread-menu-item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.theme-dark .dc-thread-menu-item { color: #ededf2; }
+.theme-light .dc-thread-menu-item { color: #0b0b0f; }
+.theme-dark .dc-thread-menu-item:hover { background: #1e1e26; }
+.theme-light .dc-thread-menu-item:hover { background: #f0f0f3; }
+.dc-thread-menu-item--danger { color: #e5484d !important; }
+@media (max-width: 1023px) {
+  .dc-thread-actions {
+    top: calc(56px + env(safe-area-inset-top) + 8px);
+    right: 12px;
+  }
+}
 
-/* Non-owner coming-soon state (plan Phase 2.1): wordmark + copy centered by
-   the frozen .dc-main column (D/L:97); no composer, no pills, no hero.
-   Copy styling follows the mono microlabel vocabulary (recents-label F:64). */
-.dc-coming-soon { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 24px; text-align: center; }
-.dc-coming-soon-mark { width: min(220px, 60vw); height: auto; }
-.dc-coming-soon-copy { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
-.theme-dark .dc-coming-soon-copy { color: #EDEDF2; }
-.theme-light .dc-coming-soon-copy { color: #0B0B0F; }
+/* Starred marker in the Recent Chats list. */
+.dc-recent-star {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #45e0a8;
+}
+.theme-light .dc-recent-star { color: #0fa36b; }

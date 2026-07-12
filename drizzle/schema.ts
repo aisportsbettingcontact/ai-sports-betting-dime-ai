@@ -2994,3 +2994,50 @@ export type InsertWc2026EspnGlossaryEntry = typeof wc2026EspnGlossary.$inferInse
 // Importers of the TABLE must use: import { wc2026MatchOdds } from "../../drizzle/wc2026.schema";
 export type { SelectWc2026MatchOdds as Wc2026MatchOddsRow, InsertWc2026MatchOdds } from "./wc2026.schema";
 // END wc2026MatchOdds re-export
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dime Chat history (2026-07-12) — persistent AI Model chat conversations.
+// Threads belong to one app_user; deletion is SOFT (deletedAt set): the row is
+// hidden from every user-facing query but retained in the database per product
+// direction. Messages are append-only, ordered by seq within a thread.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const dimeChatThreads = mysqlTable(
+  "dime_chat_threads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** FK to app_users.id — the owner of this conversation */
+    userId: int("userId").notNull(),
+    /** Title derived from the first user message (max 80 chars) */
+    title: varchar("title", { length: 80 }).notNull(),
+    starred: boolean("starred").default(false).notNull(),
+    archived: boolean("archived").default(false).notNull(),
+    /** Soft delete: set = hidden from all user-facing queries, retained in DB */
+    deletedAt: timestamp("deletedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxUserUpdated: index("idx_dime_chat_threads_user_updated").on(t.userId, t.updatedAt),
+  }),
+);
+
+export const dimeChatMessages = mysqlTable(
+  "dime_chat_messages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** FK to dime_chat_threads.id */
+    threadId: int("threadId").notNull(),
+    /** 1-based position within the thread */
+    seq: int("seq").notNull(),
+    role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => ({
+    idxThreadSeq: index("idx_dime_chat_messages_thread_seq").on(t.threadId, t.seq),
+  }),
+);
+
+export type SelectDimeChatThread = typeof dimeChatThreads.$inferSelect;
+export type SelectDimeChatMessage = typeof dimeChatMessages.$inferSelect;
