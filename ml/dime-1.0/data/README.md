@@ -45,3 +45,27 @@ Chat-format JSONL — one object per line:
 training data is built from platform exports and is **never committed** here.
 
 Split ~95/5 into `train.jsonl` / `val.jsonl` stratified by category.
+
+## Generating the dataset
+
+`build_dataset.py` does all of the above from real `games` rows: context blocks
+formatted byte-for-byte like `dimeChatContext.ts`, the system prompt extracted
+from `dime1Model.ts` at build time, grounded answers computed deterministically
+from row numbers, the category mix enforced, exact-duplicate examples dropped,
+and a hard abort if any generated answer trips the certainty filter.
+
+```bash
+# from a JSON export of the games table:
+python build_dataset.py --games games.json --target 4000 --seed 42
+
+# or straight from the platform DB (pip install pymysql first):
+DATABASE_URL='mysql://...' python build_dataset.py --from-db \
+    --start 2026-04-01 --end 2026-07-12 --target 4000
+```
+
+Outputs `train.jsonl`, `val.jsonl` (stratified split), and
+`dataset_manifest.json` (seed, counts, system-prompt hash — upload it next to
+the eval report so every checkpoint's data is reproducible). All three are
+git-ignored. If a category prints a "capped" warning, widen `--start/--end` to
+feed it more game rows. Hand-written examples can be appended to `train.jsonl`
+afterward — the format is identical.

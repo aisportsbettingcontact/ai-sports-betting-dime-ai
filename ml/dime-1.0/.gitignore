@@ -11,3 +11,5 @@ eval-report*.json
 # Real training data stays out of the repo (samples are committed explicitly).
 data/train.jsonl
 data/val.jsonl
+data/dataset_manifest.json
+data/games*.json
