@@ -150,6 +150,50 @@ describe("environment-failure gate", () => {
     expect(kinds).toContain("unexpected-skip");
   });
 
+  it.each(["local", "ci"] as const)(
+    "fails %s on a collection error (file failed, zero assertions) — never excusable",
+    profile => {
+      // Real vitest shape for a broken import/syntax error: the file entry
+      // is status:"failed" with NO assertionResults, success:false, and
+      // `vitest run || true` swallows the exit code. Found by the
+      // independent verifier (2026-07-12): the gate previously read only
+      // assertionResults and passed this green.
+      const results = {
+        success: false,
+        testResults: [
+          {
+            name: "/repo/server/broken.test.ts",
+            status: "failed",
+            assertionResults: [],
+          },
+        ],
+      };
+      const result = evaluateResults({
+        results,
+        allowlist,
+        profile,
+        env: {},
+        rootDir: "/repo",
+      });
+      expect(result.ok).toBe(false);
+      expect(result.problems.map((p: { kind: string }) => p.kind)).toContain(
+        "collection-error"
+      );
+    }
+  );
+
+  it("fails when vitest reports success:false with nothing visible in the JSON", () => {
+    const result = evaluateResults({
+      results: { success: false, testResults: [] },
+      allowlist: { entries: [], expectedCiSkips: [] },
+      profile: "ci",
+      env: {},
+      rootDir: "/repo",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.problems[0]!.kind).toBe("unaccounted-failure");
+  });
+
   it("allows declared CI skips and evaluates dependabot as local", () => {
     const ciResult = evaluateResults({
       results: vitestJson([

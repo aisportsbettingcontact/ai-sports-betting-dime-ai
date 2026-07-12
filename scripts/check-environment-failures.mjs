@@ -55,11 +55,22 @@ export function evaluateResults({
   let failed = 0;
   let skipped = 0;
 
+  const collectionErrors = [];
   for (const file of results.testResults ?? []) {
     const relFile = path.isAbsolute(file.name)
       ? path.relative(rootDir, file.name)
       : file.name;
-    for (const assertion of file.assertionResults ?? []) {
+    const assertions = file.assertionResults ?? [];
+    // A file that FAILED with zero assertion results never ran its tests —
+    // a collection error (broken import, syntax error, top-level throw).
+    // The environment allowlist excuses failing ASSERTIONS, never a file
+    // that produced none: with `vitest run || true` feeding this gate and
+    // tsconfig excluding *.test.ts from typecheck, nothing else would
+    // surface it. Fatal in every profile.
+    if (file.status === "failed" && assertions.length === 0) {
+      collectionErrors.push(relFile);
+    }
+    for (const assertion of assertions) {
       const id = testId(relFile, assertion);
       statusById.set(id, assertion.status);
       fileByById.set(id, relFile);
@@ -73,6 +84,30 @@ export function evaluateResults({
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
   const expectedCiSkips = allowlist.expectedCiSkips ?? [];
   const problems = [];
+
+  for (const relFile of collectionErrors) {
+    problems.push({
+      kind: "collection-error",
+      testId: `${relFile}::(file failed before any test ran)`,
+      detail:
+        "Test file failed with zero assertion results (import/syntax/top-level error). Never excusable by the allowlist.",
+    });
+  }
+  // Belt for report shapes we do not anticipate: vitest said the run failed
+  // but nothing above accounts for it.
+  if (
+    results.success === false &&
+    problems.length === 0 &&
+    failed === 0 &&
+    ![...statusById.values()].some((s) => s === "failed")
+  ) {
+    problems.push({
+      kind: "unaccounted-failure",
+      testId: "(run)",
+      detail:
+        "vitest reported success:false, but no failed assertions or collection errors are visible in the JSON report.",
+    });
+  }
 
   const missingEnv = (entry) =>
     (entry.requiredEnv ?? []).filter((name) => !env[name]);
