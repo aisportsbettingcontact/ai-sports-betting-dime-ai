@@ -34,6 +34,7 @@ import {
   selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { handleDime1ChatRequest } from "./_core/dime1ChatHandler";
 import { validateDimeResponseText } from "./_core/dimeVerdict";
 import { assessDimeResponsibleGamblingSafety, containsProhibitedBettingCertainty } from "./_core/dimeSafety";
 import {
@@ -187,6 +188,19 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   if (safety.risk === "distress") {
     dimeLog("dime.chat.safety_intervention", requestId, { reason: safety.reason });
     res.status(200).json({ message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.` });
+    return;
+  }
+
+  // --- DIME 1.0 PROVIDER (v1): self-hosted Llama-3-based Dime 1.0 served
+  // 4-bit by vLLM from a private RunPod Serverless endpoint. Railway stays
+  // the control plane — auth, entitlement, rate limits, and the distress
+  // screen already ran above; retrieval grounding, prompt construction, and
+  // post-generation validation run inside the handler. Only generation
+  // leaves the box. This branch sits ABOVE the frozen guard and delegates
+  // to a separate module so the freeze contract tests keep pinning the
+  // frozen branch as the single barrier in front of the Claude path. ---
+  if (DIME_CHAT_LLM_PROVIDER === "dime1") {
+    await handleDime1ChatRequest({ req, res, requestId, startTime, messages, requestClass, responseBudget });
     return;
   }
 
