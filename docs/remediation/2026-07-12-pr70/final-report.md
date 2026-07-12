@@ -17,7 +17,7 @@ vocabulary and traces to a command output; the raw evidence index is at the end.
 | 7 | Preview scanner false confidence (live prod bundle contained `set("preview","1")` while scanner reported PASS) | Live-bundle token scan | Activation canary `__DIME_PREVIEW_GATE_ACTIVE__` + compile-time kill switch in previewGate.ts; scanner decodes source maps, separates load-bearing vs advisory tokens; wired into `pnpm build` and CI. 4-iteration negative-control history, final iteration proves exit 1 | VERIFIED_FIXED |
 | 8 | Tautological/weak tests (`[pane==="chat", pane!=="chat"]` length-1 assertion; decorative width parametrization) | Tautology passes any source | Rewritten as verbatim pins of the complementary pane-exposure derivations; two recorded mutation checks (forked derivation; RequireAuth stripped from splits target) each fail the new suites | VERIFIED_FIXED |
 | 9 | Playwright hygiene: restored matrix.js contradicting its own audit appendix | Blob-identity vs archived copy | Deleted; `.playwright-cli/` ignored; appendix erratum appended | VERIFIED_FIXED |
-| 10 | 42 DB assertions execute nowhere (suites skipIf(IS_CI), no DATABASE_URL secret — repo has exactly 7 secrets, none of the documented set) | Secrets API + skip-guard reading | db-tests CI job (mysql:8 service container, drizzle-kit migrate, `DB_TESTS=1`) + scripts/test-db-local.sh (loopback-only safety). Local execution on this machine impossible (no mysqld/Docker) | BLOCKED_WITH_EVIDENCE locally; executable in CI on this PR. INCIDENTS.md stays OPEN until a green db-tests run is recorded |
+| 10 | 42 DB assertions execute nowhere (suites skipIf(IS_CI), no DATABASE_URL secret — repo has exactly 7 secrets, none of the documented set) | Secrets API + skip-guard reading | db-tests CI job (mysql:8 service container, schema via `drizzle-kit push --force`, `--no-file-parallelism`, `DB_TESTS=1`) + scripts/test-db-local.sh (loopback-only safety) | VERIFIED_FIXED: first green execution in history on PR #84 (48/48 passed, run 29195327415). INCIDENTS.md entry RESOLVED with that run as evidence. Getting there surfaced findings 11 and 12 below |
 
 ## Upstream churn absorbed during remediation
 
@@ -45,6 +45,19 @@ production effectively runs. The history files themselves are production's deplo
 path and were deliberately NOT edited on this branch; repairing them (e.g., making
 0104 idempotent) is an owner decision. Until then, a from-scratch environment cannot
 be built via `migrate`.
+
+## Finding 12 (NEW, discovered by the db-tests job's second run): the DB suites are not parallel-safe
+
+With provisioning fixed, 47/48 assertions passed on their first-ever execution; the
+one failure (register `[ER-1]` expected CONFLICT, received "Session invalidated",
+jwt.tv=1 vs db.tv=2) was cross-suite interference, not a product bug:
+`tokenVersion.db.test.ts` ran `incrementAllTokenVersions` ("affected 17 users") in a
+parallel vitest worker between `[ER-1]`'s two calls, invalidating the register
+suite's live owner session. Suites sharing one database where one performs a global
+mutation must run sequentially. Status: VERIFIED_DEFECT (in the suites' execution
+model, latent since they were written), fixed — `--no-file-parallelism` in the CI
+job and scripts/test-db-local.sh, assertions untouched. Third run: 48/48 green
+(run 29195327415).
 
 ## Final verification matrix (clean checkout of a76b6841, frozen install)
 
