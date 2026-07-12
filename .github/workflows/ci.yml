@@ -303,8 +303,15 @@ jobs:
       - name: "[STEP] Install dependencies (frozen lockfile)"
         run: pnpm install --frozen-lockfile
 
-      - name: "[STEP] Apply migrations to the isolated database"
-        run: pnpm exec drizzle-kit migrate
+      # Schema comes from `drizzle-kit push` (the current TS schema), NOT
+      # `drizzle-kit migrate`: the checked-in migration history is not
+      # replayable from scratch (0097 and 0104 both CREATE TABLE
+      # wc2026_matches — proven by this job's first run on PR #84). Production
+      # never replays history either; db-push.yml applies increments to the
+      # long-lived database. Recorded in
+      # docs/remediation/2026-07-12-pr70/final-report.md (finding 11).
+      - name: "[STEP] Provision the current schema on the isolated database"
+        run: pnpm exec drizzle-kit push --force
 
       - name: "[STEP] Run the five real-database suites"
         run: |
