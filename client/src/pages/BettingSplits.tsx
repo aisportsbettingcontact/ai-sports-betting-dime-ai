@@ -9,12 +9,11 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Loader2, Search, X } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
-import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
+import { bettingSplitsPath } from "@/lib/feedRoutes";
 import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
 
 // CDN icon URLs
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
-const CDN_MONEY_BAG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-money-bag_b9c73c5d.png";
 const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
 
 // League pill logos — rendered only for in-season leagues (see leagueSeasons).
@@ -24,13 +23,6 @@ const LEAGUE_LOGOS: Record<SplitsLeague, string> = {
   NBA: CDN_NBA,
 };
 
-function TestTubeIcon({ size = 14 }: { size?: number }) {
-  return <img src={CDN_TEST_TUBE} alt="Test tube" width={size} height={size} style={{ objectFit: "contain", filter: "invert(1)" }} />;
-}
-
-function MoneyBagIcon({ size = 14 }: { size?: number }) {
-  return <img src={CDN_MONEY_BAG} alt="Money bag" width={size} height={size} style={{ objectFit: "contain", filter: "invert(1)" }} />;
-}
 import { GameCard } from "@/components/GameCard";
 import { AgeModal } from "@/components/AgeModal";
 import { inSeasonLeagues, type SplitsLeague } from "@/lib/leagueSeasons";
@@ -41,7 +33,6 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
-import { Link } from "wouter";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -156,7 +147,7 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
             <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{awayAbbr}</span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{awaySchool}</span>
-            {awayNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
+            {awayNick && <span className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
           </div>
         </div>
         {/* Center: @ + date + time */}
@@ -172,7 +163,7 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
             <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{homeAbbr}</span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{homeSchool}</span>
-            {homeNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
+            {homeNick && <span className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
           </div>
           <TeamBadge slug={game.homeTeam} size={32} />
         </div>
@@ -516,34 +507,11 @@ export default function BettingSplitsPage({
           </span>
         </div>
 
-        {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active).
-            Mobile only: at ≥768px the Dime shell sidebar owns pane navigation,
-            so the in-page tab selectors disappear. */}
-        <div className="flex w-full md:hidden" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-          {/* Links style themselves (no nested <button> — interactive-inside-
-              interactive is invalid HTML and doubles the keyboard tab stops). */}
-          {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
-          <Link href={resolveRouteHref(feedModelPath("MLB"))}
-            className="bs-tab flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            <img src={CDN_TEST_TUBE} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.45 }} />
-            <span>AI MODEL PROJECTIONS</span>
-          </Link>
-          {/* Right: BETTING SPLITS — active on this page. Self-link targets the
-              canonical sport path (the old /splits href navigated away to the
-              retired public page — the tab un-selected itself on click). */}
-          <Link href={resolveRouteHref(bettingSplitsPath(selectedSport, selectedDate))} aria-current="page"
-            className="bs-tab bs-tab--active flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
-            style={{ color: "#ffffff" }}
-          >
-            <img src={CDN_MONEY_BAG} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)" }} />
-            <span>BETTING SPLITS</span>
-            <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full" style={{ background: "#45E0A8" }} />
-          </Link>
-        </div>
+        {/* No page-tab row on mobile — the bottom tab bar (Feed | Splits | Chat |
+            Props | Profile) is the only <768px navigation; at ≥768px the Dime
+            shell sidebar owns pane navigation. */}
 
-        {/* Row 3: Unified filter bar — DATE | NBA | Search */}
+        {/* Row 2: Unified filter bar — DATE | NBA | Search */}
         <div ref={searchRef} className="relative px-3 pt-1 pb-1 flex items-center gap-2">
 
           {/* DATE picker — calendar dropdown */}
