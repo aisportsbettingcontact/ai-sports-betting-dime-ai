@@ -144,6 +144,19 @@ dime-ai/.vercel-output/
 # Machine-specific Claude Code preferences (skill overrides etc.) — never share
 .claude/settings.local.json
 
+# Release-gate artifacts (generated)
+vitest-results.json
+env-gate-report.json
+bundle-budget-report.json
+
+# Playwright CLI session artifacts (canonical matrix archive lives in docs/audits/)
+.playwright-cli/
+
+# Playwright Test (@playwright/test) run artifacts — e2e/, playwright.config.ts
+test-results/
+playwright-report/
+blob-report/
+
 # LiveLab (livelab/) — generated state and build outputs
 .livelab/
 livelab/.vscode-test/

@@ -452,3 +452,14 @@ Verdict: **VERIFIED — yes, a live mobile-owner-tab destination still emits the
 | C4 no `enabled: canAccess` remnants | **VERIFIED** |
 | C5 dateless Splits target live anywhere | **VERIFIED: yes, mobile config line 31** |
 | Change mobile tab emitter now? | **RATIFIED FOUNDER DECISION REQUIRED; outside current tablet/desktop scope** |
+
+---
+
+## Erratum (2026-07-12)
+
+Section 7 states twice that the `.playwright-cli/matrix.js` deletion
+"remains untouched" and that no restoration occurred. Commit `f3a1f67a`
+(part of PR #70) restored the file as `new file mode 100644`,
+blob-identical to the archived copy in this directory, together with an
+empty `page-2026-07-12T03-01-46-681Z.yml`. The remediation branch removes
+both; the archived copy in this directory stays canonical.

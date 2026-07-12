@@ -63,7 +63,7 @@
  */
 
 import { describe, it, expect, afterAll, beforeEach } from "vitest";
-import { IS_CI } from "./_core/ciTestGuard";
+import { SKIP_DB_IN_CI } from "./_core/ciTestGuard";
 import { appRouter } from "./routers";
 import { APP_USER_COOKIE, loginRateMap } from "./routers/appUsers";
 import type { TrpcContext } from "./_core/context";
@@ -186,7 +186,7 @@ beforeEach(() => {
 // ── Test suite ─────────────────────────────────────────────────────────────────
 // Uses a real database via getDb() — no DATABASE_URL in CI.
 // TODO: wire dedicated CI test database, then re-enable.
-describe.skipIf(IS_CI)("appUsers.login — cookie issuance invariants", () => {
+describe.skipIf(SKIP_DB_IN_CI)("appUsers.login — cookie issuance invariants", () => {
 
   // ── STAY LOGGED IN = TRUE ─────────────────────────────────────────────────────
 

@@ -164,13 +164,33 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
       The ONLY easing the kit owns: 160ms cubic-bezier(0.16,1,0.3,1) (F:21).
    -------------------------------------------------------------------------- */
 
-.dc-ghost { position: fixed; margin: 0; opacity: 1; pointer-events: none; z-index: 3; } /* Framer Motion owns the interruptible 160ms opacity beat. */
+.dc-ghost { position: fixed; margin: 0; opacity: 1; pointer-events: none; z-index: 3; transition: opacity 160ms cubic-bezier(0.16,1,0.3,1); } /* PR #70: CSS owns the interruptible 160ms opacity beat (was framer-motion `animate`) */
+.dc-ghost--fading { opacity: 0; } /* toggled by JS the frame after the FLIP transition starts (spec §3.2) */
 .dc-fade-in { animation: dcFadeIn 160ms cubic-bezier(0.16,1,0.3,1); } /* user capsule + dots fade in at final position (spec §3.2) */
 @keyframes dcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Composer FLIP: DimeChatPage.tsx sets the "from" transform inline, adds this
+   class, then sets translateY(0) one rAF later so the transition plays the
+   measured-to-final-position beat (spec §3.2). Same 160ms brand curve as
+   everything else — PR #70: replaces framer-motion's `animate(el, {transform},
+   {duration:0.16, ease: BRAND_EASE})`. */
+.dc-composer--flip { transition: transform 160ms cubic-bezier(0.16,1,0.3,1); }
+
+/* Settings menu popover (spec-adjacent, D/L:80-93): CSS keyframe on mount,
+   immediate unmount on close — no exit animation. PR #70: replaces
+   framer-motion's AnimatePresence initial/animate/exit; Motion dial 2/10
+   ("Subtle") does not require a symmetric close beat for a small popover. */
+.dc-settings-menu--enter { animation: dcSettingsMenuIn 160ms cubic-bezier(0.16,1,0.3,1); }
+@keyframes dcSettingsMenuIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .dc-ghost { display: none; }
   .dc-fade-in { animation: none; }
+  .dc-composer--flip { transition: none; }
+  .dc-settings-menu--enter { animation: none; }
 } /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */
 
 /* ----------------------------------------------------------------------------
@@ -222,9 +242,9 @@ button.dc-sidebar-row {
 }
 .dc-pressable {
   transition:
-    transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 120ms cubic-bezier(0.16, 1, 0.3, 1);
-}
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+} /* MASTER.md: ONE curve, 160ms, for transform/opacity — was 120ms (verified violation, PR #70 remediation) */
 .dc-pressable:active {
   transform: scale(0.97);
   opacity: 0.88;

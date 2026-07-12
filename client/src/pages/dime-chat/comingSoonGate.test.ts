@@ -176,9 +176,18 @@ describe("non-owner coming-soon gate (Phase 2)", () => {
   });
 
   it("preview bypass stays compile-time DEV-gated at both call sites", () => {
-    // Standalone route: previewMode only from allowsLocalDimePreview(DEV).
+    // [PR #70 REMEDIATION 2026-07-12] The standalone DimeChatRoute fork this
+    // test originally pinned was removed: /chat now has ONE owner
+    // (DimeAppShell) at every width so crossing 768px cannot remount the
+    // chat. The DEV-gating contract is unchanged — previewMode still flows
+    // ONLY from allowsLocalDimePreview(search, import.meta.env.DEV) at the
+    // unified Router call site, and previewGate.ts hard-returns false in
+    // non-DEV builds (enforced by scripts/verify-preview-production.mjs).
     expect(appSource).toMatch(
-      /localPreview \? \(\s*<DimeChat previewMode \/>\s*\) : \(\s*<RequireAuth>\s*<DimeChat \/>\s*<\/RequireAuth>/
+      /const localPreview = allowsLocalDimePreview\(\s*window\.location\.search,\s*import\.meta\.env\.DEV\s*\)/
+    );
+    expect(appSource).toMatch(
+      /localPreview \? \(\s*<DimeAppShell mode=\{shellMode\} previewMode \/>/
     );
     // Shell: forwards its own DEV-gated previewMode flag.
     expect(shellSource).toMatch(/<DimeChatPage\s+previewMode=\{previewMode\}/);

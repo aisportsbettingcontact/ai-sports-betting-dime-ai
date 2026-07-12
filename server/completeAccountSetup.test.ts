@@ -60,7 +60,7 @@
  */
 
 import { describe, it, expect, afterAll, vi } from "vitest";
-import { IS_CI } from "./_core/ciTestGuard";
+import { SKIP_DB_IN_CI } from "./_core/ciTestGuard";
 
 // ── Email mock — prevent SMTP traffic during test runs ─────────────────────────
 // stripe.ts calls import('../email').then(({ sendWelcomeEmail }) => ...) as a
@@ -256,7 +256,7 @@ afterAll(async () => {
 
 // Uses a real database via getDb() — no DATABASE_URL in CI.
 // TODO: wire dedicated CI test database, then re-enable.
-describe.skipIf(IS_CI)("stripe.completeAccountSetup — auto-login cookie invariant", () => {
+describe.skipIf(SKIP_DB_IN_CI)("stripe.completeAccountSetup — auto-login cookie invariant", () => {
 
   // ── HAPPY PATH — cookie issuance ──────────────────────────────────────────────
 

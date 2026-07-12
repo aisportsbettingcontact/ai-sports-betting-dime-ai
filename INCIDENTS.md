@@ -58,3 +58,47 @@ Exact failing `file::test` names:
 Required follow-up: provide an isolated test database (or explicitly skip these
 integration suites when it is absent), rerun all five files, and close only when
 the 42 exact assertions pass.
+
+### Update 2026-07-12 (remediation pass)
+
+Two corrections and one improvement:
+
+- CI never exercised these 42 assertions. All five suites carried
+  `describe.skipIf(IS_CI)`, so GitHub Actions skipped them while local runs
+  failed on the missing database. They executed nowhere.
+- The repository configures no `DATABASE_URL` Actions secret (verified via
+  the secrets API on 2026-07-12), so pointing CI at a real database was never
+  possible with the documented setup.
+- The remediation branch gives them an executing home: the `db-tests` CI job
+  runs all five suites against an isolated `mysql:8` service container with
+  migrations applied, and `scripts/test-db-local.sh` reproduces that locally
+  against a throwaway `mysqld` (requires `brew install mysql`; the
+  remediation machine had only `mysql-client`, so the local rerun remains
+  outstanding).
+
+Status stays OPEN until the 42 assertions pass on a local isolated database
+per the follow-up above. The db-tests job result on the remediation PR is the
+first executed evidence either way.
+
+### Update 2026-07-12 (first green execution): RESOLVED
+
+All five suites executed and passed against an isolated `mysql:8` database in
+the `db-tests` CI job on PR #84 (48 assertions, 48 passed):
+<https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/actions/runs/29195327415/job/86657313941>
+
+Getting there surfaced two latent defects the assertions themselves were not
+guilty of, both now fixed in the job definition:
+
+1. The checked-in Drizzle migration history is not replayable from scratch
+   (`drizzle/0097` and `drizzle/0104` both `CREATE TABLE wc2026_matches`), so
+   the job provisions the current TS schema via `drizzle-kit push --force`
+   instead of `drizzle-kit migrate`. Repairing the history files is an owner
+   decision (final-report finding 11).
+2. The suites are not safe to run file-parallel against one shared database:
+   `tokenVersion.db.test.ts` calls `incrementAllTokenVersions`, which bumps
+   every user's tokenVersion and invalidated another suite's live owner
+   session mid-test. The job and `scripts/test-db-local.sh` now pass
+   `--no-file-parallelism`.
+
+The local rerun via `scripts/test-db-local.sh` remains available for any
+machine with `mysqld` (`brew install mysql`); the CI job now runs on every PR.

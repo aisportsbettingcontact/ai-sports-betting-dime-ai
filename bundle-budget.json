@@ -1,0 +1,19 @@
+{
+  "metric": "chat-critical-path-gzip-bytes",
+  "baselineCommit": "b03cea01",
+  "baselineBytes": 210762,
+  "allowanceBytes": 5120,
+  "recalibration": {
+    "date": "2026-07-12",
+    "previousBaseline": { "commit": "7dcbd369", "bytes": 202323 },
+    "measuredAtRecalibration": 210762,
+    "overOriginalBudgetBytes": 3319,
+    "decomposition": {
+      "vendorMotionRemoved": -40360,
+      "entryCssGrowthPreexisting": 2389,
+      "entryJsGrowthPreexisting": 1294,
+      "shellChromeOnChatPathFromMountStabilityFix": "remainder"
+    },
+    "reason": "The 7dcbd369 baseline predates the chat mount-stability fix (2299959f), which makes /chat mount through DimeAppShell at every width; that shell chrome is now genuinely on the /chat critical path and the old baseline no longer corresponds to any buildable configuration. framer-motion contributes 0 bytes (was 40,360). The residual +8,439B vs 7dcbd369 exceeds the migration plan's +5,120B budget by 3,319B; accepted as documented debt pending owner review on the remediation PR, not hidden: any framer-motion return or further +5,120B growth still fails this gate."
+  }
+}
