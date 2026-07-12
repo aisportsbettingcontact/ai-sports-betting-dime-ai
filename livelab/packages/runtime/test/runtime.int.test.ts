@@ -191,24 +191,28 @@ describe('browser sessions', () => {
   it('recovers a crashed session in place', async () => {
     const crash = await api('POST', '/sessions', { device: 'desktop-1440', engine: 'chromium', url: `${fixture.url}/` });
     const crashId = crash.json.session.sessionId;
-    // Chromium treats a navigation to chrome://crash as a renderer crash.
-    await api('POST', `/sessions/${crashId}/navigate`, { url: 'about:blank' });
-    // Force-crash via the input of a navigation the runtime marks crashed:
-    // navigate to chrome://crash is blocked by our allowlist (not http), so use CDP-free route:
-    // kill the page process through evaluating an infinite allocation is unreliable — instead
-    // use Playwright's dedicated crash URL through the daemon's own engine access.
-    const before = await api('GET', `/sessions/${crashId}`);
-    expect(before.json.session.state).toBe('ready');
-    // Access the live session object directly (white-box) to trigger the crash.
-    const session = daemon.core.sessions.get(crashId);
-    await session.currentPage.goto('chrome://crash').catch(() => {});
-    await new Promise((r) => setTimeout(r, 500));
-    expect(daemon.core.sessions.maybeGet(crashId)?.state).toBe('crashed');
-    const recovered = await api('POST', `/sessions/${crashId}/recover`, {});
-    expect(recovered.json.recovered).toBe(true);
-    const after = await api('GET', `/sessions/${crashId}`);
-    expect(after.json.session.state).toBe('ready');
-    await api('DELETE', `/sessions/${crashId}`);
+    try {
+      const before = await api('GET', `/sessions/${crashId}`);
+      expect(before.json.session.state).toBe('ready');
+      // Deterministic renderer crash via CDP Page.crash (chrome://crash navigation
+      // is racy across Chromium builds/runners). White-box page access.
+      const session = daemon.core.sessions.get(crashId);
+      const cdp = await session.currentPage.context().newCDPSession(session.currentPage);
+      cdp.send('Page.crash').catch(() => {}); // never resolves normally — the target dies
+      // Crash event delivery is asynchronous; poll instead of a fixed sleep.
+      const deadline = Date.now() + 20_000;
+      while (daemon.core.sessions.maybeGet(crashId)?.state !== 'crashed' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      expect(daemon.core.sessions.maybeGet(crashId)?.state).toBe('crashed');
+      const recovered = await api('POST', `/sessions/${crashId}/recover`, {});
+      expect(recovered.json.recovered).toBe(true);
+      const after = await api('GET', `/sessions/${crashId}`);
+      expect(after.json.session.state).toBe('ready');
+    } finally {
+      // Never leak a possibly-wedged session into later tests.
+      await api('DELETE', `/sessions/${crashId}`);
+    }
   });
 
   it('exports a sanitized HAR', async () => {

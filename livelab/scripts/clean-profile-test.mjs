@@ -47,7 +47,8 @@ if (!vsix) {
 }
 console.log(`[clean-profile] VSIX: ${vsix}`);
 
-const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'livelab-clean-profile-'));
+// Short prefix keeps VS Code's IPC socket path under the 103-char Unix limit.
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'll-cp-'));
 const userDataDir = path.join(profile, 'user-data');
 const extensionsDir = path.join(profile, 'extensions');
 fs.mkdirSync(userDataDir, { recursive: true });
