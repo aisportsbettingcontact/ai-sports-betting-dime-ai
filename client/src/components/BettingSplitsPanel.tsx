@@ -154,7 +154,7 @@ const LABEL_STROKE = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1p
 const MOBILE_AWAY_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -167,7 +167,7 @@ const MOBILE_AWAY_LABEL_STYLE: React.CSSProperties = {
 const MOBILE_HOME_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -180,7 +180,7 @@ const MOBILE_HOME_LABEL_STYLE: React.CSSProperties = {
 const MOBILE_FULL_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -197,14 +197,14 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       <div className="w-full flex flex-col gap-0.5">
         {/* Header row */}
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
+          <span style={{ fontSize: 10, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
         </div>
         {/* Empty bar */}
         <div className="w-full rounded-md flex items-center justify-center"
-          style={{ height: 20, background: "rgba(255,255,255,0.05)", minWidth: 0 }}>
-          <span style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", opacity: 0.35 }}>—</span>
+          style={{ height: 20, background: "var(--dime-row-hover, rgba(255,255,255,0.05))", minWidth: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
         </div>
       </div>
     );
@@ -368,7 +368,7 @@ interface SplitBarProps {
 const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -381,7 +381,7 @@ const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
 const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -394,7 +394,7 @@ const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
 const DESKTOP_FULL_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -513,7 +513,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
       })() : (
         <div className="w-full rounded-full flex items-center justify-center"
           style={{ height: 30, background: "var(--dime-surface-raised, rgba(255,255,255,0.05))" }}>
-          <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", opacity: 0.35 }}>—</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
         </div>
       )}
     </div>
@@ -557,12 +557,14 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
     <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(12px, 1.4vw, 18px)" }}>
       <div className="flex items-center gap-2">
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
-        <span className="uppercase tracking-widest font-extrabold whitespace-nowrap"
+        <span className="uppercase tracking-widest font-bold whitespace-nowrap"
           style={{ fontSize: 'clamp(13px, 1.1vw, 17px)', color: "var(--dime-text-primary, #ffffff)", letterSpacing: "0.14em" }}>{title}</span>
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
       </div>
+      {/* Both label-row branches share one fixed box so the three market
+          columns keep a single baseline (TOTAL used to sit 3-4px lower). */}
       {isTotalMarket ? (
-        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
+        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, minHeight: 'clamp(21px, 1.8vw, 30px)' }}>
           <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
           <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totalValue}</span>
           <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
@@ -570,7 +572,7 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
       ) : (
         // min-width:0 + ellipsis on both sides: the two labels can never
         // collide or bleed into the neighboring market column.
-        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, gap: 8 }}>
+        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, gap: 8, minHeight: 'clamp(21px, 1.8vw, 30px)' }}>
           <span className="uppercase" style={{ fontSize: 'clamp(12px, 1.0vw, 15px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.02em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{awayLabel}</span>
           <span className="uppercase text-right" style={{ fontSize: 'clamp(12px, 1.0vw, 15px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.02em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{homeLabel}</span>
         </div>
@@ -643,7 +645,7 @@ export function BettingSplitsPanel({
   if (!hasAnySplits) {
     return (
       <div className="w-full flex items-center justify-center" style={{ minHeight: 80, padding: "16px 12px" }}>
-        <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", opacity: 0.4, letterSpacing: "0.06em" }}>
+        <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>
           Splits not yet available
         </span>
       </div>
@@ -683,7 +685,7 @@ export function BettingSplitsPanel({
                   flex: 1,
                   padding: "3px 0",
                   fontSize: 11,
-                  fontWeight: 800,
+                  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   borderRadius: 4,

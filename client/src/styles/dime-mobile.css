@@ -357,7 +357,26 @@ html:not(.dark) .cal-panel {
   color: var(--dime-text-primary) !important;
 }
 .bsp-toggle:disabled {
-  color: var(--dime-text-faint) !important;
+  color: var(--dime-text-muted) !important;
+}
+
+/* Odds & Splits History toggle row: brand curve hover, visible focus. */
+.ohp-toggle {
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dime-t) var(--dime-ease);
+}
+.ohp-toggle:hover {
+  background: var(--dime-row-hover);
+}
+.ohp-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--dime-ring);
+}
+.bs-pill:focus-visible,
+.bsp-toggle:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
 }
 
 /* One motion curve everywhere (MASTER.md: 160ms, single curve). */
