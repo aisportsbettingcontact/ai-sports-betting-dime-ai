@@ -25,18 +25,6 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "wouter";
-import {
-  AnimatePresence,
-  LazyMotion,
-  animate,
-  domAnimation,
-  m,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-  type AnimationPlaybackControls,
-  type MotionStyle,
-} from "framer-motion";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   chatReducer,
@@ -61,6 +49,14 @@ import {
   rubberBand,
 } from "./drawerMotion";
 import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
+import {
+  REDUCED_MOTION_QUERY,
+  useReducedMotionPreference,
+} from "./useReducedMotionPreference";
+import {
+  createSpringSettle,
+  type SpringSettleHandle,
+} from "@/lib/springSettle";
 import { bettingSplitsPath, feedModelPath } from "@/lib/feedRoutes";
 import type { DimeProductPane } from "../dime-shell/productRoute";
 import avatarUrl from "./assets/prez-avatar.jpg";
@@ -115,7 +111,7 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
-  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  !!window.matchMedia?.(REDUCED_MOTION_QUERY).matches;
 
 // Client-side diagnostics behind localStorage.DIME_DEBUG === "1" (preserved)
 const DEBUG =
@@ -183,7 +179,6 @@ function DimeSidebar({
   recentChats,
   compact,
   drawerOpen,
-  drawerStyle,
   sidebarRef,
   onClose,
   onNavigate,
@@ -194,7 +189,6 @@ function DimeSidebar({
   recentChats: RecentChat[];
   compact: boolean;
   drawerOpen: boolean;
-  drawerStyle?: MotionStyle;
   sidebarRef: MutableRefObject<HTMLElement | null>;
   onClose: () => void;
   onNavigate: () => void;
@@ -203,7 +197,6 @@ function DimeSidebar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -222,10 +215,9 @@ function DimeSidebar({
   }, [menuOpen]);
 
   return (
-    <m.aside
+    <aside
       ref={sidebarRef}
       className={`dc-sidebar${compact ? " dc-drawer" : ""}`}
-      style={drawerStyle}
       role={compact && drawerOpen ? "dialog" : undefined}
       aria-modal={compact && drawerOpen ? true : undefined}
       aria-label={compact ? "Dime navigation" : undefined}
@@ -315,73 +307,63 @@ function DimeSidebar({
           <div className="dc-profile-name">PREZ BETS</div>
           <div className="dc-profile-tier">Pro</div>
         </div>
-        <AnimatePresence initial={false}>
-          {menuOpen && (
-            <m.div
-              key="settings-menu"
-              className="dc-settings-menu open"
-              role="menu"
-              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.16,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="dc-menu-header">
-                <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
-                <div className="dc-menu-id">
-                  <div className="dc-menu-handle-row">
-                    <div className="dc-menu-handle">@prez</div>
-                    <div className="dc-badge-pro">PRO</div>
-                  </div>
-                  <div className="dc-menu-expiry">Expires August 8, 2026</div>
+        {menuOpen && (
+          <div
+            className="dc-settings-menu open dc-settings-menu--enter"
+            role="menu"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="dc-menu-header">
+              <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
+              <div className="dc-menu-id">
+                <div className="dc-menu-handle-row">
+                  <div className="dc-menu-handle">@prez</div>
+                  <div className="dc-badge-pro">PRO</div>
                 </div>
+                <div className="dc-menu-expiry">Expires August 8, 2026</div>
               </div>
-              <div className="dc-menu-cta-row">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
-                >
-                  Upgrade Membership
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
-                >
-                  Cancel Membership
-                </button>
-              </div>
-              <div className="dc-menu-divider" />
+            </div>
+            <div className="dc-menu-cta-row">
               <button
                 type="button"
                 role="menuitem"
-                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
               >
-                Edit Profile
+                Upgrade Membership
               </button>
               <button
                 type="button"
                 role="menuitem"
-                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
               >
-                Discord Connected: <span className="dc-menu-accent">@prez</span>
+                Cancel Membership
               </button>
-              <div className="dc-menu-divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
-              >
-                Log Out
-              </button>
-            </m.div>
-          )}
-        </AnimatePresence>
+            </div>
+            <div className="dc-menu-divider" />
+            <button
+              type="button"
+              role="menuitem"
+              className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+            >
+              Edit Profile
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+            >
+              Discord Connected: <span className="dc-menu-accent">@prez</span>
+            </button>
+            <div className="dc-menu-divider" />
+            <button
+              type="button"
+              role="menuitem"
+              className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
+            >
+              Log Out
+            </button>
+          </div>
+        )}
         <button
           type="button"
           className="dc-settings-trigger dc-pressable dc-focusable"
@@ -406,7 +388,7 @@ function DimeSidebar({
           </svg>
         </button>
       </div>
-    </m.aside>
+    </aside>
   );
 }
 
@@ -662,13 +644,11 @@ type DrawerGesture = {
 };
 
 const DRAWER_FALLBACK_WIDTH = 293;
-const DRAWER_SPRING = {
-  type: "spring" as const,
-  stiffness: 520,
-  damping: 43,
-  mass: 0.9,
-};
-const BRAND_EASE = [0.16, 1, 0.3, 1] as const;
+
+/** A `.stop()`-only handle shape, shared by the FLIP and drawer-settle refs. */
+interface StoppableAnimation {
+  stop: () => void;
+}
 
 const rectStyle = (r: {
   left: number;
@@ -681,6 +661,15 @@ const rectStyle = (r: {
   width: r.width,
   height: r.height,
 });
+
+/** Linear interpolation matching the old `useTransform(drawerX, [-W, 0], [0, 0.46])`. */
+const scrimOpacityFor = (x: number) => {
+  const fraction = Math.min(
+    1,
+    Math.max(0, (x + DRAWER_FALLBACK_WIDTH) / DRAWER_FALLBACK_WIDTH)
+  );
+  return fraction * 0.46;
+};
 
 export interface DimeChatShellState {
   /** Pane currently painted; may lag the URL while a lazy chunk resolves. */
@@ -708,7 +697,7 @@ export default function DimeChatPage({
   const { theme: contextTheme } = useTheme();
   const theme: Theme =
     themeProp ?? (contextTheme === "light" ? "light" : "dark");
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
 
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
@@ -736,7 +725,7 @@ export default function DimeChatPage({
   const abortRef = useRef<AbortController | null>(null);
   const activeBatcherRef = useRef<RafDeltaBatcher | null>(null);
   const flipFromRef = useRef<number | null>(null);
-  const flipControlsRef = useRef<AnimationPlaybackControls | null>(null);
+  const flipControlsRef = useRef<StoppableAnimation | null>(null);
   const flipGenerationRef = useRef(0);
   const stuckRef = useRef(true);
   const programmaticScrollRef = useRef(false);
@@ -745,21 +734,81 @@ export default function DimeChatPage({
   const mainRef = useRef<HTMLElement | null>(null);
   const mobileBarRef = useRef<HTMLDivElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const drawerAnimationRef = useRef<AnimationPlaybackControls | null>(null);
+  const drawerGrabRef = useRef<HTMLDivElement | null>(null);
+  const drawerScrimRef = useRef<HTMLButtonElement | null>(null);
+  const drawerAnimationRef = useRef<StoppableAnimation | null>(null);
   const drawerAnimationGenerationRef = useRef(0);
   const drawerTargetRef = useRef(-DRAWER_FALLBACK_WIDTH);
   const drawerRestoreFocusRef = useRef(false);
   const drawerWidthRef = useRef(DRAWER_FALLBACK_WIDTH);
   const gestureRef = useRef<DrawerGesture | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
-  const drawerX = useMotionValue(-DRAWER_FALLBACK_WIDTH);
-  const scrimOpacity = useTransform(
-    drawerX,
-    [-DRAWER_FALLBACK_WIDTH, 0],
-    [0, 0.46]
-  );
+  // Authoritative current drawer x (px); replaces framer-motion's MotionValue.
+  const dragXRef = useRef(-DRAWER_FALLBACK_WIDTH);
+  // rAF id for gesture drag-follow writes (batches pointermove into one paint).
+  const dragFrameRef = useRef<number | null>(null);
+  // Post-release settle physics (drawerMotion.ts owns the pure gesture math;
+  // springSettle.ts owns this critically-damped integrator).
+  const drawerSpringRef = useRef<SpringSettleHandle | null>(null);
+  const drawerSpringFrameRef = useRef<number | null>(null);
+  const drawerSpringLastTimeRef = useRef<number | null>(null);
+  // Reassigned on every settleDrawer() call so a spring created for an
+  // earlier generation still resolves to the CURRENT finish() when retargeted
+  // mid-flight instead of being created (see settleDrawer's retarget branch).
+  const drawerFinishRef = useRef<(() => void) | null>(null);
 
   const conversation = state.messages.length > 0;
+
+  /** Writes the drawer transform + grab-strip transform + scrim opacity in
+   * one synchronous DOM pass — the "same rAF write" the brief calls for,
+   * whether driven by a gesture's drag-follow frame or the settle spring. */
+  const writeDrawerVisual = useCallback((x: number) => {
+    dragXRef.current = x;
+    const transform = `translateX(${x}px)`;
+    if (sidebarRef.current) sidebarRef.current.style.transform = transform;
+    if (drawerGrabRef.current)
+      drawerGrabRef.current.style.transform = transform;
+    if (drawerScrimRef.current)
+      drawerScrimRef.current.style.opacity = String(scrimOpacityFor(x));
+  }, []);
+
+  const scheduleDrawerFrame = useCallback(() => {
+    if (dragFrameRef.current != null) return;
+    dragFrameRef.current = requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      writeDrawerVisual(dragXRef.current);
+    });
+  }, [writeDrawerVisual]);
+
+  const stopDrawerSettle = useCallback(() => {
+    if (drawerSpringFrameRef.current != null) {
+      cancelAnimationFrame(drawerSpringFrameRef.current);
+      drawerSpringFrameRef.current = null;
+    }
+    drawerSpringRef.current?.stop();
+    drawerSpringRef.current = null;
+    drawerSpringLastTimeRef.current = null;
+  }, []);
+
+  const runDrawerSpringFrame = useCallback(
+    (timestamp: number) => {
+      const spring = drawerSpringRef.current;
+      if (!spring) return;
+      const last = drawerSpringLastTimeRef.current ?? timestamp;
+      const dt = Math.min(0.1, Math.max(0, (timestamp - last) / 1000));
+      drawerSpringLastTimeRef.current = timestamp;
+      spring.step(dt);
+      writeDrawerVisual(spring.value);
+      if (spring.settled) {
+        drawerSpringFrameRef.current = null;
+        drawerSpringLastTimeRef.current = null;
+        return;
+      }
+      drawerSpringFrameRef.current =
+        requestAnimationFrame(runDrawerSpringFrame);
+    },
+    [writeDrawerVisual]
+  );
 
   useEffect(
     () => () => {
@@ -767,6 +816,8 @@ export default function DimeChatPage({
       activeBatcherRef.current?.dispose();
       flipControlsRef.current?.stop();
       drawerAnimationRef.current?.stop();
+      if (dragFrameRef.current != null)
+        cancelAnimationFrame(dragFrameRef.current);
       if (viewportFrameRef.current != null)
         cancelAnimationFrame(viewportFrameRef.current);
     },
@@ -817,21 +868,21 @@ export default function DimeChatPage({
       "--dc-drawer-width",
       `${drawerWidthRef.current}px`
     );
-    if (compact) drawerX.set(drawerOpen ? 0 : -drawerWidthRef.current);
+    if (compact) writeDrawerVisual(drawerOpen ? 0 : -drawerWidthRef.current);
     else {
       drawerAnimationRef.current?.stop();
-      drawerX.set(0);
+      writeDrawerVisual(0);
       setDrawerOpen(false);
       setDrawerMoving(false);
     }
-  }, [compact, drawerX]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- writeDrawerVisual is a stable ref-only callback
+  }, [compact]);
 
   const settleDrawer = useCallback(
     (target: number, velocityX = 0, restoreFocus = false) => {
       const generation = ++drawerAnimationGenerationRef.current;
       drawerTargetRef.current = target;
       drawerRestoreFocusRef.current = restoreFocus;
-      drawerAnimationRef.current?.stop();
       setDrawerMoving(true);
 
       const finish = () => {
@@ -853,21 +904,38 @@ export default function DimeChatPage({
           setDrawerOpen(true);
         }
       };
+      drawerFinishRef.current = finish;
 
       if (reduceMotion) {
-        drawerX.set(target);
+        stopDrawerSettle();
+        writeDrawerVisual(target);
         finish();
         return;
       }
 
-      const controls = animate(drawerX, target, {
-        ...DRAWER_SPRING,
-        velocity: velocityX,
-      });
-      drawerAnimationRef.current = controls;
-      void controls.then(finish);
+      const existing = drawerSpringRef.current;
+      // A settle already in flight: retarget it so position AND (unless a
+      // fresh gesture measured its own release velocity) velocity carry over
+      // with no jump, instead of restarting from rest. `velocityX` is only
+      // ever nonzero here when endDrawerGesture just measured a real release.
+      if (existing && !existing.settled) {
+        existing.retarget(target, velocityX !== 0 ? velocityX : undefined);
+      } else {
+        drawerSpringRef.current = createSpringSettle({
+          from: dragXRef.current,
+          to: target,
+          velocity: velocityX,
+          onUpdate: writeDrawerVisual,
+          onSettle: () => drawerFinishRef.current?.(),
+        });
+      }
+      drawerAnimationRef.current = { stop: stopDrawerSettle };
+      if (drawerSpringFrameRef.current == null) {
+        drawerSpringFrameRef.current =
+          requestAnimationFrame(runDrawerSpringFrame);
+      }
     },
-    [drawerX, reduceMotion]
+    [reduceMotion, stopDrawerSettle, writeDrawerVisual, runDrawerSpringFrame]
   );
 
   useEffect(() => {
@@ -875,7 +943,7 @@ export default function DimeChatPage({
     drawerAnimationGenerationRef.current++;
     drawerAnimationRef.current.stop();
     drawerAnimationRef.current = null;
-    drawerX.set(drawerTargetRef.current);
+    writeDrawerVisual(drawerTargetRef.current);
     setDrawerMoving(false);
     const closed = drawerTargetRef.current < 0;
     setDrawerOpen(!closed);
@@ -883,7 +951,7 @@ export default function DimeChatPage({
     // this runs after the modal-semantics effect lifts `inert`.
     if (closed && drawerRestoreFocusRef.current)
       requestAnimationFrame(() => menuButtonRef.current?.focus());
-  }, [drawerX, reduceMotion]);
+  }, [reduceMotion, writeDrawerVisual]);
 
   const openDrawer = useCallback(() => {
     setDrawerOpen(true);
@@ -918,7 +986,7 @@ export default function DimeChatPage({
     // table, including that exact regression.
     const width = drawerWidthRef.current;
     const drawerVisibleFraction =
-      width > 0 ? (drawerX.get() + width) / width : 0;
+      width > 0 ? (dragXRef.current + width) / width : 0;
     const { mainInert, trapFocus } = resolveDrawerAccessibility({
       drawerOpen,
       drawerMoving,
@@ -964,7 +1032,7 @@ export default function DimeChatPage({
       cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKey);
     };
-  }, [compact, drawerOpen, drawerMoving, reduceMotion, drawerX, closeDrawer]);
+  }, [compact, drawerOpen, drawerMoving, reduceMotion, closeDrawer]);
 
   useEffect(() => {
     if (!shell) return;
@@ -979,15 +1047,15 @@ export default function DimeChatPage({
       // [PR #70 REMEDIATION 2026-07-12] Under reduced motion the drawer
       // opens/closes ONLY via its button and keyboard — gestures must never
       // claim the pointer for drawer purposes. Refusing to start a gesture
-      // here (rather than only gating the later `drawerX.set(...)` visual
-      // write, as before) keeps `drawerOpen`/`drawerMoving` from ever
-      // flipping true mid-swipe while the drawer stays off-screen, and lets
-      // the 24px edge strip fall through as an ordinary scroll/no-op.
+      // here (rather than only gating the later drag-follow visual write, as
+      // before) keeps `drawerOpen`/`drawerMoving` from ever flipping true
+      // mid-swipe while the drawer stays off-screen, and lets the 24px edge
+      // strip fall through as an ordinary scroll/no-op.
       if (reduceMotion) return;
       drawerAnimationGenerationRef.current++;
       drawerAnimationRef.current?.stop();
       drawerAnimationRef.current = null;
-      const currentX = drawerX.get();
+      const currentX = dragXRef.current;
       gestureRef.current = {
         pointerId: event.pointerId,
         startX: event.clientX,
@@ -1005,7 +1073,7 @@ export default function DimeChatPage({
         setDrawerMoving(true);
       }
     },
-    [drawerX, reduceMotion]
+    [reduceMotion]
   );
 
   const moveDrawerGesture = useCallback(
@@ -1040,10 +1108,11 @@ export default function DimeChatPage({
 
       if (!reduceMotion) {
         const raw = event.clientX - gesture.grabOffset;
-        drawerX.set(rubberBand(raw, -drawerWidthRef.current, 0));
+        dragXRef.current = rubberBand(raw, -drawerWidthRef.current, 0);
+        scheduleDrawerFrame();
       }
     },
-    [drawerX, reduceMotion]
+    [reduceMotion, scheduleDrawerFrame]
   );
 
   const endDrawerGesture = useCallback(
@@ -1305,23 +1374,49 @@ export default function DimeChatPage({
       return;
     }
 
+    // PR #70: CSS transition (`.dc-composer--flip`, conversation.css)
+    // replaces framer-motion's `animate(el, {transform}, {duration, ease})`.
+    // The "from" transform above is already committed; adding the class here
+    // and flipping to the end value one rAF later is what makes the browser
+    // observe two separate style states and actually play the transition.
     const generation = ++flipGenerationRef.current;
-    const controls = animate(
-      el,
-      { transform: "translateY(0px)" },
-      { duration: 0.16, ease: BRAND_EASE }
-    );
-    flipControlsRef.current = controls;
-    const frame = requestAnimationFrame(() =>
-      setGhost(current => (current ? { ...current, fading: true } : current))
-    );
-    void controls.then(() => {
+    el.classList.add("dc-composer--flip");
+
+    const cleanup = () => {
+      el.removeEventListener("transitionend", onTransitionEnd);
+      el.classList.remove("dc-composer--flip");
+    };
+    const onTransitionEnd = (event: TransitionEvent) => {
+      if (event.target !== el || event.propertyName !== "transform") return;
       if (generation !== flipGenerationRef.current) return;
+      cleanup();
       flipControlsRef.current = null;
       el.style.removeProperty("transform");
       setGhost(null);
       setFirstSendFx(false);
+    };
+    el.addEventListener("transitionend", onTransitionEnd);
+
+    const frame = requestAnimationFrame(() => {
+      setGhost(current => (current ? { ...current, fading: true } : current));
+      el.style.transform = "translateY(0px)";
     });
+
+    flipControlsRef.current = {
+      stop: () => {
+        // Interruption (a new send/newChat fires before this settles):
+        // freeze at the CURRENT on-screen position — read the live computed
+        // transform before tearing down — rather than snapping to either
+        // end. captureComposerPresentation() measures
+        // getBoundingClientRect() immediately after calling this, and that
+        // read must reflect where the composer visually still is.
+        const computed = getComputedStyle(el).transform;
+        cleanup();
+        if (computed && computed !== "none") el.style.transform = computed;
+        else el.style.removeProperty("transform");
+      },
+    };
+
     return () => cancelAnimationFrame(frame);
   }, [conversation, reduceMotion]);
 
@@ -1372,282 +1467,256 @@ export default function DimeChatPage({
   };
 
   return (
-    <LazyMotion features={domAnimation} strict>
-      <div
-        ref={pageRef}
-        className={`dc-page dc-page--app theme-${theme}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
-        data-theme={theme}
-      >
-        <div className="dc-app">
-          {compact && (
-            <div className="dc-mobile-bar" ref={mobileBarRef}>
-              <button
-                ref={menuButtonRef}
-                type="button"
-                className="dc-mobile-menu dc-focusable dc-pressable"
-                aria-haspopup="dialog"
-                aria-expanded={drawerOpen}
-                onClick={openDrawer}
-              >
-                Menu
-              </button>
-              <span className="dc-mobile-title">AI Sports Betting</span>
-              <span className="dc-mobile-balance" aria-hidden="true" />
-            </div>
-          )}
-
-          <DimeSidebar
-            onNewChat={newChat}
-            recentChats={recentChats}
-            compact={compact}
-            drawerOpen={drawerOpen}
-            drawerStyle={compact ? { x: drawerX } : undefined}
-            sidebarRef={sidebarRef}
-            onClose={() => closeDrawer(true)}
-            onNavigate={() => {
-              if (compact) closeDrawer(true);
-            }}
-            activePane={shell?.navigationPane}
-            onShellNavigate={shell?.onNavigate}
-          />
-
-          {compact && drawerOpen && (
-            <m.button
+    <div
+      ref={pageRef}
+      className={`dc-page dc-page--app theme-${theme}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
+      data-theme={theme}
+    >
+      <div className="dc-app">
+        {compact && (
+          <div className="dc-mobile-bar" ref={mobileBarRef}>
+            <button
+              ref={menuButtonRef}
               type="button"
-              className="dc-drawer-scrim"
-              style={{ opacity: scrimOpacity }}
-              aria-label="Close navigation"
-              tabIndex={-1}
-              onPointerDown={() => closeDrawer(true)}
-            />
-          )}
+              className="dc-mobile-menu dc-focusable dc-pressable"
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
+              onClick={openDrawer}
+            >
+              Menu
+            </button>
+            <span className="dc-mobile-title">AI Sports Betting</span>
+            <span className="dc-mobile-balance" aria-hidden="true" />
+          </div>
+        )}
 
-          {compact && !drawerOpen && (
-            <div
-              className="dc-edge-capture"
-              aria-hidden="true"
-              onPointerDown={event => beginDrawerGesture(event, true)}
-              onPointerMove={moveDrawerGesture}
-              onPointerUp={endDrawerGesture}
-              onPointerCancel={endDrawerGesture}
-            />
-          )}
+        <DimeSidebar
+          onNewChat={newChat}
+          recentChats={recentChats}
+          compact={compact}
+          drawerOpen={drawerOpen}
+          sidebarRef={sidebarRef}
+          onClose={() => closeDrawer(true)}
+          onNavigate={() => {
+            if (compact) closeDrawer(true);
+          }}
+          activePane={shell?.navigationPane}
+          onShellNavigate={shell?.onNavigate}
+        />
 
-          {compact && drawerOpen && (
-            <m.div
-              className="dc-drawer-grab"
-              style={{ x: drawerX }}
-              aria-hidden="true"
-              onPointerDown={event => beginDrawerGesture(event, false)}
-              onPointerMove={moveDrawerGesture}
-              onPointerUp={endDrawerGesture}
-              onPointerCancel={endDrawerGesture}
-            />
-          )}
+        {compact && drawerOpen && (
+          <button
+            ref={drawerScrimRef}
+            type="button"
+            className="dc-drawer-scrim"
+            style={{ opacity: scrimOpacityFor(dragXRef.current) }}
+            aria-label="Close navigation"
+            tabIndex={-1}
+            onPointerDown={() => closeDrawer(true)}
+          />
+        )}
 
-          {(() => {
-            const chatActive = !shell || shell.renderedPane === "chat";
-            const transition = {
-              duration: reduceMotion ? 0 : 0.16,
-              ease: BRAND_EASE,
-            };
-            // [PR #70 REMEDIATION 2026-07-12] `chatPane`'s wrapping element
-            // below used to fork by TYPE on `!shell` (bare <m.main> vs a
-            // <div className="dc-shell-stack"> wrapping <m.main> + the
-            // external pane). That fork is invisible to DimeAppShell's
-            // caller, but NOT to React's reconciler: when the SAME mounted
-            // DimeChatPage instance re-renders with `shell` flipping from a
-            // value to undefined (DimeAppShell's `mode` crossing 768px),
-            // the root element type this component returns changes —
-            // forcing React to tear down and rebuild everything inside,
-            // including the composer's DOM node, even though the
-            // DimeChatPage component instance itself never unmounts. Fix:
-            // always return the SAME wrapper type/position; only the
-            // external pane's presence is conditional (a trailing sibling
-            // gain/loss does not perturb an earlier sibling's identity).
-            // `.dc-shell-stack`'s single-cell grid is already the
-            // production-verified >=768px chat layout — applying it
-            // unconditionally here is layout-neutral for a lone child, and
-            // touches neither conversation.css nor the framer-motion API
-            // surface, only which elements exist in the DOM.
-            const chatPane = (
-              <m.main
-                ref={chatPaneRef}
-                className={`dc-main${conversation ? " dc-main--conv" : ""} dc-shell-chat-layer`}
-                aria-hidden={shell && !chatActive ? true : undefined}
-                animate={
-                  shell
-                    ? { opacity: chatActive ? 1 : 0, y: chatActive ? 0 : -4 }
-                    : undefined
-                }
-                transition={transition}
-                style={
-                  shell
-                    ? { pointerEvents: chatActive ? "auto" : "none" }
-                    : undefined
-                }
-              >
-                {shell && (
-                  <h1
-                    ref={shell.chatHeadingRef}
-                    className="dc-shell-sr-only"
-                    tabIndex={-1}
-                  >
-                    Dime Chat
-                  </h1>
-                )}
-                {conversation && (
+        {compact && !drawerOpen && (
+          <div
+            className="dc-edge-capture"
+            aria-hidden="true"
+            onPointerDown={event => beginDrawerGesture(event, true)}
+            onPointerMove={moveDrawerGesture}
+            onPointerUp={endDrawerGesture}
+            onPointerCancel={endDrawerGesture}
+          />
+        )}
+
+        {compact && drawerOpen && (
+          <div
+            ref={drawerGrabRef}
+            className="dc-drawer-grab"
+            style={{ transform: `translateX(${dragXRef.current}px)` }}
+            aria-hidden="true"
+            onPointerDown={event => beginDrawerGesture(event, false)}
+            onPointerMove={moveDrawerGesture}
+            onPointerUp={endDrawerGesture}
+            onPointerCancel={endDrawerGesture}
+          />
+        )}
+
+        {(() => {
+          const chatActive = !shell || shell.renderedPane === "chat";
+          // [PR #70 REMEDIATION 2026-07-12] `chatPane`'s wrapping element
+          // below used to fork by TYPE on `!shell` (bare <m.main> vs a
+          // <div className="dc-shell-stack"> wrapping <m.main> + the
+          // external pane). That fork is invisible to DimeAppShell's
+          // caller, but NOT to React's reconciler: when the SAME mounted
+          // DimeChatPage instance re-renders with `shell` flipping from a
+          // value to undefined (DimeAppShell's `mode` crossing 768px),
+          // the root element type this component returns changes —
+          // forcing React to tear down and rebuild everything inside,
+          // including the composer's DOM node, even though the
+          // DimeChatPage component instance itself never unmounts. Fix:
+          // always return the SAME wrapper type/position; only the
+          // external pane's presence is conditional (a trailing sibling
+          // gain/loss does not perturb an earlier sibling's identity).
+          // `.dc-shell-stack`'s single-cell grid is already the
+          // production-verified >=768px chat layout — applying it
+          // unconditionally here is layout-neutral for a lone child, and
+          // touches neither conversation.css nor the framer-motion API
+          // surface, only which elements exist in the DOM.
+          //
+          // PR #70 bundle-budget remediation: the chat/external pane
+          // cross-fade is now a CSS transition (shell.css's
+          // `dc-shell-pane--inactive` modifier, 160ms brand curve) instead
+          // of framer-motion's `animate` prop — `<m.main>`/`<m.section>`
+          // become plain `<main>`/`<section>`.
+          const chatPane = (
+            <main
+              ref={chatPaneRef}
+              className={`dc-main${conversation ? " dc-main--conv" : ""} dc-shell-chat-layer${shell && !chatActive ? " dc-shell-pane--inactive" : ""}`}
+              aria-hidden={shell && !chatActive ? true : undefined}
+            >
+              {shell && (
+                <h1
+                  ref={shell.chatHeadingRef}
+                  className="dc-shell-sr-only"
+                  tabIndex={-1}
+                >
+                  Dime Chat
+                </h1>
+              )}
+              {conversation && (
+                <div
+                  className="dc-scroller"
+                  ref={scrollerRef}
+                  onScroll={onScroll}
+                >
                   <div
-                    className="dc-scroller"
-                    ref={scrollerRef}
-                    onScroll={onScroll}
+                    className="dc-thread"
+                    role="log"
+                    aria-live="polite"
+                    aria-relevant="additions text"
+                    aria-atomic="false"
+                    aria-label="Dime chat conversation"
                   >
-                    <div
-                      className="dc-thread"
-                      role="log"
-                      aria-live="polite"
-                      aria-relevant="additions text"
-                      aria-atomic="false"
-                      aria-label="Dime chat conversation"
-                    >
-                      {state.messages.map(m => (
-                        <Turn
-                          key={m.id}
-                          msg={m}
-                          freshness={state.dataFreshness}
-                          fx={firstSendFx}
-                        />
-                      ))}
-                      {state.error && (
-                        <ErrorCard message={state.error} onRetry={retry} />
-                      )}
-                      <div className="dc-footnote">{DISCLAIMER}</div>
-                    </div>
+                    {state.messages.map(m => (
+                      <Turn
+                        key={m.id}
+                        msg={m}
+                        freshness={state.dataFreshness}
+                        fx={firstSendFx}
+                      />
+                    ))}
+                    {state.error && (
+                      <ErrorCard message={state.error} onRetry={retry} />
+                    )}
+                    <div className="dc-footnote">{DISCLAIMER}</div>
                   </div>
+                </div>
+              )}
+              {!conversation && <BrandHero innerRef={heroRef} />}
+              <div className="dc-composer-zone">
+                {conversation && !stuck && state.streaming && (
+                  <button
+                    type="button"
+                    className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable dc-jump"
+                    onClick={jumpToLatest}
+                  >
+                    Jump to latest
+                  </button>
                 )}
-                {!conversation && <BrandHero innerRef={heroRef} />}
-                <div className="dc-composer-zone">
-                  {conversation && !stuck && state.streaming && (
+                <form
+                  className="dc-composer"
+                  ref={composerRef}
+                  onSubmit={onSubmit}
+                >
+                  <div className="dc-composer-plus">＋</div>
+                  <input
+                    className="dc-composer-input"
+                    type="text"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    placeholder={
+                      conversation ? "Reply to dime…" : "Ask dime anything…"
+                    }
+                    enterKeyHint="send"
+                  />
+                  {state.streaming ? (
                     <button
                       type="button"
-                      className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable dc-jump"
-                      onClick={jumpToLatest}
+                      className="dc-send dc-hv3 dc-focusable dc-pressable"
+                      aria-label="Stop response"
+                      onClick={stop}
                     >
-                      Jump to latest
+                      <StopGlyph />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="dc-send dc-hv3 dc-focusable dc-pressable"
+                      aria-label="Submit prompt"
+                    >
+                      <SendGlyph />
                     </button>
                   )}
-                  <form
-                    className="dc-composer"
-                    ref={composerRef}
-                    onSubmit={onSubmit}
-                  >
-                    <div className="dc-composer-plus">＋</div>
-                    <input
-                      className="dc-composer-input"
-                      type="text"
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      placeholder={
-                        conversation ? "Reply to dime…" : "Ask dime anything…"
-                      }
-                      enterKeyHint="send"
-                    />
-                    {state.streaming ? (
-                      <button
-                        type="button"
-                        className="dc-send dc-hv3 dc-focusable dc-pressable"
-                        aria-label="Stop response"
-                        onClick={stop}
-                      >
-                        <StopGlyph />
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        className="dc-send dc-hv3 dc-focusable dc-pressable"
-                        aria-label="Submit prompt"
-                      >
-                        <SendGlyph />
-                      </button>
-                    )}
-                  </form>
-                </div>
-                {!conversation && (
-                  <PromptPills
-                    theme={theme}
-                    onPick={submit}
-                    innerRef={pillsRef}
-                  />
-                )}
-                {ghost && (
-                  <div aria-hidden="true">
-                    <m.div
-                      className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
-                      style={rectStyle(ghost.hero)}
-                      animate={{ opacity: ghost.fading ? 0 : 1 }}
-                      transition={{
-                        duration: reduceMotion ? 0 : 0.16,
-                        ease: BRAND_EASE,
-                      }}
-                    >
-                      <BrandHero />
-                    </m.div>
-                    <m.div
-                      className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
-                      style={rectStyle(ghost.pills)}
-                      animate={{ opacity: ghost.fading ? 0 : 1 }}
-                      transition={{
-                        duration: reduceMotion ? 0 : 0.16,
-                        ease: BRAND_EASE,
-                      }}
-                    >
-                      <PromptPills theme={theme} ghost />
-                    </m.div>
-                  </div>
-                )}
-              </m.main>
-            );
-
-            const externalActive = !!shell && shell.renderedPane !== "chat";
-            return (
-              <div
-                ref={mainRef as MutableRefObject<HTMLDivElement | null>}
-                className="dc-shell-stack"
-              >
-                {chatPane}
-                {shell && (
-                  <m.section
-                    ref={externalPaneRef}
-                    className="dc-shell-external-layer"
-                    aria-hidden={!externalActive}
-                    animate={{
-                      opacity: externalActive ? 1 : 0,
-                      y: externalActive ? 0 : 4,
-                    }}
-                    transition={transition}
-                    style={{ pointerEvents: externalActive ? "auto" : "none" }}
-                  >
-                    <div
-                      ref={shell.externalScrollRef}
-                      className="dc-shell-external-scroll"
-                      onScroll={shell.onExternalScroll}
-                    >
-                      <h1
-                        ref={shell.externalHeadingRef}
-                        className="dc-shell-sr-only"
-                        tabIndex={-1}
-                      >
-                        {shell.paneHeading}
-                      </h1>
-                      {shell.paneContent}
-                    </div>
-                  </m.section>
-                )}
+                </form>
               </div>
-            );
-          })()}
-        </div>
+              {!conversation && (
+                <PromptPills
+                  theme={theme}
+                  onPick={submit}
+                  innerRef={pillsRef}
+                />
+              )}
+              {ghost && (
+                <div aria-hidden="true">
+                  <div
+                    className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
+                    style={rectStyle(ghost.hero)}
+                  >
+                    <BrandHero />
+                  </div>
+                  <div
+                    className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
+                    style={rectStyle(ghost.pills)}
+                  >
+                    <PromptPills theme={theme} ghost />
+                  </div>
+                </div>
+              )}
+            </main>
+          );
+
+          const externalActive = !!shell && shell.renderedPane !== "chat";
+          return (
+            <div
+              ref={mainRef as MutableRefObject<HTMLDivElement | null>}
+              className="dc-shell-stack"
+            >
+              {chatPane}
+              {shell && (
+                <section
+                  ref={externalPaneRef}
+                  className={`dc-shell-external-layer${!externalActive ? " dc-shell-pane--inactive" : ""}`}
+                  aria-hidden={!externalActive}
+                >
+                  <div
+                    ref={shell.externalScrollRef}
+                    className="dc-shell-external-scroll"
+                    onScroll={shell.onExternalScroll}
+                  >
+                    <h1
+                      ref={shell.externalHeadingRef}
+                      className="dc-shell-sr-only"
+                      tabIndex={-1}
+                    >
+                      {shell.paneHeading}
+                    </h1>
+                    {shell.paneContent}
+                  </div>
+                </section>
+              )}
+            </div>
+          );
+        })()}
       </div>
-    </LazyMotion>
+    </div>
   );
 }

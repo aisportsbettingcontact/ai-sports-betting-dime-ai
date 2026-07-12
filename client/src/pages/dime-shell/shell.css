@@ -9,13 +9,34 @@
   position: relative;
 }
 
-/* derived: pane layers share one cell to eliminate layout shift during URL swaps. */
+/* derived: pane layers share one cell to eliminate layout shift during URL swaps.
+   PR #70: opacity/transform cross-fade between the chat and external panes was
+   framer-motion's `animate` prop (m.main/m.section); CSS now owns the same
+   160ms brand curve via the `dc-shell-pane--inactive` modifier DimeChatPage.tsx
+   toggles. Only applies while a `shell` prop is present (chat-only mode never
+   adds the modifier, so it stays fully opaque/static, matching the original
+   "no animate prop" behavior below 768px). */
 .dc-shell-chat-layer,
 .dc-shell-external-layer {
   grid-area: 1 / 1;
   width: 100%;
   min-width: 0;
   min-height: 0;
+  transition:
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dc-shell-chat-layer.dc-shell-pane--inactive {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+.dc-shell-external-layer.dc-shell-pane--inactive {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
 }
 
 /* derived: embedded surfaces keep document-like scrolling inside the fixed app shell. */

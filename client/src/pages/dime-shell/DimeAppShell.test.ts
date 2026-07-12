@@ -171,7 +171,7 @@ describe("DimeAppShell integration contract", () => {
     expect(shellSource).toMatch(/target\?\.focus\(\{ preventScroll: true \}\)/);
     expect(chatSource).toMatch(/className="dc-shell-sr-only"/);
     expect(chatSource).toMatch(
-      /<m\.main[\s\S]*ref=\{shell\.chatHeadingRef\}[\s\S]*>\s*Dime Chat\s*<\/h1>/
+      /<main[\s\S]*ref=\{shell\.chatHeadingRef\}[\s\S]*>\s*Dime Chat\s*<\/h1>/
     );
     expect(chatSource).toMatch(/aria-hidden=\{!externalActive\}/);
   });
@@ -182,10 +182,10 @@ describe("DimeAppShell integration contract", () => {
       expect(width).toBeGreaterThanOrEqual(768);
       expect(chatSource.match(/<h1\b/g)).toHaveLength(2);
       expect(chatSource).toMatch(
-        /<m\.main[\s\S]*?aria-hidden=\{shell && !chatActive \? true : undefined\}[\s\S]*?<h1[\s\S]*?>\s*Dime Chat\s*<\/h1>/
+        /<main[\s\S]*?aria-hidden=\{shell && !chatActive \? true : undefined\}[\s\S]*?<h1[\s\S]*?>\s*Dime Chat\s*<\/h1>/
       );
       expect(chatSource).toMatch(
-        /<m\.section[\s\S]*?aria-hidden=\{!externalActive\}[\s\S]*?<h1[\s\S]*?>[\s\S]*?\{shell\.paneHeading\}[\s\S]*?<\/h1>/
+        /<section[\s\S]*?aria-hidden=\{!externalActive\}[\s\S]*?<h1[\s\S]*?>[\s\S]*?\{shell\.paneHeading\}[\s\S]*?<\/h1>/
       );
 
       for (const pane of ["chat", "feed", "splits", "tracker"] as const) {
