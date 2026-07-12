@@ -233,9 +233,9 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
   const showDivider = !isAwayFull && !isHomeFull && away > 0 && home > 0;
 
   return (
-    <div className="w-full flex flex-col gap-0.5">
+    <div className="bsp-row w-full flex flex-col gap-0.5">
       {/* Header row: AWAY_LABEL  [rowLabel]  HOME_LABEL */}
-      <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
+      <div className="bsp-hdr flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
@@ -243,6 +243,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       {/* Bar — flex row, NO overflow:hidden on outer container (that clips home label) */}
       {/* Each segment has its own overflow:hidden to clip text within its bounds */}
       <div
+        className="bsp-bar"
         style={{
           // Mobile pill height: fixed 20px (mobile baseline, not scaled — mobile is already at scale=1)
           height: 20,
@@ -256,38 +257,38 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       >
         {/* Away segment — label flush LEFT (only when NOT full-bar) */}
         {away > 0 && !isAwayFull && !isHomeFull && (
-          <div style={awaySegStyle} className="transition-all duration-700">
+          <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-700">
             <span style={MOBILE_AWAY_LABEL_STYLE}>{away}%</span>
           </div>
         )}
         {/* Divider */}
         {showDivider && (
-          <div style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0, alignSelf: 'stretch' }} />
+          <div className="bsp-div" style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0, alignSelf: 'stretch' }} />
         )}
         {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
         {home > 0 && !isHomeFull && !isAwayFull && (
-          <div style={homeSegStyle} className="transition-all duration-700">
+          <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-700">
             <span style={MOBILE_HOME_LABEL_STYLE}>{home}%</span>
           </div>
         )}
         {/* 100% full-bar cases — label centered — EXCLUSIVE: only one can render */}
         {isAwayFull && !isHomeFull && (
-          <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="transition-all duration-700">
+          <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--away transition-all duration-700">
             <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
           </div>
         )}
         {isHomeFull && !isAwayFull && (
-          <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="transition-all duration-700">
+          <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--home transition-all duration-700">
             <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
           </div>
         )}
         {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
         {isAwayFull && isHomeFull && (
           <>
-            <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px 0 0 4px' }} className="transition-all duration-700">
+            <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px 0 0 4px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
               <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
             </div>
-            <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0' }} className="transition-all duration-700">
+            <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0' }} className="bsp-seg bsp-seg--home transition-all duration-700">
               <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
             </div>
           </>
@@ -660,6 +661,8 @@ export function BettingSplitsPanel({
             const isAvailable = availableMarkets.includes(m);
             return (
               <button type="button" key={m}
+                className="bsp-toggle"
+                data-active={isActive}
                 onClick={() => handleMarketChange(m)}
                 disabled={!isAvailable}
                 style={{

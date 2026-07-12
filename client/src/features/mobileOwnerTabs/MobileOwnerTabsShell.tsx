@@ -66,7 +66,10 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
 
   return (
     <MobileOwnerAccessGate>
-      <div className="fixed inset-0 flex flex-col bg-[#0f0f1a]">
+      <div
+        className="fixed inset-0 flex flex-col"
+        style={{ background: "var(--dime-bg)" }}
+      >
         {/* Scrollable content area */}
         <div
           ref={contentRef}

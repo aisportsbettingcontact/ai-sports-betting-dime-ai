@@ -57,10 +57,15 @@ export function MobileOwnerDebugPanel() {
       {/* Floating trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 right-4 z-[100] w-8 h-8 rounded-full bg-amber-500/80 backdrop-blur flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+        className="fixed top-4 right-4 z-[100] w-8 h-8 rounded-full border flex items-center justify-center active:scale-90 transition-transform"
+        style={{
+          background: "var(--dime-surface-raised)",
+          borderColor: "var(--dime-border-strong)",
+          color: "var(--dime-text-secondary)",
+        }}
         aria-label="Toggle debug panel"
       >
-        <Bug className="w-4 h-4 text-white" />
+        <Bug className="w-4 h-4" />
       </button>
 
       {/* Debug panel overlay */}
@@ -69,7 +74,7 @@ export function MobileOwnerDebugPanel() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <Bug className="w-4 h-4 text-amber-400" />
+              <Bug className="w-4 h-4" style={{ color: "var(--dime-mint-text)" }} />
               <span className="text-sm font-bold text-white">Debug Panel</span>
               <span className="text-[10px] text-gray-400">
                 {entries.length} events

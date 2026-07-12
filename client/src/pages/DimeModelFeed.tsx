@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
+import { useTheme } from "@/contexts/ThemeContext";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { formatGameTime } from "@/lib/gameUtils";
 import {
@@ -302,23 +303,18 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   const [, navigate] = useLocation();
   const resolveRouteHref = props.resolveRouteHref ?? identityRouteHref;
   const parsed = parseFeedModelPath(props.sport, props.date);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    try {
-      const q = new URLSearchParams(window.location.search).get("theme");
-      if (q === "light" || q === "dark") return q;
-      const saved = localStorage.getItem("dime-feed-theme");
-      return saved === "light" ? "light" : "dark";
-    } catch {
-      return "dark";
-    }
-  });
+  // Theme is app-global (ThemeContext) so the choice follows the user across
+  // every tab and the bottom tab bar. ?theme= is still honored for embeds.
+  const { theme, setTheme } = useTheme();
   useEffect(() => {
     try {
-      localStorage.setItem("dime-feed-theme", theme);
+      const q = new URLSearchParams(window.location.search).get("theme");
+      if ((q === "light" || q === "dark") && setTheme) setTheme(q);
     } catch {
-      /* private mode */
+      /* no-op */
     }
-  }, [theme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sport = parsed?.sport ?? "MLB";
   const isoDate = parsed?.isoDate ?? "";
@@ -400,7 +396,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
           )}
           <button
             className="dmf-themebtn"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme?.(theme === "dark" ? "light" : "dark")}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
           >
             {theme === "dark" ? "Light" : "Dark"}
@@ -880,7 +876,7 @@ const DMF_CSS = `
   --dmf-page:#0B0B0F; --dmf-sidebar:#101016; --dmf-card:#16161C; --dmf-card-hi:#1A1A22;
   --dmf-border:#1E1E26; --dmf-border-hi:#24242E; --dmf-border-hover:#2E2E38;
   --dmf-t1:#EDEDF2; --dmf-t2:#C9C9D4; --dmf-t3:#9A9AA8; --dmf-t4:#6A6A78;
-  --dmf-mint:#45E0A8; --dmf-mint-dim:rgba(69,224,168,.10); --dmf-ring:rgba(69,224,168,.35);
+  --dmf-mint:#45E0A8; --dmf-mint-dim:rgba(69,224,168,.10); --dmf-ring:rgba(69,224,168,.36);
   --dmf-ease:cubic-bezier(.16,1,.3,1); --dmf-t:160ms;
   --dmf-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --dmf-sans:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -896,8 +892,8 @@ const DMF_CSS = `
   /* t4 #6A6A78 (not #9A9AA8): 10px data labels need AA — 4.9:1 on the
      #F4F4F6 card vs 2.5:1 for the lighter gray */
   --dmf-t1:#0B0B0F; --dmf-t2:#2A2A32; --dmf-t3:#55555E; --dmf-t4:#6A6A78;
-  --dmf-mint:#0FA36B; --dmf-mint-dim:rgba(15,163,107,.08); --dmf-ring:rgba(15,163,107,.35);
-  --dmf-shadow-input:0 1px 3px rgba(0,0,0,.12);
+  --dmf-mint:#0FA36B; --dmf-mint-dim:rgba(15,163,107,.08); --dmf-ring:rgba(69,224,168,.28);
+  --dmf-shadow-input:0 1px 3px rgba(11,11,15,.06);
 }
 .dmf-root *{box-sizing:border-box}
 .dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
