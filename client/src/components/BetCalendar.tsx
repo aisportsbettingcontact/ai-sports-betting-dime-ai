@@ -104,9 +104,9 @@ function getCellColors(units: number, maxMagnitude: number): {
 } {
   if (units === 0) {
     return {
-      bg: "rgba(39,39,42,0.5)",
-      textColor: "#71717a",
-      borderColor: "rgba(63,63,70,0.4)",
+      bg: "var(--bt-cell-empty, rgba(39,39,42,0.5))",
+      textColor: "var(--bt-text-muted, #71717a)",
+      borderColor: "var(--bt-cell-empty-border, rgba(63,63,70,0.4))",
     };
   }
 
@@ -115,27 +115,19 @@ function getCellColors(units: number, maxMagnitude: number): {
   // Apply square root to spread out the lower range (small wins still visible)
   const intensity = 0.15 + Math.sqrt(raw) * 0.85;
 
-  if (units > 0) {
-    // Neon green scale: #39FF14 at full intensity
-    const r = Math.round(57  * intensity);
-    const g = Math.round(255 * intensity);
-    const b = Math.round(20  * intensity);
-    return {
-      bg:          `rgba(${r},${g},${b},${0.12 + intensity * 0.25})`,
-      textColor:   intensity > 0.6 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},0.9)`,
-      borderColor: `rgba(${r},${g},${b},${0.15 + intensity * 0.35})`,
-    };
-  } else {
-    // Loss red scale: #FF3B3B at full intensity
-    const r = Math.round(255 * intensity);
-    const g = Math.round(59  * intensity);
-    const b = Math.round(59  * intensity);
-    return {
-      bg:          `rgba(${r},${g},${b},${0.12 + intensity * 0.25})`,
-      textColor:   intensity > 0.6 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},0.9)`,
-      borderColor: `rgba(${r},${g},${b},${0.15 + intensity * 0.35})`,
-    };
-  }
+  // Token-aware heat scale: base color is a --bt-* var (legacy literal
+  // fallback on desktop). Mixing toward black reproduces the old channel
+  // scaling; mixing toward transparent reproduces the old alpha.
+  const base = units > 0
+    ? "var(--bt-green, rgb(57,255,20))"
+    : "var(--bt-red, rgb(255,59,59))";
+  const scaled = `color-mix(in srgb, ${base} ${Math.round(intensity * 100)}%, black)`;
+  const pct = (a: number) => `${Math.round(a * 100)}%`;
+  return {
+    bg:          `color-mix(in srgb, ${scaled} ${pct(0.12 + intensity * 0.25)}, transparent)`,
+    textColor:   intensity > 0.6 ? scaled : `color-mix(in srgb, ${scaled} 90%, transparent)`,
+    borderColor: `color-mix(in srgb, ${scaled} ${pct(0.15 + intensity * 0.35)}, transparent)`,
+  };
 }
 
 /**
@@ -262,12 +254,12 @@ export function BetCalendar({
   return (
     <div
       style={{
-        background: "#0d0f0e",
+        background: "var(--bt-base, #0d0f0e)",
         border: "1px solid #1e231e",
         borderRadius: "6px",
         overflow: "hidden",
         userSelect: "none",
-        fontFamily: "'Barlow Condensed', sans-serif",
+        fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
       }}
     >
       {/* ── HEADER: Month + Year + Navigation ── */}
@@ -279,26 +271,26 @@ export function BetCalendar({
               <span style={{
                 fontSize: "28px",
                 fontWeight: 900,
-                color: "#f0f0f0",
+                color: "var(--bt-strong, #f0f0f0)",
                 letterSpacing: "-0.5px",
                 lineHeight: 1,
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
               }}>
                 {MONTH_NAMES[month - 1]}
               </span>
               <span style={{
                 fontSize: "16px",
                 fontWeight: 600,
-                color: "#4a5a4a",
-                fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+                color: "var(--bt-label, #4a5a4a)",
+                fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
               }}>
                 {year}
               </span>
             </div>
             <div style={{
               fontSize: "11px",
-              color: "#39FF14",
-              fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+              color: "var(--bt-green, #39FF14)",
+              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
               letterSpacing: "2px",
               marginTop: "3px",
               opacity: 0.8,
@@ -315,16 +307,16 @@ export function BetCalendar({
               aria-label="Previous month"
               style={{
                 width: "32px", height: "32px",
-                background: "#141614",
+                background: "var(--bt-card, #141614)",
                 border: "1px solid #2a2a2a",
                 borderRadius: "4px",
-                color: "#888",
+                color: "var(--bt-text-muted, #888)",
                 cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "all 150ms ease",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#1a1f1a"; (e.currentTarget as HTMLButtonElement).style.color = "#f0f0f0"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#141614"; (e.currentTarget as HTMLButtonElement).style.color = "#888"; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-hover, #1a1f1a)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-strong, #f0f0f0)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-card, #141614)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-text-muted, #888)"; }}
             >
               <ChevronLeft size={13} />
             </button>
@@ -335,16 +327,16 @@ export function BetCalendar({
               aria-label="Next month"
               style={{
                 width: "32px", height: "32px",
-                background: canGoNext ? "#141614" : "#0d0f0e",
+                background: canGoNext ? "var(--bt-card, #141614)" : "var(--bt-base, #0d0f0e)",
                 border: "1px solid #2a2a2a",
                 borderRadius: "4px",
-                color: canGoNext ? "#888" : "#2a2a2a",
+                color: canGoNext ? "var(--bt-text-muted, #888)" : "var(--bt-border2, #2a2a2a)",
                 cursor: canGoNext ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "all 150ms ease",
               }}
-              onMouseEnter={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "#1a1f1a"; (e.currentTarget as HTMLButtonElement).style.color = "#f0f0f0"; } }}
-              onMouseLeave={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "#141614"; (e.currentTarget as HTMLButtonElement).style.color = "#888"; } }}
+              onMouseEnter={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-hover, #1a1f1a)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-strong, #f0f0f0)"; } }}
+              onMouseLeave={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-card, #141614)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-text-muted, #888)"; } }}
             >
               <ChevronRight size={13} />
             </button>
@@ -355,7 +347,7 @@ export function BetCalendar({
       {/* ── MONTHLY SUMMARY BAR ── */}
       {!calendarQuery.isLoading && monthRecord && (monthRecord.wins + monthRecord.losses) > 0 && (
         <div style={{
-          background: "#141614",
+          background: "var(--bt-card, #141614)",
           borderBottom: "1px solid #1e231e",
           padding: "10px 18px",
           display: "grid",
@@ -364,52 +356,52 @@ export function BetCalendar({
         }}>
           {/* Record */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>RECORD</div>
-            <div style={{ fontSize: "13px", fontWeight: 700, color: "#d0d0d0", fontFamily: "'JetBrains Mono', monospace" }}>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>RECORD</div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--bt-text, #d0d0d0)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
               {monthRecord.wins}W–{monthRecord.losses}L
-              {monthRecord.pushes > 0 && <span style={{ color: "#888" }}>–{monthRecord.pushes}P</span>}
+              {monthRecord.pushes > 0 && <span style={{ color: "var(--bt-text-muted, #888)" }}>–{monthRecord.pushes}P</span>}
             </div>
           </div>
           {/* Win% */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>WIN%</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>WIN%</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
-              color: monthRecord.winPct >= 55 ? "#39FF14" : monthRecord.winPct >= 50 ? "#a3e635" : "#FF3B3B",
-              fontFamily: "'JetBrains Mono', monospace",
+              color: monthRecord.winPct >= 55 ? "var(--bt-green, #39FF14)" : monthRecord.winPct >= 50 ? "var(--bt-grade-b, #a3e635)" : "var(--bt-red, #FF3B3B)",
+              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
             }}>
               {monthRecord.winPct.toFixed(1)}%
             </div>
           </div>
           {/* Net Units */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>NET UNITS</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>NET UNITS</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
-              color: netUnits >= 0 ? "#39FF14" : "#FF3B3B",
-              fontFamily: "'JetBrains Mono', monospace",
+              color: netUnits >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
+              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
             }}>
               {fmtUnits(netUnits)}
             </div>
           </div>
           {/* ROI */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>ROI</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>ROI</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
-              color: monthRecord.roi >= 0 ? "#39FF14" : "#FF3B3B",
-              fontFamily: "'JetBrains Mono', monospace",
+              color: monthRecord.roi >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
+              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
             }}>
               {fmtPct(monthRecord.roi)}
             </div>
           </div>
           {/* Current Streak */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "#4a5a4a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace", marginBottom: "2px" }}>STREAK</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>STREAK</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
-              color: monthRecord.currentStreak?.startsWith("W") ? "#39FF14" : "#FF3B3B",
-              fontFamily: "'JetBrains Mono', monospace",
+              color: monthRecord.currentStreak?.startsWith("W") ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
+              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
             }}>
               {monthRecord.currentStreak ?? "—"}
             </div>
@@ -439,7 +431,7 @@ export function BetCalendar({
             <polyline
               points={sparkPoints}
               fill="none"
-              stroke={netUnits >= 0 ? "#39FF14" : "#FF3B3B"}
+              style={{ stroke: netUnits >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)" }}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -460,10 +452,10 @@ export function BetCalendar({
               textAlign: "center",
               fontSize: "10px",
               fontWeight: 700,
-              color: "#3a4a3a",
+              color: "var(--bt-dim, #3a4a3a)",
               letterSpacing: "2px",
               padding: "4px 0",
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
             }}>
               {d}
             </div>
@@ -477,7 +469,7 @@ export function BetCalendar({
               <div key={i} style={{
                 aspectRatio: "1",
                 borderRadius: "4px",
-                background: "rgba(39,39,42,0.4)",
+                background: "var(--bt-cell-empty, rgba(39,39,42,0.4))",
                 animation: "pulse 1.5s ease-in-out infinite",
               }} />
             ))}
@@ -516,19 +508,19 @@ export function BetCalendar({
                     style={{
                       aspectRatio: "1",
                       borderRadius: "4px",
-                      border: isToday ? "1px solid rgba(57,255,20,0.4)" : "1px solid transparent",
+                      border: isToday ? "1px solid color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 40%, transparent)" : "1px solid transparent",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: isToday ? "rgba(57,255,20,0.04)" : "transparent",
+                      background: isToday ? "color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 4%, transparent)" : "transparent",
                       animation: isToday ? "todayPulse 2s ease-in-out infinite" : undefined,
                     }}
                   >
                     <span style={{
                       fontSize: "11px",
-                      fontFamily: "'JetBrains Mono', monospace",
-                      color: isFuture ? "#1e261e" : "#2a3a2a",
+                      fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                      color: isFuture ? "var(--bt-border, #1e261e)" : "var(--bt-dimmer, #2a3a2a)",
                     }}>
                       {dayNum}
                     </span>
@@ -536,7 +528,7 @@ export function BetCalendar({
                       <span style={{
                         width: "4px", height: "4px",
                         borderRadius: "50%",
-                        background: "#f59e0b",
+                        background: "var(--bt-grade-c, #f59e0b)",
                         marginTop: "2px",
                       }} />
                     )}
@@ -556,7 +548,7 @@ export function BetCalendar({
                     aspectRatio: "1",
                     borderRadius: "4px",
                     border: isToday
-                      ? "1px solid rgba(57,255,20,0.7)"
+                      ? "1px solid color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 70%, transparent)"
                       : `1px solid ${borderColor}`,
                     background: bg,
                     display: "flex",
@@ -583,7 +575,7 @@ export function BetCalendar({
                     top: "3px",
                     left: "4px",
                     fontSize: "9px",
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
                     color: textColor,
                     opacity: 0.65,
                     lineHeight: 1,
@@ -595,7 +587,7 @@ export function BetCalendar({
                   <span style={{
                     fontSize: "clamp(8px, 1.8vw, 11px)",
                     fontWeight: 900,
-                    fontFamily: "'JetBrains Mono', monospace",
+                    fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
                     color: textColor,
                     lineHeight: 1,
                     letterSpacing: "-0.5px",
@@ -612,7 +604,7 @@ export function BetCalendar({
                       bottom: "2px",
                       right: "3px",
                       fontSize: "8px",
-                      fontFamily: "'JetBrains Mono', monospace",
+                      fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
                       color: textColor,
                       opacity: 0.5,
                       lineHeight: 1,
@@ -662,7 +654,7 @@ export function BetCalendar({
                       width: "4px",
                       height: "4px",
                       borderRadius: "50%",
-                      background: "#f59e0b",
+                      background: "var(--bt-grade-c, #f59e0b)",
                     }} title={`${dayData.pending} pending`} />
                   )}
                 </div>
@@ -680,22 +672,22 @@ export function BetCalendar({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          background: "#0d0f0e",
+          background: "var(--bt-base, #0d0f0e)",
         }}>
           <div style={{ display: "flex", gap: "16px" }}>
             <div>
-              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>BEST STREAK </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#39FF14", fontFamily: "'JetBrains Mono', monospace" }}>W{monthRecord.longestWinStreak}</span>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>BEST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>W{monthRecord.longestWinStreak}</span>
             </div>
             <div>
-              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>WORST STREAK </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#FF3B3B", fontFamily: "'JetBrains Mono', monospace" }}>L{monthRecord.longestLossStreak}</span>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>WORST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-red, #FF3B3B)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>L{monthRecord.longestLossStreak}</span>
             </div>
           </div>
           {monthRecord.bestDayUnits !== null && (
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: "9px", color: "#3a4a3a", letterSpacing: "1.5px", fontFamily: "'JetBrains Mono', monospace" }}>BEST DAY </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#39FF14", fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>BEST DAY </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
                 {fmtUnits(monthRecord.bestDayUnits)}
               </span>
             </div>
@@ -706,7 +698,7 @@ export function BetCalendar({
       {/* ── EMPTY STATE ── */}
       {!calendarQuery.isLoading && (!monthRecord || (monthRecord.wins + monthRecord.losses) === 0) && (
         <div style={{ padding: "20px 18px", textAlign: "center" }}>
-          <span style={{ fontSize: "11px", color: "#3a4a3a", fontFamily: "'JetBrains Mono', monospace" }}>
+          <span style={{ fontSize: "11px", color: "var(--bt-dim, #3a4a3a)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
             NO GRADED BETS FOR THIS MONTH
           </span>
         </div>
@@ -715,8 +707,8 @@ export function BetCalendar({
       {/* ── CSS animations ── */}
       <style>{`
         @keyframes todayPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,20,0); }
-          50%       { box-shadow: 0 0 0 3px rgba(57,255,20,0.25); }
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50%       { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 25%, transparent); }
         }
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }

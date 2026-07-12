@@ -31,7 +31,7 @@ import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { getGameTeamColorsClient } from "@shared/teamColors";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict } from '@/lib/edgeUtils';
+import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 import { formatGameTime, toNum, spreadSign } from '@/lib/gameUtils';
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -222,7 +222,7 @@ function MobileTeamNameBlock({
       <span style={{
         fontSize: NAME_FONT,
         fontWeight: 700,
-        color: '#ffffff',
+        color: 'var(--dime-text-primary, #ffffff)',
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
         whiteSpace: 'nowrap',
@@ -234,7 +234,7 @@ function MobileTeamNameBlock({
           style={{
             fontSize: NICK_FONT,
             fontWeight: 600,
-            color: '#ffffff',
+            color: 'var(--dime-text-primary, #ffffff)',
             letterSpacing: '0.02em',
             textTransform: 'none',
             whiteSpace: 'nowrap',
@@ -2648,6 +2648,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       <div className="flex items-center gap-1 mb-1">
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
+            className="gc-star"
+            data-favorited={isFavorited}
             aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             style={{
@@ -2655,7 +2657,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               padding: "2px 3px", lineHeight: 1, flexShrink: 0,
               minWidth: 44, minHeight: 44,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: isFavorited ? "#FFD700" : "rgba(255,255,255,0.65)",
+              color: isFavorited ? "var(--dime-mint-text, #FFD700)" : "var(--dime-text-muted, rgba(255,255,255,0.65))",
               opacity: 1,
               transition: "color 0.15s, transform 0.15s, filter 0.15s",
               filter: isFavorited ? "drop-shadow(0 0 3px #FFD700)" : "none",
@@ -2664,8 +2666,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24"
-              fill={isFavorited ? "#FFD700" : "none"}
-              stroke={isFavorited ? "#FFD700" : "rgba(255,255,255,0.85)"}
+              style={{ fill: isFavorited ? "var(--dime-mint, #FFD700)" : "none", stroke: isFavorited ? "var(--dime-mint, #FFD700)" : "currentColor" }}
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -2677,7 +2678,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             {game.gameClock && (
               <span className="text-[9px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
             )}
-            <span className="flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#39FF14" }}>
+            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#39FF14" }}>
               <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#39FF14" }} />
               LIVE
             </span>
@@ -2775,6 +2776,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Star / Favorite button — always left of status */}
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
+            className="gc-star"
+            data-favorited={isFavorited}
             aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             style={{
@@ -2789,19 +2792,18 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: isFavorited ? "#FFD700" : "rgba(255,255,255,0.65)",
+              color: isFavorited ? "var(--dime-mint-text, #FFD700)" : "var(--dime-text-muted, rgba(255,255,255,0.65))",
               opacity: 1,
               transition: "color 0.15s, transform 0.15s, filter 0.15s",
               // Change D: larger glow to match 2× star size on desktop
-              filter: isFavorited ? (isDesktop ? "drop-shadow(0 0 5px rgba(255,215,0,0.75))" : "drop-shadow(0 0 2px rgba(255,215,0,0.6))") : "none",
+              filter: "none",
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; if (!isFavorited) e.currentTarget.style.color = "rgba(255,255,255,0.95)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; if (!isFavorited) e.currentTarget.style.color = "rgba(255,255,255,0.65)"; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-secondary, rgba(255,255,255,0.95))"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-muted, rgba(255,255,255,0.65))"; }}
           >
             {/* Desktop: 24px star (1.5× mobile 16px) */}
             <svg width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} viewBox="0 0 24 24"
-              fill={isFavorited ? "#FFD700" : "none"}
-              stroke={isFavorited ? "#FFD700" : "rgba(255,255,255,0.85)"}
+              style={{ fill: isFavorited ? "var(--dime-mint, #FFD700)" : "none", stroke: isFavorited ? "var(--dime-mint, #FFD700)" : "currentColor" }}
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -2819,9 +2821,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
                 style={{
                   fontSize: LIVE_FONT_SIZE,
-                  background: "rgba(57,255,20,0.12)",
-                  color: "#39FF14",
-                  border: "1px solid rgba(57,255,20,0.4)",
+                  background: "var(--dime-mint-dim, rgba(57,255,20,0.12))",
+                  color: "var(--dime-mint-text, #39FF14)",
+                  border: "1px solid var(--dime-mint-border, rgba(57,255,20,0.4))",
                   letterSpacing: "0.10em",
                   borderRadius: '14px',
                   gap: '8px',
@@ -2830,7 +2832,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               >
                 <span
                   className="rounded-full animate-pulse inline-block flex-shrink-0"
-                  style={{ width: '9px', height: '9px', background: "#39FF14" }}
+                  style={{ width: '9px', height: '9px', background: "var(--dime-mint, #39FF14)" }}
                 />
                 LIVE
               </span>
@@ -2842,9 +2844,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 className="px-1.5 py-0.5 font-bold tracking-wide flex-shrink-0 flex items-center"
                 style={{
                   fontSize: LIVE_FONT_SIZE,
-                  background: "rgba(57,255,20,0.12)",
-                  color: "#39FF14",
-                  border: "1px solid rgba(57,255,20,0.4)",
+                  background: "var(--dime-mint-dim, rgba(57,255,20,0.12))",
+                  color: "var(--dime-mint-text, #39FF14)",
+                  border: "1px solid var(--dime-mint-border, rgba(57,255,20,0.4))",
                   letterSpacing: "0.08em",
                   borderRadius: '12px',
                   gap: '8px',
@@ -2867,9 +2869,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             className="px-1.5 py-0.5 font-black tracking-widest"
             style={{
               fontSize: FINAL_FONT_SIZE,
-              background: isDesktop ? "rgba(57,255,20,0.12)" : "rgba(255,255,255,0.07)",
-              color: isDesktop ? "#39FF14" : "hsl(var(--muted-foreground))",
-              border: isDesktop ? "1px solid rgba(57,255,20,0.4)" : "none",
+              background: "var(--dime-surface-raised, rgba(255,255,255,0.07))",
+              color: "var(--dime-text-secondary, #d0d0d4)",
+              border: isDesktop ? "1px solid var(--dime-border-strong, rgba(255,255,255,0.15))" : "none",
               borderRadius: '12px',
               lineHeight: 1,
             }}
@@ -3110,6 +3112,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         transition={{ duration: 0.12, ease: "easeOut" }}
         className="w-full relative"
         ref={cardRef}
+        // Inert hook: mobile CSS (dime-mobile.css) maps edge tiers to the
+        // brand's mint/grey signal scale. Desktop rendering is untouched.
+        data-edge-tier={maxDiff >= EDGE_THRESHOLD_PP ? "signal" : "none"}
         style={{
           background: "hsl(var(--card))",
           borderTop: "1px solid hsl(var(--border))",
@@ -3398,9 +3403,10 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
 
           {/* Splits mode: fixed CompactScore column | scrollable Splits column */}
           {mode === "splits" && (
-            <div style={{ display: "grid", gridTemplateColumns: "clamp(170px, 14vw, 220px) 1fr", width: "100%" }}>
+            <div className="gc-splitgrid" style={{ display: "grid", gridTemplateColumns: "clamp(170px, 14vw, 220px) 1fr", width: "100%" }}>
               {/* Fixed compact score — NOT inside scroll container */}
               <div
+                className="gc-frozen"
                 style={{
                   gridColumn: "1",
                   borderRight: "1px solid hsl(var(--border) / 0.5)",
@@ -3418,7 +3424,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                   overflowY: "hidden",
                 }}
               >
-                <div style={{ minWidth: 260 }}>
+                <div className="gc-scrollinner" style={{ minWidth: 260 }}>
                   <BettingSplitsPanel
                     gameId={game.id}
                     game={game}

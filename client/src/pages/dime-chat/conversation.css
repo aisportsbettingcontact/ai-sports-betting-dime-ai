@@ -511,3 +511,27 @@ button.dc-sidebar-row {
     transform: translateX(-50%);
   }
 }
+
+/* ----------------------------------------------------------------------------
+   11. OWNER-ONLY ACCESS NOTICE (product requirement 2026-07-12) — rendered
+       directly below the composer pill when a non-owner tries to send.
+       Hardcoded colors per requirement: black text on light mode, white text
+       on dark mode. The zones that lay out as flex rows (conversation state,
+       mobile) wrap the full-width notice onto its own line below the pill.
+   -------------------------------------------------------------------------- */
+.dc-composer-zone {
+  flex-wrap: wrap;
+}
+.dc-access-notice {
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.theme-dark .dc-access-notice {
+  color: #ffffff;
+}
+.theme-light .dc-access-notice {
+  color: #000000;
+}

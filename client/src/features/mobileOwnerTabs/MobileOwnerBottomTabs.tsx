@@ -3,23 +3,27 @@
  * ═════════════════════
  * Fixed bottom navigation bar with 5 tabs.
  *
- * DESIGN SPEC (PERMANENT — DO NOT CHANGE):
- * ─────────────────────────────────────────
- * Background:      #000000 (pure black, NO navy, NO blur, NO transparency)
- * Border-top:      1px solid rgba(255, 255, 255, 0.08)
- * Active icon:     #39FF14 (neon green)
- * Active label:    #FFFFFF (white)
- * Inactive icon:   rgba(255, 255, 255, 0.55) (muted gray)
- * Inactive label:  rgba(255, 255, 255, 0.55) (muted gray)
- * Active dot:      #39FF14, 4px circle
- * Icon size:       22px
- * Label:           11px, weight 600 active / 500 inactive
- * Height:          60px
- * Touch targets:   44px minimum (Apple HIG)
- * Safe area:       env(safe-area-inset-bottom)
+ * DESIGN SPEC — Dime brand law (design-system/dime-ai/MASTER.md):
+ * ────────────────────────────────────────────────────────────────
+ * All colors resolve from the global `--dime-*` tokens
+ * (client/src/styles/dime-mobile.css), so the bar follows the
+ * app theme (html.dark) with no state wiring:
+ *   Background:      --dime-surface-sidebar (#101016 dark / #F4F4F6 light)
+ *   Border-top:      1px solid --dime-border (#24242E / #E4E4E9)
+ *   Active icon:     --dime-mint-text (#45E0A8 dark / #0FA36B light — the
+ *                    mint-text-on-light contrast rule, MASTER.md:47)
+ *   Active label:    --dime-text-primary
+ *   Inactive:        --dime-text-secondary
+ *   Active dot:      --dime-mint 4px circle; on light it carries the brand
+ *                    coin-dot hairline (--dime-coin-keyline)
+ *   Motion:          160ms cubic-bezier(0.16,1,0.3,1); disabled under
+ *                    prefers-reduced-motion
+ *   Icon size 22px · label 11px Familjen Grotesk (600 active / 500 inactive)
+ *   Height 60px · 44px touch targets · env(safe-area-inset-bottom)
  *
  * ALL COLORS USE INLINE style={{}} — NOT Tailwind classes.
- * This prevents any CSS specificity override.
+ * This prevents any CSS specificity override. Neon `#39FF14` and pure
+ * black `#000000` are the pre-rebrand legacy spec — do not reintroduce.
  */
 
 import { useLocation } from "wouter";
@@ -27,28 +31,43 @@ import {
   Newspaper,
   BarChart3,
   MessageSquare,
-  FlaskConical,
+  TrendingUp,
   User,
 } from "lucide-react";
 import { type MobileOwnerTabId, MOBILE_OWNER_TABS } from "./config";
 import { mobileOwnerTabLogger } from "./logger";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// ─── Design tokens (single source of truth) ─────────────────────────────────
+// ─── Design tokens (single source of truth: --dime-* in dime-mobile.css) ────
 const COLORS = {
-  BG: "#000000",
-  BORDER: "rgba(255, 255, 255, 0.08)",
-  ACTIVE_ICON: "#39FF14",
-  ACTIVE_LABEL: "#FFFFFF",
-  INACTIVE: "rgba(255, 255, 255, 0.55)",
-  DOT: "#39FF14",
+  BG: "var(--dime-surface-sidebar)",
+  BORDER: "var(--dime-border)",
+  ACTIVE_ICON: "var(--dime-mint-text)",
+  ACTIVE_LABEL: "var(--dime-text-primary)",
+  INACTIVE: "var(--dime-text-secondary)",
+  DOT: "var(--dime-mint)",
 } as const;
+
+const BRAND_TRANSITION = "var(--dime-t) var(--dime-ease)";
+
+/** MASTER.md motion law: respect prefers-reduced-motion (disable transitions). */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => setReduced(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return reduced;
+}
 
 const ICON_MAP: Record<string, React.FC<{ className?: string; strokeWidth?: number }>> = {
   Newspaper,
   BarChart3,
   MessageSquare,
-  FlaskConical,
+  TrendingUp,
   User,
 };
 
@@ -59,6 +78,7 @@ interface MobileOwnerBottomTabsProps {
 export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsProps) {
   const [location, navigate] = useLocation();
   const renderedRef = useRef(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   // Log initial render + verify design tokens on mount
   useEffect(() => {
@@ -224,7 +244,7 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
                 cursor: tab.disabled ? "not-allowed" : "pointer",
                 opacity: tab.disabled ? 0.4 : 1,
                 WebkitTapHighlightColor: "transparent",
-                transition: "transform 150ms ease-out",
+                transition: reducedMotion ? "none" : `transform ${BRAND_TRANSITION}`,
               }}
             >
               {Icon && (
@@ -232,8 +252,10 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
                   style={{
                     display: "inline-flex",
                     color: iconColor,
-                    transform: isActive ? "scale(1.05)" : "scale(1)",
-                    transition: "transform 150ms ease-out, color 150ms ease-out",
+                    transform: isActive && !reducedMotion ? "scale(1.05)" : "scale(1)",
+                    transition: reducedMotion
+                      ? "none"
+                      : `transform ${BRAND_TRANSITION}, color ${BRAND_TRANSITION}`,
                   }}
                 >
                   <Icon
@@ -244,12 +266,13 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
               )}
               <span
                 style={{
+                  fontFamily: "var(--dime-font-sans)",
                   fontSize: "11px",
                   fontWeight: isActive ? 600 : 500,
                   letterSpacing: "0.01em",
                   lineHeight: 1.2,
                   color: labelColor,
-                  transition: "color 150ms ease-out",
+                  transition: reducedMotion ? "none" : `color ${BRAND_TRANSITION}`,
                 }}
               >
                 {tab.label}
@@ -265,6 +288,9 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
                     height: "4px",
                     borderRadius: "999px",
                     backgroundColor: COLORS.DOT,
+                    // Brand coin-dot rule: mint dot needs a near-black hairline
+                    // on light surfaces (token is `none` on dark).
+                    boxShadow: "var(--dime-coin-keyline)",
                   }}
                 />
               )}
@@ -284,7 +310,9 @@ function getActiveTab(path: string): MobileOwnerTabId | null {
   // keeps its tab lit — e.g. /feed/model/wc-07-11-2026 is still "feed").
   if (path.startsWith("/feed/model")) return "feed";
   if (path.startsWith("/betting-splits")) return "splits";
-  if (path === "/m/props" || path.startsWith("/m/props/")) return "props";
+  if (path === "/m/tracker" || path.startsWith("/m/tracker/")) return "tracker";
+  // Legacy slug — /m/props redirects to /m/tracker; keep the tab lit meanwhile.
+  if (path === "/m/props" || path.startsWith("/m/props/")) return "tracker";
 
   // Exact/prefix match against configured tab paths (/chat, /profile, /m/*)
   for (const tab of MOBILE_OWNER_TABS) {

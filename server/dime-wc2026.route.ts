@@ -35,6 +35,7 @@ import { ENV } from "./_core/env";
 import { getDb } from "./db";
 import { getAppUserById } from "./db";
 import { sql } from "drizzle-orm";
+import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const MODEL = "claude-fable-5";
@@ -109,15 +110,16 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
   }
 }
 
-// ─── Subscription Check ──────────────────────────────────────────────────────
+// ─── Entitlement Check ───────────────────────────────────────────────────────
+// OWNER-ONLY LOCKDOWN (2026-07-12): the Dime model answers role="owner"
+// accounts only (@prez, @sippi) — see server/dimeModelAccess.ts. Admins and
+// Stripe subscribers are NOT entitled while the lockdown is in effect.
 async function checkSubscription(userId: number): Promise<{ valid: boolean; reason?: string }> {
   const user = await getAppUserById(userId);
   if (!user) return { valid: false, reason: "USER_NOT_FOUND" };
   if (!user.hasAccess) return { valid: false, reason: "ACCESS_REVOKED" };
   if (user.expiryDate && Date.now() > user.expiryDate) return { valid: false, reason: "SUBSCRIPTION_EXPIRED" };
-  // Must have active Stripe subscription OR be owner/admin
-  if (user.role === "owner" || user.role === "admin") return { valid: true };
-  if (!user.stripeSubscriptionId) return { valid: false, reason: "NO_SUBSCRIPTION" };
+  if (!canAccessDimeModel(user)) return { valid: false, reason: "OWNER_ONLY" };
   return { valid: true };
 }
 
@@ -405,7 +407,7 @@ dimeWc2026Router.post("/wc2026", async (req: Request, res: Response) => {
       requestId, userId: userIdStr, authStatus: "PASSED",
       entitlementStatus: "REJECTED", refusalReason: "SUBSCRIPTION_REQUIRED",
     });
-    res.status(403).json({ error: "Active subscription required.", requestId, mode: "REFUSE", reason: "SUBSCRIPTION_REQUIRED" });
+    res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE, requestId, mode: "REFUSE", reason: "SUBSCRIPTION_REQUIRED" });
     return;
   }
   dimeLog("step.4.subscription_PASSED", requestId);
