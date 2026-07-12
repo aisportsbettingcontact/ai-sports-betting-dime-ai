@@ -1,20 +1,26 @@
 /**
- * ciTestGuard.ts — shared skip-guard for tests scoped out of CI.
+ * ciTestGuard.ts — shared skip-guards for environment-bound tests.
  *
- * Two categories of tests must not run in GitHub Actions:
- *   1. Presence-probes — assert that a real credential exists in the env
- *      (ciSecrets, vsinCredentials, claude:ANTHROPIC_API_KEY). Valuable on
- *      a developer/operator machine; meaningless noise in CI where those
- *      secrets are deliberately not configured.
- *   2. Live-network credential checks — authenticate against external
- *      services (Gmail SMTP, Discord REST) or need a real database.
+ * Two categories of tests cannot run in this repository's GitHub Actions
+ * environment as it actually exists (verified 2026-07-12: only 7 Actions
+ * secrets are configured; DATABASE_URL, DISCORD_*, VSIN_*, GMAIL_APP_PASSWORD,
+ * NBA_SHEET_ID, PUBLIC_ORIGIN and the OAuth values documented in ci.yml are
+ * NOT among them):
  *
- * Usage (mirrors the graceful-skip pattern in fileParser.test.ts):
- *   import { IS_CI } from "./_core/ciTestGuard";
- *   describe.skipIf(IS_CI)("…", () => { … });   // whole suite
- *   it.skipIf(IS_CI)("…", () => { … });          // single probe
+ *   1. Presence/liveness probes — assert that a real credential exists or
+ *      authenticates (ciSecrets, vsinCredentials, email SMTP, Discord REST,
+ *      claude credentials). Operator-side checks; guard with IS_CI.
+ *   2. Real-database suites — need a MySQL DATABASE_URL. These are NOT
+ *      operator-only: the dedicated `db-tests` CI job provides a MySQL
+ *      service container and sets DB_TESTS=1, so they run there. Guard with
+ *      SKIP_DB_IN_CI so they skip only in the secretless main vitest job.
  *
- * GitHub Actions always sets CI=true; local runs normally don't, so the
- * probes still execute wherever real credentials are expected to exist.
+ * Every skip declared here must have a matching entry in
+ * vitest.environment-failure-allowlist.json (expectedCiSkips), which
+ * scripts/check-environment-failures.mjs enforces — an undeclared skip fails
+ * the CI gate instead of passing silently.
  */
 export const IS_CI = process.env.CI === "true" || process.env.CI === "1";
+
+/** Real-DB suites run in CI only inside the db-tests job (MySQL service). */
+export const SKIP_DB_IN_CI = IS_CI && process.env.DB_TESTS !== "1";

@@ -52,3 +52,13 @@ export function parseDimeProductRoute(
 export function isDimeProductLocation(location: string): boolean {
   return parseDimeProductRoute(location) !== null;
 }
+
+/**
+ * Chat is the one product surface that must own a stable mount at EVERY
+ * viewport width (see DimeAppShell's `mode` prop) — an active SSE stream and
+ * the composer draft must survive a resize, not just navigation. Every other
+ * pane is shell-owned only when the shared >=768px viewport claims it.
+ */
+export function isChatLocation(location: string): boolean {
+  return parseDimeProductRoute(location)?.pane === "chat";
+}

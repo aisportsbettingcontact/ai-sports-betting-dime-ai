@@ -60,7 +60,7 @@
  *  afterAll deletes all such rows to prevent DB pollution.
  */
 import { describe, it, expect, afterAll, vi, beforeEach } from "vitest";
-import { IS_CI } from "./_core/ciTestGuard";
+import { SKIP_DB_IN_CI } from "./_core/ciTestGuard";
 
 // ── Email mock — prevent SMTP traffic during test runs ─────────────────────────
 // requestPasswordReset calls import('../email') as a dynamic import.
@@ -186,7 +186,7 @@ beforeEach(async () => {
 // ── Test suite ─────────────────────────────────────────────────────────────────
 // Uses a real database via getDb() — no DATABASE_URL in CI.
 // TODO: wire dedicated CI test database, then re-enable.
-describe.skipIf(IS_CI)("passwordReset — requestPasswordReset + resetPassword invariants (real DB)", () => {
+describe.skipIf(SKIP_DB_IN_CI)("passwordReset — requestPasswordReset + resetPassword invariants (real DB)", () => {
 
   // ── requestPasswordReset — token generation ────────────────────────────────
 

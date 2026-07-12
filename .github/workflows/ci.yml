@@ -5,24 +5,26 @@
 #   - Every pull request targeting main (pre-merge gate)
 #   - Manual dispatch (on-demand audit)
 #
-# Stages (run in order, each must pass before the next begins):
+# Stages:
 #   1. security-audit   — pnpm audit --audit-level=high (blocks on HIGH or CRITICAL CVEs)
 #   2. typecheck        — tsc --noEmit (zero TypeScript errors required)
-#   3. test             — vitest run (all 435 tests must pass)
+#   3. test             — gated vitest run: zero failures, and every skipped
+#                         suite must be declared (with a reason) in
+#                         vitest.environment-failure-allowlist.json, enforced
+#                         by scripts/check-environment-failures.mjs
+#   3b. db-tests        — the five real-database suites against an isolated
+#                         MySQL service container (no repository secrets
+#                         required; the container is job-local)
+#   3c. build           — production client build + preview-activation scan
+#                         (scripts/verify-preview-production.mjs)
 #
-# Secrets required in GitHub repository settings:
-#   (Settings → Secrets and variables → Actions → New repository secret)
-#
-#   DATABASE_URL        — MySQL/TiDB connection string
-#                         Format: mysql://user:password@host:port/database
-#   APP_SESSION_SECRET  — Session cookie signing secret (min 44 chars)
-#   PUBLIC_ORIGIN       — Canonical public origin, no trailing slash
-#                         Value: https://aisportsbettingmodels.com
-#   VITE_APP_ID         — Manus OAuth application ID
-#   OAUTH_SERVER_URL    — Manus OAuth backend base URL
-#                         Value: https://api.manus.im
-#   OWNER_OPEN_ID       — Owner's Manus open ID
-#   NBA_SHEET_ID        — Google Sheets ID for NBA model sync (44-char base64url string)
+# Secrets: the env block below documents the FULL set the suite can consume,
+# but as of 2026-07-12 the repository configures only a subset (verified via
+# the Actions secrets API: APP_SESSION_SECRET, CRON_SECRET, JWT_SECRET,
+# RAILWAY_API_TOKEN, RAILWAY_APP_URL, TARGET_DATABASE_URL, VERCEL_TOKEN).
+# Unconfigured names inject empty strings; the suites that need them guard
+# themselves and their skips are declared and machine-checked. Provisioning
+# the remaining secrets turns those probes back on without workflow changes.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -199,10 +201,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: typecheck
     env:
-      # All secrets required by the test suite are injected from GitHub Secrets.
-      # Tests that require DB connectivity use DATABASE_URL.
-      # Tests that require auth use APP_SESSION_SECRET.
-      # Tests that require Discord OAuth use PUBLIC_ORIGIN + DISCORD_* vars.
+      # Full env surface the suite can consume. NOTE: most of these secrets
+      # are NOT configured in this repository (see header) — unconfigured
+      # names inject empty strings, the affected suites skip themselves, and
+      # the env-gate requires every such skip to be declared.
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APP_SESSION_SECRET: ${{ secrets.APP_SESSION_SECRET }}
       PUBLIC_ORIGIN: ${{ secrets.PUBLIC_ORIGIN }}
@@ -238,37 +240,131 @@ jobs:
       - name: "[STEP] Install dependencies (frozen lockfile)"
         run: pnpm install --frozen-lockfile
 
-      - name: "[STEP] Run Vitest test suite — all tests must pass"
-        # vitest run: executes all test files once (non-watch mode).
-        # --reporter=verbose: prints each test name and result for full traceability.
-        # --coverage is intentionally omitted here to keep CI fast; run locally
-        # with `pnpm test --coverage` for coverage reports.
-        #
-        # [VERIFY] All 458 tests must pass. Any failure blocks the merge.
-        # Test categories: ciSecrets (validates all GitHub secrets are present),
-        # auth, fileParser, strikeoutProps, kenpomCredentials, nbaSheetId,
-        # vsinCredentials, discordAuth, tokenVersion, and more.
+      - name: "[STEP] Run gated Vitest suite — zero failures, no undeclared skips"
+        # scripts/check-environment-failures.mjs consumes the JSON reporter
+        # output. CI profile: any failure fails; any skip not declared in
+        # vitest.environment-failure-allowlist.json (expectedCiSkips) fails.
+        # Dependabot actors are evaluated with the local profile because
+        # repository secrets are structurally absent for them.
         run: |
-          echo "[INPUT] Running vitest run --reporter=verbose..."
-          pnpm test -- --reporter=verbose 2>&1 | tee test-report.txt
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "[STATE] Vitest exit code: $EXIT_CODE"
-          # Extract pass/fail summary from output
-          PASSED=$(grep -oP '\d+ passed' test-report.txt | tail -1 || echo "unknown")
-          FAILED=$(grep -oP '\d+ failed' test-report.txt | tail -1 || echo "0")
-          echo "[STATE] Tests passed: $PASSED | Tests failed: $FAILED"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "[OUTPUT] FAIL — One or more tests failed"
-            echo "[VERIFY] Review test-report.txt for failure details"
-            exit $EXIT_CODE
-          fi
-          echo "[OUTPUT] PASS — All tests passed: $PASSED"
-          echo "[VERIFY] Full test suite clean"
+          pnpm run test:gated:ci 2>&1 | tee test-report.txt
+          exit ${PIPESTATUS[0]}
 
-      - name: "[OUTPUT] Upload test report as artifact"
+      - name: "[OUTPUT] Upload test + gate reports as artifacts"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: test-report.txt
+          path: |
+            test-report.txt
+            env-gate-report.json
+            vitest-results.json
           retention-days: 30
+
+  # ─── Stage 3b: Real-database suites (isolated MySQL service) ──────────────
+  # These five suites cover login cookies, registration, password reset,
+  # Stripe account setup auto-login, and tokenVersion force-logout. They are
+  # guarded by SKIP_DB_IN_CI, so they skip in the secretless job above and run
+  # here against a job-local MySQL container — no repository secrets involved.
+  db-tests:
+    name: DB Tests
+    runs-on: ubuntu-latest
+    needs: typecheck
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "1"
+          MYSQL_DATABASE: dime_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: mysql://root@127.0.0.1:3306/dime_test
+      DB_TESTS: "1"
+      NODE_ENV: test
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      # Schema comes from `drizzle-kit push` (the current TS schema), NOT
+      # `drizzle-kit migrate`: the checked-in migration history is not
+      # replayable from scratch (0097 and 0104 both CREATE TABLE
+      # wc2026_matches — proven by this job's first run on PR #84). Production
+      # never replays history either; db-push.yml applies increments to the
+      # long-lived database. Recorded in
+      # docs/remediation/2026-07-12-pr70/final-report.md (finding 11).
+      - name: "[STEP] Provision the current schema on the isolated database"
+        run: pnpm exec drizzle-kit push --force
+
+      # --no-file-parallelism: the five suites share ONE database and
+      # tokenVersion.db.test.ts performs a global mutation
+      # (incrementAllTokenVersions bumps EVERY user's tokenVersion), which
+      # invalidates other suites' live sessions mid-test when files run in
+      # parallel workers. Proven by this job's second run on PR #84:
+      # register [ER-1] got "Session invalidated" (jwt.tv=1 db.tv=2) instead
+      # of CONFLICT while the tokenVersion suite logged "affected 17 users".
+      - name: "[STEP] Run the five real-database suites"
+        run: |
+          pnpm exec vitest run --no-file-parallelism \
+            server/appUsers.login.test.ts \
+            server/appUsers.register.test.ts \
+            server/completeAccountSetup.test.ts \
+            server/passwordReset.test.ts \
+            server/tokenVersion.db.test.ts \
+            --reporter=verbose 2>&1 | tee db-test-report.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: "[OUTPUT] Upload DB test report"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-test-report
+          path: db-test-report.txt
+          retention-days: 30
+
+  # ─── Stage 3c: Production build + preview-activation gate ─────────────────
+  build:
+    name: Build & Preview Gate
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Build production client"
+        run: pnpm run build:client
+
+      - name: "[VERIFY] Preview activation is dead in production output"
+        run: node scripts/verify-preview-production.mjs dist/public
+
+      - name: "[VERIFY] Bundle budget"
+        run: pnpm run check:bundle
