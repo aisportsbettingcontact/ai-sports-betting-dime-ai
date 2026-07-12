@@ -31,6 +31,21 @@ account menu — while keeping the remediation architecture: no framer-motion on
 reintroduced). One test updated honestly: comingSoonGate.test.ts pinned the removed
 standalone call site; the DEV-gating contract it proves is unchanged and still asserted.
 
+## Finding 11 (NEW, discovered by this branch's own CI): migration history is not replayable
+
+The db-tests job's first run (PR #84) failed at `drizzle-kit migrate` on a fresh
+mysql:8 database: `Table 'wc2026_matches' already exists` — migrations
+`drizzle/0097_happy_yellow_claw.sql` and `drizzle/0104_outgoing_night_thrasher.sql`
+both CREATE that table. No environment had ever replayed the history from scratch
+(production's db-push.yml applies increments to the long-lived database), so the
+defect was invisible until an isolated database existed. Status: VERIFIED_DEFECT,
+worked around — the db-tests job and scripts/test-db-local.sh now provision the test
+database from the current TS schema (`drizzle-kit push --force`), which matches what
+production effectively runs. The history files themselves are production's deployment
+path and were deliberately NOT edited on this branch; repairing them (e.g., making
+0104 idempotent) is an owner decision. Until then, a from-scratch environment cannot
+be built via `migrate`.
+
 ## Final verification matrix (clean checkout of a76b6841, frozen install)
 
 | Gate | Command | Result |

@@ -52,8 +52,8 @@ for _ in $(seq 1 30); do [ -S "$SOCKET" ] && break; sleep 1; done
 
 "$MYSQL" --socket="$SOCKET" -u root -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 
-echo "[db-local] applying migrations"
-DATABASE_URL="$DATABASE_URL" pnpm exec drizzle-kit migrate
+echo "[db-local] provisioning current schema (push, not migrate: history is not replayable from scratch — see ci.yml db-tests job)"
+DATABASE_URL="$DATABASE_URL" pnpm exec drizzle-kit push --force
 
 echo "[db-local] running the five real-database suites"
 DATABASE_URL="$DATABASE_URL" pnpm exec vitest run \
