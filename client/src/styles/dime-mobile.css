@@ -336,7 +336,7 @@ html:not(.dark) .cal-panel {
 }
 .bsp-hdr span:nth-child(2) {
   font-family: var(--dime-font-mono);
-  color: var(--dime-text-muted) !important;
+  color: var(--dime-text-secondary) !important;
   letter-spacing: 0.08em !important;
 }
 
@@ -349,7 +349,7 @@ html:not(.dark) .cal-panel {
   border-radius: 8px !important;
   border: 1px solid var(--dime-border) !important;
   background: transparent !important;
-  color: var(--dime-text-muted) !important;
+  color: var(--dime-text-secondary) !important;
 }
 .bsp-toggle[data-active="true"] {
   background: var(--dime-surface-raised) !important;
@@ -653,7 +653,7 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   .bs-page .bsp-toggle {
     font-size: 11px !important;
   }
-  .bs-page .bsp-hdr span:nth-child(2) {
+  .bs-page .bsp-hdr span {
     font-size: 11px !important;
   }
   .bs-dropdown .bs-nick {

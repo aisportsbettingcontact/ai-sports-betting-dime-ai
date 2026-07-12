@@ -197,9 +197,9 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       <div className="w-full flex flex-col gap-0.5">
         {/* Header row */}
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
+          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
         </div>
         {/* Empty bar */}
         <div className="w-full rounded-md flex items-center justify-center"
@@ -241,12 +241,12 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
     <div className="bsp-row w-full flex flex-col gap-0.5">
       {/* Header row: AWAY_LABEL  [rowLabel]  HOME_LABEL */}
       <div className="bsp-hdr flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
       </div>
       {/* Bar — flex row, NO overflow:hidden on outer container (that clips home label) */}
-      {/* Each segment has its own overflow:hidden to clip text within its bounds */}
+      {/* Header spans: 11px floor — the mobile type law bans sub-10px content. */}
       <div
         className="bsp-bar"
         style={{
@@ -682,7 +682,7 @@ export function BettingSplitsPanel({
                 style={{
                   flex: 1,
                   padding: "3px 0",
-                  fontSize: 9,
+                  fontSize: 11,
                   fontWeight: 800,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
