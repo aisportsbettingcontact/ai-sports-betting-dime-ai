@@ -42,13 +42,28 @@ function defaultSplitsState(): { sport: SplitsSport; isoDate: string } {
   return { sport: parsed.sport, isoDate: parsed.isoDate };
 }
 
+/**
+ * "shell" — full tablet/desktop shell chrome: sidebar navigation, the
+ * currently-selected pane content, scroll restoration, focus management.
+ * "chat-only" — renders bare chat, nothing else: no lazy panes, no
+ * splits/feed URL-canonicalization effects, no shell chrome. This is how
+ * /chat (and any shellViewport-owned product route) renders below the
+ * 768px shell boundary. The two modes render the SAME <DimeChatPage>
+ * element at the SAME position — only props differ — so crossing 768px
+ * never remounts chat (see productRoute.ts `isChatLocation` + App.tsx
+ * Router()).
+ */
+export type DimeAppShellMode = "shell" | "chat-only";
+
 export interface DimeAppShellProps {
   /** Compile-time DEV-gated visual preview capability supplied by App.tsx. */
   previewMode?: boolean;
+  mode?: DimeAppShellMode;
 }
 
 export default function DimeAppShell({
   previewMode = false,
+  mode = "shell",
 }: DimeAppShellProps) {
   const [location, navigate] = useLocation();
   const actualRoute = useMemo(
@@ -70,7 +85,13 @@ export default function DimeAppShell({
     [previewMode]
   );
 
+  // Hooks always run in the same order regardless of `mode` (Rules of
+  // Hooks) — chat-only mode no-ops inside the effect body instead of
+  // skipping the hook call. This is also why the shell-only splits
+  // URL-canonicalization effect must not run in chat-only mode: there is no
+  // splits pane to canonicalize below 768px.
   useEffect(() => {
+    if (mode !== "shell") return;
     if (actualRoute.pane !== "splits") return;
     const canonical = canonicalBettingSplitsPath(
       actualRoute.sportSegment,
@@ -80,7 +101,7 @@ export default function DimeAppShell({
     if (pathname !== canonical) {
       navigate(resolveRouteHref(canonical), { replace: true });
     }
-  }, [actualRoute, location, navigate, resolveRouteHref]);
+  }, [mode, actualRoute, location, navigate, resolveRouteHref]);
 
   const onNavigate = useCallback(
     (href: string) => {
@@ -96,6 +117,7 @@ export default function DimeAppShell({
   }, []);
 
   useLayoutEffect(() => {
+    if (mode !== "shell") return;
     renderedPaneRef.current = renderedRoute.pane;
     if (renderedRoute.pane !== "chat" && externalScrollRef.current) {
       externalScrollRef.current.scrollTop =
@@ -109,51 +131,65 @@ export default function DimeAppShell({
       target?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [renderedRoute]);
+  }, [mode, renderedRoute]);
 
+  // chat-only mode never mounts a lazy pane, never runs pane-switch focus/
+  // scroll bookkeeping, and never renders shell chrome — it renders bare
+  // chat, identically to the pre-shell standalone /chat route.
   let paneContent = null;
-  if (renderedRoute.pane === "feed") {
-    paneContent = (
-      <DimeModelFeed
-        sport={renderedRoute.sportSegment}
-        date={renderedRoute.dateSegment}
-        embeddedInShell
-        resolveRouteHref={resolveRouteHref}
-      />
-    );
-  } else if (renderedRoute.pane === "splits") {
-    const parsed = parseBettingSplitsPath(
-      renderedRoute.sportSegment,
-      renderedRoute.dateSegment
-    );
-    const state = parsed?.isoDate
-      ? { sport: parsed.sport, isoDate: parsed.isoDate }
-      : defaultSplitsState();
-    paneContent = (
-      <BettingSplits
-        initialSport={state.sport}
-        initialDate={state.isoDate}
-        initialDateSource={parsed?.isoDate ? "url-explicit" : "app-default"}
-        resolveRouteHref={resolveRouteHref}
-      />
-    );
-  } else if (renderedRoute.pane === "tracker") {
-    paneContent = <BetTracker previewMode={previewMode} />;
+  if (mode === "shell") {
+    if (renderedRoute.pane === "feed") {
+      paneContent = (
+        <DimeModelFeed
+          sport={renderedRoute.sportSegment}
+          date={renderedRoute.dateSegment}
+          embeddedInShell
+          resolveRouteHref={resolveRouteHref}
+        />
+      );
+    } else if (renderedRoute.pane === "splits") {
+      const parsed = parseBettingSplitsPath(
+        renderedRoute.sportSegment,
+        renderedRoute.dateSegment
+      );
+      const state = parsed?.isoDate
+        ? { sport: parsed.sport, isoDate: parsed.isoDate }
+        : defaultSplitsState();
+      paneContent = (
+        <BettingSplits
+          initialSport={state.sport}
+          initialDate={state.isoDate}
+          initialDateSource={parsed?.isoDate ? "url-explicit" : "app-default"}
+          resolveRouteHref={resolveRouteHref}
+        />
+      );
+    } else if (renderedRoute.pane === "tracker") {
+      paneContent = <BetTracker previewMode={previewMode} />;
+    }
   }
 
+  // The SAME <DimeChatPage> element at the SAME position in both modes —
+  // only the `shell` prop changes. This is what keeps DimeChatPage mounted
+  // (conversation state, in-flight SSE stream, composer draft intact) across
+  // an 768px viewport crossing: React reconciles by element type + position,
+  // never by `mode`.
   return (
     <DimeChatPage
-      shell={{
-        renderedPane: renderedRoute.pane,
-        navigationPane: actualRoute.pane,
-        paneContent,
-        paneHeading: PANE_HEADINGS[renderedRoute.pane],
-        onNavigate,
-        externalScrollRef,
-        chatHeadingRef,
-        externalHeadingRef,
-        onExternalScroll,
-      }}
+      shell={
+        mode !== "shell"
+          ? undefined
+          : {
+              renderedPane: renderedRoute.pane,
+              navigationPane: actualRoute.pane,
+              paneContent,
+              paneHeading: PANE_HEADINGS[renderedRoute.pane],
+              onNavigate,
+              externalScrollRef,
+              chatHeadingRef,
+              externalHeadingRef,
+              onExternalScroll,
+            }
+      }
     />
   );
 }

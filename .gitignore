@@ -148,3 +148,8 @@ env-gate-report.json
 
 # Playwright CLI session artifacts (canonical matrix archive lives in docs/audits/)
 .playwright-cli/
+
+# Playwright Test (@playwright/test) run artifacts — e2e/, playwright.config.ts
+test-results/
+playwright-report/
+blob-report/

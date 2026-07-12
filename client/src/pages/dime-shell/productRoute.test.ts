@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isDimeProductLocation, parseDimeProductRoute } from "./productRoute";
+import {
+  isChatLocation,
+  isDimeProductLocation,
+  parseDimeProductRoute,
+} from "./productRoute";
 
 describe("parseDimeProductRoute", () => {
   it("classifies chat and tracker", () => {
@@ -65,6 +69,30 @@ describe("parseDimeProductRoute", () => {
       "/",
     ]) {
       expect(isDimeProductLocation(location)).toBe(false);
+    }
+  });
+});
+
+describe("isChatLocation", () => {
+  // The 768px shell-mount-stability fix (App.tsx `chatShellOwnsRoute`) needs
+  // an EXACT chat-route test independent of the shared viewport gate, so
+  // /chat can claim the unified DimeAppShell branch at every width.
+  it("matches the exact /chat route, including query and hash variants", () => {
+    expect(isChatLocation("/chat")).toBe(true);
+    expect(isChatLocation("/chat?preview=1")).toBe(true);
+    expect(isChatLocation("/chat#top")).toBe(true);
+  });
+
+  it("rejects nested, prefixed, and unrelated routes", () => {
+    for (const location of [
+      "/m/chat",
+      "/chat-history",
+      "/chat/history",
+      "/admin/model-status",
+      "/",
+      "/bet-tracker",
+    ]) {
+      expect(isChatLocation(location), location).toBe(false);
     }
   });
 });

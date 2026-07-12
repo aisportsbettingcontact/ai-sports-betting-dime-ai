@@ -1412,10 +1412,29 @@ export default function DimeChatPage({
               duration: reduceMotion ? 0 : 0.16,
               ease: BRAND_EASE,
             };
+            // [PR #70 REMEDIATION 2026-07-12] `chatPane`'s wrapping element
+            // below used to fork by TYPE on `!shell` (bare <m.main> vs a
+            // <div className="dc-shell-stack"> wrapping <m.main> + the
+            // external pane). That fork is invisible to DimeAppShell's
+            // caller, but NOT to React's reconciler: when the SAME mounted
+            // DimeChatPage instance re-renders with `shell` flipping from a
+            // value to undefined (DimeAppShell's `mode` crossing 768px),
+            // the root element type this component returns changes —
+            // forcing React to tear down and rebuild everything inside,
+            // including the composer's DOM node, even though the
+            // DimeChatPage component instance itself never unmounts. Fix:
+            // always return the SAME wrapper type/position; only the
+            // external pane's presence is conditional (a trailing sibling
+            // gain/loss does not perturb an earlier sibling's identity).
+            // `.dc-shell-stack`'s single-cell grid is already the
+            // production-verified >=768px chat layout — applying it
+            // unconditionally here is layout-neutral for a lone child, and
+            // touches neither conversation.css nor the framer-motion API
+            // surface, only which elements exist in the DOM.
             const chatPane = (
               <m.main
-                ref={shell ? chatPaneRef : mainRef}
-                className={`dc-main${conversation ? " dc-main--conv" : ""}${shell ? " dc-shell-chat-layer" : ""}`}
+                ref={chatPaneRef}
+                className={`dc-main${conversation ? " dc-main--conv" : ""} dc-shell-chat-layer`}
                 aria-hidden={shell && !chatActive ? true : undefined}
                 animate={
                   shell
@@ -1550,41 +1569,41 @@ export default function DimeChatPage({
               </m.main>
             );
 
-            if (!shell) return chatPane;
-
-            const externalActive = shell.renderedPane !== "chat";
+            const externalActive = !!shell && shell.renderedPane !== "chat";
             return (
               <div
                 ref={mainRef as MutableRefObject<HTMLDivElement | null>}
                 className="dc-shell-stack"
               >
                 {chatPane}
-                <m.section
-                  ref={externalPaneRef}
-                  className="dc-shell-external-layer"
-                  aria-hidden={!externalActive}
-                  animate={{
-                    opacity: externalActive ? 1 : 0,
-                    y: externalActive ? 0 : 4,
-                  }}
-                  transition={transition}
-                  style={{ pointerEvents: externalActive ? "auto" : "none" }}
-                >
-                  <div
-                    ref={shell.externalScrollRef}
-                    className="dc-shell-external-scroll"
-                    onScroll={shell.onExternalScroll}
+                {shell && (
+                  <m.section
+                    ref={externalPaneRef}
+                    className="dc-shell-external-layer"
+                    aria-hidden={!externalActive}
+                    animate={{
+                      opacity: externalActive ? 1 : 0,
+                      y: externalActive ? 0 : 4,
+                    }}
+                    transition={transition}
+                    style={{ pointerEvents: externalActive ? "auto" : "none" }}
                   >
-                    <h1
-                      ref={shell.externalHeadingRef}
-                      className="dc-shell-sr-only"
-                      tabIndex={-1}
+                    <div
+                      ref={shell.externalScrollRef}
+                      className="dc-shell-external-scroll"
+                      onScroll={shell.onExternalScroll}
                     >
-                      {shell.paneHeading}
-                    </h1>
-                    {shell.paneContent}
-                  </div>
-                </m.section>
+                      <h1
+                        ref={shell.externalHeadingRef}
+                        className="dc-shell-sr-only"
+                        tabIndex={-1}
+                      >
+                        {shell.paneHeading}
+                      </h1>
+                      {shell.paneContent}
+                    </div>
+                  </m.section>
+                )}
               </div>
             );
           })()}
