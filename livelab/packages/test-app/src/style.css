@@ -1,0 +1,73 @@
+:root {
+  --accent: #2563eb;
+  --bg: #ffffff;
+  --fg: #111827;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+/* LIVELAB_HMR_MARKER: edit the accent color to exercise HMR + visual diff */
+.counter-button {
+  background: var(--accent);
+  color: white;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.counter-button:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+input[type='text'] {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 320px;
+  display: block;
+  margin-top: 8px;
+}
+
+nav a {
+  margin-right: 12px;
+  color: var(--accent);
+}
+
+.wide-overflow {
+  width: 3000px;
+  height: 24px;
+  background: repeating-linear-gradient(90deg, #fca5a5 0 40px, #fecaca 40px 80px);
+}
+
+.blocking-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 96px;
+  background: rgba(17, 24, 39, 0.92);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
