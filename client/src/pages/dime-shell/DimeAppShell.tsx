@@ -175,6 +175,7 @@ export default function DimeAppShell({
   // never by `mode`.
   return (
     <DimeChatPage
+      previewMode={previewMode}
       shell={
         mode !== "shell"
           ? undefined

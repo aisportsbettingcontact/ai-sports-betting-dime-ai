@@ -1,0 +1,19 @@
+{
+  "name": "@livelab/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "livelab-mcp": "dist/mcp-server.cjs"
+  },
+  "scripts": {
+    "build": "tsc -b && node ../../scripts/bundle-mcp.mjs"
+  },
+  "dependencies": {
+    "@livelab/protocol": "*",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.25.0"
+  }
+}
