@@ -1,0 +1,153 @@
+{
+  "name": "livelab",
+  "displayName": "LiveLab",
+  "description": "Live multi-device browser laboratory: side-by-side Chromium device previews, diagnostics, smoke tests, visual regression, and a shared MCP bridge for Claude Code and Codex.",
+  "version": "0.1.0",
+  "publisher": "livelab",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": ["Other", "Testing", "Visualization"],
+  "keywords": ["browser", "preview", "responsive", "playwright", "mcp", "testing"],
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "LiveLab requires workspace trust to start development servers, run project scripts, and watch project files. In untrusted workspaces only read-only preview of explicitly entered localhost URLs is available."
+    }
+  },
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "livelab",
+          "title": "LiveLab",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "livelab": [
+        { "id": "livelab.sessions", "name": "Sessions", "icon": "media/icon.svg" },
+        { "id": "livelab.diagnostics", "name": "Diagnostics", "icon": "media/icon.svg" }
+      ]
+    },
+    "commands": [
+      { "command": "livelab.open", "title": "LiveLab: Open" },
+      { "command": "livelab.startServer", "title": "LiveLab: Start Development Server" },
+      { "command": "livelab.attachUrl", "title": "LiveLab: Attach to URL" },
+      { "command": "livelab.stopServer", "title": "LiveLab: Stop Development Server" },
+      { "command": "livelab.addDevice", "title": "LiveLab: Add Device" },
+      { "command": "livelab.removeDevice", "title": "LiveLab: Remove Device" },
+      { "command": "livelab.reloadAll", "title": "LiveLab: Reload All" },
+      { "command": "livelab.toggleInspect", "title": "LiveLab: Toggle Inspect Mode" },
+      { "command": "livelab.captureScreenshots", "title": "LiveLab: Capture Screenshots" },
+      { "command": "livelab.startTrace", "title": "LiveLab: Start Trace" },
+      { "command": "livelab.stopTrace", "title": "LiveLab: Stop Trace" },
+      { "command": "livelab.runSmoke", "title": "LiveLab: Run Responsive Smoke Test" },
+      { "command": "livelab.approveBaseline", "title": "LiveLab: Approve Visual Baseline" },
+      { "command": "livelab.compareBaseline", "title": "LiveLab: Compare Visual Baseline" },
+      { "command": "livelab.openLatestReport", "title": "LiveLab: Open Latest Report" },
+      { "command": "livelab.openDiagnostics", "title": "LiveLab: Open Diagnostics" },
+      { "command": "livelab.startWatch", "title": "LiveLab: Start Agent Watch" },
+      { "command": "livelab.stopWatch", "title": "LiveLab: Stop Agent Watch" },
+      { "command": "livelab.configureMcp", "title": "LiveLab: Configure MCP" },
+      { "command": "livelab.doctor", "title": "LiveLab: Run Doctor" },
+      { "command": "livelab.resetRuntime", "title": "LiveLab: Reset Runtime" },
+      { "command": "livelab.webkitVerify", "title": "LiveLab: Run WebKit Verification" }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "livelab.removeDevice", "when": "livelab.active" },
+        { "command": "livelab.reloadAll", "when": "livelab.active" },
+        { "command": "livelab.toggleInspect", "when": "livelab.active" },
+        { "command": "livelab.captureScreenshots", "when": "livelab.active" },
+        { "command": "livelab.startTrace", "when": "livelab.active" },
+        { "command": "livelab.stopTrace", "when": "livelab.active" }
+      ]
+    },
+    "configuration": {
+      "title": "LiveLab",
+      "properties": {
+        "livelab.defaultUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "URL suggested when opening LiveLab."
+        },
+        "livelab.autoDetectServer": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect common dev-server scripts (Vite, Next.js, Astro, Remix, Nuxt, SvelteKit) in the workspace."
+        },
+        "livelab.allowedHosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["localhost", "127.0.0.1"],
+          "description": "Hosts LiveLab sessions may navigate to. Remote hosts are blocked unless added here."
+        },
+        "livelab.defaultDevices": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["iphone-16", "desktop-1440"],
+          "description": "Device presets opened by default."
+        },
+        "livelab.managedScripts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["dev", "start", "test", "test:e2e", "lint", "typecheck", "build"],
+          "description": "npm scripts LiveLab may start. Anything else is rejected."
+        },
+        "livelab.browser": {
+          "type": "string",
+          "enum": ["chromium"],
+          "default": "chromium",
+          "description": "Interactive live-preview engine. WebKit is available as a separate on-demand verification run, not as the live engine."
+        },
+        "livelab.syncNavigation": { "type": "boolean", "default": true },
+        "livelab.syncScroll": { "type": "boolean", "default": false },
+        "livelab.syncInteraction": { "type": "boolean", "default": false },
+        "livelab.watch.enabled": { "type": "boolean", "default": true },
+        "livelab.watch.quietWindowMs": { "type": "number", "default": 500 },
+        "livelab.watch.maxSettleMs": { "type": "number", "default": 10000 },
+        "livelab.artifactsDirectory": { "type": "string", "default": ".livelab/artifacts" },
+        "livelab.redactHeaders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["authorization", "cookie", "set-cookie", "x-api-key"]
+        },
+        "livelab.redactQueryParameters": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["token", "key", "api_key", "access_token"]
+        },
+        "livelab.console.maxEntries": { "type": "number", "default": 500 },
+        "livelab.network.maxEntries": { "type": "number", "default": 1000 },
+        "livelab.frameRate": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 30,
+          "description": "Maximum screencast frames per second per device."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b && node ../../scripts/bundle-extension.mjs",
+    "vscode:prepublish": "echo 'packaged via scripts/package.mjs'"
+  },
+  "dependencies": {
+    "@livelab/protocol": "*"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.3.0",
+    "mocha": "^11.1.0"
+  }
+}
