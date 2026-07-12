@@ -1493,36 +1493,36 @@ function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnal
         type="button"
         onClick={() => setDrawerOpen(p => !p)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-xs font-bold tracking-widest uppercase hover:bg-zinc-800/40 transition-colors"
-        style={{ color: "#888" }}
+        style={{ color: "var(--bt-text-muted, #888)" }}
       >
         <span>Every pick tracked →</span>
         <ChevronDown size={14} className={`transition-transform duration-200 ${drawerOpen ? "rotate-180" : ""}`} />
       </button>
       {drawerOpen && (
         <div className="overflow-x-auto max-h-72 overflow-y-auto">
-          <table className="w-full text-xs" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <table className="w-full text-xs" style={{ fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
             <thead>
               <tr className="border-b border-zinc-800 sticky top-0 bg-zinc-900">
-                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "#555" }}>DATE</th>
-                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "#555" }}>PICK</th>
-                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>ODDS</th>
-                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>UNITS</th>
-                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "#555" }}>P/L</th>
-                <th className="px-3 py-2 text-center font-semibold tracking-widest uppercase" style={{ color: "#555" }}>RESULT</th>
+                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>DATE</th>
+                <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>PICK</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>ODDS</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>UNITS</th>
+                <th className="px-3 py-2 text-right font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>P/L</th>
+                <th className="px-3 py-2 text-center font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>RESULT</th>
               </tr>
             </thead>
             <tbody>
               {pts.map((pt, i) => {
                 const isWin  = pt.result === "WIN";
                 const isLoss = pt.result === "LOSS";
-                const plColor = isWin ? "#39FF14" : isLoss ? "#FF073A" : "#888";
+                const plColor = isWin ? "var(--bt-green, #39FF14)" : isLoss ? "var(--bt-red, #FF073A)" : "var(--bt-text-muted, #888)";
                 const plSign  = pt.pl >= 0 ? "+" : "";
                 return (
                   <tr key={i} className="border-b border-zinc-800/30 hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: "#aaa" }}>{pt.date}</td>
-                    <td className="px-3 py-1.5 max-w-[160px] truncate" style={{ color: "#ddd" }} title={pt.label ?? pt.pick}>{pt.label ?? pt.pick}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: "#aaa" }}>{pt.odds != null ? (pt.odds > 0 ? `+${pt.odds}` : pt.odds) : "\u2014"}</td>
-                    <td className="px-3 py-1.5 text-right" style={{ color: "#aaa" }}>{pt.units != null ? `${pt.units}u` : "\u2014"}</td>
+                    <td className="px-3 py-1.5 whitespace-nowrap" style={{ color: "var(--bt-text-dim, #aaa)" }}>{pt.date}</td>
+                    <td className="px-3 py-1.5 max-w-[160px] truncate" style={{ color: "var(--bt-text-body, #ddd)" }} title={pt.label ?? pt.pick}>{pt.label ?? pt.pick}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: "var(--bt-text-dim, #aaa)" }}>{pt.odds != null ? (pt.odds > 0 ? `+${pt.odds}` : pt.odds) : "\u2014"}</td>
+                    <td className="px-3 py-1.5 text-right" style={{ color: "var(--bt-text-dim, #aaa)" }}>{pt.units != null ? `${pt.units}u` : "\u2014"}</td>
                     <td className="px-3 py-1.5 text-right font-bold" style={{ color: plColor }}>{plSign}{pt.pl?.toFixed(2)}u</td>
                     <td className="px-3 py-1.5 text-center">
                       <span className="px-1.5 py-0.5 rounded text-xs font-bold tracking-widest"
@@ -2616,7 +2616,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
     // Show a page-structure skeleton instead of a blank full-screen spinner.
     // Eliminates the perceived blank-screen delay during auth check (~200-400ms).
     return (
-      <div className="min-h-screen bg-zinc-950 text-white">
+      <div className="bt-page min-h-screen bg-zinc-950 text-white">
         <div className="sticky top-0 z-30 bg-zinc-950/95 backdrop-blur border-b border-zinc-800/60">
           <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -2645,7 +2645,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
 
   if (!canAccess) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+      <div className="bt-page min-h-screen bg-zinc-950 flex items-center justify-center px-4">
         <div className="text-center space-y-3">
           <AlertCircle className="mx-auto text-red-400" size={32} />
           <p className="text-white font-bold">Access Restricted</p>
@@ -2658,7 +2658,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
 
   // ─────────────────────────────────────────────────────────────────────────
     return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="bt-page min-h-screen bg-zinc-950 text-white">
       {/* ── Global error toast (fixed top, visible regardless of scroll) ── */}
       {formError && (
         <div className="fixed top-0 left-0 right-0 z-[100] flex items-center gap-2 bg-red-600 text-white text-xs font-semibold px-4 py-2.5 shadow-lg" role="alert">
@@ -2674,8 +2674,8 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
             <button type="button" onClick={() => navigate("/")} className="text-zinc-300 hover:text-white transition-colors p-1">
               <ChevronLeft size={18} />
             </button>
-            <TrendingUp size={18} className="text-emerald-400" />
-            <span className="font-bold tracking-wider text-sm sm:text-base">BET TRACKER</span>
+            <TrendingUp size={18} className="bt-trend text-emerald-400" />
+            <span className="bt-title font-bold tracking-wider text-sm sm:text-base whitespace-nowrap">BET TRACKER</span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -2877,7 +2877,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                       : activeSport === "NCAAM" ? "ON NCAAM"
                       : "ACROSS ALL SPORTS";
                     const netSign = stats.netProfit >= 0 ? "+" : "";
-                    const netColor = stats.netProfit >= 0 ? "#39FF14" : "#FF073A";
+                    const netColor = stats.netProfit >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF073A)";
                     // Current run: from stats (server-computed)
                     const runUnits = (stats as any).currentRunUnits as number | undefined;
                     const runSince = (stats as any).currentRunSince as string | undefined;
@@ -2904,20 +2904,20 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                           {activeSport === "NBA" && <span className="text-xl" role="img">🏀</span>}
                           {activeSport === "NCAAM" && <span className="text-xl" role="img">🏀</span>}
                           {activeSport === "ALL" && <span className="text-xl" role="img">🏆</span>}
-                          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#555" }}>
+                          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>
                             {activeSport === "MLB" ? "2026 MLB SEASON" : activeSport === "NHL" ? "2025-26 NHL" : activeSport === "NBA" ? "2025-26 NBA" : activeSport === "NCAAM" ? "2025-26 NCAAM" : "2025-26 SEASON"}
                           </span>
                         </div>
 
                         {/* HEADLINE: AI SPORTS BETTING IS UP +120.4U ON MLB */}
                         <div className="text-center mb-1">
-                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "var(--bt-strong, #FFFFFF)", letterSpacing: "0.08em" }}>
                             {handicapperLabel} IS {stats.netProfit >= 0 ? "UP" : "DOWN"}{" "}
                           </span>
                           <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: netColor, letterSpacing: "0.08em" }}>
                             {netSign}{fmtUnits(stats.netProfit)}
                           </span>
-                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "#FFFFFF", letterSpacing: "0.08em" }}>
+                          <span className="text-xl sm:text-2xl font-black tracking-widest uppercase" style={{ color: "var(--bt-strong, #FFFFFF)", letterSpacing: "0.08em" }}>
                             {" "}{sportLabel}
                           </span>
                         </div>
@@ -2926,7 +2926,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                         {hasRun && (
                           <div className="flex items-center justify-center gap-2 mb-2">
                             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase"
-                              style={{ background: "rgba(57,255,20,0.12)", border: "1px solid #39FF14", color: "#39FF14" }}>
+                              style={{ background: "color-mix(in srgb, var(--bt-green, #39FF14) 12%, transparent)", border: "1px solid var(--bt-green, #39FF14)", color: "var(--bt-green, #39FF14)" }}>
                               <span style={{ fontSize: "10px" }}>🔥</span>
                               CURRENT RUN: +{runUnits!.toFixed(1)}U SINCE {fmtRunSince(runSince)}
                             </div>
@@ -2934,8 +2934,8 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                         )}
 
                         {/* PROOF LINE: ROI · risked · every bet tracked */}
-                        <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-xs mb-2" style={{ color: "#888" }}>
-                          <span style={{ color: stats.roi >= 0 ? "#39FF14" : "#FF073A", fontWeight: 700 }}>
+                        <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-xs mb-2" style={{ color: "var(--bt-text-muted, #888)" }}>
+                          <span style={{ color: stats.roi >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF073A)", fontWeight: 700 }}>
                             {stats.roi >= 0 ? "+" : ""}{stats.roi.toFixed(2)}% ROI
                           </span>
                           <span>·</span>
@@ -2945,7 +2945,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                           {maxDD != null && maxDD > 0 && (
                             <>
                               <span>·</span>
-                              <span style={{ color: "#FF073A" }}>max drawdown: -{maxDD.toFixed(1)}u</span>
+                              <span style={{ color: "var(--bt-red, #FF073A)" }}>max drawdown: -{maxDD.toFixed(1)}u</span>
                             </>
                           )}
                         </div>
@@ -2956,8 +2956,8 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                   /* ── All other modes: trend icon + units value ── */
                   <>
                     <div className="flex items-center gap-2.5">
-                      <TrendingUp size={28} style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }} />
-                      <span className="text-3xl sm:text-4xl font-bold tracking-widest uppercase" style={{ color: stats.netProfit >= 0 ? "#39FF14" : "#FF073A" }}>
+                      <TrendingUp size={28} style={{ color: stats.netProfit >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF073A)" }} />
+                      <span className="text-3xl sm:text-4xl font-bold tracking-widest uppercase" style={{ color: stats.netProfit >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF073A)" }}>
                         {stats.netProfit >= 0 ? "+" : ""}{fmtUnits(stats.netProfit)}
                       </span>
                     </div>
