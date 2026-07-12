@@ -89,6 +89,37 @@ describe('MCP initialization & discovery', () => {
   });
 });
 
+describe('workspace identity across symlinked paths (macOS tmpdir topology)', () => {
+  it.skipIf(process.platform === 'win32')(
+    'RuntimeClient attaches to the same runtime through symlinked and canonical spellings',
+    async () => {
+      const { RuntimeClient } = await import('../src/client');
+      const real = makeTmpWorkspace('livelab-mcp-symreal-');
+      const linkParent = makeTmpWorkspace('livelab-mcp-symlink-');
+      const link = path.join(linkParent, 'ws');
+      fs.symlinkSync(real, link);
+      const symDaemon = await startDaemon({
+        workspaceRoot: link,
+        owner: 'headless',
+        workspaceTrusted: true,
+        jsonLogs: false,
+      });
+      try {
+        const viaLink = await new RuntimeClient(link).ensure(false);
+        const viaReal = await new RuntimeClient(real).ensure(false);
+        expect(viaLink.runtimeId).toBe(symDaemon.core.runtimeId);
+        expect(viaReal.runtimeId).toBe(symDaemon.core.runtimeId);
+        // Discovery record itself carries the canonical root.
+        expect(fs.realpathSync(viaLink.workspaceRoot)).toBe(viaLink.workspaceRoot);
+      } finally {
+        await symDaemon.close();
+        rmDir(real);
+        rmDir(linkParent);
+      }
+    },
+  );
+});
+
 describe('runtime-unavailable behavior', () => {
   it('reports status gracefully with no runtime', async () => {
     const res = await call('livelab_runtime_status', {}, bareClient);
