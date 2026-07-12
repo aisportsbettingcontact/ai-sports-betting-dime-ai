@@ -362,7 +362,7 @@ interface SplitBarProps {
 // Away label: flush LEFT
 const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(11px, 1.2vw, 17px)',
-  color: '#ffffff',
+  color: 'var(--dime-text-primary, #ffffff)',
   fontWeight: 800,
   letterSpacing: '0.04em',
   lineHeight: 1,
@@ -375,7 +375,7 @@ const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
 // Home label: flush RIGHT
 const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(11px, 1.2vw, 17px)',
-  color: '#ffffff',
+  color: 'var(--dime-text-primary, #ffffff)',
   fontWeight: 800,
   letterSpacing: '0.04em',
   lineHeight: 1,
@@ -388,7 +388,7 @@ const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
 // 100% full-bar label: centered
 const DESKTOP_FULL_LABEL_STYLE: React.CSSProperties = {
   fontSize: 'clamp(11px, 1.2vw, 17px)',
-  color: '#ffffff',
+  color: 'var(--dime-text-primary, #ffffff)',
   fontWeight: 800,
   letterSpacing: '0.04em',
   lineHeight: 1,
@@ -423,7 +423,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
   return (
     <div className="flex flex-col gap-1 w-full">
       <span className="text-center uppercase tracking-widest font-bold"
-        style={{ fontSize: 'clamp(11px, 0.9vw, 14px)', color: "rgba(255,255,255,0.80)", letterSpacing: "0.12em" }}>
+        style={{ fontSize: 'clamp(11px, 0.9vw, 14px)', color: "var(--dime-text-secondary, rgba(255,255,255,0.80))", letterSpacing: "0.12em" }}>
         {label}
       </span>
       {hasData ? (() => {
@@ -463,41 +463,42 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
               boxSizing: 'border-box',
               width: '100%',
             }}
+            className="bsp-bar bsp-bar--pill"
           >
             {/* Away segment — label flush LEFT (only when NOT full-bar) */}
             {away > 0 && !isAwayFull && !isHomeFull && (
-              <div style={awaySegStyle} className="transition-all duration-700">
+              <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-700">
                 <span style={DESKTOP_AWAY_LABEL_STYLE}>{away}%</span>
               </div>
             )}
             {/* Divider */}
             {showDivider && (
-              <div style={{ width: 1.5, background: 'rgba(255,255,255,0.3)', flexShrink: 0, alignSelf: 'stretch' }} />
+              <div className="bsp-div" style={{ width: 1.5, background: 'rgba(255,255,255,0.3)', flexShrink: 0, alignSelf: 'stretch' }} />
             )}
             {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
             {home > 0 && !isHomeFull && !isAwayFull && (
-              <div style={homeSegStyle} className="transition-all duration-700">
+              <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-700">
                 <span style={DESKTOP_HOME_LABEL_STYLE}>{home}%</span>
               </div>
             )}
             {/* 100% full-bar cases — label centered — EXCLUSIVE: only one can render */}
             {isAwayFull && !isHomeFull && (
-              <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="transition-all duration-700">
+              <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
                 <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
               </div>
             )}
             {isHomeFull && !isAwayFull && (
-              <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="transition-all duration-700">
+              <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--home transition-all duration-700">
                 <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
               </div>
             )}
             {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
             {isAwayFull && isHomeFull && (
               <>
-                <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px 0 0 9999px' }} className="transition-all duration-700">
+                <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px 0 0 9999px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
                   <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
                 </div>
-                <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 9999px 9999px 0' }} className="transition-all duration-700">
+                <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 9999px 9999px 0' }} className="bsp-seg bsp-seg--home transition-all duration-700">
                   <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
                 </div>
               </>
@@ -506,7 +507,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
         );
       })() : (
         <div className="w-full rounded-full flex items-center justify-center"
-          style={{ height: 30, background: "rgba(255,255,255,0.05)" }}>
+          style={{ height: 30, background: "var(--dime-surface-raised, rgba(255,255,255,0.05))" }}>
           <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", opacity: 0.35 }}>—</span>
         </div>
       )}
@@ -547,21 +548,21 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
   return (
     <div className="flex flex-col w-full" style={{ gap: 8, padding: "10px 12px" }}>
       <div className="flex items-center gap-2">
-        <div className="flex-1" style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
         <span className="uppercase tracking-widest font-extrabold whitespace-nowrap"
-          style={{ fontSize: 'clamp(13px, 1.1vw, 17px)', color: "#ffffff", letterSpacing: "0.14em" }}>{title}</span>
-        <div className="flex-1" style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+          style={{ fontSize: 'clamp(13px, 1.1vw, 17px)', color: "var(--dime-text-primary, #ffffff)", letterSpacing: "0.14em" }}>{title}</span>
+        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
       </div>
       {isTotalMarket ? (
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
-          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "#ffffff", fontWeight: 700 }}>{totalValue}</span>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
+          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700 }}>{totalValue}</span>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
         </div>
       ) : (
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span className="uppercase" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{awayLabel}</span>
-          <span className="uppercase text-right" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "rgba(255,255,255,0.95)", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{homeLabel}</span>
+          <span className="uppercase" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{awayLabel}</span>
+          <span className="uppercase text-right" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{homeLabel}</span>
         </div>
       )}
       <SplitBar label="Tickets" awayPct={awayTickets} homePct={homeTickets} awayColor={awayColor} homeColor={homeColor} />

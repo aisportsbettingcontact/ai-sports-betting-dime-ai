@@ -106,15 +106,16 @@ export function getVerdict(edge: number): string {
   return 'FADE';
 }
 
-/** Color for a given edge pp value (spec-compliant 6-tier scale). */
+/** Color for a given edge pp value — Dime brand law (MASTER.md):
+ *  mint is the ONE signal color; everything without signal stays in the
+ *  grey text tiers, and negative/FADE is grey, never red. Values are
+ *  CSS vars from the global token layer (legacy fallbacks for safety). */
 export function getEdgeColor(edge: number): string {
-  if (isNaN(edge)) return 'rgba(255,255,255,0.30)';
-  if (edge >= 8) return '#39FF14';   // ELITE   — full neon green
-  if (edge >= 5) return '#7FFF00';   // STRONG  — chartreuse
-  if (edge >= 2.5) return '#ADFF2F'; // PLAYABLE — yellow-green
-  if (edge >= 0.5) return 'rgba(255,255,255,0.60)'; // SMALL — white/60
-  if (edge >= -1) return 'rgba(255,255,255,0.30)';  // NEUTRAL — white/30
-  return '#FF2244';                  // FADE    — red
+  if (isNaN(edge)) return 'var(--dime-text-faint, rgba(255,255,255,0.30))';
+  if (edge >= 2.5) return 'var(--dime-mint-text, #45E0A8)'; // ELITE/STRONG/PLAYABLE — signal
+  if (edge >= 0.5) return 'var(--dime-text-secondary, rgba(255,255,255,0.60))'; // SMALL
+  if (edge >= -1) return 'var(--dime-text-faint, rgba(255,255,255,0.30))'; // NEUTRAL
+  return 'var(--dime-text-secondary, rgba(255,255,255,0.60))'; // FADE — grey, never red
 }
 
 /**
