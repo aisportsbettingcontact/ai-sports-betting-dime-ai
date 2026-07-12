@@ -1,15 +1,21 @@
 /**
  * Mobile Owner Tabs — Feature Flags & Configuration
  * ═══════════════════════════════════════════════════
- * Owner-only mobile bottom tab navigation.
+ * Mobile bottom tab navigation for ALL authenticated users (<768px).
+ * ("Owner" in the module name is historical — the bar launched owner-only
+ * and went public 2026-07-12 via MOBILE_OWNER_TABS_PUBLIC_ENABLED.)
  * All flags are compile-time constants for tree-shaking.
  */
 
 // ─── Feature Flags ───────────────────────────────────────────────────────────
 export const MOBILE_OWNER_TABS_ENABLED = true;
-export const MOBILE_OWNER_TABS_TEST_MODE = false; // When true, any authenticated user can see tabs
-export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = false; // When true, all users see tabs (future)
-export const MOBILE_OWNER_TABS_DEBUG_PANEL = true; // Shows debug overlay for owner
+export const MOBILE_OWNER_TABS_TEST_MODE = false; // Superseded by PUBLIC_ENABLED (kept for rollback)
+// All authenticated mobile users see the tabs. Authentication is still
+// required — decideMobileOwnerAccess checks isAuthenticated before this flag.
+export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = true;
+// Debug overlay must stay off now that the tabs are public — it renders for
+// everyone who can reach /m/* (MobileOwnerDebugPanel gates on this flag only).
+export const MOBILE_OWNER_TABS_DEBUG_PANEL = false;
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
 export type MobileOwnerTabId = "feed" | "splits" | "chat" | "props" | "profile";
