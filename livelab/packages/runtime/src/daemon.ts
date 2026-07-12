@@ -12,6 +12,7 @@ import { createHttpHandler } from './api/http';
 import { attachWebSocket } from './api/ws';
 import { acquireLock, pidAlive, readDiscovery, removeDiscovery, writeDiscovery } from './discovery';
 import { resolveRuntimeOptions } from './config';
+import { canonicalWorkspaceRoot } from './util/paths';
 import { newToken, workspaceIdFor } from './util/ids';
 import { Logger } from './util/logger';
 
@@ -44,7 +45,7 @@ export interface RunningDaemon {
  * lifecycle cleanup (signals, orphan detection, heartbeat).
  */
 export async function startDaemon(args: DaemonArgs): Promise<RunningDaemon> {
-  const workspaceRoot = path.resolve(args.workspaceRoot);
+  const workspaceRoot = canonicalWorkspaceRoot(args.workspaceRoot);
   const log = new Logger(
     { workspaceId: workspaceIdFor(workspaceRoot) },
     args.jsonLogs === false ? undefined : path.join(workspaceRoot, '.livelab', 'logs'),

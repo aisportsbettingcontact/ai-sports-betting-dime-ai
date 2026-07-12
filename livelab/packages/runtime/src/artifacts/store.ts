@@ -7,7 +7,7 @@ import {
   ERROR_CODES,
 } from '@livelab/protocol';
 import { newId } from '../util/ids';
-import { ensureDir, resolveInside } from '../util/paths';
+import { canonicalWorkspaceRoot, ensureDir, resolveInside } from '../util/paths';
 import { Logger } from '../util/logger';
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -35,8 +35,11 @@ export class ArtifactStore {
     private readonly maxTotalBytes: number,
     private readonly log: Logger,
   ) {
-    this.workspaceRoot = workspaceRoot;
-    this.root = path.join(workspaceRoot, '.livelab');
+    // Canonical root: resolveInside() realpaths its results, so relative paths
+    // must be computed against the same canonical namespace (macOS /var/folders
+    // is a symlink to /private/var/folders).
+    this.workspaceRoot = canonicalWorkspaceRoot(workspaceRoot);
+    this.root = path.join(this.workspaceRoot, '.livelab');
     ensureDir(path.join(this.root, 'artifacts'));
     ensureDir(path.join(this.root, 'reports'));
     this.loadIndex();

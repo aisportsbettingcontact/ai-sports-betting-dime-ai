@@ -38,7 +38,7 @@ Controlling specification: `Fable-5-LiveLab-VS-Code-Builder.md` (provided by the
 - [x] `@livelab/test-app` — Vite app: healthy `/`, `/console-error`, `/network-fail`, `/exception`, `/broken`
 - [x] `@livelab/webview-ui` — 6.4KB-gzip vanilla-TS bundle (toolbar, device grid, drawer, inspect, sync toggles, a11y/theme/reduced-motion aware)
 - [x] VS Code extension — passive activation, 22 commands, trees, status bar, CSP+nonce panel in editor column, workspace-trust gating, MCP configurator, doctor
-- [x] Tests: 45 unit + 24 integration + 17 MCP + 8 extension + 8 e2e — all passing
+- [x] Tests: 46 unit + 25 integration + 17 MCP + 8 extension + 8 e2e — all passing (incl. symlinked-workspace regressions)
 - [x] Docs: README + ARCHITECTURE/SECURITY/CONFIGURATION/MCP/CLAUDE_CODE/CODEX/TESTING/TROUBLESHOOTING + CHANGELOG + LICENSE + config JSON schema + `.claude/skills/livelab/SKILL.md`
 - [x] CI: `.github/workflows/livelab-ci.yml` (3 OS, typecheck/lint/tests/package/audit/artifact upload)
 - [x] VSIX packaged; clean-profile install proof; headless CLI/MCP proof
@@ -57,6 +57,8 @@ Controlling specification: `Fable-5-LiveLab-VS-Code-Builder.md` (provided by the
 | Vite SPA fallback served 200 for `/api/*` (network-fail route untestable) | test-app middleware returns real 404 for `/api/*` |
 | MCP pagination test assumed one error record; Chromium adds "Failed to load resource" for 404 favicon | test rewritten to verify cursor tiling rather than counts |
 | eslint no-control-regex on ANSI stripper | explicit `eslint-disable-next-line` |
+| **CI (ubuntu)**: `npm audit --audit-level=high` failed — mocha 11.7.6 pins vulnerable `serialize-javascript@6.0.2` (high: GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v DoS) + `diff@7.0.0` (low); patched releases outside mocha's semver ranges, so `npm audit fix` was a no-op | npm `overrides` (`serialize-javascript ^7.0.5`, `diff ^8.0.3`) + lockfile regeneration → `npm audit` reports 0 vulnerabilities; extension suite re-run proves mocha works on the overridden versions |
+| **CI (macos)**: MCP contract test failed — screenshot artifact path came back as `../../../../../../private/var/folders/...` instead of `.livelab/...`. Root cause (reproduced on Linux with a symlinked workspace): `resolveInside()` realpaths its results (symlink-escape defense) while `path.relative()` used the un-canonicalized workspace root; macOS `os.tmpdir()` is a symlink (`/var/folders` → `/private/var/folders`), Linux `/tmp` is not, so only macOS hit it | `canonicalWorkspaceRoot()` (absolute + realpath) applied at every workspace boundary: `startDaemon`, `ArtifactStore`, MCP `RuntimeClient` (discovery identity compare), extension `RuntimeManager`. Regression tests added: unit (symlinked store, subdir branch) + integration (daemon through a symlinked root: clean paths, canonical discovery record) |
 
 ## Verification evidence (2026-07-12, this container)
 
@@ -67,13 +69,13 @@ npm run typecheck (tsc -b)  → 0 errors (strict, noUncheckedIndexedAccess)
 npm run lint (eslint 9)     → 0 problems
 npm run build               → all bundles; webview 18.6KB raw / 6.4KB gzip (<500KB budget, enforced in build)
 npm run package             → artifacts/livelab-0.1.0.vsix (2.24 MB, 352 files)
-                              sha256 f48a2636e62bb9c8f251891b9807343a2657eb74b1875f6fcebcabf316f8bffb
+                              sha256 fcb05eafb9ad940e9aaa809997fed4faf2fa40b612016860b44342aaf16f5c5e
 ```
 
 ### Gate B — VS Code (`npm run test:extension`, real downloaded VS Code + Xvfb) — 8/8
 activation (passive, no runtime spawn, <5s CI allowance) · limited-trust declaration · 22 commands registered · settings defaults · `LiveLab: Open` → webview tab + extension-owned daemon (0600 discovery, 401-guarded API) · sessions endpoint · Reset Runtime disposal (pid gone) · panel reopen after disposal.
 
-### Gate C — Browser (`npm run test:integration` 24/24 + e2e) 
+### Gate C — Browser (`npm run test:integration` 25/25 + e2e) 
 two simultaneous sessions load the test app · locator input works (button state `"1"`→`"2"`, typed text echoed) · reload/back/forward · HMR reflected (computed background color changes live) · console/page-error/network evidence with cursors + redaction · screenshot artifacts on disk · trace zip · crash recovery (`chrome://crash` → recover → ready).
 
 ### Gate D — Agent bridge (`npm run test:mcp` 17/17 + e2e)
