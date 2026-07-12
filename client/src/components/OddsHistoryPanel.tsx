@@ -217,7 +217,7 @@ const DK_LOGO_URL = "https://www.draftkings.com/v2/landingpages-assets/blt02fb52
 function SourceBadge({ lineSource }: { lineSource: string | null }) {
   if (!lineSource) {
     // Should never happen — every game has either 'dk' or 'open'
-    return <span style={{ color: "rgba(255,255,255,0.25)", fontFamily: "monospace", fontSize: "inherit" }}>—</span>;
+    return <span style={{ color: "var(--dime-text-faint, rgba(255,255,255,0.25))", fontFamily: "var(--dime-font-mono, monospace)", fontSize: "inherit" }}>—</span>;
   }
 
   if (lineSource.toLowerCase() === 'dk') {
@@ -240,7 +240,7 @@ function SourceBadge({ lineSource }: { lineSource: string | null }) {
           el.style.display = "none";
           const span = document.createElement("span");
           span.textContent = "DK";
-          span.style.cssText = "color:#39FF14;font-family:monospace;font-weight:700;font-size:inherit;";
+          span.style.cssText = "color:var(--dime-mint-text, #39FF14);font-family:var(--dime-font-mono, monospace);font-weight:700;font-size:inherit;";
           el.parentNode?.insertBefore(span, el.nextSibling);
         }}
       />
@@ -254,10 +254,10 @@ function SourceBadge({ lineSource }: { lineSource: string | null }) {
         display: "inline-block",
         padding: "1px 5px",
         borderRadius: 3,
-        background: "rgba(255,200,80,0.10)",
-        color: "#FFC850",
-        border: "1px solid rgba(255,200,80,0.35)",
-        fontFamily: "monospace",
+        background: "var(--dime-surface-raised, rgba(255,255,255,0.08))",
+        color: "var(--dime-text-secondary, #FFC850)",
+        border: "1px solid var(--dime-border-strong, rgba(255,255,255,0.2))",
+        fontFamily: "var(--dime-font-mono, monospace)",
         fontWeight: 700,
         fontSize: "inherit",
         letterSpacing: "0.05em",
@@ -273,9 +273,9 @@ function SourceBadge({ lineSource }: { lineSource: string | null }) {
 // ── Market color map ───────────────────────────────────────────────────────────
 
 const MARKET_COLOR: Record<ActiveMarket, string> = {
-  spread: "rgba(255,200,80,0.9)",
-  total:  "rgba(80,200,255,0.9)",
-  ml:     "rgba(180,120,255,0.9)",
+  spread: "var(--dime-text-body, rgba(255,255,255,0.9))",
+  total:  "var(--dime-text-secondary, rgba(255,255,255,0.7))",
+  ml:     "var(--dime-text-muted, rgba(255,255,255,0.55))",
 };
 
 const MARKET_LABEL: Record<ActiveMarket, string> = {
@@ -329,7 +329,7 @@ function TeamHeader({
       <span
         style={{
           fontWeight: 700,
-          color: "rgba(255,255,255,0.85)",
+          color: "var(--dime-text-body, rgba(255,255,255,0.85))",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -442,7 +442,7 @@ export function OddsHistoryPanel({
 
   // ── Shared cell styles ─────────────────────────────────────────────────────
   const TH: React.CSSProperties = {
-    color: "rgba(255,255,255,0.5)",
+    color: "var(--dime-text-muted, rgba(255,255,255,0.5))",
     fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
@@ -454,10 +454,10 @@ export function OddsHistoryPanel({
 
   const TD: React.CSSProperties = {
     padding: "clamp(4px, 1vw, 6px) clamp(4px, 1.5vw, 10px)",
-    fontFamily: "monospace",
+    fontFamily: "var(--dime-font-mono, monospace)",
     fontSize: responsiveMonoFont,
     whiteSpace: "nowrap",
-    color: "rgba(255,255,255,0.88)",
+    color: "var(--dime-text-body, rgba(255,255,255,0.88))",
   };
 
   const BORDER_L: React.CSSProperties = { borderLeft: "1px solid rgba(57,255,20,0.12)" };
@@ -471,10 +471,10 @@ export function OddsHistoryPanel({
         aria-expanded={open}
       >
         <div className="flex items-center gap-2">
-          <Clock size={13} style={{ color: "#39FF14" }} />
+          <Clock size={13} style={{ color: "var(--dime-mint-text, #39FF14)" }} />
           <span
             className="text-[11px] font-black uppercase tracking-[0.18em]"
-            style={{ color: "#39FF14" }}
+            style={{ color: "var(--dime-mint-text, #39FF14)" }}
           >
             Odds &amp; Splits History
           </span>
@@ -491,7 +491,7 @@ export function OddsHistoryPanel({
           </span>
         </div>
         {open
-          ? <ChevronUp size={14} style={{ color: "#39FF14" }} />
+          ? <ChevronUp size={14} style={{ color: "var(--dime-mint-text, #39FF14)" }} />
           : <ChevronDown size={14} style={{ color: "rgba(57,255,20,0.6)" }} />
         }
       </button>
@@ -500,16 +500,16 @@ export function OddsHistoryPanel({
       {open && (
         <div className="px-2 pb-3">
           {isLoading ? (
-            <div className="flex items-center justify-center py-6 gap-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <div className="flex items-center justify-center py-6 gap-2" style={{ color: "var(--dime-text-muted, rgba(255,255,255,0.4))" }}>
               <RefreshCw size={13} className="animate-spin" />
               <span className="text-xs">Loading history…</span>
             </div>
           ) : error ? (
-            <p className="text-xs text-center py-4" style={{ color: "#ff4444" }}>
+            <p className="text-xs text-center py-4" style={{ color: "var(--dime-text-secondary, #ff4444)" }}>
               Failed to load odds &amp; splits history.
             </p>
           ) : rows.length === 0 && !pinnedOpenRow ? (
-            <p className="text-xs text-center py-4" style={{ color: "rgba(255,255,255,0.35)" }}>
+            <p className="text-xs text-center py-4" style={{ color: "var(--dime-text-muted, rgba(255,255,255,0.35))" }}>
               No snapshots yet — history populates after the next 10-min refresh cycle.
             </p>
           ) : (
@@ -614,7 +614,7 @@ export function OddsHistoryPanel({
                     const totalUnderMoney = totalPending  || row.totalOverMoneyPct  == null ? null : 100 - row.totalOverMoneyPct;
                     const mlHomeBets      = mlPending     || row.mlAwayBetsPct      == null ? null : 100 - row.mlAwayBetsPct;
                     const mlHomeMoney     = mlPending     || row.mlAwayMoneyPct     == null ? null : 100 - row.mlAwayMoneyPct;
-                    const dimColor = "rgba(255,255,255,0.28)";
+                    const dimColor = "var(--dime-text-faint, rgba(255,255,255,0.28))";
                     const colSpan = activeMarket === 'spread' ? 8 : activeMarket === 'total' ? 8 : 8;
                     return (
                       <>
@@ -624,16 +624,16 @@ export function OddsHistoryPanel({
                             colSpan={colSpan}
                             style={{
                               padding: "3px 8px",
-                              background: "rgba(255,200,80,0.08)",
-                              borderTop: "1px solid rgba(255,200,80,0.3)",
-                              borderBottom: "1px solid rgba(255,200,80,0.3)",
+                              background: "var(--dime-row-hover, rgba(255,255,255,0.05))",
+                              borderTop: "1px solid var(--dime-border-strong, rgba(255,255,255,0.2))",
+                              borderBottom: "1px solid var(--dime-border-strong, rgba(255,255,255,0.2))",
                               textAlign: "center",
                               fontSize: "clamp(8px, 1.6vw, 9.5px)",
                               fontWeight: 700,
                               letterSpacing: "0.12em",
-                              color: "#FFC850",
+                              color: "var(--dime-text-secondary, #FFC850)",
                               textTransform: "uppercase",
-                              fontFamily: "monospace",
+                              fontFamily: "var(--dime-font-mono, monospace)",
                             }}
                           >
                             &#9660; OPENING LINE
@@ -642,11 +642,11 @@ export function OddsHistoryPanel({
                         {/* Pinned OPEN row */}
                         <tr
                           style={{
-                            background: "rgba(255,200,80,0.04)",
-                            borderBottom: "1px solid rgba(255,200,80,0.15)",
+                            background: "var(--dime-row-hover, rgba(255,255,255,0.03))",
+                            borderBottom: "1px solid var(--dime-border, rgba(255,255,255,0.12))",
                           }}
                         >
-                          <td style={{ ...TD, textAlign: "left", color: "rgba(255,255,255,0.7)" }}>
+                          <td style={{ ...TD, textAlign: "left", color: "var(--dime-text-secondary, rgba(255,255,255,0.7))" }}>
                             {fmtTimestamp(row.scrapedAt)}
                           </td>
                           <td style={{ ...TD, textAlign: "center" }}>
@@ -657,19 +657,19 @@ export function OddsHistoryPanel({
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtSpread(row.awaySpread, row.awaySpreadOdds)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {spreadPending ? "\u2014" : fmtPct(row.spreadAwayBetsPct)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {spreadPending ? "\u2014" : fmtPct(row.spreadAwayMoneyPct)}
                               </td>
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtSpread(row.homeSpread, row.homeSpreadOdds)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {spreadPending ? "\u2014" : fmtPct(spreadHomeBets)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {spreadPending ? "\u2014" : fmtPct(spreadHomeMoney)}
                               </td>
                             </>
@@ -679,19 +679,19 @@ export function OddsHistoryPanel({
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtOver(row.total, row.overOdds)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {totalPending ? "\u2014" : fmtPct(row.totalOverBetsPct)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {totalPending ? "\u2014" : fmtPct(row.totalOverMoneyPct)}
                               </td>
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtUnder(row.total, row.underOdds)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {totalPending ? "\u2014" : fmtPct(totalUnderBets)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {totalPending ? "\u2014" : fmtPct(totalUnderMoney)}
                               </td>
                             </>
@@ -701,19 +701,19 @@ export function OddsHistoryPanel({
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtML(row.awayML)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {mlPending ? "\u2014" : fmtPct(row.mlAwayBetsPct)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {mlPending ? "\u2014" : fmtPct(row.mlAwayMoneyPct)}
                               </td>
                               <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                                 {fmtML(row.homeML)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {mlPending ? "\u2014" : fmtPct(mlHomeBets)}
                               </td>
-                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                              <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                                 {mlPending ? "\u2014" : fmtPct(mlHomeMoney)}
                               </td>
                             </>
@@ -735,7 +735,7 @@ export function OddsHistoryPanel({
                                 letterSpacing: "0.12em",
                                 color: "rgba(57,255,20,0.7)",
                                 textTransform: "uppercase",
-                                fontFamily: "monospace",
+                                fontFamily: "var(--dime-font-mono, monospace)",
                               }}
                             >
                               &#9660; LIVE MARKET MOVEMENT
@@ -768,7 +768,7 @@ export function OddsHistoryPanel({
                     const mlHomeBets      = mlPending     || row.mlAwayBetsPct      == null ? null : 100 - row.mlAwayBetsPct;
                     const mlHomeMoney     = mlPending     || row.mlAwayMoneyPct     == null ? null : 100 - row.mlAwayMoneyPct;
 
-                    const dimColor = "rgba(255,255,255,0.28)";
+                    const dimColor = "var(--dime-text-faint, rgba(255,255,255,0.28))";
 
                     return (
                       <tr
@@ -781,7 +781,7 @@ export function OddsHistoryPanel({
                         }}
                       >
                         {/* Timestamp */}
-                        <td style={{ ...TD, textAlign: "left", color: "rgba(255,255,255,0.7)" }}>
+                        <td style={{ ...TD, textAlign: "left", color: "var(--dime-text-secondary, rgba(255,255,255,0.7))" }}>
                           {fmtTimestamp(row.scrapedAt)}
                         </td>
 
@@ -796,19 +796,19 @@ export function OddsHistoryPanel({
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtSpread(row.awaySpread, row.awaySpreadOdds)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {spreadPending ? "—" : fmtPct(row.spreadAwayBetsPct)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {spreadPending ? "—" : fmtPct(row.spreadAwayMoneyPct)}
                             </td>
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtSpread(row.homeSpread, row.homeSpreadOdds)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {spreadPending ? "—" : fmtPct(spreadHomeBets)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: spreadPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {spreadPending ? "—" : fmtPct(spreadHomeMoney)}
                             </td>
                           </>
@@ -820,19 +820,19 @@ export function OddsHistoryPanel({
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtOver(row.total, row.overOdds)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {totalPending ? "—" : fmtPct(row.totalOverBetsPct)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {totalPending ? "—" : fmtPct(row.totalOverMoneyPct)}
                             </td>
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtUnder(row.total, row.underOdds)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {totalPending ? "—" : fmtPct(totalUnderBets)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: totalPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {totalPending ? "—" : fmtPct(totalUnderMoney)}
                             </td>
                           </>
@@ -844,19 +844,19 @@ export function OddsHistoryPanel({
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtML(row.awayML)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {mlPending ? "—" : fmtPct(row.mlAwayBetsPct)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {mlPending ? "—" : fmtPct(row.mlAwayMoneyPct)}
                             </td>
                             <td style={{ ...TD, ...BORDER_L, color: marketColor, textAlign: "center" }}>
                               {fmtML(row.homeML)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {mlPending ? "—" : fmtPct(mlHomeBets)}
                             </td>
-                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "rgba(255,255,255,0.88)" }}>
+                            <td style={{ ...TD, textAlign: "center", color: mlPending ? dimColor : "var(--dime-text-body, rgba(255,255,255,0.88))" }}>
                               {mlPending ? "—" : fmtPct(mlHomeMoney)}
                             </td>
                           </>

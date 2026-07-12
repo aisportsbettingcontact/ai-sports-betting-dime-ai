@@ -365,7 +365,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       const bw = tw + 10, bh = 16;
       const bLeft = Math.min(bx - bw / 2, PAD_LEFT + chartW - bw - 2);
       const bTop = Math.max(PAD_TOP + 2, by - bh - 6);
-      ctx.fillStyle = "rgba(255,215,0,0.18)";
+      ctx.fillStyle = withAlpha(P.gold, 0.18);
       ctx.strokeStyle = P.gold;
       ctx.lineWidth = 1.5;
       const r = 3;
@@ -508,7 +508,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
           position: "absolute",
           zIndex: 10,
           pointerEvents: "none",
-          background: "#141614",
+          background: "var(--bt-card, #141614)",
           border: `1px solid ${T.border2}`,
           borderRadius: "4px",
           padding: "8px 12px",
@@ -721,7 +721,7 @@ function BreakdownPanelInner({
                   <span style={{
                     fontSize: "12px",
                     fontWeight: 700,
-                    color: "#f0f0f0",
+                    color: "var(--bt-strong, #f0f0f0)",
                     fontFamily: T.sans,
                     letterSpacing: "0.5px",
                     whiteSpace: "nowrap",
@@ -928,7 +928,7 @@ function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; sho
 
           return (
             <div key={e.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#f0f0f0", fontFamily: T.sans, letterSpacing: "0.5px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-strong, #f0f0f0)", fontFamily: T.sans, letterSpacing: "0.5px" }}>
                 {e.key}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1132,7 +1132,7 @@ function HandicapperSelectorInner({
           top: "calc(100% + 4px)",
           left: 0,
           zIndex: 20,
-          background: "#141614",
+          background: "var(--bt-card, #141614)",
           border: `1px solid ${T.border2}`,
           borderRadius: "4px",
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
