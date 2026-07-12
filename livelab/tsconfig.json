@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/runtime" },
+    { "path": "packages/mcp-server" },
+    { "path": "packages/webview-ui" },
+    { "path": "packages/cli" },
+    { "path": "apps/vscode-extension" }
+  ]
+}

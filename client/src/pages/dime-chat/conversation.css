@@ -515,6 +515,8 @@ button.dc-sidebar-row {
 /* ----------------------------------------------------------------------------
    11. OWNER-ONLY COMING SOON (product requirement 2026-07-12) — non-owners see
        only the Dime wordmark with the coming-soon line: no composer, no pills.
+       Copy styling follows the mono microlabel vocabulary (recents-label F:64)
+       with the mandated pure white (dark) / black (light) copy color.
    -------------------------------------------------------------------------- */
 .dc-coming-soon {
   flex: 1;
@@ -524,17 +526,18 @@ button.dc-sidebar-row {
   justify-content: center;
   gap: 22px;
   padding: 24px;
+  text-align: center;
 }
 .dc-coming-soon-mark {
-  height: 52px;
-  width: auto;
-  max-width: 80%;
+  width: min(220px, 60vw);
+  height: auto;
 }
 .dc-coming-soon-copy {
-  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
   font-weight: 700;
+  font-size: 13px;
   letter-spacing: 0.28em;
-  text-align: center;
+  text-transform: uppercase;
   margin: 0;
 }
 .theme-dark .dc-coming-soon-copy {

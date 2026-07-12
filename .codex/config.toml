@@ -1,0 +1,3 @@
+[mcp_servers.livelab]
+command = "node"
+args = ["livelab/packages/mcp-server/dist/mcp-server.cjs"]

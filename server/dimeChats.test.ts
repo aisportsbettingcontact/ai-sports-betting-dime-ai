@@ -28,6 +28,10 @@ const chatRouteSrc = fs.readFileSync(
   path.join(import.meta.dirname, "dime-chat.route.ts"),
   "utf8"
 );
+const modelAccessSrc = fs.readFileSync(
+  path.join(import.meta.dirname, "dimeModelAccess.ts"),
+  "utf8"
+);
 const schemaSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "drizzle", "schema.ts"),
   "utf8"
@@ -75,17 +79,22 @@ describe("dimeChats router — security contract", () => {
 
 describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
   it("non-owners get the coming-soon state and never the composer", () => {
-    expect(pageSrc).toContain('const CHAT_COMING_SOON_COPY = "AI MODEL CHAT COMING SOON"');
-    expect(pageSrc).toMatch(/\{!chatUiReady && !authLoading && <ChatComingSoon theme=\{theme\} \/>\}/);
-    // Composer zone, hero and pills all gate on chatUiReady.
-    expect(pageSrc).toMatch(/\{chatUiReady && \(\s*<div className="dc-composer-zone">/);
-    expect(pageSrc).toMatch(/\{chatUiReady && !conversation && <BrandHero/);
-    expect(pageSrc).toMatch(/\{chatUiReady && !conversation && \(\s*<PromptPills/);
+    expect(pageSrc).toContain("AI MODEL CHAT COMING SOON");
+    expect(pageSrc).toMatch(/\{chatAccess === "denied" && \(/);
+    // Composer zone, hero and pills all gate on the granted access state.
+    expect(pageSrc).toMatch(/\{chatAccess === "granted" && \(\s*<div className="dc-composer-zone">/);
+    expect(pageSrc).toMatch(/\{chatAccess === "granted" && !conversation && \(\s*<BrandHero/);
+    expect(pageSrc).toMatch(/\{chatAccess === "granted" && !conversation && \(\s*<PromptPills/);
   });
 
   it("the server refuses non-owners before any model or context work", () => {
-    expect(chatRouteSrc).toMatch(/user\.hasAccess && user\.role === "owner"/);
-    expect(chatRouteSrc).toContain('res.status(403).json({ error: "AI Model chat is coming soon." })');
+    expect(chatRouteSrc).toContain("canAccessDimeModel(user)");
+    expect(chatRouteSrc).toContain(
+      "res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE })"
+    );
+    // The decision itself is the owner-only policy module.
+    expect(modelAccessSrc).toMatch(/user\.role === "owner"/);
+    expect(modelAccessSrc).toMatch(/if \(!user\.hasAccess\) return false/);
   });
 
   it("sidebar identity is the live session user — no frozen sample copy", () => {
@@ -93,18 +102,19 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
     expect(pageSrc).not.toContain("Expires August 8, 2026");
     expect(pageSrc).not.toContain("FROZEN SAMPLE IDENTITY");
     expect(pageSrc).toContain("resolveAvatarSrc");
-    expect(pageSrc).toMatch(/@\{appUser\.username\}/);
+    expect(pageSrc).toMatch(/formatHandle\(appUser\.username\)/);
     // Discord avatar CDN + blank silhouette fallback.
     expect(pageSrc).toContain("cdn.discordapp.com/avatars/");
     expect(pageSrc).toContain("BLANK_AVATAR_URI");
   });
 
   it("lifetime members see no Upgrade/Cancel; the menu buttons act", () => {
-    expect(pageSrc).toMatch(/\{!lifetime && \(\s*<div className="dc-menu-cta-row">/);
+    expect(pageSrc).toMatch(/\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/);
+    expect(pageSrc).toMatch(/!isLifetimeMember\(appUser\)/);
     expect(pageSrc).toContain('goTo("/checkout")');
     expect(pageSrc).toContain('goTo("/account")');
     expect(pageSrc).toContain('goTo("/profile")');
-    expect(pageSrc).toContain("logoutMutation.mutate()");
+    expect(pageSrc).toContain("await logoutMutation.mutateAsync()");
   });
 
   it("the ⋯ menu wires Star, Archive and Delete to the history mutations", () => {
