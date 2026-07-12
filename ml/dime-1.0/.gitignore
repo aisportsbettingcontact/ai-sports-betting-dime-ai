@@ -1,0 +1,13 @@
+# Model artifacts never belong in git — they live in the private HF repo.
+out/
+checkpoints/
+merged/
+awq/
+*.safetensors
+*.gguf
+*.bin
+*.pt
+eval-report*.json
+# Real training data stays out of the repo (samples are committed explicitly).
+data/train.jsonl
+data/val.jsonl
