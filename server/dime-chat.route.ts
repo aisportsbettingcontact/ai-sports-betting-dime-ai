@@ -23,13 +23,16 @@ import { ENV } from "./_core/env";
 import { getAppUserById } from "./db";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import {
-  DIME_CHAT_MAX_TOKENS,
   DIME_CHAT_MODEL,
+  DIME_CHAT_PROFILE_METADATA,
   DIME_CHAT_SYSTEM_PROMPT,
-  DIME_CHAT_SYSTEM_PROMPT_SOURCE,
+  classifyDimeChatRequest,
   sanitizeDimeChatHistory,
+  selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { validateDimeResponseText } from "./_core/dimeVerdict";
+import { assessDimeResponsibleGamblingSafety, containsProhibitedBettingCertainty } from "./_core/dimeSafety";
 import {
   checkDimeChatRateLimit,
   DIME_CHAT_RATE_LIMIT_WINDOW_MS,
@@ -150,9 +153,17 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   }
 
   const messages = sanitizeDimeChatHistory(req.body?.messages);
+  const requestClass = classifyDimeChatRequest(messages);
+  const responseBudget = selectDimeChatResponseBudget(requestClass);
 
   dimeLog("dime.chat.request", requestId, {
     messageCount: messages.length,
+    requestClass,
+    responseBudget,
+    dimeProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
+    profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
+    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
     lastMessageLength: messages.length > 0 ? messages[messages.length - 1].content.length : 0,
   });
 
@@ -163,6 +174,13 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       detail: "Request must end with a user message",
     });
     res.status(400).json({ error: "Request must end with a user message." });
+    return;
+  }
+
+  const safety = assessDimeResponsibleGamblingSafety(messages.at(-1)?.content ?? "unknown");
+  if (safety.risk === "distress") {
+    dimeLog("dime.chat.safety_intervention", requestId, { reason: safety.reason });
+    res.status(200).json({ message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.` });
     return;
   }
 
@@ -207,7 +225,16 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
 
   // Additive data-freshness declaration for the client DataPill. Older clients
   // ignore unknown frame types.
-  send({ type: "meta", dataFreshness });
+  send({
+    type: "meta",
+    dataFreshness,
+    dimeProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
+    profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
+    promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
+    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    requestClass,
+    responseBudget,
+  });
 
   const anthropic = createAnthropicClient();
   const abort = new AbortController();
@@ -226,34 +253,52 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   dimeLog("dime.chat.stream.start", requestId, {
     model: DIME_CHAT_MODEL,
     historyLength: messages.length,
-    promptSource: DIME_CHAT_SYSTEM_PROMPT_SOURCE,
+    requestClass,
+    responseBudget,
+    promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
+    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
   });
 
   try {
     const stream = anthropic.messages.stream(
       {
         model: DIME_CHAT_MODEL,
-        max_tokens: DIME_CHAT_MAX_TOKENS,
+        max_tokens: responseBudget,
         system: DIME_CHAT_SYSTEM_PROMPT,
         messages,
       },
       { signal: abort.signal },
     );
 
-    let outputChars = 0;
+    let output = "";
     stream.on("text", (delta) => {
-      outputChars += delta.length;
-      send({ type: "delta", text: delta });
+      output += delta;
     });
 
     const final = await stream.finalMessage();
+    const validation = validateDimeResponseText(output);
+    const certaintyViolation = containsProhibitedBettingCertainty(output);
 
     dimeLog("dime.chat.stream.done", requestId, {
       stopReason: final.stop_reason,
-      outputCharCount: outputChars,
+      outputCharCount: output.length,
       latencyMs: Date.now() - startTime,
+      verificationStatus: validation.ok && !certaintyViolation ? "passed" : "blocked",
+      validationErrors: validation.errors,
+      certaintyViolation,
+      usage: final.usage,
     });
 
+    if (!validation.ok || certaintyViolation) {
+      send({
+        type: "delta",
+        text: "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.",
+      });
+      send({ type: "done", stopReason: "validation_blocked" });
+      return;
+    }
+
+    send({ type: "delta", text: output });
     send({ type: "done", stopReason: final.stop_reason });
   } catch (err: unknown) {
     if (!aborted) {
