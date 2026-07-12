@@ -23,7 +23,8 @@ import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 // LazyMotion + m keeps the card compatible with the Dime shell's strict
 // LazyMotion boundary (a full `motion` component inside it throws in dev and
 // defeats motion tree-shaking). The local provider covers standalone routes.
-import { LazyMotion, domAnimation, m } from "framer-motion";
+// MotionConfig honors the OS reduced-motion setting for the entrance fade.
+import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -2763,10 +2764,10 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   const HEADER_ICON_SIZE = isDesktop ? 18 : isMdUp ? 16 : 12;
   // 768–1023 (tablet md layout): full readable sizes — the sub-10px values are
   // phone-only and violate the no-tiny-text law on tablets.
-  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '8.25px';
-  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(13.3px, 1.05vw, 17.1px)' : isMdUp ? '12px' : '6.75px';
-  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(15.2px, 1.28vw, 19px)' : isMdUp ? '13px' : '7.5px';
-  const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '9.75px';
+  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '10px';
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(13.3px, 1.05vw, 17.1px)' : isMdUp ? '12px' : '10px';
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(15.2px, 1.28vw, 19px)' : isMdUp ? '13px' : '11px';
+  const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '10px';
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
     const teamGroupJustify = 'center';
@@ -3112,10 +3113,11 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
 
   return (
     <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
       <m.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.12, ease: "easeOut" }}
+        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
         className="w-full relative"
         ref={cardRef}
         // Inert hook: mobile CSS (dime-mobile.css) maps edge tiers to the
@@ -3526,6 +3528,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       {(mode === 'splits' || mobileTab === 'splits') && isCardVisible && game.id != null && (
         <div
           className="w-full"
+          data-edge-tier={maxDiff >= EDGE_THRESHOLD_PP ? "signal" : "none"}
           style={{
             background: "hsl(var(--card))",
             borderLeft: `3px solid ${borderColor}`,
@@ -3580,6 +3583,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           />
         </>
       )}
+      </MotionConfig>
     </LazyMotion>
   );
 }

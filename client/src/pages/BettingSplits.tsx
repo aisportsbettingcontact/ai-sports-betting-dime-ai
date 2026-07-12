@@ -316,9 +316,12 @@ export default function BettingSplitsPage({
     if (activeLeagues.includes(selectedSport)) return;
     const fallback = activeLeagues[0];
     if (!fallback) return;
+    // Drop the requested date too: an off-season deep link's date belongs to
+    // the dead league's calendar — land on the fallback league's live slate.
     setSelectedSportState(fallback);
-    setLocation(resolveRouteHref(bettingSplitsPath(fallback, selectedDate)), { replace: true });
-  }, [activeLeagues, selectedSport, selectedDate, setLocation, resolveRouteHref]);
+    setSelectedDateState(todayUTC());
+    setLocation(resolveRouteHref(bettingSplitsPath(fallback)), { replace: true });
+  }, [activeLeagues, selectedSport, setLocation, resolveRouteHref]);
 
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
     { sport: selectedSport },
@@ -528,7 +531,7 @@ export default function BettingSplitsPage({
               State styling comes from the .bs-pill brand layer in dime-mobile.css. */}
           {activeLeagues.map((league) => (
             <button type="button" key={league} onClick={() => setSelectedSport(league)} data-active={selectedSport === league}
-              className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0 cursor-pointer">
+              className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold tracking-wide transition-all flex-shrink-0 cursor-pointer">
               <img src={LEAGUE_LOGOS[league]} alt="" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === league ? 1 : 0.5, flexShrink: 0 }} />
               {league}
             </button>

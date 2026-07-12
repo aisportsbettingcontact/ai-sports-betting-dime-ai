@@ -387,6 +387,7 @@ function MarketHistoryTable({
   homeLogo,
   awayAbbrev,
   homeAbbrev,
+  alignFixed = false,
 }: {
   market: ActiveMarket;
   rawRows: HistoryRow[];
@@ -394,6 +395,10 @@ function MarketHistoryTable({
   homeLogo?: string | null;
   awayAbbrev: string;
   homeAbbrev: string;
+  /** ≥768px: fixed layout + shared column widths so the three stacked
+   * market tables align column-for-column. Mobile keeps auto layout so the
+   * timestamp column can breathe at 390px. */
+  alignFixed?: boolean;
 }) {
   // OPEN pinning: first OPEN row with values for THIS market (oldest = last in
   // the DESC-ordered array); DK rows dedupe per market so every move is real.
@@ -461,7 +466,7 @@ function MarketHistoryTable({
           fontFamily: "var(--dime-font-mono)",
         }}
       >
-        &#9660; {label}
+        {label}
       </td>
     </tr>
   );
@@ -479,10 +484,21 @@ function MarketHistoryTable({
         style={{
           width: "100%",
           borderCollapse: "collapse",
-          tableLayout: "auto",
+          tableLayout: alignFixed ? "fixed" : "auto",
           fontSize: FONT_TD,
         }}
       >
+        {alignFixed && (
+          <colgroup>
+            <col style={{ width: "16%" }} />
+            <col style={{ width: "20%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "20%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "11%" }} />
+          </colgroup>
+        )}
         <thead>
           <tr>
             <th style={{ ...TH, textAlign: "left" }}>Time&nbsp;(EST)</th>
@@ -597,10 +613,7 @@ export function OddsHistoryPanel({
 
       {/* ── Toggle header ─────────────────────────────────────────────────── */}
       <button type="button" onClick={handleToggle}
-        className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer transition-colors"
-        style={{ background: "transparent" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--dime-row-hover)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+        className="ohp-toggle w-full flex items-center justify-between px-4 py-2.5"
         aria-expanded={open}
       >
         <div className="flex items-center gap-2">
@@ -645,7 +658,7 @@ export function OddsHistoryPanel({
 
       {/* ── Expanded panel ────────────────────────────────────────────────── */}
       {open && (
-        <div className="px-2 pb-3">
+        <div className="px-3 pb-3">
           {isLoading ? (
             <div className="flex items-center justify-center py-6 gap-2" style={{ color: "var(--dime-text-secondary)" }}>
               <RefreshCw size={13} className="animate-spin" />
@@ -686,6 +699,7 @@ export function OddsHistoryPanel({
                     homeLogo={homeLogo}
                     awayAbbrev={awayAbbrev}
                     homeAbbrev={homeAbbrev}
+                    alignFixed={isMdUp}
                   />
                 </div>
               ))}
