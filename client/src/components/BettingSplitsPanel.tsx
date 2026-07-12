@@ -1,15 +1,16 @@
 /*
  * BettingSplitsPanel
  *
- * Mobile  (< lg): 3 markets stacked vertically — ultra-compact rows
+ * Mobile  (< md / 768px): tabbed toggle, one market at a time — ultra-compact rows
  *   Each row: [MARKET LABEL] [TICKETS bar] [HANDLE bar] — all inline
- *   Target: 3 rows together match the height of CompactScorePanel (~115px)
  *
- * Desktop (≥ lg): 3 markets side-by-side in equal columns (full layout)
+ * Tablet + desktop (≥ md / 768px): all 3 markets side-by-side in equal
+ * columns, no tab selectors — the wide layout is the whole point of the
+ * splits surface on these screens.
  */
 
 import { useState } from "react";
-import { useIsDesktop } from '@/hooks/useIsDesktop';
+import { useIsMdUp } from '@/hooks/useIsMdUp';
 import { trpc } from "@/lib/trpc";
 import { getGameTeamColorsClient } from "@shared/teamColors";
 import { OddsHistoryPanel } from "./OddsHistoryPanel";
@@ -37,6 +38,10 @@ interface BettingSplitsPanelProps {
   };
   awayLabel: string;
   homeLabel: string;
+  /** Official team abbreviations (e.g. "KC", "BAL") — preferred over city
+   * names in the tight market-label rows; falls back to awayLabel/homeLabel. */
+  awayAbbr?: string;
+  homeAbbr?: string;
   awayNickname?: string;
   homeNickname?: string;
   /** IntersectionObserver gate — only fetch data when card is in viewport */
@@ -149,7 +154,7 @@ const LABEL_STROKE = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1p
 const MOBILE_AWAY_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -162,7 +167,7 @@ const MOBILE_AWAY_LABEL_STYLE: React.CSSProperties = {
 const MOBILE_HOME_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -175,7 +180,7 @@ const MOBILE_HOME_LABEL_STYLE: React.CSSProperties = {
 const MOBILE_FULL_LABEL_STYLE: React.CSSProperties = {
   fontSize: 10,
   color: '#ffffff',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -192,14 +197,14 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       <div className="w-full flex flex-col gap-0.5">
         {/* Header row */}
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
-          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.55)", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
+          <span style={{ fontSize: 10, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
         </div>
         {/* Empty bar */}
         <div className="w-full rounded-md flex items-center justify-center"
-          style={{ height: 20, background: "rgba(255,255,255,0.05)", minWidth: 0 }}>
-          <span style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", opacity: 0.35 }}>—</span>
+          style={{ height: 20, background: "var(--dime-row-hover, rgba(255,255,255,0.05))", minWidth: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
         </div>
       </div>
     );
@@ -236,12 +241,12 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
     <div className="bsp-row w-full flex flex-col gap-0.5">
       {/* Header row: AWAY_LABEL  [rowLabel]  HOME_LABEL */}
       <div className="bsp-hdr flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
       </div>
       {/* Bar — flex row, NO overflow:hidden on outer container (that clips home label) */}
-      {/* Each segment has its own overflow:hidden to clip text within its bounds */}
+      {/* Header spans: 11px floor — the mobile type law bans sub-10px content. */}
       <div
         className="bsp-bar"
         style={{
@@ -361,9 +366,9 @@ interface SplitBarProps {
 // Font scales proportionally with bar height: bar = clamp(28px,3vw,44px), font ≈ 40% of bar height
 // Away label: flush LEFT
 const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 'clamp(11px, 1.2vw, 17px)',
+  fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -374,9 +379,9 @@ const DESKTOP_AWAY_LABEL_STYLE: React.CSSProperties = {
 
 // Home label: flush RIGHT
 const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 'clamp(11px, 1.2vw, 17px)',
+  fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -387,9 +392,9 @@ const DESKTOP_HOME_LABEL_STYLE: React.CSSProperties = {
 
 // 100% full-bar label: centered
 const DESKTOP_FULL_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 'clamp(11px, 1.2vw, 17px)',
+  fontSize: 'clamp(12px, 1.2vw, 17px)',
   color: 'var(--dime-text-primary, #ffffff)',
-  fontWeight: 800,
+  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
   letterSpacing: '0.04em',
   lineHeight: 1,
   whiteSpace: 'nowrap',
@@ -422,8 +427,8 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
 
   return (
     <div className="flex flex-col gap-1 w-full">
-      <span className="text-center uppercase tracking-widest font-bold"
-        style={{ fontSize: 'clamp(11px, 0.9vw, 14px)', color: "var(--dime-text-secondary, rgba(255,255,255,0.80))", letterSpacing: "0.12em" }}>
+      <span className="text-center uppercase"
+        style={{ fontFamily: "var(--dime-font-mono)", fontWeight: 500, fontSize: 'clamp(11px, 0.9vw, 13px)', color: "var(--dime-text-secondary, rgba(255,255,255,0.80))", letterSpacing: "0.1em" }}>
         {label}
       </span>
       {hasData ? (() => {
@@ -508,7 +513,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
       })() : (
         <div className="w-full rounded-full flex items-center justify-center"
           style={{ height: 30, background: "var(--dime-surface-raised, rgba(255,255,255,0.05))" }}>
-          <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))", opacity: 0.35 }}>—</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
         </div>
       )}
     </div>
@@ -546,23 +551,30 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
   const isTotalMarket = totalValue !== undefined && !isNaN(totalValue);
 
   return (
-    <div className="flex flex-col w-full" style={{ gap: 8, padding: "10px 12px" }}>
+    // Horizontal inset keeps adjacent market columns' labels ≥24px apart
+    // across the divider (never a run-on line) while still fitting two
+    // "WSH (-106)"-length labels per column in the 1024–1279 shell band.
+    <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(12px, 1.4vw, 18px)" }}>
       <div className="flex items-center gap-2">
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
-        <span className="uppercase tracking-widest font-extrabold whitespace-nowrap"
+        <span className="uppercase tracking-widest font-bold whitespace-nowrap"
           style={{ fontSize: 'clamp(13px, 1.1vw, 17px)', color: "var(--dime-text-primary, #ffffff)", letterSpacing: "0.14em" }}>{title}</span>
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
       </div>
+      {/* Both label-row branches share one fixed box so the three market
+          columns keep a single baseline (TOTAL used to sit 3-4px lower). */}
       {isTotalMarket ? (
-        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
-          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700 }}>{totalValue}</span>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
+        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, minHeight: 'clamp(21px, 1.8vw, 30px)' }}>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
+          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totalValue}</span>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
         </div>
       ) : (
-        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span className="uppercase" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{awayLabel}</span>
-          <span className="uppercase text-right" style={{ fontSize: 'clamp(11px, 1.0vw, 15px)', color: "var(--dime-text-body, rgba(255,255,255,0.95))", fontWeight: 700, letterSpacing: "0.04em", whiteSpace: 'nowrap' }}>{homeLabel}</span>
+        // min-width:0 + ellipsis on both sides: the two labels can never
+        // collide or bleed into the neighboring market column.
+        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, gap: 8, minHeight: 'clamp(21px, 1.8vw, 30px)' }}>
+          <span className="uppercase" style={{ fontSize: 'clamp(12px, 1.0vw, 15px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.02em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{awayLabel}</span>
+          <span className="uppercase text-right" style={{ fontSize: 'clamp(12px, 1.0vw, 15px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.02em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{homeLabel}</span>
         </div>
       )}
       <SplitBar label="Tickets" awayPct={awayTickets} homePct={homeTickets} awayColor={awayColor} homeColor={homeColor} />
@@ -576,6 +588,7 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
 export function BettingSplitsPanel({
   gameId,
   game, awayLabel, homeLabel,
+  awayAbbr: awayAbbrProp, homeAbbr: homeAbbrProp,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   awayNickname: _aN, homeNickname: _hN,
   onMarketChange,
@@ -611,8 +624,10 @@ export function BettingSplitsPanel({
   const homeSpread = toNum(game.homeBookSpread);
   const bookTotal  = toNum(game.bookTotal);
 
-  const awayAbbr = colors?.away?.abbrev ?? awayLabel;
-  const homeAbbr = colors?.home?.abbrev ?? homeLabel;
+  // Abbreviations keep the tight label rows collision-free; city names are the
+  // last resort ("KANSAS CITY (+1.5)" is what used to overlap the next column).
+  const awayAbbr = colors?.away?.abbrev ?? awayAbbrProp ?? awayLabel;
+  const homeAbbr = colors?.home?.abbrev ?? homeAbbrProp ?? homeLabel;
 
   const awaySpreadLabel = !isNaN(awaySpread) ? `${awayAbbr} (${spreadSign(awaySpread)})` : awayAbbr;
   const homeSpreadLabel = !isNaN(homeSpread) ? `${homeAbbr} (${spreadSign(homeSpread)})` : homeAbbr;
@@ -630,7 +645,7 @@ export function BettingSplitsPanel({
   if (!hasAnySplits) {
     return (
       <div className="w-full flex items-center justify-center" style={{ minHeight: 80, padding: "16px 12px" }}>
-        <span style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", opacity: 0.4, letterSpacing: "0.06em" }}>
+        <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>
           Splits not yet available
         </span>
       </div>
@@ -648,12 +663,12 @@ export function BettingSplitsPanel({
     ? mobileMarket
     : (availableMarkets[0] ?? "spread");
 
-  const isDesktop = useIsDesktop();
+  const isMdUp = useIsMdUp();
 
   return (
     <>
-      {/* ── Mobile (< lg): toggle + single active market ── */}
-      {!isDesktop && <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', padding: '4px 0' }}>
+      {/* ── Mobile (< md): toggle + single active market ── */}
+      {!isMdUp && <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', padding: '4px 0' }}>
         {/* 3-way toggle */}
         <div className="flex items-center" style={{ padding: "0 8px 4px 8px", gap: 4 }}>
           {(["spread", "total", "ml"] as MobileMarket[]).map((m) => {
@@ -669,8 +684,8 @@ export function BettingSplitsPanel({
                 style={{
                   flex: 1,
                   padding: "3px 0",
-                  fontSize: 9,
-                  fontWeight: 800,
+                  fontSize: 11,
+                  fontWeight: 700, // Grotesk loads 400-700; 800 renders synthetic bold
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   borderRadius: 4,
@@ -722,9 +737,9 @@ export function BettingSplitsPanel({
         )}
       </div>}
 
-      {/* ── Desktop (≥ lg): full-size horizontal 3-column layout ── */}
+      {/* ── Tablet + desktop (≥ md): full-size horizontal 3-column layout, no tabs ── */}
       {/* Always render all 3 columns so the panel fills 100% width with no whitespace */}
-      {isDesktop && <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
+      {isMdUp && <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
         {/* Spread column — always rendered */}
         <div className="flex-1 min-w-0">
           <MarketBlock title="Spread" awayLabel={awaySpreadLabel} homeLabel={homeSpreadLabel}
