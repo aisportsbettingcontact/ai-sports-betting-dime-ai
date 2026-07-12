@@ -287,8 +287,20 @@ const prettyDate = (iso: string): string =>
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export default function DimeModelFeed(props: { sport?: string; date?: string }) {
+export interface DimeModelFeedProps {
+  sport?: string;
+  date?: string;
+  /** The unified app shell owns primary navigation when this surface is embedded. */
+  embeddedInShell?: boolean;
+  /** Allows the shell to preserve a local-only preview capability in route changes. */
+  resolveRouteHref?: (href: string) => string;
+}
+
+const identityRouteHref = (href: string) => href;
+
+export default function DimeModelFeed(props: DimeModelFeedProps) {
   const [, navigate] = useLocation();
+  const resolveRouteHref = props.resolveRouteHref ?? identityRouteHref;
   const parsed = parseFeedModelPath(props.sport, props.date);
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     try {
@@ -316,9 +328,9 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
   const needsDateCanonicalize = parsed !== null && parsed.isoDate === null;
   useEffect(() => {
     if (needsDateCanonicalize) {
-      navigate(feedModelPath(sport), { replace: true });
+      navigate(resolveRouteHref(feedModelPath(sport)), { replace: true });
     }
-  }, [needsDateCanonicalize, sport, navigate]);
+  }, [needsDateCanonicalize, sport, navigate, resolveRouteHref]);
 
   // Discord account-link feedback lands here now (the legacy /dashboard
   // consumer is unrouted): surface it once, then strip the params.
@@ -340,7 +352,7 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
   const { cards, isLoading, isStale, gamesCount } = useFeedCards(sport, isoDate);
 
   const go = (nextSport: "MLB" | "WC", nextIso: string) =>
-    navigate(feedModelPath(nextSport, nextIso));
+    navigate(resolveRouteHref(feedModelPath(nextSport, nextIso)));
 
   if (needsDateCanonicalize) {
     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
@@ -379,11 +391,13 @@ export default function DimeModelFeed(props: { sport?: string; date?: string }) 
         <div className="dmf-sync">
           {/* Outbound nav — the canonical feed must never be a dead end
               (tablet/desktop have no bottom tab bar; non-owners never do) */}
-          <nav className="dmf-nav" aria-label="Dime surfaces">
-            <Link href={bettingSplitsPath("MLB")} className="dmf-navlink">Splits</Link>
-            <Link href="/chat" className="dmf-navlink">Chat</Link>
-            <Link href="/profile" className="dmf-navlink">Profile</Link>
-          </nav>
+          {!props.embeddedInShell && (
+            <nav className="dmf-nav" aria-label="Dime surfaces">
+              <Link href={bettingSplitsPath("MLB")} className="dmf-navlink">Splits</Link>
+              <Link href="/chat" className="dmf-navlink">Chat</Link>
+              <Link href="/profile" className="dmf-navlink">Profile</Link>
+            </nav>
+          )}
           <button
             className="dmf-themebtn"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

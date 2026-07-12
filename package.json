@@ -7,6 +7,7 @@
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build",
+    "verify:preview-production": "vite build && node scripts/verify-preview-production.mjs dist/public",
     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp server/discord/splits_card.html dist/splits_card.html && cp server/nhl_model_engine.py dist/nhl_model_engine.py && cp server/MLBAIModel.py dist/MLBAIModel.py && cp server/StrikeoutModel.py dist/StrikeoutModel.py && cp server/ActionNetworkHRPropsAPI.py dist/ActionNetworkHRPropsAPI.py && cp server/ActionNetworkF5NrfiAPI.py dist/ActionNetworkF5NrfiAPI.py && cp server/wc2026/wc2026BracketScraper.mjs dist/wc2026BracketScraper.mjs && cp server/wc2026/v24_jul11_engine.mjs dist/v24_jul11_engine.mjs && cp server/wc2026/wc2026AuditEngine.mjs dist/wc2026AuditEngine.mjs && cp server/wc2026/groupStageGameIds.json dist/groupStageGameIds.json",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",

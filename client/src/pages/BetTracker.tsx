@@ -1545,17 +1545,25 @@ function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnal
   );
 }
 
-export default function BetTracker() {
+export interface BetTrackerProps {
+  /** Local shell preview: render chrome without impersonating server authorization. */
+  previewMode?: boolean;
+}
+
+export default function BetTracker({ previewMode = false }: BetTrackerProps) {
   const [, navigate] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
 
   useEffect(() => {
-    if (!authLoading && !appUser) navigate("/");
-  }, [authLoading, appUser, navigate]);
+    if (!previewMode && !authLoading && !appUser) navigate("/");
+  }, [authLoading, appUser, navigate, previewMode]);
 
-  const role      = appUser?.role ?? "user";
+  const role      = appUser?.role ?? (previewMode ? "owner" : "user");
   const canAccess = ["owner", "admin", "handicapper"].includes(role);
   const isOwnerOrAdmin = role === "owner" || role === "admin";
+  // Preview mode never grants protected data access. With no authenticated
+  // app user, queries stay disabled and the real empty-state chrome is shown.
+  const canLoadProtectedData = canAccess && !!appUser;
 
   // ── Stake mode ────────────────────────────────────────────────────────────
   const [stakeMode, setStakeMode] = useState<StakeMode>(() => {
@@ -1747,7 +1755,7 @@ export default function BetTracker() {
   const slateQuery = trpc.betTracker.getSlate.useQuery(
     { sport: activeSport === "ALL" ? "MLB" : activeSport, gameDate: formDate },
     {
-      enabled:   canAccess && !!formDate,
+      enabled:   canLoadProtectedData && !!formDate,
       staleTime: isFormDatePast ? Infinity : 4 * 60 * 1000,
       gcTime:    isFormDatePast ? 30 * 60 * 1000 : 5 * 60 * 1000,  // keep past slates in cache 30min
       retry:     1,
@@ -1785,7 +1793,7 @@ export default function BetTracker() {
   const paginatedQuery = trpc.betTracker.listWithStatsPaginated.useInfiniteQuery(
     paginatedQueryInput,
     {
-      enabled: canAccess,
+      enabled: canLoadProtectedData,
       // staleTime:Infinity for historical data — graded bets never change
       // staleTime:60s for live ranges (TODAY, SEASON with pending bets)
       staleTime: isHistoricalRange ? Infinity : 60_000,
@@ -1816,7 +1824,7 @@ export default function BetTracker() {
   const handicappersQuery = trpc.betTracker.listHandicappers.useQuery(
     undefined,
     {
-      enabled: canAccess && isOwnerOrAdmin,
+      enabled: canLoadProtectedData && isOwnerOrAdmin,
       staleTime: 5 * 60 * 1000, // 5 min — user list rarely changes
       refetchOnWindowFocus: false,
     }
@@ -1853,7 +1861,7 @@ export default function BetTracker() {
   const linescoreQuery = trpc.betTracker.getLinescores.useQuery(
     { sport: "MLB", dates: mlbDates },
     {
-      enabled: canAccess && mlbDates.length > 0,
+      enabled: canLoadProtectedData && mlbDates.length > 0,
       staleTime: hasLiveMlbDates ? 30_000 : Infinity,
       gcTime:    hasLiveMlbDates ? 5 * 60_000 : 30 * 60_000,
       refetchInterval: hasLiveMlbDates ? 60_000 : false,
@@ -1921,7 +1929,7 @@ export default function BetTracker() {
   // ── Logs query (owner/admin only) ─────────────────────────────────────────
   const logsQuery = trpc.betTracker.getLogs.useQuery(
     { limit: 200, offset: 0 },
-    { enabled: canAccess && isOwnerOrAdmin && activeTab === "LOGS", staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 }
+    { enabled: canLoadProtectedData && isOwnerOrAdmin && activeTab === "LOGS", staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 }
   );
 
   const utils = trpc.useUtils();
@@ -2604,7 +2612,7 @@ export default function BetTracker() {
 
 
   // ── Access guard ──────────────────────────────────────────────────────────
-  if (authLoading) {
+  if (authLoading && !previewMode) {
     // Show a page-structure skeleton instead of a blank full-screen spinner.
     // Eliminates the perceived blank-screen delay during auth check (~200-400ms).
     return (
@@ -3248,7 +3256,7 @@ export default function BetTracker() {
 
           {/* ── Calendar Recap (Pikkit-style) ─────────────────────────────────── */}
           {/* Shows +/- units per day for the selected handicapper, month navigation */}
-          {canAccess && (
+          {canLoadProtectedData && (
             <BetCalendar
               targetUserId={effectiveUserId}
               unitSize={unitSize > 0 ? unitSize : 100}
