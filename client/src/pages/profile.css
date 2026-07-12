@@ -1,29 +1,24 @@
-/* Profile page — Prez Bets design system.
+/* Profile page — Dime brand law (design-system/dime-ai/MASTER.md).
    Discipline rules on this page:
-   - Gold (#F5C518-family) appears ONCE: the lifetime badge. It is the
-     content of this screen, so it may speak. It appears nowhere else.
-   - Neon green (#39FF14) does NOT appear on this page at all —
-     green means edge/win, and there are no edges here. The bottom
-     nav's active state handles green.
-   - Three type tiers only: identity, section label, row text. */
+   - One accent: mint, and only as the wordmark coin-dot. There are no
+     edges/picks/live signals here, so nothing else earns mint.
+   - No gold, no neon, no red. The plan badge is a quiet raised pill —
+     the username is the identity, the badge is metadata.
+   - Three type tiers only: identity, section label, row text.
+   - All colors resolve from the global --dime-* tokens, so light mode
+     is a token swap (html.dark), never a redesign. */
 
 .pf-page {
-  --bg: #000000;
-  --surface: #101012;
-  --border: #232327;
-  --text: #f2f2f2;
-  --text-dim: #8a8a92;
-  --gold: #f2c11f;
-  --gold-ink: #1a1300;
+  --bg: var(--dime-bg);
+  --surface: var(--dime-surface-card);
+  --border: var(--dime-border);
+  --text: var(--dime-text-primary);
+  --text-dim: var(--dime-text-secondary);
 
   min-height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family:
-    "Inter",
-    -apple-system,
-    system-ui,
-    sans-serif;
+  font-family: var(--dime-font-sans);
   display: flex;
   flex-direction: column;
   padding: 0 16px calc(24px + env(safe-area-inset-bottom));
@@ -33,6 +28,12 @@
   width: 100%;
 }
 
+/* The global owner-tabs body class already reserves 60px + the safe-area
+   inset for the bottom bar — don't double-count the inset locally. */
+body.mobile-owner-tabs-active .pf-page {
+  padding-bottom: 24px;
+}
+
 /* ---------- Identity hero ---------- */
 
 .pf-hero {
@@ -40,19 +41,40 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 36px 0 28px;
+  padding: calc(36px + env(safe-area-inset-top, 0px)) 0 28px;
 }
 
-.pf-logo {
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  object-fit: cover;
+/* Brand wordmark: lowercase "dıme", dotless ı + mint coin-dot
+   (MASTER.md:56 — 0.20em dot, weight 700, tracking −0.05em). */
+.pf-wordmark {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.pf-wordmark-i {
+  position: relative;
+  display: inline-block;
+}
+
+.pf-coindot {
+  position: absolute;
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: var(--dime-mint);
+  left: calc(50% + 0.03em);
+  top: 0.05em;
+  transform: translateX(-50%);
+  box-shadow: var(--dime-coin-keyline);
 }
 
 .pf-username {
   margin: 14px 0 10px;
   font-size: 24px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -63,22 +85,18 @@
   gap: 6px;
 }
 
-/* The one loud element on the page. Earned. */
+/* Quiet raised pill — plan tier is metadata, not signal. */
 .pf-plan-badge {
-  background: var(--gold);
-  color: var(--gold-ink);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  background: var(--dime-surface-raised);
+  border: 1px solid var(--border);
+  color: var(--dime-text-body);
+  font-family: var(--dime-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   padding: 6px 14px;
-  border-radius: 999px;
-}
-
-.pf-plan-since {
-  font-size: 12px;
-  color: var(--text-dim);
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  letter-spacing: 0.04em;
+  border-radius: 16px;
 }
 
 /* ---------- Sections ---------- */
@@ -88,11 +106,12 @@
 }
 
 .pf-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-family: var(--dime-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--dime-text-muted);
   margin: 0 0 8px 4px;
 }
 
@@ -148,17 +167,17 @@
   font: inherit;
   font-size: 15px;
   font-weight: 600;
-  transition: background-color 0.12s ease;
+  transition: background-color var(--dime-t) var(--dime-ease);
 }
 
 .pf-row--action:hover,
 .pf-row--action:focus-visible {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--dime-row-hover);
 }
 
 .pf-row--action:focus-visible {
-  outline: 2px solid var(--text-dim);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--dime-ring);
 }
 
 .pf-row--quiet {
@@ -201,6 +220,12 @@
   50% { opacity: 0.8; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .pf-skeleton {
+    animation: none;
+  }
+}
+
 .pf-skeleton--circle {
   border-radius: 18px;
 }
@@ -231,15 +256,15 @@
   border-radius: 8px;
   padding: 8px 16px;
   cursor: pointer;
-  transition: background-color 0.12s ease;
+  transition: background-color var(--dime-t) var(--dime-ease);
 }
 
 .pf-error-retry:hover,
 .pf-error-retry:focus-visible {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--dime-row-hover);
 }
 
 .pf-error-retry:focus-visible {
-  outline: 2px solid var(--text-dim);
-  outline-offset: -2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--dime-ring);
 }
