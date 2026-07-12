@@ -9,3 +9,10 @@ e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-tasks-HIJ-addendum.
 e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verification-worksheet.md:aws-access-token:44
 e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-rotation-verification-worksheet.md:aws-access-token:128
 e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-corrections-1-2-addendum.md:generic-api-key:54
+
+# LiveLab redaction unit test (commit 501f9645): a synthetic, hand-typed JWT
+# fixture used to verify that redactText() scrubs JWT shapes — not a credential
+# (header/payload decode to {"alg":"HS256"}/{"sub":"1234567890"}, signature is
+# junk). The test now builds the token at runtime so the literal is gone from
+# the working tree; this fingerprint covers the immutable history.
+501f9645ba9ac39acf53cb74699bc1a9158fcd00:livelab/packages/protocol/test/protocol.unit.test.ts:jwt:133
