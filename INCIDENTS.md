@@ -58,3 +58,24 @@ Exact failing `file::test` names:
 Required follow-up: provide an isolated test database (or explicitly skip these
 integration suites when it is absent), rerun all five files, and close only when
 the 42 exact assertions pass.
+
+### Update 2026-07-12 (remediation pass)
+
+Two corrections and one improvement:
+
+- CI never exercised these 42 assertions. All five suites carried
+  `describe.skipIf(IS_CI)`, so GitHub Actions skipped them while local runs
+  failed on the missing database. They executed nowhere.
+- The repository configures no `DATABASE_URL` Actions secret (verified via
+  the secrets API on 2026-07-12), so pointing CI at a real database was never
+  possible with the documented setup.
+- The remediation branch gives them an executing home: the `db-tests` CI job
+  runs all five suites against an isolated `mysql:8` service container with
+  migrations applied, and `scripts/test-db-local.sh` reproduces that locally
+  against a throwaway `mysqld` (requires `brew install mysql`; the
+  remediation machine had only `mysql-client`, so the local rerun remains
+  outstanding).
+
+Status stays OPEN until the 42 assertions pass on a local isolated database
+per the follow-up above. The db-tests job result on the remediation PR is the
+first executed evidence either way.

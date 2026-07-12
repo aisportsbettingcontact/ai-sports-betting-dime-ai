@@ -145,3 +145,6 @@ dime-ai/.vercel-output/
 # Release-gate artifacts (generated)
 vitest-results.json
 env-gate-report.json
+
+# Playwright CLI session artifacts (canonical matrix archive lives in docs/audits/)
+.playwright-cli/

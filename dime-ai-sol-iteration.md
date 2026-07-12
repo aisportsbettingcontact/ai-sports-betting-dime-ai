@@ -694,3 +694,32 @@ The implementation is not finished in the release sense. The bundle gate fails, 
 ## 11. Code-verification appendix
 
 The raw instruction, complete 32-file implementation patch, requested test-source ledger, Motion import-path dossier, archived harness audit, failure ledgers, and recovered original named-file plan are indexed in [`dime-ai-sol-audit-appendix.md`](./docs/audits/2026-07-11-dime-shell/dime-ai-sol-audit-appendix.md).
+
+---
+
+## 2026-07-12 post-landing corrections (remediation pass)
+
+The remediation branch `remediation/pr70-hotfix` corrects four statements in
+this document against repository, GitHub, and build evidence. The original
+text above stays unchanged as the historical record.
+
+1. **Disposition.** Sections 1 and 9 declare this work "not landable", state
+   "no landing action is authorized", and prohibit pushing. The same content
+   merged to `main` as PR #70 on 2026-07-12 at 07:36 UTC and Railway deployed
+   it to production. The prohibition and the landing cannot both stand; the
+   landing happened.
+2. **Home.tsx.** Section 2.3 calls the Home.tsx diff "mechanical reflow".
+   The diff also imports `resolvePostLoginPath` and changes where every
+   non-deep-linked user lands after login (desktop and tablet now land on
+   `/chat`). That change closes an open-redirect gap and improves the flow,
+   and it is behavioral, not mechanical.
+3. **DimeAppShell test claims.** Section 7.1 reports "13/13 pass" as proof of
+   shell wiring, headings, and cleanup contracts. Those tests assert source
+   text shape with regexes, one assertion was a tautology that no code change
+   could fail, and none of them render a component. The remediation branch
+   removes the tautology and adds rendered-behavior coverage under `e2e/`.
+4. **Bundle breach remediation state.** Section 1 reports the `/chat` gzip
+   breach (+46.61 KiB against a +5 KiB budget) as blocking and unremediated.
+   The remediation branch removes framer-motion from the `/chat` critical
+   path and adds an enforced bundle budget check; see
+   `docs/remediation/2026-07-12-pr70/` for measurements.
