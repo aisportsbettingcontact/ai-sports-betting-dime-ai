@@ -152,12 +152,6 @@ html.dark {
     display: none;
   }
 }
-.bs-tab {
-  color: var(--dime-text-secondary) !important;
-}
-.bs-tab--active {
-  color: var(--dime-text-primary) !important;
-}
 .bs-datehdr {
   color: var(--dime-text-primary) !important;
 }
@@ -369,7 +363,6 @@ html:not(.dark) .cal-panel {
 /* One motion curve everywhere (MASTER.md: 160ms, single curve). */
 .bs-page .bs-pill,
 .bs-page .bs-search,
-.bs-page .bs-tab,
 .bs-page .cal-trigger,
 .bs-page .cal-day,
 .bs-page .gc-star,
@@ -650,6 +643,29 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   }
   .bs-page .gc-scrollinner {
     min-width: 220px !important;
+  }
+
+  /* Mobile type floor (MASTER.md): no content text below 11px on phones.
+   * Mono micro-labels sit at the 11px end of their 10–11px band; the search
+   * dropdown's team nicknames lift from their 10px desktop inline size; the
+   * date-subheader clamp raises its minimum so it never dips under 11px on
+   * narrow phones (its vw-driven size at ≥768px is untouched). */
+  .bs-page .bsp-toggle {
+    font-size: 11px !important;
+  }
+  .bs-page .bsp-hdr span:nth-child(2) {
+    font-size: 11px !important;
+  }
+  .bs-dropdown .bs-nick {
+    font-size: 11px !important;
+  }
+  .bs-datehdr-sub {
+    font-size: clamp(11px, 2.8vw, 17px) !important;
+  }
+  /* Dropdown contrast: hard-white inline text maps to the theme's primary
+   * ink so light-mode never renders white-on-light (≥4.5:1 both themes). */
+  .bs-dropdown .text-white {
+    color: var(--dime-text-primary) !important;
   }
 
   /* ── Bet Tracker: phone layout ────────────────────────────────────────── */
