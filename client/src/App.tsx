@@ -149,7 +149,7 @@ function DimeChatRoute() {
   );
 
   return localPreview ? (
-    <DimeChat />
+    <DimeChat previewMode />
   ) : (
     <RequireAuth>
       <DimeChat />
