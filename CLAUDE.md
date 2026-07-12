@@ -66,6 +66,10 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
 - `references/ai-gateway-setup.md` — routing all Claude traffic (Anthropic SDK via
   `server/_core/anthropicClient.ts`, Agent SDK via `server/_core/dimeAgent.ts`, Claude Code CLI)
   through Vercel AI Gateway with `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
+- `ml/dime-1.0/README.md` — Dime 1.0 self-hosted model runbook (QLoRA fine-tune of Llama 3 8B
+  Instruct → 4-bit AWQ → private RunPod Serverless vLLM endpoint; Railway stays the control
+  plane). Server wiring: `server/_core/dime1*.ts` behind `DIME_CHAT_LLM_PROVIDER` (ships
+  `"frozen"`; flip to `"dime1"` only after the runbook's eval gates pass)
 
 ## Deploy law (IMPORTANT)
 
