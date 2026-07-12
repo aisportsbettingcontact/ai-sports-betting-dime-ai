@@ -1,0 +1,12 @@
+{
+  "name": "@livelab/webview-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -b && node ../../scripts/bundle-webview.mjs"
+  },
+  "dependencies": {
+    "@livelab/protocol": "*"
+  }
+}
