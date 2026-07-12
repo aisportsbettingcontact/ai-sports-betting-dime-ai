@@ -14,6 +14,30 @@ export const DIME_CHAT_MAX_HISTORY = 24;
 export const DIME_CHAT_MAX_MESSAGE_CHARS = 8_000;
 export const DIME_CHAT_MAX_BLUEPRINT_BYTES = 128_000;
 export const DIME_CHAT_CONTEXT_TOKEN_BUDGET = 36_000;
+
+/**
+ * Which LLM backend serves Dime Chat responses (PROVIDER FREEZE, 2026-07-12).
+ *
+ * "frozen"    — the Dime Chat interface makes NO model-provider calls. The
+ *               route short-circuits before createAnthropicClient() and
+ *               streams DIME_CHAT_FROZEN_NOTICE back over the same SSE
+ *               contract, so the client renders it like a normal assistant
+ *               turn. All Claude routing/wiring below the switch stays intact
+ *               per product direction — nothing is removed.
+ * "anthropic" — restores the original Claude streaming path unchanged.
+ *
+ * This is a deliberate hardcoded constant, not an env var: unfreezing must be
+ * an explicit code change. Scope is the Dime Chat interface only
+ * (POST /api/dime/chat) — other Claude surfaces are not governed by this
+ * switch.
+ */
+export type DimeChatLlmProvider = "anthropic" | "frozen";
+export const DIME_CHAT_LLM_PROVIDER: DimeChatLlmProvider = "frozen";
+
+/** Hardcoded assistant reply streamed while the provider is frozen. */
+export const DIME_CHAT_FROZEN_NOTICE =
+  "Dime's AI model is temporarily offline while we upgrade model providers. " +
+  "Your message was not sent to a model. AI responses will return soon.";
 export const DIME_CHAT_BLUEPRINT_PATH = process.env.DIME_CHAT_BLUEPRINT_PATH?.trim();
 
 const DEFAULT_DIME_CHAT_BLUEPRINT_NAMES = ["llm-blueprint.md", "llm-blueprint", "llm-blueprint.docx"] as const;
