@@ -61,12 +61,13 @@ import { GlobalMobileOwnerTabs } from "./features/mobileOwnerTabs/GlobalMobileOw
 import {
   feedModelPath,
   bettingSplitsPath,
+  canonicalBettingSplitsPath,
   legacyFeedRedirectTarget,
   parseBettingSplitsPath,
 } from "@/lib/feedRoutes";
 import { isDimeProductLocation } from "./pages/dime-shell/productRoute";
 import { useDimeShellViewport } from "./pages/dime-shell/useDimeShellViewport";
-import { allowsLocalChatPreview } from "./pages/dime-shell/previewGate";
+import { allowsLocalDimePreview } from "./pages/dime-shell/previewGate";
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -141,8 +142,8 @@ function RootRoute() {
 
 function DimeChatRoute() {
   // Local visual-review escape hatch only. Vite replaces DEV with false in
-  // production builds, where /chat remains behind RequireAuth unconditionally.
-  const localPreview = allowsLocalChatPreview(
+  // production builds, where authenticated product routes stay behind RequireAuth.
+  const localPreview = allowsLocalDimePreview(
     window.location.search,
     import.meta.env.DEV
   );
@@ -164,12 +165,12 @@ function StandaloneSplitsRoute({
   dateSegment?: string;
 }) {
   const parsed = parseBettingSplitsPath(sportSegment, dateSegment);
-  const canonical = parsed?.isoDate
-    ? bettingSplitsPath(parsed.sport, parsed.isoDate)
-    : bettingSplitsPath(parsed?.sport ?? "MLB");
+  const canonical = canonicalBettingSplitsPath(sportSegment, dateSegment);
+
   if (!parsed?.isoDate || window.location.pathname !== canonical) {
     return <Redirect to={canonical} replace />;
   }
+
   return (
     <RequireAuth>
       <BettingSplits initialSport={parsed.sport} initialDate={parsed.isoDate} />
@@ -181,15 +182,16 @@ function Router() {
   const [location] = useLocation();
   const shellViewport = useDimeShellViewport();
   const shellOwnsRoute = shellViewport && isDimeProductLocation(location);
-  const localPreview =
-    location === "/chat" &&
-    allowsLocalChatPreview(window.location.search, import.meta.env.DEV);
+  const localPreview = allowsLocalDimePreview(
+    window.location.search,
+    import.meta.env.DEV
+  );
 
   if (shellOwnsRoute) {
     return (
       <Suspense fallback={null}>
         {localPreview ? (
-          <DimeAppShell />
+          <DimeAppShell previewMode />
         ) : (
           <RequireAuth>
             <DimeAppShell />
@@ -219,15 +221,9 @@ function Router() {
         {/* ── Legacy slug eradication — permanent client-side redirects ─────────
           (server issues 308s for full-page loads; these cover SPA navigations).
           None of these slugs may be emitted by app code — see lib/feedRoutes. */}
-        <Route path="/dashboard">
-          {() => <Redirect to={feedModelPath("MLB")} replace />}
-        </Route>
-        <Route path="/projections">
-          {() => <Redirect to={feedModelPath("MLB")} replace />}
-        </Route>
-        <Route path="/splits">
-          {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
-        </Route>
+        <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+        <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+        <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
         {/* Legal pages — public, no auth required */}
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
@@ -253,32 +249,13 @@ function Router() {
         {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
         {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
           maps to /betting-splits/MLB; everything else to the dated feed URL. */}
-        <Route path="/feed">
-          {() => (
-            <Redirect
-              to={legacyFeedRedirectTarget(window.location.search)}
-              replace
-            />
-          )}
-        </Route>
+        <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
         {/* Dime AI Model Projections — the canonical feed surface.
           /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
           split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
           canonicalizes to today's dated URL inside DimeModelFeed). */}
-        <Route path="/feed/model/:sport/:date">
-          {p => (
-            <RequireAuth>
-              <DimeModelFeed sport={p.sport} date={p.date} />
-            </RequireAuth>
-          )}
-        </Route>
-        <Route path="/feed/model/:sport">
-          {p => (
-            <RequireAuth>
-              <DimeModelFeed sport={p.sport} />
-            </RequireAuth>
-          )}
-        </Route>
+        <Route path="/feed/model/:sport/:date">{p => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
+        <Route path="/feed/model/:sport">{p => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
         {/* Betting splits — lowercase dated canonical URL; legacy forms replace. */}
         <Route path="/betting-splits/:sport/:date">
           {p => (

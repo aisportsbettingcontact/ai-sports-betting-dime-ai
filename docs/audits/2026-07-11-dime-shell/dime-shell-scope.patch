@@ -1,0 +1,4613 @@
+diff --git a/client/src/App.tsx b/client/src/App.tsx
+index e27ffcdc7b3bb36f72e2586f7c28a8d13ce528ad..52c0233725ecdc86249e5c4c4fcdcc2fe9168e4a 100644
+--- a/client/src/App.tsx
++++ b/client/src/App.tsx
+@@ -13,7 +13,7 @@ import { useAppAuth } from "./_core/hooks/useAppAuth";
+ // [SWAP 2026-07-09] "/" now renders Dime landing v2 (spec:
+ // docs/superpowers/specs/2026-07-08-dime-landing-v2-design.md — this is the approved
+ // route-swap step). The legacy LandingPage import is gone; v1 remains at /landingpage.
+-import DimeLandingV2 from './pages/dime/landing/DimeLandingV2';
++import DimeLandingV2 from "./pages/dime/landing/DimeLandingV2";
+ // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
+ // Making it lazy removes recharts (409KB) from the critical path.
+ const NotFound = lazy(() => import("@/pages/NotFound"));
+@@ -23,7 +23,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
+ // canonical surfaces (docs/plans/2026-07-11-navigation-reconstruction.md):
+ //   /feed/model/{mlb|wc}-MM-DD-YYYY (DimeModelFeed) · /betting-splits/:sport
+ const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
+-const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
++const BettingSplits = lazy(() => import("./pages/BettingSplits"));
+ const Home = lazy(() => import("./pages/Home"));
+ const UserManagement = lazy(() => import("./pages/UserManagement"));
+ const PublishProjections = lazy(() => import("./pages/PublishProjections"));
+@@ -38,29 +38,36 @@ const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
+ const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
+ const Resources = lazy(() => import("@/pages/Resources"));
+ const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
+-const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
++const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+ 
+-const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
+-const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
+-const ManageAccount = lazy(() => import('./pages/ManageAccount'));
+-const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
+-const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
+-const DimeChat = lazy(() => import('./pages/DimeChat'));
+-const CheckoutPage = lazy(() => import('./pages/dime/CheckoutPage'));
+-const Profile = lazy(() => import('./pages/Profile'));
+-const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
+-const Privacy = lazy(() => import('./pages/Privacy'));
+-const Terms = lazy(() => import('./pages/Terms'));
++const SubscribeSuccess = lazy(() => import("./pages/SubscribeSuccess"));
++const SubscribeCancel = lazy(() => import("./pages/SubscribeCancel"));
++const ManageAccount = lazy(() => import("./pages/ManageAccount"));
++const WorldCup2026 = lazy(() => import("./pages/WorldCup2026"));
++const ClaudeAssistant = lazy(() => import("./pages/ClaudeAssistant"));
++const DimeChat = lazy(() => import("./pages/DimeChat"));
++const DimeAppShell = lazy(() => import("./pages/dime-shell/DimeAppShell"));
++const CheckoutPage = lazy(() => import("./pages/dime/CheckoutPage"));
++const Profile = lazy(() => import("./pages/Profile"));
++const WaitlistAdmin = lazy(() => import("./pages/WaitlistAdmin"));
++const Privacy = lazy(() => import("./pages/Privacy"));
++const Terms = lazy(() => import("./pages/Terms"));
+ 
+ // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
+-const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
+-import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOwnerTabs';
++const MobileOwnerLayout = lazy(
++  () => import("./features/mobileOwnerTabs/MobileOwnerLayout")
++);
++import { GlobalMobileOwnerTabs } from "./features/mobileOwnerTabs/GlobalMobileOwnerTabs";
+ import {
+   feedModelPath,
+   bettingSplitsPath,
++  canonicalBettingSplitsPath,
+   legacyFeedRedirectTarget,
+-  parseSplitsSport,
++  parseBettingSplitsPath,
+ } from "@/lib/feedRoutes";
++import { isDimeProductLocation } from "./pages/dime-shell/productRoute";
++import { useDimeShellViewport } from "./pages/dime-shell/useDimeShellViewport";
++import { allowsLocalDimePreview } from "./pages/dime-shell/previewGate";
+ 
+ /**
+  * RootRoute — auth-aware landing/redirect component for the "/" path.
+@@ -95,7 +102,9 @@ function RootRoute() {
+   // This replaces the old "return null while loading" pattern that kept the shell visible.
+   useEffect(() => {
+     if (loading) {
+-      console.log("[RootRoute] [STATE] Auth loading — LandingPage already visible, waiting for auth");
++      console.log(
++        "[RootRoute] [STATE] Auth loading — LandingPage already visible, waiting for auth"
++      );
+       return;
+     }
+     if (appUser) {
+@@ -103,27 +112,95 @@ function RootRoute() {
+       const pendingCheckout = sessionStorage.getItem("pendingCheckout");
+       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
+         sessionStorage.removeItem("pendingCheckout");
+-        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
++        console.log(
++          `[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`
++        );
+         navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
+         return;
+       }
+       const target = feedModelPath("MLB");
+-      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`);
++      console.log(
++        `[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`
++      );
+       // replace — otherwise Back lands on "/" which instantly re-pushes forward
+       navigate(target, { replace: true });
+     } else {
+-      console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
++      console.log(
++        "[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible"
++      );
+     }
+   }, [loading, appUser]);
+ 
+   // [OPTIMISTIC] Always render the landing page immediately — no null return, no loading gap.
+   // DimeLandingV2 is an eager import — no Suspense needed, renders synchronously.
+   // The HTML loading shell dismisses the moment this component renders into #root.
+-  console.log(`[RootRoute] [RENDER] Rendering DimeLandingV2 immediately (loading=${loading}, authed=${!!appUser})`);
++  console.log(
++    `[RootRoute] [RENDER] Rendering DimeLandingV2 immediately (loading=${loading}, authed=${!!appUser})`
++  );
+   return <DimeLandingV2 />;
+ }
+ 
++function DimeChatRoute() {
++  // Local visual-review escape hatch only. Vite replaces DEV with false in
++  // production builds, where authenticated product routes stay behind RequireAuth.
++  const localPreview = allowsLocalDimePreview(
++    window.location.search,
++    import.meta.env.DEV
++  );
++
++  return localPreview ? (
++    <DimeChat />
++  ) : (
++    <RequireAuth>
++      <DimeChat />
++    </RequireAuth>
++  );
++}
++
++function StandaloneSplitsRoute({
++  sportSegment,
++  dateSegment,
++}: {
++  sportSegment?: string;
++  dateSegment?: string;
++}) {
++  const parsed = parseBettingSplitsPath(sportSegment, dateSegment);
++  const canonical = canonicalBettingSplitsPath(sportSegment, dateSegment);
++
++  if (!parsed?.isoDate || window.location.pathname !== canonical) {
++    return <Redirect to={canonical} replace />;
++  }
++
++  return (
++    <RequireAuth>
++      <BettingSplits initialSport={parsed.sport} initialDate={parsed.isoDate} />
++    </RequireAuth>
++  );
++}
++
+ function Router() {
++  const [location] = useLocation();
++  const shellViewport = useDimeShellViewport();
++  const shellOwnsRoute = shellViewport && isDimeProductLocation(location);
++  const localPreview = allowsLocalDimePreview(
++    window.location.search,
++    import.meta.env.DEV
++  );
++
++  if (shellOwnsRoute) {
++    return (
++      <Suspense fallback={null}>
++        {localPreview ? (
++          <DimeAppShell previewMode />
++        ) : (
++          <RequireAuth>
++            <DimeAppShell />
++          </RequireAuth>
++        )}
++      </Suspense>
++    );
++  }
++
+   return (
+     // [PERF] fallback=null: the HTML loading shell in index.html covers all loading states.
+     // It hides via MutationObserver the moment React renders ANY child into #root.
+@@ -131,99 +208,222 @@ function Router() {
+     // and the React component — two separate loading states visible to the user.
+     // With null: HTML shell → direct render of real content. Zero flash.
+     <Suspense fallback={null}>
+-    <Switch>
+-      {/* ── Public routes (no auth required) ───────────────────────────────── */}
+-      {/* / → auth-aware root:
++      <Switch>
++        {/* ── Public routes (no auth required) ───────────────────────────────── */}
++        {/* / → auth-aware root:
+            - Authenticated users → canonical feed (/feed/model/mlb-MM-DD-YYYY)
+            - Unauthenticated users → LandingPage (public marketing page)
+            - While auth is loading → render nothing (HTML shell covers this state)
+       */}
+-      <Route path="/">{() => <RootRoute />}</Route>
+-      {/* /home → redirect to landing */}
+-      <Route path="/home">{() => <Redirect to="/" />}</Route>
+-      {/* ── Legacy slug eradication — permanent client-side redirects ─────────
++        <Route path="/">{() => <RootRoute />}</Route>
++        {/* /home → redirect to landing */}
++        <Route path="/home">{() => <Redirect to="/" />}</Route>
++        {/* ── Legacy slug eradication — permanent client-side redirects ─────────
+           (server issues 308s for full-page loads; these cover SPA navigations).
+           None of these slugs may be emitted by app code — see lib/feedRoutes. */}
+-      <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+-      <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+-      <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
+-      {/* Legal pages — public, no auth required */}
+-      <Route path="/privacy" component={Privacy} />
+-      <Route path="/terms" component={Terms} />
+-      {/* Stripe checkout result pages — public, no auth required */}
+-      <Route path="/subscribe/success" component={SubscribeSuccess} />
+-      <Route path="/subscribe/cancel" component={SubscribeCancel} />
+-      {/* Login page — public, no auth required */}
+-      <Route path="/login" component={Home} />
+-      {/* Legacy standalone pricing page retired: it advertised the old $99/$499
++        <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
++        <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
++        <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
++        {/* Legal pages — public, no auth required */}
++        <Route path="/privacy" component={Privacy} />
++        <Route path="/terms" component={Terms} />
++        {/* Stripe checkout result pages — public, no auth required */}
++        <Route path="/subscribe/success" component={SubscribeSuccess} />
++        <Route path="/subscribe/cancel" component={SubscribeCancel} />
++        {/* Login page — public, no auth required */}
++        <Route path="/login" component={Home} />
++        {/* Legacy standalone pricing page retired: it advertised the old $99/$499
+           copy while its CTAs charged the legacy $99.99/$499.99 prices (live
+           audit 2026-07-10). The v2 grid on the landing page is canonical. */}
+-      <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
+-      {/* Password reset — public, accessed via reset link */}
+-      <Route path="/reset-password" component={ResetPassword} />
+-      {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
++        <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
++        {/* Password reset — public, accessed via reset link */}
++        <Route path="/reset-password" component={ResetPassword} />
++        {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
+           old page still marketed the de-marketed annual plan. */}
+-      <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
+-      {/* Landing v2 is now the root landing page — redirect the old test route
++        <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
++        {/* Landing v2 is now the root landing page — redirect the old test route
+           so existing links and the checkout back-links keep working. */}
+-      <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>
+-      {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
+-      <Route path="/checkout" component={CheckoutPage} />
+-      {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
+-      {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
++        <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>
++        {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
++        <Route path="/checkout" component={CheckoutPage} />
++        {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
++        {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
+           maps to /betting-splits/MLB; everything else to the dated feed URL. */}
+-      <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
+-      {/* Dime AI Model Projections — the canonical feed surface.
++        <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
++        {/* Dime AI Model Projections — the canonical feed surface.
+           /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
+           split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
+           canonicalizes to today's dated URL inside DimeModelFeed). */}
+-      <Route path="/feed/model/:sport/:date">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
+-      <Route path="/feed/model/:sport">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
+-      {/* Betting splits — canonical /betting-splits/:sport (MLB | NHL | NBA) */}
+-      <Route path="/betting-splits/:sport">{(p) => {
+-        const sport = parseSplitsSport(p.sport);
+-        return sport
+-          ? <RequireAuth><BettingSplits initialSport={sport} /></RequireAuth>
+-          : <Redirect to={bettingSplitsPath("MLB")} replace />;
+-      }}</Route>
+-      <Route path="/betting-splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
+-      {/* Admin pages */}
+-      <Route path="/admin/users">{() => <RequireAuth><UserManagement /></RequireAuth>}</Route>
+-      <Route path="/admin/publish">{() => <RequireAuth><PublishProjections /></RequireAuth>}</Route>
+-      <Route path="/admin/ingest-an">{() => <RequireAuth><IngestAnOdds /></RequireAuth>}</Route>
+-      <Route path="/admin/model-results">{() => <RequireAuth><TheModelResults /></RequireAuth>}</Route>
+-      <Route path="/admin/f5-edge">{() => <Redirect to="/admin/model-results" />}</Route>
+-      <Route path="/admin/security">{() => <RequireAuth><SecurityEvents /></RequireAuth>}</Route>
+-      <Route path="/admin/model-status">{() => <RequireAuth><AdminModelStatus /></RequireAuth>}</Route>
+-      <Route path="/admin/postponed-games">{() => <RequireAuth><PostponedGames /></RequireAuth>}</Route>
+-      <Route path="/admin/backtest">{() => <RequireAuth><MlbBacktest /></RequireAuth>}</Route>
+-      {/* Waitlist management — owner-only, enforced inside WaitlistAdmin */}
+-      <Route path="/admin/waitlist">{() => <RequireAuth><WaitlistAdmin /></RequireAuth>}</Route>
+-      {/* Team schedules — params are read via useParams() inside each component */}
+-      <Route path="/mlb/team/:slug">{() => <RequireAuth><MlbTeamSchedule /></RequireAuth>}</Route>
+-      <Route path="/nba/team/:slug">{() => <RequireAuth><NbaTeamSchedule /></RequireAuth>}</Route>
+-      <Route path="/nhl/team/:slug">{() => <RequireAuth><NhlTeamSchedule /></RequireAuth>}</Route>
+-      {/* User pages */}
+-      <Route path="/bet-tracker">{() => <RequireAuth><BetTracker /></RequireAuth>}</Route>
+-      <Route path="/resources">{() => <RequireAuth><Resources /></RequireAuth>}</Route>
+-      {/* Manage Account page */}
+-      <Route path="/account">{() => <RequireAuth><ManageAccount /></RequireAuth>}</Route>
+-      {/* Claude UI/UX Assistant */}
+-      <Route path="/admin/claude">{() => <RequireAuth><ClaudeAssistant /></RequireAuth>}</Route>
+-      {/* Profile page — identity and standing */}
+-      <Route path="/profile">{() => <RequireAuth><Profile /></RequireAuth>}</Route>
+-      {/* Dime AI Chat — streaming Claude Fable 5 chat */}
+-      <Route path="/chat">{() => <RequireAuth><DimeChat /></RequireAuth>}</Route>
+-      {/* FIFA World Cup 2026 — Group Stage Feed */}
+-      <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
+-      {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+-      {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
+-      <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
+-      <Route path="/m/:rest*">{() => <RequireAuth><MobileOwnerLayout /></RequireAuth>}</Route>
+-      {/* 404 */}
+-      <Route path="/404" component={NotFound} />
+-      <Route component={NotFound} />
+-    </Switch>
++        <Route path="/feed/model/:sport/:date">{p => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
++        <Route path="/feed/model/:sport">{p => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
++        {/* Betting splits — lowercase dated canonical URL; legacy forms replace. */}
++        <Route path="/betting-splits/:sport/:date">
++          {p => (
++            <StandaloneSplitsRoute
++              sportSegment={p.sport}
++              dateSegment={p.date}
++            />
++          )}
++        </Route>
++        <Route path="/betting-splits/:sport">
++          {p => <StandaloneSplitsRoute sportSegment={p.sport} />}
++        </Route>
++        <Route path="/betting-splits">
++          {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
++        </Route>
++        {/* Admin pages */}
++        <Route path="/admin/users">
++          {() => (
++            <RequireAuth>
++              <UserManagement />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/publish">
++          {() => (
++            <RequireAuth>
++              <PublishProjections />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/ingest-an">
++          {() => (
++            <RequireAuth>
++              <IngestAnOdds />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/model-results">
++          {() => (
++            <RequireAuth>
++              <TheModelResults />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/f5-edge">
++          {() => <Redirect to="/admin/model-results" />}
++        </Route>
++        <Route path="/admin/security">
++          {() => (
++            <RequireAuth>
++              <SecurityEvents />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/model-status">
++          {() => (
++            <RequireAuth>
++              <AdminModelStatus />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/postponed-games">
++          {() => (
++            <RequireAuth>
++              <PostponedGames />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/admin/backtest">
++          {() => (
++            <RequireAuth>
++              <MlbBacktest />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Waitlist management — owner-only, enforced inside WaitlistAdmin */}
++        <Route path="/admin/waitlist">
++          {() => (
++            <RequireAuth>
++              <WaitlistAdmin />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Team schedules — params are read via useParams() inside each component */}
++        <Route path="/mlb/team/:slug">
++          {() => (
++            <RequireAuth>
++              <MlbTeamSchedule />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/nba/team/:slug">
++          {() => (
++            <RequireAuth>
++              <NbaTeamSchedule />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/nhl/team/:slug">
++          {() => (
++            <RequireAuth>
++              <NhlTeamSchedule />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* User pages */}
++        <Route path="/bet-tracker">
++          {() => (
++            <RequireAuth>
++              <BetTracker />
++            </RequireAuth>
++          )}
++        </Route>
++        <Route path="/resources">
++          {() => (
++            <RequireAuth>
++              <Resources />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Manage Account page */}
++        <Route path="/account">
++          {() => (
++            <RequireAuth>
++              <ManageAccount />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Claude UI/UX Assistant */}
++        <Route path="/admin/claude">
++          {() => (
++            <RequireAuth>
++              <ClaudeAssistant />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Profile page — identity and standing */}
++        <Route path="/profile">
++          {() => (
++            <RequireAuth>
++              <Profile />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* Dime AI Chat — streaming Claude Fable 5 chat */}
++        <Route path="/chat">{() => <DimeChatRoute />}</Route>
++        {/* FIFA World Cup 2026 — Group Stage Feed */}
++        <Route path="/wc2026">
++          {() => (
++            <RequireAuth>
++              <WorldCup2026 />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
++        {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
++        <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
++        <Route path="/m/:rest*">
++          {() => (
++            <RequireAuth>
++              <MobileOwnerLayout />
++            </RequireAuth>
++          )}
++        </Route>
++        {/* 404 */}
++        <Route path="/404" component={NotFound} />
++        <Route component={NotFound} />
++      </Switch>
+     </Suspense>
+   );
+ }
+diff --git a/client/src/lib/feedRoutes.test.ts b/client/src/lib/feedRoutes.test.ts
+index a3e304f6dc50b10232b7c8901b580dc7baec2aa2..a473ce7f50534987c4a5664ac9a0dabd41c69db6 100644
+--- a/client/src/lib/feedRoutes.test.ts
++++ b/client/src/lib/feedRoutes.test.ts
+@@ -3,11 +3,14 @@ import {
+   toFeedSlugDate,
+   feedModelPath,
+   bettingSplitsPath,
++  canonicalBettingSplitsPath,
++  parseBettingSplitsPath,
+   parseSplitsSport,
+   legacyFeedRedirectTarget,
+ } from "./feedRoutes";
+ 
+ const SLUG_RE = /^\/feed\/model\/(mlb|wc)-\d{2}-\d{2}-\d{4}$/;
++const SPLITS_SLUG_RE = /^\/betting-splits\/(mlb|nhl|nba)-\d{2}-\d{2}-\d{4}$/;
+ 
+ describe("feedRoutes — canonical path builders", () => {
+   it("toFeedSlugDate converts YYYY-MM-DD to MM-DD-YYYY", () => {
+@@ -16,7 +19,9 @@ describe("feedRoutes — canonical path builders", () => {
+   });
+ 
+   it("feedModelPath builds dated lowercase slugs", () => {
+-    expect(feedModelPath("MLB", "2026-07-11")).toBe("/feed/model/mlb-07-11-2026");
++    expect(feedModelPath("MLB", "2026-07-11")).toBe(
++      "/feed/model/mlb-07-11-2026"
++    );
+     expect(feedModelPath("WC", "2026-07-11")).toBe("/feed/model/wc-07-11-2026");
+   });
+ 
+@@ -26,10 +31,22 @@ describe("feedRoutes — canonical path builders", () => {
+     expect(feedModelPath("WC")).toContain("/feed/model/wc-");
+   });
+ 
+-  it("bettingSplitsPath builds uppercase sport paths, MLB default", () => {
+-    expect(bettingSplitsPath()).toBe("/betting-splits/MLB");
+-    expect(bettingSplitsPath("NHL")).toBe("/betting-splits/NHL");
+-    expect(bettingSplitsPath("NBA")).toBe("/betting-splits/NBA");
++  it("bettingSplitsPath mirrors the feed's lowercase MM-DD-YYYY slug", () => {
++    expect(bettingSplitsPath("MLB", "2026-07-11")).toBe(
++      "/betting-splits/mlb-07-11-2026"
++    );
++    expect(bettingSplitsPath("NHL", "2026-01-02")).toBe(
++      "/betting-splits/nhl-01-02-2026"
++    );
++    expect(bettingSplitsPath("NBA", "2026-12-31")).toBe(
++      "/betting-splits/nba-12-31-2026"
++    );
++  });
++
++  it("bettingSplitsPath defaults to MLB + today's effective date", () => {
++    expect(bettingSplitsPath()).toMatch(SPLITS_SLUG_RE);
++    expect(bettingSplitsPath()).toContain("/betting-splits/mlb-");
++    expect(bettingSplitsPath("NHL")).toContain("/betting-splits/nhl-");
+   });
+ 
+   it("parseSplitsSport validates case-insensitively and rejects junk", () => {
+@@ -40,15 +57,101 @@ describe("feedRoutes — canonical path builders", () => {
+     expect(parseSplitsSport("")).toBeNull();
+     expect(parseSplitsSport(undefined)).toBeNull();
+   });
++
++  it("parseBettingSplitsPath accepts combined dated slugs and returns ISO", () => {
++    expect(parseBettingSplitsPath("mlb-07-11-2026")).toEqual({
++      sport: "MLB",
++      isoDate: "2026-07-11",
++    });
++    expect(parseBettingSplitsPath("NHL-01-02-2026")).toEqual({
++      sport: "NHL",
++      isoDate: "2026-01-02",
++    });
++    expect(parseBettingSplitsPath("nba-12-31-2026")).toEqual({
++      sport: "NBA",
++      isoDate: "2026-12-31",
++    });
++  });
++
++  it("parseBettingSplitsPath accepts split and bare legacy forms", () => {
++    expect(parseBettingSplitsPath("mlb", "07-11-2026")).toEqual({
++      sport: "MLB",
++      isoDate: "2026-07-11",
++    });
++    expect(parseBettingSplitsPath("MLB")).toEqual({
++      sport: "MLB",
++      isoDate: null,
++    });
++    expect(parseBettingSplitsPath("nhl")).toEqual({
++      sport: "NHL",
++      isoDate: null,
++    });
++  });
++
++  it("parseBettingSplitsPath rejects invalid sports, formats, and calendar dates", () => {
++    for (const [sport, date] of [
++      ["wc-07-11-2026", undefined],
++      ["", undefined],
++      [undefined, undefined],
++      ["mlb-7-11-2026", undefined],
++      ["mlb", "2026-07-11"],
++      ["mlb-13-11-2026", undefined],
++      ["mlb-02-30-2026", undefined],
++      ["mlb", "04-31-2026"],
++    ] as const) {
++      expect(parseBettingSplitsPath(sport, date)).toBeNull();
++    }
++  });
++
++  it("converges every required splits input to one stable dated URL in at most two hops", () => {
++    const todayMlb = bettingSplitsPath("MLB");
++    const cases = [
++      ["/betting-splits/MLB", "MLB", undefined, todayMlb],
++      ["/betting-splits/mlb", "mlb", undefined, todayMlb],
++      [
++        "/betting-splits/MLB/07-11-2026",
++        "MLB",
++        "07-11-2026",
++        "/betting-splits/mlb-07-11-2026",
++      ],
++      ["/betting-splits/MLB/2026-07-11", "MLB", "2026-07-11", todayMlb],
++      ["/betting-splits/MLB/garbage", "MLB", "garbage", todayMlb],
++      ["/betting-splits/XYZ", "XYZ", undefined, todayMlb],
++    ] as const;
++
++    for (const owner of ["standalone", ">=768 shell"] as const) {
++      for (const [input, sport, date, expected] of cases) {
++        const firstHop = canonicalBettingSplitsPath(sport, date);
++        const canonicalSlug = firstHop.split("/").pop();
++        const secondHop = canonicalBettingSplitsPath(canonicalSlug);
++
++        expect(firstHop, `${owner}: ${input}`).toBe(expected);
++        expect(firstHop, `${owner}: ${input} must be dated`).toMatch(
++          SPLITS_SLUG_RE
++        );
++        expect(secondHop, `${owner}: ${input} must stabilize`).toBe(firstHop);
++      }
++    }
++  });
+ });
+ 
+ describe("feedRoutes — legacy /feed?… eradication mapping", () => {
+   it("?tab=splits routes to the canonical splits page", () => {
+-    expect(legacyFeedRedirectTarget("?tab=splits")).toBe("/betting-splits/MLB");
++    expect(legacyFeedRedirectTarget("?tab=splits")).toMatch(SPLITS_SLUG_RE);
++    expect(legacyFeedRedirectTarget("?tab=splits&date=2026-07-11")).toBe(
++      "/betting-splits/mlb-07-11-2026"
++    );
+   });
+ 
+   it("every other legacy tab lands on the canonical feed", () => {
+-    for (const q of ["", "?tab=dual", "?tab=lineups", "?tab=props", "?tab=f5nrfi", "?tab=hrprops"]) {
++    for (const q of [
++      "",
++      "?tab=dual",
++      "?tab=lineups",
++      "?tab=props",
++      "?tab=f5nrfi",
++      "?tab=hrprops",
++    ]) {
+       expect(legacyFeedRedirectTarget(q)).toMatch(SLUG_RE);
+       expect(legacyFeedRedirectTarget(q)).toContain("mlb-");
+     }
+@@ -56,21 +159,36 @@ describe("feedRoutes — legacy /feed?… eradication mapping", () => {
+ 
+   it("legacy ?sport=WC is preserved; unknown sports fall back to MLB", () => {
+     expect(legacyFeedRedirectTarget("?sport=WC")).toContain("/feed/model/wc-");
+-    expect(legacyFeedRedirectTarget("?sport=NHL")).toContain("/feed/model/mlb-");
++    expect(legacyFeedRedirectTarget("?sport=NHL")).toContain(
++      "/feed/model/mlb-"
++    );
+   });
+ 
+   it("legacy ?date=YYYY-MM-DD carries into the slug; invalid dates ignored", () => {
+     expect(legacyFeedRedirectTarget("?sport=MLB&date=2026-07-04")).toBe(
+-      "/feed/model/mlb-07-04-2026",
++      "/feed/model/mlb-07-04-2026"
+     );
+     expect(legacyFeedRedirectTarget("?date=07/04/2026")).toMatch(SLUG_RE);
++    expect(legacyFeedRedirectTarget("?date=2026-02-30")).toMatch(SLUG_RE);
++    expect(legacyFeedRedirectTarget("?tab=splits&date=2026-02-30")).toMatch(
++      SPLITS_SLUG_RE
++    );
+   });
+ 
+   it("never emits a legacy slug", () => {
+-    for (const q of ["", "?tab=splits", "?tab=dual", "?sport=WC", "?tab=lineups&sport=NBA"]) {
++    for (const q of [
++      "",
++      "?tab=splits",
++      "?tab=dual",
++      "?sport=WC",
++      "?tab=lineups&sport=NBA",
++    ]) {
+       const target = legacyFeedRedirectTarget(q);
+       expect(target).not.toContain("?");
+-      expect(target.startsWith("/feed/model/") || target.startsWith("/betting-splits/")).toBe(true);
++      expect(
++        target.startsWith("/feed/model/") ||
++          target.startsWith("/betting-splits/")
++      ).toBe(true);
+     }
+   });
+ });
+diff --git a/client/src/lib/feedRoutes.ts b/client/src/lib/feedRoutes.ts
+index b97dd141fb3a87967ef01fb82e2b0c556398595c..87d0bfe1e66b8ab0550b0adfb04dda703365b263 100644
+--- a/client/src/lib/feedRoutes.ts
++++ b/client/src/lib/feedRoutes.ts
+@@ -3,7 +3,7 @@
+  *
+  * The ONLY link targets app code may emit for these surfaces:
+  *   • AI Model Projections → /feed/model/{mlb|wc}-MM-DD-YYYY
+- *   • Betting Splits       → /betting-splits/{MLB|NHL|NBA}
++ *   • Betting Splits       → /betting-splits/{mlb|nhl|nba}-MM-DD-YYYY
+  *
+  * Legacy slugs (/feed, /feed?tab=…, /splits, /projections, /dashboard) must
+  * never populate from any link, tab, or redirect default. They survive only
+@@ -28,34 +28,130 @@ export function toFeedSlugDate(iso: string): string {
+  * Defaults to today's effective feed date (todayUTC — the 07:00 UTC /
+  * 00:00 PT rollover shared by the whole feed stack).
+  */
+-export function feedModelPath(sport: FeedSport = "MLB", isoDate?: string): string {
++export function feedModelPath(
++  sport: FeedSport = "MLB",
++  isoDate?: string
++): string {
+   const iso = isoDate ?? todayUTC();
+   return `/feed/model/${sport.toLowerCase()}-${toFeedSlugDate(iso)}`;
+ }
+ 
+-/** Canonical Betting Splits path, e.g. /betting-splits/MLB. */
+-export function bettingSplitsPath(sport: SplitsSport = "MLB"): string {
+-  return `/betting-splits/${sport}`;
++/**
++ * Canonical Betting Splits path, e.g. /betting-splits/mlb-07-11-2026.
++ * This deliberately shares the feed builder's ISO → MM-DD-YYYY boundary;
++ * callers and parsed state remain ISO-only.
++ */
++export function bettingSplitsPath(
++  sport: SplitsSport = "MLB",
++  isoDate?: string
++): string {
++  const iso = isoDate ?? todayUTC();
++  return `/betting-splits/${sport.toLowerCase()}-${toFeedSlugDate(iso)}`;
+ }
+ 
+ /** Validates a /betting-splits/:sport route segment (case-insensitive). */
+ export function parseSplitsSport(seg: string | undefined): SplitsSport | null {
+   const s = (seg ?? "").toUpperCase();
+-  return (SPLITS_SPORTS as readonly string[]).includes(s) ? (s as SplitsSport) : null;
++  return (SPLITS_SPORTS as readonly string[]).includes(s)
++    ? (s as SplitsSport)
++    : null;
++}
++
++function slugDateToIso(date: string): string | null {
++  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(date);
++  if (!match) return null;
++
++  const [, mm, dd, yyyy] = match;
++  const month = Number(mm);
++  const day = Number(dd);
++  const year = Number(yyyy);
++  if (month < 1 || month > 12) return null;
++
++  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
++  const daysInMonth = [
++    31,
++    leapYear ? 29 : 28,
++    31,
++    30,
++    31,
++    30,
++    31,
++    31,
++    30,
++    31,
++    30,
++    31,
++  ];
++  if (day < 1 || day > daysInMonth[month - 1]) return null;
++
++  return `${yyyy}-${mm}-${dd}`;
++}
++
++function validIsoDate(iso: string): boolean {
++  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
++  if (!match) return false;
++  const [, yyyy, mm, dd] = match;
++  return slugDateToIso(`${mm}-${dd}-${yyyy}`) === iso;
++}
++
++/**
++ * Parses canonical combined slugs and the legacy split/bare route forms:
++ *   mlb-07-11-2026      → { sport: "MLB", isoDate: "2026-07-11" }
++ *   mlb / 07-11-2026    → { sport: "MLB", isoDate: "2026-07-11" }
++ *   MLB                 → { sport: "MLB", isoDate: null }
++ *
++ * A null date means the route is recognized but must be replaced with today's
++ * canonical dated URL. Invalid sports and calendar dates return null.
++ */
++export function parseBettingSplitsPath(
++  sportSegment?: string,
++  dateSegment?: string
++): { sport: SplitsSport; isoDate: string | null } | null {
++  let sportPart = sportSegment ?? "";
++  let slugDate = dateSegment ?? "";
++
++  if (!slugDate) {
++    const combined = /^([a-z]+)-(\d{2}-\d{2}-\d{4})$/i.exec(sportPart);
++    if (combined) [, sportPart, slugDate] = combined;
++  }
++
++  const sport = parseSplitsSport(sportPart);
++  if (!sport) return null;
++  if (!slugDate) return { sport, isoDate: null };
++
++  const isoDate = slugDateToIso(slugDate);
++  return isoDate ? { sport, isoDate } : null;
++}
++
++/**
++ * Resolves every recognized or malformed splits route form to one dated URL.
++ * A missing/invalid date falls back to today's effective date; an invalid sport
++ * falls back to MLB. Passing the returned slug back through this function is
++ * stable, which bounds client canonicalization to one redirect hop.
++ */
++export function canonicalBettingSplitsPath(
++  sportSegment?: string,
++  dateSegment?: string
++): string {
++  const parsed = parseBettingSplitsPath(sportSegment, dateSegment);
++  return parsed?.isoDate
++    ? bettingSplitsPath(parsed.sport, parsed.isoDate)
++    : bettingSplitsPath(parsed?.sport ?? "MLB");
+ }
+ 
+ /**
+  * Maps a legacy /feed?… URL onto its canonical replacement. Pure — pass the
+  * query string (window.location.search); "" handles the bare /feed slug.
+- *   ?tab=splits            → /betting-splits/MLB
++ *   ?tab=splits            → /betting-splits/mlb-MM-DD-YYYY
+  *   ?sport=WC[&date=ISO]   → /feed/model/wc-…
+  *   anything else          → /feed/model/mlb-… (today, or legacy ?date=)
+  */
+ export function legacyFeedRedirectTarget(search: string): string {
+   const params = new URLSearchParams(search);
+-  if (params.get("tab") === "splits") return bettingSplitsPath("MLB");
+-  const sport: FeedSport = (params.get("sport") ?? "").toUpperCase() === "WC" ? "WC" : "MLB";
+   const date = params.get("date");
+-  const iso = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
++  const iso = date && validIsoDate(date) ? date : undefined;
++  if (params.get("tab") === "splits") return bettingSplitsPath("MLB", iso);
++  const sport: FeedSport =
++    (params.get("sport") ?? "").toUpperCase() === "WC" ? "WC" : "MLB";
+   return feedModelPath(sport, iso);
+ }
+diff --git a/client/src/pages/BetTracker.tsx b/client/src/pages/BetTracker.tsx
+index f329756194475f9da68f2a60f916932479911f4c..627fcbb776d6a887d6fc23fb24bac66bf1e786f3 100644
+--- a/client/src/pages/BetTracker.tsx
++++ b/client/src/pages/BetTracker.tsx
+@@ -1545,17 +1545,25 @@ function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnal
+   );
+ }
+ 
+-export default function BetTracker() {
++export interface BetTrackerProps {
++  /** Local shell preview: render chrome without impersonating server authorization. */
++  previewMode?: boolean;
++}
++
++export default function BetTracker({ previewMode = false }: BetTrackerProps) {
+   const [, navigate] = useLocation();
+   const { appUser, loading: authLoading } = useAppAuth();
+ 
+   useEffect(() => {
+-    if (!authLoading && !appUser) navigate("/");
+-  }, [authLoading, appUser, navigate]);
++    if (!previewMode && !authLoading && !appUser) navigate("/");
++  }, [authLoading, appUser, navigate, previewMode]);
+ 
+-  const role      = appUser?.role ?? "user";
++  const role      = appUser?.role ?? (previewMode ? "owner" : "user");
+   const canAccess = ["owner", "admin", "handicapper"].includes(role);
+   const isOwnerOrAdmin = role === "owner" || role === "admin";
++  // Preview mode never grants protected data access. With no authenticated
++  // app user, queries stay disabled and the real empty-state chrome is shown.
++  const canLoadProtectedData = canAccess && !!appUser;
+ 
+   // ── Stake mode ────────────────────────────────────────────────────────────
+   const [stakeMode, setStakeMode] = useState<StakeMode>(() => {
+@@ -1747,7 +1755,7 @@ export default function BetTracker() {
+   const slateQuery = trpc.betTracker.getSlate.useQuery(
+     { sport: activeSport === "ALL" ? "MLB" : activeSport, gameDate: formDate },
+     {
+-      enabled:   canAccess && !!formDate,
++      enabled:   canLoadProtectedData && !!formDate,
+       staleTime: isFormDatePast ? Infinity : 4 * 60 * 1000,
+       gcTime:    isFormDatePast ? 30 * 60 * 1000 : 5 * 60 * 1000,  // keep past slates in cache 30min
+       retry:     1,
+@@ -1785,7 +1793,7 @@ export default function BetTracker() {
+   const paginatedQuery = trpc.betTracker.listWithStatsPaginated.useInfiniteQuery(
+     paginatedQueryInput,
+     {
+-      enabled: canAccess,
++      enabled: canLoadProtectedData,
+       // staleTime:Infinity for historical data — graded bets never change
+       // staleTime:60s for live ranges (TODAY, SEASON with pending bets)
+       staleTime: isHistoricalRange ? Infinity : 60_000,
+@@ -1816,7 +1824,7 @@ export default function BetTracker() {
+   const handicappersQuery = trpc.betTracker.listHandicappers.useQuery(
+     undefined,
+     {
+-      enabled: canAccess && isOwnerOrAdmin,
++      enabled: canLoadProtectedData && isOwnerOrAdmin,
+       staleTime: 5 * 60 * 1000, // 5 min — user list rarely changes
+       refetchOnWindowFocus: false,
+     }
+@@ -1853,7 +1861,7 @@ export default function BetTracker() {
+   const linescoreQuery = trpc.betTracker.getLinescores.useQuery(
+     { sport: "MLB", dates: mlbDates },
+     {
+-      enabled: canAccess && mlbDates.length > 0,
++      enabled: canLoadProtectedData && mlbDates.length > 0,
+       staleTime: hasLiveMlbDates ? 30_000 : Infinity,
+       gcTime:    hasLiveMlbDates ? 5 * 60_000 : 30 * 60_000,
+       refetchInterval: hasLiveMlbDates ? 60_000 : false,
+@@ -1921,7 +1929,7 @@ export default function BetTracker() {
+   // ── Logs query (owner/admin only) ─────────────────────────────────────────
+   const logsQuery = trpc.betTracker.getLogs.useQuery(
+     { limit: 200, offset: 0 },
+-    { enabled: canAccess && isOwnerOrAdmin && activeTab === "LOGS", staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 }
++    { enabled: canLoadProtectedData && isOwnerOrAdmin && activeTab === "LOGS", staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 }
+   );
+ 
+   const utils = trpc.useUtils();
+@@ -2604,7 +2612,7 @@ export default function BetTracker() {
+ 
+ 
+   // ── Access guard ──────────────────────────────────────────────────────────
+-  if (authLoading) {
++  if (authLoading && !previewMode) {
+     // Show a page-structure skeleton instead of a blank full-screen spinner.
+     // Eliminates the perceived blank-screen delay during auth check (~200-400ms).
+     return (
+@@ -3248,7 +3256,7 @@ export default function BetTracker() {
+ 
+           {/* ── Calendar Recap (Pikkit-style) ─────────────────────────────────── */}
+           {/* Shows +/- units per day for the selected handicapper, month navigation */}
+-          {canAccess && (
++          {canLoadProtectedData && (
+             <BetCalendar
+               targetUserId={effectiveUserId}
+               unitSize={unitSize > 0 ? unitSize : 100}
+diff --git a/client/src/pages/BettingSplits.tsx b/client/src/pages/BettingSplits.tsx
+index b09f7d6baf1a7ee63a080654e3a1521a481d206a..dd0fa9e85486ca89e12ab5104f4e632436cdee8e 100644
+--- a/client/src/pages/BettingSplits.tsx
++++ b/client/src/pages/BettingSplits.tsx
+@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
+ import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
+ import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
+ import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
++import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
+ 
+ // CDN icon URLs
+ const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
+@@ -175,7 +176,21 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
+ 
+ // ─── Main Component ───────────────────────────────────────────────────────────
+ 
+-export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSport?: "MLB" | "NHL" | "NBA" }) {
++export interface BettingSplitsPageProps {
++  initialSport?: "MLB" | "NHL" | "NBA";
++  /** ISO date parsed from the canonical URL; URL state is authoritative. */
++  initialDate?: string;
++  /** Allows the shell to preserve a local-only preview capability in route changes. */
++  resolveRouteHref?: (href: string) => string;
++}
++
++const identityRouteHref = (href: string) => href;
++
++export default function BettingSplitsPage({
++  initialSport = "MLB",
++  initialDate,
++  resolveRouteHref = identityRouteHref,
++}: BettingSplitsPageProps) {
+   const [, setLocation] = useLocation();
+   const [showAgeModal, setShowAgeModal] = useState(false);
+   const [showLoginModal, setShowLoginModal] = useState(false);
+@@ -183,13 +198,22 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+   // Sport is seeded from the canonical route (/betting-splits/:sport) and the
+   // URL is kept in sync on pill changes so the address bar stays shareable.
+   const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
++  const [selectedDate, setSelectedDateState] = useState<string>(initialDate ?? todayUTC());
++  const userSelectedDateRef = useRef(false);
+   const setSelectedSport = useCallback((sport: "MLB" | "NHL" | "NBA") => {
+     setSelectedSportState(sport);
+-    setLocation(bettingSplitsPath(sport), { replace: true });
+-  }, [setLocation]);
++    setLocation(resolveRouteHref(bettingSplitsPath(sport, selectedDate)));
++  }, [selectedDate, setLocation, resolveRouteHref]);
++  const setSelectedDate = useCallback((date: string) => {
++    userSelectedDateRef.current = true;
++    setSelectedDateState(date);
++    setLocation(resolveRouteHref(bettingSplitsPath(selectedSport, date)));
++  }, [selectedSport, setLocation, resolveRouteHref]);
+   useEffect(() => { setSelectedSportState(initialSport); }, [initialSport]);
++  useEffect(() => {
++    if (initialDate) setSelectedDateState(initialDate);
++  }, [initialDate]);
+   const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
+-  const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());
+   const [searchQuery, setSearchQuery] = useState("");
+   const [searchFocused, setSearchFocused] = useState(false);
+   const searchRef = useRef<HTMLDivElement>(null);
+@@ -239,7 +263,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+   });
+   const appLogout = () => { closeSessionMutation.mutate(); appLogoutMutation.mutate(); };
+ 
+-  useEffect(() => { setSelectedStatuses(new Set()); setSelectedDate(todayUTC()); }, [selectedSport]);
++  useEffect(() => { setSelectedStatuses(new Set()); }, [selectedSport]);
+ 
+   // ─── Fix 1: Remove auth gate — games.list is a publicProcedure, no login required ───────────────
+   // Previously: { enabled: isAppAuthed } blocked the query for unauthenticated users.
+@@ -248,7 +272,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+   // games.list is declared as publicProcedure on the server — no auth required.
+   const isAppAuthed = !appAuthLoading && Boolean(appUser);
+   const { data: allGames, isLoading: gamesLoading } = trpc.games.list.useQuery(
+-    { sport: selectedSport },
++    { sport: selectedSport, gameDate: selectedDate },
+     {
+       enabled: true,           // FIX 1: always enabled — games.list is public
+       refetchOnWindowFocus: false,
+@@ -268,16 +292,26 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+   });
+   useEffect(() => {
+     if (!serverDateData) return;
+-    const serverDate = serverDateData.effectiveDate;
++    const serverDate = resolveSplitsServerDate(
++      selectedDate,
++      serverDateData.effectiveDate,
++      initialDate,
++      userSelectedDateRef.current
++    );
+     if (serverDate !== selectedDate) {
+       console.log(
+         `[BettingSplits][DateSync] Syncing selectedDate from client=${selectedDate} to server=${serverDate}` +
+         ` (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`
+       );
+-      setSelectedDate(serverDate);
++      setSelectedDateState(serverDate);
+     }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [serverDateData]);
++  }, [serverDateData, initialDate, selectedDate]);
++
++  const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
++    { sport: selectedSport },
++    { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
++  );
+ 
+   const liveCount = useMemo(() => (allGames ?? []).filter(g => g?.gameStatus === "live").length, [allGames]);
+ 
+@@ -317,18 +351,17 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+   };
+ 
+   // All unique dates available for the current sport (sorted ascending)
+-  const allDates = useMemo(() => {
+-    if (!allGames) return [];
+-    const dateSet = new Set<string>();
+-    for (const g of allGames) if (g) dateSet.add(effectiveGameDate(g.gameDate, g.startTimeEst));
+-    return Array.from(dateSet).sort();
+-  }, [allGames]);
++  const allDates = useMemo(
++    () => availableDatesData?.dates ?? [],
++    [availableDatesData?.dates]
++  );
+ 
+   // ─── Fix 3: Auto-advance selectedDate when it has no games ──────────────────────────────────────
+   // BettingSplits previously had NO auto-advance. If selectedDate was not in allDates
+   // (e.g. stale date after boundary crossing), the page stayed stuck on an empty view.
+   // Mirror the same guarded auto-advance that ModelProjections uses.
+   useEffect(() => {
++    if (initialDate) return;
+     if (!allGames || allDates.length === 0) return; // still loading
+     const hasGamesOnDate = allDates.includes(selectedDate);
+     if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
+@@ -348,8 +381,8 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+       `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
+       `Advancing to allDates[0]=${allDates[0]}`
+     );
+-    setSelectedDate(allDates[0]!);
+-  }, [allDates, selectedDate, serverDateData]);
++    setSelectedDateState(allDates[0]!);
++  }, [allDates, selectedDate, serverDateData, initialDate, allGames]);
+ 
+   // ─── Fix 4: Diagnostic logging when allGames=0 ──────────────────────────────────────────────────
+   useEffect(() => {
+@@ -545,7 +578,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+           {/* Links style themselves (no nested <button> — interactive-inside-
+               interactive is invalid HTML and doubles the keyboard tab stops). */}
+           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
+-          <Link href={feedModelPath("MLB")}
++          <Link href={resolveRouteHref(feedModelPath("MLB"))}
+             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
+             style={{ color: "rgba(255,255,255,0.45)" }}
+           >
+@@ -555,7 +588,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
+           {/* Right: BETTING SPLITS — active on this page. Self-link targets the
+               canonical sport path (the old /splits href navigated away to the
+               retired public page — the tab un-selected itself on click). */}
+-          <Link href={bettingSplitsPath(selectedSport)} aria-current="page"
++          <Link href={resolveRouteHref(bettingSplitsPath(selectedSport, selectedDate))} aria-current="page"
+             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
+             style={{ color: "#ffffff" }}
+           >
+diff --git a/client/src/pages/DimeModelFeed.tsx b/client/src/pages/DimeModelFeed.tsx
+index 296918df997cab80031be125779a09d90406b889..1ee67cebc4d360d57d74fc4bd25c4862e7287a1d 100644
+--- a/client/src/pages/DimeModelFeed.tsx
++++ b/client/src/pages/DimeModelFeed.tsx
+@@ -287,8 +287,20 @@ const prettyDate = (iso: string): string =>
+ 
+ // ─── Page ────────────────────────────────────────────────────────────────────
+ 
+-export default function DimeModelFeed(props: { sport?: string; date?: string }) {
++export interface DimeModelFeedProps {
++  sport?: string;
++  date?: string;
++  /** The unified app shell owns primary navigation when this surface is embedded. */
++  embeddedInShell?: boolean;
++  /** Allows the shell to preserve a local-only preview capability in route changes. */
++  resolveRouteHref?: (href: string) => string;
++}
++
++const identityRouteHref = (href: string) => href;
++
++export default function DimeModelFeed(props: DimeModelFeedProps) {
+   const [, navigate] = useLocation();
++  const resolveRouteHref = props.resolveRouteHref ?? identityRouteHref;
+   const parsed = parseFeedModelPath(props.sport, props.date);
+   const [theme, setTheme] = useState<"dark" | "light">(() => {
+     try {
+@@ -316,9 +328,9 @@ export default function DimeModelFeed(props: { sport?: string; date?: string })
+   const needsDateCanonicalize = parsed !== null && parsed.isoDate === null;
+   useEffect(() => {
+     if (needsDateCanonicalize) {
+-      navigate(feedModelPath(sport), { replace: true });
++      navigate(resolveRouteHref(feedModelPath(sport)), { replace: true });
+     }
+-  }, [needsDateCanonicalize, sport, navigate]);
++  }, [needsDateCanonicalize, sport, navigate, resolveRouteHref]);
+ 
+   // Discord account-link feedback lands here now (the legacy /dashboard
+   // consumer is unrouted): surface it once, then strip the params.
+@@ -340,7 +352,7 @@ export default function DimeModelFeed(props: { sport?: string; date?: string })
+   const { cards, isLoading, isStale, gamesCount } = useFeedCards(sport, isoDate);
+ 
+   const go = (nextSport: "MLB" | "WC", nextIso: string) =>
+-    navigate(feedModelPath(nextSport, nextIso));
++    navigate(resolveRouteHref(feedModelPath(nextSport, nextIso)));
+ 
+   if (needsDateCanonicalize) {
+     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
+@@ -379,11 +391,13 @@ export default function DimeModelFeed(props: { sport?: string; date?: string })
+         <div className="dmf-sync">
+           {/* Outbound nav — the canonical feed must never be a dead end
+               (tablet/desktop have no bottom tab bar; non-owners never do) */}
+-          <nav className="dmf-nav" aria-label="Dime surfaces">
+-            <Link href={bettingSplitsPath("MLB")} className="dmf-navlink">Splits</Link>
+-            <Link href="/chat" className="dmf-navlink">Chat</Link>
+-            <Link href="/profile" className="dmf-navlink">Profile</Link>
+-          </nav>
++          {!props.embeddedInShell && (
++            <nav className="dmf-nav" aria-label="Dime surfaces">
++              <Link href={bettingSplitsPath("MLB")} className="dmf-navlink">Splits</Link>
++              <Link href="/chat" className="dmf-navlink">Chat</Link>
++              <Link href="/profile" className="dmf-navlink">Profile</Link>
++            </nav>
++          )}
+           <button
+             className="dmf-themebtn"
+             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+diff --git a/client/src/pages/Home.tsx b/client/src/pages/Home.tsx
+index 8c192dc296ad9ad37e9d651d9b24b01fcfd868a4..a5b1f6ca4d2cb4ae6e01fc178bdc311fcc9e3206 100644
+--- a/client/src/pages/Home.tsx
++++ b/client/src/pages/Home.tsx
+@@ -28,6 +28,7 @@ import { Loader2, Eye, EyeOff, TrendingUp, MessageSquare, ListChecks, Clock } fr
+ import { useAppAuth } from "@/_core/hooks/useAppAuth";
+ import { trpc } from "@/lib/trpc";
+ import { toast } from "sonner";
++import { resolvePostLoginPath } from "./dime-shell/breakpoints";
+ 
+ // ── Discord brand icon ────────────────────────────────────────────────────────
+ function DiscordIcon({ size = 18 }: { size?: number }) {
+@@ -102,9 +103,9 @@ export default function Home() {
+   useEffect(() => {
+     if (!authLoading && appUser) {
+       const searchParams = new URLSearchParams(window.location.search);
+-      // Default post-login destination: canonical AI Model Projections feed
+-      // (/feed/model/mlb canonicalizes to today's dated URL).
+-      const returnPath = searchParams.get("returnPath") ?? "/feed/model/mlb";
++      // Explicit deep links win. Otherwise the shared 768px shell boundary
++      // defaults tablet/desktop to chat and retains the current mobile feed.
++      const returnPath = resolvePostLoginPath(searchParams.get("returnPath"));
+       console.log(`[Login] [STATE] Already authenticated — redirecting to returnPath=${returnPath}`);
+       setLocation(returnPath);
+     }
+@@ -116,7 +117,8 @@ export default function Home() {
+   );
+   const discordError = searchParams.get("discord_error");
+   const discordUser  = searchParams.get("discord_user");
+-  const returnPath   = searchParams.get("returnPath") ?? "/feed/model/mlb";
++  const explicitReturnPath = searchParams.get("returnPath");
++  const returnPath   = resolvePostLoginPath(explicitReturnPath);
+   const loginUrl     = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent(returnPath)}`;
+ 
+   // ── Transient error auto-retry ────────────────────────────────────────────
+@@ -147,9 +149,10 @@ export default function Home() {
+ 
+   const loginMutation = trpc.appUsers.login.useMutation({
+     onSuccess: () => {
+-      console.log("[Login] [OUTPUT] Login successful — redirecting to", returnPath);
++      const destination = resolvePostLoginPath(explicitReturnPath);
++      console.log("[Login] [OUTPUT] Login successful — redirecting to", destination);
+       toast.success("Signed in successfully.");
+-      setLocation(returnPath);
++      setLocation(destination);
+     },
+     onError: (err) => {
+       console.error("[Login] [VERIFY] FAIL — login error:", err.message);
+diff --git a/client/src/pages/dime-chat/DimeChatPage.tsx b/client/src/pages/dime-chat/DimeChatPage.tsx
+index 192b0b963a08d44acf60c41583f3b4bfd128dbca..c36d8cc69456a7c32db0997186122499e26ce5e3 100644
+--- a/client/src/pages/dime-chat/DimeChatPage.tsx
++++ b/client/src/pages/dime-chat/DimeChatPage.tsx
+@@ -21,8 +21,22 @@ import {
+   type FormEvent,
+   type MouseEvent as ReactMouseEvent,
+   type MutableRefObject,
++  type PointerEvent as ReactPointerEvent,
++  type ReactNode,
+ } from "react";
+ import { Link } from "wouter";
++import {
++  AnimatePresence,
++  LazyMotion,
++  animate,
++  domAnimation,
++  m,
++  useMotionValue,
++  useReducedMotion,
++  useTransform,
++  type AnimationPlaybackControls,
++  type MotionStyle,
++} from "framer-motion";
+ import { useTheme } from "../../contexts/ThemeContext";
+ import {
+   chatReducer,
+@@ -30,8 +44,24 @@ import {
+   type ChatMessage,
+   type DataFreshness,
+ } from "./chatReducer";
+-import { parseAssistantContent, segmentNumerals, type EdgeBlock } from "./edgeParser";
+-import { addSessionRecent, getSessionRecents, type RecentChat } from "./recentChats";
++import {
++  parseAssistantContent,
++  segmentNumerals,
++  type EdgeBlock,
++} from "./edgeParser";
++import {
++  addSessionRecent,
++  getSessionRecents,
++  type RecentChat,
++} from "./recentChats";
++import {
++  classifyPointerIntent,
++  resolveDrawerTarget,
++  rubberBand,
++} from "./drawerMotion";
++import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
++import { bettingSplitsPath, feedModelPath } from "@/lib/feedRoutes";
++import type { DimeProductPane } from "../dime-shell/productRoute";
+ import avatarUrl from "./assets/prez-avatar.jpg";
+ import "./frozen-tokens.css";
+ import "./conversation.css";
+@@ -42,15 +72,21 @@ type Theme = "dark" | "light";
+ /* Frozen copy — labels verbatim from D/L:57-71, 106-109              */
+ /* ----------------------------------------------------------------- */
+ 
+-const NAV_ROWS: Array<{ label: string; href: string; active?: boolean }> = [
+-  { label: "New Chat", href: "/chat", active: true }, // D/L:57
+-  // Canonical routes only — /feed/model/mlb self-canonicalizes to today's
+-  // dated URL, so this module-scope config never holds a stale date.
+-  { label: "AI Model Projections", href: "/feed/model/mlb" }, // D/L:58
+-  { label: "Betting Splits + Odds History", href: "/betting-splits/MLB" }, // D/L:59
+-  { label: "Trends", href: "#" }, // D/L:60 — no route exists; frozen href="#"
+-  { label: "Prop Projections", href: "#" }, // D/L:61 — no route exists
+-  { label: "Bet Tracker", href: "/bet-tracker" }, // D/L:62
++const NAV_ROWS: Array<{
++  label: string;
++  pane?: DimeProductPane;
++  href: () => string;
++}> = [
++  { label: "New Chat", pane: "chat", href: () => "/chat" }, // D/L:57
++  { label: "AI Model Projections", pane: "feed", href: () => feedModelPath() }, // D/L:58
++  {
++    label: "Betting Splits + Odds History",
++    pane: "splits",
++    href: () => bettingSplitsPath(),
++  }, // D/L:59
++  { label: "Trends", href: () => "#" }, // D/L:60 — no route exists; frozen href="#"
++  { label: "Prop Projections", href: () => "#" }, // D/L:61 — no route exists
++  { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker" }, // D/L:62
+ ];
+ 
+ // Recent chats are session-only and honest (Ph1): titles derive from the first
+@@ -69,8 +105,10 @@ const PILL_VARIANTS: Record<Theme, Array<"contrast" | "outline" | "mint">> = {
+   light: ["mint", "outline", "contrast"], // L:107-109
+ };
+ 
+-const ERROR_COPY = "Dime couldn't reach the model. Your message is saved above."; // spec §4
+-const DISCLAIMER = "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
++const ERROR_COPY =
++  "Dime couldn't reach the model. Your message is saved above."; // spec §4
++const DISCLAIMER =
++  "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
+ 
+ const uid = () => Math.random().toString(36).slice(2, 10);
+ 
+@@ -142,12 +180,29 @@ const GEAR_PATH =
+ function DimeSidebar({
+   onNewChat,
+   recentChats,
++  compact,
++  drawerOpen,
++  drawerStyle,
++  sidebarRef,
++  onClose,
++  onNavigate,
++  activePane = "chat",
++  onShellNavigate,
+ }: {
+   onNewChat: () => void;
+   recentChats: RecentChat[];
++  compact: boolean;
++  drawerOpen: boolean;
++  drawerStyle?: MotionStyle;
++  sidebarRef: MutableRefObject<HTMLElement | null>;
++  onClose: () => void;
++  onNavigate: () => void;
++  activePane?: DimeProductPane;
++  onShellNavigate?: (href: string) => void;
+ }) {
+   const [menuOpen, setMenuOpen] = useState(false);
+   const profileRef = useRef<HTMLDivElement>(null);
++  const reduceMotion = useReducedMotion();
+ 
+   useEffect(() => {
+     if (!menuOpen) return;
+@@ -165,46 +220,82 @@ function DimeSidebar({
+     };
+   }, [menuOpen]);
+ 
+-  const inert = (e: ReactMouseEvent) => e.preventDefault();
+-
+   return (
+-    <div className="dc-sidebar">
+-      <div className="dc-sidebar-title">AI Sports Betting</div>
++    <m.aside
++      ref={sidebarRef}
++      className={`dc-sidebar${compact ? " dc-drawer" : ""}`}
++      style={drawerStyle}
++      role={compact && drawerOpen ? "dialog" : undefined}
++      aria-modal={compact && drawerOpen ? true : undefined}
++      aria-label={compact ? "Dime navigation" : undefined}
++      aria-hidden={compact && !drawerOpen ? true : undefined}
++    >
++      <div className="dc-sidebar-head">
++        <div className="dc-sidebar-title">AI Sports Betting</div>
++        {compact && (
++          <button
++            type="button"
++            className="dc-drawer-close dc-pressable dc-focusable"
++            aria-label="Close navigation"
++            onClick={onClose}
++          >
++            ×
++          </button>
++        )}
++      </div>
+       <nav className="dc-nav-group" aria-label="Primary">
+-        {NAV_ROWS.map((row) =>
+-          row.href === "#" ? (
+-            <a key={row.label} href="#" className="dc-sidebar-row" onClick={inert}>
++        {NAV_ROWS.map(row => {
++          const href = row.href();
++          const active = row.pane === activePane;
++          return href === "#" ? (
++            <button
++              key={row.label}
++              type="button"
++              className="dc-sidebar-row dc-nav-disabled"
++              aria-disabled="true"
++            >
+               <span className="dc-sidebar-text">{row.label}</span>
+-            </a>
++            </button>
+           ) : (
+             <Link
+               key={row.label}
+-              href={row.href}
+-              className={`dc-sidebar-row${row.active ? " is-active" : ""}`}
+-              aria-current={row.active ? "page" : undefined}
+-              onClick={
+-                row.active
+-                  ? (e: ReactMouseEvent) => {
+-                      // Already on /chat: New Chat resets to the home state
+-                      // instantly (spec §2.7/§3.4), no navigation.
+-                      e.preventDefault();
+-                      onNewChat();
+-                    }
+-                  : undefined
+-              }
++              href={href}
++              className={`dc-sidebar-row${active ? " is-active" : ""}`}
++              aria-current={active ? "page" : undefined}
++              onClick={(event: ReactMouseEvent) => {
++                if (row.pane === "chat") {
++                  event.preventDefault();
++                  onNewChat();
++                  onShellNavigate?.(href);
++                } else if (onShellNavigate) {
++                  event.preventDefault();
++                  onShellNavigate(href);
++                }
++                onNavigate();
++              }}
+             >
+-              {row.active && <span className="dc-sidebar-icon">＋</span>}
++              {row.pane === "chat" && (
++                <span className="dc-sidebar-icon">＋</span>
++              )}
+               <span className="dc-sidebar-text">{row.label}</span>
+             </Link>
+-          ),
+-        )}
++          );
++        })}
+       </nav>
+       {recentChats.length > 0 ? (
+         <>
+           <div className="dc-recents-label">Recent Chats</div>
+           <div className="dc-recent-list">
+-            {recentChats.map((rc) => (
+-              <a key={rc.id} href="#" className="dc-sidebar-row" onClick={inert}>
++            {recentChats.map(rc => (
++              <a
++                key={rc.id}
++                href="#"
++                className="dc-sidebar-row"
++                onClick={event => {
++                  event.preventDefault();
++                  onNavigate();
++                }}
++              >
+                 <span className="dc-sidebar-text">{rc.title}</span>
+               </a>
+             ))}
+@@ -216,84 +307,105 @@ function DimeSidebar({
+         // recent list's flex: 1 slot (D/L:65) so the profile row stays pinned.
+         <div className="dc-sidebar-spacer" />
+       )}
+-      <div
+-        ref={profileRef}
+-        className="dc-sidebar-row dc-profile-row"
+-        role="button"
+-        tabIndex={0}
+-        aria-haspopup="menu"
+-        aria-expanded={menuOpen}
+-        onClick={() => setMenuOpen((o) => !o)}
+-        onKeyDown={(e) => {
+-          if (e.key === "Enter" || e.key === " ") {
+-            e.preventDefault();
+-            setMenuOpen((o) => !o);
+-          }
+-        }}
+-      >
++      <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
++        {/* FROZEN SAMPLE IDENTITY — product-wiring decision pending. */}
+         <img className="dc-avatar" src={avatarUrl} alt="PREZ BETS" />
+         <div className="dc-profile-id">
+           <div className="dc-profile-name">PREZ BETS</div>
+           <div className="dc-profile-tier">Pro</div>
+         </div>
+-        <div
+-          className={`dc-settings-menu${menuOpen ? " open" : ""}`}
+-          role="menu"
+-          onClick={(e) => e.stopPropagation()}
+-        >
+-          <div className="dc-menu-header">
+-            <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
+-            <div className="dc-menu-id">
+-              <div className="dc-menu-handle-row">
+-                <div className="dc-menu-handle">@prez</div>
+-                <div className="dc-badge-pro">PRO</div>
++        <AnimatePresence initial={false}>
++          {menuOpen && (
++            <m.div
++              key="settings-menu"
++              className="dc-settings-menu open"
++              role="menu"
++              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
++              animate={{ opacity: 1, y: 0 }}
++              exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
++              transition={{
++                duration: reduceMotion ? 0 : 0.16,
++                ease: [0.16, 1, 0.3, 1],
++              }}
++              onClick={e => e.stopPropagation()}
++            >
++              <div className="dc-menu-header">
++                <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
++                <div className="dc-menu-id">
++                  <div className="dc-menu-handle-row">
++                    <div className="dc-menu-handle">@prez</div>
++                    <div className="dc-badge-pro">PRO</div>
++                  </div>
++                  <div className="dc-menu-expiry">Expires August 8, 2026</div>
++                </div>
+               </div>
+-              <div className="dc-menu-expiry">Expires August 8, 2026</div>
+-            </div>
+-          </div>
+-          <div className="dc-menu-cta-row">
+-            <div role="menuitem" tabIndex={0} className="dc-btn-upgrade dc-hv1 dc-focusable">
+-              Upgrade Membership
+-            </div>
+-            <div role="menuitem" tabIndex={0} className="dc-btn-cancel dc-hv2 dc-focusable">
+-              Cancel Membership
+-            </div>
+-          </div>
+-          <div className="dc-menu-divider" />
+-          <div role="menuitem" tabIndex={0} className="dc-menu-item dc-hv2 dc-focusable">
+-            Edit Profile
+-          </div>
+-          <div role="menuitem" tabIndex={0} className="dc-menu-item dc-hv2 dc-focusable">
+-            Discord Connected: <span className="dc-menu-accent">@prez</span>
+-          </div>
+-          <div className="dc-menu-divider" />
+-          <div
+-            role="menuitem"
+-            tabIndex={0}
+-            className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable"
+-          >
+-            Log Out
+-          </div>
+-        </div>
+-        <svg
+-          className="dc-settings-btn dc-focusable"
+-          tabIndex={0}
+-          role="button"
++              <div className="dc-menu-cta-row">
++                <button
++                  type="button"
++                  role="menuitem"
++                  className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
++                >
++                  Upgrade Membership
++                </button>
++                <button
++                  type="button"
++                  role="menuitem"
++                  className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
++                >
++                  Cancel Membership
++                </button>
++              </div>
++              <div className="dc-menu-divider" />
++              <button
++                type="button"
++                role="menuitem"
++                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
++              >
++                Edit Profile
++              </button>
++              <button
++                type="button"
++                role="menuitem"
++                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
++              >
++                Discord Connected: <span className="dc-menu-accent">@prez</span>
++              </button>
++              <div className="dc-menu-divider" />
++              <button
++                type="button"
++                role="menuitem"
++                className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
++              >
++                Log Out
++              </button>
++            </m.div>
++          )}
++        </AnimatePresence>
++        <button
++          type="button"
++          className="dc-settings-trigger dc-pressable dc-focusable"
+           aria-label="Account settings"
+           aria-haspopup="menu"
+-          viewBox="0 0 24 24"
+-          width="17"
+-          height="17"
+-          fill="none"
+-          strokeWidth="1.8"
+-          strokeLinecap="round"
+-          strokeLinejoin="round"
++          aria-expanded={menuOpen}
++          onClick={() => setMenuOpen(open => !open)}
+         >
+-          <circle cx="12" cy="12" r="3" />
+-          <path d={GEAR_PATH} />
+-        </svg>
++          <svg
++            className="dc-settings-btn"
++            viewBox="0 0 24 24"
++            width="17"
++            height="17"
++            fill="none"
++            strokeWidth="1.8"
++            strokeLinecap="round"
++            strokeLinejoin="round"
++            aria-hidden="true"
++          >
++            <circle cx="12" cy="12" r="3" />
++            <path d={GEAR_PATH} />
++          </svg>
++        </button>
+       </div>
+-    </div>
++    </m.aside>
+   );
+ }
+ 
+@@ -301,7 +413,11 @@ function DimeSidebar({
+ /* Hero + pills — D/L:98, 106-109                                     */
+ /* ----------------------------------------------------------------- */
+ 
+-function BrandHero({ innerRef }: { innerRef?: MutableRefObject<HTMLDivElement | null> }) {
++function BrandHero({
++  innerRef,
++}: {
++  innerRef?: MutableRefObject<HTMLDivElement | null>;
++}) {
+   return (
+     <div className="dc-hero" ref={innerRef}>
+       <span className="dc-hero-word">
+@@ -334,7 +450,7 @@ function PromptPills({
+           <button
+             key={label}
+             type="button"
+-            className={`dc-pill dc-pill--${variant} dc-hv1 dc-focusable`}
++            className={`dc-pill dc-pill--${variant} dc-hv1 dc-focusable dc-pressable`}
+             onClick={onPick ? () => onPick(label) : undefined}
+             tabIndex={ghost ? -1 : 0}
+           >
+@@ -379,21 +495,40 @@ function DataPill({
+   return <span className="dc-datapill dc-datapill--none">NO LIVE DATA</span>;
+ }
+ 
+-function Stat({ label, value, mint = false }: { label: string; value: string; mint?: boolean }) {
++function Stat({
++  label,
++  value,
++  mint = false,
++}: {
++  label: string;
++  value: string;
++  mint?: boolean;
++}) {
+   return (
+     <div className="dc-stat">
+       <div className="dc-microlabel dc-stat-label">{label}</div>
+-      <div className={`dc-stat-value${mint ? " dc-stat-value--mint" : ""}`}>{value}</div>
++      <div className={`dc-stat-value${mint ? " dc-stat-value--mint" : ""}`}>
++        {value}
++      </div>
+     </div>
+   );
+ }
+ 
+-function EdgeStatBlock({ block, freshness }: { block: EdgeBlock; freshness: DataFreshness }) {
++function EdgeStatBlock({
++  block,
++  freshness,
++}: {
++  block: EdgeBlock;
++  freshness: DataFreshness;
++}) {
+   const pass = block.verdict === "pass";
+   const mintEdge = block.verdict === "edge_detected"; // mint ONLY on positive signal (spec §2.4)
+   const pct = block.edgePct.endsWith("%") ? block.edgePct : `${block.edgePct}%`;
+   return (
+-    <section className={`dc-edge${pass ? " dc-edge--pass" : ""}`} data-verdict={block.verdict}>
++    <section
++      className={`dc-edge${pass ? " dc-edge--pass" : ""}`}
++      data-verdict={block.verdict}
++    >
+       <div className="dc-edge-header">
+         <span className="dc-microlabel dc-edge-label">[EDGE]</span>
+         <DataPill state={freshness} />
+@@ -419,7 +554,7 @@ function Prose({ text }: { text: string }) {
+           </span>
+         ) : (
+           <Fragment key={i}>{part.text}</Fragment>
+-        ),
++        )
+       )}
+     </div>
+   );
+@@ -445,7 +580,11 @@ function Turn({
+     // Pre-first-delta: dimeTyping dots, the ONLY thinking affordance (spec §2.8)
+     return (
+       <div className={`dc-turn--assistant${fx ? " dc-fade-in" : ""}`}>
+-        <div className="dc-typing-row" role="status" aria-label="Dime is thinking">
++        <div
++          className="dc-typing-row"
++          role="status"
++          aria-label="Dime is thinking"
++        >
+           <span className="dc-typing-dot" />
+           <span className="dc-typing-dot" />
+           <span className="dc-typing-dot" />
+@@ -456,12 +595,13 @@ function Turn({
+   const segments = parseAssistantContent(msg.content, msg.status !== "open");
+   return (
+     <div className="dc-turn--assistant">
+-      {segments.map((seg, i) =>
+-        seg.kind === "text" ? (
+-          <Prose key={i} text={seg.text} />
+-        ) : seg.kind === "edge" ? (
+-          <EdgeStatBlock key={i} block={seg.block} freshness={freshness} />
+-        ) : null, // "pending": buffered partial [EDGE block — renders nothing until closed
++      {segments.map(
++        (seg, i) =>
++          seg.kind === "text" ? (
++            <Prose key={i} text={seg.text} />
++          ) : seg.kind === "edge" ? (
++            <EdgeStatBlock key={i} block={seg.block} freshness={freshness} />
++          ) : null // "pending": buffered partial [EDGE block — renders nothing until closed
+       )}
+       {msg.status === "interrupted" && (
+         <div className="dc-footnote">
+@@ -473,30 +613,13 @@ function Turn({
+   );
+ }
+ 
+-/**
+- * Ph3 viewport gate (<1024px): the frozen screens have no sub-desktop spec, so
+- * narrow viewports get a full-viewport branded notice instead of the shell.
+- * Frozen tokens only: page bg per theme (D/L:46 via .dc-page), hero wordmark
+- * (F:98), body copy at composer-input size (F:101), mono micro-label sub (C3)
+- * carrying the frozen link colors (F:13-14). Static — reduced-motion-safe.
+- */
+-function ViewportGate({ theme }: { theme: Theme }) {
+-  return (
+-    <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
+-      <div className="dc-gate">
+-        <BrandHero />
+-        <div className="dc-gate-line">
+-          Dime chat is built for larger screens — on a tablet, rotating to landscape works.
+-        </div>
+-        <Link href="/feed/model/mlb" className="dc-microlabel dc-gate-sub dc-link">
+-          OPEN ON A LARGER SCREEN · THE BOARD LIVES AT /feed/model
+-        </Link>
+-      </div>
+-    </div>
+-  );
+-}
+-
+-function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
++function ErrorCard({
++  message,
++  onRetry,
++}: {
++  message: string;
++  onRetry: () => void;
++}) {
+   return (
+     <div className="dc-error-card">
+       <div className="dc-microlabel dc-error-label">Connection</div>
+@@ -504,7 +627,7 @@ function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void
+       <div>
+         <button
+           type="button"
+-          className="dc-btn-cancel dc-hv2 dc-focusable"
++          className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
+           onClick={onRetry}
+         >
+           Retry
+@@ -524,61 +647,402 @@ type GhostRects = {
+   fading: boolean;
+ };
+ 
+-const rectStyle = (r: { left: number; top: number; width: number; height: number }) => ({
++type DrawerGesture = {
++  pointerId: number;
++  startX: number;
++  startY: number;
++  grabOffset: number;
++  lastX: number;
++  lastTime: number;
++  velocityX: number;
++  lastDirection: -1 | 0 | 1;
++  claimed: boolean;
++  rejected: boolean;
++};
++
++const DRAWER_FALLBACK_WIDTH = 293;
++const DRAWER_SPRING = {
++  type: "spring" as const,
++  stiffness: 520,
++  damping: 43,
++  mass: 0.9,
++};
++const BRAND_EASE = [0.16, 1, 0.3, 1] as const;
++
++const rectStyle = (r: {
++  left: number;
++  top: number;
++  width: number;
++  height: number;
++}) => ({
+   left: r.left,
+   top: r.top,
+   width: r.width,
+   height: r.height,
+ });
+ 
+-export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {}) {
++export interface DimeChatShellState {
++  /** Pane currently painted; may lag the URL while a lazy chunk resolves. */
++  renderedPane: DimeProductPane;
++  /** URL-owned active item, updated immediately for sidebar semantics. */
++  navigationPane: DimeProductPane;
++  paneContent: ReactNode;
++  paneHeading: string;
++  onNavigate: (href: string) => void;
++  externalScrollRef: MutableRefObject<HTMLDivElement | null>;
++  chatHeadingRef: MutableRefObject<HTMLHeadingElement | null>;
++  externalHeadingRef: MutableRefObject<HTMLHeadingElement | null>;
++  onExternalScroll: () => void;
++}
++
++export interface DimeChatPageProps {
++  theme?: Theme;
++  shell?: DimeChatShellState;
++}
++
++export default function DimeChatPage({
++  theme: themeProp,
++  shell,
++}: DimeChatPageProps = {}) {
+   const { theme: contextTheme } = useTheme();
+-  const theme: Theme = themeProp ?? (contextTheme === "light" ? "light" : "dark");
++  const theme: Theme =
++    themeProp ?? (contextTheme === "light" ? "light" : "dark");
++  const reduceMotion = useReducedMotion();
+ 
+   const [state, dispatch] = useReducer(chatReducer, initialChatState);
+   const [input, setInput] = useState("");
+   const [ghost, setGhost] = useState<GhostRects | null>(null);
+   const [stuck, setStuck] = useState(true);
+   const [firstSendFx, setFirstSendFx] = useState(false);
+-  const [recentChats, setRecentChats] = useState<RecentChat[]>(() => getSessionRecents());
+-  const [narrow, setNarrow] = useState(
++  const [recentChats, setRecentChats] = useState<RecentChat[]>(() =>
++    getSessionRecents()
++  );
++  const [compact, setCompact] = useState(
+     () =>
+       typeof window !== "undefined" &&
+-      !!window.matchMedia?.("(max-width: 1023px)").matches,
++      !!window.matchMedia?.("(max-width: 1023px)").matches
+   );
++  const [drawerOpen, setDrawerOpen] = useState(false);
++  const [drawerMoving, setDrawerMoving] = useState(false);
+ 
++  const pageRef = useRef<HTMLDivElement>(null);
+   const composerRef = useRef<HTMLFormElement>(null);
+   const heroRef = useRef<HTMLDivElement | null>(null);
+   const pillsRef = useRef<HTMLDivElement | null>(null);
+   const scrollerRef = useRef<HTMLDivElement>(null);
++  const chatPaneRef = useRef<HTMLElement | null>(null);
++  const externalPaneRef = useRef<HTMLElement | null>(null);
+   const abortRef = useRef<AbortController | null>(null);
++  const activeBatcherRef = useRef<RafDeltaBatcher | null>(null);
+   const flipFromRef = useRef<number | null>(null);
++  const flipControlsRef = useRef<AnimationPlaybackControls | null>(null);
++  const flipGenerationRef = useRef(0);
+   const stuckRef = useRef(true);
+   const programmaticScrollRef = useRef(false);
+   const lastScrollTopRef = useRef(0);
++  const sidebarRef = useRef<HTMLElement | null>(null);
++  const mainRef = useRef<HTMLElement | null>(null);
++  const mobileBarRef = useRef<HTMLDivElement | null>(null);
++  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
++  const drawerAnimationRef = useRef<AnimationPlaybackControls | null>(null);
++  const drawerAnimationGenerationRef = useRef(0);
++  const drawerTargetRef = useRef(-DRAWER_FALLBACK_WIDTH);
++  const drawerRestoreFocusRef = useRef(false);
++  const drawerWidthRef = useRef(DRAWER_FALLBACK_WIDTH);
++  const gestureRef = useRef<DrawerGesture | null>(null);
++  const viewportFrameRef = useRef<number | null>(null);
++  const drawerX = useMotionValue(-DRAWER_FALLBACK_WIDTH);
++  const scrimOpacity = useTransform(
++    drawerX,
++    [-DRAWER_FALLBACK_WIDTH, 0],
++    [0, 0.46]
++  );
+ 
+   const conversation = state.messages.length > 0;
+ 
+-  useEffect(() => () => abortRef.current?.abort(), []);
++  useEffect(
++    () => () => {
++      abortRef.current?.abort();
++      activeBatcherRef.current?.dispose();
++      flipControlsRef.current?.stop();
++      drawerAnimationRef.current?.stop();
++      if (viewportFrameRef.current != null)
++        cancelAnimationFrame(viewportFrameRef.current);
++    },
++    []
++  );
+ 
+-  /* --- Ph3: viewport gate listener (matchMedia — no resize-loop thrash) --- */
++  /* --- Responsive shell listener (matchMedia — no resize-loop thrash) --- */
+   useEffect(() => {
+     const mq = window.matchMedia?.("(max-width: 1023px)");
+     if (!mq) return;
+-    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
++    const onChange = (e: MediaQueryListEvent) => setCompact(e.matches);
+     mq.addEventListener("change", onChange);
+     return () => mq.removeEventListener("change", onChange);
+   }, []);
+ 
++  /* --- Mobile visual viewport: one read + one rAF write, no layout reads. --- */
++  useEffect(() => {
++    if (!compact || !window.visualViewport) return;
++    const viewport = window.visualViewport;
++    const schedule = () => {
++      if (viewportFrameRef.current != null) return;
++      const height = viewport.height;
++      const top = viewport.offsetTop;
++      viewportFrameRef.current = requestAnimationFrame(() => {
++        viewportFrameRef.current = null;
++        pageRef.current?.style.setProperty("--dc-visual-height", `${height}px`);
++        pageRef.current?.style.setProperty("--dc-visual-top", `${top}px`);
++      });
++    };
++    schedule();
++    viewport.addEventListener("resize", schedule);
++    viewport.addEventListener("scroll", schedule);
++    return () => {
++      viewport.removeEventListener("resize", schedule);
++      viewport.removeEventListener("scroll", schedule);
++      if (viewportFrameRef.current != null)
++        cancelAnimationFrame(viewportFrameRef.current);
++      viewportFrameRef.current = null;
++    };
++  }, [compact]);
++
++  useLayoutEffect(() => {
++    const sidebar = sidebarRef.current;
++    if (!sidebar) return;
++    drawerWidthRef.current =
++      sidebar.getBoundingClientRect().width || DRAWER_FALLBACK_WIDTH;
++    pageRef.current?.style.setProperty(
++      "--dc-drawer-width",
++      `${drawerWidthRef.current}px`
++    );
++    if (compact) drawerX.set(drawerOpen ? 0 : -drawerWidthRef.current);
++    else {
++      drawerAnimationRef.current?.stop();
++      drawerX.set(0);
++      setDrawerOpen(false);
++      setDrawerMoving(false);
++    }
++  }, [compact, drawerX]);
++
++  const settleDrawer = useCallback(
++    (target: number, velocityX = 0, restoreFocus = false) => {
++      const generation = ++drawerAnimationGenerationRef.current;
++      drawerTargetRef.current = target;
++      drawerRestoreFocusRef.current = restoreFocus;
++      drawerAnimationRef.current?.stop();
++      setDrawerMoving(true);
++
++      const finish = () => {
++        if (generation !== drawerAnimationGenerationRef.current) return;
++        drawerAnimationRef.current = null;
++        setDrawerMoving(false);
++        if (target < 0) {
++          setDrawerOpen(false);
++          if (restoreFocus) menuButtonRef.current?.focus();
++        } else {
++          setDrawerOpen(true);
++        }
++      };
++
++      if (reduceMotion) {
++        drawerX.set(target);
++        finish();
++        return;
++      }
++
++      const controls = animate(drawerX, target, {
++        ...DRAWER_SPRING,
++        velocity: velocityX,
++      });
++      drawerAnimationRef.current = controls;
++      void controls.then(finish);
++    },
++    [drawerX, reduceMotion]
++  );
++
++  useEffect(() => {
++    if (!reduceMotion || !drawerAnimationRef.current) return;
++    drawerAnimationGenerationRef.current++;
++    drawerAnimationRef.current.stop();
++    drawerAnimationRef.current = null;
++    drawerX.set(drawerTargetRef.current);
++    setDrawerMoving(false);
++    const closed = drawerTargetRef.current < 0;
++    setDrawerOpen(!closed);
++    if (closed && drawerRestoreFocusRef.current) menuButtonRef.current?.focus();
++  }, [drawerX, reduceMotion]);
++
++  const openDrawer = useCallback(() => {
++    setDrawerOpen(true);
++    settleDrawer(0);
++  }, [settleDrawer]);
++
++  const closeDrawer = useCallback(
++    (restoreFocus = true) => {
++      settleDrawer(-drawerWidthRef.current, 0, restoreFocus);
++    },
++    [settleDrawer]
++  );
++
++  /* --- Modal drawer semantics: inert background, focus trap, Escape, restore. --- */
++  useEffect(() => {
++    const sidebar = sidebarRef.current;
++    const main = mainRef.current;
++    const mobileBar = mobileBarRef.current;
++    if (!compact) {
++      if (sidebar) sidebar.inert = false;
++      if (main) main.inert = false;
++      if (mobileBar) mobileBar.inert = false;
++      return;
++    }
++
++    if (sidebar) sidebar.inert = !drawerOpen;
++    if (main) main.inert = drawerOpen;
++    if (mobileBar) mobileBar.inert = drawerOpen;
++    if (!drawerOpen || drawerMoving || !sidebar) return;
++
++    const focusables = () =>
++      Array.from(
++        sidebar.querySelectorAll<HTMLElement>(
++          'button:not([disabled]):not([aria-disabled="true"]), a[href], [tabindex]:not([tabindex="-1"])'
++        )
++      ).filter(el => !el.hasAttribute("aria-hidden"));
++    const frame = requestAnimationFrame(() => focusables()[0]?.focus());
++    const onKey = (event: KeyboardEvent) => {
++      if (event.key === "Escape") {
++        event.preventDefault();
++        closeDrawer(true);
++        return;
++      }
++      if (event.key !== "Tab") return;
++      const items = focusables();
++      if (items.length === 0) return;
++      const first = items[0];
++      const last = items[items.length - 1];
++      if (event.shiftKey && document.activeElement === first) {
++        event.preventDefault();
++        last.focus();
++      } else if (!event.shiftKey && document.activeElement === last) {
++        event.preventDefault();
++        first.focus();
++      }
++    };
++    document.addEventListener("keydown", onKey);
++    return () => {
++      cancelAnimationFrame(frame);
++      document.removeEventListener("keydown", onKey);
++    };
++  }, [compact, drawerOpen, drawerMoving, closeDrawer]);
++
++  useEffect(() => {
++    if (!shell) return;
++    const chatActive = shell.renderedPane === "chat";
++    if (chatPaneRef.current) chatPaneRef.current.inert = !chatActive;
++    if (externalPaneRef.current) externalPaneRef.current.inert = chatActive;
++  }, [shell?.renderedPane]);
++
++  const beginDrawerGesture = useCallback(
++    (event: ReactPointerEvent<HTMLElement>, requireIntent: boolean) => {
++      if (event.button !== 0) return;
++      drawerAnimationGenerationRef.current++;
++      drawerAnimationRef.current?.stop();
++      drawerAnimationRef.current = null;
++      const currentX = drawerX.get();
++      gestureRef.current = {
++        pointerId: event.pointerId,
++        startX: event.clientX,
++        startY: event.clientY,
++        grabOffset: event.clientX - currentX,
++        lastX: event.clientX,
++        lastTime: event.timeStamp,
++        velocityX: 0,
++        lastDirection: 0,
++        claimed: !requireIntent,
++        rejected: false,
++      };
++      if (!requireIntent) {
++        event.currentTarget.setPointerCapture(event.pointerId);
++        setDrawerMoving(true);
++      }
++    },
++    [drawerX]
++  );
++
++  const moveDrawerGesture = useCallback(
++    (event: ReactPointerEvent<HTMLElement>) => {
++      const gesture = gestureRef.current;
++      if (!gesture || gesture.pointerId !== event.pointerId || gesture.rejected)
++        return;
++      const dx = event.clientX - gesture.startX;
++      const dy = event.clientY - gesture.startY;
++
++      if (!gesture.claimed) {
++        const intent = classifyPointerIntent(dx, dy);
++        if (intent === "pending") return;
++        if (intent === "vertical") {
++          gesture.rejected = true;
++          gestureRef.current = null;
++          return;
++        }
++        gesture.claimed = true;
++        event.currentTarget.setPointerCapture(event.pointerId);
++        setDrawerOpen(true);
++        setDrawerMoving(true);
++      }
++
++      event.preventDefault();
++      const elapsed = Math.max(1, event.timeStamp - gesture.lastTime);
++      const step = event.clientX - gesture.lastX;
++      gesture.velocityX = (step / elapsed) * 1000;
++      if (Math.abs(step) >= 0.25) gesture.lastDirection = step > 0 ? 1 : -1;
++      gesture.lastX = event.clientX;
++      gesture.lastTime = event.timeStamp;
++
++      if (!reduceMotion) {
++        const raw = event.clientX - gesture.grabOffset;
++        drawerX.set(rubberBand(raw, -drawerWidthRef.current, 0));
++      }
++    },
++    [drawerX, reduceMotion]
++  );
++
++  const endDrawerGesture = useCallback(
++    (event: ReactPointerEvent<HTMLElement>) => {
++      const gesture = gestureRef.current;
++      if (!gesture || gesture.pointerId !== event.pointerId) return;
++      gestureRef.current = null;
++      if (!gesture.claimed || gesture.rejected) return;
++      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
++        event.currentTarget.releasePointerCapture(event.pointerId);
++      }
++      const target = resolveDrawerTarget({
++        velocityX: gesture.velocityX,
++        lastDirection: gesture.lastDirection,
++        closedX: -drawerWidthRef.current,
++      });
++      settleDrawer(target, gesture.velocityX, target < 0);
++    },
++    [settleDrawer]
++  );
++
+   /* --- SSE streaming core (preserved from the previous DimeChat.tsx) --- */
+   const runStream = useCallback(
+-    async (history: Array<{ role: "user" | "assistant"; content: string }>, assistantId: string) => {
++    async (
++      history: Array<{ role: "user" | "assistant"; content: string }>,
++      assistantId: string
++    ) => {
+       const controller = new AbortController();
+       abortRef.current = controller;
+ 
+       const streamStart = Date.now();
+       let frameCount = 0;
+       let settled = false;
++      const batcher = createRafDeltaBatcher(text => {
++        dispatch({ type: "stream_delta", id: assistantId, text });
++      });
++      activeBatcherRef.current?.dispose();
++      activeBatcherRef.current = batcher;
+       dimeDebug("stream.open", { historyLength: history.length });
+ 
+       try {
+@@ -607,13 +1071,13 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+           buffer = frames.pop() ?? "";
+ 
+           for (const frame of frames) {
+-            const line = frame.split("\n").find((l) => l.startsWith("data: "));
++            const line = frame.split("\n").find(l => l.startsWith("data: "));
+             if (!line) continue;
+             try {
+               const event = JSON.parse(line.slice(6));
+               frameCount++;
+               if (event.type === "delta" && typeof event.text === "string") {
+-                dispatch({ type: "stream_delta", id: assistantId, text: event.text });
++                batcher.push(event.text);
+               } else if (
+                 event.type === "meta" &&
+                 (event.dataFreshness === "live" ||
+@@ -621,12 +1085,23 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+                   event.dataFreshness === "none")
+               ) {
+                 dispatch({ type: "meta", dataFreshness: event.dataFreshness });
+-              } else if (event.type === "error" && typeof event.message === "string") {
++              } else if (
++                event.type === "error" &&
++                typeof event.message === "string"
++              ) {
+                 settled = true;
+-                dispatch({ type: "stream_error", id: assistantId, message: event.message });
++                batcher.flushBeforeTerminal(() =>
++                  dispatch({
++                    type: "stream_error",
++                    id: assistantId,
++                    message: event.message,
++                  })
++                );
+               } else if (event.type === "done") {
+                 settled = true;
+-                dispatch({ type: "stream_done", id: assistantId });
++                batcher.flushBeforeTerminal(() =>
++                  dispatch({ type: "stream_done", id: assistantId })
++                );
+               }
+             } catch {
+               dimeDebug("frame.parse_failure", { raw: line.slice(0, 100) });
+@@ -634,25 +1109,53 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+           }
+         }
+ 
+-        if (!settled) dispatch({ type: "stream_done", id: assistantId });
++        if (!settled) {
++          batcher.flushBeforeTerminal(() =>
++            dispatch({ type: "stream_done", id: assistantId })
++          );
++        }
+ 
+         const latency = Date.now() - streamStart;
+         const fps = frameCount / (latency / 1000);
+-        dimeDebug("stream.done", { frameCount, latencyMs: latency, fps: fps.toFixed(1) });
++        dimeDebug("stream.done", {
++          frameCount,
++          latencyMs: latency,
++          fps: fps.toFixed(1),
++        });
+       } catch (err) {
+         if (err instanceof DOMException && err.name === "AbortError") {
+-          dispatch({ type: "stream_abort", id: assistantId });
++          batcher.flushBeforeTerminal(() =>
++            dispatch({ type: "stream_abort", id: assistantId })
++          );
+         } else {
+-          dispatch({ type: "stream_error", id: assistantId, message: ERROR_COPY });
++          batcher.flushBeforeTerminal(() =>
++            dispatch({
++              type: "stream_error",
++              id: assistantId,
++              message: ERROR_COPY,
++            })
++          );
+           dimeDebug("stream.error", { error: (err as Error).message });
+         }
+       } finally {
++        batcher.dispose();
++        if (activeBatcherRef.current === batcher)
++          activeBatcherRef.current = null;
+         abortRef.current = null;
+       }
+     },
+-    [],
++    []
+   );
+ 
++  const captureComposerPresentation = useCallback(() => {
++    const composer = composerRef.current;
++    if (!composer) return;
++    flipGenerationRef.current++;
++    flipControlsRef.current?.stop();
++    flipControlsRef.current = null;
++    flipFromRef.current = composer.getBoundingClientRect().top;
++  }, []);
++
+   /* --- Single submit choke point: composer, Enter, chips, all of it --- */
+   const submit = useCallback(
+     (text: string) => {
+@@ -666,15 +1169,25 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+         addSessionRecent(trimmed);
+         setRecentChats(getSessionRecents());
+       }
+-      if (wasHome && !prefersReducedMotion()) {
++      if (wasHome) captureComposerPresentation();
++      if (wasHome && !reduceMotion) {
+         // FLIP first-position capture + ghost rects (spec §3.2)
+-        flipFromRef.current = composerRef.current?.getBoundingClientRect().top ?? null;
+         const hero = heroRef.current?.getBoundingClientRect();
+         const pills = pillsRef.current?.getBoundingClientRect();
+         if (hero && pills) {
+           setGhost({
+-            hero: { left: hero.left, top: hero.top, width: hero.width, height: hero.height },
+-            pills: { left: pills.left, top: pills.top, width: pills.width, height: pills.height },
++            hero: {
++              left: hero.left,
++              top: hero.top,
++              width: hero.width,
++              height: hero.height,
++            },
++            pills: {
++              left: pills.left,
++              top: pills.top,
++              width: pills.width,
++              height: pills.height,
++            },
+             fading: false,
+           });
+         }
+@@ -695,7 +1208,13 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+       dispatch({ type: "open_assistant", id: assistantId });
+       void runStream(history, assistantId);
+     },
+-    [state.streaming, state.messages, runStream],
++    [
++      state.streaming,
++      state.messages,
++      runStream,
++      reduceMotion,
++      captureComposerPresentation,
++    ]
+   );
+ 
+   /** Retry re-runs the same history (failed empty row was already removed — spec §2.6). */
+@@ -707,54 +1226,75 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+     dispatch({ type: "open_assistant", id: assistantId });
+     void runStream(
+       state.messages.map(({ role, content }) => ({ role, content })),
+-      assistantId,
++      assistantId
+     );
+   }, [state.streaming, state.messages, runStream]);
+ 
+   const stop = () => abortRef.current?.abort();
+ 
+   const newChat = useCallback(() => {
++    if (state.messages.length > 0) captureComposerPresentation();
+     abortRef.current?.abort();
++    activeBatcherRef.current?.dispose();
++    activeBatcherRef.current = null;
+     dispatch({ type: "reset" });
+     setInput("");
+     setGhost(null);
+     setFirstSendFx(false);
+     stuckRef.current = true;
+     setStuck(true);
+-  }, []);
++  }, [state.messages.length, captureComposerPresentation]);
+ 
+   const onSubmit = (e: FormEvent) => {
+     e.preventDefault();
+     submit(input);
+   };
+ 
+-  /* --- FLIP release: translateY(Δ) → none over the kit's one beat (spec §3.2) --- */
++  /* --- Interruptible FLIP: measured presentation → final layout, no timer ownership. --- */
+   useLayoutEffect(() => {
+-    if (!conversation || flipFromRef.current == null) return;
++    if (flipFromRef.current == null) return;
+     const el = composerRef.current;
+     const from = flipFromRef.current;
+     flipFromRef.current = null;
+     if (!el) return;
+     const delta = from - el.getBoundingClientRect().top;
+-    el.classList.remove("dc-composer--flip");
+     el.style.transform = `translateY(${delta}px)`;
+-    void el.getBoundingClientRect(); // commit the inverted frame before releasing
+-    el.classList.add("dc-composer--flip");
+-    el.style.transform = "";
+-    const raf = requestAnimationFrame(() =>
+-      setGhost((g) => (g ? { ...g, fading: true } : g)),
++    if (reduceMotion) {
++      el.style.removeProperty("transform");
++      setGhost(null);
++      setFirstSendFx(false);
++      return;
++    }
++
++    const generation = ++flipGenerationRef.current;
++    const controls = animate(
++      el,
++      { transform: "translateY(0px)" },
++      { duration: 0.16, ease: BRAND_EASE }
+     );
+-    const timer = setTimeout(() => {
+-      el.classList.remove("dc-composer--flip");
++    flipControlsRef.current = controls;
++    const frame = requestAnimationFrame(() =>
++      setGhost(current => (current ? { ...current, fading: true } : current))
++    );
++    void controls.then(() => {
++      if (generation !== flipGenerationRef.current) return;
++      flipControlsRef.current = null;
+       el.style.removeProperty("transform");
+       setGhost(null);
+       setFirstSendFx(false);
+-    }, 200); // 160ms beat + settle margin
+-    return () => {
+-      cancelAnimationFrame(raf);
+-      clearTimeout(timer);
+-    };
+-  }, [conversation]);
++    });
++    return () => cancelAnimationFrame(frame);
++  }, [conversation, reduceMotion]);
++
++  useEffect(() => {
++    if (!reduceMotion || !flipControlsRef.current) return;
++    flipGenerationRef.current++;
++    flipControlsRef.current.stop();
++    flipControlsRef.current = null;
++    composerRef.current?.style.removeProperty("transform");
++    setGhost(null);
++    setFirstSendFx(false);
++  }, [reduceMotion]);
+ 
+   /* --- Scroll policy: stick / release / re-stick on user action (spec §1.b) --- */
+   useEffect(() => {
+@@ -792,96 +1332,264 @@ export default function DimeChatPage({ theme: themeProp }: { theme?: Theme } = {
+     });
+   };
+ 
+-  // Ph3: below the desktop floor the shell is replaced wholesale (the frozen
+-  // design has no sub-1024px spec). All hooks above still run, so an active
+-  // stream survives a temporary resize; placed after every hook by design.
+-  if (narrow) {
+-    return <ViewportGate theme={theme} />;
+-  }
+-
+   return (
+-    <div className={`dc-page dc-page--app theme-${theme}`} data-theme={theme}>
+-      <div className="dc-app">
+-        <DimeSidebar onNewChat={newChat} recentChats={recentChats} />
+-        <main className={`dc-main${conversation ? " dc-main--conv" : ""}`}>
+-          {conversation && (
+-            <div className="dc-scroller" ref={scrollerRef} onScroll={onScroll}>
+-              <div
+-                className="dc-thread"
+-                role="log"
+-                aria-live="polite"
+-                aria-relevant="additions text"
+-                aria-atomic="false"
+-                aria-label="Dime chat conversation"
+-              >
+-                {state.messages.map((m) => (
+-                  <Turn key={m.id} msg={m} freshness={state.dataFreshness} fx={firstSendFx} />
+-                ))}
+-                {state.error && <ErrorCard message={state.error} onRetry={retry} />}
+-                <div className="dc-footnote">{DISCLAIMER}</div>
+-              </div>
+-            </div>
+-          )}
+-          {!conversation && <BrandHero innerRef={heroRef} />}
+-          <div className="dc-composer-zone">
+-            {conversation && !stuck && state.streaming && (
++    <LazyMotion features={domAnimation} strict>
++      <div
++        ref={pageRef}
++        className={`dc-page dc-page--app theme-${theme}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
++        data-theme={theme}
++      >
++        <div className="dc-app">
++          {compact && (
++            <div className="dc-mobile-bar" ref={mobileBarRef}>
+               <button
++                ref={menuButtonRef}
+                 type="button"
+-                className="dc-btn-cancel dc-hv2 dc-focusable dc-jump"
+-                onClick={jumpToLatest}
++                className="dc-mobile-menu dc-focusable dc-pressable"
++                aria-haspopup="dialog"
++                aria-expanded={drawerOpen}
++                onClick={openDrawer}
+               >
+-                Jump to latest
++                Menu
+               </button>
+-            )}
+-            <form className="dc-composer" ref={composerRef} onSubmit={onSubmit}>
+-              <div className="dc-composer-plus">＋</div>
+-              <input
+-                className="dc-composer-input"
+-                type="text"
+-                value={input}
+-                onChange={(e) => setInput(e.target.value)}
+-                placeholder={conversation ? "Reply to dime…" : "Ask dime anything…"}
+-                enterKeyHint="send"
+-              />
+-              {state.streaming ? (
+-                <button
+-                  type="button"
+-                  className="dc-send dc-hv3 dc-focusable"
+-                  aria-label="Stop response"
+-                  onClick={stop}
+-                >
+-                  <StopGlyph />
+-                </button>
+-              ) : (
+-                <button
+-                  type="submit"
+-                  className="dc-send dc-hv3 dc-focusable"
+-                  aria-label="Submit prompt"
+-                >
+-                  <SendGlyph />
+-                </button>
+-              )}
+-            </form>
+-          </div>
+-          {!conversation && <PromptPills theme={theme} onPick={submit} innerRef={pillsRef} />}
+-          {ghost && (
+-            <div aria-hidden="true">
+-              <div
+-                className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
+-                style={rectStyle(ghost.hero)}
++              <span className="dc-mobile-title">AI Sports Betting</span>
++              <span className="dc-mobile-balance" aria-hidden="true" />
++            </div>
++          )}
++
++          <DimeSidebar
++            onNewChat={newChat}
++            recentChats={recentChats}
++            compact={compact}
++            drawerOpen={drawerOpen}
++            drawerStyle={compact ? { x: drawerX } : undefined}
++            sidebarRef={sidebarRef}
++            onClose={() => closeDrawer(true)}
++            onNavigate={() => {
++              if (compact) closeDrawer(true);
++            }}
++            activePane={shell?.navigationPane}
++            onShellNavigate={shell?.onNavigate}
++          />
++
++          {compact && drawerOpen && (
++            <m.button
++              type="button"
++              className="dc-drawer-scrim"
++              style={{ opacity: scrimOpacity }}
++              aria-label="Close navigation"
++              tabIndex={-1}
++              onPointerDown={() => closeDrawer(true)}
++            />
++          )}
++
++          {compact && !drawerOpen && (
++            <div
++              className="dc-edge-capture"
++              aria-hidden="true"
++              onPointerDown={event => beginDrawerGesture(event, true)}
++              onPointerMove={moveDrawerGesture}
++              onPointerUp={endDrawerGesture}
++              onPointerCancel={endDrawerGesture}
++            />
++          )}
++
++          {compact && drawerOpen && (
++            <m.div
++              className="dc-drawer-grab"
++              style={{ x: drawerX }}
++              aria-hidden="true"
++              onPointerDown={event => beginDrawerGesture(event, false)}
++              onPointerMove={moveDrawerGesture}
++              onPointerUp={endDrawerGesture}
++              onPointerCancel={endDrawerGesture}
++            />
++          )}
++
++          {(() => {
++            const chatActive = !shell || shell.renderedPane === "chat";
++            const transition = {
++              duration: reduceMotion ? 0 : 0.16,
++              ease: BRAND_EASE,
++            };
++            const chatPane = (
++              <m.main
++                ref={shell ? chatPaneRef : mainRef}
++                className={`dc-main${conversation ? " dc-main--conv" : ""}${shell ? " dc-shell-chat-layer" : ""}`}
++                aria-hidden={shell && !chatActive ? true : undefined}
++                animate={
++                  shell
++                    ? { opacity: chatActive ? 1 : 0, y: chatActive ? 0 : -4 }
++                    : undefined
++                }
++                transition={transition}
++                style={
++                  shell
++                    ? { pointerEvents: chatActive ? "auto" : "none" }
++                    : undefined
++                }
+               >
+-                <BrandHero />
+-              </div>
++                {shell && (
++                  <h1
++                    ref={shell.chatHeadingRef}
++                    className="dc-shell-sr-only"
++                    tabIndex={-1}
++                  >
++                    Dime Chat
++                  </h1>
++                )}
++                {conversation && (
++                  <div
++                    className="dc-scroller"
++                    ref={scrollerRef}
++                    onScroll={onScroll}
++                  >
++                    <div
++                      className="dc-thread"
++                      role="log"
++                      aria-live="polite"
++                      aria-relevant="additions text"
++                      aria-atomic="false"
++                      aria-label="Dime chat conversation"
++                    >
++                      {state.messages.map(m => (
++                        <Turn
++                          key={m.id}
++                          msg={m}
++                          freshness={state.dataFreshness}
++                          fx={firstSendFx}
++                        />
++                      ))}
++                      {state.error && (
++                        <ErrorCard message={state.error} onRetry={retry} />
++                      )}
++                      <div className="dc-footnote">{DISCLAIMER}</div>
++                    </div>
++                  </div>
++                )}
++                {!conversation && <BrandHero innerRef={heroRef} />}
++                <div className="dc-composer-zone">
++                  {conversation && !stuck && state.streaming && (
++                    <button
++                      type="button"
++                      className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable dc-jump"
++                      onClick={jumpToLatest}
++                    >
++                      Jump to latest
++                    </button>
++                  )}
++                  <form
++                    className="dc-composer"
++                    ref={composerRef}
++                    onSubmit={onSubmit}
++                  >
++                    <div className="dc-composer-plus">＋</div>
++                    <input
++                      className="dc-composer-input"
++                      type="text"
++                      value={input}
++                      onChange={e => setInput(e.target.value)}
++                      placeholder={
++                        conversation ? "Reply to dime…" : "Ask dime anything…"
++                      }
++                      enterKeyHint="send"
++                    />
++                    {state.streaming ? (
++                      <button
++                        type="button"
++                        className="dc-send dc-hv3 dc-focusable dc-pressable"
++                        aria-label="Stop response"
++                        onClick={stop}
++                      >
++                        <StopGlyph />
++                      </button>
++                    ) : (
++                      <button
++                        type="submit"
++                        className="dc-send dc-hv3 dc-focusable dc-pressable"
++                        aria-label="Submit prompt"
++                      >
++                        <SendGlyph />
++                      </button>
++                    )}
++                  </form>
++                </div>
++                {!conversation && (
++                  <PromptPills
++                    theme={theme}
++                    onPick={submit}
++                    innerRef={pillsRef}
++                  />
++                )}
++                {ghost && (
++                  <div aria-hidden="true">
++                    <m.div
++                      className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
++                      style={rectStyle(ghost.hero)}
++                      animate={{ opacity: ghost.fading ? 0 : 1 }}
++                      transition={{
++                        duration: reduceMotion ? 0 : 0.16,
++                        ease: BRAND_EASE,
++                      }}
++                    >
++                      <BrandHero />
++                    </m.div>
++                    <m.div
++                      className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
++                      style={rectStyle(ghost.pills)}
++                      animate={{ opacity: ghost.fading ? 0 : 1 }}
++                      transition={{
++                        duration: reduceMotion ? 0 : 0.16,
++                        ease: BRAND_EASE,
++                      }}
++                    >
++                      <PromptPills theme={theme} ghost />
++                    </m.div>
++                  </div>
++                )}
++              </m.main>
++            );
++
++            if (!shell) return chatPane;
++
++            const externalActive = shell.renderedPane !== "chat";
++            return (
+               <div
+-                className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
+-                style={rectStyle(ghost.pills)}
++                ref={mainRef as MutableRefObject<HTMLDivElement | null>}
++                className="dc-shell-stack"
+               >
+-                <PromptPills theme={theme} ghost />
++                {chatPane}
++                <m.section
++                  ref={externalPaneRef}
++                  className="dc-shell-external-layer"
++                  aria-hidden={!externalActive}
++                  animate={{
++                    opacity: externalActive ? 1 : 0,
++                    y: externalActive ? 0 : 4,
++                  }}
++                  transition={transition}
++                  style={{ pointerEvents: externalActive ? "auto" : "none" }}
++                >
++                  <div
++                    ref={shell.externalScrollRef}
++                    className="dc-shell-external-scroll"
++                    onScroll={shell.onExternalScroll}
++                  >
++                    <h1
++                      ref={shell.externalHeadingRef}
++                      className="dc-shell-sr-only"
++                      tabIndex={-1}
++                    >
++                      {shell.paneHeading}
++                    </h1>
++                    {shell.paneContent}
++                  </div>
++                </m.section>
+               </div>
+-            </div>
+-          )}
+-        </main>
++            );
++          })()}
++        </div>
+       </div>
+-    </div>
++    </LazyMotion>
+   );
+ }
+diff --git a/client/src/pages/dime-chat/conversation.css b/client/src/pages/dime-chat/conversation.css
+index 86185b6e571dd37cbbf756b1037ecce9a318bdec..00564f0ad3e72d6275853c45221e7ad6adec7d76 100644
+--- a/client/src/pages/dime-chat/conversation.css
++++ b/client/src/pages/dime-chat/conversation.css
+@@ -112,7 +112,7 @@
+ 
+ .dc-datapill--live { color: #45E0A8; border: 1px solid rgba(69,224,168,0.36); } /* text F:13; border alpha = frozen dark --ring F:19 */
+ .theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid rgba(69,224,168,0.28); } /* text L:90; border alpha = frozen light --ring F:20 */
+-.dc-datapill--live .dc-datapill-dot { background: #45E0A8; animation: dimeTyping 2s infinite; } /* dot = mint rail material F:22; pulse = dimeTyping F:31 at half tempo (spec §2.5) */
++.dc-datapill--live .dc-datapill-dot { background: #45E0A8; animation: dimeTyping 1.6s infinite; } /* MASTER.md wins: the live-data pulse is exactly 1.6s. */
+ .theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #0B0B0F; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
+ @media (prefers-reduced-motion: reduce) { .dc-datapill--live .dc-datapill-dot { animation: none; opacity: 1; } } /* F:28 pattern */
+ 
+@@ -152,10 +152,7 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
+    -------------------------------------------------------------------------- */
+ 
+ .dc-composer-zone { position: relative; }
+-.dc-main--conv .dc-composer-zone { padding: 20px 40px; display: flex; justify-content: center; } /* 40px = home-main gutter F:97; 20px = sidebar vertical pad F:54 */
+-.dc-main--conv .dc-composer-zone::before { content: ""; position: absolute; left: 0; right: 0; top: -24px; height: 24px; pointer-events: none; } /* 24px top fade instead of a border — the frozen main pane has no horizontal rule (spec §2.9) */
+-.theme-dark .dc-main--conv .dc-composer-zone::before { background: linear-gradient(to bottom, rgba(11,11,15,0), #0B0B0F); } /* fade to page bg D:46 */
+-.theme-light .dc-main--conv .dc-composer-zone::before { background: linear-gradient(to bottom, rgba(255,255,255,0), #FFFFFF); } /* fade to page bg L:46 */
++.dc-main--conv .dc-composer-zone { padding: 20px 40px; display: flex; justify-content: center; } /* Pure spacing: approval amendment 1 forbids the earlier gradient separator. */
+ 
+ .dc-composer { max-width: 100%; } /* app adaptation: never overflow a narrow pane; 680px otherwise (F:99) */
+ .dc-send:disabled { cursor: default; } /* guard state; visual unchanged (frozen defines no disabled paint) */
+@@ -167,25 +164,350 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
+       The ONLY easing the kit owns: 160ms cubic-bezier(0.16,1,0.3,1) (F:21).
+    -------------------------------------------------------------------------- */
+ 
+-.dc-composer--flip { transition: transform 160ms cubic-bezier(0.16,1,0.3,1); will-change: transform; } /* F:21 curve; translateY only (spec §3.1) */
+-.dc-ghost { position: fixed; margin: 0; opacity: 1; transition: opacity 160ms cubic-bezier(0.16,1,0.3,1); pointer-events: none; z-index: 3; } /* hero+pills fade out-of-flow (spec §3.2) */
+-.dc-ghost--fading { opacity: 0; }
++.dc-ghost { position: fixed; margin: 0; opacity: 1; pointer-events: none; z-index: 3; } /* Framer Motion owns the interruptible 160ms opacity beat. */
+ .dc-fade-in { animation: dcFadeIn 160ms cubic-bezier(0.16,1,0.3,1); } /* user capsule + dots fade in at final position (spec §3.2) */
+ @keyframes dcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .dc-composer--flip { transition: none; }
+-  .dc-ghost { transition: none; display: none; }
++  .dc-ghost { display: none; }
+   .dc-fade-in { animation: none; }
+ } /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */
+ 
+ /* ----------------------------------------------------------------------------
+-   10. VIEWPORT GATE (<1024px, Ph3) — full-viewport branded notice replacing
+-       the shell. Frozen tokens only; fully static (reduced-motion-safe).
++   10. RESPONSIVE APP SHELL — the desktop composition remains frozen at
++       >=1024px. Tablet and mobile receive a real top bar + modal drawer.
+    -------------------------------------------------------------------------- */
+ 
+-.dc-gate { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px; text-align: center; } /* home-main geometry F:97; page bg comes from the .dc-page theme rules (D/L:46) */
+-.dc-gate-line { font-size: 14px; color: var(--text-primary); } /* body size F:101; text tokens F:19/20 */
+-.dc-gate-sub { text-transform: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 4px 12px; } /* copy is literal caps so "/feed/model" keeps its real lowercase route name; mono/size/tracking from .dc-microlabel (C3); mint link colors from .dc-link (F:13-14); 44px min hit area — this link is the gate's only in-page action */
+-.theme-light .dc-gate-sub.dc-link { color: #0FA36B; } /* MASTER.md: raw mint #45E0A8 is never TEXT on light surfaces (1.68:1) — light-mint token instead */
+-.theme-light .dc-gate-sub.dc-link:hover { color: #0C8A5A; }
++.dc-mobile-bar,
++.dc-drawer-scrim,
++.dc-edge-capture,
++.dc-drawer-grab {
++  display: none;
++}
++
++.dc-settings-trigger,
++button.dc-sidebar-row {
++  appearance: none;
++  border: 0;
++  background: transparent;
++  font-family: inherit;
++}
++.dc-settings-menu button {
++  appearance: none;
++  border: 0;
++  background: transparent;
++  font-family: inherit;
++}
++.dc-settings-menu button.dc-btn-upgrade {
++  background: #45e0a8;
++}
++.dc-settings-trigger {
++  display: inline-flex;
++  margin-left: auto;
++  padding: 0;
++}
++.dc-settings-trigger .dc-settings-btn {
++  margin-left: 0;
++}
++.dc-nav-disabled {
++  cursor: default;
++}
++.dc-nav-disabled:hover {
++  background: transparent;
++  color: var(--text-secondary);
++}
++
++.dc-composer:focus-within {
++  box-shadow: 0 0 0 3px var(--ring);
++}
++.dc-pressable {
++  transition:
++    transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
++    opacity 120ms cubic-bezier(0.16, 1, 0.3, 1);
++}
++.dc-pressable:active {
++  transform: scale(0.97);
++  opacity: 0.88;
++}
++.dc-send.dc-pressable:active {
++  transform: scale(0.94);
++}
++.dc-jump.dc-pressable:active {
++  transform: translateX(-50%) scale(0.97);
++}
++.dc-sidebar-row:not(.dc-nav-disabled):active {
++  transform: scale(0.98);
++}
++
++@media (max-width: 1023px) {
++  .dc-page.dc-page--app {
++    position: fixed;
++    inset: var(--dc-visual-top, 0px) 0 auto;
++    min-height: 0;
++    height: var(--dc-visual-height, 100dvh);
++    overflow: hidden;
++  }
++  .dc-app {
++    height: var(--dc-visual-height, 100dvh);
++  }
++
++  .dc-mobile-bar {
++    position: fixed;
++    z-index: 60;
++    top: var(--dc-visual-top, 0px);
++    left: 0;
++    right: 0;
++    height: calc(56px + env(safe-area-inset-top));
++    padding: env(safe-area-inset-top) 12px 0;
++    display: grid;
++    grid-template-columns: 64px minmax(0, 1fr) 64px;
++    align-items: center;
++  }
++  .theme-dark .dc-mobile-bar {
++    background: #101016;
++    border-bottom: 1px solid #1e1e26;
++  }
++  .theme-light .dc-mobile-bar {
++    background: #f4f4f6;
++    border-bottom: 1px solid #e4e4e9;
++  }
++  .dc-mobile-menu {
++    appearance: none;
++    min-width: 44px;
++    min-height: 44px;
++    justify-self: start;
++    padding: 0 10px;
++    border: 0;
++    border-radius: 8px;
++    background: transparent;
++    color: var(--text-primary);
++    font-family: inherit;
++    font-size: 13px;
++    font-weight: 600;
++    line-height: 1;
++    cursor: pointer;
++  }
++  .dc-mobile-title {
++    min-width: 0;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
++    text-align: center;
++    color: var(--text-primary);
++    font-size: 20px;
++    font-weight: 700;
++    letter-spacing: -0.03em;
++  }
++  .dc-mobile-balance {
++    width: 44px;
++    height: 44px;
++    justify-self: end;
++  }
++
++  .dc-sidebar.dc-drawer {
++    position: fixed;
++    z-index: 90;
++    top: var(--dc-visual-top, 0px);
++    bottom: auto;
++    left: 0;
++    width: min(82vw, 304px);
++    height: var(--dc-visual-height, 100dvh);
++    padding-top: calc(14px + env(safe-area-inset-top));
++    box-sizing: border-box;
++    touch-action: pan-y;
++  }
++  .dc-drawer-is-moving .dc-drawer,
++  .dc-drawer-is-moving .dc-drawer-grab {
++    will-change: transform;
++  }
++  .dc-sidebar-head {
++    display: flex;
++    align-items: center;
++    justify-content: space-between;
++    min-height: 44px;
++    padding: 0 0 12px 8px;
++  }
++  .dc-sidebar-head .dc-sidebar-title {
++    padding: 0;
++    text-align: left;
++  }
++  .dc-drawer-close {
++    appearance: none;
++    width: 44px;
++    height: 44px;
++    border: 0;
++    border-radius: 8px;
++    background: transparent;
++    color: var(--text-primary);
++    font-size: 24px;
++    line-height: 1;
++    cursor: pointer;
++  }
++  .dc-drawer .dc-sidebar-row {
++    min-height: 44px;
++    box-sizing: border-box;
++  }
++  .dc-drawer .dc-profile-row {
++    min-height: 52px;
++  }
++  .dc-drawer .dc-settings-trigger {
++    width: 44px;
++    height: 44px;
++    align-items: center;
++    justify-content: center;
++  }
++  .dc-drawer .dc-settings-menu {
++    max-width: calc(100vw - 32px);
++  }
++  .dc-drawer .dc-settings-menu button {
++    min-height: 44px;
++  }
++
++  .dc-drawer-scrim {
++    display: block;
++    position: fixed;
++    z-index: 80;
++    inset: var(--dc-visual-top, 0px) 0 auto;
++    width: 100%;
++    height: var(--dc-visual-height, 100dvh);
++    padding: 0;
++    border: 0;
++    background: #0b0b0f;
++    cursor: default;
++  }
++  .dc-edge-capture {
++    display: block;
++    position: fixed;
++    z-index: 70;
++    top: calc(var(--dc-visual-top, 0px) + 56px + env(safe-area-inset-top));
++    bottom: 0;
++    left: 0;
++    width: 24px;
++    touch-action: pan-y;
++  }
++  .dc-drawer-grab {
++    display: block;
++    position: fixed;
++    z-index: 100;
++    top: calc(var(--dc-visual-top, 0px) + env(safe-area-inset-top));
++    bottom: 0;
++    left: calc(var(--dc-drawer-width, 293px) - 14px);
++    width: 28px;
++    touch-action: pan-y;
++  }
++
++  .dc-main {
++    width: 100%;
++    padding: calc(56px + env(safe-area-inset-top) + 28px) 16px
++      max(20px, env(safe-area-inset-bottom));
++    gap: 28px;
++    box-sizing: border-box;
++  }
++  .dc-hero {
++    font-size: clamp(48px, 8vw, 64px);
++  }
++  .dc-composer-zone {
++    width: 100%;
++    display: flex;
++    justify-content: center;
++  }
++  .dc-composer {
++    width: 100%;
++  }
++  .dc-composer-input {
++    font-size: 16px;
++  }
++  .dc-send,
++  .dc-pill {
++    position: relative;
++  }
++  .dc-send::before,
++  .dc-pill::before {
++    content: "";
++    position: absolute;
++    inset: -4px;
++  }
++
++  .dc-pills {
++    width: calc(100vw - 32px);
++    justify-content: flex-start;
++    overflow-x: auto;
++    overflow-y: hidden;
++    padding: 4px 48px 4px 4px;
++    margin: -4px;
++    box-sizing: border-box;
++    scroll-snap-type: x mandatory;
++    scroll-padding-left: 4px;
++    overscroll-behavior-inline: contain;
++    -webkit-overflow-scrolling: touch;
++    scrollbar-width: none;
++  }
++  .dc-pills::-webkit-scrollbar {
++    display: none;
++  }
++  .dc-pill {
++    flex: 0 0 auto;
++    min-height: 36px;
++    scroll-snap-align: start;
++  }
++
++  .dc-main--conv {
++    padding: 0;
++  }
++  .dc-scroller {
++    padding: calc(56px + env(safe-area-inset-top) + 20px) 16px 16px;
++  }
++  .dc-thread {
++    row-gap: 24px;
++  }
++  .dc-user-capsule,
++  .dc-error-card {
++    max-width: 92%;
++  }
++  .dc-main--conv .dc-composer-zone {
++    width: 100%;
++    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
++    box-sizing: border-box;
++  }
++  .dc-main--conv .dc-composer {
++    width: 680px;
++    max-width: 100%;
++  }
++  .dc-footnote,
++  .dc-error-label {
++    color: var(--text-secondary) !important;
++  }
++
++  body.mobile-owner-tabs-active .dc-main:not(.dc-main--conv) {
++    padding-bottom: calc(60px + env(safe-area-inset-bottom));
++  }
++  body.mobile-owner-tabs-active .dc-main--conv .dc-composer-zone {
++    padding-bottom: calc(60px + env(safe-area-inset-bottom));
++  }
++}
++
++@media (max-width: 430px) {
++  .dc-main {
++    gap: 24px;
++    padding-left: 16px;
++    padding-right: 16px;
++  }
++  .dc-hero {
++    font-size: 48px;
++  }
++  .dc-composer {
++    padding-left: 16px;
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .dc-pressable,
++  .dc-pressable:active,
++  .dc-sidebar-row:not(.dc-nav-disabled):active {
++    transition: none;
++    transform: none;
++  }
++  .dc-jump.dc-pressable:active {
++    transform: translateX(-50%);
++  }
++}
+diff --git a/client/src/pages/dime-chat/drawerMotion.test.ts b/client/src/pages/dime-chat/drawerMotion.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..acf1ef8bec2d9587b32a5f98f8cd492b82cf87e2
+--- /dev/null
++++ b/client/src/pages/dime-chat/drawerMotion.test.ts
+@@ -0,0 +1,39 @@
++import { describe, expect, it } from "vitest";
++import {
++  classifyPointerIntent,
++  resolveDrawerTarget,
++  rubberBand,
++} from "./drawerMotion";
++
++describe("drawerMotion", () => {
++  it("waits for 10px before claiming a pointer gesture", () => {
++    expect(classifyPointerIntent(7, 4)).toBe("pending");
++    expect(classifyPointerIntent(11, 3)).toBe("horizontal");
++    expect(classifyPointerIntent(4, 12)).toBe("vertical");
++  });
++
++  it("rubber-bands progressively past both drawer bounds", () => {
++    expect(rubberBand(-320, -300, 0)).toBeCloseTo(-303.558);
++    expect(rubberBand(20, -300, 0)).toBeCloseTo(3.558);
++    expect(rubberBand(100, -300, 0) - 0).toBeLessThan(
++      5 * rubberBand(20, -300, 0)
++    );
++    expect(rubberBand(-120, -300, 0)).toBe(-120);
++  });
++
++  it("uses velocity sign rather than position to choose open or closed", () => {
++    expect(
++      resolveDrawerTarget({ velocityX: 20, lastDirection: -1, closedX: -293 })
++    ).toBe(0);
++    expect(
++      resolveDrawerTarget({ velocityX: -20, lastDirection: 1, closedX: -293 })
++    ).toBe(-293);
++  });
++
++  it("a slow reversed release past halfway goes back", () => {
++    // Position is deliberately absent from the API: negative direction wins.
++    expect(
++      resolveDrawerTarget({ velocityX: 0, lastDirection: -1, closedX: -293 })
++    ).toBe(-293);
++  });
++});
+diff --git a/client/src/pages/dime-chat/drawerMotion.ts b/client/src/pages/dime-chat/drawerMotion.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..954a3f2988b857a1cefbeec98486a6aaa7bb2ec9
+--- /dev/null
++++ b/client/src/pages/dime-chat/drawerMotion.ts
+@@ -0,0 +1,51 @@
++/**
++ * Pure drawer-gesture math for the responsive Dime chat shell.
++ * Visual geometry remains in the frozen/derived CSS; this module owns only
++ * pointer intent, rubber-band resistance, and velocity-directed release.
++ */
++
++export type HorizontalIntent = "horizontal" | "vertical" | "pending";
++
++export function classifyPointerIntent(
++  dx: number,
++  dy: number,
++  threshold = 10
++): HorizontalIntent {
++  if (Math.hypot(dx, dy) < threshold) return "pending";
++  return Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
++}
++
++/** Progressive resistance after either physical drawer bound. */
++export function rubberBand(
++  value: number,
++  min: number,
++  max: number,
++  resistance = 0.18
++): number {
++  const dimension = Math.max(1, max - min);
++  const resisted = (overshoot: number) =>
++    (overshoot * dimension * resistance) / (dimension + resistance * overshoot);
++  if (value < min) return min - resisted(min - value);
++  if (value > max) return max + resisted(value - max);
++  return value;
++}
++
++export interface DrawerRelease {
++  velocityX: number;
++  lastDirection: -1 | 0 | 1;
++  closedX: number;
++}
++
++/**
++ * Founder rule: release direction, never drawer position, chooses the target.
++ * A nearly stationary release inherits the last meaningful drag direction.
++ */
++export function resolveDrawerTarget({
++  velocityX,
++  lastDirection,
++  closedX,
++}: DrawerRelease): number {
++  const direction =
++    Math.abs(velocityX) >= 1 ? Math.sign(velocityX) : lastDirection;
++  return direction > 0 ? 0 : closedX;
++}
+diff --git a/client/src/pages/dime-chat/streamBatcher.test.ts b/client/src/pages/dime-chat/streamBatcher.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..6af5f3d46bf591dfac6f218bd88643307c2547d7
+--- /dev/null
++++ b/client/src/pages/dime-chat/streamBatcher.test.ts
+@@ -0,0 +1,63 @@
++import { describe, expect, it } from "vitest";
++import { createRafDeltaBatcher, type FrameScheduler } from "./streamBatcher";
++
++function fakeScheduler() {
++  let nextId = 0;
++  const callbacks = new Map<number, FrameRequestCallback>();
++  const cancelled: number[] = [];
++  const scheduler: FrameScheduler = {
++    request(callback) {
++      const id = ++nextId;
++      callbacks.set(id, callback);
++      return id;
++    },
++    cancel(id) {
++      callbacks.delete(id);
++      cancelled.push(id);
++    },
++  };
++  return { scheduler, callbacks, cancelled };
++}
++
++describe("createRafDeltaBatcher", () => {
++  it("coalesces multiple deltas into one animation-frame flush", () => {
++    const fake = fakeScheduler();
++    const flushed: string[] = [];
++    const batcher = createRafDeltaBatcher(
++      text => flushed.push(text),
++      fake.scheduler
++    );
++    batcher.push("price ");
++    batcher.push("meets probability");
++    expect(fake.callbacks.size).toBe(1);
++    [...fake.callbacks.values()][0](0);
++    expect(flushed).toEqual(["price meets probability"]);
++  });
++
++  it("flushes pending text before a terminal action", () => {
++    const fake = fakeScheduler();
++    const order: string[] = [];
++    const batcher = createRafDeltaBatcher(
++      text => order.push(`delta:${text}`),
++      fake.scheduler
++    );
++    batcher.push("final words");
++    batcher.flushBeforeTerminal(() => order.push("done"));
++    expect(order).toEqual(["delta:final words", "done"]);
++    expect(fake.callbacks.size).toBe(0);
++  });
++
++  it("cancels the queued frame and discards pending text on unmount", () => {
++    const fake = fakeScheduler();
++    const flushed: string[] = [];
++    const batcher = createRafDeltaBatcher(
++      text => flushed.push(text),
++      fake.scheduler
++    );
++    batcher.push("never render");
++    batcher.dispose();
++    expect(fake.cancelled).toEqual([1]);
++    expect(fake.callbacks.size).toBe(0);
++    expect(flushed).toEqual([]);
++  });
++});
+diff --git a/client/src/pages/dime-chat/streamBatcher.ts b/client/src/pages/dime-chat/streamBatcher.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..5f9149204e3485f1bbceea9062e0e7ea151bd895
+--- /dev/null
++++ b/client/src/pages/dime-chat/streamBatcher.ts
+@@ -0,0 +1,64 @@
++export interface FrameScheduler {
++  request(callback: FrameRequestCallback): number;
++  cancel(id: number): void;
++}
++
++export interface RafDeltaBatcher {
++  push(text: string): void;
++  flushBeforeTerminal(terminal: () => void): void;
++  dispose(): void;
++}
++
++const browserScheduler: FrameScheduler = {
++  request: callback => requestAnimationFrame(callback),
++  cancel: id => cancelAnimationFrame(id),
++};
++
++/**
++ * Coalesces arbitrary SSE delta cadence into at most one React update per
++ * animation frame. Terminal events synchronously drain pending text first.
++ */
++export function createRafDeltaBatcher(
++  onFlush: (text: string) => void,
++  scheduler: FrameScheduler = browserScheduler
++): RafDeltaBatcher {
++  let pending = "";
++  let frame: number | null = null;
++  let disposed = false;
++
++  const drain = () => {
++    if (!pending || disposed) return;
++    const text = pending;
++    pending = "";
++    onFlush(text);
++  };
++
++  const cancelFrame = () => {
++    if (frame == null) return;
++    scheduler.cancel(frame);
++    frame = null;
++  };
++
++  return {
++    push(text) {
++      if (disposed || !text) return;
++      pending += text;
++      if (frame != null) return;
++      frame = scheduler.request(() => {
++        frame = null;
++        drain();
++      });
++    },
++    flushBeforeTerminal(terminal) {
++      if (disposed) return;
++      cancelFrame();
++      drain();
++      terminal();
++    },
++    dispose() {
++      cancelFrame();
++      pending = "";
++      disposed = true;
++    },
++  };
++}
+diff --git a/client/src/pages/dime-shell/DimeAppShell.test.ts b/client/src/pages/dime-shell/DimeAppShell.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4d95e2aeea3be91259365f34a205ee334a76166a
+--- /dev/null
++++ b/client/src/pages/dime-shell/DimeAppShell.test.ts
+@@ -0,0 +1,180 @@
++import { describe, expect, it } from "vitest";
++import fs from "node:fs";
++import path from "node:path";
++
++const shellSource = fs.readFileSync(
++  path.join(import.meta.dirname, "DimeAppShell.tsx"),
++  "utf8"
++);
++const chatSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "dime-chat", "DimeChatPage.tsx"),
++  "utf8"
++);
++const appSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "..", "App.tsx"),
++  "utf8"
++);
++const feedSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "DimeModelFeed.tsx"),
++  "utf8"
++);
++const splitsSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "BettingSplits.tsx"),
++  "utf8"
++);
++const trackerSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "BetTracker.tsx"),
++  "utf8"
++);
++
++describe("DimeAppShell integration contract", () => {
++  it("mounts the shell only when the shared >=768 viewport owns a product route", () => {
++    expect(appSource).toMatch(/const shellViewport = useDimeShellViewport\(\)/);
++    expect(appSource).toMatch(
++      /const shellOwnsRoute = shellViewport && isDimeProductLocation\(location\)/
++    );
++    expect(appSource).toMatch(/if \(shellOwnsRoute\)[\s\S]*<DimeAppShell/);
++    expect(appSource).toMatch(
++      /<Route path="\/chat">\{\(\) => <DimeChatRoute \/>\}/
++    );
++  });
++
++  it("derives pane identity from Wouter location and keeps chat mounted", () => {
++    expect(shellSource).toMatch(
++      /const \[location, navigate\] = useLocation\(\)/
++    );
++    expect(shellSource).toMatch(/parseDimeProductRoute\(location\)/);
++    expect(shellSource).toMatch(/<DimeChatPage[\s\S]*shell=\{\{/);
++    expect(chatSource).toMatch(
++      /const chatActive = !shell \|\| shell\.renderedPane === "chat"/
++    );
++    expect(chatSource).toMatch(
++      /aria-hidden=\{shell && !chatActive \? true : undefined\}/
++    );
++  });
++
++  it("retains the outgoing pane while lazy content resolves", () => {
++    expect(shellSource).toMatch(/useDeferredValue\(actualRoute\)/);
++    expect(shellSource).toMatch(
++      /startTransition\(\(\) => navigate\(resolveRouteHref\(href\)\)\)/
++    );
++  });
++
++  it("keeps the compile-time-gated preview capability across every shell pane", () => {
++    expect(appSource).toMatch(
++      /const localPreview = allowsLocalDimePreview\([\s\S]*import\.meta\.env\.DEV/
++    );
++    expect(appSource).not.toMatch(
++      /location === "\/chat" &&[\s\S]*allowsLocalDimePreview/
++    );
++    expect(appSource).toMatch(
++      /localPreview \?[\s\S]*<DimeAppShell previewMode \/>[\s\S]*:[\s\S]*<RequireAuth>[\s\S]*<DimeAppShell \/>[\s\S]*<\/RequireAuth>/
++    );
++    expect(shellSource).toMatch(/withLocalDimePreview\(href, previewMode\)/);
++    expect(shellSource).toMatch(
++      /navigate\(resolveRouteHref\(canonical\), \{ replace: true \}\)/
++    );
++    expect(feedSource).toMatch(
++      /navigate\(resolveRouteHref\(feedModelPath\(nextSport, nextIso\)\)\)/
++    );
++    expect(splitsSource).toMatch(
++      /setLocation\(resolveRouteHref\(bettingSplitsPath\(sport, selectedDate\)\)\)/
++    );
++  });
++
++  it("shares one stable dated splits canonicalizer between standalone and shell owners", () => {
++    expect(appSource).toMatch(
++      /const canonical = canonicalBettingSplitsPath\(sportSegment, dateSegment\)/
++    );
++    expect(shellSource).toMatch(
++      /const canonical = canonicalBettingSplitsPath\(\s*actualRoute\.sportSegment,\s*actualRoute\.dateSegment\s*\)/
++    );
++    expect(appSource).toMatch(/<Redirect to=\{canonical\} replace \/>/);
++    expect(shellSource).toMatch(
++      /navigate\(resolveRouteHref\(canonical\), \{ replace: true \}\)/
++    );
++  });
++
++  it("carries the selected date on sport pushes and retains a sport-specific empty state", () => {
++    const sportSwitchStart = splitsSource.indexOf(
++      "const setSelectedSport = useCallback"
++    );
++    const sportSwitchEnd = splitsSource.indexOf(
++      "const setSelectedDate = useCallback",
++      sportSwitchStart
++    );
++    const sportSwitch = splitsSource.slice(sportSwitchStart, sportSwitchEnd);
++
++    expect(sportSwitchStart).toBeGreaterThan(-1);
++    expect(sportSwitch).toMatch(
++      /setLocation\(resolveRouteHref\(bettingSplitsPath\(sport, selectedDate\)\)\)/
++    );
++    expect(sportSwitch).not.toMatch(/setSelectedDateState/);
++    expect(sportSwitch).not.toMatch(/replace:\s*true/);
++    expect(splitsSource).toMatch(/sortedDates\.length === 0 \?/);
++    expect(splitsSource).toContain("`No ${selectedSport} games found.`");
++  });
++
++  it("restores per-pane scroll and focuses the exposed pane heading", () => {
++    expect(shellSource).toMatch(/scrollPositionsRef/);
++    expect(shellSource).toMatch(/externalScrollRef\.current\.scrollTop/);
++    expect(shellSource).toMatch(/target\?\.focus\(\{ preventScroll: true \}\)/);
++    expect(chatSource).toMatch(/className="dc-shell-sr-only"/);
++    expect(chatSource).toMatch(
++      /<m\.main[\s\S]*ref=\{shell\.chatHeadingRef\}[\s\S]*>\s*Dime Chat\s*<\/h1>/
++    );
++    expect(chatSource).toMatch(/aria-hidden=\{!externalActive\}/);
++  });
++
++  it.each([768, 1024, 1440])(
++    "exposes exactly one h1 for every pane at %ipx",
++    width => {
++      expect(width).toBeGreaterThanOrEqual(768);
++      expect(chatSource.match(/<h1\b/g)).toHaveLength(2);
++      expect(chatSource).toMatch(
++        /<m\.main[\s\S]*?aria-hidden=\{shell && !chatActive \? true : undefined\}[\s\S]*?<h1[\s\S]*?>\s*Dime Chat\s*<\/h1>/
++      );
++      expect(chatSource).toMatch(
++        /<m\.section[\s\S]*?aria-hidden=\{!externalActive\}[\s\S]*?<h1[\s\S]*?>[\s\S]*?\{shell\.paneHeading\}[\s\S]*?<\/h1>/
++      );
++
++      for (const pane of ["chat", "feed", "splits", "tracker"] as const) {
++        const exposedHeadings = [pane === "chat", pane !== "chat"].filter(
++          Boolean
++        );
++        expect(exposedHeadings, `${width}px ${pane}`).toHaveLength(1);
++      }
++    }
++  );
++
++  it("embeds feed with chrome suppression and tracker wholesale", () => {
++    expect(shellSource).toMatch(/<DimeModelFeed[\s\S]*embeddedInShell/);
++    expect(shellSource).toMatch(
++      /paneContent = <BetTracker previewMode=\{previewMode\} \/>/
++    );
++    expect(shellSource).not.toMatch(/<BetTracker[^>]+embeddedInShell/);
++  });
++
++  it("renders tracker chrome in preview without granting protected query access", () => {
++    expect(trackerSource).toMatch(
++      /if \(!previewMode && !authLoading && !appUser\) navigate\("\/"\)/
++    );
++    expect(trackerSource).toMatch(
++      /const canLoadProtectedData = canAccess && !!appUser/
++    );
++    expect(trackerSource).toMatch(
++      /\{canLoadProtectedData && \(\s*<BetCalendar/
++    );
++    expect(trackerSource).toMatch(/if \(authLoading && !previewMode\)/);
++  });
++
++  it("aborts and disposes an active stream when a breakpoint unmounts chat", () => {
++    const cleanupStart = chatSource.indexOf("useEffect(\n    () => () => {");
++    const cleanupEnd = chatSource.indexOf("    []", cleanupStart);
++    const cleanup = chatSource.slice(cleanupStart, cleanupEnd);
++    expect(cleanupStart).toBeGreaterThan(-1);
++    expect(cleanup).toMatch(/abortRef\.current\?\.abort\(\)/);
++    expect(cleanup).toMatch(/activeBatcherRef\.current\?\.dispose\(\)/);
++    expect(cleanup).toMatch(/drawerAnimationRef\.current\?\.stop\(\)/);
++  });
++});
+diff --git a/client/src/pages/dime-shell/DimeAppShell.tsx b/client/src/pages/dime-shell/DimeAppShell.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..e2e0d23c2b0fd910950cf30c092ff80a23306c47
+--- /dev/null
++++ b/client/src/pages/dime-shell/DimeAppShell.tsx
+@@ -0,0 +1,158 @@
++import {
++  lazy,
++  startTransition,
++  useCallback,
++  useDeferredValue,
++  useEffect,
++  useLayoutEffect,
++  useMemo,
++  useRef,
++} from "react";
++import { useLocation } from "wouter";
++import DimeChatPage from "../dime-chat/DimeChatPage";
++import {
++  bettingSplitsPath,
++  canonicalBettingSplitsPath,
++  parseBettingSplitsPath,
++  type SplitsSport,
++} from "@/lib/feedRoutes";
++import { parseDimeProductRoute, type DimeProductPane } from "./productRoute";
++import { withLocalDimePreview } from "./previewGate";
++import "./shell.css";
++
++const DimeModelFeed = lazy(() => import("../DimeModelFeed"));
++const BettingSplits = lazy(() => import("../BettingSplits"));
++const BetTracker = lazy(() => import("../BetTracker"));
++
++const PANE_HEADINGS: Record<DimeProductPane, string> = {
++  chat: "Dime Chat",
++  feed: "AI Model Projections",
++  splits: "Betting Splits and Odds History",
++  tracker: "Bet Tracker",
++};
++
++function defaultSplitsState(): { sport: SplitsSport; isoDate: string } {
++  const segment = bettingSplitsPath().split("/").pop();
++  const parsed = parseBettingSplitsPath(segment);
++  if (!parsed?.isoDate) {
++    throw new Error(
++      "Canonical betting splits builder did not produce a dated path"
++    );
++  }
++  return { sport: parsed.sport, isoDate: parsed.isoDate };
++}
++
++export interface DimeAppShellProps {
++  /** Compile-time DEV-gated visual preview capability supplied by App.tsx. */
++  previewMode?: boolean;
++}
++
++export default function DimeAppShell({
++  previewMode = false,
++}: DimeAppShellProps) {
++  const [location, navigate] = useLocation();
++  const actualRoute = useMemo(
++    () => parseDimeProductRoute(location) ?? ({ pane: "chat" } as const),
++    [location]
++  );
++  // A deferred URL route keeps the current pane painted if a newly selected
++  // lazy chunk suspends. The address bar and sidebar still update immediately.
++  const renderedRoute = useDeferredValue(actualRoute);
++  const externalScrollRef = useRef<HTMLDivElement | null>(null);
++  const chatHeadingRef = useRef<HTMLHeadingElement | null>(null);
++  const externalHeadingRef = useRef<HTMLHeadingElement | null>(null);
++  const renderedPaneRef = useRef<DimeProductPane>(renderedRoute.pane);
++  const scrollPositionsRef = useRef<Partial<Record<DimeProductPane, number>>>(
++    {}
++  );
++  const resolveRouteHref = useCallback(
++    (href: string) => withLocalDimePreview(href, previewMode),
++    [previewMode]
++  );
++
++  useEffect(() => {
++    if (actualRoute.pane !== "splits") return;
++    const canonical = canonicalBettingSplitsPath(
++      actualRoute.sportSegment,
++      actualRoute.dateSegment
++    );
++    const pathname = location.split(/[?#]/, 1)[0];
++    if (pathname !== canonical) {
++      navigate(resolveRouteHref(canonical), { replace: true });
++    }
++  }, [actualRoute, location, navigate, resolveRouteHref]);
++
++  const onNavigate = useCallback(
++    (href: string) => {
++      startTransition(() => navigate(resolveRouteHref(href)));
++    },
++    [navigate, resolveRouteHref]
++  );
++
++  const onExternalScroll = useCallback(() => {
++    const pane = renderedPaneRef.current;
++    if (pane === "chat" || !externalScrollRef.current) return;
++    scrollPositionsRef.current[pane] = externalScrollRef.current.scrollTop;
++  }, []);
++
++  useLayoutEffect(() => {
++    renderedPaneRef.current = renderedRoute.pane;
++    if (renderedRoute.pane !== "chat" && externalScrollRef.current) {
++      externalScrollRef.current.scrollTop =
++        scrollPositionsRef.current[renderedRoute.pane] ?? 0;
++    }
++    const frame = requestAnimationFrame(() => {
++      const target =
++        renderedRoute.pane === "chat"
++          ? chatHeadingRef.current
++          : externalHeadingRef.current;
++      target?.focus({ preventScroll: true });
++    });
++    return () => cancelAnimationFrame(frame);
++  }, [renderedRoute]);
++
++  let paneContent = null;
++  if (renderedRoute.pane === "feed") {
++    paneContent = (
++      <DimeModelFeed
++        sport={renderedRoute.sportSegment}
++        date={renderedRoute.dateSegment}
++        embeddedInShell
++        resolveRouteHref={resolveRouteHref}
++      />
++    );
++  } else if (renderedRoute.pane === "splits") {
++    const parsed = parseBettingSplitsPath(
++      renderedRoute.sportSegment,
++      renderedRoute.dateSegment
++    );
++    const state = parsed?.isoDate
++      ? { sport: parsed.sport, isoDate: parsed.isoDate }
++      : defaultSplitsState();
++    paneContent = (
++      <BettingSplits
++        initialSport={state.sport}
++        initialDate={state.isoDate}
++        resolveRouteHref={resolveRouteHref}
++      />
++    );
++  } else if (renderedRoute.pane === "tracker") {
++    paneContent = <BetTracker previewMode={previewMode} />;
++  }
++
++  return (
++    <DimeChatPage
++      shell={{
++        renderedPane: renderedRoute.pane,
++        navigationPane: actualRoute.pane,
++        paneContent,
++        paneHeading: PANE_HEADINGS[renderedRoute.pane],
++        onNavigate,
++        externalScrollRef,
++        chatHeadingRef,
++        externalHeadingRef,
++        onExternalScroll,
++      }}
++    />
++  );
++}
+diff --git a/client/src/pages/dime-shell/breakpoints.test.ts b/client/src/pages/dime-shell/breakpoints.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..576f10a7a663f7d2d7f60a9d1f2ef9e461a1373f
+--- /dev/null
++++ b/client/src/pages/dime-shell/breakpoints.test.ts
+@@ -0,0 +1,70 @@
++import { describe, expect, it, vi } from "vitest";
++import {
++  DIME_SHELL_MEDIA_QUERY,
++  DIME_SHELL_MIN_WIDTH_PX,
++  matchesDimeShellViewport,
++  resolvePostLoginPath,
++} from "./breakpoints";
++
++describe("Dime shell breakpoint", () => {
++  it("uses one inclusive 768px matchMedia boundary", () => {
++    const matchMedia = vi.fn(() => ({ matches: true }));
++
++    expect(DIME_SHELL_MIN_WIDTH_PX).toBe(768);
++    expect(DIME_SHELL_MEDIA_QUERY).toBe("(min-width: 768px)");
++    expect(matchesDimeShellViewport(matchMedia)).toBe(true);
++    expect(matchMedia).toHaveBeenCalledTimes(1);
++    expect(matchMedia).toHaveBeenCalledWith("(min-width: 768px)");
++  });
++
++  it("does not opt into the shell without a matching client viewport", () => {
++    expect(matchesDimeShellViewport(() => ({ matches: false }))).toBe(false);
++    expect(matchesDimeShellViewport(undefined)).toBe(false);
++  });
++});
++
++describe("post-login product default", () => {
++  it("defaults tablet and desktop clients to chat", () => {
++    expect(resolvePostLoginPath(null, () => ({ matches: true }))).toBe("/chat");
++  });
++
++  it("retains the existing mobile default below 768px", () => {
++    expect(resolvePostLoginPath(null, () => ({ matches: false }))).toBe(
++      "/feed/model/mlb"
++    );
++  });
++
++  it("preserves an explicit returnPath without consulting the viewport", () => {
++    const matchMedia = vi.fn(() => ({ matches: true }));
++
++    expect(resolvePostLoginPath("/bet-tracker", matchMedia)).toBe(
++      "/bet-tracker"
++    );
++    expect(resolvePostLoginPath("/chat?preview=1", matchMedia)).toBe(
++      "/chat?preview=1"
++    );
++    expect(matchMedia).not.toHaveBeenCalled();
++  });
++
++  it("rejects non-internal returnPath values with the desktop default", () => {
++    const desktop = () => ({ matches: true });
++
++    for (const unsafe of [
++      "https://evil.example/path",
++      "//evil.example/path",
++      "javascript:alert(1)",
++      "feed/model/mlb",
++      "",
++      "\\evil.example",
++      "/\\evil.example",
++    ]) {
++      expect(resolvePostLoginPath(unsafe, desktop), unsafe).toBe("/chat");
++    }
++  });
++
++  it("rejects non-internal returnPath values with the mobile default", () => {
++    expect(resolvePostLoginPath("//evil.example", () => ({ matches: false }))).toBe(
++      "/feed/model/mlb"
++    );
++  });
++});
+diff --git a/client/src/pages/dime-shell/breakpoints.ts b/client/src/pages/dime-shell/breakpoints.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..99dc89e14e8a1e1b4113bccb8b20b3546d3215aa
+--- /dev/null
++++ b/client/src/pages/dime-shell/breakpoints.ts
+@@ -0,0 +1,54 @@
++/**
++ * Single source of truth for the tablet/desktop Dime app-shell boundary.
++ *
++ * Keep viewport detection behind matchMedia so consumers share the same CSS
++ * media-query semantics at the exact 768px boundary. Nothing is evaluated at
++ * module load, which keeps server-side imports deterministic.
++ */
++export const DIME_SHELL_MIN_WIDTH_PX = 768;
++export const DIME_SHELL_MEDIA_QUERY = `(min-width: ${DIME_SHELL_MIN_WIDTH_PX}px)`;
++
++export const DIME_SHELL_DEFAULT_PATH = "/chat";
++export const MOBILE_DEFAULT_PATH = "/feed/model/mlb";
++
++export type MediaQueryMatcher = (query: string) => { matches: boolean };
++
++function browserMatchMedia(): MediaQueryMatcher | undefined {
++  if (
++    typeof window === "undefined" ||
++    typeof window.matchMedia !== "function"
++  ) {
++    return undefined;
++  }
++
++  return window.matchMedia.bind(window);
++}
++
++export function matchesDimeShellViewport(
++  matchMedia: MediaQueryMatcher | undefined = browserMatchMedia()
++): boolean {
++  return matchMedia?.(DIME_SHELL_MEDIA_QUERY).matches ?? false;
++}
++
++function isSafeInternalReturnPath(value: string): boolean {
++  return /^\/(?!\/)[^\\\u0000-\u001f\u007f]*$/.test(value);
++}
++
++/**
++ * Safe internal return paths always win. Missing, external, protocol-relative,
++ * backslash-bearing, and malformed values receive the viewport-aware default.
++ */
++export function resolvePostLoginPath(
++  explicitReturnPath: string | null | undefined,
++  matchMedia: MediaQueryMatcher | undefined = browserMatchMedia()
++): string {
++  if (
++    explicitReturnPath != null &&
++    isSafeInternalReturnPath(explicitReturnPath)
++  ) {
++    return explicitReturnPath;
++  }
++  return matchesDimeShellViewport(matchMedia)
++    ? DIME_SHELL_DEFAULT_PATH
++    : MOBILE_DEFAULT_PATH;
++}
+diff --git a/client/src/pages/dime-shell/previewGate.test.ts b/client/src/pages/dime-shell/previewGate.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..db69b935dc8762999b94b05c0925625ab6451abe
+--- /dev/null
++++ b/client/src/pages/dime-shell/previewGate.test.ts
+@@ -0,0 +1,45 @@
++import { describe, expect, it } from "vitest";
++import fs from "node:fs";
++import path from "node:path";
++import {
++  allowsLocalDimePreview,
++  withLocalDimePreview,
++} from "./previewGate";
++
++const appSource = fs.readFileSync(
++  path.join(import.meta.dirname, "..", "..", "App.tsx"),
++  "utf8"
++);
++
++describe("local Dime preview gate", () => {
++  it("is inert in a production build even when the preview query is present", () => {
++    expect(allowsLocalDimePreview("?preview=1", false)).toBe(false);
++    expect(appSource).toMatch(
++      /allowsLocalDimePreview\([\s\S]*?import\.meta\.env\.DEV[\s\S]*?\)/
++    );
++  });
++
++  it("allows the explicit query only in a development build", () => {
++    expect(allowsLocalDimePreview("?preview=1", true)).toBe(true);
++    expect(allowsLocalDimePreview("?preview=0", true)).toBe(false);
++    expect(allowsLocalDimePreview("", true)).toBe(false);
++  });
++
++  it("preserves the capability across shell paths without duplicating it", () => {
++    expect(withLocalDimePreview("/chat", true)).toBe("/chat?preview=1");
++    expect(
++      withLocalDimePreview("/feed/model/mlb-07-11-2026?theme=dark", true)
++    ).toBe("/feed/model/mlb-07-11-2026?theme=dark&preview=1");
++    expect(
++      withLocalDimePreview("/betting-splits/mlb-07-11-2026?preview=1", true)
++    ).toBe("/betting-splits/mlb-07-11-2026?preview=1");
++    expect(withLocalDimePreview("/bet-tracker#bets", true)).toBe(
++      "/bet-tracker?preview=1#bets"
++    );
++  });
++
++  it("does not alter navigation when preview is inactive", () => {
++    expect(withLocalDimePreview("/bet-tracker", false)).toBe("/bet-tracker");
++    expect(withLocalDimePreview("#", true)).toBe("#");
++  });
++});
+diff --git a/client/src/pages/dime-shell/previewGate.ts b/client/src/pages/dime-shell/previewGate.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..4b08a7b567a74b8621f59a2ddb1f5c247b5cb806
+--- /dev/null
++++ b/client/src/pages/dime-shell/previewGate.ts
+@@ -0,0 +1,28 @@
++/**
++ * The local Dime shell preview is impossible unless the build-time DEV
++ * constant is true. App.tsx passes import.meta.env.DEV explicitly so
++ * production bundles cannot enable the bypass through URL input alone.
++ */
++export function allowsLocalDimePreview(
++  search: string,
++  buildIsDevelopment: boolean
++): boolean {
++  return (
++    buildIsDevelopment && new URLSearchParams(search).get("preview") === "1"
++  );
++}
++
++/**
++ * Keeps the explicit preview capability on in-shell navigation. The caller
++ * supplies an already compile-time-gated flag; production always passes false.
++ */
++export function withLocalDimePreview(
++  href: string,
++  localPreview: boolean
++): string {
++  if (!localPreview || href.startsWith("#")) return href;
++
++  const url = new URL(href, "https://local-dime-preview.invalid");
++  url.searchParams.set("preview", "1");
++  return `${url.pathname}${url.search}${url.hash}`;
++}
+diff --git a/client/src/pages/dime-shell/productRoute.test.ts b/client/src/pages/dime-shell/productRoute.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..ac5faa48f86fe2588f54f920f8b6b1f1995481e7
+--- /dev/null
++++ b/client/src/pages/dime-shell/productRoute.test.ts
+@@ -0,0 +1,70 @@
++import { describe, expect, it } from "vitest";
++import { isDimeProductLocation, parseDimeProductRoute } from "./productRoute";
++
++describe("parseDimeProductRoute", () => {
++  it("classifies chat and tracker", () => {
++    expect(parseDimeProductRoute("/chat")).toEqual({ pane: "chat" });
++    expect(parseDimeProductRoute("/bet-tracker")).toEqual({ pane: "tracker" });
++  });
++
++  it("preserves combined and split feed route segments", () => {
++    expect(parseDimeProductRoute("/feed/model/mlb-07-11-2026")).toEqual({
++      pane: "feed",
++      sportSegment: "mlb-07-11-2026",
++      dateSegment: undefined,
++    });
++    expect(parseDimeProductRoute("/feed/model/wc/07-11-2026")).toEqual({
++      pane: "feed",
++      sportSegment: "wc",
++      dateSegment: "07-11-2026",
++    });
++  });
++
++  it("preserves combined, split, and bare splits route segments", () => {
++    expect(parseDimeProductRoute("/betting-splits")).toEqual({
++      pane: "splits",
++    });
++    expect(parseDimeProductRoute("/betting-splits/mlb-07-11-2026")).toEqual({
++      pane: "splits",
++      sportSegment: "mlb-07-11-2026",
++      dateSegment: undefined,
++    });
++    expect(parseDimeProductRoute("/betting-splits/mlb/07-11-2026")).toEqual({
++      pane: "splits",
++      sportSegment: "mlb",
++      dateSegment: "07-11-2026",
++    });
++  });
++
++  it("classifies preview-bearing deep links exactly like their canonical paths", () => {
++    expect(parseDimeProductRoute("/chat?preview=1")).toEqual({ pane: "chat" });
++    expect(
++      parseDimeProductRoute("/feed/model/mlb-07-11-2026?preview=1")
++    ).toEqual({
++      pane: "feed",
++      sportSegment: "mlb-07-11-2026",
++      dateSegment: undefined,
++    });
++    expect(
++      parseDimeProductRoute("/betting-splits/mlb-07-11-2026?preview=1")
++    ).toEqual({
++      pane: "splits",
++      sportSegment: "mlb-07-11-2026",
++      dateSegment: undefined,
++    });
++    expect(parseDimeProductRoute("/bet-tracker?preview=1")).toEqual({
++      pane: "tracker",
++    });
++  });
++
++  it("does not claim mobile-owner, admin, or similarly prefixed routes", () => {
++    for (const location of [
++      "/m/chat",
++      "/admin/model-status",
++      "/chat-history",
++      "/",
++    ]) {
++      expect(isDimeProductLocation(location)).toBe(false);
++    }
++  });
++});
+diff --git a/client/src/pages/dime-shell/productRoute.ts b/client/src/pages/dime-shell/productRoute.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..074a3f4e308e2a513ed38ef0ef4e63f609ff79da
+--- /dev/null
++++ b/client/src/pages/dime-shell/productRoute.ts
+@@ -0,0 +1,54 @@
++export type DimeProductPane = "chat" | "feed" | "splits" | "tracker";
++
++export type DimeProductRoute =
++  | { pane: "chat" }
++  | { pane: "tracker" }
++  | { pane: "feed"; sportSegment: string; dateSegment?: string }
++  | { pane: "splits"; sportSegment?: string; dateSegment?: string };
++
++const decodeSegment = (value: string | undefined): string | undefined => {
++  if (!value) return undefined;
++  try {
++    return decodeURIComponent(value);
++  } catch {
++    return value;
++  }
++};
++
++/**
++ * Classifies only the four authenticated product surfaces owned by the
++ * tablet/desktop shell. Validation and canonicalization stay with each
++ * surface's existing route parser.
++ */
++export function parseDimeProductRoute(
++  location: string
++): DimeProductRoute | null {
++  const pathname = location.split(/[?#]/, 1)[0] || "/";
++  if (pathname === "/chat") return { pane: "chat" };
++  if (pathname === "/bet-tracker") return { pane: "tracker" };
++  if (pathname === "/betting-splits") return { pane: "splits" };
++
++  const feed = /^\/feed\/model\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
++  if (feed) {
++    return {
++      pane: "feed",
++      sportSegment: decodeSegment(feed[1])!,
++      dateSegment: decodeSegment(feed[2]),
++    };
++  }
++
++  const splits = /^\/betting-splits\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
++  if (splits) {
++    return {
++      pane: "splits",
++      sportSegment: decodeSegment(splits[1]),
++      dateSegment: decodeSegment(splits[2]),
++    };
++  }
++
++  return null;
++}
++
++export function isDimeProductLocation(location: string): boolean {
++  return parseDimeProductRoute(location) !== null;
++}
+diff --git a/client/src/pages/dime-shell/shell.css b/client/src/pages/dime-shell/shell.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..a2a5002513c34d525b56e00efa222155d2ff93af
+--- /dev/null
++++ b/client/src/pages/dime-shell/shell.css
+@@ -0,0 +1,80 @@
++/* derived: >=768 unified-shell arrangement; frozen child surfaces remain unchanged. */
++.dc-shell-stack {
++  flex: 1;
++  min-width: 0;
++  min-height: 0;
++  display: grid;
++  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
++  overflow: hidden;
++  position: relative;
++}
++
++/* derived: pane layers share one cell to eliminate layout shift during URL swaps. */
++.dc-shell-chat-layer,
++.dc-shell-external-layer {
++  grid-area: 1 / 1;
++  width: 100%;
++  min-width: 0;
++  min-height: 0;
++}
++
++/* derived: embedded surfaces keep document-like scrolling inside the fixed app shell. */
++.dc-shell-external-layer {
++  overflow: hidden;
++}
++
++.theme-dark .dc-shell-external-layer {
++  background: #0b0b0f;
++}
++.theme-light .dc-shell-external-layer {
++  background: #ffffff;
++}
++
++.dc-shell-external-scroll {
++  width: 100%;
++  height: 100%;
++  min-width: 0;
++  min-height: 0;
++  overflow: auto;
++  overscroll-behavior: contain;
++  scrollbar-gutter: stable;
++}
++
++/* derived: one focusable semantic heading per embedded pane, visually absent. */
++.dc-shell-sr-only {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0, 0, 0, 0);
++  white-space: nowrap;
++  border: 0;
++}
++
++.dc-shell-sr-only:focus {
++  outline: none;
++}
++
++/* derived: 768-1023 drawer shell reserves the shipped 56px top-bar lane. */
++@media (min-width: 768px) and (max-width: 1023px) {
++  .dc-shell-external-layer {
++    box-sizing: border-box;
++    padding-top: calc(56px + env(safe-area-inset-top));
++  }
++}
++
++/* derived: embedded full-page roots fill their pane without changing inner styling. */
++.dc-shell-external-scroll > .dmf-root,
++.dc-shell-external-scroll > .min-h-screen,
++.dc-shell-external-scroll > .bg-background {
++  min-height: 100%;
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .dc-shell-chat-layer,
++  .dc-shell-external-layer {
++    transition: none !important;
++  }
++}
+diff --git a/client/src/pages/dime-shell/splitsDateState.test.ts b/client/src/pages/dime-shell/splitsDateState.test.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..0d69e3c6702bbaffcaaa68090f7bc3e8e9308fd1
+--- /dev/null
++++ b/client/src/pages/dime-shell/splitsDateState.test.ts
+@@ -0,0 +1,32 @@
++import { describe, expect, it } from "vitest";
++import { resolveSplitsServerDate } from "./splitsDateState";
++
++describe("resolveSplitsServerDate", () => {
++  it("never overwrites a URL-selected splits date", () => {
++    expect(
++      resolveSplitsServerDate("2026-07-04", "2026-07-11", "2026-07-04")
++    ).toBe("2026-07-04");
++  });
++
++  it("still synchronizes a legacy dateless view", () => {
++    expect(
++      resolveSplitsServerDate(
++        "2026-07-10",
++        "2026-07-11",
++        undefined,
++        false
++      )
++    ).toBe("2026-07-11");
++  });
++
++  it("keeps a user-picked date in a legacy dateless view", () => {
++    expect(
++      resolveSplitsServerDate(
++        "2026-07-09",
++        "2026-07-11",
++        undefined,
++        true
++      )
++    ).toBe("2026-07-09");
++  });
++});
+diff --git a/client/src/pages/dime-shell/splitsDateState.ts b/client/src/pages/dime-shell/splitsDateState.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..64d8ff13a0fb3e5d0ff8eb2fd797302d5743d8c4
+--- /dev/null
++++ b/client/src/pages/dime-shell/splitsDateState.ts
+@@ -0,0 +1,13 @@
++/**
++ * A dated URL is authoritative. Server sync supplies a date only to legacy
++ * dateless rendering and can never overwrite a URL-selected ISO date.
++ */
++export function resolveSplitsServerDate(
++  currentDate: string,
++  serverDate: string | undefined,
++  urlDate: string | undefined,
++  wasUserSelected = false
++): string {
++  if (urlDate || wasUserSelected) return currentDate;
++  return serverDate ?? currentDate;
++}
+diff --git a/client/src/pages/dime-shell/useDimeShellViewport.ts b/client/src/pages/dime-shell/useDimeShellViewport.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..e47d39483caab24efbabea6573d3c747dcea3088
+--- /dev/null
++++ b/client/src/pages/dime-shell/useDimeShellViewport.ts
+@@ -0,0 +1,19 @@
++import { useEffect, useState } from "react";
++import {
++  DIME_SHELL_MEDIA_QUERY,
++  matchesDimeShellViewport,
++} from "./breakpoints";
++
++export function useDimeShellViewport(): boolean {
++  const [matches, setMatches] = useState(matchesDimeShellViewport);
++
++  useEffect(() => {
++    const query = window.matchMedia(DIME_SHELL_MEDIA_QUERY);
++    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches);
++    setMatches(query.matches);
++    query.addEventListener("change", onChange);
++    return () => query.removeEventListener("change", onChange);
++  }, []);
++
++  return matches;
++}
+diff --git a/client/src/pages/dimeModelFeed.test.ts b/client/src/pages/dimeModelFeed.test.ts
+index 094e47fad7668f5b5c9efde15bf53c909880eeb0..06c92a04c46d11c328581eea477c2496c5573425 100644
+--- a/client/src/pages/dimeModelFeed.test.ts
++++ b/client/src/pages/dimeModelFeed.test.ts
+@@ -14,6 +14,11 @@ import path from "path";
+  *   2. OWNER RULES — crests/flags beside team labels, both sides per market,
+  *      away-first row order, no legacy neon accent.
+  *   3. ROUTES — both URL forms registered behind RequireAuth.
++ *   4. EMBEDDING — serialization method: isolate the DimeModelFeed JSX source
++ *      template, materialize standalone vs embedded conditional branches, then
++ *      collapse whitespace. Exclusion list: the external shell wrapper (outside
++ *      this component) and the intentionally suppressed `nav.dmf-nav` subtree.
++ *      Crest/flag nodes and their props are never excluded.
+  */
+ 
+ const src = fs.readFileSync(
+@@ -25,6 +30,35 @@ const appSrc = fs.readFileSync(
+   "utf8",
+ );
+ 
++const EMBEDDED_SERIALIZATION_EXCLUSIONS = Object.freeze([
++  "external shell wrapper",
++  "nav.dmf-nav",
++]);
++const EMBEDDED_NAV_CONDITIONAL = /\{!props\.embeddedInShell && \(\s*(<nav className="dmf-nav"[\s\S]*?<\/nav>)\s*\)\}/;
++
++function serializeDimeModelFeedTemplate(mode: "standalone" | "embedded"): string {
++  const start = src.indexOf('  return (\n    <div className="dmf-root"');
++  const end = src.indexOf("\n}\n\n// ─── Data adapters", start);
++  if (start < 0 || end < 0) throw new Error("DimeModelFeed JSX template anchors changed");
++
++  const template = src.slice(start, end);
++  if (!EMBEDDED_NAV_CONDITIONAL.test(template)) {
++    throw new Error("embedded dmf-nav conditional changed");
++  }
++
++  const materialized = mode === "standalone"
++    ? template.replace(EMBEDDED_NAV_CONDITIONAL, "$1")
++    : template.replace(EMBEDDED_NAV_CONDITIONAL, "");
++  return materialized.replace(/\s+/g, " ").trim();
++}
++
++function excludeSuppressedNav(serialized: string): string {
++  return serialized
++    .replace(/<nav className="dmf-nav"[\s\S]*?<\/nav>/, "")
++    .replace(/\s+/g, " ")
++    .trim();
++}
++
+ describe("DimeModelFeed — WC odds bindings (production contract)", () => {
+   it("ML binds away to the TOP row and home to the BOTTOM row", () => {
+     expect(src).toMatch(/"ML",\s*\n\s*\{\s*\n\s*label: awayCode/);
+@@ -68,7 +102,6 @@ describe("DimeModelFeed — WC odds bindings (production contract)", () => {
+     expect(src).not.toMatch(/todayWithOdds/);
+   });
+ });
+-
+ describe("DimeModelFeed — MLB bindings", () => {
+   it("run line prefers VSiN awayRunLine/homeRunLine with book-spread fallback", () => {
+     expect(src).toMatch(/n\(g\.awayRunLine\) \?\? n\(g\.awayBookSpread\)/);
+@@ -96,6 +129,12 @@ describe("DimeModelFeed — owner rules", () => {
+     expect(src).toMatch(/<Crest c=\{v\.crest\} size=\{18\}/);
+   });
+ 
++  it("RULE 2 zero-diff: embedding does not branch or alter crest/flag rendering", () => {
++    expect(src.match(/function Crest\(/g)).toHaveLength(1);
++    expect(src.match(/<Crest c=\{/g)).toHaveLength(4);
++    expect(src).not.toMatch(/embeddedInShell[^\n]*(?:crest|flag)|(?:crest|flag)[^\n]*embeddedInShell/i);
++  });
++
+   it("RULE 3: every market renders BOTH sides via twoWayCol(top, bottom)", () => {
+     expect(src).toMatch(/function twoWayCol\(/);
+     // WC card carries all 7 markets in production order.
+@@ -126,11 +165,45 @@ describe("DimeModelFeed — routes", () => {
+ 
+   it("bare /feed/model/:sport canonicalizes to today's dated URL (history replace)", () => {
+     expect(src).toMatch(/if \(!date\) return \{ sport: sportCode, isoDate: null \}/);
+-    expect(src).toMatch(/navigate\(feedModelPath\(sport\), \{ replace: true \}\)/);
++    expect(src).toMatch(
++      /navigate\(resolveRouteHref\(feedModelPath\(sport\)\), \{ replace: true \}\)/
++    );
+   });
+ 
+   it("in-page navigation builds URLs through the canonical feedModelPath helper", () => {
+     expect(src).toMatch(/from "@\/lib\/feedRoutes"/);
+-    expect(src).toMatch(/navigate\(feedModelPath\(nextSport, nextIso\)\)/);
++    expect(src).toMatch(
++      /navigate\(resolveRouteHref\(feedModelPath\(nextSport, nextIso\)\)\)/
++    );
++  });
++});
++
++describe("DimeModelFeed — unified shell embedding", () => {
++  it("accepts an optional embeddedInShell prop", () => {
++    expect(src).toMatch(/export interface DimeModelFeedProps[\s\S]*embeddedInShell\?: boolean/);
++    expect(src).toMatch(/resolveRouteHref\?: \(href: string\) => string/);
++    expect(src).toMatch(/function DimeModelFeed\(props: DimeModelFeedProps\)/);
++  });
++
++  it("serializes standalone and embedded templates with only the declared exclusions", () => {
++    expect(EMBEDDED_SERIALIZATION_EXCLUSIONS).toEqual([
++      "external shell wrapper",
++      "nav.dmf-nav",
++    ]);
++    const standalone = serializeDimeModelFeedTemplate("standalone");
++    const embedded = serializeDimeModelFeedTemplate("embedded");
++    expect(excludeSuppressedNav(standalone)).toBe(embedded);
++  });
++
++  it("suppresses only the duplicate dmf-nav subtree when embedded", () => {
++    expect(src).toMatch(/!props\.embeddedInShell && \(\s*<nav className="dmf-nav"/);
++    expect(src.match(/<nav className="dmf-nav"/g)).toHaveLength(1);
++    expect(src).toMatch(/<div className="dmf-topbar">/);
++    expect(src).toMatch(/<button\s+className="dmf-themebtn"/);
++  });
++
++  it("has no existing h1, so the shell may inject the sole sr-only focus heading", () => {
++    expect(src).not.toMatch(/<h1\b/);
++    expect(src).toMatch(/<span className="dmf-toptitle">AI Model Projections<\/span>/);
+   });
+ });
+diff --git a/package.json b/package.json
+index 25380639392d6855ef1ca8bf698c4bc839ff5b07..f55ea2801bc63ec246a4eccc62b0ace398d89008 100644
+--- a/package.json
++++ b/package.json
+@@ -7,6 +7,7 @@
+     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
+     "build": "npm run build:client && npm run build:server",
+     "build:client": "vite build",
++    "verify:preview-production": "vite build && node scripts/verify-preview-production.mjs dist/public",
+     "build:server": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && cp server/discord/splits_card.html dist/splits_card.html && cp server/nhl_model_engine.py dist/nhl_model_engine.py && cp server/MLBAIModel.py dist/MLBAIModel.py && cp server/StrikeoutModel.py dist/StrikeoutModel.py && cp server/ActionNetworkHRPropsAPI.py dist/ActionNetworkHRPropsAPI.py && cp server/ActionNetworkF5NrfiAPI.py dist/ActionNetworkF5NrfiAPI.py && cp server/wc2026/wc2026BracketScraper.mjs dist/wc2026BracketScraper.mjs && cp server/wc2026/v24_jul11_engine.mjs dist/v24_jul11_engine.mjs && cp server/wc2026/wc2026AuditEngine.mjs dist/wc2026AuditEngine.mjs && cp server/wc2026/groupStageGameIds.json dist/groupStageGameIds.json",
+     "start": "NODE_ENV=production node dist/index.js",
+     "check": "tsc --noEmit",
+diff --git a/server/legacyRedirects.test.ts b/server/legacyRedirects.test.ts
+index bacfbfa968884413b6c5168439a1a1855f1eff4b..5bb30bf917b00412821e251206a113b3ccf25d6d 100644
+--- a/server/legacyRedirects.test.ts
++++ b/server/legacyRedirects.test.ts
+@@ -108,8 +108,15 @@ describe("Legacy slug eradication — client router", () => {
+   it("canonical routes stay registered behind RequireAuth", () => {
+     expect(appSrc).toMatch(/path="\/feed\/model\/:sport\/:date"/);
+     expect(appSrc).toMatch(/path="\/feed\/model\/:sport"/);
+-    expect(appSrc).toMatch(/path="\/betting-splits\/:sport"/);
+-    expect(appSrc).toMatch(/<RequireAuth><BettingSplits initialSport=\{sport\} \/><\/RequireAuth>/);
++    expect(appSrc).toMatch(
++      /path="\/betting-splits\/:sport\/:date">[\s\S]*?<StandaloneSplitsRoute[\s\S]*?sportSegment=\{p\.sport\}[\s\S]*?dateSegment=\{p\.date\}[\s\S]*?\/>/,
++    );
++    expect(appSrc).toMatch(
++      /path="\/betting-splits\/:sport">[\s\S]*?<StandaloneSplitsRoute sportSegment=\{p\.sport\} \/>/,
++    );
++    expect(appSrc).toMatch(
++      /<RequireAuth>\s*<BettingSplits initialSport=\{parsed\.sport\} initialDate=\{parsed\.isoDate\} \/>\s*<\/RequireAuth>/,
++    );
+   });
+ 
+   it("RootRoute lands authenticated users on the canonical feed", () => {
+@@ -131,8 +138,13 @@ describe("Legacy slug eradication — navigation hooks", () => {
+     expect(tabsSrc).not.toMatch(/tab\.path\.includes\("\?"\)/);
+   });
+ 
+-  it("login returnPath defaults to the canonical feed, not /splits", () => {
+-    expect(homeSrc).toMatch(/returnPath"\) \?\? "\/feed\/model\/mlb"/);
++  it("login returnPath uses the shared viewport-aware default, never /splits", () => {
++    expect(homeSrc).toMatch(
++      /import \{ resolvePostLoginPath \} from "\.\/dime-shell\/breakpoints"/,
++    );
++    expect(homeSrc).toMatch(
++      /resolvePostLoginPath\(searchParams\.get\("returnPath"\)\)/,
++    );
+     expect(homeSrc).not.toMatch(/\?\? "\/splits"/);
+   });
+ });
+diff --git a/vitest.config.ts b/vitest.config.ts
+index 89c07981e7e000327b580d63725ca26fdf167b50..1ac1a7da2f8d59cd0cfab308f909985c206ede21 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -14,6 +14,9 @@ export default defineConfig({
+   },
+   test: {
+     environment: "node",
++    env: {
++      APP_SESSION_SECRET: "vitest-dummy-not-a-secret",
++    },
+     include: [
+       "server/**/*.test.ts",
+       "server/**/*.spec.ts",
+diff --git a/INCIDENTS.md b/INCIDENTS.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..a07dd46797d0cd4a6b6de2439e0485724435515d
+--- /dev/null
++++ b/INCIDENTS.md
+@@ -0,0 +1,60 @@
++# Incidents
++
++## 2026-07-11 — Real-database Vitest suites cannot run locally
++
++Status: OPEN (pre-existing environment/integration failure)
++
++The worktree recovery scope changed no server implementation files. After the
++approved Vitest-only `APP_SESSION_SECRET` fixture allowed all suites to load,
++42 assertions across five real-database server test files failed because their
++setup helpers reported `Database not available`. These are not included in the
++credential-only allowlist in `vitest.environment-failure-allowlist.json`.
++
++Exact failing `file::test` names:
++
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-2] throws UNAUTHORIZED for wrong password`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-3] throws FORBIDDEN for hasAccess=false user`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-4] throws FORBIDDEN for expired user (expiryDate in the past)`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [JW-1..6] JWT claims are correct: sub, role, type, tv, alg, exp`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [SC-1..6] stayLoggedIn=false issues session cookie with maxAge=undefined`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [SL-1..9] stayLoggedIn=true issues 90-day persistent cookie with correct flags`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [TLS-1,2] HTTPS request produces secure=true, sameSite=none`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [UN-1] login by username (without @) issues cookie correctly`
++- `server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [UN-2] @username (with @ prefix) is treated as email lookup — throws UNAUTHORIZED`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [CR-1..13] happy path: creates user, hashes password correctly, no cookie issued`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-1] throws CONFLICT when email is already in use`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-2] throws CONFLICT when username is already taken`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-3] Zod rejects password shorter than 8 chars (BAD_REQUEST)`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-4] Zod rejects invalid email format (BAD_REQUEST)`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [RV-1] role=admin is stored correctly`
++- `server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [RV-2] role=handicapper is stored correctly`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [EC-1] already-setup user (pendingSetup=false, sessionId still set) returns alreadySetup=true without cookie`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-1] throws NOT_FOUND for unknown sessionId`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-2] throws CONFLICT when email is already used by a different user`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-3] Zod rejects password shorter than 8 chars`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-4] Zod rejects password without uppercase letter`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-5] Zod rejects password without lowercase letter`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-6] Zod rejects password without special character`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [HP-1..9] issues app_session cookie with correct flags and returns success`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [JW-1..6] JWT claims are correct: sub, role, type, tv, alg, exp`
++- `server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [TLS-1,2] HTTPS request produces secure=true, sameSite=none`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-2] throws BAD_REQUEST for wrong token (hash mismatch)`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-3] throws BAD_REQUEST when no reset is pending (no token in DB)`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-4..5] throws BAD_REQUEST for expired token; expired token is cleared from DB`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RP-1..8] full reset chain: new hash, cost>=10, tokenVersion++, old hash cleared`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-1] returns { success: true } for a valid email`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-2] returns { success: true } for a valid username`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-4..8] DB token stored correctly + sendPasswordResetEmail called with correct args`
++- `server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-9] @username prefix is stripped before lookup`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FA-1..3] incrementAllTokenVersions increments all users except the excluded owner`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-1,2] forceLogoutUser increments tokenVersion and returns newTokenVersion`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-3] forceLogoutUser throws BAD_REQUEST when owner tries to logout themselves`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-4] forceLogoutUser throws NOT_FOUND for unknown userId`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-5,6] end-to-end: old JWT rejected after forceLogoutUser; new JWT accepted`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [JR-1,2] stale tv JWT rejected; fresh tv JWT accepted by appUserProcedure (real DB)`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [JR-3] JWT without tv claim (tv=null) is accepted — null skips the tokenVersion check`
++- `server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [TV-1..4] incrementTokenVersion increments DB tokenVersion atomically`
++
++Required follow-up: provide an isolated test database (or explicitly skip these
++integration suites when it is absent), rerun all five files, and close only when
++the 42 exact assertions pass.
+diff --git a/scripts/verify-preview-production.mjs b/scripts/verify-preview-production.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..a5b14e1040ee13163f03bfeb05684da01d4cbe12
+--- /dev/null
++++ b/scripts/verify-preview-production.mjs
+@@ -0,0 +1,42 @@
++import fs from "node:fs";
++import path from "node:path";
++
++const outputRoot = path.resolve(process.argv[2] ?? "dist/public");
++const forbidden = [
++  "allowsLocalChatPreview",
++  "allowsLocalDimePreview",
++  "preview=1",
++  'get("preview")',
++  "get('preview')",
++];
++const extensions = new Set([".css", ".html", ".js"]);
++
++function collectFiles(directory) {
++  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
++    const entryPath = path.join(directory, entry.name);
++    if (entry.isDirectory()) return collectFiles(entryPath);
++    return extensions.has(path.extname(entry.name)) ? [entryPath] : [];
++  });
++}
++
++if (!fs.existsSync(outputRoot)) {
++  console.error(`[preview-production] build output not found: ${outputRoot}`);
++  process.exit(1);
++}
++
++const files = collectFiles(outputRoot);
++let failed = false;
++
++for (const token of forbidden) {
++  const matches = files.filter(file => fs.readFileSync(file, "utf8").includes(token));
++  console.log(`[preview-production] ${JSON.stringify(token)}: ${matches.length} matches`);
++  for (const match of matches) console.log(`  ${path.relative(outputRoot, match)}`);
++  failed ||= matches.length > 0;
++}
++
++if (failed) {
++  console.error("[preview-production] FAIL: development preview capability reached production output");
++  process.exit(1);
++}
++
++console.log("[preview-production] PASS: production output contains no preview-gate tokens");
+diff --git a/vitest.environment-failure-allowlist.json b/vitest.environment-failure-allowlist.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..1107de92e21527e4d867eddba3fe4621f412bc9e
+--- /dev/null
++++ b/vitest.environment-failure-allowlist.json
+@@ -0,0 +1,22 @@
++{
++  "description": "Expected local Vitest failures caused only by intentionally absent credentials or deployment environment values. Entries are exact file::test names; additions require audit review.",
++  "expectedFailures": [
++    "server/ciSecrets.test.ts::CI secrets validation > APP_SESSION_SECRET is set with sufficient length (min 44 chars)",
++    "server/ciSecrets.test.ts::CI secrets validation > All required GitHub Actions secrets are present and correctly formatted",
++    "server/ciSecrets.test.ts::CI secrets validation > DATABASE_URL is set and matches MySQL connection string format",
++    "server/ciSecrets.test.ts::CI secrets validation > NBA_SHEET_ID is set and matches Google Sheets ID format",
++    "server/ciSecrets.test.ts::CI secrets validation > PUBLIC_ORIGIN is set and has no trailing slash",
++    "server/claude.test.ts::Claude Fable 5 Integration > Anthropic credentials are set (API key or AI Gateway auth token)",
++    "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is accepted by Discord REST API (/users/@me)",
++    "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is set in environment",
++    "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > ENV.publicOrigin is set (required to prevent Cloud Run hostname in redirect_uri)",
++    "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > redirect_uri built from PUBLIC_ORIGIN matches Discord Portal registration",
++    "server/email.test.ts::Gmail SMTP credentials > should authenticate successfully with GMAIL_APP_PASSWORD",
++    "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID is set and non-empty",
++    "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID matches Google Sheets ID format (alphanumeric + hyphens/underscores, 20+ chars)",
++    "server/nbaSheetId.test.ts::nbaModelSync startup guard > ENV.nbaSheetId is set before nbaModelSync module loads",
++    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL is set and non-empty",
++    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL looks like a valid email address",
++    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_PASSWORD is set and non-empty"
++  ]
++}

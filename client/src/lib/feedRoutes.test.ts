@@ -3,6 +3,7 @@ import {
   toFeedSlugDate,
   feedModelPath,
   bettingSplitsPath,
+  canonicalBettingSplitsPath,
   parseBettingSplitsPath,
   parseSplitsSport,
   legacyFeedRedirectTarget,
@@ -99,6 +100,37 @@ describe("feedRoutes — canonical path builders", () => {
       ["mlb", "04-31-2026"],
     ] as const) {
       expect(parseBettingSplitsPath(sport, date)).toBeNull();
+    }
+  });
+
+  it("converges every required splits input to one stable dated URL in at most two hops", () => {
+    const todayMlb = bettingSplitsPath("MLB");
+    const cases = [
+      ["/betting-splits/MLB", "MLB", undefined, todayMlb],
+      ["/betting-splits/mlb", "mlb", undefined, todayMlb],
+      [
+        "/betting-splits/MLB/07-11-2026",
+        "MLB",
+        "07-11-2026",
+        "/betting-splits/mlb-07-11-2026",
+      ],
+      ["/betting-splits/MLB/2026-07-11", "MLB", "2026-07-11", todayMlb],
+      ["/betting-splits/MLB/garbage", "MLB", "garbage", todayMlb],
+      ["/betting-splits/XYZ", "XYZ", undefined, todayMlb],
+    ] as const;
+
+    for (const owner of ["standalone", ">=768 shell"] as const) {
+      for (const [input, sport, date, expected] of cases) {
+        const firstHop = canonicalBettingSplitsPath(sport, date);
+        const canonicalSlug = firstHop.split("/").pop();
+        const secondHop = canonicalBettingSplitsPath(canonicalSlug);
+
+        expect(firstHop, `${owner}: ${input}`).toBe(expected);
+        expect(firstHop, `${owner}: ${input} must be dated`).toMatch(
+          SPLITS_SLUG_RE
+        );
+        expect(secondHop, `${owner}: ${input} must stabilize`).toBe(firstHop);
+      }
     }
   });
 });

@@ -40,7 +40,31 @@ describe("post-login product default", () => {
     expect(resolvePostLoginPath("/bet-tracker", matchMedia)).toBe(
       "/bet-tracker"
     );
-    expect(resolvePostLoginPath("", matchMedia)).toBe("");
+    expect(resolvePostLoginPath("/chat?preview=1", matchMedia)).toBe(
+      "/chat?preview=1"
+    );
     expect(matchMedia).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-internal returnPath values with the desktop default", () => {
+    const desktop = () => ({ matches: true });
+
+    for (const unsafe of [
+      "https://evil.example/path",
+      "//evil.example/path",
+      "javascript:alert(1)",
+      "feed/model/mlb",
+      "",
+      "\\evil.example",
+      "/\\evil.example",
+    ]) {
+      expect(resolvePostLoginPath(unsafe, desktop), unsafe).toBe("/chat");
+    }
+  });
+
+  it("rejects non-internal returnPath values with the mobile default", () => {
+    expect(resolvePostLoginPath("//evil.example", () => ({ matches: false }))).toBe(
+      "/feed/model/mlb"
+    );
   });
 });

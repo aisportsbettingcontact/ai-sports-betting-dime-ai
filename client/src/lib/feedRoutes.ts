@@ -112,9 +112,7 @@ export function parseBettingSplitsPath(
 
   if (!slugDate) {
     const combined = /^([a-z]+)-(\d{2}-\d{2}-\d{4})$/i.exec(sportPart);
-    if (combined) {
-      [, sportPart, slugDate] = combined;
-    }
+    if (combined) [, sportPart, slugDate] = combined;
   }
 
   const sport = parseSplitsSport(sportPart);
@@ -123,6 +121,22 @@ export function parseBettingSplitsPath(
 
   const isoDate = slugDateToIso(slugDate);
   return isoDate ? { sport, isoDate } : null;
+}
+
+/**
+ * Resolves every recognized or malformed splits route form to one dated URL.
+ * A missing/invalid date falls back to today's effective date; an invalid sport
+ * falls back to MLB. Passing the returned slug back through this function is
+ * stable, which bounds client canonicalization to one redirect hop.
+ */
+export function canonicalBettingSplitsPath(
+  sportSegment?: string,
+  dateSegment?: string
+): string {
+  const parsed = parseBettingSplitsPath(sportSegment, dateSegment);
+  return parsed?.isoDate
+    ? bettingSplitsPath(parsed.sport, parsed.isoDate)
+    : bettingSplitsPath(parsed?.sport ?? "MLB");
 }
 
 /**

@@ -1,0 +1,71 @@
+Read it end to end, including the App.tsx and Home.tsx source dumps inside the test failure output. Sol's session was disciplined — checkpoint before touching anything, correct BLOCKED handling on the browser, correct approval request before touching `legacyRedirects.test.ts`. But there are three things Sol didn't flag that your response needs to force, plus two rulings only you can issue:
+
+1. **The delete-and-recreate repair method is unproven.** Sol rebuilt App.tsx, Home.tsx, BettingSplits.tsx (and quietly, feedRoutes.ts/.test.ts) from the clean parent and reapplied "only semantic changes." BettingSplits alone dropped ~600 lines classified as churn on assertion. Nothing in the transcript proves the dropped content was formatting-only. This is the single biggest risk in the session and it's cheap to prove.
+2. **Possible live bug in `StandaloneSplitsRoute`.** As written in the App.tsx dump, a dateless URL (`/betting-splits/MLB`) computes a dateless canonical and redirects to itself — whether it converges to a dated URL depends entirely on `parseBettingSplitsPath` internals, which were never shown. And the ≥768 shell path bypasses `StandaloneSplitsRoute` entirely, so canonicalization inside `DimeAppShell` is a second unverified surface. Exactly the class of bug the blocked browser matrix would catch.
+3. **The A8 bundle math (+2.18/+2.66 KB) is not reproducible from the transcript.** Both builds shown already contain shell code; the baseline the delta references was never displayed. Under your standards that's INFERRED, not PASSED.
+
+The two rulings: approve the `legacyRedirects` edit *with an exact replacement contract* (not a blank check — the failures are semantic supersessions, not staleness), and rule on the env fixture (Sol's own plan step 6 said "with the required environment fixture," then silently ran without it — 13 suites are giving zero signal right now).
+
+Here's the response to paste:
+
+---
+
+**RESPONSE TO WORKTREE RECOVERY SESSION — RULINGS, GATES, AND EVIDENCE DEMANDS**
+
+Session accepted with conditions. Checkpoint discipline, BLOCKED handling, and the approval request were correct. The following supersedes any implied next steps. Evidence-before-status applies to every item below: any PASSED claim without displayed evidence reverts to NOT RUN. Rule-6 voiding is in effect.
+
+**§1 — Rulings on your two requests**
+
+1.1 `server/legacyRedirects.test.ts`: **APPROVED, scope-limited to the two failing assertions**, under the contract in §4. Paste the exact assertion diffs in your report. No deletions-as-fixes; replacement assertions must be at least as strong as the originals' intent (auth mandatory on splits, no legacy slugs, explicit deep links win).
+
+1.2 In-app browser: stays **BLOCKED**. I will enable the backend and signal you. Do not substitute any other automation backend. The live matrix (A4 mid-stream resize abort, A7 sticky headers at 768/1024/1440 both themes, R2 history behaviors, live focus behavior) remains BLOCKED — deterministic green does not convert to ship-ready.
+
+**§2 — GATE-1: Normalized-diff proof of the rewrites (blocks all other work)**
+
+The delete-and-recreate method for App.tsx, Home.tsx, BettingSplits.tsx, feedRoutes.ts, and feedRoutes.test.ts dropped large volumes classified as formatter churn on assertion only. Prove it:
+
+For each file: `git show 34aff1f8:<path> > /tmp/ckpt-<name>`, run prettier (repo config; if none, `--parser typescript` defaults) on both the checkpoint copy and the current file, then `diff -u`. Deliverable: a per-file list of every non-formatting hunk present in the checkpoint but absent from the repaired file, each tagged REAPPLIED / INTENTIONALLY DROPPED (with reason) / MISSED. Any MISSED item: restore or escalate before proceeding. Note that feedRoutes.ts/.test.ts and the full dimeModelFeed.test.ts rewrite exceeded the plan's named files — retroactively approved contingent on this proof, but log the drift.
+
+**§3 — GATE-2: Dateless-splits convergence, both surfaces**
+
+Paste the current source of `parseBettingSplitsPath` and `bettingSplitsPath`. Then trace, hop by hop, to a stable dated canonical URL with BettingSplits rendered, max 2 hops, for: `/betting-splits/MLB`, `/betting-splits/mlb`, `/betting-splits/MLB/07-11-2026`, `/betting-splits/MLB/2026-07-11`, `/betting-splits/MLB/garbage`, `/betting-splits/XYZ`. As written in App.tsx, a missing `isoDate` produces a dateless canonical and a self-redirect — prove convergence or fix (missing date should canonicalize to today's dated path). Repeat the trace for the ≥768 shell path: `isDimeProductLocation` short-circuits the Switch before `StandaloneSplitsRoute` ever runs, so show where DimeAppShell performs the same canonicalization. Add or cite unit tests covering every case above.
+
+**§4 — legacyRedirects replacement contract**
+
+Test 1 (canonical routes behind RequireAuth): assert both `path="/betting-splits/:sport/:date"` and `path="/betting-splits/:sport"` render `StandaloneSplitsRoute`, AND that `StandaloneSplitsRoute` contains `<RequireAuth>` wrapping `<BettingSplits` with `initialSport={parsed.sport}` and `initialDate={parsed.isoDate}` — the full auth chain, not just the wiring. Test 2 (login default): assert Home imports `resolvePostLoginPath` from `./dime-shell/breakpoints` and passes `returnPath` through it; retain the `not.toMatch(?? "/splits")` guard; retitle to match the new contract. The default destination behavior itself must be covered in `breakpoints.test.ts` — cite the covering tests or add them. Also identify which of the three originally-failing legacyRedirects assertions now passes and confirm it passes for the right reason, not vacuously.
+
+**§5 — Full-suite gate ruling**
+
+Your own recovery plan step 6 specified "the required environment fixture"; execution dropped it silently. Ruling: **APPROVED, narrow** — inject `APP_SESSION_SECRET="vitest-dummy-not-a-secret"` via vitest setup/config only. No `.env` files, no other variables, no server code changes. Rerun the full suite. The 13 currently-unloadable suites are giving zero signal; unblocking them is an audit-truth requirement. Classification rule for anything newly revealed: this scope touched zero server files, so any failure in server suites is pre-existing by construction — record as a finding, not scope damage, and log to INCIDENTS.md. Then freeze the environment-failure allowlist as exact `file::test` names (VSIN, Discord token, ciSecrets, email, claude stay on it) and reconcile your 17+2 test / 20 file counts against it so any future new failure is instantly visible.
+
+**§6 — Evidence demands**
+
+6.1 A8 bundle math: the +2.18/+2.66 KB figures reference a baseline not shown in this transcript. Build the parent via `git worktree add`, capture gzip sizes for the full initial `/chat` critical-path chunk set (define the set explicitly), and produce a baseline-vs-current table with per-chunk deltas and the sum. Until then A8 is INFERRED, not PASSED.
+
+6.2 Preview gate: rerun the dist greps (`allowsLocalChatPreview`, `preview=1`, `get("preview")`/`get('preview')`) with outputs displayed in the transcript, and add the check as a repeatable script step so it isn't a one-off manual grep.
+
+6.3 `resolvePostLoginPath` safety: show the source and prove it rejects non-internal values (`https://…`, `//host`, anything not starting with a single `/`) with fallback to the default. This param flows into the Discord OAuth `returnPath` — if the guard is absent, add it to breakpoints.ts with a test; it's in-scope new code.
+
+6.4 `resolveSplitsServerDate`: two tests is thin for A3. Produce the full truth table for (selectedDate, serverDate, initialDate) — URL date present never overridden; no URL + untouched adopts server; no URL + user-picked keeps the user's choice — with a covering test per row, and show the effect guard that prevents a set-state loop given `selectedDate` is in the dependency array.
+
+6.5 `games.getAvailableDates`: cite the server file and line at `34aff1f8^` proving the procedure pre-existed (R5: no new endpoints). tsc passing implies it; cite it for the record.
+
+6.6 Sport-switch behavior change: the old date-reset-to-today on sport change was removed, and sport switches now push (not replace) history with the carried date. Ruling: carryover stays — URL-as-truth is the locked principle. Verify the empty state renders sanely when the carried date has zero games for the new sport and report; any new UI affordance is out of scope, log as follow-up.
+
+6.7 The session footer shows "3 background agents" against your "all agents stopped" claim. Enumerate each agent and its state with evidence.
+
+6.8 Confirm `local/checkpoint-shell-wip` has no upstream and nothing was pushed (`git status -sb`, remote refs). Push remains forbidden until I authorize.
+
+6.9 The DimeAppShell.test.ts addition for the h1 fix: confirm it asserts exactly one exposed `<h1>` at every shell width, not mere presence. The h1 relocation itself is retroactively approved; it must appear in the §2 itemization, and its live focus behavior stays on the blocked browser matrix.
+
+**§7 — Bucket (c) quarantine and landing sequence**
+
+Paste the full diffs of `.claude/commands/ship.md` (88 lines), `.gitignore` (+3), and `CLAUDE.md` (19) — none have been shown this session, and ship.md is operating-discipline surface. Default ruling: quarantine to a separate commit so the shell diff lands pure; I'll confirm after seeing content. Before any landing, propose the exact git sequence for moving the repaired state to main (bucket-c commit separated, checkpoint preserved, no push) and wait for approval. Also state the recovery command for the archived `.playwright-cli/matrix.js` harness for when the browser returns.
+
+**§8 — Execution order, then stop**
+
+GATE-1 (§2) → GATE-2 (§3) → §4 edit → §5 fixture + rerun + allowlist freeze → §6 items in order → §7 diffs and proposal. Then produce an audit addendum with VERIFIED/INFERRED/UNKNOWN per item and stop. Agents stay stopped. No implementation beyond the items enumerated here. No merge, no push, no DNS-adjacent action until the live matrix runs and a fresh audit returns intact with my acknowledgment.
+
+---
+
+One note for you, not Sol: §1.2 and the browser backend are on your side — until you enable it, A4/A7/R2 live checks stay blocked no matter how green everything else gets, and the §3 convergence question is the highest-risk thing hiding behind that blockage.
