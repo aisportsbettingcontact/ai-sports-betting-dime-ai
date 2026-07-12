@@ -37,6 +37,7 @@ import {
   checkDimeChatRateLimit,
   DIME_CHAT_RATE_LIMIT_WINDOW_MS,
 } from "./dimeChatRateLimit";
+import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
 
 // ---------------------------------------------------------------
 // Structured logging
@@ -79,15 +80,15 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ---------------------------------------------------------------
-// Entitlement — require an active paid subscription (or owner role)
-// before any Anthropic call or SSE stream begins. Evaluated per-request
-// against the DB (not the JWT), so a revoked subscriber loses chat access
+// Entitlement — OWNER-ONLY LOCKDOWN (2026-07-12): the Dime model answers
+// role="owner" accounts only (@prez, @sippi). Subscribers with hasAccess are
+// NOT entitled while the lockdown is in effect. Evaluated per-request against
+// the DB (not the JWT), so a demoted/revoked user loses chat access
 // immediately instead of waiting out their JWT expiry.
 // ---------------------------------------------------------------
-async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
-  if (role === "owner") return true;
+async function checkDimeChatEntitlement(userId: number): Promise<boolean> {
   const user = await getAppUserById(userId);
-  return !!user?.hasAccess;
+  return canAccessDimeModel(user);
 }
 
 const dimeChatRouter = Router();
@@ -108,19 +109,19 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // --- SEC-CRIT: Entitlement gate — reject authenticated-but-unentitled requests
-  // before any Claude call or SSE stream. Closes the free-tier billing leak and
-  // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
-  // bumping tokenVersion, so this must be checked per-request, not just at login). ---
-  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
+  // --- SEC-CRIT: Entitlement gate — reject every non-owner request before any
+  // Claude call or SSE stream (owner-only lockdown; see dimeModelAccess.ts).
+  // Checked per-request against the DB, not the JWT, so demotion/revocation
+  // takes effect immediately instead of waiting out the token expiry. ---
+  const entitled = await checkDimeChatEntitlement(authedUser.userId);
   if (!entitled) {
     dimeLog("dime.chat.entitlement_rejected", requestId, {
       errorClass: "AuthorizationError",
       statusCode: 403,
       userId: authedUser.userId,
-      detail: "Active subscription required",
+      detail: "Owner-only access — non-owner rejected",
     });
-    res.status(403).json({ error: "Active subscription required." });
+    res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE });
     return;
   }
 

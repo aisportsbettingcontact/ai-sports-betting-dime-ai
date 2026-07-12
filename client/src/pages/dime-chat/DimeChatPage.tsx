@@ -38,6 +38,7 @@ import {
   type MotionStyle,
 } from "framer-motion";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import {
   chatReducer,
   initialChatState,
@@ -109,6 +110,10 @@ const ERROR_COPY =
   "Dime couldn't reach the model. Your message is saved above."; // spec §4
 const DISCLAIMER =
   "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
+// OWNER-ONLY LOCKDOWN (2026-07-12): non-owner send attempts are frozen on the
+// client and refused by the server (server/dimeModelAccess.ts). Copy is
+// hardcoded per product direction — keep in sync with DIME_MODEL_ACCESS_MESSAGE.
+const ACCESS_NOTICE = "AI Model access will be available soon";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -708,9 +713,15 @@ export default function DimeChatPage({
   const theme: Theme =
     themeProp ?? (contextTheme === "light" ? "light" : "dark");
   const reduceMotion = useReducedMotion();
+  // Owner-only model access: everyone except role="owner" gets a frozen send
+  // button + the hardcoded ACCESS_NOTICE. While auth is still resolving we
+  // treat the user as non-owner (fail closed) — the server enforces the same
+  // rule regardless.
+  const { isOwner } = useAppAuth();
 
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
+  const [accessNotice, setAccessNotice] = useState(false);
   const [ghost, setGhost] = useState<GhostRects | null>(null);
   const [stuck, setStuck] = useState(true);
   const [firstSendFx, setFirstSendFx] = useState(false);
@@ -1156,9 +1167,19 @@ export default function DimeChatPage({
     flipFromRef.current = composer.getBoundingClientRect().top;
   }, []);
 
+  // Clear the frozen-send notice if auth resolves to an owner session.
+  useEffect(() => {
+    if (isOwner) setAccessNotice(false);
+  }, [isOwner]);
+
   /* --- Single submit choke point: composer, Enter, chips, all of it --- */
   const submit = useCallback(
     (text: string) => {
+      if (!isOwner) {
+        // Frozen send for non-owners: no request leaves the client, ever.
+        setAccessNotice(true);
+        return;
+      }
       const trimmed = text.trim();
       if (!trimmed || state.streaming) return;
 
@@ -1209,6 +1230,7 @@ export default function DimeChatPage({
       void runStream(history, assistantId);
     },
     [
+      isOwner,
       state.streaming,
       state.messages,
       runStream,
@@ -1219,6 +1241,10 @@ export default function DimeChatPage({
 
   /** Retry re-runs the same history (failed empty row was already removed — spec §2.6). */
   const retry = useCallback(() => {
+    if (!isOwner) {
+      setAccessNotice(true);
+      return;
+    }
     if (state.streaming || state.messages.length === 0) return;
     const last = state.messages[state.messages.length - 1];
     if (last.role !== "user") return;
@@ -1228,7 +1254,7 @@ export default function DimeChatPage({
       state.messages.map(({ role, content }) => ({ role, content })),
       assistantId
     );
-  }, [state.streaming, state.messages, runStream]);
+  }, [isOwner, state.streaming, state.messages, runStream]);
 
   const stop = () => abortRef.current?.abort();
 
@@ -1508,11 +1534,17 @@ export default function DimeChatPage({
                         type="submit"
                         className="dc-send dc-hv3 dc-focusable dc-pressable"
                         aria-label="Submit prompt"
+                        aria-disabled={!isOwner || undefined}
                       >
                         <SendGlyph />
                       </button>
                     )}
                   </form>
+                  {accessNotice && (
+                    <div className="dc-access-notice" role="status">
+                      {ACCESS_NOTICE}
+                    </div>
+                  )}
                 </div>
                 {!conversation && (
                   <PromptPills

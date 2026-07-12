@@ -27,7 +27,7 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
 
   it("should have correct tab IDs", () => {
     const ids = MOBILE_OWNER_TABS.map(t => t.id);
-    expect(ids).toEqual(["feed", "splits", "chat", "props", "profile"]);
+    expect(ids).toEqual(["feed", "splits", "chat", "tracker", "profile"]);
   });
 
   it("should have correct canonical paths for each tab (no query hooks)", () => {
@@ -36,7 +36,7 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
       "/feed/model/mlb",
       "/betting-splits/MLB",
       "/chat",
-      "/m/props",
+      "/m/tracker",
       "/profile",
     ]);
   });
@@ -55,7 +55,7 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
   });
 
   it("should have valid lucide icon names", () => {
-    const validIcons = ["Newspaper", "BarChart3", "MessageSquare", "FlaskConical", "User"];
+    const validIcons = ["Newspaper", "BarChart3", "MessageSquare", "TrendingUp", "User"];
     for (const tab of MOBILE_OWNER_TABS) {
       expect(validIcons).toContain(tab.iconName);
     }
@@ -314,11 +314,18 @@ describe("Mobile Owner Tabs — New Event Types Validity", () => {
 });
 
 describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", () => {
-  it("Feed/Splits/Props tabs route to their canonical path-based surfaces", () => {
+  it("Feed/Splits/Bet Tracker tabs route to their canonical path-based surfaces", () => {
     const byId = new Map(MOBILE_OWNER_TABS.map(t => [t.id, t.path]));
     expect(byId.get("feed")).toBe("/feed/model/mlb");
     expect(byId.get("splits")).toBe("/betting-splits/MLB");
-    expect(byId.get("props")).toBe("/m/props");
+    expect(byId.get("tracker")).toBe("/m/tracker");
+  });
+
+  it("the Props tab is fully replaced by Bet Tracker (2026-07-12)", () => {
+    expect(MOBILE_OWNER_TABS.find(t => t.id === ("props" as string))).toBeUndefined();
+    expect(MOBILE_OWNER_TABS.some(t => t.label === "Props")).toBe(false);
+    const tracker = MOBILE_OWNER_TABS.find(t => t.id === "tracker");
+    expect(tracker?.label).toBe("Bet Tracker");
   });
 
   it("Chat and Profile tabs should route to their dedicated paths", () => {
@@ -337,7 +344,7 @@ describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", ()
   it("global mount skips /m/* routes (no duplicate tabs)", () => {
     // The GlobalMobileOwnerTabs component checks: if (location.startsWith("/m")) return false
     // This test validates the logic concept
-    const mPaths = ["/m/chat", "/m/profile", "/m/props"];
+    const mPaths = ["/m/chat", "/m/profile", "/m/tracker"];
     for (const p of mPaths) {
       expect(p.startsWith("/m")).toBe(true);
     }
