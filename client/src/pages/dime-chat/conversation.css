@@ -486,6 +486,44 @@ button.dc-sidebar-row {
   }
 }
 
+/* ----------------------------------------------------------------------------
+   10b. MOBILE TYPE LAW (<768px only — matches the bottom-tab-bar breakpoint;
+        desktop and tablet ≥768px keep the frozen metrics above).
+        MASTER.md: Familjen Grotesk for ALL content including numerals
+        (600 weight, tabular-nums); IBM Plex Mono only for 11px uppercase
+        micro-labels; message text ≥15px; nothing below 11px.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .dc-prose,
+  .dc-user-capsule {
+    font-size: 15px;
+  }
+  .dc-error-message {
+    font-size: 14px;
+  }
+  /* Numerals/values leave the mono register: Grotesk 600, tabular. */
+  .dc-num,
+  .dc-stat-value {
+    font-family: inherit;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .dc-stat-value {
+    font-size: 15px;
+  }
+  /* Micro-label floor: no text below 11px on mobile. */
+  .dc-microlabel,
+  .dc-datapill,
+  .dc-badge-pro {
+    font-size: 11px;
+  }
+  /* Composer: full-height 44px tap zone on the input (send button already
+     carries a 44px hit area via its ::before inset -4px). */
+  .dc-composer-input {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 430px) {
   .dc-main {
     gap: 24px;
