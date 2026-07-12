@@ -189,16 +189,33 @@ describe('browser sessions', () => {
   });
 
   it('recovers a crashed session in place', async () => {
+    // CDP Page.crash / chrome://crash kill the renderer with a CORE-DUMPING
+    // signal; on kernels where core_pattern pipes to a handler (GitHub's
+    // Ubuntu images pipe to apport), the renderer cannot exit until the
+    // multi-hundred-MB core is drained, so Playwright's 'crash' event (which
+    // requires full process exit) arrives seconds-to-minutes late. SIGKILL
+    // produces no core dump and fires 'crash' within milliseconds on every
+    // Chromium build tested (headless shell 145, full 145, full 141), even
+    // under an adversarial piped core_pattern. So: pid-diff the browser's
+    // renderer processes around victim-session creation and SIGKILL only the
+    // new renderer(s).
+    const browser = await daemon.core.sessions.engines.get('chromium');
+    const browserCdp = await browser.newBrowserCDPSession();
+    const rendererPids = async (): Promise<number[]> => {
+      const info = (await browserCdp.send('SystemInfo.getProcessInfo')) as {
+        processInfo: Array<{ type: string; id: number }>;
+      };
+      return info.processInfo.filter((p) => p.type === 'renderer').map((p) => p.id);
+    };
+    const before = await rendererPids();
     const crash = await api('POST', '/sessions', { device: 'desktop-1440', engine: 'chromium', url: `${fixture.url}/` });
     const crashId = crash.json.session.sessionId;
     try {
-      const before = await api('GET', `/sessions/${crashId}`);
-      expect(before.json.session.state).toBe('ready');
-      // Deterministic renderer crash via CDP Page.crash (chrome://crash navigation
-      // is racy across Chromium builds/runners). White-box page access.
-      const session = daemon.core.sessions.get(crashId);
-      const cdp = await session.currentPage.context().newCDPSession(session.currentPage);
-      cdp.send('Page.crash').catch(() => {}); // never resolves normally — the target dies
+      expect(crash.json.session.state).toBe('ready');
+      const fresh = (await rendererPids()).filter((pid) => !before.includes(pid));
+      expect(fresh.length, 'victim session must own at least one new renderer').toBeGreaterThan(0);
+      for (const pid of fresh) process.kill(pid, 'SIGKILL');
+
       // Crash event delivery is asynchronous; poll instead of a fixed sleep.
       const deadline = Date.now() + 20_000;
       while (daemon.core.sessions.maybeGet(crashId)?.state !== 'crashed' && Date.now() < deadline) {
@@ -212,6 +229,7 @@ describe('browser sessions', () => {
     } finally {
       // Never leak a possibly-wedged session into later tests.
       await api('DELETE', `/sessions/${crashId}`);
+      await browserCdp.detach().catch(() => {});
     }
   });
 

@@ -38,6 +38,15 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: ''
 
+      - name: Disable piped core dumps (Linux)
+        if: runner.os == 'Linux'
+        # Ubuntu images pipe renderer core dumps to apport, which delays
+        # crashed-process exit (and therefore Playwright 'crash' events) by
+        # however long the multi-hundred-MB core takes to drain.
+        run: |
+          cat /proc/sys/kernel/core_pattern
+          echo core | sudo tee /proc/sys/kernel/core_pattern
+
       - name: Dependency audit (high+)
         run: npm audit --audit-level=high
         continue-on-error: ${{ matrix.os != 'ubuntu-latest' }}
