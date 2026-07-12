@@ -1,6 +1,12 @@
 /**
  * betTracker.ts — tRPC router for the Bet Tracker feature.
  *
+ * ⚠ OWNER-ONLY LOCKDOWN (2026-07-12): every procedure below now runs on
+ * ownerProcedure (see betTrackerProcedure) — only role="owner" accounts
+ * (@prez, @sippi) can call this router while the AI Bet Tracker relaunch is
+ * pre-release. The v4 role model documented next applies only among owner
+ * accounts until the lockdown is lifted.
+ *
  * Role-based access model (v4):
  *   OWNER (prez)     — can see/edit/delete own bets; can see sippi bets (sippi is also owner);
  *                      can see all handicapper bets via targetUserId
@@ -30,7 +36,7 @@
 
 import { z } from "zod";
 import { router } from "../_core/trpc";
-import { handicapperProcedure } from "./appUsers";
+import { ownerProcedure } from "./appUsers";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { trackedBets, appUsers, betEditRequests, type TrackedBet } from "../../drizzle/schema";
@@ -195,6 +201,19 @@ function calcUnitBucket(
   return "1U";
 }
 
+// ─── Base procedure ───────────────────────────────────────────────────────────
+// OWNER-ONLY LOCKDOWN (2026-07-12): the Bet Tracker is owner-only while the
+// "AI Bet Tracker" relaunch is pre-release — only role="owner" accounts
+// (@prez, @sippi) may read or write tracker data. Every procedure previously
+// ran on handicapperProcedure (owner/admin/handicapper); all of them now run
+// on ownerProcedure, which checks the DATABASE role per request (not the JWT
+// claim). Non-owners — admins and handicappers included — get FORBIDDEN, and
+// the client shows them the "AI BET TRACKER COMING SOON" screen instead.
+// The role-matrix comments inside individual procedures describe the pre-
+// lockdown owner/admin/handicapper model and only apply among owner accounts
+// until this gate is lifted.
+const betTrackerProcedure = ownerProcedure;
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const betTrackerRouter = router({
@@ -205,7 +224,7 @@ export const betTrackerRouter = router({
    * Returns all users with role owner/admin/handicapper so the selector
    * can show all accounts including prez (owner) and sippi (owner).
    */
-  listHandicappers: handicapperProcedure
+  listHandicappers: betTrackerProcedure
     .query(async ({ ctx }) => {
       const role = ctx.appUser.role;
       if (role !== "owner" && role !== "admin") {
@@ -230,7 +249,7 @@ export const betTrackerRouter = router({
    *   ADMIN               — can view any user via targetUserId
    *   HANDICAPPER         — can only view own bets (targetUserId ignored)
    */
-  list: handicapperProcedure
+  list: betTrackerProcedure
     .input(z.object({
       sport:         z.enum(SPORTS).optional(),
       gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -329,7 +348,7 @@ export const betTrackerRouter = router({
    * pick is auto-derived from pickSide + market + team abbreviations.
    * toWin is auto-calculated from odds + risk (or provided explicitly).
    */
-  create: handicapperProcedure
+  create: betTrackerProcedure
     .input(z.object({
       // Game identification
       anGameId:   z.number().int().positive(),
@@ -492,7 +511,7 @@ export const betTrackerRouter = router({
    *   ADMIN              — can update porter/hank bets (handicapper role); CANNOT update owner bets
    *   HANDICAPPER        — FORBIDDEN (must use submitEditRequest)
    */
-  update: handicapperProcedure
+  update: betTrackerProcedure
     .input(z.object({
       id:         z.number().int().positive(),
       timeframe:  z.enum(TIMEFRAMES).optional(),
@@ -608,7 +627,7 @@ export const betTrackerRouter = router({
    *   ADMIN              — can delete handicapper bets; CANNOT delete owner bets
    *   HANDICAPPER        — FORBIDDEN (must use submitEditRequest with requestType=DELETE)
    */
-  delete: handicapperProcedure
+  delete: betTrackerProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
@@ -659,7 +678,7 @@ export const betTrackerRouter = router({
    * submitEditRequest — handicapper submits an EDIT or DELETE request for their own bet.
    * The bet itself is NOT modified. Owner/Admin reviews via reviewEditRequest.
    */
-  submitEditRequest: handicapperProcedure
+  submitEditRequest: betTrackerProcedure
     .input(z.object({
       betId:           z.number().int().positive(),
       requestType:     z.enum(["EDIT", "DELETE"]),
@@ -712,7 +731,7 @@ export const betTrackerRouter = router({
    *   - EDIT request: applies proposedChanges to the bet
    * On DENY: marks request as DENIED with optional note.
    */
-  reviewEditRequest: handicapperProcedure
+  reviewEditRequest: betTrackerProcedure
     .input(z.object({
       requestId:  z.number().int().positive(),
       action:     z.enum(["APPROVE", "DENY"]),
@@ -813,7 +832,7 @@ export const betTrackerRouter = router({
    *   - bets: all tracked_bets with user info (username, role)
    *   - editRequests: all bet_edit_requests with requester + reviewer info
    */
-  getLogs: handicapperProcedure
+  getLogs: betTrackerProcedure
     .input(z.object({
       limit:  z.number().int().positive().max(500).default(200),
       offset: z.number().int().min(0).default(0),
@@ -888,7 +907,7 @@ export const betTrackerRouter = router({
    * Served from in-memory cache (5-min TTL) after server pre-warm.
    * Returns normalized SlateGame[] sorted by start time ASC.
    */
-  getSlate: handicapperProcedure
+  getSlate: betTrackerProcedure
     .input(z.object({
       sport:    z.enum(["MLB", "NBA", "NHL", "NCAAM"]),
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -926,7 +945,7 @@ export const betTrackerRouter = router({
    * Fetches official league scores and deterministically grades each bet.
    * Returns a summary of how many bets were graded and their results.
    */
-  autoGrade: handicapperProcedure
+  autoGrade: betTrackerProcedure
     .input(z.object({
       sport:    z.enum(SPORTS).optional(),
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -1014,7 +1033,7 @@ export const betTrackerRouter = router({
    * autoGradeAll — OWNER/ADMIN only: grade ALL users' PENDING bets for a given date.
    * Used by the scheduled background job.
    */
-  autoGradeAll: handicapperProcedure
+  autoGradeAll: betTrackerProcedure
     .input(z.object({
       gameDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     }))
@@ -1102,7 +1121,7 @@ export const betTrackerRouter = router({
    *   Minus-money bets: toWin = unit count
    *   Buckets: 10U, 5U, 4U, 3U, 2U, 1U
    */
-  getStats: handicapperProcedure
+  getStats: betTrackerProcedure
     .input(z.object({
       sport:         z.enum(SPORTS).optional(),
       gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -1323,7 +1342,7 @@ export const betTrackerRouter = router({
    *   - In-memory aggregation over the same row set (no second scan)
    *   - Compression reduces payload 70-85% over the wire
    */
-  listWithStats: handicapperProcedure
+  listWithStats: betTrackerProcedure
     .input(z.object({
       sport:         z.enum(SPORTS).optional(),
       gameDate:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -1659,7 +1678,7 @@ export const betTrackerRouter = router({
    * Calls the official MLB Stats API: https://statsapi.mlb.com/api/v1/schedule
    * Returns a map keyed by gamePk with innings array + R/H/E totals + status.
    */
-  getLinescores: handicapperProcedure
+  getLinescores: betTrackerProcedure
     .input(z.object({
       sport:  z.literal("MLB"),
       dates:  z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(14),
@@ -1810,7 +1829,7 @@ export const betTrackerRouter = router({
    *     getNextPageParam: (last) => last.nextCursor,
    *   })
    */
-  listWithStatsPaginated: handicapperProcedure
+  listWithStatsPaginated: betTrackerProcedure
     .input(z.object({
       sport:        z.enum(SPORTS).optional(),
       gameDate:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -2098,7 +2117,7 @@ export const betTrackerRouter = router({
    *   days: Array<{ date: string; units: number; wins: number; losses: number; pushes: number; pending: number }>
    *   monthRecord: { wins: number; losses: number; pushes: number; netUnits: number }
    */
-  getCalendarData: handicapperProcedure
+  getCalendarData: betTrackerProcedure
     .input(z.object({
       /** YYYY-MM — the month to compute calendar data for */
       yearMonth:    z.string().regex(/^\d{4}-\d{2}$/),
