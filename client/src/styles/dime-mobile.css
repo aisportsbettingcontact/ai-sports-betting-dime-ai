@@ -409,4 +409,164 @@ html.dark {
       transition: none !important;
     }
   }
+
+  /* ── Bet Tracker (/bet-tracker + shell tracker pane) ──────────────────────
+   * BetTracker.tsx / BetTrackerAnalytics.tsx / BetCalendar.tsx consume
+   * var(--bt-*, <legacy literal>) — undefined on desktop (pixel-identical
+   * fallbacks), mapped to the Dime tokens here on mobile. Canvas charts
+   * resolve the same vars at draw time. */
+  :root {
+    --bt-base: var(--dime-bg);
+    --bt-card: var(--dime-surface-card);
+    --bt-hover: var(--dime-row-hover);
+    --bt-border: var(--dime-border);
+    --bt-border2: var(--dime-border-strong);
+    --bt-green: var(--dime-mint-text);
+    --bt-red: var(--dime-text-secondary); /* negative = grey, never red */
+    --bt-gold: var(--dime-mint); /* ATH markers: signal, not gold */
+    --bt-grade-b: var(--dime-text-primary);
+    --bt-grade-c: var(--dime-text-secondary);
+    --bt-dim: var(--dime-text-muted);
+    --bt-dimmer: var(--dime-surface-raised);
+    --bt-label: var(--dime-text-muted);
+    --bt-text: var(--dime-text-body);
+    --bt-text-body: var(--dime-text-body);
+    --bt-text-dim: var(--dime-text-secondary);
+    --bt-text-muted: var(--dime-text-muted);
+    --bt-text-faint: var(--dime-text-muted);
+    --bt-strong: var(--dime-text-primary);
+    --bt-cell-empty: var(--dime-surface-raised);
+    --bt-cell-empty-border: var(--dime-border);
+    --bt-mono: var(--dime-font-mono);
+    --bt-sans: var(--dime-font-sans);
+  }
+
+  .bt-page {
+    background: var(--dime-bg) !important;
+    color: var(--dime-text-primary);
+    min-height: 100dvh;
+  }
+  .bt-page header {
+    background: var(--dime-surface-sidebar) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-bottom: 1px solid var(--dime-border) !important;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Tailwind mass-mapping: the page styles itself with zinc/emerald/green/
+   * red/yellow utilities — remap whole families onto the brand tokens. */
+  .bt-page [class*="text-emerald-"],
+  .bt-page [class*="text-green-"],
+  .bt-page [class*="text-lime-"] {
+    color: var(--dime-mint-text) !important;
+  }
+  .bt-page [class*="text-red-"] {
+    color: var(--dime-text-secondary) !important;
+  }
+  .bt-page [class*="text-yellow-"],
+  .bt-page [class*="text-amber-"],
+  .bt-page [class*="text-blue-"] {
+    color: var(--dime-text-body) !important;
+  }
+  .bt-page .bg-emerald-500 {
+    background-color: var(--dime-mint) !important;
+  }
+  .bt-page .bg-emerald-500,
+  .bt-page .bg-emerald-500 * {
+    color: #0b0b0f !important;
+  }
+  .bt-page [class*="bg-emerald-500/"],
+  .bt-page [class*="bg-green-500/"],
+  .bt-page [class*="bg-emerald-400/"] {
+    background-color: var(--dime-mint-dim) !important;
+  }
+  .bt-page [class*="border-emerald-400"] {
+    border-color: var(--dime-mint) !important;
+  }
+  .bt-page [class*="border-emerald-5"],
+  .bt-page [class*="border-green-"] {
+    border-color: var(--dime-mint-border) !important;
+  }
+  .bt-page [class*="bg-yellow-"],
+  .bt-page [class*="bg-amber-"],
+  .bt-page [class*="bg-blue-"],
+  .bt-page [class*="bg-red-"] {
+    background-color: var(--dime-surface-raised) !important;
+  }
+  .bt-page [class*="border-yellow-"],
+  .bt-page [class*="border-amber-"],
+  .bt-page [class*="border-blue-"],
+  .bt-page [class*="border-red-"] {
+    border-color: var(--dime-border-strong) !important;
+  }
+  .bt-page [class*="bg-zinc-950"] {
+    background-color: var(--dime-bg) !important;
+  }
+  .bt-page [class*="bg-zinc-900"] {
+    background-color: var(--dime-surface-card) !important;
+  }
+  .bt-page [class*="bg-zinc-800"],
+  .bt-page [class*="bg-zinc-700"] {
+    background-color: var(--dime-surface-raised) !important;
+  }
+  .bt-page [class*="hover:bg-zinc-"]:hover {
+    background-color: var(--dime-row-hover) !important;
+  }
+  .bt-page [class*="border-zinc-"] {
+    border-color: var(--dime-border) !important;
+  }
+  .bt-page [class*="text-zinc-1"],
+  .bt-page [class*="text-zinc-2"],
+  .bt-page [class*="text-zinc-3"],
+  .bt-page .text-white {
+    color: var(--dime-text-body) !important;
+  }
+  .bt-page [class*="text-zinc-4"] {
+    color: var(--dime-text-secondary) !important;
+  }
+  .bt-page [class*="text-zinc-5"],
+  .bt-page [class*="text-zinc-6"] {
+    color: var(--dime-text-muted) !important;
+  }
+  .bt-page [class*="bg-white/"] {
+    background-color: var(--dime-surface-card) !important;
+  }
+  .bt-page [class*="border-white/"] {
+    border-color: var(--dime-border) !important;
+  }
+  /* Headline text (title, stat values) reads primary, not body grey. */
+  .bt-page .font-bold.text-white,
+  .bt-page .font-black.text-white,
+  .bt-page .bt-title {
+    color: var(--dime-text-primary) !important;
+  }
+  /* 390px header: the row is crowded — the decorative trend icon yields,
+   * the title drops a size, and the row tightens so nothing clips. */
+  .bt-page .bt-trend {
+    display: none;
+  }
+  .bt-page .bt-title {
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .bt-page header .h-14 {
+    gap: 8px;
+  }
+
+  /* One motion curve; visible focus; no neon glows. */
+  .bt-page [class*="transition"] {
+    transition-duration: var(--dime-t) !important;
+    transition-timing-function: var(--dime-ease) !important;
+  }
+  .bt-page :is(button, a, [tabindex]):focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 3px var(--dime-ring) !important;
+    border-radius: 8px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bt-page * {
+      transition: none !important;
+    }
+  }
 }
