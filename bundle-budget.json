@@ -1,0 +1,6 @@
+{
+  "metric": "chat-critical-path-gzip-bytes",
+  "baselineCommit": "7dcbd369",
+  "baselineBytes": 202323,
+  "allowanceBytes": 5120
+}
