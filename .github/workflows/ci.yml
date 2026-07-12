@@ -351,3 +351,6 @@ jobs:
 
       - name: "[VERIFY] Preview activation is dead in production output"
         run: node scripts/verify-preview-production.mjs dist/public
+
+      - name: "[VERIFY] Bundle budget"
+        run: pnpm run check:bundle
