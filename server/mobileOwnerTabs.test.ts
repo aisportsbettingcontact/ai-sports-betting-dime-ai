@@ -15,6 +15,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   MOBILE_OWNER_TABS,
   MOBILE_OWNER_TABS_ENABLED,
+  MOBILE_OWNER_TABS_PUBLIC_ENABLED,
+  MOBILE_OWNER_TABS_DEBUG_PANEL,
   decideMobileOwnerAccess,
 } from "../client/src/features/mobileOwnerTabs/config";
 
@@ -66,23 +68,34 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
   });
 });
 
-describe("Mobile Owner Tabs — Access Decision Logic", () => {
-  it("should grant access to owner role", () => {
+// ─── Public rollout (2026-07-12) ─────────────────────────────────────────────
+// The bottom tab bar ships to EVERY authenticated mobile user: the owner asked
+// for Feed | Splits | Chat | Props | Profile on all mobile devices, so
+// MOBILE_OWNER_TABS_PUBLIC_ENABLED is now the deliberate steady state and the
+// public grant fires before the owner check. Authentication is still required,
+// and the debug overlay must stay off for public users.
+describe("Mobile Owner Tabs — Access Decision Logic (public rollout)", () => {
+  it("pins the public flag on and the debug panel off", () => {
+    expect(MOBILE_OWNER_TABS_PUBLIC_ENABLED).toBe(true);
+    expect(MOBILE_OWNER_TABS_DEBUG_PANEL).toBe(false);
+  });
+
+  it("grants the owner role via the public rule", () => {
     const result = decideMobileOwnerAccess("owner", true, true);
     expect(result.granted).toBe(true);
-    if (result.granted) expect(result.reason).toBe("owner");
+    if (result.granted) expect(result.reason).toBe("public");
   });
 
-  it("should deny access to regular user role", () => {
+  it("grants regular authenticated users", () => {
     const result = decideMobileOwnerAccess("user", true, true);
-    expect(result.granted).toBe(false);
-    if (!result.granted) expect(result.reason).toBe("not_owner");
+    expect(result.granted).toBe(true);
+    if (result.granted) expect(result.reason).toBe("public");
   });
 
-  it("should deny access to admin role (not owner)", () => {
+  it("grants admin users", () => {
     const result = decideMobileOwnerAccess("admin", true, true);
-    expect(result.granted).toBe(false);
-    if (!result.granted) expect(result.reason).toBe("not_owner");
+    expect(result.granted).toBe(true);
+    if (result.granted) expect(result.reason).toBe("public");
   });
 
   it("should deny access to unauthenticated users", () => {
@@ -91,16 +104,16 @@ describe("Mobile Owner Tabs — Access Decision Logic", () => {
     if (!result.granted) expect(result.reason).toBe("not_authenticated");
   });
 
-  it("should deny access when user role is undefined", () => {
+  it("grants authenticated users even when the role is undefined", () => {
     const result = decideMobileOwnerAccess(undefined, true, true);
-    expect(result.granted).toBe(false);
-    if (!result.granted) expect(result.reason).toBe("not_owner");
+    expect(result.granted).toBe(true);
+    if (result.granted) expect(result.reason).toBe("public");
   });
 
-  it("should deny access to handicapper role", () => {
+  it("grants handicapper users", () => {
     const result = decideMobileOwnerAccess("handicapper", true, true);
-    expect(result.granted).toBe(false);
-    if (!result.granted) expect(result.reason).toBe("not_owner");
+    expect(result.granted).toBe(true);
+    if (result.granted) expect(result.reason).toBe("public");
   });
 });
 
@@ -214,28 +227,26 @@ describe("Mobile Owner Tabs — Tab Configuration Integrity", () => {
   });
 });
 
-describe("Mobile Owner Tabs — Global Mount Access Logic", () => {
-  it("owner on mobile should see tabs (global mount)", () => {
-    // Global mount uses useAppAuth which checks appUser.role === "owner"
-    // This simulates the same logic as GlobalMobileOwnerTabs
+describe("Mobile Owner Tabs — Global Mount Access Logic (public rollout)", () => {
+  it("owner on mobile sees tabs (global mount)", () => {
     const result = decideMobileOwnerAccess("owner", true, true);
     expect(result.granted).toBe(true);
-    if (result.granted) expect(result.reason).toBe("owner");
+    if (result.granted) expect(result.reason).toBe("public");
   });
 
-  it("normal user on mobile should NOT see tabs (global mount)", () => {
+  it("normal user on mobile sees tabs (global mount)", () => {
     const result = decideMobileOwnerAccess("user", true, true);
-    expect(result.granted).toBe(false);
+    expect(result.granted).toBe(true);
   });
 
-  it("admin on mobile should NOT see tabs (global mount)", () => {
+  it("admin on mobile sees tabs (global mount)", () => {
     const result = decideMobileOwnerAccess("admin", true, true);
-    expect(result.granted).toBe(false);
+    expect(result.granted).toBe(true);
   });
 
-  it("handicapper on mobile should NOT see tabs (global mount)", () => {
+  it("handicapper on mobile sees tabs (global mount)", () => {
     const result = decideMobileOwnerAccess("handicapper", true, true);
-    expect(result.granted).toBe(false);
+    expect(result.granted).toBe(true);
   });
 
   it("logged-out user should NOT see tabs", () => {
