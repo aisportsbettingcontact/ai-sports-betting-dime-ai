@@ -56,6 +56,7 @@ import {
 } from "./recentChats";
 import {
   classifyPointerIntent,
+  resolveDrawerAccessibility,
   resolveDrawerTarget,
   rubberBand,
 } from "./drawerMotion";
@@ -839,7 +840,15 @@ export default function DimeChatPage({
         setDrawerMoving(false);
         if (target < 0) {
           setDrawerOpen(false);
-          if (restoreFocus) menuButtonRef.current?.focus();
+          // Defer to a frame: under reduceMotion this `finish()` runs
+          // synchronously inside the same tick as the triggering event
+          // (e.g. the Escape keydown handler), *before* React commits
+          // `drawerOpen: false` and the modal-semantics effect below lifts
+          // `inert` off the mobile bar. Calling `.focus()` on an element
+          // that is still inert at that instant is a silent no-op, so
+          // focus never actually reaches the trigger.
+          if (restoreFocus)
+            requestAnimationFrame(() => menuButtonRef.current?.focus());
         } else {
           setDrawerOpen(true);
         }
@@ -870,7 +879,10 @@ export default function DimeChatPage({
     setDrawerMoving(false);
     const closed = drawerTargetRef.current < 0;
     setDrawerOpen(!closed);
-    if (closed && drawerRestoreFocusRef.current) menuButtonRef.current?.focus();
+    // Same inert/focus race as settleDrawer's `finish()` above — defer so
+    // this runs after the modal-semantics effect lifts `inert`.
+    if (closed && drawerRestoreFocusRef.current)
+      requestAnimationFrame(() => menuButtonRef.current?.focus());
   }, [drawerX, reduceMotion]);
 
   const openDrawer = useCallback(() => {
@@ -897,10 +909,29 @@ export default function DimeChatPage({
       return;
     }
 
+    // [PR #70 REMEDIATION 2026-07-12] `main.inert`/`mobileBar.inert` used to
+    // mirror `drawerOpen` directly. Under reduced motion, the (now-gated)
+    // gesture path could previously flip `drawerOpen` true while the drawer
+    // was still fully off-screen, freezing the background behind an
+    // invisible drawer. `resolveDrawerAccessibility` (drawerMotion.ts)
+    // encodes the corrected rule and is unit-tested against the full truth
+    // table, including that exact regression.
+    const width = drawerWidthRef.current;
+    const drawerVisibleFraction =
+      width > 0 ? (drawerX.get() + width) / width : 0;
+    const { mainInert, trapFocus } = resolveDrawerAccessibility({
+      drawerOpen,
+      drawerMoving,
+      drawerVisibleFraction,
+      // useReducedMotion() is `boolean | null` (null before the media query
+      // resolves) — treat "unresolved" the same as "no preference" (false).
+      reduceMotion: !!reduceMotion,
+    });
+
     if (sidebar) sidebar.inert = !drawerOpen;
-    if (main) main.inert = drawerOpen;
-    if (mobileBar) mobileBar.inert = drawerOpen;
-    if (!drawerOpen || drawerMoving || !sidebar) return;
+    if (main) main.inert = mainInert;
+    if (mobileBar) mobileBar.inert = mainInert;
+    if (!trapFocus || !sidebar) return;
 
     const focusables = () =>
       Array.from(
@@ -933,7 +964,7 @@ export default function DimeChatPage({
       cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKey);
     };
-  }, [compact, drawerOpen, drawerMoving, closeDrawer]);
+  }, [compact, drawerOpen, drawerMoving, reduceMotion, drawerX, closeDrawer]);
 
   useEffect(() => {
     if (!shell) return;
@@ -945,6 +976,14 @@ export default function DimeChatPage({
   const beginDrawerGesture = useCallback(
     (event: ReactPointerEvent<HTMLElement>, requireIntent: boolean) => {
       if (event.button !== 0) return;
+      // [PR #70 REMEDIATION 2026-07-12] Under reduced motion the drawer
+      // opens/closes ONLY via its button and keyboard — gestures must never
+      // claim the pointer for drawer purposes. Refusing to start a gesture
+      // here (rather than only gating the later `drawerX.set(...)` visual
+      // write, as before) keeps `drawerOpen`/`drawerMoving` from ever
+      // flipping true mid-swipe while the drawer stays off-screen, and lets
+      // the 24px edge strip fall through as an ordinary scroll/no-op.
+      if (reduceMotion) return;
       drawerAnimationGenerationRef.current++;
       drawerAnimationRef.current?.stop();
       drawerAnimationRef.current = null;
@@ -966,7 +1005,7 @@ export default function DimeChatPage({
         setDrawerMoving(true);
       }
     },
-    [drawerX]
+    [drawerX, reduceMotion]
   );
 
   const moveDrawerGesture = useCallback(
