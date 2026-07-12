@@ -141,3 +141,7 @@ dime-ai/.vercel-output/
 
 # Machine-specific Claude Code preferences (skill overrides etc.) — never share
 .claude/settings.local.json
+
+# Release-gate artifacts (generated)
+vitest-results.json
+env-gate-report.json

@@ -127,8 +127,14 @@ function safePreview(value: string): string {
 }
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
-// Presence-probes are scoped out of CI (secrets deliberately not configured
-// there) — run locally/operator-side to validate a real environment.
+// Skipped in CI because the repository does not actually configure the secret
+// set this file documents (verified 2026-07-12: 7 Actions secrets exist;
+// DATABASE_URL, PUBLIC_ORIGIN, NBA_SHEET_ID and the OAuth/Discord/VSIN values
+// are absent). Until those secrets are provisioned this suite can only
+// validate a real operator environment; once they exist, remove this guard so
+// the suite becomes the CI canary its header describes. The skip is declared
+// in vitest.environment-failure-allowlist.json (expectedCiSkips) and enforced
+// by scripts/check-environment-failures.mjs.
 describe.skipIf(IS_CI)("CI secrets validation", () => {
   it("All required GitHub Actions secrets are present and correctly formatted", () => {
     console.log("[INPUT] Validating CI secrets in test environment...");
