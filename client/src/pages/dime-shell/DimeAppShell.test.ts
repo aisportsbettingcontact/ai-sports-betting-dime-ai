@@ -176,26 +176,30 @@ describe("DimeAppShell integration contract", () => {
     expect(chatSource).toMatch(/aria-hidden=\{!externalActive\}/);
   });
 
-  it.each([768, 1024, 1440])(
-    "exposes exactly one h1 for every pane at %ipx",
-    width => {
-      expect(width).toBeGreaterThanOrEqual(768);
-      expect(chatSource.match(/<h1\b/g)).toHaveLength(2);
-      expect(chatSource).toMatch(
-        /<main[\s\S]*?aria-hidden=\{shell && !chatActive \? true : undefined\}[\s\S]*?<h1[\s\S]*?>\s*Dime Chat\s*<\/h1>/
-      );
-      expect(chatSource).toMatch(
-        /<section[\s\S]*?aria-hidden=\{!externalActive\}[\s\S]*?<h1[\s\S]*?>[\s\S]*?\{shell\.paneHeading\}[\s\S]*?<\/h1>/
-      );
-
-      for (const pane of ["chat", "feed", "splits", "tracker"] as const) {
-        const exposedHeadings = [pane === "chat", pane !== "chat"].filter(
-          Boolean
-        );
-        expect(exposedHeadings, `${width}px ${pane}`).toHaveLength(1);
-      }
-    }
-  );
+  // [PR #70 REMEDIATION 2026-07-12] Replaced an it.each([768,1024,1440])
+  // whose per-pane loop asserted `[pane==="chat", pane!=="chat"]` filters to
+  // one true — a tautology that passes for any source whatsoever. A
+  // source-shape test also cannot vary by viewport width, so the width
+  // parametrization asserted nothing either. The falsifiable contract is
+  // that both pane-exposure flags derive as exact complements of the SAME
+  // discriminator (shell.renderedPane === "chat"), pinned verbatim below:
+  // fork either derivation (different state, flipped comparison) and this
+  // fails. Runtime single-h1 exposure per width is e2e territory.
+  it("derives chat/external heading exposure as exact complements of renderedPane", () => {
+    expect(chatSource.match(/<h1\b/g)).toHaveLength(2);
+    expect(chatSource).toMatch(
+      /<main[\s\S]*?aria-hidden=\{shell && !chatActive \? true : undefined\}[\s\S]*?<h1[\s\S]*?>\s*Dime Chat\s*<\/h1>/
+    );
+    expect(chatSource).toMatch(
+      /<section[\s\S]*?aria-hidden=\{!externalActive\}[\s\S]*?<h1[\s\S]*?>[\s\S]*?\{shell\.paneHeading\}[\s\S]*?<\/h1>/
+    );
+    expect(chatSource).toContain(
+      'const chatActive = !shell || shell.renderedPane === "chat";'
+    );
+    expect(chatSource).toContain(
+      'const externalActive = !!shell && shell.renderedPane !== "chat";'
+    );
+  });
 
   it("embeds feed with chrome suppression and tracker wholesale", () => {
     expect(shellSource).toMatch(/<DimeModelFeed[\s\S]*embeddedInShell/);
