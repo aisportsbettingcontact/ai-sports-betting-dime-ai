@@ -14,15 +14,19 @@ import path from "path";
  *   2. OWNER RULES — crests/flags beside team labels, both sides per market,
  *      away-first row order, no legacy neon accent.
  *   3. ROUTES — both URL forms registered behind RequireAuth.
+ *   4. EMBEDDING — source-level structural serialization removes exactly the
+ *      `nav.dmf-nav` subtree when `embeddedInShell=true`. The exclusion list is
+ *      limited to that nav subtree; shell wrappers live outside this component.
+ *      Crest/flag nodes and their props are not excluded and remain guarded.
  */
 
 const src = fs.readFileSync(
   path.join(import.meta.dirname, "DimeModelFeed.tsx"),
-  "utf8",
+  "utf8"
 );
 const appSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "App.tsx"),
-  "utf8",
+  "utf8"
 );
 
 describe("DimeModelFeed — WC odds bindings (production contract)", () => {
@@ -33,26 +37,42 @@ describe("DimeModelFeed — WC odds bindings (production contract)", () => {
   });
 
   it("TO ADV binds away/home to their own to-advance values", () => {
-    expect(src).toMatch(/"To Adv",\s*\n\s*\{ label: awayCode, crest: awayCrest, book: dk\?\.toAdvanceAway/);
-    expect(src).toMatch(/\{ label: homeCode, crest: homeCrest, book: dk\?\.toAdvanceHome/);
+    expect(src).toMatch(
+      /"To Adv",\s*\n\s*\{ label: awayCode, crest: awayCrest, book: dk\?\.toAdvanceAway/
+    );
+    expect(src).toMatch(
+      /\{ label: homeCode, crest: homeCrest, book: dk\?\.toAdvanceHome/
+    );
   });
 
   it("DBL CHC: HOME WD on top (homeDrawOdds + home crest), AWAY WD bottom", () => {
-    expect(src).toMatch(/\{ label: "HOME WD", crest: homeCrest, book: dk\?\.homeDrawOdds/);
-    expect(src).toMatch(/\{ label: "AWAY WD", crest: awayCrest, book: dk\?\.awayDrawOdds/);
+    expect(src).toMatch(
+      /\{ label: "HOME WD", crest: homeCrest, book: dk\?\.homeDrawOdds/
+    );
+    expect(src).toMatch(
+      /\{ label: "AWAY WD", crest: awayCrest, book: dk\?\.awayDrawOdds/
+    );
     // HOME WD row must precede AWAY WD row.
-    expect(src.indexOf('label: "HOME WD"')).toBeLessThan(src.indexOf('label: "AWAY WD"'));
+    expect(src.indexOf('label: "HOME WD"')).toBeLessThan(
+      src.indexOf('label: "AWAY WD"')
+    );
   });
 
   it("DRAW top / NO DRAW bottom; BTTS YES top / NO bottom; O above U", () => {
-    expect(src.indexOf('label: "DRAW"')).toBeLessThan(src.indexOf('label: "NO DRAW"'));
-    expect(src.indexOf('label: "YES"')).toBeLessThan(src.indexOf('label: "NO",'));
+    expect(src.indexOf('label: "DRAW"')).toBeLessThan(
+      src.indexOf('label: "NO DRAW"')
+    );
+    expect(src.indexOf('label: "YES"')).toBeLessThan(
+      src.indexOf('label: "NO",')
+    );
     expect(src).toMatch(/label: `O \$\{totalLine\}`, book: dk\?\.overOdds/);
     expect(src).toMatch(/label: `U \$\{totalLine\}`, book: dk\?\.underOdds/);
   });
 
   it("SPREAD uses each side's own line and odds (away = awaySpreadLine/Odds)", () => {
-    expect(src).toMatch(/aLine != null \? `\$\{awayCode\} \$\{fmtLine\(aLine\)\}`/);
+    expect(src).toMatch(
+      /aLine != null \? `\$\{awayCode\} \$\{fmtLine\(aLine\)\}`/
+    );
     expect(src).toMatch(/book: dk\?\.awaySpreadOdds \?\? null/);
     expect(src).toMatch(/book: dk\?\.homeSpreadOdds \?\? null/);
   });
@@ -96,6 +116,14 @@ describe("DimeModelFeed — owner rules", () => {
     expect(src).toMatch(/<Crest c=\{v\.crest\} size=\{18\}/);
   });
 
+  it("RULE 2 zero-diff: embedding does not branch or alter crest/flag rendering", () => {
+    expect(src.match(/function Crest\(/g)).toHaveLength(1);
+    expect(src.match(/<Crest c=\{/g)).toHaveLength(4);
+    expect(src).not.toMatch(
+      /embeddedInShell[^\n]*(?:crest|flag)|(?:crest|flag)[^\n]*embeddedInShell/i
+    );
+  });
+
   it("RULE 3: every market renders BOTH sides via twoWayCol(top, bottom)", () => {
     expect(src).toMatch(/function twoWayCol\(/);
     // WC card carries all 7 markets in production order.
@@ -125,12 +153,41 @@ describe("DimeModelFeed — routes", () => {
   });
 
   it("bare /feed/model/:sport canonicalizes to today's dated URL (history replace)", () => {
-    expect(src).toMatch(/if \(!date\) return \{ sport: sportCode, isoDate: null \}/);
-    expect(src).toMatch(/navigate\(feedModelPath\(sport\), \{ replace: true \}\)/);
+    expect(src).toMatch(
+      /if \(!date\) return \{ sport: sportCode, isoDate: null \}/
+    );
+    expect(src).toMatch(
+      /navigate\(feedModelPath\(sport\), \{ replace: true \}\)/
+    );
   });
 
   it("in-page navigation builds URLs through the canonical feedModelPath helper", () => {
     expect(src).toMatch(/from "@\/lib\/feedRoutes"/);
     expect(src).toMatch(/navigate\(feedModelPath\(nextSport, nextIso\)\)/);
+  });
+});
+
+describe("DimeModelFeed — unified shell embedding", () => {
+  it("accepts an optional embeddedInShell prop", () => {
+    expect(src).toMatch(
+      /export interface DimeModelFeedProps[\s\S]*embeddedInShell\?: boolean/
+    );
+    expect(src).toMatch(/function DimeModelFeed\(props: DimeModelFeedProps\)/);
+  });
+
+  it("suppresses only the duplicate dmf-nav subtree when embedded", () => {
+    expect(src).toMatch(
+      /!props\.embeddedInShell && \(\s*<nav className="dmf-nav"/
+    );
+    expect(src.match(/<nav className="dmf-nav"/g)).toHaveLength(1);
+    expect(src).toMatch(/<div className="dmf-topbar">/);
+    expect(src).toMatch(/<button\s+className="dmf-themebtn"/);
+  });
+
+  it("has no existing h1, so the shell may inject the sole sr-only focus heading", () => {
+    expect(src).not.toMatch(/<h1\b/);
+    expect(src).toMatch(
+      /<span className="dmf-toptitle">AI Model Projections<\/span>/
+    );
   });
 });

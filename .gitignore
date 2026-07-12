@@ -138,3 +138,6 @@ schema_alignment_findings.md
 
 # Vercel misrooted-project workaround build output (dime-ai/vercel.json)
 dime-ai/.vercel-output/
+
+# Machine-specific Claude Code preferences (skill overrides etc.) — never share
+.claude/settings.local.json
