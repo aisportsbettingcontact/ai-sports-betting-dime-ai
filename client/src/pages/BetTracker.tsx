@@ -2644,13 +2644,22 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
   }
 
   if (!canAccess) {
+    // Pre-launch screen (product requirement 2026-07-12): users without
+    // tracker access see the Dime wordmark with the coming-soon line.
     return (
-      <div className="bt-page min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-        <div className="text-center space-y-3">
-          <AlertCircle className="mx-auto text-red-400" size={32} />
-          <p className="text-white font-bold">Access Restricted</p>
-          <p className="text-zinc-300 text-sm">Bet Tracker is available to Handicappers, Admins, and Owners only.</p>
-          <button type="button" onClick={() => navigate("/")} className="text-emerald-400 text-sm underline">Go back</button>
+      <div
+        className="bt-page min-h-screen bg-zinc-950 flex items-center justify-center px-4"
+        data-testid="bet-tracker-coming-soon"
+      >
+        <div className="text-center">
+          <img
+            src="/brand/dime-wordmark-on-dark.svg"
+            alt="Dime"
+            className="mx-auto h-14 w-auto sm:h-16"
+          />
+          <p className="mt-6 text-sm sm:text-base font-bold tracking-[0.28em] text-white">
+            Bet Tracker Coming Soon
+          </p>
         </div>
       </div>
     );

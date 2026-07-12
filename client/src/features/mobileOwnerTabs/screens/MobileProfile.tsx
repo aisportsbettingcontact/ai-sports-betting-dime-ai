@@ -5,11 +5,17 @@
  */
 import { useEffect } from "react";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { trpc } from "@/lib/trpc";
 import { mobileOwnerTabLogger } from "../logger";
 import { User, Crown, Shield, CreditCard, LogOut, Settings, ChevronRight } from "lucide-react";
 
 export function MobileProfile() {
   const { appUser, loading } = useAppAuth();
+  const logoutMutation = trpc.appUsers.logout.useMutation({
+    onSettled: () => {
+      window.location.href = "/";
+    },
+  });
 
   useEffect(() => {
     if (!loading && appUser) {
@@ -137,14 +143,19 @@ export function MobileProfile() {
         <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-3">Quick Actions</p>
         <div className="space-y-2">
           {[
-            { icon: Shield, label: "Admin Panel", desc: "Manage users & data", color: "text-purple-400" },
-            { icon: Settings, label: "Settings", desc: "App preferences", color: "text-zinc-400" },
-            { icon: LogOut, label: "Sign Out", desc: "End session", color: "text-red-400" },
+            { icon: Shield, label: "Admin Panel", desc: "Manage users & data", color: "text-purple-400", href: "/admin/users" },
+            { icon: Settings, label: "Settings", desc: "App preferences", color: "text-zinc-400", href: "/account" },
+            { icon: LogOut, label: "Sign Out", desc: "End session", color: "text-red-400", href: null },
           ].map((action) => (
             <button
               key={action.label}
               className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/30 hover:border-zinc-700 transition-all active:scale-[0.98]"
-              onClick={() => mobileOwnerTabLogger.log("profile_action", "profile", { action: action.label })}
+              onClick={() => {
+                mobileOwnerTabLogger.log("profile_action", "profile", { action: action.label });
+                // [LOGIN FIX 2026-07-12] These were log-only dead buttons.
+                if (action.label === "Sign Out") logoutMutation.mutate();
+                else if (action.href) window.location.assign(action.href);
+              }}
             >
               <action.icon className={`w-4 h-4 ${action.color}`} />
               <div className="flex-1 text-left">

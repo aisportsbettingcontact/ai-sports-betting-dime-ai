@@ -24,7 +24,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   AnimatePresence,
   LazyMotion,
@@ -38,6 +38,8 @@ import {
   type MotionStyle,
 } from "framer-motion";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { trpc } from "@/lib/trpc";
 import {
   chatReducer,
   initialChatState,
@@ -49,11 +51,6 @@ import {
   segmentNumerals,
   type EdgeBlock,
 } from "./edgeParser";
-import {
-  addSessionRecent,
-  getSessionRecents,
-  type RecentChat,
-} from "./recentChats";
 import {
   classifyPointerIntent,
   resolveDrawerTarget,
@@ -109,6 +106,83 @@ const ERROR_COPY =
   "Dime couldn't reach the model. Your message is saved above."; // spec §4
 const DISCLAIMER =
   "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
+// Non-owners never see the composer or prompt pills — only this copy under the
+// Dime wordmark (product requirement 2026-07-12).
+const CHAT_COMING_SOON_COPY = "AI MODEL CHAT COMING SOON";
+
+/* ----------------------------------------------------------------- */
+/* Session identity — real logged-in user (replaces the frozen sample) */
+/* ----------------------------------------------------------------- */
+
+/** Minimal slice of appUsers.me consumed by the sidebar identity UI. */
+interface SessionIdentity {
+  username: string;
+  role: string;
+  expiryDate: number | null;
+  stripePlanId: string | null;
+  discordId: string | null;
+  discordUsername: string | null;
+  discordAvatar: string | null;
+}
+
+/** Repo convention (ManageAccount.tsx): null expiry or 'lifetime' plan = Lifetime. */
+function isLifetimeMember(u: SessionIdentity): boolean {
+  return !u.expiryDate || u.stripePlanId === "lifetime";
+}
+
+function tierLabel(u: SessionIdentity): string {
+  if (u.role === "owner") return "Owner";
+  if (isLifetimeMember(u)) return "Lifetime";
+  if (u.stripePlanId) return "Pro";
+  return "Member";
+}
+
+/** Blank silhouette avatar (generic gray profile) for users with no Discord avatar. */
+const BLANK_AVATAR_URI =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#B9BFC9"/><circle cx="32" cy="24" r="11" fill="#FFFFFF"/><path d="M10 58c3-13 12-19 22-19s19 6 22 19v6H10z" fill="#FFFFFF"/></svg>',
+  );
+
+/**
+ * Avatar priority: prez keeps his real photo; everyone else gets their Discord
+ * avatar when connected, otherwise the blank silhouette.
+ */
+function resolveAvatarSrc(u: SessionIdentity): string {
+  if (u.username.toLowerCase() === "prez") return avatarUrl;
+  if (u.discordId && u.discordAvatar) {
+    return `https://cdn.discordapp.com/avatars/${u.discordId}/${u.discordAvatar}.png?size=96`;
+  }
+  return BLANK_AVATAR_URI;
+}
+
+function formatExpiry(expiryDate: number): string {
+  return new Date(expiryDate).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** Stored-thread summary rendered in the sidebar Recent Chats list. */
+interface ThreadSummary {
+  id: number;
+  title: string;
+  starred: boolean;
+}
+
+function ChatComingSoon({ theme }: { theme: Theme }) {
+  return (
+    <div className="dc-coming-soon" data-testid="chat-coming-soon">
+      <img
+        className="dc-coming-soon-mark"
+        src={theme === "light" ? "/brand/dime-wordmark-on-light.svg" : "/brand/dime-wordmark-on-dark.svg"}
+        alt="Dime"
+      />
+      <p className="dc-coming-soon-copy">{CHAT_COMING_SOON_COPY}</p>
+    </div>
+  );
+}
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -180,6 +254,9 @@ const GEAR_PATH =
 function DimeSidebar({
   onNewChat,
   recentChats,
+  onOpenChat,
+  activeChatId,
+  appUser,
   compact,
   drawerOpen,
   drawerStyle,
@@ -190,7 +267,10 @@ function DimeSidebar({
   onShellNavigate,
 }: {
   onNewChat: () => void;
-  recentChats: RecentChat[];
+  recentChats: ThreadSummary[];
+  onOpenChat: (threadId: number) => void;
+  activeChatId: number | null;
+  appUser: SessionIdentity | null;
   compact: boolean;
   drawerOpen: boolean;
   drawerStyle?: MotionStyle;
@@ -203,6 +283,24 @@ function DimeSidebar({
   const [menuOpen, setMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
+  const [, navigate] = useLocation();
+
+  const logoutMutation = trpc.appUsers.logout.useMutation({
+    onSettled: () => {
+      // Hard reload: clears every cached query so the next session starts clean.
+      window.location.href = "/";
+    },
+  });
+
+  const goTo = (href: string) => {
+    setMenuOpen(false);
+    onNavigate();
+    navigate(href);
+  };
+
+  const lifetime = appUser ? isLifetimeMember(appUser) : false;
+  const avatarSrc = appUser ? resolveAvatarSrc(appUser) : BLANK_AVATAR_URI;
+  const displayName = appUser ? appUser.username.toUpperCase() : "—";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -290,32 +388,39 @@ function DimeSidebar({
               <a
                 key={rc.id}
                 href="#"
-                className="dc-sidebar-row"
+                className={`dc-sidebar-row${rc.id === activeChatId ? " is-active" : ""}`}
+                aria-current={rc.id === activeChatId ? "true" : undefined}
                 onClick={event => {
                   event.preventDefault();
+                  onOpenChat(rc.id);
                   onNavigate();
                 }}
               >
+                {rc.starred && (
+                  <span className="dc-recent-star" aria-label="Starred">
+                    ★
+                  </span>
+                )}
                 <span className="dc-sidebar-text">{rc.title}</span>
               </a>
             ))}
           </div>
         </>
       ) : (
-        // No conversations yet this session: hide the whole section (honesty —
-        // an empty frozen shell must not render). The spacer takes over the
-        // recent list's flex: 1 slot (D/L:65) so the profile row stays pinned.
+        // No stored conversations: hide the whole section (honesty — an empty
+        // frozen shell must not render). The spacer takes over the recent
+        // list's flex: 1 slot (D/L:65) so the profile row stays pinned.
         <div className="dc-sidebar-spacer" />
       )}
       <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
-        {/* FROZEN SAMPLE IDENTITY — product-wiring decision pending. */}
-        <img className="dc-avatar" src={avatarUrl} alt="PREZ BETS" />
+        {/* Live session identity — wired to appUsers.me via useAppAuth. */}
+        <img className="dc-avatar" src={avatarSrc} alt={displayName} />
         <div className="dc-profile-id">
-          <div className="dc-profile-name">PREZ BETS</div>
-          <div className="dc-profile-tier">Pro</div>
+          <div className="dc-profile-name">{displayName}</div>
+          <div className="dc-profile-tier">{appUser ? tierLabel(appUser) : ""}</div>
         </div>
         <AnimatePresence initial={false}>
-          {menuOpen && (
+          {menuOpen && appUser && (
             <m.div
               key="settings-menu"
               className="dc-settings-menu open"
@@ -330,36 +435,48 @@ function DimeSidebar({
               onClick={e => e.stopPropagation()}
             >
               <div className="dc-menu-header">
-                <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
+                <img className="dc-avatar--menu" src={avatarSrc} alt={`@${appUser.username}`} />
                 <div className="dc-menu-id">
                   <div className="dc-menu-handle-row">
-                    <div className="dc-menu-handle">@prez</div>
-                    <div className="dc-badge-pro">PRO</div>
+                    <div className="dc-menu-handle">@{appUser.username}</div>
+                    <div className="dc-badge-pro">{tierLabel(appUser).toUpperCase()}</div>
                   </div>
-                  <div className="dc-menu-expiry">Expires August 8, 2026</div>
+                  <div className="dc-menu-expiry">
+                    {lifetime
+                      ? "Lifetime access"
+                      : appUser.expiryDate
+                        ? `Expires ${formatExpiry(appUser.expiryDate)}`
+                        : ""}
+                  </div>
                 </div>
               </div>
-              <div className="dc-menu-cta-row">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
-                >
-                  Upgrade Membership
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
-                >
-                  Cancel Membership
-                </button>
-              </div>
+              {/* Lifetime members have nothing to upgrade or cancel. */}
+              {!lifetime && (
+                <div className="dc-menu-cta-row">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
+                    onClick={() => goTo("/checkout")}
+                  >
+                    Upgrade Membership
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
+                    onClick={() => goTo("/account")}
+                  >
+                    Cancel Membership
+                  </button>
+                </div>
+              )}
               <div className="dc-menu-divider" />
               <button
                 type="button"
                 role="menuitem"
                 className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                onClick={() => goTo("/profile")}
               >
                 Edit Profile
               </button>
@@ -367,16 +484,26 @@ function DimeSidebar({
                 type="button"
                 role="menuitem"
                 className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                onClick={() => goTo("/profile")}
               >
-                Discord Connected: <span className="dc-menu-accent">@prez</span>
+                {appUser.discordUsername ? (
+                  <>
+                    Discord Connected:{" "}
+                    <span className="dc-menu-accent">@{appUser.discordUsername}</span>
+                  </>
+                ) : (
+                  "Connect Discord"
+                )}
               </button>
               <div className="dc-menu-divider" />
               <button
                 type="button"
                 role="menuitem"
                 className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
+                disabled={logoutMutation.isPending}
+                onClick={() => logoutMutation.mutate()}
               >
-                Log Out
+                {logoutMutation.isPending ? "Logging out…" : "Log Out"}
               </button>
             </m.div>
           )}
@@ -709,14 +836,41 @@ export default function DimeChatPage({
     themeProp ?? (contextTheme === "light" ? "light" : "dark");
   const reduceMotion = useReducedMotion();
 
+  // Session identity + owner gate. While auth resolves we fail closed: no
+  // composer, no pills — non-owners only ever see the coming-soon state.
+  const { appUser, isOwner, loading: authLoading } = useAppAuth();
+  const chatUiReady = !!appUser && isOwner;
+
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
   const [ghost, setGhost] = useState<GhostRects | null>(null);
   const [stuck, setStuck] = useState(true);
   const [firstSendFx, setFirstSendFx] = useState(false);
-  const [recentChats, setRecentChats] = useState<RecentChat[]>(() =>
-    getSessionRecents()
+
+  // ── Persistent chat history (dimeChats router) ──────────────────────────
+  const utils = trpc.useUtils();
+  const threadsQuery = trpc.dimeChats.list.useQuery(undefined, {
+    enabled: chatUiReady,
+    staleTime: 15_000,
+  });
+  const recentChats: ThreadSummary[] = (threadsQuery.data ?? []).map(
+    (t: { id: number; title: string; starred: boolean }) => ({
+      id: t.id,
+      title: t.title,
+      starred: t.starred,
+    })
   );
+  const [threadId, setThreadId] = useState<number | null>(null);
+  const [threadMenuOpen, setThreadMenuOpen] = useState(false);
+  const threadMenuRef = useRef<HTMLDivElement | null>(null);
+  const pendingUserTextRef = useRef<string | null>(null);
+  const prevStreamingRef = useRef(false);
+  const createThreadMut = trpc.dimeChats.create.useMutation();
+  const appendMut = trpc.dimeChats.appendMessages.useMutation();
+  const setStarredMut = trpc.dimeChats.setStarred.useMutation();
+  const setArchivedMut = trpc.dimeChats.setArchived.useMutation();
+  const softDeleteMut = trpc.dimeChats.softDelete.useMutation();
+  const activeThreadMeta = recentChats.find(t => t.id === threadId);
   const [compact, setCompact] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -1159,16 +1313,16 @@ export default function DimeChatPage({
   /* --- Single submit choke point: composer, Enter, chips, all of it --- */
   const submit = useCallback(
     (text: string) => {
+      // Owner-only chat: non-owners have no composer, but keep the gate as a
+      // second line of defense for any programmatic call path.
+      if (!chatUiReady) return;
       const trimmed = text.trim();
       if (!trimmed || state.streaming) return;
 
+      // Persist this turn once the stream settles (see the effect below).
+      pendingUserTextRef.current = trimmed;
+
       const wasHome = state.messages.length === 0;
-      if (wasHome) {
-        // Ph1: a new conversation starts — record its session-only title from
-        // this first user message.
-        addSessionRecent(trimmed);
-        setRecentChats(getSessionRecents());
-      }
       if (wasHome) captureComposerPresentation();
       if (wasHome && !reduceMotion) {
         // FLIP first-position capture + ghost rects (spec §3.2)
@@ -1209,6 +1363,7 @@ export default function DimeChatPage({
       void runStream(history, assistantId);
     },
     [
+      chatUiReady,
       state.streaming,
       state.messages,
       runStream,
@@ -1238,12 +1393,147 @@ export default function DimeChatPage({
     activeBatcherRef.current?.dispose();
     activeBatcherRef.current = null;
     dispatch({ type: "reset" });
+    setThreadId(null);
+    setThreadMenuOpen(false);
+    pendingUserTextRef.current = null;
     setInput("");
     setGhost(null);
     setFirstSendFx(false);
     stuckRef.current = true;
     setStuck(true);
   }, [state.messages.length, captureComposerPresentation]);
+
+  /* --- Persist each settled turn to the dimeChats history (fire-and-forget:
+         storage failures never block the visible conversation). --- */
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = state.streaming;
+    if (!wasStreaming || state.streaming) return; // only on stream settle
+    if (!chatUiReady) return;
+
+    const last = state.messages[state.messages.length - 1];
+    if (!last || last.role !== "assistant" || last.content === "") return;
+
+    const userText = pendingUserTextRef.current;
+    pendingUserTextRef.current = null;
+    const assistantText = last.content;
+    const refreshList = () => void utils.dimeChats.list.invalidate();
+
+    if (threadId == null) {
+      if (!userText) return;
+      createThreadMut.mutate(
+        { firstMessage: userText },
+        {
+          onSuccess: ({ threadId: newId }) => {
+            setThreadId(newId);
+            appendMut.mutate(
+              { threadId: newId, messages: [{ role: "assistant", content: assistantText }] },
+              { onSettled: refreshList },
+            );
+          },
+        },
+      );
+    } else {
+      const turn = userText
+        ? [
+            { role: "user" as const, content: userText },
+            { role: "assistant" as const, content: assistantText },
+          ]
+        : [{ role: "assistant" as const, content: assistantText }];
+      appendMut.mutate({ threadId, messages: turn }, { onSettled: refreshList });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.streaming, state.messages, threadId, chatUiReady]);
+
+  /* --- Resume a stored conversation from the sidebar. --- */
+  const openChat = useCallback(
+    async (id: number) => {
+      abortRef.current?.abort();
+      activeBatcherRef.current?.dispose();
+      activeBatcherRef.current = null;
+      try {
+        const data = await utils.dimeChats.get.fetch({ threadId: id });
+        dispatch({
+          type: "hydrate",
+          messages: data.messages.map(
+            (m: { role: "user" | "assistant"; content: string }) => ({
+              role: m.role,
+              content: m.content,
+            })
+          ),
+        });
+        setThreadId(id);
+        setThreadMenuOpen(false);
+        pendingUserTextRef.current = null;
+        setInput("");
+        stuckRef.current = true;
+        setStuck(true);
+      } catch (err) {
+        dimeDebug("history.open_failed", { error: (err as Error).message });
+      }
+    },
+    [utils]
+  );
+
+  /* --- "⋯" chat settings: Star / Archive / Delete for the open thread. --- */
+  useEffect(() => {
+    if (!threadMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!threadMenuRef.current?.contains(e.target as Node)) setThreadMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setThreadMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [threadMenuOpen]);
+
+  const refreshThreads = useCallback(
+    () => void utils.dimeChats.list.invalidate(),
+    [utils]
+  );
+
+  const toggleStar = useCallback(() => {
+    if (threadId == null) return;
+    setThreadMenuOpen(false);
+    setStarredMut.mutate(
+      { threadId, starred: !activeThreadMeta?.starred },
+      { onSettled: refreshThreads }
+    );
+  }, [threadId, activeThreadMeta?.starred, setStarredMut, refreshThreads]);
+
+  const archiveThread = useCallback(() => {
+    if (threadId == null) return;
+    setThreadMenuOpen(false);
+    setArchivedMut.mutate(
+      { threadId, archived: true },
+      {
+        onSettled: () => {
+          refreshThreads();
+          newChat();
+        },
+      }
+    );
+  }, [threadId, setArchivedMut, refreshThreads, newChat]);
+
+  const deleteThread = useCallback(() => {
+    if (threadId == null) return;
+    if (!window.confirm("Delete this chat? It will be removed from your history.")) return;
+    setThreadMenuOpen(false);
+    softDeleteMut.mutate(
+      { threadId },
+      {
+        onSettled: () => {
+          refreshThreads();
+          newChat();
+        },
+      }
+    );
+  }, [threadId, softDeleteMut, refreshThreads, newChat]);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -1360,6 +1650,9 @@ export default function DimeChatPage({
           <DimeSidebar
             onNewChat={newChat}
             recentChats={recentChats}
+            onOpenChat={openChat}
+            activeChatId={threadId}
+            appUser={appUser as SessionIdentity | null}
             compact={compact}
             drawerOpen={drawerOpen}
             drawerStyle={compact ? { x: drawerX } : undefined}
@@ -1438,7 +1731,53 @@ export default function DimeChatPage({
                     Dime Chat
                   </h1>
                 )}
-                {conversation && (
+                {/* Owner gate: non-owners get only the wordmark + coming-soon
+                    copy — no composer, no pills, on every viewport. While auth
+                    is still resolving nothing chat-like renders (fail closed). */}
+                {!chatUiReady && !authLoading && <ChatComingSoon theme={theme} />}
+                {chatUiReady && conversation && threadId != null && (
+                  <div className="dc-thread-actions" ref={threadMenuRef}>
+                    <button
+                      type="button"
+                      className="dc-thread-menu-trigger dc-focusable dc-pressable"
+                      aria-label="Chat settings"
+                      aria-haspopup="menu"
+                      aria-expanded={threadMenuOpen}
+                      onClick={() => setThreadMenuOpen(open => !open)}
+                    >
+                      ⋯
+                    </button>
+                    {threadMenuOpen && (
+                      <div className="dc-thread-menu" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={toggleStar}
+                        >
+                          {activeThreadMeta?.starred ? "Unstar" : "Star"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={archiveThread}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-thread-menu-item--danger dc-focusable dc-pressable"
+                          onClick={deleteThread}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {chatUiReady && conversation && (
                   <div
                     className="dc-scroller"
                     ref={scrollerRef}
@@ -1467,7 +1806,8 @@ export default function DimeChatPage({
                     </div>
                   </div>
                 )}
-                {!conversation && <BrandHero innerRef={heroRef} />}
+                {chatUiReady && !conversation && <BrandHero innerRef={heroRef} />}
+                {chatUiReady && (
                 <div className="dc-composer-zone">
                   {conversation && !stuck && state.streaming && (
                     <button
@@ -1514,14 +1854,15 @@ export default function DimeChatPage({
                     )}
                   </form>
                 </div>
-                {!conversation && (
+                )}
+                {chatUiReady && !conversation && (
                   <PromptPills
                     theme={theme}
                     onPick={submit}
                     innerRef={pillsRef}
                   />
                 )}
-                {ghost && (
+                {chatUiReady && ghost && (
                   <div aria-hidden="true">
                     <m.div
                       className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
