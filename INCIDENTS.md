@@ -79,3 +79,26 @@ Two corrections and one improvement:
 Status stays OPEN until the 42 assertions pass on a local isolated database
 per the follow-up above. The db-tests job result on the remediation PR is the
 first executed evidence either way.
+
+### Update 2026-07-12 (first green execution): RESOLVED
+
+All five suites executed and passed against an isolated `mysql:8` database in
+the `db-tests` CI job on PR #84 (48 assertions, 48 passed):
+<https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/actions/runs/29195327415/job/86657313941>
+
+Getting there surfaced two latent defects the assertions themselves were not
+guilty of, both now fixed in the job definition:
+
+1. The checked-in Drizzle migration history is not replayable from scratch
+   (`drizzle/0097` and `drizzle/0104` both `CREATE TABLE wc2026_matches`), so
+   the job provisions the current TS schema via `drizzle-kit push --force`
+   instead of `drizzle-kit migrate`. Repairing the history files is an owner
+   decision (final-report finding 11).
+2. The suites are not safe to run file-parallel against one shared database:
+   `tokenVersion.db.test.ts` calls `incrementAllTokenVersions`, which bumps
+   every user's tokenVersion and invalidated another suite's live owner
+   session mid-test. The job and `scripts/test-db-local.sh` now pass
+   `--no-file-parallelism`.
+
+The local rerun via `scripts/test-db-local.sh` remains available for any
+machine with `mysqld` (`brew install mysql`); the CI job now runs on every PR.
