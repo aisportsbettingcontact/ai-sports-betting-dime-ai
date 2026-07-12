@@ -45,7 +45,6 @@ const SubscribeCancel = lazy(() => import("./pages/SubscribeCancel"));
 const ManageAccount = lazy(() => import("./pages/ManageAccount"));
 const WorldCup2026 = lazy(() => import("./pages/WorldCup2026"));
 const ClaudeAssistant = lazy(() => import("./pages/ClaudeAssistant"));
-const DimeChat = lazy(() => import("./pages/DimeChat"));
 const DimeAppShell = lazy(() => import("./pages/dime-shell/DimeAppShell"));
 const CheckoutPage = lazy(() => import("./pages/dime/CheckoutPage"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -65,7 +64,10 @@ import {
   legacyFeedRedirectTarget,
   parseBettingSplitsPath,
 } from "@/lib/feedRoutes";
-import { isDimeProductLocation } from "./pages/dime-shell/productRoute";
+import {
+  isChatLocation,
+  isDimeProductLocation,
+} from "./pages/dime-shell/productRoute";
 import { useDimeShellViewport } from "./pages/dime-shell/useDimeShellViewport";
 import { allowsLocalDimePreview } from "./pages/dime-shell/previewGate";
 import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
@@ -141,23 +143,6 @@ function RootRoute() {
   return <DimeLandingV2 />;
 }
 
-function DimeChatRoute() {
-  // Local visual-review escape hatch only. Vite replaces DEV with false in
-  // production builds, where authenticated product routes stay behind RequireAuth.
-  const localPreview = allowsLocalDimePreview(
-    window.location.search,
-    import.meta.env.DEV
-  );
-
-  return localPreview ? (
-    <DimeChat />
-  ) : (
-    <RequireAuth>
-      <DimeChat />
-    </RequireAuth>
-  );
-}
-
 function StandaloneSplitsRoute({
   sportSegment,
   dateSegment,
@@ -201,20 +186,34 @@ function StandaloneSplitsRoute({
 function Router() {
   const [location] = useLocation();
   const shellViewport = useDimeShellViewport();
-  const shellOwnsRoute = shellViewport && isDimeProductLocation(location);
+  // [FIX 2026-07-12] Chat needs ONE stable mounted owner at every viewport
+  // width — an active SSE stream and the composer draft must survive a
+  // resize, not just a navigation. Before this fix, /chat below 768px fell
+  // through to the legacy <Switch> below and mounted a DIFFERENT lazy
+  // component (pages/DimeChat.tsx) than the >=768px branch (DimeAppShell),
+  // so crossing 768px swapped which component sat at this tree position and
+  // React tore down and rebuilt DimeChatPage — destroying all conversation
+  // state. Now /chat always takes this branch, and DimeAppShell's `mode`
+  // prop (recomputed from shellViewport below) is the only thing that
+  // changes across the boundary. Every other product surface (feed/splits/
+  // tracker) keeps the original shellViewport-gated behavior.
+  const chatShellOwnsRoute =
+    isChatLocation(location) ||
+    (shellViewport && isDimeProductLocation(location));
   const localPreview = allowsLocalDimePreview(
     window.location.search,
     import.meta.env.DEV
   );
 
-  if (shellOwnsRoute) {
+  if (chatShellOwnsRoute) {
+    const shellMode = shellViewport ? "shell" : "chat-only";
     return (
       <Suspense fallback={null}>
         {localPreview ? (
-          <DimeAppShell previewMode />
+          <DimeAppShell mode={shellMode} previewMode />
         ) : (
           <RequireAuth>
-            <DimeAppShell />
+            <DimeAppShell mode={shellMode} />
           </RequireAuth>
         )}
       </Suspense>
@@ -420,8 +419,11 @@ function Router() {
             </RequireAuth>
           )}
         </Route>
-        {/* Dime AI Chat — streaming Claude Fable 5 chat */}
-        <Route path="/chat">{() => <DimeChatRoute />}</Route>
+        {/* Dime AI Chat — streaming Claude Fable 5 chat. NOT routed here: /chat
+          is owned by the unified chatShellOwnsRoute branch above at every
+          viewport width (see isChatLocation in dime-shell/productRoute.ts),
+          so DimeChatPage keeps one stable mount across the 768px boundary.
+          e2e/chat-resize.spec.ts covers the mount-stability contract. */}
         {/* FIFA World Cup 2026 — Group Stage Feed */}
         <Route path="/wc2026">
           {() => (
