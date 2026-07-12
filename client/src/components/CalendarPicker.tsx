@@ -349,7 +349,7 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
     <div ref={containerRef} className="relative flex-shrink-0">
       {/* Trigger button */}
       <button type="button" onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
+        className="cal-trigger flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
         style={{
           background: "hsl(var(--card))",
           color: "#ffffff",
@@ -364,7 +364,7 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 top-full mt-1.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
+          className="cal-panel absolute left-0 top-full mt-1.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
           style={{ background: "#0f0f0f", width: 220 }}
         >
           {/* Month navigation header */}
@@ -426,13 +426,21 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
                 <button type="button" key={day}
                   onClick={() => handleDayClick(day)}
                   disabled={isLocked}
-                  className="relative flex flex-col items-center justify-center w-full aspect-square rounded-full text-sm font-bold transition-all"
+                  className="cal-day relative flex flex-col items-center justify-center w-full aspect-square rounded-full text-sm font-bold transition-all"
+                  data-cal-state={
+                    isLocked ? "locked"
+                    : isSelected && isToday ? "selected-today"
+                    : isSelected ? "selected"
+                    : isToday ? "today"
+                    : hasGames ? "has-games"
+                    : "empty"
+                  }
                   style={dayStyle}
                 >
                   {day}
                   {hasGames && !isSelected && (
                     <span
-                      className="absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full"
+                      className="cal-dot absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full"
                       style={{ width: 3, height: 3, background: isToday ? "#39FF14" : "rgba(57,255,20,0.8)" }}
                     />
                   )}

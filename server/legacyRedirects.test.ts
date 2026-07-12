@@ -130,7 +130,8 @@ describe("Legacy slug eradication — navigation hooks", () => {
     expect(configSrc).not.toMatch(/\?tab=/);
     expect(configSrc).toMatch(/"\/feed\/model\/mlb"/);
     expect(configSrc).toMatch(/"\/betting-splits\/MLB"/);
-    expect(configSrc).toMatch(/"\/m\/props"/);
+    // [2026-07-12] Props tab replaced by Bet Tracker — /m/tracker is canonical.
+    expect(configSrc).toMatch(/"\/m\/tracker"/);
   });
 
   it("bottom tabs never fall back to full-page query navigation", () => {

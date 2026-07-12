@@ -4,6 +4,7 @@ type Theme = "light" | "dark";
 
 interface ThemeContextType {
   theme: Theme;
+  setTheme?: (theme: Theme) => void;
   toggleTheme?: () => void;
   switchable: boolean;
 }
@@ -23,8 +24,16 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (switchable) {
-      const stored = localStorage.getItem("theme");
-      return (stored as Theme) || defaultTheme;
+      try {
+        const stored = localStorage.getItem("theme");
+        if (stored === "light" || stored === "dark") return stored;
+        // Migrate the feed's pre-unification private key so an existing
+        // light-mode choice survives the switch to the global theme.
+        const legacy = localStorage.getItem("dime-feed-theme");
+        if (legacy === "light" || legacy === "dark") return legacy;
+      } catch {
+        /* private mode */
+      }
     }
     return defaultTheme;
   });
@@ -38,7 +47,11 @@ export function ThemeProvider({
     }
 
     if (switchable) {
-      localStorage.setItem("theme", theme);
+      try {
+        localStorage.setItem("theme", theme);
+      } catch {
+        /* private mode */
+      }
     }
   }, [theme, switchable]);
 
@@ -49,7 +62,14 @@ export function ThemeProvider({
     : undefined;
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, switchable }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        setTheme: switchable ? setTheme : undefined,
+        toggleTheme,
+        switchable,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

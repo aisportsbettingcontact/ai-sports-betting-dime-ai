@@ -1,0 +1,632 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Dime unification layer
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 1. App-global `--dime-*` tokens, verbatim from design-system/dime-ai/MASTER.md.
+ *    Light values live on :root; html.dark overrides them.
+ * 2. GLOBAL brand mappings (all widths, both themes) for the Splits and Bet
+ *    Tracker surfaces — the shell panes and their standalone routes share
+ *    these components, so desktop/tablet and mobile stay one design.
+ * 3. A MOBILE-ONLY (<768px) block for layout concerns that belong to phones:
+ *    body type swap, safe-areas, tab-bar chrome, card conversion, header fit.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --dime-mint: #45e0a8;
+  --dime-mint-text: #0fa36b; /* mint TEXT on light surfaces (MASTER.md:47) */
+  --dime-mint-keyline: #2fb584;
+  --dime-bg: #ffffff;
+  --dime-surface-sidebar: #f4f4f6;
+  --dime-surface-card: #f7f7f9;
+  --dime-surface-raised: #e8e8ec;
+  --dime-surface-bubble: #f0f0f3;
+  --dime-border: #e4e4e9;
+  --dime-border-strong: #d5d5dc;
+  --dime-text-primary: #0b0b0f;
+  --dime-text-body: #2a2a32;
+  --dime-text-secondary: #55555e;
+  --dime-text-muted: #9a9aa8;
+  --dime-text-faint: #9a9aa8;
+  --dime-ring: rgba(69, 224, 168, 0.28);
+  --dime-row-hover: rgba(15, 23, 42, 0.055);
+  --dime-row-active: rgba(69, 224, 168, 0.13);
+  --dime-mint-dim: rgba(69, 224, 168, 0.13);
+  --dime-mint-border: rgba(15, 163, 107, 0.35);
+  --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
+  --dime-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --dime-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dime-t: 160ms;
+  /* Brand coin-dot rule: mint fills on light get a near-black hairline. */
+  --dime-coin-keyline: 0 0 0 1px #0b0b0f;
+}
+
+html.dark {
+  --dime-mint-text: #45e0a8;
+  --dime-bg: #0b0b0f;
+  --dime-surface-sidebar: #101016;
+  --dime-surface-card: #16161c;
+  --dime-surface-raised: #1a1a22;
+  --dime-surface-bubble: #1e1e26;
+  --dime-border: #24242e;
+  --dime-border-strong: #2e2e38;
+  --dime-text-primary: #ededf2;
+  --dime-text-body: #c9c9d4;
+  --dime-text-secondary: #9a9aa8;
+  --dime-text-muted: #6a6a78;
+  --dime-text-faint: #55555e;
+  --dime-ring: rgba(69, 224, 168, 0.36);
+  --dime-row-hover: rgba(255, 255, 255, 0.065);
+  --dime-row-active: rgba(255, 255, 255, 0.095);
+  --dime-mint-dim: rgba(69, 224, 168, 0.1);
+  --dime-mint-border: rgba(69, 224, 168, 0.3);
+  --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
+}
+
+/* MASTER.md micro-label: IBM Plex Mono, 10px, uppercase, 0.08em, muted. */
+.dime-mono-label {
+  font-family: var(--dime-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dime-text-muted);
+}
+
+/* MASTER.md motion law: no pulses/transitions under reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-in {
+    animation: none !important;
+  }
+  .bs-page *,
+  .bsp-seg,
+  .bsp-toggle,
+  .bt-page * {
+    transition: none !important;
+  }
+}
+
+/* ═══ GLOBAL brand mappings — Splits surface (all widths, both themes) ═════ */
+
+.bs-page {
+  min-height: 100dvh;
+  /* Local shadcn vars → brand tokens, so Tailwind utilities inside the
+   * page (bg-background, bg-card, border-border, text-foreground …)
+   * resolve to MASTER.md colors in both themes. */
+  --background: var(--dime-bg);
+  --card: var(--dime-surface-card);
+  --secondary: var(--dime-surface-raised);
+  --border: var(--dime-border);
+  --foreground: var(--dime-text-primary);
+  --muted-foreground: var(--dime-text-secondary);
+  background: var(--dime-bg) !important;
+  color: var(--dime-text-primary);
+  font-family: var(--dime-font-sans);
+}
+
+/* Header: solid chrome surface — tier + 1px border, no glass. */
+.bs-header {
+  background: var(--dime-surface-sidebar) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 1px solid var(--dime-border);
+}
+.bs-title {
+  color: var(--dime-text-primary) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+.bs-tab {
+  color: var(--dime-text-secondary) !important;
+}
+.bs-tab--active {
+  color: var(--dime-text-primary) !important;
+}
+.bs-datehdr {
+  color: var(--dime-text-primary) !important;
+}
+.bs-datehdr-sub {
+  color: var(--dime-text-secondary) !important;
+}
+
+/* Filter pills: MASTER tab-pill spec — raised surface when active,
+ * quiet card surface otherwise. League identity lives in the logo. */
+.bs-pill {
+  background: var(--dime-surface-card) !important;
+  color: var(--dime-text-secondary) !important;
+  border: 1px solid var(--dime-border) !important;
+}
+.bs-pill[data-active="true"] {
+  background: var(--dime-surface-raised) !important;
+  color: var(--dime-text-primary) !important;
+  border-color: var(--dime-border-strong) !important;
+}
+.cal-trigger {
+  background: var(--dime-surface-card) !important;
+  color: var(--dime-text-primary) !important;
+  border: 1px solid var(--dime-border) !important;
+}
+.cal-trigger svg {
+  color: var(--dime-text-muted) !important;
+}
+
+/* Search: card surface, mint focus ring (3px --ring per MASTER). */
+.bs-search {
+  background: var(--dime-surface-card) !important;
+  border-color: var(--dime-border) !important;
+  box-shadow: none !important;
+}
+.bs-search[data-focused="true"] {
+  border-color: var(--dime-mint-border) !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
+}
+
+/* Menus (search dropdown + calendar panel): raised surface, menu radius,
+ * menu shadow — the only shadowed surfaces in the system. */
+.bs-dropdown,
+.cal-panel {
+  background: var(--dime-surface-raised) !important;
+  border: 1px solid var(--dime-border-strong) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55) !important;
+}
+.bs-dropdown-head {
+  background: var(--dime-surface-raised) !important;
+  border-bottom-color: var(--dime-border) !important;
+}
+.bs-dropdown [class*="text-zinc"] {
+  color: var(--dime-text-secondary) !important;
+}
+html:not(.dark) .bs-dropdown,
+html:not(.dark) .cal-panel {
+  box-shadow: 0 12px 32px rgba(11, 11, 15, 0.18) !important;
+}
+.cal-panel > div:first-child {
+  border-bottom-color: var(--dime-border) !important;
+}
+.cal-panel > div:first-child span {
+  color: var(--dime-text-primary) !important;
+}
+.cal-panel > div:first-child button {
+  color: var(--dime-text-secondary) !important;
+}
+.cal-panel .text-center {
+  color: var(--dime-text-muted) !important;
+}
+
+/* Calendar days: mint is the one signal (today/selected). */
+.cal-day[data-cal-state="locked"] {
+  color: var(--dime-text-faint) !important;
+}
+.cal-day[data-cal-state="selected"],
+.cal-day[data-cal-state="selected-today"] {
+  background: var(--dime-mint) !important;
+  color: #0b0b0f !important;
+  outline: none !important;
+  box-shadow: var(--dime-coin-keyline);
+}
+.cal-day[data-cal-state="today"] {
+  background: var(--dime-mint-dim) !important;
+  color: var(--dime-mint-text) !important;
+  outline: 1.5px solid var(--dime-mint-border) !important;
+}
+.cal-day[data-cal-state="has-games"] {
+  color: var(--dime-text-primary) !important;
+}
+.cal-day[data-cal-state="empty"] {
+  color: var(--dime-text-muted) !important;
+}
+.cal-dot {
+  background: var(--dime-mint) !important;
+}
+
+/* Game rows: brand surfaces + 1px borders; the left rail is mint ONLY when
+ * the model has signal, otherwise a quiet border. (Card conversion —
+ * margins/radius — is a mobile-layout concern; see the media block.) */
+.bs-page main .bg-card {
+  background: transparent !important;
+}
+.bs-page [data-edge-tier] {
+  background: var(--dime-surface-card) !important;
+  border-top: 1px solid var(--dime-border) !important;
+  border-bottom: 1px solid var(--dime-border) !important;
+}
+.bs-page [data-edge-tier="signal"] {
+  border-left: 3px solid var(--dime-mint) !important;
+}
+.bs-page [data-edge-tier="none"] {
+  border-left: 1px solid var(--dime-border) !important;
+}
+.bs-page .gc-frozen {
+  background: transparent !important;
+  border-right: 1px solid var(--dime-border) !important;
+}
+.bs-page .gc-frozen span.rounded {
+  background: var(--dime-surface-raised) !important;
+  color: var(--dime-text-secondary) !important;
+}
+
+/* LIVE: mint, per the brand's live-indicator rule. */
+.bs-page .gc-live {
+  color: var(--dime-mint-text) !important;
+}
+.bs-page .gc-live > span {
+  background: var(--dime-mint) !important;
+}
+
+/* Favorite star: neutral outline, mint fill when active (MASTER.md:215). */
+.bs-page .gc-star {
+  color: var(--dime-text-muted) !important;
+  filter: none !important;
+}
+.bs-page .gc-star svg {
+  fill: none;
+  stroke: currentColor;
+}
+.bs-page .gc-star[data-favorited="true"] {
+  color: var(--dime-mint-text) !important;
+}
+.bs-page .gc-star[data-favorited="true"] svg {
+  fill: var(--dime-mint);
+  stroke: var(--dime-mint);
+}
+
+/* Split bars: one-accent discipline — away side mint, home side raised
+ * grey. Side identity comes from the labels, not team paint. */
+.bsp-bar {
+  border-color: var(--dime-border-strong) !important;
+}
+/* Mobile compact bars square off slightly; desktop bars keep their pill. */
+.bsp-bar:not(.bsp-bar--pill) {
+  border-radius: 6px !important;
+}
+.bsp-seg--away {
+  background: var(--dime-mint) !important;
+}
+.bsp-seg--home {
+  background: var(--dime-surface-raised) !important;
+}
+.bsp-div {
+  background: var(--dime-border-strong) !important;
+}
+.bsp-seg span {
+  text-shadow: none !important;
+  font-weight: 700 !important;
+}
+.bsp-seg--away span {
+  color: #0b0b0f !important;
+}
+.bsp-seg--home span {
+  color: var(--dime-text-primary) !important;
+}
+.bsp-hdr span {
+  color: var(--dime-text-secondary) !important;
+}
+.bsp-hdr span:nth-child(2) {
+  font-family: var(--dime-font-mono);
+  color: var(--dime-text-muted) !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Market toggle: mono micro-labels on the standard pill states. */
+.bsp-toggle {
+  font-family: var(--dime-font-mono) !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--dime-border) !important;
+  background: transparent !important;
+  color: var(--dime-text-muted) !important;
+}
+.bsp-toggle[data-active="true"] {
+  background: var(--dime-surface-raised) !important;
+  border-color: var(--dime-border-strong) !important;
+  color: var(--dime-text-primary) !important;
+}
+.bsp-toggle:disabled {
+  color: var(--dime-text-faint) !important;
+}
+
+/* One motion curve everywhere (MASTER.md: 160ms, single curve). */
+.bs-page .bs-pill,
+.bs-page .bs-search,
+.bs-page .bs-tab,
+.bs-page .cal-trigger,
+.bs-page .cal-day,
+.bs-page .gc-star,
+.bsp-seg,
+.bsp-toggle {
+  transition-duration: var(--dime-t) !important;
+  transition-timing-function: var(--dime-ease) !important;
+}
+
+/* Tailwind family remap for the splits surface's satellite panels (user
+ * menu, Last-5-Games, Trends): same one-accent discipline as the tracker. */
+.bs-page [class*="text-emerald-"],
+.bs-page [class*="text-green-"] {
+  color: var(--dime-mint-text) !important;
+}
+.bs-page [class*="text-red-"] {
+  color: var(--dime-text-secondary) !important;
+}
+.bs-page [class*="text-yellow-"],
+.bs-page [class*="text-amber-"],
+.bs-page [class*="text-blue-"] {
+  color: var(--dime-text-body) !important;
+}
+.bs-page [class*="bg-emerald-"] {
+  background-color: var(--dime-mint-dim) !important;
+  color: var(--dime-mint-text) !important;
+}
+.bs-page [class*="bg-red-"],
+.bs-page [class*="bg-yellow-"] {
+  background-color: var(--dime-surface-raised) !important;
+  color: var(--dime-text-secondary) !important;
+}
+.bs-page [class*="bg-zinc-7"],
+.bs-page [class*="bg-zinc-8"] {
+  background-color: var(--dime-surface-raised) !important;
+}
+.bs-page .font-mono {
+  font-family: var(--dime-font-mono) !important;
+}
+.bs-page [class*="duration-"] {
+  transition-duration: var(--dime-t) !important;
+  transition-timing-function: var(--dime-ease) !important;
+}
+
+/* Light theme: white-on-dark CDN art needs inversion on light surfaces. */
+html:not(.dark) .bs-page img[style*="invert(1)"] {
+  filter: invert(0.35) !important;
+}
+html:not(.dark) .bs-pill img,
+html:not(.dark) .cal-trigger img {
+  filter: invert(1) !important;
+}
+
+/* ═══ GLOBAL brand mappings — Bet Tracker surface (all widths, themes) ═════
+ * BetTracker.tsx / BetTrackerAnalytics.tsx / BetCalendar.tsx consume
+ * var(--bt-*, <legacy literal>) — mapped to the Dime tokens here. Canvas
+ * charts resolve the same vars at draw time. */
+:root {
+  --bt-base: var(--dime-bg);
+  --bt-card: var(--dime-surface-card);
+  --bt-hover: var(--dime-row-hover);
+  --bt-border: var(--dime-border);
+  --bt-border2: var(--dime-border-strong);
+  --bt-green: var(--dime-mint-text);
+  --bt-red: var(--dime-text-secondary); /* negative = grey, never red */
+  --bt-gold: var(--dime-mint); /* ATH markers: signal, not gold */
+  --bt-grade-b: var(--dime-text-primary);
+  --bt-grade-c: var(--dime-text-secondary);
+  --bt-dim: var(--dime-text-muted);
+  --bt-dimmer: var(--dime-surface-raised);
+  --bt-label: var(--dime-text-muted);
+  --bt-text: var(--dime-text-body);
+  --bt-text-body: var(--dime-text-body);
+  --bt-text-dim: var(--dime-text-secondary);
+  --bt-text-muted: var(--dime-text-muted);
+  --bt-text-faint: var(--dime-text-muted);
+  --bt-strong: var(--dime-text-primary);
+  --bt-cell-empty: var(--dime-surface-raised);
+  --bt-cell-empty-border: var(--dime-border);
+  --bt-mono: var(--dime-font-mono);
+  --bt-sans: var(--dime-font-sans);
+}
+
+.bt-page {
+  background: var(--dime-bg) !important;
+  color: var(--dime-text-primary);
+  min-height: 100dvh;
+  font-family: var(--dime-font-sans);
+}
+.bt-page header {
+  background: var(--dime-surface-sidebar) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 1px solid var(--dime-border) !important;
+}
+
+/* Tailwind mass-mapping: the page styles itself with zinc/emerald/green/
+ * red/yellow utilities — remap whole families onto the brand tokens. */
+.bt-page [class*="text-emerald-"],
+.bt-page [class*="text-green-"],
+.bt-page [class*="text-lime-"] {
+  color: var(--dime-mint-text) !important;
+}
+.bt-page [class*="text-red-"] {
+  color: var(--dime-text-secondary) !important;
+}
+.bt-page [class*="text-yellow-"],
+.bt-page [class*="text-amber-"],
+.bt-page [class*="text-blue-"] {
+  color: var(--dime-text-body) !important;
+}
+.bt-page .bg-emerald-500,
+.bt-page [class*="hover:bg-emerald-4"]:hover {
+  background-color: var(--dime-mint) !important;
+}
+.bt-page .bg-emerald-500,
+.bt-page .bg-emerald-500 * {
+  color: #0b0b0f !important;
+}
+.bt-page [class*="bg-emerald-500/"],
+.bt-page [class*="bg-green-500/"],
+.bt-page [class*="bg-emerald-400/"] {
+  background-color: var(--dime-mint-dim) !important;
+}
+.bt-page [class*="border-emerald-400"] {
+  border-color: var(--dime-mint) !important;
+}
+.bt-page [class*="border-emerald-5"],
+.bt-page [class*="border-green-"] {
+  border-color: var(--dime-mint-border) !important;
+}
+.bt-page [class*="focus:ring-emerald"]:focus {
+  --tw-ring-color: var(--dime-ring) !important;
+}
+.bt-page [class*="focus:border-emerald"]:focus {
+  border-color: var(--dime-mint-border) !important;
+}
+.bt-page [class*="bg-yellow-"],
+.bt-page [class*="bg-amber-"],
+.bt-page [class*="bg-blue-"],
+.bt-page [class*="bg-red-"] {
+  background-color: var(--dime-surface-raised) !important;
+}
+.bt-page [class*="border-yellow-"],
+.bt-page [class*="border-amber-"],
+.bt-page [class*="border-blue-"],
+.bt-page [class*="border-red-"] {
+  border-color: var(--dime-border-strong) !important;
+}
+.bt-page [class*="bg-zinc-950"] {
+  background-color: var(--dime-bg) !important;
+}
+.bt-page [class*="bg-zinc-900"] {
+  background-color: var(--dime-surface-card) !important;
+}
+.bt-page [class*="bg-zinc-800"],
+.bt-page [class*="bg-zinc-700"] {
+  background-color: var(--dime-surface-raised) !important;
+}
+.bt-page [class*="hover:bg-zinc-"]:hover {
+  background-color: var(--dime-row-hover) !important;
+}
+.bt-page [class*="border-zinc-"] {
+  border-color: var(--dime-border) !important;
+}
+.bt-page [class*="text-zinc-1"],
+.bt-page [class*="text-zinc-2"],
+.bt-page [class*="text-zinc-3"],
+.bt-page .text-white {
+  color: var(--dime-text-body) !important;
+}
+.bt-page [class*="text-zinc-4"] {
+  color: var(--dime-text-secondary) !important;
+}
+.bt-page [class*="text-zinc-5"],
+.bt-page [class*="text-zinc-6"] {
+  color: var(--dime-text-muted) !important;
+}
+.bt-page [class*="bg-white/"] {
+  background-color: var(--dime-surface-card) !important;
+}
+.bt-page [class*="border-white/"] {
+  border-color: var(--dime-border) !important;
+}
+/* Headline text (title, stat values) reads primary, not body grey. */
+.bt-page .font-bold.text-white,
+.bt-page .font-black.text-white,
+.bt-page .bt-title {
+  color: var(--dime-text-primary) !important;
+}
+/* Modal scrims keep isolating in both themes. */
+html:not(.dark) .bt-page [class*="bg-black/"] {
+  background-color: rgba(11, 11, 15, 0.45) !important;
+}
+
+/* The header row may carry many controls ($/U, unit input, Analytics,
+ * role pill) — wrap instead of clipping at narrow desktop widths. */
+.bt-page header .h-14 {
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 3.5rem;
+  row-gap: 4px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* One motion curve; visible focus. */
+.bt-page [class*="transition"] {
+  transition-duration: var(--dime-t) !important;
+  transition-timing-function: var(--dime-ease) !important;
+}
+.bt-page :is(button, a, [tabindex]):focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
+  border-radius: 8px;
+}
+
+/* ═══ Mobile-only layout concerns (<768px) ═════════════════════════════════ */
+@media (max-width: 767px) {
+  /* Brand type everywhere on mobile. Pages that already set their own brand
+   * stacks (chat, feed) are unaffected; legacy Inter surfaces inherit this.
+   * The body background matches the token page color so short pages don't
+   * show a foreign band between content and the tab bar. */
+  body {
+    font-family: var(--dime-font-sans);
+    background: var(--dime-bg);
+  }
+
+  /* Focus/accent tokens: mint, not the legacy purple (MASTER.md bans purple). */
+  :root {
+    --ring: rgba(69, 224, 168, 0.36);
+    --accent: rgba(69, 224, 168, 0.13);
+    --accent-foreground: var(--dime-text-primary);
+  }
+
+  /* Visible keyboard focus on the bottom tab bar (MASTER.md checklist). */
+  [data-testid="mobile-owner-bottom-tabs"] button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--dime-ring);
+    border-radius: 8px;
+  }
+
+  /* ── Feed (/feed/model/*) ─────────────────────────────────────────────── */
+  /* The bottom tab bar already navigates to Splits/Chat/Profile — hide the
+   * topbar's duplicate links when the bar is present. Non-owners (no bar)
+   * keep them so the feed is never a dead end. */
+  body.mobile-owner-tabs-active .dmf-nav {
+    display: none;
+  }
+  /* body.mobile-owner-tabs-active reserves 60px + safe-area globally; keep
+   * only local breathing room instead of the pre-unification 130px slab. */
+  body.mobile-owner-tabs-active .dmf-scroll {
+    padding-bottom: 24px;
+  }
+  /* Notch/status-bar safe area on the sticky feed chrome. */
+  .dmf-root .dmf-topbar {
+    height: calc(46px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .dmf-root .dmf-feedhead {
+    top: calc(46px + env(safe-area-inset-top, 0px));
+  }
+
+  /* ── Splits: phone layout ─────────────────────────────────────────────── */
+  .bs-header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* Full-bleed rows become floating 16px cards on phones. */
+  .bs-page [data-edge-tier] {
+    border-right: 1px solid var(--dime-border) !important;
+    border-radius: 16px;
+    margin: 8px 12px;
+    width: auto !important;
+  }
+  /* Give the splits column room at 390px — no in-card horizontal scroll. */
+  .bs-page .gc-splitgrid {
+    grid-template-columns: clamp(148px, 40vw, 200px) 1fr !important;
+  }
+  .bs-page .gc-scrollinner {
+    min-width: 220px !important;
+  }
+
+  /* ── Bet Tracker: phone layout ────────────────────────────────────────── */
+  .bt-page header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /* 390px header: the row is crowded — the decorative trend icon yields,
+   * the title drops a size, and the row tightens so nothing clips. */
+  .bt-page .bt-trend {
+    display: none;
+  }
+  .bt-page .bt-title {
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .bt-page header .h-14 {
+    gap: 8px;
+  }
+}
