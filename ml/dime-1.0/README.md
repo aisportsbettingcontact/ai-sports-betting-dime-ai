@@ -118,6 +118,11 @@ tasks, responsible gambling, injection resistance. `data/sample.train.jsonl`
 shows the exact shape. Real training data is built from platform exports and
 **never committed** to this repo.
 
+`data/build_dataset.py` generates the full dataset from real `games` rows
+(`--games export.json` or `--from-db` with `DATABASE_URL`), enforcing the mix,
+mirroring production context formatting, and computing grounded answers
+deterministically — see the usage section in `data/README.md`.
+
 ### 3. Train (QLoRA, 4-bit NF4)
 
 ```bash
