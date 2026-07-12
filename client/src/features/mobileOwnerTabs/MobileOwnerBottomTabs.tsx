@@ -31,7 +31,7 @@ import {
   Newspaper,
   BarChart3,
   MessageSquare,
-  TrendingUp,
+  FlaskConical,
   User,
 } from "lucide-react";
 import { type MobileOwnerTabId, MOBILE_OWNER_TABS } from "./config";
@@ -67,7 +67,7 @@ const ICON_MAP: Record<string, React.FC<{ className?: string; strokeWidth?: numb
   Newspaper,
   BarChart3,
   MessageSquare,
-  TrendingUp,
+  FlaskConical,
   User,
 };
 
@@ -310,9 +310,7 @@ function getActiveTab(path: string): MobileOwnerTabId | null {
   // keeps its tab lit — e.g. /feed/model/wc-07-11-2026 is still "feed").
   if (path.startsWith("/feed/model")) return "feed";
   if (path.startsWith("/betting-splits")) return "splits";
-  if (path === "/m/tracker" || path.startsWith("/m/tracker/")) return "tracker";
-  // Legacy slug — /m/props redirects to /m/tracker; keep the tab lit meanwhile.
-  if (path === "/m/props" || path.startsWith("/m/props/")) return "tracker";
+  if (path === "/m/props" || path.startsWith("/m/props/")) return "props";
 
   // Exact/prefix match against configured tab paths (/chat, /profile, /m/*)
   for (const tab of MOBILE_OWNER_TABS) {
