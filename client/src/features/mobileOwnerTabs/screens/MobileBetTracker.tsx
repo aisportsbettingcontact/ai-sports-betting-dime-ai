@@ -16,17 +16,17 @@ export function MobileBetTracker() {
   );
 
   useEffect(() => {
-    mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_started", "tracker");
+    mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_started", "props");
   }, []);
 
   useEffect(() => {
     if (!betsQuery.isLoading) {
       if (betsQuery.isError) {
-        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_failed", "tracker", {
+        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_failed", "props", {
           error: betsQuery.error?.message,
         });
       } else {
-        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_completed", "tracker", {
+        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_completed", "props", {
           totalBets: (betsQuery.data as any)?.list?.length ?? 0,
         });
       }
@@ -39,7 +39,7 @@ export function MobileBetTracker() {
   const isEmpty = !betsQuery.isLoading && !betsQuery.isError && bets.length === 0;
 
   useEffect(() => {
-    if (isEmpty) mobileOwnerTabLogger.log("mobile_bet_tracker_empty_state_rendered", "tracker");
+    if (isEmpty) mobileOwnerTabLogger.log("mobile_bet_tracker_empty_state_rendered", "props");
   }, [isEmpty]);
 
   // Compute quick stats

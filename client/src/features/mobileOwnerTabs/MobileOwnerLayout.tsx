@@ -22,9 +22,7 @@ export default function MobileOwnerLayout() {
         <Route path="/m/feed" component={MobileFeed} />
         <Route path="/m/splits" component={MobileSplits} />
         <Route path="/m/chat" component={MobileChat} />
-        <Route path="/m/tracker" component={MobileBetTracker} />
-        {/* Legacy slug — the Props tab became Bet Tracker (2026-07-12). */}
-        <Route path="/m/props">{() => <Redirect to="/m/tracker" replace />}</Route>
+        <Route path="/m/props" component={MobileBetTracker} />
         <Route path="/m/profile" component={MobileProfile} />
         {/* Default: redirect /m to /m/feed */}
         <Route path="/m">{() => <Redirect to="/m/feed" />}</Route>
