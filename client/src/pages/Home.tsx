@@ -28,6 +28,7 @@ import { Loader2, Eye, EyeOff, TrendingUp, MessageSquare, ListChecks, Clock } fr
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { resolvePostLoginPath } from "./dime-shell/breakpoints";
 
 // ── Discord brand icon ────────────────────────────────────────────────────────
 function DiscordIcon({ size = 18 }: { size?: number }) {
@@ -102,9 +103,9 @@ export default function Home() {
   useEffect(() => {
     if (!authLoading && appUser) {
       const searchParams = new URLSearchParams(window.location.search);
-      // Default post-login destination: canonical AI Model Projections feed
-      // (/feed/model/mlb canonicalizes to today's dated URL).
-      const returnPath = searchParams.get("returnPath") ?? "/feed/model/mlb";
+      // Explicit deep links win. Otherwise the shared 768px shell boundary
+      // defaults tablet/desktop to chat and retains the current mobile feed.
+      const returnPath = resolvePostLoginPath(searchParams.get("returnPath"));
       console.log(`[Login] [STATE] Already authenticated — redirecting to returnPath=${returnPath}`);
       setLocation(returnPath);
     }
@@ -116,7 +117,8 @@ export default function Home() {
   );
   const discordError = searchParams.get("discord_error");
   const discordUser  = searchParams.get("discord_user");
-  const returnPath   = searchParams.get("returnPath") ?? "/feed/model/mlb";
+  const explicitReturnPath = searchParams.get("returnPath");
+  const returnPath   = resolvePostLoginPath(explicitReturnPath);
   const loginUrl     = `/api/auth/discord-login/connect?returnPath=${encodeURIComponent(returnPath)}`;
 
   // ── Transient error auto-retry ────────────────────────────────────────────
@@ -147,9 +149,10 @@ export default function Home() {
 
   const loginMutation = trpc.appUsers.login.useMutation({
     onSuccess: () => {
-      console.log("[Login] [OUTPUT] Login successful — redirecting to", returnPath);
+      const destination = resolvePostLoginPath(explicitReturnPath);
+      console.log("[Login] [OUTPUT] Login successful — redirecting to", destination);
       toast.success("Signed in successfully.");
-      setLocation(returnPath);
+      setLocation(destination);
     },
     onError: (err) => {
       console.error("[Login] [VERIFY] FAIL — login error:", err.message);

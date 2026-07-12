@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
+import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
 
 // CDN icon URLs
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
@@ -175,7 +176,21 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSport?: "MLB" | "NHL" | "NBA" }) {
+export interface BettingSplitsPageProps {
+  initialSport?: "MLB" | "NHL" | "NBA";
+  /** ISO date parsed from the canonical URL; URL state is authoritative. */
+  initialDate?: string;
+  /** Allows the shell to preserve a local-only preview capability in route changes. */
+  resolveRouteHref?: (href: string) => string;
+}
+
+const identityRouteHref = (href: string) => href;
+
+export default function BettingSplitsPage({
+  initialSport = "MLB",
+  initialDate,
+  resolveRouteHref = identityRouteHref,
+}: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -183,13 +198,22 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
   // Sport is seeded from the canonical route (/betting-splits/:sport) and the
   // URL is kept in sync on pill changes so the address bar stays shareable.
   const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
+  const [selectedDate, setSelectedDateState] = useState<string>(initialDate ?? todayUTC());
+  const userSelectedDateRef = useRef(false);
   const setSelectedSport = useCallback((sport: "MLB" | "NHL" | "NBA") => {
     setSelectedSportState(sport);
-    setLocation(bettingSplitsPath(sport), { replace: true });
-  }, [setLocation]);
+    setLocation(resolveRouteHref(bettingSplitsPath(sport, selectedDate)));
+  }, [selectedDate, setLocation, resolveRouteHref]);
+  const setSelectedDate = useCallback((date: string) => {
+    userSelectedDateRef.current = true;
+    setSelectedDateState(date);
+    setLocation(resolveRouteHref(bettingSplitsPath(selectedSport, date)));
+  }, [selectedSport, setLocation, resolveRouteHref]);
   useEffect(() => { setSelectedSportState(initialSport); }, [initialSport]);
+  useEffect(() => {
+    if (initialDate) setSelectedDateState(initialDate);
+  }, [initialDate]);
   const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
-  const [selectedDate, setSelectedDate] = useState<string>(() => todayUTC());
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -239,7 +263,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
   });
   const appLogout = () => { closeSessionMutation.mutate(); appLogoutMutation.mutate(); };
 
-  useEffect(() => { setSelectedStatuses(new Set()); setSelectedDate(todayUTC()); }, [selectedSport]);
+  useEffect(() => { setSelectedStatuses(new Set()); }, [selectedSport]);
 
   // ─── Fix 1: Remove auth gate — games.list is a publicProcedure, no login required ───────────────
   // Previously: { enabled: isAppAuthed } blocked the query for unauthenticated users.
@@ -248,7 +272,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
   // games.list is declared as publicProcedure on the server — no auth required.
   const isAppAuthed = !appAuthLoading && Boolean(appUser);
   const { data: allGames, isLoading: gamesLoading } = trpc.games.list.useQuery(
-    { sport: selectedSport },
+    { sport: selectedSport, gameDate: selectedDate },
     {
       enabled: true,           // FIX 1: always enabled — games.list is public
       refetchOnWindowFocus: false,
@@ -268,16 +292,26 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
   });
   useEffect(() => {
     if (!serverDateData) return;
-    const serverDate = serverDateData.effectiveDate;
+    const serverDate = resolveSplitsServerDate(
+      selectedDate,
+      serverDateData.effectiveDate,
+      initialDate,
+      userSelectedDateRef.current
+    );
     if (serverDate !== selectedDate) {
       console.log(
         `[BettingSplits][DateSync] Syncing selectedDate from client=${selectedDate} to server=${serverDate}` +
         ` (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`
       );
-      setSelectedDate(serverDate);
+      setSelectedDateState(serverDate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverDateData]);
+  }, [serverDateData, initialDate, selectedDate]);
+
+  const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
+    { sport: selectedSport },
+    { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
+  );
 
   const liveCount = useMemo(() => (allGames ?? []).filter(g => g?.gameStatus === "live").length, [allGames]);
 
@@ -317,18 +351,17 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
   };
 
   // All unique dates available for the current sport (sorted ascending)
-  const allDates = useMemo(() => {
-    if (!allGames) return [];
-    const dateSet = new Set<string>();
-    for (const g of allGames) if (g) dateSet.add(effectiveGameDate(g.gameDate, g.startTimeEst));
-    return Array.from(dateSet).sort();
-  }, [allGames]);
+  const allDates = useMemo(
+    () => availableDatesData?.dates ?? [],
+    [availableDatesData?.dates]
+  );
 
   // ─── Fix 3: Auto-advance selectedDate when it has no games ──────────────────────────────────────
   // BettingSplits previously had NO auto-advance. If selectedDate was not in allDates
   // (e.g. stale date after boundary crossing), the page stayed stuck on an empty view.
   // Mirror the same guarded auto-advance that ModelProjections uses.
   useEffect(() => {
+    if (initialDate) return;
     if (!allGames || allDates.length === 0) return; // still loading
     const hasGamesOnDate = allDates.includes(selectedDate);
     if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
@@ -348,8 +381,8 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
       `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
       `Advancing to allDates[0]=${allDates[0]}`
     );
-    setSelectedDate(allDates[0]!);
-  }, [allDates, selectedDate, serverDateData]);
+    setSelectedDateState(allDates[0]!);
+  }, [allDates, selectedDate, serverDateData, initialDate, allGames]);
 
   // ─── Fix 4: Diagnostic logging when allGames=0 ──────────────────────────────────────────────────
   useEffect(() => {
@@ -545,7 +578,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
           {/* Links style themselves (no nested <button> — interactive-inside-
               interactive is invalid HTML and doubles the keyboard tab stops). */}
           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
-          <Link href={feedModelPath("MLB")}
+          <Link href={resolveRouteHref(feedModelPath("MLB"))}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
             style={{ color: "rgba(255,255,255,0.45)" }}
           >
@@ -555,7 +588,7 @@ export default function BettingSplitsPage({ initialSport = "MLB" }: { initialSpo
           {/* Right: BETTING SPLITS — active on this page. Self-link targets the
               canonical sport path (the old /splits href navigated away to the
               retired public page — the tab un-selected itself on click). */}
-          <Link href={bettingSplitsPath(selectedSport)} aria-current="page"
+          <Link href={resolveRouteHref(bettingSplitsPath(selectedSport, selectedDate))} aria-current="page"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
             style={{ color: "#ffffff" }}
           >

@@ -13,7 +13,7 @@ import { useAppAuth } from "./_core/hooks/useAppAuth";
 // [SWAP 2026-07-09] "/" now renders Dime landing v2 (spec:
 // docs/superpowers/specs/2026-07-08-dime-landing-v2-design.md — this is the approved
 // route-swap step). The legacy LandingPage import is gone; v1 remains at /landingpage.
-import DimeLandingV2 from './pages/dime/landing/DimeLandingV2';
+import DimeLandingV2 from "./pages/dime/landing/DimeLandingV2";
 // [PERF] NotFound is lazy: it imports ui/button + ui/card which share clsx with recharts.
 // Making it lazy removes recharts (409KB) from the critical path.
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -23,7 +23,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 // canonical surfaces (docs/plans/2026-07-11-navigation-reconstruction.md):
 //   /feed/model/{mlb|wc}-MM-DD-YYYY (DimeModelFeed) · /betting-splits/:sport
 const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
-const BettingSplits    = lazy(() => import("./pages/BettingSplits"));
+const BettingSplits = lazy(() => import("./pages/BettingSplits"));
 const Home = lazy(() => import("./pages/Home"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
@@ -38,29 +38,36 @@ const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
 const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
 const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
-const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
-const SubscribeSuccess = lazy(() => import('./pages/SubscribeSuccess'));
-const SubscribeCancel = lazy(() => import('./pages/SubscribeCancel'));
-const ManageAccount = lazy(() => import('./pages/ManageAccount'));
-const WorldCup2026 = lazy(() => import('./pages/WorldCup2026'));
-const ClaudeAssistant = lazy(() => import('./pages/ClaudeAssistant'));
-const DimeChat = lazy(() => import('./pages/DimeChat'));
-const CheckoutPage = lazy(() => import('./pages/dime/CheckoutPage'));
-const Profile = lazy(() => import('./pages/Profile'));
-const WaitlistAdmin   = lazy(() => import('./pages/WaitlistAdmin'));
-const Privacy = lazy(() => import('./pages/Privacy'));
-const Terms = lazy(() => import('./pages/Terms'));
+const SubscribeSuccess = lazy(() => import("./pages/SubscribeSuccess"));
+const SubscribeCancel = lazy(() => import("./pages/SubscribeCancel"));
+const ManageAccount = lazy(() => import("./pages/ManageAccount"));
+const WorldCup2026 = lazy(() => import("./pages/WorldCup2026"));
+const ClaudeAssistant = lazy(() => import("./pages/ClaudeAssistant"));
+const DimeChat = lazy(() => import("./pages/DimeChat"));
+const DimeAppShell = lazy(() => import("./pages/dime-shell/DimeAppShell"));
+const CheckoutPage = lazy(() => import("./pages/dime/CheckoutPage"));
+const Profile = lazy(() => import("./pages/Profile"));
+const WaitlistAdmin = lazy(() => import("./pages/WaitlistAdmin"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
 
 // ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
-const MobileOwnerLayout = lazy(() => import('./features/mobileOwnerTabs/MobileOwnerLayout'));
-import { GlobalMobileOwnerTabs } from './features/mobileOwnerTabs/GlobalMobileOwnerTabs';
+const MobileOwnerLayout = lazy(
+  () => import("./features/mobileOwnerTabs/MobileOwnerLayout")
+);
+import { GlobalMobileOwnerTabs } from "./features/mobileOwnerTabs/GlobalMobileOwnerTabs";
 import {
   feedModelPath,
   bettingSplitsPath,
+  canonicalBettingSplitsPath,
   legacyFeedRedirectTarget,
-  parseSplitsSport,
+  parseBettingSplitsPath,
 } from "@/lib/feedRoutes";
+import { isDimeProductLocation } from "./pages/dime-shell/productRoute";
+import { useDimeShellViewport } from "./pages/dime-shell/useDimeShellViewport";
+import { allowsLocalDimePreview } from "./pages/dime-shell/previewGate";
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -95,7 +102,9 @@ function RootRoute() {
   // This replaces the old "return null while loading" pattern that kept the shell visible.
   useEffect(() => {
     if (loading) {
-      console.log("[RootRoute] [STATE] Auth loading — LandingPage already visible, waiting for auth");
+      console.log(
+        "[RootRoute] [STATE] Auth loading — LandingPage already visible, waiting for auth"
+      );
       return;
     }
     if (appUser) {
@@ -103,27 +112,95 @@ function RootRoute() {
       const pendingCheckout = sessionStorage.getItem("pendingCheckout");
       if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
         sessionStorage.removeItem("pendingCheckout");
-        console.log(`[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`);
+        console.log(
+          `[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`
+        );
         navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
         return;
       }
       const target = feedModelPath("MLB");
-      console.log(`[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`);
+      console.log(
+        `[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`
+      );
       // replace — otherwise Back lands on "/" which instantly re-pushes forward
       navigate(target, { replace: true });
     } else {
-      console.log("[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible");
+      console.log(
+        "[RootRoute] [OUTPUT] Unauthenticated — LandingPage stays visible"
+      );
     }
   }, [loading, appUser]);
 
   // [OPTIMISTIC] Always render the landing page immediately — no null return, no loading gap.
   // DimeLandingV2 is an eager import — no Suspense needed, renders synchronously.
   // The HTML loading shell dismisses the moment this component renders into #root.
-  console.log(`[RootRoute] [RENDER] Rendering DimeLandingV2 immediately (loading=${loading}, authed=${!!appUser})`);
+  console.log(
+    `[RootRoute] [RENDER] Rendering DimeLandingV2 immediately (loading=${loading}, authed=${!!appUser})`
+  );
   return <DimeLandingV2 />;
 }
 
+function DimeChatRoute() {
+  // Local visual-review escape hatch only. Vite replaces DEV with false in
+  // production builds, where authenticated product routes stay behind RequireAuth.
+  const localPreview = allowsLocalDimePreview(
+    window.location.search,
+    import.meta.env.DEV
+  );
+
+  return localPreview ? (
+    <DimeChat />
+  ) : (
+    <RequireAuth>
+      <DimeChat />
+    </RequireAuth>
+  );
+}
+
+function StandaloneSplitsRoute({
+  sportSegment,
+  dateSegment,
+}: {
+  sportSegment?: string;
+  dateSegment?: string;
+}) {
+  const parsed = parseBettingSplitsPath(sportSegment, dateSegment);
+  const canonical = canonicalBettingSplitsPath(sportSegment, dateSegment);
+
+  if (!parsed?.isoDate || window.location.pathname !== canonical) {
+    return <Redirect to={canonical} replace />;
+  }
+
+  return (
+    <RequireAuth>
+      <BettingSplits initialSport={parsed.sport} initialDate={parsed.isoDate} />
+    </RequireAuth>
+  );
+}
+
 function Router() {
+  const [location] = useLocation();
+  const shellViewport = useDimeShellViewport();
+  const shellOwnsRoute = shellViewport && isDimeProductLocation(location);
+  const localPreview = allowsLocalDimePreview(
+    window.location.search,
+    import.meta.env.DEV
+  );
+
+  if (shellOwnsRoute) {
+    return (
+      <Suspense fallback={null}>
+        {localPreview ? (
+          <DimeAppShell previewMode />
+        ) : (
+          <RequireAuth>
+            <DimeAppShell />
+          </RequireAuth>
+        )}
+      </Suspense>
+    );
+  }
+
   return (
     // [PERF] fallback=null: the HTML loading shell in index.html covers all loading states.
     // It hides via MutationObserver the moment React renders ANY child into #root.
@@ -131,99 +208,222 @@ function Router() {
     // and the React component — two separate loading states visible to the user.
     // With null: HTML shell → direct render of real content. Zero flash.
     <Suspense fallback={null}>
-    <Switch>
-      {/* ── Public routes (no auth required) ───────────────────────────────── */}
-      {/* / → auth-aware root:
+      <Switch>
+        {/* ── Public routes (no auth required) ───────────────────────────────── */}
+        {/* / → auth-aware root:
            - Authenticated users → canonical feed (/feed/model/mlb-MM-DD-YYYY)
            - Unauthenticated users → LandingPage (public marketing page)
            - While auth is loading → render nothing (HTML shell covers this state)
       */}
-      <Route path="/">{() => <RootRoute />}</Route>
-      {/* /home → redirect to landing */}
-      <Route path="/home">{() => <Redirect to="/" />}</Route>
-      {/* ── Legacy slug eradication — permanent client-side redirects ─────────
+        <Route path="/">{() => <RootRoute />}</Route>
+        {/* /home → redirect to landing */}
+        <Route path="/home">{() => <Redirect to="/" />}</Route>
+        {/* ── Legacy slug eradication — permanent client-side redirects ─────────
           (server issues 308s for full-page loads; these cover SPA navigations).
           None of these slugs may be emitted by app code — see lib/feedRoutes. */}
-      <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-      <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-      <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
-      {/* Legal pages — public, no auth required */}
-      <Route path="/privacy" component={Privacy} />
-      <Route path="/terms" component={Terms} />
-      {/* Stripe checkout result pages — public, no auth required */}
-      <Route path="/subscribe/success" component={SubscribeSuccess} />
-      <Route path="/subscribe/cancel" component={SubscribeCancel} />
-      {/* Login page — public, no auth required */}
-      <Route path="/login" component={Home} />
-      {/* Legacy standalone pricing page retired: it advertised the old $99/$499
+        <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+        <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
+        <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
+        {/* Legal pages — public, no auth required */}
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/terms" component={Terms} />
+        {/* Stripe checkout result pages — public, no auth required */}
+        <Route path="/subscribe/success" component={SubscribeSuccess} />
+        <Route path="/subscribe/cancel" component={SubscribeCancel} />
+        {/* Login page — public, no auth required */}
+        <Route path="/login" component={Home} />
+        {/* Legacy standalone pricing page retired: it advertised the old $99/$499
           copy while its CTAs charged the legacy $99.99/$499.99 prices (live
           audit 2026-07-10). The v2 grid on the landing page is canonical. */}
-      <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
-      {/* Password reset — public, accessed via reset link */}
-      <Route path="/reset-password" component={ResetPassword} />
-      {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
+        <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
+        {/* Password reset — public, accessed via reset link */}
+        <Route path="/reset-password" component={ResetPassword} />
+        {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
           old page still marketed the de-marketed annual plan. */}
-      <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
-      {/* Landing v2 is now the root landing page — redirect the old test route
+        <Route path="/landingpage">{() => <Redirect to="/" />}</Route>
+        {/* Landing v2 is now the root landing page — redirect the old test route
           so existing links and the checkout back-links keep working. */}
-      <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>
-      {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
-      <Route path="/checkout" component={CheckoutPage} />
-      {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
-      {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
+        <Route path="/landingpage-v2">{() => <Redirect to="/" />}</Route>
+        {/* In-domain Stripe checkout (Embedded Checkout w/ hosted fallback) */}
+        <Route path="/checkout" component={CheckoutPage} />
+        {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
+        {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
           maps to /betting-splits/MLB; everything else to the dated feed URL. */}
-      <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
-      {/* Dime AI Model Projections — the canonical feed surface.
+        <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
+        {/* Dime AI Model Projections — the canonical feed surface.
           /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
           split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
           canonicalizes to today's dated URL inside DimeModelFeed). */}
-      <Route path="/feed/model/:sport/:date">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
-      <Route path="/feed/model/:sport">{(p) => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
-      {/* Betting splits — canonical /betting-splits/:sport (MLB | NHL | NBA) */}
-      <Route path="/betting-splits/:sport">{(p) => {
-        const sport = parseSplitsSport(p.sport);
-        return sport
-          ? <RequireAuth><BettingSplits initialSport={sport} /></RequireAuth>
-          : <Redirect to={bettingSplitsPath("MLB")} replace />;
-      }}</Route>
-      <Route path="/betting-splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
-      {/* Admin pages */}
-      <Route path="/admin/users">{() => <RequireAuth><UserManagement /></RequireAuth>}</Route>
-      <Route path="/admin/publish">{() => <RequireAuth><PublishProjections /></RequireAuth>}</Route>
-      <Route path="/admin/ingest-an">{() => <RequireAuth><IngestAnOdds /></RequireAuth>}</Route>
-      <Route path="/admin/model-results">{() => <RequireAuth><TheModelResults /></RequireAuth>}</Route>
-      <Route path="/admin/f5-edge">{() => <Redirect to="/admin/model-results" />}</Route>
-      <Route path="/admin/security">{() => <RequireAuth><SecurityEvents /></RequireAuth>}</Route>
-      <Route path="/admin/model-status">{() => <RequireAuth><AdminModelStatus /></RequireAuth>}</Route>
-      <Route path="/admin/postponed-games">{() => <RequireAuth><PostponedGames /></RequireAuth>}</Route>
-      <Route path="/admin/backtest">{() => <RequireAuth><MlbBacktest /></RequireAuth>}</Route>
-      {/* Waitlist management — owner-only, enforced inside WaitlistAdmin */}
-      <Route path="/admin/waitlist">{() => <RequireAuth><WaitlistAdmin /></RequireAuth>}</Route>
-      {/* Team schedules — params are read via useParams() inside each component */}
-      <Route path="/mlb/team/:slug">{() => <RequireAuth><MlbTeamSchedule /></RequireAuth>}</Route>
-      <Route path="/nba/team/:slug">{() => <RequireAuth><NbaTeamSchedule /></RequireAuth>}</Route>
-      <Route path="/nhl/team/:slug">{() => <RequireAuth><NhlTeamSchedule /></RequireAuth>}</Route>
-      {/* User pages */}
-      <Route path="/bet-tracker">{() => <RequireAuth><BetTracker /></RequireAuth>}</Route>
-      <Route path="/resources">{() => <RequireAuth><Resources /></RequireAuth>}</Route>
-      {/* Manage Account page */}
-      <Route path="/account">{() => <RequireAuth><ManageAccount /></RequireAuth>}</Route>
-      {/* Claude UI/UX Assistant */}
-      <Route path="/admin/claude">{() => <RequireAuth><ClaudeAssistant /></RequireAuth>}</Route>
-      {/* Profile page — identity and standing */}
-      <Route path="/profile">{() => <RequireAuth><Profile /></RequireAuth>}</Route>
-      {/* Dime AI Chat — streaming Claude Fable 5 chat */}
-      <Route path="/chat">{() => <RequireAuth><DimeChat /></RequireAuth>}</Route>
-      {/* FIFA World Cup 2026 — Group Stage Feed */}
-      <Route path="/wc2026">{() => <RequireAuth><WorldCup2026 /></RequireAuth>}</Route>
-      {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
-      {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
-      <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
-      <Route path="/m/:rest*">{() => <RequireAuth><MobileOwnerLayout /></RequireAuth>}</Route>
-      {/* 404 */}
-      <Route path="/404" component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
+        <Route path="/feed/model/:sport/:date">{p => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
+        <Route path="/feed/model/:sport">{p => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
+        {/* Betting splits — lowercase dated canonical URL; legacy forms replace. */}
+        <Route path="/betting-splits/:sport/:date">
+          {p => (
+            <StandaloneSplitsRoute
+              sportSegment={p.sport}
+              dateSegment={p.date}
+            />
+          )}
+        </Route>
+        <Route path="/betting-splits/:sport">
+          {p => <StandaloneSplitsRoute sportSegment={p.sport} />}
+        </Route>
+        <Route path="/betting-splits">
+          {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
+        </Route>
+        {/* Admin pages */}
+        <Route path="/admin/users">
+          {() => (
+            <RequireAuth>
+              <UserManagement />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/publish">
+          {() => (
+            <RequireAuth>
+              <PublishProjections />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/ingest-an">
+          {() => (
+            <RequireAuth>
+              <IngestAnOdds />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/model-results">
+          {() => (
+            <RequireAuth>
+              <TheModelResults />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/f5-edge">
+          {() => <Redirect to="/admin/model-results" />}
+        </Route>
+        <Route path="/admin/security">
+          {() => (
+            <RequireAuth>
+              <SecurityEvents />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/model-status">
+          {() => (
+            <RequireAuth>
+              <AdminModelStatus />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/postponed-games">
+          {() => (
+            <RequireAuth>
+              <PostponedGames />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/backtest">
+          {() => (
+            <RequireAuth>
+              <MlbBacktest />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Waitlist management — owner-only, enforced inside WaitlistAdmin */}
+        <Route path="/admin/waitlist">
+          {() => (
+            <RequireAuth>
+              <WaitlistAdmin />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Team schedules — params are read via useParams() inside each component */}
+        <Route path="/mlb/team/:slug">
+          {() => (
+            <RequireAuth>
+              <MlbTeamSchedule />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/nba/team/:slug">
+          {() => (
+            <RequireAuth>
+              <NbaTeamSchedule />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/nhl/team/:slug">
+          {() => (
+            <RequireAuth>
+              <NhlTeamSchedule />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* User pages */}
+        <Route path="/bet-tracker">
+          {() => (
+            <RequireAuth>
+              <BetTracker />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/resources">
+          {() => (
+            <RequireAuth>
+              <Resources />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Manage Account page */}
+        <Route path="/account">
+          {() => (
+            <RequireAuth>
+              <ManageAccount />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Claude UI/UX Assistant */}
+        <Route path="/admin/claude">
+          {() => (
+            <RequireAuth>
+              <ClaudeAssistant />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Profile page — identity and standing */}
+        <Route path="/profile">
+          {() => (
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* Dime AI Chat — streaming Claude Fable 5 chat */}
+        <Route path="/chat">{() => <DimeChatRoute />}</Route>
+        {/* FIFA World Cup 2026 — Group Stage Feed */}
+        <Route path="/wc2026">
+          {() => (
+            <RequireAuth>
+              <WorldCup2026 />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+        {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
+        <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
+        <Route path="/m/:rest*">
+          {() => (
+            <RequireAuth>
+              <MobileOwnerLayout />
+            </RequireAuth>
+          )}
+        </Route>
+        {/* 404 */}
+        <Route path="/404" component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
     </Suspense>
   );
 }
