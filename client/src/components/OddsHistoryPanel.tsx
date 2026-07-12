@@ -622,11 +622,11 @@ export function OddsHistoryPanel({
             <span
               style={{
                 fontFamily: "var(--dime-font-mono)",
-                fontSize: 9,
+                fontSize: 10.5,
                 fontWeight: 500,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                padding: "2px 7px",
+                padding: "2px 8px",
                 borderRadius: 999,
                 background: "var(--dime-surface-raised)",
                 border: "1px solid var(--dime-border-strong)",

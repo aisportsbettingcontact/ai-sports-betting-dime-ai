@@ -155,7 +155,7 @@ function edgeLabelIsAway(
           width: cssSize, height: cssSize,
           minWidth: minPx, minHeight: minPx,
           background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))",
-          fontSize: `clamp(${Math.max(8, Math.round(size * 0.22))}px, ${(size * 0.018).toFixed(2)}vw, ${Math.round(size * 0.34)}px)`,
+          fontSize: `clamp(${Math.max(10, Math.round(size * 0.22))}px, ${(size * 0.018).toFixed(2)}vw, ${Math.max(12, Math.round(size * 0.34))}px)`,
         }}
       >
         {name.slice(0, 2).toUpperCase()}

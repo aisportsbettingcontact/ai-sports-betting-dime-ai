@@ -107,11 +107,12 @@ body.mobile-owner-tabs-active .pf-page {
 
 .pf-label {
   font-family: var(--dime-font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--dime-text-muted);
+  /* text-secondary, not muted: every character must clear 4.5:1 */
+  color: var(--dime-text-secondary);
   margin: 0 0 8px 4px;
 }
 
@@ -267,4 +268,11 @@ body.mobile-owner-tabs-active .pf-page {
 .pf-error-retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--dime-ring);
+}
+
+/* Mobile: 44px minimum touch target (desktop rendering unchanged). */
+@media (max-width: 767px) {
+  .pf-error-retry {
+    min-height: 44px;
+  }
 }
