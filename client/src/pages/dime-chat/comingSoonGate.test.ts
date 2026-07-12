@@ -63,10 +63,14 @@ describe("real identity — no frozen sample renders (Phase 1)", () => {
     expect(chatSource).toMatch(/\{appUser\.discordUsername && \(/);
   });
 
-  it("keeps the prez photo exclusive to the prez account", () => {
+  it("avatar policy: prez photo exclusive; Discord avatar when linked; blank silhouette otherwise", () => {
     expect(chatSource).toMatch(/isPrezAccount\(user\.username\)/);
-    expect(chatSource).toMatch(/dc-avatar--initials/);
-    expect(cssSource).toMatch(/\.dc-avatar--initials/);
+    // Discord CDN avatar for linked accounts, blank silhouette for the rest —
+    // never initials, never someone else's photo (product req 2026-07-12).
+    expect(chatSource).toContain("cdn.discordapp.com/avatars/");
+    expect(chatSource).toContain("BLANK_AVATAR_URI");
+    expect(chatSource).toMatch(/src=\{resolveAvatarSrc\(user\)\}/);
+    expect(chatSource).not.toContain("deriveInitials");
   });
 
   it("renders a neutral profile row while auth resolves (never the sample)", () => {
@@ -102,8 +106,11 @@ describe("live settings menu (Phase 1.3)", () => {
     expect(chatSource).toMatch(/goTo\("\/account"\)/);
   });
 
-  it("hides Upgrade/Cancel for owners", () => {
-    expect(chatSource).toMatch(/\{!isOwner && \(\s*<div className="dc-menu-cta-row">/);
+  it("hides Upgrade/Cancel for owners AND lifetime members", () => {
+    expect(chatSource).toMatch(
+      /const showPlanCtas = !!appUser && !isOwner && !isLifetimeMember\(appUser\)/
+    );
+    expect(chatSource).toMatch(/\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/);
   });
 });
 

@@ -40,6 +40,7 @@ import { parseFileBuffer, detectSportFromFilename, detectDateFromFilename } from
 import { nanoid } from "nanoid";
 import { appUsersRouter, ownerProcedure, appUserProcedure } from "./routers/appUsers";
 import { betTrackerRouter } from "./routers/betTracker";
+import { dimeChatsRouter } from "./routers/dimeChats";
 import { securityRouter } from "./routers/security";
 import { metricsRouter } from "./routers/metrics";
 import { mlbScheduleRouter } from "./routers/mlbSchedule";
@@ -172,6 +173,7 @@ export const appRouter = router({
   system: systemRouter,
   appUsers: appUsersRouter,
   betTracker: betTrackerRouter,
+  dimeChats: dimeChatsRouter,
   security: securityRouter,
   metrics: metricsRouter,
   mlbSchedule: mlbScheduleRouter,
