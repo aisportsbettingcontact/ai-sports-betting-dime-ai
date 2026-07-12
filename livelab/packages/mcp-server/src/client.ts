@@ -40,6 +40,16 @@ export function resolveDaemonPath(): string | null {
   return null;
 }
 
+/** Canonical workspace root: absolute + symlinks resolved (macOS /var/folders → /private/var/folders). */
+function canonicalWorkspaceRoot(candidate: string): string {
+  const absolute = path.resolve(candidate);
+  try {
+    return fs.realpathSync(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 /**
  * HTTP client for the runtime daemon. Discovers the per-workspace runtime,
  * validates protocol compatibility, and can auto-start a headless daemon when
@@ -47,8 +57,13 @@ export function resolveDaemonPath(): string | null {
  */
 export class RuntimeClient {
   private discovery: RuntimeDiscovery | null = null;
+  readonly workspaceRoot: string;
 
-  constructor(readonly workspaceRoot: string) {}
+  constructor(workspaceRoot: string) {
+    // The daemon canonicalizes its root before writing the discovery record;
+    // compare in the same namespace or symlinked workspaces never match.
+    this.workspaceRoot = canonicalWorkspaceRoot(workspaceRoot);
+  }
 
   private readDiscovery(): RuntimeDiscovery | null {
     try {
@@ -62,8 +77,8 @@ export class RuntimeClient {
           `Runtime speaks protocol ${parsed.data.protocolVersion}; this client requires a compatible major version`,
         );
       }
-      // Cross-workspace attachment guard.
-      if (path.resolve(parsed.data.workspaceRoot) !== path.resolve(this.workspaceRoot)) return null;
+      // Cross-workspace attachment guard (both sides canonical).
+      if (canonicalWorkspaceRoot(parsed.data.workspaceRoot) !== this.workspaceRoot) return null;
       return parsed.data;
     } catch (err) {
       if (err instanceof LiveLabError) throw err;

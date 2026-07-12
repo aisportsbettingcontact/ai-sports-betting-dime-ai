@@ -31,6 +31,10 @@
     "package": "node scripts/package.mjs",
     "doctor": "node packages/cli/dist/cli.cjs doctor"
   },
+  "overrides": {
+    "serialize-javascript": "^7.0.5",
+    "diff": "^8.0.3"
+  },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@types/node": "^22.10.0",

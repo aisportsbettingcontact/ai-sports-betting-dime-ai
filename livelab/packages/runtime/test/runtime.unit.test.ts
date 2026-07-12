@@ -183,6 +183,33 @@ describe('runtime discovery + locking', () => {
   });
 });
 
+describe('ArtifactStore under a symlinked workspace root (macOS tmpdir topology)', () => {
+  // macOS os.tmpdir() returns /var/folders/... which symlinks to /private/var/...;
+  // artifact paths must stay workspace-relative (".livelab/...") regardless.
+  it.skipIf(process.platform === 'win32')('returns clean relative paths from the subdir branch', () => {
+    const real = fs.mkdtempSync(path.join(os.tmpdir(), 'livelab-real-'));
+    const link = path.join(tmp, 'ws-link');
+    fs.symlinkSync(real, link);
+    try {
+      const store = new ArtifactStore(link, 10_000_000, log);
+      const viaSubdir = store.reserve('screenshot', '.png', { sessionId: 's1', subdir: path.join('sessions', 's1') });
+      fs.writeFileSync(viaSubdir.absolutePath, Buffer.alloc(64));
+      const meta = store.commit(viaSubdir, 'screenshot', { sessionId: 's1' });
+      expect(meta.path).toMatch(/^\.livelab\/artifacts\/sessions\/s1\//);
+      // Readable from both the symlinked and the canonical root.
+      expect(fs.existsSync(path.join(link, meta.path))).toBe(true);
+      expect(fs.existsSync(path.join(real, meta.path))).toBe(true);
+      expect(fs.existsSync(store.absolutePathFor(meta))).toBe(true);
+
+      const plain = store.reserve('screenshot', '.png', {});
+      fs.writeFileSync(plain.absolutePath, Buffer.alloc(64));
+      expect(store.commit(plain, 'screenshot', {}).path).toMatch(/^\.livelab\/artifacts\//);
+    } finally {
+      fs.rmSync(real, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('ArtifactStore', () => {
   it('reserves, commits, lists, and confines paths', () => {
     const store = new ArtifactStore(tmp, 10_000_000, log);

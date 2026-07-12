@@ -13,6 +13,16 @@ function pidAlive(pid: number): boolean {
   }
 }
 
+/** Canonical workspace root: absolute + symlinks resolved (matches the daemon's discovery record). */
+function canonicalWorkspaceRoot(candidate: string): string {
+  const absolute = path.resolve(candidate);
+  try {
+    return fs.realpathSync(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 /**
  * Owns the runtime daemon lifecycle for the extension. Attaches to a live
  * compatible runtime when one exists (e.g. started headless by an agent);
@@ -47,7 +57,9 @@ export class RuntimeManager implements vscode.Disposable {
         );
         return null;
       }
-      if (path.resolve(parsed.data.workspaceRoot) !== path.resolve(this.workspaceRoot)) return null;
+      if (canonicalWorkspaceRoot(parsed.data.workspaceRoot) !== canonicalWorkspaceRoot(this.workspaceRoot)) {
+        return null;
+      }
       return parsed.data;
     } catch {
       return null;

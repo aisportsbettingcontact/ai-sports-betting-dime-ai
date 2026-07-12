@@ -35,6 +35,22 @@ export function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+/**
+ * Canonicalize a workspace root: absolute + symlinks resolved. Every boundary
+ * that accepts a workspace path must call this so all derived paths (artifact
+ * relatives, discovery records, watch events) live in one canonical namespace.
+ * Without it, macOS tmpdir workspaces (/var/folders → /private/var/folders)
+ * produce `../private/...` artifact paths and cross-client identity mismatches.
+ */
+export function canonicalWorkspaceRoot(candidate: string): string {
+  const absolute = path.resolve(candidate);
+  try {
+    return fs.realpathSync(absolute);
+  } catch {
+    return absolute;
+  }
+}
+
 /** Write a file with owner-only permissions where the platform supports it. */
 export function writeFileOwnerOnly(file: string, data: string | Buffer): void {
   ensureDir(path.dirname(file));

@@ -288,6 +288,55 @@ describe('browser sessions', () => {
   });
 });
 
+describe('symlinked workspace root (macOS tmpdir topology)', () => {
+  it.skipIf(process.platform === 'win32')(
+    'daemon canonicalizes the root: clean artifact paths + discovery matches through the symlink',
+    async () => {
+      const real = makeTmpWorkspace('livelab-symreal-');
+      const linkParent = makeTmpWorkspace('livelab-symlink-');
+      const link = path.join(linkParent, 'ws');
+      fs.symlinkSync(real, link);
+      // Start the daemon through the SYMLINKED path, like macOS /var/folders.
+      const symDaemon = await startDaemon({
+        workspaceRoot: link,
+        owner: 'headless',
+        workspaceTrusted: true,
+        jsonLogs: false,
+      });
+      try {
+        const call = async (method: string, apiPath: string, body?: unknown) => {
+          const res = await fetch(`http://127.0.0.1:${symDaemon.port}${apiPath}`, {
+            method,
+            headers: {
+              authorization: `Bearer ${symDaemon.token}`,
+              ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
+            },
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+          });
+          return { status: res.status, json: (await res.json()) as any };
+        };
+        // Discovery record readable via BOTH the symlinked and canonical paths,
+        // and carries the canonical root.
+        const viaLink = JSON.parse(fs.readFileSync(path.join(link, '.livelab', 'runtime.json'), 'utf8'));
+        expect(fs.realpathSync(viaLink.workspaceRoot)).toBe(viaLink.workspaceRoot);
+
+        // The exact failing CI path: screenshot with a session subdir.
+        const session = await call('POST', '/sessions', { device: 'iphone-16', engine: 'chromium', url: `${fixture.url}/` });
+        expect(session.status).toBe(201);
+        const shot = await call('POST', `/sessions/${session.json.session.sessionId}/screenshot`, { format: 'png' });
+        expect(shot.status).toBe(200);
+        expect(shot.json.artifact.path).toMatch(/^\.livelab\/artifacts\//);
+        expect(fs.existsSync(path.join(link, shot.json.artifact.path))).toBe(true);
+        expect(fs.existsSync(path.join(real, shot.json.artifact.path))).toBe(true);
+      } finally {
+        await symDaemon.close();
+        rmDir(real);
+        rmDir(linkParent);
+      }
+    },
+  );
+});
+
 describe('untrusted workspace', () => {
   it('cannot launch project commands, run scripts, or watch files', async () => {
     const untrustedWs = makeTmpWorkspace('livelab-untrusted-');
