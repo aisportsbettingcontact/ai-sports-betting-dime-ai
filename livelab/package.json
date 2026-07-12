@@ -1,0 +1,48 @@
+{
+  "name": "livelab-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LiveLab: live multi-device browser laboratory for VS Code with a shared MCP agent bridge",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/protocol",
+    "packages/runtime",
+    "packages/mcp-server",
+    "packages/webview-ui",
+    "packages/cli",
+    "packages/test-app",
+    "apps/vscode-extension"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc -b tsconfig.json",
+    "lint": "eslint .",
+    "test": "npm run test:unit && npm run test:integration && npm run test:mcp",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:mcp": "vitest run --project mcp",
+    "test:extension": "node apps/vscode-extension/test/run-extension-tests.mjs",
+    "test:e2e": "vitest run --project e2e",
+    "package": "node scripts/package.mjs",
+    "doctor": "node packages/cli/dist/cli.cjs doctor"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5",
+    "diff": "^8.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.25.0",
+    "eslint": "^9.17.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.19.0",
+    "vitest": "^3.0.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@livelab/test-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --strictPort --port 5199",
+    "build": "vite build",
+    "preview": "vite preview --strictPort --port 5199"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
