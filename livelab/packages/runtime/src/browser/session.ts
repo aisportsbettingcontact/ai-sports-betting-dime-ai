@@ -727,6 +727,35 @@ export class DeviceSession {
 
   // ------------------------------------------------------------------ evidence
 
+  /**
+   * page.evaluate has no built-in timeout; a wedged or half-crashed renderer
+   * would hang evidence collection (and with it the watch pipeline) forever.
+   * Every evidence evaluate goes through this bounded race — timeouts surface
+   * as explicit application errors instead of silent stalls.
+   */
+  private async boundedEvaluate<T = unknown>(expression: string, timeoutMs = 10_000): Promise<T> {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return (await Promise.race([
+        this.page.evaluate(expression),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new LiveLabError(
+                  ERROR_CODES.SETTLE_TIMEOUT,
+                  `Page evaluation did not return within ${timeoutMs}ms (renderer busy, wedged, or crashed)`,
+                ),
+              ),
+            timeoutMs,
+          );
+        }),
+      ])) as T;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   async screenshot(opts: { fullPage?: boolean; format?: 'png' | 'jpeg'; quality?: number }): Promise<Buffer> {
     this.assertOpen();
     const started = Date.now();
@@ -756,18 +785,18 @@ export class DeviceSession {
 
   async domSnapshot(args: { selector: string; maxDepth: number; maxNodes: number; includeText: boolean }): Promise<unknown> {
     this.assertOpen();
-    return this.page.evaluate(`(${DOM_SNAPSHOT})(${JSON.stringify(args)})`);
+    return this.boundedEvaluate(`(${DOM_SNAPSHOT})(${JSON.stringify(args)})`);
   }
 
   async ariaSnapshot(maxChars = 20_000): Promise<{ snapshot: string; truncated: boolean }> {
     this.assertOpen();
-    const snapshot = await this.page.locator('body').ariaSnapshot();
+    const snapshot = await this.page.locator('body').ariaSnapshot({ timeout: 10_000 });
     return { snapshot: snapshot.slice(0, maxChars), truncated: snapshot.length > maxChars };
   }
 
   async visibleTextDigest(): Promise<string> {
     this.assertOpen();
-    return (await this.page.evaluate(`(${VISIBLE_TEXT_DIGEST})()`)) as string;
+    return await this.boundedEvaluate<string>(`(${VISIBLE_TEXT_DIGEST})()`);
   }
 
   async layoutFacts(): Promise<{
@@ -780,12 +809,12 @@ export class DeviceSession {
     scroll: { x: number; y: number; maxX: number; maxY: number };
   }> {
     this.assertOpen();
-    return (await this.page.evaluate(`(${LAYOUT_FACTS})()`)) as any;
+    return (await this.boundedEvaluate(`(${LAYOUT_FACTS})()`)) as any;
   }
 
   async focusIndicatorCheck(): Promise<{ checked: boolean; hasIndicator?: boolean; tag?: string; reason?: string }> {
     this.assertOpen();
-    return (await this.page.evaluate(`(${FOCUS_INDICATOR_CHECK})()`)) as any;
+    return (await this.boundedEvaluate(`(${FOCUS_INDICATOR_CHECK})()`)) as any;
   }
 
   async inspect(args: { x?: number; y?: number; locator?: Locator }): Promise<unknown | null> {
@@ -804,7 +833,7 @@ export class DeviceSession {
     } else {
       throw new LiveLabError(ERROR_CODES.INVALID_INPUT, 'inspect requires x/y or a locator');
     }
-    const raw = (await this.page.evaluate(`(${INSPECT_AT})(${JSON.stringify(evalArgs)})`)) as any;
+    const raw = (await this.boundedEvaluate(`(${INSPECT_AT})(${JSON.stringify(evalArgs)})`)) as any;
     if (!raw) return null;
     const hints = raw._hints ?? {};
     delete raw._hints;

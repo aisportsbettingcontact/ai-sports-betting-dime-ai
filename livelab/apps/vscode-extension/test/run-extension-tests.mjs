@@ -39,12 +39,17 @@ fs.writeFileSync(
 );
 fs.writeFileSync(path.join(workspace, 'index.html'), '<main><h1>ext test</h1></main>');
 
+// Short user-data-dir: VS Code's default (.vscode-test/user-data under the repo)
+// exceeds the 103-char Unix IPC socket limit on deep CI paths ("listen EINVAL").
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'll-ud-'));
+
 try {
   await runTests({
     extensionDevelopmentPath,
     extensionTestsPath,
     launchArgs: [
       workspace,
+      `--user-data-dir=${userDataDir}`,
       '--disable-workspace-trust', // test host: trusted workspace (trust UI cannot be scripted)
       '--disable-gpu',
       '--disable-updates',
@@ -63,4 +68,5 @@ try {
   process.exit(1);
 } finally {
   fs.rmSync(workspace, { recursive: true, force: true });
+  fs.rmSync(userDataDir, { recursive: true, force: true });
 }
