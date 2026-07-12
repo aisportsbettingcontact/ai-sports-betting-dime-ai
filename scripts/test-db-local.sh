@@ -56,7 +56,9 @@ echo "[db-local] provisioning current schema (push, not migrate: history is not 
 DATABASE_URL="$DATABASE_URL" pnpm exec drizzle-kit push --force
 
 echo "[db-local] running the five real-database suites"
-DATABASE_URL="$DATABASE_URL" pnpm exec vitest run \
+# --no-file-parallelism: one shared DB + a global-mutation suite
+# (incrementAllTokenVersions) — parallel files invalidate each other's sessions.
+DATABASE_URL="$DATABASE_URL" pnpm exec vitest run --no-file-parallelism \
   server/appUsers.login.test.ts \
   server/appUsers.register.test.ts \
   server/completeAccountSetup.test.ts \

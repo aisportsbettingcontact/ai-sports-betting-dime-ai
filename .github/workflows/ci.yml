@@ -313,9 +313,16 @@ jobs:
       - name: "[STEP] Provision the current schema on the isolated database"
         run: pnpm exec drizzle-kit push --force
 
+      # --no-file-parallelism: the five suites share ONE database and
+      # tokenVersion.db.test.ts performs a global mutation
+      # (incrementAllTokenVersions bumps EVERY user's tokenVersion), which
+      # invalidates other suites' live sessions mid-test when files run in
+      # parallel workers. Proven by this job's second run on PR #84:
+      # register [ER-1] got "Session invalidated" (jwt.tv=1 db.tv=2) instead
+      # of CONFLICT while the tokenVersion suite logged "affected 17 users".
       - name: "[STEP] Run the five real-database suites"
         run: |
-          pnpm exec vitest run \
+          pnpm exec vitest run --no-file-parallelism \
             server/appUsers.login.test.ts \
             server/appUsers.register.test.ts \
             server/completeAccountSetup.test.ts \
