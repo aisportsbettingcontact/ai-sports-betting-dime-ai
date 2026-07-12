@@ -103,23 +103,54 @@ html.dark {
   font-family: var(--dime-font-sans);
 }
 
-/* Header: solid chrome surface — tier + 1px border, no glass. */
+/* Header: solid chrome on the page ground — black in dark mode (product
+ * owner's law: dark pages are black, structure comes from 1px borders). */
 .bs-header {
-  background: var(--dime-surface-sidebar) !important;
+  background: var(--dime-bg) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-bottom: 1px solid var(--dime-border);
 }
-.bs-title {
-  color: var(--dime-text-primary) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
+/* Brand wordmark: lowercase "dıme" — dotless ı (U+0131) with the mint
+ * coin-dot (MASTER.md wordmark spec: 0.20em dot, left calc(50% + 0.03em),
+ * top 0.05em, weight 700, tracking -0.05em). Font size inherits from the
+ * host chrome (shell sidebar/mobile bar titles are 20px); the splits page
+ * brand row sets its own size below. The dot picks up the light-mode
+ * hairline via --dime-coin-keyline. Used by the Dime shell chrome AND the
+ * splits page header — one brand mark, one implementation. */
+.dime-wordmark {
+  font-family: var(--dime-font-sans);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--dime-text-primary);
+  user-select: none;
 }
-.bs-tab {
-  color: var(--dime-text-secondary) !important;
+.dime-wordmark-i {
+  position: relative;
+  display: inline-block;
+  font-style: normal;
 }
-.bs-tab--active {
-  color: var(--dime-text-primary) !important;
+.dime-coindot {
+  position: absolute;
+  left: calc(50% + 0.03em);
+  top: 0.05em;
+  transform: translateX(-50%);
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: var(--dime-mint);
+  box-shadow: var(--dime-coin-keyline);
+}
+.bs-brand-row .dime-wordmark {
+  font-size: clamp(19px, 2vw, 24px);
+}
+/* 768–1023px: the shell's compact top bar already carries the wordmark
+ * directly above this pane — one brand mark per screen. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .bs-brand-row {
+    display: none;
+  }
 }
 .bs-datehdr {
   color: var(--dime-text-primary) !important;
@@ -226,7 +257,7 @@ html:not(.dark) .cal-panel {
   background: transparent !important;
 }
 .bs-page [data-edge-tier] {
-  background: var(--dime-surface-card) !important;
+  background: var(--dime-bg) !important;
   border-top: 1px solid var(--dime-border) !important;
   border-bottom: 1px solid var(--dime-border) !important;
 }
@@ -282,8 +313,10 @@ html:not(.dark) .cal-panel {
 .bsp-seg--away {
   background: var(--dime-mint) !important;
 }
+/* Home side reads as the black track — the pill border + divider carry the
+ * edge; the label is full-weight primary text, never white-on-grey. */
 .bsp-seg--home {
-  background: var(--dime-surface-raised) !important;
+  background: transparent !important;
 }
 .bsp-div {
   background: var(--dime-border-strong) !important;
@@ -303,7 +336,7 @@ html:not(.dark) .cal-panel {
 }
 .bsp-hdr span:nth-child(2) {
   font-family: var(--dime-font-mono);
-  color: var(--dime-text-muted) !important;
+  color: var(--dime-text-secondary) !important;
   letter-spacing: 0.08em !important;
 }
 
@@ -316,7 +349,7 @@ html:not(.dark) .cal-panel {
   border-radius: 8px !important;
   border: 1px solid var(--dime-border) !important;
   background: transparent !important;
-  color: var(--dime-text-muted) !important;
+  color: var(--dime-text-secondary) !important;
 }
 .bsp-toggle[data-active="true"] {
   background: var(--dime-surface-raised) !important;
@@ -324,13 +357,31 @@ html:not(.dark) .cal-panel {
   color: var(--dime-text-primary) !important;
 }
 .bsp-toggle:disabled {
-  color: var(--dime-text-faint) !important;
+  color: var(--dime-text-muted) !important;
+}
+
+/* Odds & Splits History toggle row: brand curve hover, visible focus. */
+.ohp-toggle {
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--dime-t) var(--dime-ease);
+}
+.ohp-toggle:hover {
+  background: var(--dime-row-hover);
+}
+.ohp-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--dime-ring);
+}
+.bs-pill:focus-visible,
+.bsp-toggle:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
 }
 
 /* One motion curve everywhere (MASTER.md: 160ms, single curve). */
 .bs-page .bs-pill,
 .bs-page .bs-search,
-.bs-page .bs-tab,
 .bs-page .cal-trigger,
 .bs-page .cal-day,
 .bs-page .gc-star,
@@ -611,6 +662,29 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   }
   .bs-page .gc-scrollinner {
     min-width: 220px !important;
+  }
+
+  /* Mobile type floor (MASTER.md): no content text below 11px on phones.
+   * Mono micro-labels sit at the 11px end of their 10–11px band; the search
+   * dropdown's team nicknames lift from their 10px desktop inline size; the
+   * date-subheader clamp raises its minimum so it never dips under 11px on
+   * narrow phones (its vw-driven size at ≥768px is untouched). */
+  .bs-page .bsp-toggle {
+    font-size: 11px !important;
+  }
+  .bs-page .bsp-hdr span {
+    font-size: 11px !important;
+  }
+  .bs-dropdown .bs-nick {
+    font-size: 11px !important;
+  }
+  .bs-datehdr-sub {
+    font-size: clamp(11px, 2.8vw, 17px) !important;
+  }
+  /* Dropdown contrast: hard-white inline text maps to the theme's primary
+   * ink so light-mode never renders white-on-light (≥4.5:1 both themes). */
+  .bs-dropdown .text-white {
+    color: var(--dime-text-primary) !important;
   }
 
   /* ── Bet Tracker: phone layout ────────────────────────────────────────── */

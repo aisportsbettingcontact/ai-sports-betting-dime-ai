@@ -38,11 +38,6 @@ import {
   type EdgeBlock,
 } from "./edgeParser";
 import {
-  addSessionRecent,
-  getSessionRecents,
-  type RecentChat,
-} from "./recentChats";
-import {
   classifyPointerIntent,
   resolveDrawerAccessibility,
   resolveDrawerTarget,
@@ -58,11 +53,11 @@ import {
   type SpringSettleHandle,
 } from "@/lib/springSettle";
 import {
-  deriveInitials,
   deriveTierLabel,
   displaySidebarName,
   formatExpiryLine,
   formatHandle,
+  isLifetimeMember,
   isPrezAccount,
   type SidebarUser,
 } from "./sidebarIdentity";
@@ -97,9 +92,14 @@ const NAV_ROWS: Array<{
   { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker" }, // D/L:62
 ];
 
-// Recent chats are session-only and honest (Ph1): titles derive from the first
-// user message of conversations started this session (recentChats.ts). The six
-// sample labels at D/L:66-71 are design law and are never rendered to users.
+/** Stored-thread summary rendered in the sidebar Recent Chats list. Recents
+ *  are the user's persisted dimeChats threads (server history) — the six
+ *  sample labels at D/L:66-71 are design law and are never rendered. */
+interface ThreadSummary {
+  id: number;
+  title: string;
+  starred: boolean;
+}
 
 const PILL_LABELS = [
   "World Cup Model Simulations",
@@ -185,8 +185,24 @@ const GEAR_PATH =
 /* Sidebar — D/L:54-96                                                */
 /* ----------------------------------------------------------------- */
 
-/** Real-identity avatar: prez photo for the prez account only (plan A2);
- *  everyone else gets brand-styled initials on the frozen avatar geometry. */
+/** Blank silhouette (generic gray profile) for accounts with no Discord avatar. */
+const BLANK_AVATAR_URI =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#B9BFC9"/><circle cx="32" cy="24" r="11" fill="#FFFFFF"/><path d="M10 58c3-13 12-19 22-19s19 6 22 19v6H10z" fill="#FFFFFF"/></svg>'
+  );
+
+/** Avatar priority (product requirement 2026-07-12): the prez photo stays
+ *  exclusive to the prez account; everyone else gets their Discord avatar
+ *  when connected, otherwise the blank silhouette. */
+function resolveAvatarSrc(user: SidebarUser): string {
+  if (isPrezAccount(user.username)) return prezAvatarUrl;
+  if (user.discordId && user.discordAvatar) {
+    return `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png?size=96`;
+  }
+  return BLANK_AVATAR_URI;
+}
+
 function IdentityAvatar({
   user,
   menu = false,
@@ -195,25 +211,20 @@ function IdentityAvatar({
   menu?: boolean;
 }) {
   const sizeClass = menu ? "dc-avatar--menu" : "dc-avatar";
-  if (isPrezAccount(user.username)) {
-    return (
-      <img
-        className={sizeClass}
-        src={prezAvatarUrl}
-        alt={displaySidebarName(user.username)}
-      />
-    );
-  }
   return (
-    <div className={`${sizeClass} dc-avatar--initials`} aria-hidden="true">
-      {deriveInitials(user.username)}
-    </div>
+    <img
+      className={sizeClass}
+      src={resolveAvatarSrc(user)}
+      alt={displaySidebarName(user.username)}
+    />
   );
 }
 
 function DimeSidebar({
   onNewChat,
   recentChats,
+  onOpenChat,
+  activeChatId,
   compact,
   drawerOpen,
   sidebarRef,
@@ -225,7 +236,9 @@ function DimeSidebar({
   isOwner,
 }: {
   onNewChat: () => void;
-  recentChats: RecentChat[];
+  recentChats: ThreadSummary[];
+  onOpenChat: (threadId: number) => void;
+  activeChatId: number | null;
   compact: boolean;
   drawerOpen: boolean;
   sidebarRef: MutableRefObject<HTMLElement | null>;
@@ -259,6 +272,10 @@ function DimeSidebar({
   };
 
   const expiryLine = appUser ? formatExpiryLine(appUser.expiryDate) : null;
+  // Upgrade/Cancel are plan-management CTAs: hidden for owners AND for
+  // lifetime members (product requirement 2026-07-12) — there is no plan to
+  // upgrade or cancel on either account.
+  const showPlanCtas = !!appUser && !isOwner && !isLifetimeMember(appUser);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -286,7 +303,15 @@ function DimeSidebar({
       aria-hidden={compact && !drawerOpen ? true : undefined}
     >
       <div className="dc-sidebar-head">
-        <div className="dc-sidebar-title">AI Sports Betting</div>
+        <div className="dc-sidebar-title">
+          <span className="dime-wordmark" aria-label="dime">
+            d
+            <span className="dime-wordmark-i">
+              ı<span className="dime-coindot" />
+            </span>
+            me
+          </span>
+        </div>
         {compact && (
           <button
             type="button"
@@ -345,21 +370,28 @@ function DimeSidebar({
               <a
                 key={rc.id}
                 href="#"
-                className="dc-sidebar-row"
+                className={`dc-sidebar-row${rc.id === activeChatId ? " is-active" : ""}`}
+                aria-current={rc.id === activeChatId ? "true" : undefined}
                 onClick={event => {
                   event.preventDefault();
+                  onOpenChat(rc.id);
                   onNavigate();
                 }}
               >
+                {rc.starred && (
+                  <span className="dc-recent-star" aria-label="Starred">
+                    ★
+                  </span>
+                )}
                 <span className="dc-sidebar-text">{rc.title}</span>
               </a>
             ))}
           </div>
         </>
       ) : (
-        // No conversations yet this session: hide the whole section (honesty —
-        // an empty frozen shell must not render). The spacer takes over the
-        // recent list's flex: 1 slot (D/L:65) so the profile row stays pinned.
+        // No stored conversations: hide the whole section (honesty — an empty
+        // frozen shell must not render). The spacer takes over the recent
+        // list's flex: 1 slot (D/L:65) so the profile row stays pinned.
         <div className="dc-sidebar-spacer" />
       )}
       {appUser ? (
@@ -393,7 +425,7 @@ function DimeSidebar({
                   )}
                 </div>
               </div>
-              {!isOwner && (
+              {showPlanCtas && (
                 <div className="dc-menu-cta-row">
                   <button
                     type="button"
@@ -805,14 +837,40 @@ export default function DimeChatPage({
         ? "granted"
         : "denied";
 
+  // History reads/writes need a real authenticated owner session — previewMode
+  // grants the visual surface only, never the tRPC history calls.
+  const historyReady = !!appUser && isOwner;
+
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
   const [ghost, setGhost] = useState<GhostRects | null>(null);
   const [stuck, setStuck] = useState(true);
   const [firstSendFx, setFirstSendFx] = useState(false);
-  const [recentChats, setRecentChats] = useState<RecentChat[]>(() =>
-    getSessionRecents()
+
+  // ── Persistent chat history (dimeChats router) ──────────────────────────
+  const utils = trpc.useUtils();
+  const threadsQuery = trpc.dimeChats.list.useQuery(undefined, {
+    enabled: historyReady,
+    staleTime: 15_000,
+  });
+  const recentChats: ThreadSummary[] = (threadsQuery.data ?? []).map(
+    (t: { id: number; title: string; starred: boolean }) => ({
+      id: t.id,
+      title: t.title,
+      starred: t.starred,
+    })
   );
+  const [threadId, setThreadId] = useState<number | null>(null);
+  const [threadMenuOpen, setThreadMenuOpen] = useState(false);
+  const threadMenuRef = useRef<HTMLDivElement | null>(null);
+  const pendingUserTextRef = useRef<string | null>(null);
+  const prevStreamingRef = useRef(false);
+  const createThreadMut = trpc.dimeChats.create.useMutation();
+  const appendMut = trpc.dimeChats.appendMessages.useMutation();
+  const setStarredMut = trpc.dimeChats.setStarred.useMutation();
+  const setArchivedMut = trpc.dimeChats.setArchived.useMutation();
+  const softDeleteMut = trpc.dimeChats.softDelete.useMutation();
+  const activeThreadMeta = recentChats.find(t => t.id === threadId);
   const [compact, setCompact] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -1379,13 +1437,11 @@ export default function DimeChatPage({
       const trimmed = text.trim();
       if (!trimmed || state.streaming) return;
 
+      // Remember the outbound text so the settle effect can persist the full
+      // user→assistant turn to the dimeChats history once the stream ends.
+      pendingUserTextRef.current = trimmed;
+
       const wasHome = state.messages.length === 0;
-      if (wasHome) {
-        // Ph1: a new conversation starts — record its session-only title from
-        // this first user message.
-        addSessionRecent(trimmed);
-        setRecentChats(getSessionRecents());
-      }
       if (wasHome) captureComposerPresentation();
       if (wasHome && !reduceMotion) {
         // FLIP first-position capture + ghost rects (spec §3.2)
@@ -1457,12 +1513,157 @@ export default function DimeChatPage({
     activeBatcherRef.current?.dispose();
     activeBatcherRef.current = null;
     dispatch({ type: "reset" });
+    setThreadId(null);
+    setThreadMenuOpen(false);
+    pendingUserTextRef.current = null;
     setInput("");
     setGhost(null);
     setFirstSendFx(false);
     stuckRef.current = true;
     setStuck(true);
   }, [state.messages.length, captureComposerPresentation]);
+
+  /* --- Persist each settled turn to the dimeChats history (fire-and-forget:
+         storage failures never block the visible conversation). --- */
+  useEffect(() => {
+    const wasStreaming = prevStreamingRef.current;
+    prevStreamingRef.current = state.streaming;
+    if (!wasStreaming || state.streaming) return; // only on stream settle
+    if (!historyReady) return;
+
+    const last = state.messages[state.messages.length - 1];
+    if (!last || last.role !== "assistant" || last.content === "") return;
+
+    const userText = pendingUserTextRef.current;
+    pendingUserTextRef.current = null;
+    const assistantText = last.content;
+    const refreshList = () => void utils.dimeChats.list.invalidate();
+
+    if (threadId == null) {
+      if (!userText) return;
+      createThreadMut.mutate(
+        { firstMessage: userText },
+        {
+          onSuccess: ({ threadId: newId }) => {
+            setThreadId(newId);
+            appendMut.mutate(
+              {
+                threadId: newId,
+                messages: [{ role: "assistant", content: assistantText }],
+              },
+              { onSettled: refreshList }
+            );
+          },
+        }
+      );
+    } else {
+      const turn = userText
+        ? [
+            { role: "user" as const, content: userText },
+            { role: "assistant" as const, content: assistantText },
+          ]
+        : [{ role: "assistant" as const, content: assistantText }];
+      appendMut.mutate(
+        { threadId, messages: turn },
+        { onSettled: refreshList }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.streaming, state.messages, threadId, historyReady]);
+
+  /* --- Resume a stored conversation from the sidebar. --- */
+  const openChat = useCallback(
+    async (id: number) => {
+      abortRef.current?.abort();
+      activeBatcherRef.current?.dispose();
+      activeBatcherRef.current = null;
+      try {
+        const data = await utils.dimeChats.get.fetch({ threadId: id });
+        dispatch({
+          type: "hydrate",
+          messages: data.messages.map(
+            (msg: { role: "user" | "assistant"; content: string }) => ({
+              role: msg.role,
+              content: msg.content,
+            })
+          ),
+        });
+        setThreadId(id);
+        setThreadMenuOpen(false);
+        pendingUserTextRef.current = null;
+        setInput("");
+        stuckRef.current = true;
+        setStuck(true);
+      } catch (err) {
+        dimeDebug("history.open_failed", { error: (err as Error).message });
+      }
+    },
+    [utils]
+  );
+
+  /* --- "⋯" chat settings: Star / Archive / Delete for the open thread. --- */
+  useEffect(() => {
+    if (!threadMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (!threadMenuRef.current?.contains(e.target as Node))
+        setThreadMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setThreadMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [threadMenuOpen]);
+
+  const refreshThreads = useCallback(
+    () => void utils.dimeChats.list.invalidate(),
+    [utils]
+  );
+
+  const toggleStar = useCallback(() => {
+    if (threadId == null) return;
+    setThreadMenuOpen(false);
+    setStarredMut.mutate(
+      { threadId, starred: !activeThreadMeta?.starred },
+      { onSettled: refreshThreads }
+    );
+  }, [threadId, activeThreadMeta?.starred, setStarredMut, refreshThreads]);
+
+  const archiveThread = useCallback(() => {
+    if (threadId == null) return;
+    setThreadMenuOpen(false);
+    setArchivedMut.mutate(
+      { threadId, archived: true },
+      {
+        onSettled: () => {
+          refreshThreads();
+          newChat();
+        },
+      }
+    );
+  }, [threadId, setArchivedMut, refreshThreads, newChat]);
+
+  const deleteThread = useCallback(() => {
+    if (threadId == null) return;
+    if (
+      !window.confirm("Delete this chat? It will be removed from your history.")
+    )
+      return;
+    setThreadMenuOpen(false);
+    softDeleteMut.mutate(
+      { threadId },
+      {
+        onSettled: () => {
+          refreshThreads();
+          newChat();
+        },
+      }
+    );
+  }, [threadId, softDeleteMut, refreshThreads, newChat]);
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -1596,7 +1797,15 @@ export default function DimeChatPage({
             >
               Menu
             </button>
-            <span className="dc-mobile-title">AI Sports Betting</span>
+            <span className="dc-mobile-title">
+              <span className="dime-wordmark" aria-label="dime">
+                d
+                <span className="dime-wordmark-i">
+                  ı<span className="dime-coindot" />
+                </span>
+                me
+              </span>
+            </span>
             <span className="dc-mobile-balance" aria-hidden="true" />
           </div>
         )}
@@ -1604,6 +1813,8 @@ export default function DimeChatPage({
         <DimeSidebar
           onNewChat={newChat}
           recentChats={recentChats}
+          onOpenChat={openChat}
+          activeChatId={threadId}
           compact={compact}
           drawerOpen={drawerOpen}
           sidebarRef={sidebarRef}
@@ -1708,6 +1919,48 @@ export default function DimeChatPage({
                   <div className="dc-coming-soon-copy">
                     AI MODEL CHAT COMING SOON
                   </div>
+                </div>
+              )}
+              {chatAccess === "granted" && conversation && threadId != null && (
+                <div className="dc-thread-actions" ref={threadMenuRef}>
+                  <button
+                    type="button"
+                    className="dc-thread-menu-trigger dc-focusable dc-pressable"
+                    aria-label="Chat settings"
+                    aria-haspopup="menu"
+                    aria-expanded={threadMenuOpen}
+                    onClick={() => setThreadMenuOpen(open => !open)}
+                  >
+                    ⋯
+                  </button>
+                  {threadMenuOpen && (
+                    <div className="dc-thread-menu" role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="dc-thread-menu-item dc-focusable dc-pressable"
+                        onClick={toggleStar}
+                      >
+                        {activeThreadMeta?.starred ? "Unstar" : "Star"}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="dc-thread-menu-item dc-focusable dc-pressable"
+                        onClick={archiveThread}
+                      >
+                        Archive
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="dc-thread-menu-item dc-thread-menu-item--danger dc-focusable dc-pressable"
+                        onClick={deleteThread}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {chatAccess === "granted" && conversation && (

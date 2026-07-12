@@ -145,8 +145,10 @@ describe("Legacy slug eradication — navigation hooks", () => {
     expect(homeSrc).toMatch(
       /import \{ resolvePostLoginPath \} from "\.\/dime-shell\/breakpoints"/,
     );
+    // [2026-07-12] /login no longer force-redirects authenticated visitors
+    // (account switching); the shared resolver is still the only path source.
     expect(homeSrc).toMatch(
-      /resolvePostLoginPath\(searchParams\.get\("returnPath"\)\)/,
+      /resolvePostLoginPath\((?:explicitReturnPath|explicit|searchParams\.get\("returnPath"\)|null)\)/,
     );
     expect(homeSrc).not.toMatch(/\?\? "\/splits"/);
   });

@@ -18,7 +18,8 @@
  *                    coin-dot hairline (--dime-coin-keyline)
  *   Motion:          160ms cubic-bezier(0.16,1,0.3,1); disabled under
  *                    prefers-reduced-motion
- *   Icon size 22px · label 11px Familjen Grotesk (600 active / 500 inactive)
+ *   Icon size 22px · label 12px Familjen Grotesk (600 active / 500 inactive)
+ *                    — Grotesk body floor is 12px; mono-micro is not used here
  *   Height 60px · 44px touch targets · env(safe-area-inset-bottom)
  *
  * ALL COLORS USE INLINE style={{}} — NOT Tailwind classes.
@@ -267,7 +268,7 @@ export function MobileOwnerBottomTabs({ className = "" }: MobileOwnerBottomTabsP
               <span
                 style={{
                   fontFamily: "var(--dime-font-sans)",
-                  fontSize: "11px",
+                  fontSize: "12px",
                   fontWeight: isActive ? 600 : 500,
                   letterSpacing: "0.01em",
                   lineHeight: 1.2,
