@@ -133,6 +133,7 @@ export default function DimeAppShell({
       <BettingSplits
         initialSport={state.sport}
         initialDate={state.isoDate}
+        initialDateSource={parsed?.isoDate ? "url-explicit" : "app-default"}
         resolveRouteHref={resolveRouteHref}
       />
     );

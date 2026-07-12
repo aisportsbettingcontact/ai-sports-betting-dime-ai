@@ -89,7 +89,12 @@ describe("DimeAppShell integration contract", () => {
     expect(shellSource).toMatch(
       /const canonical = canonicalBettingSplitsPath\(\s*actualRoute\.sportSegment,\s*actualRoute\.dateSegment\s*\)/
     );
-    expect(appSource).toMatch(/<Redirect to=\{canonical\} replace \/>/);
+    // The canonical redirect must carry date provenance on the history entry:
+    // a dated canonical URL alone cannot distinguish a deliberate deep link
+    // from an application default, and auto-advance may only move defaults.
+    expect(appSource).toMatch(
+      /<Redirect[\s\S]*?to=\{canonical\}[\s\S]*?replace[\s\S]*?splitsDateSource:[\s\S]*?"url-explicit"[\s\S]*?"app-default"[\s\S]*?\/>/
+    );
     expect(shellSource).toMatch(
       /navigate\(resolveRouteHref\(canonical\), \{ replace: true \}\)/
     );

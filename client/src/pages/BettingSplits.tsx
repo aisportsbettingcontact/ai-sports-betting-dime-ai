@@ -10,7 +10,11 @@ import { useLocation } from "wouter";
 import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
-import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
+import {
+  resolveSplitsServerDate,
+  shouldAutoAdvance,
+  type SplitsDateSource,
+} from "./dime-shell/splitsDateState";
 
 // CDN icon URLs
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
@@ -180,6 +184,12 @@ export interface BettingSplitsPageProps {
   initialSport?: "MLB" | "NHL" | "NBA";
   /** ISO date parsed from the canonical URL; URL state is authoritative. */
   initialDate?: string;
+  /**
+   * Whether initialDate was a deliberate deep link or an application default.
+   * Canonical redirects date every URL, so the URL shape cannot carry this.
+   * Auto-advance only ever moves an app-default date.
+   */
+  initialDateSource?: SplitsDateSource;
   /** Allows the shell to preserve a local-only preview capability in route changes. */
   resolveRouteHref?: (href: string) => string;
 }
@@ -189,6 +199,7 @@ const identityRouteHref = (href: string) => href;
 export default function BettingSplitsPage({
   initialSport = "MLB",
   initialDate,
+  initialDateSource = initialDate ? "url-explicit" : "app-default",
   resolveRouteHref = identityRouteHref,
 }: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
@@ -361,7 +372,6 @@ export default function BettingSplitsPage({
   // (e.g. stale date after boundary crossing), the page stayed stuck on an empty view.
   // Mirror the same guarded auto-advance that ModelProjections uses.
   useEffect(() => {
-    if (initialDate) return;
     if (!allGames || allDates.length === 0) return; // still loading
     const hasGamesOnDate = allDates.includes(selectedDate);
     if (hasGamesOnDate) return; // selectedDate is valid — no advance needed
@@ -369,20 +379,32 @@ export default function BettingSplitsPage({
     // If effectiveDate is available and selectedDate >= effectiveDate, the dates cache may be
     // stale — do NOT advance, as that would skip to a future date with no published games.
     const effectiveDate = serverDateData?.effectiveDate;
-    if (effectiveDate && selectedDate >= effectiveDate) {
-      console.warn(
-        `[BettingSplits][AutoAdvance] BLOCKED — selectedDate=${selectedDate} >= effectiveDate=${effectiveDate}. ` +
-        `allDates=${JSON.stringify(allDates.slice(0, 5))} — stale rolling window, not advancing.`
-      );
+    const blockedByEffectiveWindow = Boolean(
+      effectiveDate && selectedDate >= effectiveDate
+    );
+    const advance = shouldAutoAdvance({
+      dateSource: initialDateSource,
+      userSelected: userSelectedDateRef.current,
+      datesLoaded: true,
+      hasGamesOnSelectedDate: false,
+      blockedByEffectiveWindow,
+    });
+    if (!advance) {
+      if (blockedByEffectiveWindow) {
+        console.warn(
+          `[BettingSplits][AutoAdvance] BLOCKED — selectedDate=${selectedDate} >= effectiveDate=${effectiveDate}. ` +
+          `allDates=${JSON.stringify(allDates.slice(0, 5))} — stale rolling window, not advancing.`
+        );
+      }
       return;
     }
-    // selectedDate is genuinely before the window — advance to first available date.
+    // App-default date genuinely before the window — advance to first available date.
     console.log(
       `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
       `Advancing to allDates[0]=${allDates[0]}`
     );
     setSelectedDateState(allDates[0]!);
-  }, [allDates, selectedDate, serverDateData, initialDate, allGames]);
+  }, [allDates, selectedDate, serverDateData, initialDateSource, allGames]);
 
   // ─── Fix 4: Diagnostic logging when allGames=0 ──────────────────────────────────────────────────
   useEffect(() => {

@@ -68,6 +68,7 @@ import {
 import { isDimeProductLocation } from "./pages/dime-shell/productRoute";
 import { useDimeShellViewport } from "./pages/dime-shell/useDimeShellViewport";
 import { allowsLocalDimePreview } from "./pages/dime-shell/previewGate";
+import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
 
 /**
  * RootRoute — auth-aware landing/redirect component for the "/" path.
@@ -168,12 +169,31 @@ function StandaloneSplitsRoute({
   const canonical = canonicalBettingSplitsPath(sportSegment, dateSegment);
 
   if (!parsed?.isoDate || window.location.pathname !== canonical) {
-    return <Redirect to={canonical} replace />;
+    // The canonical redirect stamps a date onto every URL, which would make an
+    // application-guessed date indistinguishable from a deliberate deep link.
+    // Carry the provenance across the redirect on the history entry.
+    return (
+      <Redirect
+        to={canonical}
+        replace
+        state={{
+          splitsDateSource: parsed?.isoDate ? "url-explicit" : "app-default",
+        }}
+      />
+    );
   }
+
+  const redirectDateSource = (
+    window.history.state as { splitsDateSource?: SplitsDateSource } | null
+  )?.splitsDateSource;
 
   return (
     <RequireAuth>
-      <BettingSplits initialSport={parsed.sport} initialDate={parsed.isoDate} />
+      <BettingSplits
+        initialSport={parsed.sport}
+        initialDate={parsed.isoDate}
+        initialDateSource={redirectDateSource ?? "url-explicit"}
+      />
     </RequireAuth>
   );
 }
