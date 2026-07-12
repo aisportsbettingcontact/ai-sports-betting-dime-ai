@@ -549,3 +549,24 @@ button.dc-sidebar-row {
     transform: translateX(-50%);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Real identity + owner gate (plan 2026-07-12, Phases 1-2)            */
+/* ------------------------------------------------------------------ */
+
+/* Initials avatar fallback (plan A2): brand mint on the theme surface,
+   frozen avatar geometry (30px row / 34px menu — F:74/78). Mint text on
+   light uses #0FA36B per design-system/dime-ai/MASTER.md. */
+.dc-avatar--initials { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; }
+.theme-dark .dc-avatar--initials { background: #1E1E26; color: #45E0A8; }
+.theme-light .dc-avatar--initials { background: #E4E4E9; color: #0FA36B; }
+div.dc-avatar--menu.dc-avatar--initials { font-size: 12px; }
+
+/* Non-owner coming-soon state (plan Phase 2.1): wordmark + copy centered by
+   the frozen .dc-main column (D/L:97); no composer, no pills, no hero.
+   Copy styling follows the mono microlabel vocabulary (recents-label F:64). */
+.dc-coming-soon { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 24px; text-align: center; }
+.dc-coming-soon-mark { width: min(220px, 60vw); height: auto; }
+.dc-coming-soon-copy { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
+.theme-dark .dc-coming-soon-copy { color: #EDEDF2; }
+.theme-light .dc-coming-soon-copy { color: #0B0B0F; }

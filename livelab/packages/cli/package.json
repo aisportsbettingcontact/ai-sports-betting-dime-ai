@@ -1,0 +1,18 @@
+{
+  "name": "@livelab/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "bin": {
+    "livelab": "dist/cli.cjs"
+  },
+  "scripts": {
+    "build": "tsc -b && node ../../scripts/bundle-cli.mjs"
+  },
+  "dependencies": {
+    "@livelab/protocol": "*",
+    "commander": "^13.1.0",
+    "@livelab/mcp-server": "*"
+  }
+}

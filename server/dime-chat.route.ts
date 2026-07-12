@@ -21,6 +21,7 @@ import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getAppUserById } from "./db";
+import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import {
   DIME_CHAT_FROZEN_NOTICE,
@@ -33,6 +34,7 @@ import {
   selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { handleDime1ChatRequest } from "./_core/dime1ChatHandler";
 import { validateDimeResponseText } from "./_core/dimeVerdict";
 import { assessDimeResponsibleGamblingSafety, containsProhibitedBettingCertainty } from "./_core/dimeSafety";
 import {
@@ -81,15 +83,15 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ---------------------------------------------------------------
-// Entitlement — require an active paid subscription (or owner role)
-// before any Anthropic call or SSE stream begins. Evaluated per-request
-// against the DB (not the JWT), so a revoked subscriber loses chat access
-// immediately instead of waiting out their JWT expiry.
+// Entitlement — OWNER-ONLY (restored per plan A1, 2026-07-12): the Dime
+// model answers role="owner" accounts only; subscribers with hasAccess are
+// NOT entitled (see dimeModelAccess.ts). Evaluated per-request against the
+// DB (never the JWT role claim), so a demoted/revoked user loses chat
+// access immediately instead of waiting out their JWT expiry.
 // ---------------------------------------------------------------
-async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
-  if (role === "owner") return true;
+async function checkDimeChatEntitlement(userId: number): Promise<boolean> {
   const user = await getAppUserById(userId);
-  return !!user?.hasAccess;
+  return canAccessDimeModel(user);
 }
 
 const dimeChatRouter = Router();
@@ -110,19 +112,21 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // --- SEC-CRIT: Entitlement gate — reject authenticated-but-unentitled requests
-  // before any Claude call or SSE stream. Closes the free-tier billing leak and
-  // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
-  // bumping tokenVersion, so this must be checked per-request, not just at login). ---
-  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
+  // --- SEC-CRIT: Entitlement gate — reject every non-owner request before any
+  // Claude call or SSE stream (owner-only policy, dimeModelAccess.ts). Runs
+  // BEFORE the provider-freeze branch so non-owners get a 403, never the
+  // frozen-notice stream. Checked per-request against the DB, closing the
+  // hasAccess-revocation bypass (stripeWebhook.ts revokes without bumping
+  // tokenVersion) and the stale-JWT-role bypass. ---
+  const entitled = await checkDimeChatEntitlement(authedUser.userId);
   if (!entitled) {
     dimeLog("dime.chat.entitlement_rejected", requestId, {
       errorClass: "AuthorizationError",
       statusCode: 403,
       userId: authedUser.userId,
-      detail: "Active subscription required",
+      detail: "Owner-only access — non-owner rejected",
     });
-    res.status(403).json({ error: "Active subscription required." });
+    res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE });
     return;
   }
 
@@ -184,6 +188,19 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   if (safety.risk === "distress") {
     dimeLog("dime.chat.safety_intervention", requestId, { reason: safety.reason });
     res.status(200).json({ message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.` });
+    return;
+  }
+
+  // --- DIME 1.0 PROVIDER (v1): self-hosted Llama-3-based Dime 1.0 served
+  // 4-bit by vLLM from a private RunPod Serverless endpoint. Railway stays
+  // the control plane — auth, entitlement, rate limits, and the distress
+  // screen already ran above; retrieval grounding, prompt construction, and
+  // post-generation validation run inside the handler. Only generation
+  // leaves the box. This branch sits ABOVE the frozen guard and delegates
+  // to a separate module so the freeze contract tests keep pinning the
+  // frozen branch as the single barrier in front of the Claude path. ---
+  if (DIME_CHAT_LLM_PROVIDER === "dime1") {
+    await handleDime1ChatRequest({ req, res, requestId, startTime, messages, requestClass, responseBudget });
     return;
   }
 
