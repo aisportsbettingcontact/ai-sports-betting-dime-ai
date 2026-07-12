@@ -25,7 +25,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
 
         {/* Body */}
         <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-          <span className="text-foreground font-semibold">AI Sports Betting</span> provides sports betting
+          <span className="text-foreground font-semibold">Dime</span> provides sports betting
           analysis and data for <span className="italic">informational purposes only</span>.
         </p>
 

@@ -287,7 +287,11 @@ function DimeSidebar({
       aria-hidden={compact && !drawerOpen ? true : undefined}
     >
       <div className="dc-sidebar-head">
-        <div className="dc-sidebar-title">AI Sports Betting</div>
+        <div className="dc-sidebar-title">
+          <span className="dime-wordmark" aria-label="dime">
+            d<span className="dime-wordmark-i">ı<span className="dime-coindot" /></span>me
+          </span>
+        </div>
         {compact && (
           <button
             type="button"
@@ -1459,7 +1463,11 @@ export default function DimeChatPage({
               >
                 Menu
               </button>
-              <span className="dc-mobile-title">AI Sports Betting</span>
+              <span className="dc-mobile-title">
+                <span className="dime-wordmark" aria-label="dime">
+                  d<span className="dime-wordmark-i">ı<span className="dime-coindot" /></span>me
+                </span>
+              </span>
               <span className="dc-mobile-balance" aria-hidden="true" />
             </div>
           )}
