@@ -114,8 +114,11 @@ describe("Legacy slug eradication — client router", () => {
     expect(appSrc).toMatch(
       /path="\/betting-splits\/:sport">[\s\S]*?<StandaloneSplitsRoute sportSegment=\{p\.sport\} \/>/,
     );
+    // Splits render target: behind RequireAuth, fed by the parsed canonical
+    // URL, and carrying explicit date provenance so auto-advance can tell an
+    // app default from a deliberate deep link.
     expect(appSrc).toMatch(
-      /<RequireAuth>\s*<BettingSplits initialSport=\{parsed\.sport\} initialDate=\{parsed\.isoDate\} \/>\s*<\/RequireAuth>/,
+      /<RequireAuth>\s*<BettingSplits[\s\S]*?initialSport=\{parsed\.sport\}[\s\S]*?initialDate=\{parsed\.isoDate\}[\s\S]*?initialDateSource=\{[\s\S]*?\/>\s*<\/RequireAuth>/,
     );
   });
 

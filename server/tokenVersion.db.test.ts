@@ -48,7 +48,7 @@
  */
 
 import { describe, it, expect, afterAll } from "vitest";
-import { IS_CI } from "./_core/ciTestGuard";
+import { SKIP_DB_IN_CI } from "./_core/ciTestGuard";
 import { appRouter } from "./routers";
 import { APP_USER_COOKIE, signAppUserToken } from "./routers/appUsers";
 import type { TrpcContext } from "./_core/context";
@@ -138,7 +138,7 @@ afterAll(async () => {
 // ── Test suite ─────────────────────────────────────────────────────────────────
 // Uses a real database via getDb() — no DATABASE_URL in CI.
 // TODO: wire dedicated CI test database, then re-enable.
-describe.skipIf(IS_CI)("tokenVersion.db — DB-level and procedure-level force-logout invariants", () => {
+describe.skipIf(SKIP_DB_IN_CI)("tokenVersion.db — DB-level and procedure-level force-logout invariants", () => {
 
   // ── DB-LEVEL incrementTokenVersion ───────────────────────────────────────────
 

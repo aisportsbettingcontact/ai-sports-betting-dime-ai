@@ -1,22 +1,451 @@
 {
-  "description": "Expected local Vitest failures caused only by intentionally absent credentials or deployment environment values. Entries are exact file::test names; additions require audit review.",
-  "expectedFailures": [
-    "server/ciSecrets.test.ts::CI secrets validation > APP_SESSION_SECRET is set with sufficient length (min 44 chars)",
-    "server/ciSecrets.test.ts::CI secrets validation > All required GitHub Actions secrets are present and correctly formatted",
-    "server/ciSecrets.test.ts::CI secrets validation > DATABASE_URL is set and matches MySQL connection string format",
-    "server/ciSecrets.test.ts::CI secrets validation > NBA_SHEET_ID is set and matches Google Sheets ID format",
-    "server/ciSecrets.test.ts::CI secrets validation > PUBLIC_ORIGIN is set and has no trailing slash",
-    "server/claude.test.ts::Claude Fable 5 Integration > Anthropic credentials are set (API key or AI Gateway auth token)",
-    "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is accepted by Discord REST API (/users/@me)",
-    "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is set in environment",
-    "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > ENV.publicOrigin is set (required to prevent Cloud Run hostname in redirect_uri)",
-    "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > redirect_uri built from PUBLIC_ORIGIN matches Discord Portal registration",
-    "server/email.test.ts::Gmail SMTP credentials > should authenticate successfully with GMAIL_APP_PASSWORD",
-    "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID is set and non-empty",
-    "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID matches Google Sheets ID format (alphanumeric + hyphens/underscores, 20+ chars)",
-    "server/nbaSheetId.test.ts::nbaModelSync startup guard > ENV.nbaSheetId is set before nbaModelSync module loads",
-    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL is set and non-empty",
-    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL looks like a valid email address",
-    "server/vsinCredentials.test.ts::VSiN credentials > VSIN_PASSWORD is set and non-empty"
+  "version": 2,
+  "description": "Environment-bound Vitest failures, enforced by scripts/check-environment-failures.mjs (profiles: local, ci). An entry excuses a LOCAL failure only while at least one requiredEnv var is absent; entries with empty requiredEnv are unconditional operator-side probes. Entries that pass while their env is absent (stale) or fail while it is present (mislabeled regression) fail the gate. Additions require audit review.",
+  "entries": [
+    {
+      "id": "server/ciSecrets.test.ts::CI secrets validation > APP_SESSION_SECRET is set with sufficient length (min 44 chars)",
+      "requiredEnv": [],
+      "note": "vitest fixture sets a dummy APP_SESSION_SECRET, so presence cannot excuse the length assertion; operator-side check"
+    },
+    {
+      "id": "server/ciSecrets.test.ts::CI secrets validation > All required GitHub Actions secrets are present and correctly formatted",
+      "requiredEnv": [],
+      "note": "aggregate probe across many secrets; operator-side check"
+    },
+    {
+      "id": "server/ciSecrets.test.ts::CI secrets validation > DATABASE_URL is set and matches MySQL connection string format",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ]
+    },
+    {
+      "id": "server/ciSecrets.test.ts::CI secrets validation > NBA_SHEET_ID is set and matches Google Sheets ID format",
+      "requiredEnv": [
+        "NBA_SHEET_ID"
+      ]
+    },
+    {
+      "id": "server/ciSecrets.test.ts::CI secrets validation > PUBLIC_ORIGIN is set and has no trailing slash",
+      "requiredEnv": [
+        "PUBLIC_ORIGIN"
+      ]
+    },
+    {
+      "id": "server/claude.test.ts::Claude Fable 5 Integration > Anthropic credentials are set (API key or AI Gateway auth token)",
+      "requiredEnv": [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN"
+      ]
+    },
+    {
+      "id": "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is accepted by Discord REST API (/users/@me)",
+      "requiredEnv": [
+        "DISCORD_BOT_TOKEN"
+      ]
+    },
+    {
+      "id": "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is set in environment",
+      "requiredEnv": [
+        "DISCORD_BOT_TOKEN"
+      ]
+    },
+    {
+      "id": "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > ENV.publicOrigin is set (required to prevent Cloud Run hostname in redirect_uri)",
+      "requiredEnv": [
+        "PUBLIC_ORIGIN"
+      ]
+    },
+    {
+      "id": "server/discordAuth.test.ts::PUBLIC_ORIGIN env var > redirect_uri built from PUBLIC_ORIGIN matches Discord Portal registration",
+      "requiredEnv": [
+        "PUBLIC_ORIGIN"
+      ]
+    },
+    {
+      "id": "server/email.test.ts::Gmail SMTP credentials > should authenticate successfully with GMAIL_APP_PASSWORD",
+      "requiredEnv": [
+        "GMAIL_APP_PASSWORD"
+      ]
+    },
+    {
+      "id": "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID is set and non-empty",
+      "requiredEnv": [
+        "NBA_SHEET_ID"
+      ]
+    },
+    {
+      "id": "server/nbaSheetId.test.ts::NBA_SHEET_ID env var > NBA_SHEET_ID matches Google Sheets ID format (alphanumeric + hyphens/underscores, 20+ chars)",
+      "requiredEnv": [
+        "NBA_SHEET_ID"
+      ]
+    },
+    {
+      "id": "server/nbaSheetId.test.ts::nbaModelSync startup guard > ENV.nbaSheetId is set before nbaModelSync module loads",
+      "requiredEnv": [
+        "NBA_SHEET_ID"
+      ]
+    },
+    {
+      "id": "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL is set and non-empty",
+      "requiredEnv": [
+        "VSIN_EMAIL"
+      ]
+    },
+    {
+      "id": "server/vsinCredentials.test.ts::VSiN credentials > VSIN_EMAIL looks like a valid email address",
+      "requiredEnv": [
+        "VSIN_EMAIL"
+      ]
+    },
+    {
+      "id": "server/vsinCredentials.test.ts::VSiN credentials > VSIN_PASSWORD is set and non-empty",
+      "requiredEnv": [
+        "VSIN_PASSWORD"
+      ]
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-2] throws UNAUTHORIZED for wrong password",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-3] throws FORBIDDEN for hasAccess=false user",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [ER-4] throws FORBIDDEN for expired user (expiryDate in the past)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [JW-1..6] JWT claims are correct: sub, role, type, tv, alg, exp",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [SC-1..6] stayLoggedIn=false issues session cookie with maxAge=undefined",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [SL-1..9] stayLoggedIn=true issues 90-day persistent cookie with correct flags",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [TLS-1,2] HTTPS request produces secure=true, sameSite=none",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [UN-1] login by username (without @) issues cookie correctly",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.login.test.ts::appUsers.login — cookie issuance invariants > [UN-2] @username (with @ prefix) is treated as email lookup — throws UNAUTHORIZED",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [CR-1..13] happy path: creates user, hashes password correctly, no cookie issued",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-1] throws CONFLICT when email is already in use",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-2] throws CONFLICT when username is already taken",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-3] Zod rejects password shorter than 8 chars (BAD_REQUEST)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [ER-4] Zod rejects invalid email format (BAD_REQUEST)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [RV-1] role=admin is stored correctly",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/appUsers.register.test.ts::appUsers.register — createUser invariants (real DB) > [RV-2] role=handicapper is stored correctly",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [EC-1] already-setup user (pendingSetup=false, sessionId still set) returns alreadySetup=true without cookie",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-1] throws NOT_FOUND for unknown sessionId",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-2] throws CONFLICT when email is already used by a different user",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-3] Zod rejects password shorter than 8 chars",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-4] Zod rejects password without uppercase letter",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-5] Zod rejects password without lowercase letter",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [ER-6] Zod rejects password without special character",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [HP-1..9] issues app_session cookie with correct flags and returns success",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [JW-1..6] JWT claims are correct: sub, role, type, tv, alg, exp",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/completeAccountSetup.test.ts::stripe.completeAccountSetup — auto-login cookie invariant > [TLS-1,2] HTTPS request produces secure=true, sameSite=none",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-2] throws BAD_REQUEST for wrong token (hash mismatch)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-3] throws BAD_REQUEST when no reset is pending (no token in DB)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RE-4..5] throws BAD_REQUEST for expired token; expired token is cleared from DB",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RP-1..8] full reset chain: new hash, cost>=10, tokenVersion++, old hash cleared",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-1] returns { success: true } for a valid email",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-2] returns { success: true } for a valid username",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-4..8] DB token stored correctly + sendPasswordResetEmail called with correct args",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/passwordReset.test.ts::passwordReset — requestPasswordReset + resetPassword invariants (real DB) > [RQ-9] @username prefix is stripped before lookup",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FA-1..3] incrementAllTokenVersions increments all users except the excluded owner",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-1,2] forceLogoutUser increments tokenVersion and returns newTokenVersion",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-3] forceLogoutUser throws BAD_REQUEST when owner tries to logout themselves",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-4] forceLogoutUser throws NOT_FOUND for unknown userId",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [FL-5,6] end-to-end: old JWT rejected after forceLogoutUser; new JWT accepted",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [JR-1,2] stale tv JWT rejected; fresh tv JWT accepted by appUserProcedure (real DB)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [JR-3] JWT without tv claim (tv=null) is accepted — null skips the tokenVersion check",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/tokenVersion.db.test.ts::tokenVersion.db — DB-level and procedure-level force-logout invariants > [TV-1..4] incrementTokenVersion increments DB tokenVersion atomically",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    }
+  ],
+  "expectedCiSkips": [
+    {
+      "file": "server/ciSecrets.test.ts",
+      "reason": "operator-side environment audit; repo has only 7 Actions secrets configured (verified 2026-07-12), so the documented CI secret set does not exist to validate"
+    },
+    {
+      "file": "server/vsinCredentials.test.ts",
+      "reason": "live VSiN credential probe; no VSIN_* secrets in CI"
+    },
+    {
+      "file": "server/email.test.ts",
+      "reason": "live Gmail SMTP auth; no GMAIL_APP_PASSWORD in CI"
+    },
+    {
+      "file": "server/discord.bot.token.test.ts",
+      "reason": "live Discord REST probe; no DISCORD_BOT_TOKEN in CI"
+    },
+    {
+      "file": "server/discordAuth.test.ts",
+      "reason": "PUBLIC_ORIGIN env probe; secret not configured in CI"
+    },
+    {
+      "file": "server/nbaSheetId.test.ts",
+      "reason": "NBA_SHEET_ID env probe; secret not configured in CI"
+    },
+    {
+      "id": "server/claude.test.ts::Claude Fable 5 Integration > Anthropic credentials are set (API key or AI Gateway auth token)",
+      "reason": "credential presence probe; no Anthropic secrets in CI"
+    },
+    {
+      "file": "server/appUsers.login.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job (MySQL service, DB_TESTS=1), skipped in the secretless main vitest job"
+    },
+    {
+      "file": "server/appUsers.register.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job"
+    },
+    {
+      "file": "server/completeAccountSetup.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job"
+    },
+    {
+      "file": "server/passwordReset.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job"
+    },
+    {
+      "file": "server/tokenVersion.db.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job"
+    }
   ]
 }
