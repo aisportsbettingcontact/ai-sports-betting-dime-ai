@@ -23,6 +23,8 @@ import { ENV } from "./_core/env";
 import { getAppUserById } from "./db";
 import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
 import {
+  DIME_CHAT_FROZEN_NOTICE,
+  DIME_CHAT_LLM_PROVIDER,
   DIME_CHAT_MODEL,
   DIME_CHAT_PROFILE_METADATA,
   DIME_CHAT_SYSTEM_PROMPT,
@@ -37,7 +39,6 @@ import {
   checkDimeChatRateLimit,
   DIME_CHAT_RATE_LIMIT_WINDOW_MS,
 } from "./dimeChatRateLimit";
-import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
 
 // ---------------------------------------------------------------
 // Structured logging
@@ -80,15 +81,15 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ---------------------------------------------------------------
-// Entitlement — OWNER-ONLY LOCKDOWN (2026-07-12): the Dime model answers
-// role="owner" accounts only (@prez, @sippi). Subscribers with hasAccess are
-// NOT entitled while the lockdown is in effect. Evaluated per-request against
-// the DB (not the JWT), so a demoted/revoked user loses chat access
+// Entitlement — require an active paid subscription (or owner role)
+// before any Anthropic call or SSE stream begins. Evaluated per-request
+// against the DB (not the JWT), so a revoked subscriber loses chat access
 // immediately instead of waiting out their JWT expiry.
 // ---------------------------------------------------------------
-async function checkDimeChatEntitlement(userId: number): Promise<boolean> {
+async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
+  if (role === "owner") return true;
   const user = await getAppUserById(userId);
-  return canAccessDimeModel(user);
+  return !!user?.hasAccess;
 }
 
 const dimeChatRouter = Router();
@@ -109,19 +110,19 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // --- SEC-CRIT: Entitlement gate — reject every non-owner request before any
-  // Claude call or SSE stream (owner-only lockdown; see dimeModelAccess.ts).
-  // Checked per-request against the DB, not the JWT, so demotion/revocation
-  // takes effect immediately instead of waiting out the token expiry. ---
-  const entitled = await checkDimeChatEntitlement(authedUser.userId);
+  // --- SEC-CRIT: Entitlement gate — reject authenticated-but-unentitled requests
+  // before any Claude call or SSE stream. Closes the free-tier billing leak and
+  // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
+  // bumping tokenVersion, so this must be checked per-request, not just at login). ---
+  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
   if (!entitled) {
     dimeLog("dime.chat.entitlement_rejected", requestId, {
       errorClass: "AuthorizationError",
       statusCode: 403,
       userId: authedUser.userId,
-      detail: "Owner-only access — non-owner rejected",
+      detail: "Active subscription required",
     });
-    res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE });
+    res.status(403).json({ error: "Active subscription required." });
     return;
   }
 
@@ -139,7 +140,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  if (!hasAnthropicCredentials()) {
+  // Credentials are only required when the Anthropic provider is live; the
+  // frozen path makes no provider call and must not 500 on missing creds.
+  if (DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()) {
     dimeLog("dime.chat.error", requestId, {
       errorClass: "ConfigurationError",
       statusCode: 500,
@@ -181,6 +184,37 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   if (safety.risk === "distress") {
     dimeLog("dime.chat.safety_intervention", requestId, { reason: safety.reason });
     res.status(200).json({ message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.` });
+    return;
+  }
+
+  // --- PROVIDER FREEZE (2026-07-12): while DIME_CHAT_LLM_PROVIDER is
+  // "frozen", the Dime Chat interface must not use the Anthropic API to
+  // respond. Short-circuit here — before context building, before
+  // createAnthropicClient(), before any messages.stream() call — and answer
+  // with a hardcoded notice over the same SSE frame contract the client
+  // already parses (meta → delta → done). The entire Claude streaming path
+  // below is intentionally left wired for when the provider is switched
+  // back on. ---
+  if (DIME_CHAT_LLM_PROVIDER !== "anthropic") {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    const sendFrozen = (payload: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    dimeLog("dime.chat.provider_frozen", requestId, {
+      provider: DIME_CHAT_LLM_PROVIDER,
+      detail: "No model-provider call made; hardcoded notice streamed",
+      latencyMs: Date.now() - startTime,
+    });
+
+    sendFrozen({ type: "meta", dataFreshness: "none" });
+    sendFrozen({ type: "delta", text: DIME_CHAT_FROZEN_NOTICE });
+    sendFrozen({ type: "done", stopReason: "end_turn" });
+    res.end();
     return;
   }
 
