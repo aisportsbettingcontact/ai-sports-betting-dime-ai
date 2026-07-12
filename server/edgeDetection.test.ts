@@ -233,29 +233,33 @@ describe('edgeUtils: calculateRoi', () => {
   });
 });
 
-// getEdgeColor: 6-tier scale — ELITE(>=8)=#39FF14, STRONG(>=5)=#7FFF00,
-// PLAYABLE(>=2.5)=#ADFF2F, SMALL(>=0.5)=white/60, NEUTRAL(>=-1)=white/30, FADE=red
+// getEdgeColor: Dime brand law (design-system/dime-ai/MASTER.md) — mint is
+// the ONE signal color (all tiers >= 2.5pp), everything else stays in the
+// grey text tiers, and FADE is grey, never red. Values are --dime-* CSS vars
+// with legacy fallbacks so non-tokenized contexts stay readable.
 describe('edgeUtils: getEdgeColor', () => {
-  it('[VERIFY] edge >= 8 (ELITE) → #39FF14 (full neon green)', () => {
-    expect(getEdgeColor(8)).toBe('#39FF14');
-    expect(getEdgeColor(10)).toBe('#39FF14');
+  const MINT = 'var(--dime-mint-text, #45E0A8)';
+  const GREY = 'var(--dime-text-secondary, rgba(255,255,255,0.60))';
+  const FAINT = 'var(--dime-text-faint, rgba(255,255,255,0.30))';
+
+  it('[VERIFY] all signal tiers (>= 2.5pp: PLAYABLE/STRONG/ELITE) → mint', () => {
+    expect(getEdgeColor(2.5)).toBe(MINT);
+    expect(getEdgeColor(3)).toBe(MINT);
+    expect(getEdgeColor(5)).toBe(MINT);
+    expect(getEdgeColor(8)).toBe(MINT);
+    expect(getEdgeColor(10)).toBe(MINT);
   });
-  it('[VERIFY] edge >= 5 and < 8 (STRONG) → #7FFF00 (chartreuse)', () => {
-    expect(getEdgeColor(5)).toBe('#7FFF00');
-    expect(getEdgeColor(6)).toBe('#7FFF00');
+  it('[VERIFY] edge >= 0.5 and < 2.5 (SMALL) → grey secondary', () => {
+    expect(getEdgeColor(1.5)).toBe(GREY);
   });
-  it('[VERIFY] edge >= 2.5 and < 5 (PLAYABLE) → #ADFF2F (yellow-green)', () => {
-    expect(getEdgeColor(2.5)).toBe('#ADFF2F');
-    expect(getEdgeColor(3)).toBe('#ADFF2F');
+  it('[VERIFY] edge >= -1 and < 0.5 (NEUTRAL) → grey faint', () => {
+    expect(getEdgeColor(0)).toBe(FAINT);
   });
-  it('[VERIFY] edge >= 0.5 and < 2.5 (SMALL) → white/60', () => {
-    expect(getEdgeColor(1.5)).toBe('rgba(255,255,255,0.60)');
+  it('[VERIFY] edge < -1 (FADE) → grey, never red', () => {
+    expect(getEdgeColor(-2)).toBe(GREY);
   });
-  it('[VERIFY] edge < 0 (FADE) → red (#FF2244)', () => {
-    expect(getEdgeColor(-2)).toBe('#FF2244');
-  });
-  it('[VERIFY] NaN → white/30 (muted)', () => {
-    expect(getEdgeColor(NaN)).toBe('rgba(255,255,255,0.30)');
+  it('[VERIFY] NaN → grey faint', () => {
+    expect(getEdgeColor(NaN)).toBe(FAINT);
   });
 });
 
