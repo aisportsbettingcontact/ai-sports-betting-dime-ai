@@ -1528,7 +1528,7 @@ function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnal
                     <td className="px-3 py-1.5 text-center">
                       <span className="px-1.5 py-0.5 rounded text-xs font-bold tracking-widest"
                         style={{
-                          background: isWin ? "rgba(57,255,20,0.12)" : isLoss ? "rgba(255,7,58,0.12)" : "rgba(136,136,136,0.12)",
+                          background: isWin ? "color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 12%, transparent)" : isLoss ? "color-mix(in srgb, var(--bt-red, rgb(255,7,58)) 12%, transparent)" : "color-mix(in srgb, var(--bt-text-muted, rgb(136,136,136)) 12%, transparent)",
                           color: plColor,
                           border: `1px solid ${plColor}40`
                         }}>

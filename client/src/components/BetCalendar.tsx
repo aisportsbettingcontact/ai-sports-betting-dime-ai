@@ -469,7 +469,7 @@ export function BetCalendar({
               <div key={i} style={{
                 aspectRatio: "1",
                 borderRadius: "4px",
-                background: "rgba(39,39,42,0.4)",
+                background: "var(--bt-cell-empty, rgba(39,39,42,0.4))",
                 animation: "pulse 1.5s ease-in-out infinite",
               }} />
             ))}
@@ -508,12 +508,12 @@ export function BetCalendar({
                     style={{
                       aspectRatio: "1",
                       borderRadius: "4px",
-                      border: isToday ? "1px solid rgba(57,255,20,0.4)" : "1px solid transparent",
+                      border: isToday ? "1px solid color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 40%, transparent)" : "1px solid transparent",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: isToday ? "rgba(57,255,20,0.04)" : "transparent",
+                      background: isToday ? "color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 4%, transparent)" : "transparent",
                       animation: isToday ? "todayPulse 2s ease-in-out infinite" : undefined,
                     }}
                   >
@@ -548,7 +548,7 @@ export function BetCalendar({
                     aspectRatio: "1",
                     borderRadius: "4px",
                     border: isToday
-                      ? "1px solid rgba(57,255,20,0.7)"
+                      ? "1px solid color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 70%, transparent)"
                       : `1px solid ${borderColor}`,
                     background: bg,
                     display: "flex",
@@ -707,8 +707,8 @@ export function BetCalendar({
       {/* ── CSS animations ── */}
       <style>{`
         @keyframes todayPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(57,255,20,0); }
-          50%       { box-shadow: 0 0 0 3px rgba(57,255,20,0.25); }
+          0%, 100% { box-shadow: 0 0 0 0 transparent; }
+          50%       { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bt-green, rgb(57,255,20)) 25%, transparent); }
         }
         @keyframes pulse {
           0%, 100% { opacity: 0.4; }
