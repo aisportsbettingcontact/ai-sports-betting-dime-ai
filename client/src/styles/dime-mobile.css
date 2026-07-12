@@ -103,17 +103,54 @@ html.dark {
   font-family: var(--dime-font-sans);
 }
 
-/* Header: solid chrome surface — tier + 1px border, no glass. */
+/* Header: solid chrome on the page ground — black in dark mode (product
+ * owner's law: dark pages are black, structure comes from 1px borders). */
 .bs-header {
-  background: var(--dime-surface-sidebar) !important;
+  background: var(--dime-bg) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border-bottom: 1px solid var(--dime-border);
 }
-.bs-title {
-  color: var(--dime-text-primary) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.01em !important;
+/* Brand wordmark: lowercase "dıme" — dotless ı (U+0131) with the mint
+ * coin-dot (MASTER.md wordmark spec: 0.20em dot, left calc(50% + 0.03em),
+ * top 0.05em, weight 700, tracking -0.05em). Font size inherits from the
+ * host chrome (shell sidebar/mobile bar titles are 20px); the splits page
+ * brand row sets its own size below. The dot picks up the light-mode
+ * hairline via --dime-coin-keyline. Used by the Dime shell chrome AND the
+ * splits page header — one brand mark, one implementation. */
+.dime-wordmark {
+  font-family: var(--dime-font-sans);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--dime-text-primary);
+  user-select: none;
+}
+.dime-wordmark-i {
+  position: relative;
+  display: inline-block;
+  font-style: normal;
+}
+.dime-coindot {
+  position: absolute;
+  left: calc(50% + 0.03em);
+  top: 0.05em;
+  transform: translateX(-50%);
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: var(--dime-mint);
+  box-shadow: var(--dime-coin-keyline);
+}
+.bs-brand-row .dime-wordmark {
+  font-size: clamp(19px, 2vw, 24px);
+}
+/* 768–1023px: the shell's compact top bar already carries the wordmark
+ * directly above this pane — one brand mark per screen. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .bs-brand-row {
+    display: none;
+  }
 }
 .bs-tab {
   color: var(--dime-text-secondary) !important;
@@ -226,7 +263,7 @@ html:not(.dark) .cal-panel {
   background: transparent !important;
 }
 .bs-page [data-edge-tier] {
-  background: var(--dime-surface-card) !important;
+  background: var(--dime-bg) !important;
   border-top: 1px solid var(--dime-border) !important;
   border-bottom: 1px solid var(--dime-border) !important;
 }
@@ -282,8 +319,10 @@ html:not(.dark) .cal-panel {
 .bsp-seg--away {
   background: var(--dime-mint) !important;
 }
+/* Home side reads as the black track — the pill border + divider carry the
+ * edge; the label is full-weight primary text, never white-on-grey. */
 .bsp-seg--home {
-  background: var(--dime-surface-raised) !important;
+  background: transparent !important;
 }
 .bsp-div {
   background: var(--dime-border-strong) !important;
