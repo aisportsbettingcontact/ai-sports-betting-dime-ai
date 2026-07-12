@@ -480,18 +480,18 @@ export default function BettingSplitsPage({
   };
 
   return (
-    <div className="bg-background">
+    <div className="bs-page bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
       {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} onSuccess={() => { setShowLoginModal(false); refetchAppUser(); }} />}
 
       {/* ── Sticky Header ── */}
-      <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
+      <header ref={headerRef} className="bs-header sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
 
         {/* Row 1: brand + user icon */}
         <div className="relative flex items-center px-4 pt-2 pb-1">
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
             <BarChart3 className="flex-shrink-0" style={{ width: "clamp(14px, 2.5vw, 22px)", height: "clamp(14px, 2.5vw, 22px)", color: "#45E0A8" }} />
-            <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 22px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
+            <span className="bs-title font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 22px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
           </div>
           <div className="flex-1" />
           {/* User menu */}
@@ -579,7 +579,7 @@ export default function BettingSplitsPage({
               interactive is invalid HTML and doubles the keyboard tab stops). */}
           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
           <Link href={resolveRouteHref(feedModelPath("MLB"))}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
+            className="bs-tab flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
             style={{ color: "rgba(255,255,255,0.45)" }}
           >
             <img src={CDN_TEST_TUBE} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.45 }} />
@@ -589,7 +589,7 @@ export default function BettingSplitsPage({
               canonical sport path (the old /splits href navigated away to the
               retired public page — the tab un-selected itself on click). */}
           <Link href={resolveRouteHref(bettingSplitsPath(selectedSport, selectedDate))} aria-current="page"
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
+            className="bs-tab bs-tab--active flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
             style={{ color: "#ffffff" }}
           >
             <img src={CDN_MONEY_BAG} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)" }} />
@@ -612,21 +612,21 @@ export default function BettingSplitsPage({
 
 
           {/* MLB pill — primary sport */}
-          <button type="button" onClick={() => setSelectedSport("MLB")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
+          <button type="button" onClick={() => setSelectedSport("MLB")} data-active={selectedSport === "MLB"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
             style={selectedSport === "MLB" ? { background: "rgba(0,45,114,0.25)", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
             <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "MLB" ? 1 : 0.5, flexShrink: 0 }} />
             MLB
           </button>
 
           {/* NHL pill */}
-          <button type="button" onClick={() => setSelectedSport("NHL")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
+          <button type="button" onClick={() => setSelectedSport("NHL")} data-active={selectedSport === "NHL"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
             style={selectedSport === "NHL" ? { background: "rgba(0,100,200,0.18)", color: "#4FC3F7", border: "1px solid rgba(0,100,200,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
             <img src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg" alt="NHL" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NHL" ? 1 : 0.5, flexShrink: 0 }} />
             NHL
           </button>
 
           {/* NBA pill */}
-          <button type="button" onClick={() => setSelectedSport("NBA")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
+          <button type="button" onClick={() => setSelectedSport("NBA")} data-active={selectedSport === "NBA"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
             style={selectedSport === "NBA" ? { background: "rgba(200,16,46,0.15)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
             <img src={CDN_NBA} alt="NBA" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
             NBA
@@ -634,7 +634,8 @@ export default function BettingSplitsPage({
 
           {/* Search bar — takes remaining space */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
+            <div className="bs-search flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
+              data-focused={searchFocused}
               style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "rgba(34,197,94,0.5)" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px rgba(34,197,94,0.15)" : "none" }}>
               <Search className="w-3 h-3 text-muted-foreground flex-shrink-0" />
               {/* 16px on touch widths — anything smaller makes iOS Safari zoom the page on focus */}
@@ -645,8 +646,8 @@ export default function BettingSplitsPage({
 
           {/* Search dropdown */}
           {showDropdown && (
-            <div className="absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0f0f0f", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#0f0f0f", zIndex: 10 }}>
+            <div className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0f0f0f", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
+              <div className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#0f0f0f", zIndex: 10 }}>
                 <span className="text-sm text-zinc-300 uppercase tracking-widest">{dropdownResults.length === 0 ? "No results" : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}</span>
                 {dropdownResults.length > 0 && <span className="text-sm text-zinc-300">tap to jump</span>}
               </div>
@@ -666,12 +667,12 @@ export default function BettingSplitsPage({
             <div className="flex-1" />
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
               <span
-                className="font-bold tracking-widest uppercase"
+                className="bs-datehdr font-bold tracking-widest uppercase"
                 style={{ fontSize: 'clamp(11px, 3.5vw, 19px)', color: '#ffffff', whiteSpace: 'nowrap' }}
               >{formatDateHeader(selectedDate)}</span>
               <span style={{ fontSize: 'clamp(14px, 3.5vw, 22px)', color: '#ffffff', fontWeight: 800, lineHeight: 1, flexShrink: 0 }}>·</span>
               <span
-                className="font-semibold"
+                className="bs-datehdr-sub font-semibold"
                 style={{ color: '#a3a3a3', letterSpacing: '0.06em', fontSize: 'clamp(9px, 2.8vw, 17px)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
               >{selectedSport === "MLB" ? "MLB BASEBALL" : selectedSport === "NHL" ? "NHL HOCKEY" : "NBA BASKETBALL"}</span>
             </div>

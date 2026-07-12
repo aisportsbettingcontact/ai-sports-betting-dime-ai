@@ -31,7 +31,7 @@ import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { getGameTeamColorsClient } from "@shared/teamColors";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
-import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict } from '@/lib/edgeUtils';
+import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 import { formatGameTime, toNum, spreadSign } from '@/lib/gameUtils';
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -2648,6 +2648,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
       <div className="flex items-center gap-1 mb-1">
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
+            className="gc-star"
+            data-favorited={isFavorited}
             aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             style={{
@@ -2677,7 +2679,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             {game.gameClock && (
               <span className="text-[9px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
             )}
-            <span className="flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#39FF14" }}>
+            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#39FF14" }}>
               <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#39FF14" }} />
               LIVE
             </span>
@@ -2775,6 +2777,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Star / Favorite button — always left of status */}
         {isAppAuthed && (
           <button type="button" onClick={handleStarClick}
+            className="gc-star"
+            data-favorited={isFavorited}
             aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             style={{
@@ -3110,6 +3114,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         transition={{ duration: 0.12, ease: "easeOut" }}
         className="w-full relative"
         ref={cardRef}
+        // Inert hook: mobile CSS (dime-mobile.css) maps edge tiers to the
+        // brand's mint/grey signal scale. Desktop rendering is untouched.
+        data-edge-tier={maxDiff >= EDGE_THRESHOLD_PP ? "signal" : "none"}
         style={{
           background: "hsl(var(--card))",
           borderTop: "1px solid hsl(var(--border))",
@@ -3398,9 +3405,10 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
 
           {/* Splits mode: fixed CompactScore column | scrollable Splits column */}
           {mode === "splits" && (
-            <div style={{ display: "grid", gridTemplateColumns: "clamp(170px, 14vw, 220px) 1fr", width: "100%" }}>
+            <div className="gc-splitgrid" style={{ display: "grid", gridTemplateColumns: "clamp(170px, 14vw, 220px) 1fr", width: "100%" }}>
               {/* Fixed compact score — NOT inside scroll container */}
               <div
+                className="gc-frozen"
                 style={{
                   gridColumn: "1",
                   borderRight: "1px solid hsl(var(--border) / 0.5)",
@@ -3418,7 +3426,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                   overflowY: "hidden",
                 }}
               >
-                <div style={{ minWidth: 260 }}>
+                <div className="gc-scrollinner" style={{ minWidth: 260 }}>
                   <BettingSplitsPanel
                     gameId={game.id}
                     game={game}

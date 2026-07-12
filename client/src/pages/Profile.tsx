@@ -173,13 +173,9 @@ export default function Profile() {
     <div className="pf-page">
       {/* ------- Identity ------- */}
       <header className="pf-hero">
-        <img
-          className="pf-logo"
-          src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
-          alt="AI Sports Betting"
-          width={72}
-          height={72}
-        />
+        <span className="pf-wordmark" aria-label="dime">
+          d<span className="pf-wordmark-i">ı<span className="pf-coindot" /></span>me
+        </span>
         <h1 className="pf-username">{displayUsername}</h1>
         <div className="pf-plan">
           <span className="pf-plan-badge">{planLabel}</span>

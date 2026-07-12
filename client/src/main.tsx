@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import superjson from "superjson";
 import App from "./App";
 import "./index.css";
+import "./styles/dime-mobile.css";
 
 // ─── Rate-limit resilient fetch wrapper ──────────────────────────────────────
 //
