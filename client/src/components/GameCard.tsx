@@ -20,7 +20,10 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+// LazyMotion + m keeps the card compatible with the Dime shell's strict
+// LazyMotion boundary (a full `motion` component inside it throws in dev and
+// defeats motion tree-shaking). The local provider covers standalone routes.
+import { LazyMotion, domAnimation, m } from "framer-motion";
 
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -31,6 +34,7 @@ import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { getGameTeamColorsClient } from "@shared/teamColors";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { useIsMdUp } from "@/hooks/useIsMdUp";
 import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 import { formatGameTime, toNum, spreadSign } from '@/lib/gameUtils';
 import { trpc } from "@/lib/trpc";
@@ -2390,8 +2394,11 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     if (curHome !== null) prevHomeScoreRef.current = curHome;
   }, [game.awayScore, game.homeScore, game.id]);
 
-  // Desktop detection — shared singleton hook (no duplicate matchMedia listeners)
+  // Desktop detection — shared singleton hooks (no duplicate matchMedia listeners).
+  // isDesktop = ≥1024 (lg); isMdUp = ≥768 (tablet band uses the md desktop layout,
+  // so its type must never fall back to the sub-10px phone sizes).
   const isDesktop = useIsDesktop();
+  const isMdUp = useIsMdUp();
 
   const maxDiff = Math.max(isNaN(spreadDiff) ? 0 : spreadDiff, isNaN(totalDiff) ? 0 : totalDiff);
   const borderColor = getEdgeColor(maxDiff);
@@ -2753,14 +2760,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // Change E: city/team NAME_FONT_SIZE reduced by 1pt: clamp(13px,1.1vw,18px) → clamp(12px,1.0vw,17px)
   //           NICK_FONT_SIZE reduced by 1pt: clamp(11px,0.9vw,15px) → clamp(10px,0.8vw,14px)
   // Star: 24px × 0.75 = 18px (−25% more, total −50% from original 36px)
-  const HEADER_ICON_SIZE = isDesktop ? 18 : 12;
-  // Inning/clock: unchanged
-  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '8.25px';
-  // LIVE: clamp(17.7px,1.40vw,22.8px) × 0.75 = clamp(13.3px,1.05vw,17.1px) (−25% more, total −58% from original)
-  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(13.3px, 1.05vw, 17.1px)' : '6.75px';
-  // FINAL: clamp(20.25px,1.70vw,25.3px) × 0.75 = clamp(15.2px,1.28vw,19px) (−25% more, total −58% from original)
-  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(15.2px, 1.28vw, 19px)' : '7.5px';
-  const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : '9.75px';  // unchanged (upcoming time)
+  const HEADER_ICON_SIZE = isDesktop ? 18 : isMdUp ? 16 : 12;
+  // 768–1023 (tablet md layout): full readable sizes — the sub-10px values are
+  // phone-only and violate the no-tiny-text law on tablets.
+  const CLOCK_FONT_SIZE  = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '8.25px';
+  const LIVE_FONT_SIZE   = isDesktop ? 'clamp(13.3px, 1.05vw, 17.1px)' : isMdUp ? '12px' : '6.75px';
+  const FINAL_FONT_SIZE  = isDesktop ? 'clamp(15.2px, 1.28vw, 19px)' : isMdUp ? '13px' : '7.5px';
+  const TIME_FONT_SIZE   = isDesktop ? 'clamp(12px, 1.01vw, 15px)' : isMdUp ? '12px' : '9.75px';
     // Desktop: teams pushed toward top (justify-start + small paddingTop)
     // Mobile: teams vertically centered (justify-center)
     const teamGroupJustify = 'center';
@@ -3056,20 +3062,20 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           {(game.venue || game.broadcaster) && (
             <div className="flex items-center gap-1 flex-wrap">
               {game.venue && (
-                  <span style={{ fontSize: 'clamp(10px,0.8vw,12px)', color: 'hsl(var(--muted-foreground))', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'clamp(11px,0.85vw,13px)', color: 'var(--dime-text-secondary, hsl(var(--muted-foreground)))', whiteSpace: 'nowrap' }}>
                   {game.venue}
                 </span>
               )}
               {game.venue && game.broadcaster && (
-                <span style={{ fontSize: 'clamp(9px, 0.7vw, 11px)', color: 'hsl(var(--border))' }}>·</span>
+                <span style={{ fontSize: 'clamp(10px, 0.75vw, 12px)', color: 'var(--dime-text-muted, hsl(var(--border)))' }}>·</span>
               )}
               {game.broadcaster && (
-                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: '#60a5fa', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(11px, 0.85vw, 13px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   {game.broadcaster}
                 </span>
               )}
               {(game.doubleHeader === 'Y' || game.doubleHeader === 'S') && (
-                <span style={{ fontSize: 'clamp(8px, 0.65vw, 10px)', color: '#f59e0b', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 2 }}>
+                <span style={{ fontSize: 'clamp(10px, 0.75vw, 12px)', color: 'var(--dime-text-secondary, rgba(255,255,255,0.7))', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 2 }}>
                   DH-{game.doubleHeader === 'Y' ? '1' : '2'}
                 </span>
               )}
@@ -3078,17 +3084,17 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           {/* Starting pitchers */}
           {(game.awayStartingPitcher || game.homeStartingPitcher) && (
             <div className="flex items-center gap-1 flex-wrap">
-              <span style={{ fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'hsl(var(--muted-foreground))', opacity: 0.6, whiteSpace: 'nowrap' }}>SP:</span>
+              <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-secondary, hsl(var(--muted-foreground)))', whiteSpace: 'nowrap' }}>SP:</span>
               {game.awayStartingPitcher && (
-                <span style={{ fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'hsl(var(--muted-foreground))', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', whiteSpace: 'nowrap' }}>
                   {game.awayStartingPitcher}{!game.awayPitcherConfirmed ? ' *' : ''}
                 </span>
               )}
               {game.awayStartingPitcher && game.homeStartingPitcher && (
-                <span style={{ fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'hsl(var(--border))' }}>vs</span>
+                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-secondary, hsl(var(--muted-foreground)))', whiteSpace: 'nowrap' }}>vs</span>
               )}
               {game.homeStartingPitcher && (
-                <span style={{ fontSize: 'clamp(8px, 0.65vw, 10px)', color: 'hsl(var(--muted-foreground))', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', whiteSpace: 'nowrap' }}>
                   {game.homeStartingPitcher}{!game.homePitcherConfirmed ? ' *' : ''}
                 </span>
               )}
@@ -3105,8 +3111,8 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
   // to prevent infinite re-render loops from component identity changes.
 
   return (
-    <>
-      <motion.div
+    <LazyMotion features={domAnimation}>
+      <m.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.12, ease: "easeOut" }}
@@ -3136,11 +3142,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* MIN-HEIGHT: ensures a consistent baseline card height while allowing taller content (e.g. OPEN sub-rows) to expand naturally without clipping */}
         {/* ── Desktop + Tablet layout (≥ md / 768px) ── */}
         <div className="hidden md:flex items-stretch w-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
-          {/* Col 1: Score panel — fixed width so all SPREAD/TOTAL/ML/EDGE borders align at same horizontal position */}
+          {/* Col 1: Score panel — fixed width so all SPREAD/TOTAL/ML/EDGE borders align at same horizontal position.
+              Splits mode: a fixed matchup rail. The old "1 1 30%" grew to ~65%
+              of the row and crushed the three market columns into overlap. */}
           <div
             style={{
-              flex: mode === "splits" ? "1 1 30%" : "0 0 clamp(170px,22vw,260px)",
-              width: mode === "splits" ? undefined : 'clamp(170px,22vw,260px)',
+              flex: mode === "splits" ? "0 0 clamp(205px,18vw,320px)" : "0 0 clamp(170px,22vw,260px)",
+              width: mode === "splits" ? 'clamp(205px,18vw,320px)' : 'clamp(170px,22vw,260px)',
               borderRight: "1px solid hsl(var(--border) / 0.5)",
             }}
           >
@@ -3251,10 +3259,12 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               <div className="px-3 py-2">
                 <BettingSplitsPanel
                   gameId={game.id}
-            enabled={isCardVisible}
+                  enabled={isCardVisible}
                   game={game}
                   awayLabel={awayName}
                   homeLabel={homeName}
+                  awayAbbr={awayAbbr}
+                  homeAbbr={homeAbbr}
                   awayNickname={awayNickname}
                   homeNickname={homeNickname}
                   onMarketChange={setActiveMarket}
@@ -3263,12 +3273,14 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             </div>
           )}
           {mode === "splits" && (
-            <div className="flex-1 px-3 py-3" style={{ minWidth: 220 }}>
+            <div className="flex-1 min-w-0 px-3 py-3">
               <BettingSplitsPanel
                 gameId={game.id}
                 game={game}
                 awayLabel={awayName}
                 homeLabel={homeName}
+                awayAbbr={awayAbbr}
+                homeAbbr={homeAbbr}
                 awayNickname={awayNickname}
                 homeNickname={homeNickname}
                 onMarketChange={setActiveMarket}
@@ -3503,14 +3515,15 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             />
           )}
         </div>
-      </motion.div>
+      </m.div>
 
       {/* ── ODDS & SPLITS HISTORY — Full-width, below the card body ──
            Rendered outside all overflow:hidden containers so the collapsible
-           table can expand freely. Shown ONLY when the SPLITS tab is active.
-           The border-left matches the card's accent stripe for visual continuity.
+           table can expand freely. On the Betting Splits page (mode="splits")
+           the history is part of the surface itself; elsewhere it follows the
+           mobile SPLITS tab. The border-left matches the card's accent stripe.
       */}
-      {mobileTab === 'splits' && isCardVisible && game.id != null && (
+      {(mode === 'splits' || mobileTab === 'splits') && isCardVisible && game.id != null && (
         <div
           className="w-full"
           style={{
@@ -3535,7 +3548,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
            NBA/NHL panels are intentionally omitted until their DBs are backfilled.
            Panels are rendered outside overflow:hidden so they can expand freely.
       */}
-      {mobileTab === 'splits' && isCardVisible && game.sport === 'MLB' && awayMlb?.anSlug && homeMlb?.anSlug && (
+      {(mode === 'splits' || mobileTab === 'splits') && isCardVisible && game.sport === 'MLB' && awayMlb?.anSlug && homeMlb?.anSlug && (
         <>
           <RecentSchedulePanel
             sport="MLB"
@@ -3567,7 +3580,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
           />
         </>
       )}
-    </>
+    </LazyMotion>
   );
 }
 

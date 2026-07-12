@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
 import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
@@ -16,6 +16,13 @@ import { resolveSplitsServerDate } from "./dime-shell/splitsDateState";
 const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
 const CDN_MONEY_BAG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-money-bag_b9c73c5d.png";
 const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
+
+// League pill logos — rendered only for in-season leagues (see leagueSeasons).
+const LEAGUE_LOGOS: Record<SplitsLeague, string> = {
+  MLB: "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg",
+  NHL: "https://assets.nhle.com/logos/nhl/svg/NHL_light.svg",
+  NBA: CDN_NBA,
+};
 
 function TestTubeIcon({ size = 14 }: { size?: number }) {
   return <img src={CDN_TEST_TUBE} alt="Test tube" width={size} height={size} style={{ objectFit: "contain", filter: "invert(1)" }} />;
@@ -26,7 +33,7 @@ function MoneyBagIcon({ size = 14 }: { size?: number }) {
 }
 import { GameCard } from "@/components/GameCard";
 import { AgeModal } from "@/components/AgeModal";
-import { LoginModal } from "@/components/LoginModal";
+import { inSeasonLeagues, type SplitsLeague } from "@/lib/leagueSeasons";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -193,8 +200,6 @@ export default function BettingSplitsPage({
 }: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   // Sport is seeded from the canonical route (/betting-splits/:sport) and the
   // URL is kept in sync on pill changes so the address bar stays shareable.
   const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
@@ -307,6 +312,22 @@ export default function BettingSplitsPage({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverDateData, initialDate, selectedDate]);
+
+  // ── In-season league gating ──────────────────────────────────────────────────
+  // Off-season leagues have no games, splits, or history — their pills are dead
+  // UI. Gate on the server's effective slate date (authoritative) with a client
+  // UTC fallback; leagueSeasons fails open so the league row can never blank.
+  // Out-of-season deep links (e.g. /betting-splits/nba-… in July) resolve to the
+  // first in-season league with a replace navigation — no history spam.
+  const seasonDate = serverDateData?.effectiveDate ?? todayUTC();
+  const activeLeagues = useMemo(() => inSeasonLeagues(seasonDate), [seasonDate]);
+  useEffect(() => {
+    if (activeLeagues.includes(selectedSport)) return;
+    const fallback = activeLeagues[0];
+    if (!fallback) return;
+    setSelectedSportState(fallback);
+    setLocation(resolveRouteHref(bettingSplitsPath(fallback, selectedDate)), { replace: true });
+  }, [activeLeagues, selectedSport, selectedDate, setLocation, resolveRouteHref]);
 
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
     { sport: selectedSport },
@@ -482,99 +503,23 @@ export default function BettingSplitsPage({
   return (
     <div className="bs-page bg-background">
       {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
-      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} onSuccess={() => { setShowLoginModal(false); refetchAppUser(); }} />}
 
       {/* ── Sticky Header ── */}
       <header ref={headerRef} className="bs-header sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
 
-        {/* Row 1: brand + user icon */}
-        <div className="relative flex items-center px-4 pt-2 pb-1">
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <BarChart3 className="flex-shrink-0" style={{ width: "clamp(14px, 2.5vw, 22px)", height: "clamp(14px, 2.5vw, 22px)", color: "#45E0A8" }} />
-            <span className="bs-title font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 22px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
-          </div>
-          <div className="flex-1" />
-          {/* User menu */}
-          <div className="flex-shrink-0 relative">
-            <button type="button" onClick={() => setShowUserMenu(!showUserMenu)} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors" title={user ? user.name ?? "Account" : "Sign in"}>
-              <User className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-            {showUserMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                <div className="absolute right-0 top-9 z-50 w-48 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                  {appUser ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <div className="flex items-center gap-1.5">
-                          {appUser.role === "owner" && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
-                          <p className="text-xs font-semibold text-foreground truncate">@{appUser.username}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{appUser.email}</p>
-                        {/* Session duration badge */}
-                        {(() => {
-                          const exp = (appUser as { sessionExpiresAt?: number | null }).sessionExpiresAt;
-                          if (!exp) return (
-                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-white/40">
-                              <span className="w-1.5 h-1.5 rounded-full bg-white/30 inline-block" />
-                              Session: browser
-                            </span>
-                          );
-                          const daysLeft = Math.max(0, Math.ceil((exp - Date.now()) / 86_400_000));
-                          const color = daysLeft <= 3 ? "text-red-400 bg-red-400/10" : daysLeft <= 14 ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10";
-                          const dot = daysLeft <= 3 ? "bg-red-400" : daysLeft <= 14 ? "bg-amber-400" : "bg-emerald-400";
-                          return (
-                            <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${dot} inline-block`} />
-                              Session: {daysLeft}d remaining
-                            </span>
-                          );
-                        })()}
-                      </div>
-                      {isOwner && (
-                        <>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/publish"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/users"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Crown className="w-3.5 h-3.5 text-yellow-400" /> User Management
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/security"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Security Events
-                          </button>
-                        </>
-                      )}
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : user ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <p className="text-xs font-semibold text-foreground truncate">{user.name ?? "User"}</p>
-                        <p className="text-sm text-muted-foreground truncate">{user.email ?? ""}</p>
-                      </div>
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                    >
-                      <LogIn className="w-3.5 h-3.5 text-emerald-400" /> Sign In
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+        {/* Row 1: Dime wordmark — the profile control lives in the shell
+            sidebar (bottom-left); this header carries brand only. Hidden at
+            768–1023px where the shell's compact bar already shows the mark. */}
+        <div className="bs-brand-row flex items-center justify-center px-4 pt-2.5 pb-1.5">
+          <span className="dime-wordmark" aria-label="dime">
+            d<span className="dime-wordmark-i">ı<span className="dime-coindot" /></span>me
+          </span>
         </div>
 
-        {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active) */}
-        <div className="flex w-full" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+        {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active).
+            Mobile only: at ≥768px the Dime shell sidebar owns pane navigation,
+            so the in-page tab selectors disappear. */}
+        <div className="flex w-full md:hidden" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
           {/* Links style themselves (no nested <button> — interactive-inside-
               interactive is invalid HTML and doubles the keyboard tab stops). */}
           {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
@@ -611,26 +556,15 @@ export default function BettingSplitsPage({
 
 
 
-          {/* MLB pill — primary sport */}
-          <button type="button" onClick={() => setSelectedSport("MLB")} data-active={selectedSport === "MLB"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "MLB" ? { background: "rgba(0,45,114,0.25)", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "MLB" ? 1 : 0.5, flexShrink: 0 }} />
-            MLB
-          </button>
-
-          {/* NHL pill */}
-          <button type="button" onClick={() => setSelectedSport("NHL")} data-active={selectedSport === "NHL"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "NHL" ? { background: "rgba(0,100,200,0.18)", color: "#4FC3F7", border: "1px solid rgba(0,100,200,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg" alt="NHL" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NHL" ? 1 : 0.5, flexShrink: 0 }} />
-            NHL
-          </button>
-
-          {/* NBA pill */}
-          <button type="button" onClick={() => setSelectedSport("NBA")} data-active={selectedSport === "NBA"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "NBA" ? { background: "rgba(200,16,46,0.15)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src={CDN_NBA} alt="NBA" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
-            NBA
-          </button>
+          {/* League pills — only in-season leagues render (leagueSeasons).
+              State styling comes from the .bs-pill brand layer in dime-mobile.css. */}
+          {activeLeagues.map((league) => (
+            <button type="button" key={league} onClick={() => setSelectedSport(league)} data-active={selectedSport === league}
+              className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0 cursor-pointer">
+              <img src={LEAGUE_LOGOS[league]} alt="" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === league ? 1 : 0.5, flexShrink: 0 }} />
+              {league}
+            </button>
+          ))}
 
           {/* Search bar — takes remaining space */}
           <div className="flex-1 min-w-0">
