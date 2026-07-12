@@ -24,7 +24,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   AnimatePresence,
   LazyMotion,
@@ -60,9 +60,20 @@ import {
   rubberBand,
 } from "./drawerMotion";
 import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
+import {
+  deriveInitials,
+  deriveTierLabel,
+  displaySidebarName,
+  formatExpiryLine,
+  formatHandle,
+  isPrezAccount,
+  type SidebarUser,
+} from "./sidebarIdentity";
 import { bettingSplitsPath, feedModelPath } from "@/lib/feedRoutes";
+import { trpc } from "@/lib/trpc";
+import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
-import avatarUrl from "./assets/prez-avatar.jpg";
+import prezAvatarUrl from "./assets/prez-avatar.jpg";
 import "./frozen-tokens.css";
 import "./conversation.css";
 
@@ -177,6 +188,26 @@ const GEAR_PATH =
 /* Sidebar — D/L:54-96                                                */
 /* ----------------------------------------------------------------- */
 
+/** Real-identity avatar: prez photo for the prez account only (plan A2);
+ *  everyone else gets brand-styled initials on the frozen avatar geometry. */
+function IdentityAvatar({ user, menu = false }: { user: SidebarUser; menu?: boolean }) {
+  const sizeClass = menu ? "dc-avatar--menu" : "dc-avatar";
+  if (isPrezAccount(user.username)) {
+    return (
+      <img
+        className={sizeClass}
+        src={prezAvatarUrl}
+        alt={displaySidebarName(user.username)}
+      />
+    );
+  }
+  return (
+    <div className={`${sizeClass} dc-avatar--initials`} aria-hidden="true">
+      {deriveInitials(user.username)}
+    </div>
+  );
+}
+
 function DimeSidebar({
   onNewChat,
   recentChats,
@@ -188,6 +219,8 @@ function DimeSidebar({
   onNavigate,
   activePane = "chat",
   onShellNavigate,
+  appUser,
+  isOwner,
 }: {
   onNewChat: () => void;
   recentChats: RecentChat[];
@@ -199,10 +232,33 @@ function DimeSidebar({
   onNavigate: () => void;
   activePane?: DimeProductPane;
   onShellNavigate?: (href: string) => void;
+  appUser: SidebarUser | null;
+  isOwner: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
+  const [, navigate] = useLocation();
+  const logoutMutation = trpc.appUsers.logout.useMutation();
+
+  const goTo = (href: string) => {
+    setMenuOpen(false);
+    onNavigate();
+    navigate(href);
+  };
+
+  const onLogout = async () => {
+    if (logoutMutation.isPending) return;
+    try {
+      await logoutMutation.mutateAsync();
+    } finally {
+      // Hard redirect: clears every in-memory cache (React Query auth state,
+      // session recents) so the next login renders the next user's identity.
+      window.location.assign("/");
+    }
+  };
+
+  const expiryLine = appUser ? formatExpiryLine(appUser.expiryDate) : null;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -307,104 +363,132 @@ function DimeSidebar({
         // recent list's flex: 1 slot (D/L:65) so the profile row stays pinned.
         <div className="dc-sidebar-spacer" />
       )}
-      <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
-        {/* FROZEN SAMPLE IDENTITY — product-wiring decision pending. */}
-        <img className="dc-avatar" src={avatarUrl} alt="PREZ BETS" />
-        <div className="dc-profile-id">
-          <div className="dc-profile-name">PREZ BETS</div>
-          <div className="dc-profile-tier">Pro</div>
-        </div>
-        <AnimatePresence initial={false}>
-          {menuOpen && (
-            <m.div
-              key="settings-menu"
-              className="dc-settings-menu open"
-              role="menu"
-              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
-              transition={{
-                duration: reduceMotion ? 0 : 0.16,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="dc-menu-header">
-                <img className="dc-avatar--menu" src={avatarUrl} alt="@prez" />
-                <div className="dc-menu-id">
-                  <div className="dc-menu-handle-row">
-                    <div className="dc-menu-handle">@prez</div>
-                    <div className="dc-badge-pro">PRO</div>
+      {appUser ? (
+        <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
+          <IdentityAvatar user={appUser} />
+          <div className="dc-profile-id">
+            <div className="dc-profile-name">
+              {displaySidebarName(appUser.username)}
+            </div>
+            <div className="dc-profile-tier">{deriveTierLabel(appUser)}</div>
+          </div>
+          <AnimatePresence initial={false}>
+            {menuOpen && (
+              <m.div
+                key="settings-menu"
+                className="dc-settings-menu open"
+                role="menu"
+                initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={
+                  reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }
+                }
+                transition={{
+                  duration: reduceMotion ? 0 : 0.16,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="dc-menu-header">
+                  <IdentityAvatar user={appUser} menu />
+                  <div className="dc-menu-id">
+                    <div className="dc-menu-handle-row">
+                      <div className="dc-menu-handle">
+                        {formatHandle(appUser.username)}
+                      </div>
+                      <div className="dc-badge-pro">
+                        {deriveTierLabel(appUser).toUpperCase()}
+                      </div>
+                    </div>
+                    {expiryLine && (
+                      <div className="dc-menu-expiry">{expiryLine}</div>
+                    )}
                   </div>
-                  <div className="dc-menu-expiry">Expires August 8, 2026</div>
                 </div>
-              </div>
-              <div className="dc-menu-cta-row">
+                {!isOwner && (
+                  <div className="dc-menu-cta-row">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
+                      onClick={() => goTo("/checkout")}
+                    >
+                      Upgrade Membership
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
+                      onClick={() => goTo("/account")}
+                    >
+                      Cancel Membership
+                    </button>
+                  </div>
+                )}
+                <div className="dc-menu-divider" />
                 <button
                   type="button"
                   role="menuitem"
-                  className="dc-btn-upgrade dc-hv1 dc-focusable dc-pressable"
+                  className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                  onClick={() => goTo("/profile")}
                 >
-                  Upgrade Membership
+                  Edit Profile
                 </button>
+                {appUser.discordUsername && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
+                    onClick={() => goTo("/profile")}
+                  >
+                    Discord Connected:{" "}
+                    <span className="dc-menu-accent">
+                      {formatHandle(appUser.discordUsername)}
+                    </span>
+                  </button>
+                )}
+                <div className="dc-menu-divider" />
                 <button
                   type="button"
                   role="menuitem"
-                  className="dc-btn-cancel dc-hv2 dc-focusable dc-pressable"
+                  className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
+                  disabled={logoutMutation.isPending}
+                  onClick={onLogout}
                 >
-                  Cancel Membership
+                  {logoutMutation.isPending ? "Logging out…" : "Log Out"}
                 </button>
-              </div>
-              <div className="dc-menu-divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
-              >
-                Edit Profile
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
-              >
-                Discord Connected: <span className="dc-menu-accent">@prez</span>
-              </button>
-              <div className="dc-menu-divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
-              >
-                Log Out
-              </button>
-            </m.div>
-          )}
-        </AnimatePresence>
-        <button
-          type="button"
-          className="dc-settings-trigger dc-pressable dc-focusable"
-          aria-label="Account settings"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen(open => !open)}
-        >
-          <svg
-            className="dc-settings-btn"
-            viewBox="0 0 24 24"
-            width="17"
-            height="17"
-            fill="none"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+              </m.div>
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            className="dc-settings-trigger dc-pressable dc-focusable"
+            aria-label="Account settings"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(open => !open)}
           >
-            <circle cx="12" cy="12" r="3" />
-            <path d={GEAR_PATH} />
-          </svg>
-        </button>
-      </div>
+            <svg
+              className="dc-settings-btn"
+              viewBox="0 0 24 24"
+              width="17"
+              height="17"
+              fill="none"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path d={GEAR_PATH} />
+            </svg>
+          </button>
+        </div>
+      ) : (
+        // Auth still resolving (or preview): neutral row — the frozen sample
+        // identity must never render for a real session.
+        <div className="dc-sidebar-row dc-profile-row" aria-hidden="true" />
+      )}
     </m.aside>
   );
 }
@@ -698,16 +782,34 @@ export interface DimeChatShellState {
 export interface DimeChatPageProps {
   theme?: Theme;
   shell?: DimeChatShellState;
+  /** DEV-only visual-review escape hatch (previewGate.ts). Production builds
+   *  always pass false/undefined, so the owner gate cannot be bypassed. */
+  previewMode?: boolean;
 }
 
 export default function DimeChatPage({
   theme: themeProp,
   shell,
+  previewMode = false,
 }: DimeChatPageProps = {}) {
   const { theme: contextTheme } = useTheme();
   const theme: Theme =
     themeProp ?? (contextTheme === "light" ? "light" : "dark");
   const reduceMotion = useReducedMotion();
+  const { appUser, isOwner, loading: authLoading } = useAppAuth();
+
+  // Owner gate (plan Phase 2, fail closed): the chat surface — hero, composer,
+  // pills, thread — renders for owners only. While auth resolves nothing
+  // renders (never flash the composer); resolved non-owners get the Dime
+  // wordmark + AI MODEL CHAT COMING SOON. previewMode is compile-time gated
+  // to DEV builds (previewGate.ts) for frozen-design review.
+  const chatAccess: "granted" | "pending" | "denied" = previewMode
+    ? "granted"
+    : authLoading
+      ? "pending"
+      : isOwner
+        ? "granted"
+        : "denied";
 
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
@@ -1159,6 +1261,9 @@ export default function DimeChatPage({
   /* --- Single submit choke point: composer, Enter, chips, all of it --- */
   const submit = useCallback(
     (text: string) => {
+      // Defense in depth: non-owners have no composer, but no programmatic
+      // path may start a stream either (server 403s regardless).
+      if (chatAccess !== "granted") return;
       const trimmed = text.trim();
       if (!trimmed || state.streaming) return;
 
@@ -1209,6 +1314,7 @@ export default function DimeChatPage({
       void runStream(history, assistantId);
     },
     [
+      chatAccess,
       state.streaming,
       state.messages,
       runStream,
@@ -1219,6 +1325,7 @@ export default function DimeChatPage({
 
   /** Retry re-runs the same history (failed empty row was already removed — spec §2.6). */
   const retry = useCallback(() => {
+    if (chatAccess !== "granted") return;
     if (state.streaming || state.messages.length === 0) return;
     const last = state.messages[state.messages.length - 1];
     if (last.role !== "user") return;
@@ -1228,7 +1335,7 @@ export default function DimeChatPage({
       state.messages.map(({ role, content }) => ({ role, content })),
       assistantId
     );
-  }, [state.streaming, state.messages, runStream]);
+  }, [chatAccess, state.streaming, state.messages, runStream]);
 
   const stop = () => abortRef.current?.abort();
 
@@ -1370,6 +1477,8 @@ export default function DimeChatPage({
             }}
             activePane={shell?.navigationPane}
             onShellNavigate={shell?.onNavigate}
+            appUser={appUser}
+            isOwner={isOwner}
           />
 
           {compact && drawerOpen && (
@@ -1438,7 +1547,22 @@ export default function DimeChatPage({
                     Dime Chat
                   </h1>
                 )}
-                {conversation && (
+                {chatAccess === "denied" && (
+                  // Non-owner state (plan Phase 2.1): wordmark + coming-soon
+                  // copy only. No hero, no composer, no pills. Sidebar/nav
+                  // stays fully usable around it.
+                  <div className="dc-coming-soon" role="status">
+                    <img
+                      className="dc-coming-soon-mark"
+                      src={`/brand/dime-wordmark-on-${theme}.svg`}
+                      alt="Dime"
+                    />
+                    <div className="dc-coming-soon-copy">
+                      AI MODEL CHAT COMING SOON
+                    </div>
+                  </div>
+                )}
+                {chatAccess === "granted" && conversation && (
                   <div
                     className="dc-scroller"
                     ref={scrollerRef}
@@ -1467,7 +1591,10 @@ export default function DimeChatPage({
                     </div>
                   </div>
                 )}
-                {!conversation && <BrandHero innerRef={heroRef} />}
+                {chatAccess === "granted" && !conversation && (
+                  <BrandHero innerRef={heroRef} />
+                )}
+                {chatAccess === "granted" && (
                 <div className="dc-composer-zone">
                   {conversation && !stuck && state.streaming && (
                     <button
@@ -1514,14 +1641,15 @@ export default function DimeChatPage({
                     )}
                   </form>
                 </div>
-                {!conversation && (
+                )}
+                {chatAccess === "granted" && !conversation && (
                   <PromptPills
                     theme={theme}
                     onPick={submit}
                     innerRef={pillsRef}
                   />
                 )}
-                {ghost && (
+                {chatAccess === "granted" && ghost && (
                   <div aria-hidden="true">
                     <m.div
                       className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}

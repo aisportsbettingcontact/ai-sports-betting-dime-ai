@@ -142,6 +142,7 @@ export default function DimeAppShell({
 
   return (
     <DimeChatPage
+      previewMode={previewMode}
       shell={{
         renderedPane: renderedRoute.pane,
         navigationPane: actualRoute.pane,
