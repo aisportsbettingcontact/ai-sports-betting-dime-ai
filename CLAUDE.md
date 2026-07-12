@@ -8,7 +8,7 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Layer | Location | Contents |
 |---|---|---|
 | Design intelligence | `.claude/skills/` (uipro) | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides |
-| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill` | nextlevelbuilder/ui-ux-pro-max-skill marketplace — upstream ui-ux-pro-max (v2.6.x: 84 styles, 161 palettes, 73 font pairings, 17 stacks), tracks upstream releases alongside the vendored `.claude/skills/` copy |
+| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill` | nextlevelbuilder/ui-ux-pro-max-skill marketplace — upstream ui-ux-pro-max, tracks upstream releases alongside the vendored `.claude/skills/` copy |
 | Design taste | `.agents/skills/frontend-design/` | Anthropic official — distinctive, non-templated visual direction |
 | Writing quality | `.claude/skills/stop-slop/` | hardikpandya/stop-slop — strips AI writing tells from prose (filler phrases, formulaic structures, passive voice); use when drafting/editing copy or docs |
 | Design taste (Emil Kowalski) | `.claude/skills/` (emilkowalski/skill) | emil-design-eng (UI polish philosophy), apple-design (Apple-style motion/materials for web), animation-vocabulary (name-that-motion glossary), review-animations |
@@ -26,17 +26,16 @@ Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enab
 everything auto-installs on session start in any environment. `skills-lock.json` pins the
 npx-installed sources. `.agents/skills/` is the universal directory (17 agent platforms).
 
-## Custom commands (`.claude/commands/` — 32 total)
+## Custom commands (`.claude/commands/`)
 
-Give `$ARGUMENTS` real context, not just a topic name.
+Give `$ARGUMENTS` real context, not just a topic name. Full command definitions are under
+`.claude/commands/`; inspect only the command relevant to the current task.
 
-| Namespace | Commands |
-|---|---|
-| Product (`/pm-*`) | `/pm-problem` → `/pm-probe` → `/pm-story` → `/pm-epic` → `/pm-prioritize` (the discovery chain) · `/pm-prd` · `/pm-roadmap` |
-| Process (`/sp-*`) | `/sp-brainstorm` · `/sp-plan` · `/sp-execute` · `/sp-tdd` · `/sp-debug` · `/sp-verify` · `/sp-review-ask` · `/sp-review-apply` · `/sp-parallel` · `/sp-subagents` · `/sp-worktree` · `/sp-finish` · `/sp-skill-new` · `/sp-help` |
-| Design (`/ui-*`) | `/ui-build` · `/ui-tokens` · `/ui-style` · `/ui-direction` · `/ui-design-asset` · `/ui-banner` · `/ui-slides` · `/ui-brand` — ALL enforce Dime brand law from `design-system/dime-ai/MASTER.md` |
-| Payments | `/stripe` — grounded in this repo's webhook/checkout code |
-| Shipping | `/ship <PR#>` — CI-verify → merge → branch restart → Manus deploy prompt · `/gh-fix <issue#>` — issue → isolated worktree → fix → PR |
+Non-derivable notes: the `/pm-*` discovery chain is `/pm-problem` → `/pm-probe` → `/pm-story` →
+`/pm-epic` → `/pm-prioritize`; ALL `/ui-*` commands enforce Dime brand law from
+`design-system/dime-ai/MASTER.md`; `/stripe` is grounded in this repo's webhook/checkout code;
+`/ship <PR#>` = verify CI and release gates → merge approved PR → confirm Railway deployment and
+smoke checks; `/gh-fix <issue#>` = issue → isolated worktree → focused fix → verification → PR.
 
 Typical build loop: `/pm-problem` → `/pm-story` → `/sp-plan` → `/sp-tdd` → `/ui-build` → `/sp-verify` → `/sp-review-ask` → `/sp-finish`.
 
