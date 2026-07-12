@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LiveLab workspace configuration (.livelab/config.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1, "description": "Config schema version" },
+    "routes": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/", "maxLength": 500 },
+      "description": "Application routes checked by smoke tests and watch mode"
+    },
+    "devices": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "Built-in preset id (e.g. iphone-16)" },
+          {
+            "type": "object",
+            "required": ["id", "label", "kind", "width", "height"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "maxLength": 64 },
+              "label": { "type": "string", "maxLength": 80 },
+              "kind": { "enum": ["phone", "tablet", "laptop", "desktop"] },
+              "width": { "type": "integer", "minimum": 200, "maximum": 7680 },
+              "height": { "type": "integer", "minimum": 200, "maximum": 4320 },
+              "deviceScaleFactor": { "type": "number", "minimum": 0.5, "maximum": 4 },
+              "isMobile": { "type": "boolean" },
+              "hasTouch": { "type": "boolean" },
+              "userAgent": { "type": "string", "maxLength": 512 },
+              "playwrightDescriptor": { "type": "string", "maxLength": 80 },
+              "simulationFidelity": { "enum": ["descriptor", "viewport"] }
+            }
+          }
+        ]
+      }
+    },
+    "scripts": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-zA-Z0-9:_-]+$", "maxLength": 64 },
+      "description": "Extra allowlisted npm scripts (merged with livelab.managedScripts)"
+    },
+    "smoke": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "assertions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "maxLength": 64 },
+              "description": { "type": "string", "maxLength": 300 },
+              "kind": { "enum": ["elementVisible", "elementText", "urlMatches", "noSelector"] },
+              "selector": { "type": "string", "maxLength": 500 },
+              "text": { "type": "string", "maxLength": 500 },
+              "pattern": { "type": "string", "maxLength": 500 }
+            }
+          }
+        },
+        "ignoreConsole": { "type": "array", "items": { "type": "string", "maxLength": 300 } },
+        "ignoreRequests": { "type": "array", "items": { "type": "string", "maxLength": 300 } },
+        "overflowTolerancePx": { "type": "integer", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "storageStatePath": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Workspace-relative path to a user-owned Playwright storage-state JSON"
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "description": "pixelmatch per-pixel color threshold" },
+        "maxDiffPixelRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "headers": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 2048 } },
+    "env": { "type": "object", "additionalProperties": { "type": "string", "maxLength": 2048 } },
+    "watch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": { "type": "array", "items": { "type": "string", "maxLength": 300 } },
+        "exclude": { "type": "array", "items": { "type": "string", "maxLength": 300 } },
+        "quietWindowMs": { "type": "integer", "minimum": 50, "maximum": 10000 },
+        "maxSettleMs": { "type": "integer", "minimum": 500, "maximum": 60000 },
+        "fullPageScreenshot": { "type": "boolean" },
+        "visualCompare": { "type": "boolean" }
+      }
+    }
+  }
+}
