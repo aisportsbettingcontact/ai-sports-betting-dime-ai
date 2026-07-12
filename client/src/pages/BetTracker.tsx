@@ -23,6 +23,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   Clock, TrendingUp, Minus, AlertCircle,
   ChevronLeft, Plus, Pencil, Trash2, CheckCircle2,
@@ -1551,6 +1552,7 @@ export interface BetTrackerProps {
 }
 
 export default function BetTracker({ previewMode = false }: BetTrackerProps) {
+  const { theme } = useTheme();
   const [, navigate] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
 
@@ -1559,7 +1561,11 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
   }, [authLoading, appUser, navigate, previewMode]);
 
   const role      = appUser?.role ?? (previewMode ? "owner" : "user");
-  const canAccess = ["owner", "admin", "handicapper"].includes(role);
+  // OWNER-ONLY LOCKDOWN (2026-07-12): the tracker is owner-only while the AI
+  // Bet Tracker relaunch is pre-release. Everyone else — admins and
+  // handicappers included — gets the COMING SOON screen below, and the server
+  // (betTrackerProcedure = ownerProcedure) refuses their requests regardless.
+  const canAccess = role === "owner";
   const isOwnerOrAdmin = role === "owner" || role === "admin";
   // Preview mode never grants protected data access. With no authenticated
   // app user, queries stay disabled and the real empty-state chrome is shown.
@@ -2644,13 +2650,25 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
   }
 
   if (!canAccess) {
+    // OWNER-ONLY LOCKDOWN (2026-07-12): every non-owner sees the pre-launch
+    // screen — Dime wordmark with the hardcoded coming-soon line beneath it.
+    // Theme-aware like the chat access notice: black text on light mode,
+    // white text on dark mode, with the matching brand wordmark asset.
+    const light = theme === "light";
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-        <div className="text-center space-y-3">
-          <AlertCircle className="mx-auto text-red-400" size={32} />
-          <p className="text-white font-bold">Access Restricted</p>
-          <p className="text-zinc-300 text-sm">Bet Tracker is available to Handicappers, Admins, and Owners only.</p>
-          <button type="button" onClick={() => navigate("/")} className="text-emerald-400 text-sm underline">Go back</button>
+      <div
+        className={`min-h-screen flex items-center justify-center px-4 ${light ? "bg-white" : "bg-zinc-950"}`}
+        data-testid="bet-tracker-coming-soon"
+      >
+        <div className="text-center">
+          <img
+            src={light ? "/brand/dime-wordmark-on-light.svg" : "/brand/dime-wordmark-on-dark.svg"}
+            alt="Dime"
+            className="mx-auto h-14 w-auto sm:h-16"
+          />
+          <p className={`mt-6 text-sm sm:text-base font-bold tracking-[0.28em] ${light ? "text-black" : "text-white"}`}>
+            AI BET TRACKER COMING SOON
+          </p>
         </div>
       </div>
     );
