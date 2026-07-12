@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  deriveInitials,
   deriveTierLabel,
   displaySidebarName,
   formatExpiryLine,
   formatHandle,
+  isLifetimeMember,
   isPrezAccount,
   type SidebarUser,
 } from "./sidebarIdentity";
@@ -41,19 +41,25 @@ describe("isPrezAccount — photo exclusivity (plan A2)", () => {
   });
 });
 
-describe("deriveInitials", () => {
-  it("uses the first two letters of a single-token username", () => {
-    expect(deriveInitials("sippi")).toBe("SI");
+describe("isLifetimeMember — Upgrade/Cancel visibility", () => {
+  it("no expiry date means lifetime (repo convention: null = lifetime)", () => {
+    expect(isLifetimeMember(user({ role: "user", expiryDate: null }))).toBe(true);
   });
 
-  it("uses first + last segment initials for separated usernames", () => {
-    expect(deriveInitials("big.winner")).toBe("BW");
-    expect(deriveInitials("big_time_bettor")).toBe("BB");
+  it("the explicit 'lifetime' plan id is lifetime even with an expiry set", () => {
+    expect(
+      isLifetimeMember(
+        user({ role: "user", expiryDate: 1, stripePlanId: "lifetime" })
+      )
+    ).toBe(true);
   });
 
-  it("never returns an empty string", () => {
-    expect(deriveInitials("")).toBe("?");
-    expect(deriveInitials(undefined)).toBe("?");
+  it("a dated non-lifetime plan is NOT lifetime — CTAs stay visible", () => {
+    expect(
+      isLifetimeMember(
+        user({ role: "user", expiryDate: 1, stripePlanId: "monthly" })
+      )
+    ).toBe(false);
   });
 });
 

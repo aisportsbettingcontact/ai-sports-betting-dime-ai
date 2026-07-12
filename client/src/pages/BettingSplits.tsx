@@ -7,9 +7,9 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { User, LogOut, LogIn, BarChart3, Loader2, Crown, Send, Search, X, Clock, TrendingUp, ShieldAlert } from "lucide-react";
+import { Loader2, Search, X } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
-import { feedModelPath, bettingSplitsPath } from "@/lib/feedRoutes";
+import { bettingSplitsPath } from "@/lib/feedRoutes";
 import {
   resolveSplitsServerDate,
   shouldAutoAdvance,
@@ -17,20 +17,21 @@ import {
 } from "./dime-shell/splitsDateState";
 
 // CDN icon URLs
-const CDN_TEST_TUBE = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
-const CDN_MONEY_BAG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-money-bag_b9c73c5d.png";
-const CDN_NBA = "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
+const CDN_TEST_TUBE =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
+const CDN_NBA =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
 
-function TestTubeIcon({ size = 14 }: { size?: number }) {
-  return <img src={CDN_TEST_TUBE} alt="Test tube" width={size} height={size} style={{ objectFit: "contain", filter: "invert(1)" }} />;
-}
+// League pill logos — rendered only for in-season leagues (see leagueSeasons).
+const LEAGUE_LOGOS: Record<SplitsLeague, string> = {
+  MLB: "https://www.mlbstatic.com/team-logos/league-on-dark/1.svg",
+  NHL: "https://assets.nhle.com/logos/nhl/svg/NHL_light.svg",
+  NBA: CDN_NBA,
+};
 
-function MoneyBagIcon({ size = 14 }: { size?: number }) {
-  return <img src={CDN_MONEY_BAG} alt="Money bag" width={size} height={size} style={{ objectFit: "contain", filter: "invert(1)" }} />;
-}
 import { GameCard } from "@/components/GameCard";
 import { AgeModal } from "@/components/AgeModal";
-import { LoginModal } from "@/components/LoginModal";
+import { inSeasonLeagues, type SplitsLeague } from "@/lib/leagueSeasons";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -38,7 +39,6 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
-import { Link } from "wouter";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,8 @@ function formatMilitaryTime(time: string | null | undefined): string {
 }
 
 function timeToMinutes(time: string | null | undefined): number {
-  if (!time || time.toUpperCase() === "TBD" || time.toUpperCase() === "TBA") return 9999;
+  if (!time || time.toUpperCase() === "TBD" || time.toUpperCase() === "TBA")
+    return 9999;
   const [hStr, mStr] = time.split(":");
   const h = parseInt(hStr ?? "0", 10);
   const m = parseInt(mStr ?? "0", 10);
@@ -66,7 +67,10 @@ function timeToMinutes(time: string | null | undefined): number {
 
 /** Games starting at midnight (00:00 ET) are stored under their correct calendar
  * date by the backend. No frontend date adjustment needed. */
-function effectiveGameDate(gameDate: string, _startTimeEst: string | null | undefined): string {
+function effectiveGameDate(
+  gameDate: string,
+  _startTimeEst: string | null | undefined
+): string {
   return gameDate;
 }
 
@@ -79,97 +83,222 @@ function formatDateHeader(dateStr: string): string {
   try {
     const d = new Date(dateStr + "T00:00:00");
     return d.toLocaleDateString("en-US", {
-      weekday: "long", month: "long", day: "numeric", year: "numeric",
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
-  } catch { return dateStr; }
+  } catch {
+    return dateStr;
+  }
 }
 
 function formatDateShort(dateStr: string): string {
   try {
     const d = new Date(dateStr + "T00:00:00");
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  } catch { return dateStr; }
+  } catch {
+    return dateStr;
+  }
 }
 
 // ─── Team Logo Badge ──────────────────────────────────────────────────────────
 function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
   const nba = getNbaTeamByDbSlug(slug);
-  const nhl = !nba ? NHL_BY_DB_SLUG.get(slug) ?? null : null;
-  const mlb = (!nba && !nhl) ? MLB_BY_ABBREV.get(slug) ?? null : null;
+  const nhl = !nba ? (NHL_BY_DB_SLUG.get(slug) ?? null) : null;
+  const mlb = !nba && !nhl ? (MLB_BY_ABBREV.get(slug) ?? null) : null;
   const logo = nba?.logoUrl ?? nhl?.logoUrl ?? mlb?.logoUrl;
-  const initials = (nba?.name ?? nhl?.name ?? mlb?.name ?? slug.replace(/_/g, " ")).slice(0, 2).toUpperCase();
+  const initials = (
+    nba?.name ??
+    nhl?.name ??
+    mlb?.name ??
+    slug.replace(/_/g, " ")
+  )
+    .slice(0, 2)
+    .toUpperCase();
   // Enforce minimum 32px for touch targets and visual clarity
   const actualSize = Math.max(32, size);
   return (
-    <div className="rounded overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0" style={{ width: actualSize, height: actualSize }}>
-      {logo
-        ? <img
-            src={logo}
-            alt={initials}
-            style={{
-              width: '100%', height: '100%',
-              objectFit: 'contain',
-              mixBlendMode: 'screen',
-              // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
-              // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
-              filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
-            }}
-          />
-        : <span style={{ fontSize: Math.max(7, Math.round(actualSize * 0.28)) }} className="font-bold text-muted-foreground">{initials}</span>
-      }
+    <div
+      className="rounded overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0"
+      style={{ width: actualSize, height: actualSize }}
+    >
+      {logo ? (
+        <img
+          src={logo}
+          alt={initials}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            mixBlendMode: "screen",
+            // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
+            // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
+            filter:
+              "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
+          }}
+        />
+      ) : (
+        <span
+          style={{ fontSize: Math.max(7, Math.round(actualSize * 0.28)) }}
+          className="font-bold text-muted-foreground"
+        >
+          {initials}
+        </span>
+      )}
     </div>
   );
 }
 
 // ─── Search Result Row ────────────────────────────────────────────────────────
-type GameRow = { id: number; awayTeam: string; homeTeam: string; gameDate: string; startTimeEst: string | null; awayBookSpread?: string | null };
+type GameRow = {
+  id: number;
+  awayTeam: string;
+  homeTeam: string;
+  gameDate: string;
+  startTimeEst: string | null;
+  awayBookSpread?: string | null;
+};
 
-function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void }) {
+function SearchResultRow({
+  game,
+  onClick,
+}: {
+  game: GameRow;
+  onClick: () => void;
+}) {
   const awayNba = getNbaTeamByDbSlug(game.awayTeam);
   const homeNba = getNbaTeamByDbSlug(game.homeTeam);
-  const awayNhl = !awayNba ? NHL_BY_DB_SLUG.get(game.awayTeam) ?? null : null;
-  const homeNhl = !homeNba ? NHL_BY_DB_SLUG.get(game.homeTeam) ?? null : null;
-  const awayMlb = (!awayNba && !awayNhl) ? MLB_BY_ABBREV.get(game.awayTeam) ?? null : null;
-  const homeMlb = (!homeNba && !homeNhl) ? MLB_BY_ABBREV.get(game.homeTeam) ?? null : null;
-  const awaySchool = awayNba?.city ?? awayNhl?.city ?? awayMlb?.city ?? game.awayTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  const awayNick = awayNba?.nickname ?? awayNhl?.nickname ?? awayMlb?.nickname ?? "";
-  const homeSchool = homeNba?.city ?? homeNhl?.city ?? homeMlb?.city ?? game.homeTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  const homeNick = homeNba?.nickname ?? homeNhl?.nickname ?? homeMlb?.nickname ?? "";
+  const awayNhl = !awayNba ? (NHL_BY_DB_SLUG.get(game.awayTeam) ?? null) : null;
+  const homeNhl = !homeNba ? (NHL_BY_DB_SLUG.get(game.homeTeam) ?? null) : null;
+  const awayMlb =
+    !awayNba && !awayNhl ? (MLB_BY_ABBREV.get(game.awayTeam) ?? null) : null;
+  const homeMlb =
+    !homeNba && !homeNhl ? (MLB_BY_ABBREV.get(game.homeTeam) ?? null) : null;
+  const awaySchool =
+    awayNba?.city ??
+    awayNhl?.city ??
+    awayMlb?.city ??
+    game.awayTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const awayNick =
+    awayNba?.nickname ?? awayNhl?.nickname ?? awayMlb?.nickname ?? "";
+  const homeSchool =
+    homeNba?.city ??
+    homeNhl?.city ??
+    homeMlb?.city ??
+    game.homeTeam.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  const homeNick =
+    homeNba?.nickname ?? homeNhl?.nickname ?? homeMlb?.nickname ?? "";
   // Official abbreviations for responsive display — never truncated
-  const awayAbbr = awayNba?.abbrev ?? awayNhl?.abbrev ?? awayMlb?.abbrev
-    ?? game.awayTeam.split(/[_\s]+/).map(w => w[0]?.toUpperCase() ?? '').join('').slice(0, 3);
-  const homeAbbr = homeNba?.abbrev ?? homeNhl?.abbrev ?? homeMlb?.abbrev
-    ?? game.homeTeam.split(/[_\s]+/).map(w => w[0]?.toUpperCase() ?? '').join('').slice(0, 3);
+  const awayAbbr =
+    awayNba?.abbrev ??
+    awayNhl?.abbrev ??
+    awayMlb?.abbrev ??
+    game.awayTeam
+      .split(/[_\s]+/)
+      .map(w => w[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 3);
+  const homeAbbr =
+    homeNba?.abbrev ??
+    homeNhl?.abbrev ??
+    homeMlb?.abbrev ??
+    game.homeTeam
+      .split(/[_\s]+/)
+      .map(w => w[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 3);
   const time = formatMilitaryTime(game.startTimeEst);
   const dateShort = formatDateShort(game.gameDate);
   return (
-    <button type="button" onClick={onClick} className="w-full hover:bg-white/5 active:bg-white/10 transition-colors text-left border-b border-white/8 last:border-0">
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full hover:bg-white/5 active:bg-white/10 transition-colors text-left border-b border-white/8 last:border-0"
+    >
       <div className="flex items-center px-3 py-2.5 gap-2">
         {/* Away team: logo + responsive name */}
-        <div className="flex items-center gap-2" style={{ flex: "1 1 0", minWidth: 0 }}>
+        <div
+          className="flex items-center gap-2"
+          style={{ flex: "1 1 0", minWidth: 0 }}
+        >
           <TeamBadge slug={game.awayTeam} size={32} />
           <div className="flex flex-col" style={{ minWidth: 0 }}>
             {/* xs/sm: abbreviation only — never truncates */}
-            <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{awayAbbr}</span>
+            <span
+              className="font-bold text-white leading-tight sm:hidden"
+              style={{
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {awayAbbr}
+            </span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
-            <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{awaySchool}</span>
-            {awayNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
+            <span
+              className="font-bold text-white leading-tight hidden sm:block"
+              style={{ fontSize: 12, whiteSpace: "nowrap" }}
+            >
+              {awaySchool}
+            </span>
+            {awayNick && (
+              <span
+                className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block"
+                style={{ fontSize: 10, whiteSpace: "nowrap" }}
+              >
+                {awayNick}
+              </span>
+            )}
           </div>
         </div>
         {/* Center: @ + date + time */}
-        <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 60 }}>
-          <span className="text-sm text-zinc-300 font-medium leading-tight">@</span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap mt-0.5">{dateShort}</span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap">{time}</span>
+        <div
+          className="flex flex-col items-center flex-shrink-0"
+          style={{ minWidth: 60 }}
+        >
+          <span className="text-sm text-zinc-300 font-medium leading-tight">
+            @
+          </span>
+          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap mt-0.5">
+            {dateShort}
+          </span>
+          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap">
+            {time}
+          </span>
         </div>
         {/* Home team: responsive name + logo */}
-        <div className="flex items-center gap-2 justify-end" style={{ flex: "1 1 0", minWidth: 0 }}>
+        <div
+          className="flex items-center gap-2 justify-end"
+          style={{ flex: "1 1 0", minWidth: 0 }}
+        >
           <div className="flex flex-col items-end" style={{ minWidth: 0 }}>
             {/* xs/sm: abbreviation only — never truncates */}
-            <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{homeAbbr}</span>
+            <span
+              className="font-bold text-white leading-tight sm:hidden"
+              style={{
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {homeAbbr}
+            </span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
-            <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{homeSchool}</span>
-            {homeNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
+            <span
+              className="font-bold text-white leading-tight hidden sm:block"
+              style={{ fontSize: 12, whiteSpace: "nowrap" }}
+            >
+              {homeSchool}
+            </span>
+            {homeNick && (
+              <span
+                className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block"
+                style={{ fontSize: 10, whiteSpace: "nowrap" }}
+              >
+                {homeNick}
+              </span>
+            )}
           </div>
           <TeamBadge slug={game.homeTeam} size={32} />
         </div>
@@ -204,27 +333,39 @@ export default function BettingSplitsPage({
 }: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
   const [showAgeModal, setShowAgeModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   // Sport is seeded from the canonical route (/betting-splits/:sport) and the
   // URL is kept in sync on pill changes so the address bar stays shareable.
-  const [selectedSport, setSelectedSportState] = useState<"MLB" | "NHL" | "NBA">(initialSport);
-  const [selectedDate, setSelectedDateState] = useState<string>(initialDate ?? todayUTC());
+  const [selectedSport, setSelectedSportState] = useState<
+    "MLB" | "NHL" | "NBA"
+  >(initialSport);
+  const [selectedDate, setSelectedDateState] = useState<string>(
+    initialDate ?? todayUTC()
+  );
   const userSelectedDateRef = useRef(false);
-  const setSelectedSport = useCallback((sport: "MLB" | "NHL" | "NBA") => {
-    setSelectedSportState(sport);
-    setLocation(resolveRouteHref(bettingSplitsPath(sport, selectedDate)));
-  }, [selectedDate, setLocation, resolveRouteHref]);
-  const setSelectedDate = useCallback((date: string) => {
-    userSelectedDateRef.current = true;
-    setSelectedDateState(date);
-    setLocation(resolveRouteHref(bettingSplitsPath(selectedSport, date)));
-  }, [selectedSport, setLocation, resolveRouteHref]);
-  useEffect(() => { setSelectedSportState(initialSport); }, [initialSport]);
+  const setSelectedSport = useCallback(
+    (sport: "MLB" | "NHL" | "NBA") => {
+      setSelectedSportState(sport);
+      setLocation(resolveRouteHref(bettingSplitsPath(sport, selectedDate)));
+    },
+    [selectedDate, setLocation, resolveRouteHref]
+  );
+  const setSelectedDate = useCallback(
+    (date: string) => {
+      userSelectedDateRef.current = true;
+      setSelectedDateState(date);
+      setLocation(resolveRouteHref(bettingSplitsPath(selectedSport, date)));
+    },
+    [selectedSport, setLocation, resolveRouteHref]
+  );
+  useEffect(() => {
+    setSelectedSportState(initialSport);
+  }, [initialSport]);
   useEffect(() => {
     if (initialDate) setSelectedDateState(initialDate);
   }, [initialDate]);
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<"upcoming" | "live" | "final">>(new Set());
+  const [selectedStatuses, setSelectedStatuses] = useState<
+    Set<"upcoming" | "live" | "final">
+  >(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -234,29 +375,47 @@ export default function BettingSplitsPage({
 
   useEffect(() => {
     if (!headerRef.current) return;
-    const obs = new ResizeObserver(() => { setHeaderHeight(Math.ceil(headerRef.current?.getBoundingClientRect().height ?? 88)); });
+    const obs = new ResizeObserver(() => {
+      setHeaderHeight(
+        Math.ceil(headerRef.current?.getBoundingClientRect().height ?? 88)
+      );
+    });
     obs.observe(headerRef.current);
-    setHeaderHeight(Math.ceil(headerRef.current.getBoundingClientRect().height));
+    setHeaderHeight(
+      Math.ceil(headerRef.current.getBoundingClientRect().height)
+    );
     return () => obs.disconnect();
   }, []);
 
   const { user } = useAuth();
-  const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
+  const {
+    appUser,
+    isOwner,
+    loading: appAuthLoading,
+    refetch: refetchAppUser,
+  } = useAppAuth();
 
   // Age modal shown for logged-in users who haven't accepted terms.
   // NOTE: No auth guard redirect — the page is fully public. Unauthenticated users can view splits.
   useEffect(() => {
-    if (!appAuthLoading && appUser && !appUser.termsAccepted) setShowAgeModal(true);
+    if (!appAuthLoading && appUser && !appUser.termsAccepted)
+      setShowAgeModal(true);
   }, [appAuthLoading, appUser]);
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchFocused(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node))
+        setSearchFocused(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const acceptTermsMutation = trpc.appUsers.acceptTerms.useMutation({ onSuccess: () => { refetchAppUser(); setShowAgeModal(false); } });
+  const acceptTermsMutation = trpc.appUsers.acceptTerms.useMutation({
+    onSuccess: () => {
+      refetchAppUser();
+      setShowAgeModal(false);
+    },
+  });
   const utils = trpc.useUtils();
   const closeSessionMutation = trpc.metrics.closeSession.useMutation();
   const appLogoutMutation = trpc.appUsers.logout.useMutation({
@@ -272,9 +431,14 @@ export default function BettingSplitsPage({
       window.location.href = "/login";
     },
   });
-  const appLogout = () => { closeSessionMutation.mutate(); appLogoutMutation.mutate(); };
+  const appLogout = () => {
+    closeSessionMutation.mutate();
+    appLogoutMutation.mutate();
+  };
 
-  useEffect(() => { setSelectedStatuses(new Set()); }, [selectedSport]);
+  useEffect(() => {
+    setSelectedStatuses(new Set());
+  }, [selectedSport]);
 
   // ─── Fix 1: Remove auth gate — games.list is a publicProcedure, no login required ───────────────
   // Previously: { enabled: isAppAuthed } blocked the query for unauthenticated users.
@@ -285,7 +449,7 @@ export default function BettingSplitsPage({
   const { data: allGames, isLoading: gamesLoading } = trpc.games.list.useQuery(
     { sport: selectedSport, gameDate: selectedDate },
     {
-      enabled: true,           // FIX 1: always enabled — games.list is public
+      enabled: true, // FIX 1: always enabled — games.list is public
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 30 * 1000,
@@ -297,10 +461,13 @@ export default function BettingSplitsPage({
   // via todayUTC() and never updated. If the user kept the page open across the 11:00 UTC boundary,
   // selectedDate stayed as yesterday while the server window advanced to today → 0 games shown.
   // Mirror the same getCurrentDate sync that ModelProjections uses.
-  const { data: serverDateData } = trpc.games.getCurrentDate.useQuery(undefined, {
-    refetchInterval: 60 * 1000,
-    staleTime: 30 * 1000,
-  });
+  const { data: serverDateData } = trpc.games.getCurrentDate.useQuery(
+    undefined,
+    {
+      refetchInterval: 60 * 1000,
+      staleTime: 30 * 1000,
+    }
+  );
   useEffect(() => {
     if (!serverDateData) return;
     const serverDate = resolveSplitsServerDate(
@@ -312,24 +479,52 @@ export default function BettingSplitsPage({
     if (serverDate !== selectedDate) {
       console.log(
         `[BettingSplits][DateSync] Syncing selectedDate from client=${selectedDate} to server=${serverDate}` +
-        ` (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`
+          ` (utcHour=${serverDateData.utcHour}, beforeCutoff=${serverDateData.isBeforeCutoff})`
       );
       setSelectedDateState(serverDate);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverDateData, initialDate, selectedDate]);
+
+  // ── In-season league gating ──────────────────────────────────────────────────
+  // Off-season leagues have no games, splits, or history — their pills are dead
+  // UI. Gate on the server's effective slate date (authoritative) with a client
+  // UTC fallback; leagueSeasons fails open so the league row can never blank.
+  // Out-of-season deep links (e.g. /betting-splits/nba-… in July) resolve to the
+  // first in-season league with a replace navigation — no history spam.
+  const seasonDate = serverDateData?.effectiveDate ?? todayUTC();
+  const activeLeagues = useMemo(
+    () => inSeasonLeagues(seasonDate),
+    [seasonDate]
+  );
+  useEffect(() => {
+    if (activeLeagues.includes(selectedSport)) return;
+    const fallback = activeLeagues[0];
+    if (!fallback) return;
+    // Drop the requested date too: an off-season deep link's date belongs to
+    // the dead league's calendar — land on the fallback league's live slate.
+    setSelectedSportState(fallback);
+    setSelectedDateState(todayUTC());
+    setLocation(resolveRouteHref(bettingSplitsPath(fallback)), {
+      replace: true,
+    });
+  }, [activeLeagues, selectedSport, setLocation, resolveRouteHref]);
 
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
     { sport: selectedSport },
     { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
   );
 
-  const liveCount = useMemo(() => (allGames ?? []).filter(g => g?.gameStatus === "live").length, [allGames]);
+  const liveCount = useMemo(
+    () => (allGames ?? []).filter(g => g?.gameStatus === "live").length,
+    [allGames]
+  );
 
   const toggleStatus = (status: "upcoming" | "live" | "final") => {
     setSelectedStatuses(prev => {
       const next = new Set(prev);
-      if (next.has(status)) next.delete(status); else next.add(status);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
       if (next.size === 3) return new Set();
       return next;
     });
@@ -340,17 +535,35 @@ export default function BettingSplitsPage({
     const upper = gameClock.trim().toUpperCase();
     if (upper === "HALF" || upper === "HALFTIME") return [2, 0];
     const bareOtMatch = upper.match(/^(\d*)OT$/);
-    if (bareOtMatch) { const otNum = bareOtMatch[1] ? parseInt(bareOtMatch[1]) : 1; return [50 + otNum, 0]; }
+    if (bareOtMatch) {
+      const otNum = bareOtMatch[1] ? parseInt(bareOtMatch[1]) : 1;
+      return [50 + otNum, 0];
+    }
     const clockOtMatch = upper.match(/^(\d{1,2}):(\d{2})\s+(\d*)OT$/);
-    if (clockOtMatch) { const mins = parseInt(clockOtMatch[1]!); const secs = parseInt(clockOtMatch[2]!); const otNum = clockOtMatch[3] ? parseInt(clockOtMatch[3]) : 1; return [50 + otNum, mins * 60 + secs]; }
+    if (clockOtMatch) {
+      const mins = parseInt(clockOtMatch[1]!);
+      const secs = parseInt(clockOtMatch[2]!);
+      const otNum = clockOtMatch[3] ? parseInt(clockOtMatch[3]) : 1;
+      return [50 + otNum, mins * 60 + secs];
+    }
     const clockMatch = upper.match(/^(\d{1,2}):(\d{2})\s+(\d+)(ST|ND|RD|TH)?$/);
-    if (clockMatch) { const mins = parseInt(clockMatch[1]!); const secs = parseInt(clockMatch[2]!); const period = parseInt(clockMatch[3]!); return [period, mins * 60 + secs]; }
+    if (clockMatch) {
+      const mins = parseInt(clockMatch[1]!);
+      const secs = parseInt(clockMatch[2]!);
+      const period = parseInt(clockMatch[3]!);
+      return [period, mins * 60 + secs];
+    }
     return [-1, 9999];
   };
 
-  const compareGames = (a: NonNullable<typeof allGames>[number], b: NonNullable<typeof allGames>[number]): number => {
-    const statusOrder = (s: string | null | undefined) => s === "live" ? 0 : s === "upcoming" ? 1 : s === "final" ? 2 : 3;
-    const sSortA = statusOrder(a?.gameStatus); const sSortB = statusOrder(b?.gameStatus);
+  const compareGames = (
+    a: NonNullable<typeof allGames>[number],
+    b: NonNullable<typeof allGames>[number]
+  ): number => {
+    const statusOrder = (s: string | null | undefined) =>
+      s === "live" ? 0 : s === "upcoming" ? 1 : s === "final" ? 2 : 3;
+    const sSortA = statusOrder(a?.gameStatus);
+    const sSortB = statusOrder(b?.gameStatus);
     if (sSortA !== sSortB) return sSortA - sSortB;
     if (a?.gameStatus === "live" && b?.gameStatus === "live") {
       const [periodA, clockA] = parseLiveSortKey(a?.gameClock ?? null);
@@ -393,15 +606,15 @@ export default function BettingSplitsPage({
       if (blockedByEffectiveWindow) {
         console.warn(
           `[BettingSplits][AutoAdvance] BLOCKED — selectedDate=${selectedDate} >= effectiveDate=${effectiveDate}. ` +
-          `allDates=${JSON.stringify(allDates.slice(0, 5))} — stale rolling window, not advancing.`
+            `allDates=${JSON.stringify(allDates.slice(0, 5))} — stale rolling window, not advancing.`
         );
       }
       return;
     }
     // App-default date genuinely before the window — advance to first available date.
     console.log(
-      `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? 'unknown'}. ` +
-      `Advancing to allDates[0]=${allDates[0]}`
+      `[BettingSplits][AutoAdvance] FIRED — selectedDate=${selectedDate} < effectiveDate=${effectiveDate ?? "unknown"}. ` +
+        `Advancing to allDates[0]=${allDates[0]}`
     );
     setSelectedDateState(allDates[0]!);
   }, [allDates, selectedDate, serverDateData, initialDateSource, allGames]);
@@ -412,18 +625,33 @@ export default function BettingSplitsPage({
     if (allGames.length === 0) {
       console.warn(
         `[BettingSplits][DIAG] allGames=0 for sport=${selectedSport} date=${selectedDate}. ` +
-        `serverDate=${serverDateData?.effectiveDate ?? 'loading'} ` +
-        `utcHour=${serverDateData?.utcHour ?? '?'} ` +
-        `beforeCutoff=${serverDateData?.isBeforeCutoff ?? '?'} ` +
-        `isAppAuthed=${isAppAuthed} appAuthLoading=${appAuthLoading}`
+          `serverDate=${serverDateData?.effectiveDate ?? "loading"} ` +
+          `utcHour=${serverDateData?.utcHour ?? "?"} ` +
+          `beforeCutoff=${serverDateData?.isBeforeCutoff ?? "?"} ` +
+          `isAppAuthed=${isAppAuthed} appAuthLoading=${appAuthLoading}`
       );
     }
-  }, [allGames, gamesLoading, selectedSport, selectedDate, serverDateData, isAppAuthed, appAuthLoading]);
+  }, [
+    allGames,
+    gamesLoading,
+    selectedSport,
+    selectedDate,
+    serverDateData,
+    isAppAuthed,
+    appAuthLoading,
+  ]);
 
   const games = useMemo(() => {
     if (!allGames) return allGames;
-    let working = selectedStatuses.size === 0 ? allGames : allGames.filter(g => selectedStatuses.has(g?.gameStatus as "upcoming" | "live" | "final"));
-    working = working.filter(g => g && effectiveGameDate(g.gameDate, g.startTimeEst) === selectedDate);
+    let working =
+      selectedStatuses.size === 0
+        ? allGames
+        : allGames.filter(g =>
+            selectedStatuses.has(g?.gameStatus as "upcoming" | "live" | "final")
+          );
+    working = working.filter(
+      g => g && effectiveGameDate(g.gameDate, g.startTimeEst) === selectedDate
+    );
     const byDate: Record<string, NonNullable<typeof allGames>[number][]> = {};
     for (const g of working) {
       const d = effectiveGameDate(g!.gameDate, g!.startTimeEst);
@@ -431,13 +659,19 @@ export default function BettingSplitsPage({
       byDate[d]!.push(g!);
     }
     const result: NonNullable<typeof allGames>[number][] = [];
-    for (const d of Object.keys(byDate).sort()) result.push(...byDate[d]!.sort(compareGames));
+    for (const d of Object.keys(byDate).sort())
+      result.push(...byDate[d]!.sort(compareGames));
     return result;
   }, [allGames, selectedStatuses, selectedDate]);
 
-  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, { refetchInterval: 60_000 });
+  const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
   const splitsAgoLabel = useMemo(() => {
     if (!lastRefresh?.refreshedAt) return "—";
     const diffMs = now - new Date(lastRefresh.refreshedAt).getTime();
@@ -452,13 +686,22 @@ export default function BettingSplitsPage({
   const q = searchQuery.trim().toLowerCase();
   const dropdownResults = useMemo(() => {
     if (!games || !q) return [];
-    return [...games.filter(game => {
-      if (!game) return false;
-      const awayNba = getNbaTeamByDbSlug(game.awayTeam);
-      const homeNba = getNbaTeamByDbSlug(game.homeTeam);
-      const terms = [awayNba?.name ?? "", awayNba?.nickname ?? "", game.awayTeam.replace(/_/g, " "), homeNba?.name ?? "", homeNba?.nickname ?? "", game.homeTeam.replace(/_/g, " ")].map(s => s.toLowerCase());
-      return terms.some(t => t.includes(q));
-    })].sort((a, b) => {
+    return [
+      ...games.filter(game => {
+        if (!game) return false;
+        const awayNba = getNbaTeamByDbSlug(game.awayTeam);
+        const homeNba = getNbaTeamByDbSlug(game.homeTeam);
+        const terms = [
+          awayNba?.name ?? "",
+          awayNba?.nickname ?? "",
+          game.awayTeam.replace(/_/g, " "),
+          homeNba?.name ?? "",
+          homeNba?.nickname ?? "",
+          game.homeTeam.replace(/_/g, " "),
+        ].map(s => s.toLowerCase());
+        return terms.some(t => t.includes(q));
+      }),
+    ].sort((a, b) => {
       const dateCmp = (a!.gameDate ?? "").localeCompare(b!.gameDate ?? "");
       if (dateCmp !== 0) return dateCmp;
       return timeToMinutes(a!.startTimeEst) - timeToMinutes(b!.startTimeEst);
@@ -467,26 +710,45 @@ export default function BettingSplitsPage({
 
   const showDropdown = searchFocused && q.length > 0;
 
-  const gamesByDate = useMemo(() =>
-    (games ?? []).reduce<Record<string, NonNullable<typeof games>[number][]>>((acc, game) => {
-      const date = effectiveGameDate(game!.gameDate, game!.startTimeEst);
-      if (!acc[date]) acc[date] = [];
-      acc[date]!.push(game!);
-      return acc;
-    }, {}), [games]);
-  const sortedDates = useMemo(() => Object.keys(gamesByDate).sort((a, b) => a.localeCompare(b)), [gamesByDate]);
+  const gamesByDate = useMemo(
+    () =>
+      (games ?? []).reduce<Record<string, NonNullable<typeof games>[number][]>>(
+        (acc, game) => {
+          const date = effectiveGameDate(game!.gameDate, game!.startTimeEst);
+          if (!acc[date]) acc[date] = [];
+          acc[date]!.push(game!);
+          return acc;
+        },
+        {}
+      ),
+    [games]
+  );
+  const sortedDates = useMemo(
+    () => Object.keys(gamesByDate).sort((a, b) => a.localeCompare(b)),
+    [gamesByDate]
+  );
 
   const scrollToGame = (gameId: number) => {
-    setSearchFocused(false); setSearchQuery("");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setSearchFocused(false);
+    setSearchQuery("");
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
     setTimeout(() => {
       const el = document.getElementById(`game-card-${gameId}`);
       if (!el) return;
-      el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
-      el.style.outline = "2px solid #45E0A8"; el.style.borderRadius = "12px";
+      el.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
+      el.style.outline = "2px solid #45E0A8";
+      el.style.borderRadius = "12px";
       if (reducedMotion) {
         // Static highlight, no pulse — clears after the same total dwell time
-        setTimeout(() => { el.style.outline = ""; el.style.borderRadius = ""; }, 2100);
+        setTimeout(() => {
+          el.style.outline = "";
+          el.style.borderRadius = "";
+        }, 2100);
         return;
       }
       el.style.transition = "box-shadow 0.16s ease, outline 0.16s ease";
@@ -494,135 +756,62 @@ export default function BettingSplitsPage({
       let count = 0;
       const pulse = setInterval(() => {
         count++;
-        if (count % 2 === 0) { el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)"; el.style.outline = "2px solid #45E0A8"; }
-        else { el.style.boxShadow = "0 0 0 2px rgba(69,224,168,0.15)"; el.style.outline = "2px solid rgba(69,224,168,0.4)"; }
-        if (count >= 5) { clearInterval(pulse); setTimeout(() => { el.style.outline = ""; el.style.boxShadow = ""; el.style.borderRadius = ""; el.style.transition = ""; }, 600); }
+        if (count % 2 === 0) {
+          el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)";
+          el.style.outline = "2px solid #45E0A8";
+        } else {
+          el.style.boxShadow = "0 0 0 2px rgba(69,224,168,0.15)";
+          el.style.outline = "2px solid rgba(69,224,168,0.4)";
+        }
+        if (count >= 5) {
+          clearInterval(pulse);
+          setTimeout(() => {
+            el.style.outline = "";
+            el.style.boxShadow = "";
+            el.style.borderRadius = "";
+            el.style.transition = "";
+          }, 600);
+        }
       }, 300);
     }, 120);
   };
 
   return (
     <div className="bs-page bg-background">
-      {showAgeModal && <AgeModal onAccept={() => acceptTermsMutation.mutate()} onClose={appLogout} />}
-      {showLoginModal && <LoginModal onClose={() => setShowLoginModal(false)} onSuccess={() => { setShowLoginModal(false); refetchAppUser(); }} />}
+      {showAgeModal && (
+        <AgeModal
+          onAccept={() => acceptTermsMutation.mutate()}
+          onClose={appLogout}
+        />
+      )}
 
       {/* ── Sticky Header ── */}
-      <header ref={headerRef} className="bs-header sticky top-0 z-40 bg-background/95 backdrop-blur-sm">
-
-        {/* Row 1: brand + user icon */}
-        <div className="relative flex items-center px-4 pt-2 pb-1">
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <BarChart3 className="flex-shrink-0" style={{ width: "clamp(14px, 2.5vw, 22px)", height: "clamp(14px, 2.5vw, 22px)", color: "#45E0A8" }} />
-            <span className="bs-title font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 22px)", letterSpacing: "0.08em" }}>AI SPORTS BETTING</span>
-          </div>
-          <div className="flex-1" />
-          {/* User menu */}
-          <div className="flex-shrink-0 relative">
-            <button type="button" onClick={() => setShowUserMenu(!showUserMenu)} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors" title={user ? user.name ?? "Account" : "Sign in"}>
-              <User className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-            {showUserMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
-                <div className="absolute right-0 top-9 z-50 w-48 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
-                  {appUser ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <div className="flex items-center gap-1.5">
-                          {appUser.role === "owner" && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
-                          <p className="text-xs font-semibold text-foreground truncate">@{appUser.username}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{appUser.email}</p>
-                        {/* Session duration badge */}
-                        {(() => {
-                          const exp = (appUser as { sessionExpiresAt?: number | null }).sessionExpiresAt;
-                          if (!exp) return (
-                            <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-white/40">
-                              <span className="w-1.5 h-1.5 rounded-full bg-white/30 inline-block" />
-                              Session: browser
-                            </span>
-                          );
-                          const daysLeft = Math.max(0, Math.ceil((exp - Date.now()) / 86_400_000));
-                          const color = daysLeft <= 3 ? "text-red-400 bg-red-400/10" : daysLeft <= 14 ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10";
-                          const dot = daysLeft <= 3 ? "bg-red-400" : daysLeft <= 14 ? "bg-amber-400" : "bg-emerald-400";
-                          return (
-                            <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${dot} inline-block`} />
-                              Session: {daysLeft}d remaining
-                            </span>
-                          );
-                        })()}
-                      </div>
-                      {isOwner && (
-                        <>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/publish"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/users"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <Crown className="w-3.5 h-3.5 text-yellow-400" /> User Management
-                          </button>
-                          <button type="button" onClick={() => { setShowUserMenu(false); setLocation("/admin/security"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Security Events
-                          </button>
-                        </>
-                      )}
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : user ? (
-                    <>
-                      <div className="px-3 py-2.5 border-b border-border">
-                        <p className="text-xs font-semibold text-foreground truncate">{user.name ?? "User"}</p>
-                        <p className="text-sm text-muted-foreground truncate">{user.email ?? ""}</p>
-                      </div>
-                      <button type="button" onClick={() => { setShowUserMenu(false); appLogout(); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                        <LogOut className="w-3.5 h-3.5" /> Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setShowUserMenu(false); setShowLoginModal(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                    >
-                      <LogIn className="w-3.5 h-3.5 text-emerald-400" /> Sign In
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+      <header
+        ref={headerRef}
+        className="bs-header sticky top-0 z-40 bg-background/95 backdrop-blur-sm"
+      >
+        {/* Row 1: Dime wordmark — the profile control lives in the shell
+            sidebar (bottom-left); this header carries brand only. Hidden at
+            768–1023px where the shell's compact bar already shows the mark. */}
+        <div className="bs-brand-row flex items-center justify-center px-4 pt-2.5 pb-1.5">
+          <span className="dime-wordmark" aria-label="dime">
+            d
+            <span className="dime-wordmark-i">
+              ı<span className="dime-coindot" />
+            </span>
+            me
+          </span>
         </div>
 
-        {/* Row 2: Page tab bar — AI MODEL PROJECTIONS (left, dimmed) | BETTING SPLITS (right, active) */}
-        <div className="flex w-full" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-          {/* Links style themselves (no nested <button> — interactive-inside-
-              interactive is invalid HTML and doubles the keyboard tab stops). */}
-          {/* Left: AI MODEL PROJECTIONS — inactive/dimmed on this page */}
-          <Link href={resolveRouteHref(feedModelPath("MLB"))}
-            className="bs-tab flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            <img src={CDN_TEST_TUBE} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.45 }} />
-            <span>AI MODEL PROJECTIONS</span>
-          </Link>
-          {/* Right: BETTING SPLITS — active on this page. Self-link targets the
-              canonical sport path (the old /splits href navigated away to the
-              retired public page — the tab un-selected itself on click). */}
-          <Link href={resolveRouteHref(bettingSplitsPath(selectedSport, selectedDate))} aria-current="page"
-            className="bs-tab bs-tab--active flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold tracking-wide transition-colors relative"
-            style={{ color: "#ffffff" }}
-          >
-            <img src={CDN_MONEY_BAG} alt="" width={14} height={14} style={{ objectFit: "contain", filter: "invert(1)" }} />
-            <span>BETTING SPLITS</span>
-            <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full" style={{ background: "#45E0A8" }} />
-          </Link>
-        </div>
+        {/* No page-tab row on mobile — the bottom tab bar (Feed | Splits | Chat |
+            Props | Profile) is the only <768px navigation; at ≥768px the Dime
+            shell sidebar owns pane navigation. */}
 
-        {/* Row 3: Unified filter bar — DATE | NBA | Search */}
-        <div ref={searchRef} className="relative px-3 pt-1 pb-1 flex items-center gap-2">
-
+        {/* Row 2: Unified filter bar — DATE | NBA | Search */}
+        <div
+          ref={searchRef}
+          className="relative px-3 pt-1 pb-1 flex items-center gap-2"
+        >
           {/* DATE picker — calendar dropdown */}
           <CalendarPicker
             selectedDate={selectedDate}
@@ -631,54 +820,112 @@ export default function BettingSplitsPage({
             isAdmin={isOwner || user?.role === "admin"}
           />
 
-
-
-          {/* MLB pill — primary sport */}
-          <button type="button" onClick={() => setSelectedSport("MLB")} data-active={selectedSport === "MLB"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "MLB" ? { background: "rgba(0,45,114,0.25)", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "MLB" ? 1 : 0.5, flexShrink: 0 }} />
-            MLB
-          </button>
-
-          {/* NHL pill */}
-          <button type="button" onClick={() => setSelectedSport("NHL")} data-active={selectedSport === "NHL"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "NHL" ? { background: "rgba(0,100,200,0.18)", color: "#4FC3F7", border: "1px solid rgba(0,100,200,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg" alt="NHL" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NHL" ? 1 : 0.5, flexShrink: 0 }} />
-            NHL
-          </button>
-
-          {/* NBA pill */}
-          <button type="button" onClick={() => setSelectedSport("NBA")} data-active={selectedSport === "NBA"} className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-sm font-bold tracking-wide transition-all flex-shrink-0"
-            style={selectedSport === "NBA" ? { background: "rgba(200,16,46,0.15)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }}>
-            <img src={CDN_NBA} alt="NBA" width={12} height={12} style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
-            NBA
-          </button>
+          {/* League pills — only in-season leagues render (leagueSeasons).
+              State styling comes from the .bs-pill brand layer in dime-mobile.css. */}
+          {activeLeagues.map(league => (
+            <button
+              type="button"
+              key={league}
+              onClick={() => setSelectedSport(league)}
+              data-active={selectedSport === league}
+              className="bs-pill flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[13px] font-semibold tracking-wide transition-all flex-shrink-0 cursor-pointer"
+            >
+              <img
+                src={LEAGUE_LOGOS[league]}
+                alt=""
+                width={12}
+                height={12}
+                style={{
+                  objectFit: "contain",
+                  opacity: selectedSport === league ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              />
+              {league}
+            </button>
+          ))}
 
           {/* Search bar — takes remaining space */}
           <div className="flex-1 min-w-0">
-            <div className="bs-search flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
+            <div
+              className="bs-search flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
               data-focused={searchFocused}
-              style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "rgba(34,197,94,0.5)" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px rgba(34,197,94,0.15)" : "none" }}>
+              style={{
+                background: "hsl(var(--secondary))",
+                borderColor: searchFocused
+                  ? "rgba(34,197,94,0.5)"
+                  : "hsl(var(--border))",
+                boxShadow: searchFocused
+                  ? "0 0 0 1px rgba(34,197,94,0.15)"
+                  : "none",
+              }}
+            >
               <Search className="w-3 h-3 text-muted-foreground flex-shrink-0" />
               {/* 16px on touch widths — anything smaller makes iOS Safari zoom the page on focus */}
-              <input ref={inputRef} type="text" placeholder="Search…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setSearchFocused(true)} className="flex-1 min-w-0 bg-transparent text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none" />
-              {searchQuery && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setSearchQuery(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"><X className="w-3 h-3" /></button>}
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                className="flex-1 min-w-0 bg-transparent text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => {
+                    setSearchQuery("");
+                    inputRef.current?.focus();
+                  }}
+                  className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
 
           {/* Search dropdown */}
           {showDropdown && (
-            <div className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0f0f0f", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
-              <div className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#0f0f0f", zIndex: 10 }}>
-                <span className="text-sm text-zinc-300 uppercase tracking-widest">{dropdownResults.length === 0 ? "No results" : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}</span>
-                {dropdownResults.length > 0 && <span className="text-sm text-zinc-300">tap to jump</span>}
+            <div
+              className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
+              style={{
+                background: "#0f0f0f",
+                maxHeight: "calc(3 * 68px + 44px)",
+                overflowY: "auto",
+              }}
+            >
+              <div
+                className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0"
+                style={{ background: "#0f0f0f", zIndex: 10 }}
+              >
+                <span className="text-sm text-zinc-300 uppercase tracking-widest">
+                  {dropdownResults.length === 0
+                    ? "No results"
+                    : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}
+                </span>
+                {dropdownResults.length > 0 && (
+                  <span className="text-sm text-zinc-300">tap to jump</span>
+                )}
               </div>
               {dropdownResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 gap-2">
                   <Search className="w-5 h-5 text-zinc-300" />
-                  <p className="text-xs text-zinc-300">No games found for "{searchQuery}"</p>
+                  <p className="text-xs text-zinc-300">
+                    No games found for "{searchQuery}"
+                  </p>
                 </div>
-              ) : dropdownResults.map((game) => <SearchResultRow key={game!.id} game={game!} onClick={() => scrollToGame(game!.id)} />)}
+              ) : (
+                dropdownResults.map(game => (
+                  <SearchResultRow
+                    key={game!.id}
+                    game={game!}
+                    onClick={() => scrollToGame(game!.id)}
+                  />
+                ))
+              )}
             </div>
           )}
         </div>
@@ -690,13 +937,41 @@ export default function BettingSplitsPage({
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
               <span
                 className="bs-datehdr font-bold tracking-widest uppercase"
-                style={{ fontSize: 'clamp(11px, 3.5vw, 19px)', color: '#ffffff', whiteSpace: 'nowrap' }}
-              >{formatDateHeader(selectedDate)}</span>
-              <span style={{ fontSize: 'clamp(14px, 3.5vw, 22px)', color: '#ffffff', fontWeight: 800, lineHeight: 1, flexShrink: 0 }}>·</span>
+                style={{
+                  fontSize: "clamp(11px, 3.5vw, 19px)",
+                  color: "#ffffff",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {formatDateHeader(selectedDate)}
+              </span>
+              <span
+                style={{
+                  fontSize: "clamp(14px, 3.5vw, 22px)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                }}
+              >
+                ·
+              </span>
               <span
                 className="bs-datehdr-sub font-semibold"
-                style={{ color: '#a3a3a3', letterSpacing: '0.06em', fontSize: 'clamp(9px, 2.8vw, 17px)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}
-              >{selectedSport === "MLB" ? "MLB BASEBALL" : selectedSport === "NHL" ? "NHL HOCKEY" : "NBA BASKETBALL"}</span>
+                style={{
+                  color: "#a3a3a3",
+                  letterSpacing: "0.06em",
+                  fontSize: "clamp(9px, 2.8vw, 17px)",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {selectedSport === "MLB"
+                  ? "MLB BASEBALL"
+                  : selectedSport === "NHL"
+                    ? "NHL HOCKEY"
+                    : "NBA BASKETBALL"}
+              </span>
             </div>
             <div className="flex-1" />
           </div>
@@ -705,26 +980,45 @@ export default function BettingSplitsPage({
 
       {/* ── Main Feed ── */}
       <main className="w-full pb-1">
-        {(gamesLoading) ? (
+        {gamesLoading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#45E0A8" }} />
-            <p className="text-sm text-muted-foreground">Loading betting splits…</p>
+            <Loader2
+              className="w-8 h-8 animate-spin"
+              style={{ color: "#45E0A8" }}
+            />
+            <p className="text-sm text-muted-foreground">
+              Loading betting splits…
+            </p>
           </div>
         ) : sortedDates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-            <img src={CDN_TEST_TUBE} alt="Test tube" width={40} height={40} style={{ objectFit: "contain", filter: "invert(1)", opacity: 0.4 }} />
+            <img
+              src={CDN_TEST_TUBE}
+              alt="Test tube"
+              width={40}
+              height={40}
+              style={{
+                objectFit: "contain",
+                filter: "invert(1)",
+                opacity: 0.4,
+              }}
+            />
             <div>
-              <p className="text-sm font-semibold text-foreground mb-1">No games found</p>
+              <p className="text-sm font-semibold text-foreground mb-1">
+                No games found
+              </p>
               <p className="text-xs text-muted-foreground">
-                {selectedStatuses.size > 0 ? `No ${Array.from(selectedStatuses).join(" or ")} ${selectedSport} games right now.` : `No ${selectedSport} games found.`}
+                {selectedStatuses.size > 0
+                  ? `No ${Array.from(selectedStatuses).join(" or ")} ${selectedSport} games right now.`
+                  : `No ${selectedSport} games found.`}
               </p>
             </div>
           </div>
         ) : (
-          sortedDates.map((date) => (
+          sortedDates.map(date => (
             <div key={date}>
               <div className="bg-card mx-0">
-                {gamesByDate[date]!.map((game) => (
+                {gamesByDate[date]!.map(game => (
                   <div key={game!.id} id={`game-card-${game!.id}`}>
                     <GameCard game={game!} mode="splits" />
                   </div>

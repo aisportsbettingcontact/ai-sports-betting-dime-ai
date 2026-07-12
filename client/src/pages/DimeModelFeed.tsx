@@ -71,6 +71,10 @@ interface FeedCardSpec {
   away: TeamSpec;
   home: TeamSpec;
   meta: string;
+  /** Full starting-pitcher names; the mobile header renders surnames only. */
+  pitchers?: { away: string; home: string } | null;
+  /** Quiet secondary line under the mobile matchup header (venue / round). */
+  venueLine?: string | null;
   markets: MarketColSpec[];
   verdict: {
     pick: string;
@@ -87,6 +91,9 @@ const fmtAm = (v: number | null | undefined): string =>
   v == null || Number.isNaN(v) ? "—" : v > 0 ? `+${v}` : `${v}`;
 
 const NO_EDGE = { label: "NO EDGE", edge: false } as const;
+
+/** Last token of a name — the mobile matchup header shows pitcher surnames. */
+const lastNameOf = (s: string): string => s.trim().split(/\s+/).pop() ?? s;
 
 /** Simple edge → letter grade tiering (matches the reference verdict strip). */
 function edgeGrade(pp: number): string {
@@ -182,6 +189,14 @@ function TeamRow({ t }: { t: TeamSpec }) {
 function GameRow({ g }: { g: FeedCardSpec }) {
   const v = g.verdict;
   const mode = g.markets.length >= 6 ? "dmf-mk7" : "dmf-mk3";
+  // Mobile-only pitcher duel (surnames, Grotesk 600); full names kept in title.
+  const duel = g.pitchers
+    ? {
+        away: lastNameOf(g.pitchers.away),
+        home: lastNameOf(g.pitchers.home),
+        full: `${g.pitchers.away} vs ${g.pitchers.home}`,
+      }
+    : null;
   return (
     <div className={`dmf-game ${mode}${v.pass ? " dmf-pass" : ""}${g.liveLabel ? " dmf-live" : ""}`}>
       <div className="dmf-gbody">
@@ -198,9 +213,15 @@ function GameRow({ g }: { g: FeedCardSpec }) {
           )}
           <div className="dmf-teams">
             <TeamRow t={g.away} />
+            {duel ? (
+              <div className="dmf-duel" title={duel.full}>
+                {duel.away} vs {duel.home}
+              </div>
+            ) : null}
             <TeamRow t={g.home} />
           </div>
           <div className="dmf-meta">{g.meta}</div>
+          {g.venueLine ? <div className="dmf-venue">{g.venueLine}</div> : null}
         </div>
         <div className="dmf-markets">
           {g.markets.map((mc) => (
@@ -636,6 +657,11 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
     away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
     home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: isLive || isFinal ? (g.homeScore != null ? String(g.homeScore) : null) : null },
     meta,
+    pitchers:
+      g.awayStartingPitcher || g.homeStartingPitcher
+        ? { away: g.awayStartingPitcher ?? "TBD", home: g.homeStartingPitcher ?? "TBD" }
+        : null,
+    venueLine: g.venue || null,
     markets: [rl, total, ml],
     verdict: verdictOf(best),
   };
@@ -820,6 +846,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
       score: showScores && m.homeScore != null ? String(m.homeScore) : null,
     },
     meta,
+    venueLine: meta || null,
     markets,
     verdict: verdictOf(best),
   };
@@ -954,6 +981,9 @@ const DMF_CSS = `
 .dmf-tname{font-size:15.5px;font-weight:700;letter-spacing:-.006em;color:var(--dmf-t1)}
 .dmf-tscore{margin-left:auto;font-size:16px;font-weight:700;color:var(--dmf-t2);font-variant-numeric:tabular-nums}
 .dmf-meta{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4);margin-top:2px;line-height:1.6}
+/* Mobile-only matchup elements — hidden on desktop (>=768px keeps dmf-meta). */
+.dmf-duel{display:none}
+.dmf-venue{display:none}
 
 .dmf-markets{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-left:1px solid var(--dmf-border);min-width:0}
 .dmf-mkcol{padding:10px 8px 8px;border-right:1px solid var(--dmf-border);display:flex;flex-direction:column;min-width:0}
@@ -1057,6 +1087,63 @@ const DMF_CSS = `
   .dmf-datenav{flex-wrap:wrap;gap:8px}
   .dmf-datelbl{font-size:13.5px}
   .dmf-feedhead{gap:10px}
+}
+/* MOBILE (<768px): the bottom tab bar owns navigation (hide dmf-nav; theme
+   toggle stays). Matchup header collapses to one symmetric row —
+   [away logo] Nickname · Surname vs Surname · Nickname [home logo] — with
+   bare transparent logos (no circle chrome) and the venue as a quiet Grotesk
+   line below. Market grids align Book/Model as identical right-aligned
+   tabular columns; row labels drop mono/all-caps for Grotesk 600. Desktop
+   (>=768px) is untouched. */
+@media (max-width:767px){
+  .dmf-root .dmf-nav{display:none}
+  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px}
+  .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
+  /* Sport chips are a data filter (not nav): never let flex shrink clip their
+     labels; the row scrolls instead. Verdict micro-labels ride the t3 label
+     tier so Pick/Edge/Grade clear 4.5:1 on the elevated card ground. */
+  .dmf-root .dmf-sports{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .dmf-root .dmf-chip{flex:0 0 auto}
+  .dmf-root .dmf-vl{color:var(--dmf-t3)}
+
+  /* Bare logos: no circle background/border/clip. The monogram fallback
+     keeps its own disc (it needs the team-color ground to read). */
+  .dmf-root .dmf-crest{border-radius:0;box-shadow:none;background:transparent;overflow:visible}
+  .dmf-root .dmf-teams .dmf-crest{width:30px !important;height:30px !important;flex-basis:30px !important}
+
+  /* One-row matchup header, centered rhythm. */
+  .dmf-root .dmf-matchup{padding:14px 14px 12px;gap:8px}
+  .dmf-root .dmf-status{justify-content:center;margin-bottom:0}
+  .dmf-root .dmf-time{font-size:11px}
+  .dmf-root .dmf-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px 14px;max-width:none}
+  .dmf-root .dmf-teams .dmf-teamrow:first-child{grid-column:1;grid-row:1}
+  .dmf-root .dmf-teams .dmf-teamrow:last-child{grid-column:3;grid-row:1;flex-direction:row-reverse}
+  .dmf-root .dmf-teamrow{gap:8px}
+  .dmf-root .dmf-tname{font-size:14px;line-height:1.2;min-width:0}
+  .dmf-root .dmf-tscore{margin-left:0;font-size:16px}
+  .dmf-root .dmf-duel{display:block;grid-column:2;grid-row:1;max-width:172px;text-align:center;font-family:var(--dmf-sans);font-size:13px;font-weight:600;line-height:1.3;letter-spacing:-.005em;color:var(--dmf-t2);padding:0 2px}
+  .dmf-root .dmf-game .dmf-meta{display:none}
+  .dmf-root .dmf-venue{display:block;text-align:center;font-size:12px;font-weight:500;letter-spacing:0;color:var(--dmf-t3);line-height:1.4}
+
+  /* Markets: every card (MLB mk3 and WC mk7) stacks full-width so all
+     markets share one aligned grid; Book and Model are identical-width
+     columns with right-aligned Grotesk 700 tabular values (16px floor). */
+  .dmf-root .dmf-game.dmf-mk3 .dmf-markets,
+  .dmf-root .dmf-game.dmf-mk7 .dmf-markets{grid-template-columns:1fr !important}
+  .dmf-root .dmf-game.dmf-mk3 .dmf-mkcol,
+  .dmf-root .dmf-game.dmf-mk7 .dmf-mkcol{border-right:0 !important}
+  .dmf-root .dmf-mkcol{padding:10px 12px}
+  .dmf-root .dmf-mkhead{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);column-gap:10px;padding:5px 10px 4px}
+  /* t3 (not desktop's t4): 4.5:1 floor on the dark card for these headers. */
+  .dmf-root .dmf-mkhead span{text-align:right;color:var(--dmf-t3)}
+  .dmf-root .dmf-mkhead span:first-child{display:block;text-align:left}
+  .dmf-root .dmf-mkrow{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto;row-gap:0;column-gap:10px;padding:8px 10px;min-height:40px;align-items:center}
+  .dmf-root .dmf-rlab{grid-column:auto;justify-content:flex-start;gap:7px}
+  .dmf-root .dmf-lab{font-family:var(--dmf-sans);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--dmf-t1)}
+  .dmf-root .dmf-side{justify-content:flex-end}
+  .dmf-root .dmf-val{font-size:16px;font-weight:700}
+  .dmf-root .dmf-mkfoot{font-size:11px;padding:6px}
+  .dmf-root .dmf-mkfoot.dmf-none{color:var(--dmf-t3)}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}

@@ -100,13 +100,19 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [authLoading]);
 
+  // [LOGIN FIX 2026-07-12 / RC1] Do NOT force-redirect authenticated visitors
+  // away from /login. The old effect ejected anyone with a valid session the
+  // moment appUsers.me resolved, which made switching accounts impossible (the
+  // form was never reachable while a 90-day cookie existed). Deep links with an
+  // EXPLICIT returnPath keep the redirect; a bare /login visit now renders the
+  // form plus a "Signed in as…" banner so the user can continue or re-login.
   useEffect(() => {
     if (!authLoading && appUser) {
       const searchParams = new URLSearchParams(window.location.search);
-      // Explicit deep links win. Otherwise the shared 768px shell boundary
-      // defaults tablet/desktop to chat and retains the current mobile feed.
-      const returnPath = resolvePostLoginPath(searchParams.get("returnPath"));
-      console.log(`[Login] [STATE] Already authenticated — redirecting to returnPath=${returnPath}`);
+      const explicit = searchParams.get("returnPath");
+      if (!explicit) return; // stay on the form — account switching allowed
+      const returnPath = resolvePostLoginPath(explicit);
+      console.log(`[Login] [STATE] Already authenticated + explicit returnPath — redirecting to ${returnPath}`);
       setLocation(returnPath);
     }
   }, [appUser, authLoading, setLocation]);
@@ -152,7 +158,10 @@ export default function Home() {
       const destination = resolvePostLoginPath(explicitReturnPath);
       console.log("[Login] [OUTPUT] Login successful — redirecting to", destination);
       toast.success("Signed in successfully.");
-      setLocation(destination);
+      // [LOGIN FIX 2026-07-12 / RC3] Hard navigation, not SPA setLocation:
+      // guarantees a fresh React Query cache so every surface (global tabs,
+      // sidebars, feeds) renders the NEW account instead of the previous one.
+      window.location.assign(destination);
     },
     onError: (err) => {
       console.error("[Login] [VERIFY] FAIL — login error:", err.message);
@@ -385,6 +394,28 @@ export default function Home() {
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
+
+          {/* ── Already signed in (LOGIN FIX 2026-07-12 / RC1): the form stays
+                usable for account switching; this banner offers the fast path
+                back into the app for users who didn't mean to switch. ── */}
+          {!authLoading && appUser && (
+            <div
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] flex items-center justify-between gap-3"
+              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              data-testid="login-signed-in-banner"
+            >
+              <span>
+                Signed in as <span className="text-white/90">@{appUser.username}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => { window.location.assign(resolvePostLoginPath(null)); }}
+                className="text-xs underline text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              >
+                Continue to app
+              </button>
+            </div>
+          )}
 
           {/* ── Discord error stamp — grey, never red (signup.md: auth errors are
                 mono stamps on neutral surface; red is not in the Dime palette) ── */}
