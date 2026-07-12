@@ -81,15 +81,15 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
 }
 
 // ---------------------------------------------------------------
-// Entitlement — require an active paid subscription (or owner role)
-// before any Anthropic call or SSE stream begins. Evaluated per-request
-// against the DB (not the JWT), so a revoked subscriber loses chat access
-// immediately instead of waiting out their JWT expiry.
+// Entitlement — OWNER-ONLY (2026-07-12): while AI Model chat is pre-launch,
+// only role="owner" accounts may reach the chat endpoint; every other user
+// sees the client's "AI MODEL CHAT COMING SOON" state and gets 403 here on
+// any direct call. Checked per-request against the DATABASE role (not the
+// JWT claim), so demotion/revocation applies immediately.
 // ---------------------------------------------------------------
-async function checkDimeChatEntitlement(userId: number, role: string): Promise<boolean> {
-  if (role === "owner") return true;
+async function checkDimeChatEntitlement(userId: number): Promise<boolean> {
   const user = await getAppUserById(userId);
-  return !!user?.hasAccess;
+  return !!user && user.hasAccess && user.role === "owner";
 }
 
 const dimeChatRouter = Router();
@@ -114,15 +114,15 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   // before any Claude call or SSE stream. Closes the free-tier billing leak and
   // the hasAccess-revocation bypass (stripeWebhook.ts revokes hasAccess without
   // bumping tokenVersion, so this must be checked per-request, not just at login). ---
-  const entitled = await checkDimeChatEntitlement(authedUser.userId, authedUser.role);
+  const entitled = await checkDimeChatEntitlement(authedUser.userId);
   if (!entitled) {
     dimeLog("dime.chat.entitlement_rejected", requestId, {
       errorClass: "AuthorizationError",
       statusCode: 403,
       userId: authedUser.userId,
-      detail: "Active subscription required",
+      detail: "Owner-only access — AI Model chat pre-launch",
     });
-    res.status(403).json({ error: "Active subscription required." });
+    res.status(403).json({ error: "AI Model chat is coming soon." });
     return;
   }
 

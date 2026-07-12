@@ -511,3 +511,103 @@ button.dc-sidebar-row {
     transform: translateX(-50%);
   }
 }
+
+/* ----------------------------------------------------------------------------
+   11. OWNER-ONLY COMING SOON (product requirement 2026-07-12) — non-owners see
+       only the Dime wordmark with the coming-soon line: no composer, no pills.
+   -------------------------------------------------------------------------- */
+.dc-coming-soon {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px;
+}
+.dc-coming-soon-mark {
+  height: 52px;
+  width: auto;
+  max-width: 80%;
+}
+.dc-coming-soon-copy {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-align: center;
+  margin: 0;
+}
+.theme-dark .dc-coming-soon-copy {
+  color: #ffffff;
+}
+.theme-light .dc-coming-soon-copy {
+  color: #000000;
+}
+
+/* ----------------------------------------------------------------------------
+   12. CHAT SETTINGS "⋯" (product requirement 2026-07-12) — top-right of an
+       open conversation; Star / Archive / Delete for the stored thread.
+   -------------------------------------------------------------------------- */
+.dc-thread-actions {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 4;
+}
+.dc-thread-menu-trigger {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-dark .dc-thread-menu-trigger { background: #1e1e26; color: #ededf2; }
+.theme-light .dc-thread-menu-trigger { background: #f0f0f3; color: #0b0b0f; }
+.dc-thread-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  min-width: 160px;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.theme-dark .dc-thread-menu { background: #16161c; border: 1px solid #24242e; }
+.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #d5d5dc; box-shadow: 0 1px 3px rgba(11, 11, 15, 0.06); }
+.dc-thread-menu-item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.theme-dark .dc-thread-menu-item { color: #ededf2; }
+.theme-light .dc-thread-menu-item { color: #0b0b0f; }
+.theme-dark .dc-thread-menu-item:hover { background: #1e1e26; }
+.theme-light .dc-thread-menu-item:hover { background: #f0f0f3; }
+.dc-thread-menu-item--danger { color: #e5484d !important; }
+@media (max-width: 1023px) {
+  .dc-thread-actions {
+    top: calc(56px + env(safe-area-inset-top) + 8px);
+    right: 12px;
+  }
+}
+
+/* Starred marker in the Recent Chats list. */
+.dc-recent-star {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #45e0a8;
+}
+.theme-light .dc-recent-star { color: #0fa36b; }

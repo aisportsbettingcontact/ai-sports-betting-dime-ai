@@ -90,6 +90,9 @@ export function GlobalMobileOwnerTabs() {
     // Already on /m/* routes (those have their own tab shell) — segment-exact
     // so /mlb/team/:slug (which merely starts with "/m") keeps the global tabs
     if (location === "/m" || location.startsWith("/m/")) return false;
+    // [LOGIN FIX 2026-07-12] Never overlay the auth surface — /login is now
+    // reachable while authenticated (account switching).
+    if (location === "/login") return false;
     // Not mobile
     if (!isMobile) return false;
     // Public mode — show to everyone

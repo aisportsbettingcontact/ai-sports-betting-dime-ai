@@ -430,6 +430,19 @@ export const appUsersRouter = router({
       const sessionDays = input.stayLoggedIn ? 90 : 1;
       const token = await signAppUserToken(user.id, user.role, user.tokenVersion);
       const cookieOptions = getSessionCookieOptions(ctx.req);
+      // [LOGIN FIX 2026-07-12] Defensive clear of any legacy Domain-scoped
+      // app_session cookie (from before host-only cookies). If one survives,
+      // the browser sends BOTH cookies and the old identity can shadow the
+      // new login — clearing the domain variant makes account switching stick.
+      try {
+        ctx.res.clearCookie(APP_USER_COOKIE, {
+          ...cookieOptions,
+          domain: `.${ctx.req.hostname}`,
+          maxAge: -1,
+        });
+      } catch {
+        /* best-effort — never block login on the legacy clear */
+      }
       if (input.stayLoggedIn) {
         ctx.res.cookie(APP_USER_COOKIE, token, {
           ...cookieOptions,
@@ -545,6 +558,7 @@ export const appUsersRouter = router({
       termsAccepted: user.termsAccepted,
       discordId: user.discordId ?? null,
       discordUsername: user.discordUsername ?? null,
+      discordAvatar: user.discordAvatar ?? null,
       discordConnectedAt: user.discordConnectedAt ?? null,
       sessionExpiresAt, // null if session cookie (no maxAge), ms timestamp if persistent
       stripePlanId: user.stripePlanId ?? null,

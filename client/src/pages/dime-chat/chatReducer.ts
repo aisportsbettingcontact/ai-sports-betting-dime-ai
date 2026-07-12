@@ -40,7 +40,9 @@ export type ChatAction =
   | { type: "stream_done"; id: string }
   | { type: "stream_error"; id: string; message: string }
   | { type: "stream_abort"; id: string }
-  | { type: "reset" };
+  | { type: "reset" }
+  /** Replace the conversation with a stored thread's history (resume a chat). */
+  | { type: "hydrate"; messages: Array<{ role: "user" | "assistant"; content: string }> };
 
 export const initialChatState: ChatState = {
   messages: [],
@@ -128,6 +130,20 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
     case "reset":
       return initialChatState;
+
+    case "hydrate":
+      // Stored history is always settled — every row lands as "done", no
+      // stream in flight, no stale error card.
+      return {
+        ...initialChatState,
+        dataFreshness: state.dataFreshness,
+        messages: action.messages.map((m, i) => ({
+          id: `h-${i + 1}`,
+          role: m.role,
+          content: m.content,
+          status: "done" as const,
+        })),
+      };
 
     default:
       return state;
