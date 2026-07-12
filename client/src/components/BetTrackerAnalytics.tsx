@@ -85,21 +85,56 @@ export type StatsData = {
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
+// Every value is a CSS var with the legacy literal as fallback: desktop
+// (no --bt-* defined) renders pixel-identical, while dime-mobile.css maps
+// --bt-* onto the Dime brand tokens under @media (max-width: 767px).
 const T = {
-  base:      "#0d0f0e",
-  card:      "#141614",
-  hover:     "#1a1f1a",
-  border:    "#1e231e",
-  border2:   "#2a2a2a",
-  green:     "#39FF14",
-  red:       "#FF3B3B",
-  dim:       "#3a4a3a",
-  dimmer:    "#2a3a2a",
-  text:      "#d0d0d0",
-  textMuted: "#888",
-  mono:      "'JetBrains Mono', 'Courier New', monospace",
-  sans:      "'Barlow Condensed', sans-serif",
+  base:      "var(--bt-base, #0d0f0e)",
+  card:      "var(--bt-card, #141614)",
+  hover:     "var(--bt-hover, #1a1f1a)",
+  border:    "var(--bt-border, #1e231e)",
+  border2:   "var(--bt-border2, #2a2a2a)",
+  green:     "var(--bt-green, #39FF14)",
+  red:       "var(--bt-red, #FF3B3B)",
+  dim:       "var(--bt-dim, #3a4a3a)",
+  dimmer:    "var(--bt-dimmer, #2a3a2a)",
+  text:      "var(--bt-text, #d0d0d0)",
+  textMuted: "var(--bt-text-muted, #888)",
+  mono:      "var(--bt-mono, 'JetBrains Mono', 'Courier New', monospace)",
+  sans:      "var(--bt-sans, 'Barlow Condensed', sans-serif)",
 } as const;
+
+// Canvas contexts can't consume var() strings — resolve the computed values
+// at draw time (falls back to the legacy literals when --bt-* is undefined).
+function resolveCanvasPalette(el: HTMLElement) {
+  const cs = getComputedStyle(el);
+  const v = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+  return {
+    green: v("--bt-green", "#39FF14"),
+    red: v("--bt-red", "#FF073A"),
+    gold: v("--bt-gold", "#FFD700"),
+    base: v("--bt-base", "#0d0f0e"),
+    border: v("--bt-border", "#1e231e"),
+    dimmer: v("--bt-dimmer", "#2a3a2a"),
+    muted: v("--bt-text-muted", "#888888"),
+    strong: v("--bt-strong", "#FFFFFF"),
+  };
+}
+
+/** rgba() from a resolved hex/rgb color string (canvas gradients/tints). */
+function withAlpha(color: string, alpha: number): string {
+  const hex = color.match(/^#([0-9a-f]{6})$/i);
+  if (hex) {
+    const n = parseInt(hex[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+  }
+  const rgb = color.match(/^rgba?\(([^)]+)\)$/);
+  if (rgb) {
+    const [r, g, b] = rgb[1].split(",").map((s) => s.trim());
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return color;
+}
 
 // ─── EquityChart ──────────────────────────────────────────────────────────────
 
@@ -138,6 +173,8 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.scale(dpr, dpr);
+    // Brand-aware palette: legacy literals on desktop, Dime tokens on mobile.
+    const P = resolveCanvasPalette(canvas);
 
     const W = dims.w, H = dims.h;
     // PAD_LEFT=64 for emotional y-axis labels, PAD_BOTTOM=44 for x-axis dates
@@ -146,7 +183,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     const chartH = H - PAD_TOP - PAD_BOTTOM;
 
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#0d0f0e";
+    ctx.fillStyle = P.base;
     ctx.fillRect(0, 0, W, H);
 
     if (points.length === 0) return;
@@ -184,7 +221,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     const milestones = Array.from(new Set(rawMilestones)).sort((a, b) => a - b);
 
     // Draw grid lines at each milestone
-    ctx.strokeStyle = "#1e231e";
+    ctx.strokeStyle = P.border;
     ctx.lineWidth = 1;
     milestones.forEach(v => {
       const y = toY(v);
@@ -202,27 +239,27 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       let label: string;
       if (v === 0) {
         label = "START";
-        ctx.fillStyle = "#888888";
+        ctx.fillStyle = P.muted;
       } else if (v === maxV && v === finalPL) {
         // Current final value = TODAY label
         label = `TODAY`;
-        ctx.fillStyle = isPos ? "#39FF14" : "#FF073A";
+        ctx.fillStyle = isPos ? P.green : P.red;
       } else if (v === maxV) {
         // ATH badge
         label = `ATH`;
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = P.gold;
       } else if (v < 0) {
         label = `${v.toFixed(0)}U`;
-        ctx.fillStyle = "#FF073A";
+        ctx.fillStyle = P.red;
       } else {
         label = `+${v.toFixed(0)}U`;
-        ctx.fillStyle = "#FFFFFF";
+        ctx.fillStyle = P.strong;
       }
       ctx.fillText(label, PAD_LEFT - 5, y + 3.5);
     });
 
     // Zero line (dashed)
-    ctx.strokeStyle = "#2a3a2a";
+    ctx.strokeStyle = P.dimmer;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
@@ -234,11 +271,11 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     // Gradient fill — #39FF14 green (positive) or red (negative)
     const grad = ctx.createLinearGradient(0, PAD_TOP, 0, PAD_TOP + chartH);
     if (isPos) {
-      grad.addColorStop(0, "rgba(57,255,20,0.22)");
-      grad.addColorStop(1, "rgba(57,255,20,0.01)");
+      grad.addColorStop(0, withAlpha(P.green, 0.22));
+      grad.addColorStop(1, withAlpha(P.green, 0.01));
     } else {
-      grad.addColorStop(0, "rgba(255,7,58,0.01)");
-      grad.addColorStop(1, "rgba(255,7,58,0.22)");
+      grad.addColorStop(0, withAlpha(P.red, 0.01));
+      grad.addColorStop(1, withAlpha(P.red, 0.22));
     }
     ctx.beginPath();
     ctx.moveTo(toX(0), zeroY);
@@ -250,7 +287,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
 
     // Main line — #39FF14 when positive, #FF073A when negative
     ctx.beginPath();
-    ctx.strokeStyle = isPos ? "#39FF14" : "#FF073A";
+    ctx.strokeStyle = isPos ? P.green : P.red;
     ctx.lineWidth = 2;
     ctx.lineJoin = "round";
     points.forEach((p, i) => {
@@ -286,8 +323,8 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       const bw = tw + 10, bh = 16;
       const bLeft = Math.min(bx - bw / 2, PAD_LEFT + chartW - bw - 2);
       const bTop = by - bh - 6;
-      ctx.fillStyle = "rgba(57,255,20,0.18)";
-      ctx.strokeStyle = "#39FF14";
+      ctx.fillStyle = withAlpha(P.green, 0.18);
+      ctx.strokeStyle = P.green;
       ctx.lineWidth = 1;
       // Rounded rect
       const r = 3;
@@ -304,11 +341,11 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#39FF14";
+      ctx.fillStyle = P.green;
       ctx.textAlign = "center";
       ctx.fillText(label, bLeft + bw / 2, bTop + bh / 2 + 3.5);
       // Vertical tick from badge to line
-      ctx.strokeStyle = "rgba(57,255,20,0.4)";
+      ctx.strokeStyle = withAlpha(P.green, 0.4);
       ctx.lineWidth = 1;
       ctx.setLineDash([2, 2]);
       ctx.beginPath();
@@ -329,7 +366,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       const bLeft = Math.min(bx - bw / 2, PAD_LEFT + chartW - bw - 2);
       const bTop = Math.max(PAD_TOP + 2, by - bh - 6);
       ctx.fillStyle = "rgba(255,215,0,0.18)";
-      ctx.strokeStyle = "#FFD700";
+      ctx.strokeStyle = P.gold;
       ctx.lineWidth = 1.5;
       const r = 3;
       ctx.beginPath();
@@ -345,7 +382,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = "#FFD700";
+      ctx.fillStyle = P.gold;
       ctx.textAlign = "center";
       ctx.fillText(label, bLeft + bw / 2, bTop + bh / 2 + 3.5);
     }
@@ -363,17 +400,17 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
         // Outer glow
         ctx.beginPath();
         ctx.arc(dx, dy, 7, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,7,58,0.15)";
+        ctx.fillStyle = withAlpha(P.red, 0.15);
         ctx.fill();
         // Inner dot
         ctx.beginPath();
         ctx.arc(dx, dy, 4, 0, Math.PI * 2);
-        ctx.fillStyle = "#FF073A";
+        ctx.fillStyle = P.red;
         ctx.fill();
         // Ring
         ctx.beginPath();
         ctx.arc(dx, dy, 5.5, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,7,58,0.5)";
+        ctx.strokeStyle = withAlpha(P.red, 0.5);
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
@@ -395,11 +432,11 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     for (let t = 0; t < uniqueDates.length; t += step) tickIndices.push(t);
     if (tickIndices[tickIndices.length - 1] !== uniqueDates.length - 1) tickIndices.push(uniqueDates.length - 1);
 
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = P.strong;
     ctx.font = `normal 9px ${T.mono}`;
     ctx.textAlign = "center";
     const xAxisY = PAD_TOP + chartH + 16;
-    ctx.strokeStyle = "#2a3a2a";
+    ctx.strokeStyle = P.dimmer;
     ctx.lineWidth = 1;
 
     tickIndices.forEach(t => {
@@ -411,7 +448,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       ctx.stroke();
       const parts = dateStr.split("-");
       const label = parts.length === 3 ? `${parts[1]}/${parts[2]}` : dateStr;
-      ctx.fillStyle = "#FFFFFF";
+      ctx.fillStyle = P.strong;
       ctx.fillText(label, px, xAxisY + 4);
     });
   }, [points, dims, stats]);
@@ -565,8 +602,8 @@ function kellyGrade(wins: number, losses: number, roi: number): { grade: string;
   const wp = total > 0 ? (wins / total) * 100 : 0;
   if (wp >= 65 && roi >= 30) return { grade: "A+", color: T.green };
   if (wp >= 60 || roi >= 20)  return { grade: "A",  color: T.green };
-  if (wp >= 52 || roi >= 8)   return { grade: "B",  color: "#a3e635" };
-  if (wp >= 45)               return { grade: "C",  color: "#f59e0b" };
+  if (wp >= 52 || roi >= 8)   return { grade: "B",  color: "var(--bt-grade-b, #a3e635)" };
+  if (wp >= 45)               return { grade: "C",  color: "var(--bt-grade-c, #f59e0b)" };
   return                             { grade: "D",  color: T.red };
 }
 
@@ -628,8 +665,8 @@ function BreakdownPanelInner({
       {/* Kelly callout for unit size */}
       {showKellyCallout && topTiers.length > 0 && (
         <div style={{
-          background: "rgba(57,255,20,0.04)",
-          border: "1px solid rgba(57,255,20,0.15)",
+          background: `color-mix(in srgb, ${T.green} 4%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${T.green} 15%, transparent)`,
           borderRadius: "4px",
           padding: "8px 10px",
           marginBottom: "10px",
@@ -674,7 +711,7 @@ function BreakdownPanelInner({
                     <span style={{
                       fontSize: "9px",
                       fontFamily: T.mono,
-                      color: rank === 1 ? T.green : rank === 2 ? "#a3e635" : T.textMuted,
+                      color: rank === 1 ? T.green : rank === 2 ? "var(--bt-grade-b, #a3e635)" : T.textMuted,
                       fontWeight: 700,
                       minWidth: "18px",
                     }}>
@@ -715,7 +752,7 @@ function BreakdownPanelInner({
                     {e.wins}W–{e.losses}L
                     {e.pushes > 0 ? `–${e.pushes}P` : ""}
                     {" "}
-                    <span style={{ color: winPct >= 55 ? T.green : winPct >= 50 ? "#a3e635" : T.red }}>
+                    <span style={{ color: winPct >= 55 ? T.green : winPct >= 50 ? "var(--bt-grade-b, #a3e635)" : T.red }}>
                       ({winPct.toFixed(0)}%)
                     </span>
                   </span>
@@ -737,8 +774,8 @@ function BreakdownPanelInner({
                       fontSize: "10px",
                       fontFamily: T.mono,
                       color: isPos ? T.green : T.red,
-                      background: isPos ? "rgba(57,255,20,0.07)" : "rgba(255,59,59,0.07)",
-                      border: `1px solid ${isPos ? "rgba(57,255,20,0.15)" : "rgba(255,59,59,0.15)"}`,
+                      background: isPos ? `color-mix(in srgb, ${T.green} 7%, transparent)` : `color-mix(in srgb, ${T.red} 7%, transparent)`,
+                      border: isPos ? `1px solid color-mix(in srgb, ${T.green} 15%, transparent)` : `1px solid color-mix(in srgb, ${T.red} 15%, transparent)`,
                       borderRadius: "3px",
                       padding: "1px 5px",
                       whiteSpace: "nowrap",
@@ -751,7 +788,7 @@ function BreakdownPanelInner({
                   <span style={{
                     fontSize: "11px",
                     fontFamily: T.mono,
-                    color: isPos ? "rgba(57,255,20,0.65)" : "rgba(255,59,59,0.65)",
+                    color: isPos ? `color-mix(in srgb, ${T.green} 65%, transparent)` : `color-mix(in srgb, ${T.red} 65%, transparent)`,
                     whiteSpace: "nowrap",
                   }}>
                     {e.roi >= 0 ? "+" : ""}{e.roi.toFixed(1)}%
@@ -905,14 +942,14 @@ function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; sho
                   <span style={{
                     fontSize: "10px", fontFamily: T.mono,
                     color: isPos ? T.green : T.red,
-                    background: isPos ? "rgba(57,255,20,0.07)" : "rgba(255,59,59,0.07)",
-                    border: `1px solid ${isPos ? "rgba(57,255,20,0.15)" : "rgba(255,59,59,0.15)"}`,
+                    background: isPos ? `color-mix(in srgb, ${T.green} 7%, transparent)` : `color-mix(in srgb, ${T.red} 7%, transparent)`,
+                    border: isPos ? `1px solid color-mix(in srgb, ${T.green} 15%, transparent)` : `1px solid color-mix(in srgb, ${T.red} 15%, transparent)`,
                     borderRadius: "3px", padding: "1px 5px",
                   }}>
                     {(e.dollarNetProfit ?? 0) >= 0 ? "+" : ""}${Math.abs(e.dollarNetProfit ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                   </span>
                 )}
-                <span style={{ fontSize: "10px", fontFamily: T.mono, color: isPos ? "rgba(57,255,20,0.6)" : "rgba(255,59,59,0.6)" }}>
+                <span style={{ fontSize: "10px", fontFamily: T.mono, color: isPos ? `color-mix(in srgb, ${T.green} 60%, transparent)` : `color-mix(in srgb, ${T.red} 60%, transparent)` }}>
                   {e.roi >= 0 ? "+" : ""}{e.roi.toFixed(1)}%
                 </span>
               </div>
