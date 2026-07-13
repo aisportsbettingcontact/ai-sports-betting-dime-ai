@@ -9,18 +9,20 @@
 .dlv2 {
   --mint: #45E0A8;
   --bg: #000000;
+  /* Law v2 tonal amendment: achromatic grey tiers replace the flat all-white
+     wireframe. Mint stays the only hue; white keylines are now rationed. */
   --surface-sidebar: #000000;
-  --surface-card: #000000;
-  --surface-raised: #000000;
-  --surface-bubble: #000000;
-  --border: #FFFFFF;
-  --border-soft: #FFFFFF;
-  --border-strong: #FFFFFF;
+  --surface-card: #0A0A0A;
+  --surface-raised: #141414;
+  --surface-bubble: #111111;
+  --border: #262626;          /* quiet default hairline */
+  --border-soft: #1F1F1F;     /* faintest divider */
+  --border-strong: #FFFFFF;   /* rationed white keyline — signature moments only */
   --text-primary: #FFFFFF;
-  --text-body: #FFFFFF;
-  --text-secondary: #FFFFFF;
-  --text-muted: #FFFFFF;
-  --text-faint: #FFFFFF;
+  --text-body: #E8E8E8;       /* near-white for long-form reading */
+  --text-secondary: #A6A6A6;  /* 8.6:1 on black */
+  --text-muted: #6E6E6E;      /* 4.1:1 on black */
+  --text-faint: #4A4A4A;
   --mural: #000000;
   --ring: #45E0A8;
   --curve: cubic-bezier(0.16, 1, 0.3, 1);
