@@ -52,6 +52,17 @@ GAP = re.compile(r"(\d{1,2}(?:\.\d)?)(?:[- ]points?(?: of)? (?:edge|value|gap|ov
 # Bettor-directed claims only: "giving the book X points of value" is a
 # correctly-signed PASS statement and must not match.
 EDGE_CLAIM = re.compile(r"points? of edge|edge in your favor|getting [\d.]+ points? of value", re.I)
+# User-supplied probability ("your 53%") — the model-side number in
+# user-numbers rows, so G2/G3 run on that category too.
+USER_PCT = re.compile(r"your (?:number of )?" + PCT, re.I)
+# Sign-mirrored prose claims: "short of break-even" demands a negative gap,
+# "above break-even / points of room" demands a positive one.
+SHORT_CLAIM = re.compile(r"points? short|short of break-even|more than your number supports", re.I)
+AHEAD_CLAIM = re.compile(r"above break-even|points? of room|clears? [\w +-]+ by", re.I)
+# Board-wide superlatives are unverifiable from one row's two prices and were
+# provably false in generated data — ban the phrasing outright.
+BOARD_SUPERLATIVE = re.compile(r"widest gap|best gap out there|at the widest", re.I)
+DENIAL = re.compile(r"isn'?t in the (?:current )?Dime feed|doesn'?t carry|hasn'?t modeled|off the board as far as", re.I)
 PLAY_BAR = 2.0
 
 ACK = "Understood. I will ground Dime answers in this platform context and clearly say when a requested market is missing."
@@ -159,6 +170,14 @@ def audit_grounding(audit: Audit, rows, lexicon: set[str]):
                 audit.sev1.append(
                     f"G1 {path}:{lineno} — model read given for '{team}' which is absent from this row's context"
                 )
+        # Inverse failure: a NO DATA answer denying a matchup whose teams are
+        # both sitting in this row's own context (denial of present data).
+        if DENIAL.search(answer):
+            denied_present = [t for t in row_teams if re.search(rf"(?<![\w]){re.escape(t)}(?![\w])", answer)]
+            if len(denied_present) >= 2:
+                audit.sev1.append(
+                    f"G1 {path}:{lineno} — NO DATA denial names {denied_present}, but those teams ARE in this row's context"
+                )
 
 
 def audit_math_direction(audit: Audit, rows):
@@ -166,7 +185,11 @@ def audit_math_direction(audit: Audit, rows):
         answer = messages[-1]["content"]
         if answer.startswith("{"):
             continue
-        model_m = MODEL_PCT.search(answer)
+        if BOARD_SUPERLATIVE.search(answer):
+            audit.sev2.append(
+                f"G3 {path}:{lineno} — board-wide superlative ('widest/best gap') is unverifiable from one row and banned"
+            )
+        model_m = MODEL_PCT.search(answer) or USER_PCT.search(answer)
         market_m = MARKET_PCT.search(answer)
         if not (model_m and market_m):
             continue
@@ -198,6 +221,14 @@ def audit_math_direction(audit: Audit, rows):
         if EDGE_CLAIM.search(answer) and gap <= 0:
             audit.sev1.append(
                 f"G3 {path}:{lineno} — 'edge' claimed with model {model_p}% <= implied {market_p}%"
+            )
+        if SHORT_CLAIM.search(answer) and gap > 0.05:
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — 'short of break-even' prose with a {gap:+.1f}pp POSITIVE gap"
+            )
+        if AHEAD_CLAIM.search(answer) and gap < -0.05:
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — 'above break-even' prose with a {gap:+.1f}pp NEGATIVE gap"
             )
 
 

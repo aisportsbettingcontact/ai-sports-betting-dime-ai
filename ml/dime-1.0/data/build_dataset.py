@@ -398,13 +398,21 @@ ABSENT_MATCHUPS = [
 ]
 
 
+def absent_matchup_for(rng, g):
+    """An 'absent' matchup sharing NO team with the example's context row —
+    otherwise a real Dodgers-Padres row could be answered with 'NO DATA.
+    Dodgers-Padres isn't in the feed', training denial of present data."""
+    row_teams = {g["awayTeam"], g["homeTeam"]}
+    return rng.choice([m for m in ABSENT_MATCHUPS if m[1] not in row_teams and m[2] not in row_teams])
+
+
 def build_refusal_missing(rng, games, system):
     g = rng.choice(games)
     rows = [g]
     generated_at = generated_at_for(g)
 
     if rng.random() < 0.5:
-        sport, away, home = rng.choice([m for m in ABSENT_MATCHUPS if m[1] not in (g["awayTeam"], g["homeTeam"])])
+        sport, away, home = absent_matchup_for(rng, g)
         question = rng.choice(
             [
                 f"What's the line on {away}-{home} tonight?",
@@ -437,7 +445,7 @@ def build_refusal_missing(rng, games, system):
         if to_float(g.get("awayML")) is None:
             missing.append(("moneyline", "moneyline prices"))
         if not missing:
-            sport, away, home = rng.choice(ABSENT_MATCHUPS)
+            sport, away, home = absent_matchup_for(rng, g)
             question = f"What's the total in the {away}-{home} game?"
             answer = rng.choice(
                 [
@@ -486,22 +494,39 @@ def build_user_numbers(rng, games, system):
             f"My number on the {team} is {p_user:.0%} and the book has {price_str}. Worth a bet?",
         ]
     )
-    if edge > 0.015:
+    # Same 2.0pp bar as build_grounded — one play policy across the dataset.
+    if edge >= 0.02:
         answer = rng.choice(
             [
-                f"Worth a play — on your numbers, not Dime's. NO DATA in the feed for this game, so the whole "
-                f"case rests on your {p_user:.0%}: {price_str} implies {pct(p_market)}, your number makes fair "
-                f"odds about {fair_str}, so you're getting {abs(edge) * 100:.1f} points of value and roughly "
-                f"{ev * 100:+.1f}% a unit. If that {p_user:.0%} came from a real model, fine. If it came from a "
-                f"feeling, cut the size.",
-                f"On your inputs, yes. NO DATA from Dime on this game, so it's your {p_user:.0%} carrying "
-                f"everything: against {price_str} (implied {pct(p_market)}) that's {abs(edge) * 100:.1f} points "
-                f"of value, about {ev * 100:+.1f}% a unit, with fair odds near {fair_str}. The bet is only as "
-                f"good as your estimate — size accordingly.",
-                f"There's a bet here if your number is real. Dime has NO DATA on this game, so on your "
-                f"{p_user:.0%}: {price_str} implies {pct(p_market)}, fair would be {fair_str}, and the gap is "
-                f"{abs(edge) * 100:.1f} points — roughly {ev * 100:+.1f}% a unit. Everything hinges on how that "
-                f"{p_user:.0%} was built. Keep it small unless you trust the process behind it.",
+                f"PLAY — small, and on your numbers, not Dime's. NO DATA in the feed for this game, so the "
+                f"whole case rests on your {p_user:.0%}: {price_str} implies {pct(p_market)}, your number makes "
+                f"fair odds about {fair_str}, so you're getting {edge * 100:.1f} points of value and roughly "
+                f"{ev * 100:+.1f}% a unit. If that {p_user:.0%} came from a real process, bet it. If it came "
+                f"from a feeling, don't.",
+                f"PLAY on your inputs. NO DATA from Dime on this game, so it's your {p_user:.0%} carrying "
+                f"everything: against {price_str} (implied {pct(p_market)}) that's {edge * 100:.1f} points of "
+                f"value, about {ev * 100:+.1f}% a unit, with fair odds near {fair_str}. The bet is only as good "
+                f"as your estimate — size accordingly.",
+                f"PLAY, if your number is real. Dime has NO DATA on this game, so on your {p_user:.0%}: "
+                f"{price_str} implies {pct(p_market)}, fair would be {fair_str}, and the gap is "
+                f"{edge * 100:.1f} points — roughly {ev * 100:+.1f}% a unit. Everything hinges on how that "
+                f"{p_user:.0%} was built. Small unless you trust the process behind it.",
+            ]
+        )
+    elif edge > 0:
+        # Thin POSITIVE edge: the prose must say above break-even, not short of it.
+        answer = rng.choice(
+            [
+                f"PASS — barely. NO DATA in the Dime feed for this game, so it's your {p_user:.0%} doing the "
+                f"work: {price_str} implies {pct(p_market)}, which puts you {edge * 100:.1f} points above "
+                f"break-even — real, but thinner than the uncertainty in any hand-made number. Wait for a "
+                f"better price or a stronger read.",
+                f"PASS, and it's close. Dime has NO DATA on this game; on your {p_user:.0%}, {price_str} "
+                f"(implied {pct(p_market)}) gives you {edge * 100:.1f} points of room. If that number came off "
+                f"a tested model, maybe. As a personal read, it's too thin to pay juice on.",
+                f"PASS at this margin. NO DATA from the feed, so your {p_user:.0%} is the whole engine — and it "
+                f"clears {price_str} by only {edge * 100:.1f} points, inside the noise of a homemade estimate. "
+                f"You want meaningfully better than {fair_str} before betting a private number.",
             ]
         )
     else:
@@ -715,7 +740,10 @@ def build_no_certainty(rng, games, system):
     if best:
         rows = [g]
         price_str = fmt_price(best["price"])
-        gap = abs(best["edge"]) * 100
+        # Signed best edge. Never call it "the widest gap on the board": per-side
+        # edges sum to minus the vig, so the losing side's |edge| is larger and
+        # that claim would be false against the row's own printed context.
+        gap = best["edge"] * 100
         if best["edge"] >= 0.02:
             answer = rng.choice(
                 [
@@ -730,18 +758,29 @@ def build_no_certainty(rng, games, system):
                     f"That's a bet, not a promise, and it's sized small.",
                 ]
             )
+        elif best["edge"] > 0:
+            answer = rng.choice(
+                [
+                    f"No bet is certain, and tonight there isn't even a good one. The best edge Dime sees on "
+                    f"this board is {gap:.1f} points ({best['team']} at {price_str}) — under the 2-point bar, "
+                    f"which is juice food. The honest answer at {gap:.1f} points is pass.",
+                    f"Nothing close to that exists, and tonight's board doesn't even offer a decent bet: the "
+                    f"best edge out there is {gap:.1f} points on {best['team']} at {price_str}. Sitting out a "
+                    f"{gap:.1f}-point board is a position too — take it.",
+                    f"That product doesn't exist. The best thing Dime can find tonight is {best['team']} at "
+                    f"{price_str} with {gap:.1f} points of room — and {gap:.1f} points doesn't cover the juice, "
+                    f"let alone promise anything. Pass the board.",
+                ]
+            )
         else:
             answer = rng.choice(
                 [
-                    f"No bet is certain, and tonight there isn't even a good one. The widest gap Dime sees on "
-                    f"this board is {gap:.1f} points ({best['team']} at {price_str}) — not worth paying juice "
-                    f"for. The honest answer at {gap:.1f} points is pass, and the bettors who last can hear that.",
-                    f"Nothing close to that exists, and tonight's board doesn't even offer a decent bet: the "
-                    f"best gap out there is {gap:.1f} points on {best['team']} at {price_str}, which is juice "
-                    f"food. Sitting out a {gap:.1f}-point board is a position too — take it.",
-                    f"That product doesn't exist. Tonight the market and the model barely disagree — {gap:.1f} "
-                    f"points at the widest, on {best['team']} {price_str} — and {gap:.1f} points doesn't cover "
-                    f"the juice, let alone promise anything. Pass the board.",
+                    f"No bet is certain, and tonight the board won't even give you fair: every price runs at or "
+                    f"past Dime's number. The least bad of them is {best['team']} at {price_str}, and even that "
+                    f"is {abs(gap):.1f} points against you. Pass is the play.",
+                    f"That doesn't exist, and tonight is a good example of why chasing it costs money — the "
+                    f"book holds the edge on every price here. Closest to fair is {best['team']} {price_str}, "
+                    f"still {abs(gap):.1f} points in the house's favor. Sit this board out.",
                 ]
             )
         return chat_example(system, "no_certainty", [*context_turns(rows, generated_at_for(g)), {"role": "user", "content": ask}, {"role": "assistant", "content": answer}])
