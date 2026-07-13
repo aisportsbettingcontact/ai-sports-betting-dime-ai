@@ -239,8 +239,8 @@ describe('edgeUtils: calculateRoi', () => {
 // with legacy fallbacks so non-tokenized contexts stay readable.
 describe('edgeUtils: getEdgeColor', () => {
   const MINT = 'var(--dime-mint-text, #45E0A8)';
-  const GREY = 'var(--dime-text-secondary, rgba(255,255,255,0.60))';
-  const FAINT = 'var(--dime-text-faint, rgba(255,255,255,0.30))';
+  const GREY = 'var(--dime-text-secondary, #FFFFFF)';
+  const FAINT = 'var(--dime-text-faint, #FFFFFF)';
 
   it('[VERIFY] all signal tiers (>= 2.5pp: PLAYABLE/STRONG/ELITE) → mint', () => {
     expect(getEdgeColor(2.5)).toBe(MINT);

@@ -18,7 +18,7 @@
 
 .dc-page.dc-page--app { width: 100%; min-height: 100dvh; }
 .dc-app { width: 100%; height: 100dvh; display: flex; overflow: hidden; } /* metrics from F:53 minus mock border/radius */
-.theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #0B0B0F; } /* D:53 */
+.theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #000000; } /* D:53 */
 .theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
 
 .dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
@@ -45,8 +45,8 @@
 
 .dc-turn--user { display: flex; justify-content: flex-end; } /* right edge = the send button's side of the composer (D:102) */
 .dc-user-capsule { max-width: 85%; border-radius: 20px; padding: 10px 16px; font-size: 14px; font-weight: 400; font-family: inherit; white-space: pre-wrap; word-break: break-word; } /* radius 20 = prompt pill D:107; padding 16px = pill inset D:107, 10px = sidebar-row gap unit F:21; type = composer input F:101; max-width 85% = UNKNOWN-3 */
-.theme-dark .dc-user-capsule { background: #1E1E26; color: #EDEDF2; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
-.theme-light .dc-user-capsule { background: #F0F0F3; color: #0B0B0F; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
+.theme-dark .dc-user-capsule { background: #000000; color: #FFFFFF; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
+.theme-light .dc-user-capsule { background: #FFFFFF; color: #000000; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
 
 /* ----------------------------------------------------------------------------
    3. ASSISTANT MESSAGE — bare text on the page itself (spec §2.3)
@@ -56,11 +56,11 @@
 .dc-prose { font-size: 14px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; } /* size F:101; color F:19/20; line-height 1.6 = UNKNOWN-1 */
 .dc-prose strong, .dc-prose b { font-weight: 600; } /* kit mid-emphasis weight (pills F:107, menu items D:92) */
 .dc-prose a { color: #45E0A8; text-decoration: none; } /* F:13 */
-.dc-prose a:hover { color: #7DEBC4; } /* F:14 — state rule */
+.dc-prose a:hover { color: #45E0A8; } /* F:14 — state rule */
 .theme-light .dc-prose a { color: var(--mint-on-light); } /* mint text on light rule, L:90 (spec §2.3) */
 
 /* Numerals: odds/lines/edges/prices/records/percentages (spec §5) */
-.dc-num { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-variant-numeric: tabular-nums; } /* mono loaded at 400/500 by F:9; 500 is the max loaded mono weight */
+.dc-num { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-variant-numeric: tabular-nums; } /* mono loaded at 400/500 by F:9; 500 is the max loaded mono weight */
 
 /* ----------------------------------------------------------------------------
    4. TYPING INDICATOR ROW — the ONLY thinking affordance (spec §2.8)
@@ -75,11 +75,11 @@
    -------------------------------------------------------------------------- */
 
 .dc-edge { border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; } /* card shell = menu card D:76; padding 16px = pill inset D:107, 14px pairs the radius (spec §2.4, composed); 10px = sidebar-row gap unit F:21 */
-.theme-dark .dc-edge { background: #1A1A22; border: 1px solid #2E2E38; } /* D:76 — in-flow dark cards carry no shadow */
-.theme-light .dc-edge { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 1px 3px rgba(11,11,15,0.06); } /* L:76 + raised in-flow shadow L:99 */
+.theme-dark .dc-edge { background: #000000; border: 1px solid #FFFFFF; } /* D:76 — in-flow dark cards carry no shadow */
+.theme-light .dc-edge { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:76 + raised in-flow shadow L:99 */
 
 .dc-edge-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dc-microlabel { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
+.dc-microlabel { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
 .dc-edge-label { color: #45E0A8; } /* mint text rule F:13 */
 .theme-light .dc-edge-label { color: var(--mint-on-light); } /* L:90 (spec §2.4) */
 
@@ -87,15 +87,15 @@
 
 .dc-edge-stats { display: flex; gap: 18px; flex-wrap: wrap; }
 .dc-stat { display: flex; flex-direction: column; gap: 2px; } /* 2px = nav-group row gap F:56 */
-.theme-dark .dc-stat-label { color: #55555E; } /* recents-label color D:64 */
-.theme-light .dc-stat-label { color: #9A9AA8; } /* recents-label color L:64 */
-.dc-stat-value { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
+.theme-dark .dc-stat-label { color: #FFFFFF; } /* recents-label color D:64 */
+.theme-light .dc-stat-label { color: #000000; } /* recents-label color L:64 */
+.dc-stat-value { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
 .dc-stat-value--mint { color: #45E0A8; } /* positive-signal mint, F:13 */
 .theme-light .dc-stat-value--mint { color: var(--mint-on-light); } /* L:90 */
 
 .dc-edge-divider { height: 1px; } /* menu divider geometry D/L:88 */
-.theme-dark .dc-edge-divider { background: #2E2E38; } /* D:88 */
-.theme-light .dc-edge-divider { background: #E4E4E9; } /* L:88 */
+.theme-dark .dc-edge-divider { background: #FFFFFF; } /* D:88 */
+.theme-light .dc-edge-divider { background: #000000; } /* L:88 */
 
 /* PASS verdict: de-emphasized, zero mint (spec §2.4, hv-register composition) */
 .dc-edge--pass { opacity: 0.82; }
@@ -106,33 +106,33 @@
       Shell = PRO badge geometry (C4, F:80) + C3 mono micro-label.
    -------------------------------------------------------------------------- */
 
-.dc-datapill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; } /* badge geometry F:80 (side pad relaxed 6->8 for the dot — spec §2.5, composed); gap 6px = menu handle-row gap F:80 */
+.dc-datapill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; } /* badge geometry F:80 (side pad relaxed 6->8 for the dot — spec §2.5, composed); gap 6px = menu handle-row gap F:80 */
 
 .dc-datapill-dot { width: 6px; height: 6px; border-radius: 999px; flex-shrink: 0; } /* dot size = typing-dot F:32; material C5 (active rail F:22) */
 
-.dc-datapill--live { color: #45E0A8; border: 1px solid rgba(69,224,168,0.36); } /* text F:13; border alpha = frozen dark --ring F:19 */
-.theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid rgba(69,224,168,0.28); } /* text L:90; border alpha = frozen light --ring F:20 */
+.dc-datapill--live { color: #45E0A8; border: 1px solid #45E0A8; } /* text F:13; border alpha = frozen dark --ring F:19 */
+.theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid #45E0A8; } /* text L:90; border alpha = frozen light --ring F:20 */
 .dc-datapill--live .dc-datapill-dot { background: #45E0A8; animation: dimeTyping 1.6s infinite; } /* MASTER.md wins: the live-data pulse is exactly 1.6s. */
-.theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #0B0B0F; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
+.theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #000000; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
 @media (prefers-reduced-motion: reduce) { .dc-datapill--live .dc-datapill-dot { animation: none; opacity: 1; } } /* F:28 pattern */
 
 .dc-datapill--delayed { color: var(--text-secondary); } /* F:19/20 */
-.theme-dark .dc-datapill--delayed { border: 1px solid #34343E; } /* outline token D:86 */
-.theme-light .dc-datapill--delayed { border: 1px solid #D5D5DC; } /* outline token L:86 */
+.theme-dark .dc-datapill--delayed { border: 1px solid #FFFFFF; } /* outline token D:86 */
+.theme-light .dc-datapill--delayed { border: 1px solid #000000; } /* outline token L:86 */
 .dc-datapill--delayed .dc-datapill-dot { background: transparent; border: 1px solid currentColor; box-sizing: border-box; } /* hollow = outline-vs-fill grammar (D:86 vs D:85) */
 
-.theme-dark .dc-datapill--none { color: #6A6A78; border: 1px dashed #34343E; } /* text = muted placeholder D:29; UNKNOWN-6: dashed = outline grammar interrupted, on D:86 outline color */
-.theme-light .dc-datapill--none { color: #9A9AA8; border: 1px dashed #D5D5DC; } /* text L:30; outline color L:86 */
+.theme-dark .dc-datapill--none { color: #FFFFFF; border: 1px dashed #FFFFFF; } /* text = muted placeholder D:29; UNKNOWN-6: dashed = outline grammar interrupted, on D:86 outline color */
+.theme-light .dc-datapill--none { color: #000000; border: 1px dashed #000000; } /* text L:30; outline color L:86 */
 
 /* ----------------------------------------------------------------------------
    7. ERROR CARD + RETRY / JUMP PILL / FOOTNOTES (spec §2.6, §1.b, §4)
    -------------------------------------------------------------------------- */
 
 .dc-error-card { align-self: flex-start; max-width: 85%; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; } /* menu card incl. its 10px control-cluster padding D:76; 8px = CTA row gap D:84 */
-.theme-dark .dc-error-card { background: #1A1A22; border: 1px solid #2E2E38; } /* D:76 */
-.theme-light .dc-error-card { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 12px 32px rgba(11,11,15,0.18); } /* L:76 */
-.theme-dark .dc-error-label { color: #55555E; } /* recents-label D:64 */
-.theme-light .dc-error-label { color: #9A9AA8; } /* recents-label L:64 */
+.theme-dark .dc-error-card { background: #000000; border: 1px solid #FFFFFF; } /* D:76 */
+.theme-light .dc-error-card { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:76 */
+.theme-dark .dc-error-label { color: #FFFFFF; } /* recents-label D:64 */
+.theme-light .dc-error-label { color: #000000; } /* recents-label L:64 */
 .dc-error-message { font-size: 13px; color: var(--text-primary); padding: 0 2px; } /* row/menu-item text size F:21/D:89 */
 
 /* Retry + Jump pills = the frozen secondary pill ("Cancel Membership", D/L:86),
@@ -143,8 +143,8 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
 .dc-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 12px); white-space: nowrap; z-index: 2; } /* floated bottom-center 12px above the composer (spec §1.b) */
 
 .dc-footnote { font-size: 11px; } /* 11px muted footnote register D:75 */
-.theme-dark .dc-footnote { color: #6A6A78; } /* placeholder muted D:29 */
-.theme-light .dc-footnote { color: #9A9AA8; } /* placeholder muted L:30 */
+.theme-dark .dc-footnote { color: #FFFFFF; } /* placeholder muted D:29 */
+.theme-light .dc-footnote { color: #000000; } /* placeholder muted L:30 */
 
 /* ----------------------------------------------------------------------------
    8. DOCKED COMPOSER ZONE (spec §2.9) — the composer element itself is the
@@ -284,12 +284,12 @@ button.dc-sidebar-row {
     align-items: center;
   }
   .theme-dark .dc-mobile-bar {
-    background: #101016;
-    border-bottom: 1px solid #1e1e26;
+    background: #000000;
+    border-bottom: 1px solid #FFFFFF;
   }
   .theme-light .dc-mobile-bar {
-    background: #f4f4f6;
-    border-bottom: 1px solid #e4e4e9;
+    background: #FFFFFF;
+    border-bottom: 1px solid #000000;
   }
   .dc-mobile-menu {
     appearance: none;
@@ -392,7 +392,7 @@ button.dc-sidebar-row {
     height: var(--dc-visual-height, 100dvh);
     padding: 0;
     border: 0;
-    background: #0b0b0f;
+    background: #000000;
     cursor: default;
   }
   .dc-edge-capture {
@@ -591,7 +591,7 @@ button.dc-sidebar-row {
   height: auto;
 }
 .dc-coming-soon-copy {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.28em;
@@ -627,8 +627,8 @@ button.dc-sidebar-row {
   align-items: center;
   justify-content: center;
 }
-.theme-dark .dc-thread-menu-trigger { background: #1e1e26; color: #ededf2; }
-.theme-light .dc-thread-menu-trigger { background: #f0f0f3; color: #0b0b0f; }
+.theme-dark .dc-thread-menu-trigger { background: #000000; color: #FFFFFF; }
+.theme-light .dc-thread-menu-trigger { background: #FFFFFF; color: #000000; }
 .dc-thread-menu {
   position: absolute;
   top: 40px;
@@ -640,8 +640,8 @@ button.dc-sidebar-row {
   flex-direction: column;
   gap: 2px;
 }
-.theme-dark .dc-thread-menu { background: #16161c; border: 1px solid #24242e; }
-.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #d5d5dc; box-shadow: 0 1px 3px rgba(11, 11, 15, 0.06); }
+.theme-dark .dc-thread-menu { background: #000000; border: 1px solid #FFFFFF; }
+.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #000000; box-shadow: none; }
 .dc-thread-menu-item {
   appearance: none;
   border: none;
@@ -653,11 +653,11 @@ button.dc-sidebar-row {
   border-radius: 8px;
   cursor: pointer;
 }
-.theme-dark .dc-thread-menu-item { color: #ededf2; }
-.theme-light .dc-thread-menu-item { color: #0b0b0f; }
-.theme-dark .dc-thread-menu-item:hover { background: #1e1e26; }
-.theme-light .dc-thread-menu-item:hover { background: #f0f0f3; }
-.dc-thread-menu-item--danger { color: #e5484d !important; }
+.theme-dark .dc-thread-menu-item { color: #FFFFFF; }
+.theme-light .dc-thread-menu-item { color: #000000; }
+.theme-dark .dc-thread-menu-item:hover { background: transparent; }
+.theme-light .dc-thread-menu-item:hover { background: transparent; }
+.dc-thread-menu-item--danger { color: inherit !important; }
 @media (max-width: 1023px) {
   .dc-thread-actions {
     top: calc(56px + env(safe-area-inset-top) + 8px);
@@ -671,4 +671,4 @@ button.dc-sidebar-row {
   font-size: 11px;
   color: #45e0a8;
 }
-.theme-light .dc-recent-star { color: #0fa36b; }
+.theme-light .dc-recent-star { color: #000000; }

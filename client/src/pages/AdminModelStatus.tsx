@@ -51,8 +51,8 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
       variant="outline"
       className={
         ok
-          ? "border-green-500 text-green-400 bg-green-950/40 font-mono text-xs"
-          : "border-red-500 text-red-400 bg-red-950/40 font-mono text-xs"
+          ? "border-[#45E0A8] text-[#45E0A8] bg-transparent font-mono text-xs"
+          : "border-white text-white bg-transparent font-mono text-xs"
       }
     >
       {ok ? "✓" : "✗"} {label}
@@ -65,7 +65,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
 function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
   if (games.length === 0) {
     return (
-      <div className="text-center text-zinc-300 py-8 text-sm">
+      <div className="text-center text-white py-8 text-sm">
         No MLB games found for {dates.join(", ")}
       </div>
     );
@@ -75,7 +75,7 @@ function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs font-mono border-collapse">
         <thead>
-          <tr className="border-b border-zinc-700 text-zinc-200 text-left">
+          <tr className="border-b border-white text-white text-left">
             <th className="py-2 px-3 whitespace-nowrap">Date</th>
             <th className="py-2 px-3 whitespace-nowrap">Matchup</th>
             <th className="py-2 px-3 whitespace-nowrap">Away SP</th>
@@ -104,44 +104,44 @@ function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
                 : "NONE";
             const lineupColor =
               lineupStatus === "CONFIRMED"
-                ? "text-green-400"
+                ? "text-[#45E0A8]"
                 : lineupStatus === "PARTIAL"
-                ? "text-yellow-400"
+                ? "text-white"
                 : lineupStatus === "EXPECTED"
-                ? "text-blue-400"
-                : "text-zinc-300";
+                ? "text-white"
+                : "text-white";
 
             return (
               <tr
                 key={g.id}
-                className="border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors"
+                className="border-b border-white transition-colors"
               >
-                <td className="py-2 px-3 text-zinc-200 whitespace-nowrap">{g.gameDate}</td>
+                <td className="py-2 px-3 text-white whitespace-nowrap">{g.gameDate}</td>
                 <td className="py-2 px-3 text-white font-semibold whitespace-nowrap">
                   {g.awayTeam} @ {g.homeTeam}
                 </td>
-                <td className="py-2 px-3 text-zinc-300 whitespace-nowrap max-w-[120px] truncate">
+                <td className="py-2 px-3 text-white whitespace-nowrap max-w-[120px] truncate">
                   {lu?.awayPitcherName ?? g.awayStartingPitcher ?? "—"}
                 </td>
-                <td className="py-2 px-3 text-zinc-300 whitespace-nowrap max-w-[120px] truncate">
+                <td className="py-2 px-3 text-white whitespace-nowrap max-w-[120px] truncate">
                   {lu?.homePitcherName ?? g.homeStartingPitcher ?? "—"}
                 </td>
                 <td className={`py-2 px-3 whitespace-nowrap font-semibold ${lineupColor}`}>
                   {lineupStatus}
                 </td>
-                <td className="py-2 px-3 text-cyan-300 whitespace-nowrap">
+                <td className="py-2 px-3 text-white whitespace-nowrap">
                   {fmtScore(g.modelAwayScore)}
                 </td>
-                <td className="py-2 px-3 text-cyan-300 whitespace-nowrap">
+                <td className="py-2 px-3 text-white whitespace-nowrap">
                   {fmtScore(g.modelHomeScore)}
                 </td>
-                <td className="py-2 px-3 text-zinc-300 whitespace-nowrap">
+                <td className="py-2 px-3 text-white whitespace-nowrap">
                   {fmtOdds(g.modelAwayML)} / {fmtOdds(g.modelHomeML)}
                 </td>
-                <td className="py-2 px-3 text-zinc-300 whitespace-nowrap">
+                <td className="py-2 px-3 text-white whitespace-nowrap">
                   {g.modelTotal != null ? `O/U ${g.modelTotal}` : "—"}
                 </td>
-                <td className="py-2 px-3 text-zinc-200 whitespace-nowrap">
+                <td className="py-2 px-3 text-white whitespace-nowrap">
                   {fmtTs(g.modelRunAt)}
                 </td>
                 <td className="py-2 px-3 whitespace-nowrap">
@@ -164,7 +164,7 @@ function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
 function NhlStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
   if (games.length === 0) {
     return (
-      <div className="text-center text-zinc-300 py-8 text-sm">
+      <div className="text-center text-white py-8 text-sm">
         No NHL games found for {dates.join(", ")}
       </div>
     );
@@ -174,7 +174,7 @@ function NhlStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-xs font-mono border-collapse">
         <thead>
-          <tr className="border-b border-zinc-700 text-zinc-200 text-left">
+          <tr className="border-b border-white text-white text-left">
             <th className="py-2 px-3 whitespace-nowrap">Date</th>
             <th className="py-2 px-3 whitespace-nowrap">Matchup</th>
             <th className="py-2 px-3 whitespace-nowrap">Away Goalie</th>
@@ -192,34 +192,34 @@ function NhlStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
           {games.map((g: any) => (
             <tr
               key={g.id}
-              className="border-b border-zinc-800 hover:bg-zinc-800/30 transition-colors"
+              className="border-b border-white transition-colors"
             >
-              <td className="py-2 px-3 text-zinc-200 whitespace-nowrap">{g.gameDate}</td>
+              <td className="py-2 px-3 text-white whitespace-nowrap">{g.gameDate}</td>
               <td className="py-2 px-3 text-white font-semibold whitespace-nowrap">
                 {g.awayTeam} @ {g.homeTeam}
               </td>
-              <td className="py-2 px-3 text-zinc-300 whitespace-nowrap max-w-[120px] truncate">
+              <td className="py-2 px-3 text-white whitespace-nowrap max-w-[120px] truncate">
                 {g.awayGoalie ?? "—"}
               </td>
-              <td className="py-2 px-3 text-zinc-300 whitespace-nowrap max-w-[120px] truncate">
+              <td className="py-2 px-3 text-white whitespace-nowrap max-w-[120px] truncate">
                 {g.homeGoalie ?? "—"}
               </td>
               <td className="py-2 px-3 whitespace-nowrap">
                 <StatusBadge ok={g.bothGoalies} label={g.bothGoalies ? "BOTH" : "MISSING"} />
               </td>
-              <td className="py-2 px-3 text-cyan-300 whitespace-nowrap">
+              <td className="py-2 px-3 text-white whitespace-nowrap">
                 {fmtScore(g.modelAwayScore)}
               </td>
-              <td className="py-2 px-3 text-cyan-300 whitespace-nowrap">
+              <td className="py-2 px-3 text-white whitespace-nowrap">
                 {fmtScore(g.modelHomeScore)}
               </td>
-              <td className="py-2 px-3 text-zinc-300 whitespace-nowrap">
+              <td className="py-2 px-3 text-white whitespace-nowrap">
                 {fmtOdds(g.modelAwayML)} / {fmtOdds(g.modelHomeML)}
               </td>
-              <td className="py-2 px-3 text-zinc-300 whitespace-nowrap">
+              <td className="py-2 px-3 text-white whitespace-nowrap">
                 {g.modelTotal != null ? `O/U ${g.modelTotal}` : "—"}
               </td>
-              <td className="py-2 px-3 text-zinc-200 whitespace-nowrap">
+              <td className="py-2 px-3 text-white whitespace-nowrap">
                 {fmtTs(g.modelRunAt)}
               </td>
               <td className="py-2 px-3 whitespace-nowrap">
@@ -252,24 +252,24 @@ function SummaryBar({
   const pct = total > 0 ? Math.round((modeled / total) * 100) : 0;
   return (
     <div className="flex items-center gap-4 text-sm mb-3">
-      <span className="text-zinc-200 font-mono">
+      <span className="text-white font-mono">
         {sport}: {total} games
       </span>
-      <span className="text-green-400 font-mono font-semibold">
+      <span className="text-[#45E0A8] font-mono font-semibold">
         ✓ {modeled} modeled
       </span>
       {unmodeled > 0 && (
-        <span className="text-red-400 font-mono font-semibold">
+        <span className="text-white font-mono font-semibold">
           ✗ {unmodeled} unmodeled
         </span>
       )}
-      <div className="flex-1 max-w-[200px] h-2 bg-zinc-800 rounded-full overflow-hidden">
+      <div className="flex-1 max-w-[200px] h-2 bg-black rounded-full overflow-hidden">
         <div
-          className="h-full bg-green-500 rounded-full transition-all duration-500"
+          className="h-full bg-[#45E0A8] rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-zinc-200 font-mono text-xs">{pct}%</span>
+      <span className="text-white font-mono text-xs">{pct}%</span>
     </div>
   );
 }
@@ -314,9 +314,9 @@ export default function AdminModelStatus() {
   // Show loading/redirecting skeleton
   if (authLoading || (!authLoading && (!appUser || !isOwner))) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center gap-3">
-        <div className="w-5 h-5 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-        <span className="text-zinc-400 text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
+      <div className="min-h-screen bg-black flex items-center justify-center gap-3">
+        <div className="w-5 h-5 border-2 border-white border-t-white rounded-full animate-spin" />
+        <span className="text-white text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
       </div>
     );
   }
@@ -337,14 +337,14 @@ export default function AdminModelStatus() {
   });
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-6">
+    <div className="min-h-screen bg-black text-white p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Model Pipeline Status
           </h1>
-          <p className="text-zinc-200 text-sm mt-1">
+          <p className="text-white text-sm mt-1">
             Today + Tomorrow · Auto-refreshes every 30s · Last updated: {lastUpdated} ET
           </p>
         </div>
@@ -352,7 +352,7 @@ export default function AdminModelStatus() {
           variant="outline"
           size="sm"
           onClick={handleRefresh}
-          className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 font-mono text-xs"
+          className="border-white text-white font-mono text-xs"
         >
           ↻ Refresh Now
         </Button>
@@ -380,16 +380,16 @@ export default function AdminModelStatus() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as "mlb" | "nhl")}>
-        <TabsList className="bg-zinc-900 border border-zinc-700 mb-4">
+        <TabsList className="bg-black border border-white mb-4">
           <TabsTrigger
             value="mlb"
-            className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white text-zinc-200 font-mono text-xs"
+            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white font-mono text-xs"
           >
             MLB{" "}
             {mlbData && (
               <span
                 className={`ml-2 font-semibold ${
-                  mlbData.unmodeled > 0 ? "text-red-400" : "text-green-400"
+                  mlbData.unmodeled > 0 ? "text-white" : "text-[#45E0A8]"
                 }`}
               >
                 {mlbData.modeled}/{mlbData.total}
@@ -398,13 +398,13 @@ export default function AdminModelStatus() {
           </TabsTrigger>
           <TabsTrigger
             value="nhl"
-            className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white text-zinc-200 font-mono text-xs"
+            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white font-mono text-xs"
           >
             NHL{" "}
             {nhlData && (
               <span
                 className={`ml-2 font-semibold ${
-                  nhlData.unmodeled > 0 ? "text-red-400" : "text-green-400"
+                  nhlData.unmodeled > 0 ? "text-white" : "text-[#45E0A8]"
                 }`}
               >
                 {nhlData.modeled}/{nhlData.total}
@@ -414,19 +414,19 @@ export default function AdminModelStatus() {
         </TabsList>
 
         <TabsContent value="mlb">
-          <Card className="bg-zinc-900 border-zinc-700">
+          <Card className="bg-black border-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-mono text-zinc-300">
+              <CardTitle className="text-sm font-mono text-white">
                 MLB Games — Today + Tomorrow
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {mlbQuery.isLoading ? (
-                <div className="text-center text-zinc-300 py-8 text-sm font-mono">
+                <div className="text-center text-white py-8 text-sm font-mono">
                   Loading MLB pipeline status…
                 </div>
               ) : mlbQuery.isError ? (
-                <div className="text-center text-red-400 py-8 text-sm font-mono">
+                <div className="text-center text-white py-8 text-sm font-mono">
                   Error loading MLB status: {mlbQuery.error?.message}
                 </div>
               ) : (
@@ -440,19 +440,19 @@ export default function AdminModelStatus() {
         </TabsContent>
 
         <TabsContent value="nhl">
-          <Card className="bg-zinc-900 border-zinc-700">
+          <Card className="bg-black border-white">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-mono text-zinc-300">
+              <CardTitle className="text-sm font-mono text-white">
                 NHL Games — Today + Tomorrow
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {nhlQuery.isLoading ? (
-                <div className="text-center text-zinc-300 py-8 text-sm font-mono">
+                <div className="text-center text-white py-8 text-sm font-mono">
                   Loading NHL pipeline status…
                 </div>
               ) : nhlQuery.isError ? (
-                <div className="text-center text-red-400 py-8 text-sm font-mono">
+                <div className="text-center text-white py-8 text-sm font-mono">
                   Error loading NHL status: {nhlQuery.error?.message}
                 </div>
               ) : (

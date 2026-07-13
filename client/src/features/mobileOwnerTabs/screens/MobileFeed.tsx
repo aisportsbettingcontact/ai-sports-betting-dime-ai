@@ -20,7 +20,7 @@ function FeedCard({
   sport,
   timestamp,
   value,
-  valueColor = "text-emerald-400",
+  valueColor = "text-[#45E0A8]",
 }: {
   type: "edge" | "projection" | "alert" | "update";
   title: string;
@@ -31,26 +31,26 @@ function FeedCard({
   valueColor?: string;
 }) {
   const icons = {
-    edge: <TrendingUp className="w-4 h-4 text-emerald-400" />,
-    projection: <Globe className="w-4 h-4 text-blue-400" />,
-    alert: <Zap className="w-4 h-4 text-amber-400" />,
-    update: <Clock className="w-4 h-4 text-zinc-400" />,
+    edge: <TrendingUp className="w-4 h-4 text-[#45E0A8]" />,
+    projection: <Globe className="w-4 h-4 text-white" />,
+    alert: <Zap className="w-4 h-4 text-white" />,
+    update: <Clock className="w-4 h-4 text-white" />,
   };
 
   return (
-    <div className="rounded-xl bg-zinc-900/60 border border-zinc-800/50 p-4 hover:border-zinc-700/60 transition-colors">
+    <div className="rounded-xl bg-black border border-white p-4 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0 flex-1">
           <div className="mt-0.5 shrink-0">{icons[type]}</div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-zinc-100 truncate">{title}</p>
-            <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{subtitle}</p>
+            <p className="text-sm font-medium text-white truncate">{title}</p>
+            <p className="text-xs text-white mt-0.5 line-clamp-2">{subtitle}</p>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium bg-zinc-800/60 px-1.5 py-0.5 rounded">
+              <span className="text-[10px] uppercase tracking-wider text-white font-medium bg-black px-1.5 py-0.5 rounded">
                 {sport}
               </span>
               {timestamp && (
-                <span className="text-[10px] text-zinc-600">{timestamp}</span>
+                <span className="text-[10px] text-white">{timestamp}</span>
               )}
             </div>
           </div>
@@ -165,7 +165,7 @@ export function MobileFeed() {
               subtitle: `Model: ${modelHomeMl > 0 ? "+" : ""}${modelHomeMl} vs Book: ${bookHomeMl > 0 ? "+" : ""}${bookHomeMl}`,
               sport: "World Cup",
               value: `+${edge}%`,
-              valueColor: "text-emerald-400",
+              valueColor: "text-[#45E0A8]",
             });
           }
         }
@@ -214,7 +214,7 @@ export function MobileFeed() {
               subtitle: `Model: ${modelSpread > 0 ? "+" : ""}${modelSpread.toFixed(1)} vs Book: ${bookSpread > 0 ? "+" : ""}${bookSpread.toFixed(1)}`,
               sport: "MLB",
               value: `${diff.toFixed(1)} pts`,
-              valueColor: diff >= 2 ? "text-emerald-400" : "text-amber-400",
+              valueColor: diff >= 2 ? "text-[#45E0A8]" : "text-white",
             });
           }
         }
@@ -233,17 +233,17 @@ export function MobileFeed() {
   }, [isEmpty, today]);
 
   return (
-    <div className="flex flex-col h-full min-h-full bg-[#0f0f1a]">
+    <div className="flex flex-col h-full min-h-full bg-black">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-white/5 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">Intelligence Feed</h1>
-            <p className="text-[10px] text-zinc-500 mt-0.5">
+            <p className="text-[10px] text-white mt-0.5">
               {today} • Real-time model & market signals
             </p>
           </div>
-          <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
+          <span className="text-[10px] text-[#45E0A8] font-medium px-2 py-0.5 rounded-full bg-black border border-[#45E0A8]">
             LIVE
           </span>
         </div>

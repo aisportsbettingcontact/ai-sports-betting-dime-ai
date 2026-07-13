@@ -97,15 +97,15 @@ export function LoginAttemptBanner({ failureTrigger }: LoginAttemptBannerProps) 
       <div
         role="alert"
         aria-live="polite"
-        className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-red-950/60 border border-red-800/60 text-red-300 text-xs"
+        className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-black border border-white text-white text-xs"
       >
-        <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-red-400" />
+        <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-white" />
         <div className="flex flex-col gap-0.5">
-          <span className="font-semibold text-red-200">Too many failed attempts</span>
-          <span className="text-red-400/90 flex items-center gap-1">
+          <span className="font-semibold text-white">Too many failed attempts</span>
+          <span className="text-white flex items-center gap-1">
             <Clock className="w-3 h-3" />
             Try again in{" "}
-            <span className="font-mono font-bold text-red-200">{countdownStr}</span>
+            <span className="font-mono font-bold text-white">{countdownStr}</span>
           </span>
         </div>
       </div>
@@ -117,12 +117,12 @@ export function LoginAttemptBanner({ failureTrigger }: LoginAttemptBannerProps) 
   const pct = used / data.maxAttempts;
   const color =
     pct >= 0.8
-      ? "bg-red-950/60 border-red-800/60 text-red-300"
+      ? "bg-black border-white text-white"
       : pct >= 0.5
-        ? "bg-amber-950/60 border-amber-700/60 text-amber-300"
-        : "bg-yellow-950/40 border-yellow-700/40 text-yellow-300";
+        ? "bg-black border-white text-white"
+        : "bg-black border-white text-white";
   const iconColor =
-    pct >= 0.8 ? "text-red-400" : pct >= 0.5 ? "text-amber-400" : "text-yellow-400";
+    pct >= 0.8 ? "text-white" : pct >= 0.5 ? "text-white" : "text-white";
 
   return (
     <div

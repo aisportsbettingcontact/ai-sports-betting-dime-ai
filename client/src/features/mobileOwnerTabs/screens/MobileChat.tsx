@@ -53,49 +53,49 @@ export function MobileChat() {
   };
 
   return (
-    <div className="min-h-full bg-[#0f0f1a] flex flex-col">
+    <div className="min-h-full bg-black flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0f0f1a]/95 backdrop-blur-sm border-b border-white/5 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#45E0A8] flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">AI Analyst</h1>
-              <p className="text-[10px] text-zinc-500">Preview Mode — No active calls</p>
+              <p className="text-[10px] text-white">Preview Mode — No active calls</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-zinc-800/50 px-2 py-1 rounded">
-            <span className="text-[10px] text-zinc-400 font-medium">Preview</span>
+          <div className="flex items-center gap-1.5 bg-black px-2 py-1 rounded">
+            <span className="text-[10px] text-white font-medium">Preview</span>
           </div>
         </div>
       </header>
 
       {/* Credit State Banner */}
-      <div className="mx-4 mt-4 rounded-xl bg-zinc-900/80 border border-zinc-800 p-3">
+      <div className="mx-4 mt-4 rounded-xl bg-black border border-white p-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">AI Analyst Credits</p>
+            <p className="text-[10px] text-white uppercase tracking-wider">AI Analyst Credits</p>
             {creditState === "owner_unlimited" ? (
-              <p className="text-sm text-emerald-400 font-semibold mt-0.5">
+              <p className="text-sm text-[#45E0A8] font-semibold mt-0.5">
                 20,000 monthly AI Analyst Credits planned
               </p>
             ) : (
-              <p className="text-sm text-amber-400 font-semibold mt-0.5">
+              <p className="text-sm text-white font-semibold mt-0.5">
                 Credit balance not initialized.
               </p>
             )}
           </div>
         </div>
-        <p className="text-[10px] text-zinc-600 mt-2">
+        <p className="text-[10px] text-white mt-2">
           Credits are consumed per action. Owner accounts receive 20,000 monthly credits.
         </p>
       </div>
 
       {/* Action Pricing List */}
       <div className="flex-1 px-4 mt-5 overflow-y-auto">
-        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-3">Available Actions</p>
+        <p className="text-[10px] text-white uppercase tracking-wider mb-3">Available Actions</p>
         <div className="space-y-2">
           {AI_ACTIONS.map((action) => {
             const Icon = action.icon;
@@ -103,15 +103,15 @@ export function MobileChat() {
               <button
                 key={action.id}
                 onClick={() => handleActionClick(action.id, action.label)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900 transition-all active:scale-[0.98]"
+                className="w-full flex items-center gap-3 p-3 rounded-xl bg-black border border-white hover:border-white transition-all active:scale-[0.98]"
               >
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-emerald-400" />
+                <div className="w-8 h-8 rounded-lg bg-transparent flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-[#45E0A8]" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white">{action.label}</p>
                 </div>
-                <div className="text-xs text-zinc-400 font-mono bg-zinc-800/50 px-2 py-0.5 rounded">
+                <div className="text-xs text-white font-mono bg-black px-2 py-0.5 rounded">
                   {action.credits.toLocaleString()}
                 </div>
               </button>
@@ -120,8 +120,8 @@ export function MobileChat() {
         </div>
 
         {/* Info Footer */}
-        <div className="mt-4 p-3 rounded-lg bg-zinc-900/40 border border-zinc-800/50">
-          <p className="text-[10px] text-zinc-500 leading-relaxed">
+        <div className="mt-4 p-3 rounded-lg bg-black border border-white">
+          <p className="text-[10px] text-white leading-relaxed">
             Actions will be activated in a future phase. No OpenAI calls are made in preview mode.
             No credits are deducted.
           </p>
@@ -129,22 +129,22 @@ export function MobileChat() {
       </div>
 
       {/* Input Bar (Disabled Preview) */}
-      <div className="px-4 py-3 border-t border-zinc-800/50">
-        <div className="flex items-center gap-2 bg-zinc-900 rounded-xl px-3 py-2.5 border border-zinc-800">
+      <div className="px-4 py-3 border-t border-white">
+        <div className="flex items-center gap-2 bg-black rounded-xl px-3 py-2.5 border border-white">
           <input
             type="text"
             placeholder="Ask the AI Analyst..."
             disabled
-            className="flex-1 bg-transparent text-sm text-zinc-500 placeholder-zinc-600 outline-none cursor-not-allowed"
+            className="flex-1 bg-transparent text-sm text-white placeholder-white outline-none cursor-not-allowed"
           />
           <button
             disabled
-            className="w-7 h-7 rounded-md bg-zinc-800 flex items-center justify-center cursor-not-allowed"
+            className="w-7 h-7 rounded-md bg-black flex items-center justify-center cursor-not-allowed"
           >
-            <MessageSquare className="w-3.5 h-3.5 text-zinc-600" />
+            <MessageSquare className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
-        <p className="text-[10px] text-zinc-600 text-center mt-1.5">
+        <p className="text-[10px] text-white text-center mt-1.5">
           Chat disabled in preview mode
         </p>
       </div>

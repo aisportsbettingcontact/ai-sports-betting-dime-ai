@@ -129,7 +129,7 @@ function edgeLabelIsAway(
     const abbr = parseAbbrFromEdgeLabel(label);
     if (abbr) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`%c[edgeLabelIsAway] sport=${sport} label="${label}" abbr=${abbr} awayAbbr=${awayAbbr} → ${abbr === awayAbbr}`, 'color:#FF9900;font-size:9px');
+        console.log(`%c[edgeLabelIsAway] sport=${sport} label="${label}" abbr=${abbr} awayAbbr=${awayAbbr} → ${abbr === awayAbbr}`, 'color:#FFFFFF;font-size:9px');
       }
       return abbr === awayAbbr;
     }
@@ -184,7 +184,7 @@ function edgeLabelIsAway(
         // Change G: greyscale losing team logo on FINAL desktop only
         filter: greyscale
           ? "grayscale(1) brightness(0.75) contrast(1.05)"
-          : "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
+          : "brightness(1.7) contrast(1.12) saturate(1.35)",
       }}
       onError={() => setError(true)}
     />
@@ -227,7 +227,7 @@ function MobileTeamNameBlock({
       <span style={{
         fontSize: NAME_FONT,
         fontWeight: 700,
-        color: 'var(--dime-text-primary, #ffffff)',
+        color: 'var(--dime-text-primary, #FFFFFF)',
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
         whiteSpace: 'nowrap',
@@ -239,7 +239,7 @@ function MobileTeamNameBlock({
           style={{
             fontSize: NICK_FONT,
             fontWeight: 600,
-            color: 'var(--dime-text-primary, #ffffff)',
+            color: 'var(--dime-text-primary, #FFFFFF)',
             letterSpacing: '0.02em',
             textTransform: 'none',
             whiteSpace: 'nowrap',
@@ -479,7 +479,7 @@ const fmtOddsSign = (raw: string | number | null | undefined): string => {
 // Mobile/tablet: this component is NEVER rendered (hidden lg:flex wraps it).
 
 // ── Inline split bar for DesktopMergedPanel ───────────────────────────────────
-const MERGED_LABEL_STROKE = '-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px rgba(0,0,0,0.9)';
+const MERGED_LABEL_STROKE = '-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px #000000';
 
 function MergedSplitBar({
   awayPct, homePct, awayColor, homeColor, rowLabel, awayLabel, homeLabel,
@@ -503,7 +503,7 @@ function MergedSplitBar({
   };
   const teamLabelStyle: React.CSSProperties = {
     fontSize: 'clamp(9px, 0.78vw, 12px)',
-    color: 'rgba(255,255,255,0.80)',
+    color: '#FFFFFF',
     fontWeight: 600,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -528,7 +528,7 @@ function MergedSplitBar({
         // The 0.1 gap before % is handled by inserting a thin-space (U+2009) before % in the rendered text
         const segLabel: React.CSSProperties = {
           fontSize: 'clamp(10px, 0.85vw, 13px)',
-          color: '#fff',
+          color: '#FFFFFF',
           fontWeight: 800,
           whiteSpace: 'nowrap',
           textShadow: MERGED_LABEL_STROKE,
@@ -540,7 +540,7 @@ function MergedSplitBar({
             height: 'clamp(22px, 2.2vw, 32px)',
             display: 'flex',
             borderRadius: '9999px',
-            border: '1px solid rgba(255,255,255,0.12)',
+            border: '1px solid #FFFFFF',
             overflow: 'hidden',
             width: '100%',
           }}>
@@ -564,7 +564,7 @@ function MergedSplitBar({
             )}
             {/* Divider */}
             {!isAwayFull && !isHomeFull && away > 0 && home > 0 && (
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+              <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0 }} />
             )}
             {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
             {home > 0 && !isHomeFull && !isAwayFull && (
@@ -609,7 +609,7 @@ function MergedSplitBar({
           </div>
         );
       })() : (
-        <div style={{ height: 'clamp(22px,2.2vw,32px)', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: 'clamp(22px,2.2vw,32px)', background: '#000000', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', opacity: 0.80 }}>—</span>
         </div>
       )}
@@ -949,10 +949,10 @@ function DesktopMergedPanel({
   //   Book values: #D3D3D3 (light gray), weight 500
   //   Model non-edge values: #FFFFFF (white), weight 600
   //   Model edge values: #39FF14 (neon green), weight 700
-  const bookCell: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 500, color: '#D3D3D3', letterSpacing: '0.02em' } as React.CSSProperties;
-  const modelGreen: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 700, color: '#39FF14', letterSpacing: '0.02em' };
+  const bookCell: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 500, color: '#FFFFFF', letterSpacing: '0.02em' } as React.CSSProperties;
+  const modelGreen: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 700, color: '#45E0A8', letterSpacing: '0.02em' };
   const modelWhite: React.CSSProperties = { fontSize: VAL_FS, fontWeight: 600, color: '#FFFFFF', letterSpacing: '0.02em' };
-  const dimCell:    React.CSSProperties = { fontSize: VAL_FS, fontWeight: 500, color: 'rgba(57,255,20,0.28)', letterSpacing: '0.02em' };
+  const dimCell:    React.CSSProperties = { fontSize: VAL_FS, fontWeight: 500, color: '#FFFFFF', letterSpacing: '0.02em' };
   // Bug fix: !null === true in JS, so !spreadEdgeIsAway and !totalEdgeIsOver are true when direction is null.
   // This caused false green highlights on home spread and under total when direction is undetermined.
   // Require direction to be explicitly false (not just non-true) before applying green.
@@ -1011,7 +1011,7 @@ function DesktopMergedPanel({
       `awayMlEdgePP=${isNaN(awayMlEdgePP)?'NaN':awayMlEdgePP.toFixed(2)} ` +
       `homeMlEdgePP=${isNaN(homeMlEdgePP)?'NaN':homeMlEdgePP.toFixed(2)} ` +
       `mlEdgePP=${isNaN(mlEdgePP)?'NaN':mlEdgePP.toFixed(2)} hasMlEdge=${hasMlEdge}`,
-      'color:#00BFFF;font-size:9px'
+      'color:#FFFFFF;font-size:9px'
     );
   }
   const awayMlModelStyle     = showModel ? (hasMlEdge && mlEdgeIsAway === true  ? modelGreen : modelWhite) : dimCell;
@@ -1141,7 +1141,7 @@ function DesktopMergedPanel({
     const _rowLabelStyle: React.CSSProperties = {
       fontSize: ABBR_FS,
       fontWeight: 700,
-      color: 'rgba(255,255,255,0.85)',
+      color: '#FFFFFF',
       letterSpacing: '0.06em',
       textTransform: 'uppercase' as const,
       whiteSpace: 'nowrap' as const,
@@ -1157,11 +1157,11 @@ function DesktopMergedPanel({
 
         {/* ── Section title ── */}
         <div className="flex items-center gap-1.5" style={{ marginBottom: 4 }}>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#fff', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
+          <span style={{ fontSize: TITLE_FS, fontWeight: 850, color: '#FFFFFF', letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
             {title}
           </span>
-          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
         </div>
 
         {/* ── Uniform spacer row — reduced height to move BOOK/MODEL up ── */}
@@ -1182,7 +1182,7 @@ function DesktopMergedPanel({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', marginBottom: 5, alignItems: 'start' }}>
           {/* BOOK / MODEL column header row */}
           <span className="text-center" style={colHdrStyle('#FFFFFF')}>BOOK</span>
-          <span className="text-center" style={colHdrStyle('#39FF14')}>MODEL</span>
+          <span className="text-center" style={colHdrStyle('#45E0A8')}>MODEL</span>
 
           {/* Away / OVER — BOOK pill */}
           <OddsCell
@@ -1226,7 +1226,7 @@ function DesktopMergedPanel({
         </div>
 
         {/* ── Thin separator ── */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', marginBottom: 7 }} />
+        <div style={{ height: 1, background: '#FFFFFF', marginBottom: 7 }} />
 
         {/* ── TICKETS split bar ── */}
         <div style={{ marginTop: 4 }}>
@@ -1289,7 +1289,7 @@ function DesktopMergedPanel({
         openHomeBook={openHomeSpreadStr}
       />
       {/* Divider */}
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
       {/* TOTAL section — no logos, OVER/UNDER baked into value cells */}
       <SectionCol
         title="Total"
@@ -1303,7 +1303,7 @@ function DesktopMergedPanel({
         openHomeBook={openUnderStr}
       />
       {/* Divider */}
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
       {/* MONEYLINE section */}
       <SectionCol
         title="Moneyline"
@@ -1318,16 +1318,16 @@ function DesktopMergedPanel({
         openHomeBook={openHomeMlStr}
       />
       {/* Divider */}
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.12)', flexShrink: 0, alignSelf: 'stretch' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch' }} />
       {/* EdgeVerdict column — width MUST be identical for showModel=true and showModel=false to prevent layout shift */}
       {/* Canonical width: clamp(180px,15vw,240px) — matches file-header spec, uniform across all toggle states */}
       {showModel ? (
         <div className="flex flex-col items-start justify-center" style={{ flex: '0 0 clamp(180px,15vw,240px)', width: 'clamp(180px,15vw,240px)', padding: '10px 12px', gap: 0 }}>
           {/* EDGE header */}
-          <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', fontWeight: 800, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, alignSelf: 'center' }}>EDGE</span>
+          <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, alignSelf: 'center' }}>EDGE</span>
           {spreadPass && totalPass && !hasMlEdge ? (
-            <div style={{ alignSelf: 'center', padding: '4px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <span style={{ fontSize: 'clamp(12px,1.0vw,15px)', fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.1em' }}>PASS</span>
+            <div style={{ alignSelf: 'center', padding: '4px 10px', borderRadius: 8, background: '#000000', border: '1px solid #FFFFFF' }}>
+              <span style={{ fontSize: 'clamp(12px,1.0vw,15px)', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.1em' }}>PASS</span>
             </div>
           ) : (
             <div className="flex flex-col w-full" style={{ gap: 6 }}>
@@ -1346,18 +1346,18 @@ function DesktopMergedPanel({
                 const showArrow = (diff ?? 0) >= 3;
                 const mktLabel = sport === 'NHL' ? 'PUCK LINE' : sport === 'MLB' ? 'RUN LINE' : 'SPREAD';
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${edgeColor}33` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: '#000000', border: `1px solid ${edgeColor}33` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                       {(spreadLogoUrl || spreadVerdictSlug) && (
                         <TeamLogo slug={spreadVerdictSlug ?? ''} name={spreadVerdictTeam ?? ''} logoUrl={spreadLogoUrl} size={16} />
                       )}
-                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
                         {showArrow && <span style={{ color: edgeColor, marginRight: 2, fontSize: '0.85em' }}>▲</span>}
                         {normalized}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: 'rgba(255,255,255,0.90)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{mktLabel}</span>
+                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: '#FFFFFF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{mktLabel}</span>
                       {!isNaN(spreadRoi) ? (
                         <span style={{ fontSize: 'clamp(10px,0.85vw,13px)', fontWeight: 800, color: edgeColor, letterSpacing: '0.02em' }}>{formatRoi(spreadRoi)}</span>
                       ) : diff !== null ? (
@@ -1384,15 +1384,15 @@ function DesktopMergedPanel({
                 const normalized = authTotalLabel.trim();
                 const showArrow = (diff ?? 0) >= 3;
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${edgeColor}33` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: '#000000', border: `1px solid ${edgeColor}33` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
                         {showArrow && <span style={{ color: edgeColor, marginRight: 2, fontSize: '0.85em' }}>▲</span>}
                         {normalized}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: 'rgba(255,255,255,0.90)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>TOTAL</span>
+                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: '#FFFFFF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>TOTAL</span>
                       {!isNaN(totalRoi) ? (
                         <span style={{ fontSize: 'clamp(10px,0.85vw,13px)', fontWeight: 800, color: edgeColor, letterSpacing: '0.02em' }}>{formatRoi(totalRoi)}</span>
                       ) : diff !== null ? (
@@ -1410,18 +1410,18 @@ function DesktopMergedPanel({
                 const edgeColor = getEdgeColor(diff);
                 const showArrow = diff >= 3;
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: `1px solid ${edgeColor}33` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '5px 8px', borderRadius: 8, background: '#000000', border: `1px solid ${edgeColor}33` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
                       {(mlEdgeLogoUrl || mlEdgeSlug) && (
                         <TeamLogo slug={mlEdgeSlug ?? ''} name={mlEdgeTeam ?? ''} logoUrl={mlEdgeLogoUrl} size={16} />
                       )}
-                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: 'clamp(11px,0.95vw,14px)', fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>
                         {showArrow && <span style={{ color: edgeColor, marginRight: 2, fontSize: '0.85em' }}>▲</span>}
                         {mlEdgeLabel}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: 'rgba(255,255,255,0.90)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>MONEYLINE</span>
+                      <span style={{ fontSize: 'clamp(11px,0.9vw,14px)', color: '#FFFFFF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>MONEYLINE</span>
                       {!isNaN(mlRoi) ? (
                         <span style={{ fontSize: 'clamp(10px,0.85vw,13px)', fontWeight: 800, color: edgeColor, letterSpacing: '0.02em' }}>{formatRoi(mlRoi)}</span>
                       ) : (
@@ -1498,7 +1498,7 @@ function OddsCell({
   if (process.env.NODE_ENV === 'development' && (isBest || isEdge)) {
     console.log(
       `%c[OddsCell] ${mainValue} ${juiceStr ?? ''} | isBest=${isBest} isEdge=${isEdge} isBook=${isBook} size=${size}`,
-      `color:${isEdge ? '#39FF14' : '#F5A623'};font-size:9px`
+      `color:${isEdge ? '#45E0A8' : '#FFFFFF'};font-size:9px`
     );
   }
 
@@ -1523,22 +1523,22 @@ function OddsCell({
   // Edge: neon green border + text
   const pillBg = isBook
     ? (isEdge
-        ? 'rgba(57,255,20,0.10)'
-        : 'rgba(255,255,255,0.07)')
+        ? 'transparent'
+        : '#000000')
     : 'transparent';
   const pillBorder = isBook
     ? (isEdge
-        ? '1px solid rgba(57,255,20,0.45)'
-        : '1px solid rgba(255,255,255,0.13)')
+        ? '1px solid #45E0A8'
+        : '1px solid #FFFFFF')
     : (isEdge
-        ? '1px solid rgba(57,255,20,0.30)'
+        ? '1px solid #45E0A8'
         : '1px solid transparent');
-  const mainColor = isEdge ? '#39FF14' : (isBook ? '#FFFFFF' : '#FFFFFF');
+  const mainColor = isEdge ? '#45E0A8' : (isBook ? '#FFFFFF' : '#FFFFFF');
   const mainWeight = isEdge ? 800 : (isBook ? 700 : 700);
   // Model cells: juice is always neon green (edge = full, non-edge = 60%); book cells: muted gray
   const juiceColor = isBook
-    ? (isEdge ? 'rgba(57,255,20,0.70)' : 'rgba(200,200,200,0.60)')
-    : (isEdge ? '#39FF14' : 'rgba(57,255,20,0.65)');
+    ? (isEdge ? '#45E0A8' : '#FFFFFF')
+    : (isEdge ? '#45E0A8' : '#FFFFFF');
 
   return (
     <div
@@ -1552,7 +1552,7 @@ function OddsCell({
           style={{
             fontSize: openFs,
             fontWeight: 500,
-            color: 'rgba(255,255,255,0.88)',
+            color: '#FFFFFF',
             letterSpacing: '0.03em',
             whiteSpace: 'nowrap',
             lineHeight: 1,
@@ -1601,14 +1601,14 @@ function OddsCell({
               xmlns="http://www.w3.org/2000/svg"
               style={{ width: '100%', height: '100%' }}
             >
-              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="#F5A623" />
+              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="#45E0A8" />
               <text
                 x="7.5"
                 y="10"
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fontSize="7"
-                fill="white"
+                fill="#FFFFFF"
                 fontWeight="bold"
               >★</text>
             </svg>
@@ -1940,11 +1940,11 @@ function OddsLinesPanel({
   // Font sizes scale with viewport: clamp(min, preferred_vw, max)
   // Use smaller font when showing odds in parentheses (longer strings like "+6.5 (-110)")
   const cellFontSize = 'clamp(9.5px, 1.0vw, 13px)';
-  const bookCell      = { fontSize: cellFontSize, fontWeight: showModel ? 400 : 600, color: '#E8E8E8', letterSpacing: '0.01em', textAlign: 'center' as const, lineHeight: '1.3', whiteSpace: 'nowrap' as const } as React.CSSProperties;
+  const bookCell      = { fontSize: cellFontSize, fontWeight: showModel ? 400 : 600, color: '#FFFFFF', letterSpacing: '0.01em', textAlign: 'center' as const, lineHeight: '1.3', whiteSpace: 'nowrap' as const } as React.CSSProperties;
   // Model cells: neon green only when this specific cell is the edge side; otherwise bold white
-  const modelGreen    = { fontSize: cellFontSize, fontWeight: 700, color: '#39FF14', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
-  const modelWhite    = { fontSize: cellFontSize, fontWeight: 700, color: '#E8E8E8', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
-  const dimCell       = { fontSize: cellFontSize, fontWeight: 700, color: 'rgba(57,255,20,0.28)', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
+  const modelGreen    = { fontSize: cellFontSize, fontWeight: 700, color: '#45E0A8', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
+  const modelWhite    = { fontSize: cellFontSize, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
+  const dimCell       = { fontSize: cellFontSize, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.01em', textAlign: 'center' as const } as React.CSSProperties;
 
   // Per-cell model style helpers
   // Null-guard: !null === true in JS — require explicit true/false, never rely on truthy/falsy for direction.
@@ -2005,14 +2005,14 @@ function OddsLinesPanel({
       {!isDesktopOdds && (
         <div
           className={`grid ${GRID} pb-1 mb-0.5`}
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.12)', transition: 'grid-template-columns 200ms ease' }}
+          style={{ borderBottom: '1px solid #FFFFFF', transition: 'grid-template-columns 200ms ease' }}
         >
           {showModel
             ? ['Book', 'Model', 'Book', 'Model', 'Book', 'Model'].map((lbl, i) => (
                 <span
                   key={i}
                   className="text-center font-bold uppercase tracking-widest"
-                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: lbl === 'Model' ? '#39FF14' : 'rgba(255,255,255,0.85)' }}
+                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: lbl === 'Model' ? '#45E0A8' : '#FFFFFF' }}
                 >
                   {lbl}
                 </span>
@@ -2021,7 +2021,7 @@ function OddsLinesPanel({
                 <span
                   key={i}
                   className="text-center font-bold uppercase tracking-widest"
-                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: 'rgba(255,255,255,0.85)' }}
+                  style={{ fontSize: 'clamp(11px, 0.95vw, 14px)', color: '#FFFFFF' }}
                 >
                   {lbl}
                 </span>
@@ -2086,7 +2086,7 @@ function OddsLinesPanel({
       </div>
 
       {/* Divider */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ height: 1, background: '#FFFFFF' }} />
 
       {/* Home row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div className={`grid ${GRID} py-2`} style={{ transition: 'grid-template-columns 200ms ease' }}>
@@ -2374,7 +2374,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     const curHome = game.homeScore ?? null;
     if (curAway !== null && prevAwayScoreRef.current !== null && curAway > prevAwayScoreRef.current) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`%c[GameCard:scoreFlash] game=${game.id} AWAY ${prevAwayScoreRef.current}→${curAway}`, 'color:#39FF14;font-size:10px');
+        console.log(`%c[GameCard:scoreFlash] game=${game.id} AWAY ${prevAwayScoreRef.current}→${curAway}`, 'color:#45E0A8;font-size:10px');
       }
       setAwayScoreFlash(true);
       const t = setTimeout(() => setAwayScoreFlash(false), 800);
@@ -2383,7 +2383,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
     }
     if (curHome !== null && prevHomeScoreRef.current !== null && curHome > prevHomeScoreRef.current) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`%c[GameCard:scoreFlash] game=${game.id} HOME ${prevHomeScoreRef.current}→${curHome}`, 'color:#39FF14;font-size:10px');
+        console.log(`%c[GameCard:scoreFlash] game=${game.id} HOME ${prevHomeScoreRef.current}→${curHome}`, 'color:#45E0A8;font-size:10px');
       }
       setHomeScoreFlash(true);
       const t = setTimeout(() => setHomeScoreFlash(false), 800);
@@ -2665,16 +2665,16 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               padding: "2px 3px", lineHeight: 1, flexShrink: 0,
               minWidth: 44, minHeight: 44,
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: isFavorited ? "var(--dime-mint-text, #FFD700)" : "var(--dime-text-muted, rgba(255,255,255,0.65))",
+              color: isFavorited ? "var(--dime-mint-text, #45E0A8)" : "var(--dime-text-muted, #FFFFFF)",
               opacity: 1,
               transition: "color 0.15s, transform 0.15s, filter 0.15s",
-              filter: isFavorited ? "drop-shadow(0 0 3px #FFD700)" : "none",
+              filter: "none",
             }}
             onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24"
-              style={{ fill: isFavorited ? "var(--dime-mint, #FFD700)" : "none", stroke: isFavorited ? "var(--dime-mint, #FFD700)" : "currentColor" }}
+              style={{ fill: isFavorited ? "var(--dime-mint, #45E0A8)" : "none", stroke: isFavorited ? "var(--dime-mint, #45E0A8)" : "currentColor" }}
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -2686,13 +2686,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             {game.gameClock && (
               <span className="text-[9px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
             )}
-            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#39FF14" }}>
-              <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#39FF14" }} />
+            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#45E0A8" }}>
+              <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#45E0A8" }} />
               LIVE
             </span>
           </>
         ) : isFinal ? (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide" style={{ background: "rgba(255,255,255,0.07)", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide" style={{ background: "#000000", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
         ) : (
           <span className="text-[10px] font-bold" style={{ color: "hsl(var(--muted-foreground))" }}>{time}</span>
         )}
@@ -2799,18 +2799,18 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: isFavorited ? "var(--dime-mint-text, #FFD700)" : "var(--dime-text-muted, rgba(255,255,255,0.65))",
+              color: isFavorited ? "var(--dime-mint-text, #45E0A8)" : "var(--dime-text-muted, #FFFFFF)",
               opacity: 1,
               transition: "color 0.15s, transform 0.15s, filter 0.15s",
               // Change D: larger glow to match 2× star size on desktop
               filter: "none",
             }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-secondary, rgba(255,255,255,0.95))"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-muted, rgba(255,255,255,0.65))"; }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.25)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-secondary, #FFFFFF)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; if (!isFavorited) e.currentTarget.style.color = "var(--dime-text-muted, #FFFFFF)"; }}
           >
             {/* Desktop: 24px star (1.5× mobile 16px) */}
             <svg width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} viewBox="0 0 24 24"
-              style={{ fill: isFavorited ? "var(--dime-mint, #FFD700)" : "none", stroke: isFavorited ? "var(--dime-mint, #FFD700)" : "currentColor" }}
+              style={{ fill: isFavorited ? "var(--dime-mint, #45E0A8)" : "none", stroke: isFavorited ? "var(--dime-mint, #45E0A8)" : "currentColor" }}
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -2828,9 +2828,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
                 style={{
                   fontSize: LIVE_FONT_SIZE,
-                  background: "var(--dime-mint-dim, rgba(57,255,20,0.12))",
-                  color: "var(--dime-mint-text, #39FF14)",
-                  border: "1px solid var(--dime-mint-border, rgba(57,255,20,0.4))",
+                  background: "var(--dime-mint-dim, transparent)",
+                  color: "var(--dime-mint-text, #45E0A8)",
+                  border: "1px solid var(--dime-mint-border, #45E0A8)",
                   letterSpacing: "0.10em",
                   borderRadius: '14px',
                   gap: '8px',
@@ -2839,7 +2839,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               >
                 <span
                   className="rounded-full animate-pulse inline-block flex-shrink-0"
-                  style={{ width: '9px', height: '9px', background: "var(--dime-mint, #39FF14)" }}
+                  style={{ width: '9px', height: '9px', background: "var(--dime-mint, #45E0A8)" }}
                 />
                 LIVE
               </span>
@@ -2851,15 +2851,15 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 className="px-1.5 py-0.5 font-bold tracking-wide flex-shrink-0 flex items-center"
                 style={{
                   fontSize: LIVE_FONT_SIZE,
-                  background: "var(--dime-mint-dim, rgba(57,255,20,0.12))",
-                  color: "var(--dime-mint-text, #39FF14)",
-                  border: "1px solid var(--dime-mint-border, rgba(57,255,20,0.4))",
+                  background: "var(--dime-mint-dim, transparent)",
+                  color: "var(--dime-mint-text, #45E0A8)",
+                  border: "1px solid var(--dime-mint-border, #45E0A8)",
                   letterSpacing: "0.08em",
                   borderRadius: '12px',
                   gap: '8px',
                 }}
               >
-                <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '5px', height: '5px', background: "#39FF14" }} />
+                <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '5px', height: '5px', background: "#45E0A8" }} />
                 LIVE
               </span>
               {game.gameClock && (
@@ -2876,9 +2876,9 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             className="px-1.5 py-0.5 font-black tracking-widest"
             style={{
               fontSize: FINAL_FONT_SIZE,
-              background: "var(--dime-surface-raised, rgba(255,255,255,0.07))",
-              color: "var(--dime-text-secondary, #d0d0d4)",
-              border: isDesktop ? "1px solid var(--dime-border-strong, rgba(255,255,255,0.15))" : "none",
+              background: "var(--dime-surface-raised, #000000)",
+              color: "var(--dime-text-secondary, #FFFFFF)",
+              border: isDesktop ? "1px solid var(--dime-border-strong, #FFFFFF)" : "none",
               borderRadius: '12px',
               lineHeight: 1,
             }}
@@ -2966,13 +2966,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
               fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: awayScoreFlash
-                ? "#39FF14"
+                ? "#45E0A8"
                 : awayWins
                 ? "hsl(var(--foreground))"
                 : (isFinal || isLive)
                 ? "hsl(var(--muted-foreground))"
                 : "hsl(var(--foreground))",
-              textShadow: awayScoreFlash ? "0 0 12px rgba(57,255,20,0.7)" : "none",
+              textShadow: "none",
             }}
           >
             {game.awayScore}
@@ -3042,13 +3042,13 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               /* Change F: FINAL loser score → fontWeight 400 on desktop; winner stays 700 */
               fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : (isFinal && isDesktop) ? 400 : (isFinal || isLive) ? 600 : 900,
               color: homeScoreFlash
-                ? "#39FF14"
+                ? "#45E0A8"
                 : homeWins
                 ? "hsl(var(--foreground))"
                 : (isFinal || isLive)
                 ? "hsl(var(--muted-foreground))"
                 : "hsl(var(--foreground))",
-              textShadow: homeScoreFlash ? "0 0 12px rgba(57,255,20,0.7)" : "none",
+              textShadow: "none",
             }}
           >
             {game.homeScore}
@@ -3071,12 +3071,12 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 <span style={{ fontSize: 'clamp(10px, 0.75vw, 12px)', color: 'var(--dime-text-muted, hsl(var(--border)))' }}>·</span>
               )}
               {game.broadcaster && (
-                <span style={{ fontSize: 'clamp(11px, 0.85vw, 13px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(11px, 0.85vw, 13px)', color: 'var(--dime-text-body, #FFFFFF)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                   {game.broadcaster}
                 </span>
               )}
               {(game.doubleHeader === 'Y' || game.doubleHeader === 'S') && (
-                <span style={{ fontSize: 'clamp(10px, 0.75vw, 12px)', color: 'var(--dime-text-secondary, rgba(255,255,255,0.7))', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 2 }}>
+                <span style={{ fontSize: 'clamp(10px, 0.75vw, 12px)', color: 'var(--dime-text-secondary, #FFFFFF)', fontWeight: 700, whiteSpace: 'nowrap', marginLeft: 2 }}>
                   DH-{game.doubleHeader === 'Y' ? '1' : '2'}
                 </span>
               )}
@@ -3087,7 +3087,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
             <div className="flex items-center gap-1 flex-wrap">
               <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-secondary, hsl(var(--muted-foreground)))', whiteSpace: 'nowrap' }}>SP:</span>
               {game.awayStartingPitcher && (
-                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, #FFFFFF)', whiteSpace: 'nowrap' }}>
                   {game.awayStartingPitcher}{!game.awayPitcherConfirmed ? ' *' : ''}
                 </span>
               )}
@@ -3095,7 +3095,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
                 <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-secondary, hsl(var(--muted-foreground)))', whiteSpace: 'nowrap' }}>vs</span>
               )}
               {game.homeStartingPitcher && (
-                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, rgba(255,255,255,0.9))', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'clamp(10px, 0.8vw, 12px)', color: 'var(--dime-text-body, #FFFFFF)', whiteSpace: 'nowrap' }}>
                   {game.homeStartingPitcher}{!game.homePitcherConfirmed ? ' *' : ''}
                 </span>
               )}
@@ -3411,7 +3411,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
               )}
               {/* Subtle card separator */}
               <div style={{ height: 8 }} />
-              <div style={{ height: 1, background: "rgba(255,255,255,0.07)", width: "100%" }} />
+              <div style={{ height: 1, background: "#FFFFFF", width: "100%" }} />
             </div>
           )}
 

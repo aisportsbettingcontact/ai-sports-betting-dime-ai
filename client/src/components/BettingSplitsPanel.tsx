@@ -148,7 +148,7 @@ function mobileSegMinPx(pct: number): number {
 }
 
 // Black stroke textShadow for all % labels — applied to every label path, no exceptions
-const LABEL_STROKE = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)';
+const LABEL_STROKE = '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 6px #000000, 0 0 10px #000000';
 
 // Away label: flush LEFT inside the segment
 const MOBILE_AWAY_LABEL_STYLE: React.CSSProperties = {
@@ -197,14 +197,14 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       <div className="w-full flex flex-col gap-0.5">
         {/* Header row */}
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
-          <span style={{ fontSize: 10, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
-          <span style={{ fontSize: 11, color: "var(--dime-text-body, rgba(255,255,255,0.8))", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, #ffffff)", fontWeight: 700, letterSpacing: "0.04em" }}>{awayLineLabel}</span>
+          <span style={{ fontSize: 10, color: "var(--dime-text-secondary, #ffffff)", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{rowLabel}</span>
+          <span style={{ fontSize: 11, color: "var(--dime-text-body, #ffffff)", fontWeight: 700, letterSpacing: "0.04em" }}>{homeLineLabel}</span>
         </div>
         {/* Empty bar */}
         <div className="w-full rounded-md flex items-center justify-center"
-          style={{ height: 20, background: "var(--dime-row-hover, rgba(255,255,255,0.05))", minWidth: 0 }}>
-          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
+          style={{ height: 20, background: "var(--dime-row-hover, #000000)", minWidth: 0 }}>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, #ffffff)" }}>—</span>
         </div>
       </div>
     );
@@ -241,9 +241,9 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
     <div className="bsp-row w-full flex flex-col gap-0.5">
       {/* Header row: AWAY_LABEL  [rowLabel]  HOME_LABEL */}
       <div className="bsp-hdr flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2 }}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
+        <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 700, letterSpacing: "0.03em" }}>{awayLineLabel}</span>
+        <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.10em" }}>{rowLabel}</span>
+        <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 700, letterSpacing: "0.03em" }}>{homeLineLabel}</span>
       </div>
       {/* Bar — flex row, NO overflow:hidden on outer container (that clips home label) */}
       {/* Header spans: 11px floor — the mobile type law bans sub-10px content. */}
@@ -256,7 +256,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
           display: 'flex',
           flexDirection: 'row',
           borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.12)',
+          border: '1px solid #ffffff',
           boxSizing: 'border-box',
         }}
       >
@@ -268,7 +268,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
         )}
         {/* Divider */}
         {showDivider && (
-          <div className="bsp-div" style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0, alignSelf: 'stretch' }} />
+          <div className="bsp-div" style={{ width: 1, background: '#ffffff', flexShrink: 0, alignSelf: 'stretch' }} />
         )}
         {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
         {home > 0 && !isHomeFull && !isAwayFull && (
@@ -428,7 +428,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
   return (
     <div className="flex flex-col gap-1 w-full">
       <span className="text-center uppercase"
-        style={{ fontFamily: "var(--dime-font-mono)", fontWeight: 500, fontSize: 'clamp(11px, 0.9vw, 13px)', color: "var(--dime-text-secondary, rgba(255,255,255,0.80))", letterSpacing: "0.1em" }}>
+        style={{ fontFamily: "var(--dime-font-mono)", fontWeight: 500, fontSize: 'clamp(11px, 0.9vw, 13px)', color: "var(--dime-text-secondary, #ffffff)", letterSpacing: "0.1em" }}>
         {label}
       </span>
       {hasData ? (() => {
@@ -464,7 +464,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
               borderRadius: '9999px',
               // NO overflow:hidden here — that clips the home segment label.
               // Each segment has its own overflow:hidden to clip text within its bounds.
-              border: '1.5px solid rgba(255,255,255,0.15)',
+              border: '1.5px solid #ffffff',
               boxSizing: 'border-box',
               width: '100%',
             }}
@@ -478,7 +478,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
             )}
             {/* Divider */}
             {showDivider && (
-              <div className="bsp-div" style={{ width: 1.5, background: 'rgba(255,255,255,0.3)', flexShrink: 0, alignSelf: 'stretch' }} />
+              <div className="bsp-div" style={{ width: 1.5, background: '#ffffff', flexShrink: 0, alignSelf: 'stretch' }} />
             )}
             {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
             {home > 0 && !isHomeFull && !isAwayFull && (
@@ -512,8 +512,8 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
         );
       })() : (
         <div className="w-full rounded-full flex items-center justify-center"
-          style={{ height: 30, background: "var(--dime-surface-raised, rgba(255,255,255,0.05))" }}>
-          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))" }}>—</span>
+          style={{ height: 30, background: "var(--dime-surface-raised, #000000)" }}>
+          <span style={{ fontSize: 11, color: "var(--dime-text-secondary, #ffffff)" }}>—</span>
         </div>
       )}
     </div>
@@ -556,10 +556,10 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
     // "WSH (-106)"-length labels per column in the 1024–1279 shell band.
     <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(12px, 1.4vw, 18px)" }}>
       <div className="flex items-center gap-2">
-        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
+        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, #ffffff)" }} />
         <span className="uppercase tracking-widest font-bold whitespace-nowrap"
           style={{ fontSize: 'clamp(13px, 1.1vw, 17px)', color: "var(--dime-text-primary, #ffffff)", letterSpacing: "0.14em" }}>{title}</span>
-        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, rgba(255,255,255,0.08))" }} />
+        <div className="flex-1" style={{ height: 1, background: "var(--dime-border, #ffffff)" }} />
       </div>
       {/* Both label-row branches share one fixed box so the three market
           columns keep a single baseline (TOTAL used to sit 3-4px lower). */}
@@ -645,7 +645,7 @@ export function BettingSplitsPanel({
   if (!hasAnySplits) {
     return (
       <div className="w-full flex items-center justify-center" style={{ minHeight: 80, padding: "16px 12px" }}>
-        <span style={{ fontSize: 11, color: "var(--dime-text-secondary, rgba(255,255,255,0.6))", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>
+        <span style={{ fontSize: 11, color: "var(--dime-text-secondary, #ffffff)", fontFamily: "var(--dime-font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>
           Splits not yet available
         </span>
       </div>
@@ -689,9 +689,9 @@ export function BettingSplitsPanel({
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   borderRadius: 4,
-                  border: isActive ? "1px solid rgba(255,255,255,0.35)" : "1px solid rgba(255,255,255,0.1)",
-                  background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
-                  color: isActive ? "#ffffff" : isAvailable ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)",
+                  border: isActive ? "1px solid #ffffff" : "1px solid #ffffff",
+                  background: isActive ? "#45E0A8" : "transparent",
+                  color: isActive ? "#ffffff" : isAvailable ? "#ffffff" : "#ffffff",
                   cursor: isAvailable ? "pointer" : "default",
                   transition: "all 0.15s ease",
                 }}
@@ -746,7 +746,7 @@ export function BettingSplitsPanel({
             ticketsPct={game.spreadAwayBetsPct} handlePct={game.spreadAwayMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
         {/* Total column — always rendered */}
         <div className="flex-1 min-w-0">
           <MarketBlock title="Total" awayLabel="" homeLabel=""
@@ -754,7 +754,7 @@ export function BettingSplitsPanel({
             ticketsPct={game.totalOverBetsPct} handlePct={game.totalOverMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
         {/* Moneyline column — always rendered */}
         <div className="flex-1 min-w-0">
           <MarketBlock title="Moneyline" awayLabel={awayMlLabel} homeLabel={homeMlLabel}

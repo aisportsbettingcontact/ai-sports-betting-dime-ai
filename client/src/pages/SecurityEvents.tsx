@@ -99,17 +99,17 @@ const EVENT_TYPE_CONFIG: Record<
 > = {
   CSRF_BLOCK: {
     label: "CSRF Block",
-    color: "bg-red-500/15 text-red-400 border-red-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <ShieldOff className="w-3 h-3" />,
   },
   RATE_LIMIT: {
     label: "Rate Limit",
-    color: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <Activity className="w-3 h-3" />,
   },
   AUTH_FAIL: {
     label: "Auth Fail",
-    color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <ShieldAlert className="w-3 h-3" />,
   },
 };
@@ -127,15 +127,15 @@ function SummaryCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 flex flex-col gap-1">
-      <div className="flex items-center gap-2 text-zinc-200 text-xs font-medium uppercase tracking-wide">
+    <div className="rounded-lg border border-white bg-black p-4 flex flex-col gap-1">
+      <div className="flex items-center gap-2 text-white text-xs font-medium uppercase tracking-wide">
         {icon}
         {label}
       </div>
-      <div className={`text-2xl font-bold tabular-nums ${count > 0 ? "text-red-400" : "text-zinc-300"}`}>
+      <div className={`text-2xl font-bold tabular-nums ${count > 0 ? "text-white" : "text-white"}`}>
         {count}
       </div>
-      <div className="text-zinc-300 text-xs">last 24 hours</div>
+      <div className="text-white text-xs">last 24 hours</div>
     </div>
   );
 }
@@ -167,30 +167,30 @@ function DiscordTestPanel() {
   const isDigestPending = fireDigestMutation.isPending;
 
   return (
-    <div className="rounded-lg border border-zinc-700/60 bg-zinc-900/40 p-4 space-y-4">
+    <div className="rounded-lg border border-white bg-black p-4 space-y-4">
       {/* Panel header */}
       <div className="flex items-center gap-2">
-        <FlaskConical className="w-4 h-4 text-violet-400" />
-        <span className="text-sm font-semibold text-zinc-200">Discord Security Channel — Live Test Controls</span>
-        <Badge className="bg-violet-500/15 text-violet-400 border-violet-500/30 text-xs px-1.5 py-0 ml-1">
+        <FlaskConical className="w-4 h-4 text-white" />
+        <span className="text-sm font-semibold text-white">Discord Security Channel — Live Test Controls</span>
+        <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0 ml-1">
           Owner Only
         </Badge>
       </div>
 
-      <p className="text-zinc-200 text-xs leading-relaxed">
+      <p className="text-white text-xs leading-relaxed">
         Use these controls to confirm that the Discord{" "}
-        <span className="text-zinc-200 font-mono">🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦</span> channel is
+        <span className="text-white font-mono">🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦</span> channel is
         receiving alerts correctly. Test embeds use a synthetic IP and are clearly
         labeled as tests — they will not affect event counts in the database.
       </p>
 
       {/* Row 1: Fire test event embed */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-zinc-950/60 border border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-black border border-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Send className="w-3.5 h-3.5 text-zinc-200 shrink-0" />
+          <Send className="w-3.5 h-3.5 text-white shrink-0" />
           <div>
-            <div className="text-xs font-medium text-zinc-200">Fire Test Event Embed</div>
-            <div className="text-xs text-zinc-300 mt-0.5">
+            <div className="text-xs font-medium text-white">Fire Test Event Embed</div>
+            <div className="text-xs text-white mt-0.5">
               Posts a synthetic embed to the Discord security channel to confirm delivery.
               Choose a specific event type or fire all three at once.
             </div>
@@ -202,10 +202,10 @@ function DiscordTestPanel() {
             onValueChange={(v) => setTestEventType(v as typeof testEventType)}
             disabled={isTestPending}
           >
-            <SelectTrigger className="h-8 w-36 bg-zinc-900 border-zinc-700 text-xs">
+            <SelectTrigger className="h-8 w-36 bg-black border-white text-xs">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-700">
+            <SelectContent className="bg-black border-white">
               <SelectItem value="ALL" className="text-xs">All 3 Types</SelectItem>
               <SelectItem value="CSRF_BLOCK" className="text-xs">🚫 CSRF Block</SelectItem>
               <SelectItem value="RATE_LIMIT" className="text-xs">⚡ Rate Limit</SelectItem>
@@ -214,7 +214,7 @@ function DiscordTestPanel() {
           </Select>
           <Button
             size="sm"
-            className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5 h-8 text-xs"
+            className="bg-[#45E0A8] hover:bg-[#45E0A8] text-black gap-1.5 h-8 text-xs"
             disabled={isTestPending}
             onClick={() => fireEventMutation.mutate({ eventType: testEventType })}
           >
@@ -229,12 +229,12 @@ function DiscordTestPanel() {
       </div>
 
       {/* Row 2: Fire daily digest */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-zinc-950/60 border border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-black border border-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <BookOpen className="w-3.5 h-3.5 text-zinc-200 shrink-0" />
+          <BookOpen className="w-3.5 h-3.5 text-white shrink-0" />
           <div>
-            <div className="text-xs font-medium text-zinc-200">Trigger Daily Digest Now</div>
-            <div className="text-xs text-zinc-300 mt-0.5">
+            <div className="text-xs font-medium text-white">Trigger Daily Digest Now</div>
+            <div className="text-xs text-white mt-0.5">
               Manually runs the daily security summary that normally posts at 08:00 EST.
               Uses the last 24 hours of real event data — threat level, counts, and top IPs.
             </div>
@@ -243,7 +243,7 @@ function DiscordTestPanel() {
         <Button
           size="sm"
           variant="outline"
-          className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 gap-1.5 h-8 text-xs shrink-0"
+          className="border-white text-white hover:bg-transparent gap-1.5 h-8 text-xs shrink-0"
           disabled={isDigestPending}
           onClick={() => fireDigestMutation.mutate()}
         >
@@ -258,14 +258,14 @@ function DiscordTestPanel() {
 
       {/* Status indicators */}
       {(fireEventMutation.isSuccess || fireDigestMutation.isSuccess) && (
-        <div className="text-xs text-emerald-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+        <div className="text-xs text-[#45E0A8] flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] inline-block" />
           Last action completed — check the Discord channel to confirm delivery.
         </div>
       )}
       {(fireEventMutation.isError || fireDigestMutation.isError) && (
-        <div className="text-xs text-red-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+        <div className="text-xs text-white flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
           Action failed — check server logs for details.
         </div>
       )}
@@ -333,9 +333,9 @@ export default function SecurityEvents() {
 
   if (authLoading || (!authLoading && (!user || !isOwner))) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center gap-3">
-        <div className="w-5 h-5 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
-        <span className="text-zinc-200 text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
+      <div className="min-h-screen bg-black flex items-center justify-center gap-3">
+        <div className="w-5 h-5 border-2 border-white border-t-[#45E0A8] rounded-full animate-spin" />
+        <span className="text-white text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
       </div>
     );
   }
@@ -353,26 +353,26 @@ export default function SecurityEvents() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-black text-white">
       {/* ── Header ── */}
-      <div className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-white bg-black backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
-              className="text-zinc-200 hover:text-zinc-100 gap-1.5"
+              className="text-white hover:text-white gap-1.5"
               onClick={() => navigate("/admin/users")}
             >
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <div className="h-4 w-px bg-zinc-700" />
+            <div className="h-4 w-px bg-white" />
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-red-400" />
+              <ShieldAlert className="w-4 h-4 text-white" />
               <span className="font-semibold text-sm">Security Events</span>
               {counts.total > 0 && (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs px-1.5 py-0">
+                <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0">
                   {counts.total} in window
                 </Badge>
               )}
@@ -382,7 +382,7 @@ export default function SecurityEvents() {
             <Button
               variant="ghost"
               size="sm"
-              className="text-zinc-200 hover:text-zinc-100 gap-1.5"
+              className="text-white hover:text-white gap-1.5"
               onClick={() => {
                 eventsQuery.refetch();
                 countsQuery.refetch();
@@ -395,7 +395,7 @@ export default function SecurityEvents() {
             <Button
               variant="outline"
               size="sm"
-              className="text-red-400 border-red-500/30 hover:bg-red-500/10 gap-1.5"
+              className="text-white border-white hover:bg-transparent gap-1.5"
               onClick={() => setPruneOpen(true)}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -417,19 +417,19 @@ export default function SecurityEvents() {
           <SummaryCard
             label="CSRF Blocks"
             count={counts.CSRF_BLOCK}
-            color="text-red-400"
+            color="text-white"
             icon={<ShieldOff className="w-3 h-3" />}
           />
           <SummaryCard
             label="Rate Limits"
             count={counts.RATE_LIMIT}
-            color="text-orange-400"
+            color="text-white"
             icon={<Activity className="w-3 h-3" />}
           />
           <SummaryCard
             label="Auth Fails"
             count={counts.AUTH_FAIL}
-            color="text-yellow-400"
+            color="text-white"
             icon={<ShieldAlert className="w-3 h-3" />}
           />
         </div>
@@ -440,15 +440,15 @@ export default function SecurityEvents() {
         {/* ── Filters ── */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-200 text-xs font-medium">Event Type</span>
+            <span className="text-white text-xs font-medium">Event Type</span>
             <Select
               value={eventTypeFilter}
               onValueChange={(v) => setEventTypeFilter(v as EventType | "ALL")}
             >
-              <SelectTrigger className="h-8 w-36 bg-zinc-900 border-zinc-700 text-xs">
+              <SelectTrigger className="h-8 w-36 bg-black border-white text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700">
+              <SelectContent className="bg-black border-white">
                 <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
                 <SelectItem value="CSRF_BLOCK" className="text-xs">CSRF Block</SelectItem>
                 <SelectItem value="RATE_LIMIT" className="text-xs">Rate Limit</SelectItem>
@@ -457,15 +457,15 @@ export default function SecurityEvents() {
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-zinc-200 text-xs font-medium">Window</span>
+            <span className="text-white text-xs font-medium">Window</span>
             <Select
               value={String(windowHours)}
               onValueChange={(v) => setWindowHours(Number(v))}
             >
-              <SelectTrigger className="h-8 w-28 bg-zinc-900 border-zinc-700 text-xs">
+              <SelectTrigger className="h-8 w-28 bg-black border-white text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700">
+              <SelectContent className="bg-black border-white">
                 <SelectItem value="1" className="text-xs">Last 1 hour</SelectItem>
                 <SelectItem value="6" className="text-xs">Last 6 hours</SelectItem>
                 <SelectItem value="24" className="text-xs">Last 24 hours</SelectItem>
@@ -475,28 +475,28 @@ export default function SecurityEvents() {
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto text-zinc-300 text-xs">
+          <div className="ml-auto text-white text-xs">
             {isLoading ? "Loading..." : `${events.length} event${events.length !== 1 ? "s" : ""}`}
           </div>
         </div>
 
         {/* ── Event Table ── */}
-        <div className="rounded-lg border border-zinc-800 overflow-hidden">
+        <div className="rounded-lg border border-white overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-800 hover:bg-transparent">
-                <TableHead className="text-zinc-200 text-xs w-36">Timestamp (EST)</TableHead>
-                <TableHead className="text-zinc-200 text-xs w-28">Type</TableHead>
-                <TableHead className="text-zinc-200 text-xs w-36">IP Address</TableHead>
-                <TableHead className="text-zinc-200 text-xs">Blocked Origin</TableHead>
-                <TableHead className="text-zinc-200 text-xs">tRPC Path</TableHead>
-                <TableHead className="text-zinc-200 text-xs w-16">Method</TableHead>
+              <TableRow className="border-white hover:bg-transparent">
+                <TableHead className="text-white text-xs w-36">Timestamp (EST)</TableHead>
+                <TableHead className="text-white text-xs w-28">Type</TableHead>
+                <TableHead className="text-white text-xs w-36">IP Address</TableHead>
+                <TableHead className="text-white text-xs">Blocked Origin</TableHead>
+                <TableHead className="text-white text-xs">tRPC Path</TableHead>
+                <TableHead className="text-white text-xs w-16">Method</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-zinc-300 text-sm py-12">
+                  <TableCell colSpan={6} className="text-center text-white text-sm py-12">
                     <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2" />
                     Loading events...
                   </TableCell>
@@ -504,10 +504,10 @@ export default function SecurityEvents() {
               ) : events.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-2 text-zinc-300">
-                      <ShieldAlert className="w-8 h-8 text-zinc-700" />
+                    <div className="flex flex-col items-center gap-2 text-white">
+                      <ShieldAlert className="w-8 h-8 text-white" />
                       <span className="text-sm">No security events in this window</span>
-                      <span className="text-xs text-zinc-300">
+                      <span className="text-xs text-white">
                         Events appear here when CSRF blocks, rate limits, or auth failures occur
                       </span>
                     </div>
@@ -517,15 +517,15 @@ export default function SecurityEvents() {
                 events.map((event) => {
                   const config = EVENT_TYPE_CONFIG[event.eventType] ?? {
                     label: event.eventType,
-                    color: "bg-zinc-500/15 text-zinc-200 border-zinc-500/30",
+                    color: "bg-transparent text-white border-white",
                     icon: <AlertTriangle className="w-3 h-3" />,
                   };
                   return (
                     <TableRow
                       key={event.id}
-                      className="border-zinc-800/60 hover:bg-zinc-900/40 transition-colors"
+                      className="border-white hover:bg-transparent transition-colors"
                     >
-                      <TableCell className="text-zinc-300 text-xs font-mono whitespace-nowrap">
+                      <TableCell className="text-white text-xs font-mono whitespace-nowrap">
                         {formatTs(event.occurredAt)}
                       </TableCell>
                       <TableCell>
@@ -536,26 +536,26 @@ export default function SecurityEvents() {
                           {config.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-zinc-300 text-xs font-mono">
+                      <TableCell className="text-white text-xs font-mono">
                         {event.ip}
                       </TableCell>
                       <TableCell
-                        className="text-zinc-200 text-xs font-mono max-w-xs truncate"
+                        className="text-white text-xs font-mono max-w-xs truncate"
                         title={event.blockedOrigin ?? "—"}
                       >
                         {event.blockedOrigin ?? (
-                          <span className="text-zinc-300">—</span>
+                          <span className="text-white">—</span>
                         )}
                       </TableCell>
                       <TableCell
-                        className="text-zinc-200 text-xs font-mono max-w-xs truncate"
+                        className="text-white text-xs font-mono max-w-xs truncate"
                         title={event.trpcPath ?? "—"}
                       >
                         {event.trpcPath ?? (
-                          <span className="text-zinc-300">—</span>
+                          <span className="text-white">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-zinc-200 text-xs font-mono">
+                      <TableCell className="text-white text-xs font-mono">
                         {event.httpMethod ?? "—"}
                       </TableCell>
                     </TableRow>
@@ -567,35 +567,35 @@ export default function SecurityEvents() {
         </div>
 
         {/* ── Auto-refresh notice ── */}
-        <div className="text-zinc-300 text-xs text-center">
+        <div className="text-white text-xs text-center">
           Auto-refreshes every 30 seconds &nbsp;·&nbsp; Showing newest {events.length} events
         </div>
       </div>
 
       {/* ── Prune Dialog ── */}
       <Dialog open={pruneOpen} onOpenChange={setPruneOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-zinc-100 max-w-sm">
+        <DialogContent className="bg-black border-white text-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-white">
               <Trash2 className="w-4 h-4" />
               Prune Security Events
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-zinc-200 text-sm">
+            <p className="text-white text-sm">
               Delete all security events older than the selected retention period.
               This action cannot be undone.
             </p>
             <div className="flex items-center gap-3">
-              <span className="text-zinc-300 text-sm">Keep last</span>
+              <span className="text-white text-sm">Keep last</span>
               <Select
                 value={String(retentionDays)}
                 onValueChange={(v) => setRetentionDays(Number(v))}
               >
-                <SelectTrigger className="h-8 w-28 bg-zinc-800 border-zinc-600 text-sm">
+                <SelectTrigger className="h-8 w-28 bg-black border-white text-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-600">
+                <SelectContent className="bg-black border-white">
                   <SelectItem value="7">7 days</SelectItem>
                   <SelectItem value="14">14 days</SelectItem>
                   <SelectItem value="30">30 days</SelectItem>
@@ -605,7 +605,7 @@ export default function SecurityEvents() {
                   <SelectItem value="365">365 days</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-zinc-200 text-sm">of events</span>
+              <span className="text-white text-sm">of events</span>
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -613,13 +613,13 @@ export default function SecurityEvents() {
               variant="ghost"
               size="sm"
               onClick={() => setPruneOpen(false)}
-              className="text-zinc-200"
+              className="text-white"
             >
               Cancel
             </Button>
             <Button
               size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white gap-1.5"
+              className="bg-white hover:bg-white text-black gap-1.5"
               disabled={pruneMutation.isPending}
               onClick={() => pruneMutation.mutate({ retentionDays })}
             >

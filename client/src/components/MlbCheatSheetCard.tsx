@@ -185,7 +185,7 @@ function computeEdgeEV(
 }
 
 function edgeColor(edge: number): string {
-  return edge >= 0.03 ? "#39FF14" : "#FF4444";
+  return edge >= 0.03 ? "#45E0A8" : "#FFFFFF";
 }
 
 function fmtEdge(edge: number): string {
@@ -218,22 +218,22 @@ function InningBoxGrid({
   const innings = Array.from({ length: count }, (_, i) => i);
 
   return (
-    <div style={{ padding: "8px 10px 6px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <div style={{ padding: "8px 10px 6px", borderBottom: "1px solid #FFFFFF" }}>
       {/* Team legend */}
       <div style={{ display: "flex", gap: 14, marginBottom: 6, alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 8, height: 8, borderRadius: 2, background: awayColor }} />
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 700, letterSpacing: "0.07em" }}>
+          <span style={{ fontSize: 9, color: "#FFFFFF", fontWeight: 700, letterSpacing: "0.07em" }}>
             {awayAbbrev}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 8, height: 8, borderRadius: 2, background: homeColor }} />
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 700, letterSpacing: "0.07em" }}>
+          <span style={{ fontSize: 9, color: "#FFFFFF", fontWeight: 700, letterSpacing: "0.07em" }}>
             {homeAbbrev}
           </span>
         </div>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginLeft: "auto", letterSpacing: "0.05em" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", marginLeft: "auto", letterSpacing: "0.05em" }}>
           EXP RUNS / INNING
         </span>
       </div>
@@ -246,8 +246,8 @@ function InningBoxGrid({
           return (
             <div key={i} style={{
               flex: 1,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "#000000",
+              border: "1px solid #FFFFFF",
               borderRadius: 5,
               padding: "5px 2px 4px",
               display: "flex",
@@ -259,7 +259,7 @@ function InningBoxGrid({
               {/* Inning label */}
               <span style={{
                 fontSize: 8, fontWeight: 800, letterSpacing: "0.08em",
-                color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
+                color: "#FFFFFF", textTransform: "uppercase",
               }}>
                 I{i + 1}
               </span>
@@ -267,18 +267,18 @@ function InningBoxGrid({
               <span style={{
                 fontSize: 12, fontWeight: 800,
                 color: awayColor,
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 lineHeight: 1,
               }}>
                 {aVal.toFixed(2)}
               </span>
               {/* Divider */}
-              <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.08)" }} />
+              <div style={{ width: "60%", height: 1, background: "#FFFFFF" }} />
               {/* Home expected runs */}
               <span style={{
                 fontSize: 12, fontWeight: 800,
                 color: homeColor,
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 lineHeight: 1,
               }}>
                 {hVal.toFixed(2)}
@@ -318,13 +318,13 @@ function MarketRow({
       gridTemplateColumns: "36px 1fr 96px 1fr",
       alignItems: "center",
       padding: "7px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       {/* Label */}
       <span style={{
         fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
-        color: "rgba(255,255,255,0.35)", textTransform: "uppercase",
+        color: "#FFFFFF", textTransform: "uppercase",
       }}>
         {label}
       </span>
@@ -333,14 +333,14 @@ function MarketRow({
       <div style={{ textAlign: "center" }}>
         <span style={{
           fontSize: 14, fontWeight: 700,
-          color: awayHasEdge ? edgeColor(awayEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: awayHasEdge ? edgeColor(awayEdge!.edge) : "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {awayTop}
         </span>
         {awayBot && (
-          <span style={{ fontSize: 10, color: awayHasEdge ? edgeColor(awayEdge!.edge) : "rgba(255,255,255,0.4)", display: "block", marginTop: 1 }}>
+          <span style={{ fontSize: 10, color: awayHasEdge ? edgeColor(awayEdge!.edge) : "#FFFFFF", display: "block", marginTop: 1 }}>
             {awayBot}
           </span>
         )}
@@ -354,22 +354,22 @@ function MarketRow({
       {/* Model center */}
       <div style={{
         textAlign: "center",
-        background: "rgba(255,255,255,0.05)",
+        background: "#000000",
         borderRadius: 5,
         padding: "5px 4px",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: "1px solid #FFFFFF",
       }}>
         <span style={{
           fontSize: 13, fontWeight: 800,
-          color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: "#45E0A8",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.1,
         }}>
           {modelTop}
         </span>
         {modelBot && (
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", display: "block", marginTop: 2 }}>
+          <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginTop: 2 }}>
             {modelBot}
           </span>
         )}
@@ -379,14 +379,14 @@ function MarketRow({
       <div style={{ textAlign: "center" }}>
         <span style={{
           fontSize: 14, fontWeight: 700,
-          color: homeHasEdge ? edgeColor(homeEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: homeHasEdge ? edgeColor(homeEdge!.edge) : "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {homeTop}
         </span>
         {homeBot && (
-          <span style={{ fontSize: 10, color: homeHasEdge ? edgeColor(homeEdge!.edge) : "rgba(255,255,255,0.4)", display: "block", marginTop: 1 }}>
+          <span style={{ fontSize: 10, color: homeHasEdge ? edgeColor(homeEdge!.edge) : "#FFFFFF", display: "block", marginTop: 1 }}>
             {homeBot}
           </span>
         )}
@@ -443,26 +443,26 @@ function TotalRow({
       gridTemplateColumns: "36px 1fr 96px 1fr",
       alignItems: "center",
       padding: "7px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       {/* Label */}
       <span style={{
         fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
-        color: "rgba(255,255,255,0.35)", textTransform: "uppercase",
+        color: "#FFFFFF", textTransform: "uppercase",
       }}>
         TOT
       </span>
 
       {/* Over (away side) */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", display: "block", marginBottom: 1 }}>
+        <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginBottom: 1 }}>
           O {bookLine ?? "—"}
         </span>
         <span style={{
           fontSize: 14, fontWeight: 700,
-          color: overHasEdge ? edgeColor(overEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: overHasEdge ? edgeColor(overEdge!.edge) : "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {fmtOdds(bookOverOdds)}
@@ -477,15 +477,15 @@ function TotalRow({
       {/* Model center */}
       <div style={{
         textAlign: "center",
-        background: "rgba(255,255,255,0.05)",
+        background: "#000000",
         borderRadius: 5,
         padding: "5px 4px",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: "1px solid #FFFFFF",
       }}>
         <span style={{
           fontSize: 10, fontWeight: 700,
-          color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: "#45E0A8",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.2,
         }}>
@@ -493,8 +493,8 @@ function TotalRow({
         </span>
         <span style={{
           fontSize: 12, fontWeight: 800,
-          color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: "#45E0A8",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.2,
         }}>
@@ -503,8 +503,8 @@ function TotalRow({
         {projTotStr && (
           <span style={{
             fontSize: 9, fontWeight: 700,
-            color: "#a3e8b0",
-            fontFamily: "'Barlow Condensed', sans-serif",
+            color: "#45E0A8",
+            fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             display: "block",
             lineHeight: 1.2,
             marginTop: 1,
@@ -515,7 +515,7 @@ function TotalRow({
         {showWeather && weatherDelta != null && (
           <span style={{
             fontSize: 8,
-            color: weatherDelta > 0 ? "#f59e0b" : "#60a5fa",
+            color: weatherDelta > 0 ? "#FFFFFF" : "#FFFFFF",
             display: "block",
             marginTop: 1,
             letterSpacing: "0.04em",
@@ -524,7 +524,7 @@ function TotalRow({
           </span>
         )}
         {(modelOverOdds || modelUnderOdds) && (
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginTop: 2 }}>
+          <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginTop: 2 }}>
             O {fmtOdds(modelOverOdds)} / U {fmtOdds(modelUnderOdds)}
           </span>
         )}
@@ -532,13 +532,13 @@ function TotalRow({
 
       {/* Under (home side) */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", display: "block", marginBottom: 1 }}>
+        <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginBottom: 1 }}>
           U {bookLine ?? "—"}
         </span>
         <span style={{
           fontSize: 14, fontWeight: 700,
-          color: underHasEdge ? edgeColor(underEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: underHasEdge ? edgeColor(underEdge!.edge) : "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {fmtOdds(bookUnderOdds)}
@@ -580,13 +580,13 @@ function I1BoxRow({
       gridTemplateColumns: "1fr 80px 1fr",
       gap: 6,
       padding: "8px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid #FFFFFF",
       alignItems: "stretch",
     }}>
       {/* Away I1 box */}
       <div style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "#000000",
+        border: "1px solid #FFFFFF",
         borderRadius: 5,
         padding: "6px 6px",
         textAlign: "center",
@@ -596,14 +596,14 @@ function I1BoxRow({
         </span>
         <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
           <div>
-            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>EXP</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 8, color: "#FFFFFF", display: "block" }}>EXP</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {awayI1Exp != null ? awayI1Exp.toFixed(3) : "—"}
             </span>
           </div>
           <div>
-            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>P(≥1)</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 8, color: "#FFFFFF", display: "block" }}>P(≥1)</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {awayI1PScores != null ? fmtPct(awayI1PScores * 100) : "—"}
             </span>
           </div>
@@ -612,8 +612,8 @@ function I1BoxRow({
 
       {/* Center: P(NRFI) */}
       <div style={{
-        background: "rgba(57,255,20,0.07)",
-        border: "1px solid rgba(57,255,20,0.2)",
+        background: "transparent",
+        border: "1px solid #45E0A8",
         borderRadius: 5,
         padding: "6px 4px",
         textAlign: "center",
@@ -622,16 +622,16 @@ function I1BoxRow({
         justifyContent: "center",
         alignItems: "center",
       }}>
-        <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", display: "block", marginBottom: 2 }}>P(NRFI)</span>
-        <span style={{ fontSize: 16, fontWeight: 900, color: "#39FF14", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 8, color: "#FFFFFF", display: "block", marginBottom: 2 }}>P(NRFI)</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {pNeitherI1 != null ? fmtPct(pNeitherI1 * 100) : "—"}
         </span>
       </div>
 
       {/* Home I1 box */}
       <div style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.08)",
+        background: "#000000",
+        border: "1px solid #FFFFFF",
         borderRadius: 5,
         padding: "6px 6px",
         textAlign: "center",
@@ -641,14 +641,14 @@ function I1BoxRow({
         </span>
         <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
           <div>
-            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>EXP</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 8, color: "#FFFFFF", display: "block" }}>EXP</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {homeI1Exp != null ? homeI1Exp.toFixed(3) : "—"}
             </span>
           </div>
           <div>
-            <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>P(≥1)</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 8, color: "#FFFFFF", display: "block" }}>P(≥1)</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {homeI1PScores != null ? fmtPct(homeI1PScores * 100) : "—"}
             </span>
           </div>
@@ -679,13 +679,13 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
       gridTemplateColumns: "36px 1fr 1fr 1fr",
       alignItems: "center",
       padding: "8px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.05)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       {/* Label */}
       <span style={{
         fontSize: 10, fontWeight: 900, letterSpacing: "0.06em",
-        color: isNrfi ? "#39FF14" : "#FF6B35",
+        color: isNrfi ? "#45E0A8" : "#FFFFFF",
         textTransform: "uppercase",
       }}>
         {label}
@@ -693,11 +693,11 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
 
       {/* AN Odds */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 2 }}>AN ODDS</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 2 }}>AN ODDS</span>
         <span style={{
           fontSize: 14, fontWeight: 700,
-          color: "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
         }}>
           {fmtOdds(bookOdds)}
         </span>
@@ -706,16 +706,16 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
       {/* Model % + Model Odds */}
       <div style={{
         textAlign: "center",
-        background: "rgba(255,255,255,0.05)",
+        background: "#000000",
         borderRadius: 5,
         padding: "5px 4px",
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: "1px solid #FFFFFF",
       }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 1 }}>MODEL %</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 1 }}>MODEL %</span>
         <span style={{
           fontSize: 15, fontWeight: 900,
-          color: isNrfi ? "#39FF14" : "#FF6B35",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          color: isNrfi ? "#45E0A8" : "#FFFFFF",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.1,
         }}>
@@ -723,7 +723,7 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
           {modelPct != null ? fmtPct(modelPct) : "—"}
         </span>
         {modelOdds && (
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", display: "block", marginTop: 2 }}>
+          <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginTop: 2 }}>
             {fmtOdds(modelOdds)}
           </span>
         )}
@@ -731,27 +731,27 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
 
       {/* Edge / EV */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 2 }}>EDGE · EV</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 2 }}>EDGE · EV</span>
         {edgeEV ? (
           <>
             <span style={{
               fontSize: 13, fontWeight: 700,
-              color: hasEdge ? edgeColor(edgeEV.edge) : "rgba(255,255,255,0.45)",
-              fontFamily: "'Barlow Condensed', sans-serif",
+              color: hasEdge ? edgeColor(edgeEV.edge) : "#FFFFFF",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               display: "block",
             }}>
               {fmtEdge(edgeEV.edge)}
             </span>
             <span style={{
               fontSize: 10,
-              color: hasEdge ? edgeColor(edgeEV.edge) : "rgba(255,255,255,0.3)",
+              color: hasEdge ? edgeColor(edgeEV.edge) : "#FFFFFF",
               display: "block", marginTop: 1,
             }}>
               {fmtEV(edgeEV.ev)}
             </span>
           </>
         ) : (
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>—</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>—</span>
         )}
       </div>
     </div>
@@ -820,19 +820,19 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
 
   // Gradient bar
   const gradientStyle = {
-    background: `linear-gradient(90deg, ${awayColor}66 0%, transparent 45%, transparent 55%, ${homeColor}66 100%)`,
+    background: "#45E0A8",
     height: 3,
     width: "100%",
   };
 
   return (
     <div style={{
-      background: "#0f0f0f",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "#000000",
+      border: "1px solid #FFFFFF",
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
-      fontFamily: "'Barlow', 'Barlow Condensed', sans-serif",
+      fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
       {/* Gradient bar */}
       <div style={gradientStyle} />
@@ -841,16 +841,16 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "center",
         padding: "8px 10px 7px",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        borderBottom: "1px solid #FFFFFF",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {awayLogo && <img src={awayLogo} alt={game.awayTeam} style={{ width: 24, height: 24, objectFit: "contain" }} />}
-          <span style={{ fontSize: 15, fontWeight: 800, color: "rgba(255,255,255,0.92)", letterSpacing: "0.03em" }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.03em" }}>
             {awayName}
           </span>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "0 2px" }}>@</span>
+          <span style={{ fontSize: 12, color: "#FFFFFF", margin: "0 2px" }}>@</span>
           {homeLogo && <img src={homeLogo} alt={game.homeTeam} style={{ width: 24, height: 24, objectFit: "contain" }} />}
-          <span style={{ fontSize: 15, fontWeight: 800, color: "rgba(255,255,255,0.92)", letterSpacing: "0.03em" }}>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.03em" }}>
             {homeName}
           </span>
         </div>
@@ -858,14 +858,14 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
           {nrfiPass && (
             <span style={{
               fontSize: 8, fontWeight: 900, letterSpacing: "0.08em",
-              background: "rgba(57,255,20,0.12)", color: "#39FF14",
-              border: "1px solid rgba(57,255,20,0.3)",
+              background: "transparent", color: "#45E0A8",
+              border: "1px solid #45E0A8",
               borderRadius: 3, padding: "2px 5px",
             }}>
               NRFI {nrfiSignal != null ? `${(nrfiSignal * 100).toFixed(1)}%` : "✓"}
             </span>
           )}
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
+          <span style={{ fontSize: 11, color: "#FFFFFF", fontWeight: 600 }}>
             {formatTime(game.startTimeEst)}
           </span>
         </div>
@@ -874,10 +874,10 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
       {/* ── F5 SECTION HEADER ── */}
       <div style={{
         padding: "5px 10px 4px",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        background: "rgba(57,255,20,0.03)",
+        borderBottom: "1px solid #FFFFFF",
+        background: "transparent",
       }}>
-        <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", color: "#39FF14", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", color: "#45E0A8", textTransform: "uppercase" }}>
           F5 · ACTION NETWORK
         </span>
       </div>
@@ -894,8 +894,8 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
           homeColor={homeColor}
         />
       ) : (
-        <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", fontStyle: "italic" }}>
+        <div style={{ padding: "8px 10px", borderBottom: "1px solid #FFFFFF" }}>
+          <span style={{ fontSize: 10, color: "#FFFFFF", fontStyle: "italic" }}>
             Inning distribution pending model run
           </span>
         </div>
@@ -912,13 +912,13 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
             gap: 4,
           }}>
             <span />
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {game.awayTeam}
             </span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               MODEL
             </span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {game.homeTeam}
             </span>
           </div>
@@ -940,27 +940,27 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
               alignItems: "center",
               justifyContent: "space-between",
               padding: "4px 10px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: "rgba(255,165,0,0.04)",
+              borderBottom: "1px solid #FFFFFF",
+              background: "transparent",
             }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,165,0,0.75)", letterSpacing: "0.08em", minWidth: 36 }}>PUSH</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.08em", minWidth: 36 }}>PUSH</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, justifyContent: "center" }}>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.40)", letterSpacing: "0.04em" }}>P(TIE)</span>
+                <span style={{ fontSize: 10, color: "#FFFFFF", letterSpacing: "0.04em" }}>P(TIE)</span>
                 <span style={{
                   fontSize: 13,
                   fontWeight: 800,
-                  color: "rgba(255,165,0,0.92)",
+                  color: "#FFFFFF",
                   fontVariantNumeric: "tabular-nums",
                 }}>
                   {(modelF5PushPct * 100).toFixed(1)}%
                 </span>
                 {modelF5PushRaw != null && (
-                  <span style={{ fontSize: 9, color: "rgba(255,255,255,0.22)", marginLeft: 2 }}>
+                  <span style={{ fontSize: 9, color: "#FFFFFF", marginLeft: 2 }}>
                     (sim: {(modelF5PushRaw * 100).toFixed(1)}%)
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: 9, color: "rgba(255,165,0,0.40)", letterSpacing: "0.06em" }}>3-WAY</span>
+              <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.06em" }}>3-WAY</span>
             </div>
           )}
 
@@ -992,19 +992,19 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
           />
         </>
       ) : (
-        <div style={{ padding: "10px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>F5 odds not yet posted</span>
+        <div style={{ padding: "10px", textAlign: "center", borderBottom: "1px solid #FFFFFF" }}>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>F5 odds not yet posted</span>
         </div>
       )}
 
       {/* ── NRFI / YRFI SECTION HEADER ── */}
       <div style={{
         padding: "5px 10px 4px",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
-        background: "rgba(255,107,53,0.03)",
+        borderBottom: "1px solid #FFFFFF",
+        borderTop: "1px solid #FFFFFF",
+        background: "transparent",
       }}>
-        <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", color: "#FF6B35", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", color: "#FFFFFF", textTransform: "uppercase" }}>
           NRFI / YRFI · ACTION NETWORK
         </span>
       </div>
@@ -1035,13 +1035,13 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
             gap: 4,
           }}>
             <span />
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               AN ODDS
             </span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               MODEL
             </span>
-            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 9, color: "#FFFFFF", textAlign: "center", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               EDGE · EV
             </span>
           </div>
@@ -1061,13 +1061,13 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
         </>
       ) : (
         <div style={{ padding: "10px", textAlign: "center" }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>NRFI/YRFI odds not yet posted</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>NRFI/YRFI odds not yet posted</span>
         </div>
       )}
 
       {/* Footer */}
-      <div style={{ padding: "4px 10px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.16)", letterSpacing: "0.04em" }}>
+      <div style={{ padding: "4px 10px", borderTop: "1px solid #FFFFFF" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.04em" }}>
           F5 + NRFI/YRFI: Action Network · Model: 400K Monte Carlo + 3yr Bayesian priors · Edge ≥±3%
         </span>
       </div>
@@ -1121,31 +1121,31 @@ function computeEdgeV3(modelPct: number | null, bookOddsStr: string | null | und
   return { edge, ev, roiPct, barWidth, isPositive: edge >= 0, hasEdge: Math.abs(edge) >= 0.03 };
 }
 function edgeColorV3(e: EdgeV3 | null): string {
-  if (!e || !e.hasEdge) return '#3a3f3c';
-  return e.isPositive ? '#39FF14' : '#ff5555';
+  if (!e || !e.hasEdge) return '#FFFFFF';
+  return e.isPositive ? '#45E0A8' : '#FFFFFF';
 }
 
 // ─── Color helpers (v3) ───────────────────────────────────────────────────────
 function projColorV3(exp: number): string {
-  if (exp <= 0.35) return '#39FF14';
-  if (exp <= 0.45) return '#aee87a';
-  return '#ff5555';
+  if (exp <= 0.35) return '#45E0A8';
+  if (exp <= 0.45) return '#FFFFFF';
+  return '#FFFFFF';
 }
 function scoreColorV3(score: number): string {
-  if (score <= 2.5) return '#39FF14';
-  if (score <= 4.5) return '#aee87a';
-  return '#ff5555';
+  if (score <= 2.5) return '#45E0A8';
+  if (score <= 4.5) return '#FFFFFF';
+  return '#FFFFFF';
 }
 function inningBoxStyleV3(exp: number): { bg: string; border: string; color: string } {
   const r = Math.round(exp);
-  if (r === 0) return { bg: '#161918', border: '#1e2320', color: '#2a2e2c' };
-  if (r === 1) return { bg: 'rgba(57,255,20,.12)', border: 'rgba(57,255,20,.25)', color: '#39FF14' };
-  return { bg: 'rgba(255,85,85,.12)', border: 'rgba(255,85,85,.25)', color: '#ff5555' };
+  if (r === 0) return { bg: '#000000', border: '#FFFFFF', color: '#FFFFFF' };
+  if (r === 1) return { bg: 'transparent', border: '#45E0A8', color: '#45E0A8' };
+  return { bg: 'transparent', border: '#FFFFFF', color: '#FFFFFF' };
 }
 function totalBadgeStyleV3(total: number): { bg: string; border: string; color: string } {
-  if (total <= 2) return { bg: 'rgba(57,255,20,.08)', border: 'rgba(57,255,20,.18)', color: '#39FF14' };
-  if (total <= 4) return { bg: '#161918', border: '#1e2320', color: '#aee87a' };
-  return { bg: 'rgba(255,85,85,.08)', border: 'rgba(255,85,85,.18)', color: '#ff5555' };
+  if (total <= 2) return { bg: 'transparent', border: '#45E0A8', color: '#45E0A8' };
+  if (total <= 4) return { bg: '#000000', border: '#FFFFFF', color: '#FFFFFF' };
+  return { bg: 'transparent', border: '#FFFFFF', color: '#FFFFFF' };
 }
 
 // ─── NRFI badge ───────────────────────────────────────────────────────────────
@@ -1233,15 +1233,15 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
 
   const td: React.CSSProperties = {
     padding: '10px 10px',
-    borderBottom: expanded ? 'none' : '0.5px solid #161918',
+    borderBottom: expanded ? 'none' : '0.5px solid #FFFFFF',
     verticalAlign: 'middle',
-    color: '#e8ede9',
+    color: '#FFFFFF',
   };
   const tdExpanded: React.CSSProperties = {
     padding: '0 10px 10px',
-    borderBottom: '0.5px solid #161918',
+    borderBottom: '0.5px solid #FFFFFF',
     verticalAlign: 'top',
-    color: '#e8ede9',
+    color: '#FFFFFF',
   };
 
   return (
@@ -1249,23 +1249,23 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
     <tr
       onClick={() => hasInnData && setExpanded(e => !e)}
       style={{ cursor: hasInnData ? 'pointer' : 'default' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = '#111412'; }}
+      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
     >
       {/* Matchup */}
       <td style={td}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#e8ede9', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
               {game.awayTeam} @ {game.homeTeam}
             </div>
-            <div style={{ fontSize: 10, color: '#3a3f3c', marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: '#FFFFFF', marginTop: 2 }}>
               {formatTimeV3(game.startTimeEst)}
               {(game as CheatSheetGame & { venue?: string | null }).venue ? ` · ${(game as CheatSheetGame & { venue?: string | null }).venue}` : ''}
             </div>
           </div>
           {hasInnData && (
-            <span style={{ fontSize: 9, color: '#2e3330', marginLeft: 4, flexShrink: 0 }}>
+            <span style={{ fontSize: 9, color: '#FFFFFF', marginLeft: 4, flexShrink: 0 }}>
               {expanded ? '\u25b2' : '\u25bc'}
             </span>
           )}
@@ -1273,13 +1273,13 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
       </td>
       {/* Away Starter */}
       <td style={td}>
-        <div style={{ fontSize: 12, color: '#c4cac5', whiteSpace: 'nowrap' }}>{awayPitcherName}</div>
-        <div style={{ fontSize: 10, color: '#3a3f3c', marginTop: 1 }}>{awayPitcherEra ? `ERA ${awayPitcherEra}` : '\u2014'}</div>
+        <div style={{ fontSize: 12, color: '#FFFFFF', whiteSpace: 'nowrap' }}>{awayPitcherName}</div>
+        <div style={{ fontSize: 10, color: '#FFFFFF', marginTop: 1 }}>{awayPitcherEra ? `ERA ${awayPitcherEra}` : '\u2014'}</div>
       </td>
       {/* Home Starter */}
       <td style={td}>
-        <div style={{ fontSize: 12, color: '#c4cac5', whiteSpace: 'nowrap' }}>{homePitcherName}</div>
-        <div style={{ fontSize: 10, color: '#3a3f3c', marginTop: 1 }}>{homePitcherEra ? `ERA ${homePitcherEra}` : '\u2014'}</div>
+        <div style={{ fontSize: 12, color: '#FFFFFF', whiteSpace: 'nowrap' }}>{homePitcherName}</div>
+        <div style={{ fontSize: 10, color: '#FFFFFF', marginTop: 1 }}>{homePitcherEra ? `ERA ${homePitcherEra}` : '\u2014'}</div>
       </td>
       {/* Away I1 Proj - hundredths precision */}
       <td style={{ ...td, textAlign: 'center' }}>
@@ -1287,10 +1287,10 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
           ? (
             <div>
               <span style={{ fontSize: 15, fontWeight: 700, color: projColorV3(awayI1), fontVariantNumeric: 'tabular-nums' }}>{awayI1.toFixed(2)}</span>
-              <div style={{ fontSize: 8, color: '#3a3f3c', marginTop: 1, letterSpacing: '.04em' }}>AWAY I1</div>
+              <div style={{ fontSize: 8, color: '#FFFFFF', marginTop: 1, letterSpacing: '.04em' }}>AWAY I1</div>
             </div>
           )
-          : <span style={{ color: '#3a3f3c' }}>\u2014</span>}
+          : <span style={{ color: '#FFFFFF' }}>\u2014</span>}
       </td>
       {/* Home I1 Proj - hundredths precision */}
       <td style={{ ...td, textAlign: 'center' }}>
@@ -1298,47 +1298,47 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
           ? (
             <div>
               <span style={{ fontSize: 15, fontWeight: 700, color: projColorV3(homeI1), fontVariantNumeric: 'tabular-nums' }}>{homeI1.toFixed(2)}</span>
-              <div style={{ fontSize: 8, color: '#3a3f3c', marginTop: 1, letterSpacing: '.04em' }}>HOME I1</div>
+              <div style={{ fontSize: 8, color: '#FFFFFF', marginTop: 1, letterSpacing: '.04em' }}>HOME I1</div>
             </div>
           )
-          : <span style={{ color: '#3a3f3c' }}>\u2014</span>}
+          : <span style={{ color: '#FFFFFF' }}>\u2014</span>}
       </td>
       {/* Badge + NRFI% hundredths */}
       <td style={{ ...td, textAlign: 'center' }}>
         {badge === 'NRFI' && (
           <div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: 'rgba(57,255,20,.09)', color: '#39FF14', border: '1px solid rgba(57,255,20,.22)' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#39FF14', flexShrink: 0, display: 'inline-block' }} />NRFI
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: 'transparent', color: '#45E0A8', border: '1px solid #45E0A8' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#45E0A8', flexShrink: 0, display: 'inline-block' }} />NRFI
             </span>
             {nrfiPctDisplay && (
-              <div style={{ fontSize: 9, color: '#39FF14', marginTop: 3, fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{nrfiPctDisplay}%</div>
+              <div style={{ fontSize: 9, color: '#45E0A8', marginTop: 3, fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{nrfiPctDisplay}%</div>
             )}
           </div>
         )}
         {badge === 'YRFI' && (
           <div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: 'rgba(255,85,85,.09)', color: '#ff5555', border: '1px solid rgba(255,85,85,.22)' }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ff5555', flexShrink: 0, display: 'inline-block' }} />YRFI
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: 'transparent', color: '#FFFFFF', border: '1px solid #FFFFFF' }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FFFFFF', flexShrink: 0, display: 'inline-block' }} />YRFI
             </span>
             {yrfiPctDisplay && (
-              <div style={{ fontSize: 9, color: '#ff5555', marginTop: 3, fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{yrfiPctDisplay}%</div>
+              <div style={{ fontSize: 9, color: '#FFFFFF', marginTop: 3, fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>{yrfiPctDisplay}%</div>
             )}
           </div>
         )}
         {badge === 'Skip' && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: '#111412', color: '#3a3f3c', border: '1px solid #1e2320' }}>Skip</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 500, padding: '4px 9px', borderRadius: 4, whiteSpace: 'nowrap', background: '#000000', color: '#FFFFFF', border: '1px solid #FFFFFF' }}>Skip</span>
         )}
       </td>
       {/* Book / Model */}
       <td style={td}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, minWidth: 160 }}>
-          <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '7px 10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: '#7a8078', marginBottom: 2 }}>Book</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#c4cac5' }}>{fmtOddsV3(bookOdds)}</div>
+          <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '7px 10px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 2 }}>Book</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#FFFFFF' }}>{fmtOddsV3(bookOdds)}</div>
           </div>
-          <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '7px 10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: '#7a8078', marginBottom: 2 }}>Model</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: nrfiEdge?.hasEdge ? '#39FF14' : '#7a8078' }}>{fmtOddsV3(modelOdds)}</div>
+          <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '7px 10px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 2 }}>Model</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: nrfiEdge?.hasEdge ? '#45E0A8' : '#FFFFFF' }}>{fmtOddsV3(modelOdds)}</div>
           </div>
         </div>
       </td>
@@ -1346,14 +1346,14 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
       <td style={{ ...td, textAlign: 'center' }}>
         {nrfiEdge?.hasEdge ? (
           <div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: nrfiEdge.isPositive ? '#39FF14' : '#ff5555' }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: nrfiEdge.isPositive ? '#45E0A8' : '#FFFFFF' }}>
               {nrfiEdge.isPositive ? '+' : ''}{nrfiEdge.roiPct.toFixed(1)}%
             </div>
-            <div style={{ height: 2, background: '#1e2320', borderRadius: 1, marginTop: 4 }}>
-              <div style={{ height: 2, borderRadius: 1, width: `${nrfiEdge.barWidth}%`, background: nrfiEdge.isPositive ? '#39FF14' : '#ff5555' }} />
+            <div style={{ height: 2, background: '#000000', borderRadius: 1, marginTop: 4 }}>
+              <div style={{ height: 2, borderRadius: 1, width: `${nrfiEdge.barWidth}%`, background: nrfiEdge.isPositive ? '#45E0A8' : '#FFFFFF' }} />
             </div>
           </div>
-        ) : <div style={{ fontSize: 14, fontWeight: 500, color: '#3a3f3c' }}>\u2014</div>}
+        ) : <div style={{ fontSize: 14, fontWeight: 500, color: '#FFFFFF' }}>\u2014</div>}
       </td>
     </tr>
     {/* Per-inning linescore expansion row */}
@@ -1361,18 +1361,18 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
       <tr>
         <td colSpan={8} style={tdExpanded}>
           <div style={{
-            background: '#0d100e',
-            border: '1px solid #1a1d1b',
+            background: '#000000',
+            border: '1px solid #FFFFFF',
             borderRadius: 6,
             padding: '10px 12px',
             marginBottom: 2,
           }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#2e3330' }}>
+              <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>
                 Per-Inning Projection (I1-I9)
               </span>
-              <span style={{ fontSize: 8, color: '#2e3330' }}>
+              <span style={{ fontSize: 8, color: '#FFFFFF' }}>
                 NRFI%: {nrfiPctDisplay ?? '\u2014'} \u00b7 YRFI%: {yrfiPctDisplay ?? '\u2014'}
               </span>
             </div>
@@ -1391,14 +1391,14 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
                     padding: '5px 3px 4px',
                     textAlign: 'center',
                   }}>
-                    <div style={{ fontSize: 7, fontWeight: 800, letterSpacing: '.08em', color: '#2e3330', marginBottom: 3, textTransform: 'uppercase' as const }}>
+                    <div style={{ fontSize: 7, fontWeight: 800, letterSpacing: '.08em', color: '#FFFFFF', marginBottom: 3, textTransform: 'uppercase' as const }}>
                       I{i + 1}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7ab87e', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                       {aVal.toFixed(2)}
                     </div>
-                    <div style={{ width: '60%', height: 1, background: 'rgba(255,255,255,0.06)', margin: '3px auto' }} />
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#7a9ab8', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                    <div style={{ width: '60%', height: 1, background: '#FFFFFF', margin: '3px auto' }} />
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                       {hVal.toFixed(2)}
                     </div>
                     <div style={{ fontSize: 8, fontWeight: 600, color: s.color, marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
@@ -1409,15 +1409,15 @@ function NrfiTableRowV3({ game, lineup }: { game: CheatSheetGame; lineup?: Cheat
               })}
             </div>
             {/* Totals row */}
-            <div style={{ display: 'flex', gap: 16, marginTop: 8, paddingTop: 6, borderTop: '1px solid #1a1d1b' }}>
-              <span style={{ fontSize: 9, color: '#3a3f3c' }}>
-                Away total: <span style={{ color: '#7ab87e', fontWeight: 700 }}>{awayInnExp.reduce((a, b) => a + b, 0).toFixed(2)}</span>
+            <div style={{ display: 'flex', gap: 16, marginTop: 8, paddingTop: 6, borderTop: '1px solid #FFFFFF' }}>
+              <span style={{ fontSize: 9, color: '#FFFFFF' }}>
+                Away total: <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{awayInnExp.reduce((a, b) => a + b, 0).toFixed(2)}</span>
               </span>
-              <span style={{ fontSize: 9, color: '#3a3f3c' }}>
-                Home total: <span style={{ color: '#7a9ab8', fontWeight: 700 }}>{homeInnExp.reduce((a, b) => a + b, 0).toFixed(2)}</span>
+              <span style={{ fontSize: 9, color: '#FFFFFF' }}>
+                Home total: <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{homeInnExp.reduce((a, b) => a + b, 0).toFixed(2)}</span>
               </span>
-              <span style={{ fontSize: 9, color: '#3a3f3c' }}>
-                Game total: <span style={{ color: '#c4cac5', fontWeight: 700 }}>{(awayInnExp.reduce((a, b) => a + b, 0) + homeInnExp.reduce((a, b) => a + b, 0)).toFixed(2)}</span>
+              <span style={{ fontSize: 9, color: '#FFFFFF' }}>
+                Game total: <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{(awayInnExp.reduce((a, b) => a + b, 0) + homeInnExp.reduce((a, b) => a + b, 0)).toFixed(2)}</span>
               </span>
             </div>
           </div>
@@ -1562,11 +1562,11 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
   const pitcherLine = [awayPitcherName, homePitcherName].filter(Boolean).join(' vs ');
 
   return (
-    <div style={{ background: '#111412', border: '1px solid #1a1d1b', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
+    <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 8, marginBottom: 8, overflow: 'hidden' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', borderBottom: '1px solid #1a1d1b', gap: 10, flexWrap: 'wrap' as const }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: '#e8ede9' }}>{game.awayTeam} @ {game.homeTeam}</span>
-        <span style={{ fontSize: 10, color: '#3a3f3c' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '9px 14px', borderBottom: '1px solid #FFFFFF', gap: 10, flexWrap: 'wrap' as const }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: '#FFFFFF' }}>{game.awayTeam} @ {game.homeTeam}</span>
+        <span style={{ fontSize: 10, color: '#FFFFFF' }}>
           {formatTimeV3(game.startTimeEst)}
           {(game as CheatSheetGame & { venue?: string | null }).venue ? ` · ${(game as CheatSheetGame & { venue?: string | null }).venue}` : ''}
           {pitcherLine ? ` · ${pitcherLine}` : ''}
@@ -1577,16 +1577,16 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr' }}>
 
         {/* LEFT: Proj runs I1–I5 */}
-        <div style={{ padding: '10px 14px 12px', borderRight: '1px solid #1a1d1b' }}>
-          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#3a3f3c', marginBottom: 8 }}>
+        <div style={{ padding: '10px 14px 12px', borderRight: '1px solid #FFFFFF' }}>
+          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF', marginBottom: 8 }}>
             Proj runs — innings 1–5
           </div>
           {/* Away */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: '#7a8078', width: 38, flexShrink: 0 }}>{game.awayTeam}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: '#FFFFFF', width: 38, flexShrink: 0 }}>{game.awayTeam}</span>
             <div style={{ display: 'flex', gap: 3 }}>
               {(awayInnExp ?? Array(5).fill(null)).slice(0, 5).map((exp: number | null, i: number) => {
-                const s = exp != null ? inningBoxStyleV3(exp) : { bg: '#161918', border: '#1e2320', color: '#2a2e2c' };
+                const s = exp != null ? inningBoxStyleV3(exp) : { bg: '#000000', border: '#FFFFFF', color: '#FFFFFF' };
                 return (
                   <div key={i} style={{ width: 22, height: 22, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>
                     {exp != null ? Math.round(exp) : '—'}
@@ -1602,10 +1602,10 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
           </div>
           {/* Home */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 500, color: '#7a8078', width: 38, flexShrink: 0 }}>{game.homeTeam}</span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: '#FFFFFF', width: 38, flexShrink: 0 }}>{game.homeTeam}</span>
             <div style={{ display: 'flex', gap: 3 }}>
               {(homeInnExp ?? Array(5).fill(null)).slice(0, 5).map((exp: number | null, i: number) => {
-                const s = exp != null ? inningBoxStyleV3(exp) : { bg: '#161918', border: '#1e2320', color: '#2a2e2c' };
+                const s = exp != null ? inningBoxStyleV3(exp) : { bg: '#000000', border: '#FFFFFF', color: '#FFFFFF' };
                 return (
                   <div key={i} style={{ width: 22, height: 22, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, flexShrink: 0, background: s.bg, border: `1px solid ${s.border}`, color: s.color }}>
                     {exp != null ? Math.round(exp) : '—'}
@@ -1622,24 +1622,24 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
         </div>
 
         {/* CENTER: F5 projection + Win Probability row */}
-        <div style={{ padding: '10px 18px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid #1a1d1b', minWidth: 160 }}>
-          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#3a3f3c' }}>F5 projection</div>
+        <div style={{ padding: '10px 18px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 6, borderRight: '1px solid #FFFFFF', minWidth: 160 }}>
+          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>F5 projection</div>
 
           {/* Score display row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: awayInfo?.primaryColor ? `${awayInfo.primaryColor}22` : '#1a1d1b', border: `1px solid ${awayInfo?.primaryColor ?? '#222523'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500, color: awayInfo?.primaryColor ?? '#7a8078', flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: awayInfo?.primaryColor ? `${awayInfo.primaryColor}22` : '#000000', border: `1px solid ${awayInfo?.primaryColor ?? '#FFFFFF'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500, color: awayInfo?.primaryColor ?? '#FFFFFF', flexShrink: 0 }}>
               {game.awayTeam}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 26, fontWeight: 500, lineHeight: 1, color: modelF5Away != null ? scoreColorV3(modelF5Away) : '#7a8078' }}>
+              <span style={{ fontSize: 26, fontWeight: 500, lineHeight: 1, color: modelF5Away != null ? scoreColorV3(modelF5Away) : '#FFFFFF' }}>
                 {modelF5Away != null ? modelF5Away.toFixed(1) : '—'}
               </span>
-              <span style={{ fontSize: 14, color: '#2e3330' }}>–</span>
-              <span style={{ fontSize: 26, fontWeight: 500, lineHeight: 1, color: modelF5Home != null ? scoreColorV3(modelF5Home) : '#7a8078' }}>
+              <span style={{ fontSize: 14, color: '#FFFFFF' }}>–</span>
+              <span style={{ fontSize: 26, fontWeight: 500, lineHeight: 1, color: modelF5Home != null ? scoreColorV3(modelF5Home) : '#FFFFFF' }}>
                 {modelF5Home != null ? modelF5Home.toFixed(1) : '—'}
               </span>
             </div>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: homeInfo?.primaryColor ? `${homeInfo.primaryColor}22` : '#1a1d1b', border: `1px solid ${homeInfo?.primaryColor ?? '#222523'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500, color: homeInfo?.primaryColor ?? '#7a8078', flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: homeInfo?.primaryColor ? `${homeInfo.primaryColor}22` : '#000000', border: `1px solid ${homeInfo?.primaryColor ?? '#FFFFFF'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500, color: homeInfo?.primaryColor ?? '#FFFFFF', flexShrink: 0 }}>
               {game.homeTeam}
             </div>
           </div>
@@ -1651,8 +1651,8 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              background: '#0e1110',
-              border: '1px solid #1a1d1b',
+              background: '#000000',
+              border: '1px solid #FFFFFF',
               borderRadius: 6,
               padding: '5px 8px',
               width: '100%',
@@ -1660,41 +1660,41 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
             }}>
               {/* Away win% */}
               <div style={{ textAlign: 'center', minWidth: 46 }}>
-                <div style={{ fontSize: 8, color: '#3a3f3c', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>{game.awayTeam}</div>
+                <div style={{ fontSize: 8, color: '#FFFFFF', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>{game.awayTeam}</div>
                 <div style={{
                   fontSize: 13, fontWeight: 600, lineHeight: 1,
                   color: f5AwayWinPct != null && f5HomeWinPct != null && f5AwayWinPct > f5HomeWinPct
-                    ? '#39FF14'
-                    : '#c4cac5',
+                    ? '#45E0A8'
+                    : '#FFFFFF',
                 }}>
                   {f5AwayWinPct != null ? `${f5AwayWinPct.toFixed(1)}%` : '—'}
                 </div>
               </div>
 
               {/* Divider */}
-              <div style={{ width: 1, height: 24, background: '#1e2320', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 24, background: '#FFFFFF', flexShrink: 0 }} />
 
               {/* Push% (three-way derived) */}
               {f5PushPctV3 != null && (
                 <>
                   <div style={{ textAlign: 'center', minWidth: 36 }}>
-                    <div style={{ fontSize: 8, color: '#3a3f3c', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>Push</div>
-                    <div style={{ fontSize: 11, fontWeight: 400, lineHeight: 1, color: '#4a5048' }}>
+                    <div style={{ fontSize: 8, color: '#FFFFFF', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>Push</div>
+                    <div style={{ fontSize: 11, fontWeight: 400, lineHeight: 1, color: '#FFFFFF' }}>
                       {f5PushPctV3.toFixed(1)}%
                     </div>
                   </div>
-                  <div style={{ width: 1, height: 24, background: '#1e2320', flexShrink: 0 }} />
+                  <div style={{ width: 1, height: 24, background: '#FFFFFF', flexShrink: 0 }} />
                 </>
               )}
 
               {/* Home win% */}
               <div style={{ textAlign: 'center', minWidth: 46 }}>
-                <div style={{ fontSize: 8, color: '#3a3f3c', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>{game.homeTeam}</div>
+                <div style={{ fontSize: 8, color: '#FFFFFF', letterSpacing: '.06em', textTransform: 'uppercase' as const, marginBottom: 2 }}>{game.homeTeam}</div>
                 <div style={{
                   fontSize: 13, fontWeight: 600, lineHeight: 1,
                   color: f5HomeWinPct != null && f5AwayWinPct != null && f5HomeWinPct > f5AwayWinPct
-                    ? '#39FF14'
-                    : '#c4cac5',
+                    ? '#45E0A8'
+                    : '#FFFFFF',
                 }}>
                   {f5HomeWinPct != null ? `${f5HomeWinPct.toFixed(1)}%` : '—'}
                 </div>
@@ -1707,27 +1707,27 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
           {hasF5MlEdgeData && (
             <div style={{
               width: '100%',
-              background: '#0a0d0b',
-              border: '1px solid #1a1d1b',
+              background: '#000000',
+              border: '1px solid #FFFFFF',
               borderRadius: 6,
               padding: '6px 8px',
               display: 'flex',
               flexDirection: 'column' as const,
               gap: 4,
             }}>
-              <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#2e3330', textAlign: 'center', marginBottom: 2 }}>F5 ML Edge</div>
+              <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF', textAlign: 'center', marginBottom: 2 }}>F5 ML Edge</div>
               {/* Away row */}
               {f5AwayWinPct != null && noVigAwayImplied != null && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: '#7a8078', minWidth: 28 }}>{game.awayTeam}</span>
-                  <span style={{ fontSize: 9, color: '#4a5048' }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#FFFFFF', minWidth: 28 }}>{game.awayTeam}</span>
+                  <span style={{ fontSize: 9, color: '#FFFFFF' }}>
                     Model {f5AwayWinPct.toFixed(1)}% vs Book {noVigAwayImplied.toFixed(1)}%
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, lineHeight: 1,
                     color: f5AwayHasEdge
-                      ? (f5AwayMlEdgeDelta! > 0 ? '#39FF14' : '#ff5555')
-                      : '#2e3330',
+                      ? (f5AwayMlEdgeDelta! > 0 ? '#45E0A8' : '#FFFFFF')
+                      : '#FFFFFF',
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {f5AwayMlEdgeDelta != null
@@ -1739,15 +1739,15 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
               {/* Home row */}
               {f5HomeWinPct != null && noVigHomeImplied != null && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: '#7a8078', minWidth: 28 }}>{game.homeTeam}</span>
-                  <span style={{ fontSize: 9, color: '#4a5048' }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#FFFFFF', minWidth: 28 }}>{game.homeTeam}</span>
+                  <span style={{ fontSize: 9, color: '#FFFFFF' }}>
                     Model {f5HomeWinPct.toFixed(1)}% vs Book {noVigHomeImplied.toFixed(1)}%
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, lineHeight: 1,
                     color: f5HomeHasEdge
-                      ? (f5HomeMlEdgeDelta! > 0 ? '#39FF14' : '#ff5555')
-                      : '#2e3330',
+                      ? (f5HomeMlEdgeDelta! > 0 ? '#45E0A8' : '#FFFFFF')
+                      : '#FFFFFF',
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {f5HomeMlEdgeDelta != null
@@ -1764,16 +1764,16 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
             <div style={{
               marginTop: 6,
               padding: '7px 10px',
-              background: '#0d100e',
-              border: '1px solid #1a1d1b',
+              background: '#000000',
+              border: '1px solid #FFFFFF',
               borderRadius: 5,
             }}>
               {/* Header row */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#2e3330' }}>FG Total Edge</div>
+                <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>FG Total Edge</div>
                 <span style={{
                   fontSize: 10, fontWeight: 700,
-                  color: fgOuEdge?.hasEdge ? '#39FF14' : '#2e3330',
+                  color: fgOuEdge?.hasEdge ? '#45E0A8' : '#FFFFFF',
                 }}>
                   {fgOuLabel && fgOuEdge ? `${fgOuLabel} ${fgOuEdge.isPositive ? '+' : ''}${fgOuEdge.roiPct.toFixed(1)}%` : '—'}
                 </span>
@@ -1781,35 +1781,35 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
               {/* Three-value comparison: Model Proj | Originated Line | Book */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
                 {/* Model Projection (raw engine output) */}
-                <div style={{ background: '#111412', border: '1px solid #1e2320', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 7, color: '#3a3f3c', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Proj</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: fgProjTotal != null ? '#a3e8b0' : '#3a3f3c', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 7, color: '#FFFFFF', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Proj</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: fgProjTotal != null ? '#45E0A8' : '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>
                     {fgProjTotal != null ? fgProjTotal.toFixed(2) : '—'}
                   </div>
                   {fgWeatherAdj != null && Math.abs(fgWeatherAdj - 1.0) >= 0.005 && (
-                    <div style={{ fontSize: 7, color: fgWeatherAdj > 1.0 ? '#f59e0b' : '#60a5fa', marginTop: 1, letterSpacing: '.04em' }}>
+                    <div style={{ fontSize: 7, color: fgWeatherAdj > 1.0 ? '#FFFFFF' : '#FFFFFF', marginTop: 1, letterSpacing: '.04em' }}>
                       {fgWeatherAdj > 1.0 ? '▲' : '▼'} {((fgWeatherAdj - 1.0) * 100).toFixed(1)}%
                     </div>
                   )}
                 </div>
                 {/* Originated Line (book-anchored model line) */}
-                <div style={{ background: '#111412', border: '1px solid #1e2320', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 7, color: '#3a3f3c', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Line</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: fgOuEdge?.hasEdge ? '#39FF14' : '#7a8078', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 7, color: '#FFFFFF', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Line</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: fgOuEdge?.hasEdge ? '#45E0A8' : '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>
                     {fgModelTotal!.toFixed(1)}
                   </div>
                   {fgOuModelPct != null && (
-                    <div style={{ fontSize: 7, color: '#3a3f3c', marginTop: 1 }}>{fgOuModelPct.toFixed(1)}%</div>
+                    <div style={{ fontSize: 7, color: '#FFFFFF', marginTop: 1 }}>{fgOuModelPct.toFixed(1)}%</div>
                   )}
                 </div>
                 {/* Book Total */}
-                <div style={{ background: '#111412', border: '1px solid #1e2320', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 7, color: '#3a3f3c', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Book</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#c4cac5', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 4, padding: '4px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 7, color: '#FFFFFF', marginBottom: 2, letterSpacing: '.08em', textTransform: 'uppercase' as const }}>Book</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF', fontVariantNumeric: 'tabular-nums' }}>
                     {fgBookTotal!.toFixed(1)}
                   </div>
                   {fgOuBookOdds && (
-                    <div style={{ fontSize: 7, color: '#3a3f3c', marginTop: 1 }}>{fmtOddsV3(fgOuBookOdds)}</div>
+                    <div style={{ fontSize: 7, color: '#FFFFFF', marginTop: 1 }}>{fmtOddsV3(fgOuBookOdds)}</div>
                   )}
                 </div>
               </div>
@@ -1821,22 +1821,22 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
             <div style={{
               marginTop: 6,
               padding: '6px 8px',
-              background: '#0d100e',
-              border: '1px solid #1a1d1b',
+              background: '#000000',
+              border: '1px solid #FFFFFF',
               borderRadius: 5,
             }}>
-              <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#2e3330', textAlign: 'center', marginBottom: 4 }}>FG ML Edge</div>
+              <div style={{ fontSize: 7, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF', textAlign: 'center', marginBottom: 4 }}>FG ML Edge</div>
               {fgAwayWinPct != null && fgNoVigAwayImplied != null && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: '#7a8078', minWidth: 28 }}>{game.awayTeam}</span>
-                  <span style={{ fontSize: 9, color: '#4a5048' }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#FFFFFF', minWidth: 28 }}>{game.awayTeam}</span>
+                  <span style={{ fontSize: 9, color: '#FFFFFF' }}>
                     Model {fgAwayWinPct.toFixed(1)}% vs Book {fgNoVigAwayImplied.toFixed(1)}%
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, lineHeight: 1,
                     color: fgAwayHasEdge
-                      ? (fgAwayMlEdgeDelta! > 0 ? '#39FF14' : '#ff5555')
-                      : '#2e3330',
+                      ? (fgAwayMlEdgeDelta! > 0 ? '#45E0A8' : '#FFFFFF')
+                      : '#FFFFFF',
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {fgAwayMlEdgeDelta != null
@@ -1847,15 +1847,15 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
               )}
               {fgHomeWinPct != null && fgNoVigHomeImplied != null && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginTop: 2 }}>
-                  <span style={{ fontSize: 9, fontWeight: 500, color: '#7a8078', minWidth: 28 }}>{game.homeTeam}</span>
-                  <span style={{ fontSize: 9, color: '#4a5048' }}>
+                  <span style={{ fontSize: 9, fontWeight: 500, color: '#FFFFFF', minWidth: 28 }}>{game.homeTeam}</span>
+                  <span style={{ fontSize: 9, color: '#FFFFFF' }}>
                     Model {fgHomeWinPct.toFixed(1)}% vs Book {fgNoVigHomeImplied.toFixed(1)}%
                   </span>
                   <span style={{
                     fontSize: 10, fontWeight: 700, lineHeight: 1,
                     color: fgHomeHasEdge
-                      ? (fgHomeMlEdgeDelta! > 0 ? '#39FF14' : '#ff5555')
-                      : '#2e3330',
+                      ? (fgHomeMlEdgeDelta! > 0 ? '#45E0A8' : '#FFFFFF')
+                      : '#FFFFFF',
                     minWidth: 36, textAlign: 'right',
                   }}>
                     {fgHomeMlEdgeDelta != null
@@ -1870,19 +1870,19 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
 
         {/* RIGHT: Book vs model — RL / ML / O/U */}
         <div style={{ padding: '10px 14px 12px' }}>
-          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#3a3f3c', marginBottom: 8 }}>Book vs model</div>
+          <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase' as const, color: '#FFFFFF', marginBottom: 8 }}>Book vs model</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
             {/* RL */}
             <div>
-              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#3a3f3c', marginBottom: 4, textAlign: 'center' }}>RL</div>
+              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#FFFFFF', marginBottom: 4, textAlign: 'center' }}>RL</div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>{fmtLineV3(game.f5AwayRunLine)} Book</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#c4cac5' }}>{fmtOddsV3(game.f5AwayRunLineOdds)}</div>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>{fmtLineV3(game.f5AwayRunLine)} Book</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#FFFFFF' }}>{fmtOddsV3(game.f5AwayRunLineOdds)}</div>
                 </div>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>{fmtLineV3(game.f5AwayRunLine)} Model</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: rlEdge?.hasEdge ? '#39FF14' : '#7a8078' }}>{fmtOddsV3(game.modelF5AwayRlOdds)}</div>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>{fmtLineV3(game.f5AwayRunLine)} Model</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: rlEdge?.hasEdge ? '#45E0A8' : '#FFFFFF' }}>{fmtOddsV3(game.modelF5AwayRlOdds)}</div>
                 </div>
               </div>
               <div style={{ fontSize: 10, fontWeight: 500, marginTop: 4, textAlign: 'center', color: edgeColorV3(rlEdge) }}>
@@ -1891,15 +1891,15 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
             </div>
             {/* ML */}
             <div>
-              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#3a3f3c', marginBottom: 4, textAlign: 'center' }}>ML</div>
+              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#FFFFFF', marginBottom: 4, textAlign: 'center' }}>ML</div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>Book</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#c4cac5' }}>{fmtOddsV3(game.f5AwayML)}</div>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>Book</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#FFFFFF' }}>{fmtOddsV3(game.f5AwayML)}</div>
                 </div>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>Model</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: mlEdge?.hasEdge ? '#39FF14' : '#7a8078' }}>{fmtOddsV3(game.modelF5AwayML)}</div>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>Model</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: mlEdge?.hasEdge ? '#45E0A8' : '#FFFFFF' }}>{fmtOddsV3(game.modelF5AwayML)}</div>
                 </div>
               </div>
               <div style={{ fontSize: 10, fontWeight: 500, marginTop: 4, textAlign: 'center', color: edgeColorV3(mlEdge) }}>
@@ -1908,15 +1908,15 @@ function F5GameCardV3({ game, lineup }: { game: CheatSheetGame; lineup?: CheatSh
             </div>
             {/* O/U */}
             <div>
-              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#3a3f3c', marginBottom: 4, textAlign: 'center' }}>O/U</div>
+              <div style={{ fontSize: 8, fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: '#FFFFFF', marginBottom: 4, textAlign: 'center' }}>O/U</div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>Book</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#c4cac5' }}>{game.f5Total ?? '—'}</div>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>Book</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#FFFFFF' }}>{game.f5Total ?? '—'}</div>
                 </div>
-                <div style={{ background: '#161918', border: '1px solid #1e2320', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, color: '#7a8078', marginBottom: 2 }}>Model</div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: ouEdge?.hasEdge ? '#39FF14' : '#7a8078' }}>
+                <div style={{ background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, color: '#FFFFFF', marginBottom: 2 }}>Model</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: ouEdge?.hasEdge ? '#45E0A8' : '#FFFFFF' }}>
                     {modelF5Total != null ? modelF5Total.toFixed(1) : '—'}
                   </div>
                 </div>
@@ -1947,25 +1947,25 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
   if (modeledGames.length === 0) return null;
 
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
+    <div style={{ fontFamily: "'Familjen Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap' as const, gap: 10 }}>
         {dateLabel && (
-          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: '#4a4f4b' }}>
+          <span style={{ fontSize: 10, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>
             {dateLabel}
           </span>
         )}
         {/* Tab switcher */}
-        <div style={{ display: 'flex', background: '#111412', border: '1px solid #1a1d1b', borderRadius: 6, padding: 3, gap: 2 }}>
+        <div style={{ display: 'flex', background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: 3, gap: 2 }}>
           {(['nrfi', 'f5'] as const).map(tab => (
             <button type="button" key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
                 fontSize: 11, fontWeight: 500, letterSpacing: '.07em', textTransform: 'uppercase' as const,
                 padding: '5px 16px', borderRadius: 4, cursor: 'pointer', transition: 'all .15s',
-                border: activeTab === tab ? '1px solid rgba(57,255,20,.2)' : '1px solid transparent',
-                background: activeTab === tab ? 'rgba(57,255,20,.1)' : 'transparent',
-                color: activeTab === tab ? '#39FF14' : '#4a4f4b',
+                border: activeTab === tab ? '1px solid #45E0A8' : '1px solid transparent',
+                background: activeTab === tab ? 'transparent' : 'transparent',
+                color: activeTab === tab ? '#45E0A8' : '#FFFFFF',
               }}
             >
               {tab === 'nrfi' ? 'NRFI / YRFI' : 'First 5'}
@@ -1975,16 +1975,16 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
         {/* Legend */}
         {activeTab === 'nrfi' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {[{ color: '#39FF14', label: 'NRFI' }, { color: '#ff5555', label: 'YRFI' }, { color: '#333', label: 'Skip' }].map(({ color, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' as const, color: '#4a4f4b' }}>
+            {[{ color: '#45E0A8', label: 'NRFI' }, { color: '#FFFFFF', label: 'YRFI' }, { color: '#FFFFFF', label: 'Skip' }].map(({ color, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />{label}
               </span>
             ))}
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {[{ color: 'rgba(57,255,20,.5)', label: 'Run' }, { color: 'rgba(255,85,85,.5)', label: 'Multi-run' }, { color: '#1a1d1b', label: 'Zero' }].map(({ color, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' as const, color: '#4a4f4b' }}>
+            {[{ color: '#45E0A8', label: 'Run' }, { color: '#FFFFFF', label: 'Multi-run' }, { color: '#FFFFFF', label: 'Zero' }].map(({ color, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>
                 <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0, display: 'inline-block' }} />{label}
               </span>
             ))}
@@ -1997,9 +1997,9 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #1e2320' }}>
+              <tr style={{ borderBottom: '1px solid #FFFFFF' }}>
                 {['Matchup', 'Away starter', 'Home starter', 'Away proj', 'Home proj', 'NRFI / YRFI', 'Book / Model', 'Edge (ROI%)'].map((h, i) => (
-                  <th key={h} style={{ fontSize: '8.5px', fontWeight: 500, letterSpacing: '.11em', textTransform: 'uppercase' as const, color: '#3a3f3c', padding: '6px 10px', textAlign: i >= 3 ? 'center' : 'left', whiteSpace: 'nowrap' as const }}>
+                  <th key={h} style={{ fontSize: '8.5px', fontWeight: 500, letterSpacing: '.11em', textTransform: 'uppercase' as const, color: '#FFFFFF', padding: '6px 10px', textAlign: i >= 3 ? 'center' : 'left', whiteSpace: 'nowrap' as const }}>
                     {h}
                   </th>
                 ))}

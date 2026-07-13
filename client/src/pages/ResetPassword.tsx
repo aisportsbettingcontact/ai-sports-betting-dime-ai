@@ -105,16 +105,16 @@ export default function ResetPassword() {
   // Invalid link params
   if (!paramsValid) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-white mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Invalid Reset Link</h1>
-          <p className="text-white/60 text-sm mb-6">
+          <p className="text-white text-sm mb-6">
             This password reset link is invalid or malformed. Please request a new one.
           </p>
           <Button
             onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-[#45E0A8] text-white"
           >
             Back to Sign In
           </Button>
@@ -126,14 +126,14 @@ export default function ResetPassword() {
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8 text-center">
-          <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
+          <CheckCircle2 className="w-12 h-12 text-[#45E0A8] mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Password Reset</h1>
-          <p className="text-white/60 text-sm mb-2">
+          <p className="text-white text-sm mb-2">
             Your password has been updated. All existing sessions have been signed out.
           </p>
-          <p className="text-white/40 text-xs">Redirecting to sign in...</p>
+          <p className="text-white text-xs">Redirecting to sign in...</p>
         </div>
       </div>
     );
@@ -142,16 +142,16 @@ export default function ResetPassword() {
   const serverError = resetPassword.error?.message;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-black border border-white rounded-xl p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">
-            <KeyRound className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center">
+            <KeyRound className="w-5 h-5 text-[#45E0A8]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Reset Password</h1>
-            <p className="text-white/50 text-xs">Enter your new password below</p>
+            <p className="text-white text-xs">Enter your new password below</p>
           </div>
         </div>
 
@@ -171,7 +171,7 @@ export default function ResetPassword() {
           <div className="flex flex-col gap-1.5">
             <Label
               htmlFor="rp-password"
-              className="text-xs font-semibold tracking-widest text-white/70 uppercase"
+              className="text-xs font-semibold tracking-widest text-white uppercase"
             >
               New Password
             </Label>
@@ -191,12 +191,12 @@ export default function ResetPassword() {
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
                 style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
+                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8] pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white transition-colors"
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -209,7 +209,7 @@ export default function ResetPassword() {
           <div className="flex flex-col gap-1.5">
             <Label
               htmlFor="rp-confirm"
-              className="text-xs font-semibold tracking-widest text-white/70 uppercase"
+              className="text-xs font-semibold tracking-widest text-white uppercase"
             >
               Confirm Password
             </Label>
@@ -229,12 +229,12 @@ export default function ResetPassword() {
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
                 style={showConfirm ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400 pr-10"
+                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8] pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white transition-colors"
                 tabIndex={-1}
                 aria-label={showConfirm ? "Hide password" : "Show password"}
               >
@@ -245,7 +245,7 @@ export default function ResetPassword() {
 
           {/* Validation / Server error */}
           {(validationError || serverError) && (
-            <div className="flex items-start gap-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+            <div className="flex items-start gap-2 text-white text-sm bg-black border border-white rounded-lg px-3 py-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{validationError ?? serverError}</span>
             </div>
@@ -256,7 +256,7 @@ export default function ResetPassword() {
             type="button"
             onClick={handleReset}
             disabled={resetPassword.isPending || !password || !confirmPassword}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-1"
+            className="w-full bg-[#45E0A8] text-white mt-1"
           >
             {resetPassword.isPending ? (
               <span className="flex items-center gap-2">
@@ -271,7 +271,7 @@ export default function ResetPassword() {
           <button
             type="button"
             onClick={() => navigate("/")}
-            className="text-white/40 hover:text-white/70 text-xs text-center transition-colors"
+            className="text-white text-xs text-center transition-colors"
           >
             Back to Sign In
           </button>
