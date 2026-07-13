@@ -113,26 +113,24 @@ export function LoginAttemptBanner({ failureTrigger }: LoginAttemptBannerProps) 
   }
 
   // ── Warning — attempts remaining ────────────────────────────────────────────
-  const used = data.maxAttempts - data.remainingAttempts;
-  const pct = used / data.maxAttempts;
-  const color =
-    pct >= 0.8
-      ? "bg-black border-white text-white"
-      : pct >= 0.5
-        ? "bg-black border-white text-white"
-        : "bg-black border-white text-white";
-  const iconColor =
-    pct >= 0.8 ? "text-white" : pct >= 0.5 ? "text-white" : "text-white";
+  // Brand law rations color to signal (mint) and reserves red for nothing, so
+  // severity escalates without a hue change: on the final attempt the icon
+  // thickens and the whole banner reads heavier. That is a real, non-color
+  // affordance rather than three identical class strings.
+  const isFinalAttempt = data.remainingAttempts <= 1;
 
   return (
     <div
       role="alert"
       aria-live="polite"
-      className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border text-xs ${color}`}
+      className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border border-white bg-black text-white text-xs ${isFinalAttempt ? "font-semibold" : ""}`}
     >
-      <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 ${iconColor}`} />
+      <AlertTriangle
+        className="w-3.5 h-3.5 flex-shrink-0 text-white"
+        strokeWidth={isFinalAttempt ? 2.75 : 1.75}
+      />
       <span>
-        <span className="font-semibold">{data.remainingAttempts}</span>
+        <span className="font-bold">{data.remainingAttempts}</span>
         {" "}attempt{data.remainingAttempts !== 1 ? "s" : ""} remaining before lockout
       </span>
     </div>

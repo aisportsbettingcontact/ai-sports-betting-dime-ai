@@ -8,15 +8,16 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  showDetails: boolean;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, showDetails: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
@@ -39,25 +40,38 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-white mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4 text-white font-bold">An unexpected error occurred.</h2>
+            <h2 className="text-xl mb-4 text-white font-bold">Something broke on this screen.</h2>
 
-            <div className="p-4 w-full rounded-lg bg-black border border-white overflow-auto mb-6">
-              <pre className="text-sm text-white font-bold whitespace-break-spaces mb-2">
-                {this.state.error?.message}
-              </pre>
-              <pre className="text-xs text-white whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
+            {/* Stack trace is never rendered by default — kept behind an explicit toggle */}
+            <div className="w-full mb-6">
+              <button
+                type="button"
+                onClick={() => this.setState({ showDetails: !this.state.showDetails })}
+                className="text-sm text-white underline mb-2 cursor-pointer"
+                aria-expanded={this.state.showDetails}
+              >
+                {this.state.showDetails ? "Hide details" : "Show details"}
+              </button>
+              {this.state.showDetails && (
+                <div className="p-4 w-full rounded-lg bg-black border border-white overflow-auto">
+                  <pre className="text-sm text-white font-bold whitespace-break-spaces mb-2">
+                    {this.state.error?.message}
+                  </pre>
+                  <pre className="text-xs text-white whitespace-break-spaces">
+                    {this.state.error?.stack}
+                  </pre>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => this.setState({ hasError: false, error: null })}
+                onClick={() => this.setState({ hasError: false, error: null, showDetails: false })}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white border border-white transition-colors cursor-pointer"
               >
                 <RotateCcw size={16} />
-                Try Again
+                Try again
               </button>
               <button
                 type="button"
@@ -65,7 +79,7 @@ class ErrorBoundary extends Component<Props, State> {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#45E0A8] text-black transition-colors cursor-pointer"
               >
                 <RotateCcw size={16} />
-                Reload Page
+                Reload page
               </button>
             </div>
           </div>

@@ -111,7 +111,7 @@ async function resilientFetch(
     // Show a user-facing toast on the first rate-limit hit (deduped).
     if (!_rateLimitToastShown) {
       _rateLimitToastShown = true;
-      toast.warning("Server is busy — retrying automatically…", {
+      toast.warning("Server is busy. Retrying automatically…", {
         id: "rate-limit-retry",
         duration: 6000,
         description: "This usually resolves in a few seconds.",
@@ -219,10 +219,10 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!_sessionExpiredToastShown) {
     _sessionExpiredToastShown = true;
     console.log("[Auth] [OUTPUT] UNAUTHORIZED detected — showing session-expired toast before redirect");
-    toast.error("Your session has expired — please sign in again.", {
+    toast.error("Your session has expired. Please log in again.", {
       id: "session-expired",       // prevents duplicate toasts from stacking
       duration: 5000,              // 5 s — enough to read before redirect
-      description: "You have been signed out. Redirecting to login...",
+      description: "You have been logged out. Redirecting to log in…",
     });
   }
 

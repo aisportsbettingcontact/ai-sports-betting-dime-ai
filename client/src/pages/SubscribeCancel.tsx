@@ -42,7 +42,7 @@ export default function SubscribeCancel() {
           className="text-2xl font-black text-white mb-2"
           style={{ letterSpacing: "-0.03em" }}
         >
-          Checkout Cancelled
+          Checkout cancelled
         </h1>
         <p className="text-white text-sm mb-8">
           No charge was made. You can return to the pricing page anytime to subscribe.
@@ -60,7 +60,7 @@ export default function SubscribeCancel() {
             className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-sm text-black transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
             style={{ background: "#45E0A8" }}
           >
-            View Pricing
+            View pricing
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -74,7 +74,7 @@ export default function SubscribeCancel() {
         </div>
 
         <p className="text-[11px] text-white mt-8">
-          Questions? Contact support — we're here to help.
+          Questions? Contact support. We're here to help.
         </p>
       </motion.div>
     </div>

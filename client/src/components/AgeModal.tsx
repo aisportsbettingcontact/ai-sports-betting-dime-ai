@@ -20,7 +20,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
           <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
-          <h2 className="text-base font-bold text-foreground">Age & Responsibility Notice</h2>
+          <h2 className="text-base font-bold text-foreground">Age & responsibility notice</h2>
         </div>
 
         {/* Body */}
@@ -55,7 +55,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
             onClick={onAccept}
             className="flex-1 bg-primary text-primary-foreground font-semibold text-sm"
           >
-            I Understand &amp; Accept
+            I understand &amp; accept
           </Button>
           <Button
             onClick={onClose}

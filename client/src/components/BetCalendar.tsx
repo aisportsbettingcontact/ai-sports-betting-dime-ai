@@ -328,9 +328,12 @@ export function BetCalendar({
               style={{
                 width: "32px", height: "32px",
                 background: canGoNext ? "var(--bt-card, #000000)" : "var(--bt-base, #000000)",
-                border: "1px solid #FFFFFF",
+                // Disabled: quiet the keyline and recede the glyph to a real muted
+                // token (not an identical white fallback, not opacity) so the "no
+                // future months" state reads clearly inert next to the live prev control.
+                border: canGoNext ? "1px solid #FFFFFF" : "1px solid var(--dime-border)",
                 borderRadius: "4px",
-                color: canGoNext ? "var(--bt-text-muted, #FFFFFF)" : "var(--bt-border2, #FFFFFF)",
+                color: canGoNext ? "var(--bt-text-muted, #FFFFFF)" : "var(--dime-text-muted)",
                 cursor: canGoNext ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "all 150ms ease",
