@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { CONTROLLED_ACCESS } from "../landing-content";
-import { MintCheck, SectionHead, TeleFrame } from "./shared";
+import { MintCheck, SectionHead } from "./shared";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,7 +39,6 @@ export default function ControlledAccess() {
   return (
     <section className="sec" id="access" aria-label="Founder access application">
       <div className="wrap">
-        <TeleFrame label="ACCESS // FOUNDER SEATS — APPLICATION QUEUE" />
         <div className="sec-body">
           <div className="access-grid">
             <SectionHead
@@ -100,7 +99,6 @@ export default function ControlledAccess() {
             </form>
           </div>
         </div>
-        <TeleFrame />
       </div>
     </section>
   );

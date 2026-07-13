@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { CHAT_EXCHANGES, CHAT_SIDE } from "../landing-content";
-import { StatePill, TeleFrame, SectionHead, CtaRow } from "./shared";
+import { StatePill, SectionHead, CtaRow } from "./shared";
 
 export default function ChatDemo() {
   const [activeId, setActiveId] = useState(CHAT_EXCHANGES[0].id);
@@ -23,7 +23,6 @@ export default function ChatDemo() {
   return (
     <section className="sec" id="chat-demo" aria-label="Dime Chat demo">
       <div className="wrap">
-        <TeleFrame label="DIME.CHAT // GROUNDED · 124_ENFORCEMENT_TESTS" />
         <div className="sec-body">
           <SectionHead
             eyebrow="Dime Chat"
@@ -63,7 +62,7 @@ export default function ChatDemo() {
               <div className="chat-bar">
                 <span className="pulse" aria-hidden="true" />
                 <span>dime.chat</span>
-                <span className="right">Demo — sample markets</span>
+                <span className="right">Demo · sample markets</span>
               </div>
               <div className="chat-body" role="log" aria-live="polite">
                 <div className="chat-user">{ex.user}</div>
@@ -95,13 +94,12 @@ export default function ChatDemo() {
 
           <CtaRow
             label="The full chat runs on tonight's real slate"
-            cta="Get Access"
+            cta="Open the full chat"
             href="#pricing"
-            ctaId="chat-demo-get-access"
+            ctaId="chat-demo-open-full-chat"
             location="chat-demo"
           />
         </div>
-        <TeleFrame />
       </div>
     </section>
   );

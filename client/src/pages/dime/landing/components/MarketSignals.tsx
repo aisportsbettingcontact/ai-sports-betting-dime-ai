@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { SIGNAL_FILTERS, SIGNAL_ROWS } from "../landing-content";
-import { SectionHead, StatePill, TeleFrame } from "./shared";
+import { SectionHead, StatePill } from "./shared";
 
 export default function MarketSignals() {
   const [filter, setFilter] = useState<string>("All");
@@ -18,7 +18,6 @@ export default function MarketSignals() {
   return (
     <section className="sec" id="signals" aria-label="Today's market signals — demo">
       <div className="wrap">
-        <TeleFrame label="SIGNALS // SAMPLE SLATE — LIVE BOARD IS THE PRODUCT" />
         <div className="sec-body">
           <SectionHead
             eyebrow="Today's market signals"
@@ -59,7 +58,7 @@ export default function MarketSignals() {
                         data-mode="paid"
                       >
                         <span className="dot" aria-hidden="true" />
-                        {r.lockedTier} — Unlock →
+                        {r.lockedTier} · Unlock →
                       </a>
                     ) : (
                       <StatePill state={r.state} label={r.stateLabel} />
@@ -74,7 +73,7 @@ export default function MarketSignals() {
             </div>
 
             <div className="signals-foot">
-              <span className="mono">Sample data — the live board prices every game, every market</span>
+              <span className="mono">Sample data: the live board prices every game, every market</span>
               <span className="lead" aria-hidden="true" />
               <a
                 href="#pricing"
@@ -88,7 +87,6 @@ export default function MarketSignals() {
             </div>
           </div>
         </div>
-        <TeleFrame />
       </div>
     </section>
   );

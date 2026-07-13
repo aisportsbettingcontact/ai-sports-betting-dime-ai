@@ -44,47 +44,28 @@ export interface Headline {
   after: string;
 }
 
+/** Section header. Eyebrow is optional: the taste budget is one labeling device
+ *  per section, and several sections let the headline carry them alone. */
 export function SectionHead({
   eyebrow,
   headline,
   sub,
   center,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   headline: Headline;
   sub?: string;
   center?: boolean;
 }) {
   return (
     <div className={center ? "section-head section-head--center" : "section-head"}>
-      <span className="mono mono--mint">{eyebrow}</span>
+      {eyebrow && <span className="mono mono--mint">{eyebrow}</span>}
       <h2>
         {headline.before}
         <em>{headline.em}</em>
         {headline.after}
       </h2>
       {sub && <p>{sub}</p>}
-    </div>
-  );
-}
-
-/** Box-drawing telemetry frame — top edge with label, or bottom closing edge. */
-export function TeleFrame({ label }: { label?: string }) {
-  if (!label) {
-    return (
-      <div className="tele" style={{ marginTop: "clamp(40px, 6vw, 64px)" }} aria-hidden="true">
-        <span className="corner">└</span>
-        <span className="line" />
-        <span className="corner">┘</span>
-      </div>
-    );
-  }
-  return (
-    <div className="tele" aria-hidden="true">
-      <span className="corner">┌</span>
-      <span className="lbl">{label}</span>
-      <span className="line" />
-      <span className="corner">┐</span>
     </div>
   );
 }
