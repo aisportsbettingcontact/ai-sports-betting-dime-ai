@@ -814,13 +814,13 @@ const MktCard = ({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      background: '#2a2a2e', borderRadius: '10px',
+      background: '#000000', borderRadius: '10px',
       overflow: 'hidden', flex: '1 1 0', minWidth: 0,
     }}>
       {/* BOOK / MODEL header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
-        <span style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
-        <span style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #FFFFFF', padding: '3px 4px 2px' }}>
+        <span style={{ fontSize: '6.5px', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+        <span style={{ fontSize: '6.5px', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
       </div>
       {/* Away row */}
       <TeamRow bookLine={awayBookLine} bookJuice={awayBookJuice} modelLine={awayModelLine} modelJuice={awayModelJuice} modelHasEdge={awayModelHasEdge} />
