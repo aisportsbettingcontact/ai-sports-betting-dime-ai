@@ -262,17 +262,17 @@
 
 .dc-pill { display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; } /* shared decls of all 6 pills, D/L:107-109 */
 
-.dc-pill--mint { background: #45E0A8; color: #0B0B0F; } /* D:109 = L:107 — identical both themes */
-.theme-dark .dc-pill--outline { background: #16161C; border: 1px solid #24242E; color: #EDEDF2; } /* D:108 */
-.theme-light .dc-pill--outline { background: #FFFFFF; border: 1px solid #D5D5DC; color: #0B0B0F; } /* L:108 */
-.theme-dark .dc-pill--contrast { background: #EDEDF2; color: #0B0B0F; } /* D:107 */
-.theme-light .dc-pill--contrast { background: #0B0B0F; color: #FFFFFF; } /* L:109 */
+.dc-pill--mint { background: #45E0A8; color: #000000; } /* D:109 = L:107 — identical both themes */
+.theme-dark .dc-pill--outline { background: #000000; border: 1px solid #FFFFFF; color: #FFFFFF; } /* D:108 */
+.theme-light .dc-pill--outline { background: #FFFFFF; border: 1px solid #000000; color: #000000; } /* L:108 */
+.theme-dark .dc-pill--contrast { background: #FFFFFF; color: #000000; } /* D:107 */
+.theme-light .dc-pill--contrast { background: #000000; color: #FFFFFF; } /* L:109 */
 
 /* Pill icon circle (inner span of every pill; svg viewBox 0 0 512 512, 13x13,
    same chevron+rects geometry as the send glyph). Variant follows its pill. */
 .dc-pill-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; } /* shared decls of all 6 icon circles, D/L:107-109 */
 
-.dc-pill-icon--on-mint { background: #0B0B0F; } /* D:109 = L:107 — no border on the mint pill's icon circle in either theme */
+.dc-pill-icon--on-mint { background: #000000; } /* D:109 = L:107 — no border on the mint pill's icon circle in either theme */
 .dc-pill-icon--on-mint .dc-pill-chevron { stroke: #FFFFFF; } /* D:109 = L:107 */
 .dc-pill-icon--on-mint .dc-pill-rect { fill: #45E0A8; } /* D:109 = L:107 */
 
