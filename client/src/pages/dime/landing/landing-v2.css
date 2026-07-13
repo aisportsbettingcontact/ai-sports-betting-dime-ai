@@ -26,7 +26,7 @@
   --mural: #000000;
   --ring: #45E0A8;
   --curve: cubic-bezier(0.16, 1, 0.3, 1);
-  --type-display: clamp(44px, 6.8vw, 88px);
+  --type-display: var(--fs-display); /* centralized fluid scale — capped 40→76px, no oversized hero */
   --type-section: clamp(30px, 4vw, 46px);
   --pad-section: clamp(64px, 9vw, 112px);
   --head-gap: clamp(36px, 5vw, 56px);
@@ -97,10 +97,10 @@
 .dlv2 .state-pill--pass { color: var(--text-muted); }
 
 /* ── Hero ── */
-.dlv2 .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--border-soft); padding: clamp(56px, 7vw, 88px) 0 clamp(56px, 7vw, 88px); }
-.dlv2 .hero h1 { margin: 20px 0 0; max-width: 13em; font-size: var(--type-display); line-height: 0.98; letter-spacing: -0.045em; font-weight: 700; color: var(--text-primary); }
+.dlv2 .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--border-soft); padding: clamp(40px, 5.5vw, 72px) 0 clamp(48px, 6vw, 80px); } /* tighter top: less accidental void above the headline */
+.dlv2 .hero h1 { margin: 20px 0 0; max-width: 13em; font-size: var(--type-display); line-height: var(--lh-display); letter-spacing: -0.045em; font-weight: 700; color: var(--text-primary); }
 .dlv2 .hero h1 em { font-style: normal; color: var(--mint); }
-.dlv2 .hero .lede { max-width: 620px; margin: 22px 0 30px; font-size: 18px; color: var(--text-secondary); }
+.dlv2 .hero .lede { max-inline-size: var(--measure-narrow); margin: 22px 0 30px; font-size: var(--fs-body-lg); line-height: var(--lh-relaxed); color: var(--text-secondary); }
 .dlv2 .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 /* secondary, not faint: this line carries the risk disclosure — must clear 4.5:1 */
 .dlv2 .hero-micro { display: block; margin-top: 22px; color: var(--text-secondary); }
