@@ -453,11 +453,10 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // ── Tab state ─────────────────────────────────────────────────────
-// isDualTab: BOOK + MODEL both active simultaneously
-// isBookTab / isModelTab: true when that tab is active OR dual is active
-const isDualTab  = mobileTab === 'dual';
-const isBookTab  = isDualTab; // MODEL PROJECTIONS tab = BOOK+MODEL both active
-const isModelTab = isDualTab;
+// The odds table only renders under the MODEL PROJECTIONS (dual) tab, where
+// BOOK and MODEL columns sit side by side. MODEL is the active/primary column;
+// BOOK is the reference. (Former isBookTab/isModelTab aliases were identical to
+// isDualTab and only fed dead style branches — removed with those branches.)
 
 // ── Value style factories (reference image spec) ──────────────────
 // The table is ALWAYS visible. Tab controls which column is "primary":
@@ -505,80 +504,34 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
+// ── Value style factories — active MODEL column vs reference BOOK column ──────
+// Emphasis is real and layered rather than a set of identical #FFFFFF branches:
+// a genuine size step (11px vs 10px), a weight step (700 vs 500), and token
+// color. BOOK is the reference column, so it recedes to --dime-text-secondary
+// (de-emphasis via the v2 tonal token, never opacity). MODEL is the active
+// column: --dime-text-primary, promoted to --dime-mint when the side has an edge.
 const bookStyle = (_isEdge?: boolean): React.CSSProperties => ({
-  // unbolded book values: 10.5px; bolded book values: 10.25px (bold appears optically larger)
-  fontSize: isDualTab ? '10.5px' : isBookTab ? '10.25px' : '10.5px',
-  // DUAL mode: book = light gray unbolded (secondary to model primary)
-  // BOOK-only: book = white bold (primary)
-  // MODEL-only: book = white unbolded 70% (secondary, visible for reference)
-  // SPLITS/EDGE: dimmed
-  fontWeight: isDualTab ? 400 : isBookTab ? 700 : 400,
-  color: isDualTab
-    ? '#FFFFFF'          // DUAL: light gray unbolded
-    : isBookTab
-      ? '#FFFFFF'           // BOOK-only: white bold (primary)
-      : isModelTab
-        ? '#FFFFFF'      // MODEL-only: white unbolded (secondary)
-        : '#FFFFFF',      // SPLITS/EDGE: dimmed
+  fontSize: '10px',
+  fontWeight: 500,
+  color: 'var(--dime-text-secondary)',
   letterSpacing: '0.02em',
   fontVariantNumeric: 'tabular-nums',
 });
 
 const modelStyle = (isEdge?: boolean): React.CSSProperties => {
-  // ── MODEL value color/weight rules ────────────────────────────────
-  // BOOK tab active:
-  //   model (any)  = white unbolded 70% — secondary, visible but NOT primary
-  //   edge does NOT trigger neon green when BOOK tab is active
-  //
-  // MODEL tab active:
-  //   model edge   = #39FF14 BOLD — edge highlight (primary)
-  //   model no-edge = white BOLD — primary non-edge (user request: white not gray)
-  //
-  // SPLITS/EDGE tabs:
-  //   model (any)  = dimmed 30%
-  //
-  // LOG: [GameCard:modelStyle] isEdge + tab in dev
+  // MODEL is the active column: bold, one size step above BOOK, primary-token
+  // color — promoted to mint on an edge (edge = signal, the one place mint earns
+  // its keep). LOG: [GameCard:modelStyle] isEdge + tab in dev.
   if (process.env.NODE_ENV === 'development' && isEdge) {
     console.log(
-      `%c[GameCard:modelStyle] edge=true tab=${mobileTab} → ${isModelTab ? '#39FF14 bold' : 'white 70% unbolded'}`,
-      'color:#FFFFFF;font-size:9px'
+      `%c[GameCard:modelStyle] edge=true tab=${mobileTab} → mint bold (active column)`,
+      'color:#45E0A8;font-size:9px'
     );
   }
-  if (isDualTab) {
-    // DUAL mode: model is primary — edge = neon green bold, non-edge = white bold
-    return {
-      fontSize: '10.25px',  // bolded model values: 10.25px
-      fontWeight: 700,
-      color: isEdge ? '#45E0A8' : '#FFFFFF',
-      letterSpacing: '0.02em',
-      fontVariantNumeric: 'tabular-nums',
-    };
-  }
-  if (isBookTab) {
-    // BOOK-only tab: model is always secondary — white unbolded, no edge highlight
-    return {
-      fontSize: '10.5px',  // unbolded model values: 10.5px
-      fontWeight: 400,
-      color: '#FFFFFF',
-      letterSpacing: '0.02em',
-      fontVariantNumeric: 'tabular-nums',
-    };
-  }
-  if (isModelTab) {
-    // MODEL-only tab: edge = neon green bold; non-edge = white bold
-    return {
-      fontSize: '10.25px',  // bolded model values: 10.25px
-      fontWeight: 700,
-      color: isEdge ? '#45E0A8' : '#FFFFFF',
-      letterSpacing: '0.02em',
-      fontVariantNumeric: 'tabular-nums',
-    };
-  }
-  // SPLITS/EDGE tabs: dimmed
   return {
-    fontSize: '10.5px',  // unbolded dimmed values: 10.5px
-    fontWeight: 400,
-    color: '#FFFFFF',
+    fontSize: '11px',
+    fontWeight: 700,
+    color: isEdge ? 'var(--dime-mint)' : 'var(--dime-text-primary)',
     letterSpacing: '0.02em',
     fontVariantNumeric: 'tabular-nums',
   };

@@ -848,7 +848,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
     homeInfo?.secondaryColor,
     (homeInfo as any)?.tertiaryColor
   );
-  // Keep awayColor/homeColor for gradient top bar and pill accents (unchanged)
+  // Keep awayColor/homeColor for logo circles and pill accents (unchanged)
   const awayColor = awayInfo?.primaryColor ?? "#444";
   const awayDark = awayInfo?.secondaryColor ?? "#222";
   const homeColor = homeInfo?.primaryColor ?? "#444";
@@ -879,11 +879,11 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         marginBottom: 10,
       }}
     >
-      {/* Color top bar */}
+      {/* Quiet 1px keyline (chrome — carries no signal, so no mint) */}
       <div
         style={{
-          height: 3,
-          background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
+          height: 1,
+          background: "var(--dime-border)",
         }}
       />
 

@@ -4,7 +4,7 @@
  * Displays MLB pitcher strikeout prop projections for a single game.
  * Styled to exactly match the Lineups rendered-image card:
  *   - #090E14 card background, #182433 borders
- *   - Team color gradient top bar
+ *   - Quiet keyline top divider (chrome)
  *   - Barlow Condensed typography
  *   - MLB headshots with background removal
  *   - LHP/RHP hand badges, CONFIRMED/EXPECTED status pills
@@ -483,10 +483,10 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
       width: "100%",
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
     }}>
-      {/* ── Color gradient top bar — identical to lineup card ── */}
+      {/* ── Quiet 1px keyline (chrome — carries no signal, so no mint) ── */}
       <div style={{
-        height: 5,
-        background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
+        height: 1,
+        background: "var(--dime-border)",
       }} />
 
       {/* ── Matchup header — mirrors lineup card header block ── */}

@@ -150,7 +150,7 @@ function ContactModal({
           </button>
           <button
             onClick={handleSend}
-            className="px-5 py-2 rounded-lg text-sm font-bold text-white bg-[#45E0A8] transition-colors"
+            className="px-5 py-2 rounded-lg text-sm font-bold text-black bg-[#45E0A8] transition-colors"
           >
             Open in Email Client →
           </button>
@@ -449,7 +449,7 @@ export default function WaitlistAdmin() {
                 onClick={() => setStatusFilter(s)}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize transition-all ${
                   statusFilter === s
-                    ? "bg-[#45E0A8] text-white"
+                    ? "bg-[#45E0A8] text-black"
                     : "text-white hover:text-white"
                 }`}
               >

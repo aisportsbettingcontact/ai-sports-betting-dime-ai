@@ -104,7 +104,7 @@ export default function ManageAccount() {
       setCancelledAt(null);
       refetch();
       utils.appUsers.me.invalidate();
-      toast.success("Subscription reactivated! Your plan will auto-renew.");
+      toast.success("Subscription reactivated. Your plan will auto-renew.");
     },
     onError: (err) => {
       console.error("[ManageAccount][reactivate] [VERIFY] FAIL", err.message);
@@ -158,7 +158,7 @@ export default function ManageAccount() {
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="hidden xs:inline">Back to Feed</span>
+          <span className="hidden xs:inline">Back to feed</span>
         </button>
         <div className="flex-1 flex items-center justify-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
@@ -173,7 +173,7 @@ export default function ManageAccount() {
         <div className="w-full max-w-md space-y-4">
           {/* ── Account info card ── */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-            <h1 className="text-base font-black text-white tracking-wider uppercase">Manage Account</h1>
+            <h1 className="text-base font-black text-white tracking-wider uppercase">Manage account</h1>
 
             {/* Username */}
             <div className="space-y-0.5">
@@ -244,7 +244,7 @@ export default function ManageAccount() {
             >
               <Key className="w-4 h-4 text-white flex-shrink-0" />
               <span className="flex-1 text-left">
-                {forgotSent ? "Reset email sent — check your inbox" : "Forgot Password"}
+                {forgotSent ? "Reset email sent: check your inbox" : "Forgot password"}
               </span>
               {forgotPasswordMutation.isPending && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -263,7 +263,7 @@ export default function ManageAccount() {
                 className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CreditCard className="w-4 h-4 text-[#45E0A8] flex-shrink-0" />
-                <span className="flex-1 text-left">Update Payment Information</span>
+                <span className="flex-1 text-left">Update payment information</span>
                 {portalMutation.isPending && (
                   <div className="w-4 h-4 border-2 border-[#45E0A8] border-t-transparent rounded-full animate-spin flex-shrink-0" />
                 )}
@@ -280,7 +280,7 @@ export default function ManageAccount() {
                     className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-white rounded-xl text-sm font-semibold text-white transition-colors"
                   >
                     <XCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Cancel Subscription</span>
+                    <span className="flex-1 text-left">Cancel subscription</span>
                   </button>
                 )}
 
@@ -296,7 +296,7 @@ export default function ManageAccount() {
                   >
                     <RefreshCw className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">
-                      {reactivateMutation.isPending ? "Reactivating…" : "Reactivate Subscription"}
+                      {reactivateMutation.isPending ? "Reactivating…" : "Reactivate subscription"}
                     </span>
                     {reactivateMutation.isPending && (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -314,7 +314,7 @@ export default function ManageAccount() {
                     className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-primary rounded-xl text-sm font-semibold text-primary transition-colors"
                   >
                     <RefreshCw className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left">Renew Subscription</span>
+                    <span className="flex-1 text-left">Renew subscription</span>
                   </button>
                 )}
               </>
@@ -331,7 +331,7 @@ export default function ManageAccount() {
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogOut className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1 text-left">Log Out</span>
+              <span className="flex-1 text-left">Log out</span>
               {logoutMutation.isPending && (
                 <div className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin flex-shrink-0" />
               )}
@@ -352,7 +352,7 @@ export default function ManageAccount() {
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
               <div>
-                <h2 className="text-sm font-black text-white uppercase tracking-wider">Cancel Subscription?</h2>
+                <h2 className="text-sm font-black text-white uppercase tracking-wider">Cancel subscription?</h2>
                 <p className="text-xs text-muted-foreground mt-1">
                   Your subscription will be cancelled at the end of your current billing period.
                   You will retain full access until then.
@@ -365,7 +365,7 @@ export default function ManageAccount() {
                 onClick={() => setShowCancelConfirm(false)}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-secondary text-sm font-semibold text-foreground hover:bg-accent transition-colors"
               >
-                Keep Subscription
+                Keep subscription
               </button>
               <button
                 type="button"
@@ -382,7 +382,7 @@ export default function ManageAccount() {
                     Cancelling…
                   </span>
                 ) : (
-                  "Yes, Cancel"
+                  "Yes, cancel"
                 )}
               </button>
             </div>

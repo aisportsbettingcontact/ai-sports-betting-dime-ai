@@ -16,23 +16,29 @@
    * borders to black. Mint stays the one accent (as FILL — mint text fails on
    * white, so --dime-mint-text is black in light). No greys, no alpha. */
   --dime-mint: #45e0a8;
-  --dime-mint-text: #45e0a8; /* mint stays the signal in both themes (allowed color) */
+  /* 2026-07-13 audit P0-11: raw mint text on white is 1.68:1 (hard AA fail).
+   * The law's literal mapping (black) deleted all light-mode signal, which is
+   * why this token drifted back to raw mint. Scoped exception (like --loss-red):
+   * #0B8557 is the same mint hue darkened to 4.66:1 on white — signal survives,
+   * contrast passes. Strict-3 alternative remains #000000 if that direction wins. */
+  --dime-mint-text: #0B8557;
   --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
+  /* Law v2 tonal ramp (light): achromatic greys, mint still the only hue. */
   --dime-surface-sidebar: #ffffff;
-  --dime-surface-card: #ffffff;
-  --dime-surface-raised: #ffffff;
-  --dime-surface-bubble: #ffffff;
-  --dime-border: #000000;
-  --dime-border-strong: #000000;
+  --dime-surface-card: #f7f7f7;
+  --dime-surface-raised: #efefef;
+  --dime-surface-bubble: #f7f7f7;
+  --dime-border: #d9d9d9;          /* quiet default hairline */
+  --dime-border-strong: #000000;   /* rationed keyline — signature only */
   --dime-text-primary: #000000;
   --dime-text-body: #000000;
-  --dime-text-secondary: #000000;
-  --dime-text-muted: #000000;
-  --dime-text-faint: #000000;
+  --dime-text-secondary: #595959;  /* 7.0:1 on white */
+  --dime-text-muted: #767676;      /* 4.5:1 on white */
+  --dime-text-faint: #767676;
   --dime-ring: #45e0a8;
-  --dime-row-hover: transparent;   /* hover = no bg change (neutralize) */
-  --dime-row-active: transparent;  /* active shown via mint rail/dot, not a tint */
+  --dime-row-hover: #efefef;       /* v2: hover returns */
+  --dime-row-active: #e4e4e4;      /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent;    /* dim-mint tiles → transparent */
   --dime-mint-border: #45e0a8;
   /* bet-loss red exception (Bet Tracker / calendar) */
@@ -50,22 +56,23 @@
 
 html.dark {
   /* ── THREE-COLOR LAW — dark theme: black ground, white ink/borders, mint. */
+  /* Law v2 tonal ramp (dark): achromatic greys, mint still the only hue. */
   --dime-mint-text: #45e0a8; /* mint text passes on black */
   --dime-bg: #000000;
   --dime-surface-sidebar: #000000;
-  --dime-surface-card: #000000;
-  --dime-surface-raised: #000000;
-  --dime-surface-bubble: #000000;
-  --dime-border: #ffffff;
-  --dime-border-strong: #ffffff;
+  --dime-surface-card: #0a0a0a;    /* surface tier 1 */
+  --dime-surface-raised: #141414;  /* raised tier — menus, active pills */
+  --dime-surface-bubble: #111111;
+  --dime-border: #262626;          /* quiet default hairline */
+  --dime-border-strong: #ffffff;   /* rationed keyline — signature only */
   --dime-text-primary: #ffffff;
   --dime-text-body: #ffffff;
-  --dime-text-secondary: #ffffff;
-  --dime-text-muted: #ffffff;
-  --dime-text-faint: #ffffff;
+  --dime-text-secondary: #a6a6a6;  /* 8.6:1 on black */
+  --dime-text-muted: #6e6e6e;      /* 4.1:1 on black */
+  --dime-text-faint: #6e6e6e;
   --dime-ring: #45e0a8;
-  --dime-row-hover: transparent;
-  --dime-row-active: transparent;
+  --dime-row-hover: #141414;       /* v2: hover returns */
+  --dime-row-active: #1f1f1f;      /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent;
   --dime-mint-border: #45e0a8;
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */

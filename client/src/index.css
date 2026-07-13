@@ -37,6 +37,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-sidebar: var(--sidebar);
@@ -117,27 +118,29 @@
   --card-radius: clamp(6px, calc(6px  * var(--scale)), 16px);
   --pill-height: clamp(20px, calc(20px * var(--scale)), 44px);
 
-  /* ── THREE-COLOR LAW (dime-ai/THREE-COLOR-LAW.md) ────────────────────────
-   * Default (dark) theme: black ground, white ink/borders, mint the one accent.
-   * Light theme lives in `html:not(.dark)` below. No greys, no alpha, no purple. */
+  /* ── THREE-COLOR LAW v2 · TONAL AMENDMENT (dime-ai/THREE-COLOR-LAW.md) ────
+   * Mint (#45E0A8) is the ONLY hue. Black and white may render as achromatic
+   * TONES (pure greys, zero hue) so hierarchy, depth and hover return. Still
+   * banned: purple, gold, neon, gradients, and any *chromatic* second accent.
+   * Default (dark) theme below; light theme in `html:not(.dark)`. */
   --background: #000000;
   --foreground: #FFFFFF;
 
-  --card: #000000;
+  --card: #0A0A0A;              /* v2: surface tier 1 (was #000 flat) */
   --card-foreground: #FFFFFF;
 
-  --popover: #000000;
+  --popover: #141414;           /* v2: raised tier — menus/popovers get depth */
   --popover-foreground: #FFFFFF;
 
   /* Mint is the single accent (was purple #6C63FF). Black ink on mint. */
   --primary: #45E0A8;
   --primary-foreground: #000000;
 
-  --secondary: #000000;
+  --secondary: #141414;         /* v2: subtle chip/secondary fill */
   --secondary-foreground: #FFFFFF;
 
-  --muted: #000000;
-  --muted-foreground: #FFFFFF;
+  --muted: #141414;             /* v2: quiet raised fill */
+  --muted-foreground: #A6A6A6;  /* v2: secondary text tier — 8.6:1 on black */
 
   --accent: #45E0A8;
   --accent-foreground: #000000;
@@ -146,8 +149,9 @@
    * (Bet-loss red is a scoped exception carried by --loss-red, not this token.) */
   --destructive: #FFFFFF;
 
-  --border: #FFFFFF;
-  --input: #FFFFFF;
+  --border: #262626;            /* v2: quiet default hairline (was full #FFF) */
+  --border-strong: #FFFFFF;     /* v2: rationed white keyline — signature only */
+  --input: #262626;
   --ring: #45E0A8;
 
   /* Positive edge = mint; negative/pass = plain ink (no red) */
@@ -162,10 +166,17 @@
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #45E0A8;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #000000;
+  --sidebar-accent: #141414;    /* v2: sidebar row hover/active fill */
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #FFFFFF;
+  --sidebar-border: #262626;    /* v2: quiet sidebar keyline (was #FFF) */
   --sidebar-ring: #45E0A8;
+
+  /* v2 tonal ramp — extra tiers consumed by app components directly */
+  --text-secondary: #A6A6A6;    /* 8.6:1 on black */
+  --text-muted: #6E6E6E;        /* 4.1:1 on black */
+  --surface-raised: #141414;
+  --row-hover: #141414;         /* hover returns (was transparent) */
+  --row-active: #1F1F1F;
 }
 
 /* Light theme — Three-Color Law: white ground, black ink/borders, mint accent.
@@ -173,21 +184,22 @@
 html:not(.dark) {
   --background: #FFFFFF;
   --foreground: #000000;
-  --card: #FFFFFF;
+  --card: #F7F7F7;              /* v2: surface tier 1 */
   --card-foreground: #000000;
   --popover: #FFFFFF;
   --popover-foreground: #000000;
   --primary: #45E0A8;
   --primary-foreground: #000000;
-  --secondary: #FFFFFF;
+  --secondary: #EFEFEF;         /* v2: subtle chip fill */
   --secondary-foreground: #000000;
-  --muted: #FFFFFF;
-  --muted-foreground: #000000;
+  --muted: #EFEFEF;             /* v2: quiet raised fill */
+  --muted-foreground: #595959;  /* v2: secondary text tier — 7.0:1 on white */
   --accent: #45E0A8;
   --accent-foreground: #000000;
   --destructive: #000000;
-  --border: #000000;
-  --input: #000000;
+  --border: #D9D9D9;            /* v2: quiet default hairline */
+  --border-strong: #000000;     /* v2: rationed keyline */
+  --input: #D9D9D9;
   --ring: #45E0A8;
   --edge-green: #45E0A8;
   --edge-red: #000000;
@@ -196,10 +208,15 @@ html:not(.dark) {
   --sidebar-foreground: #000000;
   --sidebar-primary: #45E0A8;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #FFFFFF;
+  --sidebar-accent: #EFEFEF;    /* v2: sidebar row hover/active fill */
   --sidebar-accent-foreground: #000000;
-  --sidebar-border: #000000;
+  --sidebar-border: #D9D9D9;    /* v2: quiet sidebar keyline */
   --sidebar-ring: #45E0A8;
+  --text-secondary: #595959;    /* 7.0:1 on white */
+  --text-muted: #767676;        /* 4.5:1 on white */
+  --surface-raised: #EFEFEF;
+  --row-hover: #EFEFEF;
+  --row-active: #E4E4E4;
 }
 
 @layer base {

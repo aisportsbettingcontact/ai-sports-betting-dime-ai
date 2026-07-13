@@ -327,7 +327,7 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
       <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, padding: "16px 8px 8px" }}>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="gameIndex" tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} />
             <YAxis domain={[0, 0.35]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} width={36} />
             <Tooltip
@@ -574,7 +574,7 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
         </div>
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis type="number" dataKey="x" domain={["auto", "auto"]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false}>
               <Label value="Edge (pp)" position="insideBottom" offset={-10} fill="#FFFFFF" fontSize={9} />
             </XAxis>

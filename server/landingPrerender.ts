@@ -300,7 +300,7 @@ td b{color:var(--text);font-weight:700}
 .disclaimer{max-width:720px;margin:0 auto 12px;line-height:1.7}
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI (AI Sports Betting Models)","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"10,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99/month, Sharp is $249/month and Operator is $499/month. On-page demos are free to preview, and founder access is by application."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"400,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99/month, Sharp is $249/month and Operator is $499/month. On-page demos are free to preview, and founder access is by application."}}]}</script>
 </head>
 <body>
 <nav class="nav">
@@ -330,7 +330,7 @@ td b{color:var(--text);font-weight:700}
 <section class="section">
   <h2>What the engine does</h2>
   <div class="grid">
-    <div class="card"><h3>10,000 simulations per game</h3><p>Probability distributions for every outcome, generated per market and compared against the book's implied probability.</p></div>
+    <div class="card"><h3>400,000 simulations per game</h3><p>Probability distributions for every outcome, generated per market and compared against the book's implied probability.</p></div>
     <div class="card"><h3>No-vig fair pricing</h3><p>Every line is stripped of the book's margin so the comparison starts from an honest baseline.</p></div>
     <div class="card"><h3>Movement &amp; volatility flags</h3><p>Open-to-current movement and volatility context qualify every classification &mdash; an edge that is shrinking is labeled Monitor, not Edge.</p></div>
     <div class="card"><h3>Scored against the close</h3><p>Outputs are Brier-scored versus closing prices, with odds frozen at first pitch. 55+ outputs per market, 124 enforcement tests.</p></div>
@@ -354,7 +354,7 @@ td b{color:var(--text);font-weight:700}
 <section class="section">
   <h2>Frequently asked questions</h2>
   <div class="faq-item"><div class="faq-q">Is this a picks service?</div><div class="faq-a">No. Dime AI is analytical software. It classifies markets as Pass, Monitor, or Edge Detected based on where price and projected probability disagree. You make your own decisions.</div></div>
-  <div class="faq-item"><div class="faq-q">How does the model work?</div><div class="faq-a">10,000 simulations per game generate probability distributions, compared against the book's implied probability alongside movement, volatility, and matchup context. Outputs are Brier-scored against closing prices.</div></div>
+  <div class="faq-item"><div class="faq-q">How does the model work?</div><div class="faq-a">400,000 simulations per game generate probability distributions, compared against the book's implied probability alongside movement, volatility, and matchup context. Outputs are Brier-scored against closing prices.</div></div>
   <div class="faq-item"><div class="faq-q">Why does it say Pass so often?</div><div class="faq-a">Because most markets are efficiently priced. A tool that finds an edge everywhere is not measuring anything. Pass means: no action, keep your bankroll.</div></div>
   <div class="faq-item"><div class="faq-q">Can I cancel at any time?</div><div class="faq-a">Yes. No long-term commitments &mdash; cancel from your account settings and access runs to the end of the billing period.</div></div>
 </section>

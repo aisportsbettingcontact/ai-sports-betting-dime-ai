@@ -328,9 +328,12 @@ export function BetCalendar({
               style={{
                 width: "32px", height: "32px",
                 background: canGoNext ? "var(--bt-card, #000000)" : "var(--bt-base, #000000)",
-                border: "1px solid #FFFFFF",
+                // Disabled: quiet the keyline and recede the glyph to a real muted
+                // token (not an identical white fallback, not opacity) so the "no
+                // future months" state reads clearly inert next to the live prev control.
+                border: canGoNext ? "1px solid #FFFFFF" : "1px solid var(--dime-border)",
                 borderRadius: "4px",
-                color: canGoNext ? "var(--bt-text-muted, #FFFFFF)" : "var(--bt-border2, #FFFFFF)",
+                color: canGoNext ? "var(--bt-text-muted, #FFFFFF)" : "var(--dime-text-muted)",
                 cursor: canGoNext ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 transition: "all 150ms ease",
@@ -469,7 +472,7 @@ export function BetCalendar({
               <div key={i} style={{
                 aspectRatio: "1",
                 borderRadius: "4px",
-                background: "var(--bt-cell-empty, transparent)",
+                background: "color-mix(in srgb, var(--bt-text, #FFFFFF) 8%, transparent)",
                 animation: "pulse 1.5s ease-in-out infinite",
               }} />
             ))}
@@ -520,7 +523,7 @@ export function BetCalendar({
                     <span style={{
                       fontSize: "11px",
                       fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
-                      color: isFuture ? "var(--bt-border, #FFFFFF)" : "var(--bt-dimmer, #FFFFFF)",
+                      color: isFuture ? "transparent" : "color-mix(in srgb, var(--bt-text, #FFFFFF) 30%, transparent)",
                     }}>
                       {dayNum}
                     </span>

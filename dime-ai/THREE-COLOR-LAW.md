@@ -4,6 +4,58 @@ Supersedes the multi-tier palette in `design-system/dime-ai/MASTER.md`.
 Applied across Mobile, Tablet, Desktop — frontend **and** backend (emails, Discord
 cards, prerender).
 
+---
+
+## Law v2 — Tonal Amendment (2026-07-13, owner-approved)
+
+The strict-3 mapping (below) proved too literal for a dense data product: it
+collapsed four text tiers to one, deleted hover feedback, flattened every
+surface, and left ~12 elements rendering invisibly (audit:
+`docs/audits/2026-07-13-design-audit-and-redesign-plan.md`). v2 keeps the
+**spirit** (mint is the only *hue*) and amends the **letter**:
+
+> **Mint `#45E0A8` is the only chroma. Black and white may render as achromatic
+> TONES — pure greys with zero hue.** Still banned: purple, gold, neon `#39FF14`,
+> any *chromatic* second accent, and gradients.
+
+**"Achromatic" is mechanical:** every non-mint value must satisfy `R == G == B`.
+A grey with a blue/warm bias is a hue and is banned. The allowed chromatic
+values remain exactly three: `#45E0A8` (mint), `#0B8557` (mint-as-text on light,
+4.66:1), `#FF3B3B` (`--loss-red`, scoped to Bet Tracker/calendar).
+
+### v2 tonal ramp (verified contrast) — the tokens that render
+
+| Token | Dark | Light |
+|---|---|---|
+| Page background | `#000000` | `#FFFFFF` |
+| Surface card (tier 1) | `#0A0A0A` | `#F7F7F7` |
+| Surface raised (menus, active) | `#141414` | `#EFEFEF` |
+| Text primary | `#FFFFFF` (21:1) | `#000000` (21:1) |
+| Text secondary | `#A6A6A6` (8.6:1) | `#595959` (7.0:1) |
+| Text muted | `#6E6E6E` (4.1:1) | `#767676` (4.5:1) |
+| Border (quiet default) | `#262626` | `#D9D9D9` |
+| Border strong (rationed keyline) | `#FFFFFF` | `#000000` |
+| Row hover | `#141414` | `#EFEFEF` |
+| Row active | `#1F1F1F` | `#E4E4E4` |
+| Focus ring | `#45E0A8` | `#45E0A8` |
+| Menu shadow (floating surfaces only) | `0 12px 32px rgba(0,0,0,0.55)` | `0 12px 32px rgba(11,11,15,0.18)` |
+
+**White keylines are now a rationed signature, not the default.** Full-white
+`--border-strong` is reserved for signature moments (verdict strip, composer,
+section frames); everything else uses the quiet `#262626`/`#D9D9D9` hairline.
+
+**De-emphasis uses real tone, not opacity.** PASS/disabled/secondary states drop
+to a grey tier — the `opacity: 0.82` alpha loophole the strict law leaned on is
+retired.
+
+Token layers carrying v2: `client/src/index.css`, `client/src/styles/dime-mobile.css`,
+`client/src/pages/dime-chat/frozen-tokens.css`, `client/src/pages/dime/landing/landing-v2.css`.
+
+*Everything below is the original strict-3 directive, kept for provenance. Where
+it conflicts with v2, v2 wins.*
+
+---
+
 ## Fonts
 - **Familjen Grotesk is the only typeface.** IBM Plex Mono and JetBrains Mono are
   fully retired; every `--*-mono` token and Tailwind `font-mono`/`font-sans`

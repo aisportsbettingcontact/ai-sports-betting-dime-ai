@@ -49,8 +49,10 @@
 /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */ /* D/L:17 */
 :root { --mint: #45E0A8; --mint-on-light: #000000; } /* D/L:18 */
 
-.theme-dark { --text-primary: #FFFFFF; --text-secondary: #FFFFFF; --row-hover: transparent; --row-active: transparent; --accent: #45E0A8; --ring: #45E0A8; } /* D/L:19 */
-.theme-light { --text-primary: #000000; --text-secondary: #000000; --row-hover: transparent; --row-active: transparent; --accent: #45E0A8; --ring: #45E0A8; } /* D/L:20 */
+/* Law v2 tonal amendment: secondary text becomes a real grey tier, hover fills
+   return. Mint stays the only hue. (Superseded the collapsed D/L:19-20 values.) */
+.theme-dark { --text-primary: #FFFFFF; --text-secondary: #A6A6A6; --row-hover: #141414; --row-active: #1F1F1F; --accent: #45E0A8; --ring: #45E0A8; --shadow-menu: 0 12px 32px rgba(0,0,0,0.55); }
+.theme-light { --text-primary: #000000; --text-secondary: #595959; --row-hover: #EFEFEF; --row-active: #E4E4E4; --accent: #45E0A8; --ring: #45E0A8; --shadow-menu: 0 12px 32px rgba(11,11,15,0.18); }
 
 /* ----------------------------------------------------------------------------
    2. FROZEN STYLE-BLOCK RULES — declarations verbatim, frozen selector kept,
@@ -80,11 +82,14 @@
 .dc-sidebar-row.is-active .dc-sidebar-icon, .dc-sidebar-row[data-active="true"] .dc-sidebar-icon, .dc-sidebar-row[aria-current="page"] .dc-sidebar-icon { color: var(--accent); } /* D/L:27 — state rule */
 @media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before, .settings-btn, .dc-sidebar-row, .dc-sidebar-row::before, .dc-settings-btn { transition: none; } } /* D/L:28 — state rule */
 
-/* Placeholders — D/L:29-30. NOTE: `.theme-light-placeholder` is declared but
-   NOT applied in the frozen light markup (L:101 input has class="composer-input"
-   only), so as frozen the placeholder renders #6A6A78 in both themes. */
+/* Placeholders — D/L:29-30. Three-Color mapping: placeholder ink follows the
+   theme's text color (white on the dark composer, black on the light composer).
+   2026-07-13 audit P0 fix: the unconditional #FFFFFF made "Ask dime anything…"
+   white-on-white (invisible) in light mode, where the composer fill is #FFFFFF. */
 .composer-input::placeholder, .dc-composer-input::placeholder { color: #FFFFFF; } /* D/L:29 */
+.theme-light .composer-input::placeholder, .theme-light .dc-composer-input::placeholder { color: #000000; } /* audit P0-2 */
 .theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #FFFFFF; } /* D/L:30 */
+.theme-light .theme-light-placeholder::placeholder, .theme-light .dc-theme-light-placeholder::placeholder { color: #000000; } /* audit P0-2 */
 
 /* Typing indicator — D/L:31-34 (keyframes name verbatim; no clash with
    dime-chat.css's `dime-pulse`). */
@@ -118,8 +123,8 @@
 
 /* Hover utilities — D/L:47-49 (hv2 fill differs per file; theme-scoped merge) */
 .hv1:hover, .dc-hv1:hover { opacity: 0.85 !important; } /* D:47 = L:47 — state rule */
-.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: transparent !important; } /* D:48 — state rule */
-.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: transparent !important; } /* L:48 — state rule */
+.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: var(--row-hover) !important; } /* v2: hover returns (was transparent) */
+.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: var(--row-hover) !important; } /* v2: hover returns (was transparent) */
 .hv3:hover, .dc-hv3:hover { opacity: 0.7 !important; } /* D:49 = L:49 — state rule */
 
 /* ----------------------------------------------------------------------------
@@ -179,8 +184,10 @@
    -------------------------------------------------------------------------- */
 
 .dc-settings-menu, .settings-menu { position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; z-index: 9; cursor: default; } /* D:76 = L:76 (shared decls) */
-.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #000000; border: 1px solid #FFFFFF; box-shadow: none; } /* D:76 */
-.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:76 */
+/* v2: floating menus get a raised surface + one sanctioned shadow so they read
+   as floating over content (was flat #000/#FFF with a 1px line only). */
+.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #141414; border: 1px solid #262626; box-shadow: var(--shadow-menu); } /* D:76 */
+.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #D9D9D9; box-shadow: var(--shadow-menu); } /* L:76 */
 
 .dc-menu-header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; } /* D:77 = L:77 */
 .dc-menu-id { display: flex; flex-direction: column; gap: 1px; } /* D:79 = L:79 */

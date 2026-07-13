@@ -124,15 +124,15 @@ function comparativeColors(
   const noLeft  = leftPct  < 0;
   const noRight = rightPct < 0;
 
-  if (noLeft && noRight) return ["bg-black", "bg-black"];
-  if (noLeft)  return ["bg-black", "bg-[#45E0A8]"];
-  if (noRight) return ["bg-[#45E0A8]", "bg-black"];
+  if (noLeft && noRight) return ["bg-black text-white", "bg-black text-white"];
+  if (noLeft)  return ["bg-black text-white", "bg-[#45E0A8] text-black"];
+  if (noRight) return ["bg-[#45E0A8] text-black", "bg-black text-white"];
 
   const EPSILON = 0.001;
-  if (Math.abs(leftPct - rightPct) < EPSILON) return ["bg-black", "bg-black"];
+  if (Math.abs(leftPct - rightPct) < EPSILON) return ["bg-black text-white", "bg-black text-white"];
 
-  if (leftPct > rightPct) return ["bg-[#45E0A8]", "bg-white"];
-  return ["bg-white", "bg-[#45E0A8]"];
+  if (leftPct > rightPct) return ["bg-[#45E0A8] text-black", "bg-black border border-white text-white"];
+  return ["bg-black border border-white text-white", "bg-[#45E0A8] text-black"];
 }
 
 function resolveLogoUrl(slug: string, sport: Sport): string | undefined {
@@ -175,7 +175,7 @@ function RecordRow({
         {/* Away (left) bar */}
         <div
           className={cn(
-            "flex-1 flex items-center justify-center py-1.5 rounded text-[11px] font-bold text-white font-mono",
+            "flex-1 flex items-center justify-center py-1.5 rounded text-[11px] font-bold font-mono",
             awayColor
           )}
         >
@@ -184,7 +184,7 @@ function RecordRow({
         {/* Home (right) bar */}
         <div
           className={cn(
-            "flex-1 flex items-center justify-center py-1.5 rounded text-[11px] font-bold text-white font-mono",
+            "flex-1 flex items-center justify-center py-1.5 rounded text-[11px] font-bold font-mono",
             homeColor
           )}
         >

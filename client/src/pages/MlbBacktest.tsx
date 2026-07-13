@@ -82,7 +82,7 @@ function accColor(acc: number): string {
 
 function accBadge(acc: number, sample: number): ReactElement {
   if (sample < 5) return <Badge variant="outline" className="text-xs text-white">N/A</Badge>;
-  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-[#45E0A8] text-[#45E0A8] border-[#45E0A8] text-xs">✓ {pct(acc)}</Badge>;
+  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-[#45E0A8] text-black border-[#45E0A8] text-xs">✓ {pct(acc)}</Badge>;
   if (acc >= BREAKEVEN_ACCURACY)  return <Badge className="bg-black text-white border-white text-xs">{pct(acc)}</Badge>;
   return <Badge className="bg-black text-white border-white text-xs">{pct(acc)}</Badge>;
 }
@@ -229,7 +229,7 @@ export default function MlbBacktest() {
               size="sm"
               onClick={() => runBacktestMutation.mutate({ startDate: "2026-03-26", endDate: new Date().toISOString().slice(0, 10) })}
               disabled={runBacktestMutation.isPending}
-              className="bg-[#45E0A8] hover:bg-[#45E0A8] text-white h-9 text-sm"
+              className="bg-[#45E0A8] hover:bg-[#45E0A8] text-black h-9 text-sm"
             >
               {runBacktestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />}
               Run Full Backtest
@@ -296,11 +296,11 @@ export default function MlbBacktest() {
           {/* ── Main Tabs ── */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-black border border-white mb-4 flex-wrap h-auto gap-1 p-1">
-              <TabsTrigger value="overview"  className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white text-xs sm:text-sm">Overview</TabsTrigger>
-              <TabsTrigger value="roi"       className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white text-xs sm:text-sm">ROI Curve</TabsTrigger>
-              <TabsTrigger value="calibration" className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white text-xs sm:text-sm">Calibration</TabsTrigger>
-              <TabsTrigger value="kprops"    className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white text-xs sm:text-sm">K-Props</TabsTrigger>
-              <TabsTrigger value="hrprops"   className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white text-xs sm:text-sm">HR Props</TabsTrigger>
+              <TabsTrigger value="overview"  className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="roi"       className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">ROI Curve</TabsTrigger>
+              <TabsTrigger value="calibration" className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">Calibration</TabsTrigger>
+              <TabsTrigger value="kprops"    className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">K-Props</TabsTrigger>
+              <TabsTrigger value="hrprops"   className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">HR Props</TabsTrigger>
             </TabsList>
 
             {/* ── OVERVIEW TAB ── */}
@@ -406,19 +406,19 @@ export default function MlbBacktest() {
                         : "bg-black border-white"
                     }`}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-sm text-white">{t.market}</span>
+                        <span className={`font-bold text-sm ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.market}</span>
                         <Badge className={t.status === "LIVE"
-                          ? "bg-[#45E0A8] text-[#45E0A8] border-[#45E0A8] text-xs"
+                          ? "bg-[#45E0A8] text-black border-[#45E0A8] text-xs"
                           : "bg-black text-white border-white text-xs"
                         }>
                           {t.status === "LIVE" ? `✓ ${pct(t.acc)}` : `~ ${pct(t.acc)}`}
                         </Badge>
                       </div>
-                      <div className="text-xs text-white font-mono mb-2">{t.threshold}</div>
+                      <div className={`text-xs font-mono mb-2 ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.threshold}</div>
                       <div className="flex items-center gap-3 text-xs">
-                        <span className="text-[#45E0A8] font-bold">{t.w}W</span>
-                        <span className="text-white font-bold">{t.l}L</span>
-                        <span className={`font-bold ml-auto ${t.roi >= 0 ? "text-[#45E0A8]" : "text-white"}`}>
+                        <span className={`font-bold ${t.status === "LIVE" ? "text-black" : "text-[#45E0A8]"}`}>{t.w}W</span>
+                        <span className={`font-bold ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.l}L</span>
+                        <span className={`font-bold ml-auto ${t.status === "LIVE" ? "text-black" : t.roi >= 0 ? "text-[#45E0A8]" : "text-white"}`}>
                           ROI: {t.roi >= 0 ? "+" : ""}{pct(t.roi)}
                         </span>
                       </div>
@@ -443,7 +443,7 @@ export default function MlbBacktest() {
                     data={sortedMarkets.filter(m => m.wins + m.losses >= 5)}
                     margin={{ top: 5, right: 10, left: -10, bottom: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis
                       dataKey="label"
                       tick={{ fill: "#FFFFFF", fontSize: 10 }}
@@ -501,7 +501,7 @@ export default function MlbBacktest() {
                     data={timeSeriesQuery.data ?? []}
                     margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis dataKey="date" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
                     <YAxis
                       tickFormatter={v => `${(v * 100).toFixed(0)}%`}
@@ -580,7 +580,7 @@ export default function MlbBacktest() {
                       data={edgeBucketsQuery.data ?? []}
                       margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                       <XAxis dataKey="bucket" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
                       <YAxis
                         tickFormatter={v => `${(v * 100).toFixed(0)}%`}
@@ -737,7 +737,7 @@ function KPropsPanel({ data }: { data: {
         <h3 className="text-white font-semibold text-sm mb-3">Accuracy by Book Line</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byLine} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="line" tick={{ fill: "#FFFFFF", fontSize: 10 }} tickFormatter={v => `${v}K`} />
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip
@@ -846,7 +846,7 @@ function HrPropsPanel({ data }: { data: {
         <h3 className="text-white font-semibold text-sm mb-3">Win Rate by Model P(HR) Bucket</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byProbBucket} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="bucket" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip

@@ -691,7 +691,7 @@ export function BettingSplitsPanel({
                   borderRadius: 4,
                   border: isActive ? "1px solid #ffffff" : "1px solid #ffffff",
                   background: isActive ? "#45E0A8" : "transparent",
-                  color: isActive ? "#ffffff" : isAvailable ? "#ffffff" : "#ffffff",
+                  color: isActive ? "#000000" : isAvailable ? "#ffffff" : "#ffffff",
                   cursor: isAvailable ? "pointer" : "default",
                   transition: "all 0.15s ease",
                 }}

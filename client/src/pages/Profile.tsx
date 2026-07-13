@@ -149,13 +149,13 @@ export default function Profile() {
       <div className="pf-page">
         <div className="pf-error">
           <p className="pf-error-text">
-            Unable to load your profile. Please sign in again.
+            Unable to load your profile. Please log in again.
           </p>
           <button
             className="pf-error-retry"
             onClick={() => (window.location.href = "/login")}
           >
-            Sign in
+            Log in
           </button>
         </div>
       </div>

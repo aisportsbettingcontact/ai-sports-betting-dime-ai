@@ -6,7 +6,7 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
 export function MobileErrorState({
-  message = "Could not be loaded.",
+  message = "This didn't load. Retry below.",
   onRetry,
 }: {
   message?: string;

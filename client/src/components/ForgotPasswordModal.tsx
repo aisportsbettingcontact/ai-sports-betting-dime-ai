@@ -50,7 +50,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
     },
     onError: (err) => {
       console.error("[ForgotPasswordModal] Reset request error:", err.message);
-      toast.error("Something went wrong. Please try again.");
+      toast.error("We couldn't send the reset email. Please try again.");
     },
   });
 
@@ -93,7 +93,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Mail className="w-5 h-5 text-white" />
-            Forgot Password
+            Forgot password
           </DialogTitle>
           <DialogDescription className="text-white">
             Enter your username or email address. If your account exists, a reset
@@ -105,7 +105,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
           <div className="flex flex-col items-center gap-4 py-6 text-center">
             <CheckCircle2 className="w-12 h-12 text-[#45E0A8]" />
             <div>
-              <p className="font-semibold text-white text-lg">Request Received</p>
+              <p className="font-semibold text-white text-lg">Request received</p>
               <p className="text-white text-sm mt-1">
                 If your account exists, a reset link has been sent via Discord DM.
                 If you don&apos;t have Discord linked, the site owner will relay the
@@ -117,9 +117,9 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             </div>
             <Button
               onClick={handleClose}
-              className="mt-2 bg-[#45E0A8] text-white"
+              className="mt-2 bg-[#45E0A8] text-black"
             >
-              Back to Sign In
+              Back to log in
             </Button>
           </div>
         ) : (
@@ -172,7 +172,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             {requestReset.isError && (
               <div className="flex items-center gap-2 text-white text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>Something went wrong. Please try again.</span>
+                <span>We couldn't send the reset email. Please try again.</span>
               </div>
             )}
 
@@ -191,7 +191,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 type="button"
                 onClick={handleReset}
                 disabled={requestReset.isPending || !identifier.trim()}
-                className="flex-1 bg-[#45E0A8] text-white"
+                className="flex-1 bg-[#45E0A8] text-black"
               >
                 {requestReset.isPending ? (
                   <span className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                     Sending...
                   </span>
                 ) : (
-                  "Send Reset Link"
+                  "Send reset link"
                 )}
               </Button>
             </div>

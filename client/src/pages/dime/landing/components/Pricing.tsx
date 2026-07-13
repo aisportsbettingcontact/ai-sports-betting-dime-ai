@@ -10,7 +10,7 @@
 
 import { Link } from "wouter";
 import { CREDITS_NOTE, LANDING_MODE, PRICING_HEAD, TIERS, type Tier } from "../landing-content";
-import { MintCheck, SectionHead, TeleFrame } from "./shared";
+import { MintCheck, SectionHead } from "./shared";
 
 function TierCta({ tier }: { tier: Tier }) {
   const label = LANDING_MODE === "paid" ? tier.cta.paid : tier.cta.waitlist;
@@ -47,9 +47,9 @@ export default function Pricing() {
   return (
     <section className="sec" id="pricing" aria-label="Pricing">
       <div className="wrap">
-        <TeleFrame label="PRICING // SUBSCRIPTION + CREDITS · CANCEL ANYTIME · 21+" />
         <div className="sec-body">
-          <SectionHead center eyebrow={PRICING_HEAD.eyebrow} headline={PRICING_HEAD.headline} sub={PRICING_HEAD.sub} />
+          {/* Eyebrow dropped: the headline carries this section (taste budget). */}
+          <SectionHead center headline={PRICING_HEAD.headline} sub={PRICING_HEAD.sub} />
 
           <div className="tier-grid" style={{ marginTop: "clamp(28px, 4vw, 44px)" }}>
             {TIERS.map((tier) => (
@@ -87,7 +87,6 @@ export default function Pricing() {
           <p className="pricing-proof">{PRICING_HEAD.proof}</p>
           <span className="mono pricing-legal">{PRICING_HEAD.legal}</span>
         </div>
-        <TeleFrame />
       </div>
     </section>
   );

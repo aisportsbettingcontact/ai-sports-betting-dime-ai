@@ -159,8 +159,8 @@ function PlayerRow({ row }: PlayerRowProps) {
         {fmtOdds(row.consensusOverOdds)}
       </span>
 
-      {/* Model P(HR) */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+      {/* Model P(HR) — mint only when this row is the verdict pick; otherwise normal ink */}
+      <span style={{ fontSize: 11, fontWeight: 700, color: isOver ? "#45E0A8" : "#FFFFFF", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtPct(row.modelPHr)}
       </span>
 
@@ -280,10 +280,10 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
       overflow: "hidden",
       fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
-      {/* Team gradient bar */}
+      {/* Quiet 1px keyline (chrome — carries no signal, so no mint) */}
       <div style={{
-        height: 4,
-        background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
+        height: 1,
+        background: "var(--dime-border)",
       }} />
 
       {/* Matchup header */}

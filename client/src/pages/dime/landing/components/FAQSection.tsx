@@ -1,15 +1,15 @@
 /** FAQ — native <details>/<summary> accordion (keyboard + SR accessible by default). */
 
 import { FAQ } from "../landing-content";
-import { SectionHead, TeleFrame } from "./shared";
+import { SectionHead } from "./shared";
 
 export default function FAQSection() {
   return (
     <section className="sec" id="faq" aria-label="Frequently asked questions">
       <div className="wrap">
-        <TeleFrame label="FAQ // PRACTICAL" />
         <div className="sec-body">
-          <SectionHead eyebrow={FAQ.eyebrow} headline={FAQ.headline} />
+          {/* Eyebrow dropped: the headline carries this section (taste budget). */}
+          <SectionHead headline={FAQ.headline} />
           <div className="faq-list" style={{ marginTop: "clamp(16px, 3vw, 28px)" }}>
             {FAQ.items.map((item) => (
               <details className="faq-item" key={item.q}>
@@ -22,7 +22,6 @@ export default function FAQSection() {
             ))}
           </div>
         </div>
-        <TeleFrame />
       </div>
     </section>
   );
