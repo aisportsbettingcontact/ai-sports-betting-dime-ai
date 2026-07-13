@@ -1947,7 +1947,7 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
   if (modeledGames.length === 0) return null;
 
   return (
-    <div style={{ fontFamily: ""Familjen Grotesk", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
+    <div style={{ fontFamily: "'Familjen Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap' as const, gap: 10 }}>
         {dateLabel && (
