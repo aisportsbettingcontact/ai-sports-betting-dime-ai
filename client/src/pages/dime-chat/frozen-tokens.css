@@ -167,11 +167,11 @@
 
 .dc-profile-id { display: flex; flex-direction: column; } /* D:75 = L:75 (wrapper) */
 .dc-profile-name { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; } /* D:75 = L:75 (shared decls) */
-.theme-dark .dc-profile-name { color: #EDEDF2; } /* D:75 */
-.theme-light .dc-profile-name { color: #0B0B0F; } /* L:75 */
+.theme-dark .dc-profile-name { color: #FFFFFF; } /* D:75 */
+.theme-light .dc-profile-name { color: #000000; } /* L:75 */
 .dc-profile-tier { font-size: 11px; } /* D:75 = L:75 (shared decls) */
-.theme-dark .dc-profile-tier { color: #6A6A78; } /* D:75 */
-.theme-light .dc-profile-tier { color: #9A9AA8; } /* L:75 */
+.theme-dark .dc-profile-tier { color: #FFFFFF; } /* D:75 */
+.theme-light .dc-profile-tier { color: #000000; } /* L:75 */
 
 /* ----------------------------------------------------------------------------
    5. ACCOUNT / SETTINGS MENU — inline vocabulary (D/L:76-92)
@@ -179,8 +179,8 @@
    -------------------------------------------------------------------------- */
 
 .dc-settings-menu, .settings-menu { position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; z-index: 9; cursor: default; } /* D:76 = L:76 (shared decls) */
-.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #1A1A22; border: 1px solid #2E2E38; box-shadow: 0 12px 32px rgba(0,0,0,0.55); } /* D:76 */
-.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 12px 32px rgba(11,11,15,0.18); } /* L:76 */
+.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #000000; border: 1px solid #FFFFFF; box-shadow: none; } /* D:76 */
+.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:76 */
 
 .dc-menu-header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; } /* D:77 = L:77 */
 .dc-menu-id { display: flex; flex-direction: column; gap: 1px; } /* D:79 = L:79 */
