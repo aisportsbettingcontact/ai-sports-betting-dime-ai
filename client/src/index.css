@@ -219,6 +219,39 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
+/* ═══ Law v3 — Dimensional amendment (owner-approved 2026-07-13) ══════════════
+   Relaxes Law v2's flat/no-shadow rule for the projections product. NEW: mint
+   ACCENT SURFACES (tinted cell + border + high-contrast foreground) and
+   ELEVATION shadows on major surfaces/controls. Alpha is now permitted in
+   SHADOWS and in the mint-tint color-mix ONLY; surface FILLS stay solid, tables
+   stay flat, mint stays the one hue. Full rules in dime-ai/THREE-COLOR-LAW.md §v3.
+   Contrast verified: light fg #09251C on tint 14.6:1; dark fg #DFF9EF on tint 14.8:1. */
+:root {
+  /* dark-theme defaults (solid fallbacks; color-mix upgrade below) */
+  --brand-mint-surface: #0B241B;
+  --brand-mint-border: #298665;
+  --brand-mint-foreground: #DFF9EF;
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --elev-2: 0 2px 6px rgb(0 0 0 / 0.5);
+  --elev-card: 0 1px 2px rgb(0 0 0 / 0.6), 0 10px 30px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --elev-lift: 0 2px 4px rgb(0 0 0 / 0.6), 0 16px 40px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+html:not(.dark) {
+  --brand-mint-surface: #DEF9EF;
+  --brand-mint-border: #2F9872;
+  --brand-mint-foreground: #09251C;
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.06);
+  --elev-2: 0 1px 1px rgb(0 0 0 / 0.05), 0 8px 24px rgb(0 0 0 / 0.07);
+  --elev-card: 0 1px 1px rgb(0 0 0 / 0.05), 0 8px 24px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.8);
+  --elev-lift: 0 2px 4px rgb(0 0 0 / 0.06), 0 14px 34px rgb(0 0 0 / 0.10);
+}
+/* Modern-CSS upgrade: derive the tint/border from the live mint via color-mix.
+   Falls back to the solid hexes above on engines without color-mix. */
+@supports (color: color-mix(in srgb, red, red)) {
+  :root { --brand-mint-surface: color-mix(in srgb, #45E0A8 16%, #000000); --brand-mint-border: color-mix(in srgb, #45E0A8 60%, #000000); }
+  html:not(.dark) { --brand-mint-surface: color-mix(in srgb, #45E0A8 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, #45E0A8 68%, #000000); }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

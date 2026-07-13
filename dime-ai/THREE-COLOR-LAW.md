@@ -6,6 +6,53 @@ cards, prerender).
 
 ---
 
+## Law v3 — Dimensional Amendment (2026-07-13, owner-approved)
+
+Scoped to the **AI Model Projections product** (feed cards, controls, highlighted
+values). The owner chose to evolve the austere v2 look toward a dimensional,
+premium data product. v3 relaxes two v2 rules and adds an accessible mint accent;
+everything else in v2 (tonal greys, mint = signal, one hue) still holds.
+
+### What v3 adds
+- **Elevation is allowed** on major surfaces and interactive controls (cards,
+  buttons, tabs, menus, highlighted values). Tokens `--elev-1/-2/-card/-lift`
+  (both themes) carry layered shadows with an inset top highlight. **Tables stay
+  flat** — depth is for containers and controls, not for body rows/text.
+- **Alpha is allowed in two places only**: inside `box-shadow` (elevation) and
+  inside the mint-tint `color-mix`. Surface **fills stay solid**; no translucent
+  scrims or alpha text returns.
+- **Restrained 3D / spring motion** on interactive cards/controls: a 1–2px lift,
+  a small shadow expansion, an optional restrained `rotateX/rotateY`, a
+  compressed pressed state, and a non-bouncing spring return. Animate **only**
+  `transform`/`opacity`. `prefers-reduced-motion` collapses all of it to static.
+  No 3D on tables or body text.
+
+### Accessible mint accent (fixes mint-on-white contrast)
+Small mint text on white fails contrast. v3 replaces it with a tinted **cell**
+pattern — mint surface + mint border + high-contrast foreground — so mint stays
+the brand signal but readability comes from contrast, size, weight, and shape,
+never color alone (always pair with a text label).
+
+| Token | Dark | Light |
+|---|---|---|
+| `--brand-mint-surface` | `color-mix(mint 16%, black)` → `#0B241B` | `color-mix(mint 18%, white)` → `#DEF9EF` |
+| `--brand-mint-border` | `color-mix(mint 60%, black)` → `#298665` | `color-mix(mint 68%, black)` → `#2F9872` |
+| `--brand-mint-foreground` | `#DFF9EF` (light mint) | `#09251C` (dark green) |
+
+Contrast (verified): foreground-on-surface **14.8:1 dark / 14.6:1 light** (AA
+pass, large margin); border clears 3:1 for non-text. `#09251C`/`#DFF9EF` are the
+mint hue at its extremes (near-black-green / near-white-mint), so v3 stays a
+single-hue system: mint + its tint/border/foreground + white/black + greys.
+
+### Unchanged from v2/v1
+Purple, gold, neon, gradients, and any chromatic second accent remain banned.
+Mint is still reserved for signal (edge/pick/live/active). Team/league/country
+logos and the scoped `--loss-red` keep their exceptions.
+
+Token layer: `client/src/index.css` (`--brand-mint-*`, `--elev-*`).
+
+---
+
 ## Law v2 — Tonal Amendment (2026-07-13, owner-approved)
 
 The strict-3 mapping (below) proved too literal for a dense data product: it

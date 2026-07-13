@@ -124,3 +124,28 @@
   .ds-cq-value { font-size: var(--fs-body-lg); line-height: var(--lh-snug); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
   .ds-cq-label { font-size: var(--fs-caption); line-height: var(--lh-snug); letter-spacing: var(--tracking-label); text-transform: uppercase; }
 }
+
+/* ── Projections feed readable scale (2026-07-13 directive) ─────────────────
+   Larger, data-dense semantic sizes so the fix is a real type system, not a
+   global scale transform. No token renders below 12px; odds/scores/edges land
+   16–20px by width. Brand-safe: size only, no color.
+
+   NAMESPACED `--proj-*` on purpose: the directive's literal names (--text-body,
+   --text-label, --text-primary…) COLLIDE with existing COLOR tokens of the same
+   name (frozen-tokens.css / dime-mobile.css / landing-v2.css use --text-primary
+   etc. as colors). Defining them as font-sizes on :root would break every
+   component that reads var(--text-primary) expecting a color. */
+:root {
+  --proj-meta:    clamp(0.75rem,   0.72rem + 0.12vw, 0.875rem);  /* 12 → 14 */
+  --proj-label:   clamp(0.8125rem, 0.78rem + 0.16vw, 0.9375rem); /* 13 → 15 */
+  --proj-body:    clamp(0.9375rem, 0.90rem + 0.20vw, 1.0625rem); /* 15 → 17 */
+  --proj-team:    clamp(1rem,      0.94rem + 0.28vw, 1.25rem);   /* 16 → 20 */
+  --proj-odds:    clamp(1rem,      0.94rem + 0.30vw, 1.25rem);   /* 16 → 20 */
+  --proj-primary: clamp(1.125rem,  1.04rem + 0.42vw, 1.5rem);    /* 18 → 24 */
+}
+
+/* Numeric columns: stable, aligned during data updates. Familjen Grotesk digits
+   are already tabular-width; the face ships no 'tnum'/'zero' OpenType features,
+   so these settings are harmless no-ops kept correct for any future numeric face. */
+.odds-value, .score-value, .edge-value,
+.ds-tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "zero" 1; }
