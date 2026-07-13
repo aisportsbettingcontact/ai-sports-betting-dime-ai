@@ -315,7 +315,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
           </div>
           <div style={{ display: "flex", gap: 5, alignItems: "center", marginTop: 5, flexDirection: isRight ? "row-reverse" : "row" }}>
             {prop.pitcherHand && (
-              <Pill label={`${prop.pitcherHand}HP`} bg="#101820" color="#FFFFFF" border="#FFFFFF" />
+              <Pill label={`${prop.pitcherHand}HP`} bg="#000000" color="#FFFFFF" border="#FFFFFF" />
             )}
             <StatusPill confirmed={pitcherConfirmed === true} />
           </div>
@@ -326,7 +326,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
       <div style={{
         padding: "12px 14px",
         borderBottom: "1px solid #FFFFFF",
-        background: "rgba(255,255,255,0.02)",
+        background: "#000000",
       }}>
         {/* K Projection row */}
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
@@ -334,7 +334,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {fmtNum(prop.kProj, 1)}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#a6a6a6" }}>
+            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF" }}>
               TOTAL STRIKEOUTS PROJECTED
             </div>
           </div>
@@ -382,14 +382,14 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {/* OVER */}
             <div style={{
               flex: 1, padding: "8px 10px", borderRadius: 6,
-              background: playOver ? `${primary}22` : "#000000",
-              border: `1px solid ${playOver ? primary + "55" : "rgba(255,255,255,0.08)"}`,
+              background: playOver ? "transparent" : "#000000",
+              border: `1px solid ${playOver ? "#45E0A8" : "#FFFFFF"}`,
               display: "flex", flexDirection: "column", gap: 2,
             }}>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playOver ? primary : "#FFFFFF" }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playOver ? "#45E0A8" : "#FFFFFF" }}>
                 OVER {bookLine?.toFixed(1) ?? "—"}
               </div>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: playOver ? primary : "#FFFFFF", lineHeight: 1 }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: playOver ? "#45E0A8" : "#FFFFFF", lineHeight: 1 }}>
                 {fmtPct(prop.pOver)}
               </div>
               <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "#FFFFFF" }}>
@@ -404,8 +404,8 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {/* UNDER */}
             <div style={{
               flex: 1, padding: "8px 10px", borderRadius: 6,
-              background: playUnder ? "rgba(0,191,255,0.12)" : "#000000",
-              border: `1px solid ${playUnder ? "rgba(0,191,255,0.4)" : "rgba(255,255,255,0.08)"}`,
+              background: playUnder ? "transparent" : "#000000",
+              border: `1px solid ${playUnder ? "#45E0A8" : "#FFFFFF"}`,
               display: "flex", flexDirection: "column", gap: 2,
             }}>
               <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playUnder ? "#45E0A8" : "#FFFFFF" }}>
@@ -437,9 +437,9 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
           <div style={{
             fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 800,
             letterSpacing: "1.5px", textTransform: "uppercase",
-            color: bestSide === "OVER" ? primary : "#45E0A8",
-            background: bestSide === "OVER" ? `${primary}18` : "rgba(0,191,255,0.12)",
-            border: `1px solid ${bestSide === "OVER" ? primary + "44" : "rgba(0,191,255,0.35)"}`,
+            color: bestSide === "OVER" ? "#45E0A8" : "#45E0A8",
+            background: bestSide === "OVER" ? "transparent" : "transparent",
+            border: `1px solid ${bestSide === "OVER" ? "#45E0A8" : "#45E0A8"}`,
             borderRadius: 4, padding: "4px 10px",
           }}>
             ▶ {bestSide} {bestSide === "OVER" ? fmtOdds(prop.bookOverOdds) : fmtOdds(prop.bookUnderOdds)}
@@ -476,7 +476,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
 
   return (
     <div style={{
-      background: "#090E14",
+      background: "#000000",
       borderRadius: 12,
       border: "1px solid #FFFFFF",
       overflow: "hidden",
@@ -515,7 +515,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF" }}>
             {gameDate ?? ""}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", marginTop: 2 }}>
             K PROPS
           </div>
           <div style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "1px", marginTop: 2 }}>
