@@ -100,7 +100,7 @@ function buildEmailHtml(opts: {
                 &copy; ${new Date().getFullYear()} Dime AI &mdash; AI Sports Betting Models &nbsp;&bull;&nbsp;
                 <a href="https://aisportsbettingmodels.com" style="color:#FFFFFF;text-decoration:none;">aisportsbettingmodels.com</a>
               </p>
-              <p style="font-size:10px;color:#333333;margin:6px 0 0;">
+              <p style="font-size:10px;color:#FFFFFF;margin:6px 0 0;">
                 Analytical software &mdash; no guaranteed outcomes. For informational purposes only. 21+. Gambling problem? Call 1-800-GAMBLER.
               </p>
             </td>
@@ -161,7 +161,7 @@ export async function sendPasswordResetEmail(opts: {
 
     <p style="font-size:11px;color:#FFFFFF;margin:0;word-break:break-all;">
       If the button above doesn't work, copy and paste this URL into your browser:<br/>
-      <a href="${opts.resetUrl}" style="color:#555555;">${opts.resetUrl}</a>
+      <a href="${opts.resetUrl}" style="color:#FFFFFF;">${opts.resetUrl}</a>
     </p>
   `;
 
@@ -213,7 +213,7 @@ export async function sendWelcomeEmail(opts: {
       Welcome, <strong style="color:#ffffff;">@${opts.username}</strong>. Your <strong style="color:${BRAND_COLOR};">${opts.planLabel}</strong> is now active.
     </p>
 
-    <div style="background:#0d0d0d;border:1px solid ${BORDER_COLOR};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+    <div style="background:#000000;border:1px solid ${BORDER_COLOR};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
       <p style="font-size:11px;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;font-weight:700;">What you now have access to</p>
       <ul style="margin:0;padding-left:18px;color:#FFFFFF;font-size:12px;line-height:1.8;">
         <li>Full AI Model Projections board &mdash; every game, priced (MLB live; World Cup 2026 in the engine)</li>

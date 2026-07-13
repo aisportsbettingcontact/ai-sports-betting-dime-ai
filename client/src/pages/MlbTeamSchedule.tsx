@@ -629,13 +629,13 @@ export default function MlbTeamSchedule() {
 
         {/* Error — never silent: shows message + retry button */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 mb-4 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="bg-black border border-white rounded-xl p-3 mb-4 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-red-400 font-mono text-sm font-bold mb-1">
+              <p className="text-white font-mono text-sm font-bold mb-1">
                 SCHEDULE LOAD FAILED
               </p>
-              <p className="text-red-300/70 font-mono text-xs break-all mb-2">
+              <p className="text-white font-mono text-xs break-all mb-2">
                 {error.message}
               </p>
               <Button
@@ -646,7 +646,7 @@ export default function MlbTeamSchedule() {
                   refetch();
                 }}
                 disabled={isFetching}
-                className="text-xs font-mono h-6 px-2 border-red-500/40 text-red-400 hover:text-white"
+                className="text-xs font-mono h-6 px-2 border-white text-white hover:text-white"
               >
                 <RefreshCw className={cn("w-3 h-3 mr-1", isFetching && "animate-spin")} />
                 RETRY

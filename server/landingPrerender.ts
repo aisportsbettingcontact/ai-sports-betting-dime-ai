@@ -263,18 +263,18 @@ function buildLandingHtml(): string {
 <meta name="robots" content="index,follow"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0B0B0F;--surface:#121218;--line:rgba(255,255,255,.08);--text:#F2F2F5;--text-secondary:#9A9AA3;--text-muted:#6B6B75;--mint:#45E0A8}
+:root{--bg:#000000;--surface:#000000;--line:#FFFFFF;--text:#FFFFFF;--text-secondary:#FFFFFF;--text-muted:#FFFFFF;--mint:#45E0A8}
 body{font-family:"Familjen Grotesk","Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
 a{color:inherit;text-decoration:none}
 .mono{font-family:"Familjen Grotesk", system-ui, -apple-system, sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--line);background:var(--bg)}
 .nav-logo{font-weight:700;font-size:18px;letter-spacing:-.02em}
-.nav-cta{background:var(--mint);color:#0B0B0F;font-weight:600;font-size:13px;padding:8px 20px;border-radius:8px}
+.nav-cta{background:var(--mint);color:#000000;font-weight:600;font-size:13px;padding:8px 20px;border-radius:8px}
 .hero{text-align:center;padding:88px 24px 56px}
 h1{font-size:clamp(2.25rem,5.5vw,4.25rem);font-weight:700;letter-spacing:-.03em;line-height:1.06;color:var(--text);max-width:880px;margin:16px auto 0}
 h1 em{font-style:normal;color:var(--mint)}
 .sub{max-width:620px;margin:20px auto 28px;color:var(--text-secondary);font-size:clamp(1rem,1.5vw,1.125rem)}
-.cta{display:inline-block;background:var(--mint);color:#0B0B0F;font-weight:600;font-size:15px;padding:14px 32px;border-radius:10px}
+.cta{display:inline-block;background:var(--mint);color:#000000;font-weight:600;font-size:15px;padding:14px 32px;border-radius:10px}
 .micro{margin-top:16px;color:var(--text-muted);font-size:12px}
 .section{max-width:1040px;margin:0 auto;padding:64px 24px}
 .section h2{font-size:clamp(1.6rem,3vw,2.25rem);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
