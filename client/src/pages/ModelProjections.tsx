@@ -89,7 +89,7 @@ function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
             mixBlendMode: 'screen',
             // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
             // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
-            filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
+            filter: 'brightness(1.7) contrast(1.12) saturate(1.35)',
           }}
         />
       ) : (
@@ -123,7 +123,7 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
 
   return (
     <button type="button" onClick={onClick}
-      className="w-full hover:bg-white/5 active:bg-white/10 transition-colors text-left border-b border-white/8 last:border-0"
+      className="w-full hover:bg-transparent active:bg-transparent transition-colors text-left border-b border-white last:border-0"
     >
       <div className="flex items-center px-3 py-2.5 gap-2">
         {/* Away team: logo + responsive name */}
@@ -185,10 +185,10 @@ function FavNotificationBanner({ notif, onDismiss }: { notif: FavNotification; o
       exit={{ opacity: 0, y: -8, scale: 0.96 }}
       transition={{ duration: 0.2 }}
       style={{
-        background: "rgba(10,10,10,0.97)",
-        border: "1px solid rgba(255,215,0,0.5)",
+        background: "#000000",
+        border: "1px solid #45E0A8",
         borderRadius: 8,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,215,0,0.15)",
+        boxShadow: "none",
         padding: "10px 14px",
         display: "flex",
         alignItems: "center",
@@ -1175,25 +1175,25 @@ export default function ModelProjections() {
                         {isOwner && (
                           <>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/publish'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
+                              <Send className="w-3.5 h-3.5 text-[#45E0A8]" /> Publish Projections
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/users'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                               <Crown className="w-3.5 h-3.5 text-white" /> User Management
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/model-results'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <FlaskConical className="w-3.5 h-3.5 text-blue-400" /> THE MODEL RESULTS
+                              <FlaskConical className="w-3.5 h-3.5 text-white" /> THE MODEL RESULTS
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/security'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <ShieldAlert className="w-3.5 h-3.5 text-red-400" /> Security Events
+                              <ShieldAlert className="w-3.5 h-3.5 text-white" /> Security Events
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/postponed-games'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Postponed Games
+                              <AlertTriangle className="w-3.5 h-3.5 text-white" /> Postponed Games
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/claude'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <Bot className="w-3.5 h-3.5 text-[#00ff41]" /> Claude UI/UX Assistant
+                              <Bot className="w-3.5 h-3.5 text-[#45E0A8]" /> Claude UI/UX Assistant
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/waitlist'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <Users className="w-3.5 h-3.5 text-indigo-400" /> Waitlist
+                              <Users className="w-3.5 h-3.5 text-white" /> Waitlist
                             </button>
                           </>
                         )}
