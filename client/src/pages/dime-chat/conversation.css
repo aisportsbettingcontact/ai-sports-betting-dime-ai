@@ -33,11 +33,18 @@
 .dc-main { min-width: 0; min-height: 0; position: relative; } /* R2: no height declaration — frozen main pane sizes by flex stretch (F:97 inside F:53); position context for the FLIP ghost overlay (spec §3.2); min-height 0 so the conv-state scroller can shrink */
 .dc-main--conv { justify-content: flex-start; align-items: stretch; gap: 0; padding: 0; } /* conversation replaces the centered stack; 680px column + 40px gutters persist below (spec §2) */
 
-/* Scroller: main pane minus the docked composer zone (spec §2.1) */
-.dc-scroller { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; padding: 40px 40px 20px; } /* 40px = home-main gutter F:97; 20px bottom = sidebar vertical pad step F:54 (spec §2.1) */
+/* Scroller: main pane minus the docked composer zone (spec §2.1).
+   Density fix (2026-07-13): a flex column so a SHORT conversation can be
+   bottom-anchored (thread margin-block-start: auto below) — the messages hug
+   the composer with breathing room above, instead of being stranded at the top
+   with a large accidental void between them and the docked composer. A LONG
+   conversation overflows and scrolls normally (margin-auto collapses). Gutters
+   fluid so they don't eat the pane on small widths. */
+.dc-scroller { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; padding: clamp(20px, 3vw, 40px) clamp(16px, 3vw, 40px) var(--space-md); }
 
-/* Thread grid: one 680px column (C6 = composer width F:99), append-only rows */
-.dc-thread { width: 680px; max-width: 100%; margin: 0 auto; display: grid; grid-template-columns: 100%; row-gap: 28px; } /* UNKNOWN-2: 28px turn gap (40px section gap F:97 x 0.7 hv3 register F:49) */
+/* Thread grid: one 680px column (C6 = composer width F:99), append-only rows.
+   margin-block-start: auto = the bottom-anchor; margin-inline: auto = centered. */
+.dc-thread { width: 680px; max-width: 100%; margin-inline: auto; margin-block-start: auto; display: grid; grid-template-columns: 100%; row-gap: 28px; } /* UNKNOWN-2: 28px turn gap (40px section gap F:97 x 0.7 hv3 register F:49) */
 
 /* ----------------------------------------------------------------------------
    2. USER MESSAGE — "your prompt, moved into history" (spec §2.2)
