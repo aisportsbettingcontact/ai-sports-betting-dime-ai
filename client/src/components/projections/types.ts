@@ -9,6 +9,10 @@ export interface ProjectionTeam {
   /** primary color for the monogram-disc fallback only (Three-Color Law logo exception) */
   color?: string | null;
   score?: number | null;
+  /** "country" ⇒ render the flag emoji (no frame); "team" ⇒ logo/monogram. */
+  kind?: "team" | "country";
+  /** Country flag emoji, bound to the participant's name from the same source. */
+  flag?: string | null;
 }
 
 export type GameStatus = "scheduled" | "live" | "final" | "postponed";

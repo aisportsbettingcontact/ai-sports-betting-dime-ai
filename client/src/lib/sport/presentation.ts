@@ -1,0 +1,418 @@
+/**
+ * presentation.ts — the sport-aware presentation layer.
+ *
+ * ONE normalized model (`SportPresentationModel`) sits between each league's
+ * data and the shared interface. Every sport is converted by a typed adapter in
+ * `sportAdapters`; no league-specific `if` chains live in React components. The
+ * adapters only RE-SHAPE and RE-LABEL already-computed data — every price, edge,
+ * and projection is preserved exactly (the decision engine in gameInsight.ts and
+ * edgeUtils.ts remains the single source of the numbers).
+ *
+ * Home/away is carried by explicit participant identity and event role, never by
+ * row order. For soccer, a participant's country name, ISO code, and flag are
+ * resolved together from one FIFA code (countries.ts), so they can never invert.
+ */
+import {
+  rankMarkets,
+  primaryInsight,
+  type MarketInsight,
+  type MarketSideInput,
+} from "@/lib/gameInsight";
+import { parseAmerican } from "@/components/projections/fromFeedSpec";
+import { countryIdentity, isRawCountryCode } from "./countries";
+
+// ─── The sport universe ──────────────────────────────────────────────────────
+
+export type Sport = "MLB" | "NFL" | "NBA" | "NHL" | "NCAAF" | "NCAAM" | "SOCCER";
+export type EventStatus = "scheduled" | "live" | "final";
+export type EventRole = "home" | "away";
+export type ParticipantKind = "team" | "country";
+
+/** A team or country in an event. Identity is stable and never row-derived. */
+export interface Participant {
+  /** Stable identifier (team code / FIFA code) used to bind name+flag+prices. */
+  id: string;
+  role: EventRole;
+  kind: ParticipantKind;
+  /** Full human label — "Spain", "New York Yankees". NEVER a raw code. */
+  displayName: string;
+  /** Compact label for tight cells — a team abbrev, or the country name (no code). */
+  shortName: string;
+  /** Team logo asset URL; null for countries (they render a flag). */
+  logo?: string | null;
+  /** Brand color for a monogram fallback only. */
+  color?: string | null;
+  /** Country flag emoji; null for teams. */
+  flag?: string | null;
+  /** ISO 3166-1 alpha-2 for countries; null otherwise. */
+  iso2?: string | null;
+  score?: number | null;
+}
+
+export type SelectionRole =
+  | EventRole
+  | "draw"
+  | "over"
+  | "under"
+  | "yes"
+  | "no"
+  | "home_or_draw"
+  | "away_or_draw"
+  | "neutral";
+
+/** One selectable side of a market, bound to a participant where applicable. */
+export interface MarketSelectionModel {
+  id: string;
+  role: SelectionRole;
+  /** Rendered label — participant-resolved, never a raw country code. */
+  label: string;
+  /** The participant this selection belongs to (ML/spread/double-chance sides). */
+  participantId?: string;
+  /** Flag for the bound participant, sourced from the SAME object as its name. */
+  flag?: string | null;
+  bookPrice: number | null;
+  modelPrice: number | null;
+}
+
+export interface MarketPresentationModel {
+  key: string;
+  /** Sport-appropriate market name — never forced into MLB terminology. */
+  label: string;
+  selections: MarketSelectionModel[];
+  /** A preserved result/verdict line (e.g. "NO EDGE"), shown verbatim. */
+  resultLabel?: string;
+}
+
+/** The existing projection/decision output, unchanged — just carried along. */
+export interface ProjectionSummaryModel {
+  primary: MarketInsight | null;
+  ranked: MarketInsight[];
+}
+
+export interface SportPresentationModel {
+  eventId: string;
+  sport: Sport;
+  /** Short competition label for the card badge — "MLB", "World Cup", "NFL". */
+  competition: string;
+  status: EventStatus;
+  statusLabel: string;
+  homeParticipant: Participant;
+  awayParticipant: Participant;
+  venue?: string;
+  startTime?: string;
+  /** Secondary context line — pitchers, round, etc. */
+  contextLine?: string;
+  markets: MarketPresentationModel[];
+  projection: ProjectionSummaryModel;
+}
+
+// ─── Double chance (soccer) — resolved through participant identity ──────────
+
+export type DoubleChanceSelection = "HOME_OR_DRAW" | "AWAY_OR_DRAW" | "DRAW";
+
+export function assertNever(x: never): never {
+  throw new Error(`Unexpected value: ${String(x)}`);
+}
+
+/**
+ * Full double-chance label from the event's participants — "Spain Win or Draw".
+ * HOME_OR_DRAW ALWAYS resolves to the home participant, AWAY_OR_DRAW to the away
+ * participant, regardless of the order sides arrive in from a provider.
+ */
+export function formatDoubleChanceSelection(
+  selection: DoubleChanceSelection,
+  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">,
+): string {
+  switch (selection) {
+    case "HOME_OR_DRAW":
+      return `${event.homeParticipant.displayName} Win or Draw`;
+    case "AWAY_OR_DRAW":
+      return `${event.awayParticipant.displayName} Win or Draw`;
+    case "DRAW":
+      return "Draw";
+    default:
+      return assertNever(selection);
+  }
+}
+
+// ─── Structural input (mirrors DimeModelFeed's normalized FeedCardSpec) ──────
+// Structurally typed so the adapters don't couple to the page's internal type
+// and can be unit-tested in isolation.
+
+export interface FeedCrestLike {
+  url?: string | null;
+  code: string;
+  bg?: string | null;
+}
+export interface FeedTeamLike {
+  name: string;
+  crest: FeedCrestLike;
+  score?: string | null;
+}
+export interface FeedRowLike {
+  label: string;
+  book: string;
+  model: string;
+  crest?: FeedCrestLike | null;
+}
+export interface FeedMarketLike {
+  title: string;
+  rows: FeedRowLike[];
+  foot: { label: string; edge: boolean };
+}
+export interface FeedEventLike {
+  id: string;
+  liveLabel?: string | null;
+  timeLabel: string;
+  away: FeedTeamLike;
+  home: FeedTeamLike;
+  meta: string;
+  pitchers?: { away: string; home: string } | null;
+  venueLine?: string | null;
+  markets: FeedMarketLike[];
+}
+
+export interface AdapterContext {
+  /** Short competition label override (e.g. round-specific naming). */
+  competition?: string;
+}
+
+export type SportAdapter = (raw: FeedEventLike, ctx?: AdapterContext) => SportPresentationModel;
+
+// ─── Shared building blocks ──────────────────────────────────────────────────
+
+function parseScore(s: string | null | undefined): number | null {
+  if (s == null || s === "") return null;
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function statusOf(raw: FeedEventLike): EventStatus {
+  if (raw.liveLabel) return "live";
+  if (raw.away.score != null || raw.home.score != null) return "final";
+  return "scheduled";
+}
+
+/** Venue line, dropped when it merely repeats the context line (avoids a dupe). */
+function venueOf(raw: FeedEventLike): string | undefined {
+  const v = raw.venueLine ?? undefined;
+  return v && v !== raw.meta ? v : undefined;
+}
+
+/** Pair each side with the opposite side's book price so no-vig math has both. */
+function sidesFromMarket(m: MarketPresentationModel): MarketSideInput[] {
+  const n = m.selections.length;
+  return m.selections.map((sel, i) => ({
+    marketKey: m.key,
+    marketLabel: m.label,
+    sideLabel: sel.label,
+    bookPrice: sel.bookPrice,
+    bookOppPrice: n === 2 ? m.selections[n - 1 - i].bookPrice : undefined,
+    modelPrice: sel.modelPrice,
+  }));
+}
+
+function projectionOf(markets: MarketPresentationModel[]): ProjectionSummaryModel {
+  const sides = markets.flatMap(sidesFromMarket);
+  return { primary: primaryInsight(sides), ranked: rankMarkets(sides) };
+}
+
+// ─── Team-sport adapter (MLB / NFL / NBA / NHL / NCAAF / NCAAM) ───────────────
+// Team codes (NYY, LAL) are conventional and stay as-is; only the country rule
+// (soccer) forbids raw abbreviations.
+
+function teamParticipant(t: FeedTeamLike, role: EventRole): Participant {
+  return {
+    id: t.crest.code || role,
+    role,
+    kind: "team",
+    displayName: t.name,
+    shortName: t.crest.code || t.name,
+    logo: t.crest.url ?? null,
+    color: t.crest.bg ?? null,
+    flag: null,
+    iso2: null,
+    score: parseScore(t.score),
+  };
+}
+
+/** Best-effort role tag for a team-sport side (used by the no-vig pairing only). */
+function teamRoleFor(idx: number, label: string): SelectionRole {
+  const l = label.toUpperCase();
+  if (/^O(\s|VER|$)/.test(l)) return "over";
+  if (/^U(\s|NDER|$)/.test(l)) return "under";
+  return idx === 0 ? "away" : "home";
+}
+
+function teamMarkets(raw: FeedEventLike): MarketPresentationModel[] {
+  return raw.markets.map((m) => {
+    const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const selections: MarketSelectionModel[] = m.rows.map((row, i) => ({
+      id: `${key}-${i}`,
+      role: teamRoleFor(i, row.label),
+      label: row.label,
+      bookPrice: parseAmerican(row.book),
+      modelPrice: parseAmerican(row.model),
+    }));
+    return { key, label: m.title, selections, resultLabel: m.foot.edge ? undefined : m.foot.label };
+  });
+}
+
+function createTeamPresentation(sport: Sport, competition: string): SportAdapter {
+  return (raw, ctx) => {
+    const markets = teamMarkets(raw);
+    return {
+      eventId: raw.id,
+      sport,
+      competition: ctx?.competition ?? competition,
+      status: statusOf(raw),
+      statusLabel: raw.liveLabel || raw.timeLabel,
+      awayParticipant: teamParticipant(raw.away, "away"),
+      homeParticipant: teamParticipant(raw.home, "home"),
+      venue: venueOf(raw),
+      contextLine: raw.meta || undefined,
+      markets,
+      projection: projectionOf(markets),
+    };
+  };
+}
+
+export const createMlbPresentation = createTeamPresentation("MLB", "MLB");
+export const createNflPresentation = createTeamPresentation("NFL", "NFL");
+export const createNbaPresentation = createTeamPresentation("NBA", "NBA");
+export const createNhlPresentation = createTeamPresentation("NHL", "NHL");
+export const createNcaafPresentation = createTeamPresentation("NCAAF", "NCAAF");
+export const createNcaamPresentation = createTeamPresentation("NCAAM", "NCAAM");
+
+// ─── Soccer adapter — country identity + participant-resolved markets ─────────
+
+function countryParticipant(t: FeedTeamLike, role: EventRole): Participant {
+  const id = countryIdentity(t.crest.code, t.name);
+  // displayName must be a real name: dictionary name → non-code DB name → "TBD".
+  const name = id.name || (isRawCountryCode(t.name) ? "TBD" : t.name || "TBD");
+  return {
+    id: t.crest.code || role,
+    role,
+    kind: "country",
+    displayName: name,
+    shortName: name, // countries never show a raw code
+    logo: null,
+    color: t.crest.bg ?? null,
+    flag: id.flag,
+    iso2: id.iso2,
+    score: parseScore(t.score),
+  };
+}
+
+/** Replace a leading FIFA-code token with the matching participant's name so no
+ *  raw country abbreviation can survive in any label we don't special-case. */
+function deCode(label: string, away: Participant, home: Participant): string {
+  const first = label.trim().split(/\s+/)[0];
+  if (first && first === away.id) return label.replace(first, away.displayName);
+  if (first && first === home.id) return label.replace(first, home.displayName);
+  if (isRawCountryCode(label)) {
+    if (label === away.id) return away.displayName;
+    if (label === home.id) return home.displayName;
+  }
+  return label;
+}
+
+const numTail = (label: string): string => label.replace(/^\S+\s*/, "").trim();
+
+function soccerMarket(
+  m: FeedMarketLike,
+  away: Participant,
+  home: Participant,
+  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">,
+): MarketPresentationModel {
+  const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const title = m.title.trim().toLowerCase();
+  const price = (row: FeedRowLike) => ({ bookPrice: parseAmerican(row.book), modelPrice: parseAmerican(row.model) });
+  const sel = (
+    i: number,
+    role: SelectionRole,
+    label: string,
+    participant?: Participant,
+  ): MarketSelectionModel => ({
+    id: `${key}-${i}`,
+    role,
+    label,
+    participantId: participant?.id,
+    flag: participant?.flag ?? null,
+    ...price(m.rows[i]),
+  });
+
+  let selections: MarketSelectionModel[];
+  switch (title) {
+    case "dbl chc":
+      // Row 0 = HOME WD, row 1 = AWAY WD (feed contract) → resolve via identity.
+      selections = [
+        sel(0, "home_or_draw", formatDoubleChanceSelection("HOME_OR_DRAW", event), home),
+        sel(1, "away_or_draw", formatDoubleChanceSelection("AWAY_OR_DRAW", event), away),
+      ];
+      break;
+    case "draw":
+      selections = [sel(0, "draw", "Draw"), sel(1, "neutral", "No Draw")];
+      break;
+    case "total":
+      selections = [
+        sel(0, "over", `Over ${numTail(m.rows[0].label) || ""}`.trim()),
+        sel(1, "under", `Under ${numTail(m.rows[1].label) || ""}`.trim()),
+      ];
+      break;
+    case "btts":
+      selections = [
+        sel(0, "yes", "Both teams to score — Yes"),
+        sel(1, "no", "Both teams to score — No"),
+      ];
+      break;
+    case "ml":
+    case "to adv":
+    case "spread":
+    default:
+      // away top / home bottom (feed contract); de-code any leading FIFA token.
+      selections = m.rows.map((row, i) => {
+        const participant = i === 0 ? away : i === m.rows.length - 1 ? home : undefined;
+        return sel(i, i === 0 ? "away" : "home", deCode(row.label, away, home), participant);
+      });
+      break;
+  }
+  return { key, label: m.title, selections, resultLabel: m.foot.edge ? undefined : m.foot.label };
+}
+
+export const createSoccerPresentation: SportAdapter = (raw, ctx) => {
+  const awayParticipant = countryParticipant(raw.away, "away");
+  const homeParticipant = countryParticipant(raw.home, "home");
+  const evt = { homeParticipant, awayParticipant };
+  const markets = raw.markets.map((m) => soccerMarket(m, awayParticipant, homeParticipant, evt));
+  return {
+    eventId: raw.id,
+    sport: "SOCCER",
+    competition: ctx?.competition ?? "World Cup",
+    status: statusOf(raw),
+    statusLabel: raw.liveLabel || raw.timeLabel,
+    awayParticipant,
+    homeParticipant,
+    venue: venueOf(raw),
+    contextLine: raw.meta || undefined,
+    markets,
+    projection: projectionOf(markets),
+  };
+};
+
+// ─── The registry ────────────────────────────────────────────────────────────
+
+export const sportAdapters: Record<Sport, SportAdapter> = {
+  MLB: createMlbPresentation,
+  NFL: createNflPresentation,
+  NBA: createNbaPresentation,
+  NHL: createNhlPresentation,
+  NCAAF: createNcaafPresentation,
+  NCAAM: createNcaamPresentation,
+  SOCCER: createSoccerPresentation,
+};
+
+/** Adapt any supported event by sport key. */
+export function toPresentation(sport: Sport, raw: FeedEventLike, ctx?: AdapterContext): SportPresentationModel {
+  return sportAdapters[sport](raw, ctx);
+}

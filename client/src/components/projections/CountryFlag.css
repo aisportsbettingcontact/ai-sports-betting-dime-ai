@@ -1,0 +1,21 @@
+/* CountryFlag — bare emoji flag, no frame. Depth from the glyph + shadow only. */
+.country-flag {
+  display: inline-grid;
+  place-items: center;
+  inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
+  min-inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
+  block-size: clamp(2rem, 1.8rem + 0.5vw, 2.25rem);
+  flex: none;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: clamp(1.5rem, 1.35rem + 0.4vw, 1.9rem);
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.25)) drop-shadow(0 4px 7px rgb(0 0 0 / 0.16));
+  transform: perspective(500px) rotateX(-2deg) translateZ(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .country-flag { transform: none; }
+}
