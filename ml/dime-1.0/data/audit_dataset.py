@@ -49,7 +49,9 @@ MARKET_PCT = re.compile(
     r"(?:implies|implied|needs|charging you for|paying you like it'?s|price says|against(?: an)?(?: implied)?|requires)\s*" + PCT,
     re.I,
 )
-GAP = re.compile(r"(\d{1,2}(?:\.\d)?)(?:[- ]points?(?: of)? (?:edge|value|gap|overpay|deficit)|-point)", re.I)
+# "-point(?! play bar)": the policy phrase "Dime's 2-point play bar" is a
+# constant, not a stated gap — never treat it as a numeric claim.
+GAP = re.compile(r"(\d{1,2}(?:\.\d)?)(?:[- ]points?(?: of)? (?:edge|value|gap|overpay|deficit)|-point(?! play bar))", re.I)
 # Bettor-directed claims only: "giving the book X points of value" is a
 # correctly-signed PASS statement and must not match.
 EDGE_CLAIM = re.compile(r"points? of edge|edge in your favor|getting [\d.]+ points? of value", re.I)
@@ -101,7 +103,10 @@ def _parse_start(date, time_text):
 
 def audit_temporal(audit, rows):
     """Point-in-time gate: modelRunAt <= generated_at < event_start for every
-    context entry. A model run after the snapshot is hindsight leakage."""
+    context entry. A model run after the snapshot is hindsight leakage.
+    Absolute sanity too: relative ordering means nothing if the clock reads
+    1777 — every parsed stamp must land in [2015, 2035] and the snapshot must
+    sit within 14 days of each entry's game date."""
     for path, lineno, messages in rows:
         for m in messages:
             if m["role"] != "user" or not m["content"].startswith("Dime platform context"):
@@ -111,6 +116,12 @@ def audit_temporal(audit, rows):
             if gen is None:
                 audit.sev2.append(f"TEMPORAL {path}:{lineno} — context has no parseable generated_at")
                 continue
+            if not (2015 <= gen.year <= 2035):
+                audit.sev1.append(
+                    f"TEMPORAL {path}:{lineno} — generated_at year {gen.year} is outside the sanity window "
+                    f"(malformed/epoch-corrupted timestamp)"
+                )
+                continue
             entries = re.split(r"(?m)^(?=\d+\.\s)", m["content"])
             for entry in entries:
                 header = CTX_ENTRY.search(entry)
@@ -118,6 +129,26 @@ def audit_temporal(audit, rows):
                     continue
                 run_m = RUN_AT.search(entry)
                 run = _parse_stamp(run_m.group(1)) if run_m else None
+                if run_m and run_m.group(1) not in ("—", "-") and run is None:
+                    audit.sev2.append(
+                        f"TEMPORAL {path}:{lineno} — entry {header.group(1)} modelRunAt "
+                        f"{run_m.group(1)!r} is unparseable (raw epoch int in context?)"
+                    )
+                if run is not None and not (2015 <= run.year <= 2035):
+                    audit.sev1.append(
+                        f"TEMPORAL {path}:{lineno} — entry {header.group(1)} modelRunAt year {run.year} "
+                        f"outside sanity window"
+                    )
+                    run = None
+                try:
+                    entry_date = datetime.fromisoformat(header.group(2) + "T00:00:00+00:00")
+                    if abs((gen - entry_date).days) > 14:
+                        audit.sev1.append(
+                            f"TEMPORAL {path}:{lineno} — snapshot generated_at is {abs((gen - entry_date).days)} "
+                            f"days from entry {header.group(1)}'s game date (context is not point-in-time)"
+                        )
+                except ValueError:
+                    pass
                 start = _parse_start(header.group(2), header.group(3))
                 if run and run > gen:
                     audit.sev1.append(
@@ -316,6 +347,45 @@ def audit_math_direction(audit: Audit, rows):
             )
 
 
+TOTAL_VERDICT = re.compile(r"\b(LEAN (?:OVER|UNDER)|NO LEAN|PASS)\b")
+CTX_RATES = re.compile(r"over=([\d.]+)%; under=([\d.]+)%")
+
+
+def audit_totals_actions(audit: Audit, rows):
+    """A totals verdict must match the sim rates in the row's own context:
+    a >=54.5% side dismissed as NO LEAN (or the opposite side leaned) is a
+    wrong-action label."""
+    for path, lineno, messages in rows:
+        answer = messages[-1]["content"]
+        question = messages[-2]["content"] if len(messages) >= 2 else ""
+        if "total" not in question.lower() and "Over or under" not in question:
+            continue
+        verdict_m = TOTAL_VERDICT.search(answer)
+        if not verdict_m:
+            continue
+        context = next(
+            (m["content"] for m in messages if m["role"] == "user" and m["content"].startswith("Dime platform context")),
+            None,
+        )
+        if not context:
+            continue
+        rates = CTX_RATES.findall(context)
+        if len(rates) != 1:
+            continue  # multi-game contexts: can't attribute rates without entry matching
+        over, under = float(rates[0][0]), float(rates[0][1])
+        side, rate = ("OVER", over) if over >= under else ("UNDER", under)
+        verdict = verdict_m.group(1)
+        if rate >= 54.5 and verdict in ("NO LEAN", "PASS"):
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — totals verdict '{verdict}' despite a {rate:.1f}% {side.lower()} rate "
+                f"in the row's own context (directional evidence dismissed)"
+            )
+        if verdict.startswith("LEAN") and not verdict.endswith(side) and rate >= 52.9:
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — totals verdict '{verdict}' leans against the {rate:.1f}% {side.lower()} side"
+            )
+
+
 def audit_tasks(audit: Audit, rows):
     for path, lineno, messages in rows:
         answer = messages[-1]["content"]
@@ -404,11 +474,39 @@ def main() -> None:
 
     audit = Audit()
     audit_temporal(audit, rows)
+    audit_totals_actions(audit, rows)
     audit_grounding(audit, rows, lexicon)
     audit_math_direction(audit, rows)
     audit_tasks(audit, rows)
     audit_safety(audit, rows)
     audit_duplication(audit, rows, args.max_dup_frac)
+
+    matchups = set()
+    for _, _, messages in rows:
+        matchups.update(map(tuple, (context_teams(messages),))) if False else matchups.update(
+            [tuple(sorted(context_teams(messages)))] if context_teams(messages) else []
+        )
+    contexts_present = sum(
+        1 for _, _, ms in rows if any(m["content"].startswith("Dime platform context") for m in ms if m["role"] == "user")
+    )
+    if contexts_present >= 100 and len(matchups) < 25:
+        audit.sev2.append(
+            f"DIVERSITY — only {len(matchups)} unique matchup sets across {contexts_present} context rows "
+            f"(grounded diversity collapse; widen the date range)"
+        )
+
+    if len(args.files) >= 2:
+        first = {(p, l) for p, l, _ in rows if p == args.files[0]}
+        train_answers = {ms[-1]["content"] for p, l, ms in rows if p == args.files[0]}
+        val_rows = [(p, l, ms) for p, l, ms in rows if p != args.files[0]]
+        if val_rows:
+            overlap = sum(1 for _, _, ms in val_rows if ms[-1]["content"] in train_answers)
+            frac = overlap / len(val_rows)
+            print(f"[audit] val contamination: {overlap}/{len(val_rows)} exact-answer overlap ({frac:.1%})")
+            if frac > 0.05:
+                audit.sev2.append(
+                    f"CONTAMINATION — {frac:.1%} of validation answers appear verbatim in train (>5% bar)"
+                )
 
     if args.dump_full:
         with open(args.dump_full, "w", encoding="utf-8") as f:
