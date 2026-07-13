@@ -382,19 +382,23 @@ def build_user_numbers(rng, games, system):
     return chat_example(system, "user_numbers", [{"role": "user", "content": question}, {"role": "assistant", "content": answer}])
 
 
-OFF_TOPIC_TEMPLATES = [
-    "Write me a poem about {}.", "Can you help me with my {} homework?",
-    "What's a good {} recipe?", "Summarize the plot of {}.",
-    "Write a cover letter for a {} job.", "Should I invest in {} right now?",
-    "Plan me a 3-day trip to {}.", "Translate 'good morning' into {}.",
-    "What's the best laptop for {}?", "Give me tips for learning {}.",
-    "Draft an email to my landlord about {}.", "Explain {} like I'm five.",
+# Each template carries its own compatible filler pool so crossings can't
+# produce nonsense asks ("a 3-day trip to photography").
+OFF_TOPIC_PROMPTS: list[tuple[str, list[str]]] = [
+    ("Write me a poem about {}.", ["the ocean", "autumn", "my dog", "New York", "falling asleep"]),
+    ("Can you help me with my {} homework?", ["Python", "calculus", "history", "chemistry", "statistics"]),
+    ("What's a good {} recipe?", ["pasta", "chili", "banana bread", "curry", "weeknight dinner"]),
+    ("Summarize the plot of {}.", ["Inception", "The Godfather", "Dune", "Breaking Bad", "Moby-Dick"]),
+    ("Write a cover letter for a {} job.", ["marketing", "software engineering", "sales", "nursing", "teaching"]),
+    ("Should I invest in {} right now?", ["tech stocks", "index funds", "gold", "real estate", "crypto"]),
+    ("Plan me a 3-day trip to {}.", ["Rome", "Portugal", "Tokyo", "Miami", "Denver"]),
+    ("Translate 'good morning' into {}.", ["Japanese", "Spanish", "French", "Italian", "German"]),
+    ("What's the best laptop for {}?", ["video editing", "gaming", "college", "travel", "music production"]),
+    ("Give me tips for learning {}.", ["guitar", "Spanish", "photography", "chess", "salsa dancing"]),
+    ("Draft an email to my landlord about {}.", ["a broken heater", "late rent", "a lease renewal", "a noise complaint", "a leaky faucet"]),
+    ("Explain {} like I'm five.", ["quantum computing", "inflation", "blockchain", "gravity", "the stock market"]),
 ]
-OFF_TOPIC_FILLERS = [
-    "the ocean", "Python", "pasta", "Inception", "marketing", "tech stocks", "Rome",
-    "Japanese", "video editing", "guitar", "a broken heater", "quantum computing",
-    "my resume", "French cooking", "Portugal", "Spanish", "gaming", "photography",
-]
+OFF_TOPIC_PREFIXES = ["", "Hey, ", "Quick one — ", "Random, but ", "Off topic: "]
 
 REDIRECTS = [
     "I only handle sports-betting analysis and platform tasks. Give me a game, market, or line and I'll get to work.",
@@ -404,8 +408,12 @@ REDIRECTS = [
 
 
 def build_off_topic(rng, games, system):
-    ask = rng.choice(OFF_TOPIC_TEMPLATES).format(rng.choice(OFF_TOPIC_FILLERS))
-    return chat_example(system, "refusal_off_topic", [{"role": "user", "content": ask}, {"role": "assistant", "content": rng.choice(REDIRECTS)}])
+    template, fillers = rng.choice(OFF_TOPIC_PROMPTS)
+    filled = template.format(rng.choice(fillers))
+    prefix = rng.choice(OFF_TOPIC_PREFIXES)
+    if prefix:
+        filled = filled[0].lower() + filled[1:]
+    return chat_example(system, "refusal_off_topic", [{"role": "user", "content": prefix + filled}, {"role": "assistant", "content": rng.choice(REDIRECTS)}])
 
 
 SPORTSBOOKS = ["DraftKings", "FanDuel", "BetMGM", "Caesars", None]
