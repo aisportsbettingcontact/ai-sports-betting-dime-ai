@@ -21,15 +21,15 @@ const T = {
   canvas: "#000000",
   surface: "#000000",
   barBorder: "#FFFFFF",              // white border — split-percentage bars ONLY
-  cardBorder: "rgba(237,237,242,0.12)", // hairline card definition (reference value)
-  divider: "rgba(237,237,242,0.12)",    // internal market separators
-  text1: "#EDEDF2",
-  body: "#C9C9D4",
-  text2: "#9A9AA8",
-  text3: "#6A6A78",
+  cardBorder: "#FFFFFF", // hairline card definition (reference value)
+  divider: "#FFFFFF",    // internal market separators
+  text1: "#FFFFFF",
+  body: "#FFFFFF",
+  text2: "#FFFFFF",
+  text3: "#FFFFFF",
   mint: "#45E0A8",
-  track: "rgba(237,237,242,0.10)",
-  barInk: "#0B0B0F",
+  track: "#000000",
+  barInk: "#000000",
   mono: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
 };
 

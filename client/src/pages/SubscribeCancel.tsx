@@ -17,7 +17,7 @@ export default function SubscribeCancel() {
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "#0B0B0F" }}
+      style={{ background: "#000000" }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -29,12 +29,12 @@ export default function SubscribeCancel() {
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "transparent",
+            border: "1px solid #FFFFFF",
           }}
         >
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M8 14h12" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
+            <path d="M8 14h12" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </div>
 
@@ -44,7 +44,7 @@ export default function SubscribeCancel() {
         >
           Checkout Cancelled
         </h1>
-        <p className="text-[#9ca3af] text-sm mb-8">
+        <p className="text-white text-sm mb-8">
           No charge was made. You can return to the pricing page anytime to subscribe.
         </p>
 
@@ -67,13 +67,13 @@ export default function SubscribeCancel() {
           </button>
           <button
             onClick={() => navigate("/")}
-            className="text-[13px] text-[#6b7280] hover:text-[#9ca3af] transition-colors"
+            className="text-[13px] text-white hover:text-white transition-colors"
           >
             Back to home
           </button>
         </div>
 
-        <p className="text-[11px] text-[#374151] mt-8">
+        <p className="text-[11px] text-white mt-8">
           Questions? Contact support — we're here to help.
         </p>
       </motion.div>

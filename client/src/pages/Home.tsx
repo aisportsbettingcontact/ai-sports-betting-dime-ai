@@ -242,7 +242,7 @@ export default function Home() {
      */
     <div
       className="flex flex-col lg:flex-row min-h-screen w-full"
-      style={{ background: "#0B0B0F", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
+      style={{ background: "#000000", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
     >
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -254,8 +254,8 @@ export default function Home() {
         className="hidden lg:flex flex-col justify-between w-1/2 min-h-screen sticky top-0 self-start"
         style={{
           background:
-            "#101014"  /* brand law: flat surface, no gradients */,
-          borderRight: "1px solid rgba(255,255,255,0.06)",
+            "#000000"  /* brand law: flat surface, no gradients */,
+          borderRight: "1px solid #FFFFFF",
           padding: "clamp(2.5rem, 5vw, 5rem) clamp(2rem, 4vw, 4rem)",
         }}
       >
@@ -313,7 +313,7 @@ export default function Home() {
                     style={{
                       width: "clamp(2rem, 2.5vw, 2.5rem)",
                       height: "clamp(2rem, 2.5vw, 2.5rem)",
-                      background: "rgba(69,224,168,0.10)",
+                      background: "transparent",
                     }}
                   >
                     <Icon
@@ -401,7 +401,7 @@ export default function Home() {
           {!authLoading && appUser && (
             <div
               className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] flex items-center justify-between gap-3"
-              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               data-testid="login-signed-in-banner"
             >
               <span>
@@ -422,7 +422,7 @@ export default function Home() {
           {discordErrorMsg && (
             <div
               className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] text-center space-y-1.5"
-              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               role="alert"
             >
               <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
@@ -461,7 +461,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -482,7 +482,7 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
@@ -542,7 +542,7 @@ export default function Home() {
               </div>
 
               {forgotSent ? (
-                <div className="px-4 py-3 rounded-xl bg-[#45E0A8]/10 border border-[#45E0A8]/30 text-[12px] text-[#45E0A8] text-center">
+                <div className="px-4 py-3 rounded-xl bg-transparent border border-[#45E0A8] text-[12px] text-[#45E0A8] text-center">
                   If an account exists for that username or email, a reset link has been sent.
                 </div>
               ) : (
@@ -556,7 +556,7 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
@@ -580,7 +580,7 @@ export default function Home() {
           {!forgotOpen && (
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[11px] text-[#4b5563] font-medium">or</span>
+              <span className="text-[11px] text-[#FFFFFF] font-medium">or</span>
               <div className="flex-1 h-px bg-white/10" />
             </div>
           )}
@@ -593,7 +593,7 @@ export default function Home() {
               aria-disabled={isDiscordRedirecting}
               className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-opacity hover:opacity-85"
               style={{
-                backgroundColor: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)",
+                backgroundColor: "#000000", border: "1px solid #FFFFFF",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
                 pointerEvents: isDiscordRedirecting ? "none" : "auto",
               }}
