@@ -121,12 +121,12 @@ function signedNum(val: number | null | undefined, decimals = 2): string {
 
 // ─── Accuracy color ───────────────────────────────────────────────────────────
 function accuracyColor(acc: number | null): string {
-  if (acc === null) return "rgba(255,255,255,0.4)";
-  if (acc >= 0.65) return "#39FF14";
-  if (acc >= 0.55) return "#ADFF2F";
-  if (acc >= 0.50) return "#FFD700";
-  if (acc >= 0.45) return "#FF9500";
-  return "#FF2244";
+  if (acc === null) return "#FFFFFF";
+  if (acc >= 0.65) return "#45E0A8";
+  if (acc >= 0.55) return "#45E0A8";
+  if (acc >= 0.50) return "#FFFFFF";
+  if (acc >= 0.45) return "#FFFFFF";
+  return "#FFFFFF";
 }
 
 // ─── Backtest result badge ────────────────────────────────────────────────────
@@ -135,8 +135,8 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
     return (
       <span style={{
         fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
-        borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)",
-        border: "1px solid rgba(255,255,255,0.12)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+        borderRadius: 4, background: "transparent", color: "#FFFFFF",
+        border: "1px solid #FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
       }}>
         {result === "NO_LINE" ? "NO LINE" : "PENDING"}
       </span>
@@ -146,16 +146,16 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
   const isOver = result === "OVER";
   const isPush = result === "PUSH";
   const bg = isPush
-    ? "rgba(255,215,0,0.12)"
+    ? "transparent"
     : isCorrect
-      ? "rgba(57,255,20,0.12)"
-      : "rgba(255,34,68,0.12)";
+      ? "transparent"
+      : "transparent";
   const border = isPush
-    ? "rgba(255,215,0,0.35)"
+    ? "#FFFFFF"
     : isCorrect
-      ? "rgba(57,255,20,0.35)"
-      : "rgba(255,34,68,0.35)";
-  const color = isPush ? "#FFD700" : isCorrect ? "#39FF14" : "#FF2244";
+      ? "#45E0A8"
+      : "#FFFFFF";
+  const color = isPush ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF";
   const icon = isPush ? null : isCorrect
     ? <CheckCircle2 size={10} style={{ flexShrink: 0 }} />
     : <XCircle size={10} style={{ flexShrink: 0 }} />;
@@ -181,13 +181,13 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
   bestMlStr: string | null;
 }) {
   if (!verdict || verdict === "PASS") {
-    return <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
+    return <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
   }
   const edgePp = bestEdge ? parseFloat(bestEdge) * 100 : null;
   const isOver = bestSide === "OVER";
-  const color = isOver ? "#39FF14" : "#00BFFF";
-  const bg = isOver ? "rgba(57,255,20,0.10)" : "rgba(0,191,255,0.10)";
-  const border = isOver ? "rgba(57,255,20,0.30)" : "rgba(0,191,255,0.30)";
+  const color = isOver ? "#45E0A8" : "#45E0A8";
+  const bg = isOver ? "transparent" : "transparent";
+  const border = isOver ? "#45E0A8" : "#45E0A8";
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
@@ -197,7 +197,7 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
     }}>
       ▶ {bestSide} {bestMlStr ?? ""}
       {edgePp !== null && (
-        <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+        <span style={{ color: "#FFFFFF", fontWeight: 500 }}>
           {edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp
         </span>
       )}
@@ -214,17 +214,17 @@ function StatCard({ label, value, sub, color }: {
 }) {
   return (
     <div style={{
-      background: "#090E14", border: "1px solid #182433", borderRadius: 10,
+      background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10,
       padding: "14px 16px", display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0,
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {label}
       </div>
       <div style={{ fontSize: 28, fontWeight: 800, color: color ?? "#FFFFFF", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {value}
       </div>
       {sub && (
-        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+        <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           {sub}
         </div>
       )}
@@ -277,8 +277,8 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
 
   return (
     <div style={{
-      background: "#090E14",
-      border: "1px solid #182433",
+      background: "#000000",
+      border: "1px solid #FFFFFF",
       borderRadius: 10,
       overflow: "hidden",
       marginBottom: 8,
@@ -289,18 +289,18 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
       <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
         {/* Left: headshot + team */}
         <div style={{
-          width: 80, flexShrink: 0, background: "rgba(255,255,255,0.02)",
-          borderRight: "1px solid #182433",
+          width: 80, flexShrink: 0, background: "transparent",
+          borderRight: "1px solid #FFFFFF",
           display: "flex", flexDirection: "column", alignItems: "center",
           justifyContent: "center", padding: "10px 8px", gap: 6,
         }}>
           {/* Headshot */}
-          <div style={{ width: 52, height: 52, overflow: "hidden", borderRadius: "50%", background: "rgba(255,255,255,0.04)", border: "1px solid #182433", flexShrink: 0 }}>
+          <div style={{ width: 52, height: 52, overflow: "hidden", borderRadius: "50%", background: "transparent", border: "1px solid #FFFFFF", flexShrink: 0 }}>
             {photo ? (
               <img src={photo} alt={prop.pitcherName} style={{ width: "100%", height: "100%", objectFit: "cover", mixBlendMode: "screen" }} onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0"; }} />
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: 16, color: "rgba(255,255,255,0.2)" }}>?</span>
+                <span style={{ fontSize: 16, color: "#FFFFFF" }}>?</span>
               </div>
             )}
           </div>
@@ -309,7 +309,7 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
             <img src={logo} alt={pitcherTeam} style={{ width: 22, height: 22, objectFit: "contain", mixBlendMode: "screen", opacity: 0.85 }} />
           )}
           {/* Matchup */}
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', textAlign: "center", letterSpacing: "0.5px" }}>
+          <div style={{ fontSize: 9, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', textAlign: "center", letterSpacing: "0.5px" }}>
             {isAway ? `${prop.awayTeam} @` : `vs ${prop.awayTeam}`}
             <br />
             {isAway ? prop.homeTeam : ""}
@@ -324,7 +324,7 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
               <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 18, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1 }}>
                 {prop.pitcherName}
               </div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginTop: 2 }}>
                 {formatMilitaryTime(prop.startTimeEst)} · {isAway ? "AWAY" : "HOME"}
               </div>
             </div>
@@ -338,24 +338,24 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
             {/* K Proj */}
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL PROJ</div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL PROJ</div>
               <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, color: "#FFFFFF", lineHeight: 1 }}>
                 {fmtNum(prop.kProj, 1)}
               </div>
             </div>
             {/* Book line */}
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.7)", lineHeight: 1 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, color: "#FFFFFF", lineHeight: 1 }}>
                 {fmtNum(prop.bookLine, 1)}
               </div>
             </div>
             {/* Actual Ks */}
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL Ks</div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL Ks</div>
               <div style={{
                 fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, lineHeight: 1,
-                color: isPending ? "rgba(255,255,255,0.25)" : isCorrect ? "#39FF14" : "#FF2244",
+                color: isPending ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF",
               }}>
                 {isPending ? "—" : (prop.actualKs ?? "—")}
               </div>
@@ -363,10 +363,10 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
             {/* Model error */}
             {!isPending && modelErr !== null && (
               <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL ERR</div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL ERR</div>
                 <div style={{
                   fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, lineHeight: 1,
-                  color: Math.abs(modelErr) <= 0.5 ? "#39FF14" : Math.abs(modelErr) <= 1.5 ? "#FFD700" : "#FF2244",
+                  color: Math.abs(modelErr) <= 0.5 ? "#45E0A8" : Math.abs(modelErr) <= 1.5 ? "#FFFFFF" : "#FFFFFF",
                 }}>
                   {signedNum(modelErr, 2)}
                 </div>
@@ -375,8 +375,8 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
             {/* AN No-Vig % */}
             {prop.anNoVigOverPct && (
               <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>AN NO-VIG O%</div>
-                <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.7)", lineHeight: 1 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>AN NO-VIG O%</div>
+                <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 22, fontWeight: 800, color: "#FFFFFF", lineHeight: 1 }}>
                   {fmtPct(parseFloat(prop.anNoVigOverPct))}
                 </div>
               </div>
@@ -388,31 +388,31 @@ function PitcherResultRow({ prop }: { prop: PropRow }) {
             <div style={{ display: "flex", gap: 6 }}>
               <div style={{
                 flex: 1, padding: "6px 10px", borderRadius: 6,
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                background: "transparent", border: "1px solid #FFFFFF",
                 display: "flex", alignItems: "center", gap: 6,
               }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   OVER {fmtNum(prop.bookLine, 1)}
                 </span>
                 <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>
                   {prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}
                 </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {fmtOdds(prop.bookOverOdds)}
                 </span>
               </div>
               <div style={{
                 flex: 1, padding: "6px 10px", borderRadius: 6,
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                background: "transparent", border: "1px solid #FFFFFF",
                 display: "flex", alignItems: "center", gap: 6,
               }}>
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   UNDER {fmtNum(prop.bookLine, 1)}
                 </span>
                 <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>
                   {prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}
                 </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {fmtOdds(prop.bookUnderOdds)}
                 </span>
               </div>
@@ -572,7 +572,7 @@ export default function ModelResults() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(var(--background))" }}>
-        <Loader2 className="animate-spin" style={{ color: "#39FF14" }} />
+        <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
       </div>
     );
   }
@@ -588,7 +588,7 @@ export default function ModelResults() {
         {/* Top row */}
         <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
           <button type="button" onClick={() => setLocation("/admin/publish")}
-            className="p-1.5 rounded-lg transition-colors hover:bg-white/10 mr-2 flex-shrink-0"
+            className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0"
           >
             <ChevronLeft size={18} style={{ color: "hsl(var(--muted-foreground))" }} />
           </button>
@@ -598,7 +598,7 @@ export default function ModelResults() {
               AI SPORTS BETTING
             </span>
             <span className="text-border" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
-            <span className="font-medium whitespace-nowrap" style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#9CA3AF" }}>
+            <span className="font-medium whitespace-nowrap" style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#FFFFFF" }}>
               MODEL RESULTS
             </span>
           </div>
@@ -609,7 +609,7 @@ export default function ModelResults() {
             onClick={handleRefresh}
             disabled={isRunningBacktest || (viewMode === 'daily' ? dailyLoading : last7Loading)}
             className="gap-1.5 text-xs h-8 font-bold border"
-            style={{ background: "rgba(57,255,20,0.10)", color: "#39FF14", borderColor: "rgba(57,255,20,0.35)" }}
+            style={{ background: "transparent", color: "#45E0A8", borderColor: "#45E0A8" }}
           >
             {isRunningBacktest
               ? <Loader2 size={12} className="animate-spin" />
@@ -624,9 +624,9 @@ export default function ModelResults() {
           <button type="button" onClick={() => setViewMode('daily')}
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
             style={{
-              background: viewMode === 'daily' ? 'rgba(57,255,20,0.12)' : 'rgba(255,255,255,0.04)',
-              color: viewMode === 'daily' ? '#39FF14' : 'rgba(255,255,255,0.45)',
-              border: `1px solid ${viewMode === 'daily' ? 'rgba(57,255,20,0.35)' : 'rgba(255,255,255,0.10)'}`,
+              background: viewMode === 'daily' ? 'transparent' : 'transparent',
+              color: viewMode === 'daily' ? '#45E0A8' : '#FFFFFF',
+              border: `1px solid ${viewMode === 'daily' ? '#45E0A8' : '#FFFFFF'}`,
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
               letterSpacing: '0.08em',
             }}
@@ -637,9 +637,9 @@ export default function ModelResults() {
           <button type="button" onClick={() => setViewMode('last7')}
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
             style={{
-              background: viewMode === 'last7' ? 'rgba(0,191,255,0.12)' : 'rgba(255,255,255,0.04)',
-              color: viewMode === 'last7' ? '#00BFFF' : 'rgba(255,255,255,0.45)',
-              border: `1px solid ${viewMode === 'last7' ? 'rgba(0,191,255,0.35)' : 'rgba(255,255,255,0.10)'}`,
+              background: viewMode === 'last7' ? 'transparent' : 'transparent',
+              color: viewMode === 'last7' ? '#45E0A8' : '#FFFFFF',
+              border: `1px solid ${viewMode === 'last7' ? '#45E0A8' : '#FFFFFF'}`,
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
               letterSpacing: '0.08em',
             }}
@@ -650,9 +650,9 @@ export default function ModelResults() {
           <button type="button" onClick={() => setViewMode('brier')}
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
             style={{
-              background: viewMode === 'brier' ? 'rgba(255,165,0,0.12)' : 'rgba(255,255,255,0.04)',
-              color: viewMode === 'brier' ? '#FFA500' : 'rgba(255,255,255,0.45)',
-              border: `1px solid ${viewMode === 'brier' ? 'rgba(255,165,0,0.35)' : 'rgba(255,255,255,0.10)'}`,
+              background: viewMode === 'brier' ? 'transparent' : 'transparent',
+              color: viewMode === 'brier' ? '#45E0A8' : '#FFFFFF',
+              border: `1px solid ${viewMode === 'brier' ? '#45E0A8' : '#FFFFFF'}`,
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
               letterSpacing: '0.08em',
             }}
@@ -663,15 +663,15 @@ export default function ModelResults() {
           {/* Brier window selector — only visible in brier mode */}
           {viewMode === 'brier' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '.08em', textTransform: 'uppercase' }}>Window</span>
+              <span style={{ fontSize: 10, color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '.08em', textTransform: 'uppercase' }}>Window</span>
               {[10, 20, 30, 50].map(w => (
                 <button type="button" key={w}
                   onClick={() => setBrierWindow(w)}
                   style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
-                    background: brierWindow === w ? 'rgba(255,165,0,0.15)' : 'rgba(255,255,255,0.04)',
-                    color: brierWindow === w ? '#FFA500' : 'rgba(255,255,255,0.35)',
-                    border: `1px solid ${brierWindow === w ? 'rgba(255,165,0,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                    background: brierWindow === w ? 'transparent' : 'transparent',
+                    color: brierWindow === w ? '#45E0A8' : '#FFFFFF',
+                    border: `1px solid ${brierWindow === w ? '#45E0A8' : '#FFFFFF'}`,
                     cursor: 'pointer', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '.06em',
                   }}
                 >{w}G</button>
@@ -684,7 +684,7 @@ export default function ModelResults() {
             <>
               <div style={{ flex: 1 }} />
               <button type="button" onClick={() => setGameDate(d => addDays(d, -1))}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
               >
                 <ChevronLeft size={14} style={{ color: 'hsl(var(--muted-foreground))' }} />
               </button>
@@ -692,12 +692,12 @@ export default function ModelResults() {
                 {formatDateNav(gameDate)}
               </span>
               {gameDate === todayPst() && (
-                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(57,255,20,0.15)', color: '#39FF14' }}>
+                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: 'transparent', color: '#45E0A8' }}>
                   TODAY
                 </span>
               )}
               <button type="button" onClick={() => setGameDate(d => addDays(d, 1))}
-                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0"
+                className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
               >
                 <ChevronRight size={14} style={{ color: 'hsl(var(--muted-foreground))' }} />
               </button>
@@ -713,7 +713,7 @@ export default function ModelResults() {
         {viewMode === 'brier' && (
           brierLoading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#FFA500' }} />
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#45E0A8' }} />
               <span className="text-sm text-muted-foreground">Loading Brier score trend…</span>
             </div>
           ) : !brierData || brierData.summary.totalGames === 0 ? (
@@ -728,22 +728,22 @@ export default function ModelResults() {
             <>
               {/* ── Drift Detector Banner ────────────────────────────────────────────────────────────────────────────── */}
               {driftLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', marginBottom: 12 }}>
-                  <Loader2 style={{ width: 12, height: 12, color: '#FFA500' }} className="animate-spin" />
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '1px' }}>CHECKING DRIFT...</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 6, background: 'transparent', marginBottom: 12 }}>
+                  <Loader2 style={{ width: 12, height: 12, color: '#45E0A8' }} className="animate-spin" />
+                  <span style={{ fontSize: 10, color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '1px' }}>CHECKING DRIFT...</span>
                 </div>
               ) : driftData ? (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 6, marginBottom: 12,
-                  background: driftData.driftDetected ? 'rgba(255,80,80,0.12)' : driftData.rollingF5Share !== null ? 'rgba(0,229,100,0.08)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${driftData.driftDetected ? 'rgba(255,80,80,0.3)' : driftData.rollingF5Share !== null ? 'rgba(0,229,100,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                  background: driftData.driftDetected ? 'transparent' : driftData.rollingF5Share !== null ? 'transparent' : 'transparent',
+                  border: `1px solid ${driftData.driftDetected ? '#FFFFFF' : driftData.rollingF5Share !== null ? '#45E0A8' : '#FFFFFF'}`,
                 }}>
                   <span style={{ fontSize: 13 }}>{driftData.driftDetected ? '⚠️' : driftData.rollingF5Share !== null ? '✅' : '⏳'}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: driftData.driftDetected ? '#FF5050' : driftData.rollingF5Share !== null ? '#00E564' : 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: driftData.driftDetected ? '#FFFFFF' : driftData.rollingF5Share !== null ? '#45E0A8' : '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>
                       {driftData.driftDetected ? 'DRIFT DETECTED — RECALIBRATION RECOMMENDED' : driftData.rollingF5Share !== null ? 'DRIFT DETECTOR — NOMINAL' : 'DRIFT DETECTOR — INSUFFICIENT DATA'}
                     </div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '0.5px' }}>
+                    <div style={{ fontSize: 9, color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '0.5px' }}>
                       {driftData.rollingF5Share !== null
                         ? `Rolling F5 Share: ${(driftData.rollingF5Share * 100).toFixed(2)}% | Baseline: ${(driftData.baselineF5Share * 100).toFixed(2)}% | Delta: ${((driftData.delta ?? 0) * 100).toFixed(2)}pp | Window: ${driftData.windowSize} games${driftData.recalibrationTriggered ? ' | ✅ Recalibrated' : ''}`
                         : driftData.message
@@ -751,7 +751,7 @@ export default function ModelResults() {
                     </div>
                   </div>
                   {driftData.driftDetected && !driftData.recalibrationTriggered && (
-                    <span style={{ fontSize: 9, color: '#FF5050', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '1px', fontWeight: 700 }}>NEEDS RECAL</span>
+                    <span style={{ fontSize: 9, color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: '1px', fontWeight: 700 }}>NEEDS RECAL</span>
                   )}
                 </div>
               ) : null}
@@ -765,8 +765,8 @@ export default function ModelResults() {
                       fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
                       padding: '4px 12px', borderRadius: 4, border: 'none', cursor: 'pointer',
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
-                      background: brierSubTab === tab ? (tab === 'trend' ? 'rgba(255,165,0,0.2)' : 'rgba(0,229,204,0.15)') : 'rgba(255,255,255,0.05)',
-                      color: brierSubTab === tab ? (tab === 'trend' ? '#FFA500' : '#00E5CC') : 'rgba(255,255,255,0.3)',
+                      background: brierSubTab === tab ? (tab === 'trend' ? 'transparent' : 'transparent') : 'transparent',
+                      color: brierSubTab === tab ? (tab === 'trend' ? '#45E0A8' : '#45E0A8') : '#FFFFFF',
                       transition: 'all 0.15s',
                     }}
                   >
@@ -781,21 +781,21 @@ export default function ModelResults() {
               <div style={{ marginBottom: 20 }}>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 10,
                 }}>
                   BRIER SCORE CALIBRATION — {brierData.summary.totalGames} INGESTED GAMES
-                  <span style={{ marginLeft: 8, color: 'rgba(255,165,0,0.6)', fontSize: 8 }}>
+                  <span style={{ marginLeft: 8, color: '#45E0A8', fontSize: 8 }}>
                     (lower = better | perfect = 0.000 | random = 0.250)
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {([
-                    { label: 'FG ML', value: brierData.summary.avgFgMl, color: '#39FF14' },
-                    { label: 'F5 ML', value: brierData.summary.avgF5Ml, color: '#FFA500' },
-                    { label: 'NRFI', value: brierData.summary.avgNrfi, color: '#00BFFF' },
-                    { label: 'FG TOT', value: (brierData.summary as Record<string, number | null>).avgFgTotal ?? null, color: '#BF5FFF' },
-                    { label: 'F5 TOT', value: (brierData.summary as Record<string, number | null>).avgF5Total ?? null, color: '#00E5CC' },
+                    { label: 'FG ML', value: brierData.summary.avgFgMl, color: '#45E0A8' },
+                    { label: 'F5 ML', value: brierData.summary.avgF5Ml, color: '#45E0A8' },
+                    { label: 'NRFI', value: brierData.summary.avgNrfi, color: '#45E0A8' },
+                    { label: 'FG TOT', value: (brierData.summary as Record<string, number | null>).avgFgTotal ?? null, color: '#45E0A8' },
+                    { label: 'F5 TOT', value: (brierData.summary as Record<string, number | null>).avgF5Total ?? null, color: '#45E0A8' },
                   ] as Array<{ label: string; value: number | null; color: string }>).map(({ label, value, color }) => (
                     <StatCard
                       key={label}
@@ -803,10 +803,10 @@ export default function ModelResults() {
                       value={value != null ? value.toFixed(4) : 'N/A'}
                       sub={`${brierWindow}-game rolling window`}
                       color={
-                        value == null ? '#4a5048'
-                          : value <= 0.15 ? '#39FF14'
-                          : value <= 0.22 ? '#FFD700'
-                          : '#FF2244'
+                        value == null ? '#FFFFFF'
+                          : value <= 0.15 ? '#45E0A8'
+                          : value <= 0.22 ? '#FFFFFF'
+                          : '#FFFFFF'
                       }
                     />
                   ))}
@@ -814,50 +814,50 @@ export default function ModelResults() {
                     label="WINDOW SIZE"
                     value={`${brierWindow}G`}
                     sub={`${brierData.summary.totalGames} total ingested`}
-                    color="#FFA500"
+                    color="#45E0A8"
                   />
                 </div>
               </div>
 
               {/* ── Rolling Brier chart ────────────────────────────────────────────── */}
               <div style={{
-                background: '#0a0d0b',
-                border: '1px solid #1a1d1b',
+                background: '#000000',
+                border: '1px solid #FFFFFF',
                 borderRadius: 10,
                 padding: '16px 12px 12px',
                 marginBottom: 20,
               }}>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 16,
                 }}>
                   ROLLING {brierWindow}-GAME BRIER SCORE — FG ML / F5 ML / NRFI / FG TOT / F5 TOT
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={brierChartData} margin={{ top: 4, right: 16, left: -20, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1d1b" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
                     <XAxis
                       dataKey="gameIndex"
-                      tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.25)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
+                      tick={{ fontSize: 9, fill: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
                       tickLine={false}
-                      axisLine={{ stroke: '#1a1d1b' }}
-                      label={{ value: 'Game #', position: 'insideBottomRight', offset: -4, fontSize: 9, fill: 'rgba(255,255,255,0.2)' }}
+                      axisLine={{ stroke: '#FFFFFF' }}
+                      label={{ value: 'Game #', position: 'insideBottomRight', offset: -4, fontSize: 9, fill: '#FFFFFF' }}
                     />
                     <YAxis
                       domain={[0, 0.35]}
                       tickCount={8}
-                      tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.25)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
+                      tick={{ fontSize: 9, fill: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
                       tickLine={false}
-                      axisLine={{ stroke: '#1a1d1b' }}
+                      axisLine={{ stroke: '#FFFFFF' }}
                       tickFormatter={(v: number) => v.toFixed(2)}
                     />
                     <Tooltip
                       contentStyle={{
-                        background: '#0e1110', border: '1px solid #1e2320',
+                        background: '#000000', border: '1px solid #FFFFFF',
                         borderRadius: 8, fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                       }}
-                      labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}
+                      labelStyle={{ color: '#FFFFFF', marginBottom: 4 }}
                       formatter={(value: number, name: string) => [
                         value != null ? value.toFixed(4) : 'N/A',
                         name,
@@ -871,37 +871,37 @@ export default function ModelResults() {
                       wrapperStyle={{ fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', paddingTop: 8 }}
                     />
                     {/* Reference line at 0.25 (random baseline) */}
-                    <ReferenceLine y={0.25} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4"
-                      label={{ value: 'Random (0.25)', position: 'right', fontSize: 8, fill: 'rgba(255,255,255,0.2)' }}
+                    <ReferenceLine y={0.25} stroke="#FFFFFF" strokeDasharray="4 4"
+                      label={{ value: 'Random (0.25)', position: 'right', fontSize: 8, fill: '#FFFFFF' }}
                     />
                     {/* Reference line at 0.20 (good calibration target) */}
-                    <ReferenceLine y={0.20} stroke="rgba(57,255,20,0.15)" strokeDasharray="4 4"
-                      label={{ value: 'Target (0.20)', position: 'right', fontSize: 8, fill: 'rgba(57,255,20,0.3)' }}
+                    <ReferenceLine y={0.20} stroke="#45E0A8" strokeDasharray="4 4"
+                      label={{ value: 'Target (0.20)', position: 'right', fontSize: 8, fill: '#45E0A8' }}
                     />
                     <Line
                       type="monotone" dataKey="rollFgMl" name="FG ML"
-                      stroke="#39FF14" strokeWidth={2} dot={false}
-                      connectNulls activeDot={{ r: 4, fill: '#39FF14' }}
+                      stroke="#45E0A8" strokeWidth={2} dot={false}
+                      connectNulls activeDot={{ r: 4, fill: '#45E0A8' }}
                     />
                     <Line
                       type="monotone" dataKey="rollF5Ml" name="F5 ML"
-                      stroke="#FFA500" strokeWidth={2} dot={false}
-                      connectNulls activeDot={{ r: 4, fill: '#FFA500' }}
+                      stroke="#45E0A8" strokeWidth={2} dot={false}
+                      connectNulls activeDot={{ r: 4, fill: '#45E0A8' }}
                     />
                     <Line
                       type="monotone" dataKey="rollNrfi" name="NRFI"
-                      stroke="#00BFFF" strokeWidth={2} dot={false}
-                      connectNulls activeDot={{ r: 4, fill: '#00BFFF' }}
+                      stroke="#45E0A8" strokeWidth={2} dot={false}
+                      connectNulls activeDot={{ r: 4, fill: '#45E0A8' }}
                     />
                     <Line
                       type="monotone" dataKey="rollFgTotal" name="FG TOT"
-                      stroke="#BF5FFF" strokeWidth={1.5} strokeDasharray="5 3" dot={false}
-                      connectNulls activeDot={{ r: 4, fill: '#BF5FFF' }}
+                      stroke="#45E0A8" strokeWidth={1.5} strokeDasharray="5 3" dot={false}
+                      connectNulls activeDot={{ r: 4, fill: '#45E0A8' }}
                     />
                     <Line
                       type="monotone" dataKey="rollF5Total" name="F5 TOT"
-                      stroke="#00E5CC" strokeWidth={1.5} strokeDasharray="5 3" dot={false}
-                      connectNulls activeDot={{ r: 4, fill: '#00E5CC' }}
+                      stroke="#45E0A8" strokeWidth={1.5} strokeDasharray="5 3" dot={false}
+                      connectNulls activeDot={{ r: 4, fill: '#45E0A8' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -911,7 +911,7 @@ export default function ModelResults() {
               <div style={{ marginBottom: 20 }}>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 10,
                 }}>
                   PER-GAME BRIER SCORES ({brierData.games.length} games, newest first)
@@ -919,29 +919,29 @@ export default function ModelResults() {
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #1a1d1b' }}>
+                      <tr style={{ borderBottom: '1px solid #FFFFFF' }}>
                         {['#', 'DATE', 'MATCHUP', 'FG ML', 'F5 ML', 'NRFI', 'FG TOT', 'F5 TOT', ''].map(h => (
-                          <th key={h} style={{ padding: '4px 8px', textAlign: h === '#' || h === 'DATE' || h === 'MATCHUP' || h === '' ? 'left' : 'right', color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '.08em', fontSize: 9 }}>{h}</th>
+                          <th key={h} style={{ padding: '4px 8px', textAlign: h === '#' || h === 'DATE' || h === 'MATCHUP' || h === '' ? 'left' : 'right', color: '#FFFFFF', fontWeight: 700, letterSpacing: '.08em', fontSize: 9 }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {[...brierData.games].reverse().map(g => {
                         const brierColor = (v: number | null) =>
-                          v == null ? 'rgba(255,255,255,0.15)'
-                            : v <= 0.15 ? '#39FF14'
-                            : v <= 0.22 ? '#FFD700'
-                            : '#FF2244';
+                          v == null ? '#FFFFFF'
+                            : v <= 0.15 ? '#45E0A8'
+                            : v <= 0.22 ? '#FFFFFF'
+                            : '#FFFFFF';
                         const isReingestingThis = reingestingDate === g.gameDate;
                         const isAnyReingestActive = reingestingDate !== null;
                         return (
-                          <tr key={g.gameIndex} style={{ borderBottom: '1px solid #0e1110' }}>
-                            <td style={{ padding: '4px 8px', color: 'rgba(255,255,255,0.25)', fontSize: 9 }}>{g.gameIndex}</td>
-                            <td style={{ padding: '4px 8px', color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>{g.gameDate}</td>
-                            <td style={{ padding: '4px 8px', color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{g.matchup}</td>
+                          <tr key={g.gameIndex} style={{ borderBottom: '1px solid #FFFFFF' }}>
+                            <td style={{ padding: '4px 8px', color: '#FFFFFF', fontSize: 9 }}>{g.gameIndex}</td>
+                            <td style={{ padding: '4px 8px', color: '#FFFFFF', fontSize: 9 }}>{g.gameDate}</td>
+                            <td style={{ padding: '4px 8px', color: '#FFFFFF', fontWeight: 500 }}>{g.matchup}</td>
                             {(['brierFgMl', 'brierF5Ml', 'brierNrfi', 'brierFgTotal', 'brierF5Total'] as const).map(field => (
                               <td key={field} style={{ padding: '4px 8px', textAlign: 'right', color: brierColor(g[field]), fontWeight: 600 }}>
-                                {g[field] != null ? (g[field] as number).toFixed(4) : <span style={{ color: 'rgba(255,255,255,0.12)' }}>—</span>}
+                                {g[field] != null ? (g[field] as number).toFixed(4) : <span style={{ color: '#FFFFFF' }}>—</span>}
                               </td>
                             ))}
                             <td style={{ padding: '4px 8px' }}>
@@ -951,8 +951,8 @@ export default function ModelResults() {
                                 style={{
                                   fontSize: 8, fontWeight: 700, letterSpacing: '.08em',
                                   padding: '2px 6px', borderRadius: 3, border: 'none', cursor: isAnyReingestActive ? 'not-allowed' : 'pointer',
-                                  background: isReingestingThis ? 'rgba(255,180,0,0.15)' : 'rgba(255,255,255,0.06)',
-                                  color: isReingestingThis ? '#FFB400' : 'rgba(255,255,255,0.35)',
+                                  background: isReingestingThis ? 'transparent' : 'transparent',
+                                  color: isReingestingThis ? '#45E0A8' : '#FFFFFF',
                                   transition: 'all 0.15s',
                                   display: 'flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap',
                                 }}
@@ -977,7 +977,7 @@ export default function ModelResults() {
               {brierSubTab === 'heatmap' && (
                 heatmapLoading ? (
                   <div className="flex items-center justify-center py-12 gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#00E5CC' }} />
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#45E0A8' }} />
                     <span className="text-sm text-muted-foreground">Loading Brier heatmap…</span>
                   </div>
                 ) : !heatmapData || heatmapData.heatmap.length === 0 ? (
@@ -992,22 +992,22 @@ export default function ModelResults() {
                   <div style={{ overflowX: 'auto' }}>
                     <div style={{
                       fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                      color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                       marginBottom: 12,
                     }}>
                       BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
-                      <span style={{ marginLeft: 8, color: 'rgba(0,229,204,0.6)', fontSize: 8 }}>
+                      <span style={{ marginLeft: 8, color: '#45E0A8', fontSize: 8 }}>
                         (avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)
                       </span>
                     </div>
                     <table style={{ borderCollapse: 'collapse', fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid #1a1d1b' }}>
+                        <tr style={{ borderBottom: '1px solid #FFFFFF' }}>
                           {['DATE', 'GAMES', 'FG ML', 'F5 ML', 'NRFI', 'FG TOT', 'F5 TOT'].map(h => (
                             <th key={h} style={{
                               padding: '4px 10px',
                               textAlign: h === 'DATE' ? 'left' : 'right',
-                              color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '.08em', fontSize: 9,
+                              color: '#FFFFFF', fontWeight: 700, letterSpacing: '.08em', fontSize: 9,
                             }}>{h}</th>
                           ))}
                         </tr>
@@ -1016,18 +1016,18 @@ export default function ModelResults() {
                         {[...heatmapData.heatmap].reverse().map(row => {
                           const cellBg = (v: number | null) =>
                             v == null ? 'transparent'
-                              : v <= 0.15 ? 'rgba(57,255,20,0.12)'
-                              : v <= 0.22 ? 'rgba(255,215,0,0.12)'
-                              : 'rgba(255,34,68,0.12)';
+                              : v <= 0.15 ? 'transparent'
+                              : v <= 0.22 ? 'transparent'
+                              : 'transparent';
                           const cellColor = (v: number | null) =>
-                            v == null ? 'rgba(255,255,255,0.12)'
-                              : v <= 0.15 ? '#39FF14'
-                              : v <= 0.22 ? '#FFD700'
-                              : '#FF4466';
+                            v == null ? '#FFFFFF'
+                              : v <= 0.15 ? '#45E0A8'
+                              : v <= 0.22 ? '#FFFFFF'
+                              : '#FFFFFF';
                           return (
-                            <tr key={row.date} style={{ borderBottom: '1px solid #0e1110' }}>
-                              <td style={{ padding: '5px 10px', color: 'rgba(255,255,255,0.55)', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.date}</td>
-                              <td style={{ padding: '5px 10px', textAlign: 'right', color: 'rgba(255,255,255,0.3)', fontSize: 9 }}>{row.games}</td>
+                            <tr key={row.date} style={{ borderBottom: '1px solid #FFFFFF' }}>
+                              <td style={{ padding: '5px 10px', color: '#FFFFFF', fontWeight: 600, whiteSpace: 'nowrap' }}>{row.date}</td>
+                              <td style={{ padding: '5px 10px', textAlign: 'right', color: '#FFFFFF', fontSize: 9 }}>{row.games}</td>
                               {(['avgFgMl', 'avgF5Ml', 'avgNrfi', 'avgFgTotal', 'avgF5Total'] as const).map(field => {
                                 const v = row[field];
                                 const nullCount = row[field.replace('avg', 'null') as keyof typeof row] as number;
@@ -1042,16 +1042,16 @@ export default function ModelResults() {
                                 return (
                                   <td key={field} onClick={() => setSelectedCell(isSelected ? null : { date: row.date, market: marketKey })} style={{
                                     padding: '5px 10px', textAlign: 'right',
-                                    background: isSelected ? 'rgba(0,191,255,0.25)' : cellBg(v),
-                                    color: isSelected ? '#00BFFF' : cellColor(v),
+                                    background: isSelected ? 'transparent' : cellBg(v),
+                                    color: isSelected ? '#45E0A8' : cellColor(v),
                                     fontWeight: 700,
                                     position: 'relative',
                                     cursor: 'pointer',
-                                    outline: isSelected ? '1px solid rgba(0,191,255,0.5)' : 'none',
+                                    outline: isSelected ? '1px solid #45E0A8' : 'none',
                                   }}>
-                                    {v != null ? v.toFixed(4) : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}
+                                    {v != null ? v.toFixed(4) : <span style={{ color: '#FFFFFF' }}>—</span>}
                                     {nullCount > 0 && (
-                                      <span style={{ fontSize: 7, color: 'rgba(255,180,0,0.5)', marginLeft: 3 }}>
+                                      <span style={{ fontSize: 7, color: '#FFFFFF', marginLeft: 3 }}>
                                         ({nullCount}ø)
                                       </span>
                                     )}
@@ -1071,35 +1071,35 @@ export default function ModelResults() {
               {selectedCell && (
                 <div style={{
                   marginTop: 20, padding: '16px 20px',
-                  background: 'rgba(0,191,255,0.06)',
-                  border: '1px solid rgba(0,191,255,0.2)',
+                  background: 'transparent',
+                  border: '1px solid #45E0A8',
                   borderRadius: 8,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '2px', color: '#00BFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '2px', color: '#45E0A8', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                       DRILL-DOWN — {selectedCell.date} / {selectedCell.market.toUpperCase()}
                     </div>
-                    <button type="button" onClick={() => setSelectedCell(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 14 }}>×</button>
+                    <button type="button" onClick={() => setSelectedCell(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer', fontSize: 14 }}>×</button>
                   </div>
                   {drilldownLoading ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0' }}>
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Loading games…</span>
+                      <span style={{ fontSize: 11, color: '#FFFFFF' }}>Loading games…</span>
                     </div>
                   ) : !drilldownData || drilldownData.games.length === 0 ? (
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', padding: '8px 0' }}>No games found for this date.</div>
+                    <div style={{ fontSize: 11, color: '#FFFFFF', padding: '8px 0' }}>No games found for this date.</div>
                   ) : (
                     <table style={{ borderCollapse: 'collapse', fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', width: '100%' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(0,191,255,0.15)' }}>
+                        <tr style={{ borderBottom: '1px solid #FFFFFF' }}>
                           {['MATCHUP', 'BRIER', 'MODEL AWAY%', 'MODEL HOME%', 'BOOK ML', 'SCORE', 'RESULT'].map(h => (
-                            <th key={h} style={{ padding: '4px 8px', textAlign: h === 'MATCHUP' ? 'left' : 'right', color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '.08em', fontSize: 9 }}>{h}</th>
+                            <th key={h} style={{ padding: '4px 8px', textAlign: h === 'MATCHUP' ? 'left' : 'right', color: '#FFFFFF', fontWeight: 700, letterSpacing: '.08em', fontSize: 9 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {drilldownData.games.map((g: typeof drilldownData.games[number]) => {
                           const brier = g.focusBrier;
-                          const brierColor = brier == null ? 'rgba(255,255,255,0.15)' : brier <= 0.15 ? '#39FF14' : brier <= 0.22 ? '#FFD700' : '#FF4466';
+                          const brierColor = brier == null ? '#FFFFFF' : brier <= 0.15 ? '#45E0A8' : brier <= 0.22 ? '#FFFFFF' : '#FFFFFF';
                           const mktKey = selectedCell.market;
                           const modelAway = (mktKey === 'f5Ml' || mktKey === 'f5Total') ? g.modelF5AwayWinPct : g.modelAwayWinPct;
                           const modelHome = (mktKey === 'f5Ml' || mktKey === 'f5Total') ? g.modelF5HomeWinPct : g.modelHomeWinPct;
@@ -1110,14 +1110,14 @@ export default function ModelResults() {
                           const scoreAway = mktKey.startsWith('f5') ? g.actualF5AwayScore : g.actualAwayScore;
                           const scoreHome = mktKey.startsWith('f5') ? g.actualF5HomeScore : g.actualHomeScore;
                           return (
-                            <tr key={g.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                              <td style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.7)', fontWeight: 600, whiteSpace: 'nowrap' }}>{g.awayTeam} @ {g.homeTeam}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', color: brierColor, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: 'rgba(255,255,255,0.1)' }}>—</span>}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>{modelAway != null ? modelAway.toFixed(1) + '%' : '—'}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>{modelHome != null ? modelHome.toFixed(1) + '%' : '—'}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', color: 'rgba(255,255,255,0.35)', fontSize: 9 }}>{bookAway ?? '—'} / {bookHome ?? '—'}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', color: 'rgba(255,255,255,0.4)' }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : '—'}</td>
-                              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 700, color: correct === 1 ? '#39FF14' : correct === 0 ? '#FF4466' : 'rgba(255,255,255,0.2)' }}>
+                            <tr key={g.id} style={{ borderBottom: '1px solid #FFFFFF' }}>
+                              <td style={{ padding: '5px 8px', color: '#FFFFFF', fontWeight: 600, whiteSpace: 'nowrap' }}>{g.awayTeam} @ {g.homeTeam}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: brierColor, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: '#FFFFFF' }}>—</span>}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#FFFFFF' }}>{modelAway != null ? modelAway.toFixed(1) + '%' : '—'}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#FFFFFF' }}>{modelHome != null ? modelHome.toFixed(1) + '%' : '—'}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#FFFFFF', fontSize: 9 }}>{bookAway ?? '—'} / {bookHome ?? '—'}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', color: '#FFFFFF' }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : '—'}</td>
+                              <td style={{ padding: '5px 8px', textAlign: 'right', fontWeight: 700, color: correct === 1 ? '#45E0A8' : correct === 0 ? '#FFFFFF' : '#FFFFFF' }}>
                                 {correct === 1 ? '✓' : correct === 0 ? '✗' : result ?? '—'}
                               </td>
                             </tr>
@@ -1136,7 +1136,7 @@ export default function ModelResults() {
         {viewMode === 'last7' && (
           last7Loading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#00BFFF' }} />
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#45E0A8' }} />
               <span className="text-sm text-muted-foreground">Loading 7-day window…</span>
             </div>
           ) : !last7Data || last7Data.totalProps === 0 ? (
@@ -1153,7 +1153,7 @@ export default function ModelResults() {
               <div style={{ marginBottom: 20 }}>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 10,
                 }}>
                   7-DAY AGGREGATE — {last7Data.completedProps} COMPLETED PROPS
@@ -1187,9 +1187,9 @@ export default function ModelResults() {
                     value={last7Data.overBiasPct !== null ? fmtPct(last7Data.overBiasPct) : '—'}
                     sub={`${last7Data.overTotal}O / ${last7Data.underTotal}U / ${last7Data.pushTotal}P`}
                     color={last7Data.overBiasPct !== null
-                      ? Math.abs(last7Data.overBiasPct - 0.5) <= 0.05 ? '#39FF14'
-                      : Math.abs(last7Data.overBiasPct - 0.5) <= 0.15 ? '#FFD700'
-                      : '#FF9500'
+                      ? Math.abs(last7Data.overBiasPct - 0.5) <= 0.05 ? '#45E0A8'
+                      : Math.abs(last7Data.overBiasPct - 0.5) <= 0.15 ? '#FFFFFF'
+                      : '#FFFFFF'
                       : undefined}
                   />
                   <StatCard
@@ -1197,9 +1197,9 @@ export default function ModelResults() {
                     value={last7Data.mae !== null ? fmtNum(last7Data.mae, 3) : '—'}
                     sub="mean absolute error"
                     color={last7Data.mae !== null
-                      ? last7Data.mae <= 0.8 ? '#39FF14'
-                      : last7Data.mae <= 1.5 ? '#FFD700'
-                      : '#FF2244'
+                      ? last7Data.mae <= 0.8 ? '#45E0A8'
+                      : last7Data.mae <= 1.5 ? '#FFFFFF'
+                      : '#FFFFFF'
                       : undefined}
                   />
                   <StatCard
@@ -1207,9 +1207,9 @@ export default function ModelResults() {
                     value={last7Data.meanError !== null ? signedNum(last7Data.meanError, 3) : '—'}
                     sub="avg (actual − proj)"
                     color={last7Data.meanError !== null
-                      ? Math.abs(last7Data.meanError) <= 0.2 ? '#39FF14'
-                      : Math.abs(last7Data.meanError) <= 0.5 ? '#FFD700'
-                      : '#FF2244'
+                      ? Math.abs(last7Data.meanError) <= 0.2 ? '#45E0A8'
+                      : Math.abs(last7Data.meanError) <= 0.5 ? '#FFFFFF'
+                      : '#FFFFFF'
                       : undefined}
                   />
                 </div>
@@ -1220,26 +1220,26 @@ export default function ModelResults() {
                 <div style={{ marginBottom: 20 }}>
                   <div style={{
                     fontSize: 9, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.35)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                    color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                     marginBottom: 10,
                   }}>
                     PER-DAY BREAKDOWN
                   </div>
                   <div style={{
-                    background: '#090E14', border: '1px solid #182433', borderRadius: 10, overflow: 'hidden',
+                    background: '#000000', border: '1px solid #FFFFFF', borderRadius: 10, overflow: 'hidden',
                   }}>
                     {/* Header row */}
                     <div style={{
                       display: 'grid',
                       gridTemplateColumns: '1fr 60px 60px 60px 80px 60px 60px 80px',
                       padding: '8px 14px',
-                      borderBottom: '1px solid #182433',
+                      borderBottom: '1px solid #FFFFFF',
                       gap: 8,
                     }}>
                       {['DATE', 'PROPS', 'DONE', 'CORRECT', 'ACCURACY', 'OVER', 'UNDER', 'MAE'].map(h => (
                         <div key={h} style={{
                           fontSize: 8, fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase',
-                          color: 'rgba(255,255,255,0.3)', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                          color: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                           textAlign: h === 'DATE' ? 'left' : 'center',
                         }}>{h}</div>
                       ))}
@@ -1255,22 +1255,22 @@ export default function ModelResults() {
                             gridTemplateColumns: '1fr 60px 60px 60px 80px 60px 60px 80px',
                             padding: '9px 14px',
                             gap: 8,
-                            borderBottom: idx < last7Data.dailyBreakdown.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                            background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                            borderBottom: idx < last7Data.dailyBreakdown.length - 1 ? '1px solid #FFFFFF' : 'none',
+                            background: idx % 2 === 0 ? 'transparent' : 'transparent',
                           }}
                         >
                           <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>
                             {formatDateNav(day.date)}
                           </div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{day.total}</div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>{day.completed}</div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: day.completed > 0 ? accColor7 : 'rgba(255,255,255,0.3)' }}>{day.correct}</div>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: '#FFFFFF' }}>{day.total}</div>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: '#FFFFFF' }}>{day.completed}</div>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: day.completed > 0 ? accColor7 : '#FFFFFF' }}>{day.correct}</div>
                           <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: accColor7 }}>
                             {day.completed > 0 ? fmtPct(day.accuracy) : '—'}
                           </div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: 'rgba(57,255,20,0.7)' }}>{day.overTotal}</div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: 'rgba(0,191,255,0.7)' }}>{day.underTotal}</div>
-                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: day.mae !== null ? (day.mae <= 0.8 ? '#39FF14' : day.mae <= 1.5 ? '#FFD700' : '#FF2244') : 'rgba(255,255,255,0.3)' }}>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: '#45E0A8' }}>{day.overTotal}</div>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: '#FFFFFF' }}>{day.underTotal}</div>
+                          <div style={{ textAlign: 'center', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, color: day.mae !== null ? (day.mae <= 0.8 ? '#45E0A8' : day.mae <= 1.5 ? '#FFFFFF' : '#FFFFFF') : '#FFFFFF' }}>
                             {day.mae !== null ? fmtNum(day.mae, 2) : '—'}
                           </div>
                         </div>
@@ -1287,7 +1287,7 @@ export default function ModelResults() {
         {viewMode === 'daily' && (
           dailyLoading ? (
             <div className="flex items-center justify-center py-12 gap-3">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#39FF14" }} />
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} />
               <span className="text-sm text-muted-foreground">Loading results…</span>
             </div>
           ) : !daily || daily.total === 0 ? (
@@ -1304,7 +1304,7 @@ export default function ModelResults() {
               <div style={{ marginBottom: 20 }}>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 10,
                 }}>
                   DAILY ACCURACY — {formatDateNav(gameDate).toUpperCase()}
@@ -1338,9 +1338,9 @@ export default function ModelResults() {
                     value={daily.meanError !== null ? signedNum(daily.meanError, 2) : "—"}
                     sub="avg (actual − proj)"
                     color={daily.meanError !== null
-                      ? Math.abs(daily.meanError) <= 0.3 ? "#39FF14"
-                      : Math.abs(daily.meanError) <= 0.8 ? "#FFD700"
-                      : "#FF2244"
+                      ? Math.abs(daily.meanError) <= 0.3 ? "#45E0A8"
+                      : Math.abs(daily.meanError) <= 0.8 ? "#FFFFFF"
+                      : "#FFFFFF"
                       : undefined}
                   />
                   <StatCard
@@ -1348,9 +1348,9 @@ export default function ModelResults() {
                     value={daily.mae !== null ? fmtNum(daily.mae, 2) : "—"}
                     sub="mean absolute error"
                     color={daily.mae !== null
-                      ? daily.mae <= 0.8 ? "#39FF14"
-                      : daily.mae <= 1.5 ? "#FFD700"
-                      : "#FF2244"
+                      ? daily.mae <= 0.8 ? "#45E0A8"
+                      : daily.mae <= 1.5 ? "#FFFFFF"
+                      : "#FFFFFF"
                       : undefined}
                   />
                 </div>
@@ -1361,7 +1361,7 @@ export default function ModelResults() {
                 <div style={{ marginBottom: 20 }}>
                   <div style={{
                     fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                    color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                     marginBottom: 10,
                   }}>
                     ROLLING CALIBRATION — ALL TIME ({calibration.completedProps} props)
@@ -1389,19 +1389,19 @@ export default function ModelResults() {
                       label="ROLLING MAE"
                       value={fmtNum(calibration.mae, 3)}
                       sub="mean absolute error"
-                      color={calibration.mae <= 0.8 ? "#39FF14" : calibration.mae <= 1.5 ? "#FFD700" : "#FF2244"}
+                      color={calibration.mae <= 0.8 ? "#45E0A8" : calibration.mae <= 1.5 ? "#FFFFFF" : "#FFFFFF"}
                     />
                     <StatCard
                       label="MEAN BIAS"
                       value={signedNum(calibration.meanBias, 3)}
                       sub="avg (actual − proj)"
-                      color={Math.abs(calibration.meanBias) <= 0.2 ? "#39FF14" : Math.abs(calibration.meanBias) <= 0.5 ? "#FFD700" : "#FF2244"}
+                      color={Math.abs(calibration.meanBias) <= 0.2 ? "#45E0A8" : Math.abs(calibration.meanBias) <= 0.5 ? "#FFFFFF" : "#FFFFFF"}
                     />
                     <StatCard
                       label="CALIBRATION FACTOR"
                       value={fmtNum(calibration.calibrationFactor, 4)}
                       sub="multiply proj × factor"
-                      color={Math.abs(calibration.calibrationFactor - 1) <= 0.03 ? "#39FF14" : "#FFD700"}
+                      color={Math.abs(calibration.calibrationFactor - 1) <= 0.03 ? "#45E0A8" : "#FFFFFF"}
                     />
                     <StatCard
                       label="RMSE"
@@ -1416,15 +1416,15 @@ export default function ModelResults() {
               <div>
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase",
-                  color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+                  color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                   marginBottom: 10, display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <span>PER-PITCHER RESULTS</span>
-                  <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
-                  <span style={{ color: "rgba(255,255,255,0.25)" }}>{daily.total} pitchers</span>
+                  <span style={{ color: "#FFFFFF" }}>·</span>
+                  <span style={{ color: "#FFFFFF" }}>{daily.total} pitchers</span>
                   {daily.completed > 0 && (
                     <>
-                      <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
+                      <span style={{ color: "#FFFFFF" }}>·</span>
                       <span style={{ color: accColor }}>{daily.correct}/{daily.completed} correct</span>
                     </>
                   )}

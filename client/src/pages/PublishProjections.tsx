@@ -86,9 +86,9 @@ function formatDate(dateStr: string): string {
 function getEdgeColor(diff: number): string {
   if (diff <= 0)  return "hsl(var(--muted-foreground))";
   if (diff < 1.5) return "#FF3131";
-  if (diff < 2.0) return "#FF6B00";
-  if (diff < 2.5) return "#FF9500";
-  if (diff < 3.0) return "#FFB800";
+  if (diff < 2.0) return "#45E0A8";
+  if (diff < 2.5) return "#45E0A8";
+  if (diff < 3.0) return "#45E0A8";
   if (diff < 3.5) return "#FFD700";
   if (diff < 4.0) return "#FFFF33";
   if (diff < 4.5) return "#AAFF1A";
@@ -188,7 +188,7 @@ function EditablePill({
     <div
       className="flex items-center justify-center rounded-lg"
       style={{
-        background: "rgba(255,255,255,0.08)",
+        background: "transparent",
         minWidth: prefix ? "64px" : "52px",
         width: "auto",
         maxWidth: allowNegative ? "80px" : "90px",
@@ -811,7 +811,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             <AlertDialogTrigger asChild>
               <button type="button" disabled={deleteMutation.isPending}
                 className="flex items-center gap-1 px-2 py-0.5 rounded-md text-sm font-semibold transition-all"
-                style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}
+                style={{ background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}
                 title="Permanently delete this game from the database"
               >
                 {deleteMutation.isPending
@@ -825,7 +825,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               style={{
                 background: "hsl(var(--card))",
                 border: "2px solid rgba(239,68,68,0.5)",
-                boxShadow: "0 0 40px rgba(239,68,68,0.2)",
+                boxShadow: "none",
               }}
             >
               <AlertDialogHeader>
@@ -845,21 +845,21 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   This will <strong style={{ color: "#ef4444" }}>permanently remove this game</strong> from the database.
                   {" "}It will no longer appear on the Publish Projections page or the public feed.
                   <br /><br />
-                  <strong style={{ color: "#FFB800" }}>This action is irreversible.</strong>{" "}
+                  <strong style={{ color: "#FFFFFF" }}>This action is irreversible.</strong>{" "}
                   There is no undo. The game cannot be recovered once deleted.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel
                   className="text-xs font-semibold"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" }}
+                  style={{ background: "transparent", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" }}
                 >
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate({ id: game.id })}
                   className="text-xs font-black tracking-wide"
-                  style={{ background: "rgba(239,68,68,0.85)", color: "#fff", border: "1px solid rgba(239,68,68,0.6)" }}
+                  style={{ background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }}
                 >
                   Yes, Delete Permanently
                 </AlertDialogAction>
@@ -875,10 +875,10 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           disabled={publishMutation.isPending || saving || (!game.publishedToFeed && !hasOdds)}
           className="flex items-center gap-1 px-2 py-0.5 rounded-md text-sm font-semibold transition-all"
           style={game.publishedToFeed
-            ? { background: "rgba(57,255,20,0.15)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.35)" }
+            ? { background: "transparent", color: "#39FF14", border: "1px solid rgba(57,255,20,0.35)" }
             : !hasOdds
-              ? { background: "rgba(255,255,255,0.03)", color: "rgba(156,163,175,0.4)", border: "1px solid rgba(255,255,255,0.06)", cursor: "not-allowed" }
-              : { background: "rgba(255,255,255,0.06)", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "rgba(156,163,175,0.4)", border: "1px solid rgba(255,255,255,0.06)", cursor: "not-allowed" }
+              : { background: "transparent", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
           }
           title={game.publishedToFeed ? "Remove from feed" : !hasOdds ? "No VSiN odds yet — cannot publish" : "Publish to feed"}
         >
@@ -909,12 +909,12 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
         <span
           title={hasOdds ? "VSiN odds loaded" : "No VSiN odds yet"}
           className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: hasOdds ? "#39FF14" : "#FF3131", marginLeft: 2 }}
+          style={{ background: hasOdds ? "#45E0A8" : "#FFFFFF", marginLeft: 2 }}
         />
         {game.gameType === "conference_tournament" && game.conference && (
           <>
             <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>·</span>
-            <span className="text-sm font-medium flex items-center gap-0.5" style={{ color: "#FFB800" }}>
+            <span className="text-sm font-medium flex items-center gap-0.5" style={{ color: "#FFFFFF" }}>
               <Trophy size={9} />
               {game.conference}
             </span>
@@ -951,7 +951,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14" }}>O/U</span>
                 </div>
                 <div className="flex-shrink-0 text-center" style={{ width: "clamp(52px, 13vw, 76px)" }}>
-                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: isNHL ? "#FFB800" : "#39FF14" }}>{isNHL ? 'O/U Odds' : 'Model ML'}</span>
+                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: isNHL ? "#45E0A8" : "#45E0A8" }}>{isNHL ? 'O/U Odds' : 'Model ML'}</span>
                 </div>
               </div>
               {/* Team rows */}
@@ -1043,7 +1043,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   <button type="button" onClick={handleReset}
                     disabled={saving}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-semibold transition-all"
-                    style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                    style={{ background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
                     title="Clear all model projections and save"
                   >
                     {saving ? <Loader2 size={9} className="animate-spin" /> : null}
@@ -1059,7 +1059,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   className="h-7 px-4 text-xs gap-1.5 font-bold transition-all"
                   style={dirty
                     ? { background: "#39FF14", color: "#000" }
-                    : { background: "rgba(57,255,20,0.12)", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
+                    : { background: "transparent", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
                   }
                 >
                   {saving && <Loader2 size={10} className="animate-spin" />}
@@ -1104,7 +1104,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex items-center gap-3">
                 <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>BOOK</span>
                 <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14", minWidth: 64, textAlign: 'center' }}>MODEL</span>
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>PL ODDS</span>}
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>PL ODDS</span>}
               </div>
             </div>
 
@@ -1287,8 +1287,8 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex items-center gap-3">
                 <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>BOOK O/U</span>
                 <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14", minWidth: 64, textAlign: 'center' }}>MODEL O/U</span>
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>O ODDS</span>}
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>U ODDS</span>}
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>O ODDS</span>}
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>U ODDS</span>}
               </div>
             </div>
             {/* Single row: OVER / UNDER label + book total + model input */}
@@ -1428,7 +1428,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 <button type="button" onClick={handleReset}
                   disabled={saving}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-semibold transition-all"
-                  style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                  style={{ background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
                   title="Clear all model projections and save"
                 >
                   {saving ? <Loader2 size={9} className="animate-spin" /> : null}
@@ -1444,7 +1444,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 className="h-8 px-5 text-xs gap-1.5 font-bold transition-all"
                 style={dirty
                   ? { background: "#39FF14", color: "#000" }
-                  : { background: "rgba(57,255,20,0.12)", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
+                  : { background: "transparent", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
                 }
               >
                 {saving && <Loader2 size={10} className="animate-spin" />}
@@ -1474,7 +1474,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       {isNHL && (game.modelAwayPuckLine || game.modelOverOdds || game.modelAwayScore) && (
         <div
           className="px-3 pt-2.5 pb-3"
-          style={{ borderTop: "1px solid hsl(var(--border) / 0.6)", background: "rgba(0,100,200,0.04)" }}
+          style={{ borderTop: "1px solid #FFFFFF", background: "transparent" }}
         >
           {/* Section header */}
           <div className="flex items-center gap-2 mb-2">
@@ -1947,7 +1947,7 @@ export default function PublishProjections() {
                 disabled={bulkApproveModelsMutation.isPending}
                 className="gap-1.5 text-xs h-8 font-bold border"
                 style={{
-                  background: "rgba(57,255,20,0.12)",
+                  background: "transparent",
                   color: "#39FF14",
                   borderColor: "rgba(57,255,20,0.4)",
                 }}
@@ -1960,7 +1960,7 @@ export default function PublishProjections() {
                 Approve All Models
                 <span
                   className="ml-0.5 px-1 py-0 rounded text-sm font-bold"
-                  style={{ background: "rgba(57,255,20,0.25)", color: "#39FF14" }}
+                  style={{ background: "transparent", color: "#39FF14" }}
                 >
                   {pendingApprovalCount}
                 </span>
@@ -1999,7 +1999,7 @@ export default function PublishProjections() {
             {gameDate === todayPst() && (
               <span
                 className="text-sm font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: "rgba(57,255,20,0.15)", color: "#39FF14" }}
+                style={{ background: "transparent", color: "#39FF14" }}
               >
                 TODAY
               </span>
@@ -2018,8 +2018,8 @@ export default function PublishProjections() {
             disabled={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold transition-all flex-shrink-0"
             style={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending
-              ? { background: "rgba(57,255,20,0.08)", color: "rgba(57,255,20,0.4)", border: "1px solid rgba(57,255,20,0.15)" }
-              : { background: "rgba(57,255,20,0.12)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.3)" }
+              ? { background: "transparent", color: "rgba(57,255,20,0.4)", border: "1px solid rgba(57,255,20,0.15)" }
+              : { background: "transparent", color: "#39FF14", border: "1px solid rgba(57,255,20,0.3)" }
             }
             title={selectedSport === "NBA"
               ? "Refresh VSiN NBA odds, scores, and NBA model data"
@@ -2042,7 +2042,7 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("MLB")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "MLB"
-              ? { background: "rgba(0,45,114,0.25)", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" }
+              ? { background: "transparent", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" }
               : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
             }
           >
@@ -2059,7 +2059,7 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("NHL")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "NHL"
-              ? { background: "rgba(0,100,200,0.18)", color: "#0099e6", border: "1px solid rgba(0,100,200,0.5)" }
+              ? { background: "transparent", color: "#0099e6", border: "1px solid rgba(0,100,200,0.5)" }
               : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
             }
           >
@@ -2076,7 +2076,7 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("NBA")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "NBA"
-              ? { background: "rgba(200,16,46,0.15)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" }
+              ? { background: "transparent", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" }
               : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
             }
           >
@@ -2093,7 +2093,7 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("WC2026")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "WC2026"
-              ? { background: "rgba(0,168,80,0.18)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
+              ? { background: "transparent", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
               : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
             }
           >
@@ -2109,18 +2109,18 @@ export default function PublishProjections() {
           <div
             className="rounded-lg px-4 py-2.5 grid gap-x-4 gap-y-1.5"
             style={{
-              background: "rgba(255,255,255,0.04)",
+              background: "transparent",
               border: "1px solid rgba(255,255,255,0.08)",
               gridTemplateColumns: "repeat(2, 1fr)",
             }}
           >
             {/* Context label spanning both columns */}
             <div className="col-span-2 flex items-center gap-1.5 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="font-bold uppercase tracking-widest" style={{ color: '#ffffff', fontSize: '20px' }}>
+              <span className="font-bold uppercase tracking-widest" style={{ color: '#FFFFFF', fontSize: '20px' }}>
                 {selectedSport}
               </span>
               <span className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>·</span>
-              <span className="font-semibold" style={{ color: '#fafafa', fontSize: '18px' }}>
+              <span className="font-semibold" style={{ color: '#FFFFFF', fontSize: '18px' }}>
                 {gameDate === todayPst()
                   ? new Date(gameDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
                   : formatDateNav(gameDate)}
@@ -2136,7 +2136,7 @@ export default function PublishProjections() {
             <div className="flex items-baseline gap-1.5">
               <span
                 className="text-[13px] font-black tabular-nums"
-                style={{ color: withOddsCount === totalCount ? "#39FF14" : missingOddsCount > 0 ? "#FF6B00" : "hsl(var(--muted-foreground))" }}
+                style={{ color: withOddsCount === totalCount ? "#45E0A8" : missingOddsCount > 0 ? "#FFFFFF" : "#FFFFFF" }}
               >
                 {withOddsCount}/{totalCount}
               </span>
@@ -2147,7 +2147,7 @@ export default function PublishProjections() {
             <div className="flex items-baseline gap-1.5">
               <span
                 className="text-[13px] font-black tabular-nums"
-                style={{ color: withModelCount === totalCount ? "#39FF14" : withModelCount > 0 ? "#FFB800" : "hsl(var(--muted-foreground))" }}
+                style={{ color: withModelCount === totalCount ? "#45E0A8" : withModelCount > 0 ? "#FFFFFF" : "#FFFFFF" }}
               >
                 {withModelCount}/{totalCount}
               </span>
@@ -2157,7 +2157,7 @@ export default function PublishProjections() {
             </div>
 
             {/* Divider */}
-            <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+            <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
 
             {/* Row 2: Odds timestamp | Scores timestamp */}
             <div className="flex flex-col gap-0.5">
@@ -2190,7 +2190,7 @@ export default function PublishProjections() {
             {/* NBA Model Sync timestamp — only shown when NBA tab is active */}
             {selectedSport === "NBA" && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
@@ -2198,7 +2198,7 @@ export default function PublishProjections() {
                     </span>
                     <span
                       className="font-mono"
-                      style={{ color: '#39ff14', fontSize: '13px' }}
+                      style={{ color: '#45E0A8', fontSize: '13px' }}
                     >
                       {lastNbaModelSync?.syncedAt
                         ? new Date(lastNbaModelSync.syncedAt).toLocaleTimeString("en-US", {
@@ -2215,7 +2215,7 @@ export default function PublishProjections() {
                       </span>
                       {lastNbaModelSync.errors.length > 0 && (
                         <span>
-                          <span className="font-bold" style={{ color: "#FF6B00" }}>{lastNbaModelSync.errors.length}</span> errors
+                          <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastNbaModelSync.errors.length}</span> errors
                         </span>
                       )}
                     </div>
@@ -2227,7 +2227,7 @@ export default function PublishProjections() {
             {/* MLB Refresh Stats — only shown when MLB tab is active */}
             {selectedSport === "MLB" && lastRefresh && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
@@ -2252,7 +2252,7 @@ export default function PublishProjections() {
             {/* NHL Refresh Stats + Goalie Watcher — only shown when NHL tab is active */}
             {selectedSport === "NHL" && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 {/* NHL Refresh Stats */}
                 {lastRefresh && (
                   <div className="col-span-2 flex items-center justify-between">
@@ -2278,7 +2278,7 @@ export default function PublishProjections() {
                   </div>
                 )}
                 {/* Goalie Watcher Status */}
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
@@ -2301,7 +2301,7 @@ export default function PublishProjections() {
                         </span>
                         {lastGoalieCheck.changes.length > 0 && (
                           <span>
-                            <span className="font-bold" style={{ color: "#FF6B00" }}>{lastGoalieCheck.changes.length}</span> changes
+                            <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastGoalieCheck.changes.length}</span> changes
                           </span>
                         )}
                         {lastGoalieCheck.modelRerun && (
@@ -2313,8 +2313,8 @@ export default function PublishProjections() {
                       disabled={checkGoaliesMutation.isPending}
                       className="flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold transition-all"
                       style={checkGoaliesMutation.isPending
-                        ? { background: "rgba(0,153,230,0.08)", color: "rgba(0,153,230,0.4)", border: "1px solid rgba(0,153,230,0.15)" }
-                        : { background: "rgba(0,153,230,0.12)", color: "#0099e6", border: "1px solid rgba(0,153,230,0.3)" }
+                        ? { background: "transparent", color: "rgba(0,153,230,0.4)", border: "1px solid rgba(0,153,230,0.15)" }
+                        : { background: "transparent", color: "#0099e6", border: "1px solid rgba(0,153,230,0.3)" }
                       }
                     >
                       {checkGoaliesMutation.isPending ? "Checking…" : "Check Now"}
@@ -2478,7 +2478,7 @@ function WcOddsInput({
       placeholder={placeholder}
       className="w-full text-center font-mono font-bold text-xs rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-green-400/60"
       style={{
-        background: "rgba(57,255,20,0.08)",
+        background: "transparent",
         color: "#39FF14",
         border: "1px solid rgba(57,255,20,0.25)",
         minWidth: 44,
@@ -2619,8 +2619,8 @@ function WcMatchOddsCard({
           disabled={isSaving || !isDirty}
           className="flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition-all"
           style={isDirty
-            ? { background: "rgba(57,255,20,0.15)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.4)" }
-            : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)" }
+            ? { background: "transparent", color: "#39FF14", border: "1px solid rgba(57,255,20,0.4)" }
+            : { background: "transparent", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)" }
           }
         >
           {isSaving ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
@@ -2653,12 +2653,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── 3-WAY ML ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#FFB800" }}>ML (3-WAY)</span>
+              style={{ color: "#FFFFFF" }}>ML (3-WAY)</span>
             <div className="flex gap-2">
               <MktCell
                 label={`${homeAbbr} ML`}
@@ -2681,7 +2681,7 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── DRAW / NO DRAW ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
@@ -2703,7 +2703,7 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── TOTAL ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 160 }}>
@@ -2734,7 +2734,7 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── SPREAD ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
@@ -2765,7 +2765,7 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── DOUBLE CHANCE ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
@@ -2787,7 +2787,7 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── BTTS ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
@@ -2858,7 +2858,7 @@ function WcMatchOddsPanel({
             }}
             className="px-3 py-1 rounded-full text-xs font-bold transition-all"
             style={round === r
-              ? { background: "rgba(0,168,80,0.2)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
+              ? { background: "transparent", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
               : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
             }
           >
