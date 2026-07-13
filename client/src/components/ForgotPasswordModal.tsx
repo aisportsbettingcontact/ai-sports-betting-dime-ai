@@ -89,13 +89,13 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="sm:max-w-md bg-[#111] border border-white/10 text-white">
+      <DialogContent className="sm:max-w-md bg-[#000000] border border-white text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <Mail className="w-5 h-5 text-blue-400" />
+            <Mail className="w-5 h-5 text-white" />
             Forgot Password
           </DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-white">
             Enter your username or email address. If your account exists, a reset
             link will be sent via Discord DM or relayed by the site owner.
           </DialogDescription>
@@ -103,10 +103,10 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
 
         {submitted ? (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
-            <CheckCircle2 className="w-12 h-12 text-green-400" />
+            <CheckCircle2 className="w-12 h-12 text-[#45E0A8]" />
             <div>
               <p className="font-semibold text-white text-lg">Request Received</p>
-              <p className="text-white/60 text-sm mt-1">
+              <p className="text-white text-sm mt-1">
                 If your account exists, a reset link has been sent via Discord DM.
                 If you don&apos;t have Discord linked, the site owner will relay the
                 link to you directly.
