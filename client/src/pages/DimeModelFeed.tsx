@@ -427,10 +427,18 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
       <style>{DMF_CSS}</style>
 
       <div className="dmf-topbar">
-        <span className="dmf-wordmark" aria-label="dime">
-          d<span className="dmf-i">ı<span className="dmf-coindot" /></span>me
-        </span>
-        <span className="dmf-topsep" />
+        {/* One Dime identity per page (directive §6): when embedded in the app
+            shell, the sidebar already carries the Dime brand — repeating the
+            wordmark here would put two Dime logos on the same page. Standalone
+            /feed keeps the wordmark so the surface is still branded. */}
+        {!props.embeddedInShell && (
+          <>
+            <span className="dmf-wordmark" aria-label="dime">
+              d<span className="dmf-i">ı<span className="dmf-coindot" /></span>me
+            </span>
+            <span className="dmf-topsep" />
+          </>
+        )}
         <span className="dmf-toptitle">AI Model Projections</span>
         <div className="dmf-sync">
           {/* Outbound nav — the canonical feed must never be a dead end
@@ -442,13 +450,18 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <Link href="/profile" className="dmf-navlink">Profile</Link>
             </nav>
           )}
-          <button
-            className="dmf-themebtn"
-            onClick={() => setTheme?.(theme === "dark" ? "light" : "dark")}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-          >
-            {theme === "dark" ? "Light" : "Dark"}
-          </button>
+          {/* Theme lives in Profile (shared ThemeSetting) when embedded — the
+              shell owns the single theme control (directive §8). Standalone
+              /feed keeps an inline toggle since it has no Profile chrome. */}
+          {!props.embeddedInShell && (
+            <button
+              className="dmf-themebtn"
+              onClick={() => setTheme?.(theme === "dark" ? "light" : "dark")}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            >
+              {theme === "dark" ? "Light" : "Dark"}
+            </button>
+          )}
         </div>
       </div>
 
