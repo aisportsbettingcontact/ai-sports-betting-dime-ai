@@ -163,10 +163,10 @@ function fmtEV(ev: number): string {
 
 /** Edge color: neon green if positive edge, red if negative, muted if neutral */
 function edgeColor(edge: number | null | undefined, isEdge: boolean): string {
-  if (edge == null) return "rgba(255,255,255,0.85)";
-  if (isEdge && edge >= 0.03) return "#39FF14";
-  if (isEdge && edge <= -0.03) return "#FF4444";
-  return "rgba(255,255,255,0.85)";
+  if (edge == null) return "#FFFFFF";
+  if (isEdge && edge >= 0.03) return "#45E0A8";
+  if (isEdge && edge <= -0.03) return "#FFFFFF";
+  return "#FFFFFF";
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       gridTemplateColumns: "48px 1fr 80px 1fr",
       alignItems: "center",
       padding: "5px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       {/* Label */}
@@ -201,7 +201,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       <div style={{ textAlign: "center" }}>
         <span style={{
           fontSize: 13, fontWeight: 700,
-          color: awayEdgeEV?.isEdge ? edgeColor(awayEdgeEV.edge, awayEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
+          color: awayEdgeEV?.isEdge ? edgeColor(awayEdgeEV.edge, awayEdgeEV.isEdge) : "#FFFFFF",
           fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {awayVal}
@@ -219,7 +219,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       </div>
       {/* Model center */}
       <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {modelVal}
         </span>
         {modelLabel && (
@@ -232,7 +232,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       <div style={{ textAlign: "center" }}>
         <span style={{
           fontSize: 13, fontWeight: 700,
-          color: homeEdgeEV?.isEdge ? edgeColor(homeEdgeEV.edge, homeEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
+          color: homeEdgeEV?.isEdge ? edgeColor(homeEdgeEV.edge, homeEdgeEV.isEdge) : "#FFFFFF",
           fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {homeVal}
@@ -278,13 +278,13 @@ function NrfiRow({ label, bookOdds, modelPct, modelOdds, isNrfi }: NrfiRowProps)
       gridTemplateColumns: "60px 1fr 1fr 1fr",
       alignItems: "center",
       padding: "6px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       {/* Label */}
       <span style={{
         fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
-        color: isNrfi ? "#39FF14" : "#FF6B35",
+        color: isNrfi ? "#45E0A8" : "#FFFFFF",
         textTransform: "uppercase",
         fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
       }}>
@@ -293,14 +293,14 @@ function NrfiRow({ label, bookOdds, modelPct, modelOdds, isNrfi }: NrfiRowProps)
       {/* FD Book odds */}
       <div style={{ textAlign: "center" }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>FD ODDS</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.9)", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtOdds(bookOdds)}
         </span>
       </div>
       {/* Model probability */}
       <div style={{ textAlign: "center" }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>MODEL %</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {effectivePct != null ? `${parseFloat(effectivePct).toFixed(1)}%` : "—"}
         </span>
         {/* Model fair-value odds */}
@@ -359,7 +359,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
       gridTemplateColumns: "48px 1fr 80px 1fr",
       alignItems: "center",
       padding: "5px 10px",
-      borderBottom: "1px solid rgba(255,255,255,0.06)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)", textTransform: "uppercase" }}>
@@ -370,7 +370,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>O {fmtTotal(f5Total)}</span>
         <span style={{
           fontSize: 13, fontWeight: 700,
-          color: overEdgeEV?.isEdge ? edgeColor(overEdgeEV.edge, overEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
+          color: overEdgeEV?.isEdge ? edgeColor(overEdgeEV.edge, overEdgeEV.isEdge) : "#FFFFFF",
           fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {fmtOdds(f5OverOdds)}
@@ -383,7 +383,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
       </div>
       {/* Model total */}
       <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtScore(modelF5AwayScore)} – {fmtScore(modelF5HomeScore)}
         </span>
         <span style={{ display: "block", fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
@@ -395,7 +395,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
         <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>U {fmtTotal(f5Total)}</span>
         <span style={{
           fontSize: 13, fontWeight: 700,
-          color: underEdgeEV?.isEdge ? edgeColor(underEdgeEV.edge, underEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
+          color: underEdgeEV?.isEdge ? edgeColor(underEdgeEV.edge, underEdgeEV.isEdge) : "#FFFFFF",
           fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {fmtOdds(f5UnderOdds)}
@@ -434,8 +434,8 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
 
   return (
     <div style={{
-      background: "#090E14",
-      border: "1px solid #182433",
+      background: "#000000",
+      border: "1px solid #FFFFFF",
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
@@ -453,16 +453,16 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "8px 12px 6px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid #FFFFFF",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {awayLogo && <img src={awayLogo} alt={game.awayTeam} style={{ width: 22, height: 22, objectFit: "contain" }} />}
-          <span style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em" }}>
             {awayName}
           </span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "0 2px" }}>@</span>
           {homeLogo && <img src={homeLogo} alt={game.homeTeam} style={{ width: 22, height: 22, objectFit: "contain" }} />}
-          <span style={{ fontSize: 14, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em" }}>
             {homeName}
           </span>
         </div>
@@ -476,7 +476,7 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
         display: "grid",
         gridTemplateColumns: "48px 1fr 80px 1fr",
         padding: "4px 10px",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid #FFFFFF",
         gap: 4,
       }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}></span>
@@ -494,8 +494,8 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
       {/* F5 Section */}
       {hasF5Data ? (
         <>
-          <div style={{ padding: "4px 10px 2px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", color: "#39FF14", textTransform: "uppercase" }}>
+          <div style={{ padding: "4px 10px 2px", borderBottom: "1px solid #FFFFFF" }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", color: "#45E0A8", textTransform: "uppercase" }}>
               F5 · FANDUEL NJ
             </span>
           </div>
@@ -576,8 +576,8 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
       {/* NRFI / YRFI Section */}
       {hasNrfiData ? (
         <>
-          <div style={{ padding: "4px 10px 2px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", color: "#FF6B35", textTransform: "uppercase" }}>
+          <div style={{ padding: "4px 10px 2px", borderBottom: "1px solid #FFFFFF" }}>
+            <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em", color: "#FFFFFF", textTransform: "uppercase" }}>
               NRFI / YRFI · FANDUEL NJ
             </span>
           </div>

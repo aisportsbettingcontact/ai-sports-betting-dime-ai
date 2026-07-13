@@ -205,9 +205,9 @@ function PitcherSection({
                     textTransform: "uppercase",
                     padding: "1px 4px",
                     borderRadius: 2,
-                    background: "#101820",
+                    background: "#000000",
                     color: "#FFFFFF",
-                    border: "1px solid #182433",
+                    border: "1px solid #FFFFFF",
                   }}
                 >
                   {hand}HP
@@ -218,7 +218,7 @@ function PitcherSection({
                   fontSize: 8,
                   fontWeight: 600,
                   letterSpacing: "0.5px",
-                  color: confirmed ? "#39FF14" : "#FFFF33",
+                  color: confirmed ? "#45E0A8" : "#FFFFFF",
                   display: "flex",
                   alignItems: "center",
                   gap: 3,
@@ -229,7 +229,7 @@ function PitcherSection({
                     width: 4,
                     height: 4,
                     borderRadius: "50%",
-                    background: confirmed ? "#39FF14" : "#FFFF33",
+                    background: confirmed ? "#45E0A8" : "#FFFFFF",
                     display: "inline-block",
                   }}
                 />
@@ -292,9 +292,9 @@ function PitcherSection({
                   textTransform: "uppercase",
                   padding: "1px 5px",
                   borderRadius: 3,
-                  background: "#101820",
+                  background: "#000000",
                   color: "#FFFFFF",
-                  border: "1px solid #182433",
+                  border: "1px solid #FFFFFF",
                   display: "inline-block",
                 }}
               >
@@ -310,7 +310,7 @@ function PitcherSection({
                 fontWeight: 600,
                 letterSpacing: "1px",
                 textTransform: "uppercase",
-                color: confirmed ? "#39FF14" : "#FFFF33",
+                color: confirmed ? "#45E0A8" : "#FFFFFF",
               }}
             >
               <span
@@ -318,7 +318,7 @@ function PitcherSection({
                   width: 5,
                   height: 5,
                   borderRadius: "50%",
-                  background: confirmed ? "#39FF14" : "#FFFF33",
+                  background: confirmed ? "#45E0A8" : "#FFFFFF",
                   display: "inline-block",
                 }}
               />
@@ -364,7 +364,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
           fontWeight: 600,
           letterSpacing: "0.5px",
           textTransform: "uppercase",
-          color: isConfirmed ? "#39FF14" : "#FFFF33",
+          color: isConfirmed ? "#45E0A8" : "#FFFFFF",
         }}
       >
         <span
@@ -372,7 +372,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
             width: isMobile ? 4 : 5,
             height: isMobile ? 4 : 5,
             borderRadius: "50%",
-            background: isConfirmed ? "#39FF14" : "#FFFF33",
+            background: isConfirmed ? "#45E0A8" : "#FFFFFF",
             display: "inline-block",
           }}
         />
@@ -614,7 +614,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
           justifyContent: "center",
           gap: 8,
           padding: "10px 18px",
-          background: "#0C1219",
+          background: "#000000",
         }}
       >
         <span style={{ fontSize: 16 }}>🏟️</span>
@@ -639,7 +639,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
     weatherPrecip == null
       ? "#FFFFFF"
       : weatherPrecip === 0
-      ? "#39FF14"
+      ? "#45E0A8"
       : weatherPrecip < 30
       ? "#FFCC00"
       : "#FF2D55";
@@ -652,7 +652,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
         justifyContent: "center",
         gap: 24,
         padding: "10px 18px",
-        background: "#0C1219",
+        background: "#000000",
       }}
     >
       {(weatherIcon || weatherTemp || weatherWind) && (
@@ -736,7 +736,7 @@ function EnvSignalsStrip({
 
   // Park factor color: >1.05 = hitter park (red), <0.95 = pitcher park (green), else neutral
   const pf = parkFactor?.parkFactor3yr ?? null;
-  const pfColor = pf == null ? '#888' : pf > 1.05 ? '#FF5C5C' : pf < 0.95 ? '#39FF14' : '#FFCC00';
+  const pfColor = pf == null ? '#888' : pf > 1.05 ? '#FF5C5C' : pf < 0.95 ? '#45E0A8' : '#FFCC00';
   const pfLabel = pf == null ? '—' : pf.toFixed(3);
   const pfTag = pf == null ? '' : pf > 1.05 ? 'HITTER' : pf < 0.95 ? 'PITCHER' : 'NEUTRAL';
 
@@ -745,8 +745,8 @@ function EnvSignalsStrip({
   const bbMod = umpire?.bbModifier ?? null;
   const kArrow = kMod == null ? '' : kMod > 1.05 ? ' ▲' : kMod < 0.95 ? ' ▼' : ' ─';
   const bbArrow = bbMod == null ? '' : bbMod > 1.05 ? ' ▲' : bbMod < 0.95 ? ' ▼' : ' ─';
-  const kColor = kMod == null ? '#888' : kMod > 1.05 ? '#FF5C5C' : kMod < 0.95 ? '#39FF14' : '#FFCC00';
-  const bbColor = bbMod == null ? '#888' : bbMod > 1.05 ? '#FF5C5C' : bbMod < 0.95 ? '#39FF14' : '#FFCC00';
+  const kColor = kMod == null ? '#888' : kMod > 1.05 ? '#FF5C5C' : kMod < 0.95 ? '#45E0A8' : '#FFCC00';
+  const bbColor = bbMod == null ? '#888' : bbMod > 1.05 ? '#FF5C5C' : bbMod < 0.95 ? '#45E0A8' : '#FFCC00';
 
   const cell = (label: string, value: string, color: string, sub?: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -772,7 +772,7 @@ function EnvSignalsStrip({
         gap: 16,
         padding: '10px 18px',
         background: '#080C12',
-        borderTop: '1px solid #182433',
+        borderTop: '1px solid #FFFFFF',
       }}
     >
       {/* Park Factor */}
@@ -874,7 +874,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
       style={{
         background: "#090E14",
         borderRadius: 12,
-        border: "1px solid #182433",
+        border: "1px solid #FFFFFF",
         overflow: "hidden",
         marginBottom: 10,
       }}
@@ -894,7 +894,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: isMobile ? "8px 10px 6px" : "14px 18px 12px",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
           gap: isMobile ? 6 : 10,
         }}
       >
@@ -1075,7 +1075,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1px 1fr",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
         }}
       >
         <PitcherSection
@@ -1086,7 +1086,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           confirmed={lineup?.awayPitcherConfirmed}
           isMobile={isMobile}
         />
-        <div style={{ background: "#182433" }} />
+        <div style={{ background: "#FFFFFF" }} />
         <PitcherSection
           name={lineup?.homePitcherName}
           hand={lineup?.homePitcherHand}
@@ -1102,14 +1102,14 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1px 1fr",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
         }}
       >
         <div>
           <BattingOrderHeader confirmed={lineup?.awayLineupConfirmed} isMobile={isMobile} />
           <LineupRows players={awayLineup} isMobile={isMobile} />
         </div>
-        <div style={{ background: "#182433" }} />
+        <div style={{ background: "#FFFFFF" }} />
         <div>
           <BattingOrderHeader confirmed={lineup?.homeLineupConfirmed} isMobile={isMobile} />
           <LineupRows players={homeLineup} isMobile={isMobile} />
