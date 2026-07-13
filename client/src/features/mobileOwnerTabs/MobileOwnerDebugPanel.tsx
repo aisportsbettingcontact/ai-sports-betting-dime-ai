@@ -70,7 +70,7 @@ export function MobileOwnerDebugPanel() {
 
       {/* Debug panel overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-[99] bg-black/90 backdrop-blur-sm flex flex-col">
+        <div className="fixed inset-0 z-[99] bg-black backdrop-blur-sm flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2">
