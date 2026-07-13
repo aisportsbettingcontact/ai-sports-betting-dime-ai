@@ -87,15 +87,15 @@
 
 .dc-edge-stats { display: flex; gap: 18px; flex-wrap: wrap; }
 .dc-stat { display: flex; flex-direction: column; gap: 2px; } /* 2px = nav-group row gap F:56 */
-.theme-dark .dc-stat-label { color: #55555E; } /* recents-label color D:64 */
-.theme-light .dc-stat-label { color: #9A9AA8; } /* recents-label color L:64 */
+.theme-dark .dc-stat-label { color: #FFFFFF; } /* recents-label color D:64 */
+.theme-light .dc-stat-label { color: #000000; } /* recents-label color L:64 */
 .dc-stat-value { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
 .dc-stat-value--mint { color: #45E0A8; } /* positive-signal mint, F:13 */
 .theme-light .dc-stat-value--mint { color: var(--mint-on-light); } /* L:90 */
 
 .dc-edge-divider { height: 1px; } /* menu divider geometry D/L:88 */
-.theme-dark .dc-edge-divider { background: #2E2E38; } /* D:88 */
-.theme-light .dc-edge-divider { background: #E4E4E9; } /* L:88 */
+.theme-dark .dc-edge-divider { background: #FFFFFF; } /* D:88 */
+.theme-light .dc-edge-divider { background: #000000; } /* L:88 */
 
 /* PASS verdict: de-emphasized, zero mint (spec §2.4, hv-register composition) */
 .dc-edge--pass { opacity: 0.82; }
@@ -110,19 +110,19 @@
 
 .dc-datapill-dot { width: 6px; height: 6px; border-radius: 999px; flex-shrink: 0; } /* dot size = typing-dot F:32; material C5 (active rail F:22) */
 
-.dc-datapill--live { color: #45E0A8; border: 1px solid rgba(69,224,168,0.36); } /* text F:13; border alpha = frozen dark --ring F:19 */
-.theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid rgba(69,224,168,0.28); } /* text L:90; border alpha = frozen light --ring F:20 */
+.dc-datapill--live { color: #45E0A8; border: 1px solid #45E0A8; } /* text F:13; border alpha = frozen dark --ring F:19 */
+.theme-light .dc-datapill--live { color: var(--mint-on-light); border: 1px solid #45E0A8; } /* text L:90; border alpha = frozen light --ring F:20 */
 .dc-datapill--live .dc-datapill-dot { background: #45E0A8; animation: dimeTyping 1.6s infinite; } /* MASTER.md wins: the live-data pulse is exactly 1.6s. */
-.theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #0B0B0F; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
+.theme-light .dc-datapill--live .dc-datapill-dot { border: 1px solid #000000; box-sizing: border-box; } /* keyline = light hero tittle L:98 */
 @media (prefers-reduced-motion: reduce) { .dc-datapill--live .dc-datapill-dot { animation: none; opacity: 1; } } /* F:28 pattern */
 
 .dc-datapill--delayed { color: var(--text-secondary); } /* F:19/20 */
-.theme-dark .dc-datapill--delayed { border: 1px solid #34343E; } /* outline token D:86 */
-.theme-light .dc-datapill--delayed { border: 1px solid #D5D5DC; } /* outline token L:86 */
+.theme-dark .dc-datapill--delayed { border: 1px solid #FFFFFF; } /* outline token D:86 */
+.theme-light .dc-datapill--delayed { border: 1px solid #000000; } /* outline token L:86 */
 .dc-datapill--delayed .dc-datapill-dot { background: transparent; border: 1px solid currentColor; box-sizing: border-box; } /* hollow = outline-vs-fill grammar (D:86 vs D:85) */
 
-.theme-dark .dc-datapill--none { color: #6A6A78; border: 1px dashed #34343E; } /* text = muted placeholder D:29; UNKNOWN-6: dashed = outline grammar interrupted, on D:86 outline color */
-.theme-light .dc-datapill--none { color: #9A9AA8; border: 1px dashed #D5D5DC; } /* text L:30; outline color L:86 */
+.theme-dark .dc-datapill--none { color: #FFFFFF; border: 1px dashed #FFFFFF; } /* text = muted placeholder D:29; UNKNOWN-6: dashed = outline grammar interrupted, on D:86 outline color */
+.theme-light .dc-datapill--none { color: #000000; border: 1px dashed #000000; } /* text L:30; outline color L:86 */
 
 /* ----------------------------------------------------------------------------
    7. ERROR CARD + RETRY / JUMP PILL / FOOTNOTES (spec §2.6, §1.b, §4)
