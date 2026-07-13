@@ -513,7 +513,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
           borderRadius: "4px",
           padding: "8px 12px",
           fontSize: "11px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+          boxShadow: "0 4px 20px rgba(0,0,0,0)",
           minWidth: "160px",
           left: tooltip.flipLeft ? Math.max(0, tooltip.x - 174) : Math.min(tooltip.x + 14, dims.w - 180),
           top: Math.max(4, tooltip.dotY - 82),
@@ -1135,7 +1135,7 @@ function HandicapperSelectorInner({
           background: "var(--bt-card, #000000)",
           border: `1px solid ${T.border2}`,
           borderRadius: "4px",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0)",
           minWidth: "180px",
           padding: "4px 0",
         }}>

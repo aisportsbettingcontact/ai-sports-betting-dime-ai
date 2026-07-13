@@ -166,10 +166,10 @@ function ResultBadge({
   size?: "sm" | "xs";
 }) {
   const cls = {
-    win:     "bg-emerald-500 text-white",
-    loss:    "bg-red-500 text-white",
-    push:    "bg-yellow-500 text-black",
-    neutral: "bg-white/10 text-gray-300",
+    win:     "bg-[#45E0A8] text-black",
+    loss:    "bg-white text-black",
+    push:    "bg-white text-black",
+    neutral: "bg-black text-white",
   }[variant];
 
   const sizeClass = size === "xs"

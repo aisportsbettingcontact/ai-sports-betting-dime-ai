@@ -273,8 +273,8 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
 
   return (
     <div style={{
-      background: "#090E14",
-      border: "1px solid #182433",
+      background: "#000000",
+      border: "1px solid #FFFFFF",
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
@@ -292,7 +292,7 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
         alignItems: "center",
         justifyContent: "space-between",
         padding: "7px 12px 6px",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid #FFFFFF",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
