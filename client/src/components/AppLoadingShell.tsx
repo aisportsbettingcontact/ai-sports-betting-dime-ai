@@ -20,7 +20,7 @@ export default function AppLoadingShell() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#0a0a0f",
+        backgroundColor: "#000000",
         zIndex: 9999,
       }}
     >
