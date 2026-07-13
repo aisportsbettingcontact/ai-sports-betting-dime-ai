@@ -1,0 +1,54 @@
+/* ThemeSetting — segmented System/Light/Dark control. Brand tokens only:
+   inactive segments are quiet; the active segment is a mint-tint cell (Law v3),
+   never small mint text. */
+.theme-setting {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-raised, #141414);
+  border: 1px solid var(--border, #262626);
+  border-radius: 12px;
+}
+
+.theme-setting__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-block-size: 2.75rem;
+  padding-inline: 10px;
+  font-family: "Familjen Grotesk", system-ui, sans-serif;
+  font-size: var(--proj-label, 0.875rem);
+  font-weight: 600;
+  color: var(--text-secondary, #a6a6a6);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-setting__option:hover {
+  color: var(--foreground, #fff);
+  background: var(--row-hover, #1a1a1a);
+}
+
+.theme-setting__option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring, #45e0a8);
+}
+
+.theme-setting__option.is-active {
+  color: var(--brand-mint-foreground, #dff9ef);
+  background: var(--brand-mint-surface, #0b241b);
+  border-color: var(--brand-mint-border, #298665);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-setting__option {
+    transition: none;
+  }
+}

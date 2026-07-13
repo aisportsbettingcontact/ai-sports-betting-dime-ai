@@ -28,7 +28,8 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ProjectionCard } from "@/components/projections/ProjectionCard";
-import { feedSpecToProjectionGame } from "@/components/projections/fromFeedSpec";
+import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
+import { sportAdapters } from "@/lib/sport/presentation";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { formatGameTime } from "@/lib/gameUtils";
 import {
@@ -498,12 +499,16 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <p>Try the date arrows above.</p>
             </div>
           ) : (
-            cards.map((g) => (
-              <ProjectionCard
-                key={g.id}
-                game={feedSpecToProjectionGame(g, sport === "WC" ? "World Cup" : "MLB")}
-              />
-            ))
+            cards.map((g) => {
+              // Route every sport through its typed adapter → one shared model →
+              // the shared card. Soccer resolves country names + flags + fully
+              // labeled markets ("Spain Win or Draw") here, not in the component.
+              const model =
+                sport === "WC"
+                  ? sportAdapters.SOCCER(g, { competition: "World Cup" })
+                  : sportAdapters.MLB(g, { competition: "MLB" });
+              return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
+            })
           )}
         </div>
 

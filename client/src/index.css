@@ -252,6 +252,27 @@ html:not(.dark) {
   html:not(.dark) { --brand-mint-surface: color-mix(in srgb, #45E0A8 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, #45E0A8 68%, #000000); }
 }
 
+/* ═══ Animated theme transition (View Transitions API) ════════════════════════
+   A restrained crossfade of the ROOT visual layers only (surfaces, borders,
+   icons, text) when the theme changes — not every element independently, so the
+   swap stays cheap. ThemeContext wraps the class toggle in startViewTransition;
+   this sets its duration. Disabled under reduced motion (and the JS skips the
+   transition entirely there too). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
