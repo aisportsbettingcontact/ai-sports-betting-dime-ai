@@ -156,7 +156,7 @@ export const BetCell = React.memo(function BetCell({
             <span
               style={{
                 fontSize: lineSize,
-                color: 'rgba(255,255,255,0.45)',
+                color: '#FFFFFF',
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
@@ -173,7 +173,7 @@ export const BetCell = React.memo(function BetCell({
             style={{
               fontSize: juiceSizeStr,
               fontWeight: 700,
-              color: 'rgba(255,255,255,0.90)',
+              color: '#FFFFFF',
               lineHeight: 1,
               whiteSpace: 'nowrap',
               textAlign: 'center',
@@ -198,7 +198,7 @@ export const BetCell = React.memo(function BetCell({
             <span
               style={{
                 fontSize: lineSize,
-                color: 'rgba(255,255,255,0.45)',
+                color: '#FFFFFF',
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
@@ -219,7 +219,7 @@ export const BetCell = React.memo(function BetCell({
               whiteSpace: 'nowrap',
               textAlign: 'center',
               fontVariantNumeric: 'tabular-nums',
-              color: isEdge ? getEdgeColor(side.edgePP) : 'rgba(255,255,255,0.90)',
+              color: isEdge ? getEdgeColor(side.edgePP) : '#FFFFFF',
             }}
           >
             {side.modelJuice || '—'}
@@ -235,7 +235,7 @@ export const BetCell = React.memo(function BetCell({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        background: '#2a2a2e',
+        background: '#000000',
         borderRadius,
         overflow: 'hidden',
         flex: '1 1 0',
@@ -247,7 +247,7 @@ export const BetCell = React.memo(function BetCell({
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+          borderBottom: '0.5px solid #FFFFFF',
           padding: '3px 4px 2px',
         }}
       >
@@ -255,7 +255,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.75)',
+            color: '#FFFFFF',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -267,7 +267,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.70)',
+            color: '#FFFFFF',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',

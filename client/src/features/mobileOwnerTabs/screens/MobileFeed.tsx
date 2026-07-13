@@ -20,7 +20,7 @@ function FeedCard({
   sport,
   timestamp,
   value,
-  valueColor = "text-emerald-400",
+  valueColor = "text-[#45E0A8]",
 }: {
   type: "edge" | "projection" | "alert" | "update";
   title: string;
