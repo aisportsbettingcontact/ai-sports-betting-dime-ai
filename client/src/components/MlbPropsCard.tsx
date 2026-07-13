@@ -3,7 +3,7 @@
  *
  * Displays MLB pitcher strikeout prop projections for a single game.
  * Styled to exactly match the Lineups rendered-image card:
- *   - #090E14 card background, #182433 borders
+ *   - #090E14 card background, #FFFFFF borders
  *   - Team color gradient top bar
  *   - Barlow Condensed typography
  *   - MLB headshots with background removal
@@ -106,12 +106,12 @@ function probToAmerican(p: number): string {
 
 /** Edge in percentage points → color tier matching GameCard. */
 function edgeColor(edgePp: number): string {
-  if (edgePp >= 8)   return "#39FF14";
-  if (edgePp >= 5)   return "#7FFF00";
-  if (edgePp >= 2.5) return "#ADFF2F";
-  if (edgePp >= 0.5) return "rgba(255,255,255,0.70)";
-  if (edgePp >= -1)  return "rgba(255,255,255,0.35)";
-  return "#FF2244";
+  if (edgePp >= 8)   return "#45E0A8";
+  if (edgePp >= 5)   return "#45E0A8";
+  if (edgePp >= 2.5) return "#45E0A8";
+  if (edgePp >= 0.5) return "#FFFFFF";
+  if (edgePp >= -1)  return "#FFFFFF";
+  return "#FFFFFF";
 }
 
 function teamPrimary(abbrev: string): string {
@@ -149,7 +149,7 @@ function Pill({ label, bg, color, border }: { label: string; bg: string; color: 
 
 /** CONFIRMED / EXPECTED status pill */
 function StatusPill({ confirmed }: { confirmed: boolean }) {
-  const color = confirmed ? "#39FF14" : "#FFFF33";
+  const color = confirmed ? "#45E0A8" : "#FFFF33";
   const bg    = confirmed ? "rgba(57,255,20,0.12)"  : "rgba(255,255,51,0.12)";
   const bdr   = confirmed ? "rgba(57,255,20,0.35)"  : "rgba(255,255,51,0.35)";
   return (
@@ -301,13 +301,13 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
       {/* ── Pitcher header — mirrors lineup card pitcher section ── */}
       <div style={{
         padding: "10px 12px",
-        borderBottom: "1px solid #182433",
+        borderBottom: "1px solid #FFFFFF",
         display: "flex", alignItems: "center", gap: 10,
         flexDirection: isRight ? "row-reverse" : "row",
       }}>
         <Headshot mlbamId={prop.mlbamId} size={68} />
         <div style={{ flex: 1, minWidth: 0, textAlign: isRight ? "right" : "left" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 3 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 3 }}>
             STARTING PITCHER
           </div>
           <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: "#FFFFFF", lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -315,7 +315,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
           </div>
           <div style={{ display: "flex", gap: 5, alignItems: "center", marginTop: 5, flexDirection: isRight ? "row-reverse" : "row" }}>
             {prop.pitcherHand && (
-              <Pill label={`${prop.pitcherHand}HP`} bg="#101820" color="#FFFFFF" border="#182433" />
+              <Pill label={`${prop.pitcherHand}HP`} bg="#101820" color="#FFFFFF" border="#FFFFFF" />
             )}
             <StatusPill confirmed={pitcherConfirmed === true} />
           </div>
@@ -325,7 +325,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
       {/* ── K Projection block ── */}
       <div style={{
         padding: "12px 14px",
-        borderBottom: "1px solid #182433",
+        borderBottom: "1px solid #FFFFFF",
         background: "rgba(255,255,255,0.02)",
       }}>
         {/* K Projection row */}
@@ -343,18 +343,18 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
         {/* Consensus line row */}
         {bookLine !== null && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>
+            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF" }}>
               BOOK LINE:
             </div>
             <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 16, fontWeight: 800, color: "#FFFFFF" }}>
               {bookLine.toFixed(1)} Ks
             </div>
             <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-              <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+              <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, color: "#FFFFFF" }}>
                 o {fmtOdds(prop.bookOverOdds)}
               </span>
-              <span style={{ color: "rgba(255,255,255,0.2)" }}>/</span>
-              <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, color: "rgba(255,255,255,0.45)" }}>
+              <span style={{ color: "#FFFFFF" }}>/</span>
+              <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, color: "#FFFFFF" }}>
                 u {fmtOdds(prop.bookUnderOdds)}
               </span>
             </div>
@@ -364,12 +364,12 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
         {/* Model vs Book delta */}
         {kProj !== null && bookLine !== null && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF" }}>
               MODEL vs LINE
             </div>
             <div style={{
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 13, fontWeight: 800,
-              color: kProj > bookLine ? "#39FF14" : kProj < bookLine ? "#FF2244" : "rgba(255,255,255,0.5)",
+              color: kProj > bookLine ? "#45E0A8" : kProj < bookLine ? "#FFFFFF" : "#FFFFFF",
             }}>
               {kProj > bookLine ? "▲" : kProj < bookLine ? "▼" : "="} {Math.abs(kProj - bookLine).toFixed(2)}
             </div>
@@ -382,17 +382,17 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {/* OVER */}
             <div style={{
               flex: 1, padding: "8px 10px", borderRadius: 6,
-              background: playOver ? `${primary}22` : "rgba(255,255,255,0.04)",
+              background: playOver ? `${primary}22` : "#000000",
               border: `1px solid ${playOver ? primary + "55" : "rgba(255,255,255,0.08)"}`,
               display: "flex", flexDirection: "column", gap: 2,
             }}>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playOver ? primary : "rgba(255,255,255,0.4)" }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playOver ? primary : "#FFFFFF" }}>
                 OVER {bookLine?.toFixed(1) ?? "—"}
               </div>
               <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: playOver ? primary : "#FFFFFF", lineHeight: 1 }}>
                 {fmtPct(prop.pOver)}
               </div>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "#FFFFFF" }}>
                 {probToAmerican(overProb)} model
               </div>
               {edgeOverPp !== null && (
@@ -404,17 +404,17 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {/* UNDER */}
             <div style={{
               flex: 1, padding: "8px 10px", borderRadius: 6,
-              background: playUnder ? "rgba(0,191,255,0.12)" : "rgba(255,255,255,0.04)",
+              background: playUnder ? "rgba(0,191,255,0.12)" : "#000000",
               border: `1px solid ${playUnder ? "rgba(0,191,255,0.4)" : "rgba(255,255,255,0.08)"}`,
               display: "flex", flexDirection: "column", gap: 2,
             }}>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playUnder ? "#00BFFF" : "rgba(255,255,255,0.4)" }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: playUnder ? "#45E0A8" : "#FFFFFF" }}>
                 UNDER {bookLine?.toFixed(1) ?? "—"}
               </div>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: playUnder ? "#00BFFF" : "#FFFFFF", lineHeight: 1 }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 20, fontWeight: 800, color: playUnder ? "#45E0A8" : "#FFFFFF", lineHeight: 1 }}>
                 {fmtPct(prop.pUnder)}
               </div>
-              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "rgba(255,255,255,0.4)" }}>
+              <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "#FFFFFF" }}>
                 {probToAmerican(underProb)} model
               </div>
               {edgeUnderPp !== null && (
@@ -431,13 +431,13 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
       {verdict && verdict !== "PASS" && bestEdgePp !== null && (
         <div style={{
           padding: "10px 14px",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
           display: "flex", alignItems: "center", gap: 8,
         }}>
           <div style={{
             fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 11, fontWeight: 800,
             letterSpacing: "1.5px", textTransform: "uppercase",
-            color: bestSide === "OVER" ? primary : "#00BFFF",
+            color: bestSide === "OVER" ? primary : "#45E0A8",
             background: bestSide === "OVER" ? `${primary}18` : "rgba(0,191,255,0.12)",
             border: `1px solid ${bestSide === "OVER" ? primary + "44" : "rgba(0,191,255,0.35)"}`,
             borderRadius: 4, padding: "4px 10px",
@@ -451,7 +451,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
             {bestEdgePp > 0 ? "+" : ""}{bestEdgePp.toFixed(1)}pp
           </div>
           {prop.bestMlStr && (
-            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "rgba(255,255,255,0.4)", marginLeft: "auto" }}>
+            <div style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 10, color: "#FFFFFF", marginLeft: "auto" }}>
               {prop.bestMlStr}
             </div>
           )}
@@ -478,7 +478,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
     <div style={{
       background: "#090E14",
       borderRadius: 12,
-      border: "1px solid #182433",
+      border: "1px solid #FFFFFF",
       overflow: "hidden",
       width: "100%",
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
@@ -492,7 +492,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
       {/* ── Matchup header — mirrors lineup card header block ── */}
       <div style={{
         display: "flex", alignItems: "center", padding: "14px 18px 12px",
-        borderBottom: "1px solid #182433", gap: 10,
+        borderBottom: "1px solid #FFFFFF", gap: 10,
       }}>
         {/* Away team */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
@@ -512,7 +512,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
 
         {/* Center: K PROPS label + time */}
         <div style={{ textAlign: "center", flexShrink: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF" }}>
             {gameDate ?? ""}
           </div>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
@@ -521,7 +521,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
           <div style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "1px", marginTop: 2 }}>
             {startTime}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "3px", marginTop: 3 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", letterSpacing: "3px", marginTop: 3 }}>
             @
           </div>
         </div>
@@ -543,11 +543,11 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
         </div>
       </div>
 
-      {/* ── Two-column pitcher panels — separated by #182433 divider ── */}
+      {/* ── Two-column pitcher panels — separated by #FFFFFF divider ── */}
       {hasData ? (
-        <div style={{ display: "flex", borderBottom: "1px solid #182433" }}>
+        <div style={{ display: "flex", borderBottom: "1px solid #FFFFFF" }}>
           {/* Away pitcher */}
-          <div style={{ flex: 1, minWidth: 0, borderRight: "1px solid #182433" }}>
+          <div style={{ flex: 1, minWidth: 0, borderRight: "1px solid #FFFFFF" }}>
             <PitcherPanel prop={awayProp} teamAbbrev={awayTeam} side="away" isRight={false} pitcherConfirmed={lineup?.awayPitcherConfirmed} />
           </div>
           {/* Home pitcher */}
@@ -560,10 +560,10 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
           padding: "40px 20px", textAlign: "center",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
         }}>
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", fontWeight: 600, letterSpacing: "0.5px" }}>
+          <div style={{ fontSize: 14, color: "#FFFFFF", fontWeight: 600, letterSpacing: "0.5px" }}>
             No strikeout projections yet
           </div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: "0.5px" }}>
+          <div style={{ fontSize: 11, color: "#FFFFFF", letterSpacing: "0.5px" }}>
             Run the model to generate K props for this game.
           </div>
         </div>
