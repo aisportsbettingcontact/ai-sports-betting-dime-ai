@@ -89,17 +89,17 @@ export type StatsData = {
 // (no --bt-* defined) renders pixel-identical, while dime-mobile.css maps
 // --bt-* onto the Dime brand tokens under @media (max-width: 767px).
 const T = {
-  base:      "var(--bt-base, #0d0f0e)",
-  card:      "var(--bt-card, #141614)",
-  hover:     "var(--bt-hover, #1a1f1a)",
-  border:    "var(--bt-border, #1e231e)",
-  border2:   "var(--bt-border2, #2a2a2a)",
-  green:     "var(--bt-green, #39FF14)",
+  base:      "var(--bt-base, #000000)",
+  card:      "var(--bt-card, #000000)",
+  hover:     "var(--bt-hover, #000000)",
+  border:    "var(--bt-border, #FFFFFF)",
+  border2:   "var(--bt-border2, #FFFFFF)",
+  green:     "var(--bt-green, #45E0A8)",
   red:       "var(--bt-red, #FF3B3B)",
-  dim:       "var(--bt-dim, #3a4a3a)",
-  dimmer:    "var(--bt-dimmer, #2a3a2a)",
-  text:      "var(--bt-text, #d0d0d0)",
-  textMuted: "var(--bt-text-muted, #888)",
+  dim:       "var(--bt-dim, #FFFFFF)",
+  dimmer:    "var(--bt-dimmer, #FFFFFF)",
+  text:      "var(--bt-text, #FFFFFF)",
+  textMuted: "var(--bt-text-muted, #FFFFFF)",
   mono:      "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
   sans:      "var(--bt-sans, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
 } as const;
@@ -110,13 +110,13 @@ function resolveCanvasPalette(el: HTMLElement) {
   const cs = getComputedStyle(el);
   const v = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
   return {
-    green: v("--bt-green", "#39FF14"),
-    red: v("--bt-red", "#FF073A"),
-    gold: v("--bt-gold", "#FFD700"),
-    base: v("--bt-base", "#0d0f0e"),
-    border: v("--bt-border", "#1e231e"),
-    dimmer: v("--bt-dimmer", "#2a3a2a"),
-    muted: v("--bt-text-muted", "#888888"),
+    green: v("--bt-green", "#45E0A8"),
+    red: v("--bt-red", "#FF3B3B"),
+    gold: v("--bt-gold", "#45E0A8"),
+    base: v("--bt-base", "#000000"),
+    border: v("--bt-border", "#FFFFFF"),
+    dimmer: v("--bt-dimmer", "#FFFFFF"),
+    muted: v("--bt-text-muted", "#FFFFFF"),
     strong: v("--bt-strong", "#FFFFFF"),
   };
 }

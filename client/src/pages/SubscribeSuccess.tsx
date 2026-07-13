@@ -63,7 +63,7 @@ function FeatureList() {
         {features.map((item) => (
           <li key={item} className="flex items-center gap-2.5 text-[13px] text-white">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
-              <circle cx="6" cy="6" r="6" fill="rgba(69,224,168,0.15)" />
+              <circle cx="6" cy="6" r="6" fill="transparent" />
               <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="#45E0A8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {item}
@@ -172,7 +172,7 @@ export default function SubscribeSuccess() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-[#45E0A8]/30 border-t-[#45E0A8] animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 rounded-full border-2 border-transparent border-t-[#45E0A8] animate-spin mx-auto mb-4" />
           <p className="text-white text-sm">Confirming your subscription...</p>
           <p className="text-white text-xs mt-2">This usually takes a few seconds.</p>
         </div>
@@ -301,7 +301,7 @@ export default function SubscribeSuccess() {
               className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
               style={{
                 background: "#000000",
-                borderColor: email && !emailValid ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)",
+                borderColor: email && !emailValid ? "#FFFFFF" : "#FFFFFF",
               }}
             />
             {email && !emailValid && (
@@ -322,7 +322,7 @@ export default function SubscribeSuccess() {
                 className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
                 style={{
                   background: "#000000",
-                  borderColor: password && !passwordValid ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)",
+                  borderColor: password && !passwordValid ? "#FFFFFF" : "#FFFFFF",
                 }}
               />
               <button
@@ -352,13 +352,13 @@ export default function SubscribeSuccess() {
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
                       {check.pass ? (
                         <>
-                          <circle cx="5" cy="5" r="5" fill="rgba(69,224,168,0.2)" />
+                          <circle cx="5" cy="5" r="5" fill="transparent" />
                           <path d="M2.5 5l1.5 1.5L7.5 3.5" stroke="#45E0A8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                         </>
                       ) : (
                         <>
-                          <circle cx="5" cy="5" r="5" fill="rgba(239,68,68,0.15)" />
-                          <path d="M3.5 3.5l3 3M6.5 3.5l-3 3" stroke="#ef4444" strokeWidth="1" strokeLinecap="round" />
+                          <circle cx="5" cy="5" r="5" fill="transparent" />
+                          <path d="M3.5 3.5l3 3M6.5 3.5l-3 3" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" />
                         </>
                       )}
                     </svg>
@@ -375,8 +375,8 @@ export default function SubscribeSuccess() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="mb-4 px-3.5 py-2.5 rounded-lg border border-[#ef4444]/30 text-[12px] text-white"
-                style={{ background: "rgba(239,68,68,0.08)" }}
+                className="mb-4 px-3.5 py-2.5 rounded-lg border border-white text-[12px] text-white"
+                style={{ background: "transparent" }}
               >
                 {formError}
               </motion.div>
@@ -391,7 +391,7 @@ export default function SubscribeSuccess() {
           >
             {completeSetup.isPending ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-transparent border-t-black rounded-full animate-spin" />
                 Setting up your account...
               </span>
             ) : (

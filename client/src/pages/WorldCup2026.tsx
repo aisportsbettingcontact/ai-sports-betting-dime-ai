@@ -249,7 +249,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
     <div
       className={cn(
         "rounded-xl border transition-all duration-150",
-        "bg-[#000000] border-white/8",
+        "bg-[#000000] border-white",
         isLive && "border-[#45E0A8]"
       )}
     >
@@ -339,7 +339,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
       </div>
 
       {/* ── Odds grid ── */}
-      <div className="border-t border-white/6 px-3 pt-2 pb-3">
+      <div className="border-t border-white px-3 pt-2 pb-3">
         {/* Column headers */}
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[9px] text-white uppercase tracking-widest w-[56px]">
@@ -378,7 +378,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
       {/* ── Venue ── */}
       {venue && (
-        <div className="border-t border-white/6 px-3 py-2 flex items-center gap-1 text-[10px] text-white">
+        <div className="border-t border-white px-3 py-2 flex items-center gap-1 text-[10px] text-white">
           <MapPin className="w-3 h-3 flex-shrink-0" />
           <span>
             {venue.stadium}, {venue.city}
@@ -396,7 +396,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
 function MatchCardSkeleton() {
   return (
-    <div className="rounded-xl border border-white/8 bg-[#000000] p-4 space-y-3">
+    <div className="rounded-xl border border-white bg-[#000000] p-4 space-y-3">
       <div className="flex justify-between">
         <Skeleton className="h-4 w-24 bg-black" />
         <Skeleton className="h-4 w-16 bg-black" />
@@ -408,7 +408,7 @@ function MatchCardSkeleton() {
         <Skeleton className="h-4 w-24 bg-black" />
         <Skeleton className="h-5 w-7 bg-black rounded-sm" />
       </div>
-      <div className="pt-2 border-t border-white/6 space-y-2">
+      <div className="pt-2 border-t border-white space-y-2">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex justify-between">
             <Skeleton className="h-3 w-16 bg-black" />
@@ -490,9 +490,9 @@ export default function WorldCup2026() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-[#000000] text-white">
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/8">
+      <div className="sticky top-0 z-40 bg-[#000000] backdrop-blur-sm border-b border-white">
         <div className="max-w-2xl mx-auto px-3 sm:px-4">
           {/* Title row */}
           <div className="flex items-center gap-3 pt-3 pb-2">
@@ -553,7 +553,7 @@ export default function WorldCup2026() {
                   className={cn(
                     "px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all whitespace-nowrap flex-shrink-0",
                     selectedDate === d
-                      ? "bg-transparent text-white border border-white/60"
+                      ? "bg-transparent text-white border border-white"
                       : "bg-[#000000] text-white border border-white"
                   )}
                 >
