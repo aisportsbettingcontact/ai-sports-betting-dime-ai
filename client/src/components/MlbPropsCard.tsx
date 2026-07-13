@@ -486,7 +486,7 @@ export default function MlbPropsCard({ awayTeam, homeTeam, startTime, gameDate, 
       {/* ── Color gradient top bar — identical to lineup card ── */}
       <div style={{
         height: 5,
-        background: `linear-gradient(90deg, ${awayPrimary} 48%, ${homePrimary} 52%)`,
+        background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
       }} />
 
       {/* ── Matchup header — mirrors lineup card header block ── */}

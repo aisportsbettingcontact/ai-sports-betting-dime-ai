@@ -883,7 +883,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
       <div
         style={{
           height: 3,
-          background: `linear-gradient(90deg, ${awayColor} 48%, ${homeColor} 52%)`,
+          background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
         }}
       />
 

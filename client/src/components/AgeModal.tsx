@@ -13,7 +13,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black backdrop-blur-sm" onClick={onClose} />
       
       {/* Modal */}
       <div className="relative z-10 w-full max-w-sm mx-4 bg-card border border-border rounded-xl shadow-2xl p-6">
@@ -53,7 +53,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
         <div className="flex gap-2">
           <Button
             onClick={onAccept}
-            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm"
+            className="flex-1 bg-primary text-primary-foreground font-semibold text-sm"
           >
             I Understand &amp; Accept
           </Button>

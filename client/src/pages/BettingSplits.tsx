@@ -214,7 +214,7 @@ function SearchResultRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full hover:bg-white/5 active:bg-white/10 transition-colors text-left border-b border-white/8 last:border-0"
+      className="w-full transition-colors text-left border-b border-white last:border-0"
     >
       <div className="flex items-center px-3 py-2.5 gap-2">
         {/* Away team: logo + responsive name */}
@@ -788,7 +788,7 @@ export default function BettingSplitsPage({
       {/* ── Sticky Header ── */}
       <header
         ref={headerRef}
-        className="bs-header sticky top-0 z-40 bg-background/95 backdrop-blur-sm"
+        className="bs-header sticky top-0 z-40 bg-background backdrop-blur-sm"
       >
         {/* Row 1: Dime wordmark — the profile control lives in the shell
             sidebar (bottom-left); this header carries brand only. Hidden at
@@ -890,7 +890,7 @@ export default function BettingSplitsPage({
           {/* Search dropdown */}
           {showDropdown && (
             <div
-              className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
+              className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white shadow-2xl overflow-hidden"
               style={{
                 background: "#000000",
                 maxHeight: "calc(3 * 68px + 44px)",
@@ -898,7 +898,7 @@ export default function BettingSplitsPage({
               }}
             >
               <div
-                className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0"
+                className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white sticky top-0"
                 style={{ background: "#000000", zIndex: 10 }}
               >
                 <span className="text-sm text-white uppercase tracking-widest">
@@ -932,7 +932,7 @@ export default function BettingSplitsPage({
 
         {/* Row 4: Date header — shown when games are loaded */}
         {!gamesLoading && !appAuthLoading && sortedDates.length > 0 && (
-          <div className="flex items-center px-4 py-1 border-b border-border bg-background/95">
+          <div className="flex items-center px-4 py-1 border-b border-border bg-background">
             <div className="flex-1" />
             <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
               <span
