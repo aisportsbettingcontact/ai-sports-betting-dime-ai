@@ -295,22 +295,22 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
         borderBottom: "1px solid #FFFFFF",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
             {awayTeam}
           </span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>@</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+          <span style={{ fontSize: 10, color: "#FFFFFF" }}>@</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
             {homeTeam}
           </span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>
+          <span style={{ fontSize: 10, color: "#FFFFFF", marginLeft: 4 }}>
             {formatTime(startTime)}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {totalEdges > 0 && (
             <span style={{
-              fontSize: 9, fontWeight: 700, color: "#39FF14",
-              background: "rgba(57,255,20,0.12)", borderRadius: 3,
+              fontSize: 9, fontWeight: 700, color: "#45E0A8",
+              background: "transparent", borderRadius: 3,
               padding: "2px 6px", letterSpacing: "0.06em",
             }}>
               {totalEdges} OVER EDGE{totalEdges > 1 ? "S" : ""}
