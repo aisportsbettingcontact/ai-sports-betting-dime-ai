@@ -107,10 +107,10 @@ function PlayerRow({ row }: PlayerRowProps) {
   const isOver = row.verdict === "OVER";
   const edgeNum = row.edgeOver ? parseFloat(row.edgeOver) : null;
   const edgeColor = edgeNum != null
-    ? edgeNum >= 0.03 ? "#39FF14"
-    : edgeNum <= -0.03 ? "#FF4444"
-    : "rgba(255,255,255,0.7)"
-    : "rgba(255,255,255,0.7)";
+    ? edgeNum >= 0.03 ? "#45E0A8"
+    : edgeNum <= -0.03 ? "#FFFFFF"
+    : "#FFFFFF"
+    : "#FFFFFF";
 
   const photo = mlbPhoto(row.mlbamId);
 
@@ -120,16 +120,16 @@ function PlayerRow({ row }: PlayerRowProps) {
       gridTemplateColumns: "26px 1fr 36px 44px 44px 44px 44px",
       alignItems: "center",
       padding: "4px 8px",
-      borderBottom: "1px solid rgba(255,255,255,0.04)",
+      borderBottom: "1px solid #FFFFFF",
       gap: 3,
-      background: isOver ? "rgba(57,255,20,0.04)" : "transparent",
+      background: isOver ? "transparent" : "transparent",
     }}>
       {/* Headshot */}
-      <div style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", background: "rgba(255,255,255,0.08)", flexShrink: 0 }}>
+      <div style={{ width: 22, height: 22, borderRadius: "50%", overflow: "hidden", background: "#000000", flexShrink: 0 }}>
         {photo ? (
           <img src={photo} alt={row.playerName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
-          <div style={{ width: "100%", height: "100%", background: "rgba(255,255,255,0.1)" }} />
+          <div style={{ width: "100%", height: "100%", background: "#000000" }} />
         )}
       </div>
 
@@ -138,7 +138,7 @@ function PlayerRow({ row }: PlayerRowProps) {
         <span style={{
           fontSize: 11,
           fontWeight: isOver ? 800 : 600,
-          color: isOver ? "#39FF14" : "rgba(255,255,255,0.85)",
+          color: isOver ? "#45E0A8" : "#FFFFFF",
           fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           whiteSpace: "nowrap",
           overflow: "hidden",

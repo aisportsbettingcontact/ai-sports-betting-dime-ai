@@ -222,7 +222,7 @@ function OddsRow({
         {/* Model odds */}
         <span
           className="text-xs tabular-nums w-[44px] text-right font-bold"
-          style={{ color: modelOdds != null ? '#39FF14' : undefined }}
+          style={{ color: modelOdds != null ? '#45E0A8' : undefined }}
         >
           {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-zinc-600">—</span>}
         </span>
@@ -249,8 +249,8 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
     <div
       className={cn(
         "rounded-xl border transition-all duration-150",
-        "bg-[#0f0f0f] border-white/8",
-        isLive && "border-emerald-500/40 shadow-[0_0_12px_rgba(34,197,94,0.08)]"
+        "bg-[#000000] border-white/8",
+        isLive && "border-[#45E0A8]"
       )}
     >
       {/* ── Card header: group + kickoff ── */}
@@ -262,7 +262,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             </span>
           )}
           {isLive && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 text-[#45E0A8] border border-[#45E0A8] font-bold rounded animate-pulse">
               LIVE
             </span>
           )}
@@ -349,7 +349,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold w-[44px] text-right">
               BOOK
             </span>
-            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#39FF14' }}>
+            <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#45E0A8' }}>
               MODEL
             </span>
           </div>
@@ -384,7 +384,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             {venue.stadium}, {venue.city}
           </span>
           {venue.elevationM > 500 && (
-            <span className="ml-1 text-amber-500/70">
+            <span className="ml-1 text-white">
               ⚠ {venue.elevationM}m alt
             </span>
           )}
@@ -396,23 +396,23 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
 function MatchCardSkeleton() {
   return (
-    <div className="rounded-xl border border-white/8 bg-[#0f0f0f] p-4 space-y-3">
+    <div className="rounded-xl border border-white/8 bg-[#000000] p-4 space-y-3">
       <div className="flex justify-between">
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-4 w-16 bg-zinc-800" />
+        <Skeleton className="h-4 w-24 bg-black" />
+        <Skeleton className="h-4 w-16 bg-black" />
       </div>
       <div className="flex items-center gap-3">
-        <Skeleton className="h-5 w-7 bg-zinc-800 rounded-sm" />
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-4 w-8 bg-zinc-800 mx-auto" />
-        <Skeleton className="h-4 w-24 bg-zinc-800" />
-        <Skeleton className="h-5 w-7 bg-zinc-800 rounded-sm" />
+        <Skeleton className="h-5 w-7 bg-black rounded-sm" />
+        <Skeleton className="h-4 w-24 bg-black" />
+        <Skeleton className="h-4 w-8 bg-black mx-auto" />
+        <Skeleton className="h-4 w-24 bg-black" />
+        <Skeleton className="h-5 w-7 bg-black rounded-sm" />
       </div>
       <div className="pt-2 border-t border-white/6 space-y-2">
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex justify-between">
-            <Skeleton className="h-3 w-16 bg-zinc-800" />
-            <Skeleton className="h-3 w-12 bg-zinc-800" />
+            <Skeleton className="h-3 w-16 bg-black" />
+            <Skeleton className="h-3 w-12 bg-black" />
           </div>
         ))}
       </div>
@@ -529,7 +529,7 @@ export default function WorldCup2026() {
                   "px-3 py-2.5 text-[11px] font-bold tracking-widest uppercase whitespace-nowrap transition-all border-b-2 flex-shrink-0",
                   activeTab === tab
                     ? "text-white border-white"
-                    : "text-zinc-500 border-transparent hover:text-zinc-300"
+                    : "text-white border-transparent"
                 )}
               >
                 {tab}
@@ -554,7 +554,7 @@ export default function WorldCup2026() {
                     "px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all whitespace-nowrap flex-shrink-0",
                     selectedDate === d
                       ? "bg-transparent text-white border border-white/60"
-                      : "bg-[#1a1a1a] text-zinc-400 border border-white/8 hover:text-zinc-200"
+                      : "bg-[#000000] text-white border border-white"
                   )}
                 >
                   {WC_DATE_LABELS[d]}

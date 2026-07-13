@@ -108,10 +108,10 @@ function fmtTotal(val: string | null | undefined): string {
 
 function ResultChip({ label, variant }: { label: string; variant: "win" | "loss" | "push" | "neutral" }) {
   const colors = {
-    win:     "bg-emerald-600/20 text-emerald-400 border border-emerald-600/40",
-    loss:    "bg-red-600/20 text-red-400 border border-red-600/40",
-    push:    "bg-gray-600/20 text-zinc-200 border border-gray-600/40",
-    neutral: "bg-white/5 text-zinc-300 border border-white/10",
+    win:     "text-[#45E0A8] border border-[#45E0A8]",
+    loss:    "text-white border border-white",
+    push:    "text-white border border-white",
+    neutral: "text-white border border-white",
   };
   return (
     <span className={cn("inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold font-mono", colors[variant])}>
@@ -167,21 +167,21 @@ function GameRow({
 
   return (
     <tr className={cn(
-      "border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors",
+      "border-b border-white transition-colors",
       isUpcoming && "opacity-70"
     )}>
       {/* Date */}
-      <td className="px-3 py-2.5 text-sm text-zinc-200 font-mono whitespace-nowrap">
+      <td className="px-3 py-2.5 text-sm text-white font-mono whitespace-nowrap">
         <div>{formatGameDate(game.gameDate)}</div>
         {isUpcoming && (
-          <div className="text-xs text-zinc-300">{formatStartTime(game.startTimeUtc)}</div>
+          <div className="text-xs text-white">{formatStartTime(game.startTimeUtc)}</div>
         )}
       </td>
 
       {/* Opponent */}
       <td className="px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-300 font-mono w-4 flex-shrink-0">
+          <span className="text-xs text-white font-mono w-4 flex-shrink-0">
             {isHome ? "vs" : "@"}
           </span>
           {opponentTeam?.logoUrl && (
@@ -201,12 +201,12 @@ function GameRow({
         {hasScore ? (
           <div className="flex flex-col items-center gap-0.5">
             <ResultChip label={resultLabel} variant={resultVariant} />
-            <span className="text-xs text-zinc-300 font-mono">
+            <span className="text-xs text-white font-mono">
               {teamScore}-{oppScore}
             </span>
           </div>
         ) : (
-          <span className="text-xs text-zinc-300 font-mono">
+          <span className="text-xs text-white font-mono">
             {isUpcoming ? "—" : "—"}
           </span>
         )}
@@ -215,8 +215,8 @@ function GameRow({
       {/* Spread */}
       <td className="px-3 py-2.5 text-center">
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-sm text-gray-300 font-mono">
-            {fmtLine(teamSpread)} <span className="text-zinc-300">{fmtOdds(teamSpreadOdds)}</span>
+          <span className="text-sm text-white font-mono">
+            {fmtLine(teamSpread)} <span className="text-white">{fmtOdds(teamSpreadOdds)}</span>
           </span>
           {isCompleted && <ResultChip label={spreadLabel} variant={spreadVariant} />}
         </div>
@@ -225,10 +225,10 @@ function GameRow({
       {/* Total */}
       <td className="px-3 py-2.5 text-center">
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-sm text-gray-300 font-mono">
+          <span className="text-sm text-white font-mono">
             {fmtTotal(game.dkTotal)}
           </span>
-          <span className="text-xs text-zinc-300 font-mono">
+          <span className="text-xs text-white font-mono">
             {fmtOdds(game.dkOverOdds)} / {fmtOdds(game.dkUnderOdds)}
           </span>
           {isCompleted && totalResult !== "—" && (
@@ -239,7 +239,7 @@ function GameRow({
 
       {/* ML */}
       <td className="px-3 py-2.5 text-center">
-        <span className="text-sm text-gray-300 font-mono">{fmtOdds(teamML)}</span>
+        <span className="text-sm text-white font-mono">{fmtOdds(teamML)}</span>
       </td>
     </tr>
   );
@@ -297,7 +297,7 @@ export default function NbaTeamSchedule() {
   if (!slug) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-zinc-300 font-mono text-sm">Invalid team slug.</p>
+        <p className="text-white font-mono text-sm">Invalid team slug.</p>
       </div>
     );
   }
@@ -305,13 +305,13 @@ export default function NbaTeamSchedule() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-white/[0.06] px-4 py-3">
+      <div className="sticky top-0 z-20 bg-black backdrop-blur border-b border-white px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate("/")}
-            className="text-zinc-200 hover:text-white p-1.5"
+            className="text-white hover:text-white p-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -327,13 +327,13 @@ export default function NbaTeamSchedule() {
             <h1 className="text-sm font-bold text-white font-mono">
               {team?.name ?? slug} {team?.nickname ?? ""}
             </h1>
-            <p className="text-xs text-zinc-300 font-mono">
+            <p className="text-xs text-white font-mono">
               NBA · Full Schedule · DK NJ Odds
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {scheduleQuery.isLoading && (
-              <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+              <RefreshCw className="w-3.5 h-3.5 text-white animate-spin" />
             )}
           </div>
         </div>
@@ -342,56 +342,56 @@ export default function NbaTeamSchedule() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* ── Season Summary ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <TrendingUp className="w-3 h-3 text-zinc-300" />
-              <span className="text-xs text-zinc-300 font-mono uppercase tracking-widest">Record</span>
+              <TrendingUp className="w-3 h-3 text-white" />
+              <span className="text-xs text-white font-mono uppercase tracking-widest">Record</span>
             </div>
             <p className="text-lg font-bold text-white font-mono">{wins}-{losses}</p>
-            <p className="text-xs text-zinc-300 font-mono">{completedGames.length} games</p>
+            <p className="text-xs text-white font-mono">{completedGames.length} games</p>
           </div>
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Calendar className="w-3 h-3 text-zinc-300" />
-              <span className="text-xs text-zinc-300 font-mono uppercase tracking-widest">ATS</span>
+              <Calendar className="w-3 h-3 text-white" />
+              <span className="text-xs text-white font-mono uppercase tracking-widest">ATS</span>
             </div>
             <p className="text-lg font-bold text-white font-mono">{atsWins}-{atsLosses}</p>
-            <p className="text-xs text-zinc-300 font-mono">Spread coverage</p>
+            <p className="text-xs text-white font-mono">Spread coverage</p>
           </div>
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
-              <Calendar className="w-3 h-3 text-zinc-300" />
-              <span className="text-xs text-zinc-300 font-mono uppercase tracking-widest">O/U</span>
+              <Calendar className="w-3 h-3 text-white" />
+              <span className="text-xs text-white font-mono uppercase tracking-widest">O/U</span>
             </div>
             <p className="text-lg font-bold text-white font-mono">{overs}-{unders}</p>
-            <p className="text-xs text-zinc-300 font-mono">Over-Under</p>
+            <p className="text-xs text-white font-mono">Over-Under</p>
           </div>
         </div>
 
         {/* ── Schedule Table ─────────────────────────────────────────────────── */}
         {scheduleQuery.isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-5 h-5 text-blue-400 animate-spin mr-3" />
-            <span className="text-zinc-300 font-mono text-sm">Loading schedule...</span>
+            <RefreshCw className="w-5 h-5 text-white animate-spin mr-3" />
+            <span className="text-white font-mono text-sm">Loading schedule...</span>
           </div>
         ) : scheduleQuery.error ? (
-          <div className="bg-red-900/20 border border-red-700/40 rounded-lg p-4">
-            <p className="text-red-400 font-mono text-sm">Error: {scheduleQuery.error.message}</p>
+          <div className="bg-black border border-white rounded-lg p-4">
+            <p className="text-white font-mono text-sm">Error: {scheduleQuery.error.message}</p>
           </div>
         ) : games.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-zinc-300 font-mono text-sm">No schedule data found for this team.</p>
-            <p className="text-zinc-300 font-mono text-sm mt-1">
+            <p className="text-white font-mono text-sm">No schedule data found for this team.</p>
+            <p className="text-white font-mono text-sm mt-1">
               Data will populate as games are played and stored from the DK NJ API.
             </p>
           </div>
         ) : (
-          <div className="bg-card border border-white/[0.06] rounded-lg overflow-hidden">
-            <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
-              <span className="text-xs text-zinc-300 font-mono uppercase tracking-widest">
+          <div className="bg-card border border-white rounded-lg overflow-hidden">
+            <div className="px-4 py-2 border-b border-white flex items-center justify-between">
+              <span className="text-xs text-white font-mono uppercase tracking-widest">
                 Full Schedule — {games.length} games
               </span>
-              <Badge variant="outline" className="text-[8px] font-mono text-blue-400 border-blue-600/40">
+              <Badge variant="outline" className="text-[8px] font-mono text-white border-white">
                 DK NJ · AN API
               </Badge>
             </div>
@@ -399,13 +399,13 @@ export default function NbaTeamSchedule() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
-                    <th className="px-3 py-2 text-left text-xs text-zinc-300 font-mono uppercase tracking-widest">Date</th>
-                    <th className="px-3 py-2 text-left text-xs text-zinc-300 font-mono uppercase tracking-widest">Opponent</th>
-                    <th className="px-3 py-2 text-center text-xs text-zinc-300 font-mono uppercase tracking-widest">Result</th>
-                    <th className="px-3 py-2 text-center text-xs text-zinc-300 font-mono uppercase tracking-widest">Spread</th>
-                    <th className="px-3 py-2 text-center text-xs text-zinc-300 font-mono uppercase tracking-widest">O/U</th>
-                    <th className="px-3 py-2 text-center text-xs text-zinc-300 font-mono uppercase tracking-widest">ML</th>
+                  <tr className="border-b border-white">
+                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Date</th>
+                    <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Opponent</th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">Result</th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">Spread</th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">O/U</th>
+                    <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">ML</th>
                   </tr>
                 </thead>
                 <tbody>

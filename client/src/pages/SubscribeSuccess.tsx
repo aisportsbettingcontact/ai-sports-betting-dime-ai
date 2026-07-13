@@ -54,7 +54,7 @@ function FeatureList() {
   return (
     <div
       className="rounded-xl border border-white/10 p-5 mb-6 text-left"
-      style={{ background: "rgba(10,14,22,0.95)" }}
+      style={{ background: "#000000" }}
     >
       <p className="text-[11px] font-bold text-[#6b7280] tracking-widest uppercase mb-3">
         What you now have access to
@@ -158,7 +158,7 @@ export default function SubscribeSuccess() {
   // No session ID
   if (!sessionId) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
           <p className="text-[#9ca3af] mb-4">No session ID found. If you just subscribed, please check your email for confirmation.</p>
           <button onClick={() => navigate("/")} className="text-[13px] text-[#45E0A8] hover:underline">Back to home</button>
@@ -170,7 +170,7 @@ export default function SubscribeSuccess() {
   // Loading
   if (isLookingUp) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
           <div className="w-12 h-12 rounded-full border-2 border-[#45E0A8]/30 border-t-[#45E0A8] animate-spin mx-auto mb-4" />
           <p className="text-[#9ca3af] text-sm">Confirming your subscription...</p>
@@ -183,7 +183,7 @@ export default function SubscribeSuccess() {
   // Lookup error
   if (lookupError && !pendingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
           <p className="text-[#ef4444] mb-2 font-semibold">Could not confirm your subscription.</p>
           <p className="text-[#9ca3af] text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
@@ -200,7 +200,7 @@ export default function SubscribeSuccess() {
   if (showConfirmation) {
     const username = completedUsername ?? pendingUser?.username ?? null;
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -213,7 +213,7 @@ export default function SubscribeSuccess() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{
-              background: "rgba(69,224,168,0.10)",
+              background: "transparent",
               border: "2px solid rgba(69,224,168,0.4)",
             }}
           >
@@ -253,7 +253,7 @@ export default function SubscribeSuccess() {
 
   // New user — show account setup form
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#0B0B0F" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#000000" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -267,7 +267,7 @@ export default function SubscribeSuccess() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
             style={{
-              background: "rgba(69,224,168,0.10)",
+              background: "transparent",
               border: "2px solid rgba(69,224,168,0.4)",
             }}
           >
@@ -285,7 +285,7 @@ export default function SubscribeSuccess() {
         <form
           onSubmit={handleSubmit}
           className="rounded-xl border border-white/10 p-6"
-          style={{ background: "rgba(10,14,22,0.95)" }}
+          style={{ background: "#000000" }}
         >
           <p className="text-[11px] font-bold text-[#6b7280] tracking-widest uppercase mb-5">Create Your Account</p>
 

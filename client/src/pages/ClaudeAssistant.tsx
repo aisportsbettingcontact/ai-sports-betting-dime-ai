@@ -43,12 +43,12 @@ function MarkdownContent({ content }: { content: string }) {
   return (
     <div className="prose prose-invert prose-sm max-w-none
       prose-headings:text-white prose-headings:font-bold
-      prose-p:text-gray-200 prose-p:leading-relaxed
-      prose-code:text-[#00ff41] prose-code:bg-[#0a1a0a] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
-      prose-pre:bg-[#0a1a0a] prose-pre:border prose-pre:border-[#00ff41]/20 prose-pre:rounded-lg
-      prose-strong:text-white prose-ul:text-gray-200 prose-ol:text-gray-200 prose-li:text-gray-200
-      prose-blockquote:border-l-[#00ff41] prose-blockquote:text-gray-300
-      prose-a:text-[#00ff41] prose-a:no-underline hover:prose-a:underline">
+      prose-p:text-white prose-p:leading-relaxed
+      prose-code:text-[#45E0A8] prose-code:bg-[#000000] prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono
+      prose-pre:bg-[#000000] prose-pre:border prose-pre:border-[#45E0A8] prose-pre:rounded-lg
+      prose-strong:text-white prose-ul:text-white prose-ol:text-white prose-li:text-white
+      prose-blockquote:border-l-[#45E0A8] prose-blockquote:text-white
+      prose-a:text-[#45E0A8] prose-a:no-underline hover:prose-a:underline">
       <ReactMarkdown>{content}</ReactMarkdown>
     </div>
   );
@@ -65,18 +65,18 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} group`}>
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
-        ${isUser ? "bg-[#00ff41]/20 text-[#00ff41] border border-[#00ff41]/30" : "bg-[#1a1a2e] text-[#00ff41] border border-[#00ff41]/20"}`}>
+        ${isUser ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]" : "bg-[#000000] text-[#45E0A8] border border-[#45E0A8]"}`}>
         {isUser ? "PB" : <Bot size={14} />}
       </div>
       <div className={`flex-1 max-w-[85%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-1`}>
-        <div className={`rounded-xl px-4 py-3 ${isUser ? "bg-[#00ff41]/10 border border-[#00ff41]/20 text-white ml-auto" : "bg-[#111111] border border-white/5 text-gray-200"}`}>
+        <div className={`rounded-xl px-4 py-3 ${isUser ? "bg-transparent border border-[#45E0A8] text-white ml-auto" : "bg-[#000000] border border-white text-white"}`}>
           {isUser ? <p className="text-sm whitespace-pre-wrap">{message.content}</p> : <MarkdownContent content={message.content} />}
         </div>
         <div className={`flex items-center gap-2 px-1 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-          <span className="text-[10px] text-gray-600">{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-          {message.tokens && <span className="text-[10px] text-gray-600">{message.tokens.input + message.tokens.output} tokens</span>}
-          <button onClick={handleCopy} className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-gray-300">
-            {copied ? <Check size={11} className="text-[#00ff41]" /> : <Copy size={11} />}
+          <span className="text-[10px] text-white">{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          {message.tokens && <span className="text-[10px] text-white">{message.tokens.input + message.tokens.output} tokens</span>}
+          <button onClick={handleCopy} className="opacity-0 group-hover:opacity-100 transition-opacity text-white hover:text-white">
+            {copied ? <Check size={11} className="text-[#45E0A8]" /> : <Copy size={11} />}
           </button>
         </div>
       </div>
@@ -121,27 +121,27 @@ export default function ClaudeAssistant() {
   const handleClearChat = useCallback(() => { setMessages([]); setTotalTokens(0); setShowQuickPrompts(true); }, []);
   const handleQuickPrompt = useCallback((prompt: string) => { setInput(prompt); textareaRef.current?.focus(); }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-[#0a0a0a]"><Loader2 className="animate-spin text-[#00ff41]" size={32} /></div>;
+  if (loading) return <div className="flex items-center justify-center h-screen bg-[#000000]"><Loader2 className="animate-spin text-[#45E0A8]" size={32} /></div>;
   if (!appUser || !isOwner) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0a] font-['Barlow_Condensed',sans-serif]">
+    <div className="flex flex-col h-screen bg-[#000000] font-['Barlow_Condensed',sans-serif]">
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-white/5 bg-[#0d0d0d] px-4 py-3">
+      <div className="flex-shrink-0 border-b border-white bg-[#000000] px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#00ff41]/10 border border-[#00ff41]/30 flex items-center justify-center">
-              <Bot size={16} className="text-[#00ff41]" />
+            <div className="w-8 h-8 rounded-lg bg-transparent border border-[#45E0A8] flex items-center justify-center">
+              <Bot size={16} className="text-[#45E0A8]" />
             </div>
             <div>
               <h1 className="text-white font-bold text-base leading-none">CLAUDE UI/UX ASSISTANT</h1>
-              <p className="text-gray-500 text-xs mt-0.5">Powered by Claude Fable 5 · Owner Only</p>
+              <p className="text-white text-xs mt-0.5">Powered by Claude Fable 5 · Owner Only</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {totalTokens > 0 && <Badge variant="outline" className="text-xs text-gray-500 border-white/10">{totalTokens.toLocaleString()} tokens used</Badge>}
+            {totalTokens > 0 && <Badge variant="outline" className="text-xs text-white border-white">{totalTokens.toLocaleString()} tokens used</Badge>}
             {messages.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={handleClearChat} className="text-gray-500 hover:text-red-400 hover:bg-red-400/10 text-xs">
+              <Button variant="ghost" size="sm" onClick={handleClearChat} className="text-white hover:text-white hover:bg-transparent text-xs">
                 <Trash2 size={13} className="mr-1" /> Clear
               </Button>
             )}
@@ -150,14 +150,14 @@ export default function ClaudeAssistant() {
       </div>
 
       {/* Context bar */}
-      <div className="flex-shrink-0 border-b border-white/5 bg-[#0d0d0d] px-4 py-2">
+      <div className="flex-shrink-0 border-b border-white bg-[#000000] px-4 py-2">
         <div className="max-w-4xl mx-auto flex items-center gap-3 flex-wrap">
-          <span className="text-gray-500 text-xs uppercase tracking-wider">Context:</span>
+          <span className="text-white text-xs uppercase tracking-wider">Context:</span>
           <Select value={currentPage} onValueChange={setCurrentPage}>
-            <SelectTrigger className="h-7 text-xs bg-[#111] border-white/10 text-gray-300 w-44">
+            <SelectTrigger className="h-7 text-xs bg-[#000000] border-white text-white w-44">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-[#111] border-white/10 text-gray-300 text-xs">
+            <SelectContent className="bg-[#000000] border-white text-white text-xs">
               <SelectItem value="/feed/model/mlb">Feed (Model Projections)</SelectItem>
               <SelectItem value="/betting-splits/MLB">Betting Splits</SelectItem>
               <SelectItem value="/wc2026">WC2026</SelectItem>
