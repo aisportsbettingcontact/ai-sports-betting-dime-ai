@@ -102,7 +102,7 @@ export default function IngestAnOdds() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-border bg-card backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button
             variant="ghost"
@@ -127,7 +127,7 @@ export default function IngestAnOdds() {
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Instructions */}
-        <Card className="border-border/50 bg-card/60">
+        <Card className="border-border bg-card">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <ClipboardPaste className="h-4 w-4 text-primary" />
@@ -202,7 +202,7 @@ export default function IngestAnOdds() {
             placeholder="Paste the Action Network All Markets <tbody> HTML here..."
             value={html}
             onChange={(e) => setHtml(e.target.value)}
-            className="font-mono text-xs min-h-[200px] resize-y bg-muted/30 border-border/50"
+            className="font-mono text-xs min-h-[200px] resize-y bg-muted border-border"
           />
           {html && (
             <p className="text-xs text-muted-foreground">
@@ -277,7 +277,7 @@ export default function IngestAnOdds() {
                   <p className="text-xs font-semibold text-white">
                     Errors ({result.errors.length}):
                   </p>
-                  <div className="bg-muted/50 rounded p-2 space-y-0.5 max-h-48 overflow-y-auto">
+                  <div className="bg-muted rounded p-2 space-y-0.5 max-h-48 overflow-y-auto">
                     {result.errors.map((e, i) => (
                       <p key={i} className="text-xs font-mono text-white">
                         {e}
@@ -292,7 +292,7 @@ export default function IngestAnOdds() {
                   <p className="text-xs font-semibold text-muted-foreground">
                     Parser Warnings ({result.warnings.length}):
                   </p>
-                  <div className="bg-muted/50 rounded p-2 space-y-0.5 max-h-32 overflow-y-auto">
+                  <div className="bg-muted rounded p-2 space-y-0.5 max-h-32 overflow-y-auto">
                     {result.warnings.map((w, i) => (
                       <p key={i} className="text-xs font-mono text-muted-foreground">
                         {w}

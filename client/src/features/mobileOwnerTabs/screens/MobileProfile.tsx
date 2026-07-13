@@ -72,9 +72,9 @@ export function MobileProfile() {
 
       {/* User Card */}
       <div className="px-4 pt-5">
-        <div className="rounded-2xl bg-gradient-to-br from-[#000000] to-[#000000] border border-white p-5">
+        <div className="rounded-2xl bg-black border border-white p-5">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#45E0A8] to-[#FFFFFF] border border-[#45E0A8] flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full bg-[#45E0A8] border border-[#45E0A8] flex items-center justify-center">
               <Crown className="w-6 h-6 text-[#45E0A8]" />
             </div>
             <div className="flex-1">
@@ -126,7 +126,7 @@ export function MobileProfile() {
 
       {/* Credit Preview */}
       <div className="px-4 mt-4">
-        <div className="rounded-xl bg-gradient-to-r from-[#45E0A8] to-[#FFFFFF] border border-[#45E0A8] p-4">
+        <div className="rounded-xl bg-[#45E0A8] border border-[#45E0A8] p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white font-medium">Model Credits</span>
             <span className="text-[10px] text-[#45E0A8] font-medium px-2 py-0.5 rounded-full bg-[#45E0A8]">

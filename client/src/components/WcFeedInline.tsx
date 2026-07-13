@@ -2791,7 +2791,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
       <div
         style={{
           height: 3,
-          background: `linear-gradient(90deg, ${awayColors.primary} 48%, ${homeColors.primary} 52%)`,
+          background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
         }}
       />
 

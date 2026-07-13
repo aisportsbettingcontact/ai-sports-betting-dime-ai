@@ -66,7 +66,7 @@ class SectionErrorBoundary extends Component<
             {this.state.error?.stack}
           </pre>
           <button type="button" onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: "4px 14px", background: "#000000", border: "1px solid #444", borderRadius: 4, color: "#FFFFFF", cursor: "pointer", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
+            style={{ padding: "4px 14px", background: "#000000", border: "1px solid #FFFFFF", borderRadius: 4, color: "#FFFFFF", cursor: "pointer", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
           >
             RETRY
           </button>
@@ -1211,7 +1211,7 @@ export default function TheModelResults() {
     <div className="min-h-screen" style={{ background: "#000000" }}>
 
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-sm border-b border-white">
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
         <div className="relative flex items-center px-4 py-2 max-w-6xl mx-auto">
           <button type="button" onClick={() => setLocation("/admin/publish")} className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0">
             <ChevronLeft size={18} style={{ color: "#FFFFFF" }} />
