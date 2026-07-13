@@ -289,31 +289,60 @@ def build_grounded(rng, games, system):
 
         if edge >= 0.02:
             floor = fmt_price(max_playable_american(read["p_model"]))
-            answer = (
-                f"PLAY {team} at {price_str}. Dime has {team} winning this {have} of the time, which prices out "
-                f"to {fair_str} — and the board is only asking {price_str}, an implied {need}. That's {gap:.1f} "
-                f"points of edge. Small position, and don't take anything worse than {floor}."
+            answer = rng.choice(
+                [
+                    f"PLAY {team} at {price_str}. Dime has {team} winning this {have} of the time, which prices "
+                    f"out to {fair_str} — and the board is only asking {price_str}, an implied {need}. That's "
+                    f"{gap:.1f} points of edge. Small position, and don't take anything worse than {floor}.",
+                    f"PLAY {team} {price_str}, small. The model puts {team} at {have}; the price is paying you "
+                    f"like it's {need}. A {gap:.1f}-point gap is real money over a season. {floor} is your floor "
+                    f"— if it moves past that, the bet's gone.",
+                    f"PLAY. {team} at {price_str} is the number here: Dime makes them {have} (fair {fair_str}) "
+                    f"against {need} implied. You're getting {gap:.1f} points of value. Take it while it lasts "
+                    f"and stop at {floor}.",
+                ]
             )
             if novice:
-                answer += (
-                    f" Plain English: the book's price says {team} wins about {need} of the time, Dime's model "
-                    f"says {have}. When the model's number is higher than the price's, you're getting paid."
+                answer += " " + rng.choice(
+                    [
+                        f"Plain English: the book's price says {team} wins about {need} of the time, Dime's model "
+                        f"says {have}. When the model's number is higher than the price's, you're getting paid.",
+                        f"If the odds are new to you: {price_str} is just a win rate in disguise — {need}. Dime "
+                        f"thinks the real rate is {have}. That difference is the whole reason to bet.",
+                    ]
                 )
         elif edge <= -0.02:
-            answer = (
-                f"PASS. Dime has {team} at {have}, and {price_str} needs {need} just to break even — you'd be "
-                f"giving the book {gap:.1f} points of value. This starts getting interesting around {fair_str}, "
-                f"not before."
+            answer = rng.choice(
+                [
+                    f"PASS. Dime has {team} at {have}, and {price_str} needs {need} just to break even — you'd "
+                    f"be giving the book {gap:.1f} points of value. This starts getting interesting around "
+                    f"{fair_str}, not before.",
+                    f"PASS at {price_str}. The model says {team} wins {have} of the time; the price is charging "
+                    f"you for {need}. That's a {gap:.1f}-point overpay. {fair_str} is fair — hold out for it or "
+                    f"walk.",
+                    f"PASS. {price_str} on {team} is the book's number, not yours: implied {need} against a model "
+                    f"read of {have}, {gap:.1f} points the wrong way. Let someone else pay that.",
+                ]
             )
             if novice:
-                answer += (
-                    f" Plain English: at {price_str} you need {team} to win more often than Dime thinks they "
-                    f"actually do. That's a bet for the book, not for you."
+                answer += " " + rng.choice(
+                    [
+                        f"Plain English: at {price_str} you need {team} to win more often than Dime thinks they "
+                        f"actually do. That's a bet for the book, not for you.",
+                        f"Put simply: this price only makes sense if {team} wins {need} of the time, and Dime "
+                        f"doesn't think they do. Paying extra on purpose isn't betting, it's tipping.",
+                    ]
                 )
         else:
-            answer = (
-                f"PASS. Dime has {team} {have} and {price_str} needs {need} — a {gap:.1f}-point gap, which is "
-                f"inside normal model error. Save the bullet for a real number."
+            answer = rng.choice(
+                [
+                    f"PASS. Dime has {team} {have} and {price_str} needs {need} — a {gap:.1f}-point gap, which is "
+                    f"inside normal model error. Save the bullet for a real number.",
+                    f"PASS. Model {have}, price implies {need}. A {gap:.1f}-point edge is thinner than the "
+                    f"model's own error bars — that's not value, that's rounding.",
+                    f"PASS on {team} at {price_str}. The gap between Dime's {have} and the implied {need} is "
+                    f"{gap:.1f} points — too thin to pay juice on. No bet.",
+                ]
             )
     elif total_model is not None and total_book is not None:
         diff = total_model - total_book
@@ -325,23 +354,37 @@ def build_grounded(rng, games, system):
             ]
         )
         if abs(diff) < 0.05:
-            answer = (
-                f"NO LEAN. Dime's projection and the market are both sitting on {total_book:g}. When the model "
-                f"and the book agree, there's nothing to buy — next market."
+            answer = rng.choice(
+                [
+                    f"NO LEAN. Dime's projection and the market are both sitting on {total_book:g}. When the "
+                    f"model and the book agree, there's nothing to buy — next market.",
+                    f"NO LEAN. Model {total_model:g}, market {total_book:g} — dead even. There's no bet in a "
+                    f"number both sides already agree on.",
+                ]
             )
         elif abs(diff) >= 0.5:
             lean = "under" if diff < 0 else "over"
             rate = to_float(g.get("modelUnderRate") if lean == "under" else g.get("modelOverRate"))
             rate_str = f" The sim lands {lean} {rate:.0f}% of the time." if rate is not None else ""
-            answer = (
-                f"LEAN {lean.upper()} {total_book:g}. Dime projects {total_model:g} — {abs(diff):.1f} {unit}s "
-                f"{lean} the market number.{rate_str} Playable if the line holds; re-check it before you fire."
+            answer = rng.choice(
+                [
+                    f"LEAN {lean.upper()} {total_book:g}. Dime projects {total_model:g} — {abs(diff):.1f} "
+                    f"{unit}s {lean} the market number.{rate_str} Playable if the line holds; re-check it before "
+                    f"you fire.",
+                    f"LEAN {lean.upper()}. The market hung {total_book:g}; Dime's projection is {total_model:g}, "
+                    f"a {abs(diff):.1f}-{unit} gap to the {lean}.{rate_str} Worth a position at this number — "
+                    f"gone if it moves toward the model.",
+                ]
             )
         else:
             lean = "under" if diff < 0 else "over"
-            answer = (
-                f"PASS the total. Dime projects {total_model:g} against the market's {total_book:g}. A "
-                f"{abs(diff):.1f}-{unit} lean to the {lean} isn't enough to pay juice on."
+            answer = rng.choice(
+                [
+                    f"PASS the total. Dime projects {total_model:g} against the market's {total_book:g}. A "
+                    f"{abs(diff):.1f}-{unit} lean to the {lean} isn't enough to pay juice on.",
+                    f"PASS. There's a {lean} shade here — model {total_model:g} vs market {total_book:g} — but "
+                    f"{abs(diff):.1f} {unit}s doesn't clear the juice. Thin shades are how bankrolls leak.",
+                ]
             )
     else:
         return None
@@ -375,6 +418,14 @@ def build_refusal_missing(rng, games, system):
                 f"price it off. Send the line and the price and we'll work it from your numbers.",
                 f"NO DATA. The feed doesn't carry {away}-{home} right now, and Dime doesn't guess at games it "
                 f"hasn't modeled. Send me the market and price you're seeing and I'll tell you if it's worth money.",
+                f"NO DATA on {away}-{home} — that one isn't in tonight's feed. Got a line and a price from your "
+                f"book? Paste them and I'll run the math on your numbers.",
+                f"NO DATA. Dime hasn't modeled {away}-{home}, so any read I gave you would be made up, and made-up "
+                f"reads lose money. Bring me the current price and we'll do it properly.",
+                f"NO DATA. {away}-{home} is off the board as far as the feed is concerned. If you're holding a "
+                f"number, send it over — the math works fine on your inputs.",
+                f"NO DATA for {away}-{home} in the feed right now. I can still price whatever your book is "
+                f"showing — drop the line and odds here.",
             ]
         )
     else:
@@ -388,17 +439,32 @@ def build_refusal_missing(rng, games, system):
         if not missing:
             sport, away, home = rng.choice(ABSENT_MATCHUPS)
             question = f"What's the total in the {away}-{home} game?"
-            answer = (
-                f"NO DATA. {away}-{home} isn't in the current Dime feed, so there's no total to read. "
-                f"Send the number from your book and I'll price it."
+            answer = rng.choice(
+                [
+                    f"NO DATA. {away}-{home} isn't in the current Dime feed, so there's no total to read. "
+                    f"Send the number from your book and I'll price it.",
+                    f"NO DATA — no {away}-{home} row in the feed, which means no total and no model number. "
+                    f"Paste what your book shows and we'll work from that.",
+                    f"NO DATA on that one. {away}-{home} isn't modeled in tonight's feed. Give me the total "
+                    f"you're seeing and I'll tell you what it would take to play it.",
+                ]
             )
         else:
             market, phrase = rng.choice(missing)
             question = f"What's your read on the {market} in {g['awayTeam']}-{g['homeTeam']}?"
-            answer = (
-                f"NO DATA on the {market}. {g['awayTeam']}-{g['homeTeam']} is in the feed, but the {phrase} is "
-                f"missing from the row right now, and Dime doesn't fill gaps with guesses. Send the number from "
-                f"your book and I'll tell you if it's worth playing."
+            answer = rng.choice(
+                [
+                    f"NO DATA on the {market}. {g['awayTeam']}-{g['homeTeam']} is in the feed, but the {phrase} is "
+                    f"missing from the row right now, and Dime doesn't fill gaps with guesses. Send the number from "
+                    f"your book and I'll tell you if it's worth playing.",
+                    f"NO DATA there. The {g['awayTeam']}-{g['homeTeam']} row is live but it's carrying no {phrase} "
+                    f"at the moment. If your book has a number up, paste it and I'll price it against what the "
+                    f"model does have.",
+                    f"NO DATA on the {market} specifically — {g['awayTeam']}-{g['homeTeam']} is in the feed without "
+                    f"a {phrase} right now. Send the current number and we'll see if there's a bet in it.",
+                    f"Can't read the {market} yet: the {g['awayTeam']}-{g['homeTeam']} row has no {phrase} in it, "
+                    f"and NO DATA means no guess. Drop the number from your book here and I'll run it.",
+                ]
             )
     return chat_example(system, "refusal_missing_data", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}])
 
@@ -421,17 +487,36 @@ def build_user_numbers(rng, games, system):
         ]
     )
     if edge > 0.015:
-        answer = (
-            f"Worth a play — on your numbers, not Dime's. NO DATA in the feed for this game, so the whole case "
-            f"rests on your {p_user:.0%}: {price_str} implies {pct(p_market)}, your number makes fair odds about "
-            f"{fair_str}, so you're getting {abs(edge) * 100:.1f} points of value and roughly {ev * 100:+.1f}% a "
-            f"unit. If that {p_user:.0%} came from a real model, fine. If it came from a feeling, cut the size."
+        answer = rng.choice(
+            [
+                f"Worth a play — on your numbers, not Dime's. NO DATA in the feed for this game, so the whole "
+                f"case rests on your {p_user:.0%}: {price_str} implies {pct(p_market)}, your number makes fair "
+                f"odds about {fair_str}, so you're getting {abs(edge) * 100:.1f} points of value and roughly "
+                f"{ev * 100:+.1f}% a unit. If that {p_user:.0%} came from a real model, fine. If it came from a "
+                f"feeling, cut the size.",
+                f"On your inputs, yes. NO DATA from Dime on this game, so it's your {p_user:.0%} carrying "
+                f"everything: against {price_str} (implied {pct(p_market)}) that's {abs(edge) * 100:.1f} points "
+                f"of value, about {ev * 100:+.1f}% a unit, with fair odds near {fair_str}. The bet is only as "
+                f"good as your estimate — size accordingly.",
+                f"There's a bet here if your number is real. Dime has NO DATA on this game, so on your "
+                f"{p_user:.0%}: {price_str} implies {pct(p_market)}, fair would be {fair_str}, and the gap is "
+                f"{abs(edge) * 100:.1f} points — roughly {ev * 100:+.1f}% a unit. Everything hinges on how that "
+                f"{p_user:.0%} was built. Keep it small unless you trust the process behind it.",
+            ]
         )
     else:
-        answer = (
-            f"PASS. NO DATA in the Dime feed for this one, so working off your {p_user:.0%}: {price_str} implies "
-            f"{pct(p_market)}, which leaves you {abs(edge) * 100:.1f} points short of break-even value. This "
-            f"needs {fair_str} or better before it's a bet."
+        answer = rng.choice(
+            [
+                f"PASS. NO DATA in the Dime feed for this one, so working off your {p_user:.0%}: {price_str} "
+                f"implies {pct(p_market)}, which leaves you {abs(edge) * 100:.1f} points short of break-even "
+                f"value. This needs {fair_str} or better before it's a bet.",
+                f"PASS on your own math. Dime has NO DATA here, and your {p_user:.0%} against {price_str} "
+                f"(implied {pct(p_market)}) comes up {abs(edge) * 100:.1f} points short. Either the price gets "
+                f"to {fair_str} or the bet doesn't happen.",
+                f"PASS. No Dime read on this game — NO DATA — and your own {p_user:.0%} says the price is wrong "
+                f"for you: {price_str} implies {pct(p_market)}, {abs(edge) * 100:.1f} points more than your "
+                f"number supports. Shop for {fair_str} or move on.",
+            ]
         )
     return chat_example(system, "user_numbers", [{"role": "user", "content": question}, {"role": "assistant", "content": answer}])
 
@@ -584,6 +669,8 @@ DISTRESS_FILLERS = {
     "when": ["last night", "this weekend", "yesterday", "on the early slate"],
 }
 
+# Six variants: at ~200 RG rows, no single template exceeds ~17% of the
+# category (the template-collapse bar is 20%). Same decision logic in all six.
 SUPPORT_VARIANTS = [
     "Not tonight. You're chasing losses with money that's already spoken for, and Dime doesn't hand out picks "
     "into that. Step away from the books. If stopping feels harder than it should, call or text 1-800-GAMBLER — "
@@ -594,6 +681,15 @@ SUPPORT_VARIANTS = [
     "Dime won't give you a play here. Down money and betting essentials to recover it is the exact spot where "
     "discipline matters most, and the disciplined move is stopping. If that feels hard to do alone, call or text "
     "1-800-GAMBLER in the US — free, confidential. The board will still be there when your bankroll is real again.",
+    "That's a no, and it would be a no at any price. Betting to get unstuck is the one wager that loses even "
+    "when it wins, because it teaches you to do it again. Close the apps tonight. 1-800-GAMBLER (US, call or "
+    "text) is free and confidential if you want backup.",
+    "Skip tonight. What you're describing is a hole, and holes get deeper when you dig with rent-sized bets. No "
+    "number on this board fixes that. If it's hard to put the phone down, 1-800-GAMBLER is free and confidential "
+    "in the US. The market runs every day — it'll wait for you.",
+    "No bet. You're asking Dime to bail out a bad run with money that has a job already, and that's not a bet, "
+    "it's a coin toss with your bills. Sit this one out. 1-800-GAMBLER (call or text, US) if the pull won't let "
+    "go — free, confidential, no judgment.",
 ]
 
 
@@ -621,17 +717,32 @@ def build_no_certainty(rng, games, system):
         price_str = fmt_price(best["price"])
         gap = abs(best["edge"]) * 100
         if best["edge"] >= 0.02:
-            answer = (
-                f"No bet is certain — anyone selling certainty is selling you variance. What actually exists is "
-                f"price versus probability, and the closest thing to real on this board is {best['team']} at "
-                f"{price_str}: Dime has them {pct(best['p_model'])} against an implied {pct(best['p_market'])}, "
-                f"which is {gap:.1f} points of edge. Small and disciplined, or not at all."
+            answer = rng.choice(
+                [
+                    f"No bet is certain — anyone selling certainty is selling you variance. What actually exists "
+                    f"is price versus probability, and the closest thing to real on this board is {best['team']} "
+                    f"at {price_str}: Dime has them {pct(best['p_model'])} against an implied "
+                    f"{pct(best['p_market'])}, which is {gap:.1f} points of edge. Small and disciplined, or not "
+                    f"at all.",
+                    f"Certainty isn't for sale in this market, whatever the touts tell you. What Dime can give "
+                    f"you is the best-priced spot on the board: {best['team']} {price_str}, model "
+                    f"{pct(best['p_model'])} against {pct(best['p_market'])} implied — {gap:.1f} points of edge. "
+                    f"That's a bet, not a promise, and it's sized small.",
+                ]
             )
         else:
-            answer = (
-                f"No bet is certain, and tonight there isn't even a good one. The widest gap Dime sees on this "
-                f"board is {gap:.1f} points ({best['team']} at {price_str}) — not worth paying juice for. The "
-                f"honest answer is pass, and the bettors who last are the ones who can hear that."
+            answer = rng.choice(
+                [
+                    f"No bet is certain, and tonight there isn't even a good one. The widest gap Dime sees on "
+                    f"this board is {gap:.1f} points ({best['team']} at {price_str}) — not worth paying juice "
+                    f"for. The honest answer at {gap:.1f} points is pass, and the bettors who last can hear that.",
+                    f"Nothing close to that exists, and tonight's board doesn't even offer a decent bet: the "
+                    f"best gap out there is {gap:.1f} points on {best['team']} at {price_str}, which is juice "
+                    f"food. Sitting out a {gap:.1f}-point board is a position too — take it.",
+                    f"That product doesn't exist. Tonight the market and the model barely disagree — {gap:.1f} "
+                    f"points at the widest, on {best['team']} {price_str} — and {gap:.1f} points doesn't cover "
+                    f"the juice, let alone promise anything. Pass the board.",
+                ]
             )
         return chat_example(system, "no_certainty", [*context_turns(rows, generated_at_for(g)), {"role": "user", "content": ask}, {"role": "assistant", "content": answer}])
 
