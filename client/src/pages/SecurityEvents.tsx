@@ -127,7 +127,7 @@ function SummaryCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 flex flex-col gap-1">
+    <div className="rounded-lg border border-white bg-black p-4 flex flex-col gap-1">
       <div className="flex items-center gap-2 text-zinc-200 text-xs font-medium uppercase tracking-wide">
         {icon}
         {label}
@@ -167,7 +167,7 @@ function DiscordTestPanel() {
   const isDigestPending = fireDigestMutation.isPending;
 
   return (
-    <div className="rounded-lg border border-zinc-700/60 bg-zinc-900/40 p-4 space-y-4">
+    <div className="rounded-lg border border-white bg-black p-4 space-y-4">
       {/* Panel header */}
       <div className="flex items-center gap-2">
         <FlaskConical className="w-4 h-4 text-white" />
@@ -185,7 +185,7 @@ function DiscordTestPanel() {
       </p>
 
       {/* Row 1: Fire test event embed */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-zinc-950/60 border border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-black border border-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Send className="w-3.5 h-3.5 text-zinc-200 shrink-0" />
           <div>
@@ -202,10 +202,10 @@ function DiscordTestPanel() {
             onValueChange={(v) => setTestEventType(v as typeof testEventType)}
             disabled={isTestPending}
           >
-            <SelectTrigger className="h-8 w-36 bg-zinc-900 border-zinc-700 text-xs">
+            <SelectTrigger className="h-8 w-36 bg-black border-zinc-700 text-xs">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-700">
+            <SelectContent className="bg-black border-zinc-700">
               <SelectItem value="ALL" className="text-xs">All 3 Types</SelectItem>
               <SelectItem value="CSRF_BLOCK" className="text-xs">🚫 CSRF Block</SelectItem>
               <SelectItem value="RATE_LIMIT" className="text-xs">⚡ Rate Limit</SelectItem>
@@ -229,7 +229,7 @@ function DiscordTestPanel() {
       </div>
 
       {/* Row 2: Fire daily digest */}
-      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-zinc-950/60 border border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 p-3 rounded-md bg-black border border-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <BookOpen className="w-3.5 h-3.5 text-zinc-200 shrink-0" />
           <div>
@@ -333,7 +333,7 @@ export default function SecurityEvents() {
 
   if (authLoading || (!authLoading && (!user || !isOwner))) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center gap-3">
+      <div className="min-h-screen bg-black flex items-center justify-center gap-3">
         <div className="w-5 h-5 border-2 border-white border-t-[#45E0A8] rounded-full animate-spin" />
         <span className="text-zinc-200 text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
       </div>
@@ -353,9 +353,9 @@ export default function SecurityEvents() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-black text-zinc-100">
       {/* ── Header ── */}
-      <div className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-white bg-black backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
@@ -445,10 +445,10 @@ export default function SecurityEvents() {
               value={eventTypeFilter}
               onValueChange={(v) => setEventTypeFilter(v as EventType | "ALL")}
             >
-              <SelectTrigger className="h-8 w-36 bg-zinc-900 border-zinc-700 text-xs">
+              <SelectTrigger className="h-8 w-36 bg-black border-zinc-700 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700">
+              <SelectContent className="bg-black border-zinc-700">
                 <SelectItem value="ALL" className="text-xs">All Types</SelectItem>
                 <SelectItem value="CSRF_BLOCK" className="text-xs">CSRF Block</SelectItem>
                 <SelectItem value="RATE_LIMIT" className="text-xs">Rate Limit</SelectItem>
@@ -462,10 +462,10 @@ export default function SecurityEvents() {
               value={String(windowHours)}
               onValueChange={(v) => setWindowHours(Number(v))}
             >
-              <SelectTrigger className="h-8 w-28 bg-zinc-900 border-zinc-700 text-xs">
+              <SelectTrigger className="h-8 w-28 bg-black border-zinc-700 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-700">
+              <SelectContent className="bg-black border-zinc-700">
                 <SelectItem value="1" className="text-xs">Last 1 hour</SelectItem>
                 <SelectItem value="6" className="text-xs">Last 6 hours</SelectItem>
                 <SelectItem value="24" className="text-xs">Last 24 hours</SelectItem>
@@ -481,10 +481,10 @@ export default function SecurityEvents() {
         </div>
 
         {/* ── Event Table ── */}
-        <div className="rounded-lg border border-zinc-800 overflow-hidden">
+        <div className="rounded-lg border border-white overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-800 hover:bg-transparent">
+              <TableRow className="border-white hover:bg-transparent">
                 <TableHead className="text-zinc-200 text-xs w-36">Timestamp (EST)</TableHead>
                 <TableHead className="text-zinc-200 text-xs w-28">Type</TableHead>
                 <TableHead className="text-zinc-200 text-xs w-36">IP Address</TableHead>
@@ -574,7 +574,7 @@ export default function SecurityEvents() {
 
       {/* ── Prune Dialog ── */}
       <Dialog open={pruneOpen} onOpenChange={setPruneOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-zinc-100 max-w-sm">
+        <DialogContent className="bg-black border-zinc-700 text-zinc-100 max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-white">
               <Trash2 className="w-4 h-4" />
@@ -592,10 +592,10 @@ export default function SecurityEvents() {
                 value={String(retentionDays)}
                 onValueChange={(v) => setRetentionDays(Number(v))}
               >
-                <SelectTrigger className="h-8 w-28 bg-zinc-800 border-zinc-600 text-sm">
+                <SelectTrigger className="h-8 w-28 bg-black border-zinc-600 text-sm">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-zinc-600">
+                <SelectContent className="bg-black border-zinc-600">
                   <SelectItem value="7">7 days</SelectItem>
                   <SelectItem value="14">14 days</SelectItem>
                   <SelectItem value="30">30 days</SelectItem>
