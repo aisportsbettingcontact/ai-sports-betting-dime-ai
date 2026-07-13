@@ -5,6 +5,10 @@ const templateRoot = path.resolve(import.meta.dirname);
 
 export default defineConfig({
   root: templateRoot,
+  // Match the app's JSX transform (vite.config.ts uses the React automatic
+  // runtime) so component tests can render real .tsx components without a
+  // classic-runtime `React` import in scope — e.g. ProjectionCard.test.ts.
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "@": path.resolve(templateRoot, "client", "src"),
