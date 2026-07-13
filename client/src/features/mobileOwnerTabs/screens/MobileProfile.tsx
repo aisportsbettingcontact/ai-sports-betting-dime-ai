@@ -170,8 +170,8 @@ export function MobileProfile() {
 
       {/* Session Info */}
       <div className="px-4 mt-6 pb-24">
-        <div className="rounded-lg bg-zinc-900/30 border border-zinc-800/20 p-3">
-          <p className="text-[9px] text-zinc-600 font-mono">
+        <div className="rounded-lg bg-black border border-white p-3">
+          <p className="text-[9px] text-white font-mono">
             uid: {appUser.id} • access: {appUser.hasAccess ? "granted" : "denied"} • discord: {appUser.discordId ? "linked" : "none"}
           </p>
         </div>

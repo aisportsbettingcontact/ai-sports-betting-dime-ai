@@ -412,36 +412,36 @@ export default function MlbLast5Panel({
     >
       {/* ── Collapsible Header ────────────────────────────────────────────── */}
       <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-zinc-200 font-mono tracking-widest uppercase">
+          <span className="text-sm font-bold text-white font-mono tracking-widest uppercase">
             Last 5 Games
           </span>
-          <span className="text-xs text-zinc-300 font-mono">
+          <span className="text-xs text-white font-mono">
             DK NJ · Run Line · Total · ML
           </span>
         </div>
         <div className="flex items-center gap-2">
           {isFetching && (
-            <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+            <RefreshCw className="w-3 h-3 text-white animate-spin" />
           )}
           {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5 text-zinc-300" />
+            <ChevronUp className="w-3.5 h-3.5 text-white" />
           ) : (
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-300" />
+            <ChevronDown className="w-3.5 h-3.5 text-white" />
           )}
         </div>
       </button>
 
       {/* ── Collapsible Body ──────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-white">
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-6">
-              <RefreshCw className="w-4 h-4 text-blue-400 animate-spin mr-2" />
-              <span className="text-sm text-zinc-300 font-mono">
+              <RefreshCw className="w-4 h-4 text-white animate-spin mr-2" />
+              <span className="text-sm text-white font-mono">
                 Loading last 5 games...
               </span>
             </div>

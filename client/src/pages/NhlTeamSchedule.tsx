@@ -301,7 +301,7 @@ export default function NhlTeamSchedule() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-black backdrop-blur border-b border-white/[0.06] px-4 py-3">
+      <div className="sticky top-0 z-20 bg-black backdrop-blur border-b border-white px-4 py-3">
         <div className="max-w-5xl mx-auto flex items-center gap-3">
           <Button
             variant="ghost"
@@ -338,7 +338,7 @@ export default function NhlTeamSchedule() {
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* ── Season Summary ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <TrendingUp className="w-3 h-3 text-white" />
               <span className="text-xs text-white font-mono uppercase tracking-widest">Record</span>
@@ -346,7 +346,7 @@ export default function NhlTeamSchedule() {
             <p className="text-lg font-bold text-white font-mono">{wins}-{losses}</p>
             <p className="text-xs text-white font-mono">{completedGames.length} games</p>
           </div>
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="w-3 h-3 text-white" />
               <span className="text-xs text-white font-mono uppercase tracking-widest">Puck Line</span>
@@ -354,7 +354,7 @@ export default function NhlTeamSchedule() {
             <p className="text-lg font-bold text-white font-mono">{atsWins}-{atsLosses}</p>
             <p className="text-xs text-white font-mono">Puck line coverage</p>
           </div>
-          <div className="bg-card border border-white/[0.06] rounded-lg p-3 text-center">
+          <div className="bg-card border border-white rounded-lg p-3 text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Calendar className="w-3 h-3 text-white" />
               <span className="text-xs text-white font-mono uppercase tracking-widest">O/U</span>
@@ -382,8 +382,8 @@ export default function NhlTeamSchedule() {
             </p>
           </div>
         ) : (
-          <div className="bg-card border border-white/[0.06] rounded-lg overflow-hidden">
-            <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="bg-card border border-white rounded-lg overflow-hidden">
+            <div className="px-4 py-2 border-b border-white flex items-center justify-between">
               <span className="text-xs text-white font-mono uppercase tracking-widest">
                 Full Schedule — {games.length} games
               </span>
@@ -395,7 +395,7 @@ export default function NhlTeamSchedule() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/[0.06]">
+                  <tr className="border-b border-white">
                     <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Date</th>
                     <th className="px-3 py-2 text-left text-xs text-white font-mono uppercase tracking-widest">Opponent</th>
                     <th className="px-3 py-2 text-center text-xs text-white font-mono uppercase tracking-widest">Result</th>
