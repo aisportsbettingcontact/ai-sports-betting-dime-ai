@@ -117,7 +117,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             </div>
             <Button
               onClick={handleClose}
-              className="mt-2 bg-[#45E0A8] text-white"
+              className="mt-2 bg-[#45E0A8] text-black"
             >
               Back to Sign In
             </Button>
@@ -191,7 +191,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 type="button"
                 onClick={handleReset}
                 disabled={requestReset.isPending || !identifier.trim()}
-                className="flex-1 bg-[#45E0A8] text-white"
+                className="flex-1 bg-[#45E0A8] text-black"
               >
                 {requestReset.isPending ? (
                   <span className="flex items-center gap-2">

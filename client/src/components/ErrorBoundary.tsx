@@ -54,7 +54,7 @@ class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={() => this.setState({ hasError: false, error: null })}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white border border-white transition-colors cursor-pointer"
               >
                 <RotateCcw size={16} />
                 Try Again
@@ -62,7 +62,7 @@ class ErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#45E0A8] text-white transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#45E0A8] text-black transition-colors cursor-pointer"
               >
                 <RotateCcw size={16} />
                 Reload Page

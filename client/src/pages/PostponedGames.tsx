@@ -166,7 +166,7 @@ function MarkStatusDialog({
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-[#45E0A8] text-white"
+            className="bg-[#45E0A8] text-black"
             onClick={() =>
               markMutation.mutate({ id: game.id, status: targetStatus })
             }
@@ -336,7 +336,7 @@ export default function PostponedGames() {
               onClick={() => setFilterStatus(f)}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                 filterStatus === f
-                  ? "bg-[#45E0A8] text-white"
+                  ? "bg-[#45E0A8] text-black"
                   : "bg-black text-white"
               }`}
             >

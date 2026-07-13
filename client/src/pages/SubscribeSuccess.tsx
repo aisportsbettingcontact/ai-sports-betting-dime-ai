@@ -45,7 +45,9 @@ function isPasswordValid(pw: string): boolean {
 // ─── Feature list ─────────────────────────────────────────────────────────────
 function FeatureList() {
   const features = [
-    "AI model projections across MLB, NBA, NFL, NHL",
+    // 2026-07-13 audit P0-12: claim aligned to what ships (honesty law) — the
+    // landing says "MLB live today, World Cup 2026 next"; this page said 4 leagues.
+    "AI model projections for MLB, with World Cup 2026 in the engine",
     "Betting splits & public money percentages",
     "No-vig fair odds & ROI edge signals",
     "Live game feed with real-time updates",
@@ -298,10 +300,14 @@ export default function SubscribeSuccess() {
               onChange={(e) => { setEmail(e.target.value); setFormError(null); }}
               placeholder="you@example.com"
               autoComplete="email"
-              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
+              // 2026-07-13 audit P0-9: outline-none left this form with zero focus
+              // affordance, and the invalid border ternary was a no-op (white both
+              // branches). Mint focus ring; invalid = 2px double-weight border.
+              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[#45E0A8]"
               style={{
                 background: "#000000",
-                borderColor: email && !emailValid ? "#FFFFFF" : "#FFFFFF",
+                borderColor: "#FFFFFF",
+                borderWidth: email && !emailValid ? 2 : 1,
               }}
             />
             {email && !emailValid && (
@@ -319,10 +325,11 @@ export default function SubscribeSuccess() {
                 onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
                 placeholder="Create a strong password"
                 autoComplete="new-password"
-                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[#45E0A8]"
                 style={{
                   background: "#000000",
-                  borderColor: password && !passwordValid ? "#FFFFFF" : "#FFFFFF",
+                  borderColor: "#FFFFFF",
+                  borderWidth: password && !passwordValid ? 2 : 1,
                 }}
               />
               <button
