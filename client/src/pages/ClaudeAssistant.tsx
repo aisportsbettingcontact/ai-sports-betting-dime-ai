@@ -173,7 +173,7 @@ export default function ClaudeAssistant() {
             {FOCUS_AREAS.map(({ value, label, icon: Icon }) => (
               <button key={value} onClick={() => setFocusArea(value)}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-all
-                  ${focusArea === value ? "bg-[#00ff41]/15 text-[#00ff41] border border-[#00ff41]/30" : "text-gray-500 hover:text-gray-300 border border-transparent hover:border-white/10"}`}>
+                  ${focusArea === value ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]" : "text-white hover:text-white border border-transparent hover:border-white"}`}>
                 <Icon size={10} /> {label}
               </button>
             ))}
@@ -187,22 +187,22 @@ export default function ClaudeAssistant() {
           {showQuickPrompts && messages.length === 0 && (
             <div className="space-y-4">
               <div className="text-center py-6">
-                <div className="w-16 h-16 rounded-2xl bg-[#00ff41]/10 border border-[#00ff41]/20 flex items-center justify-center mx-auto mb-4">
-                  <Sparkles size={28} className="text-[#00ff41]" />
+                <div className="w-16 h-16 rounded-2xl bg-transparent border border-[#45E0A8] flex items-center justify-center mx-auto mb-4">
+                  <Sparkles size={28} className="text-[#45E0A8]" />
                 </div>
                 <h2 className="text-white font-bold text-lg mb-1">UI/UX Design Assistant</h2>
-                <p className="text-gray-500 text-sm max-w-md mx-auto">
+                <p className="text-white text-sm max-w-md mx-auto">
                   Ask Claude to analyze any part of the platform, suggest improvements, or generate specific code changes. Select a page and focus area above to add context.
                 </p>
               </div>
               <div>
-                <div className="flex items-center gap-2 text-gray-500 text-xs uppercase tracking-wider mb-2 cursor-pointer hover:text-gray-300" onClick={() => setShowQuickPrompts((v) => !v)}>
+                <div className="flex items-center gap-2 text-white text-xs uppercase tracking-wider mb-2 cursor-pointer hover:text-white" onClick={() => setShowQuickPrompts((v) => !v)}>
                   <ChevronDown size={12} /> Quick Prompts
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {QUICK_PROMPTS.map((prompt) => (
                     <button key={prompt} onClick={() => handleQuickPrompt(prompt)}
-                      className="text-left px-3 py-2.5 rounded-lg bg-[#111] border border-white/5 text-gray-400 text-xs hover:border-[#00ff41]/20 hover:text-gray-200 hover:bg-[#0a1a0a] transition-all">
+                      className="text-left px-3 py-2.5 rounded-lg bg-[#000000] border border-white text-white text-xs hover:border-[#45E0A8] hover:text-white hover:bg-transparent transition-all">
                       {prompt}
                     </button>
                   ))}

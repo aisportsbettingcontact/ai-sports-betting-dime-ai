@@ -150,17 +150,17 @@ function PlayerRow({ row }: PlayerRowProps) {
       </div>
 
       {/* Book line */}
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+      <span style={{ fontSize: 10, color: "#FFFFFF", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtLine(row.bookLine)}
       </span>
 
       {/* Consensus over odds */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtOdds(row.consensusOverOdds)}
       </span>
 
       {/* Model P(HR) */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtPct(row.modelPHr)}
       </span>
 

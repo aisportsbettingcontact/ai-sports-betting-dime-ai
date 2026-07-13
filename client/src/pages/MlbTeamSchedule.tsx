@@ -127,10 +127,10 @@ function fmtTotal(
 type BadgeVariant = "win" | "loss" | "push" | "neutral";
 
 const BADGE_CLS: Record<BadgeVariant, string> = {
-  win:     "bg-green-500/20 text-green-400 border-green-500/30",
-  loss:    "bg-red-500/20 text-red-400 border-red-500/30",
-  push:    "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  neutral: "bg-gray-700/40 text-zinc-300 border-gray-600/20",
+  win:     "bg-black text-[#45E0A8] border-[#45E0A8]",
+  loss:    "bg-black text-white border-white",
+  push:    "bg-black text-white border-white",
+  neutral: "bg-black text-white border-white",
 };
 
 function Badge({ label, variant }: { label: string; variant: BadgeVariant }) {
@@ -187,7 +187,7 @@ function ScheduleRow({
   // ── Location ───────────────────────────────────────────────────────────────
   // NOTE: isNeutralSite not in DB schema — future: add neutral_site column when AN API provides it
   const location  = isAway ? "Away" : "Home";
-  const locStyle  = isAway ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400";
+  const locStyle  = isAway ? "bg-black text-white" : "bg-black text-white";
 
   // ── Score / Time ───────────────────────────────────────────────────────────
   const isComplete  = game.gameStatus === STATUS_COMPLETE;
@@ -228,7 +228,7 @@ function ScheduleRow({
   const dash = <span className={cn(mono, "text-zinc-300")}>—</span>;
 
   return (
-    <tr className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+    <tr className="border-b border-white transition-colors">
 
       {/* DATE */}
       <td className={cn(cell, mono, "text-zinc-200 text-center whitespace-nowrap")}>
@@ -261,8 +261,8 @@ function ScheduleRow({
         <span className={cn(
           mono, "font-bold whitespace-nowrap",
           isComplete
-            ? myWon ? "text-green-400" : "text-red-400"
-            : "text-zinc-200"
+            ? myWon ? "text-[#45E0A8]" : "text-white"
+            : "text-white"
         )}>
           {scoreDisplay}
         </span>

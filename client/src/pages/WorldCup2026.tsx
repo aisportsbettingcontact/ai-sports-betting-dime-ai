@@ -206,7 +206,7 @@ function OddsRow({
 
   return (
     <div className="flex items-center justify-between gap-1 py-[3px]">
-      <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium w-[56px] flex-shrink-0">
+      <span className="text-[10px] text-white uppercase tracking-widest font-medium w-[56px] flex-shrink-0">
         {label}
       </span>
       <div className="flex items-center gap-3 flex-1 justify-end">
@@ -214,7 +214,7 @@ function OddsRow({
         <span
           className={cn(
             "text-xs font-bold tabular-nums w-[44px] text-right",
-            bookStr === "—" ? "text-zinc-600" : "text-zinc-100"
+            bookStr === "—" ? "text-white" : "text-white"
           )}
         >
           {bookStr}
@@ -224,7 +224,7 @@ function OddsRow({
           className="text-xs tabular-nums w-[44px] text-right font-bold"
           style={{ color: modelOdds != null ? '#45E0A8' : undefined }}
         >
-          {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-zinc-600">—</span>}
+          {modelOdds != null ? fmtAmerican(modelOdds) : <span className="text-white">—</span>}
         </span>
       </div>
     </div>
@@ -257,7 +257,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
         <div className="flex items-center gap-2">
           {match.groupLetter && (
-            <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold border border-zinc-700 rounded px-1.5 py-0.5">
+            <span className="text-[9px] text-white uppercase tracking-widest font-bold border border-white rounded px-1.5 py-0.5">
               GROUP {match.groupLetter} · MD{match.matchday}
             </span>
           )}
@@ -267,12 +267,12 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             </span>
           )}
           {isFinal && (
-            <span className="text-[9px] px-1.5 py-0.5 border border-zinc-700 text-zinc-500 font-bold rounded">
+            <span className="text-[9px] px-1.5 py-0.5 border border-white text-white font-bold rounded">
               FT
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+        <div className="flex items-center gap-1 text-[10px] text-white">
           <Clock className="w-3 h-3" />
           <span>{fmtKickoff(match.kickoffUtc)}</span>
         </div>
@@ -288,16 +288,16 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
               `https://flagcdn.com/w40/${awayTeam?.teamId ?? "xx"}.png`
             }
             alt={awayTeam?.fifaCode ?? ""}
-            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white/10"
+            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
           <div className="min-w-0">
-            <div className="text-xs font-bold text-zinc-100 truncate">
+            <div className="text-xs font-bold text-white truncate">
               {awayTeam?.name ?? match.awayTeamId}
             </div>
-            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
+            <div className="text-[9px] text-white uppercase tracking-widest">
               {awayTeam?.fifaCode ?? ""}
             </div>
           </div>
@@ -306,11 +306,11 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
         {/* Score or VS */}
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0 w-10">
           {isFinal || isLive ? (
-            <div className="text-sm font-bold text-zinc-100 tabular-nums">
+            <div className="text-sm font-bold text-white tabular-nums">
               {match.awayScore ?? 0} – {match.homeScore ?? 0}
             </div>
           ) : (
-            <div className="text-xs text-zinc-600 font-bold">VS</div>
+            <div className="text-xs text-white font-bold">VS</div>
           )}
         </div>
 
@@ -322,16 +322,16 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
               `https://flagcdn.com/w40/${homeTeam?.teamId ?? "xx"}.png`
             }
             alt={homeTeam?.fifaCode ?? ""}
-            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white/10"
+            className="w-7 h-5 object-cover rounded-sm flex-shrink-0 border border-white"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
           <div className="min-w-0 text-right">
-            <div className="text-xs font-bold text-zinc-100 truncate">
+            <div className="text-xs font-bold text-white truncate">
               {homeTeam?.name ?? match.homeTeamId}
             </div>
-            <div className="text-[9px] text-zinc-500 uppercase tracking-widest">
+            <div className="text-[9px] text-white uppercase tracking-widest">
               {homeTeam?.fifaCode ?? ""}
             </div>
           </div>
@@ -342,11 +342,11 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
       <div className="border-t border-white/6 px-3 pt-2 pb-3">
         {/* Column headers */}
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[9px] text-zinc-600 uppercase tracking-widest w-[56px]">
+          <span className="text-[9px] text-white uppercase tracking-widest w-[56px]">
             {hasOdds ? "DK NJ" : "Odds pending"}
           </span>
           <div className="flex items-center gap-3 flex-1 justify-end">
-            <span className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold w-[44px] text-right">
+            <span className="text-[9px] text-white uppercase tracking-widest font-bold w-[44px] text-right">
               BOOK
             </span>
             <span className="text-[9px] uppercase tracking-widest font-bold w-[44px] text-right" style={{ color: '#45E0A8' }}>
@@ -361,7 +361,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
         <OddsRow label="AWAY ML" bookOdds={hasOdds ? dkOdds?.away : null} modelOdds={hasModel ? modelOdds?.away : null} />
 
         {/* Divider */}
-        <div className="border-t border-white/4 my-1.5" />
+        <div className="border-t border-white my-1.5" />
 
         {/* Total rows */}
         <OddsRow
@@ -378,7 +378,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
       {/* ── Venue ── */}
       {venue && (
-        <div className="border-t border-white/6 px-3 py-2 flex items-center gap-1 text-[10px] text-zinc-600">
+        <div className="border-t border-white/6 px-3 py-2 flex items-center gap-1 text-[10px] text-white">
           <MapPin className="w-3 h-3 flex-shrink-0" />
           <span>
             {venue.stadium}, {venue.city}
@@ -450,11 +450,11 @@ function ProjectionsFeed({ date }: { date: string }) {
   if (!matchs || matchs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <CalendarDays className="w-8 h-8 text-zinc-600" />
-        <div className="text-zinc-500 text-sm">
+        <CalendarDays className="w-8 h-8 text-white" />
+        <div className="text-white text-sm">
           No World Cup matchs on {WC_DATE_LABELS[date] ?? date}
         </div>
-        <div className="text-zinc-600 text-xs">
+        <div className="text-white text-xs">
           Group stage runs June 11 – July 2, 2026
         </div>
       </div>
@@ -475,10 +475,10 @@ function ProjectionsFeed({ date }: { date: string }) {
 function ComingSoonTab({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <div className="text-zinc-600 text-sm font-semibold uppercase tracking-widest">
+      <div className="text-white text-sm font-semibold uppercase tracking-widest">
         {label}
       </div>
-      <div className="text-zinc-700 text-xs">Coming soon</div>
+      <div className="text-white text-xs">Coming soon</div>
     </div>
   );
 }
@@ -490,7 +490,7 @@ export default function WorldCup2026() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-zinc-100">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* ── Sticky header ── */}
       <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-white/8">
         <div className="max-w-2xl mx-auto px-3 sm:px-4">
@@ -505,10 +505,10 @@ export default function WorldCup2026() {
               }}
             />
             <div>
-              <div className="text-sm font-bold text-zinc-100 leading-tight">
+              <div className="text-sm font-bold text-white leading-tight">
                 FIFA World Cup 2026
               </div>
-              <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
+              <div className="text-[10px] text-white uppercase tracking-widest">
                 {/* [2026-06-29] Dynamic stage label: KO Round of 32 started Jun 28 */}
                 {selectedDate >= '2026-06-28'
                   ? 'Knockout Stage · Round of 32'

@@ -21,9 +21,9 @@ import nodemailer from "nodemailer";
 const FROM_NAME = "Dime AI";
 const FROM_EMAIL = "team@aisportsbettingmodels.com";
 const BRAND_COLOR = "#45E0A8"; // Dime mint (brand law: no neon #39FF14)
-const DARK_BG = "#0B0B0F";
-const CARD_BG = "#16161C";
-const BORDER_COLOR = "#1E1E26";
+const DARK_BG = "#000000";
+const CARD_BG = "#000000";
+const BORDER_COLOR = "#FFFFFF";
 
 // ─── Transporter ──────────────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ function buildEmailHtml(opts: {
                 <tr>
                   <td style="vertical-align:middle;">
                     <!-- dime wordmark: dotless-i + mint coin-dot (brand kit) -->
-                    <span style="font-size:22px;font-weight:700;color:#EDEDF2;letter-spacing:-0.05em;">d&#305;me<span style="color:${BRAND_COLOR};">.</span></span>
+                    <span style="font-size:22px;font-weight:700;color:#EDEDF2;letter-spacing:-0.05em;color:#FFFFFF;">d&#305;me<span style="color:${BRAND_COLOR};">.</span></span>
                   </td>
                 </tr>
               </table>
