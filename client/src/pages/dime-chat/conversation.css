@@ -627,8 +627,8 @@ button.dc-sidebar-row {
   align-items: center;
   justify-content: center;
 }
-.theme-dark .dc-thread-menu-trigger { background: #1e1e26; color: #ededf2; }
-.theme-light .dc-thread-menu-trigger { background: #f0f0f3; color: #0b0b0f; }
+.theme-dark .dc-thread-menu-trigger { background: #000000; color: #FFFFFF; }
+.theme-light .dc-thread-menu-trigger { background: #FFFFFF; color: #000000; }
 .dc-thread-menu {
   position: absolute;
   top: 40px;
@@ -640,8 +640,8 @@ button.dc-sidebar-row {
   flex-direction: column;
   gap: 2px;
 }
-.theme-dark .dc-thread-menu { background: #16161c; border: 1px solid #24242e; }
-.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #d5d5dc; box-shadow: 0 1px 3px rgba(11, 11, 15, 0.06); }
+.theme-dark .dc-thread-menu { background: #000000; border: 1px solid #FFFFFF; }
+.theme-light .dc-thread-menu { background: #ffffff; border: 1px solid #000000; box-shadow: none; }
 .dc-thread-menu-item {
   appearance: none;
   border: none;

@@ -111,15 +111,15 @@
 .dc-profile-row:hover .dc-settings-btn, .dc-settings-btn:hover { transform: rotate(18deg); } /* D/L:43 — state rule */
 .settings-btn:focus-visible, .dc-settings-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:44 — state rule */
 .dc-settings-btn { margin-left: auto; flex-shrink: 0; cursor: pointer; } /* inline D:94 = L:94 */
-.theme-dark .dc-settings-btn { stroke: #9A9AA8; } /* svg stroke attr D:94 */
-.theme-light .dc-settings-btn { stroke: #55555E; } /* svg stroke attr L:94 */
+.theme-dark .dc-settings-btn { stroke: #FFFFFF; } /* svg stroke attr D:94 */
+.theme-light .dc-settings-btn { stroke: #000000; } /* svg stroke attr L:94 */
 /* svg attrs both files (D/L:94): viewBox 0 0 24 24, width/height 17,
    fill="none", stroke-width 1.8, stroke-linecap/linejoin round */
 
 /* Hover utilities — D/L:47-49 (hv2 fill differs per file; theme-scoped merge) */
 .hv1:hover, .dc-hv1:hover { opacity: 0.85 !important; } /* D:47 = L:47 — state rule */
-.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: #26262E !important; } /* D:48 — state rule */
-.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: #F0F0F3 !important; } /* L:48 — state rule */
+.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: transparent !important; } /* D:48 — state rule */
+.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: transparent !important; } /* L:48 — state rule */
 .hv3:hover, .dc-hv3:hover { opacity: 0.7 !important; } /* D:49 = L:49 — state rule */
 
 /* ----------------------------------------------------------------------------
