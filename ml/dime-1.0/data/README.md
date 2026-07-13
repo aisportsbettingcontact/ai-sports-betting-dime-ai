@@ -69,3 +69,25 @@ the eval report so every checkpoint's data is reproducible). All three are
 git-ignored. If a category prints a "capped" warning, widen `--start/--end` to
 feed it more game rows. Hand-written examples can be appended to `train.jsonl`
 afterward — the format is identical.
+
+## Auditing — the ship gate (required before every training run)
+
+`audit_dataset.py` is the deterministic post-generation gate. It reads FULL
+records (never previews — a `[:400]` terminal slice hides context rows and
+produces false fabrication findings) and enforces the hard gates: grounding
+(any team a verdict cites must be in that row's own context), math recompute
+(implied% from the stated price, stated gap vs model−implied), verdict-sign
+coherence (PLAY needs ≥2.0pp positive gap; "edge" claims need a positive gap),
+extraction fidelity (non-null fields must be evidenced in the INPUT text),
+certainty language, RG safety (helpline once, no picks), and a template-
+duplication census (>20% verbatim reuse per category; the off-topic product
+constant and the context acknowledgment are exempt by design).
+
+```bash
+python audit_dataset.py train.jsonl val.jsonl
+# optional: write an untruncated dump for human/LLM row audits
+python audit_dataset.py train.jsonl --dump-full full_dump.txt
+```
+
+Exit 1 = a SEV-1 gate failure = **DO-NOT-TRAIN**. Never start a training run
+on a dataset that hasn't printed `VERDICT: TRAIN`.
