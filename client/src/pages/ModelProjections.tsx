@@ -1236,7 +1236,7 @@ export default function ModelProjections() {
               }
               title={`Favorites (${activeFavCount})`}
             >
-              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#45E0A8" : "rgba(255,215,0,0.75)", color: showFavoritesTab ? "#45E0A8" : "rgba(255,215,0,0.75)", flexShrink: 0 }} />
+              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#45E0A8" : "#45E0A8", color: showFavoritesTab ? "#45E0A8" : "#45E0A8", flexShrink: 0 }} />
               <span>Favorites</span>
             </button>
           )}
@@ -1296,7 +1296,7 @@ export default function ModelProjections() {
           {/* Mobile: min-w-[28px] so it always shows at least the icon; flex-1 fills remaining space */}
           <div className="flex-1 min-w-0" style={{ minWidth: 28 }}>
             <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full border transition-all duration-150"
-              style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "rgba(34,197,94,0.5)" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px rgba(34,197,94,0.15)" : "none" }}>
+              style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "#45E0A8" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px #45E0A8" : "none" }}>
               <Search className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
               <input ref={inputRef} type="text" placeholder="Search…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setSearchFocused(true)} className="flex-1 min-w-0 bg-transparent text-xs md:text-[13px] text-foreground placeholder:text-muted-foreground outline-none" />
               {searchQuery && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setSearchQuery(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"><X className="w-3 h-3 md:w-4 md:h-4" /></button>}
@@ -1363,7 +1363,7 @@ export default function ModelProjections() {
               <span
                 className="font-semibold"
                 style={{
-                  color: '#a3a3a3',
+                  color: '#FFFFFF',
                   letterSpacing: '0.04em',
                   /* Mobile: 8px at 375px keeps "MEN'S COLLEGE BASKETBALL" fully visible */
                   /* Tablet: clamp hits 12px at 571px; bump max to 14px for 768px readability */
@@ -1428,7 +1428,7 @@ export default function ModelProjections() {
                     fontSize: '13px',
                     fontWeight: isActive ? 800 : 500,
                     letterSpacing: '0.06em',
-                    color: isActive ? 'rgba(255,255,255,1)' : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#FFFFFF',
                     background: 'transparent',
                     border: 'none',
                     borderBottom: isActive ? '2px solid #45E0A8' : '2px solid transparent',
