@@ -1492,7 +1492,7 @@ export default function ModelProjections() {
               gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
               width: '100%',
               background: '#000000',
-              borderBottom: '1px solid rgba(255,255,255,0.12)',
+              borderBottom: '1px solid #FFFFFF',
               // [VERIFY] No borderTop, no margin — flush against feed-tabs row above it.
               touchAction: 'none',
             }}
@@ -1503,12 +1503,12 @@ export default function ModelProjections() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRight: '1px solid rgba(255,255,255,0.10)',
+              borderRight: '1px solid #FFFFFF',
             }}>
               <span style={{
                 fontSize: 'clamp(9px, 2.5vw, 11px)',
                 fontWeight: 700,
-                color: 'rgba(255,255,255,0.60)',
+                color: '#FFFFFF',
                 textTransform: 'uppercase',
                 letterSpacing: '0.07em',
                 whiteSpace: 'nowrap',
@@ -1532,7 +1532,7 @@ export default function ModelProjections() {
                   <span style={{
                     fontSize: 'clamp(9px, 2.5vw, 11px)',
                     fontWeight: 700,
-                    color: 'rgba(255,255,255,0.80)',
+                    color: '#FFFFFF',
                     textTransform: 'uppercase',
                     letterSpacing: '0.07em',
                     whiteSpace: 'nowrap',
@@ -1570,7 +1570,7 @@ export default function ModelProjections() {
             {showFavoritesTab ? (
               favoritesTabGames.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                  <Star className="w-10 h-10" style={{ color: "rgba(255,215,0,0.3)" }} />
+                  <Star className="w-10 h-10" style={{ color: "#45E0A8" }} />
                   <div>
                     <p className="text-sm font-semibold text-foreground mb-1">No favorited games</p>
                     <p className="text-xs text-muted-foreground">
