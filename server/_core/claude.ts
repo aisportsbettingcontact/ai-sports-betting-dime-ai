@@ -13,7 +13,7 @@ Platform context:
 - Built with React 19, Tailwind CSS 4, tRPC, and Express
 - Features: AI model projections (NFL, NBA, NHL, NCAAM, WC2026), betting splits, live odds, lineup data
 - Target users: professional sports bettors and serious handicappers
-- Design language: dark background (#0a0a0a), neon green accents (#00ff41), Barlow Condensed font
+- Design language: black background (#000000), mint accent (#45E0A8), Familjen Grotesk font
 - Key pages: Dashboard (game feed), WC2026 (World Cup), Publish Projections (admin), User Management (admin)
 
 When analyzing UI/UX:

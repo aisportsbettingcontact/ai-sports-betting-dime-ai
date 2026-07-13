@@ -84,15 +84,15 @@ function formatDate(dateStr: string): string {
 }
 
 function getEdgeColor(diff: number): string {
-  if (diff <= 0)  return "hsl(var(--muted-foreground))";
-  if (diff < 1.5) return "#FF3131";
-  if (diff < 2.0) return "#FF6B00";
-  if (diff < 2.5) return "#FF9500";
-  if (diff < 3.0) return "#FFB800";
-  if (diff < 3.5) return "#FFD700";
-  if (diff < 4.0) return "#FFFF33";
-  if (diff < 4.5) return "#AAFF1A";
-  return "#39FF14";
+  if (diff <= 0)  return "#FFFFFF";
+  if (diff < 1.5) return "#45E0A8";
+  if (diff < 2.0) return "#45E0A8";
+  if (diff < 2.5) return "#45E0A8";
+  if (diff < 3.0) return "#45E0A8";
+  if (diff < 3.5) return "#45E0A8";
+  if (diff < 4.0) return "#45E0A8";
+  if (diff < 4.5) return "#45E0A8";
+  return "#45E0A8";
 }
 function getEvGrade(diff: number | null): string {
   const d = diff ?? 0;
@@ -136,7 +136,7 @@ function TeamLogo({ slug, name, logoUrl }: { slug: string; name: string; logoUrl
     return (
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-        style={{ background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }}
+        style={{ background: "#000000", color: "#FFFFFF" }}
       >
         {name.slice(0, 2).toUpperCase()}
       </div>
@@ -188,7 +188,7 @@ function EditablePill({
     <div
       className="flex items-center justify-center rounded-lg"
       style={{
-        background: "rgba(255,255,255,0.08)",
+        background: "transparent",
         minWidth: prefix ? "64px" : "52px",
         width: "auto",
         maxWidth: allowNegative ? "80px" : "90px",
@@ -202,7 +202,7 @@ function EditablePill({
           className="font-bold flex-shrink-0 mr-1"
           style={{
             fontSize: "clamp(13px, 3.5vw, 15px)",
-            color: hasValue ? "#FFFFFF" : "hsl(var(--muted-foreground))",
+            color: hasValue ? "#FFFFFF" : "#FFFFFF",
             userSelect: "none",
           }}
         >
@@ -220,8 +220,8 @@ function EditablePill({
         style={{
           // 16px minimum prevents iOS Safari from auto-zooming on input focus
           fontSize: "clamp(16px, 3.5vw, 17px)",
-          color: hasValue ? "#FFFFFF" : "hsl(var(--muted-foreground))",
-          caretColor: "#39FF14",
+          color: hasValue ? "#FFFFFF" : "#FFFFFF",
+          caretColor: "#45E0A8",
           minWidth: 0,
         }}
       />
@@ -263,7 +263,7 @@ function EditableTeamRow({
           className="font-bold leading-none"
           style={{
             fontSize: "clamp(11px, 2.8vw, 13px)",
-            color: "hsl(var(--foreground))",
+            color: "#FFFFFF",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -276,7 +276,7 @@ function EditableTeamRow({
             className="font-medium leading-none mt-0.5"
             style={{
               fontSize: "clamp(9px, 2.2vw, 11px)",
-              color: "hsl(var(--muted-foreground))",
+              color: "#FFFFFF",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -292,7 +292,7 @@ function EditableTeamRow({
               className="font-medium leading-none flex items-center gap-0.5"
               style={{
                 fontSize: "clamp(8px, 2vw, 10px)",
-                color: "hsl(var(--foreground))",
+                color: "#FFFFFF",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -310,14 +310,14 @@ function EditableTeamRow({
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor: goalieConfirmed ? "#22c55e" : "#eab308",
+                  backgroundColor: goalieConfirmed ? "#45E0A8" : "#FFFFFF",
                   flexShrink: 0,
                 }}
               />
               <span
                 style={{
                   fontSize: "clamp(7px, 1.8vw, 9px)",
-                  color: goalieConfirmed ? "#22c55e" : "#eab308",
+                  color: goalieConfirmed ? "#45E0A8" : "#FFFFFF",
                   fontWeight: 500,
                   whiteSpace: "nowrap",
                 }}
@@ -336,7 +336,7 @@ function EditableTeamRow({
         <div className="flex items-center justify-center">
           <span
             className="font-bold leading-none whitespace-nowrap"
-            style={{ fontSize: "clamp(13px, 3.5vw, 16px)", color: "#D3D3D3" }}
+            style={{ fontSize: "clamp(13px, 3.5vw, 16px)", color: "#FFFFFF" }}
           >
             {consensus}
           </span>
@@ -372,11 +372,11 @@ function EdgeVerdictLive({
     return (
       <div
         className="mt-2 pt-2 flex items-center justify-center"
-        style={{ borderTop: "1px solid hsl(var(--border))" }}
+        style={{ borderTop: "1px solid #FFFFFF" }}
       >
         <span
           className="text-xs font-medium tracking-widest uppercase"
-          style={{ color: "hsl(var(--muted-foreground) / 0.35)" }}
+          style={{ color: "#FFFFFF" }}
         >
           PASS
         </span>
@@ -392,18 +392,18 @@ function EdgeVerdictLive({
   return (
     <div
       className="mt-2 pt-2 flex items-center"
-      style={{ borderTop: "1px solid hsl(var(--border))" }}
+      style={{ borderTop: "1px solid #FFFFFF" }}
     >
       {!spreadPass && (
         <div className="flex-1 flex flex-col items-center gap-1 py-0.5">
           <span
             className="font-bold leading-none whitespace-nowrap"
-            style={{ fontSize: isSpreadStrong ? "13px" : "12px", color: "hsl(var(--foreground))" }}
+            style={{ fontSize: isSpreadStrong ? "13px" : "12px", color: "#FFFFFF" }}
           >
             {isSpreadStrong && <span className="mr-0.5 text-sm" style={{ color: spreadColor }}>▲</span>}
             {normalizeEdgeLabel(spreadEdge)}
           </span>
-          <span className="text-sm leading-none" style={{ color: "hsl(var(--muted-foreground))", fontWeight: 500 }}>
+          <span className="text-sm leading-none" style={{ color: "#FFFFFF", fontWeight: 500 }}>
             EDGE:{" "}
             <span style={{ color: spreadColor, fontWeight: 700 }}>
               {spreadDiff} {spreadDiff === 1 ? "pt" : "pts"}
@@ -412,18 +412,18 @@ function EdgeVerdictLive({
         </div>
       )}
       {!spreadPass && !totalPass && (
-        <div style={{ width: 1, alignSelf: "stretch", background: "hsl(var(--border))", margin: "0 8px" }} />
+        <div style={{ width: 1, alignSelf: "stretch", background: "#FFFFFF", margin: "0 8px" }} />
       )}
       {!totalPass && (
         <div className="flex-1 flex flex-col items-center gap-1 py-0.5">
           <span
             className="font-bold leading-none whitespace-nowrap"
-            style={{ fontSize: isTotalStrong ? "13px" : "12px", color: "hsl(var(--foreground))" }}
+            style={{ fontSize: isTotalStrong ? "13px" : "12px", color: "#FFFFFF" }}
           >
             {isTotalStrong && <span className="mr-0.5 text-sm" style={{ color: totalColor }}>▲</span>}
             {normalizeEdgeLabel(totalEdge)}
           </span>
-          <span className="text-sm leading-none" style={{ color: "hsl(var(--muted-foreground))", fontWeight: 500 }}>
+          <span className="text-sm leading-none" style={{ color: "#FFFFFF", fontWeight: 500 }}>
             EDGE:{" "}
             <span style={{ color: totalColor, fontWeight: 700 }}>
               {totalDiff} {totalDiff === 1 ? "pt" : "pts"}
@@ -757,10 +757,10 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
 
   // Border color: green if published, edge-colored if has model data, dim if empty
   const borderColor = game.publishedToFeed
-    ? "#39FF14"
+    ? "#45E0A8"
     : maxDiff > 0
       ? getEdgeColor(maxDiff)
-      : "hsl(var(--border))";
+      : "#FFFFFF";
 
   const isNHL = game.sport === 'NHL';
   const awayNba  = getNbaTeamByDbSlug(game.awayTeam);
@@ -796,8 +796,8 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       animate={{ opacity: 1, y: 0 }}
       className="w-full rounded-xl relative"
       style={{
-        background: "hsl(var(--card))",
-        border: "1px solid hsl(var(--border))",
+        background: "#000000",
+        border: "1px solid #FFFFFF",
         borderLeft: `3px solid ${borderColor}`,
         overflow: "hidden",
       }}
@@ -811,7 +811,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             <AlertDialogTrigger asChild>
               <button type="button" disabled={deleteMutation.isPending}
                 className="flex items-center gap-1 px-2 py-0.5 rounded-md text-sm font-semibold transition-all"
-                style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}
+                style={{ background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }}
                 title="Permanently delete this game from the database"
               >
                 {deleteMutation.isPending
@@ -823,43 +823,43 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             </AlertDialogTrigger>
             <AlertDialogContent
               style={{
-                background: "hsl(var(--card))",
-                border: "2px solid rgba(239,68,68,0.5)",
-                boxShadow: "0 0 40px rgba(239,68,68,0.2)",
+                background: "#000000",
+                border: "2px solid #FFFFFF",
+                boxShadow: "none",
               }}
             >
               <AlertDialogHeader>
                 <AlertDialogTitle
                   className="flex items-center gap-2 text-base font-black tracking-wide"
-                  style={{ color: "#ef4444" }}
+                  style={{ color: "#FFFFFF" }}
                 >
                   <Trash2 size={18} />
                   PERMANENTLY DELETE GAME
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
-                  <span className="block font-bold text-foreground mb-1">
+                <AlertDialogDescription className="text-sm leading-relaxed" style={{ color: "#FFFFFF" }}>
+                  <span className="block font-bold text-white mb-1">
                     {game.awayTeam.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                     {" @ "}
                     {game.homeTeam.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                   </span>
-                  This will <strong style={{ color: "#ef4444" }}>permanently remove this game</strong> from the database.
+                  This will <strong style={{ color: "#FFFFFF" }}>permanently remove this game</strong> from the database.
                   {" "}It will no longer appear on the Publish Projections page or the public feed.
                   <br /><br />
-                  <strong style={{ color: "#FFB800" }}>This action is irreversible.</strong>{" "}
+                  <strong style={{ color: "#FFFFFF" }}>This action is irreversible.</strong>{" "}
                   There is no undo. The game cannot be recovered once deleted.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel
                   className="text-xs font-semibold"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" }}
+                  style={{ background: "transparent", border: "1px solid #FFFFFF", color: "#FFFFFF" }}
                 >
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate({ id: game.id })}
                   className="text-xs font-black tracking-wide"
-                  style={{ background: "rgba(239,68,68,0.85)", color: "#fff", border: "1px solid rgba(239,68,68,0.6)" }}
+                  style={{ background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }}
                 >
                   Yes, Delete Permanently
                 </AlertDialogAction>
@@ -875,10 +875,10 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           disabled={publishMutation.isPending || saving || (!game.publishedToFeed && !hasOdds)}
           className="flex items-center gap-1 px-2 py-0.5 rounded-md text-sm font-semibold transition-all"
           style={game.publishedToFeed
-            ? { background: "rgba(57,255,20,0.15)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.35)" }
+            ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
             : !hasOdds
-              ? { background: "rgba(255,255,255,0.03)", color: "rgba(156,163,175,0.4)", border: "1px solid rgba(255,255,255,0.06)", cursor: "not-allowed" }
-              : { background: "rgba(255,255,255,0.06)", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF", cursor: "not-allowed" }
+              : { background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }
           }
           title={game.publishedToFeed ? "Remove from feed" : !hasOdds ? "No VSiN odds yet — cannot publish" : "Publish to feed"}
         >
@@ -896,25 +896,25 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       {/* Header — identical to GameCard */}
       <div
         className="flex items-center justify-center gap-1.5 px-4 py-2"
-        style={{ background: "hsl(var(--background))", borderBottom: "1px solid hsl(var(--border))" }}
+        style={{ background: "#000000", borderBottom: "1px solid #FFFFFF" }}
       >
-        <span className="text-xs font-semibold" style={{ color: "hsl(var(--foreground))" }}>
+        <span className="text-xs font-semibold" style={{ color: "#FFFFFF" }}>
           {dateLabel}
         </span>
-        <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>·</span>
-        <span className="text-xs font-medium" style={{ color: "hsl(var(--muted-foreground))" }}>
+        <span className="text-sm" style={{ color: "#FFFFFF" }}>·</span>
+        <span className="text-xs font-medium" style={{ color: "#FFFFFF" }}>
           {time}
         </span>
         {/* VSiN odds status indicator */}
         <span
           title={hasOdds ? "VSiN odds loaded" : "No VSiN odds yet"}
           className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: hasOdds ? "#39FF14" : "#FF3131", marginLeft: 2 }}
+          style={{ background: hasOdds ? "#45E0A8" : "#FFFFFF", marginLeft: 2 }}
         />
         {game.gameType === "conference_tournament" && game.conference && (
           <>
-            <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>·</span>
-            <span className="text-sm font-medium flex items-center gap-0.5" style={{ color: "#FFB800" }}>
+            <span className="text-sm" style={{ color: "#FFFFFF" }}>·</span>
+            <span className="text-sm font-medium flex items-center gap-0.5" style={{ color: "#FFFFFF" }}>
               <Trophy size={9} />
               {game.conference}
             </span>
@@ -925,33 +925,33 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       {/* ── Card body: responsive layout ── */}
       {/* MOBILE (<lg): stacked vertical sections — SPREAD / TOTAL / ML / Splits */}
       {/* DESKTOP (lg+): two-column side-by-side — inputs left | splits right */}
-      <div style={{ borderTop: "1px solid hsl(var(--border))" }}>
+      <div style={{ borderTop: "1px solid #FFFFFF" }}>
 
         {/* ── DESKTOP layout (lg+): side-by-side ── */}
         <div className="hidden lg:flex flex-row min-h-0">
 
           {/* LEFT: model inputs */}
-          <div className="flex-1 min-w-0 px-3 pt-2 pb-3 flex flex-col justify-between" style={{ borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+          <div className="flex-1 min-w-0 px-3 pt-2 pb-3 flex flex-col justify-between" style={{ borderRight: "1px solid #FFFFFF" }}>
             {/* Column labels */}
             <div>
               <div
                 className="flex items-center gap-1.5 pb-1.5"
-                style={{ borderBottom: "1px solid hsl(var(--border) / 0.5)" }}
+                style={{ borderBottom: "1px solid #FFFFFF" }}
               >
                 <div className="w-8 flex-shrink-0" />
                 <div className="flex-shrink-0" style={{ width: "clamp(90px, 22vw, 120px)" }} />
                 <div className="flex-1 grid text-center" style={{ gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-                  <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>Books</span>
-                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14" }}>Model Line</span>
+                  <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>Books</span>
+                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8" }}>Model Line</span>
                 </div>
                 <div className="flex-shrink-0 text-center" style={{ width: "clamp(48px, 12vw, 60px)" }}>
-                  <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>{isNHL ? 'PL Odds' : 'Book ML'}</span>
+                  <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>{isNHL ? 'PL Odds' : 'Book ML'}</span>
                 </div>
                 <div className="flex-shrink-0 text-center" style={{ width: "clamp(48px, 12vw, 72px)" }}>
-                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14" }}>O/U</span>
+                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8" }}>O/U</span>
                 </div>
                 <div className="flex-shrink-0 text-center" style={{ width: "clamp(52px, 13vw, 76px)" }}>
-                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: isNHL ? "#FFB800" : "#39FF14" }}>{isNHL ? 'O/U Odds' : 'Model ML'}</span>
+                  <span className="text-sm font-bold uppercase tracking-widest" style={{ color: isNHL ? "#45E0A8" : "#45E0A8" }}>{isNHL ? 'O/U Odds' : 'Model ML'}</span>
                 </div>
               </div>
               {/* Team rows */}
@@ -970,7 +970,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                     goalieConfirmed={game.awayGoalieConfirmed}
                     isNHL={isNHL}
                   />
-                  <div className="my-0.5" style={{ height: 1, background: "hsl(var(--border))" }} />
+                  <div className="my-0.5" style={{ height: 1, background: "#FFFFFF" }} />
                   <EditableTeamRow
                     slug={game.homeTeam}
                     name={homeName}
@@ -990,17 +990,17 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                     {isNHL ? (
                       <EditablePill value={awayPLOdds} onChange={handleAwayPLOddsChange} placeholder="Odds" allowNegative />
                     ) : (
-                      <span className="font-bold tabular-nums" style={{ fontSize: "clamp(12px, 3vw, 15px)", color: "#D3D3D3" }}>
+                      <span className="font-bold tabular-nums" style={{ fontSize: "clamp(12px, 3vw, 15px)", color: "#FFFFFF" }}>
                         {game.awayML ?? "—"}
                       </span>
                     )}
                   </div>
-                  <div style={{ height: 1, background: "hsl(var(--border))" }} />
+                  <div style={{ height: 1, background: "#FFFFFF" }} />
                   <div className="flex flex-col items-center justify-center" style={{ flex: 1 }}>
                     {isNHL ? (
                       <EditablePill value={homePLOdds} onChange={handleHomePLOddsChange} placeholder="Odds" allowNegative />
                     ) : (
-                      <span className="font-bold tabular-nums" style={{ fontSize: "clamp(12px, 3vw, 15px)", color: "#D3D3D3" }}>
+                      <span className="font-bold tabular-nums" style={{ fontSize: "clamp(12px, 3vw, 15px)", color: "#FFFFFF" }}>
                         {game.homeML ?? "—"}
                       </span>
                     )}
@@ -1017,7 +1017,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                       <div className="flex items-center justify-center" style={{ flex: 1 }}>
                         <EditablePill value={overOddsInput} onChange={handleOverOddsChange} placeholder="O Odds" allowNegative />
                       </div>
-                      <div style={{ height: 1, background: "hsl(var(--border))" }} />
+                      <div style={{ height: 1, background: "#FFFFFF" }} />
                       <div className="flex items-center justify-center" style={{ flex: 1 }}>
                         <EditablePill value={underOddsInput} onChange={handleUnderOddsChange} placeholder="U Odds" allowNegative />
                       </div>
@@ -1027,7 +1027,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                       <div className="flex items-center justify-center" style={{ flex: 1 }}>
                         <EditablePill value={awayML} onChange={handleAwayMLChange} placeholder="—" allowNegative />
                       </div>
-                      <div style={{ height: 1, background: "hsl(var(--border))" }} />
+                      <div style={{ height: 1, background: "#FFFFFF" }} />
                       <div className="flex items-center justify-center" style={{ flex: 1 }}>
                         <EditablePill value={homeML} onChange={handleHomeMLChange} placeholder="—" allowNegative />
                       </div>
@@ -1043,7 +1043,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   <button type="button" onClick={handleReset}
                     disabled={saving}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-semibold transition-all"
-                    style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                    style={{ background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }}
                     title="Clear all model projections and save"
                   >
                     {saving ? <Loader2 size={9} className="animate-spin" /> : null}
@@ -1058,8 +1058,8 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   disabled={saving || !dirty}
                   className="h-7 px-4 text-xs gap-1.5 font-bold transition-all"
                   style={dirty
-                    ? { background: "#39FF14", color: "#000" }
-                    : { background: "rgba(57,255,20,0.12)", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
+                    ? { background: "#45E0A8", color: "#000000" }
+                    : { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
                   }
                 >
                   {saving && <Loader2 size={10} className="animate-spin" />}
@@ -1092,19 +1092,19 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
         <div className="lg:hidden flex flex-col">
 
           {/* ── SPREAD SECTION ── */}
-          <div className="px-3 pt-3 pb-2" style={{ borderBottom: "1px solid hsl(var(--border) / 0.6)" }}>
+          <div className="px-3 pt-3 pb-2" style={{ borderBottom: "1px solid #FFFFFF" }}>
             {/* Section header */}
             <div className="flex items-center justify-between mb-2">
               <span
                 className="text-sm font-black uppercase tracking-[0.18em]"
-                style={{ color: "#39FF14" }}
+                style={{ color: "#45E0A8" }}
               >
                 {isNHL ? 'PUCK LINE' : 'SPREAD'}
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>BOOK</span>
-                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14", minWidth: 64, textAlign: 'center' }}>MODEL</span>
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>PL ODDS</span>}
+                <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>BOOK</span>
+                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>MODEL</span>
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>PL ODDS</span>}
               </div>
             </div>
 
@@ -1118,14 +1118,14 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span
                   className="font-bold leading-tight"
-                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "hsl(var(--foreground))" }}
+                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF" }}
                 >
                   {awayName}
                 </span>
                 {awayNickname && (
                   <span
                     className="font-medium leading-tight"
-                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "hsl(var(--muted-foreground))" }}
+                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "#FFFFFF" }}
                   >
                     {awayNickname}
                   </span>
@@ -1134,13 +1134,13 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   <div className="flex flex-col gap-0" style={{ marginTop: "1px" }}>
                     <span
                       className="font-medium leading-tight"
-                      style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "hsl(var(--foreground))" }}
+                      style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "#FFFFFF" }}
                     >
                       🥅 {game.awayGoalie}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.awayGoalieConfirmed ? "#22c55e" : "#eab308", flexShrink: 0 }} />
-                      <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: game.awayGoalieConfirmed ? "#22c55e" : "#eab308", fontWeight: 500, whiteSpace: "nowrap" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.awayGoalieConfirmed ? "#45E0A8" : "#FFFFFF", flexShrink: 0 }} />
+                      <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: game.awayGoalieConfirmed ? "#45E0A8" : "#FFFFFF", fontWeight: 500, whiteSpace: "nowrap" }}>
                         {game.awayGoalieConfirmed ? "Confirmed" : "Expected"}
                       </span>
                     </div>
@@ -1151,11 +1151,11 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-shrink-0 flex flex-col items-center justify-center" style={{ minWidth: 52 }}>
                 {isNHL ? (
                   <>
-                    <span className="font-bold tabular-nums" style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#D3D3D3", lineHeight: 1.1 }}>
+                    <span className="font-bold tabular-nums" style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF", lineHeight: 1.1 }}>
                       {game.awayBookSpread ? `+1.5` : '—'}
                     </span>
                     {game.awaySpreadOdds && (
-                      <span className="tabular-nums" style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "rgba(211,211,211,0.7)", lineHeight: 1.1 }}>
+                      <span className="tabular-nums" style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "#FFFFFF", lineHeight: 1.1 }}>
                         ({game.awaySpreadOdds})
                       </span>
                     )}
@@ -1163,7 +1163,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 ) : (
                   <span
                     className="font-bold tabular-nums"
-                    style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#D3D3D3" }}
+                    style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#FFFFFF" }}
                   >
                     {awayConsensus}
                   </span>
@@ -1192,7 +1192,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             </div>
 
             {/* Divider */}
-            <div style={{ height: 1, background: "hsl(var(--border) / 0.5)", margin: "0 0" }} />
+            <div style={{ height: 1, background: "#FFFFFF", margin: "0 0" }} />
 
             {/* Home team spread row */}
             <div className="flex items-center gap-2 py-1.5">
@@ -1202,14 +1202,14 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span
                   className="font-bold leading-tight"
-                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "hsl(var(--foreground))" }}
+                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF" }}
                 >
                   {homeName}
                 </span>
                 {homeNickname && (
                   <span
                     className="font-medium leading-tight"
-                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "hsl(var(--muted-foreground))" }}
+                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "#FFFFFF" }}
                   >
                     {homeNickname}
                   </span>
@@ -1218,13 +1218,13 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                   <div className="flex flex-col gap-0" style={{ marginTop: "1px" }}>
                     <span
                       className="font-medium leading-tight"
-                      style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "hsl(var(--foreground))" }}
+                      style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "#FFFFFF" }}
                     >
                       🥅 {game.homeGoalie}
                     </span>
                     <div className="flex items-center gap-0.5">
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.homeGoalieConfirmed ? "#22c55e" : "#eab308", flexShrink: 0 }} />
-                      <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: game.homeGoalieConfirmed ? "#22c55e" : "#eab308", fontWeight: 500, whiteSpace: "nowrap" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.homeGoalieConfirmed ? "#45E0A8" : "#FFFFFF", flexShrink: 0 }} />
+                      <span style={{ fontSize: "clamp(7px, 1.8vw, 9px)", color: game.homeGoalieConfirmed ? "#45E0A8" : "#FFFFFF", fontWeight: 500, whiteSpace: "nowrap" }}>
                         {game.homeGoalieConfirmed ? "Confirmed" : "Expected"}
                       </span>
                     </div>
@@ -1235,11 +1235,11 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-shrink-0 flex flex-col items-center justify-center" style={{ minWidth: 52 }}>
                 {isNHL ? (
                   <>
-                    <span className="font-bold tabular-nums" style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#D3D3D3", lineHeight: 1.1 }}>
+                    <span className="font-bold tabular-nums" style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF", lineHeight: 1.1 }}>
                       {game.homeBookSpread ? `-1.5` : '—'}
                     </span>
                     {game.homeSpreadOdds && (
-                      <span className="tabular-nums" style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "rgba(211,211,211,0.7)", lineHeight: 1.1 }}>
+                      <span className="tabular-nums" style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "#FFFFFF", lineHeight: 1.1 }}>
                         ({game.homeSpreadOdds})
                       </span>
                     )}
@@ -1247,7 +1247,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 ) : (
                   <span
                     className="font-bold tabular-nums"
-                    style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#D3D3D3" }}
+                    style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#FFFFFF" }}
                   >
                     {homeConsensus}
                   </span>
@@ -1275,20 +1275,20 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           </div>
 
           {/* ── TOTAL SECTION ── */}
-          <div className="px-3 pt-2.5 pb-2.5" style={{ borderBottom: "1px solid hsl(var(--border) / 0.6)" }}>
+          <div className="px-3 pt-2.5 pb-2.5" style={{ borderBottom: "1px solid #FFFFFF" }}>
             {/* Section header */}
             <div className="flex items-center justify-between mb-2">
               <span
                 className="text-sm font-black uppercase tracking-[0.18em]"
-                style={{ color: "#39FF14" }}
+                style={{ color: "#45E0A8" }}
               >
                 TOTAL
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>BOOK O/U</span>
-                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14", minWidth: 64, textAlign: 'center' }}>MODEL O/U</span>
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>O ODDS</span>}
-                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#FFB800", minWidth: 64, textAlign: 'center' }}>U ODDS</span>}
+                <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>BOOK O/U</span>
+                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>MODEL O/U</span>
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>O ODDS</span>}
+                {isNHL && <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>U ODDS</span>}
               </div>
             </div>
             {/* Single row: OVER / UNDER label + book total + model input */}
@@ -1296,7 +1296,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-1 min-w-0">
                 <span
                   className="font-semibold"
-                  style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "hsl(var(--muted-foreground))" }}
+                  style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "#FFFFFF" }}
                 >
                   OVER / UNDER
                 </span>
@@ -1304,7 +1304,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-shrink-0 flex items-center justify-center" style={{ minWidth: 44 }}>
                 <span
                   className="font-bold tabular-nums"
-                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#D3D3D3" }}
+                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#FFFFFF" }}
                 >
                   {isNaN(bookTotal) ? "—" : String(bookTotal)}
                 </span>
@@ -1327,18 +1327,18 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           </div>
 
           {/* ── MONEYLINE SECTION ── */}
-          <div className="px-3 pt-2.5 pb-2.5" style={{ borderBottom: "1px solid hsl(var(--border) / 0.6)" }}>
+          <div className="px-3 pt-2.5 pb-2.5" style={{ borderBottom: "1px solid #FFFFFF" }}>
             {/* Section header */}
             <div className="flex items-center justify-between mb-2">
               <span
                 className="text-sm font-black uppercase tracking-[0.18em]"
-                style={{ color: "#39FF14" }}
+                style={{ color: "#45E0A8" }}
               >
                 MONEYLINE
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-sm uppercase tracking-widest" style={{ color: "#D3D3D3" }}>BOOK ML</span>
-                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#39FF14", minWidth: 64, textAlign: 'center' }}>MODEL ML</span>
+                <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>BOOK ML</span>
+                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: "#45E0A8", minWidth: 64, textAlign: 'center' }}>MODEL ML</span>
               </div>
             </div>
 
@@ -1350,14 +1350,14 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span
                   className="font-bold leading-tight"
-                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "hsl(var(--foreground))" }}
+                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF" }}
                 >
                   {awayName}
                 </span>
                 {awayNickname && (
                   <span
                     className="font-medium leading-tight"
-                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "hsl(var(--muted-foreground))" }}
+                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "#FFFFFF" }}
                   >
                     {awayNickname}
                   </span>
@@ -1367,7 +1367,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-shrink-0 flex items-center justify-center" style={{ minWidth: 44 }}>
                 <span
                   className="font-bold tabular-nums"
-                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#D3D3D3" }}
+                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#FFFFFF" }}
                 >
                   {game.awayML ?? "—"}
                 </span>
@@ -1379,7 +1379,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             </div>
 
             {/* Divider */}
-            <div style={{ height: 1, background: "hsl(var(--border) / 0.5)" }} />
+            <div style={{ height: 1, background: "#FFFFFF" }} />
 
             {/* Home ML row */}
             <div className="flex items-center gap-2 py-1.5">
@@ -1389,14 +1389,14 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <span
                   className="font-bold leading-tight"
-                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "hsl(var(--foreground))" }}
+                  style={{ fontSize: "clamp(13px, 3.5vw, 15px)", color: "#FFFFFF" }}
                 >
                   {homeName}
                 </span>
                 {homeNickname && (
                   <span
                     className="font-medium leading-tight"
-                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "hsl(var(--muted-foreground))" }}
+                    style={{ fontSize: "clamp(11px, 2.8vw, 13px)", color: "#FFFFFF" }}
                   >
                     {homeNickname}
                   </span>
@@ -1405,7 +1405,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
               <div className="flex-shrink-0 flex items-center justify-center" style={{ minWidth: 44 }}>
                 <span
                   className="font-bold tabular-nums"
-                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#D3D3D3" }}
+                  style={{ fontSize: "clamp(15px, 4vw, 18px)", color: "#FFFFFF" }}
                 >
                   {game.homeML ?? "—"}
                 </span>
@@ -1417,7 +1417,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           </div>
 
           {/* ── BETTING SPLITS (mobile) ── */}
-          <div style={{ borderBottom: "1px solid hsl(var(--border) / 0.6)" }}>
+          <div style={{ borderBottom: "1px solid #FFFFFF" }}>
             <BettingSplitsPanel gameId={game.id} game={game} awayLabel={awayName} homeLabel={homeName} />
           </div>
 
@@ -1428,7 +1428,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 <button type="button" onClick={handleReset}
                   disabled={saving}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-semibold transition-all"
-                  style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
+                  style={{ background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }}
                   title="Clear all model projections and save"
                 >
                   {saving ? <Loader2 size={9} className="animate-spin" /> : null}
@@ -1443,8 +1443,8 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                 disabled={saving || !dirty}
                 className="h-8 px-5 text-xs gap-1.5 font-bold transition-all"
                 style={dirty
-                  ? { background: "#39FF14", color: "#000" }
-                  : { background: "rgba(57,255,20,0.12)", color: "rgba(57,255,20,0.45)", border: "1px solid rgba(57,255,20,0.2)" }
+                  ? { background: "#45E0A8", color: "#000000" }
+                  : { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
                 }
               >
                 {saving && <Loader2 size={10} className="animate-spin" />}
@@ -1474,17 +1474,17 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       {isNHL && (game.modelAwayPuckLine || game.modelOverOdds || game.modelAwayScore) && (
         <div
           className="px-3 pt-2.5 pb-3"
-          style={{ borderTop: "1px solid hsl(var(--border) / 0.6)", background: "rgba(0,100,200,0.04)" }}
+          style={{ borderTop: "1px solid #FFFFFF", background: "transparent" }}
         >
           {/* Section header */}
           <div className="flex items-center gap-2 mb-2">
             <span
               className="text-sm font-black uppercase tracking-[0.18em]"
-              style={{ color: "#0099e6" }}
+              style={{ color: "#45E0A8" }}
             >
               ⚙ NHL MODEL PROJECTIONS
             </span>
-            <span className="text-xs uppercase tracking-widest" style={{ color: "rgba(0,153,230,0.5)" }}>
+            <span className="text-xs uppercase tracking-widest" style={{ color: "#45E0A8" }}>
               (auto-generated · read-only)
             </span>
           </div>
@@ -1492,25 +1492,25 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           {/* Puck line row */}
           {game.modelAwayPuckLine && (
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm uppercase tracking-widest flex-shrink-0" style={{ color: "hsl(var(--muted-foreground))", minWidth: 72 }}>PUCK LINE</span>
+              <span className="text-sm uppercase tracking-widest flex-shrink-0" style={{ color: "#FFFFFF", minWidth: 72 }}>PUCK LINE</span>
               <div className="flex items-center gap-3 flex-1 flex-wrap">
-                <span className="text-sm font-bold tabular-nums" style={{ color: "#e2e8f0" }}>
-                  {awayName}: <span style={{ color: "#0099e6" }}>{game.modelAwayPuckLine}</span>
+                <span className="text-sm font-bold tabular-nums" style={{ color: "#FFFFFF" }}>
+                  {awayName}: <span style={{ color: "#45E0A8" }}>{game.modelAwayPuckLine}</span>
                   {game.modelAwayPLOdds && (
-                    <span className="font-semibold" style={{ color: "rgba(0,153,230,0.8)" }}> ({game.modelAwayPLOdds})</span>
+                    <span className="font-semibold" style={{ color: "#45E0A8" }}> ({game.modelAwayPLOdds})</span>
                   )}
                   {game.modelAwayPLCoverPct && (
-                    <span className="text-sm ml-1" style={{ color: "rgba(255,255,255,0.4)" }}>{parseFloat(game.modelAwayPLCoverPct).toFixed(1)}% cover</span>
+                    <span className="text-sm ml-1" style={{ color: "#FFFFFF" }}>{parseFloat(game.modelAwayPLCoverPct).toFixed(1)}% cover</span>
                   )}
                 </span>
-                <span className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
-                <span className="text-sm font-bold tabular-nums" style={{ color: "#e2e8f0" }}>
-                  {homeName}: <span style={{ color: "#0099e6" }}>{game.modelHomePuckLine}</span>
+                <span className="text-sm" style={{ color: "#FFFFFF" }}>·</span>
+                <span className="text-sm font-bold tabular-nums" style={{ color: "#FFFFFF" }}>
+                  {homeName}: <span style={{ color: "#45E0A8" }}>{game.modelHomePuckLine}</span>
                   {game.modelHomePLOdds && (
-                    <span className="font-semibold" style={{ color: "rgba(0,153,230,0.8)" }}> ({game.modelHomePLOdds})</span>
+                    <span className="font-semibold" style={{ color: "#45E0A8" }}> ({game.modelHomePLOdds})</span>
                   )}
                   {game.modelHomePLCoverPct && (
-                    <span className="text-sm ml-1" style={{ color: "rgba(255,255,255,0.4)" }}>{parseFloat(game.modelHomePLCoverPct).toFixed(1)}% cover</span>
+                    <span className="text-sm ml-1" style={{ color: "#FFFFFF" }}>{parseFloat(game.modelHomePLCoverPct).toFixed(1)}% cover</span>
                   )}
                 </span>
               </div>
@@ -1520,15 +1520,15 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           {/* Total row */}
           {game.modelOverOdds && (
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-sm uppercase tracking-widest flex-shrink-0" style={{ color: "hsl(var(--muted-foreground))", minWidth: 72 }}>TOTAL</span>
-              <span className="text-sm font-bold tabular-nums" style={{ color: "#e2e8f0" }}>
+              <span className="text-sm uppercase tracking-widest flex-shrink-0" style={{ color: "#FFFFFF", minWidth: 72 }}>TOTAL</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: "#FFFFFF" }}>
                 {game.modelTotal ? (
                   <>
-                    <span style={{ color: "#0099e6" }}>{game.modelTotal}</span>
+                    <span style={{ color: "#45E0A8" }}>{game.modelTotal}</span>
                     {" "}
-                    <span style={{ color: "rgba(0,153,230,0.8)" }}>O({game.modelOverOdds})</span>
+                    <span style={{ color: "#45E0A8" }}>O({game.modelOverOdds})</span>
                     {" / "}
-                    <span style={{ color: "rgba(0,153,230,0.8)" }}>U({game.modelUnderOdds})</span>
+                    <span style={{ color: "#45E0A8" }}>U({game.modelUnderOdds})</span>
                   </>
                 ) : "—"}
               </span>
@@ -1540,16 +1540,16 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
             <div className="flex items-center gap-3 flex-wrap">
               {game.modelAwayScore && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>PROJ GOALS</span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>PROJ GOALS</span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "#FFFFFF" }}>
                     {awayName} {parseFloat(game.modelAwayScore).toFixed(2)} — {homeName} {parseFloat(game.modelHomeScore ?? "0").toFixed(2)}
                   </span>
                 </div>
               )}
               {game.modelAwayWinPct && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))" }}>WIN%</span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  <span className="text-sm uppercase tracking-widest" style={{ color: "#FFFFFF" }}>WIN%</span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "#FFFFFF" }}>
                     {awayName} {parseFloat(game.modelAwayWinPct).toFixed(1)}% / {homeName} {parseFloat(game.modelHomeWinPct ?? "0").toFixed(1)}%
                   </span>
                 </div>
@@ -1895,8 +1895,8 @@ export default function PublishProjections() {
   // Show loading spinner while auth resolves
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(var(--background))" }}>
-        <Loader2 className="animate-spin" style={{ color: "#39FF14" }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}>
+        <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
       </div>
     );
   }
@@ -1905,18 +1905,18 @@ export default function PublishProjections() {
   if (!isOwner) return null;
 
   return (
-    <div className="min-h-screen" style={{ background: "hsl(var(--background))" }}>
+    <div className="min-h-screen" style={{ background: "#000000" }}>
 
       {/* Sticky header — mirrors Dashboard header style */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
         {/* Top row: back + brand + publish all */}
         <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
 
           {/* Back button */}
           <button type="button" onClick={() => setLocation("/feed/model/mlb")}
-            className="p-1.5 rounded-lg transition-colors hover:bg-white/10 mr-2 flex-shrink-0"
+            className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0"
           >
-            <ChevronLeft size={18} style={{ color: "hsl(var(--muted-foreground))" }} />
+            <ChevronLeft size={18} style={{ color: "#FFFFFF" }} />
           </button>
 
           {/* Centered brand */}
@@ -1927,10 +1927,10 @@ export default function PublishProjections() {
             >
               AI SPORTS BETTING
             </span>
-            <span className="text-border" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
+            <span className="text-white" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
             <span
               className="font-medium whitespace-nowrap"
-              style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#9CA3AF" }}
+              style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#FFFFFF" }}
             >
               PUBLISH PROJECTIONS
             </span>
@@ -1947,9 +1947,9 @@ export default function PublishProjections() {
                 disabled={bulkApproveModelsMutation.isPending}
                 className="gap-1.5 text-xs h-8 font-bold border"
                 style={{
-                  background: "rgba(57,255,20,0.12)",
-                  color: "#39FF14",
-                  borderColor: "rgba(57,255,20,0.4)",
+                  background: "transparent",
+                  color: "#45E0A8",
+                  borderColor: "#45E0A8",
                 }}
                 title={`Approve all ${pendingApprovalCount} pending model projection${pendingApprovalCount === 1 ? '' : 's'}`}
               >
@@ -1960,7 +1960,7 @@ export default function PublishProjections() {
                 Approve All Models
                 <span
                   className="ml-0.5 px-1 py-0 rounded text-sm font-bold"
-                  style={{ background: "rgba(57,255,20,0.25)", color: "#39FF14" }}
+                  style={{ background: "transparent", color: "#45E0A8" }}
                 >
                   {pendingApprovalCount}
                 </span>
@@ -1971,7 +1971,7 @@ export default function PublishProjections() {
               onClick={() => publishAllMutation.mutate({ gameDate, sport: selectedSport as "MLB" | "NBA" | "NHL" })}
               disabled={publishAllMutation.isPending || totalCount === 0}
               className="gap-1.5 text-xs h-8 font-bold"
-              style={{ background: "#39FF14", color: "#000" }}
+              style={{ background: "#45E0A8", color: "#000000" }}
             >
               {publishAllMutation.isPending
                 ? <Loader2 size={12} className="animate-spin" />
@@ -1986,20 +1986,20 @@ export default function PublishProjections() {
         <div className="px-4 pb-1.5 max-w-5xl mx-auto flex items-center gap-2">
           {/* Prev day */}
           <button type="button" onClick={() => setGameDate(d => addDays(d, -1))}
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0"
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
           >
-            <ChevronLeft size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
+            <ChevronLeft size={14} style={{ color: "#FFFFFF" }} />
           </button>
 
           {/* Date display — centered */}
           <div className="flex-1 flex items-center justify-center gap-2">
-            <span className="text-xs font-bold text-foreground tracking-wide">
+            <span className="text-xs font-bold text-white tracking-wide">
               {formatDateNav(gameDate)}
             </span>
             {gameDate === todayPst() && (
               <span
                 className="text-sm font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: "rgba(57,255,20,0.15)", color: "#39FF14" }}
+                style={{ background: "transparent", color: "#45E0A8" }}
               >
                 TODAY
               </span>
@@ -2008,9 +2008,9 @@ export default function PublishProjections() {
 
           {/* Next day */}
           <button type="button" onClick={() => setGameDate(d => addDays(d, 1))}
-            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0"
+            className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
           >
-            <ChevronRight size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
+            <ChevronRight size={14} style={{ color: "#FFFFFF" }} />
           </button>
 
           {/* Refresh Now button — sport-aware */}
@@ -2018,8 +2018,8 @@ export default function PublishProjections() {
             disabled={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold transition-all flex-shrink-0"
             style={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending
-              ? { background: "rgba(57,255,20,0.08)", color: "rgba(57,255,20,0.4)", border: "1px solid rgba(57,255,20,0.15)" }
-              : { background: "rgba(57,255,20,0.12)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.3)" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
             }
             title={selectedSport === "NBA"
               ? "Refresh VSiN NBA odds, scores, and NBA model data"
@@ -2042,8 +2042,8 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("MLB")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "MLB"
-              ? { background: "rgba(0,45,114,0.25)", color: "#E31837", border: "1px solid rgba(227,24,55,0.5)" }
-              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
             <img
@@ -2059,8 +2059,8 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("NHL")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "NHL"
-              ? { background: "rgba(0,100,200,0.18)", color: "#0099e6", border: "1px solid rgba(0,100,200,0.5)" }
-              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
             <img
@@ -2076,8 +2076,8 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("NBA")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "NBA"
-              ? { background: "rgba(200,16,46,0.15)", color: "#C8102E", border: "1px solid rgba(200,16,46,0.5)" }
-              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
             <img
@@ -2093,8 +2093,8 @@ export default function PublishProjections() {
           <button type="button" onClick={() => setSelectedSport("WC2026")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
             style={selectedSport === "WC2026"
-              ? { background: "rgba(0,168,80,0.18)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
-              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
             <span style={{ fontSize: 14 }}>⚽</span>
@@ -2109,26 +2109,26 @@ export default function PublishProjections() {
           <div
             className="rounded-lg px-4 py-2.5 grid gap-x-4 gap-y-1.5"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "transparent",
+              border: "1px solid #FFFFFF",
               gridTemplateColumns: "repeat(2, 1fr)",
             }}
           >
             {/* Context label spanning both columns */}
-            <div className="col-span-2 flex items-center gap-1.5 pb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span className="font-bold uppercase tracking-widest" style={{ color: '#ffffff', fontSize: '20px' }}>
+            <div className="col-span-2 flex items-center gap-1.5 pb-1" style={{ borderBottom: "1px solid #FFFFFF" }}>
+              <span className="font-bold uppercase tracking-widest" style={{ color: '#FFFFFF', fontSize: '20px' }}>
                 {selectedSport}
               </span>
-              <span className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>·</span>
-              <span className="font-semibold" style={{ color: '#fafafa', fontSize: '18px' }}>
+              <span className="text-sm" style={{ color: "#FFFFFF" }}>·</span>
+              <span className="font-semibold" style={{ color: '#FFFFFF', fontSize: '18px' }}>
                 {gameDate === todayPst()
                   ? new Date(gameDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
                   : formatDateNav(gameDate)}
               </span>
               {totalCount > 0 && (
                 <>
-                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>·</span>
-                  <span style={{ color: "rgba(255,255,255,0.6)", fontSize: '15px' }}>{totalCount} Total {selectedSport} Games</span>
+                  <span className="text-sm" style={{ color: "#FFFFFF" }}>·</span>
+                  <span style={{ color: "#FFFFFF", fontSize: '15px' }}>{totalCount} Total {selectedSport} Games</span>
                 </>
               )}
             </div>
@@ -2136,35 +2136,35 @@ export default function PublishProjections() {
             <div className="flex items-baseline gap-1.5">
               <span
                 className="text-[13px] font-black tabular-nums"
-                style={{ color: withOddsCount === totalCount ? "#39FF14" : missingOddsCount > 0 ? "#FF6B00" : "hsl(var(--muted-foreground))" }}
+                style={{ color: withOddsCount === totalCount ? "#45E0A8" : missingOddsCount > 0 ? "#FFFFFF" : "#FFFFFF" }}
               >
                 {withOddsCount}/{totalCount}
               </span>
-              <span className="text-sm uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <span className="text-sm uppercase tracking-wide" style={{ color: "#FFFFFF" }}>
                 Games with All Odds
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span
                 className="text-[13px] font-black tabular-nums"
-                style={{ color: withModelCount === totalCount ? "#39FF14" : withModelCount > 0 ? "#FFB800" : "hsl(var(--muted-foreground))" }}
+                style={{ color: withModelCount === totalCount ? "#45E0A8" : withModelCount > 0 ? "#FFFFFF" : "#FFFFFF" }}
               >
                 {withModelCount}/{totalCount}
               </span>
-              <span className="text-sm uppercase tracking-wide" style={{ color: "hsl(var(--muted-foreground))" }}>
+              <span className="text-sm uppercase tracking-wide" style={{ color: "#FFFFFF" }}>
                 Games Modeled
               </span>
             </div>
 
             {/* Divider */}
-            <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+            <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
 
             {/* Row 2: Odds timestamp | Scores timestamp */}
             <div className="flex flex-col gap-0.5">
-              <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+              <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                 Odds Last Updated
               </span>
-              <span className="text-sm font-mono" style={{ color: lastRefresh?.refreshedAt ? "rgba(255,255,255,0.75)" : "hsl(var(--muted-foreground))" }}>
+              <span className="text-sm font-mono" style={{ color: lastRefresh?.refreshedAt ? "#FFFFFF" : "#FFFFFF" }}>
                 {lastRefresh?.refreshedAt
                   ? new Date(lastRefresh.refreshedAt).toLocaleTimeString("en-US", {
                       hour: "2-digit", minute: "2-digit", second: "2-digit",
@@ -2174,10 +2174,10 @@ export default function PublishProjections() {
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+              <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                 Scores Last Updated
               </span>
-              <span className="text-sm font-mono" style={{ color: lastRefresh?.scoresRefreshedAt ? "rgba(255,255,255,0.75)" : "hsl(var(--muted-foreground))" }}>
+              <span className="text-sm font-mono" style={{ color: lastRefresh?.scoresRefreshedAt ? "#FFFFFF" : "#FFFFFF" }}>
                 {lastRefresh?.scoresRefreshedAt
                   ? new Date(lastRefresh.scoresRefreshedAt).toLocaleTimeString("en-US", {
                       hour: "2-digit", minute: "2-digit", second: "2-digit",
@@ -2190,15 +2190,15 @@ export default function PublishProjections() {
             {/* NBA Model Sync timestamp — only shown when NBA tab is active */}
             {selectedSport === "NBA" && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
-                    <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+                    <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                       NBA Model Last Synced
                     </span>
                     <span
                       className="font-mono"
-                      style={{ color: '#39ff14', fontSize: '13px' }}
+                      style={{ color: '#45E0A8', fontSize: '13px' }}
                     >
                       {lastNbaModelSync?.syncedAt
                         ? new Date(lastNbaModelSync.syncedAt).toLocaleTimeString("en-US", {
@@ -2209,13 +2209,13 @@ export default function PublishProjections() {
                     </span>
                   </div>
                   {lastNbaModelSync && (
-                    <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: "#FFFFFF" }}>
                       <span>
-                        <span className="font-bold" style={{ color: "rgba(57,255,20,0.8)" }}>{lastNbaModelSync.synced}</span> synced
+                        <span className="font-bold" style={{ color: "#45E0A8" }}>{lastNbaModelSync.synced}</span> synced
                       </span>
                       {lastNbaModelSync.errors.length > 0 && (
                         <span>
-                          <span className="font-bold" style={{ color: "#FF6B00" }}>{lastNbaModelSync.errors.length}</span> errors
+                          <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastNbaModelSync.errors.length}</span> errors
                         </span>
                       )}
                     </div>
@@ -2227,22 +2227,22 @@ export default function PublishProjections() {
             {/* MLB Refresh Stats — only shown when MLB tab is active */}
             {selectedSport === "MLB" && lastRefresh && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
-                    <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+                    <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                       MLB Last Refresh Stats
                     </span>
-                    <span className="font-mono" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>
+                    <span className="font-mono" style={{ color: '#FFFFFF', fontSize: '11px' }}>
                       {lastRefresh.mlbTotal ?? 0} VSiN games processed
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                  <div className="flex items-center gap-3 text-sm" style={{ color: "#FFFFFF" }}>
                     <span>
-                      <span className="font-bold" style={{ color: "rgba(57,255,20,0.8)" }}>{lastRefresh.mlbUpdated ?? 0}</span> updated
+                      <span className="font-bold" style={{ color: "#45E0A8" }}>{lastRefresh.mlbUpdated ?? 0}</span> updated
                     </span>
                     <span>
-                      <span className="font-bold" style={{ color: "rgba(57,255,20,0.8)" }}>{lastRefresh.mlbInserted ?? 0}</span> inserted
+                      <span className="font-bold" style={{ color: "#45E0A8" }}>{lastRefresh.mlbInserted ?? 0}</span> inserted
                     </span>
                   </div>
                 </div>
@@ -2252,39 +2252,39 @@ export default function PublishProjections() {
             {/* NHL Refresh Stats + Goalie Watcher — only shown when NHL tab is active */}
             {selectedSport === "NHL" && (
               <>
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 {/* NHL Refresh Stats */}
                 {lastRefresh && (
                   <div className="col-span-2 flex items-center justify-between">
                     <div className="flex flex-col gap-0.5">
-                      <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+                      <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                         NHL Last Refresh Stats
                       </span>
-                      <span className="font-mono" style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>
+                      <span className="font-mono" style={{ color: '#FFFFFF', fontSize: '11px' }}>
                         {lastRefresh.nhlTotal ?? 0} VSiN games processed
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                    <div className="flex items-center gap-3 text-sm" style={{ color: "#FFFFFF" }}>
                       <span>
-                        <span className="font-bold" style={{ color: "rgba(57,255,20,0.8)" }}>{lastRefresh.nhlUpdated ?? 0}</span> updated
+                        <span className="font-bold" style={{ color: "#45E0A8" }}>{lastRefresh.nhlUpdated ?? 0}</span> updated
                       </span>
                       <span>
-                        <span className="font-bold" style={{ color: "rgba(57,255,20,0.8)" }}>{lastRefresh.nhlInserted ?? 0}</span> inserted
+                        <span className="font-bold" style={{ color: "#45E0A8" }}>{lastRefresh.nhlInserted ?? 0}</span> inserted
                       </span>
                       <span>
-                        <span className="font-bold" style={{ color: "rgba(100,200,255,0.8)" }}>{lastRefresh.nhlScheduleInserted ?? 0}</span> schedule-only
+                        <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastRefresh.nhlScheduleInserted ?? 0}</span> schedule-only
                       </span>
                     </div>
                   </div>
                 )}
                 {/* Goalie Watcher Status */}
-                <div className="col-span-2" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
-                    <span className="uppercase tracking-widest" style={{ color: "hsl(var(--muted-foreground))", fontSize: '14px' }}>
+                    <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
                       🥅 Goalie Watcher
                     </span>
-                    <span className="font-mono" style={{ color: lastGoalieCheck?.checkedAt ? "rgba(255,255,255,0.75)" : "hsl(var(--muted-foreground))", fontSize: '11px' }}>
+                    <span className="font-mono" style={{ color: lastGoalieCheck?.checkedAt ? "#FFFFFF" : "#FFFFFF", fontSize: '11px' }}>
                       {lastGoalieCheck?.checkedAt
                         ? "Last check: " + new Date(lastGoalieCheck.checkedAt).toLocaleTimeString("en-US", {
                             hour: "2-digit", minute: "2-digit", second: "2-digit",
@@ -2295,17 +2295,17 @@ export default function PublishProjections() {
                   </div>
                   <div className="flex items-center gap-3">
                     {lastGoalieCheck && (
-                      <div className="flex items-center gap-2 text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+                      <div className="flex items-center gap-2 text-sm" style={{ color: "#FFFFFF" }}>
                         <span>
-                          <span className="font-bold" style={{ color: "rgba(255,255,255,0.6)" }}>{lastGoalieCheck.gamesChecked}</span> games checked
+                          <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastGoalieCheck.gamesChecked}</span> games checked
                         </span>
                         {lastGoalieCheck.changes.length > 0 && (
                           <span>
-                            <span className="font-bold" style={{ color: "#FF6B00" }}>{lastGoalieCheck.changes.length}</span> changes
+                            <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastGoalieCheck.changes.length}</span> changes
                           </span>
                         )}
                         {lastGoalieCheck.modelRerun && (
-                          <span style={{ color: "#39FF14" }}>model re-run ✓</span>
+                          <span style={{ color: "#45E0A8" }}>model re-run ✓</span>
                         )}
                       </div>
                     )}
@@ -2313,8 +2313,8 @@ export default function PublishProjections() {
                       disabled={checkGoaliesMutation.isPending}
                       className="flex items-center gap-1 px-2 py-0.5 rounded text-sm font-semibold transition-all"
                       style={checkGoaliesMutation.isPending
-                        ? { background: "rgba(0,153,230,0.08)", color: "rgba(0,153,230,0.4)", border: "1px solid rgba(0,153,230,0.15)" }
-                        : { background: "rgba(0,153,230,0.12)", color: "#0099e6", border: "1px solid rgba(0,153,230,0.3)" }
+                        ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+                        : { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
                       }
                     >
                       {checkGoaliesMutation.isPending ? "Checking…" : "Check Now"}
@@ -2340,11 +2340,11 @@ export default function PublishProjections() {
           />
         ) : isLoading ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="animate-spin" style={{ color: "#39FF14" }} />
+            <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-2">
-            <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+            <span className="text-sm" style={{ color: "#FFFFFF" }}>
               {statusFilter === "missing_odds"
                 ? `No games missing odds on ${formatDateNav(gameDate)} — all odds are in ✓`
                 : statusFilter === "modeled"
@@ -2476,11 +2476,11 @@ function WcOddsInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full text-center font-mono font-bold text-xs rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-green-400/60"
+      className="w-full text-center font-mono font-bold text-xs rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-[#45E0A8]"
       style={{
-        background: "rgba(57,255,20,0.08)",
-        color: "#39FF14",
-        border: "1px solid rgba(57,255,20,0.25)",
+        background: "transparent",
+        color: "#45E0A8",
+        border: "1px solid #45E0A8",
         minWidth: 44,
         maxWidth: 64,
       }}
@@ -2574,12 +2574,12 @@ function WcMatchOddsCard({
   }) => (
     <div className="flex flex-col items-center gap-0.5 min-w-[52px]">
       <span className="text-[10px] uppercase tracking-widest font-semibold text-center leading-tight"
-        style={{ color: "rgba(255,255,255,0.4)" }}>
+        style={{ color: "#FFFFFF" }}>
         {label}
       </span>
       {/* Book value — static */}
       <span className="font-mono font-bold text-xs"
-        style={{ color: bookVal != null ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.2)" }}>
+        style={{ color: bookVal != null ? "#FFFFFF" : "#FFFFFF" }}>
         {isSpread ? wcFmtSpreadLine(bookVal) : wcFmtAmerican(bookVal)}
       </span>
       {/* Model input */}
@@ -2595,21 +2595,21 @@ function WcMatchOddsCard({
     <div
       className="w-full rounded-lg overflow-hidden"
       style={{
-        background: "hsl(var(--card))",
-        border: "1px solid hsl(var(--border))",
-        borderLeft: "3px solid #00A850",
+        background: "#000000",
+        border: "1px solid #FFFFFF",
+        borderLeft: "3px solid #45E0A8",
       }}
     >
       {/* Header row: match ID + team names + save button */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/50">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <span className="font-mono text-xs" style={{ color: "#FFFFFF" }}>
             {row.matchId}
           </span>
           <span className="font-bold text-sm text-white">
             {awayAbbr} vs {homeAbbr}
           </span>
-          <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <span className="text-xs" style={{ color: "#FFFFFF" }}>
             {awayName} vs {homeName}
           </span>
         </div>
@@ -2619,8 +2619,8 @@ function WcMatchOddsCard({
           disabled={isSaving || !isDirty}
           className="flex items-center gap-1 px-3 py-1 rounded text-xs font-bold transition-all"
           style={isDirty
-            ? { background: "rgba(57,255,20,0.15)", color: "#39FF14", border: "1px solid rgba(57,255,20,0.4)" }
-            : { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)" }
+            ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+            : { background: "transparent", color: "#FFFFFF", border: "1px solid #FFFFFF" }
           }
         >
           {isSaving ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
@@ -2636,7 +2636,7 @@ function WcMatchOddsCard({
           {/* ── TO ADVANCE ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#00A850" }}>TO ADV</span>
+              style={{ color: "#45E0A8" }}>TO ADV</span>
             <div className="flex gap-2">
               <MktCell
                 label={`${homeAbbr} ADV`}
@@ -2653,12 +2653,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── 3-WAY ML ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#FFB800" }}>ML (3-WAY)</span>
+              style={{ color: "#FFFFFF" }}>ML (3-WAY)</span>
             <div className="flex gap-2">
               <MktCell
                 label={`${homeAbbr} ML`}
@@ -2681,12 +2681,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── DRAW / NO DRAW ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#9CA3AF" }}>DRAW/NO DRAW</span>
+              style={{ color: "#FFFFFF" }}>DRAW/NO DRAW</span>
             <div className="flex gap-2">
               <MktCell
                 label="DRAW"
@@ -2703,12 +2703,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── TOTAL ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 160 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#39FF14" }}>
+              style={{ color: "#45E0A8" }}>
               TOTAL {row.bookTotal != null ? `(${row.bookTotal})` : ""}
             </span>
             <div className="flex gap-2">
@@ -2734,12 +2734,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── SPREAD ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 180 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#60A5FA" }}>
+              style={{ color: "#FFFFFF" }}>
               SPREAD {row.bookPrimarySpread != null ? `(${wcFmtSpreadLine(row.bookPrimarySpread)})` : ""}
             </span>
             <div className="flex gap-2">
@@ -2765,12 +2765,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── DOUBLE CHANCE ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#C084FC" }}>DBL CHC</span>
+              style={{ color: "#FFFFFF" }}>DBL CHC</span>
             <div className="flex gap-2">
               <MktCell
                 label={`${homeAbbr}/D`}
@@ -2787,12 +2787,12 @@ function WcMatchOddsCard({
             </div>
           </div>
 
-          <div style={{ width: 1, background: "rgba(255,255,255,0.07)", alignSelf: "stretch" }} />
+          <div style={{ width: 1, background: "#FFFFFF", alignSelf: "stretch" }} />
 
           {/* ── BTTS ── */}
           <div className="flex flex-col gap-1" style={{ minWidth: 120 }}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-center"
-              style={{ color: "#22D3EE" }}>BTTS</span>
+              style={{ color: "#FFFFFF" }}>BTTS</span>
             <div className="flex gap-2">
               <MktCell
                 label="YES"
@@ -2858,14 +2858,14 @@ function WcMatchOddsPanel({
             }}
             className="px-3 py-1 rounded-full text-xs font-bold transition-all"
             style={round === r
-              ? { background: "rgba(0,168,80,0.2)", color: "#00A850", border: "1px solid rgba(0,168,80,0.5)" }
-              : { background: "hsl(var(--card))", color: "hsl(var(--muted-foreground))", border: "1px solid hsl(var(--border))" }
+              ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
+              : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
             {WC_ROUND_LABELS[r] ?? r}
           </button>
         ))}
-        <span className="text-xs ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <span className="text-xs ml-2" style={{ color: "#FFFFFF" }}>
           {rows.length} match{rows.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -2873,23 +2873,23 @@ function WcMatchOddsPanel({
       {/* Legend */}
       <div className="flex items-center gap-4 px-1">
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs font-bold" style={{ color: "rgba(255,255,255,0.85)" }}>+100</span>
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>= Book</span>
+          <span className="font-mono text-xs font-bold" style={{ color: "#FFFFFF" }}>+100</span>
+          <span className="text-[10px] uppercase tracking-wide" style={{ color: "#FFFFFF" }}>= Book</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs font-bold" style={{ color: "#39FF14" }}>+100</span>
-          <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.4)" }}>= Model (editable)</span>
+          <span className="font-mono text-xs font-bold" style={{ color: "#45E0A8" }}>+100</span>
+          <span className="text-[10px] uppercase tracking-wide" style={{ color: "#FFFFFF" }}>= Model (editable)</span>
         </div>
       </div>
 
       {/* Loading */}
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="animate-spin" style={{ color: "#00A850" }} />
+          <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
         </div>
       ) : rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-2">
-          <span className="text-sm" style={{ color: "hsl(var(--muted-foreground))" }}>
+          <span className="text-sm" style={{ color: "#FFFFFF" }}>
             No matchs found for {WC_ROUND_LABELS[round] ?? round}
           </span>
         </div>

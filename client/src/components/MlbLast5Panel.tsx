@@ -101,11 +101,11 @@ function fmtML(ml: string | null): string {
 }
 
 function mlColor(ml: string | null): string {
-  if (!ml) return "text-zinc-300";
+  if (!ml) return "text-white";
   const n = parseInt(ml.replace("+", ""));
-  if (n > 0) return "text-emerald-400";
-  if (n < -150) return "text-red-400";
-  return "text-yellow-300";
+  if (n > 0) return "text-[#45E0A8]";
+  if (n < -150) return "text-white";
+  return "text-white";
 }
 
 // ─── Result Chip ──────────────────────────────────────────────────────────────
@@ -118,10 +118,10 @@ function Chip({
   variant: "win" | "loss" | "push" | "neutral";
 }) {
   const cls = {
-    win:     "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-    loss:    "bg-red-500/20 text-red-400 border-red-500/30",
-    push:    "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    neutral: "bg-white/5 text-zinc-300 border-white/10",
+    win:     "bg-black text-[#45E0A8] border-[#45E0A8]",
+    loss:    "bg-black text-white border-white",
+    push:    "bg-black text-white border-white",
+    neutral: "bg-black text-white border-white",
   }[variant];
   return (
     <span
@@ -185,9 +185,9 @@ function GameRow({
       : "—";
 
   return (
-    <tr className="border-b border-white/[0.04] hover:bg-white/[0.015] transition-colors">
+    <tr className="border-b border-white transition-colors">
       {/* Date */}
-      <td className="px-2 py-1.5 text-sm text-zinc-300 font-mono whitespace-nowrap">
+      <td className="px-2 py-1.5 text-sm text-white font-mono whitespace-nowrap">
         {fmtDate(game.gameDate)}
       </td>
 
@@ -197,8 +197,8 @@ function GameRow({
           className={cn(
             "text-[8px] font-bold font-mono px-1 py-0.5 rounded",
             isAway
-              ? "bg-blue-500/15 text-blue-400"
-              : "bg-violet-500/15 text-violet-400"
+              ? "bg-black text-white"
+              : "bg-black text-white"
           )}
         >
           {isAway ? "A" : "H"}
@@ -216,7 +216,7 @@ function GameRow({
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
-          <span className="text-sm font-mono text-gray-300 font-semibold">
+          <span className="text-sm font-mono text-white font-semibold">
             {oppAbbr}
           </span>
         </div>
@@ -228,10 +228,10 @@ function GameRow({
           className={cn(
             "text-sm font-mono font-bold",
             myWon === true
-              ? "text-emerald-400"
+              ? "text-[#45E0A8]"
               : myWon === false
-              ? "text-red-400"
-              : "text-zinc-200"
+              ? "text-white"
+              : "text-white"
           )}
         >
           {scoreStr}
@@ -248,7 +248,7 @@ function GameRow({
 
       {/* Run Line */}
       <td className="px-2 py-1.5">
-        <span className="text-xs font-mono text-zinc-200 whitespace-nowrap">
+        <span className="text-xs font-mono text-white whitespace-nowrap">
           {fmtRunLine(myRunLine, myRunLineOdds)}
         </span>
       </td>
@@ -263,7 +263,7 @@ function GameRow({
 
       {/* Total */}
       <td className="px-2 py-1.5 text-center">
-        <span className="text-xs font-mono text-zinc-200">
+        <span className="text-xs font-mono text-white">
           {fmtTotal(game.dkTotal)}
         </span>
       </td>
@@ -307,7 +307,7 @@ function TeamSection({
   return (
     <div className="flex-1 min-w-0">
       {/* Team header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.06]">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white">
         <button type="button" onClick={onLogoClick}
           className="flex-shrink-0 group relative"
           title={`View ${teamName} full schedule`}
@@ -322,37 +322,37 @@ function TeamSection({
               }}
             />
           )}
-          <ExternalLink className="w-2.5 h-2.5 text-blue-400 absolute -top-0.5 -right-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <ExternalLink className="w-2.5 h-2.5 text-white absolute -top-0.5 -right-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
         <div className="min-w-0">
           <span className="text-sm font-bold text-white font-mono tracking-wide truncate block">
             {teamName.toUpperCase()}
           </span>
-          <span className="text-xs text-zinc-300 font-mono">LAST 5 GAMES</span>
+          <span className="text-xs text-white font-mono">LAST 5 GAMES</span>
         </div>
       </div>
 
       {/* Table */}
       {games.length === 0 ? (
         <div className="px-3 py-4 text-center">
-          <p className="text-sm text-zinc-300 font-mono">No completed games found.</p>
-          <p className="text-sm text-zinc-300 font-mono mt-0.5">Run a schedule backfill to populate data.</p>
+          <p className="text-sm text-white font-mono">No completed games found.</p>
+          <p className="text-sm text-white font-mono mt-0.5">Run a schedule backfill to populate data.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px]">
             <thead>
-              <tr className="border-b border-white/[0.04]">
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-left">DATE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">H/A</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-left">OPP</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">SCORE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">W/L</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-left">RUN LINE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">COV</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">TOTAL</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">O/U</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-zinc-300 font-mono tracking-widest text-center">ML</th>
+              <tr className="border-b border-white">
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">DATE</th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">H/A</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">OPP</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">SCORE</th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">W/L</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">RUN LINE</th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">COV</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">TOTAL</th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">O/U</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">ML</th>
               </tr>
             </thead>
             <tbody>
@@ -412,36 +412,36 @@ export default function MlbLast5Panel({
     >
       {/* ── Collapsible Header ────────────────────────────────────────────── */}
       <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-zinc-200 font-mono tracking-widest uppercase">
+          <span className="text-sm font-bold text-white font-mono tracking-widest uppercase">
             Last 5 Games
           </span>
-          <span className="text-xs text-zinc-300 font-mono">
+          <span className="text-xs text-white font-mono">
             DK NJ · Run Line · Total · ML
           </span>
         </div>
         <div className="flex items-center gap-2">
           {isFetching && (
-            <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
+            <RefreshCw className="w-3 h-3 text-white animate-spin" />
           )}
           {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5 text-zinc-300" />
+            <ChevronUp className="w-3.5 h-3.5 text-white" />
           ) : (
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-300" />
+            <ChevronDown className="w-3.5 h-3.5 text-white" />
           )}
         </div>
       </button>
 
       {/* ── Collapsible Body ──────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-white">
           {/* Loading */}
           {isLoading && (
             <div className="flex items-center justify-center py-6">
-              <RefreshCw className="w-4 h-4 text-blue-400 animate-spin mr-2" />
-              <span className="text-sm text-zinc-300 font-mono">
+              <RefreshCw className="w-4 h-4 text-white animate-spin mr-2" />
+              <span className="text-sm text-white font-mono">
                 Loading last 5 games...
               </span>
             </div>
@@ -450,11 +450,11 @@ export default function MlbLast5Panel({
           {/* Error */}
           {error && !isLoading && (
             <div className="px-3 py-3">
-              <p className="text-sm text-red-400 font-mono">
+              <p className="text-sm text-white font-mono">
                 Error: {error.message}
               </p>
               <button type="button" onClick={() => refetch()}
-                className="text-xs text-blue-400 font-mono mt-1 hover:underline"
+                className="text-xs text-white font-mono mt-1 hover:underline"
               >
                 Retry
               </button>
@@ -463,7 +463,7 @@ export default function MlbLast5Panel({
 
           {/* Data */}
           {!isLoading && !error && (
-            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/[0.06]">
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white">
               {/* Away team */}
               <TeamSection
                 teamSlug={awaySlug}

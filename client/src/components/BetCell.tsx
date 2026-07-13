@@ -156,7 +156,7 @@ export const BetCell = React.memo(function BetCell({
             <span
               style={{
                 fontSize: lineSize,
-                color: 'rgba(255,255,255,0.45)',
+                color: '#FFFFFF',
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
@@ -173,7 +173,7 @@ export const BetCell = React.memo(function BetCell({
             style={{
               fontSize: juiceSizeStr,
               fontWeight: 700,
-              color: 'rgba(255,255,255,0.90)',
+              color: '#FFFFFF',
               lineHeight: 1,
               whiteSpace: 'nowrap',
               textAlign: 'center',
@@ -198,7 +198,7 @@ export const BetCell = React.memo(function BetCell({
             <span
               style={{
                 fontSize: lineSize,
-                color: 'rgba(255,255,255,0.45)',
+                color: '#FFFFFF',
                 lineHeight: 1,
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
@@ -219,7 +219,7 @@ export const BetCell = React.memo(function BetCell({
               whiteSpace: 'nowrap',
               textAlign: 'center',
               fontVariantNumeric: 'tabular-nums',
-              color: isEdge ? getEdgeColor(side.edgePP) : 'rgba(255,255,255,0.90)',
+              color: isEdge ? getEdgeColor(side.edgePP) : '#FFFFFF',
             }}
           >
             {side.modelJuice || '—'}
@@ -235,7 +235,7 @@ export const BetCell = React.memo(function BetCell({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        background: '#2a2a2e',
+        background: '#000000',
         borderRadius,
         overflow: 'hidden',
         flex: '1 1 0',
@@ -247,7 +247,7 @@ export const BetCell = React.memo(function BetCell({
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+          borderBottom: '0.5px solid #FFFFFF',
           padding: '3px 4px 2px',
         }}
       >
@@ -255,7 +255,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.75)',
+            color: '#FFFFFF',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -267,7 +267,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: headerSize,
             fontWeight: 700,
-            color: 'rgba(255,255,255,0.70)',
+            color: '#FFFFFF',
             textAlign: 'center',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
@@ -285,7 +285,7 @@ export const BetCell = React.memo(function BetCell({
         {/* Divider + Home row — hidden for singleRow (DRAW) */}
         {!singleRow && (
           <>
-            <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+            <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />
             <TeamRow side={home} isEdge={homeEdge} />
           </>
         )}
@@ -295,13 +295,13 @@ export const BetCell = React.memo(function BetCell({
       <div
         style={{
           marginTop: 'auto',
-          borderTop: '0.5px solid rgba(255,255,255,0.07)',
+          borderTop: '0.5px solid #FFFFFF',
           padding: '3px 4px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 1,
-          background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent',
+          background: hasEdge ? 'transparent' : 'transparent',
         }}
       >
         {hasEdge && edgeLabel && (
@@ -327,7 +327,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: footerSize + 0.5,
             fontWeight: hasEdge ? 800 : 400,
-            color: hasEdge ? edgeColor : 'rgba(200,200,200,0.40)',
+            color: hasEdge ? edgeColor : '#FFFFFF',
             letterSpacing: '0.03em',
             lineHeight: 1,
             whiteSpace: 'nowrap',

@@ -242,7 +242,7 @@ export default function Home() {
      */
     <div
       className="flex flex-col lg:flex-row min-h-screen w-full"
-      style={{ background: "#0B0B0F", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
+      style={{ background: "#000000", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
     >
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -254,8 +254,8 @@ export default function Home() {
         className="hidden lg:flex flex-col justify-between w-1/2 min-h-screen sticky top-0 self-start"
         style={{
           background:
-            "#101014"  /* brand law: flat surface, no gradients */,
-          borderRight: "1px solid rgba(255,255,255,0.06)",
+            "#000000"  /* brand law: flat surface, no gradients */,
+          borderRight: "1px solid #FFFFFF",
           padding: "clamp(2.5rem, 5vw, 5rem) clamp(2rem, 4vw, 4rem)",
         }}
       >
@@ -294,7 +294,7 @@ export default function Home() {
               disagree.
             </h1>
             <p
-              className="text-[#6b7280] mt-4 leading-relaxed"
+              className="text-[#FFFFFF] mt-4 leading-relaxed"
               style={{ fontSize: "clamp(0.875rem, 1.1vw, 1.05rem)" }}
             >
               Dime AI compares sportsbook prices against projected probability so every
@@ -313,7 +313,7 @@ export default function Home() {
                     style={{
                       width: "clamp(2rem, 2.5vw, 2.5rem)",
                       height: "clamp(2rem, 2.5vw, 2.5rem)",
-                      background: "rgba(69,224,168,0.10)",
+                      background: "transparent",
                     }}
                   >
                     <Icon
@@ -332,7 +332,7 @@ export default function Home() {
                       {f.title}
                     </p>
                     <p
-                      className="text-[#6b7280] mt-0.5 leading-snug"
+                      className="text-[#FFFFFF] mt-0.5 leading-snug"
                       style={{ fontSize: "clamp(0.75rem, 0.9vw, 0.875rem)" }}
                     >
                       {f.desc}
@@ -346,7 +346,7 @@ export default function Home() {
 
         {/* Bottom: disclaimer — legible grey (contrast law), full RG language */}
         <p
-          className="text-[#9A9AA8] mt-8"
+          className="text-[#FFFFFF] mt-8"
           style={{ fontSize: "clamp(0.65rem, 0.8vw, 0.75rem)" }}
         >
           No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
@@ -375,7 +375,7 @@ export default function Home() {
           </a>
           <div className="text-center">
             <h1 className="text-lg font-bold text-white tracking-tight">dıme</h1>
-            <p className="text-[12px] text-[#9A9AA8] mt-0.5">Sign in to your account</p>
+            <p className="text-[12px] text-[#FFFFFF] mt-0.5">Sign in to your account</p>
           </div>
         </div>
 
@@ -390,7 +390,7 @@ export default function Home() {
             >
               Sign in
             </h2>
-            <p className="text-[#6b7280] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
+            <p className="text-[#FFFFFF] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
@@ -400,8 +400,8 @@ export default function Home() {
                 back into the app for users who didn't mean to switch. ── */}
           {!authLoading && appUser && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] flex items-center justify-between gap-3"
-              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] flex items-center justify-between gap-3"
+              style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               data-testid="login-signed-in-banner"
             >
               <span>
@@ -421,11 +421,11 @@ export default function Home() {
                 mono stamps on neutral surface; red is not in the Dime palette) ── */}
           {discordErrorMsg && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] text-center space-y-1.5"
-              style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] text-center space-y-1.5"
+              style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               role="alert"
             >
-              <p className="uppercase tracking-widest text-[10px] text-[#6E6E78]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
                 Sign-in error
               </p>
               <p className="text-white/90">{discordErrorMsg}</p>
@@ -450,7 +450,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="identifier"
-                  className="text-[12px] font-semibold text-[#9ca3af]"
+                  className="text-[12px] font-semibold text-[#FFFFFF]"
                 >
                   Username or Email
                 </label>
@@ -461,7 +461,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -470,7 +470,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="password"
-                  className="text-[12px] font-semibold text-[#9ca3af]"
+                  className="text-[12px] font-semibold text-[#FFFFFF]"
                 >
                   Password
                 </label>
@@ -482,13 +482,13 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9AA8] hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#FFFFFF] hover:text-white transition-colors"
                     aria-label={showPw ? "Hide password" : "Show password"}
                   >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -501,7 +501,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setFormError(null); }}
-                  className="text-[11px] text-[#9A9AA8] hover:text-white underline transition-colors"
+                  className="text-[11px] text-[#FFFFFF] hover:text-white underline transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -509,7 +509,7 @@ export default function Home() {
 
               {/* Form error — grey stamp, never red (signup.md) */}
               {formError && (
-                <p className="text-[12px] text-[#9A9AA8] text-center -mt-1" role="alert">{formError}</p>
+                <p className="text-[12px] text-[#FFFFFF] text-center -mt-1" role="alert">{formError}</p>
               )}
 
               {/* Submit */}
@@ -533,7 +533,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotIdent(""); }}
-                  className="text-[#6b7280] hover:text-white transition-colors"
+                  className="text-[#FFFFFF] hover:text-white transition-colors"
                   aria-label="Back to login"
                 >
                   ← Back
@@ -542,12 +542,12 @@ export default function Home() {
               </div>
 
               {forgotSent ? (
-                <div className="px-4 py-3 rounded-xl bg-[#45E0A8]/10 border border-[#45E0A8]/30 text-[12px] text-[#45E0A8] text-center">
+                <div className="px-4 py-3 rounded-xl bg-transparent border border-[#45E0A8] text-[12px] text-[#45E0A8] text-center">
                   If an account exists for that username or email, a reset link has been sent.
                 </div>
               ) : (
                 <>
-                  <p className="text-[12px] text-[#9ca3af]">
+                  <p className="text-[12px] text-[#FFFFFF]">
                     Enter your username or email and we'll send you a password reset link.
                   </p>
                   <input
@@ -556,7 +556,7 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
@@ -580,7 +580,7 @@ export default function Home() {
           {!forgotOpen && (
             <div className="flex items-center gap-3 my-5">
               <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[11px] text-[#4b5563] font-medium">or</span>
+              <span className="text-[11px] text-[#FFFFFF] font-medium">or</span>
               <div className="flex-1 h-px bg-white/10" />
             </div>
           )}
@@ -593,7 +593,7 @@ export default function Home() {
               aria-disabled={isDiscordRedirecting}
               className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-opacity hover:opacity-85"
               style={{
-                backgroundColor: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)",
+                backgroundColor: "#000000", border: "1px solid #FFFFFF",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
                 pointerEvents: isDiscordRedirecting ? "none" : "auto",
               }}
@@ -608,7 +608,7 @@ export default function Home() {
 
           {/* ── Sign Up link — grey: Sign In keeps the surface's single mint action ── */}
           {!forgotOpen && (
-            <p className="text-center text-[12px] text-[#9A9AA8] mt-5">
+            <p className="text-center text-[12px] text-[#FFFFFF] mt-5">
               Don't have an account?{" "}
               <a
                 href="/#pricing"
@@ -620,7 +620,7 @@ export default function Home() {
           )}
 
           {/* ── Disclaimer — legible grey, full RG language ── */}
-          <p className="text-center text-[11px] text-[#9A9AA8] mt-6">
+          <p className="text-center text-[11px] text-[#FFFFFF] mt-6">
             By signing in you agree to gamble responsibly. For informational purposes only. 21+.
             Gambling problem? Call 1-800-GAMBLER.
           </p>

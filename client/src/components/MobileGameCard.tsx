@@ -50,7 +50,7 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
           flexShrink: 0,
           // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
           // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
-          filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
+          filter: 'brightness(1.7) contrast(1.12) saturate(1.35)',
         }}
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
@@ -60,9 +60,9 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
   return (
     <div style={{
       width: actualSize, height: actualSize, borderRadius: '50%',
-      background: 'rgba(255,255,255,0.1)',
+      background: '#000000',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: actualSize * 0.35, fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+      fontSize: actualSize * 0.35, fontWeight: 700, color: '#FFFFFF',
       flexShrink: 0,
     }}>
       {initials}
@@ -159,7 +159,7 @@ export const MobileGameCard = React.memo(function MobileGameCard(props: MobileGa
 if (process.env.NODE_ENV === 'development') {
   console.groupCollapsed(
     `%c[GameCard:mobile] ${awayAbbr} @ ${homeAbbr} | tab=${mobileTab} | id=${game.id}`,
-    'color:#39FF14;font-weight:700;font-size:11px'
+    'color:#45E0A8;font-weight:700;font-size:11px'
   );
   console.log('[data] spread:', { awayBookSpread, homeBookSpread, awayModelSpread, homeModelSpread, spreadDiff });
   console.log('[data] total:', { bookTotal, modelTotal, totalDiff });
@@ -269,7 +269,7 @@ if (process.env.NODE_ENV === 'development') {
     `mdlAwaySpreadOdds=${game.modelAwaySpreadOdds ?? 'null'} mdlHomeSpreadOdds=${game.modelHomeSpreadOdds ?? 'null'} ` +
     `mdlOverOdds=${game.modelOverOdds ?? 'null'} mdlUnderOdds=${game.modelUnderOdds ?? 'null'} ` +
     `isMlbGame=${isMlbGame} isNhlGame=${isNhlGame}`,
-    'color:#FF9900;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 // ── MLB RL LABEL RULE: model RL label ALWAYS mirrors the book's run line. ──────────────────────
@@ -383,7 +383,7 @@ const mdlHomeMl = hasModelData ? formatMl(game.modelHomeML) : '—';
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:ML] game=${game.id} bkAway=${bkAwayMl} bkHome=${bkHomeMl} mdlAway=${mdlAwayMl} mdlHome=${mdlHomeMl}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -448,7 +448,7 @@ if (process.env.NODE_ENV === 'development') {
     ` | home: bkProb=${isNaN(bkHomeMlProb)?'NaN':bkHomeMlProb.toFixed(4)}` +
     ` mdlProb=${isNaN(mdlHomeMlProb)?'NaN':mdlHomeMlProb.toFixed(4)}` +
     ` edgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)}pp → edge=${homeMlEdgeDetected}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -478,7 +478,7 @@ const isModelTab = isDualTab;
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:OddsStyle] game=${game.id} tab=${mobileTab} spreadEdge=${spreadEdgeIsAway} totalEdge=${totalEdgeIsOver}`,
-    'color:#aaa;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 
@@ -501,7 +501,7 @@ if (process.env.NODE_ENV === 'development') {
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:OddsStyle] game=${game.id} tab=${mobileTab} spreadEdge=${spreadEdgeIsAway} totalEdge=${totalEdgeIsOver}`,
-    'color:#aaa;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 
@@ -514,12 +514,12 @@ const bookStyle = (_isEdge?: boolean): React.CSSProperties => ({
   // SPLITS/EDGE: dimmed
   fontWeight: isDualTab ? 400 : isBookTab ? 700 : 400,
   color: isDualTab
-    ? 'rgba(200,200,200,0.65)'          // DUAL: light gray unbolded
+    ? '#FFFFFF'          // DUAL: light gray unbolded
     : isBookTab
-      ? 'rgba(255,255,255,1)'           // BOOK-only: white bold (primary)
+      ? '#FFFFFF'           // BOOK-only: white bold (primary)
       : isModelTab
-        ? 'rgba(255,255,255,0.70)'      // MODEL-only: white unbolded (secondary)
-        : 'rgba(255,255,255,0.30)',      // SPLITS/EDGE: dimmed
+        ? '#FFFFFF'      // MODEL-only: white unbolded (secondary)
+        : '#FFFFFF',      // SPLITS/EDGE: dimmed
   letterSpacing: '0.02em',
   fontVariantNumeric: 'tabular-nums',
 });
@@ -541,7 +541,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
   if (process.env.NODE_ENV === 'development' && isEdge) {
     console.log(
       `%c[GameCard:modelStyle] edge=true tab=${mobileTab} → ${isModelTab ? '#39FF14 bold' : 'white 70% unbolded'}`,
-      'color:#aaa;font-size:9px'
+      'color:#FFFFFF;font-size:9px'
     );
   }
   if (isDualTab) {
@@ -549,7 +549,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.25px',  // bolded model values: 10.25px
       fontWeight: 700,
-      color: isEdge ? '#39FF14' : 'rgba(255,255,255,1)',
+      color: isEdge ? '#45E0A8' : '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -559,7 +559,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.5px',  // unbolded model values: 10.5px
       fontWeight: 400,
-      color: 'rgba(255,255,255,0.70)',
+      color: '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -569,7 +569,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.25px',  // bolded model values: 10.25px
       fontWeight: 700,
-      color: isEdge ? '#39FF14' : 'rgba(255,255,255,1)',
+      color: isEdge ? '#45E0A8' : '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -578,7 +578,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
   return {
     fontSize: '10.5px',  // unbolded dimmed values: 10.5px
     fontWeight: 400,
-    color: 'rgba(255,255,255,0.70)',
+    color: '#FFFFFF',
     letterSpacing: '0.02em',
     fontVariantNumeric: 'tabular-nums',
   };
@@ -750,7 +750,7 @@ if (process.env.NODE_ENV === 'development') {
     ` (awayRoi=${isNaN(awayMlRoi)?'NaN':awayMlRoi.toFixed(2)} homeRoi=${isNaN(homeMlRoi)?'NaN':homeMlRoi.toFixed(2)})` +
     ` (awayEdgePP=${isNaN(awayMlEdgePP)?'NaN':(awayMlEdgePP*100).toFixed(2)} homeEdgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)})` +
     ` | best=${isNaN(bestEdgePP)?'NaN':bestEdgePP.toFixed(2)}pp → ${getVerdict(bestEdgePP)}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -789,14 +789,14 @@ const MktCard = ({
   // modelJuiceColor: neon green only when this side has an edge, otherwise white
   const SubCol = ({ line, juice, isBook, hasEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
     const juiceColor = isBook
-      ? 'rgba(255,255,255,0.90)'                      // BOOK: always white
-      : hasEdge ? '#39FF14' : 'rgba(255,255,255,0.90)'; // MODEL: neon if edge, white if not
+      ? '#FFFFFF'                      // BOOK: always white
+      : hasEdge ? '#45E0A8' : '#FFFFFF'; // MODEL: neon if edge, white if not
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', minWidth: 0, flex: 1 }}>
         {/* Spacer/line row: always rendered to keep height consistent */}
         {isML
           ? <span style={{ fontSize: '11px', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>  // empty spacer for ML
-          : <span style={{ fontSize: 'clamp(9px, 2.8vw, 11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+          : <span style={{ fontSize: 'clamp(9px, 2.8vw, 11px)', fontWeight: 400, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         }
         {/* juice: clamp(11px, 3.5vw, 14px) — scales down on narrow screens (e.g. 360px → 12.6px) so -179 never overflows MktCard */}
         <span style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
@@ -814,18 +814,18 @@ const MktCard = ({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      background: '#2a2a2e', borderRadius: '10px',
+      background: '#000000', borderRadius: '10px',
       overflow: 'hidden', flex: '1 1 0', minWidth: 0,
     }}>
       {/* BOOK / MODEL header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
-        <span style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
-        <span style={{ fontSize: '6.5px', fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #FFFFFF', padding: '3px 4px 2px' }}>
+        <span style={{ fontSize: '6.5px', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+        <span style={{ fontSize: '6.5px', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
       </div>
       {/* Away row */}
       <TeamRow bookLine={awayBookLine} bookJuice={awayBookJuice} modelLine={awayModelLine} modelJuice={awayModelJuice} modelHasEdge={awayModelHasEdge} />
       {/* Divider */}
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+      <div style={{ height: 1, background: '#FFFFFF', margin: '0 4px' }} />
       {/* Home row */}
       <TeamRow bookLine={homeBookLine} bookJuice={homeBookJuice} modelLine={homeModelLine} modelJuice={homeModelJuice} modelHasEdge={homeModelHasEdge} />
       {/* ROI footer — edge side label + ROI% in neon green, or NO EDGE in gray */}
@@ -834,17 +834,17 @@ const MktCard = ({
         const hasEdge = !isNaN(pp) && pp >= 1.5;
         // formatRoi handles sign correctly: +15.71% ROI, -2.10% ROI
         const roiStr = hasEdge ? formatRoi(pp) : 'NO EDGE';
-        const roiColor = hasEdge ? getEdgeColor(pp) : 'rgba(200,200,200,0.45)';
+        const roiColor = hasEdge ? getEdgeColor(pp) : '#FFFFFF';
         const label = hasEdge && roiLabel ? roiLabel : '';
         return (
           <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.07)',
+            borderTop: '1px solid #FFFFFF',
             padding: '3px 4px 3px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '1px',
-            background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent',
+            background: hasEdge ? 'transparent' : 'transparent',
           }}>
             {label ? (
               <span style={{ fontSize: '7px', fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{label}</span>
@@ -1049,7 +1049,7 @@ return (
         paddingTop: '3px',
         paddingBottom: '3px',
         gap: '1px',
-        borderBottom: '1px solid rgba(255,255,255,0.10)',
+        borderBottom: '1px solid #FFFFFF',
         minWidth: 0,
         width: '100%',
       }}>
@@ -1058,21 +1058,21 @@ return (
           {isAppAuthed && (
             <button type="button" onClick={onStarClick}
               aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 1px', lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center', color: isFavorited ? '#FFD700' : 'rgba(255,255,255,0.65)', filter: isFavorited ? 'drop-shadow(0 0 4px #FFD700)' : 'none', transition: 'color 0.15s' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px 1px', lineHeight: 1, flexShrink: 0, display: 'flex', alignItems: 'center', color: isFavorited ? '#45E0A8' : '#FFFFFF', filter: isFavorited ? 'none' : 'none', transition: 'color 0.15s' }}
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorited ? '#FFD700' : 'none'} stroke={isFavorited ? '#FFD700' : 'rgba(255,255,255,0.85)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill={isFavorited ? '#45E0A8' : 'none'} stroke={isFavorited ? '#45E0A8' : '#FFFFFF'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             </button>
           )}
           {isLive ? (
             // "•LIVE" badge — just the dot + LIVE text, no clock here
-            <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#39FF14', fontSize: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#39FF14', flexShrink: 0 }} />
+            <span className="flex items-center gap-0.5 font-black tracking-widest uppercase" style={{ color: '#45E0A8', fontSize: '10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ background: '#45E0A8', flexShrink: 0 }} />
               <span>LIVE</span>
             </span>
           ) : isFinal ? (
-            <span className="font-bold tracking-wide" style={{ fontSize: '8px', color: '#39FF14', background: 'rgba(255,255,255,0.12)', borderRadius: '999px', padding: '1px 6px', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>FINAL</span>
+            <span className="font-bold tracking-wide" style={{ fontSize: '8px', color: '#FFFFFF', background: '#000000', borderRadius: '999px', padding: '1px 6px', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>FINAL</span>
           ) : (
             <span style={{ fontSize: '10px', fontWeight: 400, color: 'hsl(var(--foreground))', whiteSpace: 'nowrap' }}>{time}</span>
           )}
@@ -1082,7 +1082,7 @@ return (
           <span style={{
             fontSize: '9px',
             fontWeight: 600,
-            color: 'rgba(255,255,255,0.85)',
+            color: '#FFFFFF',
             letterSpacing: '0.04em',
             fontVariantNumeric: 'tabular-nums',
             whiteSpace: 'nowrap',
@@ -1112,7 +1112,7 @@ return (
         </div>
         {/* Abbreviation — flex:1 fills remaining space; NO overflow:hidden (panel container clips instead)
              minWidth:0 allows flex shrink but abbr has 34px available on 360px phone — no shrink needed */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {awayAbbr}
         </span>
         {/* Score slot — ALWAYS rendered with fixed minWidth:22px to permanently reserve space.
@@ -1128,8 +1128,8 @@ return (
             fontSize: 'clamp(11px, 3.2vw, 13px)',
             lineHeight: 1,
             fontWeight: awayScoreFlash ? 900 : awayWins ? 700 : 600,
-            color: awayScoreFlash ? '#39FF14' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
-            textShadow: awayScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
+            color: awayScoreFlash ? '#45E0A8' : awayWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+            textShadow: awayScoreFlash ? 'none' : 'none',
             visibility: (isLive || isFinal) && hasScores ? 'visible' : 'hidden',
           }}
         >
@@ -1146,7 +1146,7 @@ return (
         </div>
         {/* Abbreviation — flex:1 fills remaining space; NO overflow:hidden (panel container clips instead)
              minWidth:0 allows flex shrink but abbr has 34px available on 360px phone — no shrink needed */}
-        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.95)', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
+        <span style={{ flex: '1 1 0', fontSize: '11px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', letterSpacing: '0.05em', minWidth: 0 }}>
           {homeAbbr}
         </span>
         {/* Score slot — ALWAYS rendered with fixed minWidth:22px to permanently reserve space.
@@ -1162,8 +1162,8 @@ return (
             fontSize: 'clamp(11px, 3.2vw, 13px)',
             lineHeight: 1,
             fontWeight: homeScoreFlash ? 900 : homeWins ? 700 : 600,
-            color: homeScoreFlash ? '#39FF14' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
-            textShadow: homeScoreFlash ? '0 0 10px rgba(57,255,20,0.7)' : 'none',
+            color: homeScoreFlash ? '#45E0A8' : homeWins ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
+            textShadow: homeScoreFlash ? 'none' : 'none',
             visibility: (isLive || isFinal) && hasScores ? 'visible' : 'hidden',
           }}
         >
@@ -1182,7 +1182,7 @@ return (
 
       {/* ── SPLITS tab (additional content below OddsTable) ──────── */}
       {mobileTab === 'splits' && (
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', borderTop: '1px solid #FFFFFF' }}>
           <BettingSplitsPanel
             gameId={game.id}
             game={game}
