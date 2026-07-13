@@ -256,15 +256,15 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
   if (!props || props.length === 0) {
     return (
       <div style={{
-        background: "#090E14",
-        border: "1px solid #182433",
+        background: "#000000",
+        border: "1px solid #FFFFFF",
         borderRadius: 10,
         marginBottom: 10,
         padding: "16px",
         textAlign: "center",
         fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
       }}>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+        <span style={{ fontSize: 11, color: "#FFFFFF" }}>
           HR props not yet available for {awayTeam} @ {homeTeam}
         </span>
       </div>

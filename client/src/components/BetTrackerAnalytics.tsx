@@ -508,7 +508,7 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
           position: "absolute",
           zIndex: 10,
           pointerEvents: "none",
-          background: "var(--bt-card, #141614)",
+          background: "var(--bt-card, #000000)",
           border: `1px solid ${T.border2}`,
           borderRadius: "4px",
           padding: "8px 12px",
@@ -602,8 +602,8 @@ function kellyGrade(wins: number, losses: number, roi: number): { grade: string;
   const wp = total > 0 ? (wins / total) * 100 : 0;
   if (wp >= 65 && roi >= 30) return { grade: "A+", color: T.green };
   if (wp >= 60 || roi >= 20)  return { grade: "A",  color: T.green };
-  if (wp >= 52 || roi >= 8)   return { grade: "B",  color: "var(--bt-grade-b, #a3e635)" };
-  if (wp >= 45)               return { grade: "C",  color: "var(--bt-grade-c, #f59e0b)" };
+  if (wp >= 52 || roi >= 8)   return { grade: "B",  color: "var(--bt-grade-b, #FFFFFF)" };
+  if (wp >= 45)               return { grade: "C",  color: "var(--bt-grade-c, #FFFFFF)" };
   return                             { grade: "D",  color: T.red };
 }
 
@@ -711,7 +711,7 @@ function BreakdownPanelInner({
                     <span style={{
                       fontSize: "9px",
                       fontFamily: T.mono,
-                      color: rank === 1 ? T.green : rank === 2 ? "var(--bt-grade-b, #a3e635)" : T.textMuted,
+                      color: rank === 1 ? T.green : rank === 2 ? "var(--bt-grade-b, #FFFFFF)" : T.textMuted,
                       fontWeight: 700,
                       minWidth: "18px",
                     }}>
@@ -721,7 +721,7 @@ function BreakdownPanelInner({
                   <span style={{
                     fontSize: "12px",
                     fontWeight: 700,
-                    color: "var(--bt-strong, #f0f0f0)",
+                    color: "var(--bt-strong, #FFFFFF)",
                     fontFamily: T.sans,
                     letterSpacing: "0.5px",
                     whiteSpace: "nowrap",
@@ -752,7 +752,7 @@ function BreakdownPanelInner({
                     {e.wins}W–{e.losses}L
                     {e.pushes > 0 ? `–${e.pushes}P` : ""}
                     {" "}
-                    <span style={{ color: winPct >= 55 ? T.green : winPct >= 50 ? "var(--bt-grade-b, #a3e635)" : T.red }}>
+                    <span style={{ color: winPct >= 55 ? T.green : winPct >= 50 ? "var(--bt-grade-b, #FFFFFF)" : T.red }}>
                       ({winPct.toFixed(0)}%)
                     </span>
                   </span>
@@ -928,7 +928,7 @@ function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; sho
 
           return (
             <div key={e.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-strong, #f0f0f0)", fontFamily: T.sans, letterSpacing: "0.5px" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-strong, #FFFFFF)", fontFamily: T.sans, letterSpacing: "0.5px" }}>
                 {e.key}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1132,7 +1132,7 @@ function HandicapperSelectorInner({
           top: "calc(100% + 4px)",
           left: 0,
           zIndex: 20,
-          background: "var(--bt-card, #141614)",
+          background: "var(--bt-card, #000000)",
           border: `1px solid ${T.border2}`,
           borderRadius: "4px",
           boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
