@@ -987,7 +987,7 @@ const DMF_CSS = `
 
 .dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px;transition:opacity var(--dmf-t) var(--dmf-ease)}
 .dmf-list.dmf-stale{opacity:.45;pointer-events:none}
-.dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}/* card-level container: key type below scales by the CARD's width (cqi), not the viewport. Named @container dmf rules still target .dmf-root. */
 .dmf-game.dmf-pass{opacity:.82}
 .dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
 
@@ -1002,7 +1002,7 @@ const DMF_CSS = `
 .dmf-teamrow{display:flex;align-items:center;gap:9px;min-width:0}
 .dmf-crest{border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;box-shadow:inset 0 0 0 1px var(--dmf-border-hi);background:var(--dmf-card-hi)}
 .dmf-crest-mono{width:100%;height:100%;display:grid;place-items:center;font-weight:700;color:var(--dmf-t1);border-radius:50%}
-.dmf-tname{font-size:15.5px;font-weight:700;letter-spacing:-.006em;color:var(--dmf-t1)}
+.dmf-tname{font-size:clamp(13.5px,7px + 1.3cqi,15.5px);font-weight:700;letter-spacing:-.006em;color:var(--dmf-t1)}
 .dmf-tscore{margin-left:auto;font-size:16px;font-weight:700;color:var(--dmf-t2);font-variant-numeric:tabular-nums}
 .dmf-meta{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4);margin-top:2px;line-height:1.6}
 /* Mobile-only matchup elements — hidden on desktop (>=768px keeps dmf-meta). */
@@ -1036,8 +1036,8 @@ const DMF_CSS = `
 .dmf-vitem{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 4px;min-width:0}
 .dmf-vitem.dmf-vpick{grid-column:1 / -1}
 .dmf-vl{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4)}
-.dmf-vv{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--dmf-t1);font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:7px}
-.dmf-vpick .dmf-vv{font-size:19px}
+.dmf-vv{font-size:clamp(14.5px,7px + 1.45cqi,17px);font-weight:700;letter-spacing:-.01em;color:var(--dmf-t1);font-variant-numeric:tabular-nums;white-space:nowrap;display:flex;align-items:center;gap:7px}
+.dmf-vpick .dmf-vv{font-size:clamp(16px,8px + 1.6cqi,19px)}
 .dmf-vv.dmf-vsig{color:var(--dmf-mint)}
 .dmf-pass .dmf-vv{color:var(--dmf-t3)}
 .dmf-grade{display:inline-grid;place-items:center;min-width:32px;height:26px;padding:0 8px;border-radius:8px;font-size:15px;font-weight:700;background:var(--dmf-card-hi);box-shadow:inset 0 0 0 1px var(--dmf-border-hi);color:var(--dmf-t1)}

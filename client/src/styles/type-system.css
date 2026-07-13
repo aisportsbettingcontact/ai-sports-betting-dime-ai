@@ -1,0 +1,126 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dime AI — semantic fluid typography + spacing system
+   ─────────────────────────────────────────────────────────────────────────
+   Centralized, reusable primitives. Consume via CSS custom properties (var())
+   or the `.ds-*` semantic classes. This layer owns SIZE / RHYTHM / MEASURE /
+   WRAP; the Three-Color Law v2 (index.css) owns COLOR. The two are orthogonal.
+
+   Design intent (matches design-system/dime-ai/TYPOGRAPHY.md):
+   - Fluid clamp() scale with hard min/max: legible at 320px, never oversized at
+     1920px. Bounds hit their max near ~1440px, their min near ~360px.
+   - rem-based so it honors the user's browser font-size / 200% zoom.
+   - Container queries (cqi) for component-driven scaling where a card must read
+     the same in a narrow shell pane and the wide feed — with an @supports
+     fallback for engines without container units.
+   - Additive + opt-in: migrating components onto these tokens retires the
+     scattered px sizes and one-off Tailwind overrides. Nothing here overrides
+     existing tokens, so adoption is incremental and safe.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Fluid type scale — clamp(min, Arem + Bvw, max) ─────────────────────
+     Comments show the min→max px at 16px root. */
+  --fs-caption:  clamp(0.6875rem, 0.66rem + 0.14vw, 0.75rem);    /* 11 → 12 */
+  --fs-label:    clamp(0.75rem,   0.72rem + 0.16vw, 0.8125rem);  /* 12 → 13 */
+  --fs-body-sm:  clamp(0.8125rem, 0.79rem + 0.16vw, 0.875rem);   /* 13 → 14 */
+  --fs-body:     clamp(0.875rem,  0.83rem + 0.22vw, 1rem);       /* 14 → 16 */
+  --fs-body-lg:  clamp(1rem,      0.95rem + 0.25vw, 1.125rem);   /* 16 → 18 */
+  --fs-h4:       clamp(1.0625rem, 1.00rem + 0.31vw, 1.25rem);    /* 17 → 20 */
+  --fs-h3:       clamp(1.25rem,   1.11rem + 0.70vw, 1.5rem);     /* 20 → 24 */
+  --fs-h2:       clamp(1.5rem,    1.19rem + 1.55vw, 2.25rem);    /* 24 → 36 */
+  --fs-h1:       clamp(1.875rem,  1.34rem + 2.70vw, 3rem);       /* 30 → 48 */
+  --fs-display:  clamp(2.5rem,    1.45rem + 5.25vw, 4.75rem);    /* 40 → 76  (capped: no oversized hero) */
+
+  /* ── Line-heights (paired to the scale) ── */
+  --lh-display: 1.02;
+  --lh-heading: 1.12;
+  --lh-snug:    1.30;
+  --lh-body:    1.55;
+  --lh-relaxed: 1.65;
+
+  /* ── Letter-spacing ── */
+  --tracking-display: -0.035em;
+  --tracking-heading: -0.02em;
+  --tracking-normal:   0;
+  --tracking-label:    0.08em;   /* uppercase micro-labels */
+
+  /* ── Weights — Familjen Grotesk exposes a wght axis only (no opsz).
+     font-variation-settings drives weight; optical sizing is a no-op for this
+     face but set correctly for any future opsz-capable typeface. ── */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ── Readable measures (ch) — long-form caps, data surfaces stay full-width ── */
+  --measure-prose:  68ch;
+  --measure-narrow: 46ch;
+  --measure-wide:   82ch;
+
+  /* ── Spacing / vertical rhythm — 4pt base; fluid where it scales with width ── */
+  --space-3xs: 0.125rem;   /*  2 */
+  --space-2xs: 0.25rem;    /*  4 */
+  --space-xs:  0.5rem;     /*  8 */
+  --space-sm:  0.75rem;    /* 12 */
+  --space-md:  1rem;       /* 16 */
+  --space-lg:  1.5rem;     /* 24 */
+  --space-xl:  2rem;       /* 32 */
+  --space-2xl: clamp(2rem,   1.40rem + 2.6vw, 3.5rem);   /* 32 → 56 */
+  --space-3xl: clamp(2.5rem, 1.60rem + 4.0vw, 5rem);     /* 40 → 80 */
+  --space-section: clamp(3rem, 1.90rem + 5.4vw, 7rem);   /* 48 → 112 section rhythm */
+
+  /* ── Minimum interactive target — WCAG 2.2 SC 2.5.8 / 2.5.5 ── */
+  --target-min: 2.75rem;   /* 44px */
+
+  /* Optical sizing correct-by-default (harmless for wght-only faces). */
+  font-optical-sizing: auto;
+}
+
+/* ── Base text-flow safety (additive, guarded). Prevents heading orphans and
+   improves body ragging without touching size or color. ── */
+@supports (text-wrap: balance) {
+  h1, h2, h3, h4 { text-wrap: balance; }
+}
+@supports (text-wrap: pretty) {
+  p, li { text-wrap: pretty; }
+}
+
+/* ── Semantic type primitives — bundle size + leading + tracking + weight so
+   type stays one system instead of per-component font declarations. ── */
+.ds-display  { font-size: var(--fs-display);  line-height: var(--lh-display); letter-spacing: var(--tracking-display); font-weight: var(--weight-bold); }
+.ds-h1       { font-size: var(--fs-h1);       line-height: var(--lh-heading); letter-spacing: var(--tracking-heading); font-weight: var(--weight-bold); }
+.ds-h2       { font-size: var(--fs-h2);       line-height: var(--lh-heading); letter-spacing: var(--tracking-heading); font-weight: var(--weight-bold); }
+.ds-h3       { font-size: var(--fs-h3);       line-height: var(--lh-snug);    letter-spacing: var(--tracking-heading); font-weight: var(--weight-semibold); }
+.ds-h4       { font-size: var(--fs-h4);       line-height: var(--lh-snug);    letter-spacing: var(--tracking-normal);  font-weight: var(--weight-semibold); }
+.ds-body-lg  { font-size: var(--fs-body-lg);  line-height: var(--lh-relaxed); }
+.ds-body     { font-size: var(--fs-body);     line-height: var(--lh-body); }
+.ds-body-sm  { font-size: var(--fs-body-sm);  line-height: var(--lh-body); }
+.ds-label    { font-size: var(--fs-label);    line-height: var(--lh-snug);    letter-spacing: var(--tracking-label); text-transform: uppercase; font-weight: var(--weight-semibold); }
+.ds-caption  { font-size: var(--fs-caption);  line-height: var(--lh-snug); }
+.ds-data     { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; letter-spacing: 0; }
+
+/* ── Measure helpers (logical properties → RTL / vertical-safe) ── */
+.ds-measure        { max-inline-size: var(--measure-prose); }
+.ds-measure-narrow { max-inline-size: var(--measure-narrow); }
+.ds-measure-wide   { max-inline-size: var(--measure-wide); }
+
+/* ── Overflow / truncation safety ── */
+.ds-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-inline-size: 0; }
+.ds-clamp-2  { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ds-clamp-3  { display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ds-break    { overflow-wrap: anywhere; word-break: break-word; hyphens: auto; }
+
+/* ── Container-query scaffolding: a component scales by ITS width, not the
+   viewport. Mark a wrapper `.ds-cq`; descendants use the cqi-based primitives.
+   Locale-safe: long translated strings reflow within the component box. ── */
+.ds-cq { container-type: inline-size; }
+
+@supports (font-size: 1cqi) {
+  .ds-cq-value { font-size: clamp(0.9375rem, 0.55rem + 2.4cqi, 1.375rem); line-height: var(--lh-snug); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+  .ds-cq-label { font-size: clamp(0.625rem,  0.50rem + 0.9cqi, 0.75rem);  line-height: var(--lh-snug); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+}
+@supports not (font-size: 1cqi) {
+  /* Fallback: viewport-fluid tokens keep the same visual role. */
+  .ds-cq-value { font-size: var(--fs-body-lg); line-height: var(--lh-snug); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+  .ds-cq-label { font-size: var(--fs-caption); line-height: var(--lh-snug); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+}
