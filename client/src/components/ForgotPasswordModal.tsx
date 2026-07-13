@@ -161,7 +161,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={requestReset.isPending}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400"
+                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8]"
                 aria-required="true"
                 aria-label="Username"
                 onInvalid={suppressInvalid}
@@ -170,7 +170,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             </div>
 
             {requestReset.isError && (
-              <div className="flex items-center gap-2 text-red-400 text-sm">
+              <div className="flex items-center gap-2 text-white text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Something went wrong. Please try again.</span>
               </div>
@@ -182,7 +182,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 variant="outline"
                 onClick={handleClose}
                 disabled={requestReset.isPending}
-                className="flex-1 border-white/20 text-white/70 hover:text-white hover:bg-white/10"
+                className="flex-1 border-white text-white hover:text-white"
               >
                 Cancel
               </Button>
@@ -191,7 +191,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 type="button"
                 onClick={handleReset}
                 disabled={requestReset.isPending || !identifier.trim()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1 bg-[#45E0A8] text-white"
               >
                 {requestReset.isPending ? (
                   <span className="flex items-center gap-2">
