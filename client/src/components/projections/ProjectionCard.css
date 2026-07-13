@@ -30,8 +30,8 @@
 .matchup__name { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; }
 .matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
 .matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; padding-inline: var(--space-xs); }
-.matchup__status { font-size: var(--proj-meta); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
-.matchup__status--live { color: #45e0a8; }
+/* Event time/status is owned by .projection-card__status (header) and rendered
+   once — the center carries only stage/venue context (directive §3). */
 .matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
 .matchup__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px var(--space-md); font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
 
@@ -57,7 +57,11 @@
 .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 .projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
 .projection-card__markets-count { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
-.projection-card__markets-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); margin-top: var(--space-sm); }
+/* Intrinsic reflow (directive §2): columns are added/removed by available width,
+   never compressed. Each market keeps a readable floor (~22rem); below that the
+   grid drops 3→2→1 columns on its own. `min(100%, 22rem)` prevents overflow when
+   the card is narrower than the floor. */
+.projection-card__markets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: clamp(0.75rem, 0.5rem + 0.7vw, 1.25rem); margin-top: var(--space-sm); }
 
 /* Market table — flat, scannable; depth via the card, not per-table frames */
 .market-table { inline-size: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; background: var(--surface-raised, #141414); border: 1px solid var(--border, #262626); border-radius: 12px; overflow: hidden; }
@@ -72,15 +76,10 @@
 .market-table__edge { font-size: var(--proj-meta); font-weight: 700; }
 .market-table__result { text-align: center !important; color: var(--text-muted, #6e6e6e); border-block-start: 1px solid var(--border, #262626); }
 
-/* ── Container-query reflow: structure adapts, type never shrinks to fit ── */
-@container projcard (min-width: 34rem) {
-  .projection-card__markets-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@container projcard (min-width: 52rem) {
-  .projection-card__markets-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-/* Design note: an element cannot respond to its OWN container query, and
-   insight-first (matchup + dominant summary on top, market grid reflowing 3→2→1
+/* Design note: the market grid reflows via intrinsic `auto-fit` (above) rather
+   than fixed container-query breakpoints — the grid itself decides how many
+   readable columns fit, so type never shrinks to preserve a column count.
+   Insight-first (matchup + dominant summary on top, market grid reflowing 3→2→1
    below) is a stronger 3-second hierarchy than cramming matchup|markets|summary
    into one row — so the card stacks and only the market grid reflows by width. */
 
