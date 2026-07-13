@@ -266,7 +266,7 @@ function buildLandingHtml(): string {
 :root{--bg:#0B0B0F;--surface:#121218;--line:rgba(255,255,255,.08);--text:#F2F2F5;--text-secondary:#9A9AA3;--text-muted:#6B6B75;--mint:#45E0A8}
 body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
 a{color:inherit;text-decoration:none}
-.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.mono{font-family:"Familjen Grotesk", system-ui, -apple-system, sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--line);background:var(--bg)}
 .nav-logo{font-weight:700;font-size:18px;letter-spacing:-.02em}
 .nav-cta{background:var(--mint);color:#0B0B0F;font-weight:600;font-size:13px;padding:8px 20px;border-radius:8px}

@@ -905,7 +905,7 @@ const DMF_CSS = `
   --dmf-t1:#EDEDF2; --dmf-t2:#C9C9D4; --dmf-t3:#9A9AA8; --dmf-t4:#6A6A78;
   --dmf-mint:#45E0A8; --dmf-mint-dim:rgba(69,224,168,.10); --dmf-ring:rgba(69,224,168,.36);
   --dmf-ease:cubic-bezier(.16,1,.3,1); --dmf-t:160ms;
-  --dmf-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --dmf-mono:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
   --dmf-sans:"Familjen Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
   --dmf-shadow-input:none;
   background:var(--dmf-page); color:var(--dmf-t1); font-family:var(--dmf-sans);

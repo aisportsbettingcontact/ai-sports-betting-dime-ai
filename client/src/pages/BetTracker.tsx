@@ -1500,7 +1500,7 @@ function VerifiedBetsDrawer({ pts }: { pts: import("../components/BetTrackerAnal
       </button>
       {drawerOpen && (
         <div className="overflow-x-auto max-h-72 overflow-y-auto">
-          <table className="w-full text-xs" style={{ fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
+          <table className="w-full text-xs" style={{ fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>
             <thead>
               <tr className="border-b border-zinc-800 sticky top-0 bg-zinc-900">
                 <th className="px-3 py-2 text-left font-semibold tracking-widest uppercase" style={{ color: "var(--bt-text-faint, #555)" }}>DATE</th>

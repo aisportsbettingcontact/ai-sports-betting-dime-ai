@@ -425,7 +425,7 @@ export default function Home() {
               style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
               role="alert"
             >
-              <p className="uppercase tracking-widest text-[10px] text-[#6E6E78]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <p className="uppercase tracking-widest text-[10px] text-[#6E6E78]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
                 Sign-in error
               </p>
               <p className="text-white/90">{discordErrorMsg}</p>

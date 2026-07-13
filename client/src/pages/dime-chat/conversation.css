@@ -60,7 +60,7 @@
 .theme-light .dc-prose a { color: var(--mint-on-light); } /* mint text on light rule, L:90 (spec §2.3) */
 
 /* Numerals: odds/lines/edges/prices/records/percentages (spec §5) */
-.dc-num { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-variant-numeric: tabular-nums; } /* mono loaded at 400/500 by F:9; 500 is the max loaded mono weight */
+.dc-num { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-variant-numeric: tabular-nums; } /* mono loaded at 400/500 by F:9; 500 is the max loaded mono weight */
 
 /* ----------------------------------------------------------------------------
    4. TYPING INDICATOR ROW — the ONLY thinking affordance (spec §2.8)
@@ -79,7 +79,7 @@
 .theme-light .dc-edge { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 1px 3px rgba(11,11,15,0.06); } /* L:76 + raised in-flow shadow L:99 */
 
 .dc-edge-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.dc-microlabel { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
+.dc-microlabel { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
 .dc-edge-label { color: #45E0A8; } /* mint text rule F:13 */
 .theme-light .dc-edge-label { color: var(--mint-on-light); } /* L:90 (spec §2.4) */
 
@@ -89,7 +89,7 @@
 .dc-stat { display: flex; flex-direction: column; gap: 2px; } /* 2px = nav-group row gap F:56 */
 .theme-dark .dc-stat-label { color: #55555E; } /* recents-label color D:64 */
 .theme-light .dc-stat-label { color: #9A9AA8; } /* recents-label color L:64 */
-.dc-stat-value { font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
+.dc-stat-value { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text-primary); } /* spec §2.4 numbers row */
 .dc-stat-value--mint { color: #45E0A8; } /* positive-signal mint, F:13 */
 .theme-light .dc-stat-value--mint { color: var(--mint-on-light); } /* L:90 */
 
@@ -106,7 +106,7 @@
       Shell = PRO badge geometry (C4, F:80) + C3 mono micro-label.
    -------------------------------------------------------------------------- */
 
-.dc-datapill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; } /* badge geometry F:80 (side pad relaxed 6->8 for the dot — spec §2.5, composed); gap 6px = menu handle-row gap F:80 */
+.dc-datapill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 8px; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; } /* badge geometry F:80 (side pad relaxed 6->8 for the dot — spec §2.5, composed); gap 6px = menu handle-row gap F:80 */
 
 .dc-datapill-dot { width: 6px; height: 6px; border-radius: 999px; flex-shrink: 0; } /* dot size = typing-dot F:32; material C5 (active rail F:22) */
 
@@ -591,7 +591,7 @@ button.dc-sidebar-row {
   height: auto;
 }
 .dc-coming-soon-copy {
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.28em;

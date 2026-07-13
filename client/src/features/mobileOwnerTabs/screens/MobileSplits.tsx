@@ -30,7 +30,7 @@ const T = {
   mint: "#45E0A8",
   track: "rgba(237,237,242,0.10)",
   barInk: "#0B0B0F",
-  mono: "'IBM Plex Mono', monospace",
+  mono: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
 };
 
 // IBM Plex Mono micro-label (labels only, never values)
