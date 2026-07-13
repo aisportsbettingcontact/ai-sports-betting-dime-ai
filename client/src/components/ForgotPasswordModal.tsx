@@ -111,13 +111,13 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 If you don&apos;t have Discord linked, the site owner will relay the
                 link to you directly.
               </p>
-              <p className="text-white/40 text-xs mt-3">
+              <p className="text-white text-xs mt-3">
                 Links expire in 30 minutes.
               </p>
             </div>
             <Button
               onClick={handleClose}
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="mt-2 bg-[#45E0A8] text-white"
             >
               Back to Sign In
             </Button>
@@ -144,7 +144,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                */}
               <Label
                 htmlFor="fp-identifier"
-                className="text-xs font-semibold tracking-widest text-white/70 uppercase"
+                className="text-xs font-semibold tracking-widest text-white uppercase"
               >
                 Username
               </Label>
