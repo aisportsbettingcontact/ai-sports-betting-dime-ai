@@ -9,7 +9,10 @@ drift), and every numeric claim in a grounded answer is computed from the row.
 
 Sources (pick one):
   --games games.json     JSON array of `games` rows (column names as in the DB)
-  --from-db              live MySQL via DATABASE_URL (requires `pip install pymysql`)
+  --from-db              live MySQL/TiDB via DATABASE_URL (pip install pymysql certifi).
+                         If DATABASE_URL is unset, the script prompts for it with
+                         hidden input — prefer that over exporting it in the shell.
+                         TLS is enabled automatically for non-local hosts.
 
 Usage (from ml/dime-1.0/data/):
   python build_dataset.py --games games.json --target 4000 --seed 42
@@ -612,21 +615,54 @@ GAME_COLUMNS = (
 
 def load_games_from_db(start: str, end: str) -> list[dict]:
     import os
-    from urllib.parse import urlparse
+    from urllib.parse import unquote, urlparse
 
     try:
         import pymysql
     except ImportError:
-        sys.exit("--from-db requires pymysql: pip install pymysql")
+        sys.exit("--from-db requires pymysql: pip install pymysql certifi")
 
-    url = os.environ.get("DATABASE_URL")
+    url = (os.environ.get("DATABASE_URL") or "").strip()
     if not url:
-        sys.exit("--from-db requires DATABASE_URL in the environment")
+        # Prompt inside the script: hidden input, no shell quoting/globbing
+        # traps (a mysql URL's ?ssl={...} query breaks zsh if typed inline).
+        import getpass
+
+        print("DATABASE_URL is not set. Paste the connection URL now — input is hidden, nothing will echo.")
+        url = getpass.getpass("DATABASE_URL: ").strip()
+    if not url:
+        sys.exit("No DATABASE_URL provided.")
+
     parsed = urlparse(url)
+    if parsed.scheme not in ("mysql", "mysql2") or not parsed.hostname:
+        sys.exit(
+            "DATABASE_URL did not parse as a MySQL connection URL (scheme mysql://, "
+            "then user, password, host, port, database) — re-copy the full URL "
+            "(query params like ?ssl=... are fine; they are ignored)."
+        )
+
+    # Managed MySQL-compatible endpoints (TiDB Cloud, PlanetScale, ...) require
+    # TLS. The Node-style ?ssl={...} query param means nothing to PyMySQL, so
+    # enable verified TLS explicitly for any non-local host.
+    ssl_kwargs: dict = {}
+    if parsed.hostname not in ("localhost", "127.0.0.1"):
+        ssl_kwargs = {"ssl_verify_cert": True, "ssl_verify_identity": True}
+        try:
+            import certifi
+
+            ssl_kwargs["ssl_ca"] = certifi.where()
+        except ImportError:
+            pass  # fall back to the system trust store
+
     connection = pymysql.connect(
-        host=parsed.hostname, port=parsed.port or 3306, user=parsed.username,
-        password=parsed.password or "", database=parsed.path.lstrip("/"),
+        host=parsed.hostname,
+        port=parsed.port or 3306,
+        user=unquote(parsed.username or ""),
+        password=unquote(parsed.password or ""),
+        database=parsed.path.lstrip("/"),
         cursorclass=pymysql.cursors.DictCursor,
+        connect_timeout=15,
+        **ssl_kwargs,
     )
     try:
         with connection.cursor() as cursor:
