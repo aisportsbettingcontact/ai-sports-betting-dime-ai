@@ -198,9 +198,9 @@ function FavNotificationBanner({ notif, onDismiss }: { notif: FavNotification; o
         pointerEvents: "auto",
       }}
     >
-      <Star className="flex-shrink-0" style={{ width: 14, height: 14, color: "#FFD700", fill: "#FFD700" }} />
+      <Star className="flex-shrink-0" style={{ width: 14, height: 14, color: "#45E0A8", fill: "#45E0A8" }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, color: "#FFD700", margin: 0, lineHeight: 1.3 }}>Added to Favorites</p>
+        <p style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", margin: 0, lineHeight: 1.3 }}>Added to Favorites</p>
         <p style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", margin: "2px 0 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {awayName} @ {homeName}
         </p>
@@ -1113,7 +1113,7 @@ export default function ModelProjections() {
                   return (
                     <span
                       className="hidden xs:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider select-none"
-                      style={{ background: '#FFD700', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.08em' }}
+                      style={{ background: '#45E0A8', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.08em' }}
                     >
                       LIFETIME
                     </span>
@@ -1124,7 +1124,7 @@ export default function ModelProjections() {
                 return (
                   <span
                     className="hidden xs:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider select-none"
-                    style={{ background: '#39FF14', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}
+                    style={{ background: '#45E0A8', color: '#000', whiteSpace: 'nowrap', letterSpacing: '0.06em' }}
                   >
                     EXP {label}
                   </span>
@@ -1231,12 +1231,12 @@ export default function ModelProjections() {
             <button type="button" onClick={() => setShowFavoritesTab(v => !v)}
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
               style={showFavoritesTab
-                ? { background: "rgba(255,215,0,0.18)", color: "#FFD700", border: "1px solid rgba(255,215,0,0.55)", boxShadow: "0 0 8px rgba(255,215,0,0.15)" }
+                ? { background: "rgba(255,215,0,0.18)", color: "#45E0A8", border: "1px solid rgba(255,215,0,0.55)", boxShadow: "0 0 8px rgba(255,215,0,0.15)" }
                 : { background: "hsl(var(--card))", color: "rgba(255,215,0,0.75)", border: "1px solid rgba(255,215,0,0.35)" }
               }
               title={`Favorites (${activeFavCount})`}
             >
-              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#FFD700" : "rgba(255,215,0,0.75)", color: showFavoritesTab ? "#FFD700" : "rgba(255,215,0,0.75)", flexShrink: 0 }} />
+              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#45E0A8" : "rgba(255,215,0,0.75)", color: showFavoritesTab ? "#45E0A8" : "rgba(255,215,0,0.75)", flexShrink: 0 }} />
               <span>Favorites</span>
             </button>
           )}
@@ -1307,8 +1307,8 @@ export default function ModelProjections() {
 
           {/* Search dropdown */}
           {showDropdown && (
-            <div className="absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0f0f0f", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#0f0f0f", zIndex: 10 }}>
+            <div className="absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#000000", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#000000", zIndex: 10 }}>
                 <span className="text-sm text-zinc-300 uppercase tracking-widest">{dropdownResults.length === 0 ? "No results" : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}</span>
                 {dropdownResults.length > 0 && <span className="text-sm text-zinc-300">tap to jump</span>}
               </div>
@@ -1381,7 +1381,7 @@ export default function ModelProjections() {
         {showFavoritesTab && (
           <div className="flex items-center px-4 py-1 md:py-2 border-b border-border bg-background/95 gap-2">
             <div className="flex-1" />
-            <span className="font-bold tracking-widest uppercase" style={{ fontSize: "clamp(11px, 2vw, 15px)", color: "#FFD700" }}>
+            <span className="font-bold tracking-widest uppercase" style={{ fontSize: "clamp(11px, 2vw, 15px)", color: "#45E0A8" }}>
               FAVORITED GAMES
             </span>
             <div className="flex-1" />
@@ -1431,7 +1431,7 @@ export default function ModelProjections() {
                     color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.45)',
                     background: 'transparent',
                     border: 'none',
-                    borderBottom: isActive ? '2px solid #39FF14' : '2px solid transparent',
+                    borderBottom: isActive ? '2px solid #45E0A8' : '2px solid transparent',
                     marginBottom: '-2px',
                     cursor: 'pointer',
                     transition: 'color 0.15s, border-color 0.15s',
@@ -1491,7 +1491,7 @@ export default function ModelProjections() {
               // Zero gap: this row flows directly after feed-tabs-scroll borderBottom.
               gridTemplateColumns: 'clamp(72px, 20.4vw, 88px) 1fr',
               width: '100%',
-              background: '#0f0f0f',
+              background: '#000000',
               borderBottom: '1px solid rgba(255,255,255,0.12)',
               // [VERIFY] No borderTop, no margin — flush against feed-tabs row above it.
               touchAction: 'none',
