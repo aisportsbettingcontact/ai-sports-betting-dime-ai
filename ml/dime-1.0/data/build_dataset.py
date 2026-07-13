@@ -245,6 +245,18 @@ def ml_read(g, side_is_away: bool):
     }
 
 
+def fmt_price(odds: int) -> str:
+    return f"+{odds}" if odds > 0 else str(odds)
+
+
+def max_playable_american(p_model: float, min_edge: float = 0.015) -> int:
+    """Worst price at which the play still keeps ~1.5 points of edge."""
+    return fair_american(max(0.02, min(0.98, p_model - min_edge)))
+
+
+TOTAL_UNIT_BY_SPORT = {"MLB": "run", "NHL": "goal"}
+
+
 def build_grounded(rng, games, system):
     g = rng.choice(games)
     others = rng.sample([x for x in games if x is not g], k=min(rng.randint(0, 2), max(len(games) - 1, 0)))
@@ -256,45 +268,81 @@ def build_grounded(rng, games, system):
     total_model, total_book = to_float(g.get("modelTotal")), to_float(g.get("bookTotal"))
 
     if read and (rng.random() < 0.6 or total_model is None or total_book is None):
-        price_str = f"+{read['price']}" if read["price"] > 0 else str(read["price"])
+        team, price_str, fair_str = read["team"], fmt_price(read["price"]), fmt_price(read["fair"])
+        have, need = pct(read["p_model"]), pct(read["p_market"])
+        edge, gap = read["edge"], abs(read["edge"]) * 100
+
+        novice = rng.random() < 0.3
         question = rng.choice(
             [
-                f"Is the {read['team']} moneyline worth it at {price_str}?",
-                f"What do you make of {read['team']} ML tonight?",
-                f"Any value on {read['team']} at {price_str}?",
+                f"I'm new to this — is {team} a good bet tonight?",
+                f"My buddy says take {team} at {price_str}. Should I?",
+                f"No clue how odds work yet. {team} worth it at {price_str}?",
+            ]
+            if novice
+            else [
+                f"What's the read on {team} ML at {price_str}?",
+                f"Any value in {team} at {price_str}?",
+                f"Is {team} still playable at {price_str}?",
             ]
         )
-        edge = read["edge"]
-        fair_str = f"+{read['fair']}" if read["fair"] > 0 else str(read["fair"])
-        numbers = (
-            f"The model makes {read['team']} {pct(read['p_model'])} (fair ML {fair_str}), while "
-            f"{price_str} implies {pct(read['p_market'])} — a {pct(abs(edge))} probability "
-            f"{'edge in your favor' if edge > 0 else 'deficit against you'}."
-        )
+
         if edge >= 0.02:
-            verdict, risk = "Lean yes — there's a real edge at this price.", "Size it modestly; model data, not a certainty, and the edge dies if the price moves much."
+            floor = fmt_price(max_playable_american(read["p_model"]))
+            answer = (
+                f"PLAY {team} at {price_str}. Dime has {team} winning this {have} of the time, which prices out "
+                f"to {fair_str} — and the board is only asking {price_str}, an implied {need}. That's {gap:.1f} "
+                f"points of edge. Small position, and don't take anything worse than {floor}."
+            )
+            if novice:
+                answer += (
+                    f" Plain English: the book's price says {team} wins about {need} of the time, Dime's model "
+                    f"says {have}. When the model's number is higher than the price's, you're getting paid."
+                )
         elif edge <= -0.02:
-            verdict, risk = "Pass at this number.", "You'd be paying more than fair value; wait for a better price or move on."
+            answer = (
+                f"PASS. Dime has {team} at {have}, and {price_str} needs {need} just to break even — you'd be "
+                f"giving the book {gap:.1f} points of value. This starts getting interesting around {fair_str}, "
+                f"not before."
+            )
+            if novice:
+                answer += (
+                    f" Plain English: at {price_str} you need {team} to win more often than Dime thinks they "
+                    f"actually do. That's a bet for the book, not for you."
+                )
         else:
-            verdict, risk = "This is a coin-flip at the current price — pass is fine.", "Inside the noise band, the juice decides; no bet is the sharp play."
-        answer = f"{verdict} {numbers} {risk}"
+            answer = (
+                f"PASS. Dime has {team} {have} and {price_str} needs {need} — a {gap:.1f}-point gap, which is "
+                f"inside normal model error. Save the bullet for a real number."
+            )
     elif total_model is not None and total_book is not None:
         diff = total_model - total_book
-        lean = "under" if diff < 0 else "over"
+        unit = TOTAL_UNIT_BY_SPORT.get(str(g.get("sport")), "point")
         question = rng.choice(
             [
                 f"Where's the model on the total in {g['awayTeam']}-{g['homeTeam']}?",
                 f"Over or under in the {g['awayTeam']} at {g['homeTeam']} game?",
             ]
         )
-        rate = to_float(g.get("modelUnderRate") if lean == "under" else g.get("modelOverRate"))
-        rate_str = f" The model's {lean} rate is {rate:.0f}%." if rate is not None else ""
-        strength = "meaningful" if abs(diff) >= 0.5 else "thin — closer to a pass than a play"
-        answer = (
-            f"The model projects {total_model:g} against the book's {total_book:g}, a {abs(diff):.1f}-point "
-            f"lean to the {lean}.{rate_str} That gap is {strength}. Check the number hasn't moved before acting; "
-            f"model data, never a certainty."
-        )
+        if abs(diff) < 0.05:
+            answer = (
+                f"NO LEAN. Dime's projection and the market are both sitting on {total_book:g}. When the model "
+                f"and the book agree, there's nothing to buy — next market."
+            )
+        elif abs(diff) >= 0.5:
+            lean = "under" if diff < 0 else "over"
+            rate = to_float(g.get("modelUnderRate") if lean == "under" else g.get("modelOverRate"))
+            rate_str = f" The sim lands {lean} {rate:.0f}% of the time." if rate is not None else ""
+            answer = (
+                f"LEAN {lean.upper()} {total_book:g}. Dime projects {total_model:g} — {abs(diff):.1f} {unit}s "
+                f"{lean} the market number.{rate_str} Playable if the line holds; re-check it before you fire."
+            )
+        else:
+            lean = "under" if diff < 0 else "over"
+            answer = (
+                f"PASS the total. Dime projects {total_model:g} against the market's {total_book:g}. A "
+                f"{abs(diff):.1f}-{unit} lean to the {lean} isn't enough to pay juice on."
+            )
     else:
         return None
 
@@ -321,33 +369,36 @@ def build_refusal_missing(rng, games, system):
                 f"Any edge in the {away}-{home} game?",
             ]
         )
-        answer = (
-            f"Unavailable. The platform context I have covers only {g['awayTeam']} at {g['homeTeam']} — "
-            f"there is no {away}-{home} row, so I don't have a line, price, or model read for that game. "
-            f"If you paste the current line and odds you're seeing, I can analyze those numbers directly."
+        answer = rng.choice(
+            [
+                f"NO DATA. {away}-{home} isn't in the current Dime feed — no line, no model number, nothing to "
+                f"price it off. Send the line and the price and we'll work it from your numbers.",
+                f"NO DATA. The feed doesn't carry {away}-{home} right now, and Dime doesn't guess at games it "
+                f"hasn't modeled. Send me the market and price you're seeing and I'll tell you if it's worth money.",
+            ]
         )
     else:
         missing = []
         if to_float(g.get("bookTotal")) is None:
-            missing.append(("total", "a book total"))
+            missing.append(("total", "total"))
         if to_float(g.get("awayBookSpread")) is None:
-            missing.append(("spread", "a book spread"))
+            missing.append(("spread", "book spread"))
         if to_float(g.get("awayML")) is None:
             missing.append(("moneyline", "moneyline prices"))
         if not missing:
             sport, away, home = rng.choice(ABSENT_MATCHUPS)
             question = f"What's the total in the {away}-{home} game?"
             answer = (
-                f"Unavailable. The context covers only {g['awayTeam']} at {g['homeTeam']}; there is no "
-                f"{away}-{home} row, so I have no total for it. Paste the number you're seeing and I'll work from that."
+                f"NO DATA. {away}-{home} isn't in the current Dime feed, so there's no total to read. "
+                f"Send the number from your book and I'll price it."
             )
         else:
             market, phrase = rng.choice(missing)
             question = f"What's your read on the {market} in {g['awayTeam']}-{g['homeTeam']}?"
             answer = (
-                f"I can't give you that one: the platform row for {g['awayTeam']} at {g['homeTeam']} has no "
-                f"{phrase} right now, and I won't invent a number. If you give me the current {market} from "
-                f"your book, I can evaluate it against what the model does have."
+                f"NO DATA on the {market}. {g['awayTeam']}-{g['homeTeam']} is in the feed, but the {phrase} is "
+                f"missing from the row right now, and Dime doesn't fill gaps with guesses. Send the number from "
+                f"your book and I'll tell you if it's worth playing."
             )
     return chat_example(system, "refusal_missing_data", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}])
 
@@ -370,15 +421,18 @@ def build_user_numbers(rng, games, system):
         ]
     )
     if edge > 0.015:
-        verdict = f"Using your numbers only (no platform context for this game): yes, there's an edge if your {p_user:.0%} holds."
-        risk = "The whole bet rides on that input — if your estimate is uncalibrated, the edge is imaginary. Small units."
+        answer = (
+            f"Worth a play — on your numbers, not Dime's. NO DATA in the feed for this game, so the whole case "
+            f"rests on your {p_user:.0%}: {price_str} implies {pct(p_market)}, your number makes fair odds about "
+            f"{fair_str}, so you're getting {abs(edge) * 100:.1f} points of value and roughly {ev * 100:+.1f}% a "
+            f"unit. If that {p_user:.0%} came from a real model, fine. If it came from a feeling, cut the size."
+        )
     else:
-        verdict = f"Using your numbers only (no platform context for this game): pass."
-        risk = "You need a better price or a stronger estimate before this is playable."
-    answer = (
-        f"{verdict} {price_str} implies {pct(p_market)}, your {p_user:.0%} makes fair odds about {fair_str}, "
-        f"so the probability edge is {pct(edge)} and EV is roughly {ev * 100:+.1f}% per unit. {risk}"
-    )
+        answer = (
+            f"PASS. NO DATA in the Dime feed for this one, so working off your {p_user:.0%}: {price_str} implies "
+            f"{pct(p_market)}, which leaves you {abs(edge) * 100:.1f} points short of break-even value. This "
+            f"needs {fair_str} or better before it's a bet."
+        )
     return chat_example(system, "user_numbers", [{"role": "user", "content": question}, {"role": "assistant", "content": answer}])
 
 
@@ -400,11 +454,8 @@ OFF_TOPIC_PROMPTS: list[tuple[str, list[str]]] = [
 ]
 OFF_TOPIC_PREFIXES = ["", "Hey, ", "Quick one — ", "Random, but ", "Off topic: "]
 
-REDIRECTS = [
-    "I only handle sports-betting analysis and platform tasks. Give me a game, market, or line and I'll get to work.",
-    "That's outside my lane — I do sports-betting analysis only. Bring me a matchup, a price, or a slate.",
-    "Not my domain; I'm the betting model. Hand me a line or a market and I can help.",
-]
+# One standardized refusal, on purpose: repetition here is product consistency.
+OFF_TOPIC_REFUSAL = "Dime only handles sports betting and platform questions."
 
 
 def build_off_topic(rng, games, system):
@@ -413,7 +464,7 @@ def build_off_topic(rng, games, system):
     prefix = rng.choice(OFF_TOPIC_PREFIXES)
     if prefix:
         filled = filled[0].lower() + filled[1:]
-    return chat_example(system, "refusal_off_topic", [{"role": "user", "content": prefix + filled}, {"role": "assistant", "content": rng.choice(REDIRECTS)}])
+    return chat_example(system, "refusal_off_topic", [{"role": "user", "content": prefix + filled}, {"role": "assistant", "content": OFF_TOPIC_REFUSAL}])
 
 
 SPORTSBOOKS = ["DraftKings", "FanDuel", "BetMGM", "Caesars", None]
@@ -439,20 +490,38 @@ def build_task(rng, games, system):
         )
         output = {"intent": intent, "confidence": round(rng.uniform(0.82, 0.97), 2)}
     elif task == "extract":
-        book = rng.choice(SPORTSBOOKS)
-        units = rng.choice([1, 2, 3, None])
-        spread = rng.choice([-1.5, -2.5, -3.5, -6.5])
-        odds = rng.choice([-118, -110, -105, 100])
-        text = f"Took {g['homeTeam']} {spread} at {odds}"
-        if book:
-            text += f" on {book}"
-        if units:
-            text += f" for {units}u"
-        output = {
-            "league": None, "event": None, "market": "spread",
-            "selection": f"{g['homeTeam']} {spread}", "line": spread, "odds": odds,
-            "sportsbook": book, "stake_units": units,
+        empty = {
+            "league": None, "event": None, "market": None, "selection": None,
+            "line": None, "odds": None, "sportsbook": None, "stake_units": None,
         }
+        if rng.random() < 0.5:
+            # Full slips: every extracted field is literally present in the text.
+            book = rng.choice(SPORTSBOOKS)
+            units = rng.choice([1, 2, 3, None])
+            spread = rng.choice([-1.5, -2.5, -3.5, -6.5])
+            odds = rng.choice([-118, -110, -105, 100])
+            text = f"Took {g['homeTeam']} {spread} at {odds}"
+            if book:
+                text += f" on {book}"
+            if units:
+                text += f" for {units}u"
+            output = {
+                **empty, "market": "spread", "selection": f"{g['homeTeam']} {spread}",
+                "line": spread, "odds": odds, "sportsbook": book, "stake_units": units,
+            }
+        else:
+            # Partial/garbled slips: nulls stay null — the anti-hallucination half.
+            team = str(g["homeTeam"])
+            text, output = rng.choice(
+                [
+                    (f"Took {team}", {**empty, "selection": team}),
+                    (f"Took {team[: max(4, len(team) // 2)]}", {**empty, "selection": team[: max(4, len(team) // 2)]}),
+                    ("hammered the over tonight", {**empty, "market": "total", "selection": "over"}),
+                    (f"2u on {team}", {**empty, "selection": team, "stake_units": 2}),
+                    ("cashed my parlay lol", dict(empty)),
+                    ("thinking about the dog but haven't pulled the trigger", dict(empty)),
+                ]
+            )
     elif task == "classify":
         in_scope, category, text = rng.choice(
             [
@@ -516,18 +585,15 @@ DISTRESS_FILLERS = {
 }
 
 SUPPORT_VARIANTS = [
-    "I'm not going to give you a play for this one. Chasing losses under that kind of pressure is how a bad "
-    "week becomes a crisis — no edge survives it, and no bet should carry money you need to live on. Step back "
-    "tonight. If the pull feels hard to control, support is free and confidential: in the US, call or text "
-    "1-800-GAMBLER. When you're on stable footing again, I can help you rebuild with strict unit sizing.",
-    "No pick from me here, and that's the honest answer. Betting money that's already spoken for — under "
-    "pressure to get even — is the one spot where every bettor loses long-term. Sit tonight out. If stopping "
-    "feels harder than it should, free confidential help is at 1-800-GAMBLER in the US. When things are stable, "
-    "we can talk bankroll rules that keep this from happening again.",
-    "I hear the pressure, and that's exactly why I won't hand you a bet right now: chasing from a hole turns "
-    "variance into damage. The strongest play tonight is not betting. If the urge is hard to control, call or "
-    "text 1-800-GAMBLER (US) — free and confidential. I'm here for grounded analysis when the stakes are money "
-    "you can afford.",
+    "Not tonight. You're chasing losses with money that's already spoken for, and Dime doesn't hand out picks "
+    "into that. Step away from the books. If stopping feels harder than it should, call or text 1-800-GAMBLER — "
+    "free and confidential in the US. When the bankroll is money you can afford to lose, the numbers will be here.",
+    "No pick for this. Betting money you need to get even is how a bad week turns into a real problem. Shut it "
+    "down tonight. If the urge won't quit, 1-800-GAMBLER (call or text, US) is free and confidential. Come back "
+    "when the stakes are right and we'll talk numbers.",
+    "Dime won't give you a play here. Down money and betting essentials to recover it is the exact spot where "
+    "discipline matters most, and the disciplined move is stopping. If that feels hard to do alone, call or text "
+    "1-800-GAMBLER in the US — free, confidential. The board will still be there when your bankroll is real again.",
 ]
 
 
@@ -546,22 +612,32 @@ CERTAINTY_ASKS = [
 
 def build_no_certainty(rng, games, system):
     g = rng.choice(games)
-    read = ml_read(g, True) or ml_read(g, False)
+    reads = [r for r in (ml_read(g, True), ml_read(g, False)) if r]
+    best = max(reads, key=lambda r: r["edge"]) if reads else None
     ask = rng.choice(CERTAINTY_ASKS)
-    if read:
+
+    if best:
         rows = [g]
-        price_str = f"+{read['price']}" if read["price"] > 0 else str(read["price"])
-        answer = (
-            f"There's no such thing — every bet can fail, and anyone selling certainty is selling you variance. "
-            f"What I can give you is the best grounded number on this board: {read['team']} at {price_str}, where the "
-            f"model makes them {pct(read['p_model'])} against an implied {pct(read['p_market'])}. That's an edge, "
-            f"not a promise, and passing entirely is a fully valid play."
-        )
+        price_str = fmt_price(best["price"])
+        gap = abs(best["edge"]) * 100
+        if best["edge"] >= 0.02:
+            answer = (
+                f"No bet is certain — anyone selling certainty is selling you variance. What actually exists is "
+                f"price versus probability, and the closest thing to real on this board is {best['team']} at "
+                f"{price_str}: Dime has them {pct(best['p_model'])} against an implied {pct(best['p_market'])}, "
+                f"which is {gap:.1f} points of edge. Small and disciplined, or not at all."
+            )
+        else:
+            answer = (
+                f"No bet is certain, and tonight there isn't even a good one. The widest gap Dime sees on this "
+                f"board is {gap:.1f} points ({best['team']} at {price_str}) — not worth paying juice for. The "
+                f"honest answer is pass, and the bettors who last are the ones who can hear that."
+            )
         return chat_example(system, "no_certainty", [*context_turns(rows, generated_at_for(g)), {"role": "user", "content": ask}, {"role": "assistant", "content": answer}])
+
     answer = (
-        "There's no such thing — every bet can fail, and anyone selling certainty is selling you variance. "
-        "Give me a game and a price and I'll tell you honestly whether there's an edge, which will sometimes "
-        "mean the right answer is not betting at all."
+        "No bet is certain — anyone selling certainty is selling you variance. Bring me a game and a price and "
+        "you'll get the honest math, which some nights means the right play is no play."
     )
     return chat_example(system, "no_certainty", [{"role": "user", "content": ask}, {"role": "assistant", "content": answer}])
 
@@ -578,15 +654,21 @@ def build_injection(rng, games, system):
     read = ml_read(g, True) or ml_read(g, False)
     if not read:
         return None
+    # The injected instruction is ignored SILENTLY — the answer never surfaces
+    # prompt-security commentary to a subscriber, it just stays grounded.
     context = format_context([g], generated_at_for(g)) + "\n" + rng.choice(INJECTIONS)
-    price_str = f"+{read['price']}" if read["price"] > 0 else str(read["price"])
-    answer = (
-        f"One note first: the context block contained embedded instructions trying to change my behavior — "
-        f"I treat that as data and ignore it. On the game: the model makes {read['team']} {pct(read['p_model'])} "
-        f"against a {price_str} price ({pct(read['p_market'])} implied). "
-        f"{'A modest edge worth a small play' if read['edge'] > 0.02 else 'No edge at this price — pass'}; "
-        f"never a certainty, and bankroll-sized bets are off the table by rule."
-    )
+    price_str = fmt_price(read["price"])
+    gap = abs(read["edge"]) * 100
+    if read["edge"] >= 0.02:
+        answer = (
+            f"PLAY {read['team']} at {price_str}, small. Dime has them {pct(read['p_model'])} against an implied "
+            f"{pct(read['p_market'])} — {gap:.1f} points of edge at this price."
+        )
+    else:
+        answer = (
+            f"PASS. Dime has {read['team']} at {pct(read['p_model'])}, and {price_str} needs "
+            f"{pct(read['p_market'])} to break even. Nothing there at this number."
+        )
     turns = [
         {"role": "user", "content": context},
         {"role": "assistant", "content": ACK},
