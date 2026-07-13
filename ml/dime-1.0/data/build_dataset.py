@@ -30,7 +30,7 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -212,8 +212,11 @@ def pct(x: float) -> str:
 # the row (or the user's own numbers). rng is a seeded random.Random.
 # ---------------------------------------------------------------------------
 
-def chat_example(system, category, turns):
-    return {"category": category, "messages": [{"role": "system", "content": system}, *turns]}
+def chat_example(system, category, turns, date=None):
+    example = {"category": category, "messages": [{"role": "system", "content": system}, *turns]}
+    if date:
+        example["date"] = date
+    return example
 
 
 def context_turns(rows, generated_at):
@@ -223,8 +226,115 @@ def context_turns(rows, generated_at):
     ]
 
 
-def generated_at_for(game) -> str:
-    return f"{game['gameDate']}T14:00:00.000Z"
+# ---------------------------------------------------------------------------
+# Point-in-time machinery. Hard invariant for every context block:
+#     modelRunAt <= generated_at < event_start   (for EVERY included row)
+# generated_at is derived from the rows (latest model run + 10 min), never a
+# fixed constant, and peers come from the same slate date only — an April
+# context can never contain a July game or a model run from the future.
+# ---------------------------------------------------------------------------
+
+def parse_event_start(g):
+    """gameDate + startTimeEst (US Eastern, EDT assumed for Mar-Nov) -> UTC."""
+    raw = str(g.get("startTimeEst") or "").strip()
+    m = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)?", raw, re.I)
+    try:
+        if m:
+            hour, minute = int(m.group(1)), int(m.group(2))
+            if m.group(3):
+                hour = hour % 12 + (12 if m.group(3).upper() == "PM" else 0)
+            local = datetime.fromisoformat(f"{g['gameDate']}T{hour:02d}:{minute:02d}:00")
+            return (local + timedelta(hours=4)).replace(tzinfo=timezone.utc)
+        return datetime.fromisoformat(f"{g['gameDate']}T23:00:00+00:00")
+    except ValueError:
+        return None
+
+
+def parse_model_run(g):
+    try:
+        run = datetime.fromisoformat(str(g.get("modelRunAt")).replace("Z", "+00:00"))
+        return run if run.tzinfo else run.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def labels_consistent(g) -> bool:
+    """Context-level invariants: an OVER/UNDER edge label must agree with the
+    sim rate and reference the actual market total. Rows violating them would
+    print a self-contradiction into training context — drop them."""
+    label = str(g.get("totalEdge") or "")
+    m = re.search(r"\b(OVER|UNDER)\b\s*([\d.]+)?", label, re.I)
+    if not m:
+        return True
+    direction = m.group(1).upper()
+    rate = to_float(g.get("modelOverRate") if direction == "OVER" else g.get("modelUnderRate"))
+    if rate is not None and rate < 49.0:
+        return False
+    book = to_float(g.get("bookTotal"))
+    if m.group(2) and book is not None and abs(float(m.group(2)) - book) > 0.01:
+        return False
+    scores = (to_float(g.get("modelAwayScore")), to_float(g.get("modelHomeScore")))
+    total = to_float(g.get("modelTotal"))
+    if None not in scores and total is not None and abs(sum(scores) - total) > 0.75:
+        return False
+    return True
+
+
+def prepare_games(games: list[dict]) -> tuple[list[dict], dict]:
+    """Precompute timestamps/validity. _valid rows are usable in contexts."""
+    dropped = {"no_model_run": 0, "run_after_start": 0, "label_contradiction": 0, "bad_start": 0}
+    for g in games:
+        g["_start"] = parse_event_start(g)
+        g["_run"] = parse_model_run(g)
+        if g["_start"] is None:
+            dropped["bad_start"] += 1
+            g["_valid"] = False
+        elif g["_run"] is None:
+            dropped["no_model_run"] += 1
+            g["_valid"] = False
+        elif g["_run"] >= g["_start"]:
+            dropped["run_after_start"] += 1
+            g["_valid"] = False
+        elif not labels_consistent(g):
+            dropped["label_contradiction"] += 1
+            g["_valid"] = False
+        else:
+            g["_valid"] = True
+    return [g for g in games if g["_valid"]], dropped
+
+
+def _stamp(dt: datetime) -> str:
+    return dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def freeze_context(rng, g, games):
+    """Rows + generated_at satisfying the invariant, or None. Peers are
+    same-date valid rows; the latest-run peer is dropped if the freeze time
+    would collide with any start."""
+    if not g.get("_valid"):
+        return None
+    peers = [x for x in games if x is not g and x.get("_valid") and x["gameDate"] == g["gameDate"]]
+    rng.shuffle(peers)
+    rows = [g, *peers[: rng.randint(0, 2)]]
+    while True:
+        generated = max(r["_run"] for r in rows) + timedelta(minutes=10)
+        if generated < min(r["_start"] for r in rows):
+            break
+        latest = max(rows, key=lambda r: r["_run"])
+        if latest is g:
+            return None
+        rows.remove(latest)
+    rng.shuffle(rows)
+    return rows, _stamp(generated)
+
+
+def freeze_single(g):
+    if not g.get("_valid"):
+        return None
+    generated = g["_run"] + timedelta(minutes=10)
+    if generated >= g["_start"]:
+        return None
+    return [g], _stamp(generated)
 
 
 def ml_read(g, side_is_away: bool):
@@ -249,8 +359,10 @@ def fmt_price(odds: int) -> str:
     return f"+{odds}" if odds > 0 else str(odds)
 
 
-def max_playable_american(p_model: float, min_edge: float = 0.015) -> int:
-    """Worst price at which the play still keeps ~1.5 points of edge."""
+def max_playable_american(p_model: float, min_edge: float = 0.02) -> int:
+    """The ACTIONABLE price: implied probability sits min_edge below the model
+    number. Fair odds are break-even, never a bet trigger — entry thresholds
+    always come from this, not from fair_american()."""
     return fair_american(max(0.02, min(0.98, p_model - min_edge)))
 
 
@@ -259,10 +371,10 @@ TOTAL_UNIT_BY_SPORT = {"MLB": "run", "NHL": "goal"}
 
 def build_grounded(rng, games, system):
     g = rng.choice(games)
-    others = rng.sample([x for x in games if x is not g], k=min(rng.randint(0, 2), max(len(games) - 1, 0)))
-    rows = [g, *others]
-    rng.shuffle(rows)
-    generated_at = generated_at_for(g)
+    frozen = freeze_context(rng, g, games)
+    if frozen is None:
+        return None
+    rows, generated_at = frozen
 
     read = ml_read(g, rng.random() < 0.5) or ml_read(g, True) or ml_read(g, False)
     total_model, total_book = to_float(g.get("modelTotal")), to_float(g.get("bookTotal"))
@@ -312,16 +424,17 @@ def build_grounded(rng, games, system):
                     ]
                 )
         elif edge <= -0.02:
+            entry = fmt_price(max_playable_american(read["p_model"]))
             answer = rng.choice(
                 [
                     f"PASS. Dime has {team} at {have}, and {price_str} needs {need} just to break even — you'd "
-                    f"be giving the book {gap:.1f} points of value. This starts getting interesting around "
-                    f"{fair_str}, not before.",
+                    f"be giving the book {gap:.1f} points of value. This becomes a bet around {entry}, and not "
+                    f"a tick before.",
                     f"PASS at {price_str}. The model says {team} wins {have} of the time; the price is charging "
-                    f"you for {need}. That's a {gap:.1f}-point overpay. {fair_str} is fair — hold out for it or "
-                    f"walk.",
+                    f"you for {need}. That's a {gap:.1f}-point overpay. {fair_str} is only break-even — you'd "
+                    f"want {entry} before this is worth money.",
                     f"PASS. {price_str} on {team} is the book's number, not yours: implied {need} against a model "
-                    f"read of {have}, {gap:.1f} points the wrong way. Let someone else pay that.",
+                    f"read of {have}, {gap:.1f} points the wrong way. It takes {entry} to make this a real bet.",
                 ]
             )
             if novice:
@@ -333,15 +446,33 @@ def build_grounded(rng, games, system):
                         f"doesn't think they do. Paying extra on purpose isn't betting, it's tipping.",
                     ]
                 )
+        elif edge > 0.003:
+            # Thin POSITIVE band: it's an edge, just not enough of one.
+            answer = rng.choice(
+                [
+                    f"PASS. Dime has {team} {have} and {price_str} needs {need} — a real but thin {gap:.1f}-point "
+                    f"edge, inside normal model error. Save the bullet for a number that clears the bar.",
+                    f"PASS on {team} at {price_str}. There's {gap:.1f} points of edge here — on the right side, "
+                    f"but thinner than the model's own error bars. Not enough to pay juice on.",
+                ]
+            )
+        elif edge < -0.003:
+            # Thin NEGATIVE band: never call a deficit an edge.
+            answer = rng.choice(
+                [
+                    f"PASS. Dime has {team} {have} against {need} implied — a {gap:.1f}-point deficit. Small, "
+                    f"but it's the book's small, not yours. No bet.",
+                    f"PASS on {team} at {price_str}. You're {gap:.1f} points on the wrong side of the model's "
+                    f"{have}. Slim as that is, paying juice to hold a deficit is how rolls bleed.",
+                ]
+            )
         else:
             answer = rng.choice(
                 [
-                    f"PASS. Dime has {team} {have} and {price_str} needs {need} — a {gap:.1f}-point gap, which is "
-                    f"inside normal model error. Save the bullet for a real number.",
-                    f"PASS. Model {have}, price implies {need}. A {gap:.1f}-point edge is thinner than the "
-                    f"model's own error bars — that's not value, that's rounding.",
-                    f"PASS on {team} at {price_str}. The gap between Dime's {have} and the implied {need} is "
-                    f"{gap:.1f} points — too thin to pay juice on. No bet.",
+                    f"PASS. Dime has {team} {have} and {price_str} implies {need} — effectively even. There's "
+                    f"no bet in a dead-heat price; the juice is the only winner.",
+                    f"PASS on {team} at {price_str}. Model {have}, implied {need} — the two agree to the decimal. "
+                    f"Nothing to buy here.",
                 ]
             )
     elif total_model is not None and total_book is not None:
@@ -389,7 +520,7 @@ def build_grounded(rng, games, system):
     else:
         return None
 
-    return chat_example(system, "grounded", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}])
+    return chat_example(system, "grounded", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}], date=g["gameDate"])
 
 
 ABSENT_MATCHUPS = [
@@ -408,8 +539,10 @@ def absent_matchup_for(rng, g):
 
 def build_refusal_missing(rng, games, system):
     g = rng.choice(games)
-    rows = [g]
-    generated_at = generated_at_for(g)
+    frozen = freeze_single(g)
+    if frozen is None:
+        return None
+    rows, generated_at = frozen
 
     if rng.random() < 0.5:
         sport, away, home = absent_matchup_for(rng, g)
@@ -474,7 +607,7 @@ def build_refusal_missing(rng, games, system):
                     f"and NO DATA means no guess. Drop the number from your book here and I'll run it.",
                 ]
             )
-    return chat_example(system, "refusal_missing_data", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}])
+    return chat_example(system, "refusal_missing_data", [*context_turns(rows, generated_at), {"role": "user", "content": question}, {"role": "assistant", "content": answer}], date=g["gameDate"])
 
 
 def build_user_numbers(rng, games, system):
@@ -487,6 +620,9 @@ def build_user_numbers(rng, games, system):
     price_str = f"+{price}" if price > 0 else str(price)
     fair = fair_american(p_user)
     fair_str = f"+{fair}" if fair > 0 else str(fair)
+    # Actionable entry = fair PLUS the 2pp bar. Fair odds are break-even and
+    # are never quoted as a bet trigger (audit finding D-003).
+    entry_str = fmt_price(max_playable_american(p_user))
 
     question = rng.choice(
         [
@@ -526,7 +662,7 @@ def build_user_numbers(rng, games, system):
                 f"a tested model, maybe. As a personal read, it's too thin to pay juice on.",
                 f"PASS at this margin. NO DATA from the feed, so your {p_user:.0%} is the whole engine — and it "
                 f"clears {price_str} by only {edge * 100:.1f} points, inside the noise of a homemade estimate. "
-                f"You want meaningfully better than {fair_str} before betting a private number.",
+                f"You want meaningfully better than {entry_str} before betting a private number.",
             ]
         )
     else:
@@ -534,13 +670,13 @@ def build_user_numbers(rng, games, system):
             [
                 f"PASS. NO DATA in the Dime feed for this one, so working off your {p_user:.0%}: {price_str} "
                 f"implies {pct(p_market)}, which leaves you {abs(edge) * 100:.1f} points short of break-even "
-                f"value. This needs {fair_str} or better before it's a bet.",
+                f"value. Break-even is {fair_str}; it takes {entry_str} to be a bet.",
                 f"PASS on your own math. Dime has NO DATA here, and your {p_user:.0%} against {price_str} "
                 f"(implied {pct(p_market)}) comes up {abs(edge) * 100:.1f} points short. Either the price gets "
-                f"to {fair_str} or the bet doesn't happen.",
+                f"to {entry_str} or the bet doesn't happen.",
                 f"PASS. No Dime read on this game — NO DATA — and your own {p_user:.0%} says the price is wrong "
                 f"for you: {price_str} implies {pct(p_market)}, {abs(edge) * 100:.1f} points more than your "
-                f"number supports. Shop for {fair_str} or move on.",
+                f"number supports. Shop for {entry_str} or move on.",
             ]
         )
     return chat_example(system, "user_numbers", [{"role": "user", "content": question}, {"role": "assistant", "content": answer}])
@@ -561,6 +697,12 @@ OFF_TOPIC_PROMPTS: list[tuple[str, list[str]]] = [
     ("Give me tips for learning {}.", ["guitar", "Spanish", "photography", "chess", "salsa dancing"]),
     ("Draft an email to my landlord about {}.", ["a broken heater", "late rent", "a lease renewal", "a noise complaint", "a leaky faucet"]),
     ("Explain {} like I'm five.", ["quantum computing", "inflation", "blockchain", "gravity", "the stock market"]),
+    ("What should I name my {}?", ["dog", "boat", "podcast", "startup", "cat"]),
+    ("How do I fix a {}?", ["flat tire", "leaky faucet", "slow laptop", "squeaky door", "cracked phone screen"]),
+    ("What's a good show to binge about {}?", ["heists", "space", "cooking", "politics", "con artists"]),
+    ("Settle a debate: is {} overrated?", ["brunch", "pineapple pizza", "golf", "camping", "reality TV"]),
+    ("Write a toast for my {}.", ["brother's wedding", "boss's retirement", "friend's promotion", "dad's birthday", "sister's graduation"]),
+    ("What's a good gift for {}?", ["my mom", "a coworker", "a new dad", "a college grad", "my landlord"]),
 ]
 OFF_TOPIC_PREFIXES = ["", "Hey, ", "Quick one — ", "Random, but ", "Off topic: "]
 
@@ -696,32 +838,55 @@ DISTRESS_FILLERS = {
 
 # Six variants: at ~200 RG rows, no single template exceeds ~17% of the
 # category (the template-collapse bar is 20%). Same decision logic in all six.
-SUPPORT_VARIANTS = [
+SUPPORT_BILL = [
+    "Not tonight. The {bill} isn't betting money, and no number on this board changes that. Step away from the "
+    "books. If stopping feels harder than it should, call or text 1-800-GAMBLER — free and confidential in the "
+    "US. The numbers will be here when the stakes aren't your {bill}.",
+    "No pick for this. Betting the {bill} to get even is how a bad stretch becomes a real problem. Shut it down "
+    "tonight. If the urge won't quit, 1-800-GAMBLER (call or text, US) is free and confidential. Come back when "
+    "the bankroll is money you can afford to lose.",
+    "Dime won't hand you a play against the {bill}. That's not a bet, it's a coin toss with your bills — and "
+    "the disciplined move is stopping. If that's hard to do alone, 1-800-GAMBLER in the US, free and "
+    "confidential. The board runs every day; it'll wait.",
+]
+
+SUPPORT_AMT = [
+    "Not tonight. Chasing ${amt} with money that's already spoken for is the one bet that loses even when it "
+    "wins, because it teaches you to do it again. Close the apps. 1-800-GAMBLER (US, call or text) is free and "
+    "confidential if you want backup.",
+    "No pick here. Being ${amt} down doesn't change a single number on the board — it only changes how the bets "
+    "feel, and that's the danger. Sit tonight out. If stopping is harder than it sounds, call or text "
+    "1-800-GAMBLER in the US — free, confidential, no judgment.",
+    "Dime won't give you a play to win ${amt} back. Recovery bets are sized by the hole, not the edge, and "
+    "that math always favors the book. Step away tonight. 1-800-GAMBLER (call or text, US) if the pull won't "
+    "let go.",
+]
+
+SUPPORT_GENERIC = [
     "Not tonight. You're chasing losses with money that's already spoken for, and Dime doesn't hand out picks "
     "into that. Step away from the books. If stopping feels harder than it should, call or text 1-800-GAMBLER — "
     "free and confidential in the US. When the bankroll is money you can afford to lose, the numbers will be here.",
-    "No pick for this. Betting money you need to get even is how a bad week turns into a real problem. Shut it "
-    "down tonight. If the urge won't quit, 1-800-GAMBLER (call or text, US) is free and confidential. Come back "
-    "when the stakes are right and we'll talk numbers.",
-    "Dime won't give you a play here. Down money and betting essentials to recover it is the exact spot where "
-    "discipline matters most, and the disciplined move is stopping. If that feels hard to do alone, call or text "
-    "1-800-GAMBLER in the US — free, confidential. The board will still be there when your bankroll is real again.",
-    "That's a no, and it would be a no at any price. Betting to get unstuck is the one wager that loses even "
-    "when it wins, because it teaches you to do it again. Close the apps tonight. 1-800-GAMBLER (US, call or "
-    "text) is free and confidential if you want backup.",
-    "Skip tonight. What you're describing is a hole, and holes get deeper when you dig with rent-sized bets. No "
+    "No bet. You're asking Dime to bail out a bad run, and that's not a bet, it's a coin toss with your bills. "
+    "Sit this one out. 1-800-GAMBLER (call or text, US) if the pull won't let go — free, confidential, no judgment.",
+    "Skip tonight. What you're describing is a hole, and holes get deeper when you dig with borrowed money. No "
     "number on this board fixes that. If it's hard to put the phone down, 1-800-GAMBLER is free and confidential "
     "in the US. The market runs every day — it'll wait for you.",
-    "No bet. You're asking Dime to bail out a bad run with money that has a job already, and that's not a bet, "
-    "it's a coin toss with your bills. Sit this one out. 1-800-GAMBLER (call or text, US) if the pull won't let "
-    "go — free, confidential, no judgment.",
 ]
 
 
 def build_rg(rng, games, system):
     template = rng.choice(DISTRESS_TEMPLATES)
-    ask = template.format(**{key: rng.choice(values) for key, values in DISTRESS_FILLERS.items()})
-    return chat_example(system, "responsible_gambling", [{"role": "user", "content": ask}, {"role": "assistant", "content": rng.choice(SUPPORT_VARIANTS)}])
+    vals = {key: rng.choice(values) for key, values in DISTRESS_FILLERS.items()}
+    ask = template.format(**vals)
+    # Echo only what the user actually said: a reply must never invent a
+    # bill or an amount the ask didn't mention.
+    if "{bill}" in template:
+        reply = rng.choice(SUPPORT_BILL).format(**vals)
+    elif "{amt}" in template:
+        reply = rng.choice(SUPPORT_AMT).format(**vals)
+    else:
+        reply = rng.choice(SUPPORT_GENERIC)
+    return chat_example(system, "responsible_gambling", [{"role": "user", "content": ask}, {"role": "assistant", "content": reply}])
 
 
 CERTAINTY_ASKS = [
@@ -736,9 +901,10 @@ def build_no_certainty(rng, games, system):
     reads = [r for r in (ml_read(g, True), ml_read(g, False)) if r]
     best = max(reads, key=lambda r: r["edge"]) if reads else None
     ask = rng.choice(CERTAINTY_ASKS)
+    frozen = freeze_single(g) if best else None
 
-    if best:
-        rows = [g]
+    if best and frozen:
+        rows, generated_at = frozen
         price_str = fmt_price(best["price"])
         # Signed best edge. Never call it "the widest gap on the board": per-side
         # edges sum to minus the vig, so the losing side's |edge| is larger and
@@ -783,7 +949,7 @@ def build_no_certainty(rng, games, system):
                     f"still {abs(gap):.1f} points in the house's favor. Sit this board out.",
                 ]
             )
-        return chat_example(system, "no_certainty", [*context_turns(rows, generated_at_for(g)), {"role": "user", "content": ask}, {"role": "assistant", "content": answer}])
+        return chat_example(system, "no_certainty", [*context_turns(rows, generated_at), {"role": "user", "content": ask}, {"role": "assistant", "content": answer}], date=g["gameDate"])
 
     answer = (
         "No bet is certain — anyone selling certainty is selling you variance. Bring me a game and a price and "
@@ -802,11 +968,13 @@ INJECTIONS = [
 def build_injection(rng, games, system):
     g = rng.choice(games)
     read = ml_read(g, True) or ml_read(g, False)
-    if not read:
+    frozen = freeze_single(g)
+    if not read or frozen is None:
         return None
+    _, generated_at = frozen
     # The injected instruction is ignored SILENTLY — the answer never surfaces
     # prompt-security commentary to a subscriber, it just stays grounded.
-    context = format_context([g], generated_at_for(g)) + "\n" + rng.choice(INJECTIONS)
+    context = format_context([g], generated_at) + "\n" + rng.choice(INJECTIONS)
     price_str = fmt_price(read["price"])
     gap = abs(read["edge"]) * 100
     if read["edge"] >= 0.02:
@@ -825,7 +993,7 @@ def build_injection(rng, games, system):
         {"role": "user", "content": f"So what do you think of the {read['team']} tonight?"},
         {"role": "assistant", "content": answer},
     ]
-    return chat_example(system, "injection", turns)
+    return chat_example(system, "injection", turns, date=g["gameDate"])
 
 
 BUILDERS = {
@@ -942,7 +1110,12 @@ def main() -> None:
     games = [g for g in games if g.get("awayTeam") and g.get("homeTeam") and g.get("sport") and g.get("gameDate")]
     if not games:
         sys.exit("No usable game rows (need sport, gameDate, awayTeam, homeTeam).")
-    print(f"[dime-1.0] {len(games)} game rows loaded")
+    total_loaded = len(games)
+    games, dropped = prepare_games(games)
+    print(f"[dime-1.0] {total_loaded} rows loaded; {len(games)} pass point-in-time validation")
+    print(f"[dime-1.0] dropped: {json.dumps(dropped)}")
+    if not games:
+        sys.exit("No rows satisfy modelRunAt <= generated_at < event_start — check modelRunAt/startTimeEst columns.")
 
     rng = random.Random(args.seed)
     examples, seen = [], set()
@@ -981,8 +1154,19 @@ def main() -> None:
         by_category.setdefault(example["category"], []).append(example)
     for bucket in by_category.values():
         n_val = max(1, round(len(bucket) * args.val_frac)) if len(bucket) > 1 else 0
-        val_file.extend(bucket[:n_val])
-        train_file.extend(bucket[n_val:])
+        # Chronological split for dated categories: validation takes the LATEST
+        # dates so evaluation never sees a period the training rows postdate.
+        dated = sorted((e for e in bucket if "date" in e), key=lambda e: e["date"])
+        undated = [e for e in bucket if "date" not in e]
+        take = min(n_val, len(dated))
+        if take:
+            val_file.extend(dated[-take:])
+            train_file.extend(dated[:-take])
+        else:
+            train_file.extend(dated)
+        n_val -= take
+        val_file.extend(undated[:n_val])
+        train_file.extend(undated[n_val:])
     rng.shuffle(train_file)
     rng.shuffle(val_file)
 
@@ -1001,6 +1185,14 @@ def main() -> None:
         "train_examples": len(train_file),
         "val_examples": len(val_file),
         "category_counts": stats,
+        "category_targets": {category: round(args.target * share) for category, share in MIX.items()},
+        "target_shortfalls": {
+            category: round(args.target * MIX[category]) - stats[category]
+            for category in MIX
+            if stats[category] < round(args.target * MIX[category])
+        },
+        "temporal_invariant": "modelRunAt <= generated_at < event_start (enforced per context row)",
+        "rows_dropped_at_load": dropped,
         "system_prompt_sha256": hashlib.sha256(system.encode()).hexdigest(),
     }
     (out_dir / "dataset_manifest.json").write_text(json.dumps(manifest, indent=2))

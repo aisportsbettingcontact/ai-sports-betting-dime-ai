@@ -33,6 +33,7 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -66,6 +67,73 @@ DENIAL = re.compile(r"isn'?t in the (?:current )?Dime feed|doesn'?t carry|hasn'?
 PLAY_BAR = 2.0
 
 ACK = "Understood. I will ground Dime answers in this platform context and clearly say when a requested market is missing."
+GEN_AT = re.compile(r"generated_at=(\S+)")
+CTX_ENTRY = re.compile(r"^(\d+)\.\s+\S+\s+(\d{4}-\d{2}-\d{2})\s+(.*?)\s+—", re.M)
+RUN_AT = re.compile(r"modelRunAt=(\S+)")
+ENTRY_PRICE = re.compile(
+    r"(?:becomes a bet around|want meaningfully better than|it takes|price gets\s+to|Shop for|shop for) ([+-]\d{2,4})"
+)
+THIN_EDGE_WORD = re.compile(r"[\d.]+-point edge")
+THIN_DEFICIT_WORD = re.compile(r"[\d.]+-point deficit")
+
+
+def _parse_stamp(token):
+    try:
+        stamp = datetime.fromisoformat(token.rstrip(";,").replace("Z", "+00:00"))
+        return stamp if stamp.tzinfo else stamp.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _parse_start(date, time_text):
+    m = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)?", time_text.strip(), re.I)
+    try:
+        if m:
+            hour, minute = int(m.group(1)), int(m.group(2))
+            if m.group(3):
+                hour = hour % 12 + (12 if m.group(3).upper() == "PM" else 0)
+            local = datetime.fromisoformat(f"{date}T{hour:02d}:{minute:02d}:00")
+            return (local + timedelta(hours=4)).replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+    return None
+
+
+def audit_temporal(audit, rows):
+    """Point-in-time gate: modelRunAt <= generated_at < event_start for every
+    context entry. A model run after the snapshot is hindsight leakage."""
+    for path, lineno, messages in rows:
+        for m in messages:
+            if m["role"] != "user" or not m["content"].startswith("Dime platform context"):
+                continue
+            gen_m = GEN_AT.search(m["content"])
+            gen = _parse_stamp(gen_m.group(1)) if gen_m else None
+            if gen is None:
+                audit.sev2.append(f"TEMPORAL {path}:{lineno} — context has no parseable generated_at")
+                continue
+            entries = re.split(r"(?m)^(?=\d+\.\s)", m["content"])
+            for entry in entries:
+                header = CTX_ENTRY.search(entry)
+                if not header:
+                    continue
+                run_m = RUN_AT.search(entry)
+                run = _parse_stamp(run_m.group(1)) if run_m else None
+                start = _parse_start(header.group(2), header.group(3))
+                if run and run > gen:
+                    audit.sev1.append(
+                        f"TEMPORAL {path}:{lineno} — entry {header.group(1)} modelRunAt {run_m.group(1)} "
+                        f"postdates snapshot generated_at (hindsight leakage)"
+                    )
+                if start and gen >= start:
+                    audit.sev1.append(
+                        f"TEMPORAL {path}:{lineno} — snapshot generated_at is at/after entry "
+                        f"{header.group(1)}'s event start (post-start context)"
+                    )
+                if run and start and run >= start:
+                    audit.sev2.append(
+                        f"TEMPORAL {path}:{lineno} — entry {header.group(1)} model run is after its own "
+                        f"event start (source-row anomaly)"
+                    )
 OFF_TOPIC_CONSTANT = "Dime only handles sports betting and platform questions."
 CONTEXT_HEADER = re.compile(r"^\d+\.\s+\S+\s+\d{4}-\d{2}-\d{2}.*?—\s*(.+?)\s+at\s+(.+?)\s*$", re.M)
 
@@ -222,6 +290,22 @@ def audit_math_direction(audit: Audit, rows):
             audit.sev1.append(
                 f"G3 {path}:{lineno} — 'edge' claimed with model {model_p}% <= implied {market_p}%"
             )
+        entry_m = ENTRY_PRICE.search(answer)
+        if entry_m:
+            entry_implied = implied(int(entry_m.group(1))) * 100
+            if entry_implied > model_p - 1.45:
+                audit.sev2.append(
+                    f"G3 {path}:{lineno} — quoted entry price {entry_m.group(1)} carries under 1.5pp of edge "
+                    f"(implied {entry_implied:.1f}% vs model {model_p}%) — fair price used as bet trigger"
+                )
+        if THIN_EDGE_WORD.search(answer) and gap < -0.05:
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — 'edge' wording on a {gap:+.1f}pp NEGATIVE gap (deficit called an edge)"
+            )
+        if THIN_DEFICIT_WORD.search(answer) and gap > 0.05:
+            audit.sev1.append(
+                f"G3 {path}:{lineno} — 'deficit' wording on a {gap:+.1f}pp POSITIVE gap"
+            )
         if SHORT_CLAIM.search(answer) and gap > 0.05:
             audit.sev1.append(
                 f"G3 {path}:{lineno} — 'short of break-even' prose with a {gap:+.1f}pp POSITIVE gap"
@@ -307,7 +391,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("files", nargs="+", help="JSONL files to audit (full contents)")
     parser.add_argument("--dump-full", default=None, help="write an untruncated human-readable dump")
-    parser.add_argument("--max-dup-frac", type=float, default=0.20)
+    parser.add_argument("--max-dup-frac", type=float, default=0.10)
     args = parser.parse_args()
 
     rows = load_rows(args.files)
@@ -319,6 +403,7 @@ def main() -> None:
     print(f"[audit] team lexicon: {len(lexicon)} teams (context headers + generator pools)")
 
     audit = Audit()
+    audit_temporal(audit, rows)
     audit_grounding(audit, rows, lexicon)
     audit_math_direction(audit, rows)
     audit_tasks(audit, rows)

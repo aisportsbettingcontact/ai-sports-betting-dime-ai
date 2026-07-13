@@ -74,14 +74,24 @@ afterward — the format is identical.
 
 `audit_dataset.py` is the deterministic post-generation gate. It reads FULL
 records (never previews — a `[:400]` terminal slice hides context rows and
-produces false fabrication findings) and enforces the hard gates: grounding
-(any team a verdict cites must be in that row's own context), math recompute
+produces false fabrication findings) and enforces the hard gates: **temporal
+integrity** (`modelRunAt <= generated_at < event_start` for every context
+entry — a model run postdating the snapshot is hindsight leakage), grounding
+(any team a verdict cites must be in that row's own context; a NO DATA answer
+may never deny a matchup sitting in its own context), math recompute
 (implied% from the stated price, stated gap vs model−implied), verdict-sign
-coherence (PLAY needs ≥2.0pp positive gap; "edge" claims need a positive gap),
-extraction fidelity (non-null fields must be evidenced in the INPUT text),
-certainty language, RG safety (helpline once, no picks), and a template-
-duplication census (>20% verbatim reuse per category; the off-topic product
-constant and the context acknowledgment are exempt by design).
+coherence (PLAY needs ≥2.0pp positive gap; "edge"/"deficit"/"short of
+break-even" wording must match the gap's sign; quoted entry prices must carry
+≥1.5pp of edge — fair odds are never a bet trigger; board-wide superlatives
+are banned), extraction fidelity (non-null fields must be evidenced in the
+INPUT text), certainty language, RG safety (helpline once, no picks), and a
+template-duplication census (>10% verbatim reuse per category; the off-topic
+product constant and the context acknowledgment are exempt by design).
+
+The generator enforces the same temporal invariant at load time (invalid
+source rows are dropped and counted in the manifest), context peers come from
+the same slate date only, and the train/val split is chronological for dated
+categories — validation always holds the latest dates.
 
 ```bash
 python audit_dataset.py train.jsonl val.jsonl
