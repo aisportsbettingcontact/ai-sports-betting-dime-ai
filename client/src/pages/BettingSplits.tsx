@@ -853,10 +853,10 @@ export default function BettingSplitsPage({
               style={{
                 background: "hsl(var(--secondary))",
                 borderColor: searchFocused
-                  ? "rgba(34,197,94,0.5)"
+                  ? "#45E0A8"
                   : "hsl(var(--border))",
                 boxShadow: searchFocused
-                  ? "0 0 0 1px rgba(34,197,94,0.15)"
+                  ? "0 0 0 1px #45E0A8"
                   : "none",
               }}
             >
@@ -892,14 +892,14 @@ export default function BettingSplitsPage({
             <div
               className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
               style={{
-                background: "#0f0f0f",
+                background: "#000000",
                 maxHeight: "calc(3 * 68px + 44px)",
                 overflowY: "auto",
               }}
             >
               <div
                 className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0"
-                style={{ background: "#0f0f0f", zIndex: 10 }}
+                style={{ background: "#000000", zIndex: 10 }}
               >
                 <span className="text-sm text-white uppercase tracking-widest">
                   {dropdownResults.length === 0
@@ -959,7 +959,7 @@ export default function BettingSplitsPage({
               <span
                 className="bs-datehdr-sub font-semibold"
                 style={{
-                  color: "#a3a3a3",
+                  color: "#FFFFFF",
                   letterSpacing: "0.06em",
                   fontSize: "clamp(9px, 2.8vw, 17px)",
                   textTransform: "uppercase",
