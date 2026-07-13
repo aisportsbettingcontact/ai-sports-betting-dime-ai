@@ -19,7 +19,7 @@ export function AgeModal({ onAccept, onClose }: AgeModalProps) {
       <div className="relative z-10 w-full max-w-sm mx-4 bg-card border border-border rounded-xl shadow-2xl p-6">
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+          <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
           <h2 className="text-base font-bold text-foreground">Age & Responsibility Notice</h2>
         </div>
 
