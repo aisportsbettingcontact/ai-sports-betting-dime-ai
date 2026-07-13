@@ -206,7 +206,7 @@ function FavNotificationBanner({ notif, onDismiss }: { notif: FavNotification; o
         </p>
       </div>
       <button type="button" onClick={() => onDismiss(notif.id)}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.4)", flexShrink: 0 }}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#FFFFFF", flexShrink: 0 }}
       >
         <X style={{ width: 12, height: 12 }} />
       </button>
@@ -1041,7 +1041,7 @@ export default function ModelProjections() {
                   title={`Discord connected: @${appUser.discordUsername ?? appUser.discordId}`}
                   className="flex items-center gap-[6px] px-3 py-1.5 rounded-full select-none cursor-default min-w-0"
                   style={{
-                    background: "#3238a9",
+                    background: "#000000",
                     color: "#ffffff",
                     fontFamily: "'GG Sans', 'Noto Sans', sans-serif",
                     fontWeight: 600,
@@ -1073,7 +1073,7 @@ export default function ModelProjections() {
                   title="Link your Discord account to verify membership"
                   className="flex items-center gap-[5px] rounded-full no-underline min-w-0 flex-shrink-0"
                   style={{
-                    background: "#3238a9",
+                    background: "#000000",
                     color: "#ffffff",
                     fontFamily: "'GG Sans', 'Noto Sans', sans-serif",
                     fontWeight: 600,
@@ -1231,8 +1231,8 @@ export default function ModelProjections() {
             <button type="button" onClick={() => setShowFavoritesTab(v => !v)}
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
               style={showFavoritesTab
-                ? { background: "rgba(255,215,0,0.18)", color: "#45E0A8", border: "1px solid rgba(255,215,0,0.55)", boxShadow: "0 0 8px rgba(255,215,0,0.15)" }
-                : { background: "hsl(var(--card))", color: "rgba(255,215,0,0.75)", border: "1px solid rgba(255,215,0,0.35)" }
+                ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8", boxShadow: "none" }
+                : { background: "hsl(var(--card))", color: "#45E0A8", border: "1px solid #45E0A8" }
               }
               title={`Favorites (${activeFavCount})`}
             >

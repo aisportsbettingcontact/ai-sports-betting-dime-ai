@@ -159,8 +159,8 @@
 
 /* Profile row — applied WITH .dc-sidebar-row (frozen: class="profile-row sidebar-row") */
 .profile-row, .dc-profile-row { position: relative; margin-top: 8px; padding: 10px 8px; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px; } /* D:73 = L:73 (shared decls) */
-.theme-dark .dc-profile-row, .theme-dark .profile-row { border-top: 1px solid #1E1E26; } /* D:73 */
-.theme-light .dc-profile-row, .theme-light .profile-row { border-top: 1px solid #E4E4E9; } /* L:73 */
+.theme-dark .dc-profile-row, .theme-dark .profile-row { border-top: 1px solid #FFFFFF; } /* D:73 */
+.theme-light .dc-profile-row, .theme-light .profile-row { border-top: 1px solid #000000; } /* L:73 */
 
 .dc-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; } /* D:74 = L:74 */
 .dc-avatar--menu { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; } /* D:78 = L:78 */
