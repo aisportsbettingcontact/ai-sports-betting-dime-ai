@@ -141,9 +141,9 @@ describe("DimeModelFeed — owner rules", () => {
     expect(src).toMatch(/\[toAdv, ml, draw, total, spread, dblChc, btts\]/);
   });
 
-  it("brand law: mint token only (#45E0A8 dark / #0FA36B light), no neon/gold", () => {
+  it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
     expect(src).toContain("#45E0A8");
-    expect(src).toContain("#0FA36B");
+    expect(src).not.toContain("#0FA36B");
     expect(src).not.toMatch(/#39FF14|#FFD700|#FF6B35|#22D3EE|#F87171/i);
   });
 
