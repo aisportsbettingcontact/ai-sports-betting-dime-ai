@@ -27,6 +27,8 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
+import { ProjectionCard } from "@/components/projections/ProjectionCard";
+import { feedSpecToProjectionGame } from "@/components/projections/fromFeedSpec";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { formatGameTime } from "@/lib/gameUtils";
 import {
@@ -496,7 +498,12 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <p>Try the date arrows above.</p>
             </div>
           ) : (
-            cards.map((g) => <GameRow g={g} key={g.id} />)
+            cards.map((g) => (
+              <ProjectionCard
+                key={g.id}
+                game={feedSpecToProjectionGame(g, sport === "WC" ? "World Cup" : "MLB")}
+              />
+            ))
           )}
         </div>
 
