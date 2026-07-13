@@ -1,0 +1,89 @@
+/* ProjectionCard — Law v3 dimensional data card. Consumes the global tokens
+   (--proj-* type, --brand-mint-* accent, --elev-* elevation, --space-*, color
+   tokens). Mobile-first; @container reflows structure before type shrinks. */
+
+.projection-card {
+  container: projcard / inline-size;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--space-md);
+  grid-template-areas: "head" "matchup" "summary" "markets";
+  padding: var(--space-lg);
+  background: var(--card, #0a0a0a);
+  color: var(--foreground, #ffffff);
+  border: 1px solid var(--border, #262626);
+  border-radius: 16px;
+  box-shadow: var(--elev-card);
+}
+
+.projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.projection-card__league { color: var(--text-secondary, #a6a6a6); }
+.projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
+.projection-card__status--live { color: #45e0a8; } /* live = signal */
+
+/* ── Matchup ── */
+.matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
+.matchup__grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-sm) var(--space-md); }
+.matchup__team { display: flex; align-items: center; gap: var(--space-sm); min-inline-size: 0; }
+.matchup__team--home { justify-content: flex-end; }
+.matchup__name { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; }
+.matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; padding-inline: var(--space-xs); }
+.matchup__status { font-size: var(--proj-meta); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
+.matchup__status--live { color: #45e0a8; }
+.matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
+.matchup__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px var(--space-md); font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
+
+/* Team logos: unframed transparent asset in a consistent optical box */
+.team-logo-box { display: inline-grid; place-items: center; inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); block-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); flex: none; }
+.team-logo { inline-size: 100%; block-size: 100%; object-fit: contain; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.team-logo--mono { display: grid; place-items: center; border-radius: 50%; color: #fff; font-size: var(--proj-label); font-weight: 700; } /* monogram fallback disc (logo exception) */
+
+/* ── Summary (the dominant insight) ── */
+.summary { grid-area: summary; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); padding-block: var(--space-sm); border-block: 1px solid var(--border, #262626); }
+.summary__edge { flex: none; }
+.summary__readout { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-lg); margin: 0; }
+.summary__item { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
+.summary__item dt { color: var(--text-muted, #6e6e6e); }
+.summary__item dd { margin: 0; }
+.summary__pick { font-size: var(--proj-body); font-weight: 700; }
+.summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
+
+/* ── Markets (supporting; disclosure keeps them from dominating) ── */
+.projection-card__markets { grid-area: markets; }
+.projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.75rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
+.projection-card__markets-toggle::-webkit-details-marker { display: none; }
+.projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
+.projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
+.projection-card__markets-count { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
+.projection-card__markets-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); margin-top: var(--space-sm); }
+
+/* Market table — flat, scannable; depth via the card, not per-table frames */
+.market-table { inline-size: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; background: var(--surface-raised, #141414); border: 1px solid var(--border, #262626); border-radius: 12px; overflow: hidden; }
+.market-table__caption { caption-side: top; text-align: start; padding: var(--space-xs) var(--space-sm) var(--space-2xs); color: var(--text-secondary, #a6a6a6); }
+.market-table th, .market-table td { min-block-size: 2.75rem; padding: 0.5rem 0.625rem; font-size: var(--proj-body); vertical-align: middle; }
+.market-table thead th { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-muted, #6e6e6e); text-align: start; border-block-end: 1px solid var(--border, #262626); }
+.market-table th:not(:first-child), .market-table td:not(:first-child) { text-align: end; }
+.market-table__side { font-weight: 600; }
+.market-table tbody td, .market-table tbody th { font-variant-numeric: tabular-nums; }
+.market-table tbody tr + tr th, .market-table tbody tr + tr td { border-block-start: 1px solid var(--border, #262626); }
+.market-table__model--signal { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); box-shadow: inset 3px 0 0 #45e0a8; font-weight: 700; }
+.market-table__edge { font-size: var(--proj-meta); font-weight: 700; }
+.market-table__result { text-align: center !important; color: var(--text-muted, #6e6e6e); border-block-start: 1px solid var(--border, #262626); }
+
+/* ── Container-query reflow: structure adapts, type never shrinks to fit ── */
+@container projcard (min-width: 34rem) {
+  .projection-card__markets-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container projcard (min-width: 52rem) {
+  .projection-card__markets-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* Design note: an element cannot respond to its OWN container query, and
+   insight-first (matchup + dominant summary on top, market grid reflowing 3→2→1
+   below) is a stronger 3-second hierarchy than cramming matchup|markets|summary
+   into one row — so the card stacks and only the market grid reflows by width. */
+
+@media (prefers-reduced-motion: reduce) {
+  .projection-card, .projection-card__markets-toggle { transition: none; }
+}

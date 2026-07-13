@@ -1,0 +1,58 @@
+/* EdgeIndicator — accessible mint accent (Law v3). Mint reads as a tinted CELL
+   with a high-contrast foreground, never small mint text on white. Meaning is
+   carried by surface + border + label + icon, so it never depends on color. */
+
+.edge-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-block-size: 2rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand-mint-foreground);
+  background: var(--brand-mint-surface);
+  border: 1px solid var(--brand-mint-border);
+  border-inline-start: 4px solid #45e0a8; /* the one mint rail */
+  box-shadow: var(--elev-1);
+}
+
+.edge-indicator__label {
+  font-size: var(--proj-meta);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.edge-indicator__value {
+  font-size: var(--proj-odds);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.edge-indicator__rec {
+  margin-inline-start: auto;
+  padding-inline-start: 10px;
+  font-size: var(--proj-meta);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* NO_EDGE: quiet, flat, NON-mint — mint stays signal-only. */
+.edge-indicator--none {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 2rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 10px;
+  color: var(--text-muted, #6e6e6e);
+  background: transparent;
+  border: 1px solid var(--border, #262626);
+  font-size: var(--proj-label);
+  font-weight: 600;
+}
