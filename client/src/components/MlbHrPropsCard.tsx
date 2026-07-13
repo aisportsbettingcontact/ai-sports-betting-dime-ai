@@ -139,7 +139,7 @@ function PlayerRow({ row }: PlayerRowProps) {
           fontSize: 11,
           fontWeight: isOver ? 800 : 600,
           color: isOver ? "#39FF14" : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -150,27 +150,27 @@ function PlayerRow({ row }: PlayerRowProps) {
       </div>
 
       {/* Book line */}
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtLine(row.bookLine)}
       </span>
 
       {/* Consensus over odds */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.85)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtOdds(row.consensusOverOdds)}
       </span>
 
       {/* Model P(HR) */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtPct(row.modelPHr)}
       </span>
 
       {/* Model odds */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtOdds(row.modelOverOdds)}
       </span>
 
       {/* Edge */}
-      <span style={{ fontSize: 11, fontWeight: 800, color: edgeColor, textAlign: "center", fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 800, color: edgeColor, textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtEdge(row.edgeOver)}
       </span>
     </div>
@@ -203,7 +203,7 @@ function TeamSection({ teamAbbrev, rows, primaryColor }: TeamSectionProps) {
         <span style={{
           fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
           color: primaryColor, textTransform: "uppercase",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
         }}>
           {teamName} ({teamAbbrev})
         </span>
@@ -262,7 +262,7 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
         marginBottom: 10,
         padding: "16px",
         textAlign: "center",
-        fontFamily: "'Barlow Condensed', sans-serif",
+        fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
       }}>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
           HR props not yet available for {awayTeam} @ {homeTeam}
@@ -278,7 +278,7 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
-      fontFamily: "'Barlow Condensed', 'Barlow', sans-serif",
+      fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
       {/* Team gradient bar */}
       <div style={{
@@ -295,11 +295,11 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
             {awayTeam}
           </span>
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>@</span>
-          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: "0.04em", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
             {homeTeam}
           </span>
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginLeft: 4 }}>

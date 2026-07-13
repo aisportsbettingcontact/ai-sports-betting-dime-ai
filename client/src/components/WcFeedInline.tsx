@@ -2662,7 +2662,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
               }}
             >
               {/* Jersey number */}
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: "#FFFFFF", width: 14, flexShrink: 0, textAlign: "right" }}>
+              <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, color: "#FFFFFF", width: 14, flexShrink: 0, textAlign: "right" }}>
                 {p.jerseyNumber ?? ""}
               </span>
               {/* Flag circle */}
@@ -2671,12 +2671,12 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
               </div>
               {/* Name + position */}
               <div style={{ flex: 1, minWidth: 0, marginLeft: 4 }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }}>
+                <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 13, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }}>
                   {p.playerName}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                   {p.position && (
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 4px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.4 }}>
+                    <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 4px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.4 }}>
                       {p.position}
                     </span>
                   )}
@@ -2712,7 +2712,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
             }}
           >
             {/* Jersey number */}
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 16, flexShrink: 0, textAlign: "right" }}>
+            <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 16, flexShrink: 0, textAlign: "right" }}>
               {p.jerseyNumber ?? ""}
             </span>
             {/* Flag circle */}
@@ -2721,11 +2721,11 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
             </div>
             {/* Name + position + injury */}
             <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
+              <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 14, fontWeight: 800, color: "#FFFFFF", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>
                 {p.playerName}
               </span>
               {p.position && (
-                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 6px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.5, flexShrink: 0 }}>
+                <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 6px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.5, flexShrink: 0 }}>
                   {p.position}
                 </span>
               )}
@@ -2830,10 +2830,10 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
             />
           </div>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
               {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
             </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
               {awayFifaCode}
             </div>
             <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${awayColors.primary}22`, color: "#FFFFFF", border: `1px solid ${awayColors.primary}44` }}>
@@ -2844,10 +2844,10 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
 
         {/* Center: time + @ */}
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, color: "#FFFFFF", letterSpacing: "1px", whiteSpace: "nowrap" }}>
+          <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, color: "#FFFFFF", letterSpacing: "1px", whiteSpace: "nowrap" }}>
             {startTime}
           </div>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 10, color: "#FFFFFF", letterSpacing: "3px", marginTop: 3 }}>
+          <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 10, color: "#FFFFFF", letterSpacing: "3px", marginTop: 3 }}>
             @
           </div>
         </div>
@@ -2855,10 +2855,10 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
         {/* Home team — right-aligned */}
         <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 7 : 12, justifyContent: "flex-end" }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
               {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
             </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
               {homeFifaCode}
             </div>
             <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${homeColors.primary}22`, color: "#FFFFFF", border: `1px solid ${homeColors.primary}44` }}>

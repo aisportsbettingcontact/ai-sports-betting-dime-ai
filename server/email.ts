@@ -63,7 +63,7 @@ function buildEmailHtml(opts: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${opts.title}</title>
 </head>
-<body style="margin:0;padding:0;background:${DARK_BG};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:${DARK_BG};font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <!-- Preheader (hidden preview text) -->
   <span style="display:none;font-size:1px;color:${DARK_BG};max-height:0;max-width:0;opacity:0;overflow:hidden;">${opts.preheader}</span>
 

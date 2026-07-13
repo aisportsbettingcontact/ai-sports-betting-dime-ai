@@ -101,7 +101,7 @@ const T = {
   text:      "var(--bt-text, #d0d0d0)",
   textMuted: "var(--bt-text-muted, #888)",
   mono:      "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
-  sans:      "var(--bt-sans, 'Barlow Condensed', sans-serif)",
+  sans:      "var(--bt-sans, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
 } as const;
 
 // Canvas contexts can't consume var() strings — resolve the computed values

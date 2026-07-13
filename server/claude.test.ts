@@ -59,7 +59,7 @@ describe("Claude Fable 5 Integration", () => {
       expect(UIUX_SYSTEM_PROMPT).toContain("AI Sports Betting");
       expect(UIUX_SYSTEM_PROMPT).toContain("Prez Bets");
       expect(UIUX_SYSTEM_PROMPT).toContain("#00ff41");
-      expect(UIUX_SYSTEM_PROMPT).toContain("Barlow Condensed");
+      expect(UIUX_SYSTEM_PROMPT).toContain("Familjen Grotesk");
       expect(UIUX_SYSTEM_PROMPT).toContain("TypeScript");
     });
   });

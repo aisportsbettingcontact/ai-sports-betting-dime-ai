@@ -259,7 +259,7 @@ export function BetCalendar({
         borderRadius: "6px",
         overflow: "hidden",
         userSelect: "none",
-        fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
+        fontFamily: "var(--bt-sans, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
       }}
     >
       {/* ── HEADER: Month + Year + Navigation ── */}
@@ -274,7 +274,7 @@ export function BetCalendar({
                 color: "var(--bt-strong, #f0f0f0)",
                 letterSpacing: "-0.5px",
                 lineHeight: 1,
-                fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
+                fontFamily: "var(--bt-sans, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
               }}>
                 {MONTH_NAMES[month - 1]}
               </span>
@@ -455,7 +455,7 @@ export function BetCalendar({
               color: "var(--bt-dim, #3a4a3a)",
               letterSpacing: "2px",
               padding: "4px 0",
-              fontFamily: "var(--bt-sans, 'Barlow Condensed', sans-serif)",
+              fontFamily: "var(--bt-sans, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
             }}>
               {d}
             </div>
