@@ -818,10 +818,10 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
   const nrfiPass = game.nrfiFilterPass === 1;
   const nrfiSignal = game.nrfiCombinedSignal;
 
-  // Gradient bar
-  const gradientStyle = {
-    background: "#45E0A8",
-    height: 3,
+  // Quiet 1px keyline (chrome — carries no signal, so no mint)
+  const keylineStyle = {
+    background: "var(--dime-border)",
+    height: 1,
     width: "100%",
   };
 
@@ -834,8 +834,8 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
       overflow: "hidden",
       fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
-      {/* Gradient bar */}
-      <div style={gradientStyle} />
+      {/* Keyline (chrome) */}
+      <div style={keylineStyle} />
 
       {/* ── HEADER ── */}
       <div style={{

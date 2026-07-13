@@ -13,16 +13,6 @@ export default function Hero() {
     <>
       <header className="hero" id="top">
         <div className="wrap">
-          <div className="tele" style={{ marginBottom: 26 }} aria-hidden="true">
-            <span className="corner">┌</span>
-            <span className="lbl">
-              <span className="pulse" style={{ marginRight: 7 }} />
-              SIM.ENGINE // ACTIVE &nbsp;·&nbsp; RUNS // 400,000 PER GAME &nbsp;·&nbsp; ODDS.FREEZE // FIRST_PITCH
-            </span>
-            <span className="line" />
-            <span className="corner">┐</span>
-          </div>
-
           <span className="mono mono--mint">{HERO.eyebrow}</span>
           <h1>
             {HERO.headline.before}

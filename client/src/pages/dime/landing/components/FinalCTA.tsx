@@ -20,7 +20,7 @@ export default function FinalCTA() {
           data-plan="pro"
           data-mode="paid"
         >
-          {FINAL_CTA.cta} — <Wordmark fontSize={17} />
+          {FINAL_CTA.cta} · <Wordmark fontSize={17} />
         </a>
       </div>
     </div>

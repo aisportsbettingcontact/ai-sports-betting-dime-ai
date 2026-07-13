@@ -24,13 +24,11 @@ export default function NotFound() {
           <h1 className="text-4xl font-bold text-white mb-2">404</h1>
 
           <h2 className="text-xl font-semibold text-white mb-4">
-            Page Not Found
+            Page not found
           </h2>
 
           <p className="text-white mb-8 leading-relaxed">
-            Sorry, the page you are looking for doesn't exist.
-            <br />
-            It may have been moved or deleted.
+            This page doesn't exist. It may have been moved or deleted.
           </p>
 
           <div
@@ -39,11 +37,33 @@ export default function NotFound() {
           >
             <Button
               onClick={handleGoHome}
-              className="bg-[#45E0A8] text-white px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              className="bg-[#45E0A8] text-black px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <Home className="w-4 h-4 mr-2" />
-              Go Home
+              Go home
             </Button>
+          </div>
+
+          {/* Useful destinations instead of a dead end */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
+            <a
+              href="/feed/model/mlb"
+              className="text-white underline hover:text-[#45E0A8] transition-colors"
+            >
+              Projections board
+            </a>
+            <a
+              href="/#pricing"
+              className="text-white underline hover:text-[#45E0A8] transition-colors"
+            >
+              Pricing
+            </a>
+            <a
+              href="/login"
+              className="text-white underline hover:text-[#45E0A8] transition-colors"
+            >
+              Log in
+            </a>
           </div>
         </CardContent>
       </Card>

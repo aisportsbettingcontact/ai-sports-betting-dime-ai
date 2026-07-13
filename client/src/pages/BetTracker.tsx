@@ -1458,7 +1458,7 @@ function LogsTab({
               </button>
               <button type="button" onClick={handleReview}
                 disabled={reviewMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:opacity-40 ${
+                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
                   reviewAction === "APPROVE" ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
                 }`}
               >
@@ -2691,12 +2691,12 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
             {/* $ / Units toggle */}
             <div className="flex items-center bg-black border border-white rounded-lg p-0.5">
               <button type="button" onClick={() => setStakeMode("$")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-[#45E0A8] text-white" : "text-white hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-[#45E0A8] text-black" : "text-white hover:text-white"}`}
               >
                 <DollarSign size={10} />$
               </button>
               <button type="button" onClick={() => setStakeMode("U")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-[#45E0A8] text-white" : "text-white hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-[#45E0A8] text-black" : "text-white hover:text-white"}`}
               >
                 <Hash size={10} />U
               </button>
@@ -3059,7 +3059,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                 <button type="button" onClick={() => setFormWagerType("PREGAME")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                     formWagerType === "PREGAME"
-                      ? "bg-[#45E0A8] text-white"
+                      ? "bg-[#45E0A8] text-black"
                       : "text-white hover:text-white"
                   }`}
                 >
@@ -3252,7 +3252,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
             {/* Submit */}
             <button type="button" onClick={handleSubmit}
               disabled={createMut.isPending || !formGame}
-              className="w-full bg-[#45E0A8] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
+              className="w-full bg-[#45E0A8] disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
             >
               {createMut.isPending ? "Saving…" : "TRACK BET"}
             </button>
@@ -3563,7 +3563,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
               </button>
               <button type="button" onClick={handleEditSave}
                 disabled={updateMut.isPending || submitRequestMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:opacity-40 ${
+                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
                   editIsRequest ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
                 }`}
               >
@@ -3650,7 +3650,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
               </button>
               <button type="button" onClick={handleDeleteConfirm}
                 disabled={deleteMut.isPending || submitRequestMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-colors disabled:opacity-40 ${
+                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
                   deleteIsRequest ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
                 }`}
               >

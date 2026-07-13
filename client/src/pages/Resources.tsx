@@ -528,7 +528,7 @@ export default function Resources() {
                 className={`
                   relative px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all
                   ${isActive
-                    ? "bg-[#45E0A8] text-white"
+                    ? "bg-[#45E0A8] text-black"
                     : "text-white hover:text-white hover:bg-black"
                   }
                 `}

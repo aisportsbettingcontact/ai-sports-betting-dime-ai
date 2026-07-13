@@ -220,8 +220,8 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
     // Deduplicate and sort
     const milestones = Array.from(new Set(rawMilestones)).sort((a, b) => a - b);
 
-    // Draw grid lines at each milestone
-    ctx.strokeStyle = P.border;
+    // Draw grid lines at each milestone (faint — must stay quieter than the data line)
+    ctx.strokeStyle = withAlpha(P.border, 0.12);
     ctx.lineWidth = 1;
     milestones.forEach(v => {
       const y = toY(v);
@@ -258,8 +258,9 @@ function EquityChartInner({ points, stats }: { points: EquityPoint[]; stats?: St
       ctx.fillText(label, PAD_LEFT - 5, y + 3.5);
     });
 
-    // Zero line (dashed)
-    ctx.strokeStyle = P.dimmer;
+    // Zero line (dashed) — P.dimmer resolves to the page bg in Dime themes
+    // (invisible), so tint from the border token instead.
+    ctx.strokeStyle = withAlpha(P.border, 0.35);
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();

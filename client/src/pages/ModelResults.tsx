@@ -836,7 +836,7 @@ export default function ModelResults() {
                 </div>
                 <ResponsiveContainer width="100%" height={280}>
                   <LineChart data={brierChartData} margin={{ top: 4, right: 16, left: -20, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis
                       dataKey="gameIndex"
                       tick={{ fontSize: 9, fill: '#FFFFFF', fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}

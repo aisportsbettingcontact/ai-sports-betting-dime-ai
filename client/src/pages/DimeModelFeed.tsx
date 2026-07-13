@@ -105,6 +105,24 @@ function edgeGrade(pp: number): string {
   return "C+";
 }
 
+/**
+ * Black or white ink for a monogram on a `hex` disc (WCAG relative luminance,
+ * threshold 0.5) — light team discs need black ink, not hardcoded white.
+ * Duplicated in client/src/components/TeamLogo.tsx (no shared export without
+ * a new file) — keep in sync.
+ */
+function inkFor(hex: string): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return "#FFFFFF";
+  const n = parseInt(m[1], 16);
+  const lin = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.5 ? "#000000" : "#FFFFFF";
+}
+
 // ─── Presentational components ───────────────────────────────────────────────
 
 function Crest({ c, size }: { c: CrestSpec | null | undefined; size: number }) {
@@ -128,7 +146,13 @@ function Crest({ c, size }: { c: CrestSpec | null | undefined; size: number }) {
       ) : (
         <span
           className="dmf-crest-mono"
-          style={{ background: c.bg || "var(--dmf-card-hi)", fontSize: Math.max(7, size * 0.34) }}
+          style={{
+            background: c.bg || "var(--dmf-card-hi)",
+            // Team-colored disc: compute ink from disc luminance. No bg: the
+            // CSS default var(--dmf-t1) is the theme ink for the card-hi disc.
+            color: c.bg ? inkFor(c.bg) : undefined,
+            fontSize: Math.max(7, size * 0.34),
+          }}
         >
           {/* 2-char monogram — 3 letters clip inside small circles (Rule 5) */}
           {c.code.slice(0, 2)}
@@ -977,7 +1001,7 @@ const DMF_CSS = `
 .dmf-teams{display:flex;flex-direction:column;gap:8px;min-width:0}
 .dmf-teamrow{display:flex;align-items:center;gap:9px;min-width:0}
 .dmf-crest{border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;box-shadow:inset 0 0 0 1px var(--dmf-border-hi);background:var(--dmf-card-hi)}
-.dmf-crest-mono{width:100%;height:100%;display:grid;place-items:center;font-weight:700;color:#fff;border-radius:50%}
+.dmf-crest-mono{width:100%;height:100%;display:grid;place-items:center;font-weight:700;color:var(--dmf-t1);border-radius:50%}
 .dmf-tname{font-size:15.5px;font-weight:700;letter-spacing:-.006em;color:var(--dmf-t1)}
 .dmf-tscore{margin-left:auto;font-size:16px;font-weight:700;color:var(--dmf-t2);font-variant-numeric:tabular-nums}
 .dmf-meta{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4);margin-top:2px;line-height:1.6}
@@ -1020,7 +1044,7 @@ const DMF_CSS = `
 
 .dmf-empty,.dmf-invalid{padding:60px 0;text-align:center;color:var(--dmf-t3)}
 .dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
-.dmf-skel{background:var(--dmf-card-hi);border-radius:6px}
+.dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
 .dmf-rg{padding:28px 0 8px;text-align:center}
 
 /* mk7 (WC): matchup header, 4-col market grid, verdict strip */

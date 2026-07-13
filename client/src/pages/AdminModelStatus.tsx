@@ -383,7 +383,7 @@ export default function AdminModelStatus() {
         <TabsList className="bg-black border border-white mb-4">
           <TabsTrigger
             value="mlb"
-            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white font-mono text-xs"
+            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white font-mono text-xs"
           >
             MLB{" "}
             {mlbData && (
@@ -398,7 +398,7 @@ export default function AdminModelStatus() {
           </TabsTrigger>
           <TabsTrigger
             value="nhl"
-            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-white text-white font-mono text-xs"
+            className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white font-mono text-xs"
           >
             NHL{" "}
             {nhlData && (

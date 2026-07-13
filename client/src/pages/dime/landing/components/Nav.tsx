@@ -27,17 +27,19 @@ export default function Nav() {
         >
           Log in
         </a>
-        {/* Ghost, not mint: the hero's Get Access is the surface's single mint
+        {/* Ghost, not mint: the hero's Get access is the surface's single mint
             action (MASTER.md); once the hero scrolls away the sticky bar's mint
-            takes over. Two simultaneous mint buttons broke the one-accent law. */}
+            takes over. Two simultaneous mint buttons broke the one-accent law.
+            Contextual label: "Get access" is reserved for the hero + final CTA;
+            this button scrolls to the pricing grid. */}
         <a
           href="#pricing"
           className="btn btn--ghost"
-          data-cta-id="nav-get-access"
+          data-cta-id="nav-see-plans"
           data-cta-location="nav"
           data-mode="paid"
         >
-          Get Access
+          See plans
         </a>
       </div>
     </nav>

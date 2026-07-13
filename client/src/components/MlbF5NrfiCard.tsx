@@ -441,10 +441,10 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
       overflow: "hidden",
       fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
-      {/* Team gradient bar */}
+      {/* Quiet 1px keyline (chrome — carries no signal, so no mint) */}
       <div style={{
-        height: 4,
-        background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
+        height: 1,
+        background: "var(--dime-border)",
       }} />
 
       {/* Matchup header */}

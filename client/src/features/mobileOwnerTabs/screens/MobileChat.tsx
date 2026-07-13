@@ -1,5 +1,5 @@
 /**
- * MobileChat — AI Betting Analyst Preview (Phase 2)
+ * MobileChat — Dime Chat Preview (Phase 2)
  * ═══════════════════════════════════════════════════
  * Preview-only. No OpenAI calls. No credit deductions.
  * Shows credit state preview and action pricing.
@@ -12,11 +12,11 @@ import { mobileOwnerTabLogger } from "../logger";
 
 // ─── AI Action Pricing (Blueprint-defined) ──────────────────────────────────
 const AI_ACTIONS = [
-  { id: "explain_edge", label: "Explain This Edge", credits: 250, icon: Zap },
-  { id: "find_price", label: "Find Playable Price", credits: 350, icon: TrendingUp },
-  { id: "analyze_movement", label: "Analyze Line Movement", credits: 400, icon: BarChart3 },
-  { id: "break_down_game", label: "Break Down This Game", credits: 750, icon: Brain },
-  { id: "summarize_slate", label: "Summarize Today's Slate", credits: 2500, icon: Sparkles },
+  { id: "explain_edge", label: "Explain this edge", credits: 250, icon: Zap },
+  { id: "find_price", label: "Find playable price", credits: 350, icon: TrendingUp },
+  { id: "analyze_movement", label: "Analyze line movement", credits: 400, icon: BarChart3 },
+  { id: "break_down_game", label: "Break down this game", credits: 750, icon: Brain },
+  { id: "summarize_slate", label: "Summarize today's slate", credits: 2500, icon: Sparkles },
 ] as const;
 
 export function MobileChat() {
@@ -41,7 +41,7 @@ export function MobileChat() {
     });
 
     // Show toast — no OpenAI call, no credit deduction
-    toast.info(`"${actionLabel}" will be available when AI Analyst is activated.`, {
+    toast.info(`"${actionLabel}" will be available when Dime Chat is activated.`, {
       description: "Coming soon in test mode",
     });
 
@@ -62,8 +62,8 @@ export function MobileChat() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">AI Analyst</h1>
-              <p className="text-[10px] text-white">Preview Mode — No active calls</p>
+              <h1 className="text-lg font-bold text-white tracking-tight">Dime Chat</h1>
+              <p className="text-[10px] text-white">Preview mode. No active calls.</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 bg-black px-2 py-1 rounded">
@@ -76,10 +76,10 @@ export function MobileChat() {
       <div className="mx-4 mt-4 rounded-xl bg-black border border-white p-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-white uppercase tracking-wider">AI Analyst Credits</p>
+            <p className="text-[10px] text-white uppercase tracking-wider">Dime Credits</p>
             {creditState === "owner_unlimited" ? (
               <p className="text-sm text-[#45E0A8] font-semibold mt-0.5">
-                20,000 monthly AI Analyst Credits planned
+                20,000 monthly Dime Credits planned
               </p>
             ) : (
               <p className="text-sm text-white font-semibold mt-0.5">
@@ -133,7 +133,7 @@ export function MobileChat() {
         <div className="flex items-center gap-2 bg-black rounded-xl px-3 py-2.5 border border-white">
           <input
             type="text"
-            placeholder="Ask the AI Analyst..."
+            placeholder="Ask Dime Chat…"
             disabled
             className="flex-1 bg-transparent text-sm text-white placeholder-white outline-none cursor-not-allowed"
           />

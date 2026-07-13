@@ -1,13 +1,12 @@
 /** Objection handling — the shipped Straight Answers layer, carried forward. */
 
 import { OBJECTIONS } from "../landing-content";
-import { CtaRow, SectionHead, TeleFrame } from "./shared";
+import { CtaRow, SectionHead } from "./shared";
 
 export default function ObjectionHandling() {
   return (
     <section className="sec" id="answers" aria-label="Straight answers">
       <div className="wrap">
-        <TeleFrame label="STRAIGHT.ANSWERS // NO SALES VOICE" />
         <div className="sec-body">
           <SectionHead eyebrow={OBJECTIONS.eyebrow} headline={OBJECTIONS.headline} sub={OBJECTIONS.sub} />
           <div style={{ marginTop: "clamp(20px, 3vw, 32px)" }}>
@@ -21,13 +20,12 @@ export default function ObjectionHandling() {
           </div>
           <CtaRow
             label="Asked and answered"
-            cta="Get Access"
+            cta="Compare the plans"
             href="#pricing"
-            ctaId="answers-get-access"
+            ctaId="answers-compare-plans"
             location="objection-handling"
           />
         </div>
-        <TeleFrame />
       </div>
     </section>
   );
