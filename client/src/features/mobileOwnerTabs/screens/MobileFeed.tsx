@@ -243,7 +243,7 @@ export function MobileFeed() {
               {today} • Real-time model & market signals
             </p>
           </div>
-          <span className="text-[10px] text-emerald-400 font-medium px-2 py-0.5 rounded-full bg-emerald-400/10 border border-emerald-400/20">
+          <span className="text-[10px] text-[#45E0A8] font-medium px-2 py-0.5 rounded-full bg-black border border-[#45E0A8]">
             LIVE
           </span>
         </div>

@@ -378,7 +378,7 @@ export default function ManageAccount() {
               >
                 {cancelMutation.isPending ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Cancelling…
                   </span>
                 ) : (
