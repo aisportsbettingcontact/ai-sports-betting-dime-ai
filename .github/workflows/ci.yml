@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@v4
@@ -145,7 +145,7 @@ jobs:
     needs: security-audit
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@v4
@@ -225,7 +225,7 @@ jobs:
       DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@v4
@@ -289,7 +289,7 @@ jobs:
       NODE_ENV: test
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@v4
@@ -346,7 +346,7 @@ jobs:
     needs: typecheck
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@v4
