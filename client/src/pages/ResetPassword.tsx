@@ -68,7 +68,7 @@ export default function ResetPassword() {
     onSuccess: () => {
       setSuccess(true);
       console.log("[ResetPassword] Password reset successful | uid=%s", uid);
-      toast.success("Password reset successfully! You can now sign in.");
+      toast.success("Password updated. Log in with your new password.");
       setTimeout(() => navigate("/"), 2500);
     },
     onError: (err) => {
@@ -108,7 +108,7 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
           <AlertCircle className="w-12 h-12 text-white mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-white mb-2">Invalid Reset Link</h1>
+          <h1 className="text-xl font-bold text-white mb-2">Invalid reset link</h1>
           <p className="text-white text-sm mb-6">
             This password reset link is invalid or malformed. Please request a new one.
           </p>
@@ -116,7 +116,7 @@ export default function ResetPassword() {
             onClick={() => navigate("/")}
             className="bg-[#45E0A8] text-black"
           >
-            Back to Sign In
+            Back to log in
           </Button>
         </div>
       </div>
@@ -129,11 +129,11 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
           <CheckCircle2 className="w-12 h-12 text-[#45E0A8] mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-white mb-2">Password Reset</h1>
+          <h1 className="text-xl font-bold text-white mb-2">Password reset</h1>
           <p className="text-white text-sm mb-2">
-            Your password has been updated. All existing sessions have been signed out.
+            Your password has been updated. All existing sessions have been logged out.
           </p>
-          <p className="text-white text-xs">Redirecting to sign in...</p>
+          <p className="text-white text-xs">Redirecting to log in…</p>
         </div>
       </div>
     );
@@ -150,7 +150,7 @@ export default function ResetPassword() {
             <KeyRound className="w-5 h-5 text-[#45E0A8]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Reset Password</h1>
+            <h1 className="text-xl font-bold text-white">Reset password</h1>
             <p className="text-white text-xs">Enter your new password below</p>
           </div>
         </div>
@@ -264,7 +264,7 @@ export default function ResetPassword() {
                 Resetting...
               </span>
             ) : (
-              "Reset Password"
+              "Reset password"
             )}
           </Button>
 
@@ -273,7 +273,7 @@ export default function ResetPassword() {
             onClick={() => navigate("/")}
             className="text-white text-xs text-center transition-colors"
           >
-            Back to Sign In
+            Back to log in
           </button>
         </div>
       </div>

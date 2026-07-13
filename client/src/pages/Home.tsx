@@ -157,7 +157,7 @@ export default function Home() {
     onSuccess: () => {
       const destination = resolvePostLoginPath(explicitReturnPath);
       console.log("[Login] [OUTPUT] Login successful — redirecting to", destination);
-      toast.success("Signed in successfully.");
+      toast.success("Logged in successfully.");
       // [LOGIN FIX 2026-07-12 / RC3] Hard navigation, not SPA setLocation:
       // guarantees a fresh React Query cache so every surface (global tabs,
       // sidebars, feeds) renders the NEW account instead of the previous one.
@@ -375,7 +375,7 @@ export default function Home() {
           </a>
           <div className="text-center">
             <h1 className="text-lg font-bold text-white tracking-tight">dıme</h1>
-            <p className="text-[12px] text-[#FFFFFF] mt-0.5">Sign in to your account</p>
+            <p className="text-[12px] text-[#FFFFFF] mt-0.5">Log in to your account</p>
           </div>
         </div>
 
@@ -388,7 +388,7 @@ export default function Home() {
               className="font-bold text-white"
               style={{ fontSize: "clamp(1.5rem, 2.2vw, 2.25rem)", letterSpacing: "-0.03em" }}
             >
-              Sign in
+              Log in
             </h2>
             <p className="text-[#FFFFFF] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
               Welcome back. Enter your credentials to continue.
@@ -405,7 +405,7 @@ export default function Home() {
               data-testid="login-signed-in-banner"
             >
               <span>
-                Signed in as <span className="text-white">@{appUser.username}</span>
+                Logged in as <span className="text-white">@{appUser.username}</span>
               </span>
               <button
                 type="button"
@@ -426,7 +426,7 @@ export default function Home() {
               role="alert"
             >
               <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
-                Sign-in error
+                Log-in error
               </p>
               <p className="text-white">{discordErrorMsg}</p>
               {isTransientError && retryCountdown !== null && (
@@ -520,9 +520,9 @@ export default function Home() {
                 style={{ background: "#45E0A8" }}
               >
                 {loginMutation.isPending ? (
-                  <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Signing in…</>
+                  <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Logging in…</>
                 ) : (
-                  "Sign In"
+                  "Log in"
                 )}
               </button>
             </form>
@@ -538,7 +538,7 @@ export default function Home() {
                 >
                   ← Back
                 </button>
-                <span className="text-sm font-semibold text-white">Reset Password</span>
+                <span className="text-sm font-semibold text-white">Reset password</span>
               </div>
 
               {forgotSent ? (
@@ -568,7 +568,7 @@ export default function Home() {
                     {requestResetMutation.isPending ? (
                       <><Loader2 size={15} className="animate-spin motion-reduce:animate-none" /> Sending…</>
                     ) : (
-                      "Send Reset Link"
+                      "Send reset link"
                     )}
                   </button>
                 </>
@@ -614,14 +614,14 @@ export default function Home() {
                 href="/#pricing"
                 className="font-semibold text-white underline hover:text-[#45E0A8] transition-colors"
               >
-                Sign Up
+                Sign up
               </a>
             </p>
           )}
 
           {/* ── Disclaimer — legible grey, full RG language ── */}
           <p className="text-center text-[11px] text-[#FFFFFF] mt-6">
-            By signing in you agree to gamble responsibly. For informational purposes only. 21+.
+            By logging in you agree to gamble responsibly. For informational purposes only. 21+.
             Gambling problem? Call 1-800-GAMBLER.
           </p>
         </div>

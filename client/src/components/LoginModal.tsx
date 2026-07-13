@@ -79,7 +79,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         className="relative w-full max-w-sm rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
         role="dialog"
         aria-modal="true"
-        aria-label="Sign in"
+        aria-label="Log in"
       >
         {/* Close button — hidden during redirect */}
         {!isRedirecting && (
@@ -105,7 +105,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             }
           </div>
           <h2 className="text-lg font-bold text-foreground mb-1">
-            {isRedirecting ? "Redirecting to Discord…" : "Sign in to AI Sports Betting"}
+            {isRedirecting ? "Redirecting to Discord…" : "Log in to AI Sports Betting"}
           </h2>
           <p className="text-sm text-muted-foreground">
             {isRedirecting
@@ -131,7 +131,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           >
             {isRedirecting
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting to Discord…</>
-              : <><DiscordIcon size={20} /> Sign in with Discord</>
+              : <><DiscordIcon size={20} /> Continue with Discord</>
             }
           </a>
 
