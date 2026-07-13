@@ -69,7 +69,7 @@ export default function MarketConsole() {
         <span>dime.market-console</span>
         <span className="right">
           <span>scan // 400,000_sims</span>
-          <span className="demo-tag">Demo — sample markets</span>
+          <span className="demo-tag">Demo · sample markets</span>
         </span>
       </div>
 
@@ -102,12 +102,14 @@ export default function MarketConsole() {
           <div className="scan-rail">
             <span className="track"><b style={{ width: `${progressPct}%` }} /></span>
             <span className="mono step" role="status" aria-live="polite">
-              {done ? "Scan complete — market classified" : CONSOLE_SCAN_STEPS[scanStep]}
+              {done ? "Scan complete · market classified" : CONSOLE_SCAN_STEPS[scanStep]}
             </span>
           </div>
 
           <div className="console-market-head">
-            <h3>{market.market}</h3>
+            {/* Not a heading: the console lives inside the hero, so an <h3> here
+                would jump h1→h3. It's a data label — styled, not structural. */}
+            <div className="market-name">{market.market}</div>
             <span className="mono">{market.sport}</span>
             {done && <StatePill state={market.state} label={market.stateLabel} />}
           </div>
@@ -167,7 +169,7 @@ export default function MarketConsole() {
               data-cta-location="market-console"
               data-mode="paid"
             >
-              ↻ Run Market Scan
+              ↻ Run market scan
             </button>
             <span className="mono num">Cost: {market.creditCost} Dime Credit</span>
           </div>

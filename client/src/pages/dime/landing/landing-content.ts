@@ -24,7 +24,7 @@ export const HERO = {
   headline: { before: "See where price and probability ", em: "disagree", after: "." },
   sub:
     "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.",
-  primaryCta: "Get Access",
+  primaryCta: "Get access",
   secondaryCta: "Preview Dime Chat",
   trustMicrocopy: "Analytical software. No guaranteed outcomes. Built for disciplined market evaluation.",
 } as const;
@@ -278,25 +278,21 @@ export const MECHANISM = {
       num: "01",
       title: "Choose market",
       copy: "Moneyline, run line, totals, first-five, props — pick the market you're actually considering.",
-      tele: "INPUT // MARKET",
     },
     {
       num: "02",
       title: "Compare price",
       copy: "The book's price becomes an implied probability and meets the model's projection from 400,000 simulations of the matchup.",
-      tele: "SIM // 400,000_PER_GAME",
     },
     {
       num: "03",
       title: "Evaluate edge",
       copy: "The gap between implied and projected is stated in percent, with fair price, confidence, movement and volatility alongside.",
-      tele: "EDGE // MODEL − IMPLIED",
     },
     {
       num: "04",
       title: "Decide",
       copy: "Every market resolves to Pass, Monitor, or Edge Detected. Most markets are priced efficiently — most verdicts are Pass.",
-      tele: "OUTPUT // PASS · MONITOR · EDGE",
     },
   ],
 } as const;
@@ -333,12 +329,12 @@ export const FEATURES = {
   eyebrow: "What you get",
   headline: { before: "An engine, not ", em: "a feed of opinions", after: "." },
   items: [
-    { title: "400,000 simulations per game", copy: "A Monte Carlo engine plays every matchup inning by inning — 55+ outputs per game.", tele: "SIM.ENGINE" },
-    { title: "Full projections board", copy: "Moneyline, run line, totals, F5, NRFI, K props and HR props — every market priced book vs model.", tele: "BOARD" },
-    { title: "Dime Chat", copy: "Interrogate any number on the slate. Answers trace back to tables the model wrote — 124 enforcement tests stand between the engine and a made-up number.", tele: "CHAT // GROUNDED" },
-    { title: "Graded against the close", copy: "Odds freeze at first pitch. Every projection is Brier-scored after the final out. The grading is the record.", tele: "SCORING // BRIER" },
-    { title: "Honest PASS verdicts", copy: "No edge means grey, not a sales pitch. The most common verdict is the one that costs you nothing.", tele: "VERDICT // PASS" },
-    { title: "Live 24/7 pipeline", copy: "Odds, lineups, park factors, umpires and weather refresh around the clock. MLB today, World Cup 2026 next.", tele: "PIPELINE // 24/7" },
+    { title: "400,000 simulations per game", copy: "A Monte Carlo engine plays every matchup inning by inning — 55+ outputs per game." },
+    { title: "Full projections board", copy: "Moneyline, run line, totals, F5, NRFI, K props and HR props — every market priced book vs model." },
+    { title: "Dime Chat", copy: "Interrogate any number on the slate. Answers trace back to tables the model wrote — 124 enforcement tests stand between the engine and a made-up number." },
+    { title: "Graded against the close", copy: "Odds freeze at first pitch. Every projection is Brier-scored after the final out. The grading is the record." },
+    { title: "Honest PASS verdicts", copy: "No edge means grey, not a sales pitch. The most common verdict is the one that costs you nothing." },
+    { title: "Live 24/7 pipeline", copy: "Odds, lineups, park factors, umpires and weather refresh around the clock. MLB today, World Cup 2026 next." },
   ],
 } as const;
 
@@ -467,7 +463,7 @@ export const CONTROLLED_ACCESS = {
   headline: { before: "Founder seats are ", em: "reviewed, not sold", after: "." },
   copy:
     "Dime is a small, serious tool built by one operator. Founder access is application-based so the earliest cohort shapes the product — no artificial countdown, no fake scarcity, just a genuinely limited review queue.",
-  formTitle: "Apply for Founder Access",
+  formTitle: "Apply for Founder access",
   fields: { name: "Full name", email: "Email" },
   submit: "Submit application",
   success: "Application received. You'll hear back at this email.",
@@ -544,10 +540,10 @@ export const FAQ = {
 // ─── Final CTA ────────────────────────────────────────────────────────────────
 
 export const FINAL_CTA = {
-  mono: "PASS · MONITOR · EDGE DETECTED — the Dime Verdict",
+  mono: "Pass · Monitor · Edge Detected · the Dime Verdict",
   headline: "Bet with the math.",
   copy: "Price every line against 400,000 simulations before a dollar of your bankroll moves.",
-  cta: "Get Access",
+  cta: "Get access",
 } as const;
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
