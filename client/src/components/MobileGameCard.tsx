@@ -50,7 +50,7 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
           flexShrink: 0,
           // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
           // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
-          filter: 'brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))',
+          filter: 'brightness(1.7) contrast(1.12) saturate(1.35)',
         }}
         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
@@ -60,9 +60,9 @@ function TeamLogo({ slug, name, logoUrl, size = 32 }: { slug: string; name: stri
   return (
     <div style={{
       width: actualSize, height: actualSize, borderRadius: '50%',
-      background: 'rgba(255,255,255,0.1)',
+      background: '#000000',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: actualSize * 0.35, fontWeight: 700, color: 'rgba(255,255,255,0.7)',
+      fontSize: actualSize * 0.35, fontWeight: 700, color: '#FFFFFF',
       flexShrink: 0,
     }}>
       {initials}
@@ -159,7 +159,7 @@ export const MobileGameCard = React.memo(function MobileGameCard(props: MobileGa
 if (process.env.NODE_ENV === 'development') {
   console.groupCollapsed(
     `%c[GameCard:mobile] ${awayAbbr} @ ${homeAbbr} | tab=${mobileTab} | id=${game.id}`,
-    'color:#39FF14;font-weight:700;font-size:11px'
+    'color:#45E0A8;font-weight:700;font-size:11px'
   );
   console.log('[data] spread:', { awayBookSpread, homeBookSpread, awayModelSpread, homeModelSpread, spreadDiff });
   console.log('[data] total:', { bookTotal, modelTotal, totalDiff });
@@ -269,7 +269,7 @@ if (process.env.NODE_ENV === 'development') {
     `mdlAwaySpreadOdds=${game.modelAwaySpreadOdds ?? 'null'} mdlHomeSpreadOdds=${game.modelHomeSpreadOdds ?? 'null'} ` +
     `mdlOverOdds=${game.modelOverOdds ?? 'null'} mdlUnderOdds=${game.modelUnderOdds ?? 'null'} ` +
     `isMlbGame=${isMlbGame} isNhlGame=${isNhlGame}`,
-    'color:#FF9900;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 // ── MLB RL LABEL RULE: model RL label ALWAYS mirrors the book's run line. ──────────────────────
@@ -383,7 +383,7 @@ const mdlHomeMl = hasModelData ? formatMl(game.modelHomeML) : '—';
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:ML] game=${game.id} bkAway=${bkAwayMl} bkHome=${bkHomeMl} mdlAway=${mdlAwayMl} mdlHome=${mdlHomeMl}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -448,7 +448,7 @@ if (process.env.NODE_ENV === 'development') {
     ` | home: bkProb=${isNaN(bkHomeMlProb)?'NaN':bkHomeMlProb.toFixed(4)}` +
     ` mdlProb=${isNaN(mdlHomeMlProb)?'NaN':mdlHomeMlProb.toFixed(4)}` +
     ` edgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)}pp → edge=${homeMlEdgeDetected}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -478,7 +478,7 @@ const isModelTab = isDualTab;
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:OddsStyle] game=${game.id} tab=${mobileTab} spreadEdge=${spreadEdgeIsAway} totalEdge=${totalEdgeIsOver}`,
-    'color:#aaa;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 
@@ -501,7 +501,7 @@ if (process.env.NODE_ENV === 'development') {
 if (process.env.NODE_ENV === 'development') {
   console.log(
     `%c[GameCard:OddsStyle] game=${game.id} tab=${mobileTab} spreadEdge=${spreadEdgeIsAway} totalEdge=${totalEdgeIsOver}`,
-    'color:#aaa;font-size:9px'
+    'color:#FFFFFF;font-size:9px'
   );
 }
 
@@ -514,12 +514,12 @@ const bookStyle = (_isEdge?: boolean): React.CSSProperties => ({
   // SPLITS/EDGE: dimmed
   fontWeight: isDualTab ? 400 : isBookTab ? 700 : 400,
   color: isDualTab
-    ? 'rgba(200,200,200,0.65)'          // DUAL: light gray unbolded
+    ? '#FFFFFF'          // DUAL: light gray unbolded
     : isBookTab
-      ? 'rgba(255,255,255,1)'           // BOOK-only: white bold (primary)
+      ? '#FFFFFF'           // BOOK-only: white bold (primary)
       : isModelTab
-        ? 'rgba(255,255,255,0.70)'      // MODEL-only: white unbolded (secondary)
-        : 'rgba(255,255,255,0.30)',      // SPLITS/EDGE: dimmed
+        ? '#FFFFFF'      // MODEL-only: white unbolded (secondary)
+        : '#FFFFFF',      // SPLITS/EDGE: dimmed
   letterSpacing: '0.02em',
   fontVariantNumeric: 'tabular-nums',
 });
@@ -541,7 +541,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
   if (process.env.NODE_ENV === 'development' && isEdge) {
     console.log(
       `%c[GameCard:modelStyle] edge=true tab=${mobileTab} → ${isModelTab ? '#39FF14 bold' : 'white 70% unbolded'}`,
-      'color:#aaa;font-size:9px'
+      'color:#FFFFFF;font-size:9px'
     );
   }
   if (isDualTab) {
@@ -549,7 +549,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.25px',  // bolded model values: 10.25px
       fontWeight: 700,
-      color: isEdge ? '#39FF14' : 'rgba(255,255,255,1)',
+      color: isEdge ? '#45E0A8' : '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -559,7 +559,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.5px',  // unbolded model values: 10.5px
       fontWeight: 400,
-      color: 'rgba(255,255,255,0.70)',
+      color: '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -569,7 +569,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
     return {
       fontSize: '10.25px',  // bolded model values: 10.25px
       fontWeight: 700,
-      color: isEdge ? '#39FF14' : 'rgba(255,255,255,1)',
+      color: isEdge ? '#45E0A8' : '#FFFFFF',
       letterSpacing: '0.02em',
       fontVariantNumeric: 'tabular-nums',
     };
@@ -578,7 +578,7 @@ const modelStyle = (isEdge?: boolean): React.CSSProperties => {
   return {
     fontSize: '10.5px',  // unbolded dimmed values: 10.5px
     fontWeight: 400,
-    color: 'rgba(255,255,255,0.70)',
+    color: '#FFFFFF',
     letterSpacing: '0.02em',
     fontVariantNumeric: 'tabular-nums',
   };
@@ -750,7 +750,7 @@ if (process.env.NODE_ENV === 'development') {
     ` (awayRoi=${isNaN(awayMlRoi)?'NaN':awayMlRoi.toFixed(2)} homeRoi=${isNaN(homeMlRoi)?'NaN':homeMlRoi.toFixed(2)})` +
     ` (awayEdgePP=${isNaN(awayMlEdgePP)?'NaN':(awayMlEdgePP*100).toFixed(2)} homeEdgePP=${isNaN(homeMlEdgePP)?'NaN':(homeMlEdgePP*100).toFixed(2)})` +
     ` | best=${isNaN(bestEdgePP)?'NaN':bestEdgePP.toFixed(2)}pp → ${getVerdict(bestEdgePP)}`,
-    'color:#39FF14;font-size:9px'
+    'color:#45E0A8;font-size:9px'
   );
 }
 
@@ -789,14 +789,14 @@ const MktCard = ({
   // modelJuiceColor: neon green only when this side has an edge, otherwise white
   const SubCol = ({ line, juice, isBook, hasEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
     const juiceColor = isBook
-      ? 'rgba(255,255,255,0.90)'                      // BOOK: always white
-      : hasEdge ? '#39FF14' : 'rgba(255,255,255,0.90)'; // MODEL: neon if edge, white if not
+      ? '#FFFFFF'                      // BOOK: always white
+      : hasEdge ? '#45E0A8' : '#FFFFFF'; // MODEL: neon if edge, white if not
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px', minWidth: 0, flex: 1 }}>
         {/* Spacer/line row: always rendered to keep height consistent */}
         {isML
           ? <span style={{ fontSize: '11px', lineHeight: 1, visibility: 'hidden' }}>&nbsp;</span>  // empty spacer for ML
-          : <span style={{ fontSize: 'clamp(9px, 2.8vw, 11px)', fontWeight: 400, color: 'rgba(255,255,255,0.55)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+          : <span style={{ fontSize: 'clamp(9px, 2.8vw, 11px)', fontWeight: 400, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         }
         {/* juice: clamp(11px, 3.5vw, 14px) — scales down on narrow screens (e.g. 360px → 12.6px) so -179 never overflows MktCard */}
         <span style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
