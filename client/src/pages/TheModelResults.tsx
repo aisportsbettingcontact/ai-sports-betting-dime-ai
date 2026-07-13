@@ -224,7 +224,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 
 function MiniStatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div style={{ background: "#111", border: "1px solid #FFFFFF", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
+    <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
       <div style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{value}</div>
     </div>
@@ -415,7 +415,7 @@ function EdgeLeaderboardTable({
           <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MIN EDGE</span>
           {[0, 1, 2, 3, 5].map(v => (
             <button type="button" key={v} onClick={() => setMinEdge(v)} style={{
-              background: minEdge === v ? "#45E0A8" : "#000000", border: "1px solid #333",
+              background: minEdge === v ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
               borderRadius: 3, cursor: "pointer", color: minEdge === v ? "#000" : "#FFFFFF",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{v === 0 ? "ALL" : `≥${v}pp`}</button>
@@ -425,7 +425,7 @@ function EdgeLeaderboardTable({
           <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SIDE</span>
           {(["both", "away", "home"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSide(s)} style={{
-              background: side === s ? "#45E0A8" : "#000000", border: "1px solid #333",
+              background: side === s ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
               borderRadius: 3, cursor: "pointer", color: side === s ? "#000" : "#FFFFFF",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
@@ -433,7 +433,7 @@ function EdgeLeaderboardTable({
           ))}
         </div>
         <button type="button" onClick={() => setWithOutcome(!withOutcome)} style={{
-          background: withOutcome ? "#45E0A8" : "#000000", border: "1px solid #333",
+          background: withOutcome ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
           borderRadius: 3, cursor: "pointer", color: withOutcome ? "#000" : "#FFFFFF",
           padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
         }}>WITH OUTCOME ONLY</button>
@@ -441,7 +441,7 @@ function EdgeLeaderboardTable({
           <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SORT</span>
           {(["edge", "date", "brier"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSortBy(s)} style={{
-              background: sortBy === s ? "#333" : "#000000", border: "1px solid #333",
+              background: sortBy === s ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
               borderRadius: 3, cursor: "pointer", color: sortBy === s ? "#000000" : "#FFFFFF",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
@@ -473,7 +473,7 @@ function EdgeLeaderboardTable({
               const correct = market === "f5" ? row.f5MlCorrect : row.fgMlCorrect;
               const brier = market === "f5" ? row.brierF5Ml : row.brierFgMl;
               return (
-                <tr key={`${row.id}-${row.side}`} style={{ borderBottom: "1px solid #111", background: i % 2 === 0 ? edgeBg(row.edgePct) : "transparent" }}>
+                <tr key={`${row.id}-${row.side}`} style={{ borderBottom: "1px solid #FFFFFF", background: i % 2 === 0 ? edgeBg(row.edgePct) : "transparent" }}>
                   <td style={{ padding: "5px 10px", color: "#FFFFFF", whiteSpace: "nowrap" }}>{row.gameDate}</td>
                   <td style={{ padding: "5px 10px", whiteSpace: "nowrap" }}>
                     <span style={{ color: "#FFFFFF" }}>{row.awayTeam}</span>
@@ -515,7 +515,7 @@ function EdgeLeaderboardTable({
         <div style={{ display: "flex", gap: 6 }}>
           {[100, 200, 500].map(v => (
             <button type="button" key={v} onClick={() => setLimit(v)} style={{
-              background: limit === v ? "#333" : "#000000", border: "1px solid #333",
+              background: limit === v ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
               borderRadius: 3, cursor: "pointer", color: limit === v ? "#000000" : "#FFFFFF",
               padding: "2px 7px", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>TOP {v}</button>
@@ -586,7 +586,7 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
                 if (!payload?.length) return null;
                 const d = payload[0].payload;
                 return (
-                  <div style={{ background: "#111", border: "1px solid #333", borderRadius: 4, padding: "6px 10px", fontSize: 10 }}>
+                  <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 4, padding: "6px 10px", fontSize: 10 }}>
                     <div style={{ color: "#FFFFFF" }}>{d.label}</div>
                     <div style={{ color: "#45E0A8" }}>Edge: {d.x > 0 ? "+" : ""}{d.x}pp</div>
                     <div style={{ color: d.y === 1 ? "#45E0A8" : "#FFFFFF" }}>{d.y === 1 ? "WIN" : "LOSS"} ({d.side})</div>
@@ -1217,7 +1217,7 @@ export default function TheModelResults() {
             <ChevronLeft size={18} style={{ color: "hsl(var(--muted-foreground))" }} />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <FlaskConical size={16} style={{ color: "#4A90D9" }} />
+            <FlaskConical size={16} style={{ color: "#45E0A8" }} />
             <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
               THE MODEL RESULTS
             </span>
@@ -1399,7 +1399,7 @@ export default function TheModelResults() {
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   {(["table", "scatter"] as const).map(t => (
                     <button type="button" key={t} onClick={() => setFgEdgeTab(t)} style={{
-                      background: fgEdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #333",
+                      background: fgEdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
                       borderRadius: 4, cursor: "pointer", color: fgEdgeTab === t ? "#000" : "#FFFFFF",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
@@ -1512,7 +1512,7 @@ export default function TheModelResults() {
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   {(["table", "scatter"] as const).map(t => (
                     <button type="button" key={t} onClick={() => setF5EdgeTab(t)} style={{
-                      background: f5EdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #333",
+                      background: f5EdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
                       borderRadius: 4, cursor: "pointer", color: f5EdgeTab === t ? "#000" : "#FFFFFF",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
