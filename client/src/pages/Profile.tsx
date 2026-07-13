@@ -14,6 +14,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { ThemeSetting } from "@/components/ThemeSetting";
 import "./profile.css";
 
 // ─── Structured logging (matches repo convention) ────────────────────────────
@@ -229,6 +230,14 @@ export default function Profile() {
             </span>
           </button>
         </div>
+      </section>
+
+      {/* ------- Appearance ------- */}
+      <section className="pf-section" aria-labelledby="pf-appearance">
+        <h2 className="pf-label" id="pf-appearance">
+          Appearance
+        </h2>
+        <ThemeSetting />
       </section>
 
       {/* ------- Session ------- */}
