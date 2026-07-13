@@ -53,8 +53,8 @@ class SectionErrorBoundary extends Component<
     if (this.state.hasError) {
       return (
         <div style={{
-          padding: 24, background: "rgba(255,34,68,0.08)",
-          border: "1px solid rgba(255,34,68,0.35)", borderRadius: 8, margin: "16px 0",
+          padding: 24, background: "transparent",
+          border: "1px solid #FFFFFF", borderRadius: 8, margin: "16px 0",
         }}>
           <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: 13, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1, marginBottom: 8 }}>
             ⚠ SECTION CRASH — {this.props.label}
@@ -62,7 +62,7 @@ class SectionErrorBoundary extends Component<
           <div style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontWeight: 700, marginBottom: 12, wordBreak: 'break-all' }}>
             {this.state.error?.message ?? 'Unknown error'}
           </div>
-          <pre style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
+          <pre style={{ color: "#FFFFFF", fontSize: 10, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
             {this.state.error?.stack}
           </pre>
           <button type="button" onClick={() => this.setState({ hasError: false, error: null })}
@@ -155,7 +155,7 @@ function signedNum(val: number | null | undefined, decimals = 2): string {
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 function accuracyColor(acc: number | null): string {
-  if (acc === null) return "rgba(255,255,255,0.4)";
+  if (acc === null) return "#FFFFFF";
   if (acc >= 0.65) return "#45E0A8";
   if (acc >= 0.55) return "#45E0A8";
   if (acc >= 0.50) return "#FFFFFF";
@@ -179,12 +179,12 @@ function edgeColor(edge: number): string {
   return "#FFFFFF";
 }
 function edgeBg(edge: number): string {
-  if (edge >= 5) return "rgba(0,255,136,0.08)";
-  if (edge >= 3) return "rgba(0,255,136,0.05)";
-  if (edge >= 1) return "rgba(0,255,136,0.02)";
-  if (edge <= -5) return "rgba(255,68,102,0.08)";
-  if (edge <= -3) return "rgba(255,68,102,0.05)";
-  if (edge <= -1) return "rgba(255,68,102,0.02)";
+  if (edge >= 5) return "transparent";
+  if (edge >= 3) return "transparent";
+  if (edge >= 1) return "transparent";
+  if (edge <= -5) return "transparent";
+  if (edge <= -3) return "transparent";
+  if (edge <= -1) return "transparent";
   return "transparent";
 }
 
@@ -211,13 +211,13 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
       padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4,
       minWidth: 0, overflow: "hidden",
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
         {label}
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "#FFFFFF", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.3 }}>{sub}</div>}
     </div>
   );
 }
@@ -236,8 +236,8 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
     return (
       <span style={{
         fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
-        borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)",
-        border: "1px solid rgba(255,255,255,0.12)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+        borderRadius: 4, background: "transparent", color: "#FFFFFF",
+        border: "1px solid #FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
       }}>
         {result === "NO_LINE" ? "NO LINE" : "PENDING"}
       </span>
@@ -245,8 +245,8 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
   }
   const isCorrect = correct === 1;
   const isPush = result === "PUSH";
-  const bg = isPush ? "rgba(255,215,0,0.12)" : isCorrect ? "rgba(57,255,20,0.12)" : "rgba(255,34,68,0.12)";
-  const border = isPush ? "rgba(255,215,0,0.35)" : isCorrect ? "rgba(57,255,20,0.35)" : "rgba(255,34,68,0.35)";
+  const bg = isPush ? "transparent" : isCorrect ? "transparent" : "transparent";
+  const border = isPush ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF";
   const color = isPush ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF";
   const icon = isPush ? null : isCorrect ? <CheckCircle2 size={10} style={{ flexShrink: 0 }} /> : <XCircle size={10} style={{ flexShrink: 0 }} />;
   return (
@@ -265,13 +265,13 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
   verdict: string | null; bestSide: string | null; bestEdge: string | null; bestMlStr: string | null;
 }) {
   if (!verdict || verdict === "PASS") {
-    return <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
+    return <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
   }
   const edgePp = bestEdge ? parseFloat(bestEdge) * 100 : null;
   const isOver = bestSide === "OVER";
   const color = isOver ? "#45E0A8" : "#45E0A8";
-  const bg = isOver ? "rgba(57,255,20,0.10)" : "rgba(0,191,255,0.10)";
-  const border = isOver ? "rgba(57,255,20,0.30)" : "rgba(0,191,255,0.30)";
+  const bg = isOver ? "transparent" : "transparent";
+  const border = isOver ? "#45E0A8" : "#45E0A8";
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
@@ -280,7 +280,7 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
     }}>
       ▶ {bestSide} {bestMlStr ?? ""}
-      {edgePp !== null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp</span>}
+      {edgePp !== null && <span style={{ color: "#FFFFFF", fontWeight: 500 }}>{edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp</span>}
     </span>
   );
 }
@@ -289,10 +289,10 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
 function SectionLabel({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {children}
       </div>
-      {sub && <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 9, color: "#FFFFFF", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
     </div>
   );
 }
@@ -313,13 +313,13 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
         {[10, 20, 30, 50].map(w => (
           <button type="button" key={w} onClick={() => onWindowChange(w)} style={{
             fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-            background: windowSize === w ? "rgba(255,165,0,0.15)" : "rgba(255,255,255,0.04)",
-            color: windowSize === w ? "#45E0A8" : "rgba(255,255,255,0.35)",
-            border: `1px solid ${windowSize === w ? "rgba(255,165,0,0.4)" : "rgba(255,255,255,0.08)"}`,
+            background: windowSize === w ? "transparent" : "transparent",
+            color: windowSize === w ? "#45E0A8" : "#FFFFFF",
+            border: `1px solid ${windowSize === w ? "#45E0A8" : "#FFFFFF"}`,
             cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
           }}>{w}G</button>
         ))}
@@ -327,17 +327,17 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
       <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, padding: "16px 8px 8px" }}>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-            <XAxis dataKey="gameIndex" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickLine={false} />
-            <YAxis domain={[0, 0.35]} tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 9 }} tickLine={false} width={36} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <XAxis dataKey="gameIndex" tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} />
+            <YAxis domain={[0, 0.35]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} width={36} />
             <Tooltip
               contentStyle={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 6, fontSize: 10 }}
-              labelStyle={{ color: "rgba(255,255,255,0.4)" }}
+              labelStyle={{ color: "#FFFFFF" }}
             />
-            <Legend wrapperStyle={{ fontSize: 9, color: "rgba(255,255,255,0.4)" }} />
-            <ReferenceLine y={0.25} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4" label={{ value: "random", position: "insideTopRight", fill: "rgba(255,255,255,0.2)", fontSize: 8 }} />
-            <ReferenceLine y={0.22} stroke="rgba(255,215,0,0.2)" strokeDasharray="2 2" />
-            <ReferenceLine y={0.15} stroke="rgba(57,255,20,0.2)" strokeDasharray="2 2" />
+            <Legend wrapperStyle={{ fontSize: 9, color: "#FFFFFF" }} />
+            <ReferenceLine y={0.25} stroke="#FFFFFF" strokeDasharray="4 4" label={{ value: "random", position: "insideTopRight", fill: "#FFFFFF", fontSize: 8 }} />
+            <ReferenceLine y={0.22} stroke="#FFFFFF" strokeDasharray="2 2" />
+            <ReferenceLine y={0.15} stroke="#45E0A8" strokeDasharray="2 2" />
             {lines.map(l => (
               <Line
                 key={l.key}
@@ -482,7 +482,7 @@ function EdgeLeaderboardTable({
                   </td>
                   <td style={{ padding: "5px 10px" }}>
                     <span style={{
-                      background: isAway ? "rgba(100,150,255,0.15)" : "rgba(255,150,50,0.15)",
+                      background: isAway ? "transparent" : "transparent",
                       color: isAway ? "#6496ff" : "#ff9632",
                       borderRadius: 3, padding: "1px 5px", fontSize: 9, fontWeight: 700, letterSpacing: 1,
                     }}>{isAway ? "AWAY" : "HOME"}</span>
@@ -574,14 +574,14 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
         </div>
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
             <XAxis type="number" dataKey="x" domain={["auto", "auto"]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false}>
               <Label value="Edge (pp)" position="insideBottom" offset={-10} fill="#FFFFFF" fontSize={9} />
             </XAxis>
             <YAxis type="number" dataKey="y" domain={[-0.1, 1.1]} ticks={[0, 1]}
               tickFormatter={(v) => v === 1 ? "WIN" : v === 0 ? "LOSS" : ""}
               tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} width={40} />
-            <Tooltip cursor={{ strokeDasharray: "3 3", stroke: "rgba(255,255,255,0.1)" }}
+            <Tooltip cursor={{ strokeDasharray: "3 3", stroke: "#FFFFFF" }}
               content={({ payload }) => {
                 if (!payload?.length) return null;
                 const d = payload[0].payload;
@@ -593,8 +593,8 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
                   </div>
                 );
               }} />
-            <ReferenceLine x={0} stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" />
-            <ReferenceLine y={0.5} stroke="rgba(255,255,255,0.08)" strokeDasharray="2 2" />
+            <ReferenceLine x={0} stroke="#FFFFFF" strokeDasharray="4 4" />
+            <ReferenceLine y={0.5} stroke="#FFFFFF" strokeDasharray="2 2" />
             <Scatter data={scatterData.filter(d => d.y === 1)} fill="#45E0A8" fillOpacity={0.7} r={4} />
             <Scatter data={scatterData.filter(d => d.y === 0)} fill="#FFFFFF" fillOpacity={0.7} r={4} />
             {regression && (
@@ -613,7 +613,7 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
         <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
           <span style={{ fontSize: 9, color: "#45E0A8" }}>● WIN</span>
           <span style={{ fontSize: 9, color: "#FFFFFF" }}>● LOSS</span>
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)" }}>--- REGRESSION TREND</span>
+          <span style={{ fontSize: 9, color: "#FFFFFF" }}>--- REGRESSION TREND</span>
         </div>
       </div>
     </>
@@ -629,30 +629,30 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
   drilldownLoading: boolean;
 }) {
   const cellBg = (v: number | null) =>
-    v == null ? "transparent" : v <= 0.15 ? "rgba(57,255,20,0.12)" : v <= 0.22 ? "rgba(255,215,0,0.12)" : "rgba(255,34,68,0.12)";
+    v == null ? "transparent" : v <= 0.15 ? "transparent" : v <= 0.22 ? "transparent" : "transparent";
   const cellColor = (v: number | null) =>
-    v == null ? "rgba(255,255,255,0.12)" : v <= 0.15 ? "#45E0A8" : v <= 0.22 ? "#FFFFFF" : "#FFFFFF";
+    v == null ? "#FFFFFF" : v <= 0.15 ? "#45E0A8" : v <= 0.22 ? "#FFFFFF" : "#FFFFFF";
 
   return (
     <div>
       <div style={{ overflowX: "auto" }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
           BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
-          <span style={{ marginLeft: 8, color: "rgba(0,229,204,0.6)", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
+          <span style={{ marginLeft: 8, color: "#45E0A8", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
         </div>
         <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid #FFFFFF" }}>
               {["DATE", "GAMES", "FG ML", "F5 ML", "NRFI", "FG TOT", "F5 TOT"].map(h => (
-                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "#FFFFFF", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {[...heatmapData.heatmap].reverse().map(row => (
               <tr key={row.date} style={{ borderBottom: "1px solid #FFFFFF" }}>
-                <td style={{ padding: "5px 10px", color: "rgba(255,255,255,0.55)", fontWeight: 600, whiteSpace: "nowrap" }}>{row.date}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right", color: "rgba(255,255,255,0.3)", fontSize: 9 }}>{row.games}</td>
+                <td style={{ padding: "5px 10px", color: "#FFFFFF", fontWeight: 600, whiteSpace: "nowrap" }}>{row.date}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right", color: "#FFFFFF", fontSize: 9 }}>{row.games}</td>
                 {(["avgFgMl", "avgF5Ml", "avgNrfi", "avgFgTotal", "avgF5Total"] as const).map(field => {
                   const v = row[field];
                   const nullCount = row[field.replace("avg", "null") as keyof typeof row] as number;
@@ -661,13 +661,13 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                   return (
                     <td key={field} onClick={() => setSelectedCell(isSelected ? null : { date: row.date, market: marketKey })} style={{
                       padding: "5px 10px", textAlign: "right",
-                      background: isSelected ? "rgba(0,191,255,0.25)" : cellBg(v),
+                      background: isSelected ? "transparent" : cellBg(v),
                       color: isSelected ? "#45E0A8" : cellColor(v),
                       fontWeight: 700, cursor: "pointer",
-                      outline: isSelected ? "1px solid rgba(0,191,255,0.5)" : "none",
+                      outline: isSelected ? "1px solid #45E0A8" : "none",
                     }}>
-                      {v != null ? v.toFixed(4) : <span style={{ color: "rgba(255,255,255,0.1)" }}>—</span>}
-                      {nullCount > 0 && <span style={{ fontSize: 7, color: "rgba(255,180,0,0.5)", marginLeft: 3 }}>({nullCount}ø)</span>}
+                      {v != null ? v.toFixed(4) : <span style={{ color: "#FFFFFF" }}>—</span>}
+                      {nullCount > 0 && <span style={{ fontSize: 7, color: "#FFFFFF", marginLeft: 3 }}>({nullCount}ø)</span>}
                     </td>
                   );
                 })}
@@ -679,30 +679,30 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
 
       {/* Drill-down panel */}
       {selectedCell && (
-        <div style={{ marginTop: 16, padding: "16px 20px", background: "rgba(0,191,255,0.06)", border: "1px solid rgba(0,191,255,0.2)", borderRadius: 8 }}>
+        <div style={{ marginTop: 16, padding: "16px 20px", background: "transparent", border: "1px solid #45E0A8", borderRadius: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", color: "#45E0A8", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               DRILL-DOWN — {selectedCell.date} / {selectedCell.market.toUpperCase()}
             </div>
-            <button type="button" onClick={() => setSelectedCell(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 14 }}>×</button>
+            <button type="button" onClick={() => setSelectedCell(null)} style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", fontSize: 14 }}>×</button>
           </div>
           {drilldownLoading ? (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", padding: "12px 0" }}>Loading games…</div>
+            <div style={{ fontSize: 11, color: "#FFFFFF", padding: "12px 0" }}>Loading games…</div>
           ) : !drilldownData || drilldownData.games.length === 0 ? (
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", padding: "8px 0" }}>No games found for this date.</div>
+            <div style={{ fontSize: 11, color: "#FFFFFF", padding: "8px 0" }}>No games found for this date.</div>
           ) : (
             <table style={{ borderCollapse: "collapse", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', width: "100%" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(0,191,255,0.15)" }}>
+                <tr style={{ borderBottom: "1px solid #FFFFFF" }}>
                   {["MATCHUP", "BRIER", "MODEL AWAY%", "MODEL HOME%", "BOOK ML", "SCORE", "RESULT"].map(h => (
-                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "rgba(255,255,255,0.3)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "#FFFFFF", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {drilldownData.games.map((g: Record<string, unknown>) => {
                   const brier = g.focusBrier as number | null;
-                  const bc = brier == null ? "rgba(255,255,255,0.15)" : brier <= 0.15 ? "#45E0A8" : brier <= 0.22 ? "#FFFFFF" : "#FFFFFF";
+                  const bc = brier == null ? "#FFFFFF" : brier <= 0.15 ? "#45E0A8" : brier <= 0.22 ? "#FFFFFF" : "#FFFFFF";
                   const mktKey = selectedCell.market;
                   const modelAway = (mktKey === "f5Ml" || mktKey === "f5Total") ? g.modelF5AwayWinPct : g.modelAwayWinPct;
                   const modelHome = (mktKey === "f5Ml" || mktKey === "f5Total") ? g.modelF5HomeWinPct : g.modelHomeWinPct;
@@ -713,14 +713,14 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                   const scoreAway = (mktKey as string).startsWith("f5") ? g.actualF5AwayScore : g.actualAwayScore;
                   const scoreHome = (mktKey as string).startsWith("f5") ? g.actualF5HomeScore : g.actualHomeScore;
                   return (
-                    <tr key={g.id as number} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "5px 8px", color: "rgba(255,255,255,0.7)", fontWeight: 600, whiteSpace: "nowrap" }}>{g.awayTeam as string} @ {g.homeTeam as string}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: bc, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: "rgba(255,255,255,0.1)" }}>—</span>}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "rgba(255,255,255,0.5)" }}>{modelAway != null ? (modelAway as number).toFixed(1) + "%" : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "rgba(255,255,255,0.5)" }}>{modelHome != null ? (modelHome as number).toFixed(1) + "%" : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "rgba(255,255,255,0.35)", fontSize: 9 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "rgba(255,255,255,0.4)" }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: correct === 1 ? "#45E0A8" : correct === 0 ? "#FFFFFF" : "rgba(255,255,255,0.2)" }}>
+                    <tr key={g.id as number} style={{ borderBottom: "1px solid #FFFFFF" }}>
+                      <td style={{ padding: "5px 8px", color: "#FFFFFF", fontWeight: 600, whiteSpace: "nowrap" }}>{g.awayTeam as string} @ {g.homeTeam as string}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: bc, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: "#FFFFFF" }}>—</span>}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{modelAway != null ? (modelAway as number).toFixed(1) + "%" : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{modelHome != null ? (modelHome as number).toFixed(1) + "%" : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF", fontSize: 9 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: correct === 1 ? "#45E0A8" : correct === 0 ? "#FFFFFF" : "#FFFFFF" }}>
                         {correct === 1 ? "✓" : correct === 0 ? "✗" : result as string ?? "—"}
                       </td>
                     </tr>
@@ -747,11 +747,11 @@ function RollingAccuracyPanel({ days, appUser }: { days: number; appUser: { id: 
     <StatGrid>
       {data.map(row => (
         <div key={row.market} style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 8, padding: "10px 14px", minWidth: 110 }}>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: accuracyColor(row.accuracy), fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>
             {row.sampleSize > 0 ? `${(row.accuracy * 100).toFixed(1)}%` : "—"}
           </div>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
+          <div style={{ fontSize: 9, color: "#FFFFFF", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
         </div>
       ))}
     </StatGrid>
@@ -796,7 +796,7 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
         {/* Photo */}
         {photo
-          ? <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.04)", border: `1px solid ${primary}44` }}>
+          ? <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "transparent", border: `1px solid ${primary}44` }}>
               <img src={photo} alt={prop.playerName} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
             </div>
           : <InitialsAvatar name={prop.playerName} color={primary} size={56} />
@@ -806,40 +806,40 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={team} style={{ width: 18, height: 18, objectFit: "contain" }} />}
             <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.playerName}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{team}</span>
+            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{team}</span>
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{awayTeam} @ {homeTeam}</div>
+          <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{awayTeam} @ {homeTeam}</div>
         </div>
         {/* Model vs Book */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {modelPHr != null ? `${(modelPHr * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {anNoVig != null ? `${(anNoVig * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "#45E0A8" : "#FFFFFF") : "rgba(255,255,255,0.3)" }}>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "#45E0A8" : "#FFFFFF") : "#FFFFFF" }}>
               {edgeOver != null ? `${edgeOver > 0 ? "+" : ""}${(edgeOver * 100).toFixed(1)}pp` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {fmtOdds(prop.fdOverOdds)}
             </div>
           </div>
           {/* Result */}
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -893,7 +893,7 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
       <div style={{ height: 3, background: primary }} />
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
         {photo
-          ? <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.04)", border: `1px solid ${primary}44` }}>
+          ? <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "transparent", border: `1px solid ${primary}44` }}>
               <img src={photo} alt={prop.pitcherName} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />
             </div>
           : <InitialsAvatar name={prop.pitcherName} color={primary} size={56} />
@@ -902,28 +902,28 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={pitcherTeam} style={{ width: 18, height: 18, objectFit: "contain" }} />}
             <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.pitcherName}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
+            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
+          <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ textAlign: "center", minWidth: 44 }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
           </div>
           <div style={{ textAlign: "center", minWidth: 52 }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
+            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
           </div>
           {prop.actualKs != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
+              <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#45E0A8", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
             </div>
           )}
           {modelErr != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
+              <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "#45E0A8" : Math.abs(modelErr) <= 1.5 ? "#FFFFFF" : "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
             </div>
           )}
@@ -932,7 +932,7 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
           </div>
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -941,15 +941,15 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
       {/* O/U breakdown */}
       {(prop.pOver || prop.pUnder) && (
         <div style={{ display: "flex", gap: 8, padding: "0 14px 10px", marginTop: -4 }}>
-          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
+          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid #FFFFFF", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
             <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
+            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
           </div>
-          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
+          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid #FFFFFF", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
             <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
+            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
           </div>
         </div>
       )}
@@ -1235,7 +1235,7 @@ export default function TheModelResults() {
             </Button>
             <Button size="sm" onClick={handleRefresh} disabled={isRefreshing}
               className="gap-1.5 text-xs h-8 font-bold border"
-              style={{ background: "rgba(57,255,20,0.10)", color: "#45E0A8", borderColor: "rgba(57,255,20,0.35)" }}>
+              style={{ background: "transparent", color: "#45E0A8", borderColor: "#45E0A8" }}>
               {isRefreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               Refresh
             </Button>
@@ -1248,9 +1248,9 @@ export default function TheModelResults() {
             <button type="button" key={tab.id} onClick={() => setMarketTab(tab.id)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0"
               style={{
-                background: marketTab === tab.id ? `${tab.color}1a` : "rgba(255,255,255,0.04)",
-                color: marketTab === tab.id ? tab.color : "rgba(255,255,255,0.45)",
-                border: `1px solid ${marketTab === tab.id ? `${tab.color}55` : "rgba(255,255,255,0.10)"}`,
+                background: marketTab === tab.id ? `${tab.color}1a` : "transparent",
+                color: marketTab === tab.id ? tab.color : "#FFFFFF",
+                border: `1px solid ${marketTab === tab.id ? `${tab.color}55` : "#FFFFFF"}`,
                 fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
               }}>
               {tab.label}
@@ -1266,7 +1266,7 @@ export default function TheModelResults() {
               </button>
               <span className="text-xs font-bold text-foreground tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
               {gameDate === todayPst() && (
-                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(57,255,20,0.15)", color: "#45E0A8" }}>TODAY</span>
+                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "transparent", color: "#45E0A8" }}>TODAY</span>
               )}
               <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0">
                 <ChevronRight size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
@@ -1282,9 +1282,9 @@ export default function TheModelResults() {
                 <button type="button" key={st} onClick={() => setBrierSubTab(st)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors"
                   style={{
-                    background: brierSubTab === st ? "rgba(255,165,0,0.12)" : "rgba(255,255,255,0.04)",
-                    color: brierSubTab === st ? "#45E0A8" : "rgba(255,255,255,0.35)",
-                    border: `1px solid ${brierSubTab === st ? "rgba(255,165,0,0.35)" : "rgba(255,255,255,0.08)"}`,
+                    background: brierSubTab === st ? "transparent" : "transparent",
+                    color: brierSubTab === st ? "#45E0A8" : "#FFFFFF",
+                    border: `1px solid ${brierSubTab === st ? "#45E0A8" : "#FFFFFF"}`,
                     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em",
                   }}>
                   {st === "trend" ? <TrendingUp size={10} /> : <BarChart3 size={10} />}
@@ -1297,9 +1297,9 @@ export default function TheModelResults() {
                   {[10, 20, 30, 50].map(w => (
                     <button type="button" key={w} onClick={() => setBrierWindow(w)} style={{
                       fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
-                      background: brierWindow === w ? "rgba(255,165,0,0.15)" : "rgba(255,255,255,0.04)",
-                      color: brierWindow === w ? "#45E0A8" : "rgba(255,255,255,0.3)",
-                      border: `1px solid ${brierWindow === w ? "rgba(255,165,0,0.4)" : "rgba(255,255,255,0.08)"}`,
+                      background: brierWindow === w ? "transparent" : "transparent",
+                      color: brierWindow === w ? "#45E0A8" : "#FFFFFF",
+                      border: `1px solid ${brierWindow === w ? "#45E0A8" : "#FFFFFF"}`,
                       cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                     }}>{w}G</button>
                   ))}
@@ -1315,11 +1315,11 @@ export default function TheModelResults() {
 
         {/* ── DRIFT BANNER ─────────────────────────────────────────────────── */}
         {driftData && driftData.driftDetected && (
-          <div style={{ marginBottom: 16, padding: "10px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.35)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ marginBottom: 16, padding: "10px 16px", background: "transparent", border: "1px solid #FFFFFF", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
             <Activity size={14} style={{ color: "#FFFFFF", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", letterSpacing: "1px", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>DRIFT DETECTED</span>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+              <span style={{ fontSize: 10, color: "#FFFFFF", marginLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 {driftData.message ?? "F5 share deviation exceeds threshold — recalibration recommended"}
               </span>
             </div>
@@ -1610,7 +1610,7 @@ export default function TheModelResults() {
             {/* Daily NRFI results from heatmap drill-down */}
             <div>
               <SectionLabel sub={`Date: ${formatDateNav(gameDate)}`}>DAILY NRFI RESULTS</SectionLabel>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', padding: "12px 0" }}>
+              <div style={{ fontSize: 11, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', padding: "12px 0" }}>
                 Use the Brier Heatmap above to drill into per-game NRFI results by clicking any NRFI cell.
                 Date navigation (arrows above) selects the date for K-Props and HR Props daily views.
               </div>
@@ -1632,9 +1632,9 @@ export default function TheModelResults() {
                 <button type="button" key={v} onClick={() => setKPropsView(v)}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
                   style={{
-                    background: kPropsView === v ? "rgba(255,105,180,0.12)" : "rgba(255,255,255,0.04)",
-                    color: kPropsView === v ? "#45E0A8" : "rgba(255,255,255,0.45)",
-                    border: `1px solid ${kPropsView === v ? "rgba(255,105,180,0.35)" : "rgba(255,255,255,0.10)"}`,
+                    background: kPropsView === v ? "transparent" : "transparent",
+                    color: kPropsView === v ? "#45E0A8" : "#FFFFFF",
+                    border: `1px solid ${kPropsView === v ? "#45E0A8" : "#FFFFFF"}`,
                     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
                   }}>
                   {v === "daily" ? <Calendar size={11} /> : <CalendarDays size={11} />}
@@ -1644,17 +1644,17 @@ export default function TheModelResults() {
             </div>
 
             {/* MLB Headshot Backfill Tool */}
-            <div style={{ padding: "10px 14px", background: "rgba(255,105,180,0.04)", border: "1px solid rgba(255,105,180,0.15)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ padding: "10px 14px", background: "transparent", border: "1px solid #FFFFFF", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,105,180,0.7)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
+                <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {backfillStatus ?? "Resolves MLBAM IDs for all K-Props pitchers missing headshots. Calls MLB Stats API."}
                 </div>
               </div>
               <Button size="sm" variant="outline"
                 disabled={backfillMutation.isPending}
                 onClick={() => { setBackfillStatus(null); backfillMutation.mutate(); }}
-                style={{ borderColor: "rgba(255,105,180,0.35)", color: "#45E0A8", flexShrink: 0 }}
+                style={{ borderColor: "#45E0A8", color: "#45E0A8", flexShrink: 0 }}
                 className="gap-1.5 text-xs h-7">
                 {backfillMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
                 BACKFILL IDs
@@ -1725,10 +1725,10 @@ export default function TheModelResults() {
                   {kLast7Data.dailyBreakdown && kLast7Data.dailyBreakdown.map((day: { date: string; correct: number; completed: number; accuracy: number | null; mae: number | null }) => (
                     <div key={day.date} style={{ marginBottom: 8, padding: "10px 14px", background: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.date}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.date}</span>
                         <span style={{ fontSize: 11, color: accuracyColor(day.accuracy), fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.accuracy != null ? fmtPct(day.accuracy) : "—"}</span>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.correct}/{day.completed} correct</span>
-                        {day.mae != null && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
+                        <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.correct}/{day.completed} correct</span>
+                        {day.mae != null && <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
                       </div>
                     </div>
                   ))}
@@ -1796,7 +1796,7 @@ export default function TheModelResults() {
               )}
             </div>
             {/* Re-ingest button */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid #FFFFFF" }}>
               <Target size={12} style={{ color: "#FFFFFF" }} />
               <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 Re-ingest outcomes for {gameDate} to update HR prop results
@@ -1808,7 +1808,7 @@ export default function TheModelResults() {
                   reingestMutation.mutate({ dateStr: gameDate, force: false });
                 }}
                 className="ml-auto gap-1.5 text-xs h-7"
-                style={{ borderColor: "rgba(255,107,53,0.35)", color: "#45E0A8" }}>
+                style={{ borderColor: "#45E0A8", color: "#45E0A8" }}>
                 {reingestingDate === gameDate ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
                 RE-INGEST
               </Button>
