@@ -56,16 +56,16 @@ function buildPrivacyHtml(): string {
 <meta name="robots" content="index,follow"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#000000;color:#FFFFFF;line-height:1.7;padding:48px 24px}
 .container{max-width:720px;margin:0 auto}
-h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
-h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
-p{margin-bottom:12px;font-size:14px;color:#9ca3af}
+h1{font-size:2rem;font-weight:900;color:#FFFFFF;margin-bottom:8px}
+h2{font-size:1.25rem;font-weight:700;color:#FFFFFF;margin-top:32px;margin-bottom:12px}
+p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
-li{font-size:14px;color:#9ca3af;margin-bottom:6px}
+li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#6b7280;font-size:13px;margin-bottom:32px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);text-align:center;color:#4b5563;font-size:12px}
+.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
 </style>
 </head>
 <body>
@@ -152,17 +152,17 @@ function buildTermsHtml(): string {
 <meta name="robots" content="index,follow"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#000000;color:#FFFFFF;line-height:1.7;padding:48px 24px}
 .container{max-width:720px;margin:0 auto}
-h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
-h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
-p{margin-bottom:12px;font-size:14px;color:#9ca3af}
+h1{font-size:2rem;font-weight:900;color:#FFFFFF;margin-bottom:8px}
+h2{font-size:1.25rem;font-weight:700;color:#FFFFFF;margin-top:32px;margin-bottom:12px}
+p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
-li{font-size:14px;color:#9ca3af;margin-bottom:6px}
+li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#6b7280;font-size:13px;margin-bottom:32px}
+.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
 .caps{text-transform:uppercase;font-size:13px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.06);text-align:center;color:#4b5563;font-size:12px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
 </style>
 </head>
 <body>

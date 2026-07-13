@@ -79,7 +79,7 @@ function buildEmailHtml(opts: {
                 <tr>
                   <td style="vertical-align:middle;">
                     <!-- dime wordmark: dotless-i + mint coin-dot (brand kit) -->
-                    <span style="font-size:22px;font-weight:700;color:#EDEDF2;letter-spacing:-0.05em;color:#FFFFFF;">d&#305;me<span style="color:${BRAND_COLOR};">.</span></span>
+                    <span style="font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:-0.05em;">d&#305;me<span style="color:${BRAND_COLOR};">.</span></span>
                   </td>
                 </tr>
               </table>
@@ -96,9 +96,9 @@ function buildEmailHtml(opts: {
           <!-- Footer -->
           <tr>
             <td align="center" style="padding-top:20px;">
-              <p style="font-size:11px;color:#444444;margin:0;">
+              <p style="font-size:11px;color:#FFFFFF;margin:0;">
                 &copy; ${new Date().getFullYear()} Dime AI &mdash; AI Sports Betting Models &nbsp;&bull;&nbsp;
-                <a href="https://aisportsbettingmodels.com" style="color:#444444;text-decoration:none;">aisportsbettingmodels.com</a>
+                <a href="https://aisportsbettingmodels.com" style="color:#FFFFFF;text-decoration:none;">aisportsbettingmodels.com</a>
               </p>
               <p style="font-size:10px;color:#333333;margin:6px 0 0;">
                 Analytical software &mdash; no guaranteed outcomes. For informational purposes only. 21+. Gambling problem? Call 1-800-GAMBLER.
@@ -136,7 +136,7 @@ export async function sendPasswordResetEmail(opts: {
 
   const bodyHtml = `
     <h1 style="font-size:20px;font-weight:900;color:#ffffff;margin:0 0 8px;letter-spacing:0.04em;">Password Reset</h1>
-    <p style="font-size:13px;color:#aaaaaa;margin:0 0 24px;">
+    <p style="font-size:13px;color:#FFFFFF;margin:0 0 24px;">
       Hi <strong style="color:#ffffff;">@${opts.username}</strong>, we received a request to reset your password.
     </p>
 
@@ -152,14 +152,14 @@ export async function sendPasswordResetEmail(opts: {
       </tr>
     </table>
 
-    <p style="font-size:12px;color:#666666;margin:0 0 8px;">
-      This link expires <strong style="color:#aaaaaa;">${expiryStr} ET</strong>.
+    <p style="font-size:12px;color:#FFFFFF;margin:0 0 8px;">
+      This link expires <strong style="color:#FFFFFF;">${expiryStr} ET</strong>.
       If you did not request a password reset, you can safely ignore this email.
     </p>
 
     <hr style="border:none;border-top:1px solid ${BORDER_COLOR};margin:20px 0;" />
 
-    <p style="font-size:11px;color:#444444;margin:0;word-break:break-all;">
+    <p style="font-size:11px;color:#FFFFFF;margin:0;word-break:break-all;">
       If the button above doesn't work, copy and paste this URL into your browser:<br/>
       <a href="${opts.resetUrl}" style="color:#555555;">${opts.resetUrl}</a>
     </p>
@@ -202,20 +202,20 @@ export async function sendWelcomeEmail(opts: {
   console.log(`${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} plan=${opts.planLabel}`);
 
   const expiryLine = opts.expiryDate
-    ? `<p style="font-size:12px;color:#666666;margin:0 0 0;">
-         Your access is active through <strong style="color:#aaaaaa;">${opts.expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.
+    ? `<p style="font-size:12px;color:#FFFFFF;margin:0 0 0;">
+         Your access is active through <strong style="color:#FFFFFF;">${opts.expiryDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>.
        </p>`
     : "";
 
   const bodyHtml = `
     <h1 style="font-size:20px;font-weight:900;color:#ffffff;margin:0 0 8px;letter-spacing:0.04em;">You're In.</h1>
-    <p style="font-size:13px;color:#aaaaaa;margin:0 0 20px;">
+    <p style="font-size:13px;color:#FFFFFF;margin:0 0 20px;">
       Welcome, <strong style="color:#ffffff;">@${opts.username}</strong>. Your <strong style="color:${BRAND_COLOR};">${opts.planLabel}</strong> is now active.
     </p>
 
     <div style="background:#0d0d0d;border:1px solid ${BORDER_COLOR};border-radius:8px;padding:16px 20px;margin-bottom:24px;">
-      <p style="font-size:11px;color:#666666;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;font-weight:700;">What you now have access to</p>
-      <ul style="margin:0;padding-left:18px;color:#aaaaaa;font-size:12px;line-height:1.8;">
+      <p style="font-size:11px;color:#FFFFFF;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;font-weight:700;">What you now have access to</p>
+      <ul style="margin:0;padding-left:18px;color:#FFFFFF;font-size:12px;line-height:1.8;">
         <li>Full AI Model Projections board &mdash; every game, priced (MLB live; World Cup 2026 in the engine)</li>
         <li>Dime Chat &mdash; ask the engine anything on the slate</li>
         <li>The Dime Verdict on every market: Pass, Monitor, or Edge Detected</li>

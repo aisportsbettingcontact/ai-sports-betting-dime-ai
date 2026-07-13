@@ -225,13 +225,13 @@ function ScheduleRow({
   // ── Cell classes ───────────────────────────────────────────────────────────
   const cell = "px-[2px] sm:px-1 py-1.5 align-middle";
   const mono = "font-mono text-[8px] sm:text-xs";
-  const dash = <span className={cn(mono, "text-zinc-300")}>—</span>;
+  const dash = <span className={cn(mono, "text-white")}>—</span>;
 
   return (
     <tr className="border-b border-white transition-colors">
 
       {/* DATE */}
-      <td className={cn(cell, mono, "text-zinc-200 text-center whitespace-nowrap")}>
+      <td className={cn(cell, mono, "text-white text-center whitespace-nowrap")}>
         {fmtDate(game.gameDate)}
       </td>
 
@@ -275,7 +275,7 @@ function ScheduleRow({
 
       {/* RUN LINE */}
       <td className={cn(cell, "text-center")}>
-        <span className={cn(mono, "text-gray-300 whitespace-nowrap")}>
+        <span className={cn(mono, "text-white whitespace-nowrap")}>
           {fmtRunLine(myRunLine, myRunLineOdds)}
         </span>
       </td>
@@ -287,7 +287,7 @@ function ScheduleRow({
 
       {/* TOTAL */}
       <td className={cn(cell, "text-center")}>
-        <span className={cn(mono, "text-gray-300 whitespace-nowrap")}>
+        <span className={cn(mono, "text-white whitespace-nowrap")}>
           {fmtTotal(game.dkTotal, game.dkOverOdds, game.dkUnderOdds)}
         </span>
       </td>
@@ -363,8 +363,8 @@ function StatsSummary({
     <div className="flex items-stretch gap-2 sm:gap-3 mb-4 sm:mb-5">
 
       {/* RECORD */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white/5 rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-zinc-300 font-mono tracking-widest mb-1">
+      <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
+        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RECORD
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -373,8 +373,8 @@ function StatsSummary({
       </div>
 
       {/* RL COVER */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white/5 rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-zinc-300 font-mono tracking-widest mb-1">
+      <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
+        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RL COVER
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -383,8 +383,8 @@ function StatsSummary({
       </div>
 
       {/* O/U */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-white/5 rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-zinc-300 font-mono tracking-widest mb-1">
+      <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
+        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
           O/U
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -411,11 +411,11 @@ function ScheduleTable({
 }) {
   const th = cn(
     "px-[2px] sm:px-1 py-1.5 text-[7px] sm:text-[8px] font-bold",
-    "text-zinc-300 font-mono tracking-widest text-center whitespace-nowrap align-middle"
+    "text-white font-mono tracking-widest text-center whitespace-nowrap align-middle"
   );
 
   return (
-    <div className="rounded-lg border border-white/10 w-full overflow-hidden">
+    <div className="rounded-lg border border-white w-full overflow-hidden">
       <table className="w-full table-fixed text-left border-collapse">
         <colgroup>
           {/* DATE     */} <col style={{ width: "8%" }} />
@@ -430,7 +430,7 @@ function ScheduleTable({
           {/* ML       */} <col style={{ width: "8%" }} />
         </colgroup>
         <thead>
-          <tr className="border-b border-white/10 bg-white/[0.03]">
+          <tr className="border-b border-white bg-black">
             <th className={th}>DATE</th>
             <th className={th}>LOCATION</th>
             <th className={th}>OPP</th>
@@ -550,24 +550,24 @@ export default function MlbTeamSchedule() {
 
   if (!teamSlug) {
     return (
-      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
-        <p className="text-zinc-200 font-mono text-sm">No team specified.</p>
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center">
+        <p className="text-white font-mono text-sm">No team specified.</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a] text-white">
+    <div className="min-h-screen bg-[#000000] text-white">
 
       {/* ── Sticky Header ──────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-[#0a0e1a]/95 backdrop-blur-sm border-b border-white/10">
+      <div className="sticky top-0 z-20 bg-[#000000] backdrop-blur-sm border-b border-white">
         <div className="w-full px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2">
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate("/feed/model/mlb")}
-            className="text-zinc-200 hover:text-white gap-1 -ml-1 px-2 flex-shrink-0"
+            className="text-white hover:text-white gap-1 -ml-1 px-2 flex-shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span className="text-sm font-mono">BACK</span>
@@ -586,7 +586,7 @@ export default function MlbTeamSchedule() {
             <h1 className="text-sm sm:text-sm font-bold text-white font-mono tracking-wide truncate leading-tight">
               {teamInfo?.name ?? teamSlug.replace(/-/g, " ").toUpperCase()}
             </h1>
-            <p className="text-[8px] sm:text-sm text-zinc-300 font-mono leading-tight">
+            <p className="text-[8px] sm:text-sm text-white font-mono leading-tight">
               2026 MLB SCHEDULE
             </p>
           </div>
@@ -594,7 +594,7 @@ export default function MlbTeamSchedule() {
           <div className="flex items-center gap-1 flex-shrink-0">
             {/* Stale indicator — shown when data > 5 min old and page has live/upcoming games */}
             {isStale && !isFetching && upcomingGames.length > 0 && (
-              <span className="text-[7px] font-mono text-yellow-500/80 bg-yellow-500/10 border border-yellow-500/20 rounded px-1 py-0.5">
+              <span className="text-[7px] font-mono text-white bg-black border border-white rounded px-1 py-0.5">
                 STALE
               </span>
             )}
@@ -606,7 +606,7 @@ export default function MlbTeamSchedule() {
                 refetch();
               }}
               disabled={isFetching}
-              className="text-zinc-200 hover:text-white px-2"
+              className="text-white hover:text-white px-2"
             >
               <RefreshCw className={cn("w-3 h-3 sm:w-3.5 sm:h-3.5", isFetching && "animate-spin")} />
             </Button>
@@ -621,8 +621,8 @@ export default function MlbTeamSchedule() {
         {isLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
-              <RefreshCw className="w-5 h-5 text-blue-400 animate-spin mx-auto mb-3" />
-              <p className="text-zinc-200 font-mono text-xs">Loading schedule...</p>
+              <RefreshCw className="w-5 h-5 text-white animate-spin mx-auto mb-3" />
+              <p className="text-white font-mono text-xs">Loading schedule...</p>
             </div>
           </div>
         )}
@@ -658,9 +658,9 @@ export default function MlbTeamSchedule() {
         {/* No data */}
         {!isLoading && !error && games.length === 0 && (
           <div className="text-center py-16">
-            <Calendar className="w-7 h-7 text-zinc-300 mx-auto mb-3" />
-            <p className="text-zinc-200 font-mono text-xs">No 2026 schedule data available.</p>
-            <p className="text-zinc-300 font-mono text-sm mt-1">
+            <Calendar className="w-7 h-7 text-white mx-auto mb-3" />
+            <p className="text-white font-mono text-xs">No 2026 schedule data available.</p>
+            <p className="text-white font-mono text-sm mt-1">
               Run a backfill from the admin panel to populate data.
             </p>
           </div>
@@ -675,8 +675,8 @@ export default function MlbTeamSchedule() {
         {!isLoading && upcomingGames.length > 0 && (
           <div className="mb-4 sm:mb-5">
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-              <h2 className="text-xs sm:text-sm font-bold text-blue-400 font-mono tracking-widest uppercase">
+              <TrendingUp className="w-3.5 h-3.5 text-white flex-shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-white font-mono tracking-widest uppercase">
                 Upcoming / Live
               </h2>
             </div>
@@ -692,8 +692,8 @@ export default function MlbTeamSchedule() {
         {!isLoading && completedGames.length > 0 && (
           <div>
             <div className="flex items-center gap-1.5 mb-2">
-              <Calendar className="w-3.5 h-3.5 text-zinc-200 flex-shrink-0" />
-              <h2 className="text-xs sm:text-sm font-bold text-zinc-200 font-mono tracking-widest uppercase">
+              <Calendar className="w-3.5 h-3.5 text-white flex-shrink-0" />
+              <h2 className="text-xs sm:text-sm font-bold text-white font-mono tracking-widest uppercase">
                 Completed Games
               </h2>
             </div>

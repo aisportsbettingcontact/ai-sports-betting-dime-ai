@@ -165,7 +165,7 @@ function PlayerRow({ row }: PlayerRowProps) {
       </span>
 
       {/* Model odds */}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", textAlign: "center", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
         {fmtOdds(row.modelOverOdds)}
       </span>
 
@@ -197,8 +197,8 @@ function TeamSection({ teamAbbrev, rows, primaryColor }: TeamSectionProps) {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "4px 8px",
-        background: "rgba(255,255,255,0.04)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        background: "#000000",
+        borderBottom: "1px solid #FFFFFF",
       }}>
         <span style={{
           fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
@@ -209,8 +209,8 @@ function TeamSection({ teamAbbrev, rows, primaryColor }: TeamSectionProps) {
         </span>
         {edgeRows.length > 0 && (
           <span style={{
-            fontSize: 9, fontWeight: 700, color: "#39FF14",
-            background: "rgba(57,255,20,0.12)", borderRadius: 3,
+            fontSize: 9, fontWeight: 700, color: "#45E0A8",
+            background: "transparent", borderRadius: 3,
             padding: "1px 5px", letterSpacing: "0.06em",
           }}>
             {edgeRows.length} EDGE{edgeRows.length > 1 ? "S" : ""}
@@ -224,10 +224,10 @@ function TeamSection({ teamAbbrev, rows, primaryColor }: TeamSectionProps) {
         gridTemplateColumns: "26px 1fr 36px 44px 44px 44px 44px",
         padding: "2px 8px",
         gap: 3,
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid #FFFFFF",
       }}>
         {["", "PLAYER", "LINE", "CONS", "MDL%", "MDL$", "EDGE"].map((h, i) => (
-          <span key={i} style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", textAlign: i > 1 ? "center" : "left", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          <span key={i} style={{ fontSize: 8, color: "#FFFFFF", textAlign: i > 1 ? "center" : "left", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             {h}
           </span>
         ))}

@@ -213,12 +213,12 @@ export default function ClaudeAssistant() {
           {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
           {chatMutation.isPending && (
             <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#1a1a2e] border border-[#00ff41]/20 flex items-center justify-center">
-                <Bot size={14} className="text-[#00ff41]" />
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#000000] border border-[#45E0A8] flex items-center justify-center">
+                <Bot size={14} className="text-[#45E0A8]" />
               </div>
-              <div className="bg-[#111] border border-white/5 rounded-xl px-4 py-3 flex items-center gap-2">
-                <Loader2 size={14} className="animate-spin text-[#00ff41]" />
-                <span className="text-gray-500 text-sm">Claude is thinking...</span>
+              <div className="bg-[#000000] border border-white rounded-xl px-4 py-3 flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-[#45E0A8]" />
+                <span className="text-white text-sm">Claude is thinking...</span>
               </div>
             </div>
           )}
@@ -227,7 +227,7 @@ export default function ClaudeAssistant() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 border-t border-white/5 bg-[#0d0d0d] px-4 py-3">
+      <div className="flex-shrink-0 border-t border-white bg-[#000000] px-4 py-3">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
             <Textarea
@@ -236,15 +236,15 @@ export default function ClaudeAssistant() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask Claude to analyze or improve any part of the platform... (Enter to send, Shift+Enter for newline)"
-              className="flex-1 min-h-[60px] max-h-[200px] resize-none bg-[#111] border-white/10 text-white placeholder-gray-600 text-sm focus:border-[#00ff41]/30 focus:ring-0 rounded-xl"
+              className="flex-1 min-h-[60px] max-h-[200px] resize-none bg-[#000000] border-white text-white placeholder-white text-sm focus:border-[#45E0A8] focus:ring-0 rounded-xl"
               disabled={chatMutation.isPending}
             />
             <Button onClick={handleSend} disabled={!input.trim() || chatMutation.isPending}
-              className="h-[60px] w-[60px] bg-[#00ff41] hover:bg-[#00cc33] text-black rounded-xl flex-shrink-0 disabled:opacity-30">
+              className="h-[60px] w-[60px] bg-[#45E0A8] hover:bg-[#45E0A8] text-black rounded-xl flex-shrink-0 disabled:opacity-30">
               {chatMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
             </Button>
           </div>
-          <p className="text-[10px] text-gray-600 mt-1.5 text-center">
+          <p className="text-[10px] text-white mt-1.5 text-center">
             Claude has full context of the platform's design system, components, and tech stack.
           </p>
         </div>

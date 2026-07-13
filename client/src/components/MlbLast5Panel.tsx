@@ -450,11 +450,11 @@ export default function MlbLast5Panel({
           {/* Error */}
           {error && !isLoading && (
             <div className="px-3 py-3">
-              <p className="text-sm text-red-400 font-mono">
+              <p className="text-sm text-white font-mono">
                 Error: {error.message}
               </p>
               <button type="button" onClick={() => refetch()}
-                className="text-xs text-blue-400 font-mono mt-1 hover:underline"
+                className="text-xs text-white font-mono mt-1 hover:underline"
               >
                 Retry
               </button>
@@ -463,7 +463,7 @@ export default function MlbLast5Panel({
 
           {/* Data */}
           {!isLoading && !error && (
-            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white/[0.06]">
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-white">
               {/* Away team */}
               <TeamSection
                 teamSlug={awaySlug}
