@@ -11,26 +11,32 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  /* ── THREE-COLOR LAW — light theme: white ground, black ink/borders, mint.
+   * All surface tiers collapse to the page color; all text tiers to black; all
+   * borders to black. Mint stays the one accent (as FILL — mint text fails on
+   * white, so --dime-mint-text is black in light). No greys, no alpha. */
   --dime-mint: #45e0a8;
-  --dime-mint-text: #0fa36b; /* mint TEXT on light surfaces (MASTER.md:47) */
-  --dime-mint-keyline: #2fb584;
+  --dime-mint-text: #45e0a8; /* mint stays the signal in both themes (allowed color) */
+  --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
-  --dime-surface-sidebar: #f4f4f6;
-  --dime-surface-card: #f7f7f9;
-  --dime-surface-raised: #e8e8ec;
-  --dime-surface-bubble: #f0f0f3;
-  --dime-border: #e4e4e9;
-  --dime-border-strong: #d5d5dc;
-  --dime-text-primary: #0b0b0f;
-  --dime-text-body: #2a2a32;
-  --dime-text-secondary: #55555e;
-  --dime-text-muted: #9a9aa8;
-  --dime-text-faint: #9a9aa8;
-  --dime-ring: rgba(69, 224, 168, 0.28);
-  --dime-row-hover: rgba(15, 23, 42, 0.055);
-  --dime-row-active: rgba(69, 224, 168, 0.13);
-  --dime-mint-dim: rgba(69, 224, 168, 0.13);
-  --dime-mint-border: rgba(15, 163, 107, 0.35);
+  --dime-surface-sidebar: #ffffff;
+  --dime-surface-card: #ffffff;
+  --dime-surface-raised: #ffffff;
+  --dime-surface-bubble: #ffffff;
+  --dime-border: #000000;
+  --dime-border-strong: #000000;
+  --dime-text-primary: #000000;
+  --dime-text-body: #000000;
+  --dime-text-secondary: #000000;
+  --dime-text-muted: #000000;
+  --dime-text-faint: #000000;
+  --dime-ring: #45e0a8;
+  --dime-row-hover: transparent;   /* hover = no bg change (neutralize) */
+  --dime-row-active: transparent;  /* active shown via mint rail/dot, not a tint */
+  --dime-mint-dim: transparent;    /* dim-mint tiles → transparent */
+  --dime-mint-border: #45e0a8;
+  /* bet-loss red exception (Bet Tracker / calendar) */
+  --loss-red: #ff3b3b;
   --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
   /* Single-font mandate: the "mono" token now resolves to Familjen Grotesk so
    * every legacy var(--dime-font-mono) / var(--bt-mono) consumer renders the
@@ -39,28 +45,29 @@
   --dime-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dime-t: 160ms;
   /* Brand coin-dot rule: mint fills on light get a near-black hairline. */
-  --dime-coin-keyline: 0 0 0 1px #0b0b0f;
+  --dime-coin-keyline: 0 0 0 1px #000000;
 }
 
 html.dark {
-  --dime-mint-text: #45e0a8;
-  --dime-bg: #0b0b0f;
-  --dime-surface-sidebar: #101016;
-  --dime-surface-card: #16161c;
-  --dime-surface-raised: #1a1a22;
-  --dime-surface-bubble: #1e1e26;
-  --dime-border: #24242e;
-  --dime-border-strong: #2e2e38;
-  --dime-text-primary: #ededf2;
-  --dime-text-body: #c9c9d4;
-  --dime-text-secondary: #9a9aa8;
-  --dime-text-muted: #6a6a78;
-  --dime-text-faint: #55555e;
-  --dime-ring: rgba(69, 224, 168, 0.36);
-  --dime-row-hover: rgba(255, 255, 255, 0.065);
-  --dime-row-active: rgba(255, 255, 255, 0.095);
-  --dime-mint-dim: rgba(69, 224, 168, 0.1);
-  --dime-mint-border: rgba(69, 224, 168, 0.3);
+  /* ── THREE-COLOR LAW — dark theme: black ground, white ink/borders, mint. */
+  --dime-mint-text: #45e0a8; /* mint text passes on black */
+  --dime-bg: #000000;
+  --dime-surface-sidebar: #000000;
+  --dime-surface-card: #000000;
+  --dime-surface-raised: #000000;
+  --dime-surface-bubble: #000000;
+  --dime-border: #ffffff;
+  --dime-border-strong: #ffffff;
+  --dime-text-primary: #ffffff;
+  --dime-text-body: #ffffff;
+  --dime-text-secondary: #ffffff;
+  --dime-text-muted: #ffffff;
+  --dime-text-faint: #ffffff;
+  --dime-ring: #45e0a8;
+  --dime-row-hover: transparent;
+  --dime-row-active: transparent;
+  --dime-mint-dim: transparent;
+  --dime-mint-border: #45e0a8;
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
 }
 
@@ -201,7 +208,7 @@ html.dark {
   background: var(--dime-surface-raised) !important;
   border: 1px solid var(--dime-border-strong) !important;
   border-radius: 14px !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55) !important;
+  box-shadow: none !important; /* Three-Color Law: no shadows — 1px border separates */
 }
 .bs-dropdown-head {
   background: var(--dime-surface-raised) !important;
@@ -212,7 +219,7 @@ html.dark {
 }
 html:not(.dark) .bs-dropdown,
 html:not(.dark) .cal-panel {
-  box-shadow: 0 12px 32px rgba(11, 11, 15, 0.18) !important;
+  box-shadow: none !important; /* Three-Color Law: no shadows */
 }
 .cal-panel > div:first-child {
   border-bottom-color: var(--dime-border) !important;
@@ -234,7 +241,7 @@ html:not(.dark) .cal-panel {
 .cal-day[data-cal-state="selected"],
 .cal-day[data-cal-state="selected-today"] {
   background: var(--dime-mint) !important;
-  color: #0b0b0f !important;
+  color: #000000 !important;
   outline: none !important;
   box-shadow: var(--dime-coin-keyline);
 }
@@ -329,7 +336,7 @@ html:not(.dark) .cal-panel {
   font-weight: 700 !important;
 }
 .bsp-seg--away span {
-  color: #0b0b0f !important;
+  color: #000000 !important;
 }
 .bsp-seg--home span {
   color: var(--dime-text-primary) !important;
@@ -449,7 +456,7 @@ html:not(.dark) .cal-trigger img {
   --bt-border: var(--dime-border);
   --bt-border2: var(--dime-border-strong);
   --bt-green: var(--dime-mint-text);
-  --bt-red: var(--dime-text-secondary); /* negative = grey, never red */
+  --bt-red: var(--loss-red); /* bet-loss red exception (Three-Color Law) */
   --bt-gold: var(--dime-mint); /* ATH markers: signal, not gold */
   --bt-grade-b: var(--dime-text-primary);
   --bt-grade-c: var(--dime-text-secondary);
@@ -489,7 +496,7 @@ html:not(.dark) .cal-trigger img {
   color: var(--dime-mint-text) !important;
 }
 .bt-page [class*="text-red-"] {
-  color: var(--dime-text-secondary) !important;
+  color: var(--loss-red) !important; /* bet-loss red exception (Three-Color Law) */
 }
 .bt-page [class*="text-yellow-"],
 .bt-page [class*="text-amber-"],
@@ -502,7 +509,7 @@ html:not(.dark) .cal-trigger img {
 }
 .bt-page .bg-emerald-500,
 .bt-page .bg-emerald-500 * {
-  color: #0b0b0f !important;
+  color: #000000 !important;
 }
 .bt-page [class*="bg-emerald-500/"],
 .bt-page [class*="bg-green-500/"],
@@ -577,7 +584,7 @@ html:not(.dark) .cal-trigger img {
 }
 /* Modal scrims keep isolating in both themes. */
 html:not(.dark) .bt-page [class*="bg-black/"] {
-  background-color: rgba(11, 11, 15, 0.45) !important;
+  background-color: #000000 !important; /* Three-Color Law: opaque scrim, no alpha */
 }
 
 /* The header row may carry many controls ($/U, unit input, Analytics,
@@ -615,8 +622,8 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
 
   /* Focus/accent tokens: mint, not the legacy purple (MASTER.md bans purple). */
   :root {
-    --ring: rgba(69, 224, 168, 0.36);
-    --accent: rgba(69, 224, 168, 0.13);
+    --ring: #45e0a8;
+    --accent: #45e0a8;
     --accent-foreground: var(--dime-text-primary);
   }
 
