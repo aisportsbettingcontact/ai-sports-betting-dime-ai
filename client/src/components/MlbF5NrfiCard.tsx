@@ -202,7 +202,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: awayEdgeEV?.isEdge ? edgeColor(awayEdgeEV.edge, awayEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
-          fontFamily: "'Barlow Condensed', sans-serif"
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {awayVal}
         </span>
@@ -219,7 +219,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       </div>
       {/* Model center */}
       <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {modelVal}
         </span>
         {modelLabel && (
@@ -233,7 +233,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: homeEdgeEV?.isEdge ? edgeColor(homeEdgeEV.edge, homeEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
-          fontFamily: "'Barlow Condensed', sans-serif"
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {homeVal}
         </span>
@@ -286,21 +286,21 @@ function NrfiRow({ label, bookOdds, modelPct, modelOdds, isNrfi }: NrfiRowProps)
         fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
         color: isNrfi ? "#39FF14" : "#FF6B35",
         textTransform: "uppercase",
-        fontFamily: "'Barlow Condensed', sans-serif",
+        fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
       }}>
         {label}
       </span>
       {/* FD Book odds */}
       <div style={{ textAlign: "center" }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>FD ODDS</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.9)", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.9)", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtOdds(bookOdds)}
         </span>
       </div>
       {/* Model probability */}
       <div style={{ textAlign: "center" }}>
         <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>MODEL %</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#39FF14", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {effectivePct != null ? `${parseFloat(effectivePct).toFixed(1)}%` : "—"}
         </span>
         {/* Model fair-value odds */}
@@ -316,7 +316,7 @@ function NrfiRow({ label, bookOdds, modelPct, modelOdds, isNrfi }: NrfiRowProps)
             <span style={{
               fontSize: 12, fontWeight: 800,
               color: hasEdge ? edgeColor(edgeEV.edge, edgeEV.isEdge) : "rgba(255,255,255,0.5)",
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             }}>
               {fmtEdge(edgeEV.edge)}
             </span>
@@ -371,7 +371,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: overEdgeEV?.isEdge ? edgeColor(overEdgeEV.edge, overEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
-          fontFamily: "'Barlow Condensed', sans-serif"
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {fmtOdds(f5OverOdds)}
         </span>
@@ -383,7 +383,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
       </div>
       {/* Model total */}
       <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtScore(modelF5AwayScore)} – {fmtScore(modelF5HomeScore)}
         </span>
         <span style={{ display: "block", fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
@@ -396,7 +396,7 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: underEdgeEV?.isEdge ? edgeColor(underEdgeEV.edge, underEdgeEV.isEdge) : "rgba(255,255,255,0.9)",
-          fontFamily: "'Barlow Condensed', sans-serif"
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif"
         }}>
           {fmtOdds(f5UnderOdds)}
         </span>
@@ -439,7 +439,7 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
-      fontFamily: "'Barlow Condensed', 'Barlow', sans-serif",
+      fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
       {/* Team gradient bar */}
       <div style={{

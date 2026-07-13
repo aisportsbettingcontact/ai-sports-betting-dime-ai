@@ -132,7 +132,7 @@ export default function F5EdgeLeaderboard() {
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#e0e0e0", fontFamily: "monospace" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0a0a", color: "#e0e0e0", fontFamily: "Familjen Grotesk, system-ui, sans-serif" }}>
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ borderBottom: "1px solid #1a1a1a", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, background: "#0d0d0d" }}>
         <button type="button" onClick={() => setLocation("/admin/model-results")}

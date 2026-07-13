@@ -180,7 +180,7 @@ function PitcherSection({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 12,
                 fontWeight: 800,
                 color: "#FFFFFF",
@@ -270,7 +270,7 @@ function PitcherSection({
         <div style={{ textAlign: "left" }}>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 16,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -430,7 +430,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
             {/* Batting order number */}
             <span
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 10,
                 fontWeight: 700,
                 color: "#FFFFFF",
@@ -450,7 +450,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
               {/* Line 1: Player name */}
               <div
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                   fontSize: 13,
                   fontWeight: 800,
                   color: "#FFFFFF",
@@ -474,7 +474,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
                 {/* Position pill */}
                 <span
                   style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                     fontSize: 10,
                     fontWeight: 700,
                     letterSpacing: "0.5px",
@@ -492,7 +492,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
                 {/* Handedness indicator — white for all */}
                 <span
                   style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                     fontSize: 11,
                     fontWeight: 800,
                     color: "#FFFFFF",
@@ -526,7 +526,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Batting order number */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 11,
               fontWeight: 700,
               color: "#FFFFFF",
@@ -544,7 +544,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Position badge — styled pill */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.5px",
@@ -565,7 +565,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Player name */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 14,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -583,7 +583,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Bats indicator — white */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 12,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -620,7 +620,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
         <span style={{ fontSize: 16 }}>🏟️</span>
         <span
           style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
+            fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             fontSize: 13,
             fontWeight: 700,
             color: "#FFFFFF",
@@ -662,7 +662,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
             {weatherTemp && (
               <div
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                   fontSize: 16,
                   fontWeight: 700,
                   color: "#FFFFFF",
@@ -685,7 +685,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
           <div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 13,
                 fontWeight: 700,
                 textAlign: "center",
@@ -750,7 +750,7 @@ function EnvSignalsStrip({
 
   const cell = (label: string, value: string, color: string, sub?: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color }}>
+      <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 13, fontWeight: 700, color }}>
         {value}
       </div>
       {sub && <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>{sub}</div>}
@@ -927,7 +927,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           <div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 11 : 13,
                 fontWeight: 900,
                 letterSpacing: "0.5px",
@@ -940,7 +940,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
             </div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 9 : 11,
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.5)",
@@ -974,7 +974,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         <div style={{ textAlign: "center" }}>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: isMobile ? 10 : 12,
               fontWeight: 700,
               color: "#FFFFFF",
@@ -986,7 +986,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           </div>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: isMobile ? 9 : 10,
               color: "#FFFFFF",
               letterSpacing: "3px",
@@ -1026,7 +1026,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           <div style={{ textAlign: "right" }}>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 11 : 13,
                 fontWeight: 900,
                 letterSpacing: "0.5px",
@@ -1039,7 +1039,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
             </div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 9 : 11,
                 fontWeight: 400,
                 color: "rgba(255,255,255,0.5)",

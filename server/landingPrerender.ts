@@ -56,7 +56,7 @@ function buildPrivacyHtml(): string {
 <meta name="robots" content="index,follow"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
 .container{max-width:720px;margin:0 auto}
 h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
 h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
@@ -152,7 +152,7 @@ function buildTermsHtml(): string {
 <meta name="robots" content="index,follow"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
+body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#050810;color:#e5e7eb;line-height:1.7;padding:48px 24px}
 .container{max-width:720px;margin:0 auto}
 h1{font-size:2rem;font-weight:900;color:#fff;margin-bottom:8px}
 h2{font-size:1.25rem;font-weight:700;color:#fff;margin-top:32px;margin-bottom:12px}
@@ -264,7 +264,7 @@ function buildLandingHtml(): string {
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0B0B0F;--surface:#121218;--line:rgba(255,255,255,.08);--text:#F2F2F5;--text-secondary:#9A9AA3;--text-muted:#6B6B75;--mint:#45E0A8}
-body{font-family:"Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+body{font-family:"Familjen Grotesk","Familjen Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
 a{color:inherit;text-decoration:none}
 .mono{font-family:"Familjen Grotesk", system-ui, -apple-system, sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
 .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--line);background:var(--bg)}

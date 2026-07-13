@@ -267,7 +267,7 @@ function InningBoxGrid({
               <span style={{
                 fontSize: 12, fontWeight: 800,
                 color: awayColor,
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 lineHeight: 1,
               }}>
                 {aVal.toFixed(2)}
@@ -278,7 +278,7 @@ function InningBoxGrid({
               <span style={{
                 fontSize: 12, fontWeight: 800,
                 color: homeColor,
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 lineHeight: 1,
               }}>
                 {hVal.toFixed(2)}
@@ -334,7 +334,7 @@ function MarketRow({
         <span style={{
           fontSize: 14, fontWeight: 700,
           color: awayHasEdge ? edgeColor(awayEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {awayTop}
@@ -362,7 +362,7 @@ function MarketRow({
         <span style={{
           fontSize: 13, fontWeight: 800,
           color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.1,
         }}>
@@ -380,7 +380,7 @@ function MarketRow({
         <span style={{
           fontSize: 14, fontWeight: 700,
           color: homeHasEdge ? edgeColor(homeEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {homeTop}
@@ -462,7 +462,7 @@ function TotalRow({
         <span style={{
           fontSize: 14, fontWeight: 700,
           color: overHasEdge ? edgeColor(overEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {fmtOdds(bookOverOdds)}
@@ -485,7 +485,7 @@ function TotalRow({
         <span style={{
           fontSize: 10, fontWeight: 700,
           color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.2,
         }}>
@@ -494,7 +494,7 @@ function TotalRow({
         <span style={{
           fontSize: 12, fontWeight: 800,
           color: "#39FF14",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.2,
         }}>
@@ -504,7 +504,7 @@ function TotalRow({
           <span style={{
             fontSize: 9, fontWeight: 700,
             color: "#a3e8b0",
-            fontFamily: "'Barlow Condensed', sans-serif",
+            fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             display: "block",
             lineHeight: 1.2,
             marginTop: 1,
@@ -538,7 +538,7 @@ function TotalRow({
         <span style={{
           fontSize: 14, fontWeight: 700,
           color: underHasEdge ? edgeColor(underEdge!.edge) : "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
         }}>
           {fmtOdds(bookUnderOdds)}
@@ -597,13 +597,13 @@ function I1BoxRow({
         <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
           <div>
             <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>EXP</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {awayI1Exp != null ? awayI1Exp.toFixed(3) : "—"}
             </span>
           </div>
           <div>
             <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>P(≥1)</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: awayColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {awayI1PScores != null ? fmtPct(awayI1PScores * 100) : "—"}
             </span>
           </div>
@@ -623,7 +623,7 @@ function I1BoxRow({
         alignItems: "center",
       }}>
         <span style={{ fontSize: 8, color: "rgba(255,255,255,0.35)", display: "block", marginBottom: 2 }}>P(NRFI)</span>
-        <span style={{ fontSize: 16, fontWeight: 900, color: "#39FF14", fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span style={{ fontSize: 16, fontWeight: 900, color: "#39FF14", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {pNeitherI1 != null ? fmtPct(pNeitherI1 * 100) : "—"}
         </span>
       </div>
@@ -642,13 +642,13 @@ function I1BoxRow({
         <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
           <div>
             <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>EXP</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {homeI1Exp != null ? homeI1Exp.toFixed(3) : "—"}
             </span>
           </div>
           <div>
             <span style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", display: "block" }}>P(≥1)</span>
-            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: homeColor, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
               {homeI1PScores != null ? fmtPct(homeI1PScores * 100) : "—"}
             </span>
           </div>
@@ -697,7 +697,7 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
         <span style={{
           fontSize: 14, fontWeight: 700,
           color: "rgba(255,255,255,0.85)",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
         }}>
           {fmtOdds(bookOdds)}
         </span>
@@ -715,7 +715,7 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
         <span style={{
           fontSize: 15, fontWeight: 900,
           color: isNrfi ? "#39FF14" : "#FF6B35",
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
           display: "block",
           lineHeight: 1.1,
         }}>
@@ -737,7 +737,7 @@ function NrfiYrfiRow({ label, bookOdds, modelPct, modelOdds }: NrfiYrfiRowProps)
             <span style={{
               fontSize: 13, fontWeight: 700,
               color: hasEdge ? edgeColor(edgeEV.edge) : "rgba(255,255,255,0.45)",
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               display: "block",
             }}>
               {fmtEdge(edgeEV.edge)}
@@ -832,7 +832,7 @@ export default function MlbCheatSheetCard({ game }: MlbCheatSheetCardProps) {
       borderRadius: 10,
       marginBottom: 10,
       overflow: "hidden",
-      fontFamily: "'Barlow', 'Barlow Condensed', sans-serif",
+      fontFamily: "'Familjen Grotesk', 'Familjen Grotesk', system-ui, -apple-system, sans-serif",
     }}>
       {/* Gradient bar */}
       <div style={gradientStyle} />
@@ -1947,7 +1947,7 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
   if (modeledGames.length === 0) return null;
 
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
+    <div style={{ fontFamily: ""Familjen Grotesk", -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap' as const, gap: 10 }}>
         {dateLabel && (

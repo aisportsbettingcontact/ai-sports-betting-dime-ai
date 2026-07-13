@@ -56,17 +56,17 @@ class SectionErrorBoundary extends Component<
           padding: 24, background: "rgba(255,34,68,0.08)",
           border: "1px solid rgba(255,34,68,0.35)", borderRadius: 8, margin: "16px 0",
         }}>
-          <div style={{ color: "#FF2244", fontWeight: 700, fontSize: 13, fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ color: "#FF2244", fontWeight: 700, fontSize: 13, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1, marginBottom: 8 }}>
             ⚠ SECTION CRASH — {this.props.label}
           </div>
-          <div style={{ color: "#ff6680", fontSize: 14, fontFamily: 'monospace', fontWeight: 700, marginBottom: 12, wordBreak: 'break-all' }}>
+          <div style={{ color: "#ff6680", fontSize: 14, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontWeight: 700, marginBottom: 12, wordBreak: 'break-all' }}>
             {this.state.error?.message ?? 'Unknown error'}
           </div>
-          <pre style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
+          <pre style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
             {this.state.error?.stack}
           </pre>
           <button type="button" onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: "4px 14px", background: "#1a1a1a", border: "1px solid #444", borderRadius: 4, color: "#ccc", cursor: "pointer", fontSize: 11, fontFamily: '"Barlow Condensed", sans-serif' }}
+            style={{ padding: "4px 14px", background: "#1a1a1a", border: "1px solid #444", borderRadius: 4, color: "#ccc", cursor: "pointer", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
           >
             RETRY
           </button>
@@ -124,7 +124,7 @@ function InitialsAvatar({ name, color, size = 56 }: { name: string; color: strin
       background: `${color}22`, border: `1px solid ${color}44`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: size * 0.32, fontWeight: 800, color: color,
-      fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: 1,
+      fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
     }}>
       {initials}
     </div>
@@ -211,13 +211,13 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
       padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4,
       minWidth: 0, overflow: "hidden",
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
         {label}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "#FFFFFF", lineHeight: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "#FFFFFF", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1.3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.3 }}>{sub}</div>}
     </div>
   );
 }
@@ -225,8 +225,8 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 function MiniStatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div style={{ background: "#111", border: "1px solid #1e2320", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
-      <div style={{ fontSize: 9, color: "#555", letterSpacing: 1, marginBottom: 2, fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "#ccc", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 9, color: "#555", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "#ccc", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -237,7 +237,7 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
       <span style={{
         fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
         borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)",
-        border: "1px solid rgba(255,255,255,0.12)", fontFamily: '"Barlow Condensed", sans-serif',
+        border: "1px solid rgba(255,255,255,0.12)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
       }}>
         {result === "NO_LINE" ? "NO LINE" : "PENDING"}
       </span>
@@ -254,7 +254,7 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
       display: "inline-flex", alignItems: "center", gap: 4,
       fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
       borderRadius: 4, background: bg, color, border: `1px solid ${border}`,
-      fontFamily: '"Barlow Condensed", sans-serif',
+      fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
     }}>
       {icon}{result}
     </span>
@@ -265,7 +265,7 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
   verdict: string | null; bestSide: string | null; bestEdge: string | null; bestMlStr: string | null;
 }) {
   if (!verdict || verdict === "PASS") {
-    return <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Barlow Condensed", sans-serif' }}>PASS</span>;
+    return <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
   }
   const edgePp = bestEdge ? parseFloat(bestEdge) * 100 : null;
   const isOver = bestSide === "OVER";
@@ -277,7 +277,7 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
       display: "inline-flex", alignItems: "center", gap: 4,
       fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
       borderRadius: 4, background: bg, color, border: `1px solid ${border}`,
-      fontFamily: '"Barlow Condensed", sans-serif',
+      fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
     }}>
       ▶ {bestSide} {bestMlStr ?? ""}
       {edgePp !== null && <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp</span>}
@@ -289,10 +289,10 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
 function SectionLabel({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {children}
       </div>
-      {sub && <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 2, fontFamily: '"Barlow Condensed", sans-serif' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
     </div>
   );
 }
@@ -313,14 +313,14 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
+        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
         {[10, 20, 30, 50].map(w => (
           <button type="button" key={w} onClick={() => onWindowChange(w)} style={{
             fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
             background: windowSize === w ? "rgba(255,165,0,0.15)" : "rgba(255,255,255,0.04)",
             color: windowSize === w ? "#FFA500" : "rgba(255,255,255,0.35)",
             border: `1px solid ${windowSize === w ? "rgba(255,165,0,0.4)" : "rgba(255,255,255,0.08)"}`,
-            cursor: "pointer", fontFamily: '"Barlow Condensed", sans-serif',
+            cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
           }}>{w}G</button>
         ))}
       </div>
@@ -412,39 +412,39 @@ function EdgeLeaderboardTable({
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10, padding: "8px 0" }}>
         <Filter size={11} style={{ color: "#555" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Barlow Condensed", sans-serif' }}>MIN EDGE</span>
+          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MIN EDGE</span>
           {[0, 1, 2, 3, 5].map(v => (
             <button type="button" key={v} onClick={() => setMinEdge(v)} style={{
               background: minEdge === v ? "#ff8c00" : "#1a1a1a", border: "1px solid #333",
               borderRadius: 3, cursor: "pointer", color: minEdge === v ? "#000" : "#888",
-              padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Barlow Condensed", sans-serif',
+              padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{v === 0 ? "ALL" : `≥${v}pp`}</button>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Barlow Condensed", sans-serif' }}>SIDE</span>
+          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SIDE</span>
           {(["both", "away", "home"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSide(s)} style={{
               background: side === s ? "#ff8c00" : "#1a1a1a", border: "1px solid #333",
               borderRadius: 3, cursor: "pointer", color: side === s ? "#000" : "#888",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-              fontFamily: '"Barlow Condensed", sans-serif',
+              fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{s}</button>
           ))}
         </div>
         <button type="button" onClick={() => setWithOutcome(!withOutcome)} style={{
           background: withOutcome ? "#ff8c00" : "#1a1a1a", border: "1px solid #333",
           borderRadius: 3, cursor: "pointer", color: withOutcome ? "#000" : "#888",
-          padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Barlow Condensed", sans-serif',
+          padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
         }}>WITH OUTCOME ONLY</button>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: "auto" }}>
-          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Barlow Condensed", sans-serif' }}>SORT</span>
+          <span style={{ fontSize: 10, color: "#555", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SORT</span>
           {(["edge", "date", "brier"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSortBy(s)} style={{
               background: sortBy === s ? "#333" : "#1a1a1a", border: "1px solid #333",
               borderRadius: 3, cursor: "pointer", color: sortBy === s ? "#fff" : "#888",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
-              fontFamily: '"Barlow Condensed", sans-serif',
+              fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{s}</button>
           ))}
         </div>
@@ -452,7 +452,7 @@ function EdgeLeaderboardTable({
 
       {/* Table */}
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: '"Barlow Condensed", sans-serif' }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           <thead>
             <tr style={{ borderBottom: "1px solid #1e2320", background: "#090E14" }}>
               {["DATE", "MATCHUP", "SIDE", "MODEL WIN%", "BOOK IMPLIED%", "EDGE", "ML", "SCORE", "RESULT", "BRIER"].map(h => (
@@ -509,7 +509,7 @@ function EdgeLeaderboardTable({
 
       {/* Footer */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid #1e2320" }}>
-        <span style={{ fontSize: 10, color: "#444", fontFamily: '"Barlow Condensed", sans-serif' }}>
+        <span style={{ fontSize: 10, color: "#444", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           {sorted.length} rows · Edge = Model Win% − No-Vig Book Implied%
         </span>
         <div style={{ display: "flex", gap: 6 }}>
@@ -517,7 +517,7 @@ function EdgeLeaderboardTable({
             <button type="button" key={v} onClick={() => setLimit(v)} style={{
               background: limit === v ? "#333" : "#1a1a1a", border: "1px solid #333",
               borderRadius: 3, cursor: "pointer", color: limit === v ? "#fff" : "#555",
-              padding: "2px 7px", fontSize: 10, fontFamily: '"Barlow Condensed", sans-serif',
+              padding: "2px 7px", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>TOP {v}</button>
           ))}
         </div>
@@ -569,7 +569,7 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
         ].map(card => <MiniStatCard key={card.label} label={card.label} value={card.value} color={card.color} />)}
       </div>
       <div style={{ background: "#090E14", border: "1px solid #182433", borderRadius: 10, padding: "16px 8px 8px" }}>
-        <div style={{ fontSize: 10, color: "#555", letterSpacing: 2, marginBottom: 12, paddingLeft: 8, fontFamily: '"Barlow Condensed", sans-serif' }}>
+        <div style={{ fontSize: 10, color: "#555", letterSpacing: 2, marginBottom: 12, paddingLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           {market === "f5" ? "F5" : "FG"} ML EDGE (pp) vs OUTCOME — Positive slope = model alpha confirmed
         </div>
         <ResponsiveContainer width="100%" height={320}>
@@ -636,11 +636,11 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
   return (
     <div>
       <div style={{ overflowX: "auto" }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif', marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
           BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
           <span style={{ marginLeft: 8, color: "rgba(0,229,204,0.6)", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
         </div>
-        <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Barlow Condensed", sans-serif', minWidth: 520 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid #1a1d1b" }}>
               {["DATE", "GAMES", "FG ML", "F5 ML", "NRFI", "FG TOT", "F5 TOT"].map(h => (
@@ -681,7 +681,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
       {selectedCell && (
         <div style={{ marginTop: 16, padding: "16px 20px", background: "rgba(0,191,255,0.06)", border: "1px solid rgba(0,191,255,0.2)", borderRadius: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", color: "#00BFFF", fontFamily: '"Barlow Condensed", sans-serif' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", color: "#00BFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               DRILL-DOWN — {selectedCell.date} / {selectedCell.market.toUpperCase()}
             </div>
             <button type="button" onClick={() => setSelectedCell(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 14 }}>×</button>
@@ -691,7 +691,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
           ) : !drilldownData || drilldownData.games.length === 0 ? (
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", padding: "8px 0" }}>No games found for this date.</div>
           ) : (
-            <table style={{ borderCollapse: "collapse", fontSize: 10, fontFamily: '"Barlow Condensed", sans-serif', width: "100%" }}>
+            <table style={{ borderCollapse: "collapse", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', width: "100%" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(0,191,255,0.15)" }}>
                   {["MATCHUP", "BRIER", "MODEL AWAY%", "MODEL HOME%", "BOOK ML", "SCORE", "RESULT"].map(h => (
@@ -747,11 +747,11 @@ function RollingAccuracyPanel({ days, appUser }: { days: number; appUser: { id: 
     <StatGrid>
       {data.map(row => (
         <div key={row.market} style={{ background: "#090E14", border: "1px solid #182433", borderRadius: 8, padding: "10px 14px", minWidth: 110 }}>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: accuracyColor(row.accuracy), fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: accuracyColor(row.accuracy), fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>
             {row.sampleSize > 0 ? `${(row.accuracy * 100).toFixed(1)}%` : "—"}
           </div>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2, fontFamily: '"Barlow Condensed", sans-serif' }}>{row.sampleSize} graded</div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
         </div>
       ))}
     </StatGrid>
@@ -805,41 +805,41 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={team} style={{ width: 18, height: 18, objectFit: "contain" }} />}
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Barlow Condensed", sans-serif' }}>{prop.playerName}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Barlow Condensed", sans-serif' }}>{team}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.playerName}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{team}</span>
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>{awayTeam} @ {homeTeam}</div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{awayTeam} @ {homeTeam}</div>
         </div>
         {/* Model vs Book */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>MODEL P(HR)</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Barlow Condensed", sans-serif' }}>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {modelPHr != null ? `${(modelPHr * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>BOOK NO-VIG</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Barlow Condensed", sans-serif' }}>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {anNoVig != null ? `${(anNoVig * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>EDGE OVER</div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Barlow Condensed", sans-serif', color: hasEdge ? (edgeOver! > 0 ? "#39FF14" : "#FF2244") : "rgba(255,255,255,0.3)" }}>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "#39FF14" : "#FF2244") : "rgba(255,255,255,0.3)" }}>
               {edgeOver != null ? `${edgeOver > 0 ? "+" : ""}${(edgeOver * 100).toFixed(1)}pp` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>FD ODDS</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Barlow Condensed", sans-serif' }}>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {fmtOdds(prop.fdOverOdds)}
             </div>
           </div>
           {/* Result */}
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Barlow Condensed", sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -901,30 +901,30 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={pitcherTeam} style={{ width: 18, height: 18, objectFit: "contain" }} />}
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Barlow Condensed", sans-serif' }}>{prop.pitcherName}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Barlow Condensed", sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.pitcherName}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ textAlign: "center", minWidth: 44 }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>PROJ Ks</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
           </div>
           <div style={{ textAlign: "center", minWidth: 52 }}>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>BOOK LINE</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
+            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
           </div>
           {prop.actualKs != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>ACTUAL</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#00BFFF", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
+              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#00BFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
             </div>
           )}
           {modelErr != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Barlow Condensed", sans-serif' }}>ERROR</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "#39FF14" : Math.abs(modelErr) <= 1.5 ? "#FFD700" : "#FF2244", fontFamily: '"Barlow Condensed", sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
+              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.3)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "#39FF14" : Math.abs(modelErr) <= 1.5 ? "#FFD700" : "#FF2244", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
             </div>
           )}
           <div>
@@ -932,7 +932,7 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
           </div>
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Barlow Condensed", sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -942,14 +942,14 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
       {(prop.pOver || prop.pUnder) && (
         <div style={{ display: "flex", gap: 8, padding: "0 14px 10px", marginTop: -4 }}>
           <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
-            <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Barlow Condensed", sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
           </div>
           <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
-            <span style={{ fontFamily: '"Barlow Condensed", sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Barlow Condensed", sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
           </div>
         </div>
       )}
@@ -1251,7 +1251,7 @@ export default function TheModelResults() {
                 background: marketTab === tab.id ? `${tab.color}1a` : "rgba(255,255,255,0.04)",
                 color: marketTab === tab.id ? tab.color : "rgba(255,255,255,0.45)",
                 border: `1px solid ${marketTab === tab.id ? `${tab.color}55` : "rgba(255,255,255,0.10)"}`,
-                fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: "0.08em",
+                fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
               }}>
               {tab.label}
             </button>
@@ -1285,7 +1285,7 @@ export default function TheModelResults() {
                     background: brierSubTab === st ? "rgba(255,165,0,0.12)" : "rgba(255,255,255,0.04)",
                     color: brierSubTab === st ? "#FFA500" : "rgba(255,255,255,0.35)",
                     border: `1px solid ${brierSubTab === st ? "rgba(255,165,0,0.35)" : "rgba(255,255,255,0.08)"}`,
-                    fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: ".08em",
+                    fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em",
                   }}>
                   {st === "trend" ? <TrendingUp size={10} /> : <BarChart3 size={10} />}
                   {st.toUpperCase()}
@@ -1300,7 +1300,7 @@ export default function TheModelResults() {
                       background: brierWindow === w ? "rgba(255,165,0,0.15)" : "rgba(255,255,255,0.04)",
                       color: brierWindow === w ? "#FFA500" : "rgba(255,255,255,0.3)",
                       border: `1px solid ${brierWindow === w ? "rgba(255,165,0,0.4)" : "rgba(255,255,255,0.08)"}`,
-                      cursor: "pointer", fontFamily: '"Barlow Condensed", sans-serif',
+                      cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                     }}>{w}G</button>
                   ))}
                 </div>
@@ -1318,8 +1318,8 @@ export default function TheModelResults() {
           <div style={{ marginBottom: 16, padding: "10px 16px", background: "rgba(255,69,0,0.12)", border: "1px solid rgba(255,69,0,0.35)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
             <Activity size={14} style={{ color: "#FF4500", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#FF4500", letterSpacing: "1px", fontFamily: '"Barlow Condensed", sans-serif' }}>DRIFT DETECTED</span>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 8, fontFamily: '"Barlow Condensed", sans-serif' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#FF4500", letterSpacing: "1px", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>DRIFT DETECTED</span>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", marginLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 {driftData.message ?? "F5 share deviation exceeds threshold — recalibration recommended"}
               </span>
             </div>
@@ -1402,7 +1402,7 @@ export default function TheModelResults() {
                       background: fgEdgeTab === t ? "#39FF14" : "#1a1a1a", border: "1px solid #333",
                       borderRadius: 4, cursor: "pointer", color: fgEdgeTab === t ? "#000" : "#888",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
-                      fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: 1,
+                      fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
                     }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
                   ))}
                 </div>
@@ -1515,7 +1515,7 @@ export default function TheModelResults() {
                       background: f5EdgeTab === t ? "#FFA500" : "#1a1a1a", border: "1px solid #333",
                       borderRadius: 4, cursor: "pointer", color: f5EdgeTab === t ? "#000" : "#888",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
-                      fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: 1,
+                      fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
                     }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
                   ))}
                 </div>
@@ -1610,7 +1610,7 @@ export default function TheModelResults() {
             {/* Daily NRFI results from heatmap drill-down */}
             <div>
               <SectionLabel sub={`Date: ${formatDateNav(gameDate)}`}>DAILY NRFI RESULTS</SectionLabel>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif', padding: "12px 0" }}>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', padding: "12px 0" }}>
                 Use the Brier Heatmap above to drill into per-game NRFI results by clicking any NRFI cell.
                 Date navigation (arrows above) selects the date for K-Props and HR Props daily views.
               </div>
@@ -1635,7 +1635,7 @@ export default function TheModelResults() {
                     background: kPropsView === v ? "rgba(255,105,180,0.12)" : "rgba(255,255,255,0.04)",
                     color: kPropsView === v ? "#FF69B4" : "rgba(255,255,255,0.45)",
                     border: `1px solid ${kPropsView === v ? "rgba(255,105,180,0.35)" : "rgba(255,255,255,0.10)"}`,
-                    fontFamily: '"Barlow Condensed", sans-serif', letterSpacing: "0.08em",
+                    fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
                   }}>
                   {v === "daily" ? <Calendar size={11} /> : <CalendarDays size={11} />}
                   {v === "daily" ? "DAILY" : "LAST 7 DAYS"}
@@ -1646,8 +1646,8 @@ export default function TheModelResults() {
             {/* MLB Headshot Backfill Tool */}
             <div style={{ padding: "10px 14px", background: "rgba(255,105,180,0.04)", border: "1px solid rgba(255,105,180,0.15)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,105,180,0.7)", fontFamily: '"Barlow Condensed", sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Barlow Condensed", sans-serif' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,105,180,0.7)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {backfillStatus ?? "Resolves MLBAM IDs for all K-Props pitchers missing headshots. Calls MLB Stats API."}
                 </div>
               </div>
@@ -1725,10 +1725,10 @@ export default function TheModelResults() {
                   {kLast7Data.dailyBreakdown && kLast7Data.dailyBreakdown.map((day: { date: string; correct: number; completed: number; accuracy: number | null; mae: number | null }) => (
                     <div key={day.date} style={{ marginBottom: 8, padding: "10px 14px", background: "#090E14", border: "1px solid #182433", borderRadius: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Barlow Condensed", sans-serif' }}>{day.date}</span>
-                        <span style={{ fontSize: 11, color: accuracyColor(day.accuracy), fontWeight: 700, fontFamily: '"Barlow Condensed", sans-serif' }}>{day.accuracy != null ? fmtPct(day.accuracy) : "—"}</span>
-                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Barlow Condensed", sans-serif' }}>{day.correct}/{day.completed} correct</span>
-                        {day.mae != null && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Barlow Condensed", sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.date}</span>
+                        <span style={{ fontSize: 11, color: accuracyColor(day.accuracy), fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.accuracy != null ? fmtPct(day.accuracy) : "—"}</span>
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.correct}/{day.completed} correct</span>
+                        {day.mae != null && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
                       </div>
                     </div>
                   ))}
@@ -1798,7 +1798,7 @@ export default function TheModelResults() {
             {/* Re-ingest button */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <Target size={12} style={{ color: "#555" }} />
-              <span style={{ fontSize: 10, color: "#555", fontFamily: '"Barlow Condensed", sans-serif' }}>
+              <span style={{ fontSize: 10, color: "#555", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 Re-ingest outcomes for {gameDate} to update HR prop results
               </span>
               <Button size="sm" variant="outline"
