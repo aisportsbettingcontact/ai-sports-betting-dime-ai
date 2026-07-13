@@ -67,7 +67,7 @@
 .dlv2 .btn:disabled { opacity: 0.55; cursor: default; }
 
 /* ── Nav ── */
-.dlv2 .nav { position: sticky; top: 0; z-index: 60; background: rgba(11, 11, 15, 0.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-soft); }
+.dlv2 .nav { position: sticky; top: 0; z-index: 60; background: #000000; backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-soft); }
 .dlv2 .nav-inner { display: flex; align-items: center; gap: 32px; height: 68px; }
 .dlv2 .nav .wordmark { font-size: 26px; }
 .dlv2 .nav-links { display: flex; gap: 26px; margin-left: auto; }
@@ -95,7 +95,7 @@
 /* ── State colors (never color alone — always with text label) ── */
 .dlv2 .state-pill { display: inline-flex; align-items: center; gap: 7px; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--border-strong); border-radius: 20px; padding: 4px 11px; color: var(--text-secondary); white-space: nowrap; }
 .dlv2 .state-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
-.dlv2 .state-pill--edge { color: var(--mint); border-color: rgba(69, 224, 168, 0.4); }
+.dlv2 .state-pill--edge { color: var(--mint); border-color: #45E0A8; }
 .dlv2 .state-pill--edge .dot { background: var(--mint); }
 .dlv2 .state-pill--monitor { color: var(--text-primary); }
 .dlv2 .state-pill--monitor .dot { background: var(--text-secondary); }
@@ -111,7 +111,7 @@
 .dlv2 .hero-micro { display: block; margin-top: 22px; color: var(--text-secondary); }
 
 /* ── Market Console ── */
-.dlv2 .console { margin-top: clamp(36px, 5vw, 56px); background: var(--surface-sidebar); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 28px 70px rgba(0, 0, 0, 0.5); overflow: hidden; }
+.dlv2 .console { margin-top: clamp(36px, 5vw, 56px); background: var(--surface-sidebar); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 28px 70px transparent; overflow: hidden; }
 .dlv2 .console-chrome { display: flex; align-items: center; gap: 12px; padding: 11px 16px; background: var(--surface-raised); border-bottom: 1px solid var(--border-soft); font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); flex-wrap: wrap; }
 .dlv2 .console-chrome .right { margin-left: auto; display: flex; align-items: center; gap: 14px; color: var(--text-faint); }
 .dlv2 .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); animation: dlv2-pulse 1.6s ease-in-out infinite; } /* 1.6s per MASTER.md live-dot */
@@ -192,10 +192,10 @@
 .dlv2 .chip-group { display: flex; flex-direction: column; gap: 8px; }
 .dlv2 .chip { appearance: none; text-align: left; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 11px 14px; font: 500 13.5px 'Familjen Grotesk', sans-serif; color: var(--text-secondary); cursor: pointer; transition: color 160ms var(--curve), border-color 160ms var(--curve); }
 .dlv2 .chip:hover { color: var(--text-primary); border-color: var(--border-strong); }
-.dlv2 .chip[aria-pressed="true"] { color: var(--text-primary); border-color: rgba(69, 224, 168, 0.4); }
+.dlv2 .chip[aria-pressed="true"] { color: var(--text-primary); border-color: #45E0A8; }
 .dlv2 .filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .dlv2 .filter-chip { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--border-soft); border-radius: 14px; padding: 4px 10px; }
-.dlv2 .chat-window { background: var(--surface-sidebar); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); }
+.dlv2 .chat-window { background: var(--surface-sidebar); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px transparent; }
 .dlv2 .chat-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border-soft); background: var(--surface-raised); font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
 .dlv2 .chat-bar .right { margin-left: auto; color: var(--text-faint); }
 .dlv2 .chat-body { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-height: 320px; }
@@ -278,9 +278,9 @@
 /* ── Pricing ── */
 .dlv2 .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; align-items: stretch; }
 .dlv2 .tier { position: relative; background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 16px; padding: 24px 22px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
-.dlv2 .tier--featured { border-color: var(--border-strong); background: var(--surface-raised); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); }
+.dlv2 .tier--featured { border-color: var(--border-strong); background: var(--surface-raised); box-shadow: 0 20px 50px transparent; }
 .dlv2 .tier-badge { position: absolute; top: 16px; right: 16px; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 9px; letter-spacing: 0.09em; text-transform: uppercase; border-radius: 16px; padding: 4px 9px; font-weight: 500; }
-.dlv2 .tier-badge--mint { color: #0B0B0F; background: var(--mint); }
+.dlv2 .tier-badge--mint { color: #000000; background: var(--mint); }
 .dlv2 .tier-badge--ghost { color: var(--text-secondary); border: 1px solid var(--border-strong); }
 .dlv2 .tier-name { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .dlv2 .tier-aud { font-size: 13px; color: var(--text-faint); }
@@ -348,7 +348,7 @@
 .dlv2 .foot-legal { font-size: 12.5px; color: var(--text-secondary); max-width: 82ch; margin: 0; }
 
 /* ── Sticky CTA bar ── */
-.dlv2 .slipbar { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 90px); width: min(640px, calc(100vw - 32px)); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); display: flex; align-items: center; gap: 14px; padding: 10px 14px; z-index: 70; transition: transform 160ms var(--curve), opacity 160ms var(--curve); opacity: 0; pointer-events: none; }
+.dlv2 .slipbar { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 90px); width: min(640px, calc(100vw - 32px)); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: 0 18px 50px transparent; display: flex; align-items: center; gap: 14px; padding: 10px 14px; z-index: 70; transition: transform 160ms var(--curve), opacity 160ms var(--curve); opacity: 0; pointer-events: none; }
 .dlv2 .slipbar.on { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
 .dlv2 .slipbar .price { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 12px; letter-spacing: 0.06em; color: var(--text-primary); text-transform: uppercase; white-space: nowrap; }
 .dlv2 .slipbar .lead { flex: 1; border-top: var(--leader); }
@@ -401,7 +401,7 @@
 @keyframes dlv2-skel { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .dlv2 .pe-status { display: inline-flex; align-items: center; gap: 8px; }
 .dlv2 .btn--pay:hover { opacity: 0.85; transform: none; }
-.dlv2 .btn--pay .pulse { background: #0B0B0F; }
+.dlv2 .btn--pay .pulse { background: #000000; }
 .dlv2 .checkout-legal-line { margin-top: -2px; font-size: 12.5px; color: var(--text-secondary); }
 
 /* Success / expired panels (replace the form inside the card) */
