@@ -405,12 +405,12 @@ export default function Home() {
               data-testid="login-signed-in-banner"
             >
               <span>
-                Signed in as <span className="text-white/90">@{appUser.username}</span>
+                Signed in as <span className="text-white">@{appUser.username}</span>
               </span>
               <button
                 type="button"
                 onClick={() => { window.location.assign(resolvePostLoginPath(null)); }}
-                className="text-xs underline text-white/80 hover:text-white transition-colors whitespace-nowrap"
+                className="text-xs underline text-white hover:text-white transition-colors whitespace-nowrap"
               >
                 Continue to app
               </button>
@@ -428,14 +428,14 @@ export default function Home() {
               <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
                 Sign-in error
               </p>
-              <p className="text-white/90">{discordErrorMsg}</p>
+              <p className="text-white">{discordErrorMsg}</p>
               {isTransientError && retryCountdown !== null && (
                 <p>Retrying in {retryCountdown}s…</p>
               )}
               {isTransientError && (
                 <button
                   onClick={() => { window.location.href = loginUrl; }}
-                  className="text-xs underline text-white/80 hover:text-white transition-colors"
+                  className="text-xs underline text-white hover:text-white transition-colors"
                 >
                   Retry now
                 </button>
@@ -461,7 +461,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -482,7 +482,7 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
@@ -556,7 +556,7 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
@@ -579,9 +579,9 @@ export default function Home() {
           {/* ── Divider ── */}
           {!forgotOpen && (
             <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-white" />
               <span className="text-[11px] text-[#FFFFFF] font-medium">or</span>
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-white" />
             </div>
           )}
 

@@ -2907,7 +2907,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                         {/* Sport logo row */}
                         <div className="flex items-center gap-2 mb-1">
                           {activeSport === "MLB" && (
-                            <img src="/manus-storage/mlb-logo_50fd8568.png" alt="MLB" className="w-7 h-7 object-contain" style={{ filter: "drop-shadow(0 0 2px rgba(255,255,255,0.15))" }} />
+                            <img src="/manus-storage/mlb-logo_50fd8568.png" alt="MLB" className="w-7 h-7 object-contain" />
                           )}
                           {activeSport === "NHL" && <span className="text-xl" role="img">🏒</span>}
                           {activeSport === "NBA" && <span className="text-xl" role="img">🏀</span>}

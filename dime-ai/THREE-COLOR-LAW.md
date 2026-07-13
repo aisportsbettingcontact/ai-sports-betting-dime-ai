@@ -68,3 +68,15 @@ exception keeps a color).
 - **Known strict-3 contrast artifacts** (consequences of the literal mapping, flagged for an optional
   polish pass): mint-on-mint "hit target" badge (MlbBacktest); white-on-white comparative bar
   (SituationalResultsPanel); white text on some mint CTA fills; light-mode mint text at low contrast.
+
+---
+
+## Follow-up audit (smoke + 12-subagent fan-out) — remediation
+
+Deployed smoke: `scripts/smoke-deploy.mjs` 8/8 on the live origin; served HTML renders only the 3 colors. A 12-subagent file-by-file re-audit (pages/components/features/css/lib/server/config) surfaced a residual class the first sweep under-handled — now fixed:
+- **Alpha modifiers → solid** (149 across 42 files): `bg-black/50` scrims, `bg-background/95` sticky headers, `bg-card/60`, `bg-muted/50`, `text-white/90`, `border-white/10`, `ring-destructive/40`, and `hover:/focus:/active:bg-*/NN` (removed) — alpha renders translucent (off-palette); law is solid-3.
+- **Gradients → solid** (9): MobileProfile mint→white discs/tiles → solid mint; the 4 MLB-card + WC team-color top-*rails* → solid mint (matching MlbCheatSheetCard); ModelProjections fade-scrim → transparent. Team-color **radial crest/monogram discs** (WcFeedInline, teamLogoCircle) kept — logo exception.
+- **client/index.html** loading shell + SEO block → 3-color (was outside the first audit's scope); unused **Inter** `<link>` removed.
+- Stray `#444` (TheModelResults retry border) → white; white-alpha drop-shadow (BetTracker MLB logo) removed; `UIUX_SYSTEM_PROMPT` "neon" → "mint".
+
+Runtime computed-style pass (headless Chromium on the live site) was blocked by the environment proxy (ERR_CONNECTION_RESET for browser automation); verification rests on the static fan-out + curl smoke + served-HTML check. Residual audit flags remain only the documented exceptions (team colors, remap selectors, chart mint-alpha, comments, bet-loss red, Discord surfaces).

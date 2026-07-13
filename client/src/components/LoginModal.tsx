@@ -86,7 +86,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-3 right-3 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors z-10"
+            className="absolute top-3 right-3 p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors z-10"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -136,9 +136,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </a>
 
           {!isRedirecting && (
-            <p className="text-center text-xs text-muted-foreground/60 pt-1">
+            <p className="text-center text-xs text-muted-foreground pt-1">
               Access is by invitation only.{" "}
-              <span className="text-muted-foreground/40">
+              <span className="text-muted-foreground">
                 Your Discord account must be linked by the owner.
               </span>
             </p>
@@ -147,8 +147,8 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
         {/* Footer */}
         {!isRedirecting && (
-          <div className="px-6 pb-5 text-center border-t border-border/50 pt-4">
-            <p className="text-xs text-muted-foreground/40">
+          <div className="px-6 pb-5 text-center border-t border-border pt-4">
+            <p className="text-xs text-muted-foreground">
               This tool is for informational purposes only. Gamble responsibly.
             </p>
           </div>

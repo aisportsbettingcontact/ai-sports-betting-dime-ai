@@ -444,7 +444,7 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
       {/* Team gradient bar */}
       <div style={{
         height: 4,
-        background: `linear-gradient(to right, ${awayColor}, ${homeColor})`,
+        background: "#45E0A8",  /* Three-Color Law: solid mint rail (no gradients) */
       }} />
 
       {/* Matchup header */}

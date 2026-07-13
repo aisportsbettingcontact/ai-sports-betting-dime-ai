@@ -584,7 +584,7 @@ export default function ModelResults() {
   return (
     <div className="min-h-screen" style={{ background: "hsl(var(--background))" }}>
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-40 bg-background backdrop-blur-sm border-b border-border">
         {/* Top row */}
         <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
           <button type="button" onClick={() => setLocation("/admin/publish")}
@@ -718,7 +718,7 @@ export default function ModelResults() {
             </div>
           ) : !brierData || brierData.summary.totalGames === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-              <TrendingUp className="w-10 h-10 text-muted-foreground/30" />
+              <TrendingUp className="w-10 h-10 text-muted-foreground" />
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">No Brier score data yet</p>
                 <p className="text-xs text-muted-foreground">Outcome ingestion must run first to populate Brier scores.</p>
@@ -982,7 +982,7 @@ export default function ModelResults() {
                   </div>
                 ) : !heatmapData || heatmapData.heatmap.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/30" />
+                    <BarChart3 className="w-10 h-10 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">No heatmap data yet</p>
                       <p className="text-xs text-muted-foreground">Outcome ingestion must run first.</p>
@@ -1141,7 +1141,7 @@ export default function ModelResults() {
             </div>
           ) : !last7Data || last7Data.totalProps === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-              <CalendarDays className="w-10 h-10 text-muted-foreground/30" />
+              <CalendarDays className="w-10 h-10 text-muted-foreground" />
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">No K-Props data in the last 7 days</p>
                 <p className="text-xs text-muted-foreground">Run the model for MLB games first.</p>
@@ -1292,7 +1292,7 @@ export default function ModelResults() {
             </div>
           ) : !daily || daily.total === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-              <BarChart3 className="w-10 h-10 text-muted-foreground/30" />
+              <BarChart3 className="w-10 h-10 text-muted-foreground" />
               <div>
                 <p className="text-sm font-semibold text-foreground mb-1">No K-Props data for {formatDateNav(gameDate)}</p>
                 <p className="text-xs text-muted-foreground">Run the model for MLB games on this date first.</p>
