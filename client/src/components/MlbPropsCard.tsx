@@ -149,9 +149,9 @@ function Pill({ label, bg, color, border }: { label: string; bg: string; color: 
 
 /** CONFIRMED / EXPECTED status pill */
 function StatusPill({ confirmed }: { confirmed: boolean }) {
-  const color = confirmed ? "#45E0A8" : "#FFFF33";
-  const bg    = confirmed ? "rgba(57,255,20,0.12)"  : "rgba(255,255,51,0.12)";
-  const bdr   = confirmed ? "rgba(57,255,20,0.35)"  : "rgba(255,255,51,0.35)";
+  const color = confirmed ? "#45E0A8" : "#FFFFFF";
+  const bg    = confirmed ? "transparent"  : "transparent";
+  const bdr   = confirmed ? "#45E0A8"  : "#FFFFFF";
   return (
     <span style={{
       fontSize: 9, fontWeight: 800, letterSpacing: "1.2px",
@@ -234,7 +234,7 @@ function Headshot({ mlbamId, size = 72 }: { mlbamId: number | null | undefined; 
       ) : (
         <div style={{
           width: size * 0.6, height: size * 0.6, borderRadius: "50%",
-          background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)",
+          background: "#000000", border: "1px solid #FFFFFF",
         }} />
       )}
     </div>
@@ -288,7 +288,7 @@ function PitcherPanel({ prop, teamAbbrev, side, isRight = false, pitcherConfirme
   if (!prop) {
     return (
       <div style={{ flex: 1, padding: "16px 14px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.5px" }}>
+        <div style={{ fontSize: 12, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.5px" }}>
           No projection
         </div>
       </div>
