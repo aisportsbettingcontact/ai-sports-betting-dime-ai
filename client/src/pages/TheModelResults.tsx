@@ -483,7 +483,7 @@ function EdgeLeaderboardTable({
                   <td style={{ padding: "5px 10px" }}>
                     <span style={{
                       background: isAway ? "transparent" : "transparent",
-                      color: isAway ? "#6496ff" : "#ff9632",
+                      color: isAway ? "#FFFFFF" : "#FFFFFF",
                       borderRadius: 3, padding: "1px 5px", fontSize: 9, fontWeight: 700, letterSpacing: 1,
                     }}>{isAway ? "AWAY" : "HOME"}</span>
                   </td>
