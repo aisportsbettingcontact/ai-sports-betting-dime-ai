@@ -1189,7 +1189,7 @@ export default function TheModelResults() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(var(--background))" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}>
         <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
       </div>
     );
@@ -1208,20 +1208,20 @@ export default function TheModelResults() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: "hsl(var(--background))" }}>
+    <div className="min-h-screen" style={{ background: "#000000" }}>
 
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-40 bg-black/95 backdrop-blur-sm border-b border-white">
         <div className="relative flex items-center px-4 py-2 max-w-6xl mx-auto">
-          <button type="button" onClick={() => setLocation("/admin/publish")} className="p-1.5 rounded-lg transition-colors hover:bg-white/10 mr-2 flex-shrink-0">
-            <ChevronLeft size={18} style={{ color: "hsl(var(--muted-foreground))" }} />
+          <button type="button" onClick={() => setLocation("/admin/publish")} className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0">
+            <ChevronLeft size={18} style={{ color: "#FFFFFF" }} />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
             <FlaskConical size={16} style={{ color: "#45E0A8" }} />
             <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
               THE MODEL RESULTS
             </span>
-            <span className="text-border" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
+            <span className="text-white" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
             <span className="font-medium whitespace-nowrap" style={{ fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "0.1em", color: activeTab.color }}>
               {activeTab.label}
             </span>
@@ -1229,7 +1229,7 @@ export default function TheModelResults() {
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setLocation("/admin/backtest")}
-              className="gap-1.5 text-xs h-8 font-medium border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10">
+              className="gap-1.5 text-xs h-8 font-medium border-white text-white">
               <BarChart3 size={12} />
               Backtest
             </Button>
@@ -1248,9 +1248,9 @@ export default function TheModelResults() {
             <button type="button" key={tab.id} onClick={() => setMarketTab(tab.id)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0"
               style={{
-                background: marketTab === tab.id ? `${tab.color}1a` : "transparent",
+                background: "transparent",
                 color: marketTab === tab.id ? tab.color : "#FFFFFF",
-                border: `1px solid ${marketTab === tab.id ? `${tab.color}55` : "#FFFFFF"}`,
+                border: `1px solid ${marketTab === tab.id ? tab.color : "#FFFFFF"}`,
                 fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
               }}>
               {tab.label}
@@ -1261,15 +1261,15 @@ export default function TheModelResults() {
           {(marketTab === "kprops" || marketTab === "hrprops" || marketTab === "firstinning") && (
             <>
               <div style={{ flex: 1 }} />
-              <button type="button" onClick={() => setGameDate(d => addDays(d, -1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0">
-                <ChevronLeft size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
+              <button type="button" onClick={() => setGameDate(d => addDays(d, -1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
+                <ChevronLeft size={14} style={{ color: "#FFFFFF" }} />
               </button>
-              <span className="text-xs font-bold text-foreground tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
+              <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
               {gameDate === todayPst() && (
                 <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "transparent", color: "#45E0A8" }}>TODAY</span>
               )}
-              <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 flex-shrink-0">
-                <ChevronRight size={14} style={{ color: "hsl(var(--muted-foreground))" }} />
+              <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
+                <ChevronRight size={14} style={{ color: "#FFFFFF" }} />
               </button>
             </>
           )}
@@ -1356,9 +1356,9 @@ export default function TheModelResults() {
               <div>
                 <SectionLabel>BRIER TREND — FG ML (solid) + FG TOTAL (dashed)</SectionLabel>
                 {brierLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /><span className="text-sm text-muted-foreground">Loading…</span></div>
+                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /><span className="text-sm text-white">Loading…</span></div>
                 ) : !brierData || brierData.summary.totalGames === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground text-sm">No Brier data yet. Run outcome ingestion first.</div>
+                  <div className="text-center py-12 text-white text-sm">No Brier data yet. Run outcome ingestion first.</div>
                 ) : (
                   <BrierTrendChart
                     data={brierChartData}
@@ -1379,7 +1379,7 @@ export default function TheModelResults() {
                 {heatmapLoading ? (
                   <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
                 ) : !heatmapData ? (
-                  <div className="text-center py-12 text-muted-foreground text-sm">No heatmap data yet.</div>
+                  <div className="text-center py-12 text-white text-sm">No heatmap data yet.</div>
                 ) : (
                   <BrierHeatmap
                     heatmapData={heatmapData}
@@ -1471,7 +1471,7 @@ export default function TheModelResults() {
                 {brierLoading ? (
                   <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
                 ) : !brierData || brierData.summary.totalGames === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground text-sm">No Brier data yet.</div>
+                  <div className="text-center py-12 text-white text-sm">No Brier data yet.</div>
                 ) : (
                   <BrierTrendChart
                     data={brierChartData}
@@ -1492,7 +1492,7 @@ export default function TheModelResults() {
                 {heatmapLoading ? (
                   <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
                 ) : !heatmapData ? (
-                  <div className="text-center py-12 text-muted-foreground text-sm">No heatmap data yet.</div>
+                  <div className="text-center py-12 text-white text-sm">No heatmap data yet.</div>
                 ) : (
                   <BrierHeatmap
                     heatmapData={heatmapData}
@@ -1582,7 +1582,7 @@ export default function TheModelResults() {
               {brierLoading ? (
                 <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
               ) : !brierData || brierData.summary.totalGames === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">No Brier data yet.</div>
+                <div className="text-center py-12 text-white text-sm">No Brier data yet.</div>
               ) : (
                 <BrierTrendChart
                   data={brierChartData}
@@ -1682,7 +1682,7 @@ export default function TheModelResults() {
               kDailyLoading ? (
                 <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} /></div>
               ) : !kDailyData?.results || kDailyData.results.total === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">No K-Props data for {formatDateNav(gameDate)}.</div>
+                <div className="text-center py-12 text-white text-sm">No K-Props data for {formatDateNav(gameDate)}.</div>
               ) : (
                 <>
                   <div>
@@ -1710,7 +1710,7 @@ export default function TheModelResults() {
               kLast7Loading ? (
                 <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} /></div>
               ) : !kLast7Data || kLast7Data.totalProps === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">No K-Props data in the last 7 days.</div>
+                <div className="text-center py-12 text-white text-sm">No K-Props data in the last 7 days.</div>
               ) : (
                 <div>
                   <SectionLabel sub={`${kLast7Data.totalProps} props across ${kLast7Data.windowDays} days`}>LAST 7 DAYS AGGREGATE</SectionLabel>
@@ -1761,7 +1761,7 @@ export default function TheModelResults() {
                   <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} />
                 </div>
               ) : hrPropsList.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">
+                <div className="text-center py-12 text-white text-sm">
                   No HR Props data for {formatDateNav(gameDate)}.
                   {hrGameIds.length === 0 && " (No games found for this date.)"}
                 </div>
