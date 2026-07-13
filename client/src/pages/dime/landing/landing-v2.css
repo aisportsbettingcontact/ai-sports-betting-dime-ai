@@ -8,21 +8,21 @@
 
 .dlv2 {
   --mint: #45E0A8;
-  --bg: #0B0B0F;
-  --surface-sidebar: #101016;
-  --surface-card: #16161C;
-  --surface-raised: #1A1A22;
-  --surface-bubble: #1E1E26;
-  --border: #24242E;
-  --border-soft: #1E1E26;
-  --border-strong: #2E2E38;
-  --text-primary: #EDEDF2;
-  --text-body: #C9C9D4;
-  --text-secondary: #9A9AA8;
-  --text-muted: #6A6A78;
-  --text-faint: #55555E;
-  --mural: #1E1E28;
-  --ring: rgba(69, 224, 168, 0.36);
+  --bg: #000000;
+  --surface-sidebar: #000000;
+  --surface-card: #000000;
+  --surface-raised: #000000;
+  --surface-bubble: #000000;
+  --border: #FFFFFF;
+  --border-soft: #FFFFFF;
+  --border-strong: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-body: #FFFFFF;
+  --text-secondary: #FFFFFF;
+  --text-muted: #FFFFFF;
+  --text-faint: #FFFFFF;
+  --mural: #000000;
+  --ring: #45E0A8;
   --curve: cubic-bezier(0.16, 1, 0.3, 1);
   --type-display: clamp(44px, 6.8vw, 88px);
   --type-section: clamp(30px, 4vw, 46px);
@@ -59,7 +59,7 @@
 
 /* ── Buttons ── */
 .dlv2 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 22px; border-radius: 22px; font: 600 15px 'Familjen Grotesk', sans-serif; letter-spacing: -0.01em; cursor: pointer; border: 1px solid transparent; text-decoration: none; transition: transform 160ms var(--curve), background 160ms var(--curve), border-color 160ms var(--curve), color 160ms var(--curve); }
-.dlv2 .btn--mint { background: var(--mint); color: #0B0B0F; }
+.dlv2 .btn--mint { background: var(--mint); color: #000000; }
 .dlv2 .btn--mint:hover { opacity: 0.85; } /* MASTER.md: mint hover = opacity, no lift */
 .dlv2 .btn--ghost { background: transparent; color: var(--text-primary); border-color: var(--border-strong); }
 .dlv2 .btn--ghost:hover { border-color: var(--text-faint); }
