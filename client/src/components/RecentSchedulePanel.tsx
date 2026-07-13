@@ -281,7 +281,7 @@ function GameRow({
   const myCovered = getMyCovered(game, isAway, sport);
 
   return (
-    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+    <tr className="border-b border-white transition-colors">
       {/* Date */}
       <td className="px-3 py-2 text-[11px] text-white font-mono whitespace-nowrap">
         {fmtDate(game.gameDate)}
@@ -370,7 +370,7 @@ function TeamScheduleTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[360px]">
         <thead>
-          <tr className="border-b border-white/[0.06]">
+          <tr className="border-b border-white">
             <th className="px-3 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">GAME</th>
             <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">OPP</th>
             <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">RESULT</th>
@@ -434,7 +434,7 @@ function H2HRow({
     : "—";
 
   return (
-    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+    <tr className="border-b border-white transition-colors">
       {/* Date */}
       <td className="px-3 py-2 text-[11px] text-white font-mono whitespace-nowrap">
         {fmtDate(game.gameDate)}
@@ -580,7 +580,7 @@ function H2HSection({
       <div className="overflow-x-auto">
         <table className="w-full min-w-[380px]">
           <thead>
-            <tr className="border-b border-white/[0.06]">
+            <tr className="border-b border-white">
               <th className="px-3 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">DATE</th>
               <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">MATCHUP</th>
               <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">SCORE</th>
@@ -687,7 +687,7 @@ export default function RecentSchedulePanel({
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
       <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
@@ -706,9 +706,9 @@ export default function RecentSchedulePanel({
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-white">
           {/* ── Team Tab Selector ─────────────────────────────────────────── */}
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-white/[0.06]">
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-white">
             {/* Away tab */}
             <button type="button" onClick={() => setTab("away")}
               className={cn(
@@ -817,7 +817,7 @@ export default function RecentSchedulePanel({
 
           {/* ── Team logo click-through links ─────────────────────────────── */}
           {!isLoading && !error && (
-            <div className="flex items-center justify-between px-3 py-2 border-t border-white/[0.04]">
+            <div className="flex items-center justify-between px-3 py-2 border-t border-white">
               <button type="button" onClick={handleAwayLogoClick}
                 className="flex items-center gap-1.5 text-[9px] text-white font-mono hover:underline"
               >

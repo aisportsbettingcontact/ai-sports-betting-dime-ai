@@ -316,7 +316,7 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
               {totalEdges} OVER EDGE{totalEdges > 1 ? "S" : ""}
             </span>
           )}
-          <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", letterSpacing: "0.04em" }}>
+          <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.04em" }}>
             {props.length} PLAYERS
           </span>
         </div>
@@ -333,8 +333,8 @@ export default function MlbHrPropsCard({ awayTeam, homeTeam, startTime, props }:
       )}
 
       {/* Source footer */}
-      <div style={{ padding: "4px 10px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "0.04em" }}>
+      <div style={{ padding: "4px 10px", borderTop: "1px solid #FFFFFF" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.04em" }}>
           Odds: Consensus (Action Network) · Model: Poisson P(≥1 HR) | Park + Pitcher Adjusted
         </span>
       </div>
