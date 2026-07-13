@@ -3,7 +3,7 @@
  *
  * Displays MLB pitcher strikeout prop projections for a single game.
  * Styled to exactly match the Lineups rendered-image card:
- *   - #090E14 card background, #FFFFFF borders
+ *   - #090E14 card background, #182433 borders
  *   - Team color gradient top bar
  *   - Barlow Condensed typography
  *   - MLB headshots with background removal
