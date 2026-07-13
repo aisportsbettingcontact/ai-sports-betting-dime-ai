@@ -443,7 +443,7 @@ export default function MlbBacktest() {
                     data={sortedMarkets.filter(m => m.wins + m.losses >= 5)}
                     margin={{ top: 5, right: 10, left: -10, bottom: 60 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis
                       dataKey="label"
                       tick={{ fill: "#FFFFFF", fontSize: 10 }}
@@ -501,7 +501,7 @@ export default function MlbBacktest() {
                     data={timeSeriesQuery.data ?? []}
                     margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                     <XAxis dataKey="date" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
                     <YAxis
                       tickFormatter={v => `${(v * 100).toFixed(0)}%`}
@@ -580,7 +580,7 @@ export default function MlbBacktest() {
                       data={edgeBucketsQuery.data ?? []}
                       margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                       <XAxis dataKey="bucket" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
                       <YAxis
                         tickFormatter={v => `${(v * 100).toFixed(0)}%`}
@@ -737,7 +737,7 @@ function KPropsPanel({ data }: { data: {
         <h3 className="text-white font-semibold text-sm mb-3">Accuracy by Book Line</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byLine} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="line" tick={{ fill: "#FFFFFF", fontSize: 10 }} tickFormatter={v => `${v}K`} />
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip
@@ -846,7 +846,7 @@ function HrPropsPanel({ data }: { data: {
         <h3 className="text-white font-semibold text-sm mb-3">Win Rate by Model P(HR) Bucket</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byProbBucket} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#FFFFFF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
             <XAxis dataKey="bucket" tick={{ fill: "#FFFFFF", fontSize: 10 }} />
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip

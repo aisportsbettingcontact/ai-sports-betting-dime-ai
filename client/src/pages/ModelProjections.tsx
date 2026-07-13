@@ -1231,12 +1231,12 @@ export default function ModelProjections() {
             <button type="button" onClick={() => setShowFavoritesTab(v => !v)}
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
               style={showFavoritesTab
-                ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8", boxShadow: "none" }
-                : { background: "hsl(var(--card))", color: "#45E0A8", border: "1px solid #45E0A8" }
+                ? { background: "#45E0A8", color: "#000000", border: "1px solid #45E0A8", boxShadow: "none" }
+                : { background: "var(--card)", color: "#FFFFFF", border: "1px solid var(--border)" }
               }
               title={`Favorites (${activeFavCount})`}
             >
-              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#45E0A8" : "#45E0A8", color: showFavoritesTab ? "#45E0A8" : "#45E0A8", flexShrink: 0 }} />
+              <Star style={{ width: 11, height: 11, fill: showFavoritesTab ? "#000000" : "transparent", color: showFavoritesTab ? "#000000" : "#FFFFFF", flexShrink: 0 }} />
               <span>Favorites</span>
             </button>
           )}
@@ -1265,7 +1265,7 @@ export default function ModelProjections() {
           {/* MLB pill — only shown when MLB has games today or tomorrow */}
           {(!activeSports || activeSports.MLB) && (
             <button type="button" onClick={() => setSelectedSport("MLB")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "MLB" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
+              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "MLB" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "var(--card)", color: "#FFFFFF", border: "1px solid var(--border)" }) }}>
               <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "MLB" ? 1 : 0.5, flexShrink: 0 }} />
               MLB
             </button>
@@ -1276,7 +1276,7 @@ export default function ModelProjections() {
           {/* WC 2026 pill — renders inline on the feed (same as MLB/NHL) */}
           {/* Label: "2026 WORLD CUP" on all screen sizes for clarity */}
           <button type="button" onClick={() => setSelectedSport("WC")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-            style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
+            style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "var(--card)", color: "#FFFFFF", border: "1px solid var(--border)" }) }}>
             <img src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75" alt="WC26" style={{ width: 'clamp(10px, 1.5vw, 14px)', height: 'clamp(10px, 1.5vw, 14px)', objectFit: 'contain', flexShrink: 0, opacity: selectedSport === "WC" ? 1 : 0.8 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             2026 WORLD CUP
           </button>
@@ -1284,7 +1284,7 @@ export default function ModelProjections() {
           {/* NBA pill — HIDDEN: NBA tab suppressed from feed until re-enabled */}
           {false && (!activeSports || activeSports?.NBA) && (
             <button type="button" onClick={() => setSelectedSport("NBA")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NBA" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
+              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NBA" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "var(--card)", color: "#FFFFFF", border: "1px solid var(--border)" }) }}>
               <img src={CDN_NBA} alt="NBA" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
               NBA
             </button>
@@ -1296,7 +1296,7 @@ export default function ModelProjections() {
           {/* Mobile: min-w-[28px] so it always shows at least the icon; flex-1 fills remaining space */}
           <div className="flex-1 min-w-0" style={{ minWidth: 28 }}>
             <div className="flex items-center gap-1.5 sm:gap-2 md:gap-2.5 px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full border transition-all duration-150"
-              style={{ background: "hsl(var(--secondary))", borderColor: searchFocused ? "#45E0A8" : "hsl(var(--border))", boxShadow: searchFocused ? "0 0 0 1px #45E0A8" : "none" }}>
+              style={{ background: "var(--secondary)", borderColor: searchFocused ? "#45E0A8" : "var(--border)", boxShadow: searchFocused ? "0 0 0 1px #45E0A8" : "none" }}>
               <Search className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
               <input ref={inputRef} type="text" placeholder="Search…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setSearchFocused(true)} className="flex-1 min-w-0 bg-transparent text-xs md:text-[13px] text-foreground placeholder:text-muted-foreground outline-none" />
               {searchQuery && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setSearchQuery(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"><X className="w-3 h-3 md:w-4 md:h-4" /></button>}
@@ -1407,8 +1407,8 @@ export default function ModelProjections() {
             // so vertical swipes are immediately handed off to the page scroll handler.
             overscrollBehaviorX: 'contain',
             touchAction: 'pan-x',
-            borderBottom: '2px solid hsl(var(--border) / 0.5)',
-            background: 'hsl(var(--card))',
+            borderBottom: '2px solid var(--border)',
+            background: 'var(--card)',
           }}>
             {FEED_TABS.map(tab => {
               const isActive = feedMobileTab === tab.id;
