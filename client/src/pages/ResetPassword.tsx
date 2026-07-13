@@ -114,7 +114,7 @@ export default function ResetPassword() {
           </p>
           <Button
             onClick={() => navigate("/")}
-            className="bg-[#45E0A8] text-white"
+            className="bg-[#45E0A8] text-black"
           >
             Back to Sign In
           </Button>
@@ -256,7 +256,7 @@ export default function ResetPassword() {
             type="button"
             onClick={handleReset}
             disabled={resetPassword.isPending || !password || !confirmPassword}
-            className="w-full bg-[#45E0A8] text-white mt-1"
+            className="w-full bg-[#45E0A8] text-black mt-1"
           >
             {resetPassword.isPending ? (
               <span className="flex items-center gap-2">

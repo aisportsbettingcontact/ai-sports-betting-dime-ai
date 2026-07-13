@@ -80,11 +80,14 @@
 .dc-sidebar-row.is-active .dc-sidebar-icon, .dc-sidebar-row[data-active="true"] .dc-sidebar-icon, .dc-sidebar-row[aria-current="page"] .dc-sidebar-icon { color: var(--accent); } /* D/L:27 — state rule */
 @media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before, .settings-btn, .dc-sidebar-row, .dc-sidebar-row::before, .dc-settings-btn { transition: none; } } /* D/L:28 — state rule */
 
-/* Placeholders — D/L:29-30. NOTE: `.theme-light-placeholder` is declared but
-   NOT applied in the frozen light markup (L:101 input has class="composer-input"
-   only), so as frozen the placeholder renders #6A6A78 in both themes. */
+/* Placeholders — D/L:29-30. Three-Color mapping: placeholder ink follows the
+   theme's text color (white on the dark composer, black on the light composer).
+   2026-07-13 audit P0 fix: the unconditional #FFFFFF made "Ask dime anything…"
+   white-on-white (invisible) in light mode, where the composer fill is #FFFFFF. */
 .composer-input::placeholder, .dc-composer-input::placeholder { color: #FFFFFF; } /* D/L:29 */
+.theme-light .composer-input::placeholder, .theme-light .dc-composer-input::placeholder { color: #000000; } /* audit P0-2 */
 .theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #FFFFFF; } /* D/L:30 */
+.theme-light .theme-light-placeholder::placeholder, .theme-light .dc-theme-light-placeholder::placeholder { color: #000000; } /* audit P0-2 */
 
 /* Typing indicator — D/L:31-34 (keyframes name verbatim; no clash with
    dime-chat.css's `dime-pulse`). */

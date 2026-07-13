@@ -169,7 +169,10 @@ const APPEARANCE: Appearance = {
     fontSizeBase: "15px",
     borderRadius: "10px",
     spacingUnit: "4px",
-    focusBoxShadow: "none",
+    // 2026-07-13 audit P0-8: focus was suppressed entirely (focusBoxShadow none),
+    // leaving the card fields with zero visible focus while the rest of the page
+    // gets the 3px mint ring. Match the app-wide focus treatment.
+    focusBoxShadow: "0 0 0 3px #45E0A8",
     focusOutline: "none",
   },
   rules: {
@@ -181,12 +184,14 @@ const APPEARANCE: Appearance = {
       padding: "11px 13px",
     },
     ".Input:focus": {
-      boxShadow: "none",
+      boxShadow: "0 0 0 3px #45E0A8",
       outline: "none",
       borderColor: "#FFFFFF",
     },
+    // Invalid state: no red under the law — a 2px double-weight border makes the
+    // failing field findable while Stripe's .Error text names the problem below.
     ".Input--invalid": {
-      border: "1px solid #FFFFFF",
+      border: "2px solid #FFFFFF",
       color: "#FFFFFF",
       boxShadow: "none",
     },
@@ -213,8 +218,10 @@ const APPEARANCE: Appearance = {
 
 const ELEMENTS_FONTS: CssFontSource[] = [
   {
+    // Single-font mandate: IBM Plex Mono removed from the Stripe iframe load
+    // (2026-07-13 audit — it was the last surface still fetching the retired mono).
     cssSrc:
-      "https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap",
+      "https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap",
   },
 ];
 

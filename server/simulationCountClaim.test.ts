@@ -28,6 +28,10 @@ describe("simulation-count claim consistency", () => {
     "client/src/pages/dime/landing/landing-content.ts",
     "client/src/pages/dime/landing/components/Hero.tsx",
     "client/src/pages/dime/landing/components/MarketConsole.tsx",
+    // 2026-07-13 audit: these two SEO surfaces drifted to "10,000" because the
+    // guard didn't cover them. Crawlers index them — they must match the engine.
+    "client/index.html",
+    "server/landingPrerender.ts",
   ];
 
   for (const rel of userFacingFiles) {

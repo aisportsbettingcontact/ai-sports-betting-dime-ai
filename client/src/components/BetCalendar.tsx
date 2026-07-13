@@ -469,7 +469,7 @@ export function BetCalendar({
               <div key={i} style={{
                 aspectRatio: "1",
                 borderRadius: "4px",
-                background: "var(--bt-cell-empty, transparent)",
+                background: "color-mix(in srgb, var(--bt-text, #FFFFFF) 8%, transparent)",
                 animation: "pulse 1.5s ease-in-out infinite",
               }} />
             ))}
@@ -520,7 +520,7 @@ export function BetCalendar({
                     <span style={{
                       fontSize: "11px",
                       fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
-                      color: isFuture ? "var(--bt-border, #FFFFFF)" : "var(--bt-dimmer, #FFFFFF)",
+                      color: isFuture ? "transparent" : "color-mix(in srgb, var(--bt-text, #FFFFFF) 30%, transparent)",
                     }}>
                       {dayNum}
                     </span>

@@ -16,7 +16,12 @@
    * borders to black. Mint stays the one accent (as FILL — mint text fails on
    * white, so --dime-mint-text is black in light). No greys, no alpha. */
   --dime-mint: #45e0a8;
-  --dime-mint-text: #45e0a8; /* mint stays the signal in both themes (allowed color) */
+  /* 2026-07-13 audit P0-11: raw mint text on white is 1.68:1 (hard AA fail).
+   * The law's literal mapping (black) deleted all light-mode signal, which is
+   * why this token drifted back to raw mint. Scoped exception (like --loss-red):
+   * #0B8557 is the same mint hue darkened to 4.66:1 on white — signal survives,
+   * contrast passes. Strict-3 alternative remains #000000 if that direction wins. */
+  --dime-mint-text: #0B8557;
   --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
   --dime-surface-sidebar: #ffffff;

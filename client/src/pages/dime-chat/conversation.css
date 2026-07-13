@@ -45,8 +45,11 @@
 
 .dc-turn--user { display: flex; justify-content: flex-end; } /* right edge = the send button's side of the composer (D:102) */
 .dc-user-capsule { max-width: 85%; border-radius: 20px; padding: 10px 16px; font-size: 14px; font-weight: 400; font-family: inherit; white-space: pre-wrap; word-break: break-word; } /* radius 20 = prompt pill D:107; padding 16px = pill inset D:107, 10px = sidebar-row gap unit F:21; type = composer input F:101; max-width 85% = UNKNOWN-3 */
-.theme-dark .dc-user-capsule { background: #000000; color: #FFFFFF; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
-.theme-light .dc-user-capsule { background: #FFFFFF; color: #000000; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
+/* 2026-07-13 audit P0-5: capsule fill equals the page ground in both themes, so
+   without a border the user bubble was invisible — speaker identity carried by
+   alignment alone. 1px ink border restores the surface within the 3-color law. */
+.theme-dark .dc-user-capsule { background: #000000; color: #FFFFFF; border: 1px solid #FFFFFF; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
+.theme-light .dc-user-capsule { background: #FFFFFF; color: #000000; border: 1px solid #000000; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
 
 /* ----------------------------------------------------------------------------
    3. ASSISTANT MESSAGE — bare text on the page itself (spec §2.3)
@@ -139,6 +142,11 @@
    already extracted as .dc-btn-cancel; buttons reuse that class + .dc-hv2. */
 button.dc-btn-cancel { background: none; font-family: inherit; } /* button-element reset only; visual recipe stays D/L:86 */
 .dc-focusable:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* focus treatment F:24/F:44 */
+/* 2026-07-13 audit P0-6: a mint ring on a mint fill is invisible. Mint-filled
+   focusables get a 2px black separation ring inside the mint ring (law-legal:
+   black + mint only) so keyboard focus is visible on the pill/upgrade/PRO fills. */
+.dc-pill--mint.dc-focusable:focus-visible,
+.dc-btn-upgrade:focus-visible { outline: none; box-shadow: 0 0 0 2px #000000, 0 0 0 5px var(--ring); }
 
 .dc-jump { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 12px); white-space: nowrap; z-index: 2; } /* floated bottom-center 12px above the composer (spec §1.b) */
 
