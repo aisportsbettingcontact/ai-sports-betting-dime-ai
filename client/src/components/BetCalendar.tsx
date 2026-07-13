@@ -282,7 +282,7 @@ export function BetCalendar({
                 fontSize: "16px",
                 fontWeight: 600,
                 color: "var(--bt-label, #4a5a4a)",
-                fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
               }}>
                 {year}
               </span>
@@ -290,7 +290,7 @@ export function BetCalendar({
             <div style={{
               fontSize: "11px",
               color: "var(--bt-green, #39FF14)",
-              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+              fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
               letterSpacing: "2px",
               marginTop: "3px",
               opacity: 0.8,
@@ -356,52 +356,52 @@ export function BetCalendar({
         }}>
           {/* Record */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>RECORD</div>
-            <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--bt-text, #d0d0d0)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)", marginBottom: "2px" }}>RECORD</div>
+            <div style={{ fontSize: "13px", fontWeight: 700, color: "var(--bt-text, #d0d0d0)", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>
               {monthRecord.wins}W–{monthRecord.losses}L
               {monthRecord.pushes > 0 && <span style={{ color: "var(--bt-text-muted, #888)" }}>–{monthRecord.pushes}P</span>}
             </div>
           </div>
           {/* Win% */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>WIN%</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)", marginBottom: "2px" }}>WIN%</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
               color: monthRecord.winPct >= 55 ? "var(--bt-green, #39FF14)" : monthRecord.winPct >= 50 ? "var(--bt-grade-b, #a3e635)" : "var(--bt-red, #FF3B3B)",
-              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+              fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
             }}>
               {monthRecord.winPct.toFixed(1)}%
             </div>
           </div>
           {/* Net Units */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>NET UNITS</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)", marginBottom: "2px" }}>NET UNITS</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
               color: netUnits >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
-              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+              fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
             }}>
               {fmtUnits(netUnits)}
             </div>
           </div>
           {/* ROI */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>ROI</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)", marginBottom: "2px" }}>ROI</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
               color: monthRecord.roi >= 0 ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
-              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+              fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
             }}>
               {fmtPct(monthRecord.roi)}
             </div>
           </div>
           {/* Current Streak */}
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)", marginBottom: "2px" }}>STREAK</div>
+            <div style={{ fontSize: "9px", color: "var(--bt-label, #4a5a4a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)", marginBottom: "2px" }}>STREAK</div>
             <div style={{
               fontSize: "13px", fontWeight: 700,
               color: monthRecord.currentStreak?.startsWith("W") ? "var(--bt-green, #39FF14)" : "var(--bt-red, #FF3B3B)",
-              fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+              fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
             }}>
               {monthRecord.currentStreak ?? "—"}
             </div>
@@ -519,7 +519,7 @@ export function BetCalendar({
                   >
                     <span style={{
                       fontSize: "11px",
-                      fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                      fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
                       color: isFuture ? "var(--bt-border, #1e261e)" : "var(--bt-dimmer, #2a3a2a)",
                     }}>
                       {dayNum}
@@ -575,7 +575,7 @@ export function BetCalendar({
                     top: "3px",
                     left: "4px",
                     fontSize: "9px",
-                    fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                    fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
                     color: textColor,
                     opacity: 0.65,
                     lineHeight: 1,
@@ -587,7 +587,7 @@ export function BetCalendar({
                   <span style={{
                     fontSize: "clamp(8px, 1.8vw, 11px)",
                     fontWeight: 900,
-                    fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                    fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
                     color: textColor,
                     lineHeight: 1,
                     letterSpacing: "-0.5px",
@@ -604,7 +604,7 @@ export function BetCalendar({
                       bottom: "2px",
                       right: "3px",
                       fontSize: "8px",
-                      fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)",
+                      fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)",
                       color: textColor,
                       opacity: 0.5,
                       lineHeight: 1,
@@ -676,18 +676,18 @@ export function BetCalendar({
         }}>
           <div style={{ display: "flex", gap: "16px" }}>
             <div>
-              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>BEST STREAK </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>W{monthRecord.longestWinStreak}</span>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>BEST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>W{monthRecord.longestWinStreak}</span>
             </div>
             <div>
-              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>WORST STREAK </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-red, #FF3B3B)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>L{monthRecord.longestLossStreak}</span>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>WORST STREAK </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-red, #FF3B3B)", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>L{monthRecord.longestLossStreak}</span>
             </div>
           </div>
           {monthRecord.bestDayUnits !== null && (
             <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>BEST DAY </span>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
+              <span style={{ fontSize: "9px", color: "var(--bt-dim, #3a4a3a)", letterSpacing: "1.5px", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>BEST DAY </span>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--bt-green, #39FF14)", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>
                 {fmtUnits(monthRecord.bestDayUnits)}
               </span>
             </div>
@@ -698,7 +698,7 @@ export function BetCalendar({
       {/* ── EMPTY STATE ── */}
       {!calendarQuery.isLoading && (!monthRecord || (monthRecord.wins + monthRecord.losses) === 0) && (
         <div style={{ padding: "20px 18px", textAlign: "center" }}>
-          <span style={{ fontSize: "11px", color: "var(--bt-dim, #3a4a3a)", fontFamily: "var(--bt-mono, 'JetBrains Mono', monospace)" }}>
+          <span style={{ fontSize: "11px", color: "var(--bt-dim, #3a4a3a)", fontFamily: "var(--bt-mono, 'Familjen Grotesk', system-ui, -apple-system, sans-serif)" }}>
             NO GRADED BETS FOR THIS MONTH
           </span>
         </div>

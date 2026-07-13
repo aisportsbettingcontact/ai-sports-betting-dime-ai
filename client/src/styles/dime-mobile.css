@@ -32,7 +32,10 @@
   --dime-mint-dim: rgba(69, 224, 168, 0.13);
   --dime-mint-border: rgba(15, 163, 107, 0.35);
   --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
-  --dime-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  /* Single-font mandate: the "mono" token now resolves to Familjen Grotesk so
+   * every legacy var(--dime-font-mono) / var(--bt-mono) consumer renders the
+   * one brand typeface. IBM Plex Mono is fully retired. */
+  --dime-font-mono: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --dime-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dime-t: 160ms;
   /* Brand coin-dot rule: mint fills on light get a near-black hairline. */

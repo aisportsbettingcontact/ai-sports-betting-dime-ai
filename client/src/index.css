@@ -4,6 +4,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* ── Single-font mandate ─────────────────────────────────────────────────
+   * Familjen Grotesk is the ONLY typeface. Both the sans AND mono Tailwind
+   * families resolve to it, so every `font-sans`/`font-mono` utility renders
+   * Familjen Grotesk — IBM Plex Mono / JetBrains Mono are fully retired. */
+  --font-sans: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   /* ── Custom breakpoints (Tailwind 4 --breakpoint-* syntax) ──────────────── */
   --breakpoint-xs: 375px;   /* iPhone 14/15 Pro baseline */
   --breakpoint-sm: 640px;   /* large phone / small tablet */
@@ -170,7 +176,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
     /* Prevent horizontal overflow at the document level — catches any
      * rogue element that might push past 100vw on narrow screens. */
     overflow-x: hidden;

@@ -191,7 +191,7 @@ const APPEARANCE: Appearance = {
       boxShadow: "none",
     },
     ".Label": {
-      fontFamily: "'IBM Plex Mono', monospace",
+      fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
       fontSize: "11px",
       fontWeight: "500",
       letterSpacing: "0.08em",
