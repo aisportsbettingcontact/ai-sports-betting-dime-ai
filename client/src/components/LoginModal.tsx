@@ -72,7 +72,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      style={{ backgroundColor: "#000000", backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
       <div
@@ -97,10 +97,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
         <div className="px-6 pt-8 pb-6 text-center">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: "rgba(88,101,242,0.15)" }}
+            style={{ backgroundColor: "#000000" }}
           >
             {isRedirecting
-              ? <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#5865F2" }} />
+              ? <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#45E0A8" }} />
               : <DiscordIcon size={28} />
             }
           </div>

@@ -285,7 +285,7 @@ export const BetCell = React.memo(function BetCell({
         {/* Divider + Home row — hidden for singleRow (DRAW) */}
         {!singleRow && (
           <>
-            <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+            <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />
             <TeamRow side={home} isEdge={homeEdge} />
           </>
         )}
@@ -295,13 +295,13 @@ export const BetCell = React.memo(function BetCell({
       <div
         style={{
           marginTop: 'auto',
-          borderTop: '0.5px solid rgba(255,255,255,0.07)',
+          borderTop: '0.5px solid #FFFFFF',
           padding: '3px 4px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 1,
-          background: hasEdge ? 'rgba(57,255,20,0.04)' : 'transparent',
+          background: hasEdge ? 'transparent' : 'transparent',
         }}
       >
         {hasEdge && edgeLabel && (
@@ -327,7 +327,7 @@ export const BetCell = React.memo(function BetCell({
           style={{
             fontSize: footerSize + 0.5,
             fontWeight: hasEdge ? 800 : 400,
-            color: hasEdge ? edgeColor : 'rgba(200,200,200,0.40)',
+            color: hasEdge ? edgeColor : '#FFFFFF',
             letterSpacing: '0.03em',
             lineHeight: 1,
             whiteSpace: 'nowrap',

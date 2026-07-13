@@ -95,47 +95,47 @@ function logMetrics(label: string, headerHeight?: number, extra?: Record<string,
   console.groupCollapsed(
     `%c[MobileDebug:${label}] %cvw=${vw} vh=${vh} dpr=${dpr.toFixed(1)} scale=${scale.toFixed(3)} device=${device}`,
     "color:#45E0A8;font-weight:700;font-size:11px",
-    "color:#aaa;font-size:10px"
+    "color:#FFFFFF;font-size:10px"
   );
   console.log(
     `%c  visual viewport: %c${dvw}×${dvh}px`,
-    "color:#888;font-size:9px", "color:#fff;font-size:9px"
+    "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
   );
   console.log(
     `%c  safe insets:     %ctop=${safeInsets.top}  bottom=${safeInsets.bottom}  left=${safeInsets.left}  right=${safeInsets.right}`,
-    "color:#888;font-size:9px", "color:#FFD700;font-size:9px"
+    "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
   );
   console.log(
     `%c  filter budget:   %c${filterBarBudget}px (vw minus safe-left/right)`,
-    "color:#888;font-size:9px", "color:#87CEEB;font-size:9px"
+    "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
   );
   if (headerHeight !== undefined) {
     console.log(
       `%c  header height:   %c${headerHeight}px  →  feed starts at y=${headerHeight}px`,
-      "color:#888;font-size:9px", "color:#87CEEB;font-size:9px"
+      "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
     );
     const feedHeight = vh - headerHeight - (parseFloat(safeInsets.bottom) || 0);
     console.log(
       `%c  feed height:     %c${feedHeight}px (vh - header - safe-bottom)`,
-      "color:#888;font-size:9px", "color:#87CEEB;font-size:9px"
+      "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
     );
   }
   console.log(
     `%c  CSS tokens:      %c--scale=${scaleCss}  --fs-nav=${fsNav}  --fs-header=${fsHeader}  --fs-base=${fsBase}`,
-    "color:#888;font-size:9px", "color:#ccc;font-size:9px"
+    "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
   );
   if (extra && Object.keys(extra).length > 0) {
     const extraStr = Object.entries(extra).map(([k, v]) => `${k}=${v}`).join("  ");
     console.log(
       `%c  extra:           %c${extraStr}`,
-      "color:#888;font-size:9px", "color:#FF9500;font-size:9px"
+      "color:#FFFFFF;font-size:9px", "color:#FFFFFF;font-size:9px"
     );
   }
   // Overflow warning: flag if vw < 375px (tight mobile)
   if (vw < 375) {
     console.warn(
       `%c  ⚠ NARROW SCREEN: ${vw}px < 375px — verify filter bar and date row fit without overflow`,
-      "color:#FF3131;font-size:9px;font-weight:700"
+      "color:#FFFFFF;font-size:9px;font-weight:700"
     );
   }
   console.groupEnd();
@@ -186,6 +186,6 @@ export function logMobileEvent(
   console.log(
     `%c[MobileDebug:${component}] %c${event}${dataStr}`,
     "color:#45E0A8;font-weight:700;font-size:10px",
-    "color:#ccc;font-size:10px"
+    "color:#FFFFFF;font-size:10px"
   );
 }
