@@ -20,7 +20,7 @@ export default function AppLoadingShell() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#0a0a0f",
+        backgroundColor: "#000000",
         zIndex: 9999,
       }}
     >
@@ -30,12 +30,12 @@ export default function AppLoadingShell() {
           width: 52,
           height: 52,
           borderRadius: 12,
-          background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+          background: "#45E0A8",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 16,
-          boxShadow: "0 0 32px rgba(59,130,246,0.35)",
+          boxShadow: "none",
         }}
       >
         {/* Bar chart icon — SVG, no external deps */}
@@ -44,7 +44,7 @@ export default function AppLoadingShell() {
           height="28"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="white"
+          stroke="#000000"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -59,8 +59,8 @@ export default function AppLoadingShell() {
         style={{
           width: 24,
           height: 24,
-          border: "2px solid rgba(255,255,255,0.1)",
-          borderTopColor: "#3b82f6",
+          border: "2px solid #FFFFFF",
+          borderTopColor: "#45E0A8",
           borderRadius: "50%",
           animation: "app-shell-spin 0.7s linear infinite",
         }}

@@ -20,10 +20,10 @@ function SingleGameCardSkeleton() {
     <div
       className="w-full relative"
       style={{
-        background: "hsl(var(--card))",
-        borderTop: "1px solid hsl(var(--border))",
-        borderBottom: "1px solid hsl(var(--border))",
-        borderLeft: "3px solid hsl(var(--border))",
+        background: "#000000",
+        borderTop: "1px solid #FFFFFF",
+        borderBottom: "1px solid #FFFFFF",
+        borderLeft: "3px solid #FFFFFF",
       }}
     >
       {/* ── Desktop layout (≥ md) ── */}
@@ -33,7 +33,7 @@ function SingleGameCardSkeleton() {
           style={{
             flex: "0 0 clamp(170px,22vw,260px)",
             width: "clamp(170px,22vw,260px)",
-            borderRight: "1px solid hsl(var(--border) / 0.5)",
+            borderRight: "1px solid #FFFFFF",
             padding: "16px 12px",
             display: "flex",
             flexDirection: "column",
@@ -66,7 +66,7 @@ function SingleGameCardSkeleton() {
         <div
           className="flex-1 min-w-0"
           style={{
-            borderLeft: "1px solid hsl(var(--border) / 0.5)",
+            borderLeft: "1px solid #FFFFFF",
             padding: "12px 16px",
             display: "flex",
             flexDirection: "column",
@@ -99,7 +99,7 @@ function SingleGameCardSkeleton() {
         {/* Row 1: Score panel */}
         <div
           style={{
-            borderBottom: "1px solid hsl(var(--border) / 0.5)",
+            borderBottom: "1px solid #FFFFFF",
             padding: "12px 10px",
             display: "flex",
             flexDirection: "column",

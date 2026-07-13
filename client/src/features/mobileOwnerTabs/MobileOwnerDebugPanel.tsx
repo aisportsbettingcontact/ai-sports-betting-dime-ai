@@ -70,32 +70,32 @@ export function MobileOwnerDebugPanel() {
 
       {/* Debug panel overlay */}
       {isOpen && (
-        <div className="fixed inset-0 z-[99] bg-black/90 backdrop-blur-sm flex flex-col">
+        <div className="fixed inset-0 z-[99] bg-black backdrop-blur-sm flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white">
             <div className="flex items-center gap-2">
               <Bug className="w-4 h-4" style={{ color: "var(--dime-mint-text)" }} />
               <span className="text-sm font-bold text-white">Debug Panel</span>
-              <span className="text-[10px] text-gray-400">
+              <span className="text-[10px] text-white">
                 {entries.length} events
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleExport} className="p-1.5 rounded bg-white/10 hover:bg-white/20">
+              <button onClick={handleExport} className="p-1.5 rounded bg-black">
                 <Download className="w-3.5 h-3.5 text-white" />
               </button>
-              <button onClick={handleClear} className="p-1.5 rounded bg-white/10 hover:bg-white/20">
-                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+              <button onClick={handleClear} className="p-1.5 rounded bg-black">
+                <Trash2 className="w-3.5 h-3.5 text-white" />
               </button>
-              <button onClick={() => setIsOpen(false)} className="p-1.5 rounded bg-white/10 hover:bg-white/20">
+              <button onClick={() => setIsOpen(false)} className="p-1.5 rounded bg-black">
                 <X className="w-3.5 h-3.5 text-white" />
               </button>
             </div>
           </div>
 
           {/* Feature flags */}
-          <div className="px-4 py-2 border-b border-white/5">
-            <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">
+          <div className="px-4 py-2 border-b border-white">
+            <div className="text-[10px] text-white font-semibold uppercase tracking-wider mb-1">
               Feature Flags
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -107,36 +107,36 @@ export function MobileOwnerDebugPanel() {
           </div>
 
           {/* Session info */}
-          <div className="px-4 py-2 border-b border-white/5">
-            <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1">
+          <div className="px-4 py-2 border-b border-white">
+            <div className="text-[10px] text-white font-semibold uppercase tracking-wider mb-1">
               Session
             </div>
-            <div className="text-[10px] text-gray-300 font-mono">
+            <div className="text-[10px] text-white font-mono">
               ID: {mobileOwnerTabLogger.getSessionId()} | Duration: {(mobileOwnerTabLogger.getSessionDuration() / 1000).toFixed(1)}s
             </div>
           </div>
 
           {/* Event log */}
           <div className="flex-1 overflow-y-auto px-4 py-2">
-            <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-2">
+            <div className="text-[10px] text-white font-semibold uppercase tracking-wider mb-2">
               Event Log (newest first)
             </div>
             <div className="space-y-0.5">
               {[...entries].reverse().slice(0, 100).map((entry, i) => (
                 <div key={i} className="flex items-start gap-2 py-0.5">
-                  <span className="text-[9px] text-gray-600 font-mono shrink-0 w-16">
+                  <span className="text-[9px] text-white font-mono shrink-0 w-16">
                     {new Date(entry.timestamp).toLocaleTimeString("en-US", { hour12: false })}
                   </span>
                   <span className={`text-[9px] font-mono shrink-0 w-6 ${
-                    entry.tabId ? "text-emerald-400" : "text-gray-500"
+                    entry.tabId ? "text-[#45E0A8]" : "text-white"
                   }`}>
                     {entry.tabId ? entry.tabId.slice(0, 4) : "sys"}
                   </span>
-                  <span className="text-[9px] text-gray-300 font-mono">
+                  <span className="text-[9px] text-white font-mono">
                     {entry.event}
                   </span>
                   {entry.metadata && (
-                    <span className="text-[9px] text-gray-600 font-mono truncate">
+                    <span className="text-[9px] text-white font-mono truncate">
                       {JSON.stringify(entry.metadata)}
                     </span>
                   )}
@@ -156,8 +156,8 @@ function FlagBadge({ label, active }: { label: string; active: boolean }) {
     <span
       className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
         active
-          ? "bg-emerald-400/20 text-emerald-400 border border-emerald-400/30"
-          : "bg-red-400/10 text-red-400/60 border border-red-400/20"
+          ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]"
+          : "bg-transparent text-white border border-white"
       }`}
     >
       {label}: {active ? "ON" : "OFF"}

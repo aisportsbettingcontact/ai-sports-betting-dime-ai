@@ -37,13 +37,15 @@ export function getVerdict(edge: number): string {
 
 /** Color for a given edge pp value (spec-compliant 6-tier scale). */
 export function getEdgeColor(edge: number): string {
-  if (isNaN(edge))  return 'rgba(255,255,255,0.30)';
-  if (edge >= 8)    return '#39FF14';   // ELITE   — full neon green
-  if (edge >= 5)    return '#7FFF00';   // STRONG  — chartreuse
-  if (edge >= 2.5)  return '#ADFF2F';   // PLAYABLE — yellow-green
-  if (edge >= 0.5)  return 'rgba(255,255,255,0.60)';  // SMALL — white/60
-  if (edge >= -1)   return 'rgba(255,255,255,0.30)';  // NEUTRAL — white/30
-  return '#FF2244';                     // FADE    — red
+  // Three-Color Law: positive edge (ELITE/STRONG/PLAYABLE) = mint signal;
+  // everything else = plain white ink (no greys, no red).
+  if (isNaN(edge))  return '#FFFFFF';
+  if (edge >= 8)    return '#45E0A8';   // ELITE
+  if (edge >= 5)    return '#45E0A8';   // STRONG
+  if (edge >= 2.5)  return '#45E0A8';   // PLAYABLE
+  if (edge >= 0.5)  return '#FFFFFF';   // SMALL
+  if (edge >= -1)   return '#FFFFFF';   // NEUTRAL
+  return '#FFFFFF';                     // FADE — plain ink, never red
 }
 
 /** Spread sign helper — returns "PK" for 0, "—" for NaN, otherwise "+X" or "-X". */

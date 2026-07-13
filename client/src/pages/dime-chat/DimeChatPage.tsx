@@ -189,7 +189,7 @@ const GEAR_PATH =
 const BLANK_AVATAR_URI =
   "data:image/svg+xml," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#B9BFC9"/><circle cx="32" cy="24" r="11" fill="#FFFFFF"/><path d="M10 58c3-13 12-19 22-19s19 6 22 19v6H10z" fill="#FFFFFF"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#000000"/><circle cx="32" cy="24" r="11" fill="#FFFFFF"/><path d="M10 58c3-13 12-19 22-19s19 6 22 19v6H10z" fill="#FFFFFF"/></svg>'
   );
 
 /** Avatar priority (product requirement 2026-07-12): the prez photo stays

@@ -180,7 +180,7 @@ function PitcherSection({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 12,
                 fontWeight: 800,
                 color: "#FFFFFF",
@@ -192,7 +192,7 @@ function PitcherSection({
             >
               {displayName}
             </div>
-            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+            <div style={{ fontSize: 9, color: "#FFFFFF", marginTop: 1 }}>
               {displayEra}
             </div>
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>
@@ -205,9 +205,9 @@ function PitcherSection({
                     textTransform: "uppercase",
                     padding: "1px 4px",
                     borderRadius: 2,
-                    background: "#101820",
+                    background: "#000000",
                     color: "#FFFFFF",
-                    border: "1px solid #182433",
+                    border: "1px solid #FFFFFF",
                   }}
                 >
                   {hand}HP
@@ -218,7 +218,7 @@ function PitcherSection({
                   fontSize: 8,
                   fontWeight: 600,
                   letterSpacing: "0.5px",
-                  color: confirmed ? "#39FF14" : "#FFFF33",
+                  color: confirmed ? "#45E0A8" : "#FFFFFF",
                   display: "flex",
                   alignItems: "center",
                   gap: 3,
@@ -229,7 +229,7 @@ function PitcherSection({
                     width: 4,
                     height: 4,
                     borderRadius: "50%",
-                    background: confirmed ? "#39FF14" : "#FFFF33",
+                    background: confirmed ? "#45E0A8" : "#FFFFFF",
                     display: "inline-block",
                   }}
                 />
@@ -270,7 +270,7 @@ function PitcherSection({
         <div style={{ textAlign: "left" }}>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 16,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -279,7 +279,7 @@ function PitcherSection({
           >
             {displayName}
           </div>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: "#FFFFFF", marginTop: 2 }}>
             {displayEra}
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 5 }}>
@@ -292,9 +292,9 @@ function PitcherSection({
                   textTransform: "uppercase",
                   padding: "1px 5px",
                   borderRadius: 3,
-                  background: "#101820",
+                  background: "#000000",
                   color: "#FFFFFF",
-                  border: "1px solid #182433",
+                  border: "1px solid #FFFFFF",
                   display: "inline-block",
                 }}
               >
@@ -310,7 +310,7 @@ function PitcherSection({
                 fontWeight: 600,
                 letterSpacing: "1px",
                 textTransform: "uppercase",
-                color: confirmed ? "#39FF14" : "#FFFF33",
+                color: confirmed ? "#45E0A8" : "#FFFFFF",
               }}
             >
               <span
@@ -318,7 +318,7 @@ function PitcherSection({
                   width: 5,
                   height: 5,
                   borderRadius: "50%",
-                  background: confirmed ? "#39FF14" : "#FFFF33",
+                  background: confirmed ? "#45E0A8" : "#FFFFFF",
                   display: "inline-block",
                 }}
               />
@@ -341,7 +341,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
         alignItems: "center",
         gap: 6,
         padding: isMobile ? "5px 8px 3px" : "7px 12px 4px",
-        borderBottom: "1px solid rgba(24,36,51,0.6)",
+        borderBottom: "1px solid #FFFFFF",
       }}
     >
       <span
@@ -350,7 +350,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
           fontWeight: 700,
           letterSpacing: "1.5px",
           textTransform: "uppercase",
-          color: "rgba(255,255,255,0.5)",
+          color: "#FFFFFF",
         }}
       >
         Batting Order
@@ -364,7 +364,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
           fontWeight: 600,
           letterSpacing: "0.5px",
           textTransform: "uppercase",
-          color: isConfirmed ? "#39FF14" : "#FFFF33",
+          color: isConfirmed ? "#45E0A8" : "#FFFFFF",
         }}
       >
         <span
@@ -372,7 +372,7 @@ function BattingOrderHeader({ confirmed, isMobile }: { confirmed: boolean | null
             width: isMobile ? 4 : 5,
             height: isMobile ? 4 : 5,
             borderRadius: "50%",
-            background: isConfirmed ? "#39FF14" : "#FFFF33",
+            background: isConfirmed ? "#45E0A8" : "#FFFFFF",
             display: "inline-block",
           }}
         />
@@ -424,13 +424,13 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
               alignItems: "center",
               gap: 3,
               padding: "5px 0",
-              borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.5)" : "none",
+              borderBottom: i < players.length - 1 ? "1px solid #FFFFFF" : "none",
             }}
           >
             {/* Batting order number */}
             <span
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 10,
                 fontWeight: 700,
                 color: "#FFFFFF",
@@ -450,7 +450,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
               {/* Line 1: Player name */}
               <div
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                   fontSize: 13,
                   fontWeight: 800,
                   color: "#FFFFFF",
@@ -474,16 +474,16 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
                 {/* Position pill */}
                 <span
                   style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                     fontSize: 10,
                     fontWeight: 700,
                     letterSpacing: "0.5px",
                     textTransform: "uppercase",
-                    color: "#7EB8D4",
-                    background: "rgba(30,60,90,0.6)",
+                    color: "#FFFFFF",
+                    background: "transparent",
                     padding: "1px 4px",
                     borderRadius: 3,
-                    border: "1px solid rgba(30,80,120,0.4)",
+                    border: "1px solid #FFFFFF",
                     lineHeight: 1.4,
                   }}
                 >
@@ -492,7 +492,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
                 {/* Handedness indicator — white for all */}
                 <span
                   style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                     fontSize: 11,
                     fontWeight: 800,
                     color: "#FFFFFF",
@@ -520,13 +520,13 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
             alignItems: "center",
             gap: 7,
             padding: "6px 0",
-            borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.6)" : "none",
+            borderBottom: i < players.length - 1 ? "1px solid #FFFFFF" : "none",
           }}
         >
           {/* Batting order number */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 11,
               fontWeight: 700,
               color: "#FFFFFF",
@@ -544,16 +544,16 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Position badge — styled pill */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.5px",
               textTransform: "uppercase",
-              color: "#7EB8D4",
-              background: "rgba(30,60,90,0.6)",
+              color: "#FFFFFF",
+              background: "transparent",
               padding: "2px 5px",
               borderRadius: 3,
-              border: "1px solid rgba(30,80,120,0.4)",
+              border: "1px solid #FFFFFF",
               flexShrink: 0,
               textAlign: "center",
               minWidth: 28,
@@ -565,7 +565,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Player name */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 14,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -583,7 +583,7 @@ function LineupRows({ players, isMobile }: { players: LineupPlayer[]; isMobile: 
           {/* Bats indicator — white */}
           <span
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: 12,
               fontWeight: 800,
               color: "#FFFFFF",
@@ -614,13 +614,13 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
           justifyContent: "center",
           gap: 8,
           padding: "10px 18px",
-          background: "#0C1219",
+          background: "#000000",
         }}
       >
         <span style={{ fontSize: 16 }}>🏟️</span>
         <span
           style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
+            fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             fontSize: 13,
             fontWeight: 700,
             color: "#FFFFFF",
@@ -628,7 +628,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
         >
           Dome
         </span>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>Indoor stadium</span>
+        <span style={{ fontSize: 10, color: "#FFFFFF" }}>Indoor stadium</span>
       </div>
     );
   }
@@ -639,10 +639,10 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
     weatherPrecip == null
       ? "#FFFFFF"
       : weatherPrecip === 0
-      ? "#39FF14"
+      ? "#45E0A8"
       : weatherPrecip < 30
-      ? "#FFCC00"
-      : "#FF2D55";
+      ? "#FFFFFF"
+      : "#FFFFFF";
 
   return (
     <div
@@ -652,7 +652,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
         justifyContent: "center",
         gap: 24,
         padding: "10px 18px",
-        background: "#0C1219",
+        background: "#000000",
       }}
     >
       {(weatherIcon || weatherTemp || weatherWind) && (
@@ -662,7 +662,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
             {weatherTemp && (
               <div
                 style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                   fontSize: 16,
                   fontWeight: 700,
                   color: "#FFFFFF",
@@ -672,7 +672,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
               </div>
             )}
             {weatherWind && (
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+              <div style={{ fontSize: 10, color: "#FFFFFF", marginTop: 1 }}>
                 {weatherWind}
               </div>
             )}
@@ -681,11 +681,11 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
       )}
       {weatherPrecip != null && (
         <>
-          <div style={{ width: 1, height: 28, background: "#1E3048" }} />
+          <div style={{ width: 1, height: 28, background: "#FFFFFF" }} />
           <div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: 13,
                 fontWeight: 700,
                 textAlign: "center",
@@ -697,7 +697,7 @@ function WeatherStrip({ lineup }: { lineup: MlbLineupRow }) {
             <div
               style={{
                 fontSize: 9,
-                color: "rgba(255,255,255,0.3)",
+                color: "#FFFFFF",
                 letterSpacing: "1px",
                 textTransform: "uppercase",
                 marginTop: 1,
@@ -736,7 +736,7 @@ function EnvSignalsStrip({
 
   // Park factor color: >1.05 = hitter park (red), <0.95 = pitcher park (green), else neutral
   const pf = parkFactor?.parkFactor3yr ?? null;
-  const pfColor = pf == null ? '#888' : pf > 1.05 ? '#FF5C5C' : pf < 0.95 ? '#39FF14' : '#FFCC00';
+  const pfColor = pf == null ? '#FFFFFF' : pf > 1.05 ? '#FFFFFF' : pf < 0.95 ? '#45E0A8' : '#FFFFFF';
   const pfLabel = pf == null ? '—' : pf.toFixed(3);
   const pfTag = pf == null ? '' : pf > 1.05 ? 'HITTER' : pf < 0.95 ? 'PITCHER' : 'NEUTRAL';
 
@@ -745,22 +745,22 @@ function EnvSignalsStrip({
   const bbMod = umpire?.bbModifier ?? null;
   const kArrow = kMod == null ? '' : kMod > 1.05 ? ' ▲' : kMod < 0.95 ? ' ▼' : ' ─';
   const bbArrow = bbMod == null ? '' : bbMod > 1.05 ? ' ▲' : bbMod < 0.95 ? ' ▼' : ' ─';
-  const kColor = kMod == null ? '#888' : kMod > 1.05 ? '#FF5C5C' : kMod < 0.95 ? '#39FF14' : '#FFCC00';
-  const bbColor = bbMod == null ? '#888' : bbMod > 1.05 ? '#FF5C5C' : bbMod < 0.95 ? '#39FF14' : '#FFCC00';
+  const kColor = kMod == null ? '#FFFFFF' : kMod > 1.05 ? '#FFFFFF' : kMod < 0.95 ? '#45E0A8' : '#FFFFFF';
+  const bbColor = bbMod == null ? '#FFFFFF' : bbMod > 1.05 ? '#FFFFFF' : bbMod < 0.95 ? '#45E0A8' : '#FFFFFF';
 
   const cell = (label: string, value: string, color: string, sub?: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color }}>
+      <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 13, fontWeight: 700, color }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>{sub}</div>}
-      <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: 1 }}>
+      {sub && <div style={{ fontSize: 8, color: '#FFFFFF', letterSpacing: '0.8px', textTransform: 'uppercase' }}>{sub}</div>}
+      <div style={{ fontSize: 8, color: '#FFFFFF', letterSpacing: '1px', textTransform: 'uppercase', marginTop: 1 }}>
         {label}
       </div>
     </div>
   );
 
-  const divider = <div style={{ width: 1, height: 32, background: '#1E3048', flexShrink: 0 }} />;
+  const divider = <div style={{ width: 1, height: 32, background: '#FFFFFF', flexShrink: 0 }} />;
 
   return (
     <div
@@ -771,8 +771,8 @@ function EnvSignalsStrip({
         flexWrap: 'wrap',
         gap: 16,
         padding: '10px 18px',
-        background: '#080C12',
-        borderTop: '1px solid #182433',
+        background: '#000000',
+        borderTop: '1px solid #FFFFFF',
       }}
     >
       {/* Park Factor */}
@@ -786,9 +786,9 @@ function EnvSignalsStrip({
       {/* Away Bullpen */}
       {awayBullpen?.eraBullpen != null && (
         <>
-          {cell(`${awayTeam} BULL ERA`, awayBullpen.eraBullpen.toFixed(2), '#A0C4FF')}
+          {cell(`${awayTeam} BULL ERA`, awayBullpen.eraBullpen.toFixed(2), '#FFFFFF')}
           {divider}
-          {cell(`${awayTeam} BULL FIP`, (awayBullpen.fipBullpen ?? 0).toFixed(2), '#A0C4FF')}
+          {cell(`${awayTeam} BULL FIP`, (awayBullpen.fipBullpen ?? 0).toFixed(2), '#FFFFFF')}
           {(homeBullpen || umpire) && divider}
         </>
       )}
@@ -796,9 +796,9 @@ function EnvSignalsStrip({
       {/* Home Bullpen */}
       {homeBullpen?.eraBullpen != null && (
         <>
-          {cell(`${homeTeam} BULL ERA`, homeBullpen.eraBullpen.toFixed(2), '#FFD580')}
+          {cell(`${homeTeam} BULL ERA`, homeBullpen.eraBullpen.toFixed(2), '#FFFFFF')}
           {divider}
-          {cell(`${homeTeam} BULL FIP`, (homeBullpen.fipBullpen ?? 0).toFixed(2), '#FFD580')}
+          {cell(`${homeTeam} BULL FIP`, (homeBullpen.fipBullpen ?? 0).toFixed(2), '#FFFFFF')}
           {umpire && divider}
         </>
       )}
@@ -872,9 +872,9 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
   return (
     <div
       style={{
-        background: "#090E14",
+        background: "#000000",
         borderRadius: 12,
-        border: "1px solid #182433",
+        border: "1px solid #FFFFFF",
         overflow: "hidden",
         marginBottom: 10,
       }}
@@ -894,7 +894,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: isMobile ? "8px 10px 6px" : "14px 18px 12px",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
           gap: isMobile ? 6 : 10,
         }}
       >
@@ -927,7 +927,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           <div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 11 : 13,
                 fontWeight: 900,
                 letterSpacing: "0.5px",
@@ -940,10 +940,10 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
             </div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 9 : 11,
                 fontWeight: 400,
-                color: "rgba(255,255,255,0.5)",
+                color: "#FFFFFF",
                 letterSpacing: "0.5px",
                 marginTop: 1,
               }}
@@ -960,9 +960,9 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
                 borderRadius: 3,
                 marginTop: isMobile ? 2 : 4,
                 display: "inline-block",
-                background: `${awayColor}22`,
+                background: "transparent",
                 color: "#FFFFFF",
-                border: `1px solid ${awayColor}44`,
+                border: `1px solid #FFFFFF`,
               }}
             >
               Away
@@ -974,7 +974,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         <div style={{ textAlign: "center" }}>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: isMobile ? 10 : 12,
               fontWeight: 700,
               color: "#FFFFFF",
@@ -986,7 +986,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           </div>
           <div
             style={{
-              fontFamily: "'Barlow Condensed', sans-serif",
+              fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
               fontSize: isMobile ? 9 : 10,
               color: "#FFFFFF",
               letterSpacing: "3px",
@@ -1026,7 +1026,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           <div style={{ textAlign: "right" }}>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 11 : 13,
                 fontWeight: 900,
                 letterSpacing: "0.5px",
@@ -1039,10 +1039,10 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
             </div>
             <div
               style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
+                fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
                 fontSize: isMobile ? 9 : 11,
                 fontWeight: 400,
-                color: "rgba(255,255,255,0.5)",
+                color: "#FFFFFF",
                 letterSpacing: "0.5px",
                 marginTop: 1,
               }}
@@ -1059,9 +1059,9 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
                 borderRadius: 3,
                 marginTop: isMobile ? 2 : 4,
                 display: "inline-block",
-                background: `${homeColor}22`,
+                background: "transparent",
                 color: "#FFFFFF",
-                border: `1px solid ${homeColor}44`,
+                border: `1px solid #FFFFFF`,
               }}
             >
               Home
@@ -1075,7 +1075,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1px 1fr",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
         }}
       >
         <PitcherSection
@@ -1086,7 +1086,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
           confirmed={lineup?.awayPitcherConfirmed}
           isMobile={isMobile}
         />
-        <div style={{ background: "#182433" }} />
+        <div style={{ background: "#FFFFFF" }} />
         <PitcherSection
           name={lineup?.homePitcherName}
           hand={lineup?.homePitcherHand}
@@ -1102,14 +1102,14 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1px 1fr",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
         }}
       >
         <div>
           <BattingOrderHeader confirmed={lineup?.awayLineupConfirmed} isMobile={isMobile} />
           <LineupRows players={awayLineup} isMobile={isMobile} />
         </div>
-        <div style={{ background: "#182433" }} />
+        <div style={{ background: "#FFFFFF" }} />
         <div>
           <BattingOrderHeader confirmed={lineup?.homeLineupConfirmed} isMobile={isMobile} />
           <LineupRows players={homeLineup} isMobile={isMobile} />

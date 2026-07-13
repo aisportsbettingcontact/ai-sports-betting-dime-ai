@@ -65,10 +65,10 @@ const ROLE_ICONS = {
 };
 
 const ROLE_COLORS = {
-  owner:       "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
-  admin:       "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  handicapper: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  user:        "bg-zinc-500/15 text-zinc-200 border-zinc-500/30",
+  owner:       "bg-black text-white border-white",
+  admin:       "bg-black text-white border-white",
+  handicapper: "bg-black text-[#45E0A8] border-[#45E0A8]",
+  user:        "bg-black text-white border-white",
 };
 
 const EST_OPTS: Intl.DateTimeFormatOptions = { timeZone: "America/New_York" };
@@ -174,40 +174,40 @@ function ColFilterDropdown({
     <div className="relative" ref={ref}>
       <button type="button" onClick={() => setOpen((v) => !v)}
         className={`flex items-center gap-1 group transition-colors ${
-          isActive ? "text-white" : "text-zinc-200 hover:text-zinc-200"
+          isActive ? "text-white" : "text-white hover:text-white"
         }`}
       >
         <span className="text-xs font-semibold tracking-wider">{label}</span>
         <span className="flex flex-col gap-[1px]">
           {state.sort === "asc" ? (
-            <ArrowUp className="w-3 h-3 text-blue-400" />
+            <ArrowUp className="w-3 h-3 text-white" />
           ) : state.sort === "desc" ? (
-            <ArrowDown className="w-3 h-3 text-blue-400" />
+            <ArrowDown className="w-3 h-3 text-white" />
           ) : (
             <ChevronsUpDown className="w-3 h-3 opacity-40 group-hover:opacity-70" />
           )}
         </span>
         {isFiltered && (
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-black flex-shrink-0" />
         )}
         <ChevronDown className={`w-3 h-3 opacity-40 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl py-1">
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[160px] bg-black border border-white rounded-lg shadow-xl py-1">
           {/* Sort options */}
-          <div className="px-2 py-1 border-b border-white/8">
-            <p className="text-sm text-zinc-300 tracking-wider mb-1 px-1">SORT</p>
+          <div className="px-2 py-1 border-b border-white">
+            <p className="text-sm text-white tracking-wider mb-1 px-1">SORT</p>
             <button type="button" onClick={() => toggleSort("asc")}
               className={`flex items-center gap-2 w-full px-2 py-1 rounded text-xs transition-colors ${
-                state.sort === "asc" ? "bg-blue-500/20 text-blue-300" : "text-zinc-300 hover:bg-white/5"
+                state.sort === "asc" ? "bg-black text-white" : "text-white hover:bg-black"
               }`}
             >
               <ArrowUp className="w-3 h-3" /> Ascending
             </button>
             <button type="button" onClick={() => toggleSort("desc")}
               className={`flex items-center gap-2 w-full px-2 py-1 rounded text-xs transition-colors ${
-                state.sort === "desc" ? "bg-blue-500/20 text-blue-300" : "text-zinc-300 hover:bg-white/5"
+                state.sort === "desc" ? "bg-black text-white" : "text-white hover:bg-black"
               }`}
             >
               <ArrowDown className="w-3 h-3" /> Descending
@@ -217,9 +217,9 @@ function ColFilterDropdown({
           {/* Filter options */}
           <div className="px-2 py-1">
             <div className="flex items-center justify-between mb-1 px-1">
-              <p className="text-sm text-zinc-300 tracking-wider">FILTER</p>
+              <p className="text-sm text-white tracking-wider">FILTER</p>
               {isFiltered && (
-                <button type="button" onClick={selectAll} className="text-sm text-blue-400 hover:text-blue-300">
+                <button type="button" onClick={selectAll} className="text-sm text-white hover:text-white">
                   All
                 </button>
               )}
@@ -230,15 +230,15 @@ function ColFilterDropdown({
                 return (
                   <label
                     key={opt}
-                    className="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1 rounded hover:bg-black cursor-pointer"
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleOption(opt)}
-                      className="w-3 h-3 accent-blue-500"
+                      className="w-3 h-3 accent-[#45E0A8]"
                     />
-                    <span className="text-xs text-zinc-300">{opt}</span>
+                    <span className="text-xs text-white">{opt}</span>
                   </label>
                 );
               })}
@@ -247,9 +247,9 @@ function ColFilterDropdown({
 
           {/* Clear all */}
           {isActive && (
-            <div className="border-t border-white/8 px-2 py-1">
+            <div className="border-t border-white px-2 py-1">
               <button type="button" onClick={() => { clearAll(); setOpen(false); }}
-                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-xs text-white hover:bg-black transition-colors"
               >
                 <X className="w-3 h-3" /> Clear filters
               </button>
@@ -309,29 +309,29 @@ function MetricsPanel() {
       label: "DAILY ACTIVE USERS",
       sublabel: "Unique logins in last 24 hours",
       value: loading ? "—" : String(sessionData?.dau ?? 0),
-      color: "text-emerald-400",
-      border: "border-emerald-500/20",
+      color: "text-[#45E0A8]",
+      border: "border-[#45E0A8]",
     },
     {
       label: "WEEKLY ACTIVE USERS",
       sublabel: "Unique logins in last 7 days",
       value: loading ? "—" : String(sessionData?.wau ?? 0),
-      color: "text-blue-400",
-      border: "border-blue-500/20",
+      color: "text-white",
+      border: "border-white",
     },
     {
       label: "MONTHLY ACTIVE USERS",
       sublabel: "Unique logins in last 30 days",
       value: loading ? "—" : String(sessionData?.mau ?? 0),
-      color: "text-violet-400",
-      border: "border-violet-500/20",
+      color: "text-white",
+      border: "border-white",
     },
     {
       label: "AVG SESSION DURATION",
       sublabel: "Avg active time per session",
       value: loading ? "—" : fmtDuration(sessionData?.avgSessionDurationMs ?? 0),
-      color: "text-amber-400",
-      border: "border-amber-500/20",
+      color: "text-white",
+      border: "border-white",
     },
   ];
 
@@ -340,29 +340,29 @@ function MetricsPanel() {
       label: "TOTAL PAYING MEMBERS",
       sublabel: "Active paid access (all tiers)",
       value: loading ? "—" : String(memberData?.totalPaying ?? 0),
-      color: "text-yellow-400",
-      border: "border-yellow-500/20",
+      color: "text-white",
+      border: "border-white",
     },
     {
       label: "LIFETIME MEMBERS",
       sublabel: "Never-expiring access accounts",
       value: loading ? "—" : String(memberData?.lifetimeMembers ?? 0),
-      color: "text-orange-400",
-      border: "border-orange-500/20",
+      color: "text-white",
+      border: "border-white",
     },
     {
       label: "NON-PAYING MEMBERS",
       sublabel: "Accounts without active access",
       value: loading ? "—" : String(memberData?.nonPaying ?? 0),
-      color: "text-zinc-200",
-      border: "border-zinc-500/20",
+      color: "text-white",
+      border: "border-white",
     },
     {
       label: "CONNECTED DISCORD USERS",
       sublabel: "Accounts with Discord linked",
       value: loading ? "—" : String(memberData?.discordConnected ?? 0),
-      color: "text-indigo-400",
-      border: "border-indigo-500/20",
+      color: "text-white",
+      border: "border-white",
     },
   ];
 
@@ -370,30 +370,30 @@ function MetricsPanel() {
     <div className="mb-6 space-y-3">
       {/* Section label */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold tracking-[0.15em] text-zinc-400 uppercase">Platform Metrics</span>
-        <div className="flex-1 h-px bg-white/8" />
-        {loading && <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />}
+        <span className="text-xs font-semibold tracking-[0.15em] text-white uppercase">Platform Metrics</span>
+        <div className="flex-1 h-px bg-black" />
+        {loading && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
       </div>
 
       {/* Row 1 — Session KPIs: 2-col mobile, 4-col sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {sessionKpis.map((k) => (
-          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
+          <div key={k.label} className={`bg-black border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
             {/* Value: font-mono for fixed-width digits, truncate prevents overflow */}
             <div className={`text-base sm:text-xl font-bold font-mono ${k.color} truncate`}>{k.value}</div>
             {/* Label: fixed xs size — sm:text-xs was backwards (larger on mobile) */}
-            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-zinc-300 mt-0.5 leading-tight">{k.label}</div>
-            <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">{k.sublabel}</div>
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-white mt-0.5 leading-tight">{k.label}</div>
+            <div className="text-[10px] sm:text-xs text-white mt-0.5 leading-tight">{k.sublabel}</div>
           </div>
         ))}
       </div>
       {/* Row 2 — Member KPIs: 2-col mobile, 4-col sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {memberKpis.map((k) => (
-          <div key={k.label} className={`bg-white/3 border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
+          <div key={k.label} className={`bg-black border ${k.border} rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden`}>
             <div className={`text-base sm:text-xl font-bold font-mono ${k.color} truncate`}>{k.value}</div>
-            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-zinc-300 mt-0.5 leading-tight">{k.label}</div>
-            <div className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-tight">{k.sublabel}</div>
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-white mt-0.5 leading-tight">{k.label}</div>
+            <div className="text-[10px] sm:text-xs text-white mt-0.5 leading-tight">{k.sublabel}</div>
           </div>
         ))}
       </div>
@@ -405,26 +405,26 @@ function MetricsPanel() {
         // Bar height is proportional to the bucket with the most sessions (max = 100%).
         const total = histData?.total ?? 0;
         const buckets: Array<{ label: string; sublabel: string; count: number; color: string; barColor: string }> = [
-          { label: "<5 min",    sublabel: "Quick visits",    count: histData?.under5m  ?? 0, color: "text-rose-400",    barColor: "bg-rose-500" },
-          { label: "5-30 min",  sublabel: "Short sessions",  count: histData?.m5to30   ?? 0, color: "text-amber-400",  barColor: "bg-amber-500" },
-          { label: "30-120 min",sublabel: "Active sessions", count: histData?.m30to120 ?? 0, color: "text-emerald-400",barColor: "bg-emerald-500" },
-          { label: "2-4 h",     sublabel: "Deep sessions",   count: histData?.h2to4    ?? 0, color: "text-blue-400",   barColor: "bg-blue-500" },
+          { label: "<5 min",    sublabel: "Quick visits",    count: histData?.under5m  ?? 0, color: "text-white",    barColor: "bg-black" },
+          { label: "5-30 min",  sublabel: "Short sessions",  count: histData?.m5to30   ?? 0, color: "text-white",  barColor: "bg-black" },
+          { label: "30-120 min",sublabel: "Active sessions", count: histData?.m30to120 ?? 0, color: "text-[#45E0A8]",barColor: "bg-[#45E0A8]" },
+          { label: "2-4 h",     sublabel: "Deep sessions",   count: histData?.h2to4    ?? 0, color: "text-white",   barColor: "bg-black" },
         ];
         const maxCount = Math.max(...buckets.map((b) => b.count), 1); // avoid div/0
 
         return (
-          <div className="bg-white/3 border border-white/8 rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+          <div className="bg-black border border-white rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
             {/* Header row */}
             <div className="flex items-center justify-between mb-2">
               <div>
-                <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-zinc-300 uppercase leading-tight">
+                <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-white uppercase leading-tight">
                   Session Duration Distribution
                 </div>
-                <div className="text-[10px] sm:text-xs text-zinc-400 leading-tight">
+                <div className="text-[10px] sm:text-xs text-white leading-tight">
                   {histLoading ? "Loading..." : `${total} closed session${total !== 1 ? "s" : ""} in last 30 days`}
                 </div>
               </div>
-              {histLoading && <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin flex-shrink-0" />}
+              {histLoading && <RefreshCw className="w-3 h-3 text-white animate-spin flex-shrink-0" />}
             </div>
 
             {/* Bar chart */}
@@ -449,11 +449,11 @@ function MetricsPanel() {
                       {histLoading ? "—" : b.count}
                     </div>
                     {/* Bucket label */}
-                    <div className="text-[9px] sm:text-[10px] text-zinc-400 leading-none text-center truncate w-full">
+                    <div className="text-[9px] sm:text-[10px] text-white leading-none text-center truncate w-full">
                       {b.label}
                     </div>
                     {/* Percentage */}
-                    <div className="text-[9px] sm:text-[10px] text-zinc-500 leading-none">
+                    <div className="text-[9px] sm:text-[10px] text-white leading-none">
                       {histLoading ? "" : `${pct}%`}
                     </div>
                   </div>
@@ -798,28 +798,28 @@ export default function UserManagement() {
   // This prevents both the blank screen and the flash of unauthorized content
   if (loading || (!loading && (!appUser || appUser.role !== "owner"))) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center gap-3">
-        <RefreshCw className="w-5 h-5 text-zinc-400 animate-spin" />
-        <span className="text-sm text-zinc-500">{loading ? "Authenticating..." : "Redirecting..."}</span>
+      <div className="min-h-screen bg-black flex items-center justify-center gap-3">
+        <RefreshCw className="w-5 h-5 text-white animate-spin" />
+        <span className="text-sm text-white">{loading ? "Authenticating..." : "Redirecting..."}</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] text-white flex flex-col">
+    <div className="min-h-screen w-full bg-black text-white flex flex-col">
       {/* Header — two-row on mobile, single-row on sm+ */}
-      <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur border-b border-white/8 w-full">
+      <div className="sticky top-0 z-40 bg-black backdrop-blur border-b border-white w-full">
         {/* Row 1: Back + Title */}
         <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
           <button type="button" onClick={() => navigate("/feed/model/mlb")}
-            className="flex items-center gap-1.5 text-zinc-200 hover:text-white transition-colors text-sm flex-shrink-0"
+            className="flex items-center gap-1.5 text-white hover:text-white transition-colors text-sm flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden xs:inline">Back</span>
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5">
-            <Crown className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+            <Crown className="w-4 h-4 text-white flex-shrink-0" />
             <span className="text-sm font-semibold tracking-wider text-white whitespace-nowrap">USER MANAGEMENT</span>
           </div>
           <div className="flex-1" />
@@ -829,7 +829,7 @@ export default function UserManagement() {
               onClick={() => setForceLogoutAllConfirm(true)}
               size="sm"
               variant="outline"
-              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
+              className="gap-1.5 border-white text-white hover:bg-black hover:text-white hover:border-white"
               disabled={forceLogoutAllMutation.isPending}
             >
               {forceLogoutAllMutation.isPending ? (
@@ -843,7 +843,7 @@ export default function UserManagement() {
               onClick={() => navigate("/admin/security")}
               size="sm"
               variant="outline"
-              className="gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              className="gap-1.5 border-white text-white hover:bg-black hover:text-white"
             >
               <ShieldAlert className="w-4 h-4" />
               Security Events
@@ -860,7 +860,7 @@ export default function UserManagement() {
             onClick={() => setForceLogoutAllConfirm(true)}
             size="sm"
             variant="outline"
-            className="flex-1 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 text-xs"
+            className="flex-1 gap-1.5 border-white text-white hover:bg-black hover:text-white hover:border-white text-xs"
             disabled={forceLogoutAllMutation.isPending}
           >
             {forceLogoutAllMutation.isPending ? (
@@ -874,7 +874,7 @@ export default function UserManagement() {
             onClick={() => navigate("/admin/security")}
             size="sm"
             variant="outline"
-            className="flex-1 gap-1.5 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs"
+            className="flex-1 gap-1.5 border-white text-white hover:bg-black hover:text-white text-xs"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             Security Events
@@ -901,9 +901,9 @@ export default function UserManagement() {
             { label: "Handicappers", value: rawUsers.filter((u) => u.role === "handicapper").length },
             { label: "Active Access", value: rawUsers.filter((u) => u.hasAccess).length },
           ].map((stat) => (
-            <div key={stat.label} className="bg-white/4 border border-white/8 rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0">
+            <div key={stat.label} className="bg-black border border-white rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0">
               <div className="text-lg sm:text-xl font-bold text-white truncate">{stat.value}</div>
-              <div className="text-xs text-zinc-300 tracking-wide leading-tight mt-0.5 truncate">{stat.label}</div>
+              <div className="text-xs text-white tracking-wide leading-tight mt-0.5 truncate">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -913,7 +913,7 @@ export default function UserManagement() {
 
         {/* Search bar */}
         <div className="mb-4 relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
           <input
@@ -921,11 +921,11 @@ export default function UserManagement() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by username or email…"
-            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-9 py-2 text-sm text-white placeholder:text-zinc-300 focus:outline-none focus:border-white/25 transition-colors"
+            className="w-full bg-black border border-white rounded-lg pl-9 pr-9 py-2 text-sm text-white placeholder:text-white focus:outline-none focus:border-white transition-colors"
           />
           {searchQuery && (
             <button type="button" onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -934,7 +934,7 @@ export default function UserManagement() {
 
         {/* Filtered count indicator */}
         {users.length !== rawUsers.length && (
-          <div className="mb-3 flex items-center gap-2 text-xs text-zinc-200">
+          <div className="mb-3 flex items-center gap-2 text-xs text-white">
             <span>Showing <span className="text-white font-semibold">{users.length}</span> of <span className="text-white font-semibold">{rawUsers.length}</span> accounts</span>
             <button type="button" onClick={() => {
                 setSearchQuery("");
@@ -944,7 +944,7 @@ export default function UserManagement() {
                   lastSignIn: defaultColState(),
                 });
               }}
-              className="text-red-400 hover:text-red-300 flex items-center gap-1"
+              className="text-white hover:text-white flex items-center gap-1"
             >
               <X className="w-3 h-3" /> Clear all filters
             </button>
@@ -952,11 +952,11 @@ export default function UserManagement() {
         )}
 
         {/* Table */}
-        <div className="bg-white/3 border border-white/8 rounded-xl overflow-hidden w-full">
+        <div className="bg-black border border-white rounded-xl overflow-hidden w-full">
           <div className="overflow-x-auto w-full">
           <Table>
             <TableHeader>
-              <TableRow className="border-white/8 hover:bg-transparent">
+              <TableRow className="border-white hover:bg-transparent">
                 <TableHead>
                   <ColFilterDropdown label="USERNAME" colKey="username" options={opts.username} state={cols.username} onChange={(s) => updateCol("username", s)} />
                 </TableHead>
@@ -978,31 +978,31 @@ export default function UserManagement() {
                 <TableHead>
                   <ColFilterDropdown label="LAST SIGN IN" colKey="lastSignIn" options={opts.lastSignIn} state={cols.lastSignIn} onChange={(s) => updateCol("lastSignIn", s)} />
                 </TableHead>
-                <TableHead className="text-zinc-200 font-semibold tracking-wider text-xs">PLAN</TableHead>
-                <TableHead className="text-zinc-200 font-semibold tracking-wider text-xs">DISCORD STATUS</TableHead>
-                <TableHead className="text-zinc-200 font-semibold tracking-wider text-xs">DISCORD USERNAME</TableHead>
-                <TableHead className="text-zinc-200 font-semibold tracking-wider text-xs text-right">ACTIONS</TableHead>
+                <TableHead className="text-white font-semibold tracking-wider text-xs">PLAN</TableHead>
+                <TableHead className="text-white font-semibold tracking-wider text-xs">DISCORD STATUS</TableHead>
+                <TableHead className="text-white font-semibold tracking-wider text-xs">DISCORD USERNAME</TableHead>
+                <TableHead className="text-white font-semibold tracking-wider text-xs text-right">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-zinc-300">
+                  <TableCell colSpan={10} className="text-center py-12 text-white">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
                     Loading accounts...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-zinc-300">
+                  <TableCell colSpan={10} className="text-center py-12 text-white">
                     {rawUsers.length === 0 ? "No accounts yet. Create the first one." : "No accounts match the current filters."}
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
-                  <TableRow key={user.id} className="border-white/5 hover:bg-white/3">
+                  <TableRow key={user.id} className="border-white hover:bg-black">
                     <TableCell className="font-semibold text-white">@{user.username}</TableCell>
-                    <TableCell className="text-zinc-200 text-sm">{user.email}</TableCell>
+                    <TableCell className="text-white text-sm">{user.email}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${ROLE_COLORS[user.role]}`}>
                         {ROLE_ICONS[user.role]}
@@ -1012,26 +1012,26 @@ export default function UserManagement() {
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                         user.hasAccess
-                          ? "bg-green-500/15 text-green-400 border-green-500/30"
-                          : "bg-red-500/15 text-red-400 border-red-500/30"
+                          ? "bg-black text-[#45E0A8] border-[#45E0A8]"
+                          : "bg-black text-white border-white"
                       }`}>
                         {user.hasAccess ? "YES" : "NO"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-zinc-200 text-sm">{formatExpiry(user.expiryDate)}</TableCell>
+                    <TableCell className="text-white text-sm">{formatExpiry(user.expiryDate)}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                           user.termsAccepted
-                            ? "bg-green-500/15 text-green-400 border-green-500/30"
-                            : "bg-zinc-500/15 text-zinc-300 border-zinc-500/20"
+                            ? "bg-black text-[#45E0A8] border-[#45E0A8]"
+                            : "bg-black text-white border-white"
                         }`}
                         title={user.termsAccepted && user.termsAcceptedAt ? `Accepted: ${new Date(user.termsAcceptedAt).toLocaleString()}` : "Not yet accepted"}
                       >
                         {user.termsAccepted ? "ACCEPTED" : "PENDING"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-zinc-200 text-sm">{formatDate(user.lastSignedIn)}</TableCell>
+                    <TableCell className="text-white text-sm">{formatDate(user.lastSignedIn)}</TableCell>
                     {/* PLAN column */}
                     <TableCell>
                       <div className="flex flex-col gap-1">
@@ -1040,16 +1040,16 @@ export default function UserManagement() {
                             {user.stripePlanId ? (
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border ${
                                 user.stripePlanId === 'annual'
-                                  ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
-                                  : 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                  ? 'bg-black text-white border-white'
+                                  : 'bg-black text-white border-white'
                               }`}>
                                 {user.stripePlanId === 'annual' ? '★ ANNUAL' : 'MONTHLY'}
                               </span>
                             ) : (
-                              <span className="text-[10px] text-zinc-400">Stripe</span>
+                              <span className="text-[10px] text-white">Stripe</span>
                             )}
                             {user.pendingSetup && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-black text-white border border-white">
                                 ⏳ PENDING SETUP
                               </span>
                             )}
@@ -1057,7 +1057,7 @@ export default function UserManagement() {
                               href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                              className="inline-flex items-center gap-1 text-[10px] text-white hover:text-white transition-colors"
                               title="View in Stripe Dashboard"
                             >
                               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
@@ -1065,7 +1065,7 @@ export default function UserManagement() {
                             </a>
                           </>
                         ) : (
-                          <span className="text-[10px] text-zinc-600">—</span>
+                          <span className="text-[10px] text-white">—</span>
                         )}
                       </div>
                     </TableCell>
@@ -1074,8 +1074,8 @@ export default function UserManagement() {
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${
                           user.discordId
-                            ? "bg-[rgba(88,101,242,0.15)] text-[#7289da] border-[rgba(88,101,242,0.4)]"
-                            : "bg-zinc-500/10 text-zinc-300 border-zinc-500/20"
+                            ? "bg-black text-white border-white"
+                            : "bg-black text-white border-white"
                         }`}
                         title={user.discordId && user.discordConnectedAt
                           ? `Discord ID: ${user.discordId} · Linked: ${new Date(user.discordConnectedAt).toLocaleString()}`
@@ -1093,7 +1093,7 @@ export default function UserManagement() {
                             type="button"
                             onClick={() => handleGenerateInvite(user.id)}
                             disabled={inviteGenerating === user.id}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-[rgba(88,101,242,0.15)] hover:bg-[rgba(88,101,242,0.3)] text-[#7289da] hover:text-white border border-[rgba(88,101,242,0.3)] hover:border-[#7289da] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-black hover:bg-black text-white hover:text-white border border-white hover:border-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Generate a unique Discord invite link for this user"
                           >
                             {inviteGenerating === user.id ? (
@@ -1115,7 +1115,7 @@ export default function UserManagement() {
                     {/* DISCORD USERNAME column */}
                     <TableCell className="text-sm">
                       {user.discordUsername ? (
-                        <span className="text-[#7289da] font-medium">@{user.discordUsername}</span>
+                        <span className="text-white font-medium">@{user.discordUsername}</span>
                       ) : editingDiscordId === user.id ? (
                         /* ── Inline Discord ID input ──────────────────────────── */
                         <div className="flex items-center gap-1 min-w-0">
@@ -1129,14 +1129,14 @@ export default function UserManagement() {
                               if (e.key === "Escape") cancelEditDiscordId();
                             }}
                             placeholder="Discord ID (e.g. 123456789012345678)"
-                            className="w-44 px-2 py-0.5 text-xs rounded bg-zinc-800 border border-[#7289da]/60 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-[#7289da] focus:ring-1 focus:ring-[#7289da]/40"
+                            className="w-44 px-2 py-0.5 text-xs rounded bg-black border border-white text-white placeholder-white focus:outline-none focus:border-white focus:ring-1 focus:ring-[#45E0A8]"
                             disabled={setManualDiscordIdMutation.isPending}
                           />
                           <button
                             type="button"
                             onClick={() => submitDiscordId(user.id)}
                             disabled={setManualDiscordIdMutation.isPending}
-                            className="p-1 rounded bg-[#7289da]/20 hover:bg-[#7289da]/40 text-[#7289da] transition-colors disabled:opacity-50"
+                            className="p-1 rounded bg-black hover:bg-black text-white transition-colors disabled:opacity-50"
                             title="Save Discord ID"
                           >
                             {setManualDiscordIdMutation.isPending
@@ -1147,7 +1147,7 @@ export default function UserManagement() {
                           <button
                             type="button"
                             onClick={cancelEditDiscordId}
-                            className="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                            className="p-1 rounded hover:bg-black text-white hover:text-white transition-colors"
                             title="Cancel"
                           >
                             <X className="w-2.5 h-2.5" />
@@ -1158,10 +1158,10 @@ export default function UserManagement() {
                         <button
                           type="button"
                           onClick={() => startEditDiscordId(user)}
-                          className="group flex items-center gap-1 text-zinc-500 hover:text-zinc-200 transition-colors"
+                          className="group flex items-center gap-1 text-white hover:text-white transition-colors"
                           title="Click to connect Discord ID"
                         >
-                          <span className="text-zinc-600 group-hover:text-zinc-400">—</span>
+                          <span className="text-white group-hover:text-white">—</span>
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-0 group-hover:opacity-60 transition-opacity"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         </button>
                       )}
@@ -1169,12 +1169,12 @@ export default function UserManagement() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button type="button" onClick={() => openEdit(user)}
-                          className="p-1.5 rounded hover:bg-white/8 text-zinc-200 hover:text-white transition-colors"
+                          className="p-1.5 rounded hover:bg-black text-white hover:text-white transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button type="button" onClick={() => forceLogoutUserMutation.mutate({ id: user.id })}
-                          className="p-1.5 rounded hover:bg-orange-500/15 text-zinc-200 hover:text-orange-400 transition-colors"
+                          className="p-1.5 rounded hover:bg-black text-white hover:text-white transition-colors"
                           disabled={user.id === appUser?.id || forceLogoutUserMutation.isPending}
                           title="Force logout this user"
                         >
@@ -1191,7 +1191,7 @@ export default function UserManagement() {
                                 disconnectDiscordMutation.mutate({ id: user.id });
                               }
                             }}
-                            className="p-1.5 rounded hover:bg-[rgba(88,101,242,0.2)] text-zinc-200 hover:text-[#7289da] transition-colors"
+                            className="p-1.5 rounded hover:bg-black text-white hover:text-white transition-colors"
                             disabled={disconnectDiscordMutation.isPending}
                             title={`Unlink Discord @${user.discordUsername ?? user.discordId}`}
                           >
@@ -1210,7 +1210,7 @@ export default function UserManagement() {
                               syncDiscordRoleMutation.mutate({ userId: user.id });
                             }}
                             disabled={syncDiscordRoleMutation.isPending}
-                            className="p-1.5 rounded hover:bg-emerald-500/15 text-zinc-200 hover:text-emerald-400 transition-colors disabled:opacity-50"
+                            className="p-1.5 rounded hover:bg-black text-white hover:text-[#45E0A8] transition-colors disabled:opacity-50"
                             title="Sync Discord role (grant if hasAccess=true, revoke if false)"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${syncDiscordRoleMutation.isPending ? 'animate-spin' : ''}`} />
@@ -1222,14 +1222,14 @@ export default function UserManagement() {
                             href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded hover:bg-violet-500/15 text-zinc-200 hover:text-violet-400 transition-colors"
+                            className="p-1.5 rounded hover:bg-black text-white hover:text-white transition-colors"
                             title="View customer in Stripe Dashboard"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                           </a>
                         )}
                         <button type="button" onClick={() => setDeleteConfirm(user)}
-                          className="p-1.5 rounded hover:bg-red-500/15 text-zinc-200 hover:text-red-400 transition-colors"
+                          className="p-1.5 rounded hover:bg-black text-white hover:text-white transition-colors"
                           disabled={user.id === appUser?.id}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1249,7 +1249,7 @@ export default function UserManagement() {
       <Dialog open={showCreate || !!editUser} onOpenChange={(open) => {
         if (!open) { setShowCreate(false); setEditUser(null); }
       }}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-md">
+        <DialogContent className="bg-black border-white text-white max-w-md">
           <DialogHeader>
             <DialogTitle className="tracking-wider">
               {editUser ? "EDIT ACCOUNT" : "CREATE ACCOUNT"}
@@ -1257,28 +1257,28 @@ export default function UserManagement() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label className="text-zinc-200 text-xs tracking-wider">EMAIL</Label>
+              <Label className="text-white text-xs tracking-wider">EMAIL</Label>
               <Input
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="user@example.com"
-                className="bg-white/5 border-white/10 text-white placeholder:text-zinc-300"
+                className="bg-black border-white text-white placeholder:text-white"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-200 text-xs tracking-wider">USERNAME</Label>
+              <Label className="text-white text-xs tracking-wider">USERNAME</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-300">@</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white">@</span>
                 <Input
                   value={form.username.replace(/^@/, "")}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
                   placeholder="username"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-zinc-300 pl-7"
+                  className="bg-black border-white text-white placeholder:text-white pl-7"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-200 text-xs tracking-wider">
+              <Label className="text-white text-xs tracking-wider">
                 {editUser ? "NEW PASSWORD (leave blank to keep current)" : "PASSWORD"}
               </Label>
               <div className="relative">
@@ -1293,10 +1293,10 @@ export default function UserManagement() {
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   placeholder={editUser ? "Leave blank to keep current" : "Min 8 characters"}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-zinc-300 pr-10"
+                  className="bg-black border-white text-white placeholder:text-white pr-10"
                 />
                 <button type="button" onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -1306,12 +1306,12 @@ export default function UserManagement() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-zinc-200 text-xs tracking-wider">ROLE</Label>
+                <Label className="text-white text-xs tracking-wider">ROLE</Label>
                 <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as FormState["role"] }))}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectTrigger className="bg-black border-white text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10">
+                  <SelectContent className="bg-black border-white">
                     <SelectItem value="owner">Owner</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="handicapper">Handicapper</SelectItem>
@@ -1320,25 +1320,25 @@ export default function UserManagement() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-zinc-200 text-xs tracking-wider">ACCESS</Label>
-                <div className="flex items-center gap-2 h-10 px-3 bg-white/5 border border-white/10 rounded-md">
+                <Label className="text-white text-xs tracking-wider">ACCESS</Label>
+                <div className="flex items-center gap-2 h-10 px-3 bg-black border border-white rounded-md">
                   <Switch
                     checked={form.hasAccess}
                     onCheckedChange={(v) => setForm((f) => ({ ...f, hasAccess: v }))}
                   />
-                  <span className={`text-sm font-semibold ${form.hasAccess ? "text-green-400" : "text-red-400"}`}>
+                  <span className={`text-sm font-semibold ${form.hasAccess ? "text-[#45E0A8]" : "text-white"}`}>
                     {form.hasAccess ? "Yes" : "No"}
                   </span>
                 </div>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-zinc-200 text-xs tracking-wider">EXPIRY DATE</Label>
+              <Label className="text-white text-xs tracking-wider">EXPIRY DATE</Label>
               <Select value={form.expiryType} onValueChange={(v) => setForm((f) => ({ ...f, expiryType: v as "lifetime" | "custom" }))}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                <SelectTrigger className="bg-black border-white text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1a1a] border-white/10">
+                <SelectContent className="bg-black border-white">
                   <SelectItem value="lifetime">Lifetime Access</SelectItem>
                   <SelectItem value="custom">Custom Date</SelectItem>
                 </SelectContent>
@@ -1348,7 +1348,7 @@ export default function UserManagement() {
                   type="datetime-local"
                   value={form.expiryDateStr}
                   onChange={(e) => setForm((f) => ({ ...f, expiryDateStr: e.target.value }))}
-                  className="bg-white/5 border-white/10 text-white mt-2"
+                  className="bg-black border-white text-white mt-2"
                 />
               )}
             </div>
@@ -1357,7 +1357,7 @@ export default function UserManagement() {
             <Button
               variant="outline"
               onClick={() => { setShowCreate(false); setEditUser(null); }}
-              className="border-white/10 text-zinc-200 hover:text-white"
+              className="border-white text-white hover:text-white"
             >
               Cancel
             </Button>
@@ -1375,25 +1375,25 @@ export default function UserManagement() {
 
       {/* Force Logout All Confirm Dialog */}
       <Dialog open={forceLogoutAllConfirm} onOpenChange={(open) => { if (!open) setForceLogoutAllConfirm(false); }}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm">
+        <DialogContent className="bg-black border-white text-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="tracking-wider text-orange-400 flex items-center gap-2">
+            <DialogTitle className="tracking-wider text-white flex items-center gap-2">
               <LogOut className="w-4 h-4" />
               FORCE LOGOUT ALL
             </DialogTitle>
           </DialogHeader>
-          <p className="text-zinc-200 text-sm py-2">
+          <p className="text-white text-sm py-2">
             This will immediately invalidate all active sessions for <span className="text-white font-semibold">every user except you</span>. They will be logged out on their next request.
           </p>
-          <p className="text-zinc-300 text-xs">
+          <p className="text-white text-xs">
             Your own session will not be affected. Users can log back in normally.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setForceLogoutAllConfirm(false)} className="border-white/10 text-zinc-200 hover:text-white">
+            <Button variant="outline" onClick={() => setForceLogoutAllConfirm(false)} className="border-white text-white hover:text-white">
               Cancel
             </Button>
             <Button
-              className="bg-orange-600 hover:bg-orange-500 text-white"
+              className="bg-black hover:bg-black text-white"
               onClick={() => {
                 forceLogoutAllMutation.mutate();
                 setForceLogoutAllConfirm(false);
@@ -1417,13 +1417,13 @@ export default function UserManagement() {
           }}
         >
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black backdrop-blur-sm" />
           {/* Modal box */}
-          <div className="relative z-10 bg-[#18181b] border border-[#7289da]/40 rounded-xl shadow-2xl p-5 w-[420px] max-w-[95vw]">
+          <div className="relative z-10 bg-black border border-white rounded-xl shadow-2xl p-5 w-[420px] max-w-[95vw]">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#7289da">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF">
                   <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.08.11 18.1.132 18.115a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
                 </svg>
                 <span className="text-white font-semibold text-sm">Pre-Register Discord ID</span>
@@ -1431,26 +1431,26 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={cancelEditDiscordId}
-                className="p-1 rounded hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="p-1 rounded hover:bg-black text-white hover:text-white transition-colors"
                 title="Cancel (Escape)"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             {/* User context */}
-            <div className="mb-3 text-xs text-zinc-400 bg-zinc-800/60 rounded-lg px-3 py-2">
-              <span className="text-zinc-200 font-medium">
+            <div className="mb-3 text-xs text-white bg-black rounded-lg px-3 py-2">
+              <span className="text-white font-medium">
                 @{rawUsers.find(u => u.id === editingDiscordId)?.username ?? editingDiscordId}
               </span>
-              <span className="ml-2 text-zinc-500">
+              <span className="ml-2 text-white">
                 {rawUsers.find(u => u.id === editingDiscordId)?.email ?? ""}
               </span>
             </div>
             {/* Instructions */}
-            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
-              Enter the user&apos;s Discord <span className="text-zinc-200 font-medium">User ID</span> (17–20 digit snowflake).
-              To find it: right-click their name in Discord → <span className="text-zinc-200">Copy User ID</span>.
-              The account will be <span className="text-green-400 font-medium">immediately connected</span> — no login required from the user.
+            <p className="text-xs text-white mb-3 leading-relaxed">
+              Enter the user&apos;s Discord <span className="text-white font-medium">User ID</span> (17–20 digit snowflake).
+              To find it: right-click their name in Discord → <span className="text-white">Copy User ID</span>.
+              The account will be <span className="text-[#45E0A8] font-medium">immediately connected</span> — no login required from the user.
             </p>
             {/* Input */}
             <input
@@ -1463,11 +1463,11 @@ export default function UserManagement() {
                 if (e.key === "Escape") cancelEditDiscordId();
               }}
               placeholder="e.g. 123456789012345678"
-              className="w-full px-3 py-2 text-sm rounded-lg bg-zinc-900 border border-[#7289da]/50 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-[#7289da] focus:ring-2 focus:ring-[#7289da]/30 transition-all mb-4"
+              className="w-full px-3 py-2 text-sm rounded-lg bg-black border border-white text-white placeholder-white focus:outline-none focus:border-white focus:ring-2 focus:ring-[#45E0A8] transition-all mb-4"
               disabled={setManualDiscordIdMutation.isPending}
             />
             {/* Note about clearing */}
-            <p className="text-xs text-zinc-600 mb-3">
+            <p className="text-xs text-white mb-3">
               Leave empty and save to clear a previously entered ID.
             </p>
             {/* Actions */}
@@ -1475,7 +1475,7 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={cancelEditDiscordId}
-                className="px-3 py-1.5 text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg bg-black hover:bg-black text-white hover:text-white transition-colors"
               >
                 Cancel
               </button>
@@ -1483,7 +1483,7 @@ export default function UserManagement() {
                 type="button"
                 onClick={() => editingDiscordId !== null && submitDiscordId(editingDiscordId)}
                 disabled={setManualDiscordIdMutation.isPending}
-                className="px-4 py-1.5 text-xs rounded-lg bg-[#7289da] hover:bg-[#5b6eae] text-white font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="px-4 py-1.5 text-xs rounded-lg bg-black hover:bg-black text-white font-semibold transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {setManualDiscordIdMutation.isPending ? (
                   <>
@@ -1504,15 +1504,15 @@ export default function UserManagement() {
 
       {/* Delete Confirm Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm">
+        <DialogContent className="bg-black border-white text-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="tracking-wider text-red-400">DELETE ACCOUNT</DialogTitle>
+            <DialogTitle className="tracking-wider text-white">DELETE ACCOUNT</DialogTitle>
           </DialogHeader>
-          <p className="text-zinc-200 text-sm py-2">
+          <p className="text-white text-sm py-2">
             Are you sure you want to delete <span className="text-white font-semibold">@{deleteConfirm?.username}</span>? This action cannot be undone.
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-white/10 text-zinc-200 hover:text-white">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="border-white text-white hover:text-white">
               Cancel
             </Button>
             <Button
@@ -1528,22 +1528,22 @@ export default function UserManagement() {
       {/* ─── Discord Invite Link Modal ─────────────────────────────────────── */}
       {inviteModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setInviteModal(null); }}
         >
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 space-y-5">
+          <div className="bg-black border border-white rounded-xl shadow-2xl w-full max-w-lg mx-4 p-6 space-y-5">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-white">Discord Invite Link</h2>
-                <p className="text-sm text-zinc-400 mt-0.5">
+                <p className="text-sm text-white mt-0.5">
                   Send this link to <span className="text-white font-medium">@{inviteModal.username}</span> so they can connect their Discord account.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setInviteModal(null)}
-                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg hover:bg-black text-white hover:text-white transition-colors flex-shrink-0"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1552,17 +1552,17 @@ export default function UserManagement() {
             </div>
 
             {/* Invite URL box */}
-            <div className="rounded-lg bg-zinc-800 border border-zinc-600 p-3 space-y-2">
-              <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide">Invite URL (single-use · 7 days)</p>
+            <div className="rounded-lg bg-black border border-white p-3 space-y-2">
+              <p className="text-xs text-white font-medium uppercase tracking-wide">Invite URL (single-use · 7 days)</p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs text-[#7289da] break-all font-mono leading-relaxed">
+                <code className="flex-1 text-xs text-white break-all font-mono leading-relaxed">
                   {inviteModal.inviteUrl}
                 </code>
               </div>
             </div>
 
             {/* Expiry notice */}
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="flex items-center gap-2 text-xs text-white">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
               </svg>
@@ -1570,9 +1570,9 @@ export default function UserManagement() {
             </div>
 
             {/* How it works */}
-            <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-zinc-300">How it works</p>
-              <ol className="text-xs text-zinc-400 space-y-1 list-decimal list-inside">
+            <div className="rounded-lg bg-black border border-white p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-white">How it works</p>
+              <ol className="text-xs text-white space-y-1 list-decimal list-inside">
                 <li>Send this link to <span className="text-white">@{inviteModal.username}</span></li>
                 <li>They open it — Discord&#39;s Authorize screen appears</li>
                 <li>They click Authorize — their Discord account is linked automatically</li>
@@ -1585,7 +1585,7 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={handleCopyInvite}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold text-sm transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-black hover:bg-black text-white font-semibold text-sm transition-colors"
               >
                 {inviteCopied ? (
                   <>
@@ -1606,7 +1606,7 @@ export default function UserManagement() {
               <button
                 type="button"
                 onClick={() => setInviteModal(null)}
-                className="px-5 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium text-sm transition-colors border border-zinc-600"
+                className="px-5 py-2.5 rounded-lg bg-black hover:bg-black text-white hover:text-white font-medium text-sm transition-colors border border-white"
               >
                 Close
               </button>

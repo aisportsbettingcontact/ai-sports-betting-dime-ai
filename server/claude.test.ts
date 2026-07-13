@@ -58,8 +58,8 @@ describe("Claude Fable 5 Integration", () => {
       const { UIUX_SYSTEM_PROMPT } = await import("./_core/claude");
       expect(UIUX_SYSTEM_PROMPT).toContain("AI Sports Betting");
       expect(UIUX_SYSTEM_PROMPT).toContain("Prez Bets");
-      expect(UIUX_SYSTEM_PROMPT).toContain("#00ff41");
-      expect(UIUX_SYSTEM_PROMPT).toContain("Barlow Condensed");
+      expect(UIUX_SYSTEM_PROMPT).toContain("#45E0A8");
+      expect(UIUX_SYSTEM_PROMPT).toContain("Familjen Grotesk");
       expect(UIUX_SYSTEM_PROMPT).toContain("TypeScript");
     });
   });

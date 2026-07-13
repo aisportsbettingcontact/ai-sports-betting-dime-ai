@@ -135,7 +135,7 @@ function TeamBadge({ slug, size = 32 }: { slug: string; size?: number }) {
             // Enhanced visibility: brightness lifts dark logos, contrast sharpens, saturate keeps vivid
             // brightness(1.7): lifts dark logos (A's green, Padres brown) without blowing out bright logos
             filter:
-              "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px rgba(255,255,255,0.28))",
+              "brightness(1.7) contrast(1.12) saturate(1.35) drop-shadow(0 0 4px transparent)",
           }}
         />
       ) : (
@@ -244,7 +244,7 @@ function SearchResultRow({
             </span>
             {awayNick && (
               <span
-                className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block"
+                className="bs-nick font-normal text-white leading-tight hidden sm:block"
                 style={{ fontSize: 10, whiteSpace: "nowrap" }}
               >
                 {awayNick}
@@ -257,13 +257,13 @@ function SearchResultRow({
           className="flex flex-col items-center flex-shrink-0"
           style={{ minWidth: 60 }}
         >
-          <span className="text-sm text-zinc-300 font-medium leading-tight">
+          <span className="text-sm text-white font-medium leading-tight">
             @
           </span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap mt-0.5">
+          <span className="text-xs text-white leading-tight text-center whitespace-nowrap mt-0.5">
             {dateShort}
           </span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap">
+          <span className="text-xs text-white leading-tight text-center whitespace-nowrap">
             {time}
           </span>
         </div>
@@ -293,7 +293,7 @@ function SearchResultRow({
             </span>
             {homeNick && (
               <span
-                className="bs-nick font-normal text-zinc-300 leading-tight hidden sm:block"
+                className="bs-nick font-normal text-white leading-tight hidden sm:block"
                 style={{ fontSize: 10, whiteSpace: "nowrap" }}
               >
                 {homeNick}
@@ -752,16 +752,16 @@ export default function BettingSplitsPage({
         return;
       }
       el.style.transition = "box-shadow 0.16s ease, outline 0.16s ease";
-      el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)";
+      el.style.boxShadow = "0 0 0 4px transparent";
       let count = 0;
       const pulse = setInterval(() => {
         count++;
         if (count % 2 === 0) {
-          el.style.boxShadow = "0 0 0 4px rgba(69,224,168,0.3)";
+          el.style.boxShadow = "0 0 0 4px transparent";
           el.style.outline = "2px solid #45E0A8";
         } else {
-          el.style.boxShadow = "0 0 0 2px rgba(69,224,168,0.15)";
-          el.style.outline = "2px solid rgba(69,224,168,0.4)";
+          el.style.boxShadow = "0 0 0 2px transparent";
+          el.style.outline = "2px solid #45E0A8";
         }
         if (count >= 5) {
           clearInterval(pulse);
@@ -853,10 +853,10 @@ export default function BettingSplitsPage({
               style={{
                 background: "hsl(var(--secondary))",
                 borderColor: searchFocused
-                  ? "rgba(34,197,94,0.5)"
+                  ? "#45E0A8"
                   : "hsl(var(--border))",
                 boxShadow: searchFocused
-                  ? "0 0 0 1px rgba(34,197,94,0.15)"
+                  ? "0 0 0 1px #45E0A8"
                   : "none",
               }}
             >
@@ -892,28 +892,28 @@ export default function BettingSplitsPage({
             <div
               className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
               style={{
-                background: "#0f0f0f",
+                background: "#000000",
                 maxHeight: "calc(3 * 68px + 44px)",
                 overflowY: "auto",
               }}
             >
               <div
                 className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0"
-                style={{ background: "#0f0f0f", zIndex: 10 }}
+                style={{ background: "#000000", zIndex: 10 }}
               >
-                <span className="text-sm text-zinc-300 uppercase tracking-widest">
+                <span className="text-sm text-white uppercase tracking-widest">
                   {dropdownResults.length === 0
                     ? "No results"
                     : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}
                 </span>
                 {dropdownResults.length > 0 && (
-                  <span className="text-sm text-zinc-300">tap to jump</span>
+                  <span className="text-sm text-white">tap to jump</span>
                 )}
               </div>
               {dropdownResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 gap-2">
-                  <Search className="w-5 h-5 text-zinc-300" />
-                  <p className="text-xs text-zinc-300">
+                  <Search className="w-5 h-5 text-white" />
+                  <p className="text-xs text-white">
                     No games found for "{searchQuery}"
                   </p>
                 </div>
@@ -959,7 +959,7 @@ export default function BettingSplitsPage({
               <span
                 className="bs-datehdr-sub font-semibold"
                 style={{
-                  color: "#a3a3a3",
+                  color: "#FFFFFF",
                   letterSpacing: "0.06em",
                   fontSize: "clamp(9px, 2.8vw, 17px)",
                   textTransform: "uppercase",

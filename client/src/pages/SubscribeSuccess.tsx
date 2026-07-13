@@ -53,17 +53,17 @@ function FeatureList() {
   ];
   return (
     <div
-      className="rounded-xl border border-white/10 p-5 mb-6 text-left"
-      style={{ background: "rgba(10,14,22,0.95)" }}
+      className="rounded-xl border border-white p-5 mb-6 text-left"
+      style={{ background: "#000000" }}
     >
-      <p className="text-[11px] font-bold text-[#6b7280] tracking-widest uppercase mb-3">
+      <p className="text-[11px] font-bold text-white tracking-widest uppercase mb-3">
         What you now have access to
       </p>
       <ul className="space-y-2">
         {features.map((item) => (
-          <li key={item} className="flex items-center gap-2.5 text-[13px] text-[#d1d5db]">
+          <li key={item} className="flex items-center gap-2.5 text-[13px] text-white">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
-              <circle cx="6" cy="6" r="6" fill="rgba(69,224,168,0.15)" />
+              <circle cx="6" cy="6" r="6" fill="transparent" />
               <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="#45E0A8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             {item}
@@ -158,9 +158,9 @@ export default function SubscribeSuccess() {
   // No session ID
   if (!sessionId) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
-          <p className="text-[#9ca3af] mb-4">No session ID found. If you just subscribed, please check your email for confirmation.</p>
+          <p className="text-white mb-4">No session ID found. If you just subscribed, please check your email for confirmation.</p>
           <button onClick={() => navigate("/")} className="text-[13px] text-[#45E0A8] hover:underline">Back to home</button>
         </div>
       </div>
@@ -170,11 +170,11 @@ export default function SubscribeSuccess() {
   // Loading
   if (isLookingUp) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-[#45E0A8]/30 border-t-[#45E0A8] animate-spin mx-auto mb-4" />
-          <p className="text-[#9ca3af] text-sm">Confirming your subscription...</p>
-          <p className="text-[#6b7280] text-xs mt-2">This usually takes a few seconds.</p>
+          <div className="w-12 h-12 rounded-full border-2 border-transparent border-t-[#45E0A8] animate-spin mx-auto mb-4" />
+          <p className="text-white text-sm">Confirming your subscription...</p>
+          <p className="text-white text-xs mt-2">This usually takes a few seconds.</p>
         </div>
       </div>
     );
@@ -183,10 +183,10 @@ export default function SubscribeSuccess() {
   // Lookup error
   if (lookupError && !pendingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
-          <p className="text-[#ef4444] mb-2 font-semibold">Could not confirm your subscription.</p>
-          <p className="text-[#9ca3af] text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
+          <p className="text-white mb-2 font-semibold">Could not confirm your subscription.</p>
+          <p className="text-white text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
           <button onClick={() => navigate("/")} className="mt-4 text-[13px] text-[#45E0A8] hover:underline">Back to home</button>
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function SubscribeSuccess() {
   if (showConfirmation) {
     const username = completedUsername ?? pendingUser?.username ?? null;
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#0B0B0F" }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -213,8 +213,8 @@ export default function SubscribeSuccess() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{
-              background: "rgba(69,224,168,0.10)",
-              border: "2px solid rgba(69,224,168,0.4)",
+              background: "transparent",
+              border: "2px solid #45E0A8",
             }}
           >
             <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
@@ -224,10 +224,10 @@ export default function SubscribeSuccess() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
             <h1 className="text-3xl font-black text-white mb-2" style={{ letterSpacing: "-0.03em" }}>You're In.</h1>
             {username && <p className="text-[#45E0A8] font-semibold text-sm mb-1">@{username}</p>}
-            <p className="text-[#9ca3af] text-base mb-1">
+            <p className="text-white text-base mb-1">
               Your <span className="text-white font-semibold">{planLabel} Plan</span> is now active.
             </p>
-            <p className="text-[#6b7280] text-sm mb-8">{planPrice} · Full access to all models, projections, and edge tools.</p>
+            <p className="text-white text-sm mb-8">{planPrice} · Full access to all models, projections, and edge tools.</p>
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.4 }}>
             <FeatureList />
@@ -243,7 +243,7 @@ export default function SubscribeSuccess() {
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <button onClick={() => navigate("/")} className="text-[13px] text-[#6b7280] hover:text-[#9ca3af] transition-colors">Back to home</button>
+            <button onClick={() => navigate("/")} className="text-[13px] text-white hover:text-white transition-colors">Back to home</button>
           </motion.div>
 
         </motion.div>
@@ -253,7 +253,7 @@ export default function SubscribeSuccess() {
 
   // New user — show account setup form
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#0B0B0F" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#000000" }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -267,8 +267,8 @@ export default function SubscribeSuccess() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
             style={{
-              background: "rgba(69,224,168,0.10)",
-              border: "2px solid rgba(69,224,168,0.4)",
+              background: "transparent",
+              border: "2px solid #45E0A8",
             }}
           >
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -276,7 +276,7 @@ export default function SubscribeSuccess() {
             </svg>
           </motion.div>
           <h1 className="text-2xl font-black text-white mb-1" style={{ letterSpacing: "-0.03em" }}>Payment Confirmed.</h1>
-          <p className="text-[#9ca3af] text-sm">Set up your account to access the platform.</p>
+          <p className="text-white text-sm">Set up your account to access the platform.</p>
           {pendingUser?.pendingUsername && (
             <p className="text-[#45E0A8] text-sm font-semibold mt-1">@{pendingUser.pendingUsername}</p>
           )}
@@ -284,34 +284,34 @@ export default function SubscribeSuccess() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-white/10 p-6"
-          style={{ background: "rgba(10,14,22,0.95)" }}
+          className="rounded-xl border border-white p-6"
+          style={{ background: "#000000" }}
         >
-          <p className="text-[11px] font-bold text-[#6b7280] tracking-widest uppercase mb-5">Create Your Account</p>
+          <p className="text-[11px] font-bold text-white tracking-widest uppercase mb-5">Create Your Account</p>
 
           {/* Email */}
           <div className="mb-4">
-            <label className="block text-[12px] font-semibold text-[#9ca3af] mb-1.5">Email Address</label>
+            <label className="block text-[12px] font-semibold text-white mb-1.5">Email Address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setFormError(null); }}
               placeholder="you@example.com"
               autoComplete="email"
-              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-[#4b5563] border outline-none transition-all"
+              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
               style={{
-                background: "rgba(255,255,255,0.04)",
-                borderColor: email && !emailValid ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)",
+                background: "#000000",
+                borderColor: email && !emailValid ? "#FFFFFF" : "#FFFFFF",
               }}
             />
             {email && !emailValid && (
-              <p className="text-[11px] text-[#ef4444] mt-1">Please enter a valid email address.</p>
+              <p className="text-[11px] text-white mt-1">Please enter a valid email address.</p>
             )}
           </div>
 
           {/* Password */}
           <div className="mb-5">
-            <label className="block text-[12px] font-semibold text-[#9ca3af] mb-1.5">Password</label>
+            <label className="block text-[12px] font-semibold text-white mb-1.5">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -319,16 +319,16 @@ export default function SubscribeSuccess() {
                 onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
                 placeholder="Create a strong password"
                 autoComplete="new-password"
-                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-[#4b5563] border outline-none transition-all"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  borderColor: password && !passwordValid ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)",
+                  background: "#000000",
+                  borderColor: password && !passwordValid ? "#FFFFFF" : "#FFFFFF",
                 }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b7280] hover:text-[#9ca3af] transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? (
@@ -352,17 +352,17 @@ export default function SubscribeSuccess() {
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
                       {check.pass ? (
                         <>
-                          <circle cx="5" cy="5" r="5" fill="rgba(69,224,168,0.2)" />
+                          <circle cx="5" cy="5" r="5" fill="transparent" />
                           <path d="M2.5 5l1.5 1.5L7.5 3.5" stroke="#45E0A8" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                         </>
                       ) : (
                         <>
-                          <circle cx="5" cy="5" r="5" fill="rgba(239,68,68,0.15)" />
-                          <path d="M3.5 3.5l3 3M6.5 3.5l-3 3" stroke="#ef4444" strokeWidth="1" strokeLinecap="round" />
+                          <circle cx="5" cy="5" r="5" fill="transparent" />
+                          <path d="M3.5 3.5l3 3M6.5 3.5l-3 3" stroke="#FFFFFF" strokeWidth="1" strokeLinecap="round" />
                         </>
                       )}
                     </svg>
-                    <span className={`text-[11px] ${check.pass ? "text-[#45E0A8]" : "text-[#6b7280]"}`}>{check.label}</span>
+                    <span className={`text-[11px] ${check.pass ? "text-[#45E0A8]" : "text-white"}`}>{check.label}</span>
                   </div>
                 ))}
               </div>
@@ -375,8 +375,8 @@ export default function SubscribeSuccess() {
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="mb-4 px-3.5 py-2.5 rounded-lg border border-[#ef4444]/30 text-[12px] text-[#ef4444]"
-                style={{ background: "rgba(239,68,68,0.08)" }}
+                className="mb-4 px-3.5 py-2.5 rounded-lg border border-white text-[12px] text-white"
+                style={{ background: "transparent" }}
               >
                 {formError}
               </motion.div>
@@ -391,7 +391,7 @@ export default function SubscribeSuccess() {
           >
             {completeSetup.isPending ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-transparent border-t-black rounded-full animate-spin" />
                 Setting up your account...
               </span>
             ) : (
@@ -399,13 +399,13 @@ export default function SubscribeSuccess() {
             )}
           </button>
 
-          <p className="text-[11px] text-[#4b5563] text-center mt-3">
+          <p className="text-[11px] text-white text-center mt-3">
             Your account will be linked to your subscription automatically.
           </p>
         </form>
 
         <div className="mt-4 text-center">
-          <p className="text-[12px] text-[#6b7280]">
+          <p className="text-[12px] text-white">
             <span className="text-white font-semibold">{planLabel} Plan</span> · {planPrice} · Full access
           </p>
         </div>

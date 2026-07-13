@@ -89,13 +89,13 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
-      <DialogContent className="sm:max-w-md bg-[#111] border border-white/10 text-white">
+      <DialogContent className="sm:max-w-md bg-[#000000] border border-white text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <Mail className="w-5 h-5 text-blue-400" />
+            <Mail className="w-5 h-5 text-white" />
             Forgot Password
           </DialogTitle>
-          <DialogDescription className="text-white/60">
+          <DialogDescription className="text-white">
             Enter your username or email address. If your account exists, a reset
             link will be sent via Discord DM or relayed by the site owner.
           </DialogDescription>
@@ -103,21 +103,21 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
 
         {submitted ? (
           <div className="flex flex-col items-center gap-4 py-6 text-center">
-            <CheckCircle2 className="w-12 h-12 text-green-400" />
+            <CheckCircle2 className="w-12 h-12 text-[#45E0A8]" />
             <div>
               <p className="font-semibold text-white text-lg">Request Received</p>
-              <p className="text-white/60 text-sm mt-1">
+              <p className="text-white text-sm mt-1">
                 If your account exists, a reset link has been sent via Discord DM.
                 If you don&apos;t have Discord linked, the site owner will relay the
                 link to you directly.
               </p>
-              <p className="text-white/40 text-xs mt-3">
+              <p className="text-white text-xs mt-3">
                 Links expire in 30 minutes.
               </p>
             </div>
             <Button
               onClick={handleClose}
-              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="mt-2 bg-[#45E0A8] text-white"
             >
               Back to Sign In
             </Button>
@@ -144,7 +144,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                */}
               <Label
                 htmlFor="fp-identifier"
-                className="text-xs font-semibold tracking-widest text-white/70 uppercase"
+                className="text-xs font-semibold tracking-widest text-white uppercase"
               >
                 Username
               </Label>
@@ -161,7 +161,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 onChange={(e) => setIdentifier(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={requestReset.isPending}
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/30 focus:border-blue-400"
+                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8]"
                 aria-required="true"
                 aria-label="Username"
                 onInvalid={suppressInvalid}
@@ -170,7 +170,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
             </div>
 
             {requestReset.isError && (
-              <div className="flex items-center gap-2 text-red-400 text-sm">
+              <div className="flex items-center gap-2 text-white text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Something went wrong. Please try again.</span>
               </div>
@@ -182,7 +182,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 variant="outline"
                 onClick={handleClose}
                 disabled={requestReset.isPending}
-                className="flex-1 border-white/20 text-white/70 hover:text-white hover:bg-white/10"
+                className="flex-1 border-white text-white hover:text-white"
               >
                 Cancel
               </Button>
@@ -191,7 +191,7 @@ export function ForgotPasswordModal({ open, onClose }: ForgotPasswordModalProps)
                 type="button"
                 onClick={handleReset}
                 disabled={requestReset.isPending || !identifier.trim()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                className="flex-1 bg-[#45E0A8] text-white"
               >
                 {requestReset.isPending ? (
                   <span className="flex items-center gap-2">

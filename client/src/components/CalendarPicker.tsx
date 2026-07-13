@@ -165,7 +165,7 @@ function emitTzDebugLog(atMs?: number): void {
 
   console.groupCollapsed(
     `%c[CalendarPicker:tz] ${utcStr}`,
-    "color:#39FF14;font-weight:700;font-size:11px"
+    "color:#45E0A8;font-weight:700;font-size:11px"
   );
   console.log(`UTC wall clock  : ${utcStr}`);
   console.log(`UTC hour        : ${now.getUTCHours()} (cutoff=${FEED_CUTOFF_UTC_HOUR}, gate open=${!isBeforeCutoff})`);
@@ -258,7 +258,7 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
         prev.getUTCHours() < FEED_CUTOFF_UTC_HOUR &&
         curr.getUTCHours() >= FEED_CUTOFF_UTC_HOUR;
       if (crossedCutoff) {
-        console.log("%c[CalendarPicker:tz] 11:00 UTC gate FIRED — feed rolling to new date", "color:#39FF14;font-weight:700");
+        console.log("%c[CalendarPicker:tz] 11:00 UTC gate FIRED — feed rolling to new date", "color:#45E0A8;font-weight:700");
         emitTzDebugLog(ms);
       }
     }, 60_000);
@@ -352,11 +352,11 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
         className="cal-trigger flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
         style={{
           background: "hsl(var(--card))",
-          color: "#ffffff",
-          border: "1px solid rgba(255,255,255,0.35)",
+          color: "#FFFFFF",
+          border: "1px solid #FFFFFF",
         }}
       >
-        <CalendarDays className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: "rgba(255,255,255,0.6)" }} />
+        <CalendarDays className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" style={{ color: "#FFFFFF" }} />
         <span>{buttonLabel}</span>
       </button>
 
@@ -364,16 +364,16 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
       {open && (
         <div
           ref={dropdownRef}
-          className="cal-panel absolute left-0 top-full mt-1.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden"
-          style={{ background: "#0f0f0f", width: 220 }}
+          className="cal-panel absolute left-0 top-full mt-1.5 z-50 rounded-xl border border-white shadow-2xl overflow-hidden"
+          style={{ background: "#000000", width: 220 }}
         >
           {/* Month navigation header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white">
             <button type="button" onClick={prevMonth}
               disabled={prevDisabled}
               className="w-6 h-6 flex items-center justify-center rounded-full transition-colors"
               style={{
-                color: prevDisabled ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.6)",
+                color: prevDisabled ? "#FFFFFF" : "#FFFFFF",
                 cursor: prevDisabled ? "not-allowed" : "pointer",
               }}
             >
@@ -383,8 +383,8 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
               {MONTHS[viewMonth]} {viewYear}
             </span>
             <button type="button" onClick={nextMonth}
-              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
-              style={{ color: "rgba(255,255,255,0.6)" }}
+              className="w-6 h-6 flex items-center justify-center rounded-full transition-colors"
+              style={{ color: "#FFFFFF" }}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -393,7 +393,7 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
           {/* Day-of-week headers */}
           <div className="grid grid-cols-7 px-2 pt-2 pb-1">
             {DAYS.map(d => (
-              <div key={d} className="text-center text-xs font-bold tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <div key={d} className="text-center text-xs font-bold tracking-widest" style={{ color: "#FFFFFF" }}>
                 {d}
               </div>
             ))}
@@ -414,12 +414,12 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
               const hasGames = (availableDates?.has(dateStr) ?? false) && (!isPast || isAdmin);
 
               const dayStyle: React.CSSProperties = (() => {
-                if (isLocked)              return { color: "rgba(255,255,255,0.12)", cursor: "not-allowed" };
-                if (isSelected && isToday) return { background: "#ffffff", color: "#000000", outline: "2px solid #39FF14", outlineOffset: "1px" };
-                if (isSelected)            return { background: "#ffffff", color: "#000000" };
-                if (isToday)               return { background: "rgba(57,255,20,0.12)", color: "#39FF14", outline: "1.5px solid #39FF14", outlineOffset: "-1px" };
-                if (hasGames)              return { color: "#ffffff" };
-                return { color: "rgba(255,255,255,0.3)" };
+                if (isLocked)              return { color: "#FFFFFF", cursor: "not-allowed" };
+                if (isSelected && isToday) return { background: "#45E0A8", color: "#000000", outline: "2px solid #45E0A8", outlineOffset: "1px" };
+                if (isSelected)            return { background: "#45E0A8", color: "#000000" };
+                if (isToday)               return { background: "transparent", color: "#45E0A8", outline: "1.5px solid #45E0A8", outlineOffset: "-1px" };
+                if (hasGames)              return { color: "#FFFFFF" };
+                return { color: "#FFFFFF" };
               })();
 
               return (
@@ -441,7 +441,7 @@ export function CalendarPicker({ selectedDate, onSelect, availableDates, isAdmin
                   {hasGames && !isSelected && (
                     <span
                       className="cal-dot absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full"
-                      style={{ width: 3, height: 3, background: isToday ? "#39FF14" : "rgba(57,255,20,0.8)" }}
+                      style={{ width: 3, height: 3, background: isToday ? "#45E0A8" : "#45E0A8" }}
                     />
                   )}
                 </button>
