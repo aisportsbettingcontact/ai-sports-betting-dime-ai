@@ -872,7 +872,7 @@ export function MlbLineupCard({ awayTeam, homeTeam, startTime, lineup }: MlbLine
   return (
     <div
       style={{
-        background: "#090E14",
+        background: "#000000",
         borderRadius: 12,
         border: "1px solid #FFFFFF",
         overflow: "hidden",

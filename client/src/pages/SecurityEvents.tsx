@@ -132,7 +132,7 @@ function SummaryCard({
         {icon}
         {label}
       </div>
-      <div className={`text-2xl font-bold tabular-nums ${count > 0 ? "text-red-400" : "text-zinc-300"}`}>
+      <div className={`text-2xl font-bold tabular-nums ${count > 0 ? "text-white" : "text-zinc-300"}`}>
         {count}
       </div>
       <div className="text-zinc-300 text-xs">last 24 hours</div>
@@ -369,10 +369,10 @@ export default function SecurityEvents() {
             </Button>
             <div className="h-4 w-px bg-white" />
             <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-red-400" />
+              <ShieldAlert className="w-4 h-4 text-white" />
               <span className="font-semibold text-sm">Security Events</span>
               {counts.total > 0 && (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs px-1.5 py-0">
+                <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0">
                   {counts.total} in window
                 </Badge>
               )}
@@ -417,19 +417,19 @@ export default function SecurityEvents() {
           <SummaryCard
             label="CSRF Blocks"
             count={counts.CSRF_BLOCK}
-            color="text-red-400"
+            color="text-white"
             icon={<ShieldOff className="w-3 h-3" />}
           />
           <SummaryCard
             label="Rate Limits"
             count={counts.RATE_LIMIT}
-            color="text-orange-400"
+            color="text-white"
             icon={<Activity className="w-3 h-3" />}
           />
           <SummaryCard
             label="Auth Fails"
             count={counts.AUTH_FAIL}
-            color="text-yellow-400"
+            color="text-white"
             icon={<ShieldAlert className="w-3 h-3" />}
           />
         </div>
@@ -576,7 +576,7 @@ export default function SecurityEvents() {
       <Dialog open={pruneOpen} onOpenChange={setPruneOpen}>
         <DialogContent className="bg-zinc-900 border-zinc-700 text-zinc-100 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-white">
               <Trash2 className="w-4 h-4" />
               Prune Security Events
             </DialogTitle>
