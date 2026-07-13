@@ -105,11 +105,11 @@ export default function ResetPassword() {
   // Invalid link params
   if (!paramsValid) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-white mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Invalid Reset Link</h1>
-          <p className="text-white/60 text-sm mb-6">
+          <p className="text-white text-sm mb-6">
             This password reset link is invalid or malformed. Please request a new one.
           </p>
           <Button
@@ -126,8 +126,8 @@ export default function ResetPassword() {
   // Success state
   if (success) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8 text-center">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
           <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Password Reset</h1>
           <p className="text-white/60 text-sm mb-2">
@@ -142,8 +142,8 @@ export default function ResetPassword() {
   const serverError = resetPassword.error?.message;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#111] border border-white/10 rounded-xl p-8">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-black border border-white rounded-xl p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">

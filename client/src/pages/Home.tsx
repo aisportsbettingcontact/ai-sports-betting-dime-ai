@@ -294,7 +294,7 @@ export default function Home() {
               disagree.
             </h1>
             <p
-              className="text-[#6b7280] mt-4 leading-relaxed"
+              className="text-[#FFFFFF] mt-4 leading-relaxed"
               style={{ fontSize: "clamp(0.875rem, 1.1vw, 1.05rem)" }}
             >
               Dime AI compares sportsbook prices against projected probability so every
@@ -332,7 +332,7 @@ export default function Home() {
                       {f.title}
                     </p>
                     <p
-                      className="text-[#6b7280] mt-0.5 leading-snug"
+                      className="text-[#FFFFFF] mt-0.5 leading-snug"
                       style={{ fontSize: "clamp(0.75rem, 0.9vw, 0.875rem)" }}
                     >
                       {f.desc}
@@ -346,7 +346,7 @@ export default function Home() {
 
         {/* Bottom: disclaimer — legible grey (contrast law), full RG language */}
         <p
-          className="text-[#9A9AA8] mt-8"
+          className="text-[#FFFFFF] mt-8"
           style={{ fontSize: "clamp(0.65rem, 0.8vw, 0.75rem)" }}
         >
           No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
@@ -375,7 +375,7 @@ export default function Home() {
           </a>
           <div className="text-center">
             <h1 className="text-lg font-bold text-white tracking-tight">dıme</h1>
-            <p className="text-[12px] text-[#9A9AA8] mt-0.5">Sign in to your account</p>
+            <p className="text-[12px] text-[#FFFFFF] mt-0.5">Sign in to your account</p>
           </div>
         </div>
 
@@ -390,7 +390,7 @@ export default function Home() {
             >
               Sign in
             </h2>
-            <p className="text-[#6b7280] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
+            <p className="text-[#FFFFFF] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
@@ -400,7 +400,7 @@ export default function Home() {
                 back into the app for users who didn't mean to switch. ── */}
           {!authLoading && appUser && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] flex items-center justify-between gap-3"
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] flex items-center justify-between gap-3"
               style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
               data-testid="login-signed-in-banner"
             >
@@ -421,7 +421,7 @@ export default function Home() {
                 mono stamps on neutral surface; red is not in the Dime palette) ── */}
           {discordErrorMsg && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#9A9AA8] text-center space-y-1.5"
+              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] text-center space-y-1.5"
               style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
               role="alert"
             >
@@ -450,7 +450,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="identifier"
-                  className="text-[12px] font-semibold text-[#9ca3af]"
+                  className="text-[12px] font-semibold text-[#FFFFFF]"
                 >
                   Username or Email
                 </label>
@@ -470,7 +470,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="password"
-                  className="text-[12px] font-semibold text-[#9ca3af]"
+                  className="text-[12px] font-semibold text-[#FFFFFF]"
                 >
                   Password
                 </label>
@@ -488,7 +488,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9A9AA8] hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#FFFFFF] hover:text-white transition-colors"
                     aria-label={showPw ? "Hide password" : "Show password"}
                   >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -501,7 +501,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setFormError(null); }}
-                  className="text-[11px] text-[#9A9AA8] hover:text-white underline transition-colors"
+                  className="text-[11px] text-[#FFFFFF] hover:text-white underline transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -509,7 +509,7 @@ export default function Home() {
 
               {/* Form error — grey stamp, never red (signup.md) */}
               {formError && (
-                <p className="text-[12px] text-[#9A9AA8] text-center -mt-1" role="alert">{formError}</p>
+                <p className="text-[12px] text-[#FFFFFF] text-center -mt-1" role="alert">{formError}</p>
               )}
 
               {/* Submit */}
@@ -533,7 +533,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotIdent(""); }}
-                  className="text-[#6b7280] hover:text-white transition-colors"
+                  className="text-[#FFFFFF] hover:text-white transition-colors"
                   aria-label="Back to login"
                 >
                   ← Back
@@ -547,7 +547,7 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  <p className="text-[12px] text-[#9ca3af]">
+                  <p className="text-[12px] text-[#FFFFFF]">
                     Enter your username or email and we'll send you a password reset link.
                   </p>
                   <input
@@ -608,7 +608,7 @@ export default function Home() {
 
           {/* ── Sign Up link — grey: Sign In keeps the surface's single mint action ── */}
           {!forgotOpen && (
-            <p className="text-center text-[12px] text-[#9A9AA8] mt-5">
+            <p className="text-center text-[12px] text-[#FFFFFF] mt-5">
               Don't have an account?{" "}
               <a
                 href="/#pricing"
@@ -620,7 +620,7 @@ export default function Home() {
           )}
 
           {/* ── Disclaimer — legible grey, full RG language ── */}
-          <p className="text-center text-[11px] text-[#9A9AA8] mt-6">
+          <p className="text-center text-[11px] text-[#FFFFFF] mt-6">
             By signing in you agree to gamble responsibly. For informational purposes only. 21+.
             Gambling problem? Call 1-800-GAMBLER.
           </p>

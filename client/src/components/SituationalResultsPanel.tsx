@@ -124,15 +124,15 @@ function comparativeColors(
   const noLeft  = leftPct  < 0;
   const noRight = rightPct < 0;
 
-  if (noLeft && noRight) return ["bg-zinc-700", "bg-zinc-700"];
-  if (noLeft)  return ["bg-zinc-700", "bg-emerald-600"];
-  if (noRight) return ["bg-emerald-600", "bg-zinc-700"];
+  if (noLeft && noRight) return ["bg-black", "bg-black"];
+  if (noLeft)  return ["bg-black", "bg-[#45E0A8]"];
+  if (noRight) return ["bg-[#45E0A8]", "bg-black"];
 
   const EPSILON = 0.001;
-  if (Math.abs(leftPct - rightPct) < EPSILON) return ["bg-zinc-700", "bg-zinc-700"];
+  if (Math.abs(leftPct - rightPct) < EPSILON) return ["bg-black", "bg-black"];
 
-  if (leftPct > rightPct) return ["bg-emerald-600", "bg-red-700"];
-  return ["bg-red-700", "bg-emerald-600"];
+  if (leftPct > rightPct) return ["bg-[#45E0A8]", "bg-white"];
+  return ["bg-white", "bg-[#45E0A8]"];
 }
 
 function resolveLogoUrl(slug: string, sport: Sport): string | undefined {
@@ -167,8 +167,8 @@ function RecordRow({
     <div className="mb-3">
       {/* Label row */}
       <div className="flex items-center justify-between mb-1 px-1">
-        <span className="text-[9px] text-gray-300 font-mono">{label}</span>
-        <span className="text-[9px] text-gray-300 font-mono text-right">{label}</span>
+        <span className="text-[9px] text-white font-mono">{label}</span>
+        <span className="text-[9px] text-white font-mono text-right">{label}</span>
       </div>
       {/* Bar row */}
       <div className="flex gap-2">
@@ -280,8 +280,8 @@ function StatsSection({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <RefreshCw className="w-4 h-4 text-blue-400 animate-spin mr-2" />
-        <span className="text-[10px] text-gray-300 font-mono">Loading trends...</span>
+        <RefreshCw className="w-4 h-4 text-white animate-spin mr-2" />
+        <span className="text-[10px] text-white font-mono">Loading trends...</span>
       </div>
     );
   }
