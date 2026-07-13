@@ -460,11 +460,11 @@ function OddsCell({
   const borderRadius = size === 'sm' ? '8px' : '10px';
 
   const pillBg = isBook
-    ? (isEdge ? 'rgba(69,224,168,0.10)' : 'rgba(255,255,255,0.07)')
+    ? (isEdge ? 'transparent' : 'transparent')
     : 'transparent';
   const pillBorder = isBook
-    ? (isEdge ? '1px solid rgba(69,224,168,0.45)' : '1px solid rgba(255,255,255,0.13)')
-    : (isEdge ? '1px solid rgba(69,224,168,0.30)' : '1px solid transparent');
+    ? (isEdge ? '1px solid #45E0A8' : '1px solid #FFFFFF')
+    : (isEdge ? '1px solid #45E0A8' : '1px solid transparent');
   const mainColor = isEdge ? '#45E0A8' : '#FFFFFF';
   const mainWeight = isEdge ? 800 : 700;
 
@@ -508,7 +508,7 @@ function OddsCell({
 
 // ─── MergedSplitBar — exact GameCard MergedSplitBar ──────────────────────────
 
-const MERGED_LABEL_STROKE = '-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px rgba(0,0,0,0.9)';
+const MERGED_LABEL_STROKE = '-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000,0 0 6px #000000';
 
 function MergedSplitBar({
   awayPct, homePct, awayColor, homeColor, rowLabel, awayLabel, homeLabel,
@@ -532,7 +532,7 @@ function MergedSplitBar({
   };
   const teamLabelStyle: React.CSSProperties = {
     fontSize: 'clamp(9px, 0.78vw, 12px)',
-    color: 'rgba(255,255,255,0.80)',
+    color: '#FFFFFF',
     fontWeight: 600,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -565,7 +565,7 @@ function MergedSplitBar({
             height: 'clamp(22px, 2.2vw, 32px)',
             display: 'flex',
             borderRadius: '9999px',
-            border: '1px solid rgba(255,255,255,0.12)',
+            border: '1px solid #FFFFFF',
             overflow: 'hidden',
             width: '100%',
           }}>
@@ -582,7 +582,7 @@ function MergedSplitBar({
               </div>
             )}
             {!isAwayFull && !isHomeFull && away > 0 && home > 0 && (
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+              <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0 }} />
             )}
             {home > 0 && !isHomeFull && !isAwayFull && (
               <div style={{
@@ -619,8 +619,8 @@ function MergedSplitBar({
           </div>
         );
       })() : (
-        <div style={{ height: 'clamp(22px,2.2vw,32px)', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', opacity: 0.80 }}>—</span>
+        <div style={{ height: 'clamp(22px,2.2vw,32px)', background: 'transparent', borderRadius: '9999px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ fontSize: 11, color: '#FFFFFF', opacity: 0.80 }}>—</span>
         </div>
       )}
     </div>
@@ -852,8 +852,8 @@ function WcMktCol({
   // [FIX] No hidden spacer spans for ML — pure flex centering, equal vertical padding
   const SubCol = ({ line, juice, isBook: isBookCol, hasEdge: subEdge }: { line: string; juice: string; isBook: boolean; hasEdge: boolean }) => {
     const juiceColor = isBookCol
-      ? 'rgba(255,255,255,0.90)'
-      : subEdge ? '#45E0A8' : 'rgba(255,255,255,0.90)';
+      ? '#FFFFFF'
+      : subEdge ? '#45E0A8' : '#FFFFFF';
     const isVeryLongOdds = juice.length >= 6; // e.g. +2200, -1000
     const isLongOdds = juice.length >= 5;     // e.g. +1000, -900
     // [FIX] Match MLB VAL_FS scale: larger odds values get smaller font
@@ -865,7 +865,7 @@ function WcMktCol({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: line ? 1 : 0, minWidth: 0, flex: 1 }}>
         {line && (
-          <span style={{ fontSize: 'clamp(9px,0.78vw,11px)', fontWeight: 400, color: 'rgba(255,255,255,0.60)', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
+          <span style={{ fontSize: 'clamp(9px,0.78vw,11px)', fontWeight: 400, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{line}</span>
         )}
         <span style={{ fontSize: juiceFontSize, fontWeight: 700, color: juiceColor, lineHeight: 1.15, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{juice}</span>
       </div>
@@ -879,7 +879,7 @@ function WcMktCol({
   );
   // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
   const roiStr = (hasEdge && !isNaN(edgeDisplayRoi)) ? formatRoi(edgeDisplayRoi) : 'NO EDGE';
-  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
+  const roiColor = hasEdge ? edgeColor! : '#FFFFFF';
   // Per-row label (line above the juice): show for every market whose two rows
   // are OPTIONS/lines (TOTAL O/U, SPREAD ±line, DRAW/NO-DRAW, DBL CHC HOME-WD/
   // AWAY-WD, BTTS YES/NO). ML and TO ADV are team rows (team shown on the left),
@@ -890,16 +890,16 @@ function WcMktCol({
     <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
       {/* Section title — centered with flanking rules */}
       <div className="flex items-center gap-1" style={{ marginBottom: compact ? 3 : 4 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
         <span style={titleFs}>{title}</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
       </div>
 
       {/* ── MLB-identical cell container ── */}
       {/* [FIX] justifyContent:'flex-start' — footer uses marginTop:'auto' to pin to bottom without gap */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#000000', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: compact ? 4 : 6 }}>
         {/* BOOK / MODEL header — both muted white, matching MLB exactly */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid #FFFFFF', padding: '3px 4px 2px' }}>
           {/* BOOK header: full white — matches MLB SectionCol exactly */}
           <span style={{ fontSize: 'clamp(8px,0.75vw,11px)', fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.10em' }}>BOOK</span>
           {/* MODEL header: neon green — matches MLB SectionCol exactly */}
@@ -916,7 +916,7 @@ function WcMktCol({
         />
 
         {/* Divider — hidden for singleRow (DRAW) */}
-        {!singleRow && <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />}
+        {!singleRow && <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />}
 
         {/* Home / Under row (bottom) — hidden for singleRow (DRAW) */}
         {!singleRow && (
@@ -930,7 +930,7 @@ function WcMktCol({
         )}
 
         {/* ROI footer — pinned to bottom via marginTop:auto + justifyContent:space-between on parent */}
-        <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(69,224,168,0.04)' : 'transparent' }}>
+        <div style={{ marginTop: 'auto', borderTop: '0.5px solid #FFFFFF', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'transparent' : 'transparent' }}>
           {hasEdge && edgeLabel && (
             <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>
               {edgeLabel}
@@ -1039,16 +1039,16 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
                 fontSize: HT_FONT_SIZE,
-                background: isExtraTimeHT ? "rgba(251,146,60,0.12)" : "rgba(251,191,36,0.12)",
-                color: isExtraTimeHT ? "#FB923C" : "#FBbf24",
-                border: isExtraTimeHT ? "1px solid rgba(251,146,60,0.4)" : "1px solid rgba(251,191,36,0.4)",
+                background: isExtraTimeHT ? "transparent" : "transparent",
+                color: isExtraTimeHT ? "#45E0A8" : "#45E0A8",
+                border: isExtraTimeHT ? "1px solid #45E0A8" : "1px solid #45E0A8",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
                 gap: '6px',
                 lineHeight: 1,
               }}
             >
-              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: isExtraTimeHT ? "#FB923C" : "#FBbf24" }} />
+              <span className="rounded-full inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: isExtraTimeHT ? "#45E0A8" : "#45E0A8" }} />
               {isExtraTimeHT ? 'ET HT' : 'HT'}
             </span>
           ) : isShootout ? (
@@ -1057,16 +1057,16 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
                 fontSize: LIVE_FONT_SIZE,
-                background: "rgba(56,189,248,0.12)",
-                color: "#38BDF8",
-                border: "1px solid rgba(56,189,248,0.4)",
+                background: "transparent",
+                color: "#45E0A8",
+                border: "1px solid #45E0A8",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
                 gap: '6px',
                 lineHeight: 1,
               }}
             >
-              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#38BDF8" }} />
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#45E0A8" }} />
               PENS
             </span>
           ) : isET ? (
@@ -1075,16 +1075,16 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
                 fontSize: LIVE_FONT_SIZE,
-                background: "rgba(251,146,60,0.12)",
-                color: "#FB923C",
-                border: "1px solid rgba(251,146,60,0.4)",
+                background: "transparent",
+                color: "#45E0A8",
+                border: "1px solid #45E0A8",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
                 gap: '6px',
                 lineHeight: 1,
               }}
             >
-              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#FB923C" }} />
+              <span className="rounded-full animate-pulse inline-block flex-shrink-0" style={{ width: '8px', height: '8px', background: "#45E0A8" }} />
               ET{matchMinute ? ` ${matchMinute}'` : ''}
             </span>
           ) : isLive ? (
@@ -1093,9 +1093,9 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="px-2 py-1 font-black tracking-widest flex-shrink-0 flex items-center"
               style={{
                 fontSize: LIVE_FONT_SIZE,
-                background: "rgba(69,224,168,0.12)",
+                background: "transparent",
                 color: "#45E0A8",
-                border: "1px solid rgba(69,224,168,0.4)",
+                border: "1px solid #45E0A8",
                 letterSpacing: "0.10em",
                 borderRadius: '14px',
                 gap: '6px',
@@ -1112,9 +1112,9 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
               className="font-black tracking-widest flex-shrink-0"
               style={{
                 fontSize: FINAL_FONT_SIZE,
-                background: "rgba(69,224,168,0.12)",
+                background: "transparent",
                 color: "#45E0A8",
-                border: "1px solid rgba(69,224,168,0.4)",
+                border: "1px solid #45E0A8",
                 borderRadius: '6px',
                 lineHeight: 1,
                 padding: '3px 6px',
@@ -1130,10 +1130,10 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
       {/* Scheduled time row — shown only for upcoming matches, at top */}
       {!isLive && !isHT && !isET && !isShootout && !isFinal && (
         <div className="flex items-center gap-1 mb-1">
-          <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "hsl(var(--foreground))", whiteSpace: 'nowrap' }}>
+          <span className="font-bold flex items-center gap-1" style={{ fontSize: TIME_FONT_SIZE, color: "#FFFFFF", whiteSpace: 'nowrap' }}>
             {fmtKickoff(match.kickoffUtc)}
             {match.groupLetter && (
-              <span style={{ fontSize: 'clamp(7.5px, 0.65vw, 9.5px)', color: 'hsl(var(--muted-foreground))', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 'clamp(7.5px, 0.65vw, 9.5px)', color: '#FFFFFF', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                 &middot; GROUP {match.groupLetter}
               </span>
             )}
@@ -1162,19 +1162,19 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
         // [STEP] Score color: winner = #45E0A8 bold, loser/draw = white unbolded
         // [FIX 2026-06-30 v3] Use showScores (includes HT) — halftime scores are real scores
         const homeScoreColor = showScores
-          ? (isFinal && homeWins ? '#45E0A8' : 'rgba(255,255,255,0.95)')
-          : 'rgba(251,191,36,0.75)';
+          ? (isFinal && homeWins ? '#45E0A8' : '#FFFFFF')
+          : '#FFFFFF';
         const homeScoreBold = showScores && homeWins ? 700 : 400;
         const awayScoreColor = showScores
-          ? (isFinal && awayWins ? '#45E0A8' : 'rgba(255,255,255,0.95)')
-          : 'rgba(251,191,36,0.75)';
+          ? (isFinal && awayWins ? '#45E0A8' : '#FFFFFF')
+          : '#FFFFFF';
         const awayScoreBold = showScores && awayWins ? 700 : 400;
         // [STEP] Projected score color: winner proj = #45E0A8 bold, loser/draw = amber unbolded
         const projHomeWins = hasProjScores && (proj!.projHomeScore ?? 0) > (proj!.projAwayScore ?? 0);
         const projAwayWins = hasProjScores && (proj!.projAwayScore ?? 0) > (proj!.projHomeScore ?? 0);
-        const projHomeColor = projHomeWins ? '#45E0A8' : 'rgba(251,191,36,0.75)';
+        const projHomeColor = projHomeWins ? '#45E0A8' : '#FFFFFF';
         const projHomeBold = projHomeWins ? 700 : 400;
-        const projAwayColor = projAwayWins ? '#45E0A8' : 'rgba(251,191,36,0.75)';
+        const projAwayColor = projAwayWins ? '#45E0A8' : '#FFFFFF';
         const projAwayBold = projAwayWins ? 700 : 400;
         return (
           <div className="flex flex-1 flex-col" style={{ gap: 0, justifyContent: 'center' }}>
@@ -1187,10 +1187,10 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
                 </span>
                 {/* [FIX] Mobile: FIFA code abbreviated ALL CAPS. Desktop: full country name. */}
                 {/* [FIX] fontWeight: bold if winning (awayScoreBold), unbolded if losing/tied */}
-                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: 'rgba(255,255,255,0.95)', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: '#FFFFFF', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {awayFifaCode.toUpperCase()}
                 </span>
-                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: '#FFFFFF', fontWeight: awayScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
                 </span>
               </div>
@@ -1208,7 +1208,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
             </div>
 
             {/* Divider */}
-            <div style={{ height: 1, background: "hsl(var(--border) / 0.4)" }} />
+            <div style={{ height: 1, background: "#FFFFFF" }} />
 
             {/* [FIX] Home team row — BOTTOM (standard sportsbook convention: home listed second/bottom) */}
             <div className="flex items-center justify-between gap-2 py-1 w-full">
@@ -1219,10 +1219,10 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
                 </span>
                 {/* [FIX] Mobile: FIFA code abbreviated ALL CAPS. Desktop: full country name. */}
                 {/* [FIX] fontWeight: bold if winning (homeScoreBold), unbolded if losing/tied */}
-                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: 'rgba(255,255,255,0.95)', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span className="md:hidden font-bold leading-tight" style={{ fontSize: 'clamp(11px, 3.5vw, 14px)', color: '#FFFFFF', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {homeFifaCode.toUpperCase()}
                 </span>
-                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: 'rgba(255,255,255,0.95)', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
+                <span className="hidden md:inline font-bold leading-tight" style={{ fontSize: 'clamp(12px, 1.0vw, 17px)', color: '#FFFFFF', fontWeight: homeScoreBold, whiteSpace: 'nowrap', lineHeight: 1.2, letterSpacing: '0.02em' }}>
                   {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
                 </span>
               </div>
@@ -1268,8 +1268,8 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
           <div
             className="flex items-center gap-1 mt-1.5"
             style={{
-              background: 'rgba(69,224,168,0.06)',
-              border: '1px solid rgba(69,224,168,0.22)',
+              background: 'transparent',
+              border: '1px solid #45E0A8',
               borderRadius: '6px',
               padding: '3px 6px',
               flexWrap: 'nowrap',
@@ -1303,7 +1303,7 @@ function WcScorePanel({ match }: { match: WcMatchWithOdds }) {
 
       {/* Venue footer */}
       {match.venue && (
-        <div className="flex items-center gap-1 mt-1" style={{ fontSize: 'clamp(9px,0.75vw,11px)', color: 'hsl(var(--muted-foreground))' }}>
+        <div className="flex items-center gap-1 mt-1" style={{ fontSize: 'clamp(9px,0.75vw,11px)', color: '#FFFFFF' }}>
           <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
           <span className="truncate">{match.venue.city}</span>
         </div>
@@ -1442,20 +1442,20 @@ function WcDcDesktopCol({
     isLast?: boolean;
   }) => {
     const rowHasEdge = !isNaN(rowEdgePP) && rowEdgePP >= EDGE_THRESHOLD_PP;
-    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : 'rgba(255,255,255,0.90)';
+    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : '#FFFFFF';
     return (
       <>
         {/* Row divider (not before first row) */}
-        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '3px 4px' }}>
           {/* Book column */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
-            <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
           </div>
           {/* Model column */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
             <span style={{ fontSize: juiceFs, fontWeight: 700, color: modelColor, lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(modelO)}</span>
           </div>
         </div>
@@ -1465,34 +1465,34 @@ function WcDcDesktopCol({
 
   // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
   const roiStr = (hasEdge && !isNaN(bestRoiPct)) ? `+${bestRoiPct.toFixed(2)}% ROI` : 'NO EDGE';
-  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.45)';
+  const roiColor = hasEdge ? edgeColor! : '#FFFFFF';
 
   return (
     <div className="flex flex-col" style={{ flex: '1 1 0%', minWidth: 0, width: 0, padding: pad }}>
       {/* Section title */}
       <div className="flex items-center gap-1" style={{ marginBottom: 4 }}>
-        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
         <span style={titleFs}>DRAW/WIN-DRAW</span>
-        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        <div style={{ flex: 1, height: 1, background: '#FFFFFF' }} />
       </div>
 
       {/* Cell container */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#2a2a2e', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', background: '#000000', borderRadius: 10, overflow: 'hidden', flex: '1 1 0', minWidth: 0, marginBottom: 6 }}>
         {/* BOOK / MODEL header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
-          <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
-          <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid #FFFFFF', padding: '3px 4px 2px' }}>
+          <span style={{ fontSize: hdrFs, fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+          <span style={{ fontSize: hdrFs, fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
         </div>
 
         {/* Row 1: DRAW — pure 3-way draw odds */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: '3px 4px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
-            <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(drawBook)}</span>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(drawBook)}</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
-            <span style={{ fontSize: juiceFs, fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? getEdgeColor(drawEdgePP) : 'rgba(255,255,255,0.90)' }}>{fmtAmerican(drawModel)}</span>
+            <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center' }}>DRAW</span>
+            <span style={{ fontSize: juiceFs, fontWeight: 700, lineHeight: 1.1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: (!isNaN(drawEdgePP) && drawEdgePP >= EDGE_THRESHOLD_PP) ? getEdgeColor(drawEdgePP) : '#FFFFFF' }}>{fmtAmerican(drawModel)}</span>
           </div>
         </div>
 
@@ -1503,7 +1503,7 @@ function WcDcDesktopCol({
         <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} isLast />
 
         {/* ROI footer */}
-        <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(69,224,168,0.04)' : 'transparent' }}>
+        <div style={{ marginTop: 'auto', borderTop: '0.5px solid #FFFFFF', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'transparent' : 'transparent' }}>
           {hasEdge && edgeLabel && (
             <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{edgeLabel}</span>
           )}
@@ -1628,7 +1628,7 @@ function WcDcMobileCell({
 
   // [FIX 2026-06-24] Removed pp fallback — display is always "X.XX% ROI" or "NO EDGE"
   const roiStr = (hasEdge && !isNaN(bestRoiPct)) ? `+${bestRoiPct.toFixed(2)}% ROI` : 'NO EDGE';
-  const roiColor = hasEdge ? edgeColor! : 'rgba(200,200,200,0.40)';
+  const roiColor = hasEdge ? edgeColor! : '#FFFFFF';
 
   // [STEP] Per-row renderer: label (dim) | BOOK juice | MODEL juice
   const DcRow = ({
@@ -1643,17 +1643,17 @@ function WcDcMobileCell({
     rowEdgePP: number;
   }) => {
     const rowHasEdge = !isNaN(rowEdgePP) && rowEdgePP >= EDGE_THRESHOLD_PP;
-    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : 'rgba(255,255,255,0.90)';
+    const modelColor = rowHasEdge ? getEdgeColor(rowEdgePP) : '#FFFFFF';
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding }}>
         {/* Book column */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-          <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
-          <span style={{ fontSize: juiceFs, fontWeight: 700, color: 'rgba(255,255,255,0.90)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
+          <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+          <span style={{ fontSize: juiceFs, fontWeight: 700, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(bookOdds)}</span>
         </div>
         {/* Model column */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minWidth: 0 }}>
-          <span style={{ fontSize: labelFs, fontWeight: 600, color: 'rgba(255,255,255,0.50)', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
+          <span style={{ fontSize: labelFs, fontWeight: 600, color: '#FFFFFF', lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{rowLabel}</span>
           <span style={{ fontSize: juiceFs, fontWeight: 700, color: modelColor, lineHeight: 1, whiteSpace: 'nowrap', textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtAmerican(modelO)}</span>
         </div>
       </div>
@@ -1666,7 +1666,7 @@ function WcDcMobileCell({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'flex-start',
-        background: '#2a2a2e',
+        background: '#000000',
         borderRadius: 8,
         overflow: 'hidden',
         flex: '1 1 0',
@@ -1674,9 +1674,9 @@ function WcDcMobileCell({
       }}
     >
       {/* BOOK / MODEL header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid rgba(255,255,255,0.08)', padding: '3px 4px 2px' }}>
-        <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.75)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
-        <span style={{ fontSize: hdrFs, fontWeight: 700, color: 'rgba(255,255,255,0.70)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid #FFFFFF', padding: '3px 4px 2px' }}>
+        <span style={{ fontSize: hdrFs, fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BOOK</span>
+        <span style={{ fontSize: hdrFs, fontWeight: 700, color: '#FFFFFF', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em' }}>MODEL</span>
       </div>
 
       {/* [FIX] Centered wrapper: 3 rows vertically centered to match BetCell 2-row ML/TOTAL columns */}
@@ -1684,14 +1684,14 @@ function WcDcMobileCell({
         {/* Row 1: DRAW — pure 3-way draw odds */}
         <DcRow rowLabel="DRAW" bookOdds={drawBook} modelOdds={drawModel} rowEdgePP={drawEdgePP} />
         {/* Row 2: Home W/D — 1X Double Chance */}
-        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />
         <DcRow rowLabel={`${homeName.length > 4 ? homeName.slice(0,3).toUpperCase() : homeName} W/D`} bookOdds={homeDcBook} modelOdds={homeDcModel} rowEdgePP={homeDcEdgePP} />
         {/* Row 3: Away W/D — X2 Double Chance */}
-        <div style={{ height: 0.5, background: 'rgba(255,255,255,0.07)', margin: '0 4px' }} />
+        <div style={{ height: 0.5, background: '#FFFFFF', margin: '0 4px' }} />
         <DcRow rowLabel={`${awayName.length > 4 ? awayName.slice(0,3).toUpperCase() : awayName} W/D`} bookOdds={awayDcBook} modelOdds={awayDcModel} rowEdgePP={awayDcEdgePP} />
       </div>
       {/* ROI Footer */}
-      <div style={{ marginTop: 'auto', borderTop: '0.5px solid rgba(255,255,255,0.07)', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'rgba(69,224,168,0.04)' : 'transparent' }}>
+      <div style={{ marginTop: 'auto', borderTop: '0.5px solid #FFFFFF', padding: '3px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, background: hasEdge ? 'transparent' : 'transparent' }}>
         {hasEdge && edgeLabel && (
           <span style={{ fontSize: 7, fontWeight: 700, color: roiColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{edgeLabel}</span>
         )}
@@ -1784,7 +1784,7 @@ function WcDesktopMergedPanel({
         homeColor={homeColors.primary}
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 1: ML — Row 1: AWAY (top), Row 2: HOME (bottom) — each row = its own team ── */}
       <WcMktCol
@@ -1804,7 +1804,7 @@ function WcDesktopMergedPanel({
           ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 2: DRAW — Row 1: DRAW, Row 2: NO DRAW ───────────────────────────────────── */}
       <WcMktCol
@@ -1816,15 +1816,15 @@ function WcDesktopMergedPanel({
         awayModelNum={modelOdds?.draw}
         homeModelNum={modelOdds?.noDraw}
         singleRow={false}
-        awayColor="#9CA3AF"
-        homeColor="#9CA3AF"
+        awayColor="#FFFFFF"
+        homeColor="#FFFFFF"
         threeWayBook={(dkOdds?.home != null && dkOdds?.draw != null && dkOdds?.away != null)
           ? { home: dkOdds.home, draw: dkOdds.draw, away: dkOdds.away } : null}
         threeWayModel={(modelOdds?.home != null && modelOdds?.draw != null && modelOdds?.away != null)
           ? { home: modelOdds.home, draw: modelOdds.draw, away: modelOdds.away } : null}
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 3: TOTAL — Row 1: OVER, Row 2: UNDER ────────────────────────────────────────────── */}
       <WcMktCol
@@ -1837,10 +1837,10 @@ function WcDesktopMergedPanel({
         homeModelNum={modelOdds?.underOdds}
         singleRow={false}
         awayColor="#45E0A8"
-        homeColor="#9CA3AF"
+        homeColor="#FFFFFF"
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 4: SPREAD — Row 1: AWAY spread, Row 2: HOME spread ─────────────────────────────── */}
       <WcMktCol
@@ -1856,7 +1856,7 @@ function WcDesktopMergedPanel({
         homeColor={homeColors.primary}
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 5: DOUBLE CHANCE — Row 1: HOME WD (home-or-draw / 1X), Row 2: AWAY WD (away-or-draw / X2) ──
            Owner spec: HOME WD on top, AWAY WD on bottom. DC rows are bet OPTIONS
@@ -1874,7 +1874,7 @@ function WcDesktopMergedPanel({
         homeColor={awayColors.primary}
       />
 
-      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
 
       {/* ── Col 6: BTTS — Row 1: YES, Row 2: NO ─────────────────────────────────────────────────────────────────────── */}
       <WcMktCol
@@ -1886,8 +1886,8 @@ function WcDesktopMergedPanel({
         awayModelNum={modelOdds?.bttsYes}
         homeModelNum={modelOdds?.bttsNo}
         singleRow={false}
-        awayColor="#9CA3AF"
-        homeColor="#9CA3AF"
+        awayColor="#FFFFFF"
+        homeColor="#FFFFFF"
       />
 
     </div>
@@ -1912,9 +1912,9 @@ function WcMatchCard({
     <div
       className="w-full relative"
       style={{
-        background: "hsl(var(--card))",
-        borderTop: "1px solid hsl(var(--border))",
-        borderBottom: "1px solid hsl(var(--border))",
+        background: "#000000",
+        borderTop: "1px solid #FFFFFF",
+        borderBottom: "1px solid #FFFFFF",
         borderLeft: `3px solid ${borderColor}`,
         overflowX: "clip",
         overflow: "hidden",
@@ -1924,11 +1924,11 @@ function WcMatchCard({
       <div className="hidden md:flex items-stretch w-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
         {/* Col 1: Score panel */}
         {/* [FIX] Wider score panel to accommodate full country names */}
-        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", width: 'clamp(170px,22vw,260px)', borderRight: "1px solid #FFFFFF" }}>
           <WcScorePanel match={match} />
         </div>
         {/* Col 2+3: Merged panel */}
-        <div className="flex-1 min-w-0" style={{ borderLeft: "1px solid hsl(var(--border) / 0.5)" }}>
+        <div className="flex-1 min-w-0" style={{ borderLeft: "1px solid #FFFFFF" }}>
           <WcDesktopMergedPanel match={match} splits={splits} />
         </div>
       </div>
@@ -1939,7 +1939,7 @@ function WcMatchCard({
              Without this, BetCell collapses to 0px height and all market cells appear blank on mobile. */}
         <div style={{ display: "grid", gridTemplateColumns: "clamp(120px, 32%, 150px) 1fr", width: "100%", minHeight: 'clamp(130px, 28vw, 180px)' }}>
           {/* Fixed score panel */}
-          <div style={{ borderRight: "1px solid hsl(var(--border) / 0.5)" }}>
+          <div style={{ borderRight: "1px solid #FFFFFF" }}>
             <WcScorePanel match={match} />
           </div>
           {/* Scrollable odds panel */}
@@ -1954,7 +1954,7 @@ function WcMatchCard({
 
       {/* Live pulse indicator */}
       {isLive && (
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: '100%', background: 'rgba(69,224,168,0.15)' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: '100%', background: '#45E0A8' }} />
       )}
     </div>
   );
@@ -2522,7 +2522,7 @@ function WcMobileOddsPanel({ match }: { match: WcMatchWithOdds }) {
             <span style={{
               fontSize: 'clamp(7px, 2vw, 9px)',
               fontWeight: 700,
-              color: 'rgba(255,255,255,0.65)',
+              color: '#FFFFFF',
               textTransform: 'uppercase',
               letterSpacing: '0.07em',
               whiteSpace: 'nowrap',
@@ -2545,34 +2545,34 @@ function WcMatchCardSkeleton() {
     <div
       className="w-full"
       style={{
-        background: "hsl(var(--card))",
-        borderTop: "1px solid hsl(var(--border))",
-        borderBottom: "1px solid hsl(var(--border))",
-        borderLeft: "3px solid rgba(255,255,255,0.1)",
+        background: "#000000",
+        borderTop: "1px solid #FFFFFF",
+        borderBottom: "1px solid #FFFFFF",
+        borderLeft: "3px solid #FFFFFF",
         minHeight: 'clamp(160px,14vw,220px)',
       }}
     >
       <div className="hidden md:flex items-stretch w-full h-full" style={{ minHeight: 'clamp(160px,14vw,220px)' }}>
-        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", borderRight: "1px solid hsl(var(--border) / 0.5)", padding: 12 }}>
-          <Skeleton className="h-4 w-24 bg-zinc-800 mb-3" />
+        <div style={{ flex: "0 0 clamp(170px,22vw,260px)", borderRight: "1px solid #FFFFFF", padding: 12 }}>
+          <Skeleton className="h-4 w-24 bg-white mb-3" />
           <div className="flex items-center gap-2 mb-2">
-            <Skeleton className="h-9 w-9 rounded-full bg-zinc-800" />
-            <Skeleton className="h-4 w-28 bg-zinc-800" />
+            <Skeleton className="h-9 w-9 rounded-full bg-white" />
+            <Skeleton className="h-4 w-28 bg-white" />
           </div>
           <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-9 rounded-full bg-zinc-800" />
-            <Skeleton className="h-4 w-28 bg-zinc-800" />
+            <Skeleton className="h-9 w-9 rounded-full bg-white" />
+            <Skeleton className="h-4 w-28 bg-white" />
           </div>
         </div>
         <div className="flex-1 flex items-stretch">
           {[1, 2, 3].map(i => (
             <div key={i} className="flex-1 p-3 space-y-2">
-              <Skeleton className="h-4 w-16 bg-zinc-800 mx-auto" />
+              <Skeleton className="h-4 w-16 bg-white mx-auto" />
               <div className="grid grid-cols-2 gap-2">
-                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
-                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
-                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
-                <Skeleton className="h-8 bg-zinc-800 rounded-lg" />
+                <Skeleton className="h-8 bg-white rounded-lg" />
+                <Skeleton className="h-8 bg-white rounded-lg" />
+                <Skeleton className="h-8 bg-white rounded-lg" />
+                <Skeleton className="h-8 bg-white rounded-lg" />
               </div>
             </div>
           ))}
@@ -2592,7 +2592,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
         alignItems: "center",
         gap: 6,
         padding: isMobile ? "5px 8px 3px" : "7px 12px 4px",
-        borderBottom: "1px solid rgba(24,36,51,0.6)",
+        borderBottom: "1px solid #FFFFFF",
       }}
     >
       <span
@@ -2601,7 +2601,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
           fontWeight: 700,
           letterSpacing: "1.5px",
           textTransform: "uppercase",
-          color: "rgba(255,255,255,0.5)",
+          color: "#FFFFFF",
         }}
       >
         Starting XI
@@ -2615,7 +2615,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
           fontWeight: 600,
           letterSpacing: "0.5px",
           textTransform: "uppercase",
-          color: confirmed ? "#45E0A8" : "#FFFF33",
+          color: confirmed ? "#45E0A8" : "#FFFFFF",
         }}
       >
         <span
@@ -2623,7 +2623,7 @@ function StartingXiHeader({ confirmed, isMobile }: { confirmed: boolean; isMobil
             width: isMobile ? 4 : 5,
             height: isMobile ? 4 : 5,
             borderRadius: "50%",
-            background: confirmed ? "#45E0A8" : "#FFFF33",
+            background: confirmed ? "#45E0A8" : "#FFFFFF",
             display: "inline-block",
           }}
         />
@@ -2649,7 +2649,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
       <div style={{ padding: "4px 6px" }}>
         {players.map((p, i) => {
           const isInjured = p.injuryStatus && p.injuryStatus !== "null";
-          const injuryColor = p.injuryStatus === "OUT" ? "#EF4444" : p.injuryStatus === "QUES" ? "#F59E0B" : "#F97316";
+          const injuryColor = p.injuryStatus === "OUT" ? "#FFFFFF" : p.injuryStatus === "QUES" ? "#FFFFFF" : "#FFFFFF";
           return (
             <div
               key={p.id}
@@ -2658,7 +2658,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
                 alignItems: "center",
                 gap: 3,
                 padding: "5px 0",
-                borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.5)" : "none",
+                borderBottom: i < players.length - 1 ? "1px solid #FFFFFF" : "none",
               }}
             >
               {/* Jersey number */}
@@ -2666,7 +2666,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
                 {p.jerseyNumber ?? ""}
               </span>
               {/* Flag circle */}
-              <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid #FFFFFF" }}>
                 <img src={fifaFlagUrl(fifaCode)} alt={fifaCode} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
               </div>
               {/* Name + position */}
@@ -2676,7 +2676,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                   {p.position && (
-                    <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 4px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.4 }}>
+                    <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", background: "transparent", padding: "1px 4px", borderRadius: 3, border: "1px solid #FFFFFF", lineHeight: 1.4 }}>
                       {p.position}
                     </span>
                   )}
@@ -2699,7 +2699,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
     <div style={{ padding: "8px 14px" }}>
       {players.map((p, i) => {
         const isInjured = p.injuryStatus && p.injuryStatus !== "null";
-        const injuryColor = p.injuryStatus === "OUT" ? "#EF4444" : p.injuryStatus === "QUES" ? "#F59E0B" : "#F97316";
+        const injuryColor = p.injuryStatus === "OUT" ? "#FFFFFF" : p.injuryStatus === "QUES" ? "#FFFFFF" : "#FFFFFF";
         return (
           <div
             key={p.id}
@@ -2708,15 +2708,15 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
               alignItems: "center",
               gap: 7,
               padding: "6px 0",
-              borderBottom: i < players.length - 1 ? "1px solid rgba(24,36,51,0.6)" : "none",
+              borderBottom: i < players.length - 1 ? "1px solid #FFFFFF" : "none",
             }}
           >
             {/* Jersey number */}
-            <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", width: 16, flexShrink: 0, textAlign: "right" }}>
+            <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 700, color: "#FFFFFF", width: 16, flexShrink: 0, textAlign: "right" }}>
               {p.jerseyNumber ?? ""}
             </span>
             {/* Flag circle */}
-            <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid #FFFFFF" }}>
               <img src={fifaFlagUrl(fifaCode)} alt={fifaCode} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             </div>
             {/* Name + position + injury */}
@@ -2725,7 +2725,7 @@ function PlayerRows({ players, isMobile, fifaCode }: { players: WcLineupPlayer[]
                 {p.playerName}
               </span>
               {p.position && (
-                <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#7EB8D4", background: "rgba(30,60,90,0.6)", padding: "1px 6px", borderRadius: 3, border: "1px solid rgba(30,80,120,0.4)", lineHeight: 1.5, flexShrink: 0 }}>
+                <span style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", background: "transparent", padding: "1px 6px", borderRadius: 3, border: "1px solid #FFFFFF", lineHeight: 1.5, flexShrink: 0 }}>
                   {p.position}
                 </span>
               )}
@@ -2778,9 +2778,9 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
   return (
     <div
       style={{
-        background: "#090E14",
+        background: "#000000",
         borderRadius: 12,
-        border: "1px solid #182433",
+        border: "1px solid #FFFFFF",
         overflow: "hidden",
         marginBottom: 10,
         marginLeft: 12,
@@ -2802,7 +2802,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: isMobile ? "8px 10px 6px" : "14px 18px 12px",
-          borderBottom: "1px solid #182433",
+          borderBottom: "1px solid #FFFFFF",
           gap: isMobile ? 6 : 10,
         }}
       >
@@ -2819,7 +2819,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
               background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
               flexShrink: 0,
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid #FFFFFF",
             }}
           >
             <img
@@ -2833,7 +2833,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
             <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
               {wcTeamAlias(awayTeam?.name ?? awayFifaCode)}
             </div>
-            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "#FFFFFF", letterSpacing: "0.5px", marginTop: 1 }}>
               {awayFifaCode}
             </div>
             <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${awayColors.primary}22`, color: "#FFFFFF", border: `1px solid ${awayColors.primary}44` }}>
@@ -2858,7 +2858,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
             <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase", color: "#FFFFFF", lineHeight: 1.1 }}>
               {wcTeamAlias(homeTeam?.name ?? homeFifaCode)}
             </div>
-            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "rgba(255,255,255,0.5)", letterSpacing: "0.5px", marginTop: 1 }}>
+            <div style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontSize: isMobile ? 9 : 11, fontWeight: 400, color: "#FFFFFF", letterSpacing: "0.5px", marginTop: 1 }}>
               {homeFifaCode}
             </div>
             <div style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", padding: isMobile ? "1px 4px" : "1px 6px", borderRadius: 3, marginTop: isMobile ? 2 : 4, display: "inline-block", background: `${homeColors.primary}22`, color: "#FFFFFF", border: `1px solid ${homeColors.primary}44` }}>
@@ -2876,7 +2876,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
               background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
               flexShrink: 0,
               overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid #FFFFFF",
             }}
           >
             <img
@@ -2890,22 +2890,22 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
       </div>
 
       {!hasLineups ? (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px", gap: 8, color: "rgba(255,255,255,0.3)", fontSize: 12, borderTop: "1px solid #182433" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px", gap: 8, color: "#FFFFFF", fontSize: 12, borderTop: "1px solid #FFFFFF" }}>
           <Users style={{ width: 16, height: 16 }} />
           <span>Lineups not yet available</span>
         </div>
       ) : (
         <div>
           {/* ── Two-column lineup grid — gridTemplateColumns: "1fr 1px 1fr" ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", borderBottom: "1px solid #182433" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1px 1fr", borderBottom: "1px solid #FFFFFF" }}>
             {/* Away team column */}
             <div>
               <StartingXiHeader confirmed={anyConfirmed} isMobile={isMobile} />
               <PlayerRows players={awayStarters} isMobile={isMobile} fifaCode={awayFifaCode} />
               {awayBench.length > 0 && (
                 <>
-                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid rgba(24,36,51,0.5)", borderBottom: "1px solid rgba(24,36,51,0.5)" }}>
-                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid #FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
+                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF" }}>
                       Bench
                     </span>
                   </div>
@@ -2915,7 +2915,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
             </div>
 
             {/* Divider */}
-            <div style={{ background: "#182433" }} />
+            <div style={{ background: "#FFFFFF" }} />
 
             {/* Home team column */}
             <div>
@@ -2923,8 +2923,8 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
               <PlayerRows players={homeStarters} isMobile={isMobile} fifaCode={homeFifaCode} />
               {homeBench.length > 0 && (
                 <>
-                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid rgba(24,36,51,0.5)", borderBottom: "1px solid rgba(24,36,51,0.5)" }}>
-                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+                  <div style={{ padding: isMobile ? "4px 8px 2px" : "5px 14px 3px", borderTop: "1px solid #FFFFFF", borderBottom: "1px solid #FFFFFF" }}>
+                    <span style={{ fontSize: isMobile ? 7 : 8, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF" }}>
                       Bench
                     </span>
                   </div>
@@ -2936,7 +2936,7 @@ function WcLineupCard({ match }: { match: WcMatchWithLineups }) {
 
           {/* Venue footer */}
           {venue && (
-            <div style={{ padding: "6px 14px", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+            <div style={{ padding: "6px 14px", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#FFFFFF" }}>
               <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
               <span>{venue.stadium}, {venue.city}</span>
             </div>
@@ -2995,12 +2995,12 @@ function WcProjectionsFeed({ date }: { date: string }) {
   if (!matches || matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-        <CalendarDays className="w-10 h-10 text-zinc-600" />
+        <CalendarDays className="w-10 h-10 text-white" />
         <div>
-          <p className="text-sm font-semibold text-zinc-400 mb-1">
+          <p className="text-sm font-semibold text-white mb-1">
             No World Cup matches on {WC_DATE_LABELS[date] ?? date}
           </p>
-          <p className="text-xs text-zinc-600">Group stage runs June 11 – July 2, 2026</p>
+          <p className="text-xs text-white">Group stage runs June 11 – July 2, 2026</p>
         </div>
       </div>
     );
@@ -3036,17 +3036,17 @@ function WcLineupsFeed({ date }: { date: string }) {
     return (
       <div className="pt-2">
         {[1, 2].map((i) => (
-          <div key={i} style={{ background: "#090E14", borderRadius: 12, border: "1px solid #182433", marginBottom: 10, marginLeft: 12, marginRight: 12, padding: 16 }}>
+          <div key={i} style={{ background: "#000000", borderRadius: 12, border: "1px solid #FFFFFF", marginBottom: 10, marginLeft: 12, marginRight: 12, padding: 16 }}>
             <div className="flex justify-between mb-4">
-              <Skeleton className="h-4 w-24 bg-zinc-800" />
-              <Skeleton className="h-4 w-16 bg-zinc-800" />
+              <Skeleton className="h-4 w-24 bg-white" />
+              <Skeleton className="h-4 w-16 bg-white" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-zinc-800 rounded" />)}
+                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-white rounded" />)}
               </div>
               <div className="space-y-2">
-                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-zinc-800 rounded" />)}
+                {[1,2,3,4].map(j => <Skeleton key={j} className="h-10 w-full bg-white rounded" />)}
               </div>
             </div>
           </div>
@@ -3058,12 +3058,12 @@ function WcLineupsFeed({ date }: { date: string }) {
   if (!matches || matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-        <Users className="w-10 h-10 text-zinc-600" />
+        <Users className="w-10 h-10 text-white" />
         <div>
-          <p className="text-sm font-semibold text-zinc-400 mb-1">
+          <p className="text-sm font-semibold text-white mb-1">
             No lineups available for {WC_DATE_LABELS[date] ?? date}
           </p>
-          <p className="text-xs text-zinc-600">Lineups are sourced from RotoWire</p>
+          <p className="text-xs text-white">Lineups are sourced from RotoWire</p>
         </div>
       </div>
     );
@@ -3091,11 +3091,11 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
     return (
       <div className="pt-4 px-3 space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} style={{ background: 'hsl(var(--card))', borderRadius: 8, padding: 16 }}>
-            <Skeleton className="h-4 w-32 bg-zinc-800 mb-3" />
+          <div key={i} style={{ background: '#000000', borderRadius: 8, padding: 16 }}>
+            <Skeleton className="h-4 w-32 bg-white mb-3" />
             <div className="space-y-2">
-              <Skeleton className="h-8 w-full bg-zinc-800 rounded-full" />
-              <Skeleton className="h-8 w-full bg-zinc-800 rounded-full" />
+              <Skeleton className="h-8 w-full bg-white rounded-full" />
+              <Skeleton className="h-8 w-full bg-white rounded-full" />
             </div>
           </div>
         ))}
@@ -3108,12 +3108,12 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
   if (!splits || splits.length === 0 || splits.every((s) => s.splits.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-        <CalendarDays className="w-10 h-10 text-zinc-600" />
+        <CalendarDays className="w-10 h-10 text-white" />
         <div>
-          <p className="text-sm font-semibold text-zinc-400 mb-1">
+          <p className="text-sm font-semibold text-white mb-1">
             No betting splits available for {WC_DATE_LABELS[_date] ?? _date}
           </p>
-          <p className="text-xs text-zinc-600">Splits sourced from DraftKings Network · Updated every 5 min</p>
+          <p className="text-xs text-white">Splits sourced from DraftKings Network · Updated every 5 min</p>
         </div>
       </div>
     );
@@ -3139,9 +3139,9 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
           <div
             key={s.matchId}
             style={{
-              background: 'hsl(var(--card))',
-              borderTop: '1px solid hsl(var(--border))',
-              borderBottom: '1px solid hsl(var(--border))',
+              background: '#000000',
+              borderTop: '1px solid #FFFFFF',
+              borderBottom: '1px solid #FFFFFF',
               borderLeft: `3px solid ${awayColors.primary}`,
               padding: '12px 16px 14px',
               marginBottom: 0,
@@ -3154,7 +3154,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                   width: 22, height: 22, borderRadius: '50%',
                   background: `radial-gradient(circle at 30% 30%, ${awayColors.primary}cc, ${awayColors.secondary}88)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0,
+                  overflow: 'hidden', border: '1px solid #FFFFFF', flexShrink: 0,
                 }}>
                   <img
                     src={fifaFlagUrl(awayFifaCode)}
@@ -3165,13 +3165,13 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>{awayFifaCode}</span>
               </div>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>vs</span>
+              <span style={{ fontSize: 10, color: '#FFFFFF', fontWeight: 600 }}>vs</span>
               <div className="flex items-center gap-1.5">
                 <div style={{
                   width: 22, height: 22, borderRadius: '50%',
                   background: `radial-gradient(circle at 30% 30%, ${homeColors.primary}cc, ${homeColors.secondary}88)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0,
+                  overflow: 'hidden', border: '1px solid #FFFFFF', flexShrink: 0,
                 }}>
                   <img
                     src={fifaFlagUrl(homeFifaCode)}
@@ -3182,13 +3182,13 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.06em' }}>{homeFifaCode}</span>
               </div>
-              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>DraftKings</span>
+              <span style={{ fontSize: 9, color: '#FFFFFF', marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: '0.08em' }}>DraftKings</span>
             </div>
 
             {/* ML splits */}
             {hasMl && (
               <div className="mb-3">
-                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>MONEYLINE</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>MONEYLINE</div>
                 <div className="space-y-2">
                   <MergedSplitBar
                     awayPct={mlSplits.awayTickets}
@@ -3215,13 +3215,13 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
             {/* Total splits */}
             {hasTotal && (
               <div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TOTAL</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#FFFFFF', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TOTAL</div>
                 <div className="space-y-2">
                   <MergedSplitBar
                     awayPct={totalSplits.awayTickets}
                     homePct={totalSplits.homeTickets}
                     awayColor="#45E0A8"
-                    homeColor="#9CA3AF"
+                    homeColor="#FFFFFF"
                     rowLabel="TICKETS"
                     awayLabel="OVER"
                     homeLabel="UNDER"
@@ -3230,7 +3230,7 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
                     awayPct={totalSplits.awayMoney}
                     homePct={totalSplits.homeMoney}
                     awayColor="#45E0A8"
-                    homeColor="#9CA3AF"
+                    homeColor="#FFFFFF"
                     rowLabel="MONEY"
                     awayLabel="OVER"
                     homeLabel="UNDER"
@@ -3250,8 +3250,8 @@ function WcSplitsFeed({ date: _date }: { date: string }) {
 function WcComingSoon({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-3">
-      <div className="text-zinc-600 text-sm font-semibold uppercase tracking-widest">{label}</div>
-      <div className="text-zinc-700 text-xs">Coming soon</div>
+      <div className="text-white text-sm font-semibold uppercase tracking-widest">{label}</div>
+      <div className="text-white text-xs">Coming soon</div>
     </div>
   );
 }
@@ -3302,10 +3302,10 @@ export function WcFeedInline({
           document.documentElement.style.setProperty('--wc-subheader-h', `${h}px`);
           console.log(`[WcSubHeader] [OUTPUT] initial --wc-subheader-h=${h}px`);
         }}
-        className="sticky z-[38] border-b border-white/8"
+        className="sticky z-[38] border-b border-white"
         style={{
           top: "var(--prez-header-h, 220px)",
-          background: "#0f0f0f", /* [FIX] solid opaque — no transparency bleed */
+          background: "#000000", /* [FIX] solid opaque — no transparency bleed */
         }}
       >
         { /* Title row */}
@@ -3318,7 +3318,7 @@ export function WcFeedInline({
           />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold text-white tracking-wide">FIFA World Cup 2026</div>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest">
+            <div className="text-[10px] text-white uppercase tracking-widest">
               {/* Stage label derived from the selected date's knockout round (was a
                   single Jun-28 threshold that printed "Round of 32" for every KO
                   round, so quarterfinals wrongly showed "Round of 32"). */}
@@ -3358,7 +3358,7 @@ export function WcFeedInline({
             overflowY: 'hidden',
             scrollbarWidth: 'none',
             WebkitOverflowScrolling: 'touch',
-            borderBottom: '2px solid hsl(var(--border) / 0.5)',
+            borderBottom: '2px solid #FFFFFF',
             background: 'transparent',
             paddingLeft: '12px',
           } as React.CSSProperties}
@@ -3377,7 +3377,7 @@ export function WcFeedInline({
                   fontSize: '13px',
                   fontWeight: isActive ? 800 : 500,
                   letterSpacing: '0.06em',
-                  color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.55)',
+                  color: isActive ? '#FFFFFF' : '#FFFFFF',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: isActive ? '2px solid #45E0A8' : '2px solid transparent',

@@ -129,7 +129,7 @@ function edgeLabelIsAway(
     const abbr = parseAbbrFromEdgeLabel(label);
     if (abbr) {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`%c[edgeLabelIsAway] sport=${sport} label="${label}" abbr=${abbr} awayAbbr=${awayAbbr} → ${abbr === awayAbbr}`, 'color:#FF9900;font-size:9px');
+        console.log(`%c[edgeLabelIsAway] sport=${sport} label="${label}" abbr=${abbr} awayAbbr=${awayAbbr} → ${abbr === awayAbbr}`, 'color:#FFFFFF;font-size:9px');
       }
       return abbr === awayAbbr;
     }
