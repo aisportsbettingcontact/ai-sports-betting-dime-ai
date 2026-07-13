@@ -289,7 +289,7 @@ function StatsSection({
   if (error) {
     return (
       <div className="px-4 py-4">
-        <p className="text-[10px] text-red-400 font-mono">
+        <p className="text-[10px] text-white font-mono">
           [TRENDS][ERROR] {error.message}
         </p>
       </div>
@@ -429,32 +429,32 @@ export default function SituationalResultsPanel({
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
       <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
       >
-        <span className="text-[10px] font-bold text-gray-200 font-mono tracking-widest uppercase">
+        <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
           Trends
         </span>
         <div className="flex items-center gap-1">
           {isExpanded
-            ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
-            : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
+            ? <ChevronUp className="w-3.5 h-3.5 text-white" />
+            : <ChevronDown className="w-3.5 h-3.5 text-white" />
           }
         </div>
       </button>
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-white/[0.06]">
+        <div className="border-t border-white">
           {/* ── Tab selector ─────────────────────────────────────────────── */}
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-white/[0.06]">
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-white">
             {tabs.map((t) => (
               <button type="button" key={t.key}
                 onClick={() => setTab(t.key)}
                 className={cn(
                   "flex-1 py-1.5 rounded-full text-[10px] font-bold font-mono transition-all",
                   tab === t.key
-                    ? "bg-white/10 text-white"
-                    : "text-gray-300 hover:text-gray-300 hover:bg-white/5"
+                    ? "bg-[#45E0A8] text-black"
+                    : "text-white hover:text-white"
                 )}
               >
                 {t.label}

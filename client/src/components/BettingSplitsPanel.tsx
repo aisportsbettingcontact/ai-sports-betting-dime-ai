@@ -691,7 +691,7 @@ export function BettingSplitsPanel({
                   borderRadius: 4,
                   border: isActive ? "1px solid #ffffff" : "1px solid #ffffff",
                   background: isActive ? "#45E0A8" : "transparent",
-                  color: isActive ? "#ffffff" : isAvailable ? "rgba(255,255,255,0.4)" : "#ffffff",
+                  color: isActive ? "#ffffff" : isAvailable ? "#ffffff" : "#ffffff",
                   cursor: isAvailable ? "pointer" : "default",
                   transition: "all 0.15s ease",
                 }}
@@ -746,7 +746,7 @@ export function BettingSplitsPanel({
             ticketsPct={game.spreadAwayBetsPct} handlePct={game.spreadAwayMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
         {/* Total column — always rendered */}
         <div className="flex-1 min-w-0">
           <MarketBlock title="Total" awayLabel="" homeLabel=""
@@ -754,7 +754,7 @@ export function BettingSplitsPanel({
             ticketsPct={game.totalOverBetsPct} handlePct={game.totalOverMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div style={{ width: 1, background: "rgba(255,255,255,0.07)", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
         {/* Moneyline column — always rendered */}
         <div className="flex-1 min-w-0">
           <MarketBlock title="Moneyline" awayLabel={awayMlLabel} homeLabel={homeMlLabel}

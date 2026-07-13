@@ -425,7 +425,7 @@ export default function Home() {
               style={{ background: "#1E1E26", border: "1px solid rgba(255,255,255,0.14)" }}
               role="alert"
             >
-              <p className="uppercase tracking-widest text-[10px] text-[#6E6E78]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+              <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
                 Sign-in error
               </p>
               <p className="text-white/90">{discordErrorMsg}</p>
@@ -461,7 +461,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -482,7 +482,7 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 focus:bg-white/8 transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
@@ -556,7 +556,7 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#4b5563] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white/10 bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#45E0A8]/35 focus:border-[#45E0A8]/50 transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button

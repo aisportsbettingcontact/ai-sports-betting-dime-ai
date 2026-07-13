@@ -114,7 +114,7 @@ export default function ResetPassword() {
           </p>
           <Button
             onClick={() => navigate("/")}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-[#45E0A8] text-white"
           >
             Back to Sign In
           </Button>
@@ -128,12 +128,12 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
-          <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
+          <CheckCircle2 className="w-12 h-12 text-[#45E0A8] mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Password Reset</h1>
-          <p className="text-white/60 text-sm mb-2">
+          <p className="text-white text-sm mb-2">
             Your password has been updated. All existing sessions have been signed out.
           </p>
-          <p className="text-white/40 text-xs">Redirecting to sign in...</p>
+          <p className="text-white text-xs">Redirecting to sign in...</p>
         </div>
       </div>
     );
@@ -146,12 +146,12 @@ export default function ResetPassword() {
       <div className="w-full max-w-md bg-black border border-white rounded-xl p-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">
-            <KeyRound className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center">
+            <KeyRound className="w-5 h-5 text-[#45E0A8]" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Reset Password</h1>
-            <p className="text-white/50 text-xs">Enter your new password below</p>
+            <p className="text-white text-xs">Enter your new password below</p>
           </div>
         </div>
 
