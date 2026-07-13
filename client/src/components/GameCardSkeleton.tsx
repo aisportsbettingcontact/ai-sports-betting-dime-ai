@@ -20,10 +20,10 @@ function SingleGameCardSkeleton() {
     <div
       className="w-full relative"
       style={{
-        background: "hsl(var(--card))",
-        borderTop: "1px solid hsl(var(--border))",
-        borderBottom: "1px solid hsl(var(--border))",
-        borderLeft: "3px solid hsl(var(--border))",
+        background: "#000000",
+        borderTop: "1px solid #FFFFFF",
+        borderBottom: "1px solid #FFFFFF",
+        borderLeft: "3px solid #FFFFFF",
       }}
     >
       {/* ── Desktop layout (≥ md) ── */}
