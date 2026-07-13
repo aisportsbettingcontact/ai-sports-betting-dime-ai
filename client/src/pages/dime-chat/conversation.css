@@ -18,7 +18,7 @@
 
 .dc-page.dc-page--app { width: 100%; min-height: 100dvh; }
 .dc-app { width: 100%; height: 100dvh; display: flex; overflow: hidden; } /* metrics from F:53 minus mock border/radius */
-.theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #0B0B0F; } /* D:53 */
+.theme-dark .dc-app, .theme-dark.dc-page .dc-app { background: #000000; } /* D:53 */
 .theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
 
 .dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
@@ -45,8 +45,8 @@
 
 .dc-turn--user { display: flex; justify-content: flex-end; } /* right edge = the send button's side of the composer (D:102) */
 .dc-user-capsule { max-width: 85%; border-radius: 20px; padding: 10px 16px; font-size: 14px; font-weight: 400; font-family: inherit; white-space: pre-wrap; word-break: break-word; } /* radius 20 = prompt pill D:107; padding 16px = pill inset D:107, 10px = sidebar-row gap unit F:21; type = composer input F:101; max-width 85% = UNKNOWN-3 */
-.theme-dark .dc-user-capsule { background: #1E1E26; color: #EDEDF2; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
-.theme-light .dc-user-capsule { background: #F0F0F3; color: #0B0B0F; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
+.theme-dark .dc-user-capsule { background: #000000; color: #FFFFFF; } /* surface = sidebar border color promoted (FD:54, spec §2.2); text D:101 */
+.theme-light .dc-user-capsule { background: #FFFFFF; color: #000000; } /* surface = .hv2 hover fill (L:48, spec §2.2); text L:101 */
 
 /* ----------------------------------------------------------------------------
    3. ASSISTANT MESSAGE — bare text on the page itself (spec §2.3)
@@ -56,7 +56,7 @@
 .dc-prose { font-size: 14px; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap; word-break: break-word; } /* size F:101; color F:19/20; line-height 1.6 = UNKNOWN-1 */
 .dc-prose strong, .dc-prose b { font-weight: 600; } /* kit mid-emphasis weight (pills F:107, menu items D:92) */
 .dc-prose a { color: #45E0A8; text-decoration: none; } /* F:13 */
-.dc-prose a:hover { color: #7DEBC4; } /* F:14 — state rule */
+.dc-prose a:hover { color: #45E0A8; } /* F:14 — state rule */
 .theme-light .dc-prose a { color: var(--mint-on-light); } /* mint text on light rule, L:90 (spec §2.3) */
 
 /* Numerals: odds/lines/edges/prices/records/percentages (spec §5) */
@@ -75,8 +75,8 @@
    -------------------------------------------------------------------------- */
 
 .dc-edge { border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; } /* card shell = menu card D:76; padding 16px = pill inset D:107, 14px pairs the radius (spec §2.4, composed); 10px = sidebar-row gap unit F:21 */
-.theme-dark .dc-edge { background: #1A1A22; border: 1px solid #2E2E38; } /* D:76 — in-flow dark cards carry no shadow */
-.theme-light .dc-edge { background: #FFFFFF; border: 1px solid #D5D5DC; box-shadow: 0 1px 3px rgba(11,11,15,0.06); } /* L:76 + raised in-flow shadow L:99 */
+.theme-dark .dc-edge { background: #000000; border: 1px solid #FFFFFF; } /* D:76 — in-flow dark cards carry no shadow */
+.theme-light .dc-edge { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:76 + raised in-flow shadow L:99 */
 
 .dc-edge-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .dc-microlabel { font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-weight: 500; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; } /* C3 = recents-label F:64 in the loaded mono F:9 */
