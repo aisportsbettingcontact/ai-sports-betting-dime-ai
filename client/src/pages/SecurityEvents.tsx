@@ -214,7 +214,7 @@ function DiscordTestPanel() {
           </Select>
           <Button
             size="sm"
-            className="bg-violet-600 hover:bg-violet-700 text-white gap-1.5 h-8 text-xs"
+            className="bg-[#45E0A8] hover:bg-[#45E0A8] text-black gap-1.5 h-8 text-xs"
             disabled={isTestPending}
             onClick={() => fireEventMutation.mutate({ eventType: testEventType })}
           >
@@ -243,7 +243,7 @@ function DiscordTestPanel() {
         <Button
           size="sm"
           variant="outline"
-          className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 gap-1.5 h-8 text-xs shrink-0"
+          className="border-white text-white hover:bg-transparent gap-1.5 h-8 text-xs shrink-0"
           disabled={isDigestPending}
           onClick={() => fireDigestMutation.mutate()}
         >
@@ -395,7 +395,7 @@ export default function SecurityEvents() {
             <Button
               variant="outline"
               size="sm"
-              className="text-red-400 border-red-500/30 hover:bg-red-500/10 gap-1.5"
+              className="text-white border-white hover:bg-transparent gap-1.5"
               onClick={() => setPruneOpen(true)}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -619,7 +619,7 @@ export default function SecurityEvents() {
             </Button>
             <Button
               size="sm"
-              className="bg-red-600 hover:bg-red-700 text-white gap-1.5"
+              className="bg-white hover:bg-white text-black gap-1.5"
               disabled={pruneMutation.isPending}
               onClick={() => pruneMutation.mutate({ retentionDays })}
             >
