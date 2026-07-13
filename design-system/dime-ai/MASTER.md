@@ -3,6 +3,12 @@
 > **LOGIC:** When building a specific page, first check `design-system/dime-ai/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.
 > If not, strictly follow the rules below.
+>
+> **SUPERSEDED (2026-07-13):** the color + surface rules here are superseded by
+> `dime-ai/THREE-COLOR-LAW.md` — v1 (strict 3-color), v2 (tonal greys, hover,
+> depth-by-border), and v3 (dimensional: elevation shadows + an accessible mint
+> accent surface, scoped to the projections product). Where this file and the
+> Law disagree, the Law wins.
 
 ---
 
