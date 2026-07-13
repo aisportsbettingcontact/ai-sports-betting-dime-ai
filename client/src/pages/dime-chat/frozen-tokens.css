@@ -49,8 +49,8 @@
 /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */ /* D/L:17 */
 :root { --mint: #45E0A8; --mint-on-light: #000000; } /* D/L:18 */
 
-.theme-dark { --text-primary: #f7f7f8; --text-secondary: #c9c9d2; --row-hover: rgba(255,255,255,0.065); --row-active: rgba(255,255,255,0.095); --accent: #45E0A8; --ring: rgba(69,224,168,0.36); } /* D/L:19 */
-.theme-light { --text-primary: #111318; --text-secondary: #2f323b; --row-hover: rgba(15,23,42,0.055); --row-active: rgba(69,224,168,0.13); --accent: #45E0A8; --ring: rgba(69,224,168,0.28); } /* D/L:20 */
+.theme-dark { --text-primary: #FFFFFF; --text-secondary: #FFFFFF; --row-hover: transparent; --row-active: transparent; --accent: #45E0A8; --ring: #45E0A8; } /* D/L:19 */
+.theme-light { --text-primary: #000000; --text-secondary: #000000; --row-hover: transparent; --row-active: transparent; --accent: #45E0A8; --ring: #45E0A8; } /* D/L:20 */
 
 /* ----------------------------------------------------------------------------
    2. FROZEN STYLE-BLOCK RULES — declarations verbatim, frozen selector kept,
@@ -60,7 +60,7 @@
 /* Links — frozen selector is bare `a` (D/L:13-14); re-expressed on a class to
    avoid restyling every anchor in the app. Values verbatim. */
 .dc-link { color: #45E0A8; text-decoration: none; } /* D/L:13 */
-.dc-link:hover { color: #7DEBC4; } /* D/L:14 — state rule */
+.dc-link:hover { color: #45E0A8; } /* D/L:14 — state rule */
 
 /* Account menu visibility — D/L:15-16 */
 .settings-menu, .dc-settings-menu { display: none; } /* D/L:15 */
@@ -83,8 +83,8 @@
 /* Placeholders — D/L:29-30. NOTE: `.theme-light-placeholder` is declared but
    NOT applied in the frozen light markup (L:101 input has class="composer-input"
    only), so as frozen the placeholder renders #6A6A78 in both themes. */
-.composer-input::placeholder, .dc-composer-input::placeholder { color: #6A6A78; } /* D/L:29 */
-.theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #9A9AA8; } /* D/L:30 */
+.composer-input::placeholder, .dc-composer-input::placeholder { color: #FFFFFF; } /* D/L:29 */
+.theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #FFFFFF; } /* D/L:30 */
 
 /* Typing indicator — D/L:31-34 (keyframes name verbatim; no clash with
    dime-chat.css's `dime-pulse`). */
