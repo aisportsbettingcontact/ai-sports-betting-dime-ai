@@ -111,11 +111,13 @@ export function getVerdict(edge: number): string {
  *  grey text tiers, and negative/FADE is grey, never red. Values are
  *  CSS vars from the global token layer (legacy fallbacks for safety). */
 export function getEdgeColor(edge: number): string {
-  if (isNaN(edge)) return 'var(--dime-text-faint, rgba(255,255,255,0.30))';
+  // Three-Color Law: mint is the one signal; everything without signal is white
+  // ink (no grey tiers). Tokens resolve to #FFFFFF/#000000; fallbacks match.
+  if (isNaN(edge)) return 'var(--dime-text-faint, #FFFFFF)';
   if (edge >= 2.5) return 'var(--dime-mint-text, #45E0A8)'; // ELITE/STRONG/PLAYABLE — signal
-  if (edge >= 0.5) return 'var(--dime-text-secondary, rgba(255,255,255,0.60))'; // SMALL
-  if (edge >= -1) return 'var(--dime-text-faint, rgba(255,255,255,0.30))'; // NEUTRAL
-  return 'var(--dime-text-secondary, rgba(255,255,255,0.60))'; // FADE — grey, never red
+  if (edge >= 0.5) return 'var(--dime-text-secondary, #FFFFFF)'; // SMALL
+  if (edge >= -1) return 'var(--dime-text-faint, #FFFFFF)'; // NEUTRAL
+  return 'var(--dime-text-secondary, #FFFFFF)'; // FADE — plain ink, never red
 }
 
 /**
