@@ -44,3 +44,27 @@ cards, prerender).
 zinc/emerald/amber/blue/red families (remapped) · `#0FA36B` `#2FB584` `#7DEBC4`
 mint variants · every grey tier · every rgba alpha (except where a documented
 exception keeps a color).
+
+---
+
+## Verification (final)
+
+- **Fonts:** 0 non-Familjen `font-family` in `client/src` + `server` (audit-clean). Familjen
+  Grotesk is the only typeface everywhere (IBM Plex Mono / JetBrains Mono / Barlow retired).
+- **Colors:** `tsc --noEmit` passes. Rendered UI resolves to `#45E0A8` / `#FFFFFF` / `#000000`
+  across all breakpoints & both themes, on the token-driven surfaces and every swept page/component.
+- **Residual audit flags (~89) are all documented exceptions**, not violations:
+  1. **Team/league/country color constants** — crest/monogram/flag/logo fallbacks:
+     `#1a4a8a`,`#c84b0c` (GameCard/BettingSplitsPanel), `#4A90D9`,`#1A3A5C`,`#003087`,`#E8A838`
+     (MLB props/cheatsheet), `#666`/`#888`/`#444`/`#222` (team primary/dark fallbacks),
+     `#1a1a2e` (logo-disc contrast), `actionNetwork`/`teamRegistry`/`splits_card` team tokens.
+  2. **Tailwind remap selectors** in `dime-mobile.css` (`[class*="text-emerald-"]` etc.) — the
+     mechanism that forces stray Tailwind color classes onto the 3-color tokens; not rendered color.
+  3. **Chart alpha math** in `BetTrackerAnalytics` — `withAlpha()`/`color-mix()` compute translucent
+     tints **from the mint/white/black palette** for data-viz legibility (only the 3 hues involved).
+  4. **Doc-comments** referencing retired values (`#39FF14`, old hex) and **HTML entities**
+     (`&#305;` dotless-i, "React Error #310") — non-rendering text.
+  5. **Bet-loss red** `#FF3B3B` — the explicitly-approved scoped exception (Bet Tracker/calendar only).
+- **Known strict-3 contrast artifacts** (consequences of the literal mapping, flagged for an optional
+  polish pass): mint-on-mint "hit target" badge (MlbBacktest); white-on-white comparative bar
+  (SituationalResultsPanel); white text on some mint CTA fills; light-mode mint text at low contrast.
