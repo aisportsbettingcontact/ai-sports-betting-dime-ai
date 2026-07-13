@@ -251,11 +251,27 @@ def parse_event_start(g):
 
 
 def parse_model_run(g):
-    try:
-        run = datetime.fromisoformat(str(g.get("modelRunAt")).replace("Z", "+00:00"))
-        return run if run.tzinfo else run.replace(tzinfo=timezone.utc)
-    except (ValueError, TypeError):
+    """The platform stores modelRunAt as epoch seconds/milliseconds in some
+    rows and ISO strings in others. Parse all three, then reject anything
+    outside a sanity window — a timestamp that parses to 1777 is corruption,
+    not history."""
+    value = g.get("modelRunAt")
+    if value is None or value == "":
         return None
+    token = str(value).strip()
+    run = None
+    if re.fullmatch(r"\d{12,14}", token):
+        run = datetime.fromtimestamp(int(token) / 1000, tz=timezone.utc)
+    elif re.fullmatch(r"\d{9,11}", token):
+        run = datetime.fromtimestamp(int(token), tz=timezone.utc)
+    else:
+        try:
+            run = datetime.fromisoformat(token.replace("Z", "+00:00"))
+            if run.tzinfo is None:
+                run = run.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return run if 2015 <= run.year <= 2035 else None
 
 
 def labels_consistent(g) -> bool:
@@ -272,10 +288,6 @@ def labels_consistent(g) -> bool:
         return False
     book = to_float(g.get("bookTotal"))
     if m.group(2) and book is not None and abs(float(m.group(2)) - book) > 0.01:
-        return False
-    scores = (to_float(g.get("modelAwayScore")), to_float(g.get("modelHomeScore")))
-    total = to_float(g.get("modelTotal"))
-    if None not in scores and total is not None and abs(sum(scores) - total) > 0.75:
         return False
     return True
 
@@ -300,6 +312,8 @@ def prepare_games(games: list[dict]) -> tuple[list[dict], dict]:
             g["_valid"] = False
         else:
             g["_valid"] = True
+            # Contexts must print a real timestamp, never a raw epoch int.
+            g["modelRunAt"] = _stamp(g["_run"])
     return [g for g in games if g["_valid"]], dropped
 
 
@@ -451,9 +465,9 @@ def build_grounded(rng, games, system):
             answer = rng.choice(
                 [
                     f"PASS. Dime has {team} {have} and {price_str} needs {need} — a real but thin {gap:.1f}-point "
-                    f"edge, inside normal model error. Save the bullet for a number that clears the bar.",
+                    f"edge — under Dime's 2-point play bar. Save the bullet for a number that clears it.",
                     f"PASS on {team} at {price_str}. There's {gap:.1f} points of edge here — on the right side, "
-                    f"but thinner than the model's own error bars. Not enough to pay juice on.",
+                    f"but short of Dime's 2-point play bar. Not enough to pay juice on.",
                 ]
             )
         elif edge < -0.003:
@@ -475,8 +489,9 @@ def build_grounded(rng, games, system):
                     f"Nothing to buy here.",
                 ]
             )
-    elif total_model is not None and total_book is not None:
-        diff = total_model - total_book
+    elif total_book is not None and (
+        to_float(g.get("modelOverRate")) is not None or total_model is not None
+    ):
         unit = TOTAL_UNIT_BY_SPORT.get(str(g.get("sport")), "point")
         question = rng.choice(
             [
@@ -484,38 +499,60 @@ def build_grounded(rng, games, system):
                 f"Over or under in the {g['awayTeam']} at {g['homeTeam']} game?",
             ]
         )
-        if abs(diff) < 0.05:
-            answer = rng.choice(
-                [
-                    f"NO LEAN. Dime's projection and the market are both sitting on {total_book:g}. When the "
-                    f"model and the book agree, there's nothing to buy — next market.",
-                    f"NO LEAN. Model {total_model:g}, market {total_book:g} — dead even. There's no bet in a "
-                    f"number both sides already agree on.",
-                ]
-            )
-        elif abs(diff) >= 0.5:
+        over_rate = to_float(g.get("modelOverRate"))
+        under_rate = to_float(g.get("modelUnderRate"))
+        BREAK_EVEN_110 = 52.4  # implied probability of a standard -110 total
+
+        if over_rate is not None and under_rate is not None:
+            # The sim rates carry the direction. modelTotal equal to the market
+            # number is an evaluation line, not a projection — never read the
+            # zero difference as "no lean".
+            side, rate = ("over", over_rate) if over_rate >= under_rate else ("under", under_rate)
+            edge_at_110 = rate - BREAK_EVEN_110
+            if rate >= 54.5:
+                worst_juice = fmt_price(fair_american(max(0.02, min(0.98, rate / 100 - 0.02))))
+                answer = rng.choice(
+                    [
+                        f"LEAN {side.upper()} {total_book:g}. The sim lands {side} {rate:.1f}% of the time — at a "
+                        f"standard -110 that's {edge_at_110:.1f} points over the 52.4% break-even. The feed doesn't "
+                        f"carry the total's price, so check your book's juice: playable to {worst_juice}, no worse.",
+                        f"LEAN {side.upper()} {total_book:g}. Dime's sim goes {side} at {rate:.1f}%, which clears a "
+                        f"-110 total by {edge_at_110:.1f} points. Send your book's actual price to be sure — anything "
+                        f"through {worst_juice} works, past that the edge is gone.",
+                    ]
+                )
+            elif rate >= 52.9:
+                answer = rng.choice(
+                    [
+                        f"PASS at standard juice. The sim leans {side} at {rate:.1f}%, but that only clears the "
+                        f"-110 break-even of 52.4% by {edge_at_110:.1f} points — under Dime's 2-point bar. At plus "
+                        f"money it's worth another look; send the price if your book hangs one.",
+                        f"PASS — close, not close enough. {side.capitalize()} hits {rate:.1f}% in the sim against a "
+                        f"52.4% break-even at -110. A {edge_at_110:.1f}-point edge doesn't clear the bar; a better "
+                        f"price would change that, so tell me what your book is charging.",
+                    ]
+                )
+            else:
+                answer = rng.choice(
+                    [
+                        f"NO LEAN on the {total_book:g}. The sim splits {over_rate:.1f}% over / {under_rate:.1f}% "
+                        f"under — neither side beats the 52.4% a -110 price demands. No bet at standard juice.",
+                        f"NO LEAN. Over {over_rate:.1f}%, under {under_rate:.1f}% — a near coin flip on the "
+                        f"{total_book:g}, and coin flips lose exactly the juice over time. Skip the total here.",
+                    ]
+                )
+        elif total_model is not None and abs(total_model - total_book) >= 0.5:
+            diff = total_model - total_book
             lean = "under" if diff < 0 else "over"
-            rate = to_float(g.get("modelUnderRate") if lean == "under" else g.get("modelOverRate"))
-            rate_str = f" The sim lands {lean} {rate:.0f}% of the time." if rate is not None else ""
-            answer = rng.choice(
-                [
-                    f"LEAN {lean.upper()} {total_book:g}. Dime projects {total_model:g} — {abs(diff):.1f} "
-                    f"{unit}s {lean} the market number.{rate_str} Playable if the line holds; re-check it before "
-                    f"you fire.",
-                    f"LEAN {lean.upper()}. The market hung {total_book:g}; Dime's projection is {total_model:g}, "
-                    f"a {abs(diff):.1f}-{unit} gap to the {lean}.{rate_str} Worth a position at this number — "
-                    f"gone if it moves toward the model.",
-                ]
+            answer = (
+                f"LEAN {lean.upper()} {total_book:g}. Dime projects {total_model:g} — {abs(diff):.1f} {unit}s "
+                f"{lean} the market number. No sim rate on this row, so treat it as a lean, not a play, and "
+                f"check the price before doing anything."
             )
         else:
-            lean = "under" if diff < 0 else "over"
-            answer = rng.choice(
-                [
-                    f"PASS the total. Dime projects {total_model:g} against the market's {total_book:g}. A "
-                    f"{abs(diff):.1f}-{unit} lean to the {lean} isn't enough to pay juice on.",
-                    f"PASS. There's a {lean} shade here — model {total_model:g} vs market {total_book:g} — but "
-                    f"{abs(diff):.1f} {unit}s doesn't clear the juice. Thin shades are how bankrolls leak.",
-                ]
+            answer = (
+                f"NO LEAN. Dime's number and the market are both sitting on {total_book:g} and the row carries "
+                f"no simulation rate to split the difference. Nothing to do on this total."
             )
     else:
         return None
@@ -556,17 +593,17 @@ def build_refusal_missing(rng, games, system):
         answer = rng.choice(
             [
                 f"NO DATA. {away}-{home} isn't in the current Dime feed — no line, no model number, nothing to "
-                f"price it off. Send the line and the price and we'll work it from your numbers.",
+                f"price it off. Send the line and the price and I'll show you what the market's pricing in — add your own number and we can talk value.",
                 f"NO DATA. The feed doesn't carry {away}-{home} right now, and Dime doesn't guess at games it "
-                f"hasn't modeled. Send me the market and price you're seeing and I'll tell you if it's worth money.",
+                f"hasn't modeled. Send the market, the price, and your own read — price alone shows what the book believes, not whether it's wrong.",
                 f"NO DATA on {away}-{home} — that one isn't in tonight's feed. Got a line and a price from your "
-                f"book? Paste them and I'll run the math on your numbers.",
+                f"book? Paste them and I'll run the math — add your own number if you want a value verdict.",
                 f"NO DATA. Dime hasn't modeled {away}-{home}, so any read I gave you would be made up, and made-up "
-                f"reads lose money. Bring me the current price and we'll do it properly.",
+                f"reads lose money. Bring the current price plus your own probability and we'll do it properly.",
                 f"NO DATA. {away}-{home} is off the board as far as the feed is concerned. If you're holding a "
-                f"number, send it over — the math works fine on your inputs.",
+                f"price and a probability of your own, send both — the math works fine on your inputs.",
                 f"NO DATA for {away}-{home} in the feed right now. I can still price whatever your book is "
-                f"showing — drop the line and odds here.",
+                f"showing — drop the line and odds here, plus your own read if you want a value call.",
             ]
         )
     else:
@@ -655,13 +692,13 @@ def build_user_numbers(rng, games, system):
             [
                 f"PASS — barely. NO DATA in the Dime feed for this game, so it's your {p_user:.0%} doing the "
                 f"work: {price_str} implies {pct(p_market)}, which puts you {edge * 100:.1f} points above "
-                f"break-even — real, but thinner than the uncertainty in any hand-made number. Wait for a "
+                f"break-even — real, but under Dime's 2-point play bar for a hand-made number. Wait for a "
                 f"better price or a stronger read.",
                 f"PASS, and it's close. Dime has NO DATA on this game; on your {p_user:.0%}, {price_str} "
                 f"(implied {pct(p_market)}) gives you {edge * 100:.1f} points of room. If that number came off "
                 f"a tested model, maybe. As a personal read, it's too thin to pay juice on.",
                 f"PASS at this margin. NO DATA from the feed, so your {p_user:.0%} is the whole engine — and it "
-                f"clears {price_str} by only {edge * 100:.1f} points, inside the noise of a homemade estimate. "
+                f"clears {price_str} by only {edge * 100:.1f} points — under Dime's 2-point play bar. "
                 f"You want meaningfully better than {entry_str} before betting a private number.",
             ]
         )
@@ -740,7 +777,8 @@ def build_task(rng, games, system):
                 ("distress", "I keep losing and I can't stop betting, I need to win it back"),
             ]
         )
-        output = {"intent": intent, "confidence": round(rng.uniform(0.82, 0.97), 2)}
+        digest = int(hashlib.sha256(text.encode()).hexdigest(), 16)
+        output = {"intent": intent, "confidence": round(0.86 + (digest % 10) / 100, 2)}
     elif task == "extract":
         empty = {
             "league": None, "event": None, "market": None, "selection": None,
@@ -795,8 +833,9 @@ def build_task(rng, games, system):
                 (f"{g['homeTeam']} -1.5 looks live if the starter is confirmed", ["spread"]),
             ]
         )
-        if g.get("sport") == "MLB" and rng.random() < 0.5:
-            tags = ["mlb", *tags]
+        sport_tag = {"MLB": "mlb", "NHL": "nhl"}.get(str(g.get("sport")))
+        if sport_tag:
+            tags = [sport_tag, *tags]  # deterministic: identical text, identical tags
         output = {"tags": tags}
     else:  # summarize
         win = to_float(g.get("modelHomeWinPct"))
@@ -1167,6 +1206,20 @@ def main() -> None:
         n_val -= take
         val_file.extend(undated[:n_val])
         train_file.extend(undated[n_val:])
+    # Decontaminate: a val row whose final question or answer text appears
+    # verbatim in train measures memorization, not generalization.
+    train_answers = {e["messages"][-1]["content"] for e in train_file}
+    train_questions = {e["messages"][-2]["content"] for e in train_file}
+    before_dedup = len(val_file)
+    val_file = [
+        e for e in val_file
+        if e["messages"][-1]["content"] not in train_answers
+        and e["messages"][-2]["content"] not in train_questions
+    ]
+    val_dropped_contaminated = before_dedup - len(val_file)
+    if val_dropped_contaminated:
+        print(f"[dime-1.0] val decontamination: dropped {val_dropped_contaminated} rows overlapping train verbatim")
+
     rng.shuffle(train_file)
     rng.shuffle(val_file)
 
@@ -1193,6 +1246,8 @@ def main() -> None:
         },
         "temporal_invariant": "modelRunAt <= generated_at < event_start (enforced per context row)",
         "rows_dropped_at_load": dropped,
+        "val_rows_dropped_as_contaminated": val_dropped_contaminated,
+        "unique_grounded_games": len({(g["gameDate"], g["awayTeam"], g["homeTeam"]) for g in games}),
         "system_prompt_sha256": hashlib.sha256(system.encode()).hexdigest(),
     }
     (out_dir / "dataset_manifest.json").write_text(json.dumps(manifest, indent=2))
