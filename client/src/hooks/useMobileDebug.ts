@@ -94,7 +94,7 @@ function logMetrics(label: string, headerHeight?: number, extra?: Record<string,
 
   console.groupCollapsed(
     `%c[MobileDebug:${label}] %cvw=${vw} vh=${vh} dpr=${dpr.toFixed(1)} scale=${scale.toFixed(3)} device=${device}`,
-    "color:#39FF14;font-weight:700;font-size:11px",
+    "color:#45E0A8;font-weight:700;font-size:11px",
     "color:#aaa;font-size:10px"
   );
   console.log(
@@ -185,7 +185,7 @@ export function logMobileEvent(
   const dataStr = data ? "  " + Object.entries(data).map(([k, v]) => `${k}=${v}`).join("  ") : "";
   console.log(
     `%c[MobileDebug:${component}] %c${event}${dataStr}`,
-    "color:#39FF14;font-weight:700;font-size:10px",
+    "color:#45E0A8;font-weight:700;font-size:10px",
     "color:#ccc;font-size:10px"
   );
 }
