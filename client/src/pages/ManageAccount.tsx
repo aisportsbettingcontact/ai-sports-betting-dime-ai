@@ -151,7 +151,7 @@ export default function ManageAccount() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* ── Top bar ── */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card/60 backdrop-blur-sm sticky top-0 z-10">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card backdrop-blur-sm sticky top-0 z-10">
         <button
           type="button"
           onClick={() => setLocation("/feed/model/mlb")}
@@ -311,7 +311,7 @@ export default function ManageAccount() {
                       console.log("[ManageAccount][renew] [INPUT] userId=", appUser.id, "redirecting to pricing");
                       setLocation("/");
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-primary/40 rounded-xl text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-primary rounded-xl text-sm font-semibold text-primary transition-colors"
                   >
                     <RefreshCw className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">Renew Subscription</span>
@@ -347,7 +347,7 @@ export default function ManageAccount() {
 
       {/* ── Cancel Confirmation Dialog ── */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
           <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 space-y-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />

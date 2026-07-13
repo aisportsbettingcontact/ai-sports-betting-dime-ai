@@ -986,7 +986,7 @@ export default function ModelProjections() {
       </div>
 
       {/* ── Sticky Header ── */}
-      <header ref={headerRef} className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm sticky-header-safe" style={{ touchAction: 'pan-y' }}>
+      <header ref={headerRef} className="sticky top-0 z-40 bg-background backdrop-blur-sm sticky-header-safe" style={{ touchAction: 'pan-y' }}>
 
         {/* Row 1: brand + user icon
          * LAYOUT: flex row — brand LEFT, discord + user RIGHT.
@@ -1330,7 +1330,7 @@ export default function ModelProjections() {
             shrinks proportionally via font-size: clamp(9px, 2.4vw, ...) for the league label.
             sm+ breakpoints are unchanged from the original design. */}
         {!showFavoritesTab && !isWcSelected && !gamesLoading && sortedDates.length > 0 && (
-          <div className="w-full flex items-center justify-center px-2 py-1 md:py-2 border-b border-border bg-background/95 sm:px-4" style={{ overflow: 'hidden' }}>
+          <div className="w-full flex items-center justify-center px-2 py-1 md:py-2 border-b border-border bg-background sm:px-4" style={{ overflow: 'hidden' }}>
             {/* Single-line pill: all three spans in one nowrap flex row, centered in full width */}
             <div
               className="flex items-center justify-center"
@@ -1379,7 +1379,7 @@ export default function ModelProjections() {
 
         {/* Row 4 (favorites mode): Favorites header */}
         {showFavoritesTab && (
-          <div className="flex items-center px-4 py-1 md:py-2 border-b border-border bg-background/95 gap-2">
+          <div className="flex items-center px-4 py-1 md:py-2 border-b border-border bg-background gap-2">
             <div className="flex-1" />
             <span className="font-bold tracking-widest uppercase" style={{ fontSize: "clamp(11px, 2vw, 15px)", color: "#45E0A8" }}>
               FAVORITED GAMES
@@ -1455,7 +1455,7 @@ export default function ModelProjections() {
               right: 0,
               bottom: 0,
               width: 48,
-              background: 'linear-gradient(to right, transparent, hsl(var(--card)))',
+              background: 'transparent',  /* Three-Color Law: no gradient scrim */
               pointerEvents: 'none',
               opacity: tabsShowFade ? 1 : 0,
               transition: 'opacity 0.2s ease',
@@ -1621,7 +1621,7 @@ export default function ModelProjections() {
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                    <BarChart3 className="w-10 h-10 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">No MLB games found</p>
                       <p className="text-xs text-muted-foreground">Check back closer to Opening Day.</p>
@@ -1651,7 +1651,7 @@ export default function ModelProjections() {
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                    <BarChart3 className="w-10 h-10 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">No MLB games found</p>
                       <p className="text-xs text-muted-foreground">Check back closer to Opening Day.</p>
@@ -1682,7 +1682,7 @@ export default function ModelProjections() {
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                    <BarChart3 className="w-10 h-10 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">No MLB games found</p>
                       <p className="text-xs text-muted-foreground">Check back on game day.</p>
@@ -1707,7 +1707,7 @@ export default function ModelProjections() {
                   <GameCardSkeleton count={4} />
                 ) : sortedDates.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                    <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                    <BarChart3 className="w-10 h-10 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-semibold text-foreground mb-1">No MLB games found</p>
                       <p className="text-xs text-muted-foreground">Check back on game day.</p>
@@ -1748,7 +1748,7 @@ export default function ModelProjections() {
                     if (isRetrying) return <GameCardSkeleton count={4} />;
                     return (
                       <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-                        <BarChart3 className="w-10 h-10 text-muted-foreground/40" />
+                        <BarChart3 className="w-10 h-10 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-semibold text-foreground mb-1">No games found</p>
                           <p className="text-xs text-muted-foreground">

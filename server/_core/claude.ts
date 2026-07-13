@@ -21,7 +21,7 @@ When analyzing UI/UX:
 2. Prioritize changes that improve data density, readability, and betting workflow efficiency
 3. Suggest concrete implementation steps (Tailwind classes, component changes, layout adjustments)
 4. Consider both desktop and mobile experiences
-5. Keep the dark/neon aesthetic consistent
+5. Keep the dark/mint aesthetic consistent
 
 When generating code suggestions:
 - Use TypeScript + React functional components
