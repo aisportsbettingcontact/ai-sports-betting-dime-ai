@@ -47,7 +47,7 @@
    -------------------------------------------------------------------------- */
 
 /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */ /* D/L:17 */
-:root { --mint: #45E0A8; --mint-on-light: #0FA36B; } /* D/L:18 */
+:root { --mint: #45E0A8; --mint-on-light: #000000; } /* D/L:18 */
 
 .theme-dark { --text-primary: #f7f7f8; --text-secondary: #c9c9d2; --row-hover: rgba(255,255,255,0.065); --row-active: rgba(255,255,255,0.095); --accent: #45E0A8; --ring: rgba(69,224,168,0.36); } /* D/L:19 */
 .theme-light { --text-primary: #111318; --text-secondary: #2f323b; --row-hover: rgba(15,23,42,0.055); --row-active: rgba(69,224,168,0.13); --accent: #45E0A8; --ring: rgba(69,224,168,0.28); } /* D/L:20 */
