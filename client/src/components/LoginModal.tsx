@@ -121,9 +121,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
             href={loginUrl}
             onClick={handleDiscordClick}
             aria-disabled={isRedirecting}
-            className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-[0.98]"
+            className="flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl font-bold text-sm text-black transition-all active:scale-[0.98]"
             style={{
-              backgroundColor: "#5865F2",
+              backgroundColor: "#45E0A8",
               opacity: isRedirecting ? 0.75 : 1,
               pointerEvents: isRedirecting ? "none" : "auto",
               cursor: isRedirecting ? "default" : "pointer",

@@ -256,7 +256,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
           display: 'flex',
           flexDirection: 'row',
           borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.12)',
+          border: '1px solid #ffffff',
           boxSizing: 'border-box',
         }}
       >
@@ -690,7 +690,7 @@ export function BettingSplitsPanel({
                   textTransform: "uppercase",
                   borderRadius: 4,
                   border: isActive ? "1px solid rgba(255,255,255,0.35)" : "1px solid rgba(255,255,255,0.1)",
-                  background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
+                  background: isActive ? "#45E0A8" : "transparent",
                   color: isActive ? "#ffffff" : isAvailable ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.15)",
                   cursor: isAvailable ? "pointer" : "default",
                   transition: "all 0.15s ease",
