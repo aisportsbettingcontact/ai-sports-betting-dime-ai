@@ -134,14 +134,14 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
             <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{awayAbbr}</span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{awaySchool}</span>
-            {awayNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
+            {awayNick && <span className="font-normal text-white leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{awayNick}</span>}
           </div>
         </div>
         {/* Center: @ + date + time */}
         <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 60 }}>
-          <span className="text-sm text-zinc-300 font-medium leading-tight">@</span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap mt-0.5">{dateShort}</span>
-          <span className="text-xs text-zinc-300 leading-tight text-center whitespace-nowrap">{time}</span>
+          <span className="text-sm text-white font-medium leading-tight">@</span>
+          <span className="text-xs text-white leading-tight text-center whitespace-nowrap mt-0.5">{dateShort}</span>
+          <span className="text-xs text-white leading-tight text-center whitespace-nowrap">{time}</span>
         </div>
         {/* Home team: responsive name + logo */}
         <div className="flex items-center gap-2 justify-end" style={{ flex: "1 1 0", minWidth: 0 }}>
@@ -150,7 +150,7 @@ function SearchResultRow({ game, onClick }: { game: GameRow; onClick: () => void
             <span className="font-bold text-white leading-tight sm:hidden" style={{ fontSize: 12, whiteSpace: 'nowrap', letterSpacing: '0.06em' }}>{homeAbbr}</span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span className="font-bold text-white leading-tight hidden sm:block" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{homeSchool}</span>
-            {homeNick && <span className="font-normal text-zinc-300 leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
+            {homeNick && <span className="font-normal text-white leading-tight hidden sm:block" style={{ fontSize: 10, whiteSpace: 'nowrap' }}>{homeNick}</span>}
           </div>
           <TeamBadge slug={game.homeTeam} size={32} />
         </div>
@@ -201,7 +201,7 @@ function FavNotificationBanner({ notif, onDismiss }: { notif: FavNotification; o
       <Star className="flex-shrink-0" style={{ width: 14, height: 14, color: "#45E0A8", fill: "#45E0A8" }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", margin: 0, lineHeight: 1.3 }}>Added to Favorites</p>
-        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", margin: "2px 0 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p style={{ fontSize: 10, color: "#FFFFFF", margin: "2px 0 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {awayName} @ {homeName}
         </p>
       </div>
@@ -1151,7 +1151,7 @@ export default function ModelProjections() {
                     title={`@${appUser.username} (${appUser.role})`}
                   >
                     {appUser.role === 'owner' ? (
-                      <Crown className="w-3.5 h-3.5 text-yellow-400" />
+                      <Crown className="w-3.5 h-3.5 text-white" />
                     ) : (
                       <User className="w-3.5 h-3.5 text-muted-foreground" />
                     )}
@@ -1162,14 +1162,14 @@ export default function ModelProjections() {
                       <div className="absolute right-0 top-9 z-50 w-52 bg-card border border-border rounded-lg shadow-xl overflow-hidden">
                         <div className="px-3 py-2.5 border-b border-border">
                           <div className="flex items-center gap-1.5">
-                            {appUser.role === 'owner' && <Crown className="w-3 h-3 text-yellow-400 flex-shrink-0" />}
+                            {appUser.role === 'owner' && <Crown className="w-3 h-3 text-white flex-shrink-0" />}
                             <p className="text-xs font-semibold text-foreground truncate">@{appUser.username}</p>
                           </div>
                           <p className="text-[11px] text-muted-foreground truncate capitalize">{appUser.role}</p>
                         </div>
                         {(isOwner || appUser.role === 'admin' || appUser.role === 'handicapper') && (
                           <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/bet-tracker'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                            <BarChart2 className="w-3.5 h-3.5 text-emerald-400" /> Bet Tracker
+                            <BarChart2 className="w-3.5 h-3.5 text-[#45E0A8]" /> Bet Tracker
                           </button>
                         )}
                         {isOwner && (
@@ -1178,7 +1178,7 @@ export default function ModelProjections() {
                               <Send className="w-3.5 h-3.5 text-green-400" /> Publish Projections
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/users'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                              <Crown className="w-3.5 h-3.5 text-yellow-400" /> User Management
+                              <Crown className="w-3.5 h-3.5 text-white" /> User Management
                             </button>
                             <button type="button" onClick={() => { setShowUserMenu(false); setLocation('/admin/model-results'); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
                               <FlaskConical className="w-3.5 h-3.5 text-blue-400" /> THE MODEL RESULTS
@@ -1214,7 +1214,7 @@ export default function ModelProjections() {
               className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
               title="Sign in"
             >
-              <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+              <LogIn className="w-3.5 h-3.5 text-[#45E0A8]" />
             </button>
           ) : null}
         </div>
@@ -1265,7 +1265,7 @@ export default function ModelProjections() {
           {/* MLB pill — only shown when MLB has games today or tomorrow */}
           {(!activeSports || activeSports.MLB) && (
             <button type="button" onClick={() => setSelectedSport("MLB")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "MLB" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
+              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "MLB" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
               <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "MLB" ? 1 : 0.5, flexShrink: 0 }} />
               MLB
             </button>
@@ -1276,7 +1276,7 @@ export default function ModelProjections() {
           {/* WC 2026 pill — renders inline on the feed (same as MLB/NHL) */}
           {/* Label: "2026 WORLD CUP" on all screen sizes for clarity */}
           <button type="button" onClick={() => setSelectedSport("WC")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-            style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
+            style={{ fontSize: 'clamp(9px, 1.5vw, 12px)', ...(selectedSport === "WC" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
             <img src="https://digitalhub.fifa.com/transform/de1fd0e5-c091-49ac-a115-00faec1217b1/FIFA-World-Cup-26-Official-Brand-unveiled-in-Los-Angeles?&io=transform:fill,width:768&quality=75" alt="WC26" style={{ width: 'clamp(10px, 1.5vw, 14px)', height: 'clamp(10px, 1.5vw, 14px)', objectFit: 'contain', flexShrink: 0, opacity: selectedSport === "WC" ? 1 : 0.8 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             2026 WORLD CUP
           </button>
@@ -1284,7 +1284,7 @@ export default function ModelProjections() {
           {/* NBA pill — HIDDEN: NBA tab suppressed from feed until re-enabled */}
           {false && (!activeSports || activeSports?.NBA) && (
             <button type="button" onClick={() => setSelectedSport("NBA")} className="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 px-1.5 sm:px-2 md:px-3 py-1 md:py-2 min-h-[44px] rounded-full font-bold tracking-wide transition-all flex-shrink-0"
-              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NBA" ? { background: "transparent", color: "#ffffff", border: "1px solid rgba(255,255,255,0.6)" } : { background: "hsl(var(--card))", color: "rgba(255,255,255,0.45)", border: "1px solid hsl(var(--border))" }) }}>
+              style={{ fontSize: 'clamp(10px, 1.7vw, 13px)', ...(selectedSport === "NBA" ? { background: "transparent", color: "#ffffff", border: "1px solid #FFFFFF" } : { background: "hsl(var(--card))", color: "#FFFFFF", border: "1px solid hsl(var(--border))" }) }}>
               <img src={CDN_NBA} alt="NBA" className="w-[10px] h-[10px] md:w-[14px] md:h-[14px]" style={{ objectFit: "contain", opacity: selectedSport === "NBA" ? 1 : 0.5, flexShrink: 0 }} />
               NBA
             </button>
@@ -1307,15 +1307,15 @@ export default function ModelProjections() {
 
           {/* Search dropdown */}
           {showDropdown && (
-            <div className="absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#000000", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 sticky top-0" style={{ background: "#000000", zIndex: 10 }}>
-                <span className="text-sm text-zinc-300 uppercase tracking-widest">{dropdownResults.length === 0 ? "No results" : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}</span>
-                {dropdownResults.length > 0 && <span className="text-sm text-zinc-300">tap to jump</span>}
+            <div className="absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white shadow-2xl overflow-hidden" style={{ background: "#000000", maxHeight: "calc(3 * 68px + 44px)", overflowY: "auto" }}>
+              <div className="flex items-center justify-between px-3 py-2 border-b border-white sticky top-0" style={{ background: "#000000", zIndex: 10 }}>
+                <span className="text-sm text-white uppercase tracking-widest">{dropdownResults.length === 0 ? "No results" : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}</span>
+                {dropdownResults.length > 0 && <span className="text-sm text-white">tap to jump</span>}
               </div>
               {dropdownResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 gap-2">
-                  <Search className="w-5 h-5 text-zinc-300" />
-                  <p className="text-xs text-zinc-300">No games found for "{searchQuery}"</p>
+                  <Search className="w-5 h-5 text-white" />
+                  <p className="text-xs text-white">No games found for "{searchQuery}"</p>
                 </div>
               ) : dropdownResults.map((game) => <SearchResultRow key={game!.id} game={game!} onClick={() => scrollToGame(game!.id)} />)}
             </div>
@@ -1428,7 +1428,7 @@ export default function ModelProjections() {
                     fontSize: '13px',
                     fontWeight: isActive ? 800 : 500,
                     letterSpacing: '0.06em',
-                    color: isActive ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.45)',
+                    color: isActive ? 'rgba(255,255,255,1)' : '#FFFFFF',
                     background: 'transparent',
                     border: 'none',
                     borderBottom: isActive ? '2px solid #45E0A8' : '2px solid transparent',
