@@ -122,9 +122,9 @@ function statusBadge(confirmed) {
   // confirmed=false → neon yellow EXPECTED badge
   const isConfirmed = confirmed === true;
   const text  = isConfirmed ? 'CONFIRMED' : 'EXPECTED';
-  const color = isConfirmed ? '#39FF14'   : '#FFFF33';
-  const bg    = isConfirmed ? 'rgba(57,255,20,0.12)' : 'rgba(255,255,51,0.12)';
-  const bdr   = isConfirmed ? 'rgba(57,255,20,0.35)' : 'rgba(255,255,51,0.35)';
+  const color = isConfirmed ? '#45E0A8'   : '#FFFFFF';
+  const bg    = isConfirmed ? 'transparent' : 'transparent';
+  const bdr   = isConfirmed ? '#45E0A8' : '#FFFFFF';
   const badge = el('span', {
     fontSize: '9px', fontWeight: '800', letterSpacing: '1.2px',
     textTransform: 'uppercase', color, background: bg,
@@ -156,10 +156,10 @@ function pitcherSection(pitcher) {
     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '18px', fontWeight: '800',
     color: '#FFFFFF', lineHeight: '1.1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   }, name);
-  const eraEl = el('div', { fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }, era);
+  const eraEl = el('div', { fontSize: '12px', color: '#FFFFFF', marginTop: '2px' }, era);
   const badges = el('div', { display: 'flex', gap: '5px', alignItems: 'center', marginTop: '4px' });
   if (pitcher.hand) {
-    badges.appendChild(pill(pitcher.hand + 'HP', '#101820', '#FFFFFF', '#182433'));
+    badges.appendChild(pill(pitcher.hand + 'HP', '#000000', '#FFFFFF', '#FFFFFF'));
   }
   // Always show CONFIRMED or EXPECTED badge (only omit if pitcher is TBD)
   if (pitcher.name) {
@@ -181,12 +181,12 @@ function lineupRows(players, lineupConfirmed) {
   if (players && players.length > 0) {
     const lineupHeader = el('div', {
       display: 'flex', alignItems: 'center', gap: '6px',
-      padding: '4px 0 6px 0', borderBottom: '1px solid rgba(24,36,51,0.8)',
+      padding: '4px 0 6px 0', borderBottom: '1px solid #FFFFFF',
       marginBottom: '2px',
     });
     lineupHeader.appendChild(el('span', {
       fontSize: '9px', fontWeight: '700', letterSpacing: '1.5px',
-      textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)',
+      textTransform: 'uppercase', color: '#FFFFFF',
     }, 'BATTING ORDER'));
     lineupHeader.appendChild(statusBadge(lineupConfirmed));
     container.appendChild(lineupHeader);
@@ -207,7 +207,7 @@ function lineupRows(players, lineupConfirmed) {
     const row = el('div', {
       display: 'flex', alignItems: 'center', gap: '6px',
       padding: '5px 0',
-      borderBottom: i < players.length - 1 ? '1px solid rgba(24,36,51,0.6)' : 'none',
+      borderBottom: i < players.length - 1 ? '1px solid #FFFFFF' : 'none',
     });
     // Batting order number
     row.appendChild(el('span', {
@@ -228,9 +228,9 @@ function lineupRows(players, lineupConfirmed) {
     // Position pill — pixel-adjacent after name
     row.appendChild(el('span', {
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '12px', fontWeight: '700',
-      letterSpacing: '0.5px', textTransform: 'uppercase', color: '#7EB8D4',
-      background: 'rgba(30,60,90,0.6)', padding: '2px 5px', borderRadius: '3px',
-      border: '1px solid rgba(30,80,120,0.4)', flexShrink: '0',
+      letterSpacing: '0.5px', textTransform: 'uppercase', color: '#FFFFFF',
+      background: 'transparent', padding: '2px 5px', borderRadius: '3px',
+      border: '1px solid #FFFFFF', flexShrink: '0',
       textAlign: 'center', minWidth: '28px',
     }, p.position));
     // Handedness — pixel-adjacent right of position pill
@@ -251,8 +251,8 @@ function weatherStrip(weather) {
 
   // Outer wrapper with top border separator and dark bg
   const wrapper = el('div', {
-    background: '#0A1018',
-    borderTop: '1px solid #182433',
+    background: '#000000',
+    borderTop: '1px solid #FFFFFF',
     padding: '14px 24px',
   });
 
@@ -268,7 +268,7 @@ function weatherStrip(weather) {
     }, 'Dome'));
     domeInfo.appendChild(el('div', {
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '12px', fontWeight: '500',
-      color: 'rgba(255,255,255,0.45)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '2px',
+      color: '#FFFFFF', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '2px',
     }, 'Indoor Stadium'));
     strip.appendChild(domeInfo);
     wrapper.appendChild(strip);
@@ -303,7 +303,7 @@ function weatherStrip(weather) {
 
   // Divider
   if (precip != null) {
-    strip.appendChild(el('div', { width: '1px', height: '36px', background: '#1E3048' }));
+    strip.appendChild(el('div', { width: '1px', height: '36px', background: '#FFFFFF' }));
     // Right block: precip %
     const precipEl = el('div', { textAlign: 'center' });
     precipEl.appendChild(el('div', {
@@ -334,8 +334,8 @@ function buildCard(data) {
     return `${months[month - 1]} ${day}, ${year}`;
   }
   const card = el('div', {
-    background: '#090E14', borderRadius: '12px',
-    border: '1px solid #182433', overflow: 'hidden', width: '680px',
+    background: '#000000', borderRadius: '12px',
+    border: '1px solid #FFFFFF', overflow: 'hidden', width: '680px',
   });
   // Color top bar
   card.appendChild(el('div', {
@@ -346,7 +346,7 @@ function buildCard(data) {
   const header = el('div', {
     display: 'grid', gridTemplateColumns: '1fr auto 1fr',
     alignItems: 'center', padding: '14px 18px 12px',
-    borderBottom: '1px solid #182433', gap: '10px',
+    borderBottom: '1px solid #FFFFFF', gap: '10px',
   });
   // Away
   const awayCol = el('div', { display: 'flex', alignItems: 'center', gap: '12px' });
@@ -358,7 +358,7 @@ function buildCard(data) {
   }, away.city));
   awayInfo.appendChild(el('div', {
     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '13px', fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)', letterSpacing: '0.5px', marginTop: '1px',
+    color: '#FFFFFF', letterSpacing: '0.5px', marginTop: '1px',
   }, away.nickname));
   awayInfo.appendChild(pill('Away', away.primaryColor + '22', '#FFFFFF', away.primaryColor + '44'));
   awayCol.appendChild(awayInfo);
@@ -368,7 +368,7 @@ function buildCard(data) {
   if (gameDate) {
     center.appendChild(el('div', {
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '12px', fontWeight: '500',
-      color: 'rgba(255,255,255,0.65)', letterSpacing: '0.5px', whiteSpace: 'nowrap',
+      color: '#FFFFFF', letterSpacing: '0.5px', whiteSpace: 'nowrap',
       marginBottom: '2px', textTransform: 'uppercase',
     }, formatGameDate(gameDate)));
   }
@@ -390,7 +390,7 @@ function buildCard(data) {
   }, home.city));
   homeInfo.appendChild(el('div', {
     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: '13px', fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)', letterSpacing: '0.5px', marginTop: '1px',
+    color: '#FFFFFF', letterSpacing: '0.5px', marginTop: '1px',
   }, home.nickname));
   homeInfo.appendChild(pill('Home', home.primaryColor + '22', '#FFFFFF', home.primaryColor + '44'));
   homeCol.appendChild(homeInfo);
@@ -401,19 +401,19 @@ function buildCard(data) {
   // Pitchers
   const pitchers = el('div', {
     display: 'grid', gridTemplateColumns: '1fr 1px 1fr',
-    borderBottom: '1px solid #182433',
+    borderBottom: '1px solid #FFFFFF',
   });
   pitchers.appendChild(pitcherSection(lineup.awayPitcher));
-  pitchers.appendChild(el('div', { background: '#182433' }));
+  pitchers.appendChild(el('div', { background: '#FFFFFF' }));
   pitchers.appendChild(pitcherSection(lineup.homePitcher));
   card.appendChild(pitchers);
   // Lineups
   const lineups = el('div', {
     display: 'grid', gridTemplateColumns: '1fr 1px 1fr',
-    borderBottom: '1px solid #182433',
+    borderBottom: '1px solid #FFFFFF',
   });
   lineups.appendChild(lineupRows(lineup.awayPlayers, lineup.awayLineupConfirmed));
-  lineups.appendChild(el('div', { background: '#182433' }));
+  lineups.appendChild(el('div', { background: '#FFFFFF' }));
   lineups.appendChild(lineupRows(lineup.homePlayers, lineup.homeLineupConfirmed));
   card.appendChild(lineups);
   // Weather

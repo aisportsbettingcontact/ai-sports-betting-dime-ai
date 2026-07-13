@@ -13,11 +13,11 @@
   :root {
     --away-primary:#EF3B24;--away-secondary:#007AC1;--away-dark:#002D62;--away-text:#FFFFFF;
     --home-primary:#006BB6;--home-secondary:#ED174C;--home-dark:#002B5C;--home-text:#FFFFFF;
-    --neon-over:#39FF14;--neon-under:#FF1818;
-    --bg:#06090D;--bg2:#090E14;--bg3:#0C1219;--border:#182433;--border2:#1E3048;
+    --neon-over:#45E0A8;--neon-under:#FFFFFF;
+    --bg:#000000;--bg2:#000000;--bg3:#000000;--border:#FFFFFF;--border2:#FFFFFF;
   }
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{background:#03050A;display:flex;align-items:flex-start;justify-content:center;padding:20px;min-height:100vh}
+  body{background:#000000;display:flex;align-items:flex-start;justify-content:center;padding:20px;min-height:100vh}
   .sc{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;background:var(--bg);border-radius:18px;overflow:hidden;width:1100px;border:1px solid var(--border2)}
   .hdr{background:var(--bg2);padding:24px 28px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2);position:relative}
   .hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--away-primary) 0%,var(--away-secondary) 20%,transparent 44%,transparent 56%,var(--home-secondary) 80%,var(--home-primary) 100%)}
@@ -30,12 +30,12 @@
   .tinfo{display:flex;flex-direction:column}
   .tinfo.right{align-items:flex-end}
   .tname{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:30px;font-weight:700;letter-spacing:0.3px;line-height:1.1;color:#ffffff}
-  .tfull{font-size:15px;color:rgba(255,255,255,0.85);letter-spacing:0.5px;margin-top:3px;font-weight:600}
-  .tbadge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:4px;margin-top:7px;width:fit-content;background:rgba(255,255,255,0.12);color:#ffffff;border:1px solid rgba(255,255,255,0.25)}
+  .tfull{font-size:15px;color:#FFFFFF;letter-spacing:0.5px;margin-top:3px;font-weight:600}
+  .tbadge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;border-radius:4px;margin-top:7px;width:fit-content;background:transparent;color:#ffffff;border:1px solid #FFFFFF}
   .vblk{text-align:center;flex:1;padding:0 16px}
   .vat{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:42px;font-weight:800;color:#ffffff;letter-spacing:2px;line-height:1}
-  .gmeta-time{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:20px;font-weight:600;color:rgba(255,255,255,0.90);letter-spacing:1px;margin-top:10px}
-  .gmeta-date{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:14px;font-weight:400;color:rgba(255,255,255,0.60);letter-spacing:0.5px;margin-top:4px}
+  .gmeta-time{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:20px;font-weight:600;color:#FFFFFF;letter-spacing:1px;margin-top:10px}
+  .gmeta-date{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:14px;font-weight:400;color:#FFFFFF;letter-spacing:0.5px;margin-top:4px}
   .glive{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--neon-over);margin-top:8px}
   .glive-dot{width:7px;height:7px;border-radius:50%;background:var(--neon-over)}
   .body{padding:18px 20px 20px}
@@ -45,18 +45,18 @@
   .line-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)}
   .lblock{text-align:center}
   .lval{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:36px;font-weight:800;letter-spacing:-1px;line-height:1;color:#ffffff}
-  .llbl{font-size:12px;color:rgba(255,255,255,0.65);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;font-weight:600}
-  .lsep{font-size:14px;color:rgba(255,255,255,0.25)}
+  .llbl{font-size:12px;color:#FFFFFF;text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;font-weight:600}
+  .lsep{font-size:14px;color:#FFFFFF}
   .flow-section{margin-bottom:8px}
   .flow-section:last-child{margin-bottom:0}
-  .flow-type{font-size:12px;color:rgba(255,255,255,0.75);font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+  .flow-type{font-size:12px;color:#FFFFFF;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
   .flow-bar-wrap{position:relative;display:flex;align-items:center;gap:5px}
   .flow-bar{flex:1;display:flex;height:34px;border-radius:6px;overflow:hidden}
   .outside-pct{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:15px;font-weight:800;color:#ffffff;white-space:nowrap;flex-shrink:0}
   .flow-seg{display:flex;align-items:center;height:100%;min-width:0}
   .seg-left{justify-content:flex-start;padding-left:9px}
   .seg-right{justify-content:flex-end;padding-right:9px}
-  .flow-seg-pct{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:16px;font-weight:800;color:#ffffff;white-space:nowrap;text-shadow:-1px -1px 0 rgba(0,0,0,0.95),1px -1px 0 rgba(0,0,0,0.95),-1px 1px 0 rgba(0,0,0,0.95),1px 1px 0 rgba(0,0,0,0.95),0 0 6px rgba(0,0,0,0.5)}
+  .flow-seg-pct{font-family:'Familjen Grotesk', system-ui, -apple-system, sans-serif;font-size:16px;font-weight:800;color:#ffffff;white-space:nowrap;text-shadow:none}
   .seg-away{background:linear-gradient(180deg,rgba(255,255,255,0.25) 0%,transparent 100%),var(--away-primary)}
   .seg-home{background:linear-gradient(180deg,rgba(255,255,255,0.25) 0%,transparent 100%),var(--home-primary)}
   .seg-over{background:var(--away-primary)}
