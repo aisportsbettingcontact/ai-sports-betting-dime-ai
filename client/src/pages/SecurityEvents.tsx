@@ -99,17 +99,17 @@ const EVENT_TYPE_CONFIG: Record<
 > = {
   CSRF_BLOCK: {
     label: "CSRF Block",
-    color: "bg-red-500/15 text-red-400 border-red-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <ShieldOff className="w-3 h-3" />,
   },
   RATE_LIMIT: {
     label: "Rate Limit",
-    color: "bg-orange-500/15 text-orange-400 border-orange-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <Activity className="w-3 h-3" />,
   },
   AUTH_FAIL: {
     label: "Auth Fail",
-    color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
+    color: "bg-transparent text-white border-white",
     icon: <ShieldAlert className="w-3 h-3" />,
   },
 };
@@ -170,9 +170,9 @@ function DiscordTestPanel() {
     <div className="rounded-lg border border-zinc-700/60 bg-zinc-900/40 p-4 space-y-4">
       {/* Panel header */}
       <div className="flex items-center gap-2">
-        <FlaskConical className="w-4 h-4 text-violet-400" />
+        <FlaskConical className="w-4 h-4 text-white" />
         <span className="text-sm font-semibold text-zinc-200">Discord Security Channel — Live Test Controls</span>
-        <Badge className="bg-violet-500/15 text-violet-400 border-violet-500/30 text-xs px-1.5 py-0 ml-1">
+        <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0 ml-1">
           Owner Only
         </Badge>
       </div>
@@ -258,14 +258,14 @@ function DiscordTestPanel() {
 
       {/* Status indicators */}
       {(fireEventMutation.isSuccess || fireDigestMutation.isSuccess) && (
-        <div className="text-xs text-emerald-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+        <div className="text-xs text-[#45E0A8] flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] inline-block" />
           Last action completed — check the Discord channel to confirm delivery.
         </div>
       )}
       {(fireEventMutation.isError || fireDigestMutation.isError) && (
-        <div className="text-xs text-red-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+        <div className="text-xs text-white flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
           Action failed — check server logs for details.
         </div>
       )}
@@ -334,7 +334,7 @@ export default function SecurityEvents() {
   if (authLoading || (!authLoading && (!user || !isOwner))) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center gap-3">
-        <div className="w-5 h-5 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-white border-t-[#45E0A8] rounded-full animate-spin" />
         <span className="text-zinc-200 text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
       </div>
     );
@@ -367,7 +367,7 @@ export default function SecurityEvents() {
               <ArrowLeft className="w-4 h-4" />
               Back
             </Button>
-            <div className="h-4 w-px bg-zinc-700" />
+            <div className="h-4 w-px bg-white" />
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-red-400" />
               <span className="font-semibold text-sm">Security Events</span>
@@ -517,13 +517,13 @@ export default function SecurityEvents() {
                 events.map((event) => {
                   const config = EVENT_TYPE_CONFIG[event.eventType] ?? {
                     label: event.eventType,
-                    color: "bg-zinc-500/15 text-zinc-200 border-zinc-500/30",
+                    color: "bg-transparent text-white border-white",
                     icon: <AlertTriangle className="w-3 h-3" />,
                   };
                   return (
                     <TableRow
                       key={event.id}
-                      className="border-zinc-800/60 hover:bg-zinc-900/40 transition-colors"
+                      className="border-white hover:bg-transparent transition-colors"
                     >
                       <TableCell className="text-zinc-300 text-xs font-mono whitespace-nowrap">
                         {formatTs(event.occurredAt)}

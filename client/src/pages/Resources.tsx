@@ -840,18 +840,18 @@ export default function Resources() {
                           key={`d-${col}-${ci}`}
                           className={`
                             px-3 py-2 whitespace-nowrap
-                            ${isFpts   ? "text-emerald-400 font-bold" : ""}
-                            ${isSalary ? "text-sky-300 font-medium" : ""}
-                            ${isId     ? "text-zinc-500 font-mono text-[10px]" : ""}
-                            ${isKey && !isFpts && !isSalary && !isId ? "text-violet-200" : ""}
-                            ${!isKey && !isFpts && !isSalary && !isId ? "text-zinc-300" : ""}
+                            ${isFpts   ? "text-[#45E0A8] font-bold" : ""}
+                            ${isSalary ? "text-white font-medium" : ""}
+                            ${isId     ? "text-white font-mono text-[10px]" : ""}
+                            ${isKey && !isFpts && !isSalary && !isId ? "text-[#45E0A8]" : ""}
+                            ${!isKey && !isFpts && !isSalary && !isId ? "text-white" : ""}
                           `}
                         >
                           {isBool
                             ? (val === "true"
-                              ? <span className="text-emerald-400 font-bold">✔</span>
-                              : <span className="text-zinc-700">—</span>)
-                            : (val || <span className="text-zinc-700">—</span>)
+                              ? <span className="text-[#45E0A8] font-bold">✔</span>
+                              : <span className="text-white">—</span>)
+                            : (val || <span className="text-white">—</span>)
                           }
                         </td>
                       );

@@ -194,7 +194,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
       gap: 4,
     }}>
       {/* Label */}
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>
         {label}
       </span>
       {/* Away */}
@@ -207,7 +207,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
           {awayVal}
         </span>
         {awayOdds && (
-          <span style={{ display: "block", fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
+          <span style={{ display: "block", fontSize: 10, color: "#FFFFFF", marginTop: 1 }}>
             {awayOdds}
           </span>
         )}
@@ -218,12 +218,12 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
         )}
       </div>
       {/* Model center */}
-      <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
+      <div style={{ textAlign: "center", background: "transparent", borderRadius: 4, padding: "3px 4px" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {modelVal}
         </span>
         {modelLabel && (
-          <span style={{ display: "block", fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+          <span style={{ display: "block", fontSize: 9, color: "#FFFFFF", marginTop: 1 }}>
             {modelLabel}
           </span>
         )}
@@ -238,7 +238,7 @@ function MarketRow({ label, awayVal, awayOdds, modelVal, modelLabel, homeVal, ho
           {homeVal}
         </span>
         {homeOdds && (
-          <span style={{ display: "block", fontSize: 10, color: "rgba(255,255,255,0.5)", marginTop: 1 }}>
+          <span style={{ display: "block", fontSize: 10, color: "#FFFFFF", marginTop: 1 }}>
             {homeOdds}
           </span>
         )}
@@ -292,44 +292,44 @@ function NrfiRow({ label, bookOdds, modelPct, modelOdds, isNrfi }: NrfiRowProps)
       </span>
       {/* FD Book odds */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>FD ODDS</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 1 }}>FD ODDS</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtOdds(bookOdds)}
         </span>
       </div>
       {/* Model probability */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>MODEL %</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 1 }}>MODEL %</span>
         <span style={{ fontSize: 13, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {effectivePct != null ? `${parseFloat(effectivePct).toFixed(1)}%` : "—"}
         </span>
         {/* Model fair-value odds */}
-        <span style={{ display: "block", fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+        <span style={{ display: "block", fontSize: 10, color: "#FFFFFF", marginTop: 1 }}>
           {fmtOdds(modelOdds)}
         </span>
       </div>
       {/* Edge + EV */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>EDGE · EV</span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", display: "block", marginBottom: 1 }}>EDGE · EV</span>
         {edgeEV ? (
           <>
             <span style={{
               fontSize: 12, fontWeight: 800,
-              color: hasEdge ? edgeColor(edgeEV.edge, edgeEV.isEdge) : "rgba(255,255,255,0.5)",
+              color: hasEdge ? edgeColor(edgeEV.edge, edgeEV.isEdge) : "#FFFFFF",
               fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif",
             }}>
               {fmtEdge(edgeEV.edge)}
             </span>
             <span style={{
               display: "block", fontSize: 10, fontWeight: 700,
-              color: hasEdge ? edgeColor(edgeEV.edge, edgeEV.isEdge) : "rgba(255,255,255,0.35)",
+              color: hasEdge ? edgeColor(edgeEV.edge, edgeEV.isEdge) : "#FFFFFF",
               marginTop: 1,
             }}>
               {fmtEV(edgeEV.ev)}
             </span>
           </>
         ) : (
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>—</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>—</span>
         )}
       </div>
     </div>
@@ -362,12 +362,12 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
       borderBottom: "1px solid #FFFFFF",
       gap: 4,
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF", textTransform: "uppercase" }}>
         TOT
       </span>
       {/* Over */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>O {fmtTotal(f5Total)}</span>
+        <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginBottom: 1 }}>O {fmtTotal(f5Total)}</span>
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: overEdgeEV?.isEdge ? edgeColor(overEdgeEV.edge, overEdgeEV.isEdge) : "#FFFFFF",
@@ -382,17 +382,17 @@ function F5TotalRow({ f5Total, f5OverOdds, f5UnderOdds, modelF5AwayScore, modelF
         )}
       </div>
       {/* Model total */}
-      <div style={{ textAlign: "center", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "3px 4px" }}>
+      <div style={{ textAlign: "center", background: "transparent", borderRadius: 4, padding: "3px 4px" }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: "#45E0A8", fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
           {fmtScore(modelF5AwayScore)} – {fmtScore(modelF5HomeScore)}
         </span>
-        <span style={{ display: "block", fontSize: 9, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+        <span style={{ display: "block", fontSize: 9, color: "#FFFFFF", marginTop: 1 }}>
           TOT {fmtTotal(modelF5Total)}
         </span>
       </div>
       {/* Under */}
       <div style={{ textAlign: "center" }}>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 1 }}>U {fmtTotal(f5Total)}</span>
+        <span style={{ fontSize: 10, color: "#FFFFFF", display: "block", marginBottom: 1 }}>U {fmtTotal(f5Total)}</span>
         <span style={{
           fontSize: 13, fontWeight: 700,
           color: underEdgeEV?.isEdge ? edgeColor(underEdgeEV.edge, underEdgeEV.isEdge) : "#FFFFFF",
@@ -460,13 +460,13 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
           <span style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em" }}>
             {awayName}
           </span>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "0 2px" }}>@</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF", margin: "0 2px" }}>@</span>
           {homeLogo && <img src={homeLogo} alt={game.homeTeam} style={{ width: 22, height: 22, objectFit: "contain" }} />}
           <span style={{ fontSize: 14, fontWeight: 800, color: "#FFFFFF", letterSpacing: "0.04em" }}>
             {homeName}
           </span>
         </div>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>
+        <span style={{ fontSize: 11, color: "#FFFFFF", fontWeight: 600 }}>
           {formatTime(game.startTimeEst)}
         </span>
       </div>
@@ -479,14 +479,14 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
         borderBottom: "1px solid #FFFFFF",
         gap: 4,
       }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}></span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", textAlign: "center" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", textTransform: "uppercase" }}></span>
+        <span style={{ fontSize: 9, color: "#FFFFFF", textTransform: "uppercase", textAlign: "center" }}>
           {game.awayTeam}
         </span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", textAlign: "center" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", textTransform: "uppercase", textAlign: "center" }}>
           MODEL
         </span>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", textAlign: "center" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", textTransform: "uppercase", textAlign: "center" }}>
           {game.homeTeam}
         </span>
       </div>
@@ -518,27 +518,27 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
               alignItems: "center",
               justifyContent: "space-between",
               padding: "4px 10px",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-              background: "rgba(255,165,0,0.04)",
+              borderBottom: "1px solid #FFFFFF",
+              background: "transparent",
             }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,165,0,0.75)", letterSpacing: "0.08em", minWidth: 32 }}>PUSH</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.08em", minWidth: 32 }}>PUSH</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: "0.04em" }}>P(TIE)</span>
+                <span style={{ fontSize: 10, color: "#FFFFFF", letterSpacing: "0.04em" }}>P(TIE)</span>
                 <span style={{
                   fontSize: 12,
                   fontWeight: 800,
-                  color: "rgba(255,165,0,0.90)",
+                  color: "#FFFFFF",
                   fontVariantNumeric: "tabular-nums",
                 }}>
                   {(parseFloat(game.modelF5PushPct) * 100).toFixed(1)}%
                 </span>
                 {game.modelF5PushRaw != null && (
-                  <span style={{ fontSize: 9, color: "rgba(255,255,255,0.25)", marginLeft: 2 }}>
+                  <span style={{ fontSize: 9, color: "#FFFFFF", marginLeft: 2 }}>
                     (sim: {(parseFloat(game.modelF5PushRaw) * 100).toFixed(1)}%)
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: 9, color: "rgba(255,165,0,0.45)", letterSpacing: "0.06em" }}>3-WAY</span>
+              <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.06em" }}>3-WAY</span>
             </div>
           )}
 
@@ -569,7 +569,7 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
         </>
       ) : (
         <div style={{ padding: "12px 10px", textAlign: "center" }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>F5 odds not yet available</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>F5 odds not yet available</span>
         </div>
       )}
 
@@ -602,13 +602,13 @@ export default function MlbF5NrfiCard({ game }: MlbF5NrfiCardProps) {
         </>
       ) : (
         <div style={{ padding: "12px 10px", textAlign: "center" }}>
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>NRFI/YRFI odds not yet available</span>
+          <span style={{ fontSize: 11, color: "#FFFFFF" }}>NRFI/YRFI odds not yet available</span>
         </div>
       )}
 
       {/* Source footer */}
-      <div style={{ padding: "4px 10px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "0.04em" }}>
+      <div style={{ padding: "4px 10px", borderTop: "1px solid #FFFFFF" }}>
+        <span style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: "0.04em" }}>
           F5 + NRFI/YRFI odds: FanDuel NJ · Model: 400K Monte Carlo · Edge threshold: ±3%
         </span>
       </div>
