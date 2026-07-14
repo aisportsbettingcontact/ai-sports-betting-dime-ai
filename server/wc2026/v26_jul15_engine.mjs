@@ -296,10 +296,10 @@ const PROJECTION_MATCHES = [
 // own to-advance odds independently (model_*_to_advance), so the feed shows both
 // book and model advance prices.
 //
-// The six BetExplorer values and the two to-advance values below are placeholders
-// (null) until the probe runs and the owner provides the advance line; the
-// projection loop hard-fails if any is still null, so the engine can never model
-// or publish against a placeholder book (zero-oversight).
+// The six BetExplorer values below are placeholders (null) until the probe runs;
+// the two to-advance values are owner-provided (ENG -135 / ARG +110) and filled.
+// The projection loop hard-fails if any is still null, so the engine can never
+// model or publish against a placeholder book (zero-oversight).
 const JUL15_BOOK = {
   'wc26-sf-102': {   // ENG (home) vs ARG (away)
     // ── 6 BetExplorer markets — FILL FROM wc-jul15-probe.yml OUTPUT ──
@@ -310,8 +310,8 @@ const JUL15_BOOK = {
     bookHomeWD: null, bookAwayWD: null, bookNoDraw: null,
     bookHomeSpreadOdds: null, bookAwaySpreadOdds: null,
     // ── To-advance (owner-provided; BetExplorer doesn't carry it) ──
-    // FILL with the owner's ENG (home) / ARG (away) to-final lines.
-    bookHomeAdv: null, bookAwayAdv: null,
+    // ENG -135 (home) to reach the Final, ARG +110 (away).
+    bookHomeAdv: -135, bookAwayAdv: 110,
   },
 };
 
