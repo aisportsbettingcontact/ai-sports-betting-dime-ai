@@ -59,7 +59,7 @@ export interface MlbTeam {
   /** Baseball Reference team abbreviation — may differ from standard abbrev */
   brAbbrev: string;
   league: "AL" | "NL";
-  division: "East" | "Central" | "West";
+  division: "East" | "Central" | "West" | "All-Star";
   city: string;
   nickname: string;
   name: string;
@@ -399,6 +399,61 @@ export const MLB_VALID_DB_SLUGS = new Set<string>(MLB_TEAMS.map((t) => t.dbSlug)
 
 /** Set of all valid MLB abbreviations — used for schedule-seeded game filtering (teams stored as abbrev). */
 export const MLB_VALID_ABBREVS = new Set<string>(MLB_TEAMS.map((t) => t.abbrev));
+
+// ─── All-Star pseudo-teams (AL / NL) ──────────────────────────────────────────
+/**
+ * The American League and National League squads for the MLB All-Star Game.
+ *
+ * These are DELIBERATELY NOT part of MLB_TEAMS (the 30 clubs), so they never
+ * surface in team pickers, standings, or anything built by iterating MLB_TEAMS.
+ * They are registered ONLY into the lookup maps/sets that the projections feed
+ * and the live Action Network odds refresh depend on, so the AL-vs-NL All-Star
+ * Game (a) passes isValidGame in games.list and (b) has its book ML / run line /
+ * total kept CURRENT by the normal refreshAnApiOdds cycle
+ * (getMlbTeamByAnSlug resolves the AN url_slug → these teams → the existing
+ * updateAnOdds write path). The odds are therefore live, not a static snapshot.
+ *
+ * Field values verified from the Action Network API (event 291776, 2026-07-14):
+ *   away_team_id 249 = American League (url_slug "american-league")
+ *   home_team_id 250 = National League (url_slug "national-league")
+ * mlbId holds the AN event team id (249/250) — these never collide with the
+ * real 30-club statsapi ids (108–158) and MLB_BY_ID is not on the feed path for
+ * these pseudo-teams. Logos use the AN CDN PNGs (mlbstatic has no AL/NL SVG).
+ */
+export const MLB_ALLSTAR_TEAMS: MlbTeam[] = [
+  {
+    mlbId: 249, mlbCode: "al", abbrev: "AL", brAbbrev: "AL",
+    league: "AL", division: "All-Star",
+    city: "American League", nickname: "All-Stars", name: "American League",
+    vsinSlug: "al-allstars", dbSlug: "al-allstars",
+    anSlug: "american-league", anLogoSlug: "al",
+    logoUrl: "https://static.sprtactn.co/teamlogos/mlb/100/al.png",
+    primaryColor: "#CE1141", secondaryColor: "#FFFFFF",
+    isAllStar: true,
+  },
+  {
+    mlbId: 250, mlbCode: "nl", abbrev: "NL", brAbbrev: "NL",
+    league: "NL", division: "All-Star",
+    city: "National League", nickname: "All-Stars", name: "National League",
+    vsinSlug: "nl-allstars", dbSlug: "nl-allstars",
+    anSlug: "national-league", anLogoSlug: "nl",
+    logoUrl: "https://static.sprtactn.co/teamlogos/mlb/100/nl.png",
+    primaryColor: "#13274F", secondaryColor: "#FFFFFF",
+    isAllStar: true,
+  },
+];
+
+// Register the pseudo-teams into the resolution maps/sets ONLY (never MLB_TEAMS).
+for (const t of MLB_ALLSTAR_TEAMS) {
+  MLB_BY_ABBREV.set(t.abbrev, t);
+  MLB_BY_ID.set(t.mlbId, t);
+  MLB_BY_CODE.set(t.mlbCode, t);
+  MLB_BY_VSIN_SLUG.set(t.vsinSlug, t);
+  MLB_BY_DB_SLUG.set(t.dbSlug, t);
+  MLB_BY_AN_SLUG.set(t.anSlug, t);
+  MLB_VALID_ABBREVS.add(t.abbrev);
+  MLB_VALID_DB_SLUGS.add(t.dbSlug);
+}
 
 // ─── VSiN slug aliases ────────────────────────────────────────────────────────
 /**
