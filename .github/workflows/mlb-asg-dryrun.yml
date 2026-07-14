@@ -1,0 +1,50 @@
+# MLB All-Star Game — book-vs-model preview (read-only, no DB writes)
+#
+# Runs the pre-publish preview from a GitHub Actions runner (the sandbox has no
+# AN egress). Scrapes Action Network through the real scraper, applies the owner
+# model config, and prints the exact BOOK-vs-MODEL card with the run-line + total
+# rungs selected against the live book line. Nothing is written to the database.
+name: MLB ASG — book-vs-model preview
+
+on:
+  workflow_dispatch: {}
+  # Also run on push of the preview/config files to the feature branch, so it can
+  # run without first merging the workflow to the default branch.
+  push:
+    branches: ["claude/spain-france-world-cup-model-wyz0r5"]
+    paths:
+      - "scripts/dryrun_mlb_asg.mts"
+      - "server/mlbAllStarGame.ts"
+      - ".github/workflows/mlb-asg-dryrun.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mlb-asg-dryrun
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Preview ASG book-vs-model
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Run ASG book-vs-model preview"
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/dryrun_mlb_asg.mts
