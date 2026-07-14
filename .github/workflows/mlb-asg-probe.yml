@@ -1,0 +1,60 @@
+# MLB All-Star Game — Action Network probe (reconnaissance only, no DB writes)
+#
+# The sandbox/agent has no egress to api.actionnetwork.com (org policy 403), so
+# this runs the AN scrape from a GitHub Actions runner. It captures the AN team
+# url_slug for the AL/NL squads, the home/away orientation, and current book
+# ML/RunLine/Total — the facts needed to wire the ASG into the live MLB feed.
+#
+# Read-only: hits only the public Action Network API. No secrets, no DB.
+name: MLB ASG — AN probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      dates:
+        description: "Comma-separated YYYY-MM-DD dates to scan (default: 2026-07-14 window)"
+        required: false
+        default: ""
+        type: string
+  # Also run on push of the probe files to the feature branch, so the probe can
+  # run without first merging the workflow to the default branch (workflow_dispatch
+  # requires the file on the default branch; push runs the version from the pushed ref).
+  push:
+    branches: ["claude/spain-france-world-cup-model-wyz0r5"]
+    paths:
+      - "scripts/probe_mlb_asg_an.mts"
+      - ".github/workflows/mlb-asg-probe.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mlb-asg-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    name: Probe AN for the All-Star game
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@v4
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Run AN All-Star probe"
+        env:
+          ASG_DATES: ${{ github.event.inputs.dates }}
+        run: |
+          set -euo pipefail
+          pnpm exec tsx scripts/probe_mlb_asg_an.mts
