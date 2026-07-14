@@ -1,0 +1,102 @@
+# WC2026 Jul-14 — owner-triggered runner for the "run inside Railway" endpoints.
+#
+# The GitHub-Actions runner cannot reach the live TiDB cluster (the DATABASE_URL
+# repo secret is empty and the TARGET_DATABASE_URL clone creds are rotated), so
+# the model/audit/backfill can't run here. Instead the deployed Railway app —
+# which holds a valid DATABASE_URL in its own Railway Variables — exposes three
+# shared-secret (CRON_SECRET) endpoints that this workflow POSTs to:
+#
+#   action=engine        -> POST /api/scheduled/wc2026-engine   (models the Jul-14
+#                           semifinal wc26-sf-101 FRA vs ESP and writes
+#                           wc2026MatchOdds + wc2026_model_projections; dry_run=true
+#                           runs the full pipeline but skips DB writes)
+#   action=audit         -> POST /api/scheduled/wc2026-audit    (read-only forensic audit)
+#   action=espn-backfill -> POST /api/scheduled/wc2026-espn-backfill (re-scrape ESPN
+#                           stats for every played match; responds 202 and streams
+#                           progress to the Railway logs — fire-and-forget)
+#
+# NOTE: /api/scheduled/wc2026-engine spawns the engine .mjs named in
+# wc2026Heartbeat.ts (handleWc2026Engine). For the Jul-14 SF that must be
+# v25_jul14_engine.mjs — this workflow does NOT choose the engine; deploy the
+# endpoint change first.
+#
+# Required repo secrets (same as the cron-* workflows):
+#   RAILWAY_APP_URL — e.g. https://ai-sports-betting-dime-ai-production.up.railway.app
+#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+name: WC Jul14 Run (engine / audit / backfill)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Which endpoint to fire"
+        required: true
+        type: choice
+        default: engine
+        options:
+          - engine
+          - audit
+          - espn-backfill
+      dry_run:
+        description: "engine/backfill only: run pipeline but skip DB writes"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc-jul14-run
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: "POST /api/scheduled/wc2026-${{ inputs.action }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST the selected endpoint (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          ACTION: ${{ inputs.action }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/scheduled/wc2026-${ACTION}"
+          BODY_JSON=$(printf '{"dryRun": %s}' "${DRY_RUN:-false}")
+          echo "[INPUT] POST $URL  body=$BODY_JSON  at $(date -u +%FT%TZ)"
+          # The engine/audit endpoints run synchronously and respond only when the
+          # child process exits, so allow a generous client timeout; the backfill
+          # endpoint responds 202 immediately.
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 340 --retry 1 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions/wc2026-jul14-run" \
+            --data "$BODY_JSON")
+          echo "[OUTPUT] HTTP $CODE"
+          # Print the response body (endpoints return counts / audit tail, never secrets).
+          echo "[OUTPUT] body:"
+          cat "$BODY_FILE"; echo
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::wc2026-${ACTION} trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — wc2026-${ACTION} accepted (HTTP $CODE)"
