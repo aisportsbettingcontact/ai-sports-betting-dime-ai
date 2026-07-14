@@ -32,6 +32,7 @@ import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
+import { runGrantOwnerPrez } from "../grantOwnerAccess";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -101,6 +102,28 @@ export function registerCronRoutes(app: Express): void {
     }
   });
   console.log(`[Cron] [OUTPUT] Registered POST /api/cron/mlb-asg (job=mlb-asg)`);
+
+  // Grant OWNER access to @prez (single-target, hardcoded — see grantOwnerAccess.ts).
+  // Same synchronous shape as mlb-asg: runs the grant, returns before/after + audit so
+  // the grant-owner-prez.yml workflow can print/verify it. `dryRun` reads prez's current
+  // record and reports pending changes WITHOUT writing (used to confirm before granting).
+  // Scope: the handler passes ONLY { dryRun } — there is no caller-supplied target, so
+  // this endpoint can never touch any account other than prez.
+  app.post("/api/cron/grant-owner", async (req: Request, res: Response) => {
+    if (!requireCronSecret(req, res, "grant-owner")) return;
+    const dryRun =
+      req.body?.dryRun === true || req.body?.dryRun === "true" || req.query?.dryRun === "true";
+    console.log(`[Cron:grant-owner] [INPUT] POST /api/cron/grant-owner dryRun=${dryRun} at ${new Date().toISOString()}`);
+    try {
+      const result = await runGrantOwnerPrez({ dryRun });
+      console.log(`[Cron:grant-owner] [OUTPUT] wrote=${result.wrote} auditPass=${result.audit.pass}\n${result.tail}`);
+      res.status(result.audit.pass ? 200 : 500).json({ ok: result.audit.pass, ...result });
+    } catch (err) {
+      console.error(`[Cron:grant-owner] [ERROR]`, err);
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  console.log(`[Cron] [OUTPUT] Registered POST /api/cron/grant-owner (job=grant-owner)`);
 
   // Observability: read-only run-lock state for all jobs (still secret-guarded so
   // it can't be scraped anonymously). Handy for the CI perf harness and debugging.

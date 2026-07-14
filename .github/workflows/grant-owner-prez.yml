@@ -1,0 +1,71 @@
+# Grant OWNER access to @prez (single-target, manual).
+#
+# Fires POST /api/cron/grant-owner on the Railway app (CRON_SECRET-authed). The
+# endpoint is HARDCODED to @prez (server/grantOwnerAccess.ts) — the workflow sends
+# only { dryRun }, so it can never target any other account.
+#
+#   dry_run=true  → read prez's current record + report pending changes, write nothing (default)
+#   dry_run=false → set role=owner + hasAccess=true (clear a past expiry), re-read, audit
+#
+# One-off admin action — no schedule. Safe to leave in place (dry-run default,
+# secret-gated, single-target), or disable after the grant lands.
+#
+# Required repo secrets: RAILWAY_APP_URL (no trailing slash), CRON_SECRET.
+name: Grant Owner — @prez
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true = read + preview only (no writes); false = grant owner"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grant-owner-prez
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: POST /api/cron/grant-owner
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then echo "::error::RAILWAY_APP_URL secret is not set"; exit 1; fi
+          if [ -z "${CRON_SECRET:-}" ]; then echo "::error::CRON_SECRET secret is not set"; exit 1; fi
+          echo "[PREFLIGHT] secrets present"
+
+      - name: "[STEP] POST /api/cron/grant-owner (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'true' }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/grant-owner"
+          BODY_JSON=$(printf '{"dryRun": %s}' "${DRY_RUN}")
+          echo "[INPUT] POST $URL  body=$BODY_JSON  at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 120 --retry 1 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions/grant-owner-prez" \
+            --data "$BODY_JSON")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body:"; cat "$BODY_FILE"; echo
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::grant-owner failed with HTTP $CODE"; exit 1
+          fi
+          echo "[VERIFY] PASS — grant-owner accepted (HTTP $CODE)"
