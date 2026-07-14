@@ -296,18 +296,21 @@ const PROJECTION_MATCHES = [
 // independently (model_*_to_advance), so the feed shows both book and model
 // advance prices.
 //
-// The six BetExplorer values below are placeholders (null) until the probe runs;
-// the projection loop hard-fails if any is still null, so the engine can never
-// publish placeholder book lines (zero-oversight).
+// FILLED 2026-07-14 from CI probe wc-jul14-probe.yml run 29327832265
+// (scraped 11:08:24–11:08:52 UTC, BetExplorer event pU0PQ9nR slug france-spain,
+// bet365 via bid=549 bet365.us fallback where bid=16 absent; every market parse
+// PASSed — 1x2, DC, BTTS, OU primary 2.5, AH primary -1.5 by the production
+// scraper's own _select_primary_* functions, pk line excluded by the no-pk rule).
+// The projection loop still hard-fails if any of these is null (zero-oversight).
 const JUL14_BOOK = {
   'wc26-sf-101': {   // FRA (home) vs ESP (away) — FRA favorite
-    // ── 6 BetExplorer markets — FILL FROM wc-jul14-probe.yml OUTPUT ──
-    bookHomeMl: null, bookDraw: null, bookAwayMl: null,
-    bookSpread: null, bookTotal: null,
-    bookOver: null, bookUnder: null,
-    bookBttsY: null, bookBttsN: null,
-    bookHomeWD: null, bookAwayWD: null, bookNoDraw: null,
-    bookHomeSpreadOdds: null, bookAwaySpreadOdds: null,
+    // ── 6 BetExplorer markets (probe run 29327832265) ──
+    bookHomeMl: 135, bookDraw: 220, bookAwayMl: 220,
+    bookSpread: -1.5, bookTotal: 2.5,
+    bookOver: -108, bookUnder: -108,
+    bookBttsY: -149, bookBttsN: 110,
+    bookHomeWD: -278, bookAwayWD: -189, bookNoDraw: -278,
+    bookHomeSpreadOdds: 340, bookAwaySpreadOdds: -500,
     // ── To-advance (owner-provided; BetExplorer doesn't carry it) ──
     // FRA -150 (home) to reach the Final, ESP +120 (away).
     bookHomeAdv: -150, bookAwayAdv: 120,
