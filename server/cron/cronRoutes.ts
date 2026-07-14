@@ -31,6 +31,7 @@ import type { Express, Request, Response } from "express";
 import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
+import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -80,6 +81,26 @@ export function registerCronRoutes(app: Express): void {
   mountJob(app, "/api/cron/vsin-odds", "vsin-odds", vsinRunner);
   mountJob(app, "/api/cron/scores", "scores", scoresRunner);
   mountJob(app, "/api/cron/mlb-cycle", "mlb-cycle", mlbCycleRunner);
+
+  // MLB All-Star Game (AL vs NL) seed/refresh. Unlike the fire-and-forget jobs
+  // above, this runs synchronously and returns the book-vs-model tail + audit so
+  // the mlb-asg.yml workflow can print/verify the result. `dryRun` scrapes +
+  // computes without writing (pre-publish preview from the deployed server).
+  app.post("/api/cron/mlb-asg", async (req: Request, res: Response) => {
+    if (!requireCronSecret(req, res, "mlb-asg")) return;
+    const dryRun =
+      req.body?.dryRun === true || req.body?.dryRun === "true" || req.query?.dryRun === "true";
+    console.log(`[Cron:mlb-asg] [INPUT] POST /api/cron/mlb-asg dryRun=${dryRun} at ${new Date().toISOString()}`);
+    try {
+      const result = await runMlbAllStarGameSync({ dryRun });
+      console.log(`[Cron:mlb-asg] [OUTPUT] wrote=${result.wrote} auditPass=${result.audit.pass}\n${result.tail}`);
+      res.status(result.audit.pass ? 200 : 500).json({ ok: result.audit.pass, ...result });
+    } catch (err) {
+      console.error(`[Cron:mlb-asg] [ERROR]`, err);
+      res.status(500).json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  console.log(`[Cron] [OUTPUT] Registered POST /api/cron/mlb-asg (job=mlb-asg)`);
 
   // Observability: read-only run-lock state for all jobs (still secret-guarded so
   // it can't be scraped anonymously). Handy for the CI perf harness and debugging.
