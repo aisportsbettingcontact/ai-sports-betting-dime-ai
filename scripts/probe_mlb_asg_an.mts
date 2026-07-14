@@ -27,16 +27,10 @@ import { getMlbTeamByAnSlug } from "../shared/mlbTeams";
 
 const TAG = "[ASG_PROBE]";
 
-// ASG is expected 2026-07-14 (Tue). Scan a small window so we can't miss it.
-// Note: on a push event ASG_DATES is an empty string, so filter(Boolean) yields
-// [] — must fall back to defaults on an empty list, not just null/undefined.
+// Confirmed by run 29345231802: the ASG is on 2026-07-14 (07-13/07-15 empty).
+// Default to that single date; override with ASG_DATES to scan a wider window.
 const _parsedDates = (process.env.ASG_DATES ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-const DATES = _parsedDates.length > 0 ? _parsedDates : [
-  "2026-07-14",
-  "2026-07-13",
-  "2026-07-15",
-  "2026-07-16",
-];
+const DATES = _parsedDates.length > 0 ? _parsedDates : ["2026-07-14"];
 
 const AN_BASE = "https://api.actionnetwork.com/web/v2/scoreboard";
 const BOOK_IDS = "15,30,68,69,71,75,79";
@@ -87,8 +81,8 @@ function dumpRawAsg(date: string, raw: any): void {
     console.log(`\n${TAG} ${"=".repeat(78)}`);
     console.log(`${TAG} *** UNRESOLVED (ALL-STAR?) GAME on ${date} — anGameId=${g.id} ***`);
     console.log(`${TAG} start_time=${g.start_time} status=${g.status} real_status=${g.real_status ?? "-"}`);
-    console.log(`${TAG} AWAY (away_team_id=${g.away_team_id}): id=${away?.id} abbr=${away?.abbr} full_name="${away?.full_name}" display_name="${away?.display_name}" url_slug="${awaySlug}"`);
-    console.log(`${TAG} HOME (home_team_id=${g.home_team_id}): id=${home?.id} abbr=${home?.abbr} full_name="${home?.full_name}" display_name="${home?.display_name}" url_slug="${homeSlug}"`);
+    console.log(`${TAG} AWAY (away_team_id=${g.away_team_id}): id=${away?.id} abbr=${away?.abbr} full_name="${away?.full_name}" display_name="${away?.display_name}" url_slug="${awaySlug}" logo="${away?.logo}" primary_color="${away?.primary_color}"`);
+    console.log(`${TAG} HOME (home_team_id=${g.home_team_id}): id=${home?.id} abbr=${home?.abbr} full_name="${home?.full_name}" display_name="${home?.display_name}" url_slug="${homeSlug}" logo="${home?.logo}" primary_color="${home?.primary_color}"`);
     console.log(`${TAG} ORIENTATION: AN lists ${away?.abbr}/${away?.full_name} @ ${home?.abbr}/${home?.full_name}  (away @ home)`);
 
     // Full raw markets per book so no odds are hidden.
@@ -107,8 +101,6 @@ function dumpRawAsg(date: string, raw: any): void {
       for (const o of sp) console.log(`${TAG}       SPREAD ${fmt(o)}`);
       for (const o of tot) console.log(`${TAG}       TOTAL  ${fmt(o)}`);
     }
-    console.log(`${TAG} FULL RAW GAME JSON:`);
-    console.log(JSON.stringify({ id: g.id, start_time: g.start_time, status: g.status, away_team_id: g.away_team_id, home_team_id: g.home_team_id, teams: g.teams, markets: g.markets }, null, 2));
   }
 }
 
