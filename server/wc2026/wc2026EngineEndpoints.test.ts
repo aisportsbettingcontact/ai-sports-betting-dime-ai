@@ -113,6 +113,13 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).toMatch(/UPDATE wc2026_matches SET match_date = \? WHERE match_id = \? AND DATE\(match_date\) <> \?/);
   });
 
+  it("carries the owner-provided to-advance line (ENG -135 home / ARG +110 away)", () => {
+    // BetExplorer has no to-advance market; these are owner-provided (bound to the
+    // ENG home / ARG away orientation) and must not be null.
+    expect(engineSrc).toMatch(/bookHomeAdv: -135, bookAwayAdv: 110/);
+    expect(engineSrc).not.toMatch(/bookHomeAdv: null, bookAwayAdv: null/);
+  });
+
   it("bracket scraper Phase D seeds match_date on the PT kickoff-day, not the UTC day", () => {
     const scraperSrc = fs.readFileSync(
       path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs"),
