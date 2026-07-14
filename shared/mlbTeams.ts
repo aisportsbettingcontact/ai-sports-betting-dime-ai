@@ -71,6 +71,8 @@ export interface MlbTeam {
   primaryColor: string;
   secondaryColor: string;
   tertiaryColor?: string;
+  /** True only for the AL/NL All-Star pseudo-teams (see MLB_ALLSTAR_TEAMS). */
+  isAllStar?: boolean;
 }
 
 export const MLB_TEAMS: MlbTeam[] = [
