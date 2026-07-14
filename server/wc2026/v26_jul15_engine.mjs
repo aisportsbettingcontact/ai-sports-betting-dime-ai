@@ -296,19 +296,25 @@ const PROJECTION_MATCHES = [
 // own to-advance odds independently (model_*_to_advance), so the feed shows both
 // book and model advance prices.
 //
-// The six BetExplorer values below are placeholders (null) until the probe runs;
-// the two to-advance values are owner-provided (ENG -135 / ARG +110) and filled.
-// The projection loop hard-fails if any is still null, so the engine can never
-// model or publish against a placeholder book (zero-oversight).
+// FILLED 2026-07-14 from CI probe wc-jul15-probe.yml run 29336634679 (scraped
+// 13:28–13:29 UTC, BetExplorer event pKVyGJbD slug england-argentina, bet365 via
+// bid=549 bet365.us fallback). Five markets parsed cleanly (1x2, DC, BTTS, OU
+// primary 2.5). SPREAD: ENG vs ARG is a near coin-flip, so bet365's ±1.5 lines
+// blow past the scraper's -700 ceiling and it excludes ±0.5/pk by rule, so it
+// returned no primary AH line. Owner-directed resolution: use the pick'em (0)
+// line — ENG -125 / ARG +105 (draw-no-bet; the engine treats spreadLine=0 as a
+// push-on-draw handicap). To-advance owner-provided (ENG -135 / ARG +110).
+// The projection loop still hard-fails if any is null (zero-oversight).
 const JUL15_BOOK = {
-  'wc26-sf-102': {   // ENG (home) vs ARG (away)
-    // ── 6 BetExplorer markets — FILL FROM wc-jul15-probe.yml OUTPUT ──
-    bookHomeMl: null, bookDraw: null, bookAwayMl: null,
-    bookSpread: null, bookTotal: null,
-    bookOver: null, bookUnder: null,
-    bookBttsY: null, bookBttsN: null,
-    bookHomeWD: null, bookAwayWD: null, bookNoDraw: null,
-    bookHomeSpreadOdds: null, bookAwaySpreadOdds: null,
+  'wc26-sf-102': {   // ENG (home) vs ARG (away) — near coin-flip
+    // ── 5 clean BetExplorer markets (probe run 29336634679) ──
+    bookHomeMl: 170, bookDraw: 188, bookAwayMl: 200,
+    bookSpread: 0, bookTotal: 2.5,
+    bookOver: 130, bookUnder: -161,
+    bookBttsY: -105, bookBttsN: -125,
+    bookHomeWD: -278, bookAwayWD: -227, bookNoDraw: -250,
+    // pick'em (0) spread — bet365 draw-no-bet line (owner-directed; no clean AH primary)
+    bookHomeSpreadOdds: -125, bookAwaySpreadOdds: 105,
     // ── To-advance (owner-provided; BetExplorer doesn't carry it) ──
     // ENG -135 (home) to reach the Final, ARG +110 (away).
     bookHomeAdv: -135, bookAwayAdv: 110,

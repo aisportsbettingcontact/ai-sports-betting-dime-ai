@@ -120,6 +120,19 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).not.toMatch(/bookHomeAdv: null, bookAwayAdv: null/);
   });
 
+  it("carries the scraped bet365 book (5 clean markets + owner-directed pk spread)", () => {
+    // Probe run 29336634679; spread is the owner-directed pick'em (0) line since
+    // the coin-flip had no clean AH primary. Guards against a fill transcription slip.
+    expect(engineSrc).toMatch(/bookHomeMl: 170, bookDraw: 188, bookAwayMl: 200/);
+    expect(engineSrc).toMatch(/bookSpread: 0, bookTotal: 2\.5/);
+    expect(engineSrc).toMatch(/bookOver: 130, bookUnder: -161/);
+    expect(engineSrc).toMatch(/bookBttsY: -105, bookBttsN: -125/);
+    expect(engineSrc).toMatch(/bookHomeWD: -278, bookAwayWD: -227, bookNoDraw: -250/);
+    expect(engineSrc).toMatch(/bookHomeSpreadOdds: -125, bookAwaySpreadOdds: 105/);
+    // No BetExplorer market left null after the fill.
+    expect(engineSrc).not.toMatch(/bookHomeMl: null/);
+  });
+
   it("bracket scraper Phase D seeds match_date on the PT kickoff-day, not the UTC day", () => {
     const scraperSrc = fs.readFileSync(
       path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs"),
