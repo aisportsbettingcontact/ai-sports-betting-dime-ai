@@ -1,0 +1,31 @@
+name: WC Jul14 BetExplorer Probe (read-only)
+
+# Read-only recon: scrapes bet365 (via BetExplorer) odds for the July 14
+# semifinal — wc26-sf-101 (France home vs Spain away, BE event pU0PQ9nR). No DB
+# writes, no secrets — output is the JSON book blob in the Actions log, used to
+# fill the v25 engine's JUL14_BOOK block. Runs on a CI runner (real egress,
+# unlike the sandboxed agent container).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc-jul14-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe SF odds (FRA/ESP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install probe deps
+        run: pip install --quiet requests beautifulsoup4
+      - name: Run BetExplorer probe
+        run: python3 server/wc2026/jul14_betexplorer_probe.py
