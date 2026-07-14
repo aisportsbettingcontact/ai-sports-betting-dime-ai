@@ -114,17 +114,17 @@ function spawnMjs(
 
 // ─── Handler: WC2026 model engine (owner-triggered, runs inside Railway) ──────
 // POST /api/scheduled/wc2026-engine  { dryRun?: boolean }
-// Runs the v25 Jul-14 SF engine (FRA vs ESP, wc26-sf-101) against the live DB:
+// Runs the v26 Jul-15 SF engine (ENG vs ARG, wc26-sf-102) against the live DB:
 // 500x backtest -> recalibration -> model -> write wc2026MatchOdds + wc2026_model_
 // projections -> NULL audit. dryRun=true runs the full pipeline but skips every
 // Phase-7 DB write. (The engine .mjs is swapped per matchday; v24 modeled the
-// Jul-11 QFs, v25 models the Jul-14 SF.)
+// Jul-11 QFs, v25 the Jul-14 SF, v26 the Jul-15 SF.)
 async function handleWc2026Engine(req: Request, res: Response): Promise<void> {
   if (!requireCronSecret(req, res, "wc2026-engine")) return;
   const dryRun = req.body?.dryRun === true || req.body?.dryRun === "1";
   console.log(`[WC2026HB] [INPUT] /wc2026-engine triggered dryRun=${dryRun} at ${new Date().toISOString()}`);
   try {
-    const result = await spawnMjs("v25_jul14_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
+    const result = await spawnMjs("v26_jul15_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
     const ok = result.exitCode === 0 && !result.timedOut;
     const tail = result.output.slice(-8000);
     console.log(`[WC2026HB] [OUTPUT] wc2026-engine exit=${result.exitCode} timedOut=${result.timedOut}`);
