@@ -28,7 +28,10 @@ import { getMlbTeamByAnSlug } from "../shared/mlbTeams";
 const TAG = "[ASG_PROBE]";
 
 // ASG is expected 2026-07-14 (Tue). Scan a small window so we can't miss it.
-const DATES = (process.env.ASG_DATES?.split(",").map((s) => s.trim()).filter(Boolean)) ?? [
+// Note: on a push event ASG_DATES is an empty string, so filter(Boolean) yields
+// [] — must fall back to defaults on an empty list, not just null/undefined.
+const _parsedDates = (process.env.ASG_DATES ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+const DATES = _parsedDates.length > 0 ? _parsedDates : [
   "2026-07-14",
   "2026-07-13",
   "2026-07-15",
